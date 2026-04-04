@@ -12,7 +12,6 @@ import {
   connect,
   fetchPackageIdHistory,
   setPackageIdCommand,
-  purgeMailboxMessage,
   fetchAllInboxMessagesForExport,
 } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/lib/inbox-slideshow'
@@ -24,11 +23,11 @@ import { useChatViewSendFlow } from '@/frontend/hooks/use-chat-view-send-flow'
 import { useChatViewAttachments } from '@/frontend/hooks/use-chat-view-attachments'
 import { useChatViewVoiceRecord } from '@/frontend/hooks/use-chat-view-voice-record'
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
-import type { Message } from '@/frontend/lib/types'
 import { useChatViewEinsatzExports } from '@/frontend/hooks/use-chat-view-einsatz-exports'
 import { useChatViewMirrorDelay } from '@/frontend/hooks/use-chat-view-mirror-delay'
 import { useChatViewApiStatusPoll } from '@/frontend/hooks/use-chat-view-api-status-poll'
 import { useChatViewMeshPanelState } from '@/frontend/hooks/use-chat-view-mesh-panel-state'
+import { useChatViewInboxLocalUi } from '@/frontend/hooks/use-chat-view-inbox-local-ui'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -93,10 +92,31 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   }, [messages, inboxPackageFilter, bossView, role])
 
   const [delayMirrorToIota, setDelayMirrorToIota] = useState(false)
-  const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
-  const [protokollMarkedIds, setProtokollMarkedIds] = useState<Set<string>>(() => new Set())
-  const [inboxSelectMode, setInboxSelectMode] = useState(false)
-  const [selectedInboxIds, setSelectedInboxIds] = useState<Set<string>>(() => new Set())
+
+  const {
+    protokollMarkedIds,
+    inboxSelectMode,
+    setInboxSelectMode,
+    selectedInboxIds,
+    displayMessages,
+    toggleProtokollMark,
+    onHideInboxMessageLocal,
+    onPurgeInboxMessageChain,
+    toggleInboxSelection,
+    selectAllVisibleInbox,
+    clearInboxSelection,
+    onHideAllVisibleLocal,
+    onBulkHideSelected,
+    onBulkPurgeSelected,
+  } = useChatViewInboxLocalUi({
+    messages,
+    setMessages,
+    loadMessages,
+    setSending,
+    setStatus,
+    setStatusMsg,
+  })
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -118,23 +138,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatusMsg,
   })
   const { apiStatus, refreshApiStatus } = useChatViewApiStatusPoll({ runMirrorDrain })
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const h = sessionStorage.getItem('morg.inbox.hidden.ids')
-      if (h) setHiddenInboxIds(new Set(JSON.parse(h) as string[]))
-      const p = sessionStorage.getItem('morg.protokoll.marked.ids')
-      if (p) setProtokollMarkedIds(new Set(JSON.parse(p) as string[]))
-    } catch {
-      /* ignore */
-    }
-  }, [])
-
-  const displayMessages = useMemo(
-    () => messages.filter((m) => !hiddenInboxIds.has(m.id)),
-    [messages, hiddenInboxIds]
-  )
 
   const decryptMeshWire = useCallback(async (senderAddress: string, fullWire: Uint8Array) => {
     const { uint8ArrayToBase64 } = await import('@/frontend/lib/emergency-binary-browser')
@@ -358,150 +361,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setInboxPackageFilter(t)
     await loadMessages('reset', t || undefined)
   }, [inboxPackageFilter, loadMessages])
-
-  const onHideInboxMessageLocal = useCallback((id: string) => {
-    setHiddenInboxIds((prev) => {
-      const n = new Set(prev)
-      n.add(id)
-      try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
-      } catch {
-        /* ignore */
-      }
-      return n
-    })
-  }, [])
-
-  const onPurgeInboxMessageChain = useCallback(
-    async (msg: Message) => {
-      if (!msg.chainNonce || !msg.chainPurgeable) {
-        setStatus('error')
-        setStatusMsg(
-          'On-chain Purge nicht möglich (nur Funk/Event oder fehlende Nonce). Siehe ENABLE_PURGE / MAILBOX_ID.'
-        )
-        setTimeout(() => setStatus('idle'), 8000)
-        return
-      }
-      setSending(true)
-      try {
-        const r = await purgeMailboxMessage(msg.chainNonce, msg.from.startsWith('0x') ? msg.from : undefined)
-        if (r.ok) {
-          setHiddenInboxIds((prev) => {
-            const n = new Set(prev)
-            n.add(msg.id)
-            try {
-              sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
-            } catch {
-              /* ignore */
-            }
-            return n
-          })
-          setMessages((prev) => prev.filter((m) => m.id !== msg.id))
-          setStatus('success')
-          setStatusMsg('Nachricht auf der Chain gelöscht (Storage-Rebate).')
-          void loadMessages()
-        } else {
-          setStatus('error')
-          setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
-        }
-      } finally {
-        setSending(false)
-        setTimeout(() => setStatus('idle'), 6000)
-      }
-    },
-    [loadMessages, setMessages, setStatus, setStatusMsg]
-  )
-
-  const toggleProtokollMark = useCallback((id: string) => {
-    setProtokollMarkedIds((prev) => {
-      const n = new Set(prev)
-      if (n.has(id)) n.delete(id)
-      else n.add(id)
-      try {
-        sessionStorage.setItem('morg.protokoll.marked.ids', JSON.stringify([...n]))
-      } catch {
-        /* ignore */
-      }
-      return n
-    })
-  }, [])
-
-  const toggleInboxSelection = useCallback((id: string) => {
-    setSelectedInboxIds((prev) => {
-      const n = new Set(prev)
-      if (n.has(id)) n.delete(id)
-      else n.add(id)
-      return n
-    })
-  }, [])
-
-  const selectAllVisibleInbox = useCallback(() => {
-    setSelectedInboxIds(new Set(displayMessages.map((m) => m.id)))
-  }, [displayMessages])
-
-  const clearInboxSelection = useCallback(() => setSelectedInboxIds(new Set()), [])
-
-  const onHideAllVisibleLocal = useCallback(() => {
-    setHiddenInboxIds((prev) => {
-      const n = new Set(prev)
-      for (const m of displayMessages) n.add(m.id)
-      try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
-      } catch {
-        /* ignore */
-      }
-      return n
-    })
-  }, [displayMessages])
-
-  const onBulkHideSelected = useCallback(() => {
-    setHiddenInboxIds((prev) => {
-      const n = new Set(prev)
-      for (const id of selectedInboxIds) n.add(id)
-      try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
-      } catch {
-        /* ignore */
-      }
-      return n
-    })
-    setSelectedInboxIds(new Set())
-    setInboxSelectMode(false)
-  }, [selectedInboxIds])
-
-  const onBulkPurgeSelected = useCallback(async () => {
-    const list = displayMessages.filter(
-      (m) => selectedInboxIds.has(m.id) && m.chainPurgeable && m.chainNonce
-    )
-    if (list.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine purge-fähigen Nachrichten ausgewählt (Chain-Eintrag nötig).')
-      setTimeout(() => setStatus('idle'), 7000)
-      return
-    }
-    setSending(true)
-    try {
-      for (const msg of list) {
-        const r = await purgeMailboxMessage(msg.chainNonce!, msg.from.startsWith('0x') ? msg.from : undefined)
-        if (!r.ok) {
-          setStatus('error')
-          setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
-          setTimeout(() => setStatus('idle'), 8000)
-          return
-        }
-        setHiddenInboxIds((prev) => new Set(prev).add(msg.id))
-        setMessages((prev) => prev.filter((x) => x.id !== msg.id))
-      }
-      setStatus('success')
-      setStatusMsg(`${list.length} Nachricht(en) auf der Chain gelöscht (Rebate).`)
-      void loadMessages()
-    } finally {
-      setSending(false)
-      setSelectedInboxIds(new Set())
-      setInboxSelectMode(false)
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [displayMessages, selectedInboxIds, loadMessages, setMessages, setStatus, setStatusMsg])
 
   return {
     isPrivate,

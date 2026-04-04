@@ -182,7 +182,7 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | # | Paket | Hinweis |
 |---|--------|---------|
-| 1 | **`chat-view`** weiter verdünnen | `views/chat-view.tsx` bleibt dünn; Logik in Hooks. **Stand:** Export → **`use-chat-view-einsatz-exports`**; Mirror → **`use-chat-view-mirror-delay`**; API-Poll/Refresh → **`use-chat-view-api-status-poll`**; Mesh/BLE-Setup-State → **`use-chat-view-mesh-panel-state`**. Nach jedem Schritt **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
+| 1 | **`chat-view`** weiter verdünnen | `views/chat-view.tsx` bleibt dünn; Logik in Hooks. **Stand:** Posteingang lokal (Ausblenden/Protokoll/Auswahl/Purge) → **`use-chat-view-inbox-local-ui`**; Export → **`use-chat-view-einsatz-exports`**; Mirror → **`use-chat-view-mirror-delay`**; API-Poll → **`use-chat-view-api-status-poll`**; Mesh/BLE → **`use-chat-view-mesh-panel-state`**. Nach jedem Schritt **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
 | 2 | **Regression** Bild/Audio/LoRa-Sendepfad | Bei Änderungen an Chat/Send kurz manuell oder E2E prüfen. |
 | 3 | **Exports** | Keine manuellen Edits in **`exports/Morgendrot-Messenger-*`** – Bundle aus **`src/`** / `frontend/` bauen (`MESSENGER-BUNDLE-SOURCE-OF-TRUTH`). |
 
