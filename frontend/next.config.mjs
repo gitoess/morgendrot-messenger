@@ -1,7 +1,14 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const require = createRequire(import.meta.url)
+const { loadEnvConfig } = require('@next/env')
+
+/** Eine zentrale `.env` im Projektroot (nicht `frontend/.env.local`). */
+const repoRoot = path.join(__dirname, '..')
+loadEnvConfig(repoRoot)
 
 /** Backend für API-Rewrite (Browser → gleiche Origin wie Next, z. B. 3341 → Proxy → 3342/3343). */
 const MORGENDROT_API_INTERNAL = (

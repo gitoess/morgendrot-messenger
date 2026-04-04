@@ -18,7 +18,7 @@ Zum Testen der **Lite-UI**: **`npm start`** ausführen, dann im Browser **http:/
 - **„Nicht sicher“ / Warnung:** Bei **HTTP** (ohne TLS) zeigt Chrome das normal — **Fortfahren** wählen oder explizit **`http://`** nutzen (kein `https://` zur IP tippen).
 - **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Siehe `frontend/lib/api.ts` und `next.config.mjs`.
 - **Firewall (Windows):** Erster Zugriff kann blockiert werden — Node.js für **private Netzwerke** erlauben oder eingehend **TCP 3341** (und ggf. 3342 nur wenn ihr direkt zur API testet) freigeben.
-- **Next-Warnung „Cross origin … /_next/*“:** In `frontend/next.config.mjs` sind `localhost` und `127.0.0.1` für Port 3341 erlaubt. Für **Zugriff per LAN-IP** (z. B. Handy) optional in **`frontend/.env.local`:** `NEXT_ALLOWED_DEV_ORIGINS=http://192.168.178.41:3341` (eigene IP; mehrere URLs kommagetrennt).
+- **Next-Warnung „Cross origin … /_next/*“:** `frontend/next.config.mjs` lädt die **Root-`.env`** und erlaubt u. a. `localhost` / `127.0.0.1:3341`. Für **Handy per LAN-IP** in derselben **einen** `.env** (Projektroot): `NEXT_ALLOWED_DEV_ORIGINS=http://192.168.178.41:3341` (eigene IP; mehrere URLs kommagetrennt). **Keine** zweite `.env` unter `frontend/`.
 
 ## Zwei Oberflächen: Boss-Werkstatt und Kunden-Produkt
 
