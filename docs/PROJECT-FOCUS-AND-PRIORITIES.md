@@ -61,6 +61,7 @@ Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DE
 | **Dual-Band 433+868** | Primär **Basis/Relais**-Hardware; Software nur **bandbewusst**, kein Sprint-Thema. Einordnung 868 vs. 433 vs. BOS: **Frequenz-Strategie** oben und **`hardware/README.md`**. |
 | **Gehäuse / IP68 / Kamera** | Hardware; parallel zur Software planen, aber **nicht** die Code-Roadmap sprengen. |
 | **IOTA-Makros → LoRa → Handy/Heltec** (Gateway, **Macro-Interpreter** auf dem Phone, optionale OTA-**Anstöße**) | **Nach** stabiler **Phase B** (Kern LoRa + IOTA MVP) – nicht parallel dazu als zweites Großprojekt. Detaillierte Ideen, Szenarien und Kritik: **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**; Priorisierung im **Fahrplan** **`docs/ROADMAP-FAHRPLAN.md`** (Abschnitt **E**). **Meshtastic-First:** Befehle möglichst als **kurze IDs** abbilden, vorhandene Firmware-/Client-APIs nutzen, kein eigenes vollständiges Funk-Steuerprotokoll neben Meshtastic. |
+| **„Zentralserver“ / globales blindes Relay / DID-Register / Anonymitäts-Stufen** | **Nicht** als fertiges Produkt vor **Phase B** verkaufen; kritische Einordnung und Reihenfolge: **`docs/ROADMAP-FAHRPLAN.md` § I**. Umsetzung nur **phasenweise** (B = Delayed Upload; C = Gateway/Makros; DID/Twin separat laut **`PROTOCOL-CHANNELS-TX-VS-STREAMS.md`**). |
 
 ---
 
