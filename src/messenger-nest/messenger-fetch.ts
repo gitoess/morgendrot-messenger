@@ -28,6 +28,8 @@ export function isRebasedStorageEnabled(): boolean {
 type MsgItem = {
     nonce: bigint;
     sender: string;
+    /** Gegenüber (bei ausgehenden Nachrichten = Empfänger, für Entschlüsselung/Handshake) */
+    recipient?: string;
     key: string;
     isPlain: boolean;
     iv?: Uint8Array;
@@ -93,7 +95,9 @@ export async function fetchLastMessages(
     const peerAddrs = standalone ? null : new Set([...peerMap.keys()].map((a) => normalizeAddress(a)));
     const senderNorm = senderFilter?.trim().startsWith('0x') ? normalizeAddress(senderFilter.trim()) : undefined;
 
-    const matchesSender = (s: string) => !senderNorm || normalizeAddress(s) === senderNorm;
+    /** Optionaler /fetch-Absenderfilter: Gegenüber-Adresse (bei Eingang = Absender, bei Ausgang = Empfänger). */
+    const matchesCounterparty = (peerAddr: string | undefined) =>
+        !senderNorm || (peerAddr != null && normalizeAddress(peerAddr) === senderNorm);
     const matchesPeer = (s: string) => !peerAddrs || peerAddrs.has(normalizeAddress(s));
 
     const items: MsgItem[] = [];
@@ -116,11 +120,15 @@ export async function fetchLastMessages(
             if (!hasNext || !nextCursor) break;
             cursor = nextCursor;
         }
-        const msgEntries = allEntries.filter((e: any) => {
+        const msgKeyIn = allEntries.filter((e: any) => {
             const r = e?.name?.value?.recipient;
             return e?.name?.type === typeName('MsgKey') && r != null && normalizeAddress(String(r)) === myNorm;
         });
-        const ids = msgEntries.map((e: any) => e.objectId).filter(Boolean);
+        const msgKeyOut = allEntries.filter((e: any) => {
+            const s = e?.name?.value?.sender;
+            return e?.name?.type === typeName('MsgKey') && s != null && normalizeAddress(String(s)) === myNorm;
+        });
+        const ids = [...new Set([...msgKeyIn, ...msgKeyOut].map((e: any) => e.objectId).filter(Boolean))] as string[];
         if (ids.length) {
             const BATCH = 50;
             const objs: any[] = [];
@@ -133,7 +141,12 @@ export async function fetchLastMessages(
                 const f = o?.data?.content?.fields;
                 if (!f) continue;
                 const sender = f.sender as string;
-                if (!matchesPeer(sender) || !matchesSender(sender)) continue;
+                const recipient = f.recipient as string;
+                const incoming = recipient != null && normalizeAddress(String(recipient)) === myNorm;
+                const outgoing = sender != null && normalizeAddress(String(sender)) === myNorm;
+                if (!incoming && !outgoing) continue;
+                const peerAddr = incoming ? sender : recipient;
+                if (!peerAddr || !matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
                 const nonce = BigInt(f.nonce ?? 0);
                 const ivBytes = toEventBytes(f.iv);
                 const cipherBytes = toEventBytes(f.ciphertext);
@@ -150,7 +163,8 @@ export async function fetchLastMessages(
                     items.push({
                         nonce,
                         sender,
-                        key: `${sender}:${nonce}`,
+                        recipient,
+                        key: `${sender}:${recipient}:${nonce}`,
                         isPlain: false,
                         iv: ivBytes,
                         cipher: cipherBytes,
@@ -162,7 +176,7 @@ export async function fetchLastMessages(
             }
         }
         if (CFG.MAILBOX_STORE_PLAINTEXT) {
-            const plainKeyEntries = allEntries.filter((e: any) => {
+            const plainKeyIn = allEntries.filter((e: any) => {
                 const r = e?.name?.value?.recipient;
                 const t = String(e?.name?.type ?? '');
                 return (
@@ -171,7 +185,16 @@ export async function fetchLastMessages(
                     normalizeAddress(String(r)) === myNorm
                 );
             });
-            const plainIds = plainKeyEntries.map((e: any) => e.objectId).filter(Boolean);
+            const plainKeyOut = allEntries.filter((e: any) => {
+                const s = e?.name?.value?.sender;
+                const t = String(e?.name?.type ?? '');
+                return (
+                    (t === typeName('PlainMsgKey') || t.endsWith('::messaging::PlainMsgKey')) &&
+                    s != null &&
+                    normalizeAddress(String(s)) === myNorm
+                );
+            });
+            const plainIds = [...new Set([...plainKeyIn, ...plainKeyOut].map((e: any) => e.objectId).filter(Boolean))] as string[];
             if (plainIds.length) {
                 const BATCH = 50;
                 const plainObjs: any[] = [];
@@ -184,7 +207,12 @@ export async function fetchLastMessages(
                     const f = o?.data?.content?.fields;
                     if (!f) continue;
                     const sender = f.sender as string;
-                    if (!matchesPeer(sender) || !matchesSender(sender)) continue;
+                    const recipient = f.recipient as string;
+                    const incoming = recipient != null && normalizeAddress(String(recipient)) === myNorm;
+                    const outgoing = sender != null && normalizeAddress(String(sender)) === myNorm;
+                    if (!incoming && !outgoing) continue;
+                    const peerAddr = incoming ? sender : recipient;
+                    if (!peerAddr || !matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
                     const nonce = BigInt(f.nonce ?? 0);
                     const rawCreated = f.created_at_ms;
                     const createdNum =
@@ -199,7 +227,8 @@ export async function fetchLastMessages(
                     items.push({
                         nonce,
                         sender,
-                        key: `plain:${sender}:${nonce}`,
+                        recipient,
+                        key: `plain:${sender}:${recipient}:${nonce}`,
                         isPlain: true,
                         text: textBytes,
                         tsMs,
@@ -224,16 +253,23 @@ export async function fetchLastMessages(
                     ...(plainCursor != null ? { cursor: plainCursor } : {}),
                 } as any);
                 const data = (events.data ?? []) as any[];
-                const plain = data.filter(
+                const plainIn = data.filter(
                     (e: any) =>
                         e.type?.endsWith('::messaging::PlaintextMessage') &&
                         normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
                         matchesPeer(e.parsedJson?.sender) &&
-                        matchesSender(e.parsedJson?.sender)
+                        matchesCounterparty(e.parsedJson?.sender)
                 );
-                for (const msg of plain) {
+                const plainOutEv = data.filter(
+                    (e: any) =>
+                        e.type?.endsWith('::messaging::PlaintextMessage') &&
+                        normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
+                        matchesPeer(e.parsedJson?.recipient) &&
+                        matchesCounterparty(e.parsedJson?.recipient)
+                );
+                for (const msg of [...plainIn, ...plainOutEv]) {
                     const d = msg.parsedJson as any;
-                    const key = `plain:${d.sender}:${d.nonce}`;
+                    const key = `plain:${d.sender}:${d.recipient}:${d.nonce}`;
                     if (plainSeen.has(key)) continue;
                     plainSeen.add(key);
                     const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
@@ -246,6 +282,7 @@ export async function fetchLastMessages(
                     items.push({
                         nonce: BigInt(d.nonce ?? 0),
                         sender: d.sender,
+                        recipient: d.recipient,
                         key,
                         isPlain: true,
                         text: toEventBytes(d.text),
@@ -277,21 +314,21 @@ export async function fetchLastMessages(
             eventCursor = next;
         }
         const data = allEventData;
-        const enc = data.filter(
+        const encIn = data.filter(
             (e: any) =>
                 e.type?.endsWith('::messaging::EncryptedMessage') &&
                 normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
                 matchesPeer(e.parsedJson?.sender) &&
-                matchesSender(e.parsedJson?.sender)
+                matchesCounterparty(e.parsedJson?.sender)
         );
-        const plain = data.filter(
+        const encOut = data.filter(
             (e: any) =>
-                e.type?.endsWith('::messaging::PlaintextMessage') &&
-                normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-                matchesPeer(e.parsedJson?.sender) &&
-                matchesSender(e.parsedJson?.sender)
+                e.type?.endsWith('::messaging::EncryptedMessage') &&
+                normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
+                matchesPeer(e.parsedJson?.recipient) &&
+                matchesCounterparty(e.parsedJson?.recipient)
         );
-        for (const msg of enc) {
+        for (const msg of [...encIn, ...encOut]) {
             const d = msg.parsedJson as any;
             const ivBytes = toEventBytes(d.iv);
             const cipherBytes = toEventBytes(d.ciphertext);
@@ -303,7 +340,8 @@ export async function fetchLastMessages(
                 items.push({
                     nonce: BigInt(d.nonce ?? 0),
                     sender: d.sender,
-                    key: `${d.sender}:${d.nonce}`,
+                    recipient: d.recipient,
+                    key: `${d.sender}:${d.recipient}:${d.nonce}`,
                     isPlain: false,
                     iv: ivBytes,
                     cipher: cipherBytes,
@@ -313,7 +351,21 @@ export async function fetchLastMessages(
                 });
             }
         }
-        for (const msg of plain) {
+        const plainInEv = data.filter(
+            (e: any) =>
+                e.type?.endsWith('::messaging::PlaintextMessage') &&
+                normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
+                matchesPeer(e.parsedJson?.sender) &&
+                matchesCounterparty(e.parsedJson?.sender)
+        );
+        const plainOutEv2 = data.filter(
+            (e: any) =>
+                e.type?.endsWith('::messaging::PlaintextMessage') &&
+                normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
+                matchesPeer(e.parsedJson?.recipient) &&
+                matchesCounterparty(e.parsedJson?.recipient)
+        );
+        for (const msg of [...plainInEv, ...plainOutEv2]) {
             const d = msg.parsedJson as any;
             const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
             const tsMs =
@@ -321,7 +373,8 @@ export async function fetchLastMessages(
             items.push({
                 nonce: BigInt(d.nonce ?? 0),
                 sender: d.sender,
-                key: `plain:${d.sender}:${d.nonce}`,
+                recipient: d.recipient,
+                key: `plain:${d.sender}:${d.recipient}:${d.nonce}`,
                 isPlain: true,
                 text: toEventBytes(d.text),
                 tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
@@ -331,17 +384,23 @@ export async function fetchLastMessages(
     }
 
     if (standalone && items.length > 0) {
-        const uniqueSenders = [...new Set(items.map((m) => normalizeAddress(m.sender)))];
-        for (const addr of uniqueSenders) {
-            if (peerMap.has(addr)) continue;
-            const senderAddr = items.find((m) => normalizeAddress(m.sender) === addr)?.sender;
-            if (!senderAddr) continue;
+        const counterpartyByNorm = new Map<string, string>();
+        for (const m of items) {
+            const isOut = normalizeAddress(m.sender) === myNorm;
+            const peerRaw = isOut ? m.recipient : m.sender;
+            if (!peerRaw?.trim()) continue;
+            const n = normalizeAddress(peerRaw);
+            if (!counterpartyByNorm.has(n)) counterpartyByNorm.set(n, peerRaw);
+        }
+        for (const peerAddr of counterpartyByNorm.values()) {
+            const n = normalizeAddress(peerAddr);
+            if (peerMap.has(n)) continue;
             const hs =
-                (await getHandshakeFromMailbox(myAddress, senderAddr)) ??
-                (await findPeerHandshakeFrom(myAddress, senderAddr));
+                (await getHandshakeFromMailbox(myAddress, peerAddr)) ??
+                (await findPeerHandshakeFrom(myAddress, peerAddr));
             if (hs)
-                peerMap.set(normalizeAddress(senderAddr), {
-                    address: senderAddr,
+                peerMap.set(n, {
+                    address: peerAddr,
                     pubKeyRaw: hs.pubKeyRaw,
                     handshakeNonce: hs.nonce,
                 });
@@ -376,14 +435,18 @@ export async function fetchLastMessages(
                 isPlain: true,
                 nonce: String(m.nonce),
                 ts: m.tsMs,
+                recipient: m.recipient,
                 chainPurgeable: m.chainPurgeable === true,
             });
         } else if (m.iv && m.cipher && m.tag) {
+            const isOutgoingMsg = normalizeAddress(m.sender) === myNorm;
+            const peerAddrForHs = isOutgoingMsg && m.recipient?.trim() ? m.recipient : m.sender;
             const baseMeta = {
                 sender: m.sender,
                 isPlain: false as const,
                 nonce: String(m.nonce),
                 ts: m.tsMs,
+                recipient: m.recipient,
                 chainPurgeable: m.chainPurgeable !== false,
             };
             if (!myPrivKey) {
@@ -394,13 +457,13 @@ export async function fetchLastMessages(
                 continue;
             }
             const peer =
-                peerMap.get(normalizeAddress(m.sender)) ??
-                peerMap.get(m.sender) ??
-                [...peerMap.values()].find((p) => normalizeAddress(p.address) === normalizeAddress(m.sender));
+                peerMap.get(normalizeAddress(peerAddrForHs)) ??
+                peerMap.get(peerAddrForHs) ??
+                [...peerMap.values()].find((p) => normalizeAddress(p.address) === normalizeAddress(peerAddrForHs));
             if (!peer) {
                 out.push({
                     ...baseMeta,
-                    text: `[Verschlüsselt] Kein Handshake mit Absender ${String(m.sender).slice(0, 14)}… – zuerst /connect (Partner aus Handshake).`,
+                    text: `[Verschlüsselt] Kein Handshake mit ${isOutgoingMsg ? 'Empfänger' : 'Absender'} ${String(peerAddrForHs).slice(0, 14)}… – zuerst /connect (Partner aus Handshake).`,
                 });
                 continue;
             }
@@ -421,6 +484,7 @@ export async function fetchLastMessages(
                     isPlain: false,
                     nonce: String(m.nonce),
                     ts: m.tsMs,
+                    recipient: m.recipient,
                     chainPurgeable: m.chainPurgeable !== false,
                 });
                 const vaultPath = CFG.VAULT_FILE || '.morgendrot-vault';
@@ -428,7 +492,7 @@ export async function fetchLastMessages(
                 if (vaultPath && pw) {
                     appendInboxCache(vaultPath, pw, {
                         sender: m.sender,
-                        recipient: myAddress,
+                        recipient: isOutgoingMsg && m.recipient?.trim() ? m.recipient : myAddress,
                         nonce: String(m.nonce),
                         text: decrypted,
                         ts: Date.now(),
@@ -480,26 +544,28 @@ export async function fetchLastMessages(
                 merged.push(o);
             }
             merged.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
-            const result = merged.slice(skip, skip + count).map(({ sender, text, isPlain, nonce, ts, chainPurgeable }) => ({
+            const result = merged.slice(skip, skip + count).map(({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient }) => ({
                 sender,
                 text,
                 isPlain,
                 nonce,
                 ts,
                 chainPurgeable,
+                recipient,
             }));
             if (toShow.length > 0 && !opts?.silent) logger.info(`Letzte ${result.length} Nachricht(en) geladen (inkl. lokaler Inbox).`);
             return result;
         } catch {}
     }
     if (toShow.length > 0 && !opts?.silent) logger.info(`Letzte ${toShow.length} Nachricht(en) geladen.`);
-    return out.map(({ sender, text, isPlain, nonce, ts, chainPurgeable }) => ({
+    return out.map(({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient }) => ({
         sender,
         text,
         isPlain,
         nonce,
         ts,
         chainPurgeable,
+        recipient,
     }));
 }
 

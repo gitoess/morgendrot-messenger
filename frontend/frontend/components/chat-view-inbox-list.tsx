@@ -31,7 +31,7 @@ import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/lib/inbox-load-error'
-import { isMessageOutgoing } from '@/frontend/lib/inbox-partner-filter'
+import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/lib/inbox-partner-filter'
 
 export type ChatViewInboxListProps = {
   loadError: string | null
@@ -256,7 +256,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   ) : null}
                   {row.msg.recipient ? (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
-                      {myAddress && row.msg.recipient.toLowerCase() === myAddress.toLowerCase()
+                      {myAddress && addressMatchesIdentity(row.msg.recipient, myAddress)
                         ? 'An mich'
                         : `An ${row.msg.recipient.slice(0, 8)}…${row.msg.recipient.slice(-4)}`}
                     </span>

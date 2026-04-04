@@ -11,7 +11,17 @@ Die **gespeicherten Nachrichten** (z. B. aus einem Test) kommen aus der **Mailbo
 3. Im Bereich **„Posteingang“** erscheinen die letzten Nachrichten (beim Öffnen werden 50 geladen).
 4. **„Aktualisieren“** klicken, um die Liste neu vom Backend zu holen.
 
-**Technik:** Die Chat-View ruft beim Öffnen `fetchInbox(50)` auf (Backend: `/inbox` → `/fetch`). Das Backend liest aus der **Mailbox** (MAILBOX_ID) oder aus Chain-Events. Wenn du mit derselben Instanz (gleiche MY_ADDRESS, MAILBOX_ID) getestet hast, sollten die Nachrichten hier erscheinen. Keine Nachrichten? Prüfen: PACKAGE_ID gesetzt, Backend verbunden, ggf. „Aktualisieren“ erneut klicken.
+**Technik:** Die Chat-View ruft beim Öffnen `fetchInbox(50)` auf (Backend: `/inbox` → `/fetch`). Das Backend liest aus der **Mailbox** (MAILBOX_ID) oder aus Chain-Events — **eingehende und ausgehende** Nachrichten (Mailbox-Keys mit Empfänger = ich bzw. Absender = ich). Wenn du mit derselben Instanz (gleiche MY_ADDRESS, MAILBOX_ID) getestet hast, sollten die Nachrichten hier erscheinen. Keine Nachrichten? Prüfen: PACKAGE_ID gesetzt, Backend verbunden, ggf. „Aktualisieren“ erneut klicken.
+
+### Filter: Alle / Eingang / Ausgang
+
+- **Alle:** gesamte Liste.
+- **Eingang:** Nachrichten, bei denen der Absender **nicht** die eigene Adresse ist.
+- **Ausgang:** Nachrichten, bei denen der Absender **du** bist.
+
+**Eigene Adresse im UI:** Für die Zuordnung wird die **volle** Adresse aus `/api/status` (`myAddressFull`) genutzt; die maskierte Kurzform allein reicht für den Vergleich mit Chain-Adressen nicht. **Selbstnachrichten** (Absender und Empfänger = dieselbe eigene Adresse) erscheinen in **Eingang**, **Ausgang** und **Alle** — sie zählen inhaltlich zu beiden Richtungen.
+
+Implementierung (Kurz): `frontend/frontend/lib/inbox-partner-filter.ts`, Fetch/Entschlüsselung: `src/messenger-nest/messenger-fetch.ts`.
 
 ### Lite-UI (statische UI am API-Port)
 

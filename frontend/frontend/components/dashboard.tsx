@@ -196,7 +196,7 @@ export function Dashboard() {
       setNetworkInfo(res.rpcUrlLabel || res.network || 'IOTA Rebased')
       setLocked(!!res.locked)
       setRole(res.role || '')
-      setMyAddress(res.myAddress || '')
+      setMyAddress((res.myAddressFull || res.myAddress || '').trim())
     } else {
       setBackendReachable(false)
       setConnected(false)
