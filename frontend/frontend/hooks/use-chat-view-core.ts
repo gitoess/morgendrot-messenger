@@ -27,17 +27,8 @@ import { useChatViewSendFlow } from '@/frontend/hooks/use-chat-view-send-flow'
 import { useChatViewAttachments } from '@/frontend/hooks/use-chat-view-attachments'
 import { useChatViewVoiceRecord } from '@/frontend/hooks/use-chat-view-voice-record'
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
-import {
-  downloadEinsatzberichtJson,
-  downloadEinsatzberichtSummaryTxt,
-  buildEinsatzberichtPayload,
-} from '@/frontend/lib/einsatzbericht-export'
-import { encryptEinsatzberichtUtf8, downloadEinsatzberichtEncryptedJson } from '@/frontend/lib/einsatzbericht-crypto'
-import {
-  downloadEinsatzprotokollZipPasswordProtected,
-  downloadEinsatzprotokollZipPlain,
-} from '@/frontend/lib/einsatzprotokoll-export'
 import type { Message } from '@/frontend/lib/types'
+import { useChatViewEinsatzExports } from '@/frontend/hooks/use-chat-view-einsatz-exports'
 import {
   drainMirrorQueue,
   enqueueMirrorFailure,
@@ -115,6 +106,21 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [protokollMarkedIds, setProtokollMarkedIds] = useState<Set<string>>(() => new Set())
   const [inboxSelectMode, setInboxSelectMode] = useState(false)
   const [selectedInboxIds, setSelectedInboxIds] = useState<Set<string>>(() => new Set())
+  const {
+    onExportEinsatzberichtJson,
+    onExportEinsatzberichtTxt,
+    onExportEinsatzprotokoll,
+    onExportEinsatzprotokollPlainZip,
+    onExportEinsatzprotokollMarked,
+    onExportEinsatzberichtEncrypted,
+  } = useChatViewEinsatzExports({
+    messagesLength: messages.length,
+    messagesForExport,
+    myAddress,
+    protokollMarkedIds,
+    setStatus,
+    setStatusMsg,
+  })
   const mirrorDedupRef = useRef(new Set<string>())
   const mirrorDrainInFlightRef = useRef(false)
   /** Anzahl ausstehender IOTA-Mirror-Einträge (LoRa→Chain, localStorage). */
@@ -451,208 +457,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     await loadMessages('reset', t || undefined)
   }, [inboxPackageFilter, loadMessages])
 
-  const onExportEinsatzberichtJson = useCallback(async () => {
-    if (messages.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine Nachrichten im Posteingang.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    try {
-      setStatusMsg('Lade vollständigen Posteingang für Export…')
-      const full = await messagesForExport()
-      if (full.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten von der API.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      downloadEinsatzberichtJson(full, { exportedByAddress: myAddress })
-      setStatus('success')
-      setStatusMsg(`Einsatzbericht (JSON) heruntergeladen – ${full.length} Nachricht(en), vollständiger Verlauf.`)
-      setTimeout(() => setStatus('idle'), 5000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messages.length, messagesForExport, myAddress, setStatus, setStatusMsg])
-
-  const onExportEinsatzberichtTxt = useCallback(async () => {
-    if (messages.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine Nachrichten im Posteingang.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    try {
-      setStatusMsg('Lade vollständigen Posteingang für Export…')
-      const full = await messagesForExport()
-      if (full.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten von der API.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      downloadEinsatzberichtSummaryTxt(full, { exportedByAddress: myAddress })
-      setStatus('success')
-      setStatusMsg(`Kurzbericht (.txt) – ${full.length} Nachricht(en), vollständiger Verlauf.`)
-      setTimeout(() => setStatus('idle'), 5000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messages.length, messagesForExport, myAddress, setStatus, setStatusMsg])
-
-  const parseOptionalMessageIdsFromPrompt = (raw: string | null): string[] | undefined => {
-    if (raw == null) return undefined
-    const ids = raw
-      .split(/[\s,]+/)
-      .map((x) => x.trim())
-      .filter(Boolean)
-    return ids.length ? ids : undefined
-  }
-
-  const onExportEinsatzprotokoll = useCallback(async () => {
-    if (messages.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine Nachrichten im Posteingang.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    if (typeof window === 'undefined') return
-    const raw = window.prompt(
-      'Optional: nur diese Nachrichten-IDs (kommagetrennt). Leer = gesamter Verlauf:'
-    )
-    if (raw === null) return
-    const messageIds = parseOptionalMessageIdsFromPrompt(raw)
-    const p1 = window.prompt('Passwort für das Protokoll-ZIP (mind. 8 Zeichen):')
-    if (p1 == null) return
-    if (p1.length < 8) {
-      setStatus('error')
-      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    const p2 = window.prompt('Passwort wiederholen:')
-    if (p1 !== p2) {
-      setStatus('error')
-      setStatusMsg('Passwörter stimmen nicht überein.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    try {
-      setStatusMsg('Lade vollständigen Posteingang für ZIP…')
-      const full = await messagesForExport()
-      if (full.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten von der API.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      await downloadEinsatzprotokollZipPasswordProtected(full, { exportedByAddress: myAddress }, p1, {
-        messageIds,
-      })
-      setStatus('success')
-      setStatusMsg(
-        `Einsatzbericht (${full.length} Nachrichten): *.zip.enc.json gespeichert. Passwort beim Export vergeben; zum Öffnen /einsatzbericht-decrypt.html.`
-      )
-      setTimeout(() => setStatus('idle'), 9000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messages.length, messagesForExport, myAddress, setStatus, setStatusMsg])
-
-  const onExportEinsatzprotokollPlainZip = useCallback(async () => {
-    if (messages.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine Nachrichten im Posteingang.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    if (typeof window === 'undefined') return
-    if (
-      !window.confirm(
-        'Unverschlüsseltes ZIP herunterladen? Nur auf vertrauenswürdigen Geräten speichern (kein Passwort).'
-      )
-    ) {
-      return
-    }
-    try {
-      setStatusMsg('Lade vollständigen Posteingang für ZIP…')
-      const full = await messagesForExport()
-      if (full.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten von der API.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      downloadEinsatzprotokollZipPlain(full, { exportedByAddress: myAddress })
-      setStatus('success')
-      setStatusMsg(`Einsatzbericht als ZIP (${full.length} Nachrichten) – direkt entpackbar.`)
-      setTimeout(() => setStatus('idle'), 7000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messages.length, messagesForExport, myAddress, setStatus, setStatusMsg])
-
-  const onExportEinsatzprotokollMarked = useCallback(async () => {
-    if (protokollMarkedIds.size === 0) {
-      setStatus('error')
-      setStatusMsg('Keine markierten Nachrichten (Stern in der Zeile).')
-      setTimeout(() => setStatus('idle'), 6000)
-      return
-    }
-    if (typeof window === 'undefined') return
-    const p1 = window.prompt('Passwort für das Protokoll-ZIP (mind. 8 Zeichen):')
-    if (p1 == null) return
-    if (p1.length < 8) {
-      setStatus('error')
-      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    const p2 = window.prompt('Passwort wiederholen:')
-    if (p1 !== p2) {
-      setStatus('error')
-      setStatusMsg('Passwörter stimmen nicht überein.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    try {
-      setStatusMsg('Lade Posteingang für Export…')
-      const full = await messagesForExport()
-      const ids = [...protokollMarkedIds]
-      const marked = full.filter((m) => ids.includes(m.id))
-      if (marked.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine der markierten IDs im vollständigen Verlauf gefunden (veraltete Markierung?).')
-        setTimeout(() => setStatus('idle'), 7000)
-        return
-      }
-      await downloadEinsatzprotokollZipPasswordProtected(
-        full,
-        { exportedByAddress: myAddress },
-        p1,
-        { messageIds: ids }
-      )
-      setStatus('success')
-      setStatusMsg(
-        `Datei *.zip.enc.json (${marked.length} markierte von ${full.length} geladen). Entschlüsseln über /einsatzbericht-decrypt.html.`
-      )
-      setTimeout(() => setStatus('idle'), 9000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg])
-
   const onHideInboxMessageLocal = useCallback((id: string) => {
     setHiddenInboxIds((prev) => {
       const n = new Set(prev)
@@ -796,53 +600,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       setTimeout(() => setStatus('idle'), 6000)
     }
   }, [displayMessages, selectedInboxIds, loadMessages, setMessages, setStatus, setStatusMsg])
-
-  const onExportEinsatzberichtEncrypted = useCallback(async () => {
-    if (messages.length === 0) {
-      setStatus('error')
-      setStatusMsg('Keine Nachrichten im Posteingang.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    if (typeof window === 'undefined') return
-    const p1 = window.prompt('Passwort für verschlüsselten Einsatzbericht (mind. 8 Zeichen):')
-    if (p1 == null) return
-    if (p1.length < 8) {
-      setStatus('error')
-      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    const p2 = window.prompt('Passwort wiederholen:')
-    if (p1 !== p2) {
-      setStatus('error')
-      setStatusMsg('Passwörter stimmen nicht überein.')
-      setTimeout(() => setStatus('idle'), 5000)
-      return
-    }
-    try {
-      setStatusMsg('Lade vollständigen Posteingang für Export…')
-      const full = await messagesForExport()
-      if (full.length === 0) {
-        setStatus('error')
-        setStatusMsg('Keine Nachrichten von der API.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      const json = JSON.stringify(buildEinsatzberichtPayload(full, { exportedByAddress: myAddress }), null, 2)
-      const enc = await encryptEinsatzberichtUtf8(json, p1)
-      downloadEinsatzberichtEncryptedJson(enc)
-      setStatus('success')
-      setStatusMsg(
-        `Verschlüsselter Kurzbericht (${full.length} Nachrichten). Öffnen: /einsatzbericht-decrypt.html + Passwort.`
-      )
-      setTimeout(() => setStatus('idle'), 7000)
-    } catch (e) {
-      setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
-      setTimeout(() => setStatus('idle'), 6000)
-    }
-  }, [messages.length, messagesForExport, myAddress, setStatus, setStatusMsg])
 
   return {
     isPrivate,
