@@ -15,8 +15,8 @@
 | 1 | Stabilität Bild + Audio | — | Basis; bei Änderungen testen. |
 | 2 | Einsatzprotokoll / Export (ZIP) | Mittel | **Erledigt:** vollständiger Posteingang, ZIP, `.zip.enc.json`, Decrypt-Seite → **`docs/EINSATZBERICHT-EXPORT.md`**. |
 | 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
-| 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | Laufend (Phase A). |
-| 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | Offen; `npm run bundle:standalone-smartphone`. |
+| 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; kein Dauer-Refactor ohne Nutzen. |
+| 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts`, `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Bundle-README angepasst. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. |
 | 6 | Fehlerbehandlung / Status | Mittel | Laufend. |
 | 7 | Heltec / LoRa Firmware | Hoch | Spez-lastig (`meshtastic/`). |
 | 8 | Kabel-Bridge | Hoch | Spec-nah. |
@@ -182,7 +182,7 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | # | Paket | Hinweis |
 |---|--------|---------|
-| 1 | **`chat-view`** weiter verdünnen | `views/chat-view.tsx` bleibt dünn; Logik in Hooks. **Stand:** zudem Handshake/Connect/Setup/LoRa-Fallback → **`use-chat-view-connection-actions`**; Package-ID → **`use-chat-view-package-id`**; Posteingang lokal → **`use-chat-view-inbox-local-ui`**; Export / Mirror / API-Poll / Mesh wie dokumentiert. Nach jedem Schritt **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
+| 1 | **`chat-view`** + Phase-A-UI | Refactor der Kern-Logik **abgeschlossen** (Hooks wie oben). **PWA:** siehe **§ A.5** / **H.2**. Bei weiteren UI-Änderungen: **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
 | 2 | **Regression** Bild/Audio/LoRa-Sendepfad | Bei Änderungen an Chat/Send kurz manuell oder E2E prüfen. |
 | 3 | **Exports** | Keine manuellen Edits in **`exports/Morgendrot-Messenger-*`** – Bundle aus **`src/`** / `frontend/` bauen (`MESSENGER-BUNDLE-SOURCE-OF-TRUTH`). |
 
@@ -190,7 +190,7 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | Priorität | # | Thema |
 |-----------|---|--------|
-| 1 | **5** | **PWA-Grundlage** (Manifest, Service Worker), ggf. mit `bundle:standalone-smartphone` abstimmen. |
+| 1 | **5** | **PWA-Grundlage** – **Manifest + SW** (siehe §A.5); optional: 192/512-PNG-Icons, Offline-Fallback-Seite, spätere Erweiterung SW. |
 | 2 | **6** | Fehlermeldungen/Status konsistent (laufend). |
 | 3 | **8** | **Kabel-Bridge** (hoch, spec-nah) – siehe §A.8; Backlog, nicht parallel zu Phase-B-Kern. |
 

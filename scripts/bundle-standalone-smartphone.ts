@@ -220,7 +220,7 @@ Für Zugriff im LAN auf die gebaute UI: \`npm run start:prod:lan\` (Next auf \`0
 
 ## PWA / CM4
 
-- **PWA:** Service Worker / Manifest sind im Haupt-Repo geplant bzw. ergänzbar; diese Auslieferung ist die **vollständige Next-App**.
+- **PWA (Haupt-Repo \`frontend/\`):** \`app/manifest.ts\` → **installierbar** (Chrome/Android: „Zum Startbildschirm hinzufügen“). \`public/sw.js\` cached nur **\`/_next/static/**\` (JS/CSS nach erstem Laden) – **API (\`/api\`) braucht weiter Netz** zum Backend-Proxy. Erste Ladung ohne Server: nicht möglich. SW-Registrierung nur in **Production** (\`next build\` + \`next start\`), nicht im \`next dev\`.
 - **CM4:** Gleiche Schritte unter Linux (Node LTS); optional systemd-Units für \`start:api\` und \`start:next\` mit \`HOSTNAME=0.0.0.0\`.
 
 ## Sicherheit

@@ -1,15 +1,27 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
 
+export const viewport: Viewport = {
+  themeColor: '#0f172a',
+  colorScheme: 'dark',
+}
+
 export const metadata: Metadata = {
   title: 'Morgendrot - IOTA Messaging & Access Control',
   description: 'Local dashboard for IOTA/Stardust messaging, access keys, tickets, and device monitoring',
   generator: 'v0.app',
+  applicationName: 'Morgendrot Messenger',
+  appleWebApp: {
+    capable: true,
+    title: 'Morgendrot',
+    statusBarStyle: 'black-translucent',
+  },
   icons: {
     icon: [
       {
@@ -35,8 +47,9 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="de">
       <body className="font-sans antialiased">
+        <PwaServiceWorkerRegister />
         {children}
         <Analytics />
       </body>
