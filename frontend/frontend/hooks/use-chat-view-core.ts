@@ -5,13 +5,11 @@
  * Meshtastic-First: Funk über `useMeshtasticBle` + Standard-Payloads; keine parallele Mesh-Implementierung hier.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import {
   meshDecryptV2Wire,
   startHandshake,
   connect,
-  fetchPackageIdHistory,
-  setPackageIdCommand,
   fetchAllInboxMessagesForExport,
 } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/lib/inbox-slideshow'
@@ -28,6 +26,10 @@ import { useChatViewMirrorDelay } from '@/frontend/hooks/use-chat-view-mirror-de
 import { useChatViewApiStatusPoll } from '@/frontend/hooks/use-chat-view-api-status-poll'
 import { useChatViewMeshPanelState } from '@/frontend/hooks/use-chat-view-mesh-panel-state'
 import { useChatViewInboxLocalUi } from '@/frontend/hooks/use-chat-view-inbox-local-ui'
+import {
+  useChatViewPackageFilterState,
+  useChatViewPackageIdCommands,
+} from '@/frontend/hooks/use-chat-view-package-id'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -57,9 +59,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const morgPkgDeviceFilesRef = useRef<HTMLInputElement>(null)
 
   /** Posteingang `/inbox` mit dieser Package-ID (0x…); leer = Backend-Default aus .env. */
-  const [inboxPackageFilter, setInboxPackageFilter] = useState('')
-  const [packageIdSuggestions, setPackageIdSuggestions] = useState<string[]>([])
-  const [packageIdBusy, setPackageIdBusy] = useState(false)
+  const {
+    inboxPackageFilter,
+    setInboxPackageFilter,
+    packageIdSuggestions,
+    setPackageIdSuggestions,
+    packageIdBusy,
+    setPackageIdBusy,
+  } = useChatViewPackageFilterState()
 
   const { directory, refresh: refreshContactDirectory, isMeshVerifiedForAddress } = useContactDirectory()
 
@@ -308,59 +315,21 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setShowSetup(true)
   }, [])
 
-  const refreshPackageIdSuggestions = useCallback(async () => {
-    const r = await fetchPackageIdHistory()
-    if (!r.ok) return
-    const seen = new Set<string>()
-    for (const x of [r.current, ...(r.history ?? []), ...(r.discovered ?? [])]) {
-      const t = (x || '').trim()
-      if (/^0x[a-fA-F0-9]{64}$/.test(t)) seen.add(t.toLowerCase())
-    }
-    setPackageIdSuggestions([...seen])
-  }, [])
-
-  useEffect(() => {
-    if (!showSetup) return
-    void refreshPackageIdSuggestions()
-  }, [showSetup, refreshPackageIdSuggestions])
-
-  const applyPackageIdBackend = useCallback(
-    async (raw: string) => {
-      const t = raw.trim()
-      if (!/^0x[a-fA-F0-9]{64}$/.test(t)) {
-        setStatus('error')
-        setStatusMsg('Package-ID: 0x und 64 Hex-Zeichen.')
-        setTimeout(() => setStatus('idle'), 5000)
-        return
-      }
-      setPackageIdBusy(true)
-      try {
-        const res = await setPackageIdCommand(t)
-        if (res.ok) {
-          await refreshApiStatus()
-          setInboxPackageFilter(t)
-          await loadMessages('reset')
-          void refreshPackageIdSuggestions()
-          setStatus('success')
-          setStatusMsg('Package-ID gespeichert; Posteingang neu geladen.')
-          setTimeout(() => setStatus('idle'), 5000)
-        } else {
-          setStatus('error')
-          setStatusMsg(res.error || 'set-package-id fehlgeschlagen')
-          setTimeout(() => setStatus('idle'), 6000)
-        }
-      } finally {
-        setPackageIdBusy(false)
-      }
-    },
-    [loadMessages, refreshApiStatus, refreshPackageIdSuggestions, setStatus, setStatusMsg]
-  )
-
-  const applyInboxPackageFilterOnly = useCallback(async () => {
-    const t = inboxPackageFilter.trim()
-    setInboxPackageFilter(t)
-    await loadMessages('reset', t || undefined)
-  }, [inboxPackageFilter, loadMessages])
+  const {
+    refreshPackageIdSuggestions,
+    applyPackageIdBackend,
+    applyInboxPackageFilterOnly,
+  } = useChatViewPackageIdCommands({
+    showSetup,
+    inboxPackageFilter,
+    setInboxPackageFilter,
+    setPackageIdSuggestions,
+    setPackageIdBusy,
+    loadMessages,
+    refreshApiStatus,
+    setStatus,
+    setStatusMsg,
+  })
 
   return {
     isPrivate,
