@@ -267,11 +267,37 @@ function rpcUrlLabel(url: string): string {
     }
 }
 
+/** Browser-Origin z. B. vom Handy im WLAN (192.168.x.x) — für CORS, wenn die UI die API direkt anspricht. */
+function isPrivateLanOrigin(origin: string): boolean {
+    try {
+        const u = new URL(origin);
+        const h = u.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return true;
+        const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+        if (!m) return false;
+        const a = Number(m[1]);
+        const b = Number(m[2]);
+        const c = Number(m[3]);
+        const d = Number(m[4]);
+        if ([a, b, c, d].some((n) => n > 255)) return false;
+        if (a === 10) return true;
+        if (a === 172 && b >= 16 && b <= 31) return true;
+        if (a === 192 && b === 168) return true;
+        return false;
+    } catch {
+        return false;
+    }
+}
+
 function corsHeaders(req: http.IncomingMessage): Record<string, string> {
     const origin = req.headers.origin;
     const defaultOrigin = 'http://127.0.0.1:' + CFG.UI_PORT;
-    const isLocal = !origin || origin === 'null' || origin === '' ||
-        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
+    const isLocal =
+        !origin ||
+        origin === 'null' ||
+        origin === '' ||
+        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ||
+        isPrivateLanOrigin(origin);
     const allowOrigin = isLocal && origin ? origin : defaultOrigin;
     return {
         'Access-Control-Allow-Origin': allowOrigin,
