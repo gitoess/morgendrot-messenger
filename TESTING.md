@@ -24,6 +24,12 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 - [ ] **Gesperrter Tresor:** `.morg-pkg` Import/Export und verschlüsseltes Senden zeigen die erwarteten Fehlermeldungen (Keys/Vault); kein stiller Fehlschlag.
 - [ ] **Klartext-Modus (Pinnwand/privat unverschlüsselt):** Umschalten sichtbar; Senden nur mit gültigem Empfängerfeld wo die UI es verlangt; Hinweise aus **`/api/status`** (Klartext-Kanal, Konfiguration) konsistent mit dem Chat-Header/Transport-Karte.
 
+**Posteingang: Richtung & Identität** — technische Referenz **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, UI-Ort **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`**:
+
+- [ ] **Alle / Eingang / Ausgang:** Gesendete Nachrichten erscheinen unter **Ausgang** und **Alle**; empfangene unter **Eingang** und **Alle** (nach Reload/Aktualisieren).
+- [ ] **Selbstnachrichten** (an die eigene Adresse): in **allen drei** Filtern sichtbar.
+- [ ] **Adresse:** Status liefert `myAddressFull` — Zuordnung Eingang/Ausgang darf nicht durch eine nur maskierte Kurzadresse allein fehlschlagen (siehe Architektur-Doku).
+
 **Package-ID-Banner (Integration, 4 Checks)** — siehe **`docs/MESSENGER-PACKAGE-ID-BANNER.md`:**
 
 - [ ] **1.** Posteingangs-Package-ID **leer** (Backend-Default): **kein** Banner, solange kein expliziter Filter gesetzt ist.

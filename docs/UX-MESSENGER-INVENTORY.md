@@ -4,6 +4,8 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 
 **Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`. **Lite-UI:** `uiVariant` aus `/api/status` synchron mit Kachel-Auswahl (`dashboard.tsx` + `workspace-projects-panel.tsx`).
 
+**Posteingang / Chat-Verlauf (2026-03):** Backend lädt ein- und ausgehende Mailbox-/Event-Nachrichten; Next-UI nutzt `myAddressFull` und sichere Identitätsvergleiche; Filter Eingang|Ausgang|Alle inkl. Selbstnachrichten. **Doku:** `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`, `docs/UI-NACHRICHTEN-STREAMS-ORT.md`.
+
 ## 1. Login & Sicherheit (Entsperr-Dialog)
 
 | Thema | Stand im Projekt | Sinn / nächster Schritt |

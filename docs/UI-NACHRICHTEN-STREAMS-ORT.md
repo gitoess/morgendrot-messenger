@@ -1,5 +1,7 @@
 # Wo sieht man Nachrichten und Streams in der UI?
 
+**Technische Gesamtarchitektur (Datenfluss, Persistenz, Dateipfade):** **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**
+
 ## Alte Nachrichten (Posteingang / Mailbox)
 
 Die **gespeicherten Nachrichten** (z. B. aus einem Test) kommen aus der **Mailbox** (on-chain) bzw. aus Chain-Events. Sie werden **nicht** in IOTA Streams (L0.5) gespeichert.
