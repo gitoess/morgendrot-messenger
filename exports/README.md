@@ -32,3 +32,13 @@ Ziel: **ein Ordner pro Edition**, den du auf einen beliebigen PC kopierst – na
    Den **gesamten** gewählten Ordner kopieren → darin **`npm install`** → **`npm start`** oder **`npm run desktop`**.
 
 Die Ordner sind per `.gitignore` vom Repo ausgeschlossen (Größe + Secrets); bauen und verteilen lokal oder über eure Release-Pipeline.
+
+## Standalone Smartphone / PWA (`morgendrot-standalone-smartphone`)
+
+**Ziel:** **Next.js-Kunden-UI** (`frontend/`) **und** API im **einen** Ordner — für Android/PWA-Tests und Übergabe per SD/USB/ZIP (nicht dieselbe Struktur wie `Morgendrot-Messenger-*` oben, die Lite-UI `ui/` nutzen).
+
+| Schritt | Hinweis |
+|---------|---------|
+| **Bauen** | Im Hauptrepo: **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`** |
+| **`.env`** | Volle **`.env.example`** (Hauptrepo + PWA-Block), **`postinstall`** → **`.env`** nach `npm install`; Details **README.md** im Bundle |
+| **Abgabe** | Boss passt **`.env`** pro Einsatz an; **Seed/Passwort nur auf dem Gerät** — siehe **`docs/ROADMAP-FAHRPLAN.md` § H.7**, **`docs/CHAT-PROTOKOLL-2026-03-28.md`** |

@@ -52,8 +52,6 @@
 
 ---
 
----
-
 ## Folge: `.env` per `postinstall`, SIGNER-Hinweis, Boss-Adressen (2026-03-28)
 
 **Anliegen:** Kein manuelles „`.env.example` → `.env` kopieren“; Kommentar bei **SIGNER** für PWA/Android; README/Doku; Klarstellung: **Boss legt Geräte-Adressen an** (eigene `MY_ADDRESS` pro Gerät), nicht dieselbe Adresse wie der Boss.
@@ -67,5 +65,28 @@
 | `.env.example` | Kommentare zu Boss-provisionierten Adressen + **PWA/Android → SIGNER=sdk**. |
 | `README.md` | `postinstall`, portable/prepare, Rollen-Absatz (Boss erzeugt Geräte-Adressen), §2 Konfiguration, PC2-Schritt 3. |
 | `docs/CONFIG-REFERENCE.md`, `docs/ENV-ERKLAERUNG.md` | SIGNER / erste `.env` ergänzt. |
+
+---
+
+## Folge: Standalone-Smartphone-Bundle, Einsatz-Abgabe, Fahrplan **H.7** (2026-03-28)
+
+**Anliegen:** Bundle soll **vollständige** `.env`-Vorlage + automatische **`.env`** nach `npm install` bieten (wie Hauptrepo). Protokoll: **Boss → Medium → Helfer** (Tester/Käufer). README/Fahrplan konsistent halten.
+
+**Ergebnis (technisch):**
+
+| Artefakt | Inhalt |
+|----------|--------|
+| `scripts/bundle-standalone-smartphone.ts` | Schreibt **`.env.example`** = komplette `/.env.example` des Hauptrepos + **PWA-Override-Block** am Ende; kopiert **`scripts/ensure-env.mjs`**; **`postinstall`** im Bundle-`package.json`. |
+| `exports/morgendrot-standalone-smartphone/` | Wird beim Bündeln erzeugt (Ordner oft **gitignored**); Nutzer: `npm run bundle:standalone-smartphone` neu bauen. |
+
+**Ergebnis (Prozess):**
+
+| Schritt | Hinweis |
+|---------|---------|
+| Boss | Bundle bauen, **`.env`** pro Einsatz/Kunde **manuell** anpassen (RPC, Package-IDs, Partner/Boss) — **keine** Seeds auf SD/USB. |
+| Helfer | `npm install`, ggf. `npm run build:next`; **Seed/Vault-Passwort nur auf dem Gerät**. |
+| Später | Optional **Boss-Export-Assistent** (ZIP + vorgefüllte `.env`) → **Fahrplan § H.7**. |
+
+**Doku:** `docs/ROADMAP-FAHRPLAN.md` (**§ B** Zeile Standalone, **§ H.7**), `README.md` (Einleitung + Skripttabelle `bundle:standalone-smartphone`).
 
 *Manuell gepflegt; bei weiteren Meilensteinen Datum oder neue Datei ergänzen.*
