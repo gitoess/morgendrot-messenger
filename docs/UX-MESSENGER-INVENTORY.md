@@ -2,7 +2,7 @@
 
 Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`docs/ROADMAP-FAHRPLAN.md` § H.0**).
 
-**Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`.
+**Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`. **Lite-UI:** `uiVariant` aus `/api/status` synchron mit Kachel-Auswahl (`dashboard.tsx` + `workspace-projects-panel.tsx`).
 
 ## 1. Login & Sicherheit (Entsperr-Dialog)
 
@@ -18,7 +18,8 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 |--------|------|-----|
 | **Rollen-Badge (Wanderer vs. Boss)** | **Chat-Header:** Zeile „Rolle: …“ (Wanderer/Boss/Kommandant/…) aus `role` | Dashboard weiterhin mit Rolle im Header; Einstellungen unverändert. |
 | **Mobile: Blasen / Sidebar** | Responsive Klassen an vielen Stellen; kein durchgängiger QA auf allen Geräten | Laufend testen; `max-w-*` / `min-w-0` bei Bedarf nachziehen. |
-| **Einfacher Modus: IOTA-Details ausblenden** | `workspaceTileSet === 'messenger'` filtert Kacheln; Package-ID-Banner existiert für Mismatch | **Sinn:** Messenger-Rolle: technische Hashes standardmäßig einklappen (nur auf Klick). |
+| **Einfacher Modus: IOTA-Details ausblenden** | `effectiveWorkspaceTileSet === 'messenger'` (inkl. Backend `uiVariant=messenger`) filtert Kacheln; Package-ID-Banner existiert für Mismatch | **Sinn:** Messenger-Rolle: technische Hashes standardmäßig einklappen (nur auf Klick). |
+| **`uiVariant` ↔ Arbeitsbereich** | Bei `uiVariant: 'messenger'` erzwingt das Dashboard **Messenger-Kacheln**; „Volldashboard“ ist deaktiviert; State + `localStorage` werden angeglichen | Kein Konflikt mehr zwischen altem `localStorage` und `UI_VARIANT=messenger`. |
 
 ## 3. Status („Wald-Check“)
 

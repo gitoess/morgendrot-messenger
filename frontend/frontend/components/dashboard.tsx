@@ -172,6 +172,16 @@ export function Dashboard() {
     setWorkspaceTileSet(readWorkspaceTileSet())
   }, [])
 
+  /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite darf nicht durch altes localStorage „full“ überschrieben werden. */
+  const liteMessengerFromApi = apiSnapshot?.backendRunning !== false && apiSnapshot?.uiVariant === 'messenger'
+  const effectiveWorkspaceTileSet: WorkspaceTileSet = liteMessengerFromApi ? 'messenger' : workspaceTileSet
+
+  useEffect(() => {
+    if (apiSnapshot?.uiVariant !== 'messenger') return
+    setWorkspaceTileSet('messenger')
+    writeWorkspaceTileSet('messenger')
+  }, [apiSnapshot?.uiVariant])
+
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
     writeShowAllTilesPref(value)
@@ -232,13 +242,14 @@ export function Dashboard() {
   }
 
   const setWorkspaceTileSetPersist = (v: WorkspaceTileSet) => {
+    if (liteMessengerFromApi && v === 'full') return
     setWorkspaceTileSet(v)
     writeWorkspaceTileSet(v)
   }
 
   const messengerPackIds = new Set<ProjectType>(['chat', 'vault'])
   const visibleFeatures =
-    workspaceTileSet === 'messenger' ? features.filter((f) => messengerPackIds.has(f.id)) : features
+    effectiveWorkspaceTileSet === 'messenger' ? features.filter((f) => messengerPackIds.has(f.id)) : features
 
   const handleBack = () => {
     setActiveView(null)
@@ -500,7 +511,7 @@ export function Dashboard() {
         )}
 
         {/* Boss/Kommandant: Geräte-Radar (nur Volldashboard – Messenger-Projekt wie Standalone schlanker) */}
-        {(role === 'boss' || role === 'kommandant') && workspaceTileSet === 'full' && (
+        {(role === 'boss' || role === 'kommandant') && effectiveWorkspaceTileSet === 'full' && (
           <div className="mb-8">
             <DeviceRadarView />
           </div>
@@ -509,8 +520,9 @@ export function Dashboard() {
         <WorkspaceProjectsPanel
           className="mb-8"
           apiStatus={apiSnapshot}
-          tileSet={workspaceTileSet}
+          tileSet={effectiveWorkspaceTileSet}
           onTileSetChange={setWorkspaceTileSetPersist}
+          liteUiEnforcedByBackend={liteMessengerFromApi}
         />
 
         {/* Kacheln: immer für Boss/Kommandant; für Arbeiter/Lock nur wenn showAllTiles */}

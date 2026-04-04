@@ -36,6 +36,11 @@ interface WorkspaceProjectsPanelProps {
   className?: string
   tileSet: WorkspaceTileSet
   onTileSetChange: (v: WorkspaceTileSet) => void
+  /**
+   * `true`: Backend liefert `uiVariant: 'messenger'` (UI_VARIANT=messenger) – Volldashboard ist am Server nicht vorgesehen;
+   * der Schalter „Volldashboard“ ist deaktiviert.
+   */
+  liteUiEnforcedByBackend?: boolean
 }
 
 export function WorkspaceProjectsPanel({
@@ -43,6 +48,7 @@ export function WorkspaceProjectsPanel({
   className,
   tileSet,
   onTileSetChange,
+  liteUiEnforcedByBackend = false,
 }: WorkspaceProjectsPanelProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const apiPort = apiStatus?.apiListenPort
@@ -70,12 +76,19 @@ export function WorkspaceProjectsPanel({
       <div className="mb-4 flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={liteUiEnforcedByBackend}
           onClick={() => onTileSetChange('full')}
+          title={
+            liteUiEnforcedByBackend
+              ? 'Backend: UI_VARIANT=messenger – nur Messenger-Kacheln (siehe /api/status).'
+              : undefined
+          }
           className={cn(
             'rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors',
             tileSet === 'full'
               ? 'border-primary bg-primary/10 text-foreground'
-              : 'border-border text-muted-foreground hover:bg-accent'
+              : 'border-border text-muted-foreground hover:bg-accent',
+            liteUiEnforcedByBackend && 'cursor-not-allowed opacity-50 hover:bg-transparent'
           )}
         >
           Volldashboard
@@ -93,6 +106,12 @@ export function WorkspaceProjectsPanel({
           Messenger-Projekt (Nachrichten + Tresor)
         </button>
       </div>
+      {liteUiEnforcedByBackend ? (
+        <p className="mb-3 text-[11px] leading-snug text-sky-600/90 dark:text-sky-300/90">
+          Arbeitsbereich folgt dem Backend: <span className="font-mono">UI_VARIANT=messenger</span> – dieselbe
+          Kachel-Auswahl wie die Lite-UI am API-Port.
+        </p>
+      ) : null}
 
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
         <strong className="text-foreground">Messenger-Projekt</strong> blendet dieselbe Kachel-Kombination ein
