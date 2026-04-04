@@ -71,6 +71,7 @@ import { verifyTinyHmac, processTinyMessage } from './tiny-gateway.js';
 import { extractCompactImageBase64FromWire } from './compact-image-wire-extract.js';
 import { fuseLoraProgressiveJpegsSharp, prepareImageForLoRa } from './lora-progressive-image.js';
 import archiver from 'archiver';
+import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from './shared/heartbeat-presets.js';
 import {
     vaultFileExists,
     loadVaultLocal,
@@ -358,7 +359,15 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 roleId?: number;
                 permissions?: HierarchyPermissions;
                 streams?: { active: boolean; anchorId?: string; anchorIdFull?: string };
-                heartbeat?: { enabled: boolean; intervalMs: number; streamsReady: boolean };
+                heartbeat?: {
+                    enabled: boolean;
+                    intervalMs: number;
+                    streamsReady: boolean;
+                    presetsMinutes?: number[];
+                    intervalMatchesPreset?: boolean;
+                };
+                /** Volle eigene Adresse (nur lokal/vertraut) – zum Kopieren für Explorer; myAddress bleibt maskiert. */
+                myAddressFull?: string;
                 serveLiteUiStatic?: boolean;
                 apiListenPort?: number;
                 dashboardPort?: number;
@@ -370,6 +379,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 connected: custom.connected ?? false,
                 hasKeys: custom.hasKeys,
                 myAddress: custom.myAddress ?? (CFG.MY_ADDRESS ? mask(CFG.MY_ADDRESS) : undefined),
+                /** Wie /api/current-ids – nach SDK-Unlock oft erst in process.env gesetzt. */
+                myAddressFull: (() => {
+                    const raw = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                    return raw || undefined;
+                })(),
                 partnerAddress: custom.partnerAddress ?? (CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS) : undefined),
                 partnerCount: custom.partnerCount,
                 connectedAddresses: custom.connectedAddresses,
@@ -388,6 +402,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     enabled: CFG.ENABLE_HEARTBEAT,
                     intervalMs: CFG.HEARTBEAT_INTERVAL_MS,
                     streamsReady: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
+                    presetsMinutes: HEARTBEAT_INTERVAL_PRESETS_MS.map((ms) => ms / 60_000),
+                    intervalMatchesPreset: isAllowedHeartbeatIntervalMs(CFG.HEARTBEAT_INTERVAL_MS),
                 },
                 vaultStatus: {
                     hasLocal: vaultFileExists(vaultFileResolved),
