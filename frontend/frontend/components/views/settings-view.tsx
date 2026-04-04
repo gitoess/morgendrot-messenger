@@ -13,10 +13,17 @@ import {
   Package,
   Wallet,
   Server,
+  Smartphone,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { getStatus, transferCoins, restartBackend } from '../../lib/api'
+
+/** Minimal typing for `beforeinstallprompt` (nicht überall als DOM-Typ geladen). */
+type DeferredPwaPrompt = {
+  prompt: () => Promise<void>
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
+}
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -50,6 +57,9 @@ export function SettingsView({
   const [transferMsg, setTransferMsg] = useState('')
   const [restarting, setRestarting] = useState(false)
   const [restartMsg, setRestartMsg] = useState('')
+  /** Chrome/Edge/Android: gespeichertes beforeinstallprompt */
+  const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(null)
+  const [pwaStandalone, setPwaStandalone] = useState(false)
 
   const loadStatus = async () => {
     setLoading(true)
@@ -62,6 +72,28 @@ export function SettingsView({
 
   useEffect(() => {
     loadStatus()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia('(display-mode: standalone)')
+    const syncStandalone = () => {
+      setPwaStandalone(
+        mq.matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+      )
+    }
+    syncStandalone()
+    mq.addEventListener('change', syncStandalone)
+
+    const onBeforeInstall = (e: Event) => {
+      e.preventDefault()
+      setDeferredPwaPrompt(e as unknown as DeferredPwaPrompt)
+    }
+    window.addEventListener('beforeinstallprompt', onBeforeInstall)
+    return () => {
+      mq.removeEventListener('change', syncStandalone)
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
+    }
   }, [])
 
   const copyToClipboard = (text: string, key: string) => {
@@ -112,6 +144,16 @@ export function SettingsView({
     return `${addr.slice(0, 10)}...${addr.slice(-8)}`
   }
 
+  const handlePwaInstallClick = async () => {
+    if (!deferredPwaPrompt) return
+    try {
+      await deferredPwaPrompt.prompt()
+      await deferredPwaPrompt.userChoice
+    } finally {
+      setDeferredPwaPrompt(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,6 +166,38 @@ export function SettingsView({
           <p className="text-sm text-muted-foreground">Netzwerk-Status und Konfiguration</p>
         </div>
       </div>
+
+      {/* PWA: zum Home-Bildschirm (Chrome/Edge/Android; Safari iOS: manuell) */}
+      {!pwaStandalone && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+              <Smartphone className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <h4 className="font-semibold text-foreground">App auf den Startbildschirm</h4>
+              <p className="text-sm text-muted-foreground">
+                Installierte PWAs starten ohne Browser-Leiste. Auf <strong className="text-foreground">iPhone/iPad</strong>{' '}
+                (Safari): Teilen-Menü → <strong className="text-foreground">Zum Home-Bildschirm</strong>.
+              </p>
+              {deferredPwaPrompt ? (
+                <button
+                  type="button"
+                  onClick={() => void handlePwaInstallClick()}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+                >
+                  Installation anbieten
+                </button>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Wenn der Browser eine Installation erlaubt (meist HTTPS oder localhost), erscheint hier ein Button –
+                  sonst Browser-Menü „App installieren“ nutzen.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Status Card */}
       <div className="rounded-xl border border-border bg-card">

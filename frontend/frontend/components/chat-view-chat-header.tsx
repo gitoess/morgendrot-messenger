@@ -8,6 +8,7 @@ import { Activity, Handshake, Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
+import { computeWaldConnectionTier, type WaldConnectionTier } from '@/frontend/lib/chat-wald-connection'
 
 export type ChatViewChatHeaderProps = {
   isPrivate: boolean
@@ -17,6 +18,39 @@ export type ChatViewChatHeaderProps = {
   apiStatus: ApiStatus | null
   /** Nach Änderung an Puls/Heartbeat Status neu laden. */
   onRefreshStatus?: () => void | Promise<void>
+  /** GET /api/status zuletzt fehlgeschlagen (Basis „offline“). */
+  basisUnreachable: boolean
+  /** Meshtastic Web-BT verbunden – Funkpfad für Wald-Blau. */
+  meshBleConnected: boolean
+  /** Aus /api/status / Chat-View (ROLE). */
+  role: string
+}
+
+function roleBadgeLabel(role: string): string {
+  const r = role.trim().toLowerCase()
+  if (r === 'boss') return 'Boss'
+  if (r === 'arbeiter') return 'Wanderer'
+  if (r === 'kommandant') return 'Kommandant'
+  if (r === 'lock') return 'Schloss'
+  if (r === 'monitor') return 'Monitor'
+  return role.trim() || '—'
+}
+
+function WaldCheckIndicator({ tier }: { tier: WaldConnectionTier }) {
+  const meta = {
+    green: { dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]', label: 'Basis (API) erreichbar' },
+    blue: { dot: 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.45)]', label: 'Basis offline – Funk (LoRa/Mesh) aktiv' },
+    red: { dot: 'bg-red-500', label: 'Keine Verbindung: weder Basis noch Funk' },
+  }[tier]
+  return (
+    <span
+      className="inline-flex max-w-[min(100%,11rem)] items-center gap-1.5 truncate rounded-full border border-border/60 bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground"
+      title={meta.label}
+    >
+      <span className={cn('h-2 w-2 shrink-0 rounded-full', meta.dot)} aria-hidden />
+      <span className="hidden sm:inline">Wald</span>
+    </span>
+  )
 }
 
 function formatHeartbeatIntervalMs(ms: number): string {
@@ -75,29 +109,50 @@ function MessengerPulseStatusLine({ apiStatus }: { apiStatus: ApiStatus }) {
 }
 
 export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
-  const { isPrivate, encrypted, showSetup, onToggleSetup, apiStatus, onRefreshStatus } = p
+  const {
+    isPrivate,
+    encrypted,
+    showSetup,
+    onToggleSetup,
+    apiStatus,
+    onRefreshStatus,
+    basisUnreachable,
+    meshBleConnected,
+    role,
+  } = p
+
+  const waldTier = computeWaldConnectionTier(basisUnreachable, meshBleConnected)
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <div
             className={cn(
-              'flex h-12 w-12 items-center justify-center rounded-xl',
+              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
               encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
             )}
           >
             {encrypted ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-foreground">{isPrivate ? 'Privater Chat' : 'Pinnwand'}</h2>
             <p className="text-sm text-muted-foreground">
               {encrypted ? 'Inhalt: ECDH + AES-GCM (Handshake-Keys)' : 'Unverschlüsselt (Klartext)'}
             </p>
+            {role.trim() ? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Rolle:{' '}
+                <span className="rounded-md bg-muted/80 px-1.5 py-0.5 font-medium text-foreground/90">
+                  {roleBadgeLabel(role)}
+                </span>
+              </p>
+            ) : null}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
+          <WaldCheckIndicator tier={waldTier} />
           {isPrivate && (
             <button
               type="button"

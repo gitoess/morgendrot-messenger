@@ -578,6 +578,19 @@ async function testPackageIdCompareFrontend() {
     }
 }
 
+async function testChatWaldConnection() {
+    console.log('\n--- chat-wald-connection (frontend) ---');
+    try {
+        const { computeWaldConnectionTier } = await import('../frontend/frontend/lib/chat-wald-connection.ts');
+        assert(computeWaldConnectionTier(false, false) === 'green', 'basis ok');
+        assert(computeWaldConnectionTier(true, true) === 'blue', 'basis weg, mesh da');
+        assert(computeWaldConnectionTier(true, false) === 'red', 'alles weg');
+        ok('computeWaldConnectionTier');
+    } catch (e) {
+        fail('chat-wald-connection', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -593,6 +606,7 @@ async function main() {
     await testCryptoLayer();
     await testMeshPeerWireRoundtrip();
     await testPackageIdCompareFrontend();
+    await testChatWaldConnection();
     await testVaultLocal();
     await testVaultImagePipeline();
     await testReplayState();

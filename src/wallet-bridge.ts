@@ -48,6 +48,12 @@ export { preFlightCheck, type PreFlightOptions } from './messenger-nest/messenge
 export type { FetchedMessage } from './messenger-nest/messenger-fetch.js';
 
 import { HELP_START, HELP_CHAT } from './messenger-nest/messenger-help.js';
+
+/** Nach fehlgeschlagener Vault-Entschlüsselung (ENABLE_UI): neuer Resolver – kein Terminal-Fallback (readline-sync blockiert auf Windows die Event-Loop → API tot). */
+async function awaitWalletPasswordAfterVaultFailureUi(): Promise<string> {
+    const { setPasswordResolver } = await import('./api-server.js');
+    return await new Promise<string>((resolve) => setPasswordResolver(resolve));
+}
 export { HELP_START, HELP_CHAT };
 import { createMessengerCommandHandler } from './messenger-nest/messenger-command-handler.js';
 import { isRebasedStorageEnabled } from './messenger-nest/messenger-fetch.js';
@@ -191,13 +197,11 @@ async function main() {
                     setPasswordResolver(resolve);
                 });
             }
-            try {
-                walletPassword = await Promise.race([
-                    uiWalletPasswordPromise,
-                    new Promise<string>((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 120_000)),
-                ]);
-            } catch {
-                walletPassword = await readPasswordMasked('Wallet-Passwort (für Vault / ggf. CLI): ');
+            // ENABLE_UI: nur /api/unlock – kein 120s-Timeout + readline-sync (blockiert auf Windows die Event-Loop → /api/status hängt, Next-Proxy ECONNRESET).
+            if ((process.env.WALLET_PASSWORD || '').trim()) {
+                walletPassword = (process.env.WALLET_PASSWORD || '').trim();
+            } else {
+                walletPassword = await uiWalletPasswordPromise;
             }
         }
         setWalletPassword(walletPassword);
@@ -215,28 +219,59 @@ async function main() {
         let usedKeysFromVault = false;
 
         if (hasLocalVaultFile) {
-            try {
-                const vaultBlob = await loadVaultContent(walletPassword, vaultPath);
-                myKeys = vaultBlob.keys;
-                vaultStateRef.current = {
-                    keys: myKeys,
-                    notes: vaultBlob.notes ?? '',
-                    personalSecrets: vaultBlob.personalSecrets ?? [],
-                };
-                if (CFG.SIGNER === 'sdk' && (vaultBlob.iotaSdkSignerImport || '').trim()) {
-                    applySdkSignerFromImport(vaultBlob.iotaSdkSignerImport!);
-                    MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
-                    logger.info('SDK-Signer aus Vault-Import geladen. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+            if (CFG.ENABLE_UI) {
+                let pw = walletPassword;
+                for (;;) {
+                    setWalletPassword(pw);
+                    walletPassword = pw;
+                    try {
+                        const vaultBlob = await loadVaultContent(pw, vaultPath);
+                        myKeys = vaultBlob.keys;
+                        vaultStateRef.current = {
+                            keys: myKeys,
+                            notes: vaultBlob.notes ?? '',
+                            personalSecrets: vaultBlob.personalSecrets ?? [],
+                        };
+                        if (CFG.SIGNER === 'sdk' && (vaultBlob.iotaSdkSignerImport || '').trim()) {
+                            applySdkSignerFromImport(vaultBlob.iotaSdkSignerImport!);
+                            MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+                            logger.info('SDK-Signer aus Vault-Import geladen. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+                        }
+                        break;
+                    } catch (e) {
+                        const msg = String((e as Error)?.message || e || '');
+                        logger.warn(
+                            'Vault-Entschlüsselung fehlgeschlagen: ' +
+                                (msg || 'unbekannter Fehler') +
+                                '. API bleibt gesperrt – erneut /api/unlock (oder nach Timeout CLI).'
+                        );
+                        clearWalletPassword();
+                        pw = await awaitWalletPasswordAfterVaultFailureUi();
+                    }
                 }
-            } catch (e) {
-                const msg = String((e as Error)?.message || e || '');
-                logger.error(
-                    'Vault-Entschlüsselung fehlgeschlagen: ' +
-                        (msg || 'unbekannter Fehler') +
-                        '. Bei Headless: WALLET_PASSWORD in .env prüfen oder interaktiv starten.'
-                );
-                if (!CFG.ENABLE_UI) process.exit(1);
-                throw e;
+            } else {
+                try {
+                    const vaultBlob = await loadVaultContent(walletPassword, vaultPath);
+                    myKeys = vaultBlob.keys;
+                    vaultStateRef.current = {
+                        keys: myKeys,
+                        notes: vaultBlob.notes ?? '',
+                        personalSecrets: vaultBlob.personalSecrets ?? [],
+                    };
+                    if (CFG.SIGNER === 'sdk' && (vaultBlob.iotaSdkSignerImport || '').trim()) {
+                        applySdkSignerFromImport(vaultBlob.iotaSdkSignerImport!);
+                        MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+                        logger.info('SDK-Signer aus Vault-Import geladen. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+                    }
+                } catch (e) {
+                    const msg = String((e as Error)?.message || e || '');
+                    logger.error(
+                        'Vault-Entschlüsselung fehlgeschlagen: ' +
+                            (msg || 'unbekannter Fehler') +
+                            '. Bei Headless: WALLET_PASSWORD in .env prüfen oder interaktiv starten.'
+                    );
+                    process.exit(1);
+                }
             }
             usedKeysFromVault = true;
             logger.info('Keys aus lokalem Vault geladen.');
@@ -257,17 +292,59 @@ async function main() {
         } else if (CFG.VAULT_REGISTRY_ID && CFG.PACKAGE_ID) {
             const enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);
             if (enc && enc.length > 0) {
-                const content = await loadVaultFromChainPayload(enc, walletPassword);
-                myKeys = content.keys;
-                vaultStateRef.current = {
-                    keys: content.keys,
-                    notes: content.notes,
-                    personalSecrets: content.personalSecrets ?? [],
-                };
-                if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
-                    applySdkSignerFromImport(content.iotaSdkSignerImport!);
-                    MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
-                    logger.info('SDK-Signer aus On-Chain-Vault-Import. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+                if (CFG.ENABLE_UI) {
+                    let pw = walletPassword;
+                    for (;;) {
+                        setWalletPassword(pw);
+                        walletPassword = pw;
+                        try {
+                            const content = await loadVaultFromChainPayload(enc, pw);
+                            myKeys = content.keys;
+                            vaultStateRef.current = {
+                                keys: content.keys,
+                                notes: content.notes,
+                                personalSecrets: content.personalSecrets ?? [],
+                            };
+                            if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
+                                applySdkSignerFromImport(content.iotaSdkSignerImport!);
+                                MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+                                logger.info('SDK-Signer aus On-Chain-Vault-Import. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+                            }
+                            break;
+                        } catch (e) {
+                            const msg = String((e as Error)?.message || e || '');
+                            logger.warn(
+                                'On-Chain-Vault-Entschlüsselung fehlgeschlagen: ' +
+                                    (msg || 'unbekannter Fehler') +
+                                    '. API bleibt gesperrt – erneut /api/unlock (oder nach Timeout CLI).'
+                            );
+                            clearWalletPassword();
+                            pw = await awaitWalletPasswordAfterVaultFailureUi();
+                        }
+                    }
+                } else {
+                    try {
+                        const content = await loadVaultFromChainPayload(enc, walletPassword);
+                        myKeys = content.keys;
+                        vaultStateRef.current = {
+                            keys: content.keys,
+                            notes: content.notes,
+                            personalSecrets: content.personalSecrets ?? [],
+                        };
+                        if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
+                            applySdkSignerFromImport(content.iotaSdkSignerImport!);
+                            MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+                            logger.info('SDK-Signer aus On-Chain-Vault-Import. Adresse: ' + MY_ADDR.slice(0, 14) + '…');
+                        }
+                    } catch (e) {
+                        const msg = String((e as Error)?.message || e || '');
+                        logger.error(
+                            'On-Chain-Vault-Entschlüsselung fehlgeschlagen: ' +
+                                (msg || 'unbekannter Fehler') +
+                                '. Bei Headless: WALLET_PASSWORD in .env prüfen.'
+                        );
+                        process.exit(1);
+                    }
                 }
                 usedKeysFromVault = true;
                 logger.info('Keys aus On-Chain-Vault geladen (kein lokales VAULT_FILE).');

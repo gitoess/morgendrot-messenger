@@ -102,6 +102,8 @@ export type ApiStatus = {
   compactImageEncode?: boolean
   /** Backend unterstützt POST /api/lora-progressive-encode (Mesh / zweiphasig). */
   loraProgressiveEncode?: boolean
+  /** cli | sdk | remote – für Entsperr-Dialog (z. B. Mnemonic-Zusatzfeld). */
+  signer?: string
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
   /** false: API-Port liefert keine statische ui/index.html. */
@@ -143,12 +145,18 @@ export async function fetchStatus(): Promise<ApiStatus & { error?: string }> {
   }
 }
 
-export async function unlockBackend(password: string): Promise<{ ok: boolean; error?: string }> {
+export async function unlockBackend(
+  password: string,
+  opts?: { sdkSignerImport?: string }
+): Promise<{ ok: boolean; error?: string }> {
   try {
+    const body: Record<string, string> = { password }
+    const extra = (opts?.sdkSignerImport ?? '').trim()
+    if (extra) body.sdkSignerImport = extra
     const response = await fetch(`${API_BASE}/api/unlock`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(body),
     })
     return await response.json()
   } catch (error) {

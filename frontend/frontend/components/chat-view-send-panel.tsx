@@ -22,11 +22,6 @@ export type ChatViewSendPanelProps = ChatViewAttachmentBarProps & {
   /** Delayed Upload: Marker im Klartext, Empfänger spiegelt per /send (nur Text-Mesh). */
   delayMirrorToIota: boolean
   onDelayMirrorToIotaChange: (v: boolean) => void
-  /** Wie Dateiauswahl: erste Datei in den Anhang (Bild / .txt / Opus je nach Rolle). */
-  ingestChatAttachmentFile: (
-    file: File,
-    opts?: { transportOverride?: ForcedTransport }
-  ) => Promise<void>
   encrypted: boolean
   recipient: string
   onRecipientChange: (v: string) => void
@@ -75,7 +70,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onSend,
     status,
     statusMsg,
-    ingestChatAttachmentFile,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -128,7 +122,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (dropDisabled) return
     const file = e.dataTransfer.files?.[0]
     if (!file) return
-    void ingestChatAttachmentFile(file)
+    void attachmentBarProps.ingestChatAttachmentFile(file)
   }
 
   const hasNoPayload =
@@ -219,7 +213,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           <label className="mb-1.5 block text-sm font-medium text-foreground">Deine Nachricht</label>
           <p className="mb-2 text-xs text-muted-foreground">
             Sprachmemo (max. {voiceMaxSeconds}s) und SOS-Sprache (max. {voiceEmergencyMaxSeconds}s). Datei hier
-            ablegen oder „Datei importieren“ – danach <span className="text-foreground/90">Senden</span>.
+            ablegen, <span className="text-foreground/90">Datei importieren</span> oder{' '}
+            <span className="text-foreground/90">Von Kamera</span> (Handy: Kamera-App, PC: Webcam) – danach{' '}
+            <span className="text-foreground/90">Senden</span>.
           </p>
           <ChatViewVoiceRecord
             slot="emergency"

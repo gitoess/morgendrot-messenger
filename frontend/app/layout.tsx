@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
+import { AppToaster } from '@/components/app-toaster'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -50,6 +51,7 @@ export default function RootLayout({
     <html lang="de">
       <body className="font-sans antialiased">
         <PwaServiceWorkerRegister />
+        <AppToaster />
         {children}
         <Analytics />
       </body>

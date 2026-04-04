@@ -6,7 +6,8 @@
  * (expliziter Posteingangs-Filter ≠ apiStatus.packageId).
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { toast } from 'sonner'
 import { fetchStatus, type ApiStatus } from '@/frontend/lib/api'
 import { shouldShowPackageIdMismatchBanner } from '@/frontend/lib/package-id-compare'
 
@@ -26,6 +27,19 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
   /** GET /api/status fehlgeschlagen (Netzwerk, Backend aus). */
   const [basisUnreachable, setBasisUnreachable] = useState(false)
+  /** Einmal Toast, wenn die Basis nach Ausfall wieder erreichbar ist. */
+  const hadBasisUnreachable = useRef(false)
+
+  useEffect(() => {
+    if (basisUnreachable) {
+      hadBasisUnreachable.current = true
+      return
+    }
+    if (hadBasisUnreachable.current) {
+      toast.success('Basis wieder erreichbar')
+      hadBasisUnreachable.current = false
+    }
+  }, [basisUnreachable])
 
   const refreshApiStatus = useCallback(async () => {
     const s = await fetchStatus()

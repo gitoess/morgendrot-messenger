@@ -42,6 +42,8 @@ Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DE
 
 ### Phase A – jetzt: Code-Qualität & Stabilität
 
+**Hinweis Reihenfolge:** Produkt-/Einsatz-UX (Messenger schlank, Entsperren, Rollen-Kacheln, Standalone-Abgabe) kann **vorgezogen** werden – siehe **`docs/ROADMAP-FAHRPLAN.md` § H.0** – ohne die technische Phase-A-Liste unten zu ersetzen.
+
 - **`chat-view.tsx`** (und nahe liegende Chat-Teile) **schrittweise** zerlegen; Zielbild: **deutlich unter ~1000 Zeilen** für die View, Logik in **Hooks** / **Hilfsmodulen** (z. B. **`use-chat-view-send-flow.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-inbox.ts`** (Mailbox-Fetch + Mesh-Merge), **`chat-view-attachment-bar.tsx`**, **`chat-view-send-panel.tsx`**, **`chat-view-setup-panel.tsx`**, **`chat-view-chat-header.tsx`**, **`chat-view-transport-card.tsx`**, **`chat-view-inbox-list.tsx`**, **`chat-view-inbox-toolbar.tsx`**, **`chat-view-inbox-panel.tsx`**). In **`chat-view-inbox-list.tsx`** ist kurz dokumentiert, welche Inbox-Teile **Meshtastic-nah** (Anzeige bereits zusammengeführter Nachrichten) vs. **Morgendrot** (MORG_*-Darstellung, Exporte) sind. **Prüfer-Übersicht** Messenger-Fähigkeiten: **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`**.
 - **Kein** großflächiges Löschen in **`exports/Morgendrot-Messenger-*`** – Quelle bleibt **`src/`** (siehe **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**).
 - Änderungen in **kleinen, reviewbaren** Schritten mit **`tsc`/Tests** nach jedem Schritt.

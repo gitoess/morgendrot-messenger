@@ -4,11 +4,27 @@
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
 **Stand:** 2026-03 / **aktualisiert 2026-03-28** (Standalone-Smartphone-Abgabe, `.env`-Automation Hauptrepo + Bundle; siehe **§ B**, **H.7**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
-**Nächste konkrete Schritte:** → **§ H** (§ I **nicht** parallel zu H.1 abarbeiten).
+
+**Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
+
+**Nächste konkrete Schritte:** → **§ H.0** (Produkt/UX), dann **§ H.1 ff.** (§ I **nicht** parallel zu technischer Phase-A-Robustheit abarbeiten).
 
 ---
 
-## A. 8-Punkte-Liste (Checkliste)
+## Gesamtüberblick (ein Bild)
+
+| Ebene | Inhalt |
+|--------|--------|
+| **Projektphasen** | **A** Code/Stabilität/Messenger-UI → **B** Mesh v2 + **Delayed LoRa → IOTA** (MVP) → **C** Gateway/Makros/erweiterte Custody (siehe **`PROJECT-FOCUS-AND-PRIORITIES.md`**) |
+| **LoRa / Funk** | Meshtastic-First; **§ A.7** Firmware; Phase-**B**-Kern: **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**; Inspiration LXMF: **`LORA-LXMF-RETICULUM-INSPIRATION.md`** (kein Stack-Wechsel) |
+| **8 technische Punkte** | **§ A** (Tabelle): Stabilität Medien, Export, Shadow-Sweep, `chat-view`, PWA, Fehler/Status, Heltec/LoRa, Kabel-Bridge |
+| **UX / Einsatz (neu Punkt 1)** | **§ H.0** – Wanderer/Lite, Kacheln nach Rolle, Unlock-/Seed-UX, Abgleich mit Standalone-Abgabe **H.7** |
+
+---
+
+## A. 8-Punkte-Liste (Checkliste, technisch)
+
+Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (Medien bis Kabel-Bridge). Die **Reihenfolge der Umsetzung** startet aber mit **Produkt/UX** (**§ H.0**).
 
 | # | Thema | Aufwand | Stand / Hinweis (2026-03) |
 |---|--------|---------|---------------------------|
@@ -41,9 +57,10 @@
 
 ### C.1 Pflichtpfad (größter Nutzen)
 
-1. **Phase A** – Stabilität, `chat-view`-Refactor, kleine Schritte, `tsc`/Tests.  
-2. **Phase B** – zuverlässiges Mesh v2, **Delayed LoRa → IOTA** (MVP laut Spec).  
-3. **Phase C / Macro-Epic** – erst danach: Gateway, Interpreter, Opcodes aus Spec (kein Parallel-Bau zu B).
+1. **Produkt/UX (Einsatz & Messenger)** – schlanke UI, verlässliches Entsperren, optional nur Messenger-Kacheln („Wanderer“), Seed/Passwort-UX wo nötig (**§ H.0**). *Vorziehen gegenüber rein technischer Feinarbeit, wenn Feldtest oder Handy-Abgabe drängt.*  
+2. **Phase A** (technisch) – Stabilität, `chat-view`, kleine Schritte, `tsc`/Tests (**§ H.1**).  
+3. **Phase B** – zuverlässiges Mesh v2, **Delayed LoRa → IOTA** (MVP laut Spec).  
+4. **Phase C / Macro-Epic** – erst danach: Gateway, Interpreter, Opcodes aus Spec (kein Parallel-Bau zu B).
 
 ### C.2 Schnelle Erfolge (**wenig Aufwand**, klarer Nutzen)
 
@@ -72,6 +89,7 @@
 - **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** – Wald↔Netz-Opcodes.  
 - **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** – Gateway, Interpreter.  
 - **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Package-ID-Banner, Abgleich mit `/api/status`).  
+- **`docs/UX-MESSENGER-INVENTORY.md`** – Abgleich Wunsch-UX (Login, Rollen, Wald-Check, PWA) vs. Ist  
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmungen inkl. Standalone-Abgabe, `.env`)  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
@@ -177,9 +195,23 @@ Kurzfassung für Partner- und Betriebstexte (ohne Marketing-Garantien):
 
 ## H. Nächste Arbeitspakete (**weiter im Fahrplan**)
 
-Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – ohne neue Großthemen dazwischen.
+Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Oberfläche) **vor** oder **parallel zu schmalen technischen Schritten** klären; **Phase A** technisch abschließen, dann **Phase B** (LoRa/IOTA-MVP) – ohne unnötige Großthemen dazwischen.
 
-### H.1 Jetzt – Phase A (Code-Qualität & Messenger-UI)
+### H.0 Jetzt zuerst – Produkt/UX (früher „später“, jetzt **Punkt 1**)
+
+| # | Paket | Hinweis |
+|---|--------|---------|
+| 1 | **Lite / Messenger-Modus** | `UI_VARIANT` / `workspaceTileSet` mit **`/api/status`** (`uiVariant`) an einem Ort führen – weniger „falsches“ Dashboard auf dem Handy. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`**. |
+| 2 | **„Wanderer“-Abgabe** | Bundle nur Messenger-Fluss (Kacheln reduziert), konsistent mit **H.7** Standalone-Smartphone. |
+| 3 | **Kacheln nach Rolle** | z. B. Boss: optional nur Steuerung + Nachrichten (kein Zwang zur Voll-Fläche); Umsetzung nur mit klarer Default-Policy. |
+| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). |
+| 5 | **PWA-Realität** | Installation „Zum Home-Bildschirm“, statische Shell offline – eng mit **§ A.5** / **H.2** verzahnen (kein Konflikt mit UX-1). |
+
+**Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert.
+
+*Abgrenzung:* Keine neuen **Macro-/Gateway**-Features hier – nur Bedienung, Sichtbarkeit, Rollen-UI und Einsatz-Abgabe.
+
+### H.1 Phase A – Code-Qualität & Messenger-UI (technisch)
 
 | # | Paket | Hinweis |
 |---|--------|---------|

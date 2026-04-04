@@ -90,3 +90,21 @@
 **Doku:** `docs/ROADMAP-FAHRPLAN.md` (**§ B** Zeile Standalone, **§ H.7**), `README.md` (Einleitung + Skripttabelle `bundle:standalone-smartphone`).
 
 *Manuell gepflegt; bei weiteren Meilensteinen Datum oder neue Datei ergänzen.*
+
+---
+
+## Nachtrag (2026-03-28) – UX-Schritt, Tests, Doku
+
+**Anliegen:** Schrittweise UX aus **`docs/UX-MESSENGER-INVENTORY.md`** / **§ H.0** umsetzen; Stabilität wahren; testen; README & Protokoll aktualisieren.
+
+**Umgesetzt:**
+
+| Thema | Pfad / Hinweis |
+|--------|----------------|
+| Wald-Check (grün/blau/rot) | `frontend/frontend/lib/chat-wald-connection.ts`, Anzeige in `chat-view-chat-header.tsx` |
+| Rollenzeile im Chat | „Rolle: Wanderer/Boss/…“ unter dem Titel |
+| Toast bei Basis-Wiederherstellung | `use-chat-view-api-status-poll.ts` + `sonner`, `components/app-toaster.tsx`, `app/layout.tsx` |
+| Modultest | `scripts/run-tests.ts` → `computeWaldConnectionTier` |
+| Doku | `docs/UX-MESSENGER-INVENTORY.md`, `README.md` (Verweis UX) |
+
+**Tests:** `npx tsc` (Root + `frontend/`), `npm run validate:ui`, `npm run test` (Modultests).

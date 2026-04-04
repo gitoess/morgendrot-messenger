@@ -157,6 +157,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onToggleSetup={toggleShowSetup}
         apiStatus={apiStatus}
         onRefreshStatus={refreshApiStatus}
+        basisUnreachable={basisUnreachable}
+        meshBleConnected={meshtastic.connected}
+        role={role}
       />
 
       {isPrivate ? (

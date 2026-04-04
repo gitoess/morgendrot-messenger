@@ -1,9 +1,13 @@
 'use client'
 
 import type { ChangeEvent, RefObject } from 'react'
-import { RefreshCw, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
+import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { prefersFileCameraCapture } from '@/frontend/lib/device-detect'
+import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-webcam-capture-dialog'
 
 export type ChatViewAttachmentBarProps = {
   compactFileRef: RefObject<HTMLInputElement | null>
@@ -12,6 +16,8 @@ export type ChatViewAttachmentBarProps = {
   /** z. B. während Sprachaufnahme / Kodierung */
   pickDisabled?: boolean
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
+  /** Gleiche Pipeline wie Datei-Import (Bild → Kompakt/LoRa). */
+  ingestChatAttachmentFile: (file: File, opts?: { transportOverride?: ForcedTransport }) => Promise<void>
   compactMeta: {
     total: number
     luma: number
@@ -35,6 +41,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     sending,
     pickDisabled = false,
     onFileChange,
+    ingestChatAttachmentFile,
     compactMeta,
     attachedBlobBase64,
     attachedLora,
@@ -44,6 +51,17 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     compactPreviewUrl,
     loraPreviewUrl,
   } = p
+
+  const cameraCaptureRef = useRef<HTMLInputElement>(null)
+  const [webcamOpen, setWebcamOpen] = useState(false)
+
+  const openCameraImport = () => {
+    if (prefersFileCameraCapture()) {
+      cameraCaptureRef.current?.click()
+    } else {
+      setWebcamOpen(true)
+    }
+  }
 
   const hasAnyAttachment =
     attachedBlobBase64 != null ||
@@ -60,6 +78,19 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         className="hidden"
         onChange={onFileChange}
       />
+      <input
+        ref={cameraCaptureRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={onFileChange}
+      />
+      <ChatViewWebcamCaptureDialog
+        open={webcamOpen}
+        onOpenChange={setWebcamOpen}
+        onCapture={(file) => ingestChatAttachmentFile(file)}
+      />
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -74,6 +105,20 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
             <Upload className="h-3.5 w-3.5" aria-hidden />
           )}
           {compactBusy ? 'Anhang wird vorbereitet…' : 'Datei importieren'}
+        </button>
+        <button
+          type="button"
+          disabled={compactBusy || sending || pickDisabled}
+          onClick={openCameraImport}
+          title={
+            prefersFileCameraCapture()
+              ? 'Kamera-App (Handy/Tablet): Foto aufnehmen und als Bild-Anhang laden.'
+              : 'Webcam: Foto aufnehmen und als Bild-Anhang laden.'
+          }
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
+        >
+          <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          Von Kamera
         </button>
         {compactMeta && attachedBlobBase64 && (
           <span className="text-xs text-muted-foreground">

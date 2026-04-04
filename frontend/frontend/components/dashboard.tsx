@@ -46,6 +46,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 interface Feature {
   id: ProjectType
@@ -152,6 +153,8 @@ export function Dashboard() {
   const [locked, setLocked] = useState(false)
   const [backendReachable, setBackendReachable] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
+  /** Zusatz zu POST /api/unlock bei SIGNER=sdk (Mnemonic / Bech32), wenn nicht im Vault. */
+  const [signerImport, setSignerImport] = useState('')
   const [unlockError, setUnlockError] = useState('')
   const [unlocking, setUnlocking] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -200,10 +203,11 @@ export function Dashboard() {
   const handleUnlock = async () => {
     setUnlockError('')
     setUnlocking(true)
-    const res = await unlockBackend(password)
+    const res = await unlockBackend(password, { sdkSignerImport: signerImport })
     setUnlocking(false)
     if (res.ok) {
       setPassword('')
+      setSignerImport('')
       setLocked(false)
       await checkStatus()
       // Backend braucht ggf. etwas Zeit für Wallet – mehrfach Status holen
@@ -248,9 +252,88 @@ export function Dashboard() {
     setHelpLoading(false)
   }
 
-  // Render active view
-  if (activeView) {
-    return (
+  const meshPathMode: MeshPathMode =
+    backendReachable === false
+      ? 'offline'
+      : rpcProxyActive || process.env.NEXT_PUBLIC_PRIVACY_TOR === '1'
+        ? 'tor'
+        : 'internet'
+
+  const sharedDialogs = (
+    <>
+      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Hilfe
+            </DialogTitle>
+            <DialogDescription>Befehle und Ablauf – vom Backend</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded-lg border border-border bg-muted/30 p-4 text-sm whitespace-pre-wrap font-mono">
+            {helpLoading ? (
+              <span className="text-muted-foreground">Lade…</span>
+            ) : (
+              helpText
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={locked} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md z-[200]"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => locked && e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle>Wallet entsperren</DialogTitle>
+            <DialogDescription>
+              Tresor-Passwort (lokal ans Backend). Bei SIGNER=sdk ggf. Mnemonic oder Bech32-Secret zusätzlich unten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="wallet-password">Passwort</Label>
+              <Input
+                id="wallet-password"
+                type="password"
+                placeholder="Passwort eingeben"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
+                autoComplete="current-password"
+              />
+            </div>
+            {apiSnapshot?.signer === 'sdk' && (
+              <div className="space-y-2">
+                <Label htmlFor="wallet-signer-import">Mnemonic / Bech32-Secret (optional, falls nicht im Vault)</Label>
+                <Textarea
+                  id="wallet-signer-import"
+                  placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
+                  value={signerImport}
+                  onChange={(e) => setSignerImport(e.target.value)}
+                  className="min-h-[88px] font-mono text-xs"
+                  autoComplete="off"
+                />
+              </div>
+            )}
+            {unlockError && (
+              <p className="text-sm text-destructive">{unlockError}</p>
+            )}
+            <Button onClick={handleUnlock} disabled={unlocking || !password.trim()} className="w-full">
+              {unlocking ? 'Wird entsperrt…' : 'Entsperren'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+
+  return (
+    <>
+      {sharedDialogs}
+      {activeView ? (
       <div className="min-h-screen bg-background">
         {/* Slim Header */}
         <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
@@ -301,71 +384,8 @@ export function Dashboard() {
           )}
         </main>
       </div>
-    )
-  }
-
-  const meshPathMode: MeshPathMode =
-    backendReachable === false
-      ? 'offline'
-      : rpcProxyActive || process.env.NEXT_PUBLIC_PRIVACY_TOR === '1'
-        ? 'tor'
-        : 'internet'
-
-  // Main Dashboard
-  return (
+      ) : (
     <div className="min-h-screen bg-background">
-      {/* Help-Dialog (?) */}
-      <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5" />
-              Hilfe
-            </DialogTitle>
-            <DialogDescription>Befehle und Ablauf – vom Backend</DialogDescription>
-          </DialogHeader>
-          <div className="flex-1 overflow-auto rounded-lg border border-border bg-muted/30 p-4 text-sm whitespace-pre-wrap font-mono">
-            {helpLoading ? (
-              <span className="text-muted-foreground">Lade…</span>
-            ) : (
-              helpText
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Passwort-Dialog wenn Backend gesperrt */}
-      <Dialog open={locked} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle>Wallet-Passwort</DialogTitle>
-            <DialogDescription>
-              Das Backend wartet auf das Wallet-Passwort (Vault/CLI-Signatur). Nur lokal, wird nicht übertragen.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="wallet-password">Passwort</Label>
-              <Input
-                id="wallet-password"
-                type="password"
-                placeholder="Passwort eingeben"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                autoComplete="current-password"
-              />
-            </div>
-            {unlockError && (
-              <p className="text-sm text-destructive">{unlockError}</p>
-            )}
-            <Button onClick={handleUnlock} disabled={unlocking || !password.trim()} className="w-full">
-              {unlocking ? 'Wird entsperrt…' : 'Entsperren'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
       {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
@@ -570,5 +590,7 @@ export function Dashboard() {
         )}
       </main>
     </div>
+      )}
+    </>
   )
 }
