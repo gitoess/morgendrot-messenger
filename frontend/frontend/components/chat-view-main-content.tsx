@@ -36,6 +36,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     bossView,
     setBossView,
     apiStatus,
+    refreshApiStatus,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,
@@ -145,6 +146,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         showSetup={showSetup}
         onToggleSetup={toggleShowSetup}
         apiStatus={apiStatus}
+        onRefreshStatus={refreshApiStatus}
       />
 
       <ChatViewTransportCard

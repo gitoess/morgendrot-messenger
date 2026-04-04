@@ -298,6 +298,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     blocked: sending || compactBusy,
   })
 
+  const refreshApiStatus = useCallback(async () => {
+    const s = await fetchStatus()
+    if (!s.error) setApiStatus(s)
+  }, [])
+
   useEffect(() => {
     let alive = true
     const tick = async () => {
@@ -862,6 +867,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     bossView,
     setBossView,
     apiStatus,
+    refreshApiStatus,
     mirrorQueuePending,
     inboxPackageFilter,
     setInboxPackageFilter,

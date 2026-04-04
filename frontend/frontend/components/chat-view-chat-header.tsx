@@ -7,6 +7,7 @@
 import { Activity, Handshake, Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
+import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
 
 export type ChatViewChatHeaderProps = {
   isPrivate: boolean
@@ -14,6 +15,8 @@ export type ChatViewChatHeaderProps = {
   showSetup: boolean
   onToggleSetup: () => void
   apiStatus: ApiStatus | null
+  /** Nach Änderung an Puls/Heartbeat Status neu laden. */
+  onRefreshStatus?: () => void | Promise<void>
 }
 
 function formatHeartbeatIntervalMs(ms: number): string {
@@ -72,7 +75,7 @@ function MessengerPulseStatusLine({ apiStatus }: { apiStatus: ApiStatus }) {
 }
 
 export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
-  const { isPrivate, encrypted, showSetup, onToggleSetup, apiStatus } = p
+  const { isPrivate, encrypted, showSetup, onToggleSetup, apiStatus, onRefreshStatus } = p
 
   return (
     <>
@@ -114,6 +117,10 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
       </div>
 
       {isPrivate && apiStatus && <MessengerPulseStatusLine apiStatus={apiStatus} />}
+
+      {isPrivate && apiStatus && (
+        <ChatViewPulseSettings apiStatus={apiStatus} onApplied={onRefreshStatus} />
+      )}
 
       {isPrivate && apiStatus?.locked === true && (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">

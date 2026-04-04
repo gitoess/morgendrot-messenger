@@ -15,6 +15,7 @@ import {
     ensureStreamsAnchorIdInHistory,
 } from '../config.js';
 import { normalizeAddress } from '../utils.js';
+import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../shared/heartbeat-presets.js';
 import {
     getClient,
     getVaultFromChain,
@@ -476,10 +477,35 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/set-heartbeat-interval') {
                         const ms = parseInt(String(a[0]).trim(), 10);
-                        if (Number.isNaN(ms) || ms < 10000) return { ok: false, message: 'Intervall muss >= 10000 ms sein.' };
+                        if (Number.isNaN(ms) || !isAllowedHeartbeatIntervalMs(ms)) {
+                            const labels = HEARTBEAT_INTERVAL_PRESETS_MS.map((x) => `${x / 60_000} min`).join(', ');
+                            return {
+                                ok: false,
+                                message: `Intervall muss ein Preset sein (${labels}). Werte in Millisekunden: ${HEARTBEAT_INTERVAL_PRESETS_MS.join(', ')}.`,
+                            };
+                        }
                         setEnvKey('HEARTBEAT_INTERVAL_MS', String(ms));
                         (CFG as { HEARTBEAT_INTERVAL_MS: number }).HEARTBEAT_INTERVAL_MS = ms;
-                        return { ok: true, message: `Heartbeat-Intervall auf ${ms} ms gesetzt. Wird beim nächsten Takt angewendet.` };
+                        return {
+                            ok: true,
+                            message: `Heartbeat-Intervall auf ${ms / 60_000} min (${ms} ms) gesetzt. Wird beim nächsten Takt angewendet.`,
+                        };
+                    }
+                    if (c === '/set-heartbeat-enabled') {
+                        const v = String(a[0] ?? '').trim().toLowerCase();
+                        const on = v === 'true' || v === '1' || v === 'on' || v === 'ja';
+                        const off = v === 'false' || v === '0' || v === 'off' || v === 'aus';
+                        if (!on && !off) {
+                            return { ok: false, message: 'Nutzung: /set-heartbeat-enabled true|false (Puls an/aus).' };
+                        }
+                        setEnvKey('ENABLE_HEARTBEAT', on ? 'true' : 'false');
+                        (CFG as { ENABLE_HEARTBEAT: boolean }).ENABLE_HEARTBEAT = on;
+                        return {
+                            ok: true,
+                            message: on
+                                ? 'Heartbeat (Puls) aktiviert – Intervall wie konfiguriert.'
+                                : 'Heartbeat (Puls) aus – Funkstille bis wieder aktiviert.',
+                        };
                     }
                     if (c === '/streams-create') {
                         const bridgeUrl = getStreamsBridgeUrlForFetch();

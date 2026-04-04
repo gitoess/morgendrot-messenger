@@ -116,7 +116,17 @@ export type ApiStatus = {
   /** Streams-Kanal für Heartbeat/Puls (GET /api/status). */
   streams?: { active: boolean; anchorId?: string; anchorIdFull?: string }
   /** Konfiguration Heartbeat (ENABLE_HEARTBEAT, Intervall) – Senden braucht S-Bit, siehe UI. */
-  heartbeat?: { enabled: boolean; intervalMs: number; streamsReady: boolean }
+  heartbeat?: {
+    enabled: boolean
+    intervalMs: number
+    streamsReady: boolean
+    /** Feste Minuten-Presets (Server): 1, 5, 15, 30, 60. */
+    presetsMinutes?: number[]
+    /** false: .env-Intervall passt zu keinem Preset – in der UI ein Preset wählen. */
+    intervalMatchesPreset?: boolean
+  }
+  /** Volle eigene IOTA-Adresse (Explorer) – nur vertrauenswürdiges UI; myAddress bleibt maskiert. */
+  myAddressFull?: string
 }
 
 export async function fetchStatus(): Promise<ApiStatus & { error?: string }> {
@@ -422,6 +432,9 @@ export const sendHeartbeat = () =>
 
 export const setHeartbeatInterval = (ms: number) =>
   executeCommand('/set-heartbeat-interval', [ms])
+
+export const setHeartbeatEnabled = (enabled: boolean) =>
+  executeCommand('/set-heartbeat-enabled', [enabled ? 'true' : 'false'])
 
 /** Strukturierte Geheimnisse im Vault-Payload (AES-GCM wie Messaging-Keys). */
 export type PersonalSecretEntry = {

@@ -3,6 +3,7 @@
  * Optional: Lock sendet Heartbeat/Sensor via Streams; Monitor prüft Timeout und Temperatur.
  */
 import { CFG } from './config.js';
+import { HEARTBEAT_INTERVAL_MIN_MS } from './shared/heartbeat-presets.js';
 import { logger } from './logger.js';
 import { appendAuditEvent } from './audit-log.js';
 import { getStreamsAdapter } from './streams-adapter.js';
@@ -42,11 +43,11 @@ export function sendHeartbeat(deviceId: string, transport: HeartbeatTransport = 
 /** Startet Heartbeat-Loop (Lock). Nutzt setTimeout-Chain; Intervall wird bei jedem Takt aus CFG gelesen (kein Neustart nötig). */
 export function startHeartbeatLoop(deviceId: string): void {
     if (!CFG.ENABLE_HEARTBEAT || !CFG.STREAMS_ANCHOR_ID) return;
-    const ms = Math.max(10_000, CFG.HEARTBEAT_INTERVAL_MS);
+    const ms = Math.max(HEARTBEAT_INTERVAL_MIN_MS, CFG.HEARTBEAT_INTERVAL_MS);
     logger.info(`Heartbeat aktiv: alle ${ms / 1_000}s via Streams (feeless).`);
     sendHeartbeat(deviceId);
     const schedule = () => {
-        const nextMs = Math.max(10_000, CFG.HEARTBEAT_INTERVAL_MS);
+        const nextMs = Math.max(HEARTBEAT_INTERVAL_MIN_MS, CFG.HEARTBEAT_INTERVAL_MS);
         setTimeout(async () => {
             try { sendHeartbeat(deviceId); } catch {}
             schedule();

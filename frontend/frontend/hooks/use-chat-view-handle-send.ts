@@ -17,6 +17,16 @@ import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-s
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'
 
+/** UI: „IDs & Puls“ → Strikt ohne Funk-Fallback bei Online-Versand. */
+function readStrictOnlineNoMeshFallback(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem('morgendrot.strictOnlineNoMeshFallback') === '1'
+  } catch {
+    return false
+  }
+}
+
 function applyValidationError(
   v: { ok: false; message: string; idleMs?: number },
   setStatus: UseChatViewSendFlowParams['setStatus'],
@@ -275,7 +285,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const res = await sendEncryptedMessageWithTimeout(textSnap)
         if (res.ok) return { ok: true }
         const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
-        if (meshtastic.connected) {
+        if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
           try {
             await sendMeshBurst(textSnap)
             return { ok: true, meshFallback: { onlineErr } }
@@ -289,7 +299,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         setStatus('error')
         setStatusMsg(
-          `${onlineErr} Kein Funk (Heltec) verbunden – „funk“ wählen und koppeln oder Online-Fehler beheben (Wallet, Connect, RPC).`
+          readStrictOnlineNoMeshFallback() && meshtastic.connected
+            ? `${onlineErr} „Strikt ohne Funk-Fallback“ aktiv – nur Online oder Transport auf „funk“ stellen.`
+            : `${onlineErr} Kein Funk (Heltec) verbunden – „funk“ wählen und koppeln oder Online-Fehler beheben (Wallet, Connect, RPC).`
         )
         return { ok: false }
       }
