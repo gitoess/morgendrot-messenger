@@ -6,12 +6,7 @@
  */
 
 import { useState, useCallback, useRef, useMemo } from 'react'
-import {
-  meshDecryptV2Wire,
-  startHandshake,
-  connect,
-  fetchAllInboxMessagesForExport,
-} from '@/frontend/lib/api'
+import { meshDecryptV2Wire, fetchAllInboxMessagesForExport } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/lib/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/lib/chat-view-inbox-rows'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
@@ -30,6 +25,7 @@ import {
   useChatViewPackageFilterState,
   useChatViewPackageIdCommands,
 } from '@/frontend/hooks/use-chat-view-package-id'
+import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-connection-actions'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -271,49 +267,21 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     delayMirrorToIota,
   })
 
-  const handleHandshake = useCallback(async () => {
-    if (!partner.trim()) return
-    setSending(true)
-    const res = await startHandshake(partner)
-    if (res.ok) {
-      setStatus('success')
-      setStatusMsg('Handshake gestartet!')
-      setShowSetup(false)
-    } else {
-      setStatus('error')
-      setStatusMsg(res.error || 'Fehler')
-    }
-    setSending(false)
-    setTimeout(() => setStatus('idle'), 3000)
-  }, [partner])
-
-  const handleConnect = useCallback(async () => {
-    setSending(true)
-    const res = await connect()
-    if (res.ok) {
-      setStatus('success')
-      setStatusMsg('Verbunden!')
-    } else {
-      setStatus('error')
-      setStatusMsg(res.error || 'Fehler')
-    }
-    setSending(false)
-    setTimeout(() => setStatus('idle'), 3000)
-  }, [])
-
-  const dismissLoraOnlineFallback = useCallback(() => {
-    setLoraOnlineFallbackOffer(null)
-    loraOnlineOfferPayloadRef.current = null
-    setStatus('idle')
-  }, [loraOnlineOfferPayloadRef, setLoraOnlineFallbackOffer])
-
-  const toggleShowSetup = useCallback(() => {
-    setShowSetup((s) => !s)
-  }, [])
-
-  const openPartnerSetupPanel = useCallback(() => {
-    setShowSetup(true)
-  }, [])
+  const {
+    handleHandshake,
+    handleConnect,
+    dismissLoraOnlineFallback,
+    toggleShowSetup,
+    openPartnerSetupPanel,
+  } = useChatViewConnectionActions({
+    partner,
+    setSending,
+    setStatus,
+    setStatusMsg,
+    setShowSetup,
+    setLoraOnlineFallbackOffer,
+    loraOnlineOfferPayloadRef,
+  })
 
   const {
     refreshPackageIdSuggestions,
