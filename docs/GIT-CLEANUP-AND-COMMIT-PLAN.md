@@ -31,7 +31,7 @@
 | Thema | Empfehlung |
 |--------|------------|
 | **`use-chat-view-core.ts` (~900+ Zeilen)** | **Nicht** wieder mit `chat-view.tsx` verschmelzen. Besser: **weitere** Extraktion in Hooks/Module (weitere Iterationen laut Fahrplan **H.1**). |
-| **Shadow-Sweep** (`chat-view-shadow-sweep-placeholder.tsx` in Setup) | **Platzhalter** bis echte Next-UI-Integration – kann **Inhalt/Text** vereinfacht werden; **löschen** nur wenn Produkt „Shadow-Sweep“ offiziell streicht. |
+| **Shadow-Sweep** (`chat-view-shadow-sweep.tsx` im Setup-Panel) | **Umgesetzt** – POST `/api/shadow-sweep`; UX/Text weiter verfeinern nach Bedarf. |
 | **Doppelte Kopien unter `exports/`** | In **`.gitignore`** (Standalone-Bundle) – **nicht** manuell pflegen; bei Release **`npm run bundle:…`** laut README. |
 | **LXMF/Macro-Doks** | Nur Text – kein Laufzeit-Overhead; **behalten**. |
 

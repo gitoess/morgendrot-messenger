@@ -16,7 +16,7 @@ import {
 } from '@/frontend/lib/api'
 import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import type { Message } from '@/frontend/lib/types'
-import { ChatViewShadowSweepPlaceholder } from '@/frontend/components/chat-view-shadow-sweep-placeholder'
+import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 
 export type ChatViewSetupPanelMeshtastic = {
   bleSupported: boolean
@@ -130,7 +130,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           </div>
         </div>
       )}
-      <ChatViewShadowSweepPlaceholder />
+      <ChatViewShadowSweep />
       <div className="mb-4 rounded-lg border border-border bg-muted/15 px-3 py-3">
         <p className="mb-2 text-xs font-semibold text-foreground">Package-ID (Mailbox / Deploy)</p>
         <p className="mb-2 text-[11px] leading-relaxed text-muted-foreground">

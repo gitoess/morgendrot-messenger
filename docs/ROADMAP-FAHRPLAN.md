@@ -13,7 +13,7 @@
 |---|--------|---------|---------------------------|
 | 1 | Stabilität Bild + Audio | — | Basis; bei Änderungen testen. |
 | 2 | Einsatzprotokoll / Export (ZIP) | Mittel | **Erledigt:** vollständiger Posteingang, ZIP, `.zip.enc.json`, Decrypt-Seite → **`docs/EINSATZBERICHT-EXPORT.md`**. |
-| 3 | Shadow-Sweep in Next-UI | Mittel | Offen. |
+| 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
 | 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | Laufend (Phase A). |
 | 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | Offen; `npm run bundle:standalone-smartphone`. |
 | 6 | Fehlerbehandlung / Status | Mittel | Laufend. |
@@ -129,9 +129,9 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | Priorität | # | Thema |
 |-----------|---|--------|
-| 1 | **3** | **Shadow-Sweep** in Next-UI (mittel) – wenn Phase-A-Refactor nicht blockiert. |
-| 2 | **5** | **PWA-Grundlage** (Manifest, Service Worker), ggf. mit `bundle:standalone-smartphone` abstimmen. |
-| 3 | **6** | Fehlermeldungen/Status überall konsistent (laufend). |
+| 1 | **5** | **PWA-Grundlage** (Manifest, Service Worker), ggf. mit `bundle:standalone-smartphone` abstimmen. |
+| 2 | **6** | Fehlermeldungen/Status konsistent (laufend). |
+| 3 | **8** | **Kabel-Bridge** (hoch, spec-nah) – siehe §A.8; Backlog, nicht parallel zu Phase-B-Kern. |
 
 ### H.3 Phase B – wenn A „genug“ stabil ist
 
