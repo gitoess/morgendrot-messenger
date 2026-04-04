@@ -13,7 +13,6 @@ import {
   fetchStatus,
   fetchPackageIdHistory,
   setPackageIdCommand,
-  sendEncryptedMessageWithTimeout,
   purgeMailboxMessage,
   fetchAllInboxMessagesForExport,
   type ApiStatus,
@@ -29,14 +28,7 @@ import { useChatViewVoiceRecord } from '@/frontend/hooks/use-chat-view-voice-rec
 import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
 import type { Message } from '@/frontend/lib/types'
 import { useChatViewEinsatzExports } from '@/frontend/hooks/use-chat-view-einsatz-exports'
-import {
-  drainMirrorQueue,
-  enqueueMirrorFailure,
-  getMirrorQueueCount,
-  hasMirrorQueuePending,
-  mirrorPayloadFromWireBody,
-  mirrorQueueDedupKey,
-} from '@/frontend/lib/delayed-mirror-queue'
+import { useChatViewMirrorDelay } from '@/frontend/hooks/use-chat-view-mirror-delay'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -121,10 +113,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
   })
-  const mirrorDedupRef = useRef(new Set<string>())
-  const mirrorDrainInFlightRef = useRef(false)
-  /** Anzahl ausstehender IOTA-Mirror-Einträge (LoRa→Chain, localStorage). */
-  const [mirrorQueuePending, setMirrorQueuePending] = useState(0)
+  const { mirrorQueuePending, runMirrorDrain, onDelayMirrorPlaintext } = useChatViewMirrorDelay({
+    loadMessages,
+    setStatus,
+    setStatusMsg,
+  })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -133,11 +126,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       if (h) setHiddenInboxIds(new Set(JSON.parse(h) as string[]))
       const p = sessionStorage.getItem('morg.protokoll.marked.ids')
       if (p) setProtokollMarkedIds(new Set(JSON.parse(p) as string[]))
-    } catch {
-      /* ignore */
-    }
-    try {
-      setMirrorQueuePending(getMirrorQueueCount())
     } catch {
       /* ignore */
     }
@@ -153,81 +141,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     const r = await meshDecryptV2Wire(senderAddress, uint8ArrayToBase64(fullWire))
     return r.ok && r.text ? r.text : null
   }, [])
-
-  const runMirrorDrain = useCallback(async () => {
-    if (mirrorDrainInFlightRef.current) return
-    const s = await fetchStatus()
-    if (s.error || s.backendRunning === false || s.locked) return
-    if (getMirrorQueueCount() === 0) return
-    mirrorDrainInFlightRef.current = true
-    try {
-      const r = await drainMirrorQueue(
-        async (payload) => {
-          const res = await sendEncryptedMessageWithTimeout(payload)
-          const err = res.error || (res as { message?: string }).message
-          return { ok: res.ok === true, error: typeof err === 'string' ? err : undefined }
-        },
-        (item) => {
-          mirrorDedupRef.current.add(mirrorQueueDedupKey(item.fromAddress, item.wireBody))
-        }
-      )
-      setMirrorQueuePending(r.remaining)
-      if (r.sent > 0) {
-        setStatus('success')
-        setStatusMsg(
-          r.sent === 1
-            ? 'Delayed Upload: 1 Eintrag aus Warteschlange nach IOTA übertragen.'
-            : `Delayed Upload: ${r.sent} Einträge aus Warteschlange nach IOTA übertragen.`
-        )
-        setTimeout(() => setStatus('idle'), 6000)
-        void loadMessages()
-      }
-    } finally {
-      mirrorDrainInFlightRef.current = false
-    }
-  }, [loadMessages, setStatus, setStatusMsg])
-
-  const onDelayMirrorPlaintext = useCallback(
-    async (body: string, fromAddress: string) => {
-      const dedup = mirrorQueueDedupKey(fromAddress, body)
-      if (mirrorDedupRef.current.has(dedup)) return
-      if (hasMirrorQueuePending(fromAddress, body)) return
-      try {
-        const r = await sendEncryptedMessageWithTimeout(mirrorPayloadFromWireBody(body))
-        if (r.ok) {
-          mirrorDedupRef.current.add(dedup)
-          setStatus('success')
-          setStatusMsg('Delayed Upload: Inhalt zusätzlich per IOTA gespeichert.')
-          setTimeout(() => setStatus('idle'), 6000)
-          void loadMessages()
-        } else {
-          const en = enqueueMirrorFailure({
-            wireBody: body,
-            fromAddress,
-            lastError: r.error || (r as { message?: string }).message,
-          })
-          setMirrorQueuePending(getMirrorQueueCount())
-          setStatus('error')
-          setStatusMsg(
-            en.queued
-              ? `Delayed Upload: zwischengespeichert (${getMirrorQueueCount()} in Warteschlange). Wird bei Verbindung nachgeliefert.`
-              : en.reason || r.error || (r as { message?: string }).message || 'Mirror fehlgeschlagen.'
-          )
-          setTimeout(() => setStatus('idle'), 8000)
-          void runMirrorDrain()
-        }
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e)
-        enqueueMirrorFailure({ wireBody: body, fromAddress, lastError: msg })
-        setMirrorQueuePending(getMirrorQueueCount())
-        setStatus('error')
-        setStatusMsg(`Delayed Upload: zwischengespeichert (${msg.slice(0, 100)})`)
-        setTimeout(() => setStatus('idle'), 8000)
-        void runMirrorDrain()
-      }
-    },
-    [loadMessages, runMirrorDrain, setStatus, setStatusMsg]
-  )
 
   const slideSequences = useMemo(() => extractCompletedSlideSequences(displayMessages), [displayMessages])
 

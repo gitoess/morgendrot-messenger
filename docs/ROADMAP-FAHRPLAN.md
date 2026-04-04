@@ -182,7 +182,7 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | # | Paket | Hinweis |
 |---|--------|---------|
-| 1 | **`chat-view`** weiter verdünnen | `views/chat-view.tsx` bleibt dünn; Logik in Hooks. **Stand:** Einsatz-/Protokoll-Export-Callbacks aus **`use-chat-view-core`** → **`use-chat-view-einsatz-exports.ts`**. Weitere Extraktionen (z. B. Mirror-Delay-Queue) möglich. Nach jedem Schritt **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
+| 1 | **`chat-view`** weiter verdünnen | `views/chat-view.tsx` bleibt dünn; Logik in Hooks. **Stand:** Export-Callbacks → **`use-chat-view-einsatz-exports.ts`**; Delayed-Upload/Mirror-Queue → **`use-chat-view-mirror-delay.ts`**. Nach jedem Schritt **`frontend`: `npx tsc --noEmit`**, Root **`npx tsc`**, **`npm run validate:ui`**, **`npm run test`**. |
 | 2 | **Regression** Bild/Audio/LoRa-Sendepfad | Bei Änderungen an Chat/Send kurz manuell oder E2E prüfen. |
 | 3 | **Exports** | Keine manuellen Edits in **`exports/Morgendrot-Messenger-*`** – Bundle aus **`src/`** / `frontend/` bauen (`MESSENGER-BUNDLE-SOURCE-OF-TRUTH`). |
 
