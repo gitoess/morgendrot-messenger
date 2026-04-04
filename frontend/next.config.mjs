@@ -8,8 +8,19 @@ const MORGENDROT_API_INTERNAL = (
   process.env.MORGENDROT_API_INTERNAL_URL || 'http://127.0.0.1:3342'
 ).replace(/\/$/, '')
 
+/** Dev: Next 16+ — Zugriff auf /_next/* von anderem Host (localhost vs 127.0.0.1 vs Handy-LAN). */
+const extraDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  allowedDevOrigins: [
+    'http://localhost:3341',
+    'http://127.0.0.1:3341',
+    ...extraDevOrigins,
+  ],
   transpilePackages: ['@meshtastic/core', '@meshtastic/transport-web-bluetooth'],
   typescript: {
     ignoreBuildErrors: true,
