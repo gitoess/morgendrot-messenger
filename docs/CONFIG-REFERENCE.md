@@ -136,7 +136,7 @@ Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.ex
 
 | Variable | Erklärung |
 |----------|-----------|
-| **SIGNER** | `cli` = IOTA-CLI (lokal). `remote` = Boss-Service signiert. `sdk` = Mnemonic im Prozess (keine CLI nötig). Default: cli. |
+| **SIGNER** | `cli` = IOTA-CLI (lokal). `remote` = Boss-Service signiert. `sdk` = Mnemonic im Prozess (keine CLI nötig). Default: cli. **PWA / Android / Browser-Entsperr-UI:** `sdk` nötig, damit das Mnemonic-Feld erscheint. |
 | **REMOTE_SIGNER_URL** | URL des Boss-Signer-Services (POST /sign). Nur bei SIGNER=remote. |
 | **REMOTE_SIGNER_TOKEN** | Optionaler Bearer-Token für REMOTE_SIGNER_URL. |
 | **WALLET_DERIVATION_PATH** | Ableitungspfad für Mnemonic (nur bei SIGNER=sdk). Leer = Default (z. B. m/44'/4218'/0'/0'/0'). |

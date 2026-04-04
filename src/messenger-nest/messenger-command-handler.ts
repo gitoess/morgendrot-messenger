@@ -107,6 +107,7 @@ import { encryptPairingPayload, decryptPairingPayload, generatePairingNonce } fr
 import { saveContactLabel } from '../contact-labels.js';
 import { buildMorgPkgV1, decryptMorgPkgV1, isMorgPkgV1Shape } from './morg-pkg-wire.js';
 import { splitMeshPlaintextForV2 } from '../mesh-v2-fragment.js';
+import { base64ToUint8, uint8ToBase64 } from '../shared/bytes-base64.js';
 
 function messengerGasPolicyOpts() {
     return CFG.MESSENGER_AUTO_SPONSOR ? ({ messengerGasPolicy: true as const } as const) : undefined;
@@ -1242,11 +1243,11 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             for (const fragPlain of frags) {
                                 const meshNonce = Math.floor(Math.random() * 0x100000000) >>> 0;
                                 const inner = await buildMeshPeerInnerBlob(fragPlain, p.pubKeyRaw, keys!.privateKey);
-                                const built = packMeshEmergencyV2Wire(myMesh, meshNonce, inner);
+                                const built = await packMeshEmergencyV2Wire(myMesh, meshNonce, inner);
                                 if (!built.ok) return { ok: false, message: built.error };
                                 wires.push({
                                     recipient: p.address,
-                                    wireBase64: Buffer.from(built.wire).toString('base64'),
+                                    wireBase64: uint8ToBase64(built.wire),
                                     meshNonce,
                                 });
                             }
@@ -1273,7 +1274,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         if (!peerDec) {
                             return { ok: false, message: 'Absender nicht in peerMap – Handshake/Connect prüfen.' };
                         }
-                        const raw = Buffer.from(b64, 'base64');
+                        const raw = base64ToUint8(b64);
                         const plain = await decryptMeshEmergencyV2Wire(raw, peerDec.pubKeyRaw, keys!.privateKey);
                         if (!plain) return { ok: false, message: 'Mesh-v2 Entschlüsselung fehlgeschlagen.' };
                         return { ok: true, message: plain, text: plain };

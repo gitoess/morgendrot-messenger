@@ -1,6 +1,6 @@
 # Morgendrot – Funktions-Checkliste zum Testen
 
-Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package deployed, `create_globals` ausgeführt, `.env` mit PACKAGE_ID, VAULT_REGISTRY_ID, MAILBOX_ID, MY_ADDRESS (und ggf. PARTNER_ADDRESS).
+Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package deployed, `create_globals` ausgeführt, `.env` mit PACKAGE_ID, VAULT_REGISTRY_ID, MAILBOX_ID, MY_ADDRESS (und ggf. PARTNER_ADDRESS). **Hinweis:** Nach **`npm install`** wird **`.env`** aus **`.env.example`** angelegt, falls noch keine existiert (`postinstall`).
 
 **Fünf-Säulen-Strategie:** Siehe **docs/TEST-STRATEGY.md** (Unit, Move, Integration, KI-Validierung, Stresstest/Resilience).
 

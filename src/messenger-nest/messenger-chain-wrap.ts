@@ -24,7 +24,7 @@ import {
     createAccessKeysBatchPtb as chainCreateAccessKeysBatchPtb,
 } from '../chain-access.js';
 import { deriveSharedSecret, deriveAesGcmKey, encryptMessage, decryptMessage } from '../crypto-layer.js';
-import { buildEmergencyBinaryV2, tryParseEmergencyBinaryV2 } from '../emergency-binary-wire.js';
+import { base64ToUint8 } from '../shared/bytes-base64.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
@@ -43,59 +43,12 @@ export async function sendHandshake(recipient: string, myPubRaw: Uint8Array) {
     return result;
 }
 
-const MESH_V2_MAX_BYTES = 240;
-
-/** Innerer Wire-Body für Funk: 12 Byte IV + AES-GCM(cipher+tag) wie bei /send (encryptMessage). */
-export async function buildMeshPeerInnerBlob(
-    message: string,
-    peerPubRaw: Uint8Array,
-    myPrivKey: CryptoKey
-): Promise<Uint8Array> {
-    const sharedSecret = await deriveSharedSecret(myPrivKey, peerPubRaw);
-    const aesKey = await deriveAesGcmKey(sharedSecret);
-    const encrypted = await encryptMessage(aesKey, message);
-    const full = new Uint8Array(Buffer.from(encrypted.ciphertext, 'base64'));
-    const iv = new Uint8Array(Buffer.from(encrypted.iv, 'base64'));
-    const inner = new Uint8Array(12 + full.length);
-    inner.set(iv, 0);
-    inner.set(full, 12);
-    return inner;
-}
-
-export async function decryptMeshPeerInnerBlob(
-    inner: Uint8Array,
-    senderPubRaw: Uint8Array,
-    myPrivKey: CryptoKey
-): Promise<string | null> {
-    if (inner.length < 13) return null;
-    const ivB64 = Buffer.from(inner.subarray(0, 12)).toString('base64');
-    const combinedB64 = Buffer.from(inner.subarray(12)).toString('base64');
-    try {
-        const aesKey = await deriveAesGcmKey(await deriveSharedSecret(myPrivKey, senderPubRaw));
-        return await decryptMessage(aesKey, ivB64, combinedB64);
-    } catch {
-        return null;
-    }
-}
-
-/** Vollständiges Emergency-Binary-v2 (PRIVATE_APP) für einen Peer. */
-export function packMeshEmergencyV2Wire(
-    myIotaAddress: string,
-    meshNonce: number,
-    inner: Uint8Array
-): { ok: true; wire: Uint8Array } | { ok: false; error: string } {
-    return buildEmergencyBinaryV2(myIotaAddress, meshNonce, inner, MESH_V2_MAX_BYTES);
-}
-
-export async function decryptMeshEmergencyV2Wire(
-    wire: Uint8Array,
-    senderPubRaw: Uint8Array,
-    myPrivKey: CryptoKey
-): Promise<string | null> {
-    const parsed = tryParseEmergencyBinaryV2(wire, MESH_V2_MAX_BYTES);
-    if (!parsed) return null;
-    return decryptMeshPeerInnerBlob(parsed.ciphertext, senderPubRaw, myPrivKey);
-}
+export {
+    buildMeshPeerInnerBlob,
+    decryptMeshPeerInnerBlob,
+    packMeshEmergencyV2Wire,
+    decryptMeshEmergencyV2Wire,
+} from '../shared/mesh-peer-wire.js';
 
 function debugSendWire(): boolean {
     return process.env.MORG_DEBUG_SEND_WIRE === '1' || process.env.MORG_DEBUG_SEND_WIRE === 'true';
@@ -131,10 +84,10 @@ export async function sendEncryptedMessage(
     const sharedSecret = await deriveSharedSecret(myPrivKey, peerPubRaw);
     const aesKey = await deriveAesGcmKey(sharedSecret);
     const encrypted = await encryptMessage(aesKey, message);
-    const full = Buffer.from(encrypted.ciphertext, 'base64');
+    const full = base64ToUint8(encrypted.ciphertext);
     const nonce = BigInt(Date.now());
     const ciphertext = new Uint8Array(full.subarray(0, -16));
-    const iv = new Uint8Array(Buffer.from(encrypted.iv, 'base64'));
+    const iv = base64ToUint8(encrypted.iv);
     const tag = new Uint8Array(full.subarray(-16));
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
     const result = await storeEncryptedMessage(

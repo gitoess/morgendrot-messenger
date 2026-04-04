@@ -4,6 +4,8 @@ Die Datei **.env** ist wie die „Einstellungszentrale“ von Morgendrot: Hier t
 
 **Wichtig: Nach jeder Änderung in der .env die Änderung speichern und das Programm neu starten!**
 
+**Erste `.env` im Repo:** Nach **`npm install`** wird automatisch eine **`.env`** aus **`.env.example`** erstellt, **wenn noch keine** existiert (Skript `scripts/ensure-env.mjs`). Du musst `.env.example` nicht mehr manuell kopieren.
+
 **Du musst nicht alles setzen – nimm nur, was du für dein Projekt brauchst.** Fang mit „Wer bin ich?“ (MY_ADDRESS, ROLE) und „Internet & Kette“ (RPC_URL, PACKAGE_ID) an.
 
 ---
@@ -168,7 +170,7 @@ Die Datei **.env** ist wie die „Einstellungszentrale“ von Morgendrot: Hier t
 | **SPONSOR_GAS_OWNER** | `0x…` | Adresse, die Gas übernimmt (z. B. Boss). Mit SPONSORED_TRANSACTION_ENABLED=true und (bei use_ticket) **SPONSOR_GAS_PASSWORD** zahlt der Sponsor das Gas. |
 | **SPONSOR_GAS_PASSWORD** | (leer) | Passwort des Sponsor-Wallets. Für **Wärter:** Boss zahlt Gas bei `/use-ticket`, wenn Wärter SPONSOR_GAS_OWNER=Boss und SPONSOR_GAS_PASSWORD=Boss-Passwort setzt. **Nur in .env setzen!** |
 | **SPONSORED_TRANSACTION_ENABLED** | `false` | Sponsored Transactions erlauben (create-key, use-ticket etc.). |
-| **SIGNER** | `cli` | **cli** = IOTA-CLI (lokal). **remote** = Boss-Service signiert. **sdk** = Mnemonic im Prozess (keine CLI nötig). |
+| **SIGNER** | `cli` | **cli** = IOTA-CLI (lokal). **remote** = Boss-Service signiert. **sdk** = Mnemonic im Prozess (keine CLI nötig). **Handy/PWA mit Seed im Browser:** `sdk` setzen, sonst kein Mnemonic-Feld. |
 | **REMOTE_SIGNER_URL** | `https://boss.example:3340/sign` | URL des Boss-Signer-Services. Nur bei SIGNER=remote. |
 | **REMOTE_SIGNER_TOKEN** | (leer) | Bearer-Token für REMOTE_SIGNER_URL. **Nur in .env setzen!** |
 | **WALLET_DERIVATION_PATH** | (leer) | Ableitungspfad (nur bei SIGNER=sdk). Leer = Default. |

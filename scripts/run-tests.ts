@@ -7,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
 
+import '../src/install-webcrypto-node.js';
+
 let passed = 0;
 let failed = 0;
 
@@ -47,6 +49,31 @@ async function testCryptoLayer() {
         ok('ECDH + AES-GCM roundtrip');
     } catch (e) {
         fail('crypto-layer', e);
+    }
+}
+
+// --- Mesh v2 wire (shared: inner blob + emergency binary) ---
+async function testMeshPeerWireRoundtrip() {
+    console.log('\n--- mesh-peer-wire (shared) ---');
+    try {
+        const { generateKeyPair } = await import('../src/crypto-layer.js');
+        const {
+            buildMeshPeerInnerBlob,
+            packMeshEmergencyV2Wire,
+            decryptMeshEmergencyV2Wire,
+        } = await import('../src/shared/mesh-peer-wire.js');
+
+        const alice = await generateKeyPair(true);
+        const bob = await generateKeyPair(true);
+        const msg = 'mesh roundtrip test';
+        const inner = await buildMeshPeerInnerBlob(msg, bob.pubRaw, alice.privateKey);
+        const packed = await packMeshEmergencyV2Wire('0x' + 'a'.repeat(64), 0x12345678, inner);
+        assert(packed.ok === true && packed.wire.length > 0, 'pack ok');
+        const dec = await decryptMeshEmergencyV2Wire(packed.wire, alice.pubRaw, bob.privateKey);
+        assert(dec === msg, 'decrypt roundtrip');
+        ok('inner blob → emergency v2 wire → decrypt');
+    } catch (e) {
+        fail('mesh-peer-wire', e);
     }
 }
 
@@ -564,6 +591,7 @@ async function main() {
     process.env.MONITOR_STATE_FILE = monitorStatePath;
 
     await testCryptoLayer();
+    await testMeshPeerWireRoundtrip();
     await testPackageIdCompareFrontend();
     await testVaultLocal();
     await testVaultImagePipeline();

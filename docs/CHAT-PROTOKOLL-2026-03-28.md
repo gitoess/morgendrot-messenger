@@ -52,4 +52,20 @@
 
 ---
 
+---
+
+## Folge: `.env` per `postinstall`, SIGNER-Hinweis, Boss-Adressen (2026-03-28)
+
+**Anliegen:** Kein manuelles „`.env.example` → `.env` kopieren“; Kommentar bei **SIGNER** für PWA/Android; README/Doku; Klarstellung: **Boss legt Geräte-Adressen an** (eigene `MY_ADDRESS` pro Gerät), nicht dieselbe Adresse wie der Boss.
+
+**Ergebnis:**
+
+| Artefakt | Inhalt |
+|----------|--------|
+| `scripts/ensure-env.mjs` | Legt `.env` aus `.env.example` an, nur wenn `.env` fehlt. |
+| `package.json` | `postinstall` → `node scripts/ensure-env.mjs`. |
+| `.env.example` | Kommentare zu Boss-provisionierten Adressen + **PWA/Android → SIGNER=sdk**. |
+| `README.md` | `postinstall`, portable/prepare, Rollen-Absatz (Boss erzeugt Geräte-Adressen), §2 Konfiguration, PC2-Schritt 3. |
+| `docs/CONFIG-REFERENCE.md`, `docs/ENV-ERKLAERUNG.md` | SIGNER / erste `.env` ergänzt. |
+
 *Manuell gepflegt; bei weiteren Meilensteinen Datum oder neue Datei ergänzen.*

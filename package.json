@@ -4,6 +4,7 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
+    "postinstall": "node scripts/ensure-env.mjs",
     "build:docs": "tsx scripts/build-doc-contents.ts",
     "validate:ui": "node scripts/validate-ui-data.js",
     "bundle:messenger": "tsx scripts/bundle-messenger-standalone.ts",

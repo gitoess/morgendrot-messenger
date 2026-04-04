@@ -3,6 +3,8 @@
  * ABHÄNGIGKEIT: Säule 1 (MY_ADDRESS, PACKAGE_ID); Säule 2 für /send nach /connect.
  * Befehlsausführung: ein Pfad via createMessengerCommandHandler (API + Terminal).
  */
+import './install-webcrypto-node.js';
+
 import { logger } from './logger.js';
 import {
     CFG,

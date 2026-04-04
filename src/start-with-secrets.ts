@@ -7,6 +7,8 @@
  *   npx tsx src/start-with-secrets.ts
  * oder: npm run start:secrets
  */
+import './install-webcrypto-node.js';
+
 import dotenv from 'dotenv';
 import { loadEncryptedEnvIfConfigured } from './load-secrets.js';
 
