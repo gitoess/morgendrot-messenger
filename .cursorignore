@@ -1,0 +1,30 @@
+# .cursorignore – reduziert Kontext/Token-Kosten (Cursor liest diese Pfade nicht)
+# Siehe auch .gitignore
+
+node_modules/
+dist/
+build/
+target/
+.next/
+frontend/.next/
+*.tsbuildinfo
+.cache/
+.turbo/
+coverage/
+.playwright/
+
+# Große Logs und Daten
+*.log
+*.jsonl
+
+# Umgebungsdateien (sensibel, meist nicht für Code-Kontext nötig)
+.env
+.env.*
+!.env.example
+
+# Optional: RAG/Storage wenn vorhanden und sehr groß
+# morgendrot-rag/storage/
+# morgendrot-rag/embeddings/
+
+# Optional: Altes Frontend komplett aus Kontext (nur wenn du dort nie mit Cursor arbeitest)
+# frontend/
