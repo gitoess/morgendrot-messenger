@@ -30,9 +30,13 @@ import { downloadSneakernetPackage } from '@/frontend/lib/sneakernet-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/lib/inbox-load-error'
+import { isMessageOutgoing } from '@/frontend/lib/inbox-partner-filter'
 
 export type ChatViewInboxListProps = {
   loadError: string | null
+  /** GET /api/status derzeit nicht erreichbar (zusätzlicher Hinweis bei leerem Posteingang). */
+  basisUnreachable?: boolean
   messages: Message[]
   inboxRows: ChatInboxRow[]
   myAddress: string
@@ -57,6 +61,7 @@ export type ChatViewInboxListProps = {
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
   const {
     loadError,
+    basisUnreachable = false,
     messages,
     inboxRows,
     myAddress,
@@ -77,18 +82,40 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
   } = p
 
   if (loadError) {
+    const formatted = formatInboxLoadError(loadError)
     return (
-      <div className="p-6 text-center">
-        <p className="text-sm text-amber-400 font-medium">Fehler beim Laden</p>
-        <p className="mt-2 text-sm text-muted-foreground break-all">{loadError}</p>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Prüfe: Backend läuft, MAILBOX_ID und PACKAGE_ID in .env, Kette erreichbar. Dann „Aktualisieren“.
-        </p>
+      <div className="p-6">
+        <div className="mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-5 text-center dark:bg-amber-950/25">
+          <p className="text-base font-semibold text-amber-950 dark:text-amber-100">{formatted.headline}</p>
+          {formatted.headline === INBOX_BASIS_OFFLINE_HEADLINE ? (
+            <p className="mt-2 text-sm leading-snug text-amber-900/90 dark:text-amber-100/90">
+              Posteingang von der Basis nicht lesbar. Bereits empfangene Funk-Nachrichten erscheinen weiter unten, sobald
+              vorhanden. Technische Meldung:
+            </p>
+          ) : null}
+          <p className="mt-2 break-all text-sm text-muted-foreground">{formatted.detail}</p>
+          <p className="mt-4 text-xs text-muted-foreground">
+            Prüfe: Backend läuft, MAILBOX_ID und PACKAGE_ID in .env, ggf. Tor/SOCKS. Danach „Aktualisieren“.
+          </p>
+        </div>
       </div>
     )
   }
 
   if (inboxRows.length === 0) {
+    if (basisUnreachable) {
+      return (
+        <div className="p-6">
+          <div className="mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-5 text-center dark:bg-amber-950/25">
+            <p className="text-base font-semibold text-amber-950 dark:text-amber-100">{INBOX_BASIS_OFFLINE_HEADLINE}</p>
+            <p className="mt-2 text-sm text-amber-900/90 dark:text-amber-100/90">
+              Die Basis liefert derzeit keinen Status – vermutlich kein Netz zum Backend. Funk-Empfang kann trotzdem
+              Nachrichten einblenden.
+            </p>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="p-8 text-center">
         <MessageCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
@@ -215,6 +242,18 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   <time className="tabular-nums" dateTime={new Date(row.msg.timestamp).toISOString()}>
                     {new Date(row.msg.timestamp).toLocaleString('de-DE')}
                   </time>
+                  {myAddress.trim() ? (
+                    <span
+                      className={cn(
+                        'rounded-md px-2 py-0.5 font-medium',
+                        isMessageOutgoing(row.msg, myAddress)
+                          ? 'bg-sky-500/15 text-sky-800 dark:text-sky-200'
+                          : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
+                      )}
+                    >
+                      {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
+                    </span>
+                  ) : null}
                   {row.msg.recipient ? (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
                       {myAddress && row.msg.recipient.toLowerCase() === myAddress.toLowerCase()

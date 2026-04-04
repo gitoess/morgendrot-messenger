@@ -5,6 +5,7 @@
  */
 
 import { ChatViewInboxPanel } from '@/frontend/components/chat-view-inbox-panel'
+import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewTransportCard } from '@/frontend/components/chat-view-transport-card'
@@ -37,6 +38,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setBossView,
     apiStatus,
     refreshApiStatus,
+    basisUnreachable,
+    packageIdMismatch,
+    syncCanonicalPackageIdFromServer,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,
@@ -123,6 +127,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     clearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    inboxPartnerOptions,
+    selectInboxPartnerForSend,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -148,6 +158,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         apiStatus={apiStatus}
         onRefreshStatus={refreshApiStatus}
       />
+
+      {isPrivate ? (
+        <ChatViewPackageIdBanner
+          visible={packageIdMismatch && !!apiStatus?.packageId?.trim()}
+          serverPackageId={apiStatus?.packageId?.trim() ?? ''}
+          busy={packageIdBusy}
+          onSyncToServer={() => void syncCanonicalPackageIdFromServer()}
+        />
+      ) : null}
 
       <ChatViewTransportCard
         isPrivate={isPrivate}
@@ -272,6 +291,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         loadMoreInbox={loadMoreInbox}
         inboxHasMore={inboxHasMore}
         loadError={loadError}
+        basisUnreachable={basisUnreachable}
+        inboxPartnerOptions={inboxPartnerOptions}
+        inboxPartnerKey={inboxPartnerKey}
+        setInboxPartnerKey={setInboxPartnerKey}
+        inboxDirectionFilter={inboxDirectionFilter}
+        setInboxDirectionFilter={setInboxDirectionFilter}
+        selectInboxPartnerForSend={selectInboxPartnerForSend}
         messages={messages}
         inboxRows={inboxRows}
         myAddress={myAddress}

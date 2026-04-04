@@ -6,7 +6,13 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { purgeMailboxMessage } from '@/frontend/lib/api'
+import { purgeMailboxMessage, type ContactMeshEntryClient } from '@/frontend/lib/api'
+import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import {
+  filterInboxMessagesByPartnerAndDirection,
+  uniqueCounterpartyAddresses,
+  type InboxDirectionFilter,
+} from '@/frontend/lib/inbox-partner-filter'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxLocalUiParams = {
@@ -16,10 +22,13 @@ export type UseChatViewInboxLocalUiParams = {
   setSending: (v: boolean) => void
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
+  myAddress: string
+  contactDirectory: Record<string, ContactMeshEntryClient>
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
-  const { messages, setMessages, loadMessages, setSending, setStatus, setStatusMsg } = p
+  const { messages, setMessages, loadMessages, setSending, setStatus, setStatusMsg, myAddress, contactDirectory } =
+    p
 
   const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
   const [protokollMarkedIds, setProtokollMarkedIds] = useState<Set<string>>(() => new Set())
@@ -41,6 +50,33 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const displayMessages = useMemo(
     () => messages.filter((m) => !hiddenInboxIds.has(m.id)),
     [messages, hiddenInboxIds]
+  )
+
+  /** Schnellfilter: Gesprächspartner + Richtung (Eingang/Ausgang). */
+  const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
+  const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
+
+  const inboxPartnerOptions = useMemo(() => {
+    const addrs = uniqueCounterpartyAddresses(displayMessages, myAddress)
+    return addrs.map((address) => {
+      const label = contactDisplayLabel(contactDirectory, address)
+      const short =
+        address.startsWith('0x') && address.length > 12
+          ? `${address.slice(0, 8)}…${address.slice(-4)}`
+          : address
+      return { address, label: label || short }
+    })
+  }, [displayMessages, myAddress, contactDirectory])
+
+  const filteredDisplayMessages = useMemo(
+    () =>
+      filterInboxMessagesByPartnerAndDirection(
+        displayMessages,
+        myAddress,
+        inboxPartnerKey,
+        inboxDirectionFilter
+      ),
+    [displayMessages, myAddress, inboxPartnerKey, inboxDirectionFilter]
   )
 
   const onHideInboxMessageLocal = useCallback((id: string) => {
@@ -120,15 +156,15 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [])
 
   const selectAllVisibleInbox = useCallback(() => {
-    setSelectedInboxIds(new Set(displayMessages.map((m) => m.id)))
-  }, [displayMessages])
+    setSelectedInboxIds(new Set(filteredDisplayMessages.map((m) => m.id)))
+  }, [filteredDisplayMessages])
 
   const clearInboxSelection = useCallback(() => setSelectedInboxIds(new Set()), [])
 
   const onHideAllVisibleLocal = useCallback(() => {
     setHiddenInboxIds((prev) => {
       const n = new Set(prev)
-      for (const m of displayMessages) n.add(m.id)
+      for (const m of filteredDisplayMessages) n.add(m.id)
       try {
         sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
       } catch {
@@ -136,7 +172,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       return n
     })
-  }, [displayMessages])
+  }, [filteredDisplayMessages])
 
   const onBulkHideSelected = useCallback(() => {
     setHiddenInboxIds((prev) => {
@@ -154,7 +190,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [selectedInboxIds])
 
   const onBulkPurgeSelected = useCallback(async () => {
-    const list = displayMessages.filter(
+    const list = filteredDisplayMessages.filter(
       (m) => selectedInboxIds.has(m.id) && m.chainPurgeable && m.chainNonce
     )
     if (list.length === 0) {
@@ -185,7 +221,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setInboxSelectMode(false)
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [displayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
+  }, [filteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
 
   return {
     protokollMarkedIds,
@@ -193,6 +229,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxSelectMode,
     selectedInboxIds,
     displayMessages,
+    filteredDisplayMessages,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    inboxPartnerOptions,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,

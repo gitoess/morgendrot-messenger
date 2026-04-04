@@ -17,7 +17,7 @@
 | 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
 | 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; kein Dauer-Refactor ohne Nutzen. |
 | 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts`, `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Bundle-README angepasst. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. |
-| 6 | Fehlerbehandlung / Status | Mittel | Laufend. |
+| 6 | Fehlerbehandlung / Status | Mittel | **Stand 2026-03:** Next-Messenger: Posteingang bei nicht erreichbarer Basis (Hinweis „Funk-Modus“), Partner-/Richtungsfilter, Eingang/Ausgang-Badges; Abgleich Package-ID Filter vs. `/api/status` → Banner „Jetzt updaten“ (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, Checks in **`TESTING.md`**). Laufend verfeinern. |
 | 7 | Heltec / LoRa Firmware | Hoch | Spez-lastig (`meshtastic/`). |
 | 8 | Kabel-Bridge | Hoch | Spec-nah. |
 
@@ -30,6 +30,7 @@
 | Basis vs. Vortrupp-UI | Geheimnisse serverseitig an der Basis. |
 | Standalone-Smartphone-Bundle | `exports/morgendrot-standalone-smartphone/`. |
 | Posteingang 50 + „Weitere laden“ | Umgesetzt. |
+| Messenger-UI: Offline-Headline, Partner-Strip, Package-ID-Banner | Umgesetzt; siehe **§A Tabelle Punkt 6**, **`TESTING.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`**. |
 | Opcodes / QoS | `src/shared/opcodes.ts` (`MacroOpcode`, **`MacroPriorityClass`**) – für spätere Sendewarteschlange. |
 | Reticulum / **LXMF** (nur Inspiration) | Chunking/Priorität lesen, **kein** Stack-Wechsel → **`docs/LORA-LXMF-RETICULUM-INSPIRATION.md`**. |
 | Doku / Policy | Hybrid, bidirektional, **TX vs. Streams §7**, LXMF-Inspiration – siehe **D.** |
@@ -70,7 +71,7 @@
 - **`docs/LORA-LXMF-RETICULUM-INSPIRATION.md`** – LXMF-Ideen vs. Luma/Chroma + Mesh-v2, ohne Reticulum-Ökosystem.  
 - **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** – Wald↔Netz-Opcodes.  
 - **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** – Gateway, Interpreter.  
-- **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**.  
+- **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Package-ID-Banner, Abgleich mit `/api/status`).  
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`**  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
@@ -190,7 +191,7 @@ Ziel: **Phase A** abschließen bzw. stabil halten, dann **Phase B** starten – 
 
 | Priorität | # | Thema |
 |-----------|---|--------|
-| 1 | **5** | **PWA-Grundlage** – **Manifest + SW** (siehe §A.5); optional: 192/512-PNG-Icons, Offline-Fallback-Seite, spätere Erweiterung SW. |
+| 1 | **5** | **PWA:** Code-Basis **§A.5 erledigt** (Manifest + SW). **Nächster sinnvoller Schritt:** manuelle **PWA-Checks** (Installation „Zum Home-Bildschirm“, erneuter Aufruf offline = statische Shell; API bleibt online). Optional nachziehen: **192/512-PNG-Icons**, Offline-Fallback-Seite, SW erweitern. |
 | 2 | **6** | Fehlermeldungen/Status konsistent (laufend). |
 | 3 | **8** | **Kabel-Bridge** (hoch, spec-nah) – siehe §A.8; Backlog, nicht parallel zu Phase-B-Kern. |
 

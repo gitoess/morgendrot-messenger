@@ -24,6 +24,13 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 - [ ] **Gesperrter Tresor:** `.morg-pkg` Import/Export und verschlüsseltes Senden zeigen die erwarteten Fehlermeldungen (Keys/Vault); kein stiller Fehlschlag.
 - [ ] **Klartext-Modus (Pinnwand/privat unverschlüsselt):** Umschalten sichtbar; Senden nur mit gültigem Empfängerfeld wo die UI es verlangt; Hinweise aus **`/api/status`** (Klartext-Kanal, Konfiguration) konsistent mit dem Chat-Header/Transport-Karte.
 
+**Package-ID-Banner (Integration, 4 Checks)** — siehe **`docs/MESSENGER-PACKAGE-ID-BANNER.md`:**
+
+- [ ] **1.** Posteingangs-Package-ID **leer** (Backend-Default): **kein** Banner, solange kein expliziter Filter gesetzt ist.
+- [ ] **2.** Posteingangs-Feld = dieselbe ID wie **`/api/status`** → `packageId`: **kein** Banner.
+- [ ] **3.** Posteingangs-Feld = **andere** gültige 0x64-Hex-ID als die Basis meldet: Banner **„Neue Protokoll-Version verfügbar“** erscheint unter dem Chat-Header.
+- [ ] **4.** **„Jetzt updaten“**: Backend übernimmt Server-ID (`/set-package-id`), Posteingang lädt neu, Banner verschwindet (bei erfolgreichem Befehl).
+
 **Messenger-Stapel (Boss-UI 3342):** Bedeutung aller Felder (Anzahl bis 2500/Lauf, PACKAGE-Verlauf, SIGNER) → **`docs/MESSENGER-EXPORT-FIELDS.md`**.
 
 ## Playwright Lite-UI & Messenger-UI

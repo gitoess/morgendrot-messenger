@@ -530,6 +530,27 @@ async function testVaultImagePipeline() {
     }
 }
 
+async function testPackageIdCompareFrontend() {
+    console.log('\n--- package-id-compare (frontend) ---');
+    try {
+        const { shouldShowPackageIdMismatchBanner, normalizePackageIdHex } = await import(
+            '../frontend/frontend/lib/package-id-compare.ts'
+        );
+        const idA = '0x' + 'a'.repeat(64);
+        const idB = '0x' + 'b'.repeat(64);
+        assert(!shouldShowPackageIdMismatchBanner('', idA, false), 'empty local → no banner');
+        assert(!shouldShowPackageIdMismatchBanner('  ', idA, false), 'whitespace local → no banner');
+        assert(!shouldShowPackageIdMismatchBanner(idA, idA, false), 'match → no banner');
+        assert(shouldShowPackageIdMismatchBanner(idA, idB, false), 'diff → banner');
+        assert(!shouldShowPackageIdMismatchBanner(idA, idB, true), 'offline → no banner');
+        assert(normalizePackageIdHex('bogus') === null, 'invalid → null');
+        assert(normalizePackageIdHex(idA.toUpperCase()) === idA, 'normalize lowercases');
+        ok('shouldShowPackageIdMismatchBanner + normalizePackageIdHex');
+    } catch (e) {
+        fail('package-id-compare', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -543,6 +564,7 @@ async function main() {
     process.env.MONITOR_STATE_FILE = monitorStatePath;
 
     await testCryptoLayer();
+    await testPackageIdCompareFrontend();
     await testVaultLocal();
     await testVaultImagePipeline();
     await testReplayState();

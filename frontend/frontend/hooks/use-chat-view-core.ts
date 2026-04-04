@@ -102,6 +102,12 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setInboxSelectMode,
     selectedInboxIds,
     displayMessages,
+    filteredDisplayMessages,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    inboxPartnerOptions,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
@@ -118,6 +124,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setSending,
     setStatus,
     setStatusMsg,
+    myAddress,
+    contactDirectory: directory,
   })
 
   const {
@@ -140,7 +148,18 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
   })
-  const { apiStatus, refreshApiStatus } = useChatViewApiStatusPoll({ runMirrorDrain })
+  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch } = useChatViewApiStatusPoll({
+    runMirrorDrain,
+    localPackageId: inboxPackageFilter.trim(),
+  })
+
+  const selectInboxPartnerForSend = useCallback(
+    (address: string) => {
+      setRecipient(address.trim())
+      setInboxPartnerKey(address.trim())
+    },
+    [setRecipient, setInboxPartnerKey]
+  )
 
   const decryptMeshWire = useCallback(async (senderAddress: string, fullWire: Uint8Array) => {
     const { uint8ArrayToBase64 } = await import('@/frontend/lib/emergency-binary-browser')
@@ -148,11 +167,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     return r.ok && r.text ? r.text : null
   }, [])
 
-  const slideSequences = useMemo(() => extractCompletedSlideSequences(displayMessages), [displayMessages])
+  const slideSequences = useMemo(
+    () => extractCompletedSlideSequences(filteredDisplayMessages),
+    [filteredDisplayMessages]
+  )
 
   const inboxRows = useMemo(
-    (): ChatInboxRow[] => buildChatInboxRows(displayMessages, slideSequences),
-    [displayMessages, slideSequences]
+    (): ChatInboxRow[] => buildChatInboxRows(filteredDisplayMessages, slideSequences),
+    [filteredDisplayMessages, slideSequences]
   )
 
   const meshtastic = useMeshtasticBle({
@@ -299,6 +321,12 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatusMsg,
   })
 
+  /** Kanonische ID von /api/status übernehmen (= /set-package-id + Posteingang neu). */
+  const syncCanonicalPackageIdFromServer = useCallback(() => {
+    const raw = apiStatus?.packageId?.trim() ?? ''
+    void applyPackageIdBackend(raw)
+  }, [apiStatus?.packageId, applyPackageIdBackend])
+
   return {
     isPrivate,
     role,
@@ -323,6 +351,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setBossView,
     apiStatus,
     refreshApiStatus,
+    basisUnreachable,
+    packageIdMismatch,
+    syncCanonicalPackageIdFromServer,
     mirrorQueuePending,
     inboxPackageFilter,
     setInboxPackageFilter,
@@ -411,6 +442,12 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     clearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    inboxPartnerOptions,
+    selectInboxPartnerForSend,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
