@@ -10,12 +10,10 @@ import {
   meshDecryptV2Wire,
   startHandshake,
   connect,
-  fetchStatus,
   fetchPackageIdHistory,
   setPackageIdCommand,
   purgeMailboxMessage,
   fetchAllInboxMessagesForExport,
-  type ApiStatus,
 } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/lib/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/lib/chat-view-inbox-rows'
@@ -29,6 +27,7 @@ import { useChatViewInbox } from '@/frontend/hooks/use-chat-view-inbox'
 import type { Message } from '@/frontend/lib/types'
 import { useChatViewEinsatzExports } from '@/frontend/hooks/use-chat-view-einsatz-exports'
 import { useChatViewMirrorDelay } from '@/frontend/hooks/use-chat-view-mirror-delay'
+import { useChatViewApiStatusPoll } from '@/frontend/hooks/use-chat-view-api-status-poll'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -49,7 +48,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [showSetup, setShowSetup] = useState(false)
   const [encrypted, setEncrypted] = useState(true)
   const [bossView, setBossView] = useState(false)
-  const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
   const [forcedTransport, setForcedTransport] = useState<ForcedTransport>('internet')
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
@@ -118,6 +116,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
   })
+  const { apiStatus, refreshApiStatus } = useChatViewApiStatusPoll({ runMirrorDrain })
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -216,27 +215,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onEmergencyVoiceReady: () => setSosVoiceAwaitingSend(true),
     blocked: sending || compactBusy,
   })
-
-  const refreshApiStatus = useCallback(async () => {
-    const s = await fetchStatus()
-    if (!s.error) setApiStatus(s)
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    const tick = async () => {
-      const s = await fetchStatus()
-      if (!alive || s.error) return
-      setApiStatus(s)
-      await runMirrorDrain()
-    }
-    void tick()
-    const id = setInterval(() => void tick(), 12000)
-    return () => {
-      alive = false
-      clearInterval(id)
-    }
-  }, [runMirrorDrain])
 
   const {
     exportEcdhMorgPkgForMessage,
@@ -344,8 +322,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       try {
         const res = await setPackageIdCommand(t)
         if (res.ok) {
-          const s = await fetchStatus()
-          if (!s.error) setApiStatus(s)
+          await refreshApiStatus()
           setInboxPackageFilter(t)
           await loadMessages('reset')
           void refreshPackageIdSuggestions()
@@ -361,7 +338,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
         setPackageIdBusy(false)
       }
     },
-    [loadMessages, refreshPackageIdSuggestions, setStatus, setStatusMsg]
+    [loadMessages, refreshApiStatus, refreshPackageIdSuggestions, setStatus, setStatusMsg]
   )
 
   const applyInboxPackageFilterOnly = useCallback(async () => {
