@@ -99,6 +99,7 @@ function buildRootPackageJson(): Record<string, unknown> {
     description:
       'Morgendrot Messenger: Next.js UI (frontend/) + API (src/). PWA/Android-Tests; später CM4. Siehe README.md.',
     scripts: {
+      postinstall: 'node scripts/ensure-env.mjs',
       'start:api': 'tsx src/start-with-secrets.ts',
       'dev:next': 'npm run dev --prefix frontend',
       dev: 'concurrently --names "api,next" -c "cyan,magenta" "npm run start:api" "npm run dev:next"',
@@ -120,35 +121,38 @@ function buildRootPackageJson(): Record<string, unknown> {
   };
 }
 
+/**
+ * Vollständige Vorlage wie im Hauptrepo, plus PWA/Android-Defaults am Ende
+ * (bei doppeltem Key gewinnt die letzte Zeile – vgl. dotenv-Parsing).
+ */
 function envExampleSmartphone(): string {
-  return [
-    '# =============================================================================',
-    '# Morgendrot Standalone Smartphone / PWA (Next.js + API)',
-    '# =============================================================================',
-    '# Kopie als .env und Werte setzen (keine Secrets ins Repo).',
-    '#',
-    '# UI: http://127.0.0.1:3341  ·  API: http://127.0.0.1:3342 (Next leitet /api → API)',
-    '#',
-    '# Android im LAN: npm run dev:lan im Bundle-Root (Next auf 0.0.0.0:3341),',
-    '#   oder USB: adb reverse tcp:3341 tcp:3341 && adb reverse tcp:3342 tcp:3342',
-    '#',
-    '# =============================================================================',
-    '',
-    'ENABLE_UI=true',
-    'UI_VARIANT=full',
-    'ROLE=messenger',
-    'ROLE_ID=14',
-    'API_PORT=3342',
-    'API_KILL_PREVIOUS_INSTANCE=true',
-    'SIGNER=cli',
-    'RPC_URL=https://api.testnet.iota.cafe',
-    'NETWORK_TRUST_TIER=1',
-    'PACKAGE_ID=',
-    'MY_ADDRESS=',
-    '# Optional: verschlüsselte Zusatz-Env – siehe encrypt-env im README',
-    '# ENCRYPTED_ENV_FILE=.env.secrets.enc',
-    '',
-  ].join('\n');
+  const basePath = path.join(REPO, '.env.example');
+  let base = '';
+  if (fs.existsSync(basePath)) {
+    base = fs.readFileSync(basePath, 'utf8').replace(/\r\n/g, '\n');
+    if (!base.endsWith('\n')) base += '\n';
+  } else {
+    base = '# Fehlt: .env.example im Hauptrepo\n';
+  }
+
+  const append = `
+# =============================================================================
+# Standalone Smartphone / PWA (Next.js + API) — Bundle-Overrides
+# =============================================================================
+# UI: http://127.0.0.1:3341  ·  API: http://127.0.0.1:3342 (Next proxyt /api → API)
+# Android LAN: npm run dev:lan  ·  USB: adb reverse tcp:3341 tcp:3341 && adb reverse tcp:3342 tcp:3342
+# Nach npm install: .env wird aus dieser Datei erzeugt (scripts/ensure-env.mjs), falls .env fehlt.
+ENABLE_UI=true
+UI_VARIANT=full
+ROLE=messenger
+ROLE_ID=14
+API_PORT=3342
+API_KILL_PREVIOUS_INSTANCE=true
+# PWA / Mnemonic im Browser: sdk. Rechner mit IOTA-CLI: cli (oder Zeile auskommentieren und oben stehen lassen).
+SIGNER=sdk
+`;
+
+  return base + append;
 }
 
 function readmeSmartphone(): string {
@@ -159,7 +163,7 @@ function readmeSmartphone(): string {
 ## Voraussetzungen
 
 - **Node.js** LTS (20+)
-- **Keine** mitgelieferte \`.env\` / kein Vault (nur \`.env.example\`); Geheimnisse nur lokal setzen.
+- **\`.env\`:** Wird bei **\`npm install\`** im Bundle-Root automatisch aus **\`.env.example\`** angelegt, **falls noch keine** \`.env\` existiert (\`postinstall\` → \`scripts/ensure-env.mjs\`) — wie im Hauptrepo. **\`.env.example\`** entspricht der **vollen** Vorlage aus dem Hauptrepo plus **PWA-Block** am Ende (u. a. \`ENABLE_UI=true\`, \`SIGNER=sdk\`). Keine Vault-Dateien aus dem Build-PC.
 
 ## Installation (Production-Dependencies)
 
@@ -195,7 +199,7 @@ npm run dev
 - **UI:** http://127.0.0.1:3341  
 - **API:** http://127.0.0.1:3342  
 
-\`.env\` aus \`.env.example\` anlegen; Wallet/Tresor wie im Hauptprojekt.
+Falls \`.env\` nach \`npm install\` noch fehlt: einmal \`node scripts/ensure-env.mjs\` oder \`.env.example\` kopieren. Werte wie \`PACKAGE_ID\`, \`MY_ADDRESS\` setzen; Wallet/Tresor wie im Hauptprojekt.
 
 ### Android-Telefon im selben WLAN
 
@@ -225,7 +229,7 @@ Für Zugriff im LAN auf die gebaute UI: \`npm run start:prod:lan\` (Next auf \`0
 
 ## Sicherheit
 
-Keine \`.env\`, keine \`.morgendrot-vault*\`-Dateien aus dem Build-PC ins Archiv packen – nur \`.env.example\` und dieser README folgen dem Bundle-Skript.
+Keine fertige \`.env\` und keine \`.morgendrot-vault*\`-Dateien aus dem Build-PC ins Archiv packen – nur \`.env.example\`, \`scripts/ensure-env.mjs\` und dieser README folgen dem Bundle-Skript; \`.env\` entsteht beim Nutzer nach \`npm install\`.
 
 ## Unterschied zu \`exports/Morgendrot-Messenger-standalone\`
 
@@ -258,11 +262,15 @@ async function main() {
 
   fs.copyFileSync(path.join(REPO, 'tsconfig.json'), path.join(OUT, 'tsconfig.json'));
 
+  const sdir = path.join(OUT, 'scripts');
+  fs.mkdirSync(sdir, { recursive: true });
   const enc = path.join(REPO, 'scripts', 'encrypt-env.ts');
   if (fs.existsSync(enc)) {
-    const sdir = path.join(OUT, 'scripts');
-    fs.mkdirSync(sdir, { recursive: true });
     fs.copyFileSync(enc, path.join(sdir, 'encrypt-env.ts'));
+  }
+  const ensureEnv = path.join(REPO, 'scripts', 'ensure-env.mjs');
+  if (fs.existsSync(ensureEnv)) {
+    fs.copyFileSync(ensureEnv, path.join(sdir, 'ensure-env.mjs'));
   }
 
   const fePkgPath = path.join(OUT, 'frontend', 'package.json');
