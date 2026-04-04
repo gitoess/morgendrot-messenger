@@ -1,0 +1,10 @@
+{
+  "name": "morgendrot-messenger",
+  "private": true,
+  "description": "Startet das Morgendrot-Projekt im Ordner darüber mit UI_VARIANT=messenger (Lite-UI: Nachrichten + Minibar).",
+  "scripts": {
+    "start": "cd .. && npm exec cross-env -- UI_VARIANT=messenger npm start",
+    "start:backend": "cd .. && npm exec cross-env -- UI_VARIANT=messenger npm run start:secrets",
+    "dev:lite": "cd .. && npm exec cross-env -- UI_VARIANT=messenger npm run dev:lite"
+  }
+}

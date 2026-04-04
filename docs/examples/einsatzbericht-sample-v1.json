@@ -1,0 +1,21 @@
+{
+  "schema": "morgendrot.einsatzbericht.v1",
+  "meta": {
+    "exportedAt": 1710000000000,
+    "exportedByAddress": "0x0000000000000000000000000000000000000000000000000000000000000001",
+    "note": "Beispiel ohne echte Nachrichten – nur Schema-Referenz."
+  },
+  "messagesChronological": [
+    {
+      "id": "demo-1",
+      "from": "0x0000000000000000000000000000000000000000000000000000000000000002",
+      "timestamp": 1709999990000,
+      "iso": "2024-03-09T12:39:50.000Z",
+      "recipient": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "encrypted": true,
+      "transports": ["internet"],
+      "content": "Beispiel-Wire oder Klartext-Inhalt",
+      "contentLength": 32
+    }
+  ]
+}

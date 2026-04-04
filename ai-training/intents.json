@@ -1,0 +1,13 @@
+{
+  "intents": [
+    { "trigger": ["lass rein", "öffnen", "gast", "zutritt", "lass gast", "key für"], "action": "/create-key", "reason": "AccessKey Säule 3" },
+    { "trigger": ["sende", "schicke", "nachricht", "schick"], "action": "/send-plain", "reason": "Klartext Säule 3 (oder /handshake dann /send)" },
+    { "trigger": ["handshake", "verbinde", "verschlüsselt"], "action": "/handshake", "reason": "Säule 2 Kanal" },
+    { "trigger": ["connect", "verbindung"], "action": "/connect", "reason": "Auf Handshake warten" },
+    { "trigger": ["iota", "coins", "überweis"], "action": "/transfer-coins", "reason": "Säule 1, kein /connect" },
+    { "trigger": ["vault", "keys sichern", "backup"], "action": "/vault-save", "reason": "Säule 4 lokal" },
+    { "trigger": ["purge", "löschen", "rebate"], "action": "/purge-key", "reason": "Säule 4 Rebate" },
+    { "trigger": ["ticket", "eintrittskarte"], "action": "/create-ticket", "reason": "Ticket-NFT Säule 3" },
+    { "trigger": ["fetch", "nachrichten holen", "letzte"], "action": "/fetch", "reason": "Mailbox lesen" }
+  ]
+}

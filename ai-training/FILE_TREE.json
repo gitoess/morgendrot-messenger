@@ -1,0 +1,462 @@
+[
+  {
+    "path": "e2e/ui.spec.ts",
+    "functions": []
+  },
+  {
+    "path": "lora-bridge/scripts/run-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "lora-bridge/src/config.ts",
+    "functions": []
+  },
+  {
+    "path": "lora-bridge/src/index.ts",
+    "functions": [
+      "startServer"
+    ]
+  },
+  {
+    "path": "lora-bridge/src/lora-driver.ts",
+    "functions": []
+  },
+  {
+    "path": "move-test/sources/messaging.move",
+    "functions": [
+      "create_access_key",
+      "create_command_registry",
+      "create_event_registry",
+      "create_globals",
+      "create_ticket",
+      "create_ticket_to_registry",
+      "create_vault",
+      "emit_ecdh_init",
+      "enable_emergency_purge",
+      "enable_emergency_purge_key",
+      "enable_emergency_purge_ticket",
+      "purge_expired_tickets",
+      "purge_expired_tickets_loop",
+      "purge_handshake",
+      "purge_key",
+      "purge_message",
+      "purge_ticket",
+      "purge_vault",
+      "send_encrypted_message",
+      "send_plaintext_message",
+      "set_open_words",
+      "store_ecdh_init",
+      "store_encrypted_message",
+      "store_plaintext_message",
+      "transfer_access_key",
+      "transfer_ticket",
+      "update_vault",
+      "use_ticket",
+      "use_ticket_from_registry"
+    ]
+  },
+  {
+    "path": "playwright.config.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/boss-provision-handshake.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/boss-signer.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/build-doc-contents.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/build-rag-chunks.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/build-rag-embeddings.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/encrypt-env.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/generate-file-tree.ts",
+    "functions": [
+      "name"
+    ]
+  },
+  {
+    "path": "scripts/generate-ollama-modelfile.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/prepare-rag.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-all-tiles-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-copilot-api-test.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-copilot-command-coverage.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-dangerous-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-dataset-scenarios.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-natural-language-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ai-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-all-9-tiles-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-demo-1-ownership.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-demo-2-ptb.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-demo-4-boss-signer.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-festival-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-kacheln-nacheinander.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-messages-chat-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-rag-retrieval-test.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-remaining-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-replay-e2e.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-scenarios-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-security-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-stress-test.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-tests.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/run-ticket-accesskey-realworld.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/telegram-webhook.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/test-ai-combinations.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/test-all-projects-full.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/test-tickets-keys-flow.ts",
+    "functions": []
+  },
+  {
+    "path": "scripts/write-test-message.ts",
+    "functions": []
+  },
+  {
+    "path": "src/ai-copilot-context.ts",
+    "functions": [
+      "stripAnsi"
+    ]
+  },
+  {
+    "path": "src/ai-copilot.ts",
+    "functions": [
+      "askAiCopilot"
+    ]
+  },
+  {
+    "path": "src/ai-intent-matcher.ts",
+    "functions": [
+      "isTransferCoinsIntent",
+      "tryInstantMapping",
+      "tryIntentMatch",
+      "tryTransferCoinsOnly"
+    ]
+  },
+  {
+    "path": "src/api-server.ts",
+    "functions": [
+      "getActualApiPort",
+      "setCommandHandler",
+      "setPasswordResolver",
+      "setPurgeAfterLieferungHandler",
+      "setSessionStatus",
+      "startApiServer"
+    ]
+  },
+  {
+    "path": "src/audit-log.ts",
+    "functions": [
+      "appendAuditEvent",
+      "exportAuditCsv",
+      "exportAuditPdfStream",
+      "readAuditEvents"
+    ]
+  },
+  {
+    "path": "src/chain-access.ts",
+    "functions": [
+      "buildHandshakeTransaction",
+      "createAccessKey",
+      "createAccessKeyAndSendPlain",
+      "createEventRegistry",
+      "createTicket",
+      "createTicketToRegistry",
+      "createVaultOnChain",
+      "enableEmergencyPurgeKey",
+      "enableEmergencyPurgeTicket",
+      "enableEmergencyPurgeVault",
+      "findPeerHandshake",
+      "findPeerHandshakeFrom",
+      "generateNewAddressCli",
+      "getAllOwnedObjects",
+      "getBalanceInMist",
+      "getClient",
+      "getHandshakeFromMailbox",
+      "getOpenWordsFromChain",
+      "getOwnedAccessKeys",
+      "getOwnedTickets",
+      "getSdkSigner",
+      "getSponsorGasCoins",
+      "getVaultFromChain",
+      "hasValidAccessKey",
+      "hasValidTicket",
+      "iotaToMist",
+      "isChainReachable",
+      "minIotaToMist",
+      "mistToDisplayIota",
+      "publishPackageCli",
+      "purgeExpiredTickets",
+      "purgeHandshake",
+      "purgeKey",
+      "purgeMessage",
+      "purgeMultipleKeys",
+      "purgeTicket",
+      "purgeVaultOnChain",
+      "queryIncomingPayments",
+      "sendEcdhInit",
+      "setSdkSigner",
+      "signAndExecute",
+      "storeEncryptedMessage",
+      "storePlaintextMessage",
+      "transferAccessKey",
+      "transferCoins",
+      "transferTicket",
+      "typeName",
+      "useTicket",
+      "useTicketFromRegistry"
+    ]
+  },
+  {
+    "path": "src/chain-anchor.ts",
+    "functions": [
+      "anchorState",
+      "startAnchorLoop"
+    ]
+  },
+  {
+    "path": "src/config.ts",
+    "functions": [
+      "getConfigDisplay",
+      "getConnectAddresses",
+      "getEffectiveAuthorizedSenders",
+      "getHierarchyPermissions",
+      "isHierarchyConfigKey",
+      "readPackageIdHints",
+      "readPackageIdHistory",
+      "savePackageIdHint",
+      "savePackageIdToFile",
+      "savePartnerToFile",
+      "setEnvKey"
+    ]
+  },
+  {
+    "path": "src/crypto-layer.ts",
+    "functions": [
+      "decryptMessage",
+      "deriveAesGcmKey",
+      "deriveSharedSecret",
+      "encryptMessage",
+      "generateKeyPair"
+    ]
+  },
+  {
+    "path": "src/gas-station.ts",
+    "functions": [
+      "runGasStationCheck"
+    ]
+  },
+  {
+    "path": "src/index.ts",
+    "functions": []
+  },
+  {
+    "path": "src/iota-eur-oracle.ts",
+    "functions": [
+      "eurToIota",
+      "getCachedIotaEurRate",
+      "getIotaEurRate"
+    ]
+  },
+  {
+    "path": "src/load-secrets.ts",
+    "functions": [
+      "loadEncryptedEnvIfConfigured",
+      "parseEnvText"
+    ]
+  },
+  {
+    "path": "src/logger.ts",
+    "functions": []
+  },
+  {
+    "path": "src/m2m-lock.ts",
+    "functions": [
+      "runLockMode"
+    ]
+  },
+  {
+    "path": "src/monitoring.ts",
+    "functions": [
+      "checkOfflineAndAlarm",
+      "getMonitorStatus",
+      "recordHeartbeat",
+      "recordSensor",
+      "runMonitorMode",
+      "sendHeartbeat",
+      "startHeartbeatLoop"
+    ]
+  },
+  {
+    "path": "src/rag-retrieval.ts",
+    "functions": [
+      "cosineSimilarity",
+      "expandWithReferences",
+      "isRagAvailable",
+      "loadRagChunks",
+      "retrieveRelevantChunks"
+    ]
+  },
+  {
+    "path": "src/read-command-list.ts",
+    "functions": [
+      "loadOpenWordsFromFile"
+    ]
+  },
+  {
+    "path": "src/read-password.ts",
+    "functions": [
+      "readPasswordMasked"
+    ]
+  },
+  {
+    "path": "src/replay-state.ts",
+    "functions": [
+      "acceptAndUpdate",
+      "loadReplayState",
+      "saveReplayState"
+    ]
+  },
+  {
+    "path": "src/start-with-secrets.ts",
+    "functions": []
+  },
+  {
+    "path": "src/streams-adapter.ts",
+    "functions": [
+      "getStreamsAdapter",
+      "setStreamsAdapter"
+    ]
+  },
+  {
+    "path": "src/ui-server-standalone.ts",
+    "functions": []
+  },
+  {
+    "path": "src/ui-server.ts",
+    "functions": [
+      "startUiServer"
+    ]
+  },
+  {
+    "path": "src/utils.ts",
+    "functions": [
+      "normalizeAddress",
+      "toEventBytes"
+    ]
+  },
+  {
+    "path": "src/vault-local.ts",
+    "functions": [
+      "decryptPayloadToUtf8",
+      "encryptUtf8ToPayload",
+      "encryptVaultPayloadForChain",
+      "loadVaultFromChainPayload",
+      "loadVaultLocal",
+      "readVaultPackageId",
+      "saveVaultLocal",
+      "vaultFileExists",
+      "writeVaultPackageId"
+    ]
+  },
+  {
+    "path": "src/wallet-bridge.ts",
+    "functions": [
+      "getWalletPassword",
+      "setWalletPassword"
+    ]
+  }
+]

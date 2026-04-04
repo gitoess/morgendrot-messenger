@@ -1,0 +1,24 @@
+{
+  "name": "morgendrot-lora-bridge",
+  "version": "0.1.0",
+  "description": "HTTP ↔ LoRa-Mesh Bridge für Morgendrot. Verbindet STREAMS_BRIDGE_URL mit Heltec/Meshtastic.",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts",
+    "test": "tsx scripts/run-tests.ts"
+  },
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/node": "^25.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^17.3.1"
+  },
+  "optionalDependencies": {
+    "serialport": "^12.0.0"
+  }
+}

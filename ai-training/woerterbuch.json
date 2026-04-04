@@ -1,0 +1,173 @@
+{
+  "_meta": {
+    "version": "1.0",
+    "description": "Morgendrot-Wörterbuch (Hybrid): Trigger → Action. Nutzer gibt nur Auswahl/Metadaten an; KI leitet nur durch. Keine fremden Themen."
+  },
+  "zutritt": {
+    "triggers": ["lass rein", "lass den", "öffnen", "öffne", "key", "gast", "zugang", "schlüssel", "freischalten", "einlass", "zutritt", "access", "erstell key", "create key", "key erstellen", "key für", "gib schlüssel", "freigeben", "für 1 woche rein", "woche rein", "typen für"],
+    "action": "/create-key",
+    "params": ["lock", "recipient", "ttl_optional"],
+    "confidence_base": 0.92,
+    "description": "AccessKey für Zutritt (zeitbegrenzt)",
+    "param_schema": [{"name": "recipient", "type": "address", "required": true}, {"name": "ttl_days", "type": "number", "required": false, "default": 30, "range": [1, 365]}]
+  },
+  "zutritt_mehrere": {
+    "triggers": ["mehrere keys", "mehrere schlüssel", "create-keys", "create keys", "keys erstellen", "x keys für", "5 keys für", "10 keys für", " keys für 0x", "erstelle 5 keys", "erstelle 10 keys", "je 2 tage", "je 7 tage"],
+    "action": "/create-keys",
+    "params": ["lock", "recipient", "ttl_optional", "count_optional"],
+    "confidence_base": 0.92
+  },
+  "key_und_nachricht": {
+    "triggers": ["key und nachricht", "key und benachrichtigung", "create-key-and-notify", "ptb", "schlüssel und bescheid"],
+    "action": "/create-key-and-notify",
+    "params": ["lock", "recipient", "ttl_optional", "message_optional"],
+    "confidence_base": 0.90
+  },
+  "zahlung": {
+    "triggers": ["sende iota", "schick iota", "pay iota", "zahl an", "überweis", "transfer coins", "iota an 0x", "coins an 0x", "überweise", "zahle ", "betrag an 0x", "schick 0.", "sende 0."],
+    "action": "/transfer-coins",
+    "params": ["recipient", "amount_iota"],
+    "confidence_base": 0.93,
+    "description": "IOTA an Adresse senden",
+    "param_schema": [{"name": "recipient", "type": "address", "required": true}, {"name": "amount_iota", "type": "number", "required": true, "min": 0.000001}]
+  },
+  "nachricht_klartext": {
+    "triggers": ["sende nachricht", "schick nachricht", "klartext an", "send-plain", "sag ihm", "sag ihr", "nachricht an 0x", "schreib an 0x", "text an 0x", "sende mal ", "schick mal ", "soll bekommen", "bekommen.", "offen an 0x", " sende '", " schick '"],
+    "action": "/send-plain",
+    "params": ["recipient", "message_text"],
+    "confidence_base": 0.92
+  },
+  "handshake": {
+    "triggers": ["handshake", "sichere leitung", "verbindung aufbauen", "kanal zu", "ecdh"],
+    "action": "/handshake",
+    "params": ["recipient"],
+    "confidence_base": 0.92
+  },
+  "connect": {
+    "triggers": ["verbinde", "connect", "verbindung herstellen", "chat starten", "auf handshake warten"],
+    "action": "/connect",
+    "params": ["recipient_optional"],
+    "confidence_base": 0.90
+  },
+  "send_verschluesselt": {
+    "triggers": ["sende verschlüsselt", "schick verschlüsselt", "send nachricht", "/send", "an alle partner", "sende an alle", "schick an alle"],
+    "action": "/send",
+    "params": ["message_text"],
+    "confidence_base": 0.93
+  },
+  "fetch": {
+    "triggers": ["hole nachrichten", "nachrichten holen", "fetch", "hole letzte", "hole letzten", "nachrichten laden", "messages"],
+    "action": "/fetch",
+    "params": ["count", "sender_optional"],
+    "confidence_base": 0.92
+  },
+  "list_keys": {
+    "triggers": ["list-keys", "list keys", "zeig keys", "liste keys", "liste meiner keys", "gib liste keys", "accesskeys", "meine keys", "keys auflisten", "welche keys", "gib mir die liste", "letzter key", "key gültig", "wie lange key", "key noch gültig"],
+    "action": "/list-keys",
+    "params": [],
+    "confidence_base": 0.95
+  },
+  "list_tickets": {
+    "triggers": ["list-tickets", "list tickets", "zeig tickets", "liste tickets", "meine tickets", "tickets auflisten"],
+    "action": "/list-tickets",
+    "params": [],
+    "confidence_base": 0.95
+  },
+  "vault_save": {
+    "triggers": ["vault speichern", "vault-save", "keys sichern", "messaging-keys", "backup keys", "vault lokal"],
+    "action": "/vault-save",
+    "params": [],
+    "confidence_base": 0.95
+  },
+  "vault_onchain": {
+    "triggers": ["vault onchain", "vault-onchain", "keys on-chain", "vault registry"],
+    "action": "/vault-onchain",
+    "params": [],
+    "confidence_base": 0.92
+  },
+  "purge_key": {
+    "triggers": ["purge key", "purge-key", "key löschen", "lösche key", "lösche schlüssel", "lösche den schlüssel", "schlüssel löschen", "key mit id löschen", "alten key löschen", "rebate key"],
+    "action": "/purge-key",
+    "params": ["key_id"],
+    "confidence_base": 0.94
+  },
+  "purge_ticket": {
+    "triggers": ["purge ticket", "purge-ticket", "ticket löschen", "lösche ticket", "ticket mit id löschen"],
+    "action": "/purge-ticket",
+    "params": ["ticket_id"],
+    "confidence_base": 0.90
+  },
+  "purge_handshake": {
+    "triggers": ["purge handshake", "purge-handshake", "handshake löschen", "lösche handshake", "handshake aus mailbox"],
+    "action": "/purge-handshake",
+    "params": [],
+    "confidence_base": 0.92
+  },
+  "purge_msg": {
+    "triggers": ["purge-msg", "purge msg", "nachricht löschen", "nonce löschen", "nachricht aus mailbox"],
+    "action": "/purge-msg",
+    "params": ["nonce"],
+    "confidence_base": 0.88
+  },
+  "emergency_purge": {
+    "triggers": ["emergency purge", "emergency-purge", "notfall purge", "notfall-purge", "vault notfall"],
+    "action": "/emergency-purge",
+    "params": [],
+    "confidence_base": 0.90
+  },
+  "emergency_purge_key": {
+    "triggers": ["emergency-purge-key", "notfall purge key", "key notfall-purge vorbereiten"],
+    "action": "/emergency-purge-key",
+    "params": ["key_id"],
+    "confidence_base": 0.88
+  },
+  "emergency_purge_ticket": {
+    "triggers": ["emergency-purge-ticket", "notfall purge ticket"],
+    "action": "/emergency-purge-ticket",
+    "params": ["ticket_id"],
+    "confidence_base": 0.88
+  },
+  "transfer_key": {
+    "triggers": ["transfer key", "transfer-key", "key übertragen", "key an 0x"],
+    "action": "/transfer-key",
+    "params": ["key_id", "new_owner"],
+    "confidence_base": 0.90
+  },
+  "transfer_ticket": {
+    "triggers": ["transfer ticket", "transfer-ticket", "ticket übertragen", "ticket an 0x"],
+    "action": "/transfer-ticket",
+    "params": ["ticket_id", "new_owner"],
+    "confidence_base": 0.90
+  },
+  "create_ticket": {
+    "triggers": ["create-ticket", "create ticket", "ticket erstellen", "ticket für event", "ticket ausstellen", "tickets für event", "10 tickets für", "mach 10 tickets", "tickets für event 0x"],
+    "action": "/create-ticket",
+    "params": ["event_id", "recipient"],
+    "confidence_base": 0.88
+  },
+  "use_ticket": {
+    "triggers": ["use-ticket", "use ticket", "ticket einlösen", "ticket nutzen", "einlösen für event"],
+    "action": "/use-ticket",
+    "params": ["ticket_id", "event_id"],
+    "confidence_base": 0.90
+  },
+  "set_package_id": {
+    "triggers": ["set-package-id", "setze package", "package-id", "package id setzen", "set package"],
+    "action": "/set-package-id",
+    "params": ["package_id"],
+    "confidence_base": 0.92
+  },
+  "help": {
+    "triggers": ["help", "hilfe", "was kann ich", "befehle", "übersicht", "/help", "kann ich ", "kann ich offline", "was passiert wenn"],
+    "action": "/help",
+    "params": [],
+    "confidence_base": 0.92
+  },
+  "exit": {
+    "triggers": [" exit", "exit ", "/exit", "beenden", "programm beenden", "chat beenden", "raus", " stop", "stop ", "schließen"],
+    "action": "/exit",
+    "params": [],
+    "confidence_base": 0.95,
+    "description": "Programm/Chat beenden"
+  }
+}

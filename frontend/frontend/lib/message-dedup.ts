@@ -1,0 +1,48 @@
+import type { Message } from './types'
+
+const DEFAULT_WINDOW_MS = 120_000
+
+/** Gleicher Klartext vom gleichen Absender im Zeitfenster → eine Zeile, mehrere Transport-Icons. */
+export function contentDedupKey(
+  sender: string,
+  text: string,
+  ts: number,
+  windowMs: number = DEFAULT_WINDOW_MS
+): string {
+  const bucket = Math.floor(ts / windowMs)
+  return `${sender.trim().toLowerCase()}|${text.trim()}|${bucket}`
+}
+
+export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
+  const key = msg.dedupKey
+  if (!key) return [msg, ...prev]
+  const i = prev.findIndex((m) => m.dedupKey === key)
+  if (i < 0) return [msg, ...prev]
+  const cur = prev[i]!
+  const tr = new Set<'internet' | 'mesh' | 'adhoc'>([
+    ...(cur.transports ?? []),
+    ...(msg.transports ?? []),
+  ])
+  const mc = msg.content ?? ''
+  const cc = cur.content ?? ''
+  const merged: Message = {
+    ...cur,
+    ...msg,
+    id: cur.id,
+    timestamp: Math.max(cur.timestamp, msg.timestamp),
+    transports: [...tr],
+    /** Längeren Klartext bevorzugen (z. B. voller Wire vs. abgeschnittene Kopie). */
+    content: mc.length >= cc.length ? mc : cc,
+    encrypted: msg.encrypted ?? cur.encrypted,
+  }
+  const rest = prev.filter((_, j) => j !== i)
+  return [merged, ...rest]
+}
+
+export function mergeAllMessages(rows: Message[]): Message[] {
+  let acc: Message[] = []
+  for (const m of rows) {
+    acc = mergeMessageByDedup(acc, m)
+  }
+  return acc.sort((a, b) => b.timestamp - a.timestamp)
+}

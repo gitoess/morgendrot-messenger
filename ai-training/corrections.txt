@@ -1,0 +1,26 @@
+# Eine Zeile pro Korrektur: "Frage oder falsche Annahme | richtige Antwort". Zeilen mit # = Kommentar.
+# Wird beim RAG-Build als Chunks (source: corrections) eingebaut und bei der Suche stärker gewichtet.
+Ticket für Event erstellen und an Adresse senden = unbekannter Befehl | Ticket: /create-ticket <event_id> 0 <valid_until_ms> <metadata_hex> <recipient_0x>. Adresse aus der Frage als recipient. event_id = Event-Registry-Objekt-ID von der Chain. Optional danach /send-plain an die Adresse.
+"Ticket erstellen und sende es an 0x" = kein Handshake | Immer /create-ticket mit recipient=0x-Adresse. "Sende es" bezieht sich auf das Ticket/Empfänger, nicht auf verschlüsselte Nachricht. Kein /handshake.
+
+# Real-World-Export 2026-03-11T19:25:47.013Z
+ticket 0x0000000000000000000000000000000000000000000000000000000000000033 notfall-purge vorbereiten | ACTION: /emergency-purge-ticket
+ticket 0x0000000000000000000000000000000000000000000000000000000000000078 notfall-purge vorbereiten | ACTION: /emergency-purge-ticket
+
+# 500-Kombinationen 2026-03-11T20:02:59.216Z
+Hole die letzten 10 Nachrichten | ACTION: /fetch
+Als nächstes Handshake an 0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | ACTION: /handshake
+Schritt 1: Package setzen 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | ACTION: /set-package-id
+Schritt 2: Handshake an 0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | ACTION: /handshake
+Schritt 3: Verbinden mit 0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5 | ACTION: /connect
+Schritt 6: Keys sichern | ACTION: /vault-save
+Erst Handshake dann Connect dann Send | ACTION: /handshake
+Als nächstes Handshake an 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | ACTION: /handshake
+Schritt 1: Package setzen 0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5 | ACTION: /set-package-id
+Schritt 2: Handshake an 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | ACTION: /handshake
+Schritt 3: Verbinden mit 0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | ACTION: /connect
+Als nächstes Handshake an 0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5 | ACTION: /handshake
+Schritt 1: Package setzen 0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc | ACTION: /set-package-id
+Schritt 2: Handshake an 0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5 | ACTION: /handshake
+Schritt 3: Verbinden mit 0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb | ACTION: /connect
+Hole die letzten 100 Nachrichten | ACTION: /fetch

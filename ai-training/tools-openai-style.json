@@ -1,0 +1,60 @@
+{
+  "description": "Morgendrot-Befehle als Werkzeuge (OpenAI/Function-Calling-kompatibel). Für RAG oder Tool-use-Integration.",
+  "tools": [
+    {
+      "name": "create_key",
+      "description": "Erstellt einen AccessKey-NFT für Zutritt. lock = Schloss-Adresse (0x64), recipient = Gast (0x64), ttl_days optional.",
+      "parameters": { "lock": "0x64", "recipient": "0x64", "ttl_days": "int?" }
+    },
+    {
+      "name": "create_key_and_notify",
+      "description": "PTB: Key + Klartext-Nachricht in einer TX. create_key(lock, recipient, ttl?) + send_plain(recipient, message).",
+      "parameters": { "lock": "0x64", "recipient": "0x64", "ttl_days": "int?", "message": "string" }
+    },
+    {
+      "name": "send_plain",
+      "description": "Klartext an Adresse senden. Kein Handshake nötig.",
+      "parameters": { "recipient": "0x64", "text": "string" }
+    },
+    {
+      "name": "send_encrypted",
+      "description": "Verschlüsselte Nachricht. Erfordert vorher /handshake und Partner /connect (Säule 2).",
+      "parameters": { "text": "string" }
+    },
+    {
+      "name": "transfer_coins",
+      "description": "Native IOTA an Adresse senden. Braucht keinen /connect.",
+      "parameters": { "recipient": "0x64", "amount_iota": "number" }
+    },
+    {
+      "name": "handshake",
+      "description": "ECDH-Handshake an Partner senden. Partner muss danach /connect ausführen.",
+      "parameters": { "recipient": "0x64" }
+    },
+    {
+      "name": "connect",
+      "description": "Auf Handshake warten, Chat starten. Optional Partner-Adresse.",
+      "parameters": { "partner": "0x64?" }
+    },
+    {
+      "name": "fetch_messages",
+      "description": "Letzte n Nachrichten holen (1–100). Optional nur von sender.",
+      "parameters": { "n": "int", "sender": "0x64?" }
+    },
+    {
+      "name": "purge_key",
+      "description": "AccessKey löschen (Rebate). ENABLE_PURGE nötig. Säule 4.",
+      "parameters": { "key_id": "0x" }
+    },
+    {
+      "name": "list_keys",
+      "description": "AccessKeys auflisten. owner optional (default MY_ADDRESS).",
+      "parameters": { "owner": "0x64?" }
+    },
+    {
+      "name": "set_package_id",
+      "description": "Package-ID setzen (Säule 1).",
+      "parameters": { "package_id": "0x" }
+    }
+  ]
+}

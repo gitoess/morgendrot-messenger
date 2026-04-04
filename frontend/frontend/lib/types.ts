@@ -1,0 +1,86 @@
+export type ProjectType = 'chat' | 'lock' | 'monitor' | 'boss' | 'vault'
+
+export type ChatVariant = 'private-chat' | 'pinnwand'
+export type LockVariant = 'smart-lock' | 'access-key-ticket' | 'payment-trigger'
+export type MonitorVariant = 'sensor-central' | 'device-monitor' | 'heartbeat-sender'
+export type BossVariant = 'boss-signer' | 'pinnwand-admin'
+export type VaultVariant = 'local-vault' | 'emergency-purge'
+
+export type ProjectVariant =
+  | ChatVariant
+  | LockVariant
+  | MonitorVariant
+  | BossVariant
+  | VaultVariant
+
+export interface Message {
+  id: string
+  from: string
+  content: string
+  timestamp: number
+  encrypted?: boolean
+  /** Bei Boss-Übersicht: an welche Adresse die Nachricht ging („An mich“ vs „An Kommandant“). */
+  recipient?: string
+  /** Standard: Mailbox/IOTA; lokal vom Funk-Stick */
+  source?: 'mailbox' | 'mesh'
+  meshMeta?: { kind: 'v2' | 'text'; fromNodeNum: number; nonce?: number }
+  /** Kanäle, über die derselbe Inhalt (dedupKey) angekommen ist */
+  transports?: ('internet' | 'mesh' | 'adhoc')[]
+  /** Inhalt + Absender + Zeitfenster – für Zusammenführung IOTA+Funk */
+  dedupKey?: string
+  /** Mailbox-Nonce (String), nur bei chain-gespeicherten Nachrichten – für /purge-msg */
+  chainNonce?: string
+  /** true: Nachricht liegt im Rebased-Mailbox-Objekt und kann on-chain gepurgt werden */
+  chainPurgeable?: boolean
+}
+
+export interface KeyData {
+  id: string
+  lockAddress?: string
+  owner?: string
+  validUntil?: number
+}
+
+export interface TicketData {
+  id: string
+  eventId?: string
+  owner?: string
+  validFrom?: number
+  validUntil?: number
+  used?: boolean
+}
+
+export interface DeviceStatus {
+  id: string
+  name: string
+  address: string
+  lastSeen: number
+  status: 'online' | 'offline' | 'warning'
+}
+
+export interface ApiResponse<T = unknown> {
+  ok: boolean
+  data?: T
+  /** Viele /api/command-Antworten liefern Text hier statt in `error`. */
+  message?: string
+  error?: string
+  txDigest?: string
+}
+
+export interface QuickAction {
+  id: string
+  label: string
+  description: string
+  icon: string
+  command: string
+  fields?: FormField[]
+}
+
+export interface FormField {
+  name: string
+  label: string
+  placeholder?: string
+  type?: 'text' | 'number' | 'textarea' | 'select'
+  required?: boolean
+  options?: { value: string; label: string }[]
+}

@@ -1,0 +1,224 @@
+{
+  "meta": {
+    "version": "1.0",
+    "description": "Vollständige Befehlsübersicht für den Morgendrot-Wizard. Jede Kachel deckt alle Befehle ihrer Kategorie ab. KI erhält diese Struktur als Kontext.",
+    "total_commands": 28
+  },
+  "tiles": [
+    {
+      "id": "nachricht",
+      "title": "Nachricht senden",
+      "short": "✉️ Nachricht senden",
+      "description": "Verschlüsselte oder Klartext-Nachrichten, Zahlungen (IOTA), Handshake, Connect, Fetch. Säule 1 (Setup) + Säule 2 (Kanal) + Zahlung.",
+      "commands": [
+        {
+          "cmd": "/set-package-id",
+          "params": ["package_id"],
+          "param_types": ["0x64hex"],
+          "description": "Package-ID setzen (Säule 1). Vor allen anderen Aktionen.",
+          "slot_schema": { "package_id": { "type": "string", "pattern": "0x[0-9a-fA-F]{64}", "required": true } }
+        },
+        {
+          "cmd": "/handshake",
+          "params": ["recipient"],
+          "param_types": ["0x64hex"],
+          "description": "ECDH-Handshake an Partner senden. Partner führt danach /connect aus.",
+          "slot_schema": { "recipient": { "type": "string", "pattern": "0x[0-9a-fA-F]{64}", "required": true } }
+        },
+        {
+          "cmd": "/connect",
+          "params": ["recipient_optional"],
+          "param_types": ["0x64hex_or_empty"],
+          "description": "Auf Handshake warten, Chat starten. Ohne Adresse: PARTNER_ADDRESS aus .env."
+        },
+        {
+          "cmd": "/send-plain",
+          "params": ["recipient", "message_text"],
+          "param_types": ["0x64hex", "string"],
+          "description": "Klartext an Adresse senden. Kein Handshake nötig. Im Explorer sichtbar.",
+          "slot_schema": { "recipient": { "type": "string", "required": true }, "message_text": { "type": "string", "required": true } }
+        },
+        {
+          "cmd": "/send",
+          "params": ["message_text"],
+          "param_types": ["string"],
+          "description": "Verschlüsselte Nachricht (nur nach /connect). An alle verbundenen Partner."
+        },
+        {
+          "cmd": "/transfer-coins",
+          "params": ["recipient", "amount_iota"],
+          "param_types": ["0x64hex", "number"],
+          "description": "Native IOTA an Adresse senden. Kein /connect nötig.",
+          "slot_schema": { "recipient": { "type": "string", "required": true }, "amount_iota": { "type": "number", "min": 0, "required": true } }
+        },
+        {
+          "cmd": "/fetch",
+          "params": ["count", "sender_optional"],
+          "param_types": ["number", "0x64hex_or_empty"],
+          "description": "Letzte N Nachrichten laden. Optional: nur von sender (0x…)."
+        }
+      ]
+    },
+    {
+      "id": "zutritt",
+      "title": "Zutritt gewähren",
+      "short": "🔑 Zutritt gewähren",
+      "description": "AccessKeys erstellen, auflisten, übertragen, Notfall-Purge vorbereiten. Säule 3.",
+      "commands": [
+        {
+          "cmd": "/create-key",
+          "params": ["lock", "recipient", "ttl_days_optional"],
+          "param_types": ["0x64hex_or_LOCK_ID", "0x64hex", "number_1_365"],
+          "description": "Ein AccessKey-NFT ausstellen. ttl = Tage (Standard 30).",
+          "slot_schema": { "recipient": { "type": "string", "required": true }, "ttl_days": { "type": "number", "min": 1, "max": 365, "default": 30 } }
+        },
+        {
+          "cmd": "/create-keys",
+          "params": ["lock", "recipient", "ttl_days_optional", "count_optional"],
+          "param_types": ["0x64hex_or_LOCK_ID", "0x64hex", "number_1_365", "number"],
+          "description": "Mehrere AccessKeys auf einmal ausstellen."
+        },
+        {
+          "cmd": "/create-key-and-notify",
+          "params": ["lock", "recipient", "ttl_days_optional", "message_text"],
+          "param_types": ["0x64hex_or_LOCK_ID", "0x64hex", "number_1_365", "string"],
+          "description": "Key ausstellen und Klartext-Nachricht in einer TX (PTB)."
+        },
+        {
+          "cmd": "/list-keys",
+          "params": ["owner_optional"],
+          "param_types": ["0x64hex_or_empty"],
+          "description": "Eigene AccessKeys auflisten (lock_id, expires_at)."
+        },
+        {
+          "cmd": "/transfer-key",
+          "params": ["key_id", "new_owner"],
+          "param_types": ["0x64hex", "0x64hex"],
+          "description": "AccessKey an neue Adresse übertragen. Zuerst /list-keys."
+        },
+        {
+          "cmd": "/emergency-purge-key",
+          "params": ["key_id"],
+          "param_types": ["0x64hex"],
+          "description": "Notfall-Purge für Key aktivieren. Danach /purge-key ausführen."
+        }
+      ]
+    },
+    {
+      "id": "tickets",
+      "title": "Event/Tickets",
+      "short": "🎫 Event/Tickets",
+      "description": "Tickets erstellen, einlösen, auflisten, übertragen, purgen. Event-Registry.",
+      "commands": [
+        {
+          "cmd": "/create-ticket",
+          "params": ["event_id", "valid_from_ms", "valid_until_ms", "metadata_hex", "recipient"],
+          "param_types": ["0x64hex", "number", "number", "0xhex", "0x64hex"],
+          "description": "Ticket für Event ausstellen. event_id aus Event-Registry. metadata_hex = Event-Namen etc. als Hex.",
+          "slot_schema": { "event_id": { "type": "string", "required": true }, "recipient": { "type": "string", "required": true }, "valid_until_ms": { "type": "number", "required": true } }
+        },
+        {
+          "cmd": "/use-ticket",
+          "params": ["ticket_id", "event_id"],
+          "param_types": ["0x64hex", "0x64hex"],
+          "description": "Ticket einlösen (used=true). Beide IDs von /list-tickets bzw. Event.",
+          "slot_schema": { "ticket_id": { "type": "string", "required": true }, "event_id": { "type": "string", "required": true } }
+        },
+        {
+          "cmd": "/list-tickets",
+          "params": ["owner_optional"],
+          "param_types": ["0x64hex_or_empty"],
+          "description": "Eigene Tickets auflisten."
+        },
+        {
+          "cmd": "/purge-ticket",
+          "params": ["ticket_id"],
+          "param_types": ["0x64hex"],
+          "description": "Ticket löschen (Rebate). ENABLE_PURGE nötig. Zuerst /list-tickets."
+        },
+        {
+          "cmd": "/transfer-ticket",
+          "params": ["ticket_id", "new_owner"],
+          "param_types": ["0x64hex", "0x64hex"],
+          "description": "Ticket an neue Adresse übertragen."
+        },
+        {
+          "cmd": "/emergency-purge-ticket",
+          "params": ["ticket_id"],
+          "param_types": ["0x64hex"],
+          "description": "Notfall-Purge für Ticket aktivieren. Danach /purge-ticket."
+        }
+      ]
+    },
+    {
+      "id": "rebate",
+      "title": "System aufräumen (Rebate)",
+      "short": "🧹 System aufräumen",
+      "description": "Vault sichern, Handshake/Nachricht/Key/Ticket purgen, Notfall-Purge. Säule 4.",
+      "commands": [
+        {
+          "cmd": "/vault-save",
+          "params": [],
+          "param_types": [],
+          "description": "Messaging-Keys lokal speichern (VAULT_FILE). Erfordert Passwort."
+        },
+        {
+          "cmd": "/vault-onchain",
+          "params": [],
+          "param_types": [],
+          "description": "Keys on-chain im VaultRegistry speichern. VAULT_REGISTRY_ID nötig."
+        },
+        {
+          "cmd": "/purge-handshake",
+          "params": [],
+          "param_types": [],
+          "description": "Handshake aus Mailbox löschen (ENABLE_PURGE, MAILBOX_ID)."
+        },
+        {
+          "cmd": "/purge-msg",
+          "params": ["nonce", "sender_optional"],
+          "param_types": ["number", "0x64hex_or_empty"],
+          "description": "Nachricht aus Mailbox löschen. Nonce aus Event/Explorer."
+        },
+        {
+          "cmd": "/emergency-purge",
+          "params": [],
+          "param_types": [],
+          "description": "Vault Notfall-Purge (enable + purge). VAULT_REGISTRY_ID nötig."
+        },
+        {
+          "cmd": "/purge-key",
+          "params": ["key_id"],
+          "param_types": ["0x64hex"],
+          "description": "AccessKey löschen (Storage-Rebate). Zuerst /list-keys. ENABLE_PURGE."
+        },
+        {
+          "cmd": "/purge-keys",
+          "params": ["key_id_1", "key_id_2", "..."],
+          "param_types": ["0x64hex_list"],
+          "description": "Mehrere Keys in einer TX purgen (Bulk)."
+        }
+      ]
+    }
+  ],
+  "global_commands": [
+    { "cmd": "/help", "params": [], "description": "Alle Befehle anzeigen." },
+    { "cmd": "/exit", "params": [], "description": "Programm/Chat beenden." }
+  ],
+  "completeness_check": {
+    "backend_commands": [
+      "/set-package-id", "/handshake", "/connect", "/send-plain", "/send", "/transfer-coins", "/fetch",
+      "/vault-save", "/vault-onchain", "/purge-handshake", "/purge-msg", "/emergency-purge",
+      "/create-key", "/create-keys", "/create-key-and-notify", "/purge-key", "/emergency-purge-key", "/transfer-key", "/list-keys",
+      "/create-ticket", "/use-ticket", "/purge-ticket", "/emergency-purge-ticket", "/transfer-ticket", "/list-tickets",
+      "/purge-keys", "/help", "/exit"
+    ],
+    "covered_in_tiles": {
+      "nachricht": ["/set-package-id", "/handshake", "/connect", "/send-plain", "/send", "/transfer-coins", "/fetch"],
+      "zutritt": ["/create-key", "/create-keys", "/create-key-and-notify", "/list-keys", "/transfer-key", "/emergency-purge-key"],
+      "tickets": ["/create-ticket", "/use-ticket", "/list-tickets", "/purge-ticket", "/transfer-ticket", "/emergency-purge-ticket"],
+      "rebate": ["/vault-save", "/vault-onchain", "/purge-handshake", "/purge-msg", "/emergency-purge", "/purge-key", "/purge-keys"],
+      "global": ["/help", "/exit"]
+    }
+  }
+}

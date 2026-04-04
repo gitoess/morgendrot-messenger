@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Morgendrot – Einsatzbericht entschlüsseln</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; }
+    code { font-size: 0.9em; }
+    textarea { width: 100%; min-height: 8rem; font-family: ui-monospace, monospace; font-size: 12px; }
+    button { margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
+    .err { color: #b91c1c; }
+    .ok { color: #15803d; }
+  </style>
+</head>
+<body>
+  <h1>Einsatzbericht / Protokoll entschlüsseln</h1>
+  <p>
+    Schemas: <code>morgendrot.einsatzbericht.enc.v1</code> (Kurzbericht),{' '}
+    <code>morgendrot.einsatzprotokoll.zip.enc.v1</code> (Einsatzbericht: verschlüsseltes ZIP darin). Download heißt oft
+    <code>*.zip.enc.json</code> — <strong>kein</strong> fertiges ZIP; erst hier entschlüsseln.
+  </p>
+  <ol>
+    <li>JSON-Datei hier einfügen oder unten wählen (Doppelklick im Explorer fragt <strong>nicht</strong> nach dem Passwort).</li>
+    <li>Passwort eingeben (dieselbe Seite im Messenger oder eine Kopie der HTML-Datei).</li>
+    <li>Entschlüsseln → Klartext-JSON oder echtes ZIP (Einsatzprotokoll) zum Download.</li>
+  </ol>
+  <p><input type="file" id="file" accept=".json,application/json" /></p>
+  <p><textarea id="raw" placeholder='{ "schema": "morgendrot.einsatzbericht.enc.v1", ... }'></textarea></p>
+  <p><label>Passwort: <input type="password" id="pw" autocomplete="off" /></label></p>
+  <button type="button" id="go">Entschlüsseln</button>
+  <div id="out"></div>
+
+  <script>
+    function b64ToBytes(b64) {
+      const bin = atob(b64.replace(/\s/g, ''));
+      const u8 = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+      return u8;
+    }
+
+    document.getElementById('file').addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      if (!f) return;
+      document.getElementById('raw').value = await f.text();
+    });
+
+    document.getElementById('go').addEventListener('click', async () => {
+      const out = document.getElementById('out');
+      out.replaceChildren();
+      out.className = '';
+      let env;
+      try {
+        env = JSON.parse(document.getElementById('raw').value.trim());
+      } catch {
+        out.className = 'err';
+        out.appendChild(document.createTextNode('Kein gültiges JSON.'));
+        return;
+      }
+      const okSchema =
+        env.schema === 'morgendrot.einsatzbericht.enc.v1' || env.schema === 'morgendrot.einsatzprotokoll.zip.enc.v1';
+      if (!okSchema) {
+        out.className = 'err';
+        out.appendChild(
+          document.createTextNode('Unbekanntes schema (erwartet Einsatzbericht oder Einsatzprotokoll-ZIP).')
+        );
+        return;
+      }
+      const password = document.getElementById('pw').value;
+      if (!password || password.length < 8) {
+        out.className = 'err';
+        out.appendChild(document.createTextNode('Passwort mindestens 8 Zeichen.'));
+        return;
+      }
+      const enc = new TextEncoder();
+      const salt = b64ToBytes(env.saltB64);
+      const iv = b64ToBytes(env.ivB64);
+      const ct = b64ToBytes(env.ciphertextB64);
+      const iterations = Number(env.iterations) || 210000;
+      try {
+        const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, [
+          'deriveKey',
+        ]);
+        const aesKey = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+          keyMaterial,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['decrypt']
+        );
+        const plainBuf = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ct);
+        out.className = 'ok';
+        if (env.schema === 'morgendrot.einsatzprotokoll.zip.enc.v1') {
+          const blob = new Blob([plainBuf], { type: 'application/zip' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'morgendrot-einsatzprotokoll.zip';
+          a.rel = 'noopener';
+          a.textContent = 'Einsatzprotokoll (.zip) herunterladen';
+          a.style.display = 'inline-block';
+          a.style.marginTop = '1rem';
+          out.appendChild(document.createTextNode('Enthält protokoll.json, protokoll.html und medien/.'));
+          out.appendChild(document.createElement('br'));
+          out.appendChild(a);
+          return;
+        }
+        const txt = new TextDecoder().decode(plainBuf);
+        let inner;
+        try {
+          inner = JSON.parse(txt);
+        } catch {
+          out.className = 'err';
+          out.appendChild(document.createTextNode('Entschlüsselt, aber kein gültiges JSON.'));
+          return;
+        }
+        if (inner && inner.schema === 'morgendrot.einsatzprotokoll.bundle.v1' && inner.zipBase64) {
+          const bin = b64ToBytes(inner.zipBase64);
+          const blob = new Blob([bin], { type: 'application/zip' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'morgendrot-einsatzprotokoll.zip';
+          a.rel = 'noopener';
+          a.textContent = 'Einsatzprotokoll (.zip) herunterladen';
+          a.style.display = 'inline-block';
+          a.style.marginTop = '1rem';
+          out.appendChild(document.createTextNode('Älteres Bundle-Format (zipBase64).'));
+          out.appendChild(document.createElement('br'));
+          out.appendChild(a);
+          const pre = document.createElement('pre');
+          pre.style.whiteSpace = 'pre-wrap';
+          pre.style.fontSize = '11px';
+          pre.style.marginTop = '1rem';
+          pre.textContent = txt;
+          out.appendChild(pre);
+          return;
+        }
+        const pre = document.createElement('pre');
+        pre.style.whiteSpace = 'pre-wrap';
+        pre.style.fontSize = '12px';
+        pre.textContent = txt;
+        out.appendChild(pre);
+        const blob = new Blob([txt], { type: 'application/json;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'morgendrot-einsatzbericht-entschluesselt.json';
+        a.rel = 'noopener';
+        a.textContent = 'Als JSON herunterladen';
+        a.style.display = 'inline-block';
+        a.style.marginTop = '1rem';
+        out.appendChild(a);
+      } catch (e) {
+        out.className = 'err';
+        out.appendChild(
+          document.createTextNode(
+            'Entschlüsselung fehlgeschlagen (falsches Passwort oder beschädigte Datei): ' + (e && e.message ? e.message : e)
+          )
+        );
+      }
+    });
+  </script>
+</body>
+</html>

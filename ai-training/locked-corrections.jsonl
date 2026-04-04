@@ -1,0 +1,11 @@
+{"text":"Ticket für Event erstellen und an Adresse senden → /create-ticket <event_id> 0 <valid_until_ms> <metadata_hex> <recipient_0x>. Adresse als recipient. Optional danach /send-plain."}
+{"text":"\"Ticket erstellen und sende es an 0x\" → Immer /create-ticket mit recipient=0x-Adresse. Kein /handshake."}
+{"text":"ticket 0x… notfall-purge vorbereiten → ACTION: /emergency-purge-ticket"}
+{"text":"Hole die letzten N Nachrichten (10, 100, …) → ACTION: /fetch"}
+{"text":"Als nächstes Handshake an 0x… / Schritt 2: Handshake an 0x… → ACTION: /handshake"}
+{"text":"Schritt 1: Package setzen 0x… → ACTION: /set-package-id"}
+{"text":"Schritt 3: Verbinden mit 0x… → ACTION: /connect"}
+{"text":"Schritt 6: Keys sichern → ACTION: /vault-save"}
+{"text":"Erst Handshake dann Connect dann Send → zuerst ACTION: /handshake"}
+{"text":"TODESZONE Purge: Purge nur mit konkreter Objekt-ID (z. B. purge key 0x…). Ohne ID oder bei unsicherer/doppelter Aktion: NEIN oder Rückfrage (z. B. /list-keys). Kein pauschaler /emergency-purge."}
+{"text":"TODESZONE Rebate: Rebate nur vorschlagen wenn konkrete Objekt-ID und ENABLE_PURGE. Unrentablen oder pauschalen Rebate-Versuch ablehnen: NEIN mit ökonomischem Warnhinweis."}

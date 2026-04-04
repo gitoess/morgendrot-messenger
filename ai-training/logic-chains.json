@@ -1,0 +1,21 @@
+[
+  { "after": ["handshake"], "suggest": "/vault-save", "reason": "Keys lokal sichern, bevor etwas schiefgeht." },
+  { "after": ["connect"], "suggest": "/vault-save", "reason": "Nach Connect: Messaging-Keys in Vault speichern." },
+  { "after": ["handshake"], "then_next": "connect", "reason": "Partner muss /connect ausführen, dann kann gesendet werden." },
+  { "after": ["create-key", "create-key-and-notify"], "suggest": "/list-keys", "reason": "Prüfen ob Key erstellt wurde." },
+  { "after": ["create-ticket"], "suggest": "/list-tickets", "reason": "Prüfen ob Ticket erstellt wurde." },
+  { "after": ["list-keys"], "suggest": "/purge-key <keyId> für abgelaufene", "reason": "Abgelaufene Keys: Key-ID aus Liste, dann /purge-key <keyId> (ENABLE_PURGE)." },
+  { "after": ["list-tickets"], "suggest": "/purge-ticket <ticketId> für erledigte", "reason": "Tickets aufräumen: /purge-ticket <ticketId>." },
+  { "after": ["set-package-id"], "suggest": "RPC testen (Säule 1)", "reason": "Package-ID gesetzt – als Nächstes Netzwerk-Status prüfen." },
+  { "after": ["send"], "suggest": "/fetch 20", "reason": "Nachricht gesendet – optional Nachrichten aktualisieren." },
+  { "after": ["create-key", "create-key-and-notify"], "suggest": "/vault-save", "reason": "Keys lokal sichern (Säule 4)." },
+  { "after": ["connect"], "then_next": "send", "reason": "Nach Connect kann sofort /send genutzt werden." },
+  { "if_error": "ObjectNotFound", "suggest": "Zuerst /connect oder /handshake", "reason": "Objekt (Handshake/Keys) noch nicht auf Chain." },
+  { "if_error": "Nicht verbunden", "suggest": "ACTION: /handshake 0x… oder /connect 0x…", "reason": "Verschlüsselt senden braucht Verbindung. Zuerst verbinden, dann /send." },
+  { "if_error": "Insufficient", "suggest": "Gas/Deposit prüfen oder IOTA nachfüllen", "reason": "Konto oder Gas-Budget zu niedrig." },
+  { "if_error": "Backend nicht bereit", "suggest": "npm run dev starten", "reason": "Server läuft nicht." },
+  { "if_error": "Wallet", "suggest": "Wallet entsperren (UI oder Terminal)", "reason": "Signatur nötig." },
+  { "if_error": "503", "suggest": "Backend starten: npm run dev", "reason": "API nicht erreichbar." },
+  { "after": ["transfer-coins"], "suggest": "Optional /fetch oder nächster Schritt (z. B. /create-key)", "reason": "Überweisung erledigt; Kontextabhängig weitermachen." },
+  { "after": ["purge-key", "purge-ticket", "purge-handshake"], "suggest": "Rebate erhalten; optional /list-keys oder /list-tickets", "reason": "Säule 4: Aufräumen abgeschlossen." }
+]

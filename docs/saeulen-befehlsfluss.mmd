@@ -1,0 +1,55 @@
+%% Morgendrot – 4 Säulen + Befehlsfluss (Chat / Zutritt / Nachsorge)
+%% Anzeige: GitHub, VS Code Mermaid-Extension, https://mermaid.live
+%% Siehe auch: docs/architecture.mmd (High-Level Architektur)
+
+flowchart TB
+    subgraph S1["Säule 1: Fundament"]
+        A1["MY_ADDRESS setzen"]
+        A2["PACKAGE_ID setzen\n/set-package-id"]
+        A3["RPC erreichbar?\n/api/chain-reachable"]
+        A4["Wallet entsperren"]
+    end
+
+    subgraph S2["Säule 2: Kanal"]
+        B1["Partner-Adresse\n(PARTNER_ADDRESS / .morgendrot-partner)"]
+        B2["Sender: /handshake 0x…\n(ECDH auf Chain/Mailbox)"]
+        B3["Empfänger: /connect [0x…]\n(peerMap, Chat bereit)"]
+        B4["🟢 Verbunden"]
+    end
+
+    subgraph S3["Säule 3: Aktivität"]
+        C1["/send <Text>\n(verschlüsselt, nur nach Connect)"]
+        C2["/send-plain 0x… <Text>\n(Klartext, kein Handshake)"]
+        C3["/fetch n [0x…]\n(Nachrichten holen)"]
+        C4["/transfer-coins 0x… <IOTA>\n(kein Connect nötig)"]
+        C5["/create-key, /create-keys\n/create-key-and-notify (PTB)"]
+        C6["/create-ticket\n/use-ticket, /transfer-ticket"]
+    end
+
+    subgraph S4["Säule 4: Nachsorge"]
+        D1["/vault-save\n(Keys lokal sichern)"]
+        D2["/purge-handshake\n/purge-msg\n(Rebate Mailbox)"]
+        D3["/purge-key, /purge-ticket\n(Rebate Keys/Tickets)"]
+        D4["/list-keys, /list-tickets"]
+    end
+
+    A1 --> A2 --> A3 --> A4
+    A4 --> B1 --> B2 --> B3 --> B4
+    B4 --> C1
+    A4 --> C2
+    A4 --> C3
+    A4 --> C4
+    A4 --> C5
+    A4 --> C6
+    C1 --> D1
+    C5 --> D1
+    C5 --> D4
+    C6 --> D4
+    B2 --> D2
+    C5 --> D3
+    C6 --> D3
+
+    style S1 fill:#e8f4e8
+    style S2 fill:#e8e8f4
+    style S3 fill:#f4e8e8
+    style S4 fill:#f4f4e8

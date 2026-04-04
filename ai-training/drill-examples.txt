@@ -1,0 +1,35 @@
+# Morgendrot Drill-Beispiele (User → KI-Antwort) für RAG / Few-Shot
+# Format: User-Äußerung | Erwartete Kern-Antwort / ACTION
+
+Lass Gast 0x1234…cdef rein | ACTION: /create-key <LOCK_ID> 0x1234…cdef 30
+Gib der Adresse 0xabc… einen Schlüssel für 7 Tage | ACTION: /create-key <LOCK_ID> 0xabc… 7
+Verschlüsselte Nachricht an 0x0748…c5 senden | Zuerst /handshake. ACTION: /handshake 0x0748…c5
+Verschlüsselt an 0xdead… schicken | ACTION: /handshake 0xdead…
+Sende 1 IOTA an 0x0748…c5 | ACTION: /transfer-coins 0x0748…c5 1
+Überweise 0.5 IOTA an 0xabc…01 | ACTION: /transfer-coins 0xabc…01 0.5
+Ticket für Gast 0x123… ausstellen und Bescheid sagen | ACTION: /create-key-and-notify <LOCK_ID> 0x123… 30 Dein Key ist aktiv.
+Key wurde erstellt. Was jetzt? | Säule 4: ACTION: /vault-save. Später /list-keys, /purge-key <id>
+Lösche den Key 0x00…123 | ACTION: /purge-key 0x00…123
+RPC ist rot / Es geht nicht | Säule 1 prüfen: MY_ADDRESS, PACKAGE_ID, RPC_URL, Wallet entsperrt
+Verbindung schlägt fehl | Säule 1 dann Säule 2: /handshake, Partner /connect
+Verschlüsselt schreiben, Fehler | Säule 2: /handshake, Partner /connect, dann /send
+Hole die letzten 20 Nachrichten | ACTION: /fetch 20
+Verbinde mit 0x0748…c5 | ACTION: /connect 0x0748…c5
+Schick Klartext Hallo an 0x0748…c5 | ACTION: /send-plain 0x0748…c5 Hallo
+Jetzt verschlüsselt senden: Bereit | ACTION: /send <Text>
+Setze Package-ID auf 0xa1b2… | ACTION: /set-package-id 0xa1b2…
+Speichere die Messaging-Keys lokal | ACTION: /vault-save
+Lösche den Handshake aus der Mailbox | ACTION: /purge-handshake
+Zeig meine AccessKeys | ACTION: /list-keys
+Zeig meine Tickets | ACTION: /list-tickets
+Handshake an 0x0748…c5 senden | ACTION: /handshake 0x0748…c5
+Übertrage Key 0xkey456 an 0xnewowner… | ACTION: /transfer-key 0xkey456 0xnewowner…
+Ticket 0xticket123 einlösen für Event 0xevent456 | ACTION: /use-ticket 0xticket123 0xevent456
+5 IOTA an 0x00…01 | ACTION: /transfer-coins 0x00…01 5
+Erstelle 3 Keys für 0xrecipient… mit 14 Tagen | ACTION: /create-keys <LOCK_ID> 0xrecipient… 14 3
+Ticket 0xticket999 löschen | ACTION: /purge-ticket 0xticket999
+Ticket 0xt1 an 0xnewowner… übertragen | ACTION: /transfer-ticket 0xt1 0xnewowner…
+Was sind die 13 Schritte? | Chat: MY_ADDRESS, PACKAGE_ID, RPC, Klartext, Partner, Empfänger, STREAMS, Handshake/Connect, /send, /fetch, Vault, Purge, Optionen
+Was kann ich alles machen? | /help. Kurz: /handshake /connect /send /send-plain /fetch /transfer-coins /create-key /purge-key /list-keys /vault-save
+Key und Benachrichtigung in einer Transaktion | ACTION: /create-key-and-notify <LOCK_ID> <recipient> [ttl] <Nachricht>
+Backend nicht bereit | Säule 1: npm run dev, Wallet entsperren, MY_ADDRESS, PACKAGE_ID

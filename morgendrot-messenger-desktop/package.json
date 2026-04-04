@@ -1,0 +1,14 @@
+{
+  "name": "morgendrot-messenger-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Desktop-Fenster für Morgendrot Messenger (startet Backend im übergeordneten Repo).",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "postinstall": "node -e \"const fs=require('fs');const p=require('path');const r=p.resolve(__dirname,'..');if(!fs.existsSync(p.join(r,'package.json'))){console.error('Erwartet wird das Morgendrot-Repo als übergeordneten Ordner (../package.json fehlt).');process.exit(1)}\""
+  },
+  "devDependencies": {
+    "electron": "^41.0.3"
+  }
+}

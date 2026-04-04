@@ -1,0 +1,1831 @@
+/**
+ * API-Server für Morgendrot UI.
+ * LOGIK: Nur Interface – leitet /api/command an wallet-bridge weiter. Move-Funktionen liegen in chain-access; Säule 1–4 werden hier nicht interpretiert, nur durchgereicht.
+ * Stellt REST-Endpoints bereit (Status, Befehle, Abfragen). Läuft nur bei ENABLE_UI=true im Messenger-Modus.
+ */
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { spawn } from 'node:child_process';
+import { CFG, getConfigDisplay, getConnectAddresses, setEnvKey, assignDeviceRoleInEnv, savePackageIdToFile, readPackageIdHistory, readPackageIdHints, savePackageIdHint, readStreamsAnchorIdHistory, seedStreamsAnchorHistoryFromKnownFiles, dedupeStreamAnchorIds, getHierarchyPermissions, isHierarchyConfigKey, type HierarchyPermissions, buildDeviceEnv, buildDeviceJson, buildQrPayload, buildIdentityHeader, generateDeviceSecret, type DeviceProvisionParams } from './config.js';
+import {
+    findPeerHandshake,
+    isChainReachable,
+    hasValidTicket,
+    getOwnedTickets,
+    getOwnedAccessKeys,
+    getAllOwnedObjects,
+    getMailboxRebateCandidates,
+    getClient,
+    getVaultFromChain,
+    generateNewAddressCli,
+    publishPackageCli,
+    buildHandshakeTransaction,
+    signAndExecute,
+    getReferenceGasPrice,
+    getPackageIdsForOwner,
+    extractPackageIdsFromOwnedObjects,
+    getOwnedObjectsDebug,
+    resetRpcClient,
+    getActiveRpcUrl,
+    getRpcCandidateCount,
+    getEffectiveRpcUrlLabel,
+} from './chain-access.js';
+import { HELP_START, HELP_CHAT, getWalletPassword } from './wallet-bridge.js';
+import { logger } from './logger.js';
+import { getMonitorStatus } from './monitoring.js';
+import { exportAuditCsv, exportAuditPdfStream, appendAuditEvent, readAuditEvents } from './audit-log.js';
+import { runGasStationCheck } from './gas-station.js';
+import { verifyTinyHmac, processTinyMessage } from './tiny-gateway.js';
+import archiver from 'archiver';
+import {
+    vaultFileExists,
+    loadVaultLocal,
+    loadVaultContent,
+    loadVaultFromChainPayload,
+    sanitizePersonalSecrets,
+    type PersonalSecretEntry,
+} from './vault-local.js';
+import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
+import { saveContactLabel } from './contact-labels.js';
+
+/** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
+let lastVaultOnchainSuccessAt: number | undefined;
+
+export type ApiStatus = {
+    backendRunning: boolean;
+    connected: boolean;
+    hasKeys?: boolean;
+    myAddress?: string;
+    partnerAddress?: string;
+    partnerCount?: number;
+    /** Adressen der aktuell verbundenen Partner (peerMap) – für „An:“ nur diese anzeigen. */
+    connectedAddresses?: string[];
+    /** ENABLE_PLAINTEXT_CHANNEL – für UI Statuszeile „Modus: Klartext / Verschlüsselt“. */
+    plaintextMode?: boolean;
+    /** Tresor: Listen-Ansicht (Zusammenfassung) + Sync-Status (Punkt 5 Marktreife). */
+    vaultStatus?: {
+        hasLocal: boolean;
+        lastSavedToChainAt?: number;
+    };
+    /** Lite-UI: full oder messenger (nur Nachrichten-Fluss). */
+    uiVariant?: 'full' | 'messenger';
+    /** standalone = klassischer Messenger; sales = Kunden-Bundle (Schatten-Seed / Sweep). */
+    messengerEdition?: 'standalone' | 'sales';
+    /** USE_MAILBOX: true = Move speichert in Mailbox-Objekt; false = Event-Pfad (queryEvents). */
+    useMailbox?: boolean;
+    /** MAILBOX_ID gesetzt und 0x+64Hex (sonst kann Mailbox-Modus nicht greifen). */
+    mailboxConfigured?: boolean;
+    /** cli | sdk | remote – UI zeigt ggf. Mnemonic-Feld beim Entsperren. */
+    signer?: string;
+};
+
+type GetStatusFn = () => Partial<ApiStatus>;
+export type CommandApiOptions = { sponsorForSender?: string; silentFetch?: boolean; shadowMnemonic?: string };
+type CommandHandlerFn = (cmd: string, args: string[], options?: CommandApiOptions) => Promise<{ ok: boolean; message?: string }>;
+type PurgeAfterLieferungFn = (purges: Array<{ sender: string; recipient: string; nonce: string | number }>) => Promise<{ ok: boolean; message?: string; count?: number }>;
+
+/** Stub, damit /api/command nie 503 liefert – wird durch echten Handler nach Wallet-Entsperren ersetzt. */
+const _stubCommandHandler: CommandHandlerFn = async () => ({
+    ok: false,
+    error: 'Bitte zuerst Wallet entsperren (Passwort eingeben). Danach Befehle nutzbar.',
+});
+let _commandHandler: CommandHandlerFn | null = _stubCommandHandler;
+let _purgeAfterLieferungHandler: PurgeAfterLieferungFn | null = null;
+
+/** Rate-Limit für /api/command: pro IP, Fenster 1 Minute. */
+const commandRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
+function checkCommandRateLimit(ip: string): boolean {
+    const limit = CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE;
+    if (limit <= 0) return true;
+    const now = Date.now();
+    const entry = commandRateLimitByIp.get(ip);
+    if (!entry) return true;
+    if (now >= entry.resetAt) return true;
+    return entry.count < limit;
+}
+function recordCommandRateLimit(ip: string): void {
+    const limit = CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE;
+    if (limit <= 0) return;
+    const now = Date.now();
+    const windowMs = 60_000;
+    let entry = commandRateLimitByIp.get(ip);
+    if (!entry || now >= entry.resetAt) {
+        entry = { count: 0, resetAt: now + windowMs };
+        commandRateLimitByIp.set(ip, entry);
+    }
+    entry.count++;
+}
+
+/** Welches Hierarchie-Recht braucht dieser Befehl? null = kein Recht nötig (z. B. /help, /fetch, /list-keys). */
+function getRequiredPermissionForCommand(cmd: string): 'keyIssue' | 'revokeDown' | 'commandDown' | null {
+    const c = (cmd || '').trim().toLowerCase();
+    if (['/create-key', '/create-keys', '/create-key-and-notify', '/create-ticket', '/create-tickets'].includes(c)) return 'keyIssue';
+    if (['/purge-key', '/emergency-purge-key', '/purge-handshake', '/purge-msg', '/emergency-purge', '/purge-ticket', '/emergency-purge-ticket'].includes(c)) return 'revokeDown';
+    // Peer-Messaging / Peering ist keine Hierarchie „nach unten“ – Arbeiter & Messenger dürfen Handshake/Senden/Pairing.
+    if (['/transfer-coins'].includes(c)) return 'commandDown';
+    return null;
+}
+
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function markdownToHtml(md: string): string {
+    return escapeHtml(md)
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/^\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^```[\s\S]*?^```/gm, (m) => '<pre><code>' + m.replace(/^```\w*\n?|```$/g, '').trim() + '</code></pre>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        .replace(/^---$/gm, '<hr>')
+        .replace(/\n/g, '<br>\n');
+}
+
+export function setPurgeAfterLieferungHandler(handler: PurgeAfterLieferungFn | null): void {
+    _purgeAfterLieferungHandler = handler;
+}
+let _sessionStatus: Partial<ApiStatus> = {};
+let _resolvePassword: ((pw: string) => void) | null = null;
+
+export function setCommandHandler(handler: CommandHandlerFn | null): void {
+    _commandHandler = handler;
+}
+
+/** Optional: „Mein Safe“ (personalSecrets) im entsperrten Vault-RAM. Setzt wallet-bridge nach Init. */
+export type VaultPersonalSecretsBridge = {
+    getEntries: () => PersonalSecretEntry[] | null;
+    setEntries: (
+        entries: PersonalSecretEntry[],
+        opts?: { persistLocal?: boolean }
+    ) => Promise<{ ok: boolean; error?: string; message?: string }>;
+};
+
+let _vaultPersonalSecretsBridge: VaultPersonalSecretsBridge | null = null;
+
+export function setVaultPersonalSecretsBridge(b: VaultPersonalSecretsBridge | null): void {
+    _vaultPersonalSecretsBridge = b;
+}
+
+/** Setzt Callback für Passwort aus UI. Wird von wallet-bridge aufgerufen, bevor UI startet. */
+export function setPasswordResolver(resolve: (pw: string) => void): void {
+    _resolvePassword = resolve;
+}
+
+export function setSessionStatus(status: Partial<ApiStatus>): void {
+    _sessionStatus = status;
+}
+
+function mask(s: string, showChars = 8): string {
+    if (!s) return '';
+    if (s.length <= showChars * 2) return s.slice(0, 4) + '…';
+    return s.slice(0, showChars) + '…' + s.slice(-4);
+}
+
+function corsHeaders(req: http.IncomingMessage): Record<string, string> {
+    const origin = req.headers.origin;
+    const defaultOrigin = 'http://127.0.0.1:' + CFG.UI_PORT;
+    const isLocal = !origin || origin === 'null' || origin === '' ||
+        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
+    const allowOrigin = isLocal && origin ? origin : defaultOrigin;
+    return {
+        'Access-Control-Allow-Origin': allowOrigin,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+    };
+}
+
+function sendJson(res: http.ServerResponse, status: number, data: object, cors?: Record<string, string>) {
+    res.writeHead(status, { 'Content-Type': 'application/json', ...(cors || {}) });
+    res.end(JSON.stringify(data));
+}
+
+/** Tatsächlich gebundener API-Port (nach tryListen). Damit die UI den richtigen Port in index.html einsetzt. */
+let _actualApiPort: number = 0;
+export function getActualApiPort(): number {
+    return _actualApiPort || CFG.API_PORT;
+}
+
+export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
+    const port = CFG.API_PORT;
+
+    const server = http.createServer(async (req, res) => {
+        const cors = corsHeaders(req);
+        if (req.method === 'OPTIONS') {
+            res.writeHead(204, cors);
+            res.end();
+            return;
+        }
+
+        const url = req.url?.split('?')[0] || '/';
+
+        if (url === '/api/status' && req.method === 'GET') {
+            const custom = { ...(getStatus?.() ?? {}), ..._sessionStatus };
+            const perms = getHierarchyPermissions(CFG.ROLE);
+            const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
+            const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
+            const mailboxConfigured = Boolean(mailboxIdTrim && /^0x[a-fA-F0-9]{64}$/i.test(mailboxIdTrim));
+            const status: ApiStatus & {
+                locked?: boolean;
+                role?: string;
+                roleId?: number;
+                permissions?: HierarchyPermissions;
+                streams?: { active: boolean; anchorId?: string; anchorIdFull?: string };
+            } = {
+                backendRunning: true,
+                locked: !!_resolvePassword,
+                connected: custom.connected ?? false,
+                hasKeys: custom.hasKeys,
+                myAddress: custom.myAddress ?? (CFG.MY_ADDRESS ? mask(CFG.MY_ADDRESS) : undefined),
+                partnerAddress: custom.partnerAddress ?? (CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS) : undefined),
+                partnerCount: custom.partnerCount,
+                connectedAddresses: custom.connectedAddresses,
+                plaintextMode: CFG.ENABLE_PLAINTEXT_CHANNEL,
+                role: CFG.ROLE,
+                roleId: CFG.ROLE_ID,
+                permissions: perms,
+                streams: {
+                    active: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
+                    anchorId: CFG.STREAMS_ANCHOR_ID ? mask(CFG.STREAMS_ANCHOR_ID, 12) : undefined,
+                    anchorIdFull: CFG.STREAMS_ANCHOR_ID || '',
+                },
+                vaultStatus: {
+                    hasLocal: vaultFileExists(vaultFileResolved),
+                    ...(lastVaultOnchainSuccessAt != null && { lastSavedToChainAt: lastVaultOnchainSuccessAt }),
+                },
+                uiVariant: CFG.UI_VARIANT === 'messenger' ? 'messenger' : 'full',
+                messengerEdition: CFG.MESSENGER_EDITION,
+                useMailbox: CFG.USE_MAILBOX,
+                mailboxConfigured,
+                signer: CFG.SIGNER,
+            };
+            sendJson(res, 200, status, cors);
+            return;
+        }
+
+        if (url === '/api/current-ids' && req.method === 'GET') {
+            try {
+                sendJson(res, 200, {
+                    ok: true,
+                    myAddress: CFG.MY_ADDRESS || '',
+                    packageId: CFG.PACKAGE_ID || '',
+                    streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
+                    streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
+                }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/messenger-presets' && req.method === 'GET') {
+            try {
+                const pkg = (CFG.LITE_PRESET_PACKAGE_ID || '').trim();
+                const rpcFallback = (CFG.LITE_PRESET_RPC_URL || CFG.RPC_URL || '').trim();
+                const hasLite = /^0x[a-fA-F0-9]{64}$/.test(pkg);
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        litePackageId: hasLite ? pkg : '',
+                        liteRpcUrl: rpcFallback,
+                        hasLitePackagePreset: hasLite,
+                        pairingFindMaxCandidates: CFG.PAIRING_FIND_MAX_CANDIDATES,
+                        pairingFindMaxDecryptAttempts: CFG.PAIRING_FIND_MAX_DECRYPT_ATTEMPTS,
+                    },
+                    cors
+                );
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        /** Bibliothek der 64 Rollen-Profile: Liste (nur Metadaten). */
+        if (url === '/api/profiles' && req.method === 'GET') {
+            try {
+                const profilesDir = path.join(process.cwd(), 'profiles');
+                if (!fs.existsSync(profilesDir)) {
+                    sendJson(res, 200, { ok: true, profiles: [] }, cors);
+                    return;
+                }
+                const list: { id: string; ROLE_ID: number; BIT_MASK: string; DESCRIPTION: string; UI_HINTS: string[]; role: string }[] = [];
+                for (let i = 0; i < 64; i++) {
+                    const id = 'id-' + String(i).padStart(2, '0');
+                    const templatePath = path.join(profilesDir, id, 'template.json');
+                    if (!fs.existsSync(templatePath)) continue;
+                    const raw = fs.readFileSync(templatePath, 'utf8');
+                    const t = JSON.parse(raw) as { ROLE_ID?: number; BIT_MASK?: string; DESCRIPTION?: string; UI_HINTS?: string[]; role?: string };
+                    list.push({
+                        id,
+                        ROLE_ID: t.ROLE_ID ?? i,
+                        BIT_MASK: t.BIT_MASK ?? '',
+                        DESCRIPTION: t.DESCRIPTION ?? '',
+                        UI_HINTS: Array.isArray(t.UI_HINTS) ? t.UI_HINTS : [],
+                        role: t.role ?? 'arbeiter',
+                    });
+                }
+                sendJson(res, 200, { ok: true, profiles: list }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        /** Einzelnes Profil-Template laden (z. B. /api/profiles/id-14). */
+        const profileIdMatch = url?.match(/^\/api\/profiles\/(id-\d{2})$/);
+        if (profileIdMatch && req.method === 'GET') {
+            try {
+                const profileId = profileIdMatch[1];
+                const templatePath = path.join(process.cwd(), 'profiles', profileId, 'template.json');
+                if (!fs.existsSync(templatePath)) {
+                    sendJson(res, 404, { ok: false, error: 'Profil nicht gefunden: ' + profileId }, cors);
+                    return;
+                }
+                const raw = fs.readFileSync(templatePath, 'utf8');
+                const template = JSON.parse(raw) as Record<string, unknown>;
+                sendJson(res, 200, { ok: true, profileId, template }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        /** Export: Profil-Ordner als ZIP (template.json + config.json + optional .env). */
+        if (url === '/api/provision-export-zip' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const profileId = String(data.profileId || '').trim();
+                    if (!/^id-\d{2}$/.test(profileId)) {
+                        sendJson(res, 400, { ok: false, error: 'profileId (id-00 … id-63) erforderlich.' }, cors);
+                        return;
+                    }
+                    const templatePath = path.join(process.cwd(), 'profiles', profileId, 'template.json');
+                    if (!fs.existsSync(templatePath)) {
+                        sendJson(res, 404, { ok: false, error: 'Profil nicht gefunden: ' + profileId }, cors);
+                        return;
+                    }
+                    const envContent = typeof data.envContent === 'string' ? data.envContent : '';
+                    const jsonConfig = data.jsonConfig != null ? data.jsonConfig : {};
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+                    res.writeHead(200, {
+                        ...cors,
+                        'Content-Type': 'application/zip',
+                        'Content-Disposition': 'attachment; filename="profil-' + profileId + '.zip"',
+                    });
+                    archive.pipe(res);
+                    archive.append(fs.createReadStream(templatePath), { name: profileId + '/template.json' });
+                    archive.append(JSON.stringify(jsonConfig, null, 2), { name: profileId + '/config.json' });
+                    if (envContent) archive.append(envContent, { name: profileId + '/.env' });
+                    const readmeDeviceTxt =
+                        'Morgendrot – Geräte-Ordner (Export)\n' +
+                        '====================================\n\n' +
+                        '1) Vollständiges Morgendrot-Repo auf das Gerät kopieren (nicht nur diese 3 Dateien).\n' +
+                        '2) .env ins Repo-Root legen (oder Pfad beim Start setzen).\n' +
+                        '3) Auf dem Boss-PC: BOSS_SIGNER_PUBLIC_URL in .env = http://<Boss-LAN-IP>:3340/sign\n' +
+                        '   und npm run boss-signer starten.\n' +
+                        '4) Auf dem Gerät: npm install && npm run start:headless\n\n' +
+                        'Hinweis: Nur .env wird von Node gelesen; config.json ist Referenz (Wizard).\n';
+                    archive.append(Buffer.from(readmeDeviceTxt, 'utf8'), { name: profileId + '/README-GERAET.txt' });
+                    archive.finalize();
+                    archive.on('error', (err: Error) => {
+                        try { res.end(); } catch {}
+                        logger.warn('provision-export-zip: ' + (err?.message || err));
+                    });
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        const PROVISION_VAULT_FILE = path.join(process.cwd(), '.morgendrot-provisioning-vault.json');
+        type ProvisionVaultEntry = { profileId: string; deviceName: string; address: string; jsonConfig: Record<string, unknown>; envContentSafe?: string; savedAt: string };
+        function readProvisionVault(): ProvisionVaultEntry[] {
+            try {
+                if (!fs.existsSync(PROVISION_VAULT_FILE)) return [];
+                const raw = fs.readFileSync(PROVISION_VAULT_FILE, 'utf8');
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch {
+                return [];
+            }
+        }
+        function writeProvisionVault(entries: ProvisionVaultEntry[]): void {
+            fs.writeFileSync(PROVISION_VAULT_FILE, JSON.stringify(entries, null, 2), 'utf8');
+        }
+        /** Optionaler Vault: Liste der gespeicherten Provisioning-Einträge (offline für Boss). */
+        if (url === '/api/provision-vault' && req.method === 'GET') {
+            try {
+                if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                    sendJson(res, 403, { ok: false, error: 'Nur Boss/Messenger darf Vault lesen.' }, cors);
+                    return;
+                }
+                const entries = readProvisionVault();
+                sendJson(res, 200, { ok: true, entries }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+        /** Optionaler Vault: Aktuelles Provisioning-Ergebnis speichern (ohne Secret Key). Optional versendbar an Kommandant (Export ohne Mnemonic). */
+        if (url === '/api/provision-save-vault' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                        sendJson(res, 403, { ok: false, error: 'Nur Boss darf in Provisioning-Vault speichern.' }, cors);
+                        return;
+                    }
+                    const data = JSON.parse(body || '{}');
+                    const profileId = String(data.profileId || '').trim();
+                    const deviceName = String(data.deviceName || '').trim();
+                    const address = String(data.address || '').trim();
+                    const jsonConfig = data.jsonConfig && typeof data.jsonConfig === 'object' ? data.jsonConfig as Record<string, unknown> : {};
+                    let envContentSafe: string | undefined;
+                    if (typeof data.envContent === 'string') {
+                        envContentSafe = data.envContent.replace(/\n?WALLET_MNEMONIC=.*/g, '\n# WALLET_MNEMONIC=[REDACTED]').replace(/\n?# SECURITY:.*\n?/g, '\n');
+                    }
+                    const entries = readProvisionVault();
+                    entries.push({
+                        profileId: profileId || 'id-00',
+                        deviceName,
+                        address,
+                        jsonConfig,
+                        envContentSafe,
+                        savedAt: new Date().toISOString(),
+                    });
+                    writeProvisionVault(entries);
+                    sendJson(res, 200, { ok: true, message: 'Im Vault gespeichert (offline). Für Kommandant: Export ohne Secrets nutzen.' }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Liste aller kopierbaren IDs/Adressen (Anchor, Package, Mailbox, …) – vollständig, für Copy-Popup. Enthält alle genutzten/konfigurierten Werte. */
+        if (url === '/api/copyable-ids' && req.method === 'GET') {
+            try {
+                const connectedAddrs = getConnectAddresses();
+                const ids: { key: string; label: string; value: string }[] = [
+                    { key: 'MY_ADDRESS', label: 'Meine Adresse', value: CFG.MY_ADDRESS || '' },
+                    { key: 'PACKAGE_ID', label: 'Package-ID', value: CFG.PACKAGE_ID || '' },
+                    { key: 'RPC_URL', label: 'RPC-URL', value: CFG.RPC_URL || '' },
+                    { key: 'STREAMS_ANCHOR_ID', label: 'Streams Anchor-ID', value: CFG.STREAMS_ANCHOR_ID || '' },
+                    { key: 'STREAMS_BRIDGE_URL', label: 'Streams Bridge-URL', value: CFG.STREAMS_BRIDGE_URL || '' },
+                    { key: 'FACTORY_IO_URL', label: 'Factory I/O Web-API-URL', value: CFG.FACTORY_IO_URL || '' },
+                    { key: 'FACTORY_IO_POLL_MS', label: 'Factory I/O Feeder Poll (ms)', value: String(CFG.FACTORY_IO_POLL_MS) },
+                    { key: 'VAULT_REGISTRY_ID', label: 'Vault Registry-ID', value: CFG.VAULT_REGISTRY_ID || '' },
+                    { key: 'MAILBOX_ID', label: 'Mailbox-ID', value: CFG.MAILBOX_ID || '' },
+                    { key: 'COMMAND_REGISTRY_ID', label: 'Command Registry-ID', value: CFG.COMMAND_REGISTRY_ID || '' },
+                    { key: 'BOSS_ADDRESS', label: 'Boss-Adresse', value: CFG.BOSS_ADDRESS || '' },
+                    { key: 'PARTNER_ADDRESS', label: 'Partner-Adresse', value: CFG.PARTNER_ADDRESS || '' },
+                    { key: 'LOCK_ID', label: 'Lock-ID', value: CFG.LOCK_ID || '' },
+                    {
+                        key: 'CONNECTED_ADDRESSES',
+                        label: 'Verbundene Adressen',
+                        value: connectedAddrs.length ? connectedAddrs.join(', ') : '',
+                    },
+                ];
+                sendJson(res, 200, { ok: true, ids }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/package-id-history' && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const includeDiscovered = u.searchParams.get('discovered') !== 'false';
+                const debugOwned = u.searchParams.get('debug') === '1';
+                const current = CFG.PACKAGE_ID || '';
+                const history = readPackageIdHistory().filter((id) => id.toLowerCase() !== current.toLowerCase());
+                let discovered: string[] = [];
+                let debugOwnedPayload: Awaited<ReturnType<typeof getOwnedObjectsDebug>> | undefined;
+                if (includeDiscovered && CFG.MY_ADDRESS && /^0x[a-fA-F0-9]{64}$/.test(CFG.MY_ADDRESS)) {
+                    try {
+                        const client = getClient();
+                        discovered = await Promise.race([
+                            getPackageIdsForOwner(client, CFG.MY_ADDRESS, 100),
+                            new Promise<string[]>((r) => setTimeout(() => r([]), 12000)),
+                        ]);
+                        if (discovered.length === 0) {
+                            const owned = await Promise.race([
+                                getAllOwnedObjects(client, CFG.MY_ADDRESS, null, 500),
+                                new Promise<import('./chain-access.js').OwnedObjectSummary[]>((r) => setTimeout(() => r([]), 12000)),
+                            ]);
+                            discovered = extractPackageIdsFromOwnedObjects(owned);
+                        }
+                        if (debugOwned) {
+                            debugOwnedPayload = await getOwnedObjectsDebug(client, CFG.MY_ADDRESS, 50);
+                        }
+                    } catch {
+                        // ignore
+                    }
+                }
+                const hints = readPackageIdHints();
+                const payload: Record<string, unknown> = { ok: true, current, history, discovered, hints };
+                if (debugOwnedPayload !== undefined) payload.debugOwnedObjects = debugOwnedPayload;
+                sendJson(res, 200, payload, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+        if (url === '/api/debug/owned-objects' && req.method === 'GET') {
+            try {
+                if (!CFG.MY_ADDRESS || !/^0x[a-fA-F0-9]{64}$/.test(CFG.MY_ADDRESS)) {
+                    sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt oder ungültig' }, cors);
+                    return;
+                }
+                const u = new URL(req.url || '', 'http://localhost');
+                const max = Math.min(parseInt(u.searchParams.get('max') || '50', 10) || 50, 100);
+                const client = getClient();
+                const debugPayload = await getOwnedObjectsDebug(client, CFG.MY_ADDRESS, max);
+                sendJson(res, 200, { ok: true, myAddress: CFG.MY_ADDRESS.slice(0, 18) + '…', ...debugPayload }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+        if (url === '/api/streams-anchor-history' && req.method === 'GET') {
+            (async () => {
+                try {
+                    seedStreamsAnchorHistoryFromKnownFiles();
+                    const historyFromFile = readStreamsAnchorIdHistory();
+                    let bridgeAnchors: string[] = [];
+                    const urlsToTry: string[] = [];
+                    const u = (CFG.STREAMS_BRIDGE_URL || '').trim().replace(/\/$/, '');
+                    if (u && (u.startsWith('http://') || u.startsWith('https://'))) urlsToTry.push(u);
+                    try {
+                        const parsed = new URL(u || 'http://127.0.0.1');
+                        const host = parsed.hostname || '127.0.0.1';
+                        const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
+                        if (port === 3342 || port === 3343 || urlsToTry.length === 0) {
+                            urlsToTry.push(`http://${host}:3443`, `http://${host}:9343`);
+                        }
+                    } catch {
+                        if (urlsToTry.length === 0) urlsToTry.push('http://127.0.0.1:3443', 'http://127.0.0.1:9343');
+                    }
+                    for (const baseUrl of [...new Set(urlsToTry)]) {
+                        try {
+                            const fr = await fetch(`${baseUrl}?list=1`, { signal: AbortSignal.timeout(4000) });
+                            if (fr.ok) {
+                                const data = await fr.json() as { anchors?: string[] };
+                                if (Array.isArray(data?.anchors)) { bridgeAnchors = data.anchors; break; }
+                            }
+                        } catch { /* nächste URL */ }
+                    }
+                    const display = getConfigDisplay();
+                    const row = display.find((r) => (r.envKey || r.key) === 'STREAMS_ANCHOR_ID');
+                    const raw = (row?.value ?? '').trim();
+                    const current = raw === '(leer)' ? '' : raw;
+                    const merged = dedupeStreamAnchorIds([...bridgeAnchors, ...historyFromFile].filter(Boolean));
+                    const curNorm = current.trim().toLowerCase();
+                    const history = curNorm
+                        ? merged.filter((id) => id.trim().toLowerCase() !== curNorm)
+                        : merged;
+                    sendJson(res, 200, { ok: true, current, history }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            })();
+            return;
+        }
+
+        if (url === '/api/package-id-hints' && req.method === 'GET') {
+            try {
+                const hints = readPackageIdHints();
+                sendJson(res, 200, { ok: true, hints }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/package-id-hints' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const packageId = String(data.packageId ?? '').trim();
+                    if (!packageId || !/^0x[a-fA-F0-9]{64}$/.test(packageId)) {
+                        sendJson(res, 400, { ok: false, error: 'packageId (0x + 64 Hex) erforderlich' }, cors);
+                        return;
+                    }
+                    const hint = {
+                        label: data.label != null ? String(data.label).trim() : undefined,
+                        peer: data.peer != null ? String(data.peer).trim() : undefined,
+                        note: data.note != null ? String(data.note).trim() : undefined,
+                    };
+                    savePackageIdHint(packageId, hint);
+                    sendJson(res, 200, { ok: true, hints: readPackageIdHints() }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/config' && req.method === 'GET') {
+            try {
+                const config = getConfigDisplay();
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        config,
+                        messengerMeta: {
+                            networkTrustTier: CFG.NETWORK_TRUST_TIER,
+                            rpcCandidateCount: getRpcCandidateCount(),
+                            activeRpcUrl: getEffectiveRpcUrlLabel(),
+                            rpcHttpProxySet: Boolean((CFG.RPC_HTTP_PROXY || '').trim()),
+                            enableHdContactAddresses: CFG.ENABLE_HD_CONTACT_ADDRESSES,
+                            messengerEdition: CFG.MESSENGER_EDITION,
+                        },
+                    },
+                    cors
+                );
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/doc') && req.method === 'GET') {
+            let docBaseName = '';
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const raw = (u.searchParams.get('name') || '').trim();
+                const name = /^[a-zA-Z0-9_.-]+\.md$/.test(raw) ? raw : '';
+                docBaseName = name;
+                if (!name) {
+                    sendJson(res, 400, { ok: false, error: 'name=xxx.md erforderlich (nur A-Za-z0-9_.-)' }, cors);
+                    return;
+                }
+                const __dirname = path.dirname(fileURLToPath(import.meta.url));
+                const docPath = path.resolve(__dirname, '..', 'docs', path.basename(name));
+                const rel = path.relative(path.resolve(__dirname, '..', 'docs'), docPath);
+                if (rel.startsWith('..') || path.isAbsolute(rel)) {
+                    sendJson(res, 403, { ok: false, error: 'Forbidden' }, cors);
+                    return;
+                }
+                const md = fs.readFileSync(docPath, 'utf-8');
+                const html = markdownToHtml(md);
+                sendJson(res, 200, { ok: true, html }, cors);
+            } catch (e: any) {
+                if (e?.code === 'ENOENT') {
+                    sendJson(res, 404, { ok: false, error: 'Anleitung nicht gefunden: ' + path.basename(docBaseName || 'unknown.md') }, cors);
+                } else {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            }
+            return;
+        }
+
+        if (url === '/api/connect-addresses' && req.method === 'GET') {
+            try {
+                const addresses = getConnectAddresses();
+                sendJson(res, 200, { ok: true, addresses }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/chain-reachable' && req.method === 'GET') {
+            try {
+                const reachable = await isChainReachable();
+                sendJson(res, 200, { ok: true, reachable }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/rpc-rotate' && req.method === 'POST') {
+            try {
+                resetRpcClient('next');
+                const reachable = await isChainReachable();
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        rpcUrl: getActiveRpcUrl(),
+                        reachable,
+                        rpcCandidateCount: getRpcCandidateCount(),
+                        warning:
+                            'Öffentliche RPCs können Logs führen. Stufe 2: RPC_HTTP_PROXY setzen; Stufe 3: eigener Node.',
+                    },
+                    cors
+                );
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/shadow-sweep' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { shadowMnemonic?: string; mnemonic?: string };
+                    const mnemonic = String(data.shadowMnemonic ?? data.mnemonic ?? '').trim();
+                    if (!mnemonic) {
+                        sendJson(res, 400, { ok: false, error: 'shadowMnemonic fehlt (12+ Wörter).' }, cors);
+                        return;
+                    }
+                    const { executeShadowSweep } = await import('./shadow-sweep.js');
+                    const result = await executeShadowSweep(getClient(), mnemonic);
+                    if (!result.ok) {
+                        sendJson(res, 400, result, cors);
+                        return;
+                    }
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ...result,
+                            securityNote:
+                                'Mnemonic und Secret nur über localhost/API auf 127.0.0.1 senden. Secret sofort im Tresor sichern; nicht erneut abrufbar.',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/config' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const key = String(data.key || '').trim();
+                    const value = String(data.value ?? '');
+                    if (!key) {
+                        sendJson(res, 400, { ok: false, error: 'key fehlt' }, cors);
+                        return;
+                    }
+                    const role = CFG.ROLE;
+                    const allowTestRoleOverride = process.env.ALLOW_TEST_ROLE_OVERRIDE === 'true' || process.env.ALLOW_TEST_ROLE_OVERRIDE === '1';
+                    if (role === 'boss' || role === 'kommandant' || role === 'arbeiter') {
+                        const perms = getHierarchyPermissions(role);
+                        if (isHierarchyConfigKey(key)) {
+                            if (!allowTestRoleOverride && !perms.hierarchyChange) {
+                                sendJson(res, 403, { ok: false, error: 'Nur Boss darf Hierarchie (ROLE, BOSS_ADDRESS, …) ändern.' }, cors);
+                                return;
+                            }
+                        } else {
+                            if (!perms.configChange) {
+                                sendJson(res, 403, { ok: false, error: 'Konfiguration darf nur der Boss ändern.' }, cors);
+                                return;
+                            }
+                        }
+                    } else if (isHierarchyConfigKey(key) && !(process.env.ALLOW_TEST_ROLE_OVERRIDE === 'true' || process.env.ALLOW_TEST_ROLE_OVERRIDE === '1')) {
+                        sendJson(res, 403, { ok: false, error: 'Hierarchie (ROLE, …) nur als Boss/Kommandant/Arbeiter änderbar. Für Test: .env um ALLOW_TEST_ROLE_OVERRIDE=true ergänzen, Backend neu starten.' }, cors);
+                        return;
+                    }
+                    const result = setEnvKey(key, value);
+                    sendJson(res, 200, result, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/help' && req.method === 'GET') {
+            const helpText = _sessionStatus.connected ? HELP_CHAT : HELP_START;
+            sendJson(res, 200, { ok: true, helpText }, cors);
+            return;
+        }
+
+        if (url === '/api/contact-labels' && req.method === 'GET') {
+            try {
+                const { loadContactLabels } = await import('./contact-labels.js');
+                sendJson(res, 200, { ok: true, labels: loadContactLabels() }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/contact-label' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const address = String(data.address ?? '').trim();
+                    const label = String(data.label ?? 'Partner').trim().slice(0, 64) || 'Partner';
+                    if (!/^0x[a-fA-F0-9]{64}$/.test(address)) {
+                        sendJson(res, 400, { ok: false, error: 'address muss 0x + 64 Hex sein.' }, cors);
+                        return;
+                    }
+                    saveContactLabel(address, label);
+                    sendJson(res, 200, { ok: true, message: 'Anzeigename gespeichert.' }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/find-peer-handshake' && req.method === 'GET') {
+            try {
+                const myAddr = CFG.MY_ADDRESS;
+                if (!myAddr) {
+                    sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt' }, cors);
+                    return;
+                }
+                const result = await findPeerHandshake(myAddr);
+                if (!result) {
+                    sendJson(res, 200, { ok: true, found: false, message: 'Kein Handshake gefunden' }, cors);
+                    return;
+                }
+                sendJson(res, 200, {
+                    ok: true,
+                    found: true,
+                    sender: result.sender,
+                    nonce: String(result.nonce),
+                }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/has-valid-ticket') && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+                const eventId = u.searchParams.get('eventId')?.trim();
+                if (!owner || !eventId) {
+                    sendJson(res, 400, { ok: false, error: 'owner und eventId als Query-Parameter nötig' }, cors);
+                    return;
+                }
+                const client = getClient();
+                const valid = await hasValidTicket(client, CFG.PACKAGE_ID, owner, eventId);
+                sendJson(res, 200, { ok: true, valid }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/list-tickets') && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+                if (!owner) {
+                    sendJson(res, 400, { ok: false, error: 'owner als Query-Parameter oder MY_ADDRESS nötig' }, cors);
+                    return;
+                }
+                const client = getClient();
+                const tickets = await getOwnedTickets(client, CFG.PACKAGE_ID, owner);
+                sendJson(res, 200, { ok: true, tickets }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/list-keys') && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+                if (!owner) {
+                    sendJson(res, 400, { ok: false, error: 'owner als Query-Parameter oder MY_ADDRESS nötig' }, cors);
+                    return;
+                }
+                const client = getClient();
+                const keys = await getOwnedAccessKeys(client, CFG.PACKAGE_ID, owner);
+                sendJson(res, 200, { ok: true, keys }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/owned-objects' && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+                if (!owner || !/^0x[a-fA-F0-9]{64}$/.test(owner)) {
+                    sendJson(res, 400, { ok: false, error: 'owner als Query-Parameter (0x + 64 Hex) oder MY_ADDRESS nötig' }, cors);
+                    return;
+                }
+                const client = getClient();
+                const ourPackageId = (CFG.PACKAGE_ID?.trim() || null);
+                const objects = await getAllOwnedObjects(client, owner, ourPackageId);
+                sendJson(res, 200, { ok: true, owner, objects }, cors);
+            } catch (e: any) {
+                const msg = String(e?.message || e);
+                sendJson(res, 500, { ok: false, error: msg }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/rebate-candidates' && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+                const packageIdParam = u.searchParams.get('packageId')?.trim();
+                const packageId = packageIdParam && /^0x[a-fA-F0-9]{64}$/.test(packageIdParam)
+                    ? packageIdParam
+                    : (CFG.PACKAGE_ID?.trim() || '');
+                if (!owner) {
+                    sendJson(res, 400, { ok: false, error: 'owner als Query-Parameter oder MY_ADDRESS nötig' }, cors);
+                    return;
+                }
+                if (!/^0x[a-fA-F0-9]{64}$/.test(owner)) {
+                    sendJson(res, 400, { ok: false, error: 'owner muss 0x gefolgt von 64 Hex-Zeichen sein' }, cors);
+                    return;
+                }
+                if (!packageId) {
+                    sendJson(res, 400, { ok: false, error: 'PACKAGE_ID fehlt. Im Feld „Package-ID“ eintragen oder zuerst /set-package-id setzen.' }, cors);
+                    return;
+                }
+                const client = getClient();
+                const timeout = <T>(p: Promise<T>, ms: number, fallback: T): Promise<T> =>
+                    Promise.race([p, new Promise<T>(r => setTimeout(() => r(fallback), ms))]);
+                const [keys, tickets, mailbox] = await Promise.all([
+                    timeout(getOwnedAccessKeys(client, packageId, owner), 15000, []),
+                    timeout(getOwnedTickets(client, packageId, owner), 15000, []),
+                    CFG.MAILBOX_ID
+                        ? timeout(getMailboxRebateCandidates(owner), 15000, { handshakes: [], messages: [] })
+                        : Promise.resolve({ handshakes: [] as any[], messages: [] as any[] }),
+                ]);
+                sendJson(res, 200, {
+                    ok: true,
+                    owner,
+                    packageId,
+                    keys,
+                    tickets,
+                    mailboxHandshakes: mailbox.handshakes,
+                    mailboxMessages: mailbox.messages,
+                }, cors);
+            } catch (e: any) {
+                const msg = String(e?.message || e);
+                sendJson(res, 500, { ok: false, error: msg }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/reference-gas-price' && req.method === 'GET') {
+            try {
+                const price = await Promise.race([
+                    getReferenceGasPrice(),
+                    new Promise<bigint>((_, rej) => setTimeout(() => rej(new Error('RPC-Timeout (10s)')), 10000)),
+                ]);
+                sendJson(res, 200, { ok: true, referenceGasPrice: String(price), unit: 'NANOS' }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/unlock' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const password = String(data.password ?? '');
+                    if (!_resolvePassword) {
+                        const err =
+                            _commandHandler == null
+                                ? 'Backend hat noch keinen Befehls-Handler (Start noch nicht fertig oder falscher Modus, z. B. Schloss-Loop). Seite neu laden, .env prüfen (ROLE=arbeiter nur mit LOCK_ID = Schloss; ohne LOCK_ID = Messenger).'
+                                : 'Bereits entsperrt';
+                        sendJson(res, 400, { ok: false, error: err }, cors);
+                        return;
+                    }
+                    if (!password) {
+                        sendJson(res, 400, { ok: false, error: 'Passwort fehlt' }, cors);
+                        return;
+                    }
+                    const vaultPath = CFG.VAULT_FILE || '.morgendrot-vault';
+                    let vaultChecked = false;
+                    const signerPost = String(data.sdkSignerImport ?? data.secretKey ?? data.mnemonic ?? '').trim();
+                    let sdkSignerReady = CFG.SIGNER !== 'sdk';
+
+                    if (vaultFileExists(vaultPath)) {
+                        try {
+                            if (CFG.SIGNER === 'sdk') {
+                                const content = await loadVaultContent(password, vaultPath);
+                                vaultChecked = true;
+                                const fromVault = (content.iotaSdkSignerImport || '').trim();
+                                try {
+                                    if (fromVault) {
+                                        applySdkSignerFromImport(fromVault);
+                                        sdkSignerReady = true;
+                                    } else if (signerPost) {
+                                        applySdkSignerFromImport(signerPost);
+                                        sdkSignerReady = true;
+                                    } else {
+                                        sendJson(res, 400, {
+                                            ok: false,
+                                            error:
+                                                'SIGNER=sdk: In diesem Vault ist kein gespeicherter Signer-Import (weder Mnemonic noch Bech32-Secret). Trage im Formular ein: 12–24 Wörter ODER den Secret-Key (Bech32 wie von generate-mnemonic) ODER 64 Hex-Zeichen. Danach optional unter Tresor „mit speichern“.',
+                                        }, cors);
+                                        return;
+                                    }
+                                } catch (e: any) {
+                                    sendJson(res, 400, { ok: false, error: String(e?.message || e) }, cors);
+                                    return;
+                                }
+                            } else {
+                                await loadVaultLocal(password, vaultPath);
+                                vaultChecked = true;
+                            }
+                        } catch {
+                            sendJson(
+                                res,
+                                400,
+                                {
+                                    ok: false,
+                                    error: 'Falsches Passwort oder beschädigter Vault (lokale Datei lässt sich nicht entschlüsseln).',
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                    } else if (CFG.VAULT_REGISTRY_ID && CFG.PACKAGE_ID) {
+                        const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                        if (myAddr && /^0x[a-fA-F0-9]{64}$/i.test(myAddr)) {
+                            try {
+                                const enc = await getVaultFromChain(
+                                    getClient(),
+                                    CFG.VAULT_REGISTRY_ID,
+                                    CFG.PACKAGE_ID,
+                                    myAddr
+                                );
+                                if (enc && enc.length > 0) {
+                                    if (CFG.SIGNER === 'sdk') {
+                                        const content = await loadVaultFromChainPayload(enc, password);
+                                        vaultChecked = true;
+                                        const fromVault = (content.iotaSdkSignerImport || '').trim();
+                                        try {
+                                            if (fromVault) {
+                                                applySdkSignerFromImport(fromVault);
+                                                sdkSignerReady = true;
+                                            } else if (signerPost) {
+                                                applySdkSignerFromImport(signerPost);
+                                                sdkSignerReady = true;
+                                            } else {
+                                                sendJson(res, 400, {
+                                                    ok: false,
+                                                    error:
+                                                        'SIGNER=sdk: On-Chain-Vault ohne Signer-Import – Mnemonic oder Bech32-Secret im Formular eintragen.',
+                                                }, cors);
+                                                return;
+                                            }
+                                        } catch (e: any) {
+                                            sendJson(res, 400, { ok: false, error: String(e?.message || e) }, cors);
+                                            return;
+                                        }
+                                    } else {
+                                        await loadVaultFromChainPayload(enc, password);
+                                        vaultChecked = true;
+                                    }
+                                }
+                            } catch {
+                                sendJson(res, 400, {
+                                    ok: false,
+                                    error: 'Falsches Passwort, On-Chain-Vault nicht lesbar oder RPC-Fehler (MY_ADDRESS / PACKAGE_ID prüfen).',
+                                }, cors);
+                                return;
+                            }
+                        }
+                    }
+                    if (CFG.SIGNER === 'sdk' && !sdkSignerReady) {
+                        if (!signerPost) {
+                            sendJson(res, 400, {
+                                ok: false,
+                                error:
+                                    'SIGNER=sdk: Ohne Vault mit gespeichertem Import bitte Mnemonic (12+ Wörter) oder IOTA-Bech32-Secret (Ausgabe generate-mnemonic) oder 64 Hex-Bytes eintragen. Alternative: SIGNER=cli mit IOTA-Wallet.',
+                            }, cors);
+                            return;
+                        }
+                        try {
+                            applySdkSignerFromImport(signerPost);
+                        } catch (e: any) {
+                            sendJson(res, 400, { ok: false, error: String(e?.message || e) }, cors);
+                            return;
+                        }
+                    }
+                    const resolve = _resolvePassword;
+                    _resolvePassword = null;
+                    resolve(password);
+                    const okMessage = vaultChecked
+                        ? 'Passwort korrekt – Vault entschlüsselt.'
+                        : 'Entsperrt. Hinweis: Es wurde kein lokaler Vault und kein On-Chain-Vault mit Daten gefunden – das Passwort konnte nicht gegen einen Vault geprüft werden.';
+                    sendJson(res, 200, { ok: true, message: okMessage, vaultVerified: vaultChecked }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/vault-personal-secrets' && req.method === 'GET') {
+            try {
+                if (!_vaultPersonalSecretsBridge) {
+                    sendJson(res, 503, { ok: false, error: 'Safe-API nicht initialisiert.' }, cors);
+                    return;
+                }
+                const entries = _vaultPersonalSecretsBridge.getEntries();
+                if (entries === null) {
+                    sendJson(res, 200, { ok: true, unlocked: false, entries: [] }, cors);
+                    return;
+                }
+                sendJson(res, 200, { ok: true, unlocked: true, entries }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/vault-personal-secrets' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    if (!_vaultPersonalSecretsBridge) {
+                        sendJson(res, 503, { ok: false, error: 'Safe-API nicht initialisiert.' }, cors);
+                        return;
+                    }
+                    const data = JSON.parse(body || '{}') as { entries?: unknown; persistLocal?: boolean };
+                    const sanitized = sanitizePersonalSecrets(data.entries);
+                    const result = await _vaultPersonalSecretsBridge.setEntries(sanitized, {
+                        persistLocal: data.persistLocal === true,
+                    });
+                    if (!result.ok) {
+                        sendJson(res, 400, { ok: false, error: result.error || 'Fehler' }, cors);
+                        return;
+                    }
+                    sendJson(res, 200, { ok: true, message: result.message, entries: sanitized }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/restart' && req.method === 'POST') {
+            try {
+                const child = spawn(process.argv[0], process.argv.slice(1), {
+                    detached: true,
+                    stdio: 'ignore',
+                    cwd: process.cwd(),
+                    env: process.env,
+                });
+                child.unref();
+                sendJson(res, 200, { ok: true, message: 'Neustart wird ausgeführt…' }, cors);
+                setTimeout(() => process.exit(0), 500);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/monitor-status') && req.method === 'GET') {
+            try {
+                const status = getMonitorStatus();
+                sendJson(res, 200, { ok: true, devices: status }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/gas-station-check' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' || !CFG.GAS_STATION_ENABLED) {
+                sendJson(res, 403, { ok: false, error: 'Nur im Boss-Modus mit GAS_STATION_ENABLED' }, cors);
+                return;
+            }
+            const bossAddress = CFG.MY_ADDRESS?.trim();
+            if (!bossAddress) {
+                sendJson(res, 400, { ok: false, error: 'MY_ADDRESS fehlt (Wallet nicht geladen)' }, cors);
+                return;
+            }
+            runGasStationCheck(bossAddress, getWalletPassword)
+                .then((result) => sendJson(res, 200, { ok: true, ...result }, cors))
+                .catch((e: any) => sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors));
+            return;
+        }
+
+        if (url === '/api/audit-events' && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const limit = Math.min(500, Math.max(1, parseInt(u.searchParams.get('limit') || '100', 10) || 100));
+                const events = readAuditEvents(limit);
+                sendJson(res, 200, { ok: true, events }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/audit-export') && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const format = u.searchParams.get('format') || 'csv';
+                const limit = Math.min(50000, Math.max(1, parseInt(u.searchParams.get('limit') || '10000', 10) || 10000));
+                if (format === 'csv') {
+                    const csv = exportAuditCsv(limit);
+                    res.writeHead(200, {
+                        'Content-Type': 'text/csv; charset=utf-8',
+                        'Content-Disposition': 'attachment; filename="audit-export.csv"',
+                        ...cors,
+                    });
+                    res.end('\uFEFF' + csv); // BOM für Excel
+                } else if (format === 'pdf') {
+                    const stream = await exportAuditPdfStream(limit);
+                    res.writeHead(200, {
+                        'Content-Type': 'application/pdf',
+                        'Content-Disposition': 'attachment; filename="audit-export.pdf"',
+                        ...cors,
+                    });
+                    stream.pipe(res);
+                } else {
+                    sendJson(res, 400, { ok: false, error: 'format=csv oder format=pdf' }, cors);
+                }
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/purge-after-lieferung' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const purges = Array.isArray(data.purges) ? data.purges : [];
+                    if (purges.length === 0) {
+                        sendJson(res, 400, { ok: false, error: 'purges: [{ sender, recipient, nonce }] erforderlich' }, cors);
+                        return;
+                    }
+                    if (!_purgeAfterLieferungHandler) {
+                        sendJson(res, 503, { ok: false, error: 'Purge nur im Messenger-Modus mit Wallet verfügbar.' }, cors);
+                        return;
+                    }
+                    _purgeAfterLieferungHandler(purges).then((result) => {
+                        sendJson(res, 200, result, cors);
+                    }).catch((e: any) => {
+                        sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                    });
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/generate-address' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const password = typeof data.password === 'string' ? data.password : undefined;
+                    const address = await generateNewAddressCli(password);
+                    sendJson(res, 200, { ok: true, address }, cors);
+                } catch (e: any) {
+                    const msg = String(e?.message || e);
+                    sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/generate-mnemonic' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss darf Mnemonics generieren.' }, cors);
+                return;
+            }
+            try {
+                const { Ed25519Keypair } = await import('@iota/iota-sdk/keypairs/ed25519');
+                const keypair = new Ed25519Keypair();
+                let address = String(keypair.getPublicKey().toIotaAddress() || '').trim();
+                if (address && !/^0x/i.test(address)) address = '0x' + address;
+                const exportedKey = keypair.getSecretKey();
+                sendJson(res, 200, { ok: true, address, secretKey: exportedKey, note: 'Keypair generiert. Adresse + Secret sicher aufbewahren.' }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/provision-device' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss darf Geräte provisionieren.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const role = data.role;
+                    const allowedRoles = ['kommandant', 'arbeiter', 'lock', 'monitor', 'waerter', 'user'];
+                    if (!allowedRoles.includes(role)) {
+                        sendJson(res, 400, { ok: false, error: 'role muss einer von: ' + allowedRoles.join(', ') + ' sein.' }, cors);
+                        return;
+                    }
+                    const hardwareType = data.hardwareType || 'desktop';
+                    const isTiny = hardwareType === 'tiny';
+                    const deviceSecret = isTiny && (data.deviceSecret === true || data.generateDeviceSecret) ? generateDeviceSecret() : (data.deviceSecret || undefined);
+                    const params: DeviceProvisionParams = {
+                        role,
+                        roleId: role === 'waerter' ? 14 : (parseInt(data.roleId) || (role === 'monitor' ? 12 : 14)),
+                        deviceName: data.deviceName || '',
+                        address: data.address || '',
+                        mnemonic: data.mnemonic || '',
+                        bossAddress: data.bossAddress || CFG.MY_ADDRESS || '',
+                        kommandantAddresses: data.kommandantAddresses || [],
+                        workerAddresses: data.workerAddresses || [],
+                        packageId: data.packageId || CFG.PACKAGE_ID || '',
+                        rpcUrl: data.rpcUrl || CFG.RPC_URL || '',
+                        lockId: data.lockId || '',
+                        openCommand: data.openCommand || '',
+                        closeCommand: data.closeCommand || '',
+                        heartbeatIntervalMs: parseInt(data.heartbeatIntervalMs) || 30000,
+                        enableHeartbeat: data.enableHeartbeat === true || data.enableHeartbeat === 'true',
+                        signer: data.signer || 'cli',
+                        remoteSigner: data.remoteSigner || '',
+                        streamsAnchorId: data.streamsAnchorId || CFG.STREAMS_ANCHOR_ID || '',
+                        streamsBridgeUrl: data.streamsBridgeUrl || CFG.STREAMS_BRIDGE_URL || '',
+                        monitorDevices: Array.isArray(data.monitorDevices) ? data.monitorDevices : (data.monitorDevices ? [data.monitorDevices] : []),
+                        mailboxId: data.mailboxId || CFG.MAILBOX_ID || '',
+                        commandRegistryId: data.commandRegistryId || CFG.COMMAND_REGISTRY_ID || '',
+                        sponsorGasOwner: data.sponsorGasOwner || CFG.MY_ADDRESS || '',
+                        enableUi: data.enableUi !== false && hardwareType === 'desktop',
+                        hardwareType: hardwareType as DeviceProvisionParams['hardwareType'],
+                        gatewayUrl: data.gatewayUrl || '',
+                        deviceSecret,
+                        ticketOrKeyObjectId: data.ticketOrKeyObjectId || data.ticketObjectId || '',
+                    };
+                    /** Plug-and-play: IoT-Gateway ohne Mnemonic → Boss signiert (kein iota-CLI auf dem Pi nötig). */
+                    const isGateway = hardwareType === 'gateway';
+                    const seedless = !params.mnemonic;
+                    const remoteDefaultRoles = ['arbeiter', 'lock', 'kommandant', 'monitor'];
+                    if (isGateway && seedless && remoteDefaultRoles.includes(role)) {
+                        params.signer = 'remote';
+                        const pub = (process.env.BOSS_SIGNER_PUBLIC_URL || '').trim();
+                        if (pub && !String(params.remoteSigner || '').trim()) {
+                            params.remoteSigner = pub;
+                        }
+                    }
+                    const envContent = buildDeviceEnv(params);
+                    const jsonConfig = buildDeviceJson(params);
+                    const qrPayload = role === 'user' && params.ticketOrKeyObjectId
+                        ? params.ticketOrKeyObjectId
+                        : buildQrPayload(params);
+                    let identityHeader: string | undefined;
+                    if (isTiny && (params.deviceSecret || params.gatewayUrl || params.deviceName)) {
+                        identityHeader = buildIdentityHeader(params);
+                    }
+                    const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(/\/$/, '');
+                    const explorerLink = role === 'user' && params.ticketOrKeyObjectId
+                        ? `${explorerBase}/${params.ticketOrKeyObjectId}`
+                        : undefined;
+
+                    const hierarchyProvisionRoles = new Set(['kommandant', 'arbeiter', 'lock', 'monitor', 'waerter', 'boss', 'messenger']);
+                    if (params.address && hierarchyProvisionRoles.has(role)) {
+                        const reg = assignDeviceRoleInEnv(params.address, role);
+                        if (!reg.ok) {
+                            sendJson(res, 400, { ok: false, error: reg.error || 'DEVICE_ROLES / Listen konnten nicht aktualisiert werden.' }, cors);
+                            return;
+                        }
+                    }
+
+                    sendJson(res, 200, {
+                        ok: true,
+                        envContent,
+                        jsonConfig,
+                        qrPayload,
+                        ...(identityHeader ? { identityHeader } : {}),
+                        ...(explorerLink ? { explorerLink } : {}),
+                        ...(deviceSecret ? { deviceSecretForGateway: deviceSecret } : {}),
+                    }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Schreibt Provisionierungs-Dateien in exports/… (Raspi oder Messenger-Standalone, letzterer braucht vorher npm run bundle:messenger). */
+        if (url === '/api/export-provision-bundle' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant dürfen in Projektordner exportieren.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const variant = String(data.variant || '').trim().toLowerCase();
+                    const dirNames: Record<string, string> = {
+                        headless: 'Morgendrot-Raspi-headless',
+                        'lite-ui': 'Morgendrot-Raspi-lite-ui',
+                        liteui: 'Morgendrot-Raspi-lite-ui',
+                        messenger: 'Morgendrot-Messenger-standalone',
+                    };
+                    const sub = dirNames[variant];
+                    if (!sub) {
+                        sendJson(res, 400, { ok: false, error: 'variant: headless, lite-ui oder messenger' }, cors);
+                        return;
+                    }
+                    const exportsRoot = path.resolve(process.cwd(), 'exports', sub);
+                    if (variant === 'messenger') {
+                        const marker = path.join(exportsRoot, 'src', 'start-with-secrets.ts');
+                        if (!fs.existsSync(marker)) {
+                            sendJson(res, 400, {
+                                ok: false,
+                                error:
+                                    'Messenger-Ordner ohne Code. Im Hauptrepo einmal ausführen: npm run bundle:messenger – danach erneut exportieren.',
+                            }, cors);
+                            return;
+                        }
+                    }
+                    const envContent = String(data.envContent ?? '').trim();
+                    if (!envContent) {
+                        sendJson(res, 400, { ok: false, error: 'envContent fehlt – zuerst Gerät provisionieren.' }, cors);
+                        return;
+                    }
+                    const jsonConfig = data.jsonConfig != null && typeof data.jsonConfig === 'object' ? data.jsonConfig : {};
+                    fs.mkdirSync(exportsRoot, { recursive: true });
+                    let envOut = envContent + (envContent.endsWith('\n') ? '' : '\n');
+                    if (variant === 'messenger') {
+                        if (!/\bUI_VARIANT\s*=/.test(envOut)) envOut += 'UI_VARIANT=messenger\n';
+                        if (!/\bENABLE_UI\s*=/.test(envOut)) envOut += 'ENABLE_UI=true\n';
+                    }
+                    fs.writeFileSync(path.join(exportsRoot, '.env'), envOut, 'utf-8');
+                    fs.writeFileSync(path.join(exportsRoot, 'config.json'), JSON.stringify(jsonConfig, null, 2) + '\n', 'utf-8');
+                    const written: string[] = ['.env', 'config.json'];
+                    const tpl = data.templateJson;
+                    if (tpl != null && typeof tpl === 'object') {
+                        const safeProf = String(data.profileId || 'profil').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 64) || 'profil';
+                        const tname = `template-${safeProf}.json`;
+                        fs.writeFileSync(path.join(exportsRoot, tname), JSON.stringify(tpl, null, 2) + '\n', 'utf-8');
+                        written.push(tname);
+                    }
+                    const rel = path.join('exports', sub);
+                    sendJson(res, 200, {
+                        ok: true,
+                        message:
+                            variant === 'messenger'
+                                ? `Export nach ${rel}/ (.env/config). Ordner ist lauffähig nach „npm install“ auf dem Zielrechner (vollständiges Bundle – vorher im Repo: npm run bundle:messenger).`
+                                : `Export nach ${rel}/ geschrieben (${written.join(', ')}). Raspi: vollständiges Repo oder angepasster Deploy-Ordner + npm ci && npm start.`,
+                        directory: rel,
+                        files: written,
+                    }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/tiny-message' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const deviceId = data.deviceId ?? data.device;
+                    const payload = data.payload;
+                    const timestamp = Number(data.timestamp) || 0;
+                    const hmac = data.hmac ?? data.signature;
+                    if (!deviceId || payload === undefined || !timestamp || !hmac) {
+                        sendJson(res, 400, { ok: false, error: 'deviceId, payload, timestamp, hmac nötig.' }, cors);
+                        return;
+                    }
+                    const payloadStr = typeof payload === 'string' ? payload : JSON.stringify(payload);
+                    if (!verifyTinyHmac(deviceId, payloadStr, timestamp, hmac)) {
+                        sendJson(res, 401, { ok: false, error: 'HMAC-Verifikation fehlgeschlagen.' }, cors);
+                        return;
+                    }
+                    const payloadObj = typeof payload === 'object' ? payload : JSON.parse(payloadStr);
+                    const result = processTinyMessage(deviceId, payloadObj);
+                    sendJson(res, 200, result, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/import-config' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const map: Record<string, string> = {
+                        r: 'ROLE', rid: 'ROLE_ID', a: 'MY_ADDRESS',
+                        ba: 'BOSS_ADDRESS', pkg: 'PACKAGE_ID', rpc: 'RPC_URL',
+                        lid: 'LOCK_ID',
+                    };
+                    let applied = 0;
+                    for (const [short, envKey] of Object.entries(map)) {
+                        if (data[short] != null) {
+                            setEnvKey(envKey, String(data[short]));
+                            applied++;
+                        }
+                    }
+                    if (Array.isArray(data.ka) && data.ka.length) {
+                        setEnvKey('KOMMANDANT_ADDRESSES', data.ka.join(','));
+                        applied++;
+                    }
+                    if (Array.isArray(data.wa) && data.wa.length) {
+                        setEnvKey('WORKER_ADDRESSES', data.wa.join(','));
+                        applied++;
+                    }
+                    sendJson(res, 200, { ok: true, message: `${applied} Config-Werte importiert.` }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/deploy-package' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const rawPath = typeof data.path === 'string' && data.path.trim() ? data.path.trim() : 'move-test';
+                    const packageDir = path.basename(rawPath) || 'move-test';
+                    if (packageDir !== rawPath || /[\\/]/.test(packageDir)) {
+                        sendJson(res, 400, { ok: false, error: 'path darf nur einen einzelnen Ordner-Namen enthalten (z. B. move-test).' }, cors);
+                        return;
+                    }
+                    const packageId = await publishPackageCli(packageDir);
+                    (CFG as { PACKAGE_ID: string }).PACKAGE_ID = packageId;
+                    process.env.PACKAGE_ID = packageId;
+                    savePackageIdToFile(packageId);
+                    const envResult = setEnvKey('PACKAGE_ID', packageId);
+                    const message = envResult.ok
+                        ? 'Package deployt. Package-ID gesetzt und in .env sowie .morgendrot-package-id gespeichert.'
+                        : 'Package deployt. Package-ID gesetzt und in .morgendrot-package-id gespeichert. (.env: ' + (envResult.error || 'nicht aktualisiert') + ')';
+                    sendJson(res, 200, { ok: true, packageId, message }, cors);
+                } catch (e: any) {
+                    const msg = String(e?.message || e);
+                    sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/start-boss-signer' && req.method === 'POST') {
+            try {
+                const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+                const scriptPath = path.join('scripts', 'boss-signer.ts');
+                const child = spawn('npx', ['tsx', scriptPath], {
+                    detached: true,
+                    stdio: 'ignore',
+                    cwd: rootDir,
+                    env: { ...process.env, FORCE_COLOR: '0' },
+                });
+                child.unref();
+                const port = process.env.PORT || '3340';
+                sendJson(res, 200, { ok: true, message: 'Boss-Signer wird gestartet.', url: `http://127.0.0.1:${port}` }, cors);
+            } catch (e: any) {
+                sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/boss-provision-handshake' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const address = String(data.address || '').trim();
+                    const partner = String(data.partner || '').trim();
+                    const pubkey = String(data.pubkey || '').trim();
+                    if (!address || !partner || !pubkey) {
+                        sendJson(res, 400, { ok: false, error: 'address, partner und pubkey (Base64) erforderlich' }, cors);
+                        return;
+                    }
+                    const pubKeyRaw = Buffer.from(pubkey, 'base64');
+                    if (pubKeyRaw.length < 32) {
+                        sendJson(res, 400, { ok: false, error: 'Pubkey (Base64) sollte mind. 32 Bytes ergeben' }, cors);
+                        return;
+                    }
+                    const password = getWalletPassword();
+                    if (!password) {
+                        sendJson(res, 400, { ok: false, error: 'Bitte zuerst Wallet entsperren (z. B. /connect oder Entsperren in der UI).' }, cors);
+                        return;
+                    }
+                    const client = getClient();
+                    const txb = buildHandshakeTransaction(address, partner, new Uint8Array(pubKeyRaw));
+                    const result = await signAndExecute(client, txb, address, password);
+                    sendJson(res, 200, { ok: true, digest: result.digest }, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/command' && req.method === 'POST') {
+            const ip = (req.socket?.remoteAddress || 'unknown').replace(/^::ffff:/, '');
+            if (CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE > 0 && !checkCommandRateLimit(ip)) {
+                sendJson(res, 429, { ok: false, error: 'Rate-Limit überschritten (API_RATE_LIMIT_COMMANDS_PER_MINUTE).' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    let cmd = String(data.cmd ?? data.command ?? '').trim();
+                    let args = Array.isArray(data.args) ? data.args.map(String) : [];
+                    const userMessage = typeof data.userMessage === 'string' ? data.userMessage.trim() : '';
+                    if (cmd === '/transfer-coins' && args.length < 2 && userMessage) {
+                        const addr = userMessage.match(/0x[a-fA-F0-9]{64}/);
+                        const num = userMessage.match(/(\d+(?:\.\d+)?)\s*(?:iota|miota|i)?/i) || userMessage.match(/(\d+(?:\.\d+)?)/);
+                        if (addr && num) args = [addr[0], num[1]];
+                    }
+                    if (!cmd) {
+                        sendJson(res, 400, { ok: false, error: 'cmd fehlt' }, cors);
+                        return;
+                    }
+                    const role = CFG.ROLE;
+                    if (role === 'boss' || role === 'kommandant' || role === 'arbeiter') {
+                        const perms = getHierarchyPermissions(role);
+                        const need = getRequiredPermissionForCommand(cmd);
+                        if (need === 'keyIssue' && !perms.keyIssue) {
+                            sendJson(res, 403, { ok: false, error: 'Schlüssel ausstellen darf nur der Boss.' }, cors);
+                            return;
+                        }
+                        if (need === 'revokeDown' && !perms.revokeDown) {
+                            sendJson(res, 403, { ok: false, error: 'Widerruf/Sperren: nur Boss oder Kommandant.' }, cors);
+                            return;
+                        }
+                        if (need === 'commandDown' && !perms.commandDown) {
+                            sendJson(res, 403, { ok: false, error: 'Befehl senden (Handshake/Send): nur Boss oder Kommandant.' }, cors);
+                            return;
+                        }
+                    }
+                    if (!_commandHandler) {
+                        sendJson(res, 200, { ok: false, error: 'Bitte zuerst Wallet entsperren (Passwort eingeben).' }, cors);
+                        return;
+                    }
+                    if (CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE > 0) recordCommandRateLimit(ip);
+                    const commandApiOptions: CommandApiOptions = {};
+                    if (data.sponsorForSender) commandApiOptions.sponsorForSender = String(data.sponsorForSender).trim();
+                    if (data.silentFetch === true) commandApiOptions.silentFetch = true;
+                    if (typeof data.shadowMnemonic === 'string' && data.shadowMnemonic.trim()) {
+                        commandApiOptions.shadowMnemonic = data.shadowMnemonic.trim();
+                    }
+                    const result = await _commandHandler(cmd, args, commandApiOptions);
+                    if (cmd === '/vault-onchain' && result?.ok) lastVaultOnchainSuccessAt = Date.now();
+                    if (cmd === '/vault-save' && result?.ok) lastVaultOnchainSuccessAt = undefined;
+                    const out = result && typeof result === 'object' ? { ...result } : result;
+                    const outRec = out && typeof out === 'object' ? (out as Record<string, unknown>) : null;
+                    if (outRec && Array.isArray(outRec.createdObjectIds)) {
+                        const ids = outRec.createdObjectIds as string[];
+                        const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(/\/$/, '');
+                        const network = (CFG.RPC_URL || '').toLowerCase().includes('testnet') ? '?network=testnet' : '';
+                        outRec.explorerLinks = ids.map((id) => `${explorerBase}/${id}${network}`);
+                    }
+                    if (outRec && typeof outRec.objectId === 'string' && outRec.objectId) {
+                        const oid = outRec.objectId;
+                        const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(/\/$/, '');
+                        const network = (CFG.RPC_URL || '').toLowerCase().includes('testnet') ? '?network=testnet' : '';
+                        outRec.explorerLink = `${explorerBase}/${oid}${network}`;
+                    }
+                    sendJson(res, 200, outRec ?? out, cors);
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        // Lite-UI (Alpine + Tailwind): statisch aus ui/ ausliefern
+        if (req.method === 'GET' && !url.startsWith('/api')) {
+            const __dirname = path.dirname(fileURLToPath(import.meta.url));
+            const uiDir = path.resolve(__dirname, '..', 'ui');
+            const safePath = url === '/' || url === '/index.html' ? 'index.html' : url.replace(/^\//, '').replace(/\.\./g, '');
+            const filePath = path.join(uiDir, safePath === '' ? 'index.html' : safePath);
+            if (!filePath.startsWith(uiDir)) {
+                sendJson(res, 403, { ok: false, error: 'Forbidden' }, cors);
+                return;
+            }
+            try {
+                if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+                    const ct = filePath.endsWith('.html') ? 'text/html' : filePath.endsWith('.js') ? 'application/javascript' : filePath.endsWith('.css') ? 'text/css' : 'application/octet-stream';
+                    res.writeHead(200, { 'Content-Type': ct, ...cors });
+                    res.end(fs.readFileSync(filePath));
+                    return;
+                }
+            } catch (_) {}
+        }
+
+        if (url === '/favicon.ico') { res.writeHead(204, cors); res.end(); return; }
+        sendJson(res, 404, { ok: false, error: 'Route nicht gefunden: ' + url }, cors);
+    });
+
+    const maxAttempts = 5;
+
+    async function killOldInstance(p: number): Promise<boolean> {
+        try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 1500);
+            const r = await fetch(`http://127.0.0.1:${p}/api/status`, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (r.ok) {
+                const d = (await r.json().catch(() => null)) as { backendRunning?: unknown } | null;
+                if (d && d.backendRunning !== undefined) {
+                    logger.info(`Alte Morgendrot-Instanz auf Port ${p} gefunden – stoppe sie…`);
+                    const ctrl2 = new AbortController();
+                    const t2 = setTimeout(() => ctrl2.abort(), 2000);
+                    await fetch(`http://127.0.0.1:${p}/api/command`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ command: '/restart' }),
+                        signal: ctrl2.signal,
+                    }).catch(() => {});
+                    clearTimeout(t2);
+                    await new Promise(r => setTimeout(r, 1500));
+                    return true;
+                }
+            }
+        } catch {}
+        return false;
+    }
+
+    function tryListen(p: number) {
+        if (p > port + maxAttempts) {
+            logger.error(`API-Port ${port}–${port + maxAttempts} belegt. Bitte alte Morgendrot-Prozesse beenden (z. B. im Task-Manager).`);
+            return;
+        }
+        const onSuccess = () => {
+            server.removeListener('error', onError);
+            _actualApiPort = p;
+            logger.info(`Morgendrot API: http://127.0.0.1:${p}/api/status  Lite-UI: http://127.0.0.1:${p}/`);
+        };
+        const onError = (err: NodeJS.ErrnoException) => {
+            server.removeListener('error', onError);
+            server.removeListener('listening', onSuccess);
+            if (err.code === 'EADDRINUSE') {
+                logger.warn(`API-Port ${p} belegt, versuche ${p + 1}…`);
+                tryListen(p + 1);
+            } else {
+                logger.error('API-Server Fehler: ' + (err?.message || err));
+            }
+        };
+        server.once('error', onError);
+        server.once('listening', onSuccess);
+        server.listen(p, '127.0.0.1');
+    }
+
+    const startListen = () => {
+        tryListen(port);
+    };
+    if (CFG.API_KILL_PREVIOUS_INSTANCE) {
+        killOldInstance(port)
+            .then((killed) => {
+                if (killed) logger.info('Alte Instanz beendet, starte auf bevorzugtem Port…');
+                startListen();
+            })
+            .catch(() => startListen());
+    } else {
+        startListen();
+    }
+
+    return server;
+}

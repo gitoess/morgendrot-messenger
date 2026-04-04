@@ -1,0 +1,45 @@
+%% Morgendrot Logik-Baum (IF-THEN-EXECUTE-SUGGEST) – für RAG und Doku
+%% Mermaid: Säulen, Abhängigkeiten, Befehlsfluss
+
+flowchart TB
+    subgraph S1["Säule 1: Fundament"]
+        A1[MY_ADDRESS + PACKAGE_ID]
+        A2[RPC erreichbar]
+        A3[Wallet entsperrt]
+    end
+
+    subgraph S2["Säule 2: Kanal"]
+        B1["/handshake 0x…"]
+        B2["Partner: /connect"]
+        B3[peerMap / verbunden]
+    end
+
+    subgraph S3["Säule 3: Aktivität"]
+        C1["/send (verschlüsselt)"]
+        C2["/send-plain"]
+        C3["/transfer-coins"]
+        C4["/create-key, /create-key-and-notify"]
+        C5["/fetch"]
+    end
+
+    subgraph S4["Säule 4: Nachsorge"]
+        D1["/vault-save"]
+        D2["/purge-key, /purge-ticket, /purge-handshake"]
+    end
+
+    A1 --> A2 --> A3
+    A3 --> B1 --> B2 --> B3
+    B3 --> C1
+    A3 --> C2
+    A3 --> C3
+    A3 --> C4
+    A3 --> C5
+    C4 --> D1
+    C1 --> D1
+    B1 --> D2
+    C4 --> D2
+
+    style S1 fill:#e8f4e8
+    style S2 fill:#e8e8f4
+    style S3 fill:#f4e8e8
+    style S4 fill:#f4f4e8

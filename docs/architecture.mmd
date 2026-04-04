@@ -1,0 +1,73 @@
+%% Morgendrot – High-Level Architektur (Node, Chain, UI)
+%% Anzeige: GitHub, VS Code Mermaid-Extension, https://mermaid.live
+%% Siehe auch: docs/saeulen-befehlsfluss.mmd (4 Säulen + Befehlsfluss)
+
+flowchart LR
+    subgraph Client["Browser & UIs"]
+        AlpineUI["Boss-Werkstatt\nui/ · Lite-UI\nPort 3342"]
+        NextUI["Kunden-Produkt\nfrontend/ · Next\nPort 3341"]
+    end
+
+    subgraph NodeApp["Node-App (Morgendrot)"]
+        API["api-server.ts\nREST /api/*"]
+        Copilot["ai-copilot.ts\naskAiCopilot()"]
+        Intent["ai-intent-matcher.ts\nRegex + Beispiele"]
+        RAG["rag-retrieval.ts\nrag-chunks.json + Embeddings"]
+        Cfg["config.ts\n.env lesen/schreiben"]
+        Wallet["wallet-bridge.ts\nBefehlslogik /handshake, /connect, /send, /create-key, ..."]
+        Chain["chain-access.ts\nIOTA Rebased SDK"]
+        Vault["vault-local.ts\nVAULT_FILE lokal"]
+        Lock["m2m-lock.ts\nOPEN_COMMAND/OPEN_URL, AccessKeys"]
+        Monitor["monitoring.ts\nOffline-Checks"]
+        Gas["gas-station.ts\nrunGasStationCheck()"]
+    end
+
+    subgraph Storage["Storage & Daten"]
+        Env[".env / .morgendrot-*\nConfig, Package, Partner"]
+        VaultFile["VAULT_FILE\nverschlüsselte Keys"]
+        Logs["logs/*\nAudit-/System-Logs"]
+        RAGChunks["ai-training/rag-chunks.json\nChunks + Embeddings"]
+    end
+
+    subgraph ChainSide["IOTA Rebased Chain"]
+        MovePkg["Move Package\nmessaging.move"]
+        VaultReg["VAULT_REGISTRY_ID\nVaultRegistry (on-chain)"]
+        Mailbox["MAILBOX_ID\nMailbox: Handshakes + Messages"]
+        CmdReg["COMMAND_REGISTRY_ID\nCommandRegistry (OPEN-Wörter)"]
+        AccessKeys["AccessKey-Objekte\n(create_access_key, transfer_key, purge_key)"]
+        Tickets["Ticket-Objekte\n(create_ticket, use_ticket, purge_ticket)"]
+    end
+
+    subgraph BossRemote["Optional: Boss / Remote-Signer"]
+        BossApp["Boss-Signer-Service\n/sign"]
+        RemoteSigner["SIGNER=remote\nREMOTE_SIGNER_URL"]
+    end
+
+    AlpineUI -->|"HTTP /api/*"| API
+    NextUI -->|"HTTP /api/*"| API
+    API -->|"Status, Commands, AI"| Copilot
+    API -->|"Status, Config"| Cfg
+    API -->|"Befehle ausführen"| Wallet
+    API -->|"Monitoring, Gas"| Monitor
+    API -->|"Gas-Checks"| Gas
+    Copilot -->|"Intent-Versuch"| Intent
+    Copilot -->|"RAG-Suche"| RAG
+    Copilot -->|"Befehlsvorschlag\n(ACTION: /...)"| Wallet
+    RAG -->|"Chunks + Embeddings"| RAGChunks
+    Cfg --> Env
+    Wallet --> Vault
+    Wallet --> Chain
+    Wallet --> Lock
+    Monitor --> Chain
+    Lock --> Chain
+    Chain --> MovePkg
+    MovePkg --> VaultReg
+    MovePkg --> Mailbox
+    MovePkg --> CmdReg
+    MovePkg --> AccessKeys
+    MovePkg --> Tickets
+    Wallet -->|"Signatur anfragen"| BossApp
+    BossApp -->|"sign(txBytes)"| Chain
+    Wallet -. optional .-> RemoteSigner
+    Vault --> VaultFile
+    Logs --- Storage
