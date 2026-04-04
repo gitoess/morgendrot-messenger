@@ -28,6 +28,7 @@ import type { Message } from '@/frontend/lib/types'
 import { useChatViewEinsatzExports } from '@/frontend/hooks/use-chat-view-einsatz-exports'
 import { useChatViewMirrorDelay } from '@/frontend/hooks/use-chat-view-mirror-delay'
 import { useChatViewApiStatusPoll } from '@/frontend/hooks/use-chat-view-api-status-poll'
+import { useChatViewMeshPanelState } from '@/frontend/hooks/use-chat-view-mesh-panel-state'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 
 export type UseChatViewCoreParams = {
@@ -155,15 +156,26 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onDelayMirrorPlaintext,
   })
 
-  const [meshExportPw, setMeshExportPw] = useState('')
-  const [meshImportPw, setMeshImportPw] = useState('')
-  const [meshImportJson, setMeshImportJson] = useState('')
-  const [meshSyncBusy, setMeshSyncBusy] = useState(false)
-  const [meshSyncMsg, setMeshSyncMsg] = useState<string | null>(null)
-  const [localPurgeBusy, setLocalPurgeBusy] = useState(false)
-  const [contactBleAddress, setContactBleAddress] = useState('')
-  const [contactBleUuid, setContactBleUuid] = useState('')
-  const [contactBleBusy, setContactBleBusy] = useState(false)
+  const {
+    meshExportPw,
+    setMeshExportPw,
+    meshImportPw,
+    setMeshImportPw,
+    meshImportJson,
+    setMeshImportJson,
+    meshSyncBusy,
+    setMeshSyncBusy,
+    meshSyncMsg,
+    setMeshSyncMsg,
+    localPurgeBusy,
+    setLocalPurgeBusy,
+    contactBleAddress,
+    setContactBleAddress,
+    contactBleUuid,
+    setContactBleUuid,
+    contactBleBusy,
+    setContactBleBusy,
+  } = useChatViewMeshPanelState()
 
   const {
     attachedBlobBase64,
