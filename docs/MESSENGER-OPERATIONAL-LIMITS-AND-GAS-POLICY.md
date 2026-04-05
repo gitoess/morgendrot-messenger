@@ -116,6 +116,11 @@ Sinnvoll und **unabhängig** von der Chain: große Aktionen **erreichbar**, Stat
 
 - **Credits „non-transferable“** zu halten (wenn gewünscht) verhindert **nicht** automatisch Geldwäsche über **native** IOTA — dafür **Compliance** und **Produktgrenzen** definieren.
 
+### Größen-Tarife (z. B. 1 vs. 5 Credits), Storage-Miete, wer darf löschen
+
+- **Kurz:** Größere Nutzlasten verursachen typisch **mehr** On-Chain-Speicherlast → höherer Credit-Abzug kann **sinnvoll** sein; **exakte** Zahlen und **Rebate-/Purge-Flows** kritisch einordnen (kein willkürlicher Server-TTL).  
+- **Ausführlich:** **`docs/MESSAGING-CREDITS-STORAGE-AND-PURGE-POLICY.md`**.
+
 ---
 
 ## Self-Pay-Regel (Zielbild)
