@@ -150,6 +150,49 @@ Die **Adresse** aus dem Schlüssel ist der **Anker** für alles, was **on-chain*
 
 ---
 
+## Skalierung: Server bündelt zu PTB? Zeitfenster?
+
+**Kurzantwort:** **Ja, das ist ein gangbar Weg** — der Server kann **berechtigte** Einzeloperationen in einer **Warteschlange** sammeln und bei Bedarf **eine** Transaktion mit **mehreren** Move-Aufrufen (Programmable Transaction Block, PTB) einreichen. **Zeitlich zu begrenzen** (und/oder nach **Anzahl**) ist **empfehlenswert**, sonst warten Nutzer zu lange oder die Transaktion wird zu groß/teuer.
+
+### Bündeln (Batching)
+
+- **Queue:** Eingehende Anfragen (nach Credits-/Signatur-Prüfung) werden in eine **Queue** gelegt.
+- **PTB:** Statt N-mal Netzwerk-Roundtrips mit N einzelnen TX baut der Dienst **eine** Transaktion mit **N programmierten Aufrufen** (typisch mehrere `moveCall`s an dasselbe oder verschiedene Objekte — genau nach eurem Move-Design).
+- **Nicht** „beliebig viele“: Pro TX gelten **maximale Transaktionsgröße**, **Gas-/Compute-Limits** und oft **praktische** Obergrenzen (z. B. einige Dutzend Aufrufe — **Messwerte vom Netz/SDK**, nicht pauschal „1000“).
+
+### Zeitfenster und Schwellen (typisches Muster)
+
+Zwei **kombinierte** Kriterien (welches **zuerst** eintritt, gewinnt):
+
+| Schwellwert | Rolle |
+|-------------|--------|
+| **max_count** | Sobald **z. B. 10–50** (konkret zu messen) Einträge in der Queue sind → PTB **sofort** bauen und senden. |
+| **max_wait_ms** | Wenn nach **z. B. 300–2000 ms** noch nicht genug da ist → **trotzdem** senden, damit die ersten Nutzer nicht hängen bleiben. |
+
+**Ziel:** Balance zwischen **Kosten** (weniger Basis-Overhead pro Nachricht), **Latenz** (Messenger: oft **unter ~1–2 s** akzeptabel, ab **vielen Sekunden** fühlt sich „lahm“ an) und **Erfolgswahrscheinlichkeit** der TX (nicht an Gas scheitern).
+
+### Warum begrenzen?
+
+1. **Latenz:** Unbegrenztes Warten = schlechte UX.
+2. **Gas / Größe:** Zu viele Schritte in **einer** TX → **Out of Gas** oder **Tx zu groß** → gesamter Batch schlägt fehl (je nach Move: oft **atomar** — ein fehlgeschlagener Aufruf kann die ganze TX invalidieren; das muss im Vertrag/Flow berücksichtigt werden).
+3. **Fairness:** Längere Queues ohne Timeout bevorzugen „spätere“ kleine Batches gegenüber dem, der zuerst wartet — **Timeout** leert regelmäßig.
+
+### Adress-Pool (parallel)
+
+Wenn **mehrere** Sponsor-/Sender-Adressen (Pool) existieren, können **parallel** unabhängige PTBs laufen (jeweils eigene **Sequenz**/Objekt-Konten nach Rebased-Regeln). Das mildert ein **Nadelöhr** einer einzelnen Konto-Adresse — **ohne** mathematische „tausende pro Sekunde“-Garantie; immer noch begrenzt durch **RPC**, **Chain-Durchsatz** und **Kostenbudget**.
+
+### Validierung ohne „User-Whitelist“
+
+Das Move-Package muss Nutzer **nicht** vorab kennen: **Regeln** (z. B. Credits gehören Adresse A, Signatur passt) reichen. Neue Adressen funktionieren **sobald** sie on-chain gültige Objekte und Signaturen haben — das ist **kein** Ersatz für **Abuse-Schutz** (Rate-Limits, Monitoring) auf dem Relay.
+
+### Was dies **nicht** ist
+
+- **Kein** Ersatz für saubere **Ist-Implementierung** im aktuellen Morgendrot-Code — dieses Kapitel ist **Zielbild**.
+- **Kein** alleiniger Skalierungshebel: zusätzlich **Indexer**, **Sharding** mehrerer Relays, **Kapazitätsplanung** RPC.
+- Größen wie „3 KB“ in älteren Texten = **Beispiel**; die Logik gilt **generisch** für gebündelte Messenger-Operationen.
+
+---
+
 ## Verwandte Dokumentation
 
 - Messenger-Datenfluss Posteingang: **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**
