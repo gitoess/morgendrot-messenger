@@ -3,6 +3,8 @@
 **Kontext:** Frage, ob der Relay **wissen muss, wer gekauft hat**, und ob sich **Berechtigung (Credits)** vollständig über **IOTA Rebased / Move** abbilden lässt.  
 **Bezug:** **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`** (Credits, Sponsoring), **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**.
 
+**Vorab produzierte Voucher-Objekte + Webshop:** Muss der Server mit dem Shop verbunden sein? Kennen müssen „Codes“? **Ausführlich und kritisch:** **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`**.
+
 ---
 
 ## 1. Was an der „reinen IOTA“-Story **richtig** ist

@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook **§ H.3c**, Meshtastic **§ H.3d**, Credits + Wanderer-Einlösen **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook **§ H.3c**, Meshtastic **§ H.3d**, Credits/Voucher **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
@@ -97,7 +97,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/SECRETS-OPTIONS.md`** – Option C: externe Secret-Manager (Doppler, …); kritische Grenzen  
 - **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`** – Hop-Limit/TTL, Brücken, Re-Broadcast-Sturm-Risiko  
 - **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`** – Kauf/Credits on-chain: Server ohne Käufer-DB?, Grenzen „reines IOTA“  
-- **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** – Voucher A–D vs. Ist-Code; „Shadow“-Begriff vs. `shadow-sweep`
+- **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** – Voucher A–D vs. Ist-Code; „Shadow“-Begriff vs. `shadow-sweep`  
+- **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** – Pre-Mint auf Chain, Shop-Fulfillment vs. blindes Relay, Papier-QR
 
 ---
 
