@@ -101,6 +101,38 @@ LoRa ist nur **Transport** mit anderen **Latenz- und Größen**limits — keine 
 
 ---
 
+## Gerätewechsel: Messenger-Identität „mitnehmen“
+
+**Ja, möglich** — sobald die **On-Chain-Identität** (Adresse) durch ein **vom Nutzer dauerhaft kontrolliertes** Geheimnis ableitbar ist. Der Server kann den Schlüssel nach dem Provisioning gelöscht haben; **die Kette** „erinnert“ sich weiter an **Credits und Kontostand dieser Adresse**.
+
+### Weg 1: Recovery Phrase (klassisch, „analog“ sichern)
+
+- Beim **ersten** Setup (oder in einem dedizierten Sicherungsdialog) zeigt die App eine **mnemonische Phrase** (typisch 12–24 Wörter), aus der sich dieselbe **Keypair-/Adress-Ableitung** ergibt wie bei der ursprünglichen Provisionierung — **nur wenn** ihr beim Erzeugen dieselbe **Derivationslogik** (BIP-ähnlich o. Ä.) verwendet und die Phrase **wirklich** zu genau diesem Schlüssel gehört.
+- **Nutzer:** Phrase **offline** aufbewahren (Papier, Safe); **nicht** in Messenger-Chats, Screenshots oder Klartext-Cloud legen.
+- **Neues Gerät:** App installieren, **Wiederherstellung** wählen, Phrase eingeben → dieselbe Adresse → **Credits-Objekte** und Mailbox-Bezug zu dieser Adresse sind wieder nutzbar (sofern das Move-Modell an die Adresse bindet).
+
+**Kritisch:** Eingabe der Phrase auf einem **neuen** Phone hat dieselben Risiken wie überall (Phishing, Keylogger, Blick über die Schulter). **Alternative:** Hardware-Wallet / Secure-Element-Pfad, wo die Phrase **nie** in ein Web-Textfeld muss.
+
+### Weg 2: Export verschlüsselter Backup-Datei
+
+- Nutzer setzt ein **starkes Passwort**; App exportiert **verschlüsseltes** Key-Material (Datei oder QR-Chunking). Auf dem neuen Gerät Import + Passwort.
+
+**Vorteil:** Keine Phrase auf Papier nötig; **Nachteil:** Passwortverlust = Verlust der Identität (wie Phrase verloren).
+
+### Weg 3: Kein Backup (bewusst)
+
+- Verlust des Geräts **ohne** Phrase/Export = typischerweise **kein** Zugriff mehr auf die Signatur zu dieser Adresse — **Credits** können on-chain noch existieren, sind aber **praktisch unbenutzbar** ohne Schlüssel (sofern kein Social Recovery im Vertrag vorgesehen).
+
+### Kurz
+
+| Frage | Antwort |
+|--------|---------|
+| Kann der User das Handy wechseln? | **Ja**, mit **Wiederherstellung** aus einem **Backup des Schlüssels** (Phrase oder verschlüsselter Export). |
+| Sind Credits „mit dabei“? | Sie hängen an der **Adresse** auf der Chain, nicht am Gerät — der Zugriff kommt vom **Schlüssel**. |
+| Was muss das Produkt explizit tun? | **Ein** klares Recovery-Konzept (Phrase anzeigen, bestätigen, Wiederherstellungs-Flow), **kein** stilles Wegwerfen der Identität ohne Nutzerhinweis. |
+
+---
+
 ## Verwandte Dokumentation
 
 - Messenger-Datenfluss Posteingang: **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**
