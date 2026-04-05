@@ -105,7 +105,7 @@ Zielbild für **Fiat-Shop** (Shopify, WooCommerce, Stripe, …) + **Voucher on-c
 
 | Variante | Ablauf | Vorteil | Kritik |
 |----------|--------|---------|--------|
-| **A — Claim-Link (E-Mail)** | Server reserviert ein **Voucher-Objekt** aus dem Treasury, erzeugt ein **einmaliges, hohentropisches Geheimnis** (nicht ratbar), speichert serverseitig **Mapping** `token → Objekt-ID / Bestellung` (oder nur „Token gültig bis Einlösung“). Link z. B. `https://morgendrot.app/claim?t=<token>` (**HTTPS**). E-Mail an Kundenadresse. | Kunde braucht **beim Kauf** noch **keine** IOTA-Adresse. | Ihr **habt** einen **Server-Zustand** (Token/Reservierung) — das ist **kein** reines „nur Chain“. Token **einmalig verbrauchen**, **Leak**-Risiko (Weiterleiten der Mail) beachten. |
+| **A — Claim-Link (E-Mail)** | Server reserviert ein **Voucher-Objekt** aus dem Treasury, erzeugt ein **einmaliges, hoch-entropisches Geheimnis** (nicht ratbar), speichert serverseitig **Mapping** `token → Objekt-ID / Bestellung` (oder nur „Token gültig bis Einlösung“). Link z. B. `https://morgendrot.app/claim?t=<token>` (**HTTPS**). E-Mail an Kundenadresse. | Kunde braucht **beim Kauf** noch **keine** IOTA-Adresse. | Ihr **habt** einen **Server-Zustand** (Token/Reservierung) — das ist **kein** reines „nur Chain“. Token **einmalig verbrauchen**, **Leak**-Risiko (Weiterleiten der Mail) beachten. |
 | **B — Direkt-Transfer** | Webhook → TX: **Transfer** des Voucher-Objekts an die im Checkout angegebene **0x-Adresse**. | Sofort sichtbar in der Wallet/Explorer. | Adresse **muss stimmen** (Tippfehler = Verlust); Checkout muss **Adresse** erfassen. |
 
 **Präzision:** „Server nimmt Objekt aus Pool“ = typisch **Treasury signiert** `transfer` — **Gas** und **Keys** im Fulfillment-Dienst.
