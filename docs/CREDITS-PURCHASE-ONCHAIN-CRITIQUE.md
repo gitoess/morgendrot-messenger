@@ -73,6 +73,12 @@
 
 ---
 
+## 3b. Einlösen: Code + Ephemeral-Key → Wallet + Credits (Produktpfad)
+
+Eine **lineare** Reihenfolge (App installiert → temporärer Schlüssel → Voucher ans Relay → verschlüsselte Shadow-/Messenger-Wallet → Sponsor mintet Credits) **ergänzt** die „reine Chain“-Sicht um den **ersten** Kontakt — technisch konsistent mit **Provisioned Autonomy**, aber im Repo **noch nicht** als ein durchgängiger Endpunkt umgesetzt. Abgleich: **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**.
+
+---
+
 ## 4. Fazit für Morgendrot
 
 Die **Blockchain als fälschungssichere „Kundenkarte“** für **Guthaben** (nicht für Klartext-Inhalt) ist **konsistent** mit eurem Relay-/Sponsor-Zielbild — **sofern** das Move-Package **Ownership, Mint, Burn und Abbuchung** eindeutig regelt und ihr **Recovery vs. neue Identität** klar kommuniziert.

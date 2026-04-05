@@ -16,6 +16,8 @@
 2. Übergabe an das Endgerät **verschlüsselt**, z. B. über ein **ECDH**-geleitetes Geheimnis (Client sendet Ephemeral-Public-Key, Server antwortet mit verschlüsseltem Paket).
 3. Nach bestätigtem Import: Server **verwirft** das Schlüsselmaterial; der Nutzer (Gerät) ist **allein** in der Lage, im Namen dieser Adresse zu **signieren**.
 
+**Einlöse-Flow (Wanderer, Voucher):** Eine konkrete **A–D-Reihenfolge** (temporärer Key → Code + Pubkey ans Relay → verschlüsselte Übergabe der dauerhaften Wallet + Chain-Aktivierung) ist mit diesem Soll **vereinbar** — Abgleich mit **Ist-Code** und Begriff „Shadow“ vs. `shadow-sweep`: **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**.
+
 **Kritisch / Randbedingungen:**
 
 - **ECDH allein** authentifiziert den Server **nicht**. Ohne **TLS**, **Zertifikats-Pinning**, **signierte Server-Antwort** oder anderes **Trust-Anchor**-Modell ist ein **MITM** möglich (Angreifer liefert falsches „Wallet-Paket“).
