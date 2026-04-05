@@ -149,6 +149,8 @@ Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.ex
 |----------|-----------|
 | **GAS_BUDGET** | Gas-Budget pro Transaktion. Default: 10000000. |
 
+**Credits vs. MIST:** **`MESSENGER_CREDITS_OBJECT_ID`** bezieht sich auf **Messenger-Credits** (Move-Objekt, Tarif) — **nicht** auf den **MIST**-Stand der Wallet. Kurz erklärt: **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8.
+
 ---
 
 ## Messenger: Self-Pay (Zielbild, wenn implementiert)

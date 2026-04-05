@@ -78,12 +78,22 @@ Sinnvoll und **unabhängig** von der Chain: große Aktionen **erreichbar**, Stat
 
 ## 8. Kontostand: eigene IOTA (MIST) vs. Messenger-Credits
 
-**Kern:** Das sind **zwei verschiedene Dinge**:
+**Kern:** **Credits ≠ IOTA (MIST).** Das sind **zwei Schichten** — verwechseln führt zu falschen Erwartungen („warum brauche ich trotzdem Coins?“ / „warum schwankt mein Tarif nicht?“).
 
-| Begriff | Typisch |
-|--------|---------|
-| **Messenger-Credits** | Move-Objekt(e), **Regeln** eures Vertrags (z. B. „Nachrichten kontingent“), oft **nicht** frei als Coin handelbar. |
-| **IOTA/MIST auf der Nutzer-Adresse** | **Native** Zahlungsmittel für **Gas** und **Transfers** — sofern die Wallet **Guthaben** hat. |
+| Begriff | Rolle |
+|--------|--------|
+| **IOTA / MIST** | **„Echtes“ natives Geld** auf der Chain: **Gas** (Transaktionsgebühr) und **Coin-Transfers**. Liegt auf der **Nutzer-Adresse** und/oder in der **Sponsor-Wallet** des Servers. Kurs **schwankt** am Markt. |
+| **Messenger-Credits** | **Euer Produkt-Kontingent** als **Move-Objekt(e)** (z. B. digitale „Stempelkarte“): zählt herunter, **wenn** euer Vertrag/Backend das so abbildet — **kein** Ersatz für native Coins, es sei denn, ihr **mintet** sie absichtlich anders (hier: **nicht** mit MIST verwechseln). |
+
+| Merkmal | MIST (native) | Messenger-Credits |
+|--------|----------------|-------------------|
+| Zweck | **Netzwerk-Maut** (Technik), optionale Transfers | **Abo/Flatrate** beim Dienst (Produkt), z. B. „Einheiten“ pro Nachricht |
+| Preisgefühl für Nutzer | Schwankt mit **Markt/Netz**, wenn er **direkt** MIST zahlt | **Fest** im verkauften Paket (sofern ihr es so bepreist) |
+| Typischer Erwerb | Börse, Wallet, **Self-Pay** | Webshop, Voucher, Gutschrift |
+
+**Morgendrot-Szenario (Zielbild):** Der Nutzer kauft **Credits** (verständliches Kontingent). Beim Senden mit aktivem **Sponsoring** zieht ihr **Credits** laut Vertrag ab; die **MIST** für **Gas** kommt aus der **Server-Reserve** — der Nutzer muss dafür **kein** Krypto kaufen, solange sein Tarif reicht. Vermischt man beides gedanklich („Credits = IOTA“), wirkt **Self-Pay** und **Schwankung** verwirrend.
+
+*Technisch:* Credits sind typischerweise **Move-Objekt(e)** mit euren Regeln (oft **nicht** frei wie ein Coin handelbar); MIST ist das **native** Gas-/Transfer-Guthaben auf der Adresse.
 
 ### Wer zahlt die Gebühr (Gas)?
 
