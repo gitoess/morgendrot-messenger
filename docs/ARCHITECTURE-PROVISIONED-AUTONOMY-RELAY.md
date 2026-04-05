@@ -123,12 +123,29 @@ LoRa ist nur **Transport** mit anderen **Latenz- und Größen**limits — keine 
 
 - Verlust des Geräts **ohne** Phrase/Export = typischerweise **kein** Zugriff mehr auf die Signatur zu dieser Adresse — **Credits** können on-chain noch existieren, sind aber **praktisch unbenutzbar** ohne Schlüssel (sofern kein Social Recovery im Vertrag vorgesehen).
 
+### Was die Chain „von selbst“ liefert — und was nicht
+
+Die **Adresse** aus dem Schlüssel ist der **Anker** für alles, was **on-chain** wirklich an **diese** Adresse gebunden ist (Ownership, Events mit `sender`/`recipient` = du, in eurem Messaging-Modell).
+
+| Thema | Typisch automatisch wiederfindbar? | Anmerkung |
+|--------|-------------------------------------|-----------|
+| **Credits-Objekt(e)** | **Oft ja**, wenn die App weiß, **welchen Objekttyp** sie unter welchem **Package** sucht (Move-Modul). Dann: Indexer/RPC → Objekte des Nutzers filtern. | Ohne **Package-ID / Typ-Information** kann kein Client „raten“, welche von Millionen Objekten deins sind — die **PACKAGE_ID** ist das **deployte Programm**, oft **netzweit gleich**, nicht pro Nutzer aus der Adresse ableitbar. |
+| **PACKAGE_ID** | **Nein**, nicht „magisch“ aus der Adresse. | Kommt aus **Deployment** / **Netzwerk-Konfiguration**: App-Bundle, Server-Default, oder einmalige Nutzer-Eingabe. Derselbe Nutzer nutzt dasselbe Package wie alle anderen Clients des Dienstes — es ist **kein** persönliches Geheimnis. |
+| **MAILBOX_ID** | **Nein** als persönliche Ableitung. | **Gemeinsames** Mailbox-Objekt im Move-Design; ID steht in **Konfiguration** (`.env`, `/api/status`), nicht „auf der Adresse berechnet“. |
+| **Streams / Anchor** | **Nein** automatisch aus der Seed-Phrase. | `STREAMS_ANCHOR_ID` etc. sind **Dienst-/Kanal-Konfiguration**, nicht die Wallet-Adresse. |
+| **Nachrichten (Mailbox/Events)** | **Teilweise:** Fetch-Logik braucht **MY_ADDRESS** + **PACKAGE_ID** + ggf. **MAILBOX_ID** und fragt dann gezielt ab. | Ohne diese Parameter „saugt“ die App **nicht** die ganze Welt-Historie; sie **indexiert** nach eurem Protokoll. **Pruning:** Alte Events können je nach Node **nicht mehr vollständig** abfragbar sein. |
+| **Kontakte / lokale UI-Daten** | **Nein** auf der Chain, sofern nicht explizit on-chain gespeichert. | Nur was ihr **persistiert** (Gerät, Server, Vertrag), kommt zurück. |
+| **E2E-Chat-Inhalt** | Wiederherstellung nur mit den **richtigen** Schlüsseln pro Gespräch (ECDH/Session), nicht automatisch nur durch die Seed-Phrase — je nach eurem Protokoll. | **Seed-Phrase** = Identität auf L1; **Chat-Entschlüsselung** kann **zusätzliche** Geheimnisse (Session-Keys, Partner-Handshakes) brauchen, die **nicht** allein aus der Chain kommen. |
+
+**Kurz:** Die Blockchain ist die **Wahrheit für On-Chain-Status** (Credits, was unter eurem Move-Modell gespeichert ist). **Package-ID, Mailbox-ID, Anchor** sind in der Praxis **Konfiguration + Protokoll**, keine automatische Folge der 12 Wörter. Ein **Morgendrot-Server** ist weiterhin nützlich für **RPC-URL**, **Defaults** und **komfortable** Synchronisation — auch wenn der Nutzer „identisch“ wiederhergestellt ist.
+
 ### Kurz
 
 | Frage | Antwort |
 |--------|---------|
 | Kann der User das Handy wechseln? | **Ja**, mit **Wiederherstellung** aus einem **Backup des Schlüssels** (Phrase oder verschlüsselter Export). |
 | Sind Credits „mit dabei“? | Sie hängen an der **Adresse** auf der Chain, nicht am Gerät — der Zugriff kommt vom **Schlüssel**. |
+| Weiß das neue Gerät automatisch Package-ID / Mailbox / Anchor? | **Größtenteils nein** — das sind **Netzwerk- und App-Konfiguration**, nicht die Adresse. **Ja** für alles, was ihr **explizit** aus der Chain ableitet (z. B. „meine Objekte vom Typ X unter Package Y“), sobald **Y** und **Typ** bekannt sind. |
 | Was muss das Produkt explizit tun? | **Ein** klares Recovery-Konzept (Phrase anzeigen, bestätigen, Wiederherstellungs-Flow), **kein** stilles Wegwerfen der Identität ohne Nutzerhinweis. |
 
 ---
