@@ -13,6 +13,7 @@ Empfohlene Reihenfolge ohne Chain:
 1. **`npm run test:smoke`** — führt **`npm run validate:ui`** und **`npm run test`** aus (UI-Referenzen + Modultests).
 2. **Manuell:** Backend starten (`npm run start:secrets` oder `npm start`), **http://127.0.0.1:3342/** öffnen, Wallet entsperren, einen kurzen Befehl oder Tab prüfen.
 3. **Mit Next:** `npm run dev` → **http://127.0.0.1:3341/** — Chat-Kachel: Credits-Balken erscheint, wenn **`MESSENGER_CREDITS_OBJECT_ID`** gültig ist und die API das Objekt lesen kann; Lock-Kachel: Statuszeile „Backend / Chat / Keys“.
+4. **Credits vs. MIST (kein Vermischen):** **`MESSENGER_CREDITS_OBJECT_ID`** bezieht sich auf **Messenger-Credits** (Tarif/Kontingent als Move-Objekt), **nicht** auf natives **Gas-Guthaben** (MIST) auf der Wallet. Kurz: **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8. Smoke: **`GET /api/status`** (3342) — wenn Credits gesetzt und lesbar: Anzeige/Hinweise plausibel; in Support/UI nicht „Credits = IOTA“ gleichsetzen.
 
 ### Next-Messenger Chat – manuelle Checkliste (Port 3341)
 

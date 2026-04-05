@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook **§ H.3c**, Meshtastic **§ H.3d**, Credits/Voucher **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook **§ H.3c** inkl. **Test** Credits≠MIST → **`TESTING.md`** Smoke-Punkt 4, Meshtastic **§ H.3d**, Credits/Voucher-Doku).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
@@ -261,6 +261,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 1. **VPS / Runbook:** `doppler run -- npm start` (oder **gleichwertiges** Tool) im **Runbook** **testen** — Ziel: reproduzierbarer Start **ohne** Sponsor-Secrets in Klartext-Dateien auf der Platte.
 2. **Wenn Self-Pay gebaut wird:** `ENABLE_MESSENGER_SELF_PAY` im **Sendepfad auswerten** und **UI-Hinweis vor Abbuchung** (kein stiller MIST-Verbrauch ohne Zustimmung).
+3. **Testen Credits ≠ MIST:** Smoke wie **`TESTING.md`** (Abschnitt *Smoke nach Merge*, Punkt **4**) — `GET /api/status`, Credits-Anzeige vs. Begriffsverwechslung mit nativem Gas; Doku **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8.
 
 ### H.3d Meshtastic: Hop-Limit, manuelles Relay, Brücken (Doku)
 
