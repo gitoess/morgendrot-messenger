@@ -59,6 +59,12 @@
 
 **Ist-Stand:** `MESSENGER_CREDITS_OBJECT_ID` und Credits-Anzeige in **`/api/status`** — Details der Vertragslogik im Move-Package prüfen.
 
+### Kauf & „wer hat gekauft?“ (On-Chain vs. Betrieb)
+
+Der Relay **muss keine Käuferliste** führen, wenn Credits als **Move-Objekte** an die **Nutzer-Adresse** gebunden sind und nur euer Modul sie **minten** darf — die **Chain** ist dann die Quelle der Wahrheit für Guthaben; die Prüfung läuft über **Typ/Owner/Regeln** des Packages, nicht über „Codes in SQL“.
+
+**Kritisch:** Zahlungsweg (Fiat/Webshop), **Empfängeradresse** vor dem Mint, **Recovery** vs. **neue Phrase** (neue Adresse = alte Credits nicht automatisch), **öffentliche** Sichtbarkeit von Objekten, **Admin-Key**-Risiko, optionale **Betriebs-DB** trotzdem für Rate-Limits/Logs. Ausführlich: **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**.
+
 ---
 
 ## 4. Privatsphäre: E2E für Inhalt („Blind Relay“)
