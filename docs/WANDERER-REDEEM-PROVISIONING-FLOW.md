@@ -2,7 +2,7 @@
 
 **Zweck:** Eure **Erzählung** (temporärer Schlüssel → Code einlösen → echte Wallet + Credits → Chain) gegen **Code** und **bestehende Architektur-Doku** spiegeln — ohne zu behaupten, alles sei schon gebaut.
 
-**Verknüpfung:** **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** (Voucher vorproduzieren, Shop vs. Relay).
+**Verknüpfung:** **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** (Voucher vorproduzieren; **§8** Webhook → Claim → Einlösen).
 
 ---
 

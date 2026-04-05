@@ -87,4 +87,55 @@ Ein **QR mit nur einer Object-ID** beweist **keinen** Besitz — IDs sind **öff
 
 ---
 
+## 8. Bezahlflow: Webhook → Zuweisung → Einlösen (Schrittfolge + kritische Präzisierung)
+
+Zielbild für **Fiat-Shop** (Shopify, WooCommerce, Stripe, …) + **Voucher on-chain**. **Ist-Code:** Fulfillment-/Claim-Endpunkt wie unten ist **Produkt-Spezifikation** — im Repo gibt es z. B. **`POST /api/provision-device`** (Boss-Werkstatt), **kein** fertiger öffentlicher **`/claim`-Shop-Flow**.
+
+### 8.1 Trigger: Webhook vom Zahlungsdienst
+
+1. Kunde zahlt (z. B. 5,00 €).  
+2. Der **Zahlungsanbieter** ruft euren Server auf (**Webhook**): z. B. „Zahlung für **Bestellung #456** erfolgreich“, oft mit **E-Mail**, **Kunden-ID**, manchmal **Metadaten** (z. B. gewünschtes Produkt).
+
+**Kritik / Betrieb:**
+
+- Webhook **signieren** (HMAC/Signatur des Anbieters) und **Idempotenz** (dieselbe Zahlung nicht zweimal verarbeiten).
+- **5,00 €** ist **kein** Chain-Betrag — Fulfillment löst **eure** definierte Chain-Aktion aus (Transfer/Buchung).
+
+### 8.2 Zuweisung: Wohin mit dem Voucher?
+
+| Variante | Ablauf | Vorteil | Kritik |
+|----------|--------|---------|--------|
+| **A — Claim-Link (E-Mail)** | Server reserviert ein **Voucher-Objekt** aus dem Treasury, erzeugt ein **einmaliges, hohentropisches Geheimnis** (nicht ratbar), speichert serverseitig **Mapping** `token → Objekt-ID / Bestellung` (oder nur „Token gültig bis Einlösung“). Link z. B. `https://morgendrot.app/claim?t=<token>` (**HTTPS**). E-Mail an Kundenadresse. | Kunde braucht **beim Kauf** noch **keine** IOTA-Adresse. | Ihr **habt** einen **Server-Zustand** (Token/Reservierung) — das ist **kein** reines „nur Chain“. Token **einmalig verbrauchen**, **Leak**-Risiko (Weiterleiten der Mail) beachten. |
+| **B — Direkt-Transfer** | Webhook → TX: **Transfer** des Voucher-Objekts an die im Checkout angegebene **0x-Adresse**. | Sofort sichtbar in der Wallet/Explorer. | Adresse **muss stimmen** (Tippfehler = Verlust); Checkout muss **Adresse** erfassen. |
+
+**Präzision:** „Server nimmt Objekt aus Pool“ = typisch **Treasury signiert** `transfer` — **Gas** und **Keys** im Fulfillment-Dienst.
+
+### 8.3 Einlösen („Proof of Buy“) — zwei verschiedene Geschichten
+
+**Fall B (Voucher schon auf Nutzer-Wallet):** Einlösen kann **direkt on-chain** im Move sein (**Burn → Credits**), **ohne** eure SQL — Nutzer signiert mit der Wallet, die das Objekt hält.
+
+**Fall A (nur Claim-Link):** Der Ablauf „App generiert Messenger-Wallet, schickt Code an Backend“ entspricht einem **Provisionings-/Claim-Service**:
+
+1. Nutzer öffnet Link oder gibt Token in der App ein.  
+2. App erzeugt ggf. **ephemeren Schlüssel** / startet **Provisioning** (siehe **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**).  
+3. Backend prüft: **Ist Token gültig und noch nicht benutzt?** (hier ist die **Datenbank/Store** für **Claim-Tokens** — **nicht** dieselbe wie „Gültigkeit des Vouchers“, die die **Chain** bei Fall B allein regelt).  
+4. Backend führt **Burn & Mint** aus **oder** der **Nutzer** signiert — **entscheidend:** wer laut Move **Owner** des Vouchers ist. Liegt das Objekt noch bei der Treasury bis zum Claim, ist die erste TX oft **Treasury + Nutzeradresse** im selben Flow (Design!).
+
+**Korrektur zur Formulierung „Server prüft Code in DB als bezahlt“:** **Bezahlt** ist durch den **Webhook** schon geklärt; die **DB** dient hier eher **Claim-Token / Reservierung**, nicht doppelt „bezahlt ja/nein“, wenn ihr nicht zwei Welten vermischt.
+
+**Endpunkt-Name:** **`/api/provision`** war im Text **Beispiel** — im Repo heißt die Boss-Route u. a. **`/api/provision-device`**; ein **öffentlicher Claim-Endpoint** wäre **neu** zu spezifizieren (Auth, Rate-Limits).
+
+### 8.4 Sicherheit (kurz)
+
+| Aussage | Präzisierung |
+|---------|----------------|
+| **Kein Doppelkauf** | **On-chain:** Ein Voucher-Objekt kann nur **einmal** verbraucht werden, **wenn** das Move-Modell so definiert ist. **Claim-Link:** zusätzlich **Token einmalig** invalidieren, sonst theoretisch **zweimal** klickbar bis zur ersten erfolgreichen TX. |
+| **Vollautomatisch** | Webhook + guter Fulfillment-Code ja — **trotzdem** Monitoring, Zahlungsausfälle, Support-Fälle. |
+
+### 8.5 Fazit-Satz (übernommen, geschärft)
+
+Der Server ist die **Brücke**: er **übersetzt** die **Fiat-Zahlung** (Webhook) in eine **Chain-Aktion** (Voucher reservieren/transferieren; nach Claim **Burn/Mint**). Er ersetzt **nicht** die **Regeln** auf der Chain — die bleiben im **Move-Package**.
+
+---
+
 *Umsetzung = Move-Modul + Fulfillment-Service + klare UX (Adresse im Checkout). Nicht im Repo als fertiges Modul vorausgesetzt — siehe `move-test/` und Credits-Ist in `/api/status`.*
