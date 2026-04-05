@@ -61,6 +61,7 @@ import {
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
     MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from './chain-access.js';
+import { handleShopApi } from './api/shop/handle-shop-api.js';
 import { normalizeAddress } from './utils.js';
 import { HELP_START, HELP_CHAT, getWalletPassword } from './wallet-bridge.js';
 import { logger } from './logger.js';
@@ -93,6 +94,7 @@ import {
 import { VaultImagePipeline } from './vault-image-pipeline.js';
 import { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } from './messenger-media-limits.js';
 import { transcodeBrowserAudioToMessengerOpus } from './messenger-audio-opus-encode.js';
+import { consumeClaimTokenOnce } from './voucher-claim-state.js';
 
 /** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
 let lastVaultOnchainSuccessAt: number | undefined;
@@ -182,6 +184,30 @@ function recordCommandRateLimit(ip: string): void {
     if (!entry || now >= entry.resetAt) {
         entry = { count: 0, resetAt: now + windowMs };
         commandRateLimitByIp.set(ip, entry);
+    }
+    entry.count++;
+}
+
+/** Rate-Limit für POST /api/voucher-claim (öffentlich, wenn aktiviert). */
+const voucherClaimRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
+function checkVoucherClaimRateLimit(ip: string): boolean {
+    const limit = CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE;
+    if (limit <= 0) return true;
+    const now = Date.now();
+    const entry = voucherClaimRateLimitByIp.get(ip);
+    if (!entry) return true;
+    if (now >= entry.resetAt) return true;
+    return entry.count < limit;
+}
+function recordVoucherClaimRateLimit(ip: string): void {
+    const limit = CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE;
+    if (limit <= 0) return;
+    const now = Date.now();
+    const windowMs = 60_000;
+    let entry = voucherClaimRateLimitByIp.get(ip);
+    if (!entry || now >= entry.resetAt) {
+        entry = { count: 0, resetAt: now + windowMs };
+        voucherClaimRateLimitByIp.set(ip, entry);
     }
     entry.count++;
 }
@@ -330,6 +356,54 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         const rawPath = req.url?.split('?')[0] || '/';
         const url = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.replace(/\/+$/, '') : rawPath;
+
+        const shopHandled = await handleShopApi(req, res, url, cors, sendJson);
+        if (shopHandled) return;
+
+        /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
+        if (url === '/api/voucher-claim' && req.method === 'POST') {
+            if (!CFG.ENABLE_VOUCHER_CLAIM_API) {
+                sendJson(res, 404, { ok: false, error: 'Voucher-Claim-API ist deaktiviert (ENABLE_VOUCHER_CLAIM_API=false).' }, cors);
+                return;
+            }
+            const ip = (req.socket?.remoteAddress || 'unknown').replace(/^::ffff:/, '');
+            if (CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE > 0 && !checkVoucherClaimRateLimit(ip)) {
+                sendJson(res, 429, { ok: false, error: 'Rate-Limit überschritten (VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE).' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { claimToken?: string };
+                    const claimToken = String(data.claimToken ?? '').trim();
+                    if (!claimToken) {
+                        sendJson(res, 400, { ok: false, error: 'claimToken fehlt (JSON-Body).' }, cors);
+                        return;
+                    }
+                    const result = await consumeClaimTokenOnce(claimToken);
+                    if (CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE > 0) recordVoucherClaimRateLimit(ip);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            status: result.status,
+                            claimKeyPrefix: result.claimKeyPrefix,
+                            consumedAt: result.consumedAt,
+                            note: 'Nur Idempotenz-Schicht. Burn/Mint/Provisioning noch anbinden — siehe docs/API-VOUCHER-CLAIM-SPEC.md',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    sendJson(res, 400, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
 
         if (url === '/api/status' && req.method === 'GET') {
             const custom = { ...(getStatus?.() ?? {}), ..._sessionStatus };

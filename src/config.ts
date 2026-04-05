@@ -221,7 +221,9 @@ export function seedStreamsAnchorHistoryFromKnownFiles(): string[] {
 const SETENV_BLOCKLIST = new Set([
     'OPEN_COMMAND', 'OPEN_URL', 'OPEN_COMMAND_LIST_FILE', 'OPEN_COMMAND_LIST_KEY',
     'REMOTE_SIGNER_URL', 'REMOTE_SIGNER_TOKEN', 'WALLET_PASSWORD', 'ENCRYPTED_ENV_FILE',
-    'MONITOR_ALARM_WEBHOOK_URL', 'BOSS_SIGNER_TOKEN'
+    'MONITOR_ALARM_WEBHOOK_URL', 'BOSS_SIGNER_TOKEN',
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+    'SHOP_CLAIM_NOTIFY_SECRET', 'SHOP_MINT_BOSS_WALLET_PASSWORD', 'BOSS_WALLET_PASSWORD',
 ]);
 
 /** Schreibt KEY=VALUE in .env (überschreibt vorhanden, fügt neu hinzu). Wirkt nach Neustart (bei verschlüsselter Env: .env übersteuert). */
@@ -891,6 +893,35 @@ export const CFG = {
     LITE_PRESET_RPC_URL: process.env.MORGENDROT_LITE_RPC_URL?.trim() || '',
     /** Rate-Limit für POST /api/command (Anfragen pro Minute pro IP). 0 = aus. Default 0. */
     API_RATE_LIMIT_COMMANDS_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_COMMANDS_PER_MINUTE', 0)),
+    /**
+     * Öffentlicher Claim-Token-Endpunkt POST /api/voucher-claim (Shop-E-Mail, Idempotenz-Datei).
+     * Default false — bewusst aktivieren auf Fulfillment-Hosts.
+     */
+    ENABLE_VOUCHER_CLAIM_API: envBool('ENABLE_VOUCHER_CLAIM_API', false),
+    /** Rate-Limit für POST /api/voucher-claim pro IP (Anfragen/Minute). 0 = aus. Default 30. */
+    VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE: Math.max(0, envInt('VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE', 30)),
+
+    /**
+     * Integrierter Shop (Stripe Checkout, kein Kartendaten-Touch — nur serverseitige Session + Webhook).
+     * Siehe docs/API-SHOP-SPEC.md
+     */
+    ENABLE_SHOP_API: envBool('ENABLE_SHOP_API', false),
+    /** Basis-URL für Stripe success/cancel (z. B. https://app.example.com oder http://127.0.0.1:3341). Ohne trailing slash. */
+    SHOP_PUBLIC_BASE_URL: (process.env.SHOP_PUBLIC_BASE_URL || '').trim().replace(/\/$/, ''),
+    /** Rate-Limit POST /api/shop/checkout-session und /api/shop/session-claim pro IP/Minute. 0 = aus. */
+    SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE: Math.max(0, envInt('SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE', 20)),
+    /** Stripe Secret Key (sk_test_… / sk_live_…) — niemals an Client oder Git. */
+    STRIPE_SECRET_KEY: (process.env.STRIPE_SECRET_KEY || '').trim(),
+    /** Webhook-Signing-Secret (whsec_…) für POST /api/shop/webhook/stripe */
+    STRIPE_WEBHOOK_SECRET: (process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
+    /**
+     * Nach Stripe-Zahlung: optional `mint_messenger_credits_batch` an Empfänger-Adresse,
+     * wenn Checkout `recipientIotaAddress` mitschickt (Metadata) und Boss-Wallet entsperrt/Passwort.
+     */
+    ENABLE_SHOP_CHAIN_MINT: envBool('ENABLE_SHOP_CHAIN_MINT', false),
+    /** Optional: HTTPS POST nach ausgestelltem Claim (z. B. eigenes Mail-Backend). Body siehe docs/API-SHOP-SPEC.md */
+    SHOP_CLAIM_NOTIFY_WEBHOOK_URL: (process.env.SHOP_CLAIM_NOTIFY_WEBHOOK_URL || '').trim().replace(/\/$/, ''),
+    SHOP_CLAIM_NOTIFY_SECRET: (process.env.SHOP_CLAIM_NOTIFY_SECRET || '').trim(),
 
     // --- Optional: AI (Intent-Matcher und/oder Ollama) ---
     /** Intent-Matcher (Variante 1): Beispielphrasen → Befehl, ohne LLM. Klein, schnell, optional neben Ollama. */
@@ -1162,6 +1193,16 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'UI_PORT', value: String(CFG.UI_PORT), envKey: 'UI_PORT' },
         { key: 'API_PORT', value: String(CFG.API_PORT), envKey: 'API_PORT' },
         { key: 'API_KILL_PREVIOUS_INSTANCE', value: String(CFG.API_KILL_PREVIOUS_INSTANCE), envKey: 'API_KILL_PREVIOUS_INSTANCE' },
+        { key: 'ENABLE_VOUCHER_CLAIM_API', value: String(CFG.ENABLE_VOUCHER_CLAIM_API), envKey: 'ENABLE_VOUCHER_CLAIM_API' },
+        { key: 'VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE', value: String(CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE), envKey: 'VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE' },
+        { key: 'ENABLE_SHOP_API', value: String(CFG.ENABLE_SHOP_API), envKey: 'ENABLE_SHOP_API' },
+        { key: 'SHOP_PUBLIC_BASE_URL', value: CFG.SHOP_PUBLIC_BASE_URL ? mask(CFG.SHOP_PUBLIC_BASE_URL, 16) : '(leer → http://127.0.0.1:UI_PORT)', envKey: 'SHOP_PUBLIC_BASE_URL' },
+        { key: 'SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE', value: String(CFG.SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE), envKey: 'SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE' },
+        { key: 'STRIPE_SECRET_KEY', value: CFG.STRIPE_SECRET_KEY ? mask(CFG.STRIPE_SECRET_KEY, 10) : '(leer)', envKey: 'STRIPE_SECRET_KEY' },
+        { key: 'STRIPE_WEBHOOK_SECRET', value: CFG.STRIPE_WEBHOOK_SECRET ? mask(CFG.STRIPE_WEBHOOK_SECRET, 8) : '(leer)', envKey: 'STRIPE_WEBHOOK_SECRET' },
+        { key: 'ENABLE_SHOP_CHAIN_MINT', value: String(CFG.ENABLE_SHOP_CHAIN_MINT), envKey: 'ENABLE_SHOP_CHAIN_MINT' },
+        { key: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL', value: CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL ? mask(CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL, 20) : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL' },
+        { key: 'SHOP_CLAIM_NOTIFY_SECRET', value: CFG.SHOP_CLAIM_NOTIFY_SECRET ? '***' : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_SECRET' },
     ];
 }
 

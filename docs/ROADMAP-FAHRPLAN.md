@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook **§ H.3c**, Shop/Webhook **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Credits/Storage/Purge, **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**, Meshtastic **§ H.3d**, **`TESTING.md`** Smoke Credits≠MIST).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Shop/Stripe **`docs/API-SHOP-SPEC.md`**, Test **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, Shop-Theorie **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Betrieb/Lücken **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, Runbook **§ H.3c**, Meshtastic **§ H.3d**, **`TESTING.md`**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
@@ -100,7 +100,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** – Voucher A–D vs. Ist-Code; „Shadow“-Begriff vs. `shadow-sweep`  
 - **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** – Pre-Mint auf Chain, Shop-Fulfillment vs. blindes Relay, Papier-QR  
 - **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`** – Sponsor/Gas-Station-Schichten vs. Credits; Ist-Code (`gas-station.ts` vs. Blog)  
-- **`docs/MESSAGING-CREDITS-STORAGE-AND-PURGE-POLICY.md`** – Credits nach Größe, Storage, Nutzer-Purge vs. Server-TTL, Rebate-Idee
+- **`docs/MESSAGING-CREDITS-STORAGE-AND-PURGE-POLICY.md`** – Credits nach Größe, Storage, Nutzer-Purge vs. Server-TTL, Rebate-Idee  
+- **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**
 
 ---
 
@@ -257,6 +258,8 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 |---------|-------------------------|
 | **Secret-Manager (Doppler, Vault, …)** | **Doku:** **`docs/SECRETS-OPTIONS.md`** Option C — kritische Einordnung (Festplatte vs. RAM/Prozess; GitHub Secrets ≠ Server-Tresor); **`deploy/README-DEPLOY-BUNDLES.md`** verweist auf VPS-Start. **Code:** nicht nötig — `doppler run -- npm start` o. Ä. setzt `process.env`. |
 | **Self-Pay optional** | **Policy:** `ENABLE_MESSENGER_SELF_PAY` **default `false`** — keine stillen MIST-Abbuchungen; siehe **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/CONFIG-REFERENCE.md`**, **`.env.example`**. **Code:** Flag ist **vorbereitet**, Auswertung wenn Self-Pay implementiert wird. |
+| **Voucher-Claim (Shop-Link)** | **Stufe 1 (Ist):** **`POST /api/voucher-claim`** — nur **Idempotenz** (`.morgendrot-voucher-claim-state.json`). **`ENABLE_VOUCHER_CLAIM_API`**. **Offen (Stufe 2):** Move-**Burn/Mint** bzw. Wallet-Provisioning an denselben Flow koppeln — **`docs/API-VOUCHER-CLAIM-SPEC.md`**. |
+| **Shop (Stripe, All-in-One)** | **Stufe 2 (teilweise):** Checkout, Webhook, Session-Claim, optional **Credits-Mint** (`ENABLE_SHOP_CHAIN_MINT`, Empfänger-Adresse im Checkout), **Notify-Webhook** (`SHOP_CLAIM_NOTIFY_*`) — **`docs/API-SHOP-SPEC.md`**, Code **`src/api/shop/`**, **`src/api/iota/shop-fulfillment.ts`**, Test **`docs/STRIPE-TEST-SETUP.md`**. **Offen:** SMTP im Core (bewusst extern über Notify); Admin-UI „Credits schenken“ nur indirekt über **`/api/provision-device`** / Boss — siehe **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**. |
 | **Später** | CI-Deploy: Secrets nur aus Store injizieren; kein Klartext in Artefakten; kombinierbar mit Option B auf Edge-Geräten. |
 
 **Kleine nächste Schritte (ohne großen Code):**
@@ -274,6 +277,17 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | **Naives Re-Broadcast** | Fast immer **Broadcast-Storm**-Risiko → **nicht** als Standard. |
 | **ROUTER/REPEATER, Kanal, Leistung** | Sinnvoll für Stabilität und **weniger Seitenlärm**; **kein** echtes „MeshCore-Routing“ in Meshtastic nachbauen. |
 | **Zwei Heltecs seriell (Brücke)** | Oft **stabilste** Weg für **7+7** Hops auf **getrennten** Funksegmenten; siehe kritische Einordnung **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`**. |
+
+### H.3e Lücken, Verbesserungen, Betrieb (**Git**, **Logs**, Artefakte)
+
+Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**.
+
+| Thema | Kurz |
+|--------|------|
+| **Git** | Keine Secrets committen (`.env`, Stripe-Keys); State-Dateien Shop/Voucher in **`.gitignore`**; vor großen Commits **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**. |
+| **Logs** | **`logs/`** bei **`ENABLE_FILE_LOGGING`** (Winston, Rotation); operative Ereignisse auch in Konsole; keine Claim-Tokens / Mnemonics in Support-Logs. |
+| **Shop/Voucher-State** | `.morgendrot-shop-*.json`, `.morgendrot-voucher-claim-state.json` — nur auf Fulfillment-Host, **Backup** bei Produktion. |
+| **Noch offen (Produkt)** | Voucher-Claim **Stufe 2** (Move an `/api/voucher-claim`); optionale **dedizierte** Admin-Route „Credits schenken“ (aktuell: Provision-Flow); **Mehrinstanz**: Shop-State-Datei → DB bei horizontaler Skalierung. |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 

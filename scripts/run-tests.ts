@@ -336,7 +336,18 @@ async function testSetEnvKeyBlocklist() {
     const { setEnvKey } = await import('../src/config.js');
 
     try {
-        const blocked = ['OPEN_COMMAND', 'OPEN_URL', 'REMOTE_SIGNER_URL', 'REMOTE_SIGNER_TOKEN', 'WALLET_PASSWORD'];
+        const blocked = [
+            'OPEN_COMMAND',
+            'OPEN_URL',
+            'REMOTE_SIGNER_URL',
+            'REMOTE_SIGNER_TOKEN',
+            'WALLET_PASSWORD',
+            'STRIPE_SECRET_KEY',
+            'STRIPE_WEBHOOK_SECRET',
+            'SHOP_CLAIM_NOTIFY_SECRET',
+            'SHOP_MINT_BOSS_WALLET_PASSWORD',
+            'BOSS_WALLET_PASSWORD',
+        ];
         for (const k of blocked) {
             const r = setEnvKey(k, 'malicious');
             assert(!r.ok && r.error && r.error.includes('nicht per API'), `setEnvKey blocks ${k}`);
@@ -578,6 +589,22 @@ async function testPackageIdCompareFrontend() {
     }
 }
 
+async function testShopCatalog() {
+    console.log('\n--- shop catalog ---');
+    try {
+        const { getShopProductById, getPublicShopProducts, resolveStripePriceId } = await import('../src/api/shop/catalog.js');
+        const p = getShopProductById('messenger-messages-500');
+        assert(p && p.id === 'messenger-messages-500', 'product by id');
+        const pub = getPublicShopProducts();
+        assert(pub.length >= 1 && pub[0].id === 'messenger-messages-500', 'public list');
+        const price = resolveStripePriceId(p!);
+        assert(typeof price === 'string', 'price string');
+        ok('getShopProductById + getPublicShopProducts');
+    } catch (e) {
+        fail('shop catalog', e);
+    }
+}
+
 async function testChatWaldConnection() {
     console.log('\n--- chat-wald-connection (frontend) ---');
     try {
@@ -606,6 +633,7 @@ async function main() {
     await testCryptoLayer();
     await testMeshPeerWireRoundtrip();
     await testPackageIdCompareFrontend();
+    await testShopCatalog();
     await testChatWaldConnection();
     await testVaultLocal();
     await testVaultImagePipeline();

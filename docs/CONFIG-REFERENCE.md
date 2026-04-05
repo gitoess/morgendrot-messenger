@@ -74,6 +74,16 @@ Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.ex
 | **ENABLE_FETCH_COMMAND** | Befehl „hole letzten N“ / „/fetch N“ erlauben. Default: true. |
 | **ENABLE_AUTO_EXECUTE** | Empfangene Befehle ausführen. false = nur anzeigen, nicht ausführen (Kill-Switch). Default: true. |
 | **ENABLE_UI** | Optionale Offline-Web-UI für Config/Log. Default: false. |
+| **ENABLE_VOUCHER_CLAIM_API** | Öffentliches **`POST /api/voucher-claim`** (Claim-Token aus E-Mail, Idempotenz). Default: **false**. Erfordert **`ENABLE_UI=true`**, damit die API läuft. Siehe **`docs/API-VOUCHER-CLAIM-SPEC.md`**. |
+| **VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE** | Max. Claim-Requests pro **IP** und Minute (**0** = aus). Default: **30**. |
+| **ENABLE_SHOP_API** | Integrierter Shop: **`GET/POST /api/shop/*`**, Stripe Checkout/Webhook. Default: **false**. **`ENABLE_UI=true`** nötig. Siehe **`docs/API-SHOP-SPEC.md`**. |
+| **SHOP_PUBLIC_BASE_URL** | Öffentliche Basis-URL für Stripe-Erfolg/Abbruch (ohne `/` am Ende). Leer → `http://127.0.0.1:<UI_PORT>`. |
+| **STRIPE_SECRET_KEY** / **STRIPE_WEBHOOK_SECRET** | Stripe API bzw. Webhook-Signatur (**niemals** im Client). |
+| **SHOP_STRIPE_PRICE_MESSAGES_500** | Stripe **Price ID** für das Beispielprodukt im Katalog. |
+| **SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE** | POST Checkout/Session-Claim pro IP/Minute (**0** = aus). Default: **20**. |
+| **ENABLE_SHOP_CHAIN_MINT** | Optional: nach Stripe-Zahlung Credits per Move an **recipient_iota_address** minten (Boss signiert). Default: **false**. |
+| **SHOP_CLAIM_NOTIFY_WEBHOOK_URL** / **SHOP_CLAIM_NOTIFY_SECRET** | Optional: POST mit Claim-Daten an externes Mail-Backend. |
+| **SHOP_MINT_BOSS_WALLET_PASSWORD** | Optional: Boss-Passwort für Shop-Mint ohne UI-Unlock (nur sichere Umgebung). |
 | **UI_PORT** | Port der lokalen UI. Default: 3341. |
 | **ENABLE_MONITOR** | Bei ROLE=messenger zusätzlich Offline-Monitor im Hintergrund (Heartbeat + Webhook). Default: false. |
 

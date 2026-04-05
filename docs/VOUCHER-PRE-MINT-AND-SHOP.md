@@ -123,7 +123,7 @@ Zielbild für **Fiat-Shop** (Shopify, WooCommerce, Stripe, …) + **Voucher on-c
 
 **Korrektur zur Formulierung „Server prüft Code in DB als bezahlt“:** **Bezahlt** ist durch den **Webhook** schon geklärt; die **DB** dient hier eher **Claim-Token / Reservierung**, nicht doppelt „bezahlt ja/nein“, wenn ihr nicht zwei Welten vermischt.
 
-**Endpunkt-Name:** **`/api/provision`** war im Text **Beispiel** — im Repo heißt die Boss-Route u. a. **`/api/provision-device`**; ein **öffentlicher Claim-Endpoint** wäre **neu** zu spezifizieren (Auth, Rate-Limits).
+**Endpunkt-Name:** **`/api/provision`** war im Text **Beispiel** — im Repo heißt die Boss-Route u. a. **`/api/provision-device`**. Der **öffentliche Claim-Endpunkt** ist **`POST /api/voucher-claim`** (nicht „provision“); Vertrag und Idempotenz: **`docs/API-VOUCHER-CLAIM-SPEC.md`**. Burn/Mint ist darauf **noch** anzubinden (Stufe 1 = nur Token-Verbrauch merken).
 
 ### 8.4 Sicherheit (kurz)
 

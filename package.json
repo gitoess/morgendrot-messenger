@@ -155,6 +155,7 @@
     "pdfkit": "^0.17.2",
     "readline-sync": "^1.4.10",
     "socks-proxy-agent": "^8.0.5",
+    "stripe": "^17.7.0",
     "tsx": "^4.21.0",
     "undici": "^7.24.5",
     "winston": "^3.19.0",

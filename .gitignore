@@ -32,6 +32,9 @@ test-results/
 .morgendrot-partner
 .morgendrot-package-hints.json
 .messenger-gas-state.json
+.morgendrot-voucher-claim-state.json
+.morgendrot-shop-session-claims.json
+.morgendrot-shop-stripe-events.json
 .morgendrot-rules
 rustup-init.exe
 realworld-echte-tx-result.json
