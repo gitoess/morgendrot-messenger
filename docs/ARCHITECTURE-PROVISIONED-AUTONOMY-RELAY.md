@@ -193,6 +193,51 @@ Das Move-Package muss Nutzer **nicht** vorab kennen: **Regeln** (z. B. Credits
 
 ---
 
+## Sponsor-Server rotieren: neuer Server-Seed, gleiche Nutzer
+
+**Kern:** Der **Sponsor** (Server-Wallet) zahlt nur **Gas** / erfüllt die **Relay-Rolle**. **Nutzer-Identität** (Schlüssel auf dem Gerät) und **Credits an Nutzer-Adressen** sind davon **logisch getrennt** — ein Wechsel der Server-Wallet erzwingt **keinen** Verlust der Nutzerdaten in der beschriebenen Architektur.
+
+### Drei praktische Wege (Client ↔ neuer Relay)
+
+| Weg | Idee | Kritik / Präzisierung |
+|-----|------|-------------------------|
+| **1. Gleiche API-URL (DNS)** | Clients rufen weiterhin z. B. `https://api.example.com` auf; der **DNS**-Eintrag zeigt auf die **neue** Maschine/IP. Neuer Prozess nutzt **neuen** Sponsor-Key in `.env`. | Nutzer merken oft **nichts**, sofern API-Vertrag gleich bleibt. **TLS**-Zertifikat und **Domain-Kontrolle** müssen stimmen, sonst MITM-Risiko. |
+| **2. On-Chain Berechtigung** | Im Move-Package existiert eine **Rollen-/Allowlist-Logik** (z. B. welche Adresse **sponsorn** oder **Credits minten** darf). Mit **Admin-/Owner-Key** (offline gut verwahrt): alte Sponsor-Adresse **entziehen**, neue **eintragen**. | **Voraussetzung:** Das ist **im Vertrag** vorgesehen und **getestet**. Ohne solche Objekte hilft „neuer Seed“ allein **nicht** — die Chain akzeptiert weiterhin alte Regeln. |
+| **3. Client-Update** | Server-URL oder **Server-EPH-Public-Key** (ECDH) steht **hart** in der App → **PWA-/App-Update** verteilen. | Unvermeidbar, wenn kein stabiler DNS-Name und keine Chain-Steuerung genutzt wird. |
+
+**Korrektur:** Ein Sponsor-Wechsel bedeutet **typischerweise keine neue PACKAGE_ID** — das **Move-Paket** bleibt; geändert wird die **Sponsor-Adresse** / **Berechtigung** oder die **Anbindung** zum Backend. **PACKAGE_ID** wechselt eher bei **neuem Deployment** eines **anderen** Vertrags (Migration), nicht bei jedem Server-Tausch.
+
+### Was sich **nicht** ändert (wenn Nutzer-Keys gleich bleiben)
+
+- **Nutzer-Schlüssel / „Shadowwallet“** in den Geräte-Vaults.
+- **Credits-Objekte**, die **Nutzer-Adressen** gehören (sofern das Modell das so abbildet).
+- **E2E-Ciphertext** — der neue Server sieht dieselbe **Unkenntnis** wie der alte, sofern nie Klartext auf dem Relay verarbeitet wurde.
+
+Neu ist nur: **wer** die Transaktionsgebühr auf der Sponsor-Seite **signiert** und **welches** Relay die Requests annimmt.
+
+### Notfallplan (straff)
+
+1. **Betroffene Rechte on-chain anpassen** (falls vorgesehen): alte Sponsor-/Minter-Rolle **sperren**.
+2. **Neuen** Sponsor-Account mit **frischem** Key und **Gas** (MIST) bestücken.
+3. **Traffic** (DNS / Load-Balancer) auf die neue Instanz; Clients weiterhin gleiche URL oder Update ausrollen.
+
+---
+
+## SPOF-Analyse: Server-Seed / Sponsor-Wallet
+
+| Aspekt | Bei Kompromittierung / Verlust des Server-Seeds |
+|--------|-----------------------------------------------|
+| **Verfügbarkeit** | **Ja, SPOF** für den **Dienst** „Relay sponsort Gas“: ohne funktionierende Wallet mit Mitteln können **keine** (oder keine neuen) gesponserten TX eingereicht werden. |
+| **Finanzen** | Token/MIST auf der **Server-Adresse** können **abfließen** — **Betriebs-/Treasury-Risiko**, kein Nutzer-E2E-Inhalt. |
+| **E2E-Inhalt der Chats** | **Typisch sicher**, wenn der Server **nur** Ciphertext weiterreicht und **nie** die Klartext-Keys der Nutzer hält. Der Dieb „sieht“ weiterhin nur **Blob**. |
+| **Nutzer-Identität (Signatur Chat)** | **Sicher**, solange **Nutzer-Private-Keys** nur auf Endgeräten liegen — der Server-Seed ersetzt **keine** Nutzersignatur für deren Adresse. |
+| **Credits der Nutzer** | **Nicht** beliebig „umschreibbar“ ohne **Nutzer-Signatur**, sofern das Move-Modell **Ownership** korrekt setzt. |
+| **Minter-/Admin-Rolle** | **Hohes Risiko:** Wenn derselbe kompromittierte Key **unbegrenzt Credits minten** oder Rollen ändern darf → **wirtschaftlicher** und **betrieblicher** Schaden. **Gegenmaßnahmen:** getrennte Keys (Minter vs. Sponsor), **Multisig**, **Timelock**, **Limits**, **Monitoring**, **Notfall-Pause** im Vertrag. |
+
+**Kurz:** Der Server-/Sponsor-Seed ist ein **SPOF für Betrieb und Treasury**, **kein** Ersatz für „alles weg“ bei **Nutzer-Vertraulichkeit** — **sofern** E2E und Schlüsselhaltung wie beschrieben umgesetzt sind. **„Perfekt“** oder **„unkaputtbar“** sind **unzutreffend**; es bleiben **Metadaten**, **Relay-Verfügbarkeit** und **Minter-/Admin-Design**.
+
+---
+
 ## Verwandte Dokumentation
 
 - Messenger-Datenfluss Posteingang: **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**
