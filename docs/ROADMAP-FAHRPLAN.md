@@ -33,7 +33,7 @@
 | **2** | Einsatzprotokoll / Export (ZIP) | **Erledigt**; **§ H.1**, **`docs/EINSATZBERICHT-EXPORT.md`** |
 | **3** | Shadow-Sweep in Next-UI | **Erledigt**; **§ H.1**, **`POST /api/shadow-sweep`** |
 | **4** | `chat-view` + Send-Flow | **§ H.1** (Hooks, Struktur), Phase A |
-| **5** | PWA (Manifest, SW) | **§ H.0** Punkt 5 (PWA-Realität), **§ H.2** Tabelle (nächste Schritte aus § A), **§ H.4** Checks |
+| **5** | PWA (Manifest, SW) | **§ H.0** Punkt 5, **§ H.2**; Manifest mit **192/512 PNG** (`npm run build:pwa-icons`), **§ H.4** Checks |
 | **6** | Fehlerbehandlung / Status | **§ H.2** (konsistente Meldungen), **§ A**-Tabelle, Package-ID-Banner |
 | **7** | Heltec / LoRa Firmware | **§ H.3** Phase B, **`meshtastic/`**; Funk-Zeile im **Gesamtüberblick** |
 | **8** | Kabel-Bridge | **§ H.2** (Backlog nach Stabilität), Phase B/C, spec-nah |
@@ -54,7 +54,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | 2 | Einsatzprotokoll / Export (ZIP) | Mittel | **Erledigt:** vollständiger Posteingang, ZIP, `.zip.enc.json`, Decrypt-Seite → **`docs/EINSATZBERICHT-EXPORT.md`**. |
 | 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
 | 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; kein Dauer-Refactor ohne Nutzen. |
-| 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts`, `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Bundle-README angepasst. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. |
+| 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts` (inkl. **192×192** / **512×512** PNG + maskable), `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Favicons `icon-light/dark-32x32.png`, `apple-icon.png` aus **`icon.svg`** via **`npm run build:pwa-icons`**. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. **Offen:** manuelle Installations-Checks, optional Offline-Fallback-Seite. |
 | 6 | Fehlerbehandlung / Status | Mittel | **Stand 2026-03:** Next-Messenger: Posteingang bei nicht erreichbarer Basis (Hinweis „Funk-Modus“), Partner-/Richtungsfilter, Eingang/Ausgang-Badges; Abgleich Package-ID Filter vs. `/api/status` → Banner „Jetzt updaten“ (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, Checks in **`TESTING.md`**). Laufend verfeinern. |
 | 7 | Heltec / LoRa Firmware | Hoch | Spez-lastig (`meshtastic/`). |
 | 8 | Kabel-Bridge | Hoch | Spec-nah. |
@@ -253,7 +253,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 | Priorität | # | Thema |
 |-----------|---|--------|
-| 1 | **5** | **PWA:** Code-Basis **§A.5 erledigt** (Manifest + SW). **Nächster sinnvoller Schritt:** manuelle **PWA-Checks** (Installation „Zum Home-Bildschirm“, erneuter Aufruf offline = statische Shell; API bleibt online). Optional nachziehen: **192/512-PNG-Icons**, Offline-Fallback-Seite, SW erweitern. |
+| 1 | **5** | **PWA:** Manifest + SW + **PNG-Icons** (§A.5). **Nächster Schritt:** manuelle **PWA-Checks** (Installation „Zum Home-Bildschirm“, Offline-Shell). **Optional:** Offline-Fallback-Seite, SW erweitern. Bei **Änderung von `icon.svg`:** `npm run build:pwa-icons` erneut ausführen. |
 | 2 | **6** | Fehlermeldungen/Status konsistent (laufend). |
 | 3 | **8** | **Kabel-Bridge** (hoch, spec-nah) – siehe §A.8; Backlog, nicht parallel zu Phase-B-Kern. |
 
@@ -314,8 +314,10 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 ### H.4 Kurz-Check vor jedem größeren Merge
 
 - **`npx tsc`** (Root)  
+- **`frontend`:** **`npx tsc --noEmit`** (Next-TS)  
 - **`npm run test`** oder gezielte Skripte aus **`TESTING.md`**  
-- Bei Messenger-UI: **`npm run validate:ui`** wenn refs/TREE betroffen
+- Bei Messenger-UI: **`npm run validate:ui`** wenn refs/TREE betroffen  
+- Nach Änderung an **`frontend/public/icon.svg`:** **`npm run build:pwa-icons`** (PNG/Manifest-Icons aktualisieren)
 
 ### H.5 Aufräumen & Git-Commit (nach stabilem Kern)
 

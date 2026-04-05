@@ -2,9 +2,7 @@ import type { MetadataRoute } from 'next'
 
 /**
  * Web App Manifest – installierbare PWA (Chrome/Android; Safari: teilweise über Meta-Tags in layout).
- * Splash / „großes Logo“ beim Start unter Android: Chrome nutzt dafür bevorzugt **192×192** und **512×512** PNG
- * unter `public/` (hier noch SVG-only). Für den klassischen Splash: `icons` um `purpose: 'maskable'`-PNG erweitern,
- * siehe z. B. https://web.dev/add-manifest/ – bis dahin: `theme_color` / `background_color` + Name.
+ * PNG-Icons: `public/icon-192.png`, `public/icon-512.png` — erzeugen mit `npm run build:pwa-icons` (Root).
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -24,6 +22,24 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'de',
     dir: 'ltr',
     icons: [
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
       {
         src: '/icon.svg',
         sizes: 'any',

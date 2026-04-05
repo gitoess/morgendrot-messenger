@@ -10,6 +10,7 @@
 |---------|------------------|
 | **Voucher-Idempotenz** | `POST /api/voucher-claim`, `.morgendrot-voucher-claim-state.json`, **`docs/API-VOUCHER-CLAIM-SPEC.md`** |
 | **Stripe-Shop** | `GET/POST /api/shop/*`, PWA **`/shop`**, Webhook, Session-Claim — **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`** |
+| **PWA-Icons** | `npm run build:pwa-icons` erzeugt PNG aus `frontend/public/icon.svg` (192/512, Apple, 32×32); Manifest siehe **`frontend/app/manifest.ts`** |
 | **Credits nach Zahlung (optional)** | `ENABLE_SHOP_CHAIN_MINT`, `mint_messenger_credits_batch` in **`src/api/iota/shop-fulfillment.ts`** |
 | **Notify (E-Mail extern)** | `SHOP_CLAIM_NOTIFY_WEBHOOK_URL` / `SHOP_CLAIM_NOTIFY_SECRET` |
 | **Shadow-Sweep vs. Mint** | **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`** |

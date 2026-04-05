@@ -107,6 +107,7 @@
     "build:logic-traces": "tsx scripts/generate-logic-traces.ts",
     "build:rag-chunks": "tsx scripts/build-rag-chunks.ts",
     "build:rag-embeddings": "tsx scripts/build-rag-embeddings.ts",
+    "build:pwa-icons": "node scripts/generate-pwa-icons.mjs",
     "build:lite-ui": "npx @tailwindcss/cli -i ui/input.css -o ui/styles.css --minify",
     "prepare:rag": "tsx scripts/prepare-rag.ts",
     "generate:modelfile": "tsx scripts/generate-ollama-modelfile.ts",
