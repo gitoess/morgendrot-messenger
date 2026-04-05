@@ -106,6 +106,17 @@ Sinnvoll und **unabhängig** von der Chain: große Aktionen **erreichbar**, Stat
 
 ---
 
+## Self-Pay-Regel (Zielbild)
+
+**Festlegung:** Wenn **Credits = 0** und **MIST > 0** (Nutzer hat auf seiner Adresse natives Gas-Guthaben), **soll** der Client die Transaktion so bauen, dass der **Nutzer mit eigenem Gas** bezahlt (**Self-Pay**) — dann **entfällt** das Sponsoring für diesen Vorgang (sofern der Client die Transaktion **vollständig** selbst signieren und einreichen kann).
+
+**Hinweise:**
+
+- **Ist-Code (Morgendrot):** Versand läuft typischerweise über **`/api/command`** → Backend signiert mit konfigurierter Wallet — **Self-Pay** ist eine **Erweiterung** (Client-SDK oder angepasster Befehlspfad).
+- **Transparenz:** Nutzer muss **vorher** sehen, wenn Eigen-Guthaben genutzt wird (siehe Ampel + Schätzung unten).
+
+---
+
 ## Kurztabelle (Guthaben / Fee)
 
 | Situation | Wer zahlt Gas? (typisch, wenn so implementiert) |
@@ -117,10 +128,52 @@ Sinnvoll und **unabhängig** von der Chain: große Aktionen **erreichbar**, Stat
 
 ---
 
+## Offline-Gas-Buffer (Vorschlag)
+
+**Problem:** Im Funkloch (LoRa) kann der Nutzer **keine** Credits nachkaufen und evtl. **keinen** Kontakt zum Relay.
+
+**Idee:** Im Geräte-Vault dauerhaft einen **kleinen** MIST-Puffer reservieren (Betrag produktpolitisch festlegen, z. B. feste MIST-Menge statt Euro — Kurse schwanken).
+
+**Nutzen:** Die App kann bei **Credits = 0** trotzdem **Self-Pay**-Nachrichten bauen, **solange** MIST reicht — **ohne** Abrechnungs-Server.
+
+**Kritik:** Erhöht **Verwahrungs**- und **UX**-Komplexität (Anzeige „Notfall-Depot“); rechtliche Hinweise bei „Pflichtguthaben“ auf dem Gerät klären.
+
+---
+
+## Idempotenz-Keys (Vorschlag)
+
+**Problem:** Mesh/Wiederholungen können dieselbe Nutzlast **mehrfach** senden.
+
+**Idee:** Pro Nachricht eine **eindeutige ID** (Client-Nonce); im **Move-Vertrag** nur **einmal** verarbeiten (Mapping „schon gesehen“) und **Gas nur einmal**.
+
+**Voraussetzung:** Muss **im Package** designed und **speichernd** abgebildet sein (Kosten!).
+
+---
+
+## UI: Sponsoring-Status („Ampel“) & Gas-Schätzung (Vorschlag)
+
+| Zustand | Bedeutung (Beispiel) |
+|---------|----------------------|
+| **Grün** | Relay erreichbar, Credits > 0 → Sponsoring möglich |
+| **Gelb** | Credits leer, MIST > 0 → **Self-Pay** (Hinweis vor Senden) |
+| **Rot** | Kein Credit, kein MIST → nur **Empfang** / Aufladen |
+
+**Gas-Estimation:** Vor „Senden“ im Self-Pay kurz **geschätzte Kosten** anzeigen (SDK/RPC `dryRunTransaction` o. Ä.) — **Vertrauen** und weniger Panik vor „leerem Wallet“.
+
+---
+
+## Weitere sinnvolle Ergänzungen
+
+- **Klare Trennung** im UI zwischen „Flatrate (Credits)“ und „zahle ich selbst (MIST)“.
+- **Offline-Queue:** Nachrichten nur **lokal** speichern, bis Relay wieder da → dann **ein** Submit mit Idempotenz.
+- **Monitoring:** Sponsor-Treasury-Alerts bei niedrigem Stand.
+
+---
+
 ## Verwandte Dokumentation
 
-- **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`** — Relay, Sponsor, SPOF
-- **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`** (Abschnitt Skalierung / PTB)
+- **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`** — Relay, Sponsor, SPOF, Skalierung / PTB
+- **`docs/DEPLOY-SERVER-MESSENGER-ABGRENZUNG.md`** — Was auf den Server gehört vs. Messenger-only
 
 ---
 
