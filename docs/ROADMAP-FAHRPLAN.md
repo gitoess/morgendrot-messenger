@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Secret-Manager-Doku Option C, Self-Pay-Flag als Vorbereitung, Deploy-Hinweis VPS; siehe **§ H.3c**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Runbook-Schritte **§ H.3c**, Meshtastic Hop-Limit/Brücke **§ H.3d** + **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
@@ -94,7 +94,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
 - **`docs/QR-CONTACT-SCHEMA-V2.md`** – Kontakt-QR **v2** (kompakt: `b`/`g`/`s` u. a.); v1 bleibt gültig; Code-Import folgt bei Bedarf  
-- **`docs/SECRETS-OPTIONS.md`** – Option C: externe Secret-Manager (Doppler, …); kritische Grenzen
+- **`docs/SECRETS-OPTIONS.md`** – Option C: externe Secret-Manager (Doppler, …); kritische Grenzen  
+- **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`** – Hop-Limit/TTL, Brücken, Re-Broadcast-Sturm-Risiko
 
 ---
 
@@ -252,6 +253,21 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | **Secret-Manager (Doppler, Vault, …)** | **Doku:** **`docs/SECRETS-OPTIONS.md`** Option C — kritische Einordnung (Festplatte vs. RAM/Prozess; GitHub Secrets ≠ Server-Tresor); **`deploy/README-DEPLOY-BUNDLES.md`** verweist auf VPS-Start. **Code:** nicht nötig — `doppler run -- npm start` o. Ä. setzt `process.env`. |
 | **Self-Pay optional** | **Policy:** `ENABLE_MESSENGER_SELF_PAY` **default `false`** — keine stillen MIST-Abbuchungen; siehe **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/CONFIG-REFERENCE.md`**, **`.env.example`**. **Code:** Flag ist **vorbereitet**, Auswertung wenn Self-Pay implementiert wird. |
 | **Später** | CI-Deploy: Secrets nur aus Store injizieren; kein Klartext in Artefakten; kombinierbar mit Option B auf Edge-Geräten. |
+
+**Kleine nächste Schritte (ohne großen Code):**
+
+1. **VPS / Runbook:** `doppler run -- npm start` (oder **gleichwertiges** Tool) im **Runbook** **testen** — Ziel: reproduzierbarer Start **ohne** Sponsor-Secrets in Klartext-Dateien auf der Platte.
+2. **Wenn Self-Pay gebaut wird:** `ENABLE_MESSENGER_SELF_PAY` im **Sendepfad auswerten** und **UI-Hinweis vor Abbuchung** (kein stiller MIST-Verbrauch ohne Zustimmung).
+
+### H.3d Meshtastic: Hop-Limit, manuelles Relay, Brücken (Doku)
+
+| Thema | Kurz |
+|--------|------|
+| **7-Hop-/TTL-Verhalten** | Paket mit Hop-Budget **0** wird **lokal** noch angezeigt, aber **nicht** weitergefloodet — Schutz vor Dauerlast, kein „unendlich weit“ im selben Flood. |
+| **Handy/PC als Relay** | Empfang + **neu** senden = neues Budget; **Nachteil:** Verzögerung, **doppelte** Funklast, **Dedup** in der App nötig. |
+| **Naives Re-Broadcast** | Fast immer **Broadcast-Storm**-Risiko → **nicht** als Standard. |
+| **ROUTER/REPEATER, Kanal, Leistung** | Sinnvoll für Stabilität und **weniger Seitenlärm**; **kein** echtes „MeshCore-Routing“ in Meshtastic nachbauen. |
+| **Zwei Heltecs seriell (Brücke)** | Oft **stabilste** Weg für **7+7** Hops auf **getrennten** Funksegmenten; siehe kritische Einordnung **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`**. |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 
