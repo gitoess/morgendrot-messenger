@@ -2,6 +2,9 @@
  * Gas Station – automatisches Nachfüllen von IOTA für Worker-Adressen (Boss-Modus).
  * Prüft periodisch WORKER_ADDRESSES; wenn Saldo unter GAS_STATION_MIN_IOTA: Überweisung GAS_STATION_TOPUP_IOTA.
  * Siehe docs/INDUSTRY-FEATURES.md.
+ *
+ * Hinweis: Das ist NICHT die „IOTA Gas Station“ aus Netzwerk-/Sponsor-Blog-Doku (Package-Filter, PTB-Limits).
+ * Begriffe: docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md §0.
  */
 import { CFG } from './config.js';
 import { getBalanceInMist, transferCoins, iotaToMist } from './chain-access.js';

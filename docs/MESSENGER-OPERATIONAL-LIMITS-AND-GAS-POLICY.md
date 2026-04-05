@@ -23,6 +23,8 @@
 
 **Risiko:** Jeder offene Endpunkt, der **fremdes Gas** bezahlt, kann durch **Spam**, **Schleifen** oder **bösartige Move-Aufrufe** das **Treasury** leeren — wenn nicht technisch eingeschränkt.
 
+**Doppelter Boden (Kurz):** Netzwerk-/Sponsor-**Regeln** (Package-Filter, PTB-Limits, Rate-Limits — je nach IOTA-Rebed-Stand) **plus** **Credits** im **Move-Vertrag** (Kontingent). Ausführlich inkl. Abgleich mit Repo-Code: **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**. **Nicht** verwechseln: **`src/gas-station.ts`** = Worker-**Top-Up** (Boss), **nicht** dieselbe „Gas Station“ wie in Blog-Artikeln.
+
 **Gegenmaßnahmen (Kurz):**
 
 - **Rate-Limiting** pro IP / pro Nutzer-Identität / pro Credits-Objekt.

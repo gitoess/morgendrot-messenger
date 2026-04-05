@@ -8,6 +8,8 @@
 
 **Problem:** Niemand will Ladesäulen oder Sensoren manuell mit IOTA „betanken“.
 
+**Begriff:** Dieses Kapitel beschreibt **`src/gas-station.ts`** (Worker-**Top-Up**). Die **„Gas Station“** aus **IOTA-Netzwerk-/Sponsor-Doku** (Package-Filter, PTB-Limits, …) ist eine **andere** Schicht — siehe **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**.
+
 **Stand Projekt:**
 - **Sponsored Transactions:** `SPONSOR_GAS_OWNER`, `SPONSORED_TRANSACTION_ENABLED`; API `sponsorForSender` – der Boss (oder eine zentrale Adresse) kann Gas für eine TX übernehmen.
 - **Manuell:** UI/API sendet bei Key-Ausstellung `sponsorForSender: "0x…"` → Sponsor zahlt.
