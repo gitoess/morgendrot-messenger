@@ -151,8 +151,24 @@ Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.ex
 
 ---
 
+## Messenger: Self-Pay (Zielbild, wenn implementiert)
+
+| Variable | Erklärung |
+|----------|-----------|
+| **ENABLE_MESSENGER_SELF_PAY** | Wenn **`true`**: bei **Credits = 0** und vorhandenem **MIST** darf der Client (sofern technisch umgesetzt) mit **Eigen-Gas** senden statt Sponsoring. **`false`** (Default): kein stiller Verbrauch von Nutzer-MIST — Senden bleibt blockiert bis Credits/Aufladung. Siehe **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**. **Ist-Code:** Variable ist **Vorbereitung**; Auswertung folgt mit Self-Pay-Implementierung. |
+
+---
+
 ## Optionale verschlüsselte Env
 
 | Variable | Erklärung |
 |----------|-----------|
 | **ENCRYPTED_ENV_FILE** | Pfad zu verschlüsselter Secrets-Datei. App mit `npm run start:secrets` starten. Sensible Werte nicht in .env. |
+
+---
+
+## Betrieb: externe Secret-Manager (Doppler & Co.)
+
+| Thema | Erklärung |
+|-------|-----------|
+| **Kein eigener Env-Key** | Tools wie **Doppler** setzen Standard-Variablen (`SPONSOR_GAS_PASSWORD`, …) per CLI vor dem Start — siehe **`docs/SECRETS-OPTIONS.md`** (Option C) und **`deploy/README-DEPLOY-BUNDLES.md`** (Hinweis Produktion). |

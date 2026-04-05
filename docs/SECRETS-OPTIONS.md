@@ -90,15 +90,51 @@ Kurzvergleich und Umsetzungsideen, um das Betriebsrisiko „Secrets in .env“ z
 
 ---
 
+## Option C: Externe Secret-Manager („Tresor für Profis“) — Doppler, CI-Secrets, Cloud-Vaults
+
+**Idee:** Statt Sponsor-Seed, API-Token oder `SPONSOR_GAS_PASSWORD` dauerhaft als **Klartext** in einer Datei auf der VPS-Platte zu halten, liegen die Werte in einem **zentralen Secret-Store** (z. B. **Doppler**, **HashiCorp Vault**, **AWS Secrets Manager**, **Azure Key Vault**, **1Password Connect**, …). **GitHub Secrets** sind primär für **CI/CD** (Build/Deploy), nicht automatisch für den laufenden Server.
+
+### Wie es typischerweise funktioniert
+
+1. **Speicherung:** Secrets sind in der Cloud des Anbieters **verschlüsselt at rest**, mit **Zugriffskontrolle** (RBAC), **Audit-Log** und oft **Rotation**.
+2. **Zur Laufzeit:** Beim **Start** oder **Deploy** holt ein Agent/CLI die Werte und setzt sie als **Umgebungsvariablen** (z. B. `doppler run -- your-start-command`, systemd-`EnvironmentFile` nach Fetch, Kubernetes Secret → Pod-Env).
+3. **Ergebnis:** Auf der Festplatte des Servers liegt **keine** `.env` mit dem Sponsor-Mnemonic — oder nur eine `.env` mit **Referenzen** (Projekt-ID, Config-Name), **nicht** die Geheimnisse selbst.
+
+### Ehrliche Grenzen (kritisch)
+
+| Erwartung | Realität |
+|-----------|----------|
+| „Secrets sind nur im RAM, Festplatten-Hacker findet nichts“ | **Teilweise richtig** für *reinen Dateizugriff* ohne Root. Sobald der Prozess läuft, sind die Werte **im Prozess** — **Speicherabbilder**, **Debugger**, kompromittierte **root**-Session, **Malware** im gleichen User-Kontext oder **Core-Dumps** können sie auslesen. Es ist **schwieriger** als `cat .env`, aber **kein absoluter Schutz**. |
+| „GitHub Secrets = Server-Tresor“ | **Nein** — GitHub Secrets werden in **Workflows** injiziert. Ein **VPS** bekommt sie nur, wenn ihr sie beim Deploy **explizit** über SSH, API oder ein Secret-Sync-Tool übertragt. |
+| „Cloud = automatisch sicherer“ | **Falsch ohne Prozess:** Fehlkonfiguration (zu breite IAM-Rolle), **leaked Service-Account-Key** auf dem Server, oder **gleicher** Secret-Store für Dev und Prod kann schlimmer sein als eine gut geschützte lokale `secrets.enc`. |
+
+### Echter Nutzen (wofür sich Option C lohnt)
+
+- **Kein Klartext in Backups** der VM und **kein versehentliches** Einchecken in Git (wenn `.env` nie den Mnemonic enthält).
+- **Team-Betrieb:** Wer darf prod deployen, ohne den Seed zu sehen? **RBAC + Audit** im Secret-Manager.
+- **Rotation:** Neuer Sponsor-Key ohne manuelles Editieren vieler Server-Dateien (wenn der Prozess neu startet und neu zieht).
+- **Trennung:** Build-Pipeline hat andere Identität als Laufzeit-Server.
+
+### Kleine Umsetzungsschritte (ohne großen Code-Umbau)
+
+1. **Dokumentieren:** Startbefehl z. B. `doppler run -- npm start` (oder euer Wrapper) in **`deploy/README-DEPLOY-BUNDLES.md`** / Runbook — **kein** Mnemonic in systemd-Unit-Dateien im Klartext.
+2. **CI:** Production-Deploy-Workflow liest **nur** aus Secret-Store, schreibt **temporär** auf den Host oder setzt Env für **einen** Restart — kein Klartext in Repo-Artefakten.
+3. **Kombination:** Option **B** (`ENCRYPTED_ENV_FILE` + `start:secrets`) für **Edge** ohne Internet beim Boot; Option **C** für **VPS** mit Team und Audit-Pflicht.
+
+**Fazit:** Secret-Manager sind **sinnvoll** für **Betrieb, Compliance und Fehlervermeidung** (kein Seed in `/home/app/.env`). Die Story „nur RAM, Hacker kann nie etwas“ ist **überzeichnet** — korrekt ist: **Defense in Depth** (kein Klartext auf Disk **plus** gehärteter Host, Updates, minimaler Footprint im Prozess).
+
+---
+
 ## Vergleich kurz
 
-| Kriterium              | Rebased (A)           | Verschlüsselte .env (B)     |
-|------------------------|------------------------|-----------------------------|
-| Secrets in .env        | Nein                   | Nein (nur in .env.enc)      |
-| Abhängigkeit           | RPC beim Start         | Keine (lokal)               |
-| Gleiche Krypto wie App | Ja (z. B. Vault-Format)| Ja (PBKDF2 + AES-GCM)       |
-| Mehrere Geräte         | Ein Passwort, überall  | Pro Gerät secrets.enc/Key   |
-| Implementierungsaufwand| Move + Client          | Nur Client (klein)          |
+| Kriterium              | Rebased (A)           | Verschlüsselte .env (B)     | Secret-Manager (C)        |
+|------------------------|------------------------|-----------------------------|---------------------------|
+| Secrets in .env        | Nein                   | Nein (nur in .env.enc)      | Nein (nur injiziert)      |
+| Abhängigkeit           | RPC beim Start         | Keine (lokal)               | Netz/Agent beim Start/Deploy |
+| Gleiche Krypto wie App | Ja (z. B. Vault-Format)| Ja (PBKDF2 + AES-GCM)       | Anbieter + Transport-TLS |
+| Mehrere Geräte         | Ein Passwort, überall  | Pro Gerät secrets.enc/Key   | Zentral, RBAC/Audit       |
+| Implementierungsaufwand| Move + Client          | Nur Client (klein)          | Betrieb/Deploy (gering)   |
+| Laufzeit-Schutz        | Passwort/Key nötig     | Passwort/Key nötig          | Prozess hat trotzdem Klartext in RAM |
 
 ---
 
@@ -106,5 +142,6 @@ Kurzvergleich und Umsetzungsideen, um das Betriebsrisiko „Secrets in .env“ z
 
 - **Schnell und ohne Chain:** **Option B** (verschlüsselte .env) mit derselben Funktion wie Vault (PBKDF2 + AES-GCM). Optional: zusätzlich Key-File-Modus wie bei OPEN_COMMAND_LIST_KEY.
 - **Multi-Device / kein lokales Secret-File:** **Option A** (Rebased): verschlüsselter Blob on-chain, ein Passwort beim Start; .env nur IDs und RPC.
+- **VPS / Team / Audit / kein Seed in Backups:** **Option C** (Doppler o. Ä.) + dokumentierter Startpfad; **nicht** die Illusion „absolut sicher weil RAM“.
 
-Beide Optionen können kombiniert werden: z. B. Default = verschlüsselte lokale Datei; wenn `SECRETS_FROM_CHAIN=true` und Vault-Registry gesetzt, Secrets aus Chain laden (gleiches Format wie Vault-Payload).
+Beide Optionen können kombiniert werden: z. B. Default = verschlüsselte lokale Datei; wenn `SECRETS_FROM_CHAIN=true` und Vault-Registry gesetzt, Secrets aus Chain laden (gleiches Format wie Vault-Payload). **B + C:** Edge mit `secrets.enc`, Server mit Doppler-injizierten Variablen.

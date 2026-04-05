@@ -108,7 +108,9 @@ Sinnvoll und **unabhängig** von der Chain: große Aktionen **erreichbar**, Stat
 
 ## Self-Pay-Regel (Zielbild)
 
-**Festlegung:** Wenn **Credits = 0** und **MIST > 0** (Nutzer hat auf seiner Adresse natives Gas-Guthaben), **soll** der Client die Transaktion so bauen, dass der **Nutzer mit eigenem Gas** bezahlt (**Self-Pay**) — dann **entfällt** das Sponsoring für diesen Vorgang (sofern der Client die Transaktion **vollständig** selbst signieren und einreichen kann).
+**Festlegung:** Wenn **Credits = 0** und **MIST > 0** (Nutzer hat auf seiner Adresse natives Gas-Guthaben), **soll** der Client die Transaktion so bauen können, dass der **Nutzer mit eigenem Gas** bezahlt (**Self-Pay**) — dann **entfällt** das Sponsoring für diesen Vorgang (sofern der Client die Transaktion **vollständig** selbst signieren und einreichen kann).
+
+**Self-Pay optional (Produkt/Deployment):** Self-Pay **muss** per Konfiguration **abschaltbar** sein (z. B. `ENABLE_MESSENGER_SELF_PAY=false` als Default): Organisationen, die **keine** unerwarteten MIST-Abbuchungen wollen (Schulung, Kinder, striktes „nur Flatrate“), bleiben auf **Senden blockiert**, bis Credits wieder da sind — statt still Eigen-Guthaben zu verbrauchen.
 
 **Hinweise:**
 

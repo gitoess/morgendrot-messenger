@@ -20,6 +20,8 @@
 3. **`src/`** – kompletter TypeScript-Code (Messenger, Chain, Lock, API, …).  
 4. **`.env`** (oder `.env.example` als Vorlage) – Konfiguration.  
 
+**Produktion / VPS (Sponsor-Seed & Co.):** Klartext-Secrets nur auf der Platte ist ein Betriebsrisiko. **Optionen:** (1) **`ENCRYPTED_ENV_FILE`** + `npm run start:secrets` (lokal verschlüsselt, siehe **`docs/SECRETS-OPTIONS.md`** Option B); (2) **externer Secret-Manager** (z. B. Doppler: `doppler run -- npm start`) — Einordnung, Grenzen („RAM ist kein absoluter Tresor“) und kleine Schritte: **`docs/SECRETS-OPTIONS.md`** Option C. **GitHub Secrets** allein ersetzen keinen Laufzeit-Tresor auf dem Server — sie dienen primär **CI/CD**.
+
 **Nicht** nötig für reines Headless-Betreiben:
 
 - `frontend/` (Next.js)  

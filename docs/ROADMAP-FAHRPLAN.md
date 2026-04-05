@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Standalone-Smartphone-Abgabe, `.env`-Automation Hauptrepo + Bundle; siehe **§ B**, **H.7**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Secret-Manager-Doku Option C, Self-Pay-Flag als Vorbereitung, Deploy-Hinweis VPS; siehe **§ H.3c**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
@@ -93,7 +93,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmungen inkl. Standalone-Abgabe, `.env`)  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
-- **`docs/QR-CONTACT-SCHEMA-V2.md`** – Kontakt-QR **v2** (kompakt: `b`/`g`/`s` u. a.); v1 bleibt gültig; Code-Import folgt bei Bedarf
+- **`docs/QR-CONTACT-SCHEMA-V2.md`** – Kontakt-QR **v2** (kompakt: `b`/`g`/`s` u. a.); v1 bleibt gültig; Code-Import folgt bei Bedarf  
+- **`docs/SECRETS-OPTIONS.md`** – Option C: externe Secret-Manager (Doppler, …); kritische Grenzen
 
 ---
 
@@ -243,6 +244,14 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | **QR-Kontakt Schema v2** | **Erledigt (Doku):** **`docs/QR-CONTACT-SCHEMA-V2.md`** – optionale Felder `s` (Streams-Anker), `b` (Morgendrot-API-Basis), `g` (Gateway); Trennung zu `u` (IOTA-RPC). **Implementierung** (Parser/UI/Setup): erst bei Bedarf, nicht vor **H.1**-Stabilisierung zwingend. |
 | **Betrieb: VPS vs. lokal** | Kurztext: was API/Bridge **darf** und **nicht** verspricht (Metadaten, Logs); verhindert falsche „Anonymitäts-Garantie“. |
 | **Öffentliche Narrative** | Checkliste **§ I.4** – **Ist / Vision** kennzeichnen. |
+
+### H.3c Betrieb: Secret-Manager & Self-Pay (kleine Schritte, 2026-03)
+
+| Schritt | Status / nächste Aktion |
+|---------|-------------------------|
+| **Secret-Manager (Doppler, Vault, …)** | **Doku:** **`docs/SECRETS-OPTIONS.md`** Option C — kritische Einordnung (Festplatte vs. RAM/Prozess; GitHub Secrets ≠ Server-Tresor); **`deploy/README-DEPLOY-BUNDLES.md`** verweist auf VPS-Start. **Code:** nicht nötig — `doppler run -- npm start` o. Ä. setzt `process.env`. |
+| **Self-Pay optional** | **Policy:** `ENABLE_MESSENGER_SELF_PAY` **default `false`** — keine stillen MIST-Abbuchungen; siehe **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/CONFIG-REFERENCE.md`**, **`.env.example`**. **Code:** Flag ist **vorbereitet**, Auswertung wenn Self-Pay implementiert wird. |
+| **Später** | CI-Deploy: Secrets nur aus Store injizieren; kein Klartext in Artefakten; kombinierbar mit Option B auf Edge-Geräten. |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 

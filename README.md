@@ -1001,7 +1001,7 @@ Einige Befehle brauchen in der **.env** gesetzte Werte oder Parameter. Fehlt etw
 
 ### Keys/Passwörter nicht in .env (Betriebsrisiko verringern)
 
-Vollständige Gegenüberstellung: **`docs/SECRETS-OPTIONS.md`**.
+Vollständige Gegenüberstellung: **`docs/SECRETS-OPTIONS.md`** (Option A/B/C; **C** = Doppler & Co., kritische RAM-Grenzen).
 
 - **Option A – Rebased:** Verschüsselte Blobs on-chain; ein Passwort beim Start entschlüsselt. .env ohne Secrets; RPC beim Start nötig.
 - **Option B – Verschlüsselte .env (umgesetzt):** Secrets in verschlüsselter Datei; .env bleibt ohne sensible Werte.
@@ -1035,7 +1035,7 @@ Vollständige Gegenüberstellung: **`docs/SECRETS-OPTIONS.md`**.
 | Öffnen-Befehlsliste | Drei Quellen: On-Chain (CommandRegistry), AES-Datei, .env (OPEN_COMMAND_WORDS); Priorität siehe Abschnitt 12 |
 | Replay / Auto-Befehle-Schutz | Nonce pro Sender; AccessKey (Lock); ENABLE_AUTO_EXECUTE, AUTHORIZED_SENDERS, MAX_SEND_AMOUNT_IOTA; Zahlungs-Trigger optional (PAYMENT_TRIGGER_*, Replay via STATE_FILE) |
 | Tickets (optional) | create_ticket, use_ticket, purge_ticket; hasValidTicket in TS; siehe Abschnitt 12 und docs/TICKET-REVIEW.md |
-| Secrets ohne .env (optional) | Verschlüsselte Env-Datei (Option B): ENCRYPTED_ENV_FILE, npm start / start:backend, encrypt-env; Option A (Rebased) in docs/SECRETS-OPTIONS.md |
+| Secrets ohne .env (optional) | Option B: ENCRYPTED_ENV_FILE, encrypt-env; Option A (Rebased); Option C (Doppler/VPS) in docs/SECRETS-OPTIONS.md |
 | Modular (ENABLE_*) | USE_MAILBOX, ENABLE_REPLAY_PROTECTION, ENABLE_HARDWARE_OPEN, ENABLE_FILE_LOGGING |
 | SPOF, Krypto | **SPOF = Seed + Wallet-Passwort**; nur bewährte Krypto; kein exec/shell (siehe Abschnitt 8) |
 | Test-Checkliste | **`TESTING.md`** – alle Funktionen nacheinander testen und abhaken |
