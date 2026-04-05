@@ -5,7 +5,7 @@
 **Stand:** 2026-03 / **aktualisiert 2026-03-28** (Shop/Stripe **`docs/API-SHOP-SPEC.md`**, Test **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, Shop-Theorie **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Betrieb/Lücken **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, Runbook **§ H.3c**, Meshtastic **§ H.3d**, **`TESTING.md`**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
-**Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**, technisch neuer **Punkt 1** der Umsetzungsreihenfolge) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** unten (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat.
+**Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
 **Nächste konkrete Schritte:** → **§ H.0** (Produkt/UX), dann **§ H.1 ff.** (§ I **nicht** parallel zu technischer Phase-A-Robustheit abarbeiten).
 
@@ -22,9 +22,31 @@
 
 ---
 
+## A–H: Brücke zum ursprünglichen 8-Punkte-Plan
+
+**8 oder 9?** Die **ursprüngliche technische Checkliste** umfasst **8** nummerierte Punkte (**§ A**, **1–8**). **§ H.0** ist **kein** „neunter“ Punkt derselben Liste, sondern die **vorgezogene Produkt/UX-Spur** (Einsatz, Handy, Entsperren). Zusammen ergeben sich **9 Prioritätsfelder**, wenn man **H.0** + **§ A (1–8)** zählt — mit unterschiedlicher Rolle: **H.0** steuert **Reihenfolge und Fokus**, **§ A** bleibt die **technische** Spur (Medien bis Kabel-Bridge).
+
+| § A | Thema (Kurz) | Verknüpfung im Fahrplan |
+|-----|----------------|-------------------------|
+| — | **Produkt/UX (vorgezogen)** | **§ H.0** — kann **§ A.1–8** überholen, wenn Feldtest/Abgabe drängt |
+| **1** | Stabilität Bild + Audio | **§ H.1** (Regression, Tests), **§ C.1** Phase A |
+| **2** | Einsatzprotokoll / Export (ZIP) | **Erledigt**; **§ H.1**, **`docs/EINSATZBERICHT-EXPORT.md`** |
+| **3** | Shadow-Sweep in Next-UI | **Erledigt**; **§ H.1**, **`POST /api/shadow-sweep`** |
+| **4** | `chat-view` + Send-Flow | **§ H.1** (Hooks, Struktur), Phase A |
+| **5** | PWA (Manifest, SW) | **§ H.0** Punkt 5 (PWA-Realität), **§ H.2** Tabelle (nächste Schritte aus § A), **§ H.4** Checks |
+| **6** | Fehlerbehandlung / Status | **§ H.2** (konsistente Meldungen), **§ A**-Tabelle, Package-ID-Banner |
+| **7** | Heltec / LoRa Firmware | **§ H.3** Phase B, **`meshtastic/`**; Funk-Zeile im **Gesamtüberblick** |
+| **8** | Kabel-Bridge | **§ H.2** (Backlog nach Stabilität), Phase B/C, spec-nah |
+
+**Nicht in § A nummeriert, aber Phase-A-Betrieb:** Shop/Voucher/Credits (**§ H.3c**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**) — Fulfillment und Konfiguration, parallel zur Medien-/PWA-Liste.
+
+**Leselinie:** **§ C.1** (was wirklich zuerst) → **§ H.0** → **§ H.1** (Phase A technisch) → **§ H.2** (konkrete §-A-Punkte 5/6/8 als „Als Nächstes“) → **§ H.3** Phase B.
+
+---
+
 ## A. 8-Punkte-Liste (Checkliste, technisch)
 
-Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (Medien bis Kabel-Bridge). Die **Reihenfolge der Umsetzung** startet aber mit **Produkt/UX** (**§ H.0**).
+Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (Medien bis Kabel-Bridge). Die **Reihenfolge der Umsetzung** startet mit **Produkt/UX** (**§ H.0**); die **Zuordnung zu § H** steht in **§ A–H: Brücke** oben.
 
 | # | Thema | Aufwand | Stand / Hinweis (2026-03) |
 |---|--------|---------|---------------------------|
