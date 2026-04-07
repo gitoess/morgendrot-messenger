@@ -28,7 +28,7 @@
 | L3 | **Mehrinstanz-Fulfillment** | Mittel (bei Skalierung) | Shop-/Voucher-State aktuell **Datei-basiert** → später **DB** oder verteilter Store. |
 | L4 | **SMTP im Core** | Niedrig / bewusst | Stattdessen **Notify-Webhook** an eigenes Mail-Backend. |
 | L5 | **Doku synchron** | Laufend | Veraltete „Stub“-Formulierungen in Specs vermeiden; Tabelle **`docs/API-SHOP-SPEC.md`** = Referenz für On-Chain-Zeile. |
-| L6 | **Einsatzleitung / `initialProfile` / Offline-Relay** | **Teil:** Provisioning + **`/api/einsatz-role-templates`**, **`/api/contact-labels/apply-initial-profile`**, Lite-UI-Wizard — **Offline-Relay-Queue** noch offen | **`docs/API-INITIAL-PROFILE.md`**, **`docs/API-EINSATZ-ROLE-TEMPLATES.md`**, **`docs/ROADMAP-FAHRPLAN.md` § H.3g**. |
+| L6 | **Einsatzleitung / `initialProfile` / Offline-Relay** | **Teil:** Provisioning, APIs, Lite-UI, **Next-PWA** (Einstellungen → Einsatz-Profil) — **Offline-Relay-Queue** noch offen | **`docs/API-INITIAL-PROFILE.md`**, **`docs/API-EINSATZ-ROLE-TEMPLATES.md`**, **`docs/ROADMAP-FAHRPLAN.md` § H.3g**. |
 
 ---
 
