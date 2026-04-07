@@ -83,6 +83,72 @@ Es gibt **zwei** verwandte Mechanismen:
 
 ---
 
+## 6. Kanonische Bit-Bedeutungen — **nicht** raten
+
+Die Buchstaben **D, LW, BW, L, S, P** sind im Projekt **fest** mit **Gas-Modell, Hören/Senden, Pinnwand, Delegation** verknüpft (siehe `ROLE_BITS` in `src/config.ts`, Profilliste in `ui/index.html`).
+
+### 6.1 Häufige **falsche** Deutungen (vermeiden)
+
+| Falsch (Erfindung) | Richtig (Ist-Code / UI) |
+|--------------------|-------------------------|
+| **D** = Data/Disk, lokale Dateien | **D** = **Delegation** — z. B. `/set-role` / Rollenwechsel nur mit D-Bit (`messenger-command-handler.ts`). |
+| **LW** = Low-Power / Long-Range-Funk | **LW** = **Local Wallet** — Gerät nutzt **eigenes Gas** (nicht Boss-Sponsor). |
+| **BW** = Broadcast an alle / Pinnwand „global“ | **BW** = **Boss Wallet** — **Boss/Sponsor zahlt Gas** (Gegenpol zu LW). |
+| **P** = Priorität im Mesh / medizinische Dringlichkeit | **P** = **Pinnwand** / **Shared Objects** (UI: „Arbeiter + Pinnwand“). **Keine** implementierte „QoS-Priorität“ für Nachrichten über ROLE_ID. |
+
+**L** und **S** (Listen / Senden) sind in der Praxis nah an eurer Erzählung — aber **nur** für die **bereits implementierten** Checks (z. B. Send bei Hierarchie-Befehlen, Heartbeat mit S-Bit).
+
+### 6.2 Kurzreferenz (kanonisch)
+
+| Bit | Wert | Bedeutung |
+|-----|------|------------|
+| **D** | 32 | Delegation: Rollenänderung erlaubt (wenn Befehl greift) |
+| **LW** | 16 | Eigenes Gas |
+| **BW** | 8 | Boss/Sponsor-Gas |
+| **L** | 4 | Empfangen / „hören“ (Listener-Nutzung im Profil) |
+| **S** | 2 | Senden (z. B. `/send`, `/boss-command` bei Hierarchie) |
+| **P** | 1 | Pinnwand / Shared Objects (Profil) |
+
+**LW** und **BW** schließen sich **sachlich** oft aus (entweder selbst zahlen oder Boss zahlt); das **Hybrid**-Profil im UI kombiniert trotzdem Bits für Sonderfälle — Details siehe Profilbeschreibungen in der Lite-UI.
+
+---
+
+## 7. Beispiel-`ROLE_ID`s (Lite-UI `roleProfiles`) — zum Abgleich
+
+Die **Zahlen** unten sind **exakt** die Summe der Bits (nicht frei erfunden):
+
+| ID | Name (UI) | Bits | Summe |
+|----|-----------|------|--------|
+| 12 | Passiver Beobachter | BW, L | 8+4 = **12** |
+| 14 | Standard-Arbeiter | BW, L, S | 8+4+2 = **14** |
+| 15 | Arbeiter + Pinnwand | BW, L, S, P | 8+4+2+1 = **15** |
+| 46 | Kommandant | D, BW, L, S | 32+8+4+2 = **46** |
+| 63 | Boss (voll) | D, LW, BW, L, S, P | 32+16+8+4+2+1 = **63** |
+
+**Fehler im Rechenbeispiel „ID 42 = Sanitäter mit P“:**  
+`42 = 32 + 8 + 2` = **D + BW + S** — **ohne** **P** und **ohne** **L**. Wollt ihr „Sanitäter = L+S+P“, wäre z. B. `4+2+1 = 7` oder mit BW: `8+4+2+1 = 15` (wie „Arbeiter + Pinnwand“). **Eigene Einsatz-Namen** („Sanitäter“) sind **Organisations-Labels** in Vorlagen — die **technische** Maske muss **zur Summe passen**.
+
+---
+
+## 8. Narrative „Höhlenrettung“ vs. implementierte Logik
+
+| Idee | Im Repo? |
+|------|-----------|
+| Gruppen 10–15 / 40–45 für Rettungsszenarien | Nur als **Konvention**, wenn ihr sie in **Einsatz-Templates** / **Profil-JSON** so festlegt — **kein** separater „Rettungsmodus“ im Move-Code. |
+| **P** = medizinische Priorität in der Queue | **Nein** — **P** ist **Pinnwand** (siehe oben). Echte **Priorität** (Streams, Mesh, Mailbox) wäre **neues** Feature (Routing, TTL, Topic). |
+| **ROLE_ID im Trägerbild** gespeichert → Finder sieht „Sanitäter 42“ | Nur wenn ihr **Metadaten** (z. B. in Vault-JSON oder Sidecar) **explizit** so speichert; **Trägerbild allein** enthält keinen automatischen Klartext „42“. |
+| Relais nur **L** ohne **S** | Prinzipiell denkbar (nur hören); **muss** zur gewählten `ROLE_ID`-Summe und zu **`ROLE`** (messenger/arbeiter/…) passen und **getestet** werden. |
+
+---
+
+## 9. Was noch sinnvoll wäre (optional, Roadmap)
+
+1. **Dokumentation** einer **offiziellen** Tabelle „Einsatzname → empfohlene ROLE_ID“ (nur Organisation, keine Code-Pflicht).
+2. **Wenn** medizinische Priorität gewünscht: **eigenes** Konzept (Streams-Priority, separates Flag, **nicht** P umdefinieren).
+3. **Tests:** für jede frei gewählte Maske prüfen, ob **Heartbeat**, **Send**, **Boss-Befehl** wie erwartet reagieren (`ROLE_ID` in Logs beachten).
+
+---
+
 ## Verwandte Dokumente
 
 - `docs/ARCHITECTURE-ROLES-AND-HUB.md` — Boss, Kommandant, Arbeiter  
@@ -91,4 +157,4 @@ Es gibt **zwei** verwandte Mechanismen:
 
 ---
 
-*Stand: Abgleich mit `src/config.ts`, `src/messenger-nest/messenger-command-handler.ts`, `src/api-server.ts` (`/api/profiles`).*
+*Stand: Abgleich mit `src/config.ts`, `src/messenger-nest/messenger-command-handler.ts`, `src/api-server.ts` (`/api/profiles`), `ui/index.html` (`roleProfiles`). §§ 6–9: kritische Korrektur gängiger Bit-Fehldeutungen.*
