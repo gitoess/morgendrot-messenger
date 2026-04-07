@@ -13,10 +13,15 @@ export const INITIAL_PROFILE_VERSION = 1 as const;
 export const INITIAL_PROFILE_MAX_BYTES = 65536;
 
 export const INITIAL_PROFILE_MAX_CONTACTS = 200;
+/** Flache Metadata: max. Anzahl Schlüssel (v1). */
+export const INITIAL_PROFILE_METADATA_MAX_KEYS = 48;
 const MAX_NAME_LEN = 120;
 const MAX_CHANNEL_TAG_LEN = 120;
 const MAX_TAGS_PER_CONTACT = 20;
 const MAX_TAG_LEN = 48;
+const MAX_METADATA_KEY_LEN = 64;
+const MAX_METADATA_VALUE_LEN = 2048;
+const METADATA_KEY_REGEX = /^[a-zA-Z0-9_.-]{1,64}$/;
 
 export type InitialProfileContact = {
     name: string;
@@ -31,6 +36,15 @@ export type InitialProfile = {
     /** Freitext z. B. „Sektor Nord“ — Filter/Anzeige, kein Chain-Kanal */
     deploymentChannelTag?: string;
     contacts: InitialProfileContact[];
+    /**
+     * Freie Schlüssel/Werte (nur Strings in v1); z. B. teamId, visibilityHint, shared_waypoints als JSON-String.
+     * Keine Durchsetzung von Sichtbarkeit — nur Transport. Siehe docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md
+     */
+    metadata?: Record<string, string>;
+    /**
+     * Optional: Unix-Zeit in Millisekunden — nach Ablauf sollen Clients lokale Profildaten entsorgen (Honor-System).
+     */
+    validUntil?: number;
 };
 
 function trimStr(s: unknown, max: number): string {
@@ -38,9 +52,38 @@ function trimStr(s: unknown, max: number): string {
     return t.length > max ? t.slice(0, max) : t;
 }
 
+function parseMetadataField(raw: unknown): { ok: true; metadata: Record<string, string> } | { ok: false; error: string } {
+    if (raw === undefined || raw === null) {
+        return { ok: true, metadata: {} };
+    }
+    if (typeof raw !== 'object' || Array.isArray(raw)) {
+        return { ok: false, error: 'initialProfile.metadata muss ein Objekt sein.' };
+    }
+    const o = raw as Record<string, unknown>;
+    const keys = Object.keys(o);
+    if (keys.length > INITIAL_PROFILE_METADATA_MAX_KEYS) {
+        return { ok: false, error: 'initialProfile.metadata: maximal ' + INITIAL_PROFILE_METADATA_MAX_KEYS + ' Schlüssel.' };
+    }
+    const out: Record<string, string> = {};
+    for (const k of keys) {
+        if (k.length > MAX_METADATA_KEY_LEN || !METADATA_KEY_REGEX.test(k)) {
+            return { ok: false, error: 'initialProfile.metadata: ungültiger Schlüssel „' + k + '“ (nur A–Z, a–z, 0–9, _ . -).' };
+        }
+        const v = o[k];
+        if (v === null || v === undefined) continue;
+        if (typeof v === 'object') {
+            return { ok: false, error: 'initialProfile.metadata[„' + k + '“]: in v1 nur String/Zahl/Bool — Objekte als JSON-String speichern.' };
+        }
+        const s = typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : '';
+        const t = s.trim().slice(0, MAX_METADATA_VALUE_LEN);
+        if (t) out[k] = t;
+    }
+    return { ok: true, metadata: out };
+}
+
 /**
  * Prüft und normalisiert `initialProfile` aus dem Provision-JSON-Body.
- * Unbekannte Felder im Root werden ignoriert.
+ * Unbekannte Felder im Root werden ignoriert (außer dokumentierte optional).
  */
 export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profile: InitialProfile } | { ok: false; error: string } {
     if (raw === null || raw === undefined) {
@@ -65,6 +108,20 @@ export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profil
         o.deploymentChannelTag === undefined || o.deploymentChannelTag === null || o.deploymentChannelTag === ''
             ? undefined
             : trimStr(o.deploymentChannelTag, MAX_CHANNEL_TAG_LEN);
+
+    const metaParsed = parseMetadataField(o.metadata);
+    if (!metaParsed.ok) return metaParsed;
+    const metadataKeys = Object.keys(metaParsed.metadata);
+    const metadata = metadataKeys.length ? metaParsed.metadata : undefined;
+
+    let validUntil: number | undefined;
+    if (o.validUntil !== undefined && o.validUntil !== null) {
+        const n = typeof o.validUntil === 'number' ? o.validUntil : parseFloat(String(o.validUntil));
+        if (!Number.isFinite(n)) {
+            return { ok: false, error: 'initialProfile.validUntil muss eine endliche Zahl sein (Unix-ms empfohlen).' };
+        }
+        validUntil = n;
+    }
 
     const contacts: InitialProfileContact[] = [];
     const seen = new Set<string>();
@@ -111,6 +168,8 @@ export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profil
         version: INITIAL_PROFILE_VERSION,
         ...(deploymentChannelTag ? { deploymentChannelTag } : {}),
         contacts,
+        ...(metadata ? { metadata } : {}),
+        ...(validUntil !== undefined ? { validUntil } : {}),
     };
 
     const serialized = JSON.stringify(profile);

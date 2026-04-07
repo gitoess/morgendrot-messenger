@@ -13,6 +13,8 @@ Feld **`initialProfile`** im JSON-Body:
 | `version` | `1` | ja |
 | `deploymentChannelTag` | string | nein (max. 120 Zeichen, z. B. „Sektor Nord“) |
 | `contacts` | Array | ja (darf leer sein) |
+| `metadata` | Objekt | nein — **flache** Schlüssel → String-Werte (v1), siehe **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** |
+| `validUntil` | Zahl | nein — Unix-Zeit **ms**; nach Ablauf sollen Clients lokale Daten entsorgen (**Honor-System**) |
 
 **`contacts[]`:**
 
@@ -22,7 +24,7 @@ Feld **`initialProfile`** im JSON-Body:
 | `address` | string | ja (`0x` + 64 Hex) |
 | `roleTags` | string[] | nein (max. 20 Tags, je max. 48 Zeichen) |
 
-**Grenzen:** Max. **200** Kontakte; serialisiertes Profil max. **65536** Bytes UTF-8; keine doppelten Adressen.
+**Grenzen:** Max. **200** Kontakte; serialisiertes Profil max. **65536** Bytes UTF-8; keine doppelten Adressen. **`metadata`:** max. **48** Schlüssel; Schlüssel `[a-zA-Z0-9_.-]{1,64}`; Werte nach Trim max. **2048** Zeichen (Zahl/Bool werden zu String); **keine** verschachtelten Objekte in v1 — komplexe Daten als **JSON-String** in einem Wert.
 
 ## Response
 

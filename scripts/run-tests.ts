@@ -659,6 +659,29 @@ async function testInitialProfileProvision() {
         const tooMany = parseAndValidateInitialProfile(many);
         assert(tooMany.ok === false, 'reject too many contacts');
 
+        const withMeta = parseAndValidateInitialProfile({
+            version: 1,
+            contacts: [{ name: 'A', address: addr2 }],
+            metadata: { team_id: 'nord-1', visibilityHint: 'trupp' },
+            validUntil: 2000000000000,
+        });
+        assert(withMeta.ok === true && withMeta.profile.metadata?.team_id === 'nord-1', 'metadata + validUntil');
+        assert(withMeta.ok && withMeta.profile.validUntil === 2000000000000, 'validUntil');
+
+        const badMeta = parseAndValidateInitialProfile({
+            version: 1,
+            contacts: [],
+            metadata: { 'bad key': 'x' },
+        });
+        assert(badMeta.ok === false, 'reject metadata invalid key');
+
+        const nestedMeta = parseAndValidateInitialProfile({
+            version: 1,
+            contacts: [],
+            metadata: { nested: { a: 1 } } as unknown as Record<string, string>,
+        });
+        assert(nestedMeta.ok === false, 'reject nested metadata value');
+
         ok('parseAndValidateInitialProfile');
     } catch (e) {
         fail('initial-profile-provision', e);

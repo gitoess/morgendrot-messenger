@@ -326,6 +326,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Verwandt** | **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** |
 | **Offline-Boss / `initialProfile`** | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** — Warteschlange **nicht** mit `mintMessengerCreditsBatchForRecipients` verwechseln; Profil-Payload vs. Kontakt-API / Lite-UI vs. Next-PWA. |
 | **Einsatzleitung UI (Rollen-Manager, Provisioning-Maske)** | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** — Medic/Scout vs. Chain-`ROLE`; Handshake braucht Pubkey; Kanal „Sektor Nord“ = Profil-Tag bis Mehrkanal-Modell klar ist. |
+| **Metadata / Zukunftsfelder (Präsenz, SOS, Waypoints, …)** | **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** — welche Idee gehört zu **Profil** vs. **Laufzeit** vs. **Nachrichtenprotokoll**; **`metadata`** + **`validUntil`** in API (v1). |
 
 ### H.3g Umsetzungspaket: `initialProfile`, Offline-Relay-Queue, Einsatzleitung (nicht vergessen)
 
@@ -333,7 +334,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 
 | # | Arbeitspaket | Kurzinhalt | Abhängigkeit |
 |---|----------------|------------|--------------|
-| **1** | **API `initialProfile` + Schema** | **`Ist (2026-03):** `POST /api/provision-device` akzeptiert optional `initialProfile` (version 1); Validierung in **`src/initial-profile-provision.ts`**; Antwort **`initialProfile`** + Eintrag in **`jsonConfig`** — Spec **`docs/API-INITIAL-PROFILE.md`**. Client-Import (Lite-UI/Next) = noch **offen** (Pakete 3–4). | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`docs/API-INITIAL-PROFILE.md`** |
+| **1** | **API `initialProfile` + Schema** | **`Ist (2026-03):** `POST /api/provision-device` optional `initialProfile` (v1: Kontakte, **`metadata`** flach, **`validUntil`**); Validierung **`src/initial-profile-provision.ts`** — **`docs/API-INITIAL-PROFILE.md`**, Erweiterungs-Kritik **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`**. Lite-UI/Next-Import siehe Pakete 3–4. | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`docs/API-INITIAL-PROFILE.md`**, **§ H.3h** |
 | **2** | **Boss-Worker / Persistenz** | **`Ist:`** `GET/POST /api/einsatz-role-templates`, Datei **`.morgendrot-einsatz-templates.json`** — **`docs/API-EINSATZ-ROLE-TEMPLATES.md`**. | API **1** |
 | **3** | **Lite-UI-Import** | **`Ist:`** `POST /api/contact-labels/apply-initial-profile` + **`roleTags`** in Kontaktdatei; Provisioning-Schritt **„Kontakte ins Boss-Telefonbuch übernehmen“** — Next-PWA später. | **1**, **2** |
 | **4** | **Next-PWA-Import** | **`Ist:`** Einstellungen → **Einsatz-Profil** (JSON / Datei); `applyInitialProfileProvisioning` + automatische Warteschlange `localStorage` + Banner; Telefonbuch zeigt **`roleTags`**. IndexedDB bewusst nicht — **eine** Quelle (Backend-Datei). | **1**–**3** |
@@ -343,6 +344,20 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). | Laufend |
 
 **Priorität für die nächste Implementierung (wenn gestartet):** typischerweise **1 → 2 → 6** (API + Persistenz + Boss-UI), parallel Doku; **7** wenn LoRa/Offline-Boss konkret wird; **3/4** wenn Endnutzer-PWA im Fokus ist.
+
+### H.3h Erweiterungen rund um `initialProfile` (Checkliste vs. Umsetzung)
+
+**Doku:** **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`**.
+
+| Thema | Kurz |
+|--------|------|
+| **Metadata-Container (`metadata`)** | **Ist (v1):** flache String-Werte, validiert in **`src/initial-profile-provision.ts`** — kein automatisches „App lernt alles“; komplexe Daten als JSON-String in einem Key. |
+| **`validUntil`** | **Ist:** optional mitvalidiert; **Client-Logik** (Purge nach Ablauf) = Backlog. |
+| **Präsenz / Akku / `lastSeen`** | **Nicht** nur statisches Profil — **Laufzeit** (Heartbeat, Streams, Mesh). |
+| **Sichtbarkeit / `teamId`** | Feld in Metadata möglich — **Durchsetzung** = gesonderte Policy/API. |
+| **SOS / `isEmergency`** | **Nachrichten-**Schicht, nicht `initialProfile`. |
+| **Waypoints** | Konvention: JSON in **`metadata`** oder später Schema v2. |
+| **Paket 5** (Handshake-Subflow) | Unverändert nächster technischer Schritt nach Bedarf — siehe **§ H.3g** Zeile **5**. |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 

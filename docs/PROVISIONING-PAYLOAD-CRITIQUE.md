@@ -2,7 +2,7 @@
 
 **Zweck:** Produktvision (Kontaktliste, Rollen-Tags, Kanäle, SOS-Anchor, erweiterte Credits) **sauber** von **Ist-Code**, **Move-Realität** und **Privacy** trennen — bevor Umsetzung und Marketing auseinanderlaufen.
 
-**Verwandt:** **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**, **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** (Offline-Relay-Queue vs. Credits-Mint; `initialProfile`), **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** (Medic/Scout, Rollen-Manager, Provisioning-Maske), Roadmap **`docs/ROADMAP-FAHRPLAN.md` § H.3f** / **§ H.3g**.
+**Verwandt:** **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`**, **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`**, **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** (Offline-Relay-Queue vs. Credits-Mint; `initialProfile`), **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** (Medic/Scout, Rollen-Manager, Provisioning-Maske), **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (Metadata-Container, Präsenz vs. Profil, SOS-Schicht), Roadmap **`docs/ROADMAP-FAHRPLAN.md` § H.3f** / **§ H.3g** / **§ H.3h**.
 
 ---
 

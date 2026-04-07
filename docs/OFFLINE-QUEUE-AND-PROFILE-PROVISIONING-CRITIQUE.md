@@ -2,7 +2,7 @@
 
 **Zweck:** Zwei eng verwandte Produktvorhaben **gegen Ist-Code** prüfen — **fehlerhafte Begriffsverknüpfungen** vermeiden, bevor implementiert wird.
 
-**Verwandt:** **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**, **`src/settlement-queue.ts`**, **`src/chain-access.ts`** (`mintMessengerCreditsBatchForRecipients`), **`src/api-server.ts`** (`POST /api/provision-device`), Roadmap **§ H.3f** / **§ H.3g**.
+**Verwandt:** **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (`metadata`, `validUntil`, Präsenz vs. Profil), **`src/settlement-queue.ts`**, **`src/chain-access.ts`** (`mintMessengerCreditsBatchForRecipients`), **`src/api-server.ts`** (`POST /api/provision-device`), Roadmap **§ H.3f** / **§ H.3g** / **§ H.3h**.
 
 ---
 

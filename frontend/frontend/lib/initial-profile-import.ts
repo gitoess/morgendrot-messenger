@@ -44,7 +44,14 @@ export function fingerprintInitialProfile(profile: Record<string, unknown>): str
     .sort()
     .join(';;')
   const ch = String(profile.deploymentChannelTag || '')
-  return `v1|${ch}|${parts}`
+  const vu = typeof profile.validUntil === 'number' && Number.isFinite(profile.validUntil) ? String(profile.validUntil) : ''
+  const meta = profile.metadata && typeof profile.metadata === 'object' && !Array.isArray(profile.metadata)
+    ? Object.keys(profile.metadata as Record<string, unknown>)
+        .sort()
+        .map((k) => `${k}=${String((profile.metadata as Record<string, unknown>)[k] ?? '')}`)
+        .join('&')
+    : ''
+  return `v1|${ch}|vu:${vu}|m:${meta}|${parts}`
 }
 
 export function queueInitialProfileForNextApply(profile: Record<string, unknown>): void {
