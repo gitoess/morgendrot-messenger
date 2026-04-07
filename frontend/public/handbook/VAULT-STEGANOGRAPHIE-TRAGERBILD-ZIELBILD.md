@@ -48,10 +48,10 @@ In diesem Projekt werden PWA-Icons u. a. aus **`frontend/public/icon.svg`** pe
 
 **Realistisches Modell:**
 
-- **Feld:** Ein **vom Nutzer gewähltes** Bild (z. B. kopiertes `bg_stone.jpg` auf der SD-Karte), **nicht** das mitgelieferte Standard-Icon aus dem Repository; oder ein **separater Build** / Profil, das ein **nutzerspezifisches** Trägerbild einbindet.
-- **Update:** Jede **Überschreibung** der Trägerdatei (App-Update, erneutes `build:pwa-icons`, Sync-Tool) kann den Vault **vernichten** oder **verändern**, wenn die Implementierung nicht vorher extrahiert oder auslagert.
+- **Feld:** Ein **vom Nutzer gewähltes** Bild oder ein **mitgeliefertes Standard-Trägerbild als Vorlage** (siehe **§ 8**): wichtig ist nur, dass die **mit Vault beschriebene Datei** im **nutzerspezifischen Datenbereich** landet, nicht im überschreibbaren App-Bundle.
+- **Update:** Überschreibt ein Update **nur** die Installation im Programmordner, bleibt die Kopie unter **`…/userdata/…`** unangetastet. Gefahr besteht weiterhin bei **„App-Daten löschen“**, **Werk zurücksetzen** oder manuellem Löschen — deshalb **Chain-** und **Offline-Backup**.
 
-**Empfehlung:** Wenn Trägerbilder genutzt werden, **vor** Updates: Vault **exportieren**, **Chain-Backup** prüfen (`vault-onchain`), oder **physisches Backup** (Zuhause).
+**Empfehlung:** Wenn Trägerbilder genutzt werden, **vor** riskanten Systemaktionen: Vault **exportieren**, **Chain-Backup** prüfen (`vault-onchain`), oder **physisches Backup** (Zuhause).
 
 ---
 
@@ -81,13 +81,65 @@ Ein versteckter lokaler Vault **ändert nichts** an der Notfall-Purge-Semantik: 
 
 ## 6. Mögliche Produkt-Schritte (Roadmap, nicht versprochen)
 
-1. Optionaler Modus: **„Vault aus Bild laden“** (Append oder definiertes Format mit Magic-Header).
-2. **Vor** App-/Asset-Updates: Hinweis oder automatisches **Auslagern** des Blobs (temporäre normale Datei oder User-Prompt).
-3. Dokumentation: **Nie** Standard-Release-Icons als persönlichen Träger verwenden; nur **eigene** Bilder oder dedizierte Profile.
+1. **„In Bild tarnen“ / „Aus Bild laden“** mit **Append** (oder definiertes Format mit Magic-Header am Ende).
+2. **Speicherort:** nur **nutzerspezifisches Datenverzeichnis** (siehe **§ 7.3**), nie die schreibgeschützte Vorlage im App-Installationsordner.
+3. **Vor** Factory-Reset / „App-Daten löschen“: Hinweis; optional automatischer Export.
+4. PWA/Build: **Kein** persönlicher Vault in **`icon.svg`**-generierten Icons; Standard-Trägerbild ist eine **eigene, große** Asset-Datei (**§ 7.1**), nicht das 192×192-Launcher-Icon.
 
 ---
 
-## 7. Verwandte Dokumente
+## 7. Produktvision: Standardbild, eigene Wahl, Speicherort, UI (Zielbild)
+
+Die folgenden Punkte präzisieren die Nutzerstory **ohne** Implementierungsversprechen. Sie lösen den Widerspruch „offizielles Branding vs. persönlicher Vault“, indem **Vorlage** und **beschriebene Datei** strikt getrennt werden.
+
+### 7.1 Standard-Trägerbild („Morgendrot-Edition“)
+
+- **Inhalt:** Ein hochwertiges, atmosphärisches Foto (z. B. Landschaft, Höhle, Sonnenaufgang) — **nur** als **unveränderliche Vorlage** im Lieferumfang (z. B. JPEG/PNG unter `resources/` o. Ä.).
+- **Psychologischer Vorteil:** Bei einer schnellen Durchsuchung wirkt die Datei wie **normales Branding oder ein Hintergrundbild**, nicht wie ein Schlüsselbund.
+- **Technik:** Beim ersten Gebrauch liest die App die **Vorlage** und schreibt eine **Kopie** ins **User-Datenverzeichnis**; an **diese Kopie** wird der verschlüsselte Vault angehängt (§ 2.1). Die Original-Vorlage im App-Ordner bleibt **ohne** Nutzdaten.
+
+### 7.2 „Eigene Wahl“ (höhere Tarnung)
+
+- Nutzer wählt ein beliebiges Bild (Hund, Zeichnung, Urlaubsfoto) ohne Bezug zu Morgendrot — **maximale** plausible Harmlosigkeit für Außenstehende.
+- Gleicher technischer Ablauf: **Append** an eine Kopie unterhalb des User-Dirs; keine Abhängigkeit vom App-Update-Pfad.
+
+### 7.3 Überschreiben durch Updates vermeiden
+
+| Falsch | Richtig |
+|--------|---------|
+| Träger nur im App-Installationsordner | Träger-**Kopie** im **nutzerspezifischen** Bereich (z. B. Linux: `XDG_DATA_HOME`/„Morgendrot“; Windows: `%APPDATA%`; Android: app-spezifisches Scoped Storage; **CM4**/Embedded: z. B. `/home/<user>/.local/share/...` o. Ä. — konkreter Pfad ist **plattformabhängig**) |
+| Dateiname `vault_image.jpg` | **Neutrales** Muster: `wallpaper_01.jpg`, `img_2024_cache.jpg` — wirkt wie Medien-Cache (**kein** Vault im Namen) |
+| `.bin` neben Fotos | Optional möglich, wirkt in Foto-Alben oft **fremder** als eine große JPEG; **eher Bildcontainer-Format** wählen, das zur Story passt |
+
+**Kern:** App-Updates ersetzen Programmdateien, **nicht** automatisch den Ordner mit Nutzerdaten — sofern das OS den nicht leert.
+
+### 7.4 Größenordnung (realistisch, keine Garantie „klein“)
+
+Der verschlüsselte Blob wächst mit **Passwortmanager** (max. **300** Einträge, Felder begrenzt — `sanitizePersonalSecrets` in `src/vault-local.ts`) und **Freitext-Notizen** (max. **500.000** Zeichen). Im **Worst-Case** kann der JSON-Payload **mehrere MB** erreichen; typische Nutzung ist **deutlich kleiner**.
+
+- **Trägerbild:** Ausreichend große Auflösung/Datei wählen, sodass **Bild + Anhang** noch wie ein normales „schweres“ Hintergrundbild wirken (auf Smartphones sind **mehrere MB** für Wallpapers üblich).
+- **Versprechen vermeiden:** Nicht behaupten, der Container sei „immer unauffällig klein“ — besser: **„größenmäßig im üblichen Wallpaper-Bereich haltbar“**.
+
+### 7.5 UI-Workflow (Zielbild)
+
+**Tab „Sichern“ (o. Ä.):** Aktion **„In Bild tarnen“**.
+
+| Schritt | Nutzeraktion | System |
+|--------|----------------|--------|
+| A | **„Morgendrot-Standardbild“** | Vorschau der Vorlage; Speichern = Kopie nach User-Dir + Vault anhängen |
+| B | **„Eigenes Bild wählen“** | Dateiauswahl; Kopie/Ziel im User-Dir; dann derselbe Append-Vorgang |
+| Hinweis | — | Kurzer Satz: **„Ohne Passwort bleibt der Anhang nutzlos; Backup: Chain/Zuhause.“** |
+
+**Kommunikation:** Begriffe wie **„Tresor in diesem Foto verstecken“** sind für Laien klarer als „steganographische Operation auf Header-Ebene“ — die **technische** Realität bleibt meist **Append nach JPEG/PNG** (§ 2.1), nicht LSB, es sei denn, ihr plant explizit LSB mit allen Nachteilen.
+
+### 7.6 Grenzen (erneut)
+
+- **Forensik** (§ 2) bleibt gültig.
+- **Cloud-Foto-Backup** kann die Datei **mitkopieren** — ggf. Risiko je nach Anbieter (§ 5).
+
+---
+
+## 8. Verwandte Dokumente
 
 - `docs/NOTFALL-PURGE-MESSENGER.md` — was bei Purge wirklich weg ist  
 - `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` — Vault vs. Chatverlauf  
@@ -95,4 +147,4 @@ Ein versteckter lokaler Vault **ändert nichts** an der Notfall-Purge-Semantik: 
 
 ---
 
-*Stand: Zielbild und Risikoabwägung; Implementierung im Kern optional/zukünftig.*
+*Stand: Zielbild und Risikoabwägung; § 7 Produktvision; Implementierung im Kern optional/zukünftig.*
