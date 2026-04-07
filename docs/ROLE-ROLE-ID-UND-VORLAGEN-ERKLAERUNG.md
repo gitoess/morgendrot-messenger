@@ -193,6 +193,16 @@ Die **Zahlen** unten sind **exakt** die Summe der Bits (nicht frei erfunden):
 2. **Langfristig:** Ein **einheitliches** Berechtigungsmodell **spezifizieren**, dann erst Code zusammenziehen — nicht umgekehrt.
 3. **Nicht** beliebig neue Bits (**R/A/V/E**) ergänzen, solange die bestehende Matrix nicht verstanden ist.
 
+### 10.4 Konkrete Spannungen im Ist-Code (kein Refactor nötig, aber gut zu wissen)
+
+| Situation | Verhalten |
+|-----------|-----------|
+| **`ROLE=messenger`**, `ROLE_ID` **ohne S** | **`/send`** (verschlüsselt) ist **erlaubt** (`canSend` gilt nur für boss/kommandant/arbeiter). **`/heartbeat`** wird **übersprungen** (überall **S** nötig). |
+| **`ROLE=boss/kommandant/arbeiter`**, **ohne S** | **`/send`** und einige andere Aktionen **blockiert**; **`/send-plain`** weiterhin **ohne** `ROLE_ID`-Check (bewusster Klartext-Pfad). |
+| **`getHierarchyPermissions`** | Nur für **boss/kommandant/arbeiter** eingeschränkt; **`messenger`** bekommt dort volle `true` — das ist **kein Bug**, sondern: Hierarchie-Kette vs. „freier“ Messenger-Client. |
+
+**Empfehlung:** System **so lassen**, solange kein Team-Ressourcen für einen **großen** Umbau hat. Verbesserungen **ohne** Architekturbruch: **empfohlene Profile** in Doku/UI (z. B. Messenger mit **S**, wenn Heartbeat gewünscht), ggf. **Warnung** bei untypischen Kombinationen.
+
 ---
 
 ## Verwandte Dokumente
