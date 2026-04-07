@@ -4,6 +4,18 @@
 
 ---
 
+## 0. Mythen — kurz **nein**
+
+| Behauptung | Fakt |
+|------------|------|
+| „Das **6-Bit-`ROLE_ID`-System** wurde durch **drei Hierarchie-Rollen** ersetzt.“ | **Nein.** `ROLE` (boss/kommandant/arbeiter/…) und **`ROLE_ID` (0–63)** arbeiten **zusammen**; `ROLE_ID` ist weiterhin in `src/config.ts` und wird per `hasRoleBit` genutzt. |
+| „Es gibt nur noch **Arbeiter, Kommandant, Boss**.“ | **Unvollständig.** Es gibt u. a. **`ROLE=messenger`**, **`lock`**, **`monitor`**, **`waerter`** — je nach Gerät. |
+| „**getHierarchyPermissions** hat die 6 Bits abgelöst.“ | **Nein.** Das ist eine **andere** Schicht: feste Regeln nach **`ROLE`**-String + **`ENABLE_*`**-Flags (Befehle nach unten, Keys ausstellen, …) — **nicht** dieselben Bits wie D/LW/BW/L/S/P. Beide Konzepte existieren **parallel**. |
+| „**8-Bit `DeviceRights`** (isBoss, canRelay, …) ist der neue Stand.“ | **Nein** — das war **kein** Repo-Code, höchstens ein **Diskussionsvorschlag**. Im Projekt gibt es **kein** solches `DeviceRights`-Objekt als Ersatz für `ROLE_ID`. |
+| „**D** = Data/Disk, **BW** = Broadcast, **P** = Mesh-Priorität.“ | **Nein** — kanonisch: **D** = Delegation, **BW** = Boss zahlt Gas, **P** = Pinnwand (§ 6). |
+
+---
+
 ## 1. Es ist **kein** „64-Bit-Arbeiter“ im CPU-Sinn
 
 Im Code gibt es:
@@ -24,6 +36,18 @@ Im Code gibt es:
 Beispiel: `ROLE_ID=14` = 8+4+2 = BW+L+S (Boss-Gas, hören, senden) — typisches „Standard-Arbeiter“-Profil in der UI-Liste.
 
 **Fazit:** Es sind **6 Bits Rechte** in einer Zahl 0–63 — **nicht** 64 Bit wie bei einem Prozessorregister.
+
+### 1a Drei Schichten — so hängt es zusammen
+
+| Schicht | Wo | Was |
+|---------|-----|-----|
+| **A) `ROLE`** (String) | `.env` `ROLE=` | **Grob:** Welche **Geräteklasse**? z. B. `boss`, `kommandant`, `arbeiter`, `messenger`, `lock`, … |
+| **B) `ROLE_ID`** (0–63) | `.env` `ROLE_ID=` | **Fein:** Sechs Bits **D/LW/BW/L/S/P** — Senden, Delegation, Gas-Modell, Pinnwand (siehe § 6). `hasRoleBit` im Command-Handler. |
+| **C) Hierarchie-Berechtigungen** | `getHierarchyPermissions(role)` in `config.ts` | **Separat:** Was darf diese **Rolle** bzgl. **Befehle nach unten**, **Key ausstellen**, **Status lesen** — abhängig von `ROLE` **und** `ENABLE_COMMAND_DOWN`, `ENABLE_KEY_ISSUE`, … **nicht** identisch mit den sechs Bits. |
+
+**Messenger** (`ROLE=messenger`) bekommt in `getHierarchyPermissions` **alle** Hierarchie-Flags als `true` (Zeile 1020–1021) — die **feine** Steuerung läuft dort über **`ROLE_ID`** (z. B. S-Bit für Send).
+
+**Zur Kritik an R/A/V/E-Bits** (Relay, Admin, Verification, Emergency): Das sind **keine** Morgendrot-Standard-Bits im Repo; wer mehr Flags will, soll **nicht** wahllos Bits erfinden, sondern erst **Anforderung + Bedrohungsmodell** — sonst entsteht „Bit-Salat“. Das bestehende Modell bewusst **klein** halten (§ 9) ist plausibler als ein **zweites** 8-Bit-Parallelsystem, solange nichts davon implementiert ist.
 
 ---
 
