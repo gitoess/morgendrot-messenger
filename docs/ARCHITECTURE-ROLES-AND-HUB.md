@@ -42,6 +42,7 @@ Es ist eine **Architekturentscheidung** und sollte von der Frage getrennt werden
 
 ## Siehe auch
 
+- **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`** – `ROLE` vs. `ROLE_ID`, Tür (`lock`) vs. Helfer (`messenger`/`arbeiter`), Einsatz-Vorlagen  
 - **`docs/BOSS-MODUS.md`** – Remote-Signer, Maschinen nur mit Adresse.
 - **`README.md`** (Abschnitt Boss / Remote-Signer, Ameisen-Hierarchie).
 - **`docs/DEV-START.md`** – Boss-Werkstatt vs. Next-Kunden-UI.

@@ -129,6 +129,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md`** – Vault in Bildern / Icon als Träger: Zielbild, Risiko-Check, Build-Pipeline (`build:pwa-icons`); **kein** Kern-Feature  
 - **`docs/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md`** – Einsatz-Ende: Shred vs. Append, Offline/Online, PDF/Chain-Archiv (kritisch)  
 - **`docs/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md`** – Rettung/Einsatz: vorgefertigte Träger pro Rolle, generierte Beschriftung, Organisation statt Tarn-Narrativ  
+- **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`** – `ROLE` vs `ROLE_ID` (0–63), Lock vs Messenger vs Arbeiter, Vorlagen  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
