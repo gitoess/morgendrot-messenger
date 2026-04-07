@@ -52,8 +52,19 @@ Bei Erfolg zusätzlich (wenn `initialProfile` gesendet und gültig):
 }
 ```
 
-## Client
+## Kontakte lokal übernehmen (Boss oder Messenger-Instanz)
 
-Import in die lokale Kontaktliste ist **noch** separat umzusetzen (Lite-UI / Next) — Roadmap **`docs/ROADMAP-FAHRPLAN.md` § H.3g**, Pakete 3–4.
+**POST `/api/contact-labels/apply-initial-profile`**
+
+- **Body:** dasselbe JSON wie **`initialProfile`** (Root: `version`, `contacts`, …).
+- **Wirkung:** schreibt Kontakte in **`.morgendrot-contact-labels.json`** (Merge pro Adresse), inkl. optionaler **`roleTags`** pro Kontakt — siehe `src/contact-labels.ts` (`applyInitialProfileToContacts`).
+
+Die **Lite-UI** bietet nach erfolgreichem Provisioning einen Button **„Kontakte ins Boss-Telefonbuch übernehmen“**, wenn das Paket Kontakte enthält.
+
+---
+
+## Client (Helfer-Gerät / Next)
+
+Import auf dem **Helfer-Gerät** aus Export/ZIP ist weiterhin **optional** (Roadmap § H.3g, Next-PWA) — hier zuerst Boss-seitige Übernahme und Lite-UI.
 
 **Code:** `src/initial-profile-provision.ts` (`parseAndValidateInitialProfile`).

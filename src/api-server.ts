@@ -35,6 +35,7 @@ import {
     resolveMessengerExportPackageId,
 } from './config.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
+import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
 import {
     findPeerHandshake,
     isChainReachable,
@@ -91,6 +92,7 @@ import {
     getContactByMeshNodeId,
     getContactByBleUuid,
     getContactLabel,
+    applyInitialProfileToContacts,
 } from './contact-labels.js';
 import { VaultImagePipeline } from './vault-image-pipeline.js';
 import { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } from './messenger-media-limits.js';
@@ -1146,6 +1148,33 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        if (url === '/api/contact-labels/apply-initial-profile' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const v = parseAndValidateInitialProfile(data);
+                    if (!v.ok) {
+                        sendJson(res, 400, { ok: false, error: v.error }, cors);
+                        return;
+                    }
+                    const { applied } = applyInitialProfileToContacts(v.profile);
+                    sendJson(
+                        res,
+                        200,
+                        { ok: true, applied, message: applied + ' Kontakt(e) in die lokale Kontaktdatei übernommen.' },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
         if (url === '/api/mesh-contact-lookup' && req.method === 'GET') {
             try {
                 const q = new URL(req.url || '', 'http://x');
@@ -2152,6 +2181,41 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             } catch (e: any) {
                 sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
             }
+            return;
+        }
+
+        if (url === '/api/einsatz-role-templates' && req.method === 'GET') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss/Werkstatt.' }, cors);
+                return;
+            }
+            sendJson(res, 200, { ok: true, templates: loadEinsatzRoleTemplates() }, cors);
+            return;
+        }
+
+        if (url === '/api/einsatz-role-templates' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'messenger') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss/Werkstatt.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const v = parseEinsatzRoleTemplates(data);
+                    if (!v.ok) {
+                        sendJson(res, 400, { ok: false, error: v.error }, cors);
+                        return;
+                    }
+                    saveEinsatzRoleTemplates(v.templates);
+                    sendJson(res, 200, { ok: true, templates: v.templates, message: 'Einsatz-Templates gespeichert.' }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
             return;
         }
 

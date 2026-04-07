@@ -665,6 +665,68 @@ async function testInitialProfileProvision() {
     }
 }
 
+async function testEinsatzRoleTemplates() {
+    console.log('\n--- einsatz-role-templates ---');
+    try {
+        const { parseEinsatzRoleTemplates } = await import('../src/einsatz-role-templates.js');
+        const good = parseEinsatzRoleTemplates({
+            templates: [
+                {
+                    id: 'medic-1',
+                    label: 'Medic',
+                    chainRole: 'arbeiter',
+                    roleId: 14,
+                    defaultDeploymentChannelTag: 'Nord',
+                },
+            ],
+        });
+        assert(good.ok === true && good.templates.length === 1, 'valid template');
+        const badRole = parseEinsatzRoleTemplates({ templates: [{ id: 'x', label: 'Y', chainRole: 'boss', roleId: 1 }] });
+        assert(badRole.ok === false, 'reject invalid chainRole');
+        const dup = parseEinsatzRoleTemplates({
+            templates: [
+                { id: 'a', label: 'A', chainRole: 'user', roleId: 0 },
+                { id: 'a', label: 'B', chainRole: 'user', roleId: 0 },
+            ],
+        });
+        assert(dup.ok === false, 'reject duplicate id');
+        ok('parseEinsatzRoleTemplates');
+    } catch (e) {
+        fail('einsatz-role-templates', e);
+    }
+}
+
+async function testApplyInitialProfileToContacts() {
+    console.log('\n--- apply-initial-profile → contact-labels ---');
+    try {
+        const tmp = path.join(tmpdir(), 'morgendrot-cl-' + Date.now() + '.json');
+        process.env.CONTACT_LABELS_FILE = tmp;
+        const addr = '0x' + 'c'.repeat(64);
+        const { applyInitialProfileToContacts } = await import('../src/contact-labels.js');
+        const { parseAndValidateInitialProfile } = await import('../src/initial-profile-provision.js');
+        const raw = {
+            version: 1,
+            contacts: [{ name: 'Test-Kontakt', address: addr, roleTags: ['Medic'] }],
+        };
+        const v = parseAndValidateInitialProfile(raw);
+        assert(v.ok === true, 'profile valid');
+        if (!v.ok) throw new Error('profile');
+        const { applied } = applyInitialProfileToContacts(v.profile);
+        assert(applied === 1, 'applied count');
+        const j = JSON.parse(fs.readFileSync(tmp, 'utf8')) as Record<string, unknown>;
+        const entry = j[addr.toLowerCase()] as Record<string, unknown>;
+        assert(entry && entry.label === 'Test-Kontakt', 'label written');
+        assert(Array.isArray(entry.roleTags) && entry.roleTags.includes('Medic'), 'roleTags');
+        try {
+            fs.unlinkSync(tmp);
+        } catch {}
+        delete process.env.CONTACT_LABELS_FILE;
+        ok('applyInitialProfileToContacts');
+    } catch (e) {
+        fail('apply-initial-profile-contacts', e);
+    }
+}
+
 async function testChatForwardText() {
     console.log('\n--- chat-forward-text (frontend) ---');
     try {
@@ -717,6 +779,8 @@ async function main() {
     await testChainAccessAmounts();
     await testConfigDisplay();
     await testInitialProfileProvision();
+    await testEinsatzRoleTemplates();
+    await testApplyInitialProfileToContacts();
     await testMessengerExportEnv();
     await testSetEnvKeyBlocklist();
     await testMessengerGasMilestone();

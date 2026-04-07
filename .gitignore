@@ -25,6 +25,7 @@ test-results/
 /.morgendrot-vault.package-id
 /.morgendrot-vault.streams-anchor
 .morgendrot-contact-labels.json
+.morgendrot-einsatz-templates.json
 .morgendrot-package-id-history
 .morgendrot-streams-anchor-history
 .streams-mock-data.json

@@ -4,11 +4,14 @@
  */
 import fs from 'fs';
 import path from 'path';
+import type { InitialProfile } from './initial-profile-provision.js';
 
 const DEFAULT_FILE = '.morgendrot-contact-labels.json';
 
 export type ContactMeshEntry = {
     label: string;
+    /** Anzeige-Tags (Einsatz, z. B. Medic) — kein Chain-ROLE */
+    roleTags?: string[];
     /** Meshtastic Node ID, z. B. !a1b2c3d4 */
     meshNodeId?: string;
     /** X25519 Public Key, 64 Hex-Zeichen (32 Bytes) */
@@ -74,9 +77,18 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
             ? o.meshPublicKeyHex.trim().toLowerCase()
             : undefined;
     const bleUuid = typeof o.bleUuid === 'string' ? normalizeBleUuid(o.bleUuid) ?? undefined : undefined;
-    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid) return null;
+    let roleTags: string[] | undefined;
+    if (Array.isArray(o.roleTags)) {
+        const tags = o.roleTags
+            .map((t) => String(t).trim().slice(0, 48))
+            .filter(Boolean)
+            .slice(0, 20);
+        if (tags.length) roleTags = tags;
+    }
+    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length) return null;
     return {
         label: label || 'Partner',
+        ...(roleTags ? { roleTags } : {}),
         ...(meshNodeId && { meshNodeId }),
         ...(meshPublicKeyHex && { meshPublicKeyHex }),
         ...(bleUuid && { bleUuid }),
@@ -203,4 +215,27 @@ export function getContactByBleUuid(uuid: string): { address: string; entry: Con
         }
     }
     return undefined;
+}
+
+/** Wendet ein validiertes `initialProfile` auf die lokale Kontaktdatei an (Merge pro Adresse). */
+export function applyInitialProfileToContacts(profile: InitialProfile): { applied: number } {
+    const dir = loadContactDirectory();
+    let applied = 0;
+    for (const c of profile.contacts) {
+        const hex = normalizeAddress(c.address);
+        if (!hex) continue;
+        const prev = dir[hex] ?? { label: 'Partner' };
+        const tags =
+            c.roleTags && c.roleTags.length
+                ? c.roleTags.map((t) => String(t).trim().slice(0, 48)).filter(Boolean).slice(0, 20)
+                : undefined;
+        dir[hex] = {
+            ...prev,
+            label: (c.name || '').trim().slice(0, 64) || prev.label,
+            ...(tags?.length ? { roleTags: tags } : {}),
+        };
+        applied++;
+    }
+    writeDirectory(dir);
+    return { applied };
 }

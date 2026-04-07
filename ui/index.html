@@ -1898,6 +1898,19 @@
             </details>
           </div>
           <div x-show="boss.provRole === 'user'" class="mt-2 text-xs text-slate-400">Gerätetyp „Passiver Beobachter“: Nur QR + Explorer-Link für Ticket/Key, kein Morgendrot-Code. <em>Nicht verwechseln mit dem Ticket-Gast (Mensch)</em> – hier geht es um das Gerät (z. B. Log-Device).</div>
+          <div class="rounded-lg border border-slate-600/50 bg-slate-800/40 p-3 space-y-2 mt-2" x-init="loadEinsatzTemplates()">
+            <p class="text-xs text-slate-400">Einsatz-Vorlagen (lokal auf dem Boss-PC, siehe <span class="font-mono">.morgendrot-einsatz-templates.json</span>) — optional Rolle / RoleID aus Vorlage setzen.</p>
+            <div class="flex flex-wrap gap-2 items-center">
+              <span class="text-slate-500 w-36 text-xs shrink-0">Vorlage</span>
+              <select x-model="boss.provEinsatzTemplateId" @change="onProvEinsatzTemplateChange()" class="rounded border border-slate-600 bg-slate-700 px-2 py-1 text-sm text-white max-w-md">
+                <option value="">— keine —</option>
+                <template x-for="t in boss.einsatzTemplates" :key="t.id">
+                  <option :value="t.id" x-text="t.label + ' (' + t.chainRole + ', ID ' + t.roleId + ')'"></option>
+                </template>
+              </select>
+              <button type="button" @click="loadEinsatzTemplates()" class="text-xs text-sky-400 hover:underline">Neu laden</button>
+            </div>
+          </div>
           <button @click="boss.provStep = 2" :disabled="!boss.provProfileId" class="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 disabled:opacity-50 mt-2">Weiter</button>
         </div>
 
@@ -1934,6 +1947,11 @@
             <span class="text-xs text-slate-500 block mb-1">Gateway-URL (Raspi)</span>
             <input type="text" x-model="boss.provGatewayUrl" placeholder="http://192.168.1.10:3342" class="rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white w-64" />
           </div>
+          <details class="group mt-2">
+            <summary class="cursor-pointer text-xs text-slate-500 hover:text-slate-300">initialProfile (JSON, optional — Kontext für Helfer-Gerät)</summary>
+            <p class="text-xs text-slate-500 mt-1">Überschreibt die reine Vorlage-Zeile oben, wenn ausgefüllt. Siehe <span class="font-mono">docs/API-INITIAL-PROFILE.md</span>.</p>
+            <textarea x-model="boss.provInitialProfileJson" rows="5" placeholder='{"version":1,"deploymentChannelTag":"Sektor Nord","contacts":[{"name":"Leitung","address":"0x…64hex…","roleTags":["Einsatzleiter"]}]}' class="mt-2 w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs font-mono text-slate-200"></textarea>
+          </details>
           <div class="flex gap-2 mt-2">
             <button @click="boss.provStep = 1" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
             <button @click="provisionGenerate()" :disabled="boss.provLoading || (boss.provRole === 'user' && !boss.provTicketOrKeyObjectId)" class="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 disabled:opacity-50" x-text="boss.provLoading ? 'Generiere…' : 'Generieren & Weiter'"></button>
@@ -1945,6 +1963,12 @@
           <p class="text-xs text-slate-500">Schritt 3/3: Export – Artefakte passend zum Gerät (Node-App vs. Gateway-Identität)</p>
 
           <div id="boss-prov-export-feedback" x-show="boss.provExportFeedback" class="rounded-lg border px-3 py-2 text-sm" :class="boss.provExportIsError ? 'border-amber-600/60 bg-amber-950/40 text-amber-200' : 'border-emerald-600/50 bg-emerald-950/30 text-emerald-100'" x-text="boss.provExportFeedback"></div>
+
+          <div x-show="boss.provResult && boss.provResult.initialProfile && boss.provResult.initialProfile.contacts && boss.provResult.initialProfile.contacts.length" class="rounded-lg border border-cyan-600/40 bg-cyan-950/25 p-3 space-y-2">
+            <p class="text-sm text-cyan-200 font-medium">Kontakte ins Boss-Telefonbuch übernehmen</p>
+            <p class="text-xs text-slate-400">Die im Paket enthaltenen Kontakte lokal auf <strong>diesem</strong> Rechner speichern (gleiche API wie Messenger — <span class="font-mono">.morgendrot-contact-labels.json</span>).</p>
+            <button type="button" @click="applyInitialProfileToBossContacts()" class="rounded-lg bg-cyan-700 px-3 py-2 text-sm text-white hover:bg-cyan-600">Kontakte übernehmen</button>
+          </div>
 
           <div x-show="boss.provAddress" class="rounded-lg bg-slate-800/60 p-3 space-y-1">
             <p class="text-xs text-slate-400">Generierte Adresse: <span class="font-mono text-emerald-400" x-text="boss.provAddress"></span></p>
@@ -2534,6 +2558,9 @@
           provLoading: false,
           provExportFeedback: '',
           provExportIsError: false,
+          einsatzTemplates: [],
+          provEinsatzTemplateId: '',
+          provInitialProfileJson: '',
           messengerStapel: {
             edition: 'sales',
             packageSource: 'boss',
@@ -4684,6 +4711,21 @@
               this.boss.provAddress = d.address || '';
               this.boss.provSecretKey = d.secretKey || '';
             }
+            let extraInitial;
+            if (this.boss.provInitialProfileJson && this.boss.provInitialProfileJson.trim()) {
+              try {
+                extraInitial = JSON.parse(this.boss.provInitialProfileJson);
+              } catch (e) {
+                this.cmdResult = 'initialProfile: kein gültiges JSON.';
+                this.boss.provLoading = false;
+                return;
+              }
+            } else if (this.boss.provEinsatzTemplateId) {
+              const t = this.boss.einsatzTemplates.find(x => x.id === this.boss.provEinsatzTemplateId);
+              if (t) {
+                extraInitial = { version: 1, contacts: [], ...(t.defaultDeploymentChannelTag ? { deploymentChannelTag: t.defaultDeploymentChannelTag } : {}) };
+              }
+            }
             const params = {
               role: this.boss.provRole,
               roleId: this.boss.provRoleId,
@@ -4708,6 +4750,7 @@
               streamsAnchorId: (this.boss.provStreamsAnchorId || this.currentIds.streamsAnchorId || '').trim() || undefined,
               streamsBridgeUrl: this.setup.streamsBridgeUrl || this.currentIds.streamsBridgeUrl || undefined,
             };
+            if (extraInitial) params.initialProfile = extraInitial;
             const r2 = await fetch(_api() + '/api/provision-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
             const d2 = await r2.json();
             if (d2.ok) {
@@ -4725,6 +4768,44 @@
             }
           } catch (e) { this.cmdResult = 'Fehler: ' + (e.message || e); }
           this.boss.provLoading = false;
+        },
+        async loadEinsatzTemplates() {
+          try {
+            const r = await fetch(_api() + '/api/einsatz-role-templates');
+            const d = await r.json();
+            if (d.ok && Array.isArray(d.templates)) this.boss.einsatzTemplates = d.templates;
+          } catch (_) {}
+        },
+        onProvEinsatzTemplateChange() {
+          const id = this.boss.provEinsatzTemplateId;
+          if (!id) return;
+          const t = this.boss.einsatzTemplates.find(x => x.id === id);
+          if (!t) return;
+          this.boss.provRole = t.chainRole;
+          this.boss.provRoleId = t.roleId;
+        },
+        async applyInitialProfileToBossContacts() {
+          const ip = this.boss.provResult && this.boss.provResult.initialProfile;
+          if (!ip) return;
+          this.boss.provExportFeedback = '';
+          try {
+            const r = await fetch(_api() + '/api/contact-labels/apply-initial-profile', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(ip),
+            });
+            const d = await r.json();
+            if (d.ok) {
+              this.boss.provExportFeedback = d.message || (d.applied + ' Kontakt(e) übernommen.');
+              this.boss.provExportIsError = false;
+            } else {
+              this.boss.provExportFeedback = d.error || 'Übernahme fehlgeschlagen';
+              this.boss.provExportIsError = true;
+            }
+          } catch (e) {
+            this.boss.provExportFeedback = String(e && e.message ? e.message : e);
+            this.boss.provExportIsError = true;
+          }
         },
         downloadProvision(format) {
           if (!this.boss.provResult) return;
