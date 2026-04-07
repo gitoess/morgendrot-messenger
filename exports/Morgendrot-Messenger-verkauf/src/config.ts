@@ -221,7 +221,9 @@ export function seedStreamsAnchorHistoryFromKnownFiles(): string[] {
 const SETENV_BLOCKLIST = new Set([
     'OPEN_COMMAND', 'OPEN_URL', 'OPEN_COMMAND_LIST_FILE', 'OPEN_COMMAND_LIST_KEY',
     'REMOTE_SIGNER_URL', 'REMOTE_SIGNER_TOKEN', 'WALLET_PASSWORD', 'ENCRYPTED_ENV_FILE',
-    'MONITOR_ALARM_WEBHOOK_URL', 'BOSS_SIGNER_TOKEN'
+    'MONITOR_ALARM_WEBHOOK_URL', 'BOSS_SIGNER_TOKEN',
+    'STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET',
+    'SHOP_CLAIM_NOTIFY_SECRET', 'SHOP_MINT_BOSS_WALLET_PASSWORD', 'BOSS_WALLET_PASSWORD',
 ]);
 
 /** Schreibt KEY=VALUE in .env (überschreibt vorhanden, fügt neu hinzu). Wirkt nach Neustart (bei verschlüsselter Env: .env übersteuert). */
@@ -330,6 +332,11 @@ function applyEnvToCfg(key: string, value: string): void {
             void import('./chain-access.js').then((m) => m.resetRpcClient('same'));
             break;
         }
+        case 'RPC_SOCKS_PROXY': {
+            CFG.RPC_SOCKS_PROXY = v;
+            void import('./chain-access.js').then((m) => m.resetRpcClient('same'));
+            break;
+        }
         case 'NETWORK_TRUST_TIER': {
             CFG.NETWORK_TRUST_TIER = Math.min(3, Math.max(1, parseInt(v, 10) || 1));
             break;
@@ -362,6 +369,7 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'ENABLE_AUTO_EXECUTE': (CFG as { ENABLE_AUTO_EXECUTE: boolean }).ENABLE_AUTO_EXECUTE = truthy(v); break;
         case 'ENABLE_LISTENER': (CFG as { ENABLE_LISTENER: boolean }).ENABLE_LISTENER = truthy(v); break;
         case 'ENABLE_PLAINTEXT_CHANNEL': (CFG as { ENABLE_PLAINTEXT_CHANNEL: boolean }).ENABLE_PLAINTEXT_CHANNEL = truthy(v); break;
+        case 'MAILBOX_STORE_PLAINTEXT': (CFG as { MAILBOX_STORE_PLAINTEXT: boolean }).MAILBOX_STORE_PLAINTEXT = truthy(v); break;
         case 'ENABLE_REPLAY_PROTECTION': (CFG as { ENABLE_REPLAY_PROTECTION: boolean }).ENABLE_REPLAY_PROTECTION = truthy(v); break;
         case 'ENABLE_HARDWARE_OPEN': (CFG as { ENABLE_HARDWARE_OPEN: boolean }).ENABLE_HARDWARE_OPEN = truthy(v); break;
         case 'PAYMENT_TRIGGER_ENABLED': (CFG as { PAYMENT_TRIGGER_ENABLED: boolean }).PAYMENT_TRIGGER_ENABLED = truthy(v); break;
@@ -372,6 +380,9 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'ENABLE_FILE_LOGGING': (CFG as { ENABLE_FILE_LOGGING: boolean }).ENABLE_FILE_LOGGING = truthy(v); break;
         case 'LOG_VERBOSE': (CFG as { LOG_VERBOSE: boolean }).LOG_VERBOSE = truthy(v); break;
         case 'ENABLE_UI': (CFG as { ENABLE_UI: boolean }).ENABLE_UI = truthy(v); break;
+        case 'SERVE_LITE_UI_STATIC':
+            (CFG as { SERVE_LITE_UI_STATIC: boolean }).SERVE_LITE_UI_STATIC = truthy(v);
+            break;
         case 'MESSENGER_EDITION': {
             const lo = v.toLowerCase();
             (CFG as { MESSENGER_EDITION: 'standalone' | 'sales' }).MESSENGER_EDITION =
@@ -425,6 +436,52 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'HEARTBEAT_INTERVAL_MS': (CFG as { HEARTBEAT_INTERVAL_MS: number }).HEARTBEAT_INTERVAL_MS = parseInt(v, 10) || 60000; break;
         case 'DEVICE_NAMES': process.env.DEVICE_NAMES = v; break;
         case 'BOSS_SIGNER_PUBLIC_URL': (CFG as { BOSS_SIGNER_PUBLIC_URL: string }).BOSS_SIGNER_PUBLIC_URL = v; break;
+        case 'MESSENGER_AUTO_SPONSOR': (CFG as { MESSENGER_AUTO_SPONSOR: boolean }).MESSENGER_AUTO_SPONSOR = truthy(v); break;
+        case 'MESSENGER_LICENSE_NFT_OBJECT_ID':
+            (CFG as { MESSENGER_LICENSE_NFT_OBJECT_ID: string | undefined }).MESSENGER_LICENSE_NFT_OBJECT_ID = v || undefined;
+            break;
+        case 'MESSENGER_CREDITS_OBJECT_ID':
+            (CFG as { MESSENGER_CREDITS_OBJECT_ID: string | undefined }).MESSENGER_CREDITS_OBJECT_ID =
+                v && PACKAGE_ID_REGEX.test(v) ? normalizeAddress(v) : undefined;
+            break;
+        case 'PAIRING_GATE_NFT_OBJECT_ID':
+            (CFG as { PAIRING_GATE_NFT_OBJECT_ID: string | undefined }).PAIRING_GATE_NFT_OBJECT_ID = v || undefined;
+            break;
+        case 'VERIFIED_IOTA_NAME_PACKAGE_IDS':
+            (CFG as { VERIFIED_IOTA_NAME_PACKAGE_IDS: string[] }).VERIFIED_IOTA_NAME_PACKAGE_IDS =
+                parseVerifiedIotaNamePackageIds(v);
+            break;
+        case 'MESSENGER_GAS_STATE_FILE':
+            if (v) process.env.MESSENGER_GAS_STATE_FILE = v;
+            else delete process.env.MESSENGER_GAS_STATE_FILE;
+            break;
+        case 'IOTA_GAS_STATION_URL':
+            (CFG as { IOTA_GAS_STATION_URL: string | undefined }).IOTA_GAS_STATION_URL = v || undefined;
+            break;
+        case 'SHADOW_SWEEP_GAS_RESERVE_MIST': {
+            try {
+                const n = BigInt(v.trim());
+                (CFG as { SHADOW_SWEEP_GAS_RESERVE_MIST: bigint }).SHADOW_SWEEP_GAS_RESERVE_MIST =
+                    n > 0n ? n : 55_000_000n;
+            } catch {
+                (CFG as { SHADOW_SWEEP_GAS_RESERVE_MIST: bigint }).SHADOW_SWEEP_GAS_RESERVE_MIST = 55_000_000n;
+            }
+            break;
+        }
+        case 'SPONSORED_TRANSACTION_ENABLED':
+            (CFG as { SPONSORED_TRANSACTION_ENABLED: boolean }).SPONSORED_TRANSACTION_ENABLED = truthy(v);
+            break;
+        case 'SPONSOR_GAS_OWNER':
+            (CFG as { SPONSOR_GAS_OWNER: string | undefined }).SPONSOR_GAS_OWNER = v || undefined;
+            break;
+        case 'SPONSOR_GAS_PASSWORD':
+            (CFG as { SPONSOR_GAS_PASSWORD: string | undefined }).SPONSOR_GAS_PASSWORD = v || undefined;
+            break;
+        case 'GAS_BUDGET': {
+            const n = parseInt(v, 10);
+            (CFG as { GAS_BUDGET: number }).GAS_BUDGET = Number.isFinite(n) && n > 0 ? n : 10_000_000;
+            break;
+        }
         default: break;
     }
 }
@@ -463,6 +520,18 @@ export function parseRpcUrlsFromRaw(raw: string | undefined): string[] {
     return [...new Set(r.split(/[\s,]+/).map((s) => s.trim()).filter((u) => /^https?:\/\//i.test(u)))];
 }
 
+/** Komma-/Leerzeichen-getrennte 0x+64-Hex Package-IDs: NFT-Typ des IOTA-Names darf nur von diesen Paketen stammen (Partner-Whitelist). */
+export function parseVerifiedIotaNamePackageIds(raw: string | undefined): string[] {
+    const r = String(raw ?? '').trim();
+    if (!r) return [];
+    const ids = r
+        .split(/[\s,]+/)
+        .map((s) => s.trim())
+        .filter((s) => /^0x[a-fA-F0-9]{64}$/.test(s))
+        .map((s) => s.toLowerCase());
+    return [...new Set(ids)];
+}
+
 export const CFG = {
     // --- Netzwerk ---
     RPC_URL: process.env.RPC_URL || 'https://api.testnet.iota.cafe',
@@ -470,6 +539,8 @@ export const CFG = {
     RPC_URLS_EXTRA: parseRpcUrlsFromRaw(process.env.RPC_URLS),
     /** HTTP(S)-Proxy für RPC-Requests (z. B. Privoxy vor Tor). Siehe RPC_HTTP_PROXY in .env.example. */
     RPC_HTTP_PROXY: (process.env.RPC_HTTP_PROXY || '').trim(),
+    /** SOCKS5-Host für RPC (z. B. Tor 127.0.0.1:9050). Vorrang vor RPC_HTTP_PROXY wenn gesetzt. */
+    RPC_SOCKS_PROXY: (process.env.RPC_SOCKS_PROXY || '').trim(),
     /** 1 = Standard-Rotation, 2 = Proxy empfohlen, 3 = eigener Node – nur Hinweis für UI/Doku. */
     NETWORK_TRUST_TIER: Math.min(3, Math.max(1, parseInt(process.env.NETWORK_TRUST_TIER || '1', 10) || 1)),
 
@@ -553,6 +624,11 @@ export const CFG = {
 
     /** Optional: Zusätzlich Klartext-Events emittieren (Test/Demo, im Explorer sichtbar). Default false. Regel 2: Allow Cleartext. */
     ENABLE_PLAINTEXT_CHANNEL: envBool('ENABLE_PLAINTEXT_CHANNEL', false),
+    /**
+     * Wenn true und Mailbox aktiv: Klartext wird zusätzlich als Objekt in der Mailbox gespeichert (purgebar / Storage-Rebate).
+     * Sonst nur PlaintextMessage-Event (wie bisher).
+     */
+    MAILBOX_STORE_PLAINTEXT: envBool('MAILBOX_STORE_PLAINTEXT', false),
     /** Purge-Befehle erlauben. false = alle Purge-Befehle werden abgelehnt (Daten bleiben dauerhaft). Regel 5. Default true. */
     ENABLE_PURGE: envBool('ENABLE_PURGE', true),
     /** Optional: Purge nur erlauben wenn Storage-Rebate (in Mist) >= dieser Wert. 0 = aus. Verhindert Geldverbrennung bei unwirtschaftlichem Purge. */
@@ -714,6 +790,42 @@ export const CFG = {
     GAS_STATION_TOPUP_IOTA: Math.max(0.001, parseFloat(process.env.GAS_STATION_TOPUP_IOTA || '1') || 1),
     /** Gas Station: Abstand zwischen Prüfungen (ms). Default 300000 (5 Min). */
     GAS_STATION_CHECK_MS: Math.max(60_000, envInt('GAS_STATION_CHECK_MS', 300000)),
+    /**
+     * Optional: Basis-URL der IOTA Gas Station (Remote-Sponsor). Noch ohne aktive Client-Logik –
+     * für DLT.green / spätere Anbindung; Konfiguration und UI-Feld sind vorbereitet.
+     */
+    IOTA_GAS_STATION_URL: (process.env.IOTA_GAS_STATION_URL || '').trim() || undefined as string | undefined,
+    /**
+     * Messenger: Nach mindestens einer erfolgreichen selbstbezahlten TX (.messenger-gas-state.json) und Besitz von
+     * MESSENGER_LICENSE_NFT_OBJECT_ID → Gas durch SPONSOR_GAS_OWNER (SPONSORED_TRANSACTION_ENABLED + SPONSOR_GAS_PASSWORD nötig).
+     */
+    MESSENGER_AUTO_SPONSOR: envBool('MESSENGER_AUTO_SPONSOR', false),
+    /** Objekt-ID (0x+64 Hex) des Lizenz-NFT für Auto-Sponsor ab der 2. TX. */
+    MESSENGER_LICENSE_NFT_OBJECT_ID: (process.env.MESSENGER_LICENSE_NFT_OBJECT_ID || '').trim() || undefined as string | undefined,
+    /**
+     * Optional: Prepaid Messenger-Credits (owned object). Wenn gesetzt und Mailbox aktiv → Move nutzt *_with_credits (Abbuchung pro Handshake/Nachricht).
+     * Objekt-ID nach Boss-Mint oder aus Export (.env MESSENGER_CREDITS_OBJECT_ID).
+     */
+    MESSENGER_CREDITS_OBJECT_ID: (process.env.MESSENGER_CREDITS_OBJECT_ID || '').trim() || undefined as string | undefined,
+    /**
+     * Optional: Geheimnis-Peering nur wenn diese Wallet das angegebene NFT besitzt („Türsteher“ für private Kreise).
+     */
+    PAIRING_GATE_NFT_OBJECT_ID: (process.env.PAIRING_GATE_NFT_OBJECT_ID || '').trim() || undefined as string | undefined,
+    /** IOTA Names: erlaubte Move-Pakete für das Registrierungs-NFT (Indexer-Lookup + Typ-Check). */
+    VERIFIED_IOTA_NAME_PACKAGE_IDS: parseVerifiedIotaNamePackageIds(process.env.VERIFIED_IOTA_NAME_PACKAGE_IDS),
+    /**
+     * Shadow-Sweep: Reserve in MIST auf der Schatten-Adresse (Rest nach Sweep). Default 55_000_000.
+     */
+    SHADOW_SWEEP_GAS_RESERVE_MIST: ((): bigint => {
+        const raw = process.env.SHADOW_SWEEP_GAS_RESERVE_MIST?.trim();
+        if (!raw) return 55_000_000n;
+        try {
+            const n = BigInt(raw);
+            return n > 0n ? n : 55_000_000n;
+        } catch {
+            return 55_000_000n;
+        }
+    })(),
 
     // --- Audit (optional: Streams für Blackbox) ---
     /** Audit-Events zusätzlich als Hash in Streams schreiben (fälschungssicher). Default false. */
@@ -734,6 +846,12 @@ export const CFG = {
     ENABLE_UI: envBool('ENABLE_UI', false),
     /** Port der lokalen UI. Default 3341. */
     UI_PORT: envInt('UI_PORT', 3341),
+    /**
+     * Lite-UI (ui/) am API-Port ausliefern (GET /, *.css, …). Default true (Standalone-Export, klassischer Flow).
+     * false = nur REST /api/* am API-Port; Oberfläche nur noch Next unter UI_PORT (weniger Doppel-UI im Dev).
+     * Env: SERVE_LITE_UI_STATIC=false
+     */
+    SERVE_LITE_UI_STATIC: envBool('SERVE_LITE_UI_STATIC', true),
     /** Port der API (Status, Befehle). Default 3342. Nur bei ENABLE_UI. */
     API_PORT: envInt('API_PORT', 3342),
     /**
@@ -775,6 +893,35 @@ export const CFG = {
     LITE_PRESET_RPC_URL: process.env.MORGENDROT_LITE_RPC_URL?.trim() || '',
     /** Rate-Limit für POST /api/command (Anfragen pro Minute pro IP). 0 = aus. Default 0. */
     API_RATE_LIMIT_COMMANDS_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_COMMANDS_PER_MINUTE', 0)),
+    /**
+     * Öffentlicher Claim-Token-Endpunkt POST /api/voucher-claim (Shop-E-Mail, Idempotenz-Datei).
+     * Default false — bewusst aktivieren auf Fulfillment-Hosts.
+     */
+    ENABLE_VOUCHER_CLAIM_API: envBool('ENABLE_VOUCHER_CLAIM_API', false),
+    /** Rate-Limit für POST /api/voucher-claim pro IP (Anfragen/Minute). 0 = aus. Default 30. */
+    VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE: Math.max(0, envInt('VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE', 30)),
+
+    /**
+     * Integrierter Shop (Stripe Checkout, kein Kartendaten-Touch — nur serverseitige Session + Webhook).
+     * Siehe docs/API-SHOP-SPEC.md
+     */
+    ENABLE_SHOP_API: envBool('ENABLE_SHOP_API', false),
+    /** Basis-URL für Stripe success/cancel (z. B. https://app.example.com oder http://127.0.0.1:3341). Ohne trailing slash. */
+    SHOP_PUBLIC_BASE_URL: (process.env.SHOP_PUBLIC_BASE_URL || '').trim().replace(/\/$/, ''),
+    /** Rate-Limit POST /api/shop/checkout-session und /api/shop/session-claim pro IP/Minute. 0 = aus. */
+    SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE: Math.max(0, envInt('SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE', 20)),
+    /** Stripe Secret Key (sk_test_… / sk_live_…) — niemals an Client oder Git. */
+    STRIPE_SECRET_KEY: (process.env.STRIPE_SECRET_KEY || '').trim(),
+    /** Webhook-Signing-Secret (whsec_…) für POST /api/shop/webhook/stripe */
+    STRIPE_WEBHOOK_SECRET: (process.env.STRIPE_WEBHOOK_SECRET || '').trim(),
+    /**
+     * Nach Stripe-Zahlung: optional `mint_messenger_credits_batch` an Empfänger-Adresse,
+     * wenn Checkout `recipientIotaAddress` mitschickt (Metadata) und Boss-Wallet entsperrt/Passwort.
+     */
+    ENABLE_SHOP_CHAIN_MINT: envBool('ENABLE_SHOP_CHAIN_MINT', false),
+    /** Optional: HTTPS POST nach ausgestelltem Claim (z. B. eigenes Mail-Backend). Body siehe docs/API-SHOP-SPEC.md */
+    SHOP_CLAIM_NOTIFY_WEBHOOK_URL: (process.env.SHOP_CLAIM_NOTIFY_WEBHOOK_URL || '').trim().replace(/\/$/, ''),
+    SHOP_CLAIM_NOTIFY_SECRET: (process.env.SHOP_CLAIM_NOTIFY_SECRET || '').trim(),
 
     // --- Optional: AI (Intent-Matcher und/oder Ollama) ---
     /** Intent-Matcher (Variante 1): Beispielphrasen → Befehl, ohne LLM. Klein, schnell, optional neben Ollama. */
@@ -800,6 +947,14 @@ export const CFG = {
     /** Bei true: Prompt (System + User) und Raw-Ollama-Response in die Logs (logger.info). Für Debug von Template-Müll. */
     AI_DEBUG_OLLAMA: envBool('AI_DEBUG_OLLAMA', false),
 };
+
+/**
+ * Einheitliche Bedingung: Messenger nutzt Mailbox-Move-Pfad (HsKey/MsgKey im Mailbox-Objekt) statt reinem Event-Pfad.
+ * PACKAGE_ID + MAILBOX_ID + USE_MAILBOX – dieselbe Logik überall (chain-access, fetch, listener).
+ */
+export function isMessengerMailboxModeActive(): boolean {
+    return Boolean(CFG.PACKAGE_ID && CFG.MAILBOX_ID && CFG.USE_MAILBOX);
+}
 
 /** Adressen für /connect: PARTNER_ADDRESSES (Pairwise), KOMMANDANT_ADDRESSES (Boss), [BOSS, ...WORKER] (Kommandant), oder [PARTNER]. */
 export function getConnectAddresses(): string[] {
@@ -885,6 +1040,7 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
             envKey: 'RPC_URLS',
         },
         { key: 'RPC_HTTP_PROXY', value: CFG.RPC_HTTP_PROXY ? mask(CFG.RPC_HTTP_PROXY, 14) : '(leer)', envKey: 'RPC_HTTP_PROXY' },
+        { key: 'RPC_SOCKS_PROXY', value: CFG.RPC_SOCKS_PROXY ? mask(CFG.RPC_SOCKS_PROXY, 14) : '(leer)', envKey: 'RPC_SOCKS_PROXY' },
         { key: 'NETWORK_TRUST_TIER', value: String(CFG.NETWORK_TRUST_TIER) + ' (1=öffentlich … 3=eigener Node, Hinweis)', envKey: 'NETWORK_TRUST_TIER' },
         { key: 'PACKAGE_ID', value: CFG.PACKAGE_ID ? mask(CFG.PACKAGE_ID, 10) : '(leer)', envKey: 'PACKAGE_ID' },
         { key: 'PACKAGE_ID_FILE', value: process.env.PACKAGE_ID_FILE || '.morgendrot-package-id', envKey: 'PACKAGE_ID_FILE' },
@@ -932,6 +1088,7 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'ENABLE_REPLAY_PROTECTION', value: String(CFG.ENABLE_REPLAY_PROTECTION), envKey: 'ENABLE_REPLAY_PROTECTION' },
         { key: 'ENABLE_HARDWARE_OPEN', value: String(CFG.ENABLE_HARDWARE_OPEN), envKey: 'ENABLE_HARDWARE_OPEN' },
         { key: 'ENABLE_PLAINTEXT_CHANNEL', value: String(CFG.ENABLE_PLAINTEXT_CHANNEL), envKey: 'ENABLE_PLAINTEXT_CHANNEL' },
+        { key: 'MAILBOX_STORE_PLAINTEXT', value: String(CFG.MAILBOX_STORE_PLAINTEXT), envKey: 'MAILBOX_STORE_PLAINTEXT' },
         { key: 'ENABLE_PURGE', value: String(CFG.ENABLE_PURGE), envKey: 'ENABLE_PURGE' },
         { key: 'USE_ENCRYPTED_DISCOVERY', value: String(CFG.USE_ENCRYPTED_DISCOVERY), envKey: 'USE_ENCRYPTED_DISCOVERY' },
         { key: 'ENABLE_LISTENER', value: String(CFG.ENABLE_LISTENER), envKey: 'ENABLE_LISTENER' },
@@ -984,6 +1141,40 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'GAS_BUDGET', value: String(CFG.GAS_BUDGET), envKey: 'GAS_BUDGET' },
         { key: 'SPONSOR_GAS_OWNER', value: CFG.SPONSOR_GAS_OWNER ? mask(CFG.SPONSOR_GAS_OWNER, 10) : '(leer)', envKey: 'SPONSOR_GAS_OWNER' },
         { key: 'SPONSORED_TRANSACTION_ENABLED', value: String(CFG.SPONSORED_TRANSACTION_ENABLED), envKey: 'SPONSORED_TRANSACTION_ENABLED' },
+        { key: 'MESSENGER_AUTO_SPONSOR', value: String(CFG.MESSENGER_AUTO_SPONSOR), envKey: 'MESSENGER_AUTO_SPONSOR' },
+        {
+            key: 'MESSENGER_LICENSE_NFT_OBJECT_ID',
+            value: CFG.MESSENGER_LICENSE_NFT_OBJECT_ID || '(leer)',
+            envKey: 'MESSENGER_LICENSE_NFT_OBJECT_ID',
+        },
+        {
+            key: 'MESSENGER_CREDITS_OBJECT_ID',
+            value: CFG.MESSENGER_CREDITS_OBJECT_ID || '(leer)',
+            envKey: 'MESSENGER_CREDITS_OBJECT_ID',
+        },
+        {
+            key: 'PAIRING_GATE_NFT_OBJECT_ID',
+            value: CFG.PAIRING_GATE_NFT_OBJECT_ID || '(leer)',
+            envKey: 'PAIRING_GATE_NFT_OBJECT_ID',
+        },
+        {
+            key: 'VERIFIED_IOTA_NAME_PACKAGE_IDS',
+            value: CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS.length
+                ? `${CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS.length} Package-ID(s)`
+                : '(leer)',
+            envKey: 'VERIFIED_IOTA_NAME_PACKAGE_IDS',
+        },
+        {
+            key: 'MESSENGER_GAS_STATE_FILE',
+            value: (process.env.MESSENGER_GAS_STATE_FILE || '').trim() || '(default: .messenger-gas-state.json im cwd)',
+            envKey: 'MESSENGER_GAS_STATE_FILE',
+        },
+        {
+            key: 'IOTA_GAS_STATION_URL',
+            value: CFG.IOTA_GAS_STATION_URL ? mask(CFG.IOTA_GAS_STATION_URL, 24) : '(leer)',
+            envKey: 'IOTA_GAS_STATION_URL',
+        },
+        { key: 'SHADOW_SWEEP_GAS_RESERVE_MIST', value: String(CFG.SHADOW_SWEEP_GAS_RESERVE_MIST), envKey: 'SHADOW_SWEEP_GAS_RESERVE_MIST' },
         { key: 'GAS_STATION_ENABLED', value: String(CFG.GAS_STATION_ENABLED), envKey: 'GAS_STATION_ENABLED' },
         { key: 'GAS_STATION_MIN_IOTA', value: String(CFG.GAS_STATION_MIN_IOTA), envKey: 'GAS_STATION_MIN_IOTA' },
         { key: 'GAS_STATION_TOPUP_IOTA', value: String(CFG.GAS_STATION_TOPUP_IOTA), envKey: 'GAS_STATION_TOPUP_IOTA' },
@@ -993,6 +1184,7 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'ENABLE_UI', value: String(CFG.ENABLE_UI), envKey: 'ENABLE_UI' },
         { key: 'MESSENGER_EDITION', value: CFG.MESSENGER_EDITION, envKey: 'MESSENGER_EDITION' },
         { key: 'UI_VARIANT', value: CFG.UI_VARIANT, envKey: 'UI_VARIANT' },
+        { key: 'SERVE_LITE_UI_STATIC', value: String(CFG.SERVE_LITE_UI_STATIC), envKey: 'SERVE_LITE_UI_STATIC' },
         { key: 'PAIRING_WAIT_TIMEOUT_MS', value: String(CFG.PAIRING_WAIT_TIMEOUT_MS), envKey: 'PAIRING_WAIT_TIMEOUT_MS' },
         { key: 'PAIRING_FIND_MAX_CANDIDATES', value: String(CFG.PAIRING_FIND_MAX_CANDIDATES), envKey: 'PAIRING_FIND_MAX_CANDIDATES' },
         { key: 'PAIRING_FIND_MAX_DECRYPT_ATTEMPTS', value: String(CFG.PAIRING_FIND_MAX_DECRYPT_ATTEMPTS), envKey: 'PAIRING_FIND_MAX_DECRYPT_ATTEMPTS' },
@@ -1001,6 +1193,16 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'UI_PORT', value: String(CFG.UI_PORT), envKey: 'UI_PORT' },
         { key: 'API_PORT', value: String(CFG.API_PORT), envKey: 'API_PORT' },
         { key: 'API_KILL_PREVIOUS_INSTANCE', value: String(CFG.API_KILL_PREVIOUS_INSTANCE), envKey: 'API_KILL_PREVIOUS_INSTANCE' },
+        { key: 'ENABLE_VOUCHER_CLAIM_API', value: String(CFG.ENABLE_VOUCHER_CLAIM_API), envKey: 'ENABLE_VOUCHER_CLAIM_API' },
+        { key: 'VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE', value: String(CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE), envKey: 'VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE' },
+        { key: 'ENABLE_SHOP_API', value: String(CFG.ENABLE_SHOP_API), envKey: 'ENABLE_SHOP_API' },
+        { key: 'SHOP_PUBLIC_BASE_URL', value: CFG.SHOP_PUBLIC_BASE_URL ? mask(CFG.SHOP_PUBLIC_BASE_URL, 16) : '(leer → http://127.0.0.1:UI_PORT)', envKey: 'SHOP_PUBLIC_BASE_URL' },
+        { key: 'SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE', value: String(CFG.SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE), envKey: 'SHOP_CHECKOUT_RATE_LIMIT_PER_MINUTE' },
+        { key: 'STRIPE_SECRET_KEY', value: CFG.STRIPE_SECRET_KEY ? mask(CFG.STRIPE_SECRET_KEY, 10) : '(leer)', envKey: 'STRIPE_SECRET_KEY' },
+        { key: 'STRIPE_WEBHOOK_SECRET', value: CFG.STRIPE_WEBHOOK_SECRET ? mask(CFG.STRIPE_WEBHOOK_SECRET, 8) : '(leer)', envKey: 'STRIPE_WEBHOOK_SECRET' },
+        { key: 'ENABLE_SHOP_CHAIN_MINT', value: String(CFG.ENABLE_SHOP_CHAIN_MINT), envKey: 'ENABLE_SHOP_CHAIN_MINT' },
+        { key: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL', value: CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL ? mask(CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL, 20) : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL' },
+        { key: 'SHOP_CLAIM_NOTIFY_SECRET', value: CFG.SHOP_CLAIM_NOTIFY_SECRET ? '***' : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_SECRET' },
     ];
 }
 
@@ -1173,6 +1375,152 @@ export function buildDeviceEnv(p: DeviceProvisionParams): string {
     }
     lines.push('');
     return lines.join('\n');
+}
+
+/** Nur Lite-Messenger (Desktop), kein Lock/Arbeiter-Rauschen – unabhängig vom Geräte-Provisioning-Wizard. */
+export interface MessengerExportParams {
+    deviceName?: string;
+    address: string;
+    packageId: string;
+    rpcUrl: string;
+    bossAddress: string;
+    edition: 'standalone' | 'sales';
+    signer?: 'sdk' | 'cli' | 'remote';
+    remoteSignerUrl?: string;
+    roleId?: number;
+    mailboxId?: string;
+    /** On-chain MessengerCredits-Objekt-ID (0x+64), nach Boss-Mint. */
+    creditsObjectId?: string;
+    /** Klartext in Mailbox speichern (purgebar). */
+    mailboxStorePlaintext?: boolean;
+    /** Ablauf Mailbox-Nachrichten/Handshake in Tagen (DEFAULT_TTL_DAYS). */
+    exportTtlDays?: number;
+}
+
+/**
+ * PACKAGE_ID für Messenger-Export: Boss-.env, freier Wert oder Eintrag aus lokaler ID-Historie.
+ * historyFromNewest: 0 = jüngster Eintrag in der Historie, 1 = vorheriger, …
+ */
+export function resolveMessengerExportPackageId(opts: {
+    source: 'boss' | 'custom' | 'history';
+    customPackageId?: string;
+    historyFromNewest?: number;
+}): { ok: true; packageId: string } | { ok: false; error: string } {
+    if (opts.source === 'custom') {
+        const id = String(opts.customPackageId || '').trim();
+        if (!PACKAGE_ID_REGEX.test(id)) return { ok: false, error: 'PACKAGE_ID: 0x + 64 Hex erforderlich.' };
+        return { ok: true, packageId: normalizeId(id) };
+    }
+    if (opts.source === 'history') {
+        const hist = readPackageIdHistory();
+        if (!hist.length) return { ok: false, error: 'Keine Package-ID im lokalen Verlauf (.morgendrot-package-id-history).' };
+        const fromNew = Math.max(0, Number(opts.historyFromNewest) || 0);
+        const idx = hist.length - 1 - Math.min(fromNew, hist.length - 1);
+        const id = hist[idx];
+        return { ok: true, packageId: normalizeId(id) };
+    }
+    const id = String(CFG.PACKAGE_ID || '').trim();
+    if (!PACKAGE_ID_REGEX.test(id)) return { ok: false, error: 'Boss PACKAGE_ID leer oder ungültig – setzen oder „custom“/„history“ wählen.' };
+    return { ok: true, packageId: normalizeId(id) };
+}
+
+/** .env-Inhalt für exports/Morgendrot-Messenger-* (Kunde: ohne KOMMANDANT/LISTENER aus Arbeiter-Export). */
+export function buildMessengerExportEnv(p: MessengerExportParams): string {
+    const addr = normalizeAddress(String(p.address || '').trim());
+    if (!/^0x[a-f0-9]{64}$/.test(addr)) throw new Error('MY_ADDRESS muss 0x + 64 Hex sein.');
+    const pkg = String(p.packageId || '').trim();
+    if (!PACKAGE_ID_REGEX.test(pkg)) throw new Error('PACKAGE_ID ungültig.');
+    const boss = String(p.bossAddress || '').trim();
+    if (!/^0x[a-fA-F0-9]{64}$/.test(boss)) throw new Error('BOSS_ADDRESS muss 0x + 64 Hex sein.');
+    const edition = p.edition === 'sales' ? 'sales' : 'standalone';
+    const signer = p.signer === 'cli' || p.signer === 'remote' ? p.signer : 'sdk';
+    const roleId = typeof p.roleId === 'number' && Number.isFinite(p.roleId) ? p.roleId : 14;
+    const lines: string[] = [
+        '# ============================================================',
+        '# Morgendrot Messenger – exportiert (Boss)',
+        `# Edition: ${edition} | ${new Date().toISOString()}`,
+        '# Kein Arbeiter/Lock-Template – nur Chat-Messenger.',
+        '# ============================================================',
+        '',
+        'ENABLE_UI=true',
+        'UI_VARIANT=messenger',
+        `MESSENGER_EDITION=${edition}`,
+        'ROLE=messenger',
+        `ROLE_ID=${roleId}`,
+        p.deviceName ? `DEVICE_NAME=${p.deviceName.replace(/\r\n/g, ' ').slice(0, 120)}` : '# DEVICE_NAME=',
+        `MY_ADDRESS=${addr}`,
+        '',
+        `PACKAGE_ID=${normalizeId(pkg)}`,
+        `RPC_URL=${String(p.rpcUrl || CFG.RPC_URL || '').trim() || 'https://api.testnet.iota.cafe'}`,
+        '',
+        `BOSS_ADDRESS=${normalizeAddress(boss)}`,
+        '',
+        '# --- Signer (Verkauf typ. sdk – Entsperren in der UI mit Mnemonic/Bech32-Secret vom Lieferanten) ---',
+        `SIGNER=${signer}`,
+    ];
+    if (signer === 'remote') {
+        const rsu = String(p.remoteSignerUrl || '').trim();
+        if (rsu) lines.push(`REMOTE_SIGNER_URL=${rsu}`);
+        else lines.push('# REMOTE_SIGNER_URL=http://<boss-lan-ip>:3340/sign');
+    }
+    const mb = String(p.mailboxId || CFG.MAILBOX_ID || '').trim();
+    if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+        lines.push('', '# --- Optional Mailbox (wenn beim Deploy gesetzt) ---', `MAILBOX_ID=${normalizeAddress(mb)}`, 'USE_MAILBOX=true');
+    }
+    const cr = String(p.creditsObjectId || '').trim();
+    if (cr && PACKAGE_ID_REGEX.test(cr)) {
+        lines.push(
+            '',
+            '# --- Messenger-Credits (Prepaid, Boss-Mint) – nur mit Mailbox + Package mit *_with_credits ---',
+            `MESSENGER_CREDITS_OBJECT_ID=${normalizeAddress(cr)}`
+        );
+    }
+    if (p.mailboxStorePlaintext === true) {
+        lines.push('', '# Klartext zusätzlich in Mailbox (purgebar; Move: store_plaintext_message_stored)', 'MAILBOX_STORE_PLAINTEXT=true');
+    }
+    if (typeof p.exportTtlDays === 'number' && Number.isFinite(p.exportTtlDays) && p.exportTtlDays >= 0 && p.exportTtlDays <= 3650) {
+        lines.push(`DEFAULT_TTL_DAYS=${Math.max(0, Math.floor(p.exportTtlDays))}`);
+    }
+    lines.push(
+        '',
+        'API_KILL_PREVIOUS_INSTANCE=true',
+        'NETWORK_TRUST_TIER=1',
+        'ENABLE_PURGE=true',
+        'ENABLE_REPLAY_PROTECTION=true',
+        'ENABLE_PLAINTEXT_CHANNEL=true',
+        '# ENABLE_LISTENER nicht setzen – reiner Messenger-Desktop',
+        '',
+        '# Streams: nur setzen wenn genutzt',
+        '# STREAMS_ANCHOR_ID=',
+        '# STREAMS_BRIDGE_URL=',
+        'ENABLE_HEARTBEAT=false',
+        ''
+    );
+    return lines.join('\n');
+}
+
+export function buildMessengerExportJson(p: MessengerExportParams): Record<string, unknown> {
+    const addr = normalizeAddress(String(p.address || '').trim());
+    return {
+        kind: 'messenger',
+        messengerEdition: p.edition,
+        role: 'messenger',
+        roleId: typeof p.roleId === 'number' ? p.roleId : 14,
+        deviceName: p.deviceName || '',
+        address: addr,
+        packageId: normalizeId(String(p.packageId || '').trim()),
+        rpcUrl: String(p.rpcUrl || '').trim(),
+        bossAddress: normalizeAddress(String(p.bossAddress || '').trim()),
+        signer: p.signer === 'cli' || p.signer === 'remote' ? p.signer : 'sdk',
+        generatedAt: new Date().toISOString(),
+        ...(p.creditsObjectId && PACKAGE_ID_REGEX.test(String(p.creditsObjectId).trim())
+            ? { messengerCreditsObjectId: normalizeAddress(String(p.creditsObjectId).trim()) }
+            : {}),
+        ...(p.mailboxStorePlaintext === true ? { mailboxStorePlaintext: true } : {}),
+        ...(typeof p.exportTtlDays === 'number' && Number.isFinite(p.exportTtlDays)
+            ? { defaultTtlDays: Math.max(0, Math.floor(p.exportTtlDays)) }
+            : {}),
+    };
 }
 
 export function buildDeviceJson(p: DeviceProvisionParams): Record<string, unknown> {

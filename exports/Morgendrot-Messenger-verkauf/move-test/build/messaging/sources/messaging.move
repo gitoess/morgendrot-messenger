@@ -340,7 +340,31 @@ module messaging::messaging { // Named address via Move.toml
         expires_at_ms: u64,
     }
 
-    public entry fun store_ecdh_init(
+    /// Klartext unter Mailbox (purgebar / Rebate) – eigener Key-Typ, kein Konflikt mit verschlüsselter Message.
+    struct PlainMsgKey has copy, drop, store {
+        recipient: address,
+        sender: address,
+        nonce: u64,
+    }
+
+    struct PlaintextMailboxEntry has key, store {
+        id: UID,
+        sender: address,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        created_at_ms: u64,
+        expires_at_ms: u64,
+    }
+
+    struct PlaintextMailboxStored has copy, drop {
+        sender: address,
+        recipient: address,
+        nonce: u64,
+        expires_at_ms: u64,
+    }
+
+    fun store_ecdh_init_impl(
         mailbox: &mut Mailbox,
         recipient: address,
         pub_key: vector<u8>,
@@ -381,6 +405,17 @@ module messaging::messaging { // Named address via Move.toml
         event::emit(HandshakeStored { sender, recipient, nonce, expires_at_ms: now + ttl_days * 86400000 });
     }
 
+    public entry fun store_ecdh_init(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        pub_key: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_ecdh_init_impl(mailbox, recipient, pub_key, nonce, ttl_days, ctx);
+    }
+
     /// Manual purge: sender or recipient can purge anytime.
     /// Auto purge: anyone can purge after expiry.
     public entry fun purge_handshake(mailbox: &mut Mailbox, recipient: address, sender: address, ctx: &mut TxContext) {
@@ -404,7 +439,7 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
-    public entry fun store_encrypted_message(
+    fun store_encrypted_message_impl(
         mailbox: &mut Mailbox,
         recipient: address,
         ciphertext: vector<u8>,
@@ -451,6 +486,315 @@ module messaging::messaging { // Named address via Move.toml
         event::emit(MessageStored { sender, recipient, nonce, expires_at_ms: now + ttl_days * 86400000 });
     }
 
+    public entry fun store_encrypted_message(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_encrypted_message_impl(mailbox, recipient, ciphertext, iv, tag, nonce, ttl_days, ctx);
+    }
+
+    /// ----------------------------------------------------------------
+    /// Messenger prepaid credits (owned object; Boss mintet, Messenger hält & verbraucht bei Mailbox-Aktionen)
+    /// ----------------------------------------------------------------
+    const E_CREDITS_INSUFFICIENT: u64 = 40;
+    const E_CREDITS_NOT_BOSS: u64 = 41;
+    const E_CREDITS_BAD_BOUNDS: u64 = 42;
+
+    struct MessengerCredits has key, store {
+        id: UID,
+        balance: u64,
+        max_balance: u64,
+        last_refill_at_ms: u64,
+        refill_interval_ms: u64,
+        refill_amount: u64,
+        cost_ecdh_init: u64,
+        cost_store_message: u64,
+    }
+
+    struct MessengerCreditsMinted has copy, drop {
+        recipient: address,
+        credits_id: ID,
+    }
+
+    fun apply_messenger_refill(credits: &mut MessengerCredits, now: u64) {
+        if (credits.refill_interval_ms == 0u64 || credits.refill_amount == 0u64) {
+            return
+        };
+        let elapsed = now - credits.last_refill_at_ms;
+        if (elapsed < credits.refill_interval_ms) {
+            return
+        };
+        let periods = elapsed / credits.refill_interval_ms;
+        credits.last_refill_at_ms = credits.last_refill_at_ms + periods * credits.refill_interval_ms;
+        if (credits.balance >= credits.max_balance) {
+            return
+        };
+        let to_add = periods * credits.refill_amount;
+        let new_bal = credits.balance + to_add;
+        if (new_bal > credits.max_balance) {
+            credits.balance = credits.max_balance;
+        } else {
+            credits.balance = new_bal;
+        };
+    }
+
+    fun debit_messenger_credits(credits: &mut MessengerCredits, now: u64, cost: u64) {
+        apply_messenger_refill(credits, now);
+        if (cost == 0u64) {
+            return
+        };
+        assert!(credits.balance >= cost, E_CREDITS_INSUFFICIENT);
+        credits.balance = credits.balance - cost;
+    }
+
+    fun mint_one_messenger_credits(
+        recipient: address,
+        initial_balance: u64,
+        max_balance: u64,
+        refill_interval_ms: u64,
+        refill_amount: u64,
+        cost_ecdh_init: u64,
+        cost_store_message: u64,
+        ctx: &mut TxContext,
+    ) {
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let mc = MessengerCredits {
+            id: object::new(ctx),
+            balance: initial_balance,
+            max_balance,
+            last_refill_at_ms: now,
+            refill_interval_ms,
+            refill_amount,
+            cost_ecdh_init,
+            cost_store_message,
+        };
+        let credits_id = object::id(&mc);
+        event::emit(MessengerCreditsMinted { recipient, credits_id });
+        transfer::transfer(mc, recipient);
+    }
+
+    /// Nur Boss-Adresse (sender == boss): mintet ein Credits-Objekt für recipient.
+    public entry fun mint_messenger_credits(
+        boss: address,
+        recipient: address,
+        initial_balance: u64,
+        max_balance: u64,
+        refill_interval_ms: u64,
+        refill_amount: u64,
+        cost_ecdh_init: u64,
+        cost_store_message: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert!(tx_context::sender(ctx) == boss, E_CREDITS_NOT_BOSS);
+        assert!(initial_balance <= max_balance, E_CREDITS_BAD_BOUNDS);
+        mint_one_messenger_credits(
+            recipient,
+            initial_balance,
+            max_balance,
+            refill_interval_ms,
+            refill_amount,
+            cost_ecdh_init,
+            cost_store_message,
+            ctx,
+        );
+    }
+
+    fun mint_messenger_credits_batch_inner(
+        recipients: &vector<address>,
+        i: u64,
+        initial_balance: u64,
+        max_balance: u64,
+        refill_interval_ms: u64,
+        refill_amount: u64,
+        cost_ecdh_init: u64,
+        cost_store_message: u64,
+        ctx: &mut TxContext,
+    ) {
+        let len = vector::length(recipients);
+        if (i >= len) {
+            return
+        };
+        let recipient = *vector::borrow(recipients, i);
+        mint_one_messenger_credits(
+            recipient,
+            initial_balance,
+            max_balance,
+            refill_interval_ms,
+            refill_amount,
+            cost_ecdh_init,
+            cost_store_message,
+            ctx,
+        );
+        mint_messenger_credits_batch_inner(
+            recipients,
+            i + 1,
+            initial_balance,
+            max_balance,
+            refill_interval_ms,
+            refill_amount,
+            cost_ecdh_init,
+            cost_store_message,
+            ctx,
+        );
+    }
+
+    /// Batch-Mint (eine TX): gleiche Parameter für alle Empfänger; sender muss boss sein.
+    public entry fun mint_messenger_credits_batch(
+        boss: address,
+        recipients: vector<address>,
+        initial_balance: u64,
+        max_balance: u64,
+        refill_interval_ms: u64,
+        refill_amount: u64,
+        cost_ecdh_init: u64,
+        cost_store_message: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert!(tx_context::sender(ctx) == boss, E_CREDITS_NOT_BOSS);
+        assert!(initial_balance <= max_balance, E_CREDITS_BAD_BOUNDS);
+        mint_messenger_credits_batch_inner(
+            &recipients,
+            0,
+            initial_balance,
+            max_balance,
+            refill_interval_ms,
+            refill_amount,
+            cost_ecdh_init,
+            cost_store_message,
+            ctx,
+        );
+    }
+
+    public entry fun store_ecdh_init_with_credits(
+        mailbox: &mut Mailbox,
+        credits: &mut MessengerCredits,
+        recipient: address,
+        pub_key: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let cost = credits.cost_ecdh_init;
+        debit_messenger_credits(credits, now, cost);
+        store_ecdh_init_impl(mailbox, recipient, pub_key, nonce, ttl_days, ctx);
+    }
+
+    public entry fun store_encrypted_message_with_credits(
+        mailbox: &mut Mailbox,
+        credits: &mut MessengerCredits,
+        recipient: address,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let cost = credits.cost_store_message;
+        debit_messenger_credits(credits, now, cost);
+        store_encrypted_message_impl(mailbox, recipient, ciphertext, iv, tag, nonce, ttl_days, ctx);
+    }
+
+    fun store_plaintext_mailbox_emit(
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ctx: &TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        event::emit(PlaintextMessage { sender, recipient, text, nonce });
+    }
+
+    fun store_plaintext_to_mailbox_stored_impl(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let exp = now + ttl_days * 86400000;
+        let key = PlainMsgKey { recipient, sender, nonce };
+        if (dof::exists_<PlainMsgKey>(&mailbox.id, key)) {
+            let old = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key);
+            let PlaintextMailboxEntry {
+                id,
+                sender: _,
+                recipient: _,
+                text: _,
+                nonce: _,
+                created_at_ms: _,
+                expires_at_ms: _,
+            } = old;
+            object::delete(id);
+        };
+        let entry = PlaintextMailboxEntry {
+            id: object::new(ctx),
+            sender,
+            recipient,
+            text,
+            nonce,
+            created_at_ms: now,
+            expires_at_ms: exp,
+        };
+        event::emit(PlaintextMailboxStored { sender, recipient, nonce, expires_at_ms: exp });
+        dof::add<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key, entry);
+    }
+
+    /// Klartext in Mailbox speichern (purgebar) + PlaintextMessage-Event (Kompatibilität mit Fetch/UI).
+    public entry fun store_plaintext_message_stored(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_plaintext_to_mailbox_stored_impl(mailbox, recipient, text, nonce, ttl_days, ctx);
+        store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
+    }
+
+    public entry fun store_plaintext_message_with_credits(
+        _mailbox: &mut Mailbox,
+        credits: &mut MessengerCredits,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        _ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let cost = credits.cost_store_message;
+        debit_messenger_credits(credits, now, cost);
+        store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
+    }
+
+    public entry fun store_plaintext_message_with_credits_stored(
+        mailbox: &mut Mailbox,
+        credits: &mut MessengerCredits,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let cost = credits.cost_store_message;
+        debit_messenger_credits(credits, now, cost);
+        store_plaintext_to_mailbox_stored_impl(mailbox, recipient, text, nonce, ttl_days, ctx);
+        store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
+    }
+
     /// Optional: Klartext-Event emittieren (nur Event, keine Speicherung – für Test/Demo, Explorer zeigt Klartext).
     public entry fun store_plaintext_message(
         _mailbox: &mut Mailbox,
@@ -460,8 +804,7 @@ module messaging::messaging { // Named address via Move.toml
         _ttl_days: u64,
         ctx: &mut TxContext,
     ) {
-        let sender = tx_context::sender(ctx);
-        event::emit(PlaintextMessage { sender, recipient, text, nonce });
+        store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
     }
 
     /// Manual purge: sender or recipient can purge anytime.
@@ -492,6 +835,36 @@ module messaging::messaging { // Named address via Move.toml
             created_at_ms: _,
             expires_at_ms: _,
         } = m;
+        object::delete(id);
+    }
+
+    const E_PLAIN_MSG_MISSING: u64 = 43;
+
+    /// Purge gespeicherten Klartext (gleiche Rechte wie purge_message).
+    public entry fun purge_plaintext_mail_entry(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        let by = tx_context::sender(ctx);
+        let key = PlainMsgKey { recipient, sender, nonce };
+        assert!(dof::exists_<PlainMsgKey>(&mailbox.id, key), E_PLAIN_MSG_MISSING);
+        let pref = dof::borrow<PlainMsgKey, PlaintextMailboxEntry>(&mailbox.id, key);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let allowed = by == pref.sender || by == pref.recipient || now >= pref.expires_at_ms;
+        assert!(allowed, E_NOT_OWNER);
+        let p = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key);
+        let PlaintextMailboxEntry {
+            id,
+            sender: _,
+            recipient: _,
+            text: _,
+            nonce: _,
+            created_at_ms: _,
+            expires_at_ms: _,
+        } = p;
         object::delete(id);
     }
 

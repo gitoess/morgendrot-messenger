@@ -54,6 +54,8 @@ Der **Handshake** ist eine **eigene** On-Chain-TX (`buildHandshakeTransaction`).
 
 **Verbesserung der Story:** Nicht „Handshake kommt magisch nach dem Paket“, sondern: **„Ein Klick startet die definierte Kette: Profil+Env finalisieren → optional Handshake mit bekanntem Pubkey.“**
 
+**Lite-UI (`ui/index.html`, Provisioning Schritt 3):** Nach erfolgreichem **`provision-device`** kann der Boss optional **Partner-Adresse** (Standard: `MY_ADDRESS` dieser Instanz) und **Messenger-ECDH-Pubkey** (Base64, nicht der IOTA-Ed25519-Key aus `generate-mnemonic`) eintragen und **`POST /api/boss-provision-handshake`** auslösen (`sendProvisionHandshake`). Reihenfolge: immer zuerst Provisioning, dann Handshake.
+
 ### 2.4 „Einsatz-Kanal zuweisen (z. B. Sektor Nord)“
 
 **Lücke im Ist-Produkt:** Mehrere **benannte** Kanäle pro Einsatz sind **kein** fertiges Chain-Feature „pro Label eine Mailbox“ — typisch gibt es **`MAILBOX_ID`** / Streams-Anker pro Deployment; Routing über **mehrere** Kanäle erfordert **Klartext-Policy** in der App, weitere Object-IDs oder Streams-Topics (**`docs/PROVISIONING-PAYLOAD-CRITIQUE.md` § 2.4**).

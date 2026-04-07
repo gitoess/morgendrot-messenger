@@ -7,6 +7,8 @@ import fs from 'fs';
 import path from 'path';
 import { tmpdir } from 'os';
 
+import '../src/install-webcrypto-node.js';
+
 let passed = 0;
 let failed = 0;
 
@@ -50,6 +52,31 @@ async function testCryptoLayer() {
     }
 }
 
+// --- Mesh v2 wire (shared: inner blob + emergency binary) ---
+async function testMeshPeerWireRoundtrip() {
+    console.log('\n--- mesh-peer-wire (shared) ---');
+    try {
+        const { generateKeyPair } = await import('../src/crypto-layer.js');
+        const {
+            buildMeshPeerInnerBlob,
+            packMeshEmergencyV2Wire,
+            decryptMeshEmergencyV2Wire,
+        } = await import('../src/shared/mesh-peer-wire.js');
+
+        const alice = await generateKeyPair(true);
+        const bob = await generateKeyPair(true);
+        const msg = 'mesh roundtrip test';
+        const inner = await buildMeshPeerInnerBlob(msg, bob.pubRaw, alice.privateKey);
+        const packed = await packMeshEmergencyV2Wire('0x' + 'a'.repeat(64), 0x12345678, inner);
+        assert(packed.ok === true && packed.wire.length > 0, 'pack ok');
+        const dec = await decryptMeshEmergencyV2Wire(packed.wire, alice.pubRaw, bob.privateKey);
+        assert(dec === msg, 'decrypt roundtrip');
+        ok('inner blob → emergency v2 wire → decrypt');
+    } catch (e) {
+        fail('mesh-peer-wire', e);
+    }
+}
+
 // --- Vault Local (encrypt/decrypt UTF-8 payload) ---
 async function testVaultLocal() {
     console.log('\n--- vault-local ---');
@@ -75,6 +102,18 @@ async function testVaultLocal() {
             /decrypt|Authentication|Tag|ungültig|invalid|OperationError|operation failed/i
         );
         ok('decryptPayloadToUtf8 rejects wrong password');
+
+        const { sanitizePersonalSecrets } = await import('../src/vault-local.js');
+        const bad = sanitizePersonalSecrets(null);
+        assert(Array.isArray(bad) && bad.length === 0, 'sanitize null → []');
+        const two = sanitizePersonalSecrets([
+            { id: 'a', title: '  T1  ', username: 'u', secret: 's', note: 'n' },
+            { title: 'x'.repeat(400), secret: 'only-title-truncated' },
+        ]);
+        assert(two.length === 2, 'two entries');
+        assert(two[0]!.title === 'T1' && two[0]!.username === 'u', 'trim fields');
+        assert(two[1]!.title.length <= 256, 'title capped');
+        ok('sanitizePersonalSecrets');
     } catch (e) {
         fail('vault-local', e);
     }
@@ -211,7 +250,17 @@ async function testConfigDisplay() {
         assert(Array.isArray(rows) && rows.length > 0, 'has rows');
         const key = rows.find((r: { key: string }) => r.key === 'REMOTE_SIGNER_TOKEN');
         assert(key && (key.value === '(leer)' || key.value === '***'), 'token masked');
-        const newKeys = ['ENABLE_HEARTBEAT', 'ENABLE_CHAIN_ANCHOR', 'LOG_MAX_FILES', 'PAYMENT_TRIGGER_REQUIRE_MEMO'];
+        const newKeys = [
+            'ENABLE_HEARTBEAT',
+            'ENABLE_CHAIN_ANCHOR',
+            'LOG_MAX_FILES',
+            'PAYMENT_TRIGGER_REQUIRE_MEMO',
+            'MESSENGER_AUTO_SPONSOR',
+            'MESSENGER_LICENSE_NFT_OBJECT_ID',
+            'MESSENGER_CREDITS_OBJECT_ID',
+            'VERIFIED_IOTA_NAME_PACKAGE_IDS',
+            'MESSENGER_GAS_STATE_FILE',
+        ];
         for (const k of newKeys) {
             assert(rows.some((r: { key: string }) => r.key === k), `getConfigDisplay has ${k}`);
         }
@@ -221,13 +270,84 @@ async function testConfigDisplay() {
     }
 }
 
+// --- Messenger-Export-.env (ohne Arbeiter-Felder) ---
+async function testMessengerExportEnv() {
+    console.log('\n--- config (buildMessengerExportEnv) ---');
+    const { buildMessengerExportEnv, buildMessengerExportJson } = await import('../src/config.js');
+
+    try {
+        const addr = '0x' + 'a'.repeat(64);
+        const boss = '0x' + 'b'.repeat(64);
+        const pkg = '0x' + 'c'.repeat(64);
+        const env = buildMessengerExportEnv({
+            deviceName: 'Unit-Test',
+            address: addr,
+            packageId: pkg,
+            rpcUrl: 'https://api.testnet.iota.cafe',
+            bossAddress: boss,
+            edition: 'sales',
+            signer: 'sdk',
+            roleId: 14,
+        });
+        assert(env.includes('ROLE=messenger'), 'ROLE=messenger');
+        assert(env.includes('MESSENGER_EDITION=sales'), 'sales edition');
+        assert(env.includes('UI_VARIANT=messenger'), 'UI messenger');
+        assert(!env.includes('ENABLE_LISTENER=true'), 'kein Listener-Default');
+        const cred = '0x' + 'd'.repeat(64);
+        const envCred = buildMessengerExportEnv({
+            deviceName: 'C',
+            address: addr,
+            packageId: pkg,
+            rpcUrl: 'https://api.testnet.iota.cafe',
+            bossAddress: boss,
+            edition: 'standalone',
+            signer: 'sdk',
+            creditsObjectId: cred,
+        });
+        assert(envCred.includes('MESSENGER_CREDITS_OBJECT_ID=' + cred.toLowerCase()), 'credits in env');
+        const j = buildMessengerExportJson({
+            address: addr,
+            packageId: pkg,
+            rpcUrl: 'https://api.testnet.iota.cafe',
+            bossAddress: boss,
+            edition: 'standalone',
+            signer: 'cli',
+        });
+        assert(j.kind === 'messenger' && j.messengerEdition === 'standalone', 'json kind');
+        const jCred = buildMessengerExportJson({
+            address: addr,
+            packageId: pkg,
+            rpcUrl: 'https://api.testnet.iota.cafe',
+            bossAddress: boss,
+            edition: 'standalone',
+            signer: 'cli',
+            creditsObjectId: cred,
+        });
+        assert((jCred as { messengerCreditsObjectId?: string }).messengerCreditsObjectId === cred.toLowerCase(), 'credits in json');
+        ok('buildMessengerExportEnv / buildMessengerExportJson');
+    } catch (e) {
+        fail('buildMessengerExportEnv', e);
+    }
+}
+
 // --- Config setEnvKey blocklist (OPEN_COMMAND etc. nicht per API setzbar) ---
 async function testSetEnvKeyBlocklist() {
     console.log('\n--- config (setEnvKey blocklist) ---');
     const { setEnvKey } = await import('../src/config.js');
 
     try {
-        const blocked = ['OPEN_COMMAND', 'OPEN_URL', 'REMOTE_SIGNER_URL', 'REMOTE_SIGNER_TOKEN', 'WALLET_PASSWORD'];
+        const blocked = [
+            'OPEN_COMMAND',
+            'OPEN_URL',
+            'REMOTE_SIGNER_URL',
+            'REMOTE_SIGNER_TOKEN',
+            'WALLET_PASSWORD',
+            'STRIPE_SECRET_KEY',
+            'STRIPE_WEBHOOK_SECRET',
+            'SHOP_CLAIM_NOTIFY_SECRET',
+            'SHOP_MINT_BOSS_WALLET_PASSWORD',
+            'BOSS_WALLET_PASSWORD',
+        ];
         for (const k of blocked) {
             const r = setEnvKey(k, 'malicious');
             assert(!r.ok && r.error && r.error.includes('nicht per API'), `setEnvKey blocks ${k}`);
@@ -293,6 +413,86 @@ async function testChainAccessAmounts() {
     }
 }
 
+// --- Messenger-Gas-Milestone (State-Datei über MESSENGER_GAS_STATE_FILE, ohne chdir) ---
+async function testMessengerGasMilestone() {
+    console.log('\n--- messenger-gas-milestone ---');
+    const dir = path.join(tmpdir(), 'morgendrot-gas-' + Date.now());
+    const stateFile = path.join(dir, 'gas-state.json');
+    const prevGas = process.env.MESSENGER_GAS_STATE_FILE;
+    try {
+        fs.mkdirSync(dir, { recursive: true });
+        process.env.MESSENGER_GAS_STATE_FILE = stateFile;
+        const { getSelfPaidMessengerTxCount, recordSelfPaidMessengerTxSuccess } = await import('../src/messenger-gas-milestone.js');
+        const addr = '0x' + 'a'.repeat(64);
+        const addrUpper = '0x' + 'A'.repeat(64);
+        assert(getSelfPaidMessengerTxCount(addr) === 0, 'initial count 0');
+        recordSelfPaidMessengerTxSuccess(addr);
+        assert(getSelfPaidMessengerTxCount(addr) === 1, 'after one success');
+        recordSelfPaidMessengerTxSuccess(addrUpper);
+        assert(getSelfPaidMessengerTxCount(addr) === 2, 'same address different hex case => one counter');
+        assert(fs.existsSync(stateFile), 'custom state file written');
+        ok('messenger-gas-milestone count + address normalization');
+    } catch (e) {
+        fail('messenger-gas-milestone', e);
+    } finally {
+        if (prevGas !== undefined) process.env.MESSENGER_GAS_STATE_FILE = prevGas;
+        else delete process.env.MESSENGER_GAS_STATE_FILE;
+        try {
+            fs.unlinkSync(stateFile);
+            fs.rmdirSync(dir);
+        } catch {
+            /* ignore */
+        }
+    }
+}
+
+// --- IOTA Names Lookup (JSON-RPC-Aufbau, Mock-Fetch) ---
+async function testIotaNamesLookup() {
+    console.log('\n--- iota-names-lookup ---');
+    const { iotaNamesLookup } = await import('../src/iota-names-lookup.js');
+    try {
+        let called = false;
+        const mockFetch = async (_url: string, init?: RequestInit): Promise<Response> => {
+            called = true;
+            const body = JSON.parse(String(init?.body ?? '{}')) as { method?: string; params?: { name?: string } };
+            assert(body.method === 'iotax_iotaNamesLookup', 'JSON-RPC method');
+            assert(body.params?.name === 'foo.iota', 'params.name');
+            return new Response(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    result: { nftId: '0x' + 'f'.repeat(64), targetAddress: '0x' + 'e'.repeat(64) },
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+            );
+        };
+        const r = await iotaNamesLookup('https://rpc.example/', 'foo.iota', mockFetch as typeof fetch);
+        assert(called, 'fetch invoked');
+        assert(r.nftId === '0x' + 'f'.repeat(64) && r.targetAddress === '0x' + 'e'.repeat(64), 'parsed result');
+
+        await assert.rejects(
+            () =>
+                iotaNamesLookup(
+                    'https://rpc.example/',
+                    'x',
+                    async () =>
+                        new Response(
+                            JSON.stringify({ jsonrpc: '2.0', id: 1, error: { code: -1, message: 'not found' } }),
+                            { status: 200, headers: { 'Content-Type': 'application/json' } }
+                        )
+                ),
+            /not found/
+        );
+
+        const { parseVerifiedIotaNamePackageIds } = await import('../src/config.js');
+        const two = parseVerifiedIotaNamePackageIds(`0x${'a'.repeat(64)}, 0x${'b'.repeat(64)}`);
+        assert(two.length === 2 && two[0]!.startsWith('0x'), 'parse two package ids');
+        ok('iotaNamesLookup + parseVerifiedIotaNamePackageIds');
+    } catch (e) {
+        fail('iota-names-lookup', e);
+    }
+}
+
 // --- Chain-Anchor: hashState (via export or indirect) ---
 async function testChainAnchor() {
     console.log('\n--- chain-anchor ---');
@@ -334,6 +534,114 @@ async function testReplayStateFile() {
     }
 }
 
+async function testVaultImagePipeline() {
+    console.log('\n--- vault-image-pipeline ---');
+    try {
+        const sharp = (await import('sharp')).default;
+        const { VaultImagePipeline, VAULT_IMAGE_MAGIC } = await import('../src/vault-image-pipeline.js');
+        const png1x1 = await sharp({
+            create: { width: 4, height: 4, channels: 3, background: { r: 200, g: 100, b: 50 } },
+        })
+            .png()
+            .toBuffer();
+        const { plaintext, lumaWebpBytes, chromaPngBytes, originalSha256 } =
+            await VaultImagePipeline.encodeToPlaintextBlob(png1x1);
+        assert(plaintext.subarray(0, 4).equals(VAULT_IMAGE_MAGIC), 'magic');
+        assert(lumaWebpBytes > 0 && chromaPngBytes > 0, 'non-empty layers');
+        assert(originalSha256.length === 32, 'sha256');
+        const parsed = VaultImagePipeline.parsePlaintextHeader(plaintext);
+        assert(parsed.luma.length === lumaWebpBytes, 'parse luma len');
+        assert(parsed.chroma.length === chromaPngBytes, 'parse chroma len');
+        assert(parsed.originalSha256.equals(originalSha256), 'parse hash');
+        const { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } = await import('../src/messenger-media-limits.js');
+        const { MESSAGING_MAX_PLAINTEXT_UTF8_BYTES } = await import('../src/chain-access.js');
+        const chainFit = await VaultImagePipeline.encodeToPlaintextBlobFitChain(
+            png1x1,
+            MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES
+        );
+        assert(chainFit.plaintext.length <= MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES, 'fitChain blob');
+        const w = '[[MORG_COMPACT_IMG_V1:' + chainFit.plaintext.toString('base64') + ']]';
+        assert(Buffer.byteLength(w, 'utf8') <= MESSAGING_MAX_PLAINTEXT_UTF8_BYTES, 'fitChain wire under messenger UTF-8 limit');
+        ok('encode + parsePlaintextHeader roundtrip');
+    } catch (e) {
+        fail('vault-image-pipeline', e);
+    }
+}
+
+async function testPackageIdCompareFrontend() {
+    console.log('\n--- package-id-compare (frontend) ---');
+    try {
+        const { shouldShowPackageIdMismatchBanner, normalizePackageIdHex } = await import(
+            '../frontend/frontend/lib/package-id-compare.ts'
+        );
+        const idA = '0x' + 'a'.repeat(64);
+        const idB = '0x' + 'b'.repeat(64);
+        assert(!shouldShowPackageIdMismatchBanner('', idA, false), 'empty local → no banner');
+        assert(!shouldShowPackageIdMismatchBanner('  ', idA, false), 'whitespace local → no banner');
+        assert(!shouldShowPackageIdMismatchBanner(idA, idA, false), 'match → no banner');
+        assert(shouldShowPackageIdMismatchBanner(idA, idB, false), 'diff → banner');
+        assert(!shouldShowPackageIdMismatchBanner(idA, idB, true), 'offline → no banner');
+        assert(normalizePackageIdHex('bogus') === null, 'invalid → null');
+        assert(normalizePackageIdHex(idA.toUpperCase()) === idA, 'normalize lowercases');
+        ok('shouldShowPackageIdMismatchBanner + normalizePackageIdHex');
+    } catch (e) {
+        fail('package-id-compare', e);
+    }
+}
+
+async function testShopCatalog() {
+    console.log('\n--- shop catalog ---');
+    try {
+        const { getShopProductById, getPublicShopProducts, resolveStripePriceId } = await import('../src/api/shop/catalog.js');
+        const p = getShopProductById('messenger-messages-500');
+        assert(p && p.id === 'messenger-messages-500', 'product by id');
+        const pub = getPublicShopProducts();
+        assert(pub.length >= 1 && pub[0].id === 'messenger-messages-500', 'public list');
+        const price = resolveStripePriceId(p!);
+        assert(typeof price === 'string', 'price string');
+        ok('getShopProductById + getPublicShopProducts');
+    } catch (e) {
+        fail('shop catalog', e);
+    }
+}
+
+async function testChatWaldConnection() {
+    console.log('\n--- chat-wald-connection (frontend) ---');
+    try {
+        const { computeWaldConnectionTier } = await import('../frontend/frontend/lib/chat-wald-connection.ts');
+        assert(computeWaldConnectionTier(false, false) === 'green', 'basis ok');
+        assert(computeWaldConnectionTier(true, true) === 'blue', 'basis weg, mesh da');
+        assert(computeWaldConnectionTier(true, false) === 'red', 'alles weg');
+        ok('computeWaldConnectionTier');
+    } catch (e) {
+        fail('chat-wald-connection', e);
+    }
+}
+
+async function testChatForwardText() {
+    console.log('\n--- chat-forward-text (frontend) ---');
+    try {
+        const { buildForwardComposerPayload } = await import('../frontend/frontend/lib/chat-forward-text.ts');
+        const base = {
+            id: '1',
+            from: '0x' + 'a'.repeat(64),
+            content: 'Hallo Welt',
+            timestamp: 1_700_000_000_000,
+            recipient: '0x' + 'b'.repeat(64),
+        };
+        const withSender = buildForwardComposerPayload(base, true);
+        assert(withSender.includes('Von ' + base.from), 'header has from');
+        assert(withSender.includes('An ' + base.recipient), 'header has recipient');
+        assert(withSender.includes('Hallo Welt'), 'body text');
+        const noSender = buildForwardComposerPayload(base, false);
+        assert(!noSender.includes('Von '), 'no from when omitted');
+        assert(noSender.includes('Hallo Welt'), 'body without sender');
+        ok('buildForwardComposerPayload');
+    } catch (e) {
+        fail('chat-forward-text', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -347,7 +655,13 @@ async function main() {
     process.env.MONITOR_STATE_FILE = monitorStatePath;
 
     await testCryptoLayer();
+    await testMeshPeerWireRoundtrip();
+    await testPackageIdCompareFrontend();
+    await testShopCatalog();
+    await testChatWaldConnection();
+    await testChatForwardText();
     await testVaultLocal();
+    await testVaultImagePipeline();
     await testReplayState();
     await testUtils();
     await testParseEnvText();
@@ -355,7 +669,10 @@ async function main() {
     await testChainAccessValidation();
     await testChainAccessAmounts();
     await testConfigDisplay();
+    await testMessengerExportEnv();
     await testSetEnvKeyBlocklist();
+    await testMessengerGasMilestone();
+    await testIotaNamesLookup();
     await testReplayStateFile();
     await testMonitoringState(monitorStatePath);
     await testChainAnchor();

@@ -37,7 +37,7 @@ Zusätzlich in der UI (nicht in CONFIG-REFERENCE-Tabelle, aber in Doku/Projekten
 | GET /api/current-ids | ✅ loadConfigCache, Aktuelle IDs |
 | GET/POST /api/package-id-history, /api/package-id-hints | ✅ Package-History, Hinweise |
 | GET/POST /api/config | ✅ .env-Kachel, Config-Cache |
-| GET /api/doc | ✅ Dokumentations-Modal |
+| GET /api/doc | ✅ Boss-Ansicht: eingebettete Hilfe (Modal), `name=*.md` aus `docs/` — u. a. `BOSS-ORIENTIERUNG.md`, `API-INITIAL-PROFILE.md`, `API-EINSATZ-ROLE-TEMPLATES.md` |
 | GET /api/connect-addresses | ✅ getConnectAddresses (TREE) |
 | GET /api/chain-reachable | ✅ isChainReachable (TREE) |
 | GET /api/help | ✅ über /help (api/command) |
@@ -54,7 +54,7 @@ Zusätzlich in der UI (nicht in CONFIG-REFERENCE-Tabelle, aber in Doku/Projekten
 | POST /api/generate-address | ✅ Boss/Adresse erzeugen |
 | POST /api/deploy-package | ✅ Deploy-Button (Package-ID) |
 | POST /api/start-boss-signer | ✅ Boss-Signer starten |
-| POST /api/boss-provision-handshake | ✅ Formular Handshake senden |
+| POST /api/boss-provision-handshake | ✅ Formular Handshake senden (Lite-UI: **Steuerung → Provisioning Schritt 3**, nach `provision-device`) |
 | POST /api/command | ✅ Alle „Ausführen“-Befehle (siehe unten) |
 
 ---

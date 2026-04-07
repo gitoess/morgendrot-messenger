@@ -10,6 +10,14 @@
     <style>
     [x-cloak] { display: none !important; }
     .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
+    .boss-doc-html h1 { font-size: 1.25rem; font-weight: 700; margin: 0.75rem 0 0.35rem; color: #e2e8f0; }
+    .boss-doc-html h2 { font-size: 1.05rem; font-weight: 600; margin: 0.65rem 0 0.3rem; color: #cbd5e1; }
+    .boss-doc-html h3 { font-size: 0.95rem; font-weight: 600; margin: 0.5rem 0 0.25rem; color: #94a3b8; }
+    .boss-doc-html code { font-family: ui-monospace, monospace; font-size: 0.85em; background: rgba(15,23,42,0.8); padding: 0.1em 0.35em; border-radius: 4px; }
+    .boss-doc-html pre { margin: 0.5rem 0; padding: 0.75rem; background: rgba(15,23,42,0.9); border-radius: 8px; overflow-x: auto; font-size: 0.75rem; }
+    .boss-doc-html pre code { background: transparent; padding: 0; }
+    .boss-doc-html a { color: #93c5fd; text-decoration: underline; }
+    .boss-doc-html hr { border: 0; border-top: 1px solid rgba(71,85,105,0.6); margin: 0.75rem 0; }
     @media print {
       body * { visibility: hidden; }
       .asset-twin-print-area, .asset-twin-print-area * { visibility: visible; }
@@ -1508,6 +1516,16 @@
           (Kacheln <strong class="text-white">Nachrichten</strong> und <strong class="text-white">Steuerung</strong>).
         </p>
       </div>
+      <div class="glass rounded-xl p-3 border border-indigo-500/20 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-xs text-slate-400 max-w-xl">
+          <strong class="text-indigo-300">Orientierung:</strong> Welche API wofür, Vorlagen vs. <span class="font-mono">metadata</span>, typische Fehler — als eingebettete Hilfe (Markdown aus <span class="font-mono">docs/</span>).
+        </p>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" @click="openBossDoc('BOSS-ORIENTIERUNG.md')" class="rounded-lg bg-indigo-700 px-3 py-2 text-sm text-white hover:bg-indigo-600">Überblick &amp; Fähigkeiten</button>
+          <button type="button" @click="openBossDoc('API-INITIAL-PROFILE.md')" class="rounded-lg border border-indigo-500/50 px-3 py-2 text-sm text-indigo-200 hover:bg-indigo-950/50">API initialProfile</button>
+          <button type="button" @click="openBossDoc('API-EINSATZ-ROLE-TEMPLATES.md')" class="rounded-lg border border-indigo-500/50 px-3 py-2 text-sm text-indigo-200 hover:bg-indigo-950/50">Einsatz-Vorlagen</button>
+        </div>
+      </div>
       <!-- 1. Geräte-Verwaltung (Boss & Kommandant: Senden + Überwachen) -->
       <div class="glass rounded-xl p-4">
         <h4 class="mb-3 font-semibold text-white">Registrierte Geräte</h4>
@@ -1970,6 +1988,27 @@
             <button type="button" @click="applyInitialProfileToBossContacts()" class="rounded-lg bg-cyan-700 px-3 py-2 text-sm text-white hover:bg-cyan-600">Kontakte übernehmen</button>
           </div>
 
+          <div x-show="boss.provResult && boss.provAddress && boss.provRole !== 'user'" class="rounded-lg border border-fuchsia-700/40 bg-fuchsia-950/20 p-3 space-y-2">
+            <p class="text-sm font-medium text-fuchsia-200">Handshake (optional, nach Provisioning)</p>
+            <p class="text-[11px] text-slate-400 leading-snug">
+              Sendet <span class="font-mono text-slate-300">EcdhInit</span> von der <strong>Geräte-Adresse</strong> an den <strong>Partner</strong> — gleiche API wie
+              <span class="font-mono">npx tsx scripts/boss-provision-handshake.ts</span>.
+              Reihenfolge: zuerst <strong>Provisioning</strong> (Schritt 2→3), dann hier <strong>Pubkey</strong> (Base64, ECDH P-256 „raw“ wie im Messenger) eintragen und senden.
+              Der öffentliche IOTA-Key aus „Keypair generieren“ ist das <em>nicht</em> — der Messenger-Key kommt vom Gerät (z. B. nach erstem Start / Vault).
+            </p>
+            <div class="flex flex-col gap-1 max-w-2xl">
+              <label class="text-[11px] text-slate-500">Partner-Adresse (0x…64)</label>
+              <input type="text" x-model="boss.provHandshakePartner" placeholder="z. B. Boss-Messenger — Standard: diese Instanz" class="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-xs text-white font-mono w-full" autocomplete="off" />
+              <label class="text-[11px] text-slate-500 mt-1">Gerät ECDH-Pubkey (Base64)</label>
+              <textarea x-model="boss.provHandshakePubkey" rows="2" placeholder="Base64 (mind. 32 Bytes nach Dekodierung)" class="rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-xs font-mono text-slate-200 w-full"></textarea>
+            </div>
+            <div x-show="boss.provHandshakeFeedback" class="rounded border px-2 py-1.5 text-xs" :class="boss.provHandshakeIsError ? 'border-amber-600/50 bg-amber-950/30 text-amber-200' : 'border-emerald-600/50 bg-emerald-950/30 text-emerald-100'" x-text="boss.provHandshakeFeedback"></div>
+            <div class="flex flex-wrap gap-2 items-center">
+              <button type="button" @click="sendProvisionHandshake()" :disabled="boss.provHandshakeLoading || !boss.provAddress" class="rounded-lg bg-fuchsia-700 px-3 py-2 text-sm text-white hover:bg-fuchsia-600 disabled:opacity-50" x-text="boss.provHandshakeLoading ? 'Sende…' : 'Handshake senden (Boss-Wallet)'"></button>
+              <span class="text-[10px] text-slate-500">Wallet muss für <span class="font-mono" x-text="boss.provAddress || '0x…'"></span> signieren können (z. B. CLI mit importiertem Geräte-Key oder passender Remote-Signer-Konfiguration).</span>
+            </div>
+          </div>
+
           <div x-show="boss.provAddress" class="rounded-lg bg-slate-800/60 p-3 space-y-1">
             <p class="text-xs text-slate-400">Generierte Adresse: <span class="font-mono text-emerald-400" x-text="boss.provAddress"></span></p>
             <p x-show="boss.provSecretKey" class="text-xs text-amber-400">Secret Key: <span class="font-mono text-amber-300 break-all" x-text="boss.provSecretKey"></span></p>
@@ -2030,7 +2069,7 @@
           <div id="boss-qr-canvas" class="mt-3"></div>
 
           <div class="flex gap-2 mt-2">
-            <button type="button" @click="boss.provStep = 2; boss.provResult = null; boss.provExportFeedback = ''; boss.provExportIsError = false" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
+            <button type="button" @click="boss.provStep = 2; boss.provResult = null; boss.provExportFeedback = ''; boss.provExportIsError = false; boss.provHandshakeFeedback = ''; boss.provHandshakeIsError = false" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
             <button @click="resetProvision()" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Neues Gerät</button>
           </div>
         </div>
@@ -2473,6 +2512,27 @@
     </div>
   </main>
 
+  <!-- Boss: eingebettete Doku (GET /api/doc?name=…) -->
+  <div
+    x-show="bossDocModalOpen"
+    x-cloak
+    class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/70"
+    @keydown.escape.window="bossDocModalOpen = false"
+  >
+    <div class="absolute inset-0" @click="bossDocModalOpen = false" aria-hidden="true"></div>
+    <div class="relative max-w-4xl w-full max-h-[90vh] flex flex-col rounded-xl border border-slate-600 bg-slate-900 shadow-xl">
+      <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-slate-700">
+        <h3 class="text-sm font-semibold text-white truncate" x-text="bossDocTitle || 'Dokumentation'"></h3>
+        <button type="button" @click="bossDocModalOpen = false" class="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-white hover:bg-slate-600">Schließen</button>
+      </div>
+      <div class="px-4 py-3 overflow-y-auto text-sm text-slate-200 max-w-none flex-1 min-h-0">
+        <p x-show="bossDocLoading" class="text-slate-400">Lade …</p>
+        <p x-show="bossDocError && !bossDocLoading" class="text-amber-300" x-text="bossDocError"></p>
+        <div x-show="!bossDocLoading && bossDocHtml" class="boss-doc-html text-xs leading-relaxed" x-html="bossDocHtml"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     function morgendrotApp() {
       const _api = () => window.API_BASE || '';
@@ -2489,6 +2549,11 @@
         unlocking: false,
         helpOpen: false,
         helpText: '',
+        bossDocModalOpen: false,
+        bossDocHtml: '',
+        bossDocTitle: '',
+        bossDocLoading: false,
+        bossDocError: '',
         idsPopupOpen: false,
         copyableIds: [],
         idsPopupLoading: false,
@@ -2558,6 +2623,11 @@
           provLoading: false,
           provExportFeedback: '',
           provExportIsError: false,
+          provHandshakePartner: '',
+          provHandshakePubkey: '',
+          provHandshakeLoading: false,
+          provHandshakeFeedback: '',
+          provHandshakeIsError: false,
           einsatzTemplates: [],
           provEinsatzTemplateId: '',
           provInitialProfileJson: '',
@@ -3024,6 +3094,31 @@
           if (active === 'asset-twin') this.loadAssets();
           if (!active) this.loadPackageSelectorList();
           if (active === 'monitor' || active === 'streams') this.loadAnchorChannelList();
+        },
+        async openBossDoc(name) {
+          const safe = String(name || '').trim();
+          if (!/^[a-zA-Z0-9_.-]+\.md$/.test(safe)) {
+            this.bossDocError = 'Ungültiger Dateiname.';
+            this.bossDocModalOpen = true;
+            return;
+          }
+          this.bossDocModalOpen = true;
+          this.bossDocTitle = safe;
+          this.bossDocLoading = true;
+          this.bossDocError = '';
+          this.bossDocHtml = '';
+          try {
+            const r = await fetch(_api() + '/api/doc?name=' + encodeURIComponent(safe));
+            const d = await r.json().catch(() => ({}));
+            if (d.ok && d.html) {
+              this.bossDocHtml = d.html;
+            } else {
+              this.bossDocError = d.error || ('HTTP ' + r.status);
+            }
+          } catch (e) {
+            this.bossDocError = String(e && e.message ? e.message : e);
+          }
+          this.bossDocLoading = false;
         },
         assetExplorerLink(objectId) {
           const base = 'https://explorer.iota.org/object';
@@ -4756,6 +4851,9 @@
             if (d2.ok) {
               this.boss.provResult = d2;
               this.boss.provStep = 3;
+              this.boss.provHandshakeFeedback = '';
+              this.boss.provHandshakeIsError = false;
+              this.boss.provHandshakePartner = (this.currentIds.myAddress || '').trim();
               if (this.boss.provAddress) {
                 const existing = this.boss.devices.find(d => d.address === this.boss.provAddress);
                 if (!existing) {
@@ -4783,6 +4881,65 @@
           if (!t) return;
           this.boss.provRole = t.chainRole;
           this.boss.provRoleId = t.roleId;
+        },
+        async sendProvisionHandshake() {
+          const address = (this.boss.provAddress || '').trim();
+          let partner = (this.boss.provHandshakePartner || '').trim();
+          const pubkey = (this.boss.provHandshakePubkey || '').trim().replace(/\s+/g, '');
+          if (!address || !/^0x[a-fA-F0-9]{64}$/i.test(address)) {
+            this.boss.provHandshakeFeedback = 'Geräte-Adresse fehlt oder ungültig (Provisioning zuerst abschließen).';
+            this.boss.provHandshakeIsError = true;
+            return;
+          }
+          if (!partner) partner = (this.currentIds.myAddress || '').trim();
+          if (!partner || !/^0x[a-fA-F0-9]{64}$/i.test(partner)) {
+            this.boss.provHandshakeFeedback = 'Partner-Adresse: 0x + 64 Hex erforderlich.';
+            this.boss.provHandshakeIsError = true;
+            return;
+          }
+          if (!pubkey) {
+            this.boss.provHandshakeFeedback = 'Pubkey (Base64) fehlt.';
+            this.boss.provHandshakeIsError = true;
+            return;
+          }
+          let rawLen = 0;
+          try {
+            const bin = atob(pubkey);
+            rawLen = bin.length;
+          } catch {
+            this.boss.provHandshakeFeedback = 'Pubkey: kein gültiges Base64.';
+            this.boss.provHandshakeIsError = true;
+            return;
+          }
+          if (rawLen < 32) {
+            this.boss.provHandshakeFeedback = 'Pubkey: nach Base64-Dekodierung mindestens 32 Bytes (Messenger ECDH „raw“).';
+            this.boss.provHandshakeIsError = true;
+            return;
+          }
+          this.boss.provHandshakeLoading = true;
+          this.boss.provHandshakeFeedback = '';
+          this.boss.provHandshakeIsError = false;
+          try {
+            const r = await fetch(_api() + '/api/boss-provision-handshake', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ address, partner, pubkey }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (d.ok) {
+              this.boss.provHandshakeFeedback = (d.digest ? 'Digest: ' + d.digest : 'Handshake gesendet.') + (d.message ? ' ' + d.message : '');
+              this.boss.provHandshakeIsError = false;
+              this.cmdResult = 'Handshake: OK' + (d.digest ? ' — ' + d.digest : '');
+            } else {
+              this.boss.provHandshakeFeedback = d.error || 'Handshake fehlgeschlagen';
+              this.boss.provHandshakeIsError = true;
+              this.cmdResult = this.boss.provHandshakeFeedback;
+            }
+          } catch (e) {
+            this.boss.provHandshakeFeedback = String(e && e.message ? e.message : e);
+            this.boss.provHandshakeIsError = true;
+          }
+          this.boss.provHandshakeLoading = false;
         },
         async applyInitialProfileToBossContacts() {
           const ip = this.boss.provResult && this.boss.provResult.initialProfile;
@@ -4966,6 +5123,11 @@
           this.boss.provStreamsAnchorId = '';
           this.boss.provExportFeedback = '';
           this.boss.provExportIsError = false;
+          this.boss.provHandshakePartner = '';
+          this.boss.provHandshakePubkey = '';
+          this.boss.provHandshakeLoading = false;
+          this.boss.provHandshakeFeedback = '';
+          this.boss.provHandshakeIsError = false;
           const qr = document.getElementById('boss-qr-canvas');
           if (qr) qr.innerHTML = '';
         },

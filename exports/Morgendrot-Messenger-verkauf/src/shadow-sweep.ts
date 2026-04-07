@@ -18,8 +18,6 @@ import { signAndExecuteWithSigner } from './chain-access.js';
 import { countMnemonicWords } from './messenger-nest/sdk-signer-import.js';
 
 const COIN_TYPE_MARKER = '::coin::Coin';
-/** Reserve in MIST für Storage + Computation (konservativ; Rest bleibt ggf. als Staub auf Schatten). */
-const GAS_RESERVE_MIST = 55_000_000n;
 
 type CoinRow = { objectId: string; version: string | number; digest: string; balance: bigint };
 
@@ -129,15 +127,16 @@ export async function executeShadowSweep(client: IotaClient, shadowMnemonic: str
     }
 
     coins.sort((a, b) => (a.balance > b.balance ? -1 : a.balance < b.balance ? 1 : 0));
+    const gasReserve = CFG.SHADOW_SWEEP_GAS_RESERVE_MIST > 0n ? CFG.SHADOW_SWEEP_GAS_RESERVE_MIST : 55_000_000n;
     const totalBal = coins.reduce((s, c) => s + c.balance, 0n);
-    if (totalBal <= GAS_RESERVE_MIST) {
+    if (totalBal <= gasReserve) {
         return {
             ok: false,
-            error: `Guthaben zu gering für Sweep (gesamt ${totalBal} MIST, Reserve ${GAS_RESERVE_MIST} MIST).`,
+            error: `Guthaben zu gering für Sweep (gesamt ${totalBal} MIST, Reserve ${gasReserve} MIST).`,
         };
     }
 
-    const sendAmount = totalBal - GAS_RESERVE_MIST;
+    const sendAmount = totalBal - gasReserve;
     const gasCoin = coins[0];
     const mergeSources = coins.slice(1);
 

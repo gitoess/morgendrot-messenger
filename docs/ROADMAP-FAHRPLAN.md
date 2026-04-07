@@ -313,6 +313,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Logs** | **`logs/`** bei **`ENABLE_FILE_LOGGING`** (Winston, Rotation); operative Ereignisse auch in Konsole; keine Claim-Tokens / Mnemonics in Support-Logs. |
 | **Shop/Voucher-State** | `.morgendrot-shop-*.json`, `.morgendrot-voucher-claim-state.json` — nur auf Fulfillment-Host, **Backup** bei Produktion. |
 | **Noch offen (Produkt)** | Voucher-Claim **Stufe 2** (Move an `/api/voucher-claim`); optionale **dedizierte** Admin-Route „Credits schenken“ (aktuell: Provision-Flow); **Mehrinstanz**: Shop-State-Datei → DB bei horizontaler Skalierung. |
+| **PWA-Handbuch (`frontend/public/handbook/`)** | Quelle: **`docs/BOSS-ORIENTIERUNG.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**. Nach **jeder inhaltlichen Änderung** dieser Dateien: im Repo-Root **`npm run sync:handbook`** ausführen (oder **`npm run build`** im Ordner **`frontend/`** — **`prebuild`** sync’t automatisch). Ohne Sync ist die PWA unter **`/handbook`** veraltet. |
 
 ### H.3f Vision: Provisioning-Payload & „Identity-Credits“ (Doku, keine Phase-B-Pflicht)
 
@@ -327,6 +328,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Offline-Boss / `initialProfile`** | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** — Warteschlange **nicht** mit `mintMessengerCreditsBatchForRecipients` verwechseln; Profil-Payload vs. Kontakt-API / Lite-UI vs. Next-PWA. |
 | **Einsatzleitung UI (Rollen-Manager, Provisioning-Maske)** | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** — Medic/Scout vs. Chain-`ROLE`; Handshake braucht Pubkey; Kanal „Sektor Nord“ = Profil-Tag bis Mehrkanal-Modell klar ist. |
 | **Metadata / Zukunftsfelder (Präsenz, SOS, Waypoints, …)** | **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** — welche Idee gehört zu **Profil** vs. **Laufzeit** vs. **Nachrichtenprotokoll**; **`metadata`** + **`validUntil`** in API (v1). |
+| **„Heim-Heltec“ ohne Pi / ohne App (nur Relay)** | **`docs/HEIM-HELTEC-GATEWAY-NARRATIVE-CRITIQUE.md`** — LoRa→WLAN plausibel; **kein** beliebiger POST „an Shimmer“ = Chain; Settlement = **Morgendrot/Bridge/Wallet/Sponsor**-Pfad. |
 
 ### H.3g Umsetzungspaket: `initialProfile`, Offline-Relay-Queue, Einsatzleitung (nicht vergessen)
 
@@ -338,7 +340,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **2** | **Boss-Worker / Persistenz** | **`Ist:`** `GET/POST /api/einsatz-role-templates`, Datei **`.morgendrot-einsatz-templates.json`** — **`docs/API-EINSATZ-ROLE-TEMPLATES.md`**. | API **1** |
 | **3** | **Lite-UI-Import** | **`Ist:`** `POST /api/contact-labels/apply-initial-profile` + **`roleTags`** in Kontaktdatei; Provisioning-Schritt **„Kontakte ins Boss-Telefonbuch übernehmen“** — Next-PWA später. | **1**, **2** |
 | **4** | **Next-PWA-Import** | **`Ist:`** Einstellungen → **Einsatz-Profil** (JSON / Datei); `applyInitialProfileProvisioning` + automatische Warteschlange `localStorage` + Banner; Telefonbuch zeigt **`roleTags`**. IndexedDB bewusst nicht — **eine** Quelle (Backend-Datei). | **1**–**3** |
-| **5** | **Handshake-Subflow in der Maske** | UI/Flow: Pubkey + Adressen vorhanden → dann `POST /api/boss-provision-handshake` nach `provision-device` (Reihenfolge dokumentieren). | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** |
+| **5** | **Handshake-Subflow in der Maske** | **`Ist (2026-03):`** Lite-UI Provisioning Schritt 3: optional Partner + ECDH-Pubkey (Base64) → `POST /api/boss-provision-handshake` nach erfolgreichem `provision-device` — **`ui/index.html`** (`sendProvisionHandshake`). | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** |
 | **6** | **Rollen-Manager (Boss-Werkstatt)** | `ui/`: Templates (Einsatz-Rolle → Chain-`ROLE`/`roleId`); Medic/Scout als **Labels**, nicht als neue Chain-Enums. | **1**, **2** |
 | **7** | **Offline-Relay-Queue (Boss ohne Internet)** | Eigenes Modul nach Vorbild **`settlement-queue.ts`**; **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`; typisierte Einträge + Flush. | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
 | **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). | Laufend |
@@ -357,7 +359,16 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Sichtbarkeit / `teamId`** | Feld in Metadata möglich — **Durchsetzung** = gesonderte Policy/API. |
 | **SOS / `isEmergency`** | **Nachrichten-**Schicht, nicht `initialProfile`. |
 | **Waypoints** | Konvention: JSON in **`metadata`** oder später Schema v2. |
-| **Paket 5** (Handshake-Subflow) | Unverändert nächster technischer Schritt nach Bedarf — siehe **§ H.3g** Zeile **5**. |
+| **Paket 5** (Handshake-Subflow) | **Erledigt (Lite-UI):** siehe **§ H.3g** Zeile **5**; Next-PWA optional später. |
+
+### H.3i Heim-Heltec / „transparenter Gateway“-Erzählung (Marketing vs. Technik)
+
+| Thema | Kurz |
+|--------|------|
+| **Zielbild** | Heltec zu Hause: **LoRa rein → IP (WLAN)**; Bewohner **ohne** Morgendrot-UI, idealerweise **ohne** Wallet-Bedienung. |
+| **Kernkorrektur** | Chain-Settlement = **signierte TX / definiertes Gateway** (`lora-bridge`, Morgendrot-API) — **nicht** beliebiger HTTP-Post an eine öffentliche Node-URL. |
+| **Doku** | **`docs/HEIM-HELTEC-GATEWAY-NARRATIVE-CRITIQUE.md`**; Ist: **`lora-bridge/README.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**. |
+| **Offen** | Firmware-Header (**`MORG`**), Sicherheit (TLS/API-Key), Sponsor-Queue — eigene Arbeitspakete bei Produktreife. |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 
@@ -366,6 +377,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 - **`npm run test`** oder gezielte Skripte aus **`TESTING.md`**  
 - Bei Messenger-UI: **`npm run validate:ui`** wenn refs/TREE betroffen  
 - Nach Änderung an **`frontend/public/icon.svg`:** **`npm run build:pwa-icons`** (PNG/Manifest-Icons aktualisieren)
+- Nach Änderung am **PWA-Handbuch** in **`docs/`** (Quelle für **`/handbook`**): **`npm run sync:handbook`** im **Repo-Root** — siehe **§ H.3e** Zeile **PWA-Handbuch** (oder nur **`frontend/`** neu bauen; **`prebuild`** sync’t).
 
 ### H.5 Aufräumen & Git-Commit (nach stabilem Kern)
 

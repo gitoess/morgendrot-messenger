@@ -15,6 +15,7 @@ import {
     ensureStreamsAnchorIdInHistory,
 } from '../config.js';
 import { normalizeAddress } from '../utils.js';
+import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../shared/heartbeat-presets.js';
 import {
     getClient,
     getVaultFromChain,
@@ -47,7 +48,11 @@ import {
     storePlaintextMessageBatch,
     sendPairingOffer,
     queryRecentPairingOffers,
+    addressOwnsObject,
+    MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
+    MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from '../chain-access.js';
+import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
 import {
     saveVaultLocal,
     loadVaultContent,
@@ -65,7 +70,12 @@ import {
 } from '../vault-local.js';
 import { preFlightCheck } from './messenger-preflight.js';
 import { HELP_START, HELP_CHAT } from './messenger-help.js';
-import { getWalletPassword, getSessionIotaMnemonic, clearSessionIotaMnemonic } from './messenger-session-password.js';
+import {
+    getWalletPassword,
+    getSessionIotaMnemonic,
+    clearSessionIotaMnemonic,
+    clearWalletPassword,
+} from './messenger-session-password.js';
 import { applySdkSignerFromImport, countMnemonicWords } from './sdk-signer-import.js';
 import {
     getStreamsBridgeUrlForFetch,
@@ -84,6 +94,9 @@ import {
     sendHandshake,
     sendEncryptedMessage,
     sendPlaintextOnly,
+    buildMeshPeerInnerBlob,
+    packMeshEmergencyV2Wire,
+    decryptMeshEmergencyV2Wire,
 } from './messenger-chain-wrap.js';
 import { fetchLastMessages, fetchPlaintextOnlyForRecipient, isRebasedStorageEnabled } from './messenger-fetch.js';
 import type { FetchedMessage } from './messenger-fetch.js';
@@ -92,6 +105,33 @@ import { listenForMessages } from './messenger-listener.js';
 import type { PeerState } from './peer-state.js';
 import { encryptPairingPayload, decryptPairingPayload, generatePairingNonce } from '../pairing-crypto.js';
 import { saveContactLabel } from '../contact-labels.js';
+import { buildMorgPkgV1, decryptMorgPkgV1, isMorgPkgV1Shape } from './morg-pkg-wire.js';
+import { splitMeshPlaintextForV2 } from '../mesh-v2-fragment.js';
+import { base64ToUint8, uint8ToBase64 } from '../shared/bytes-base64.js';
+
+function messengerGasPolicyOpts() {
+    return CFG.MESSENGER_AUTO_SPONSOR ? ({ messengerGasPolicy: true as const } as const) : undefined;
+}
+
+/** Optional: nur mit Besitz von PAIRING_GATE_NFT_OBJECT_ID (privates Peering). */
+async function assertPairingGateNftOwned(myAddress: string): Promise<{ ok: false; message: string } | undefined> {
+    const gate = (CFG.PAIRING_GATE_NFT_OBJECT_ID || '').trim();
+    if (!gate) return undefined;
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(gate)) {
+        return {
+            ok: false,
+            message:
+                'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt aber ungültig (erwartet: 0x + 64 Hex). Bitte .env korrigieren oder leeren – sonst kein klares Türsteher-Verhalten.',
+        };
+    }
+    const owns = await addressOwnsObject(getClient(), gate, myAddress);
+    if (owns) return undefined;
+    return {
+        ok: false,
+        message:
+            'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt: Deine Wallet muss dieses NFT (Türsteher) besitzen für /pairing-offer und /pairing-find.',
+    };
+}
 
 function moveMailboxEntryMissing(msg: string): boolean {
     return /E_HS_MISSING|E_MSG_MISSING|HS_MISSING|MSG_MISSING|missing|not found|MoveAbort|does not exist|object not found|Move abort|No dynamic field|dynamic field/i.test(
@@ -150,8 +190,15 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     if (c === '/vault-lock') {
                         vaultStateRef.current = null;
                         clearSessionIotaMnemonic();
+                        clearWalletPassword();
+                        const vpLock = CFG.VAULT_FILE || '.morgendrot-vault';
+                        purgeInboxCache(vpLock, { shred: true });
                         setSessionStatus({ connected: false, hasKeys: false, connectedAddresses: [] });
-                        return { ok: true, message: 'Tresor gesperrt. Keys aus RAM entfernt. Lokale Datei unverändert – mit Passwort wieder laden.' };
+                        return {
+                            ok: true,
+                            message:
+                                'Tresor gesperrt: Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) geschreddert. Vault-Datei unverändert – erneut /vault-load oder UI-Entsperren.',
+                        };
                     }
                     if (c === '/cancel-connect') {
                         sessionState.connecting = false;
@@ -162,9 +209,11 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
-                    const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message'].includes(c);
+                    const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
+                        c
+                    );
                     const hex64Peer = /^0x[a-fA-F0-9]{64}$/;
                     const purgeMsgWithArgs =
                         (c === '/purge-msg' || c === '/purge-message') &&
@@ -247,6 +296,57 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             return { ok: false, message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : ('Vault laden fehlgeschlagen: ' + msg) };
                         }
                     }
+                    if (c === '/vault-show-signer-import') {
+                        if (CFG.SIGNER !== 'sdk') {
+                            return {
+                                ok: false,
+                                message:
+                                    'Nur bei SIGNER=sdk. Bei SIGNER=cli liegt der Key im IOTA-CLI-Keystore — kein Mnemonic in der Morgendrot-Vault.',
+                            };
+                        }
+                        const loadPath =
+                            a[1] != null && String(a[1]).trim() ? String(a[1]).trim() : CFG.VAULT_FILE || '.morgendrot-vault';
+                        const pw = String(a[0] ?? '').trim();
+                        if (!pw) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /vault-show-signer-import <passwort> [pfad-zur-vault-datei]',
+                            };
+                        }
+                        if (!vaultFileExists(loadPath)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Keine Vault-Datei: ' +
+                                    loadPath +
+                                    '. Zuerst im Tresor „Lokal sichern“ (mit „Signer-Import mit speichern“) oder /vault-load-from-chain.',
+                            };
+                        }
+                        try {
+                            const content = await loadVaultContent(pw, loadPath);
+                            const imp = (content.iotaSdkSignerImport || '').trim();
+                            if (!imp) {
+                                return {
+                                    ok: false,
+                                    message:
+                                        'Kein gespeicherter Signer-Import in dieser Vault. Beim Speichern „Signer-Import mit speichern“ aktivieren oder externes Backup nutzen.',
+                                };
+                            }
+                            return {
+                                ok: true,
+                                message:
+                                    'Signer-Import aus lokaler Vault gelesen. An einem sicheren Ort notieren; nicht weitergeben. Ohne Backup gehen Identität und ggf. gebundene Credits bei Geräteverlust verloren.',
+                                signerImport: imp,
+                            };
+                        } catch (e) {
+                            const msg = String((e as Error)?.message ?? e);
+                            const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(msg);
+                            return {
+                                ok: false,
+                                message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : 'Fehler: ' + msg,
+                            };
+                        }
+                    }
                     if (c === '/purge-handshake') {
                         if (!CFG.ENABLE_PURGE) return { ok: false, message: 'Purge deaktiviert.' };
                         if (!isRebasedStorageEnabled()) return { ok: false, message: 'MAILBOX_ID nicht gesetzt.' };
@@ -296,8 +396,26 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/purge-local-inbox') {
                         const vp = CFG.VAULT_FILE || '.morgendrot-vault';
-                        purgeInboxCache(vp);
-                        return { ok: true, message: 'Lokale Inbox geleert (immer purgable).' };
+                        const shredInbox = a[0] === '1' || String(a[0] ?? '').toLowerCase() === 'shred';
+                        purgeInboxCache(vp, { shred: shredInbox });
+                        return {
+                            ok: true,
+                            message: shredInbox
+                                ? 'Lokale Inbox geschreddert und entfernt.'
+                                : 'Lokale Inbox geleert (Datei gelöscht).',
+                        };
+                    }
+                    if (c === '/clear-local-history') {
+                        const vp = CFG.VAULT_FILE || '.morgendrot-vault';
+                        const rawH = a[0] != null ? String(a[0]).trim().toLowerCase() : '';
+                        const shredH = rawH !== '0' && rawH !== 'false' && rawH !== 'no';
+                        purgeInboxCache(vp, { shred: shredH });
+                        return {
+                            ok: true,
+                            message: shredH
+                                ? 'clearLocalHistory: lokaler Inbox-Klartext-Cache (.inbox.enc) überschrieben und gelöscht.'
+                                : 'clearLocalHistory: lokale Inbox-Datei gelöscht (ohne Shred).',
+                        };
                     }
                     if (c === '/vault-onchain') {
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load.' };
@@ -376,8 +494,16 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/emergency-purge' && CFG.VAULT_REGISTRY_ID) {
                         if (!CFG.ENABLE_PURGE) return { ok: false, message: 'Purge deaktiviert.' };
-                        const res = await chainEmergencyPurgeVaultPtb(MY_ADDR, MY_ADDR, getWalletPassword());
-                        return { ok: true, message: 'Vault Notfall-Purge ausgeführt (PTB: enable + purge in 1 TX).' + (res.digest ? ' Digest: ' + res.digest : '') };
+                        const res = await chainEmergencyPurgeVaultPtb(MY_ADDR, MY_ADDR, getWalletPassword(), messengerGasPolicyOpts());
+                        const vpEp = CFG.VAULT_FILE || '.morgendrot-vault';
+                        purgeInboxCache(vpEp, { shred: true });
+                        return {
+                            ok: true,
+                            message:
+                                'Vault Notfall-Purge ausgeführt (PTB: enable + purge in 1 TX).' +
+                                (res.digest ? ' Digest: ' + res.digest : '') +
+                                ' Lokaler Klartext-Inbox-Cache geschreddert.',
+                        };
                     }
                     if (c === '/device-status') {
                         const { getMonitorStatus } = await import('../monitoring.js');
@@ -403,10 +529,35 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/set-heartbeat-interval') {
                         const ms = parseInt(String(a[0]).trim(), 10);
-                        if (Number.isNaN(ms) || ms < 10000) return { ok: false, message: 'Intervall muss >= 10000 ms sein.' };
+                        if (Number.isNaN(ms) || !isAllowedHeartbeatIntervalMs(ms)) {
+                            const labels = HEARTBEAT_INTERVAL_PRESETS_MS.map((x) => `${x / 60_000} min`).join(', ');
+                            return {
+                                ok: false,
+                                message: `Intervall muss ein Preset sein (${labels}). Werte in Millisekunden: ${HEARTBEAT_INTERVAL_PRESETS_MS.join(', ')}.`,
+                            };
+                        }
                         setEnvKey('HEARTBEAT_INTERVAL_MS', String(ms));
                         (CFG as { HEARTBEAT_INTERVAL_MS: number }).HEARTBEAT_INTERVAL_MS = ms;
-                        return { ok: true, message: `Heartbeat-Intervall auf ${ms} ms gesetzt. Wird beim nächsten Takt angewendet.` };
+                        return {
+                            ok: true,
+                            message: `Heartbeat-Intervall auf ${ms / 60_000} min (${ms} ms) gesetzt. Wird beim nächsten Takt angewendet.`,
+                        };
+                    }
+                    if (c === '/set-heartbeat-enabled') {
+                        const v = String(a[0] ?? '').trim().toLowerCase();
+                        const on = v === 'true' || v === '1' || v === 'on' || v === 'ja';
+                        const off = v === 'false' || v === '0' || v === 'off' || v === 'aus';
+                        if (!on && !off) {
+                            return { ok: false, message: 'Nutzung: /set-heartbeat-enabled true|false (Puls an/aus).' };
+                        }
+                        setEnvKey('ENABLE_HEARTBEAT', on ? 'true' : 'false');
+                        (CFG as { ENABLE_HEARTBEAT: boolean }).ENABLE_HEARTBEAT = on;
+                        return {
+                            ok: true,
+                            message: on
+                                ? 'Heartbeat (Puls) aktiviert – Intervall wie konfiguriert.'
+                                : 'Heartbeat (Puls) aus – Funkstille bis wieder aktiviert.',
+                        };
                     }
                     if (c === '/streams-create') {
                         const bridgeUrl = getStreamsBridgeUrlForFetch();
@@ -796,37 +947,50 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const myAddrNorm = normalizeAddress(MY_ADDR);
                         if (!/^0x[a-fa-f0-9]{64}$/.test(myAddrNorm)) return { ok: false, message: 'MY_ADDRESS muss 0x gefolgt von 64 Hex-Zeichen sein.' };
                         const rawN = a[0] != null ? String(a[0]).trim() : '10';
-                        const n = Math.min(100, Math.max(1, parseInt(rawN, 10) || 10));
-                        if (Number.isNaN(n) || n < 1 || n > 100) return { ok: false, message: 'Anzahl muss zwischen 1 und 100 liegen (z. B. 10).' };
+                        const n = Math.min(500, Math.max(1, parseInt(rawN, 10) || 10));
+                        if (Number.isNaN(n) || n < 1 || n > 500) return { ok: false, message: 'Anzahl muss zwischen 1 und 500 liegen (z. B. 50).' };
                         const senderArg = a[1] != null && String(a[1]).trim().startsWith('0x') ? normalizeAddress(String(a[1]).trim()) : undefined;
                         const bossView = a[3] != null && String(a[3]).trim().toLowerCase() === 'boss';
                         const mergeLocalInbox =
                             a[4] === '1' || String(a[4] ?? '').trim().toLowerCase() === 'true';
+                        const rawOff = a[5] != null ? String(a[5]).trim() : '0';
+                        const offset = Math.max(0, parseInt(rawOff, 10) || 0);
                         if (isRebasedStorageEnabled() && (!CFG.MAILBOX_ID || !/^0x[a-fA-F0-9]{64}$/.test(CFG.MAILBOX_ID)))
                             return { ok: false, message: 'MAILBOX_ID fehlt oder hat ungültiges Format (0x + 64 Hex). In .env setzen (aus create_globals-Event).' };
                         try {
                             const { isChainReachable } = await import('../chain-access.js');
                             if (!(await isChainReachable())) return { ok: false, message: 'Kette nicht erreichbar. RPC_URL prüfen oder später erneut versuchen.' };
                             const silent = (opts as { silentFetch?: boolean } | undefined)?.silentFetch === true;
-                            const fetchOpts: { silent?: boolean; packageId?: string; mergeLocalInbox?: boolean } = {};
+                            const fetchOpts: { silent?: boolean; packageId?: string; mergeLocalInbox?: boolean; offset?: number } = {};
                             if (silent) fetchOpts.silent = true;
                             if (packageIdOverride) fetchOpts.packageId = packageIdOverride;
                             if (mergeLocalInbox) fetchOpts.mergeLocalInbox = true;
                             const peerMapForFetch = packageIdOverride ? null : (peerMap ?? null);
                             let messages: FetchedMessage[];
                             if (bossView && CFG.ROLE === 'boss' && CFG.KOMMANDANT_ADDRESSES.length > 0) {
-                                const bossMessages = await fetchLastMessages(myAddrNorm, peerMapForFetch, keys!.privateKey, n, undefined, senderArg, fetchOpts);
+                                const need = Math.min(2000, offset + n);
+                                const bossMessages = await fetchLastMessages(
+                                    myAddrNorm,
+                                    peerMapForFetch,
+                                    keys?.privateKey ?? null,
+                                    need,
+                                    undefined,
+                                    senderArg,
+                                    { ...fetchOpts, offset: 0 }
+                                );
                                 const withRecipient: FetchedMessage[] = bossMessages.map((m) => ({ ...m, recipient: myAddrNorm }));
-                                const perK = Math.max(5, Math.floor(n / (CFG.KOMMANDANT_ADDRESSES.length + 1)));
+                                const perK = Math.max(5, Math.floor(need / (CFG.KOMMANDANT_ADDRESSES.length + 1)));
                                 const pkgId = packageIdOverride || String(CFG.PACKAGE_ID ?? '').trim();
                                 for (const kommandantAddr of CFG.KOMMANDANT_ADDRESSES) {
                                     if (normalizeAddress(kommandantAddr) === normalizeAddress(myAddrNorm)) continue;
                                     const kMessages = await fetchPlaintextOnlyForRecipient(kommandantAddr, perK, pkgId);
                                     withRecipient.push(...kMessages);
                                 }
-                                messages = withRecipient;
+                                withRecipient.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
+                                messages = withRecipient.slice(offset, offset + n);
                             } else {
-                                messages = await fetchLastMessages(myAddrNorm, peerMapForFetch, keys!.privateKey, n, undefined, senderArg, fetchOpts);
+                                fetchOpts.offset = offset;
+                                messages = await fetchLastMessages(myAddrNorm, peerMapForFetch, keys?.privateKey ?? null, n, undefined, senderArg, fetchOpts);
                             }
                             if (messages.length === 0) return { ok: true, message: 'Keine neuen Nachrichten auf der Chain gefunden.', messages: [], data: [] };
                             return { ok: true, message: senderArg ? `Letzte ${n} Nachrichten von ${senderArg.slice(0, 12)}… geladen.` : `${messages.length} Nachricht(en) geladen.`, messages, data: messages };
@@ -849,6 +1013,55 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             reachable,
                             rpcCandidateCount: getRpcCandidateCount(),
                         };
+                    }
+                    if (c === '/resolve-iota-name' || c === '/iota-name-lookup') {
+                        const name = String(a[0] ?? '').trim();
+                        if (!name) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /resolve-iota-name <name.iota> (Indexer JSON-RPC iotax_iotaNamesLookup).',
+                            };
+                        }
+                        const { iotaNamesLookup, registrationNftMatchesAllowedPackages } = await import('../iota-names-lookup.js');
+                        try {
+                            const rec = await iotaNamesLookup(CFG.RPC_URL, name);
+                            const lines: string[] = [
+                                `Name: ${name}`,
+                                `Ziel-Adresse: ${rec.targetAddress ?? '(nicht gesetzt)'}`,
+                                `Registrierungs-NFT: ${rec.nftId}`,
+                            ];
+                            if (rec.expirationTimestampMs != null) lines.push(`Ablauf (ms): ${rec.expirationTimestampMs}`);
+                            const allow = CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS;
+                            let registrationNftVerified: boolean | undefined;
+                            let registrationNftType: string | undefined;
+                            if (allow.length > 0) {
+                                const v = await registrationNftMatchesAllowedPackages(getClient(), rec.nftId, allow);
+                                registrationNftVerified = v.matches;
+                                registrationNftType = v.objectType;
+                                lines.push(
+                                    v.matches
+                                        ? 'Allowlist: NFT-Typ passt zu einem der VERIFIED_IOTA_NAME_PACKAGE_IDS.'
+                                        : 'Allowlist: NFT-Typ passt NICHT – möglicher Spoofing-Name.'
+                                );
+                                if (v.objectType) lines.push(`On-Chain-Typ: ${v.objectType}`);
+                            } else {
+                                lines.push('VERIFIED_IOTA_NAME_PACKAGE_IDS leer – nur Lookup, kein Paket-Check.');
+                            }
+                            return {
+                                ok: true,
+                                message: lines.join('\n'),
+                                iotaName: {
+                                    name,
+                                    nftId: rec.nftId,
+                                    targetAddress: rec.targetAddress,
+                                    expirationTimestampMs: rec.expirationTimestampMs,
+                                    registrationNftVerified,
+                                    registrationNftType,
+                                },
+                            };
+                        } catch (e: unknown) {
+                            return { ok: false, message: String((e as Error)?.message ?? e) };
+                        }
                     }
                     if (c === '/shadow-sweep') {
                         const sm =
@@ -888,6 +1101,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const displayName = ((a[1] ?? 'Kontakt') as string).trim().slice(0, 64) || 'Kontakt';
                         const ttlSec = Math.min(300, Math.max(15, parseInt(String(a[2] ?? '60'), 10) || 60));
                         if (secret.length < 6) return { ok: false, message: 'Geheimnis mindestens 6 Zeichen (telefonisch vereinbaren).' };
+                        const gateErr = await assertPairingGateNftOwned(MY_ADDR);
+                        if (gateErr) return gateErr;
                         const myNorm = normalizeAddress(MY_ADDR);
                         if (!/^0x[a-f0-9]{64}$/.test(myNorm)) return { ok: false, message: 'MY_ADDRESS muss 0x + 64 Hex sein.' };
                         const expiresAtMs = Date.now() + ttlSec * 1000;
@@ -909,7 +1124,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 nonce,
                                 ciphertext,
                                 BigInt(expiresAtMs),
-                                getWalletPassword()
+                                getWalletPassword(),
+                                messengerGasPolicyOpts()
                             );
                             return {
                                 ok: true,
@@ -931,6 +1147,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     if (c === '/pairing-find') {
                         const secret = (a[0] ?? '').trim();
                         if (secret.length < 6) return { ok: false, message: 'Geheimnis mindestens 6 Zeichen.' };
+                        const gateErr = await assertPairingGateNftOwned(MY_ADDR);
+                        if (gateErr) return gateErr;
                         const maxCand = CFG.PAIRING_FIND_MAX_CANDIDATES;
                         const maxDec = CFG.PAIRING_FIND_MAX_DECRYPT_ATTEMPTS;
                         const offers = await queryRecentPairingOffers(maxCand);
@@ -1016,6 +1234,13 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const addrsRaw = String(a[0] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
                         const addrs = addrsRaw.filter((addr) => /^0x[a-fA-F0-9]{64}$/.test(addr));
                         const text = a.slice(1).join(' ').trim() || '(leer)';
+                        if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+                            return {
+                                ok: false,
+                                message:
+                                    `Nachricht zu lang für die Chain (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8 pro Sendung, Move-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Kürzerer Text oder kleineres Bild neu kodieren.`,
+                            };
+                        }
                         if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
                         for (const addr of addrs) await sendPlaintextOnly(addr, text);
                         return { ok: true, message: addrs.length > 1 ? `Klartext an ${addrs.length} Empfänger gesendet.` : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.` };
@@ -1026,10 +1251,171 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         if (!pm?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
                         const text = (a && a.length > 0) ? a.join(' ').trim() : '';
                         if (!text) return { ok: false, message: 'Verwendung: /send <Text> (Nachricht eingeben).' };
+                        if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+                            return {
+                                ok: false,
+                                message:
+                                    `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
+                            };
+                        }
                         for (const p of pm.values()) {
                             await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey);
                         }
                         return { ok: true, message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.' };
+                    }
+                    if (c === '/mesh-build-v2') {
+                        if (!canSend) {
+                            return {
+                                ok: false,
+                                message:
+                                    'S-Bit (Send) nicht gesetzt – Mesh-Build verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
+                            };
+                        }
+                        const pmMesh = sessionState.peerMap;
+                        if (!pmMesh?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
+                        const textMesh = (a && a.length > 0) ? a.join(' ').trim() : '';
+                        if (!textMesh) return { ok: false, message: 'Verwendung: /mesh-build-v2 <Text>' };
+                        if (new TextEncoder().encode(textMesh).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+                            return {
+                                ok: false,
+                                message: `Mesh-Nutzlast zu lang (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8).`,
+                            };
+                        }
+                        try {
+                            assertMessengerMediaNetBlobWithinLimit(textMesh);
+                        } catch (e) {
+                            return { ok: false, message: (e as Error).message };
+                        }
+                        const myMesh = (MY_ADDR || '').trim().toLowerCase();
+                        if (!/^0x[a-f0-9]{64}$/.test(myMesh)) return { ok: false, message: 'MY_ADDRESS ungültig oder fehlt.' };
+                        const frags = splitMeshPlaintextForV2(textMesh);
+                        const wires: { recipient: string; wireBase64: string; meshNonce: number }[] = [];
+                        for (const p of pmMesh.values()) {
+                            for (const fragPlain of frags) {
+                                const meshNonce = Math.floor(Math.random() * 0x100000000) >>> 0;
+                                const inner = await buildMeshPeerInnerBlob(fragPlain, p.pubKeyRaw, keys!.privateKey);
+                                const built = await packMeshEmergencyV2Wire(myMesh, meshNonce, inner);
+                                if (!built.ok) return { ok: false, message: built.error };
+                                wires.push({
+                                    recipient: p.address,
+                                    wireBase64: uint8ToBase64(built.wire),
+                                    meshNonce,
+                                });
+                            }
+                        }
+                        return {
+                            ok: true,
+                            message: `Mesh-v2 bereit (${wires.length} Paket/e, PRIVATE_APP${frags.length > 1 ? `, ${frags.length} Textfragment/e` : ''}).`,
+                            wires,
+                        };
+                    }
+                    if (c === '/mesh-decrypt-v2') {
+                        const senderMesh = (a[0] ?? '').trim();
+                        const b64 = (a[1] ?? '').trim();
+                        if (!senderMesh || !b64) {
+                            return { ok: false, message: 'Verwendung: /mesh-decrypt-v2 <0xAbsender> <wireBase64>' };
+                        }
+                        const pmDec = sessionState.peerMap;
+                        if (!pmDec?.size) return { ok: false, message: 'Nicht verbunden (Peer-Keys nötig).' };
+                        const normS = normalizeAddress(senderMesh);
+                        const peerDec =
+                            [...pmDec.values()].find((p) => normalizeAddress(p.address) === normS) ??
+                            pmDec.get(senderMesh) ??
+                            pmDec.get(normS);
+                        if (!peerDec) {
+                            return { ok: false, message: 'Absender nicht in peerMap – Handshake/Connect prüfen.' };
+                        }
+                        const raw = base64ToUint8(b64);
+                        const plain = await decryptMeshEmergencyV2Wire(raw, peerDec.pubKeyRaw, keys!.privateKey);
+                        if (!plain) return { ok: false, message: 'Mesh-v2 Entschlüsselung fehlgeschlagen.' };
+                        return { ok: true, message: plain, text: plain };
+                    }
+                    if (c === '/morg-pkg-export') {
+                        if (!canSend) {
+                            return {
+                                ok: false,
+                                message:
+                                    'S-Bit (Send) nicht gesetzt – .morg-pkg-Export verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
+                            };
+                        }
+                        const pmEx = sessionState.peerMap;
+                        if (!pmEx?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
+                        const addrRaw = (a[0] ?? '').trim();
+                        const textEx = a.length > 1 ? a.slice(1).join(' ').trim() : '';
+                        if (!addrRaw || !textEx) {
+                            return { ok: false, message: 'Verwendung: /morg-pkg-export <0xEmpfänger> <Klartext…>' };
+                        }
+                        if (!/^0x[a-fA-F0-9]{64}$/i.test(addrRaw)) {
+                            return { ok: false, message: 'Empfänger: 0x + 64 Hex (Handshake-Partner).' };
+                        }
+                        const normR = normalizeAddress(addrRaw);
+                        const peerEx =
+                            [...pmEx.values()].find((p) => normalizeAddress(p.address) === normR) ??
+                            pmEx.get(addrRaw) ??
+                            pmEx.get(normR);
+                        if (!peerEx) {
+                            return {
+                                ok: false,
+                                message: 'Empfänger nicht in peerMap – nur für verbundene Partner nach Handshake.',
+                            };
+                        }
+                        try {
+                            const morgPkg = await buildMorgPkgV1({
+                                plaintext: textEx,
+                                sender: MY_ADDR,
+                                recipient: peerEx.address,
+                                recipientPubRaw: peerEx.pubKeyRaw,
+                                senderPrivKey: keys!.privateKey,
+                            });
+                            return {
+                                ok: true,
+                                message: 'ECDH-.morg-pkg erstellt (AES-GCM wie /send). Datei offline übergeben.',
+                                morgPkg,
+                            };
+                        } catch (e: any) {
+                            return { ok: false, message: String(e?.message || e) };
+                        }
+                    }
+                    if (c === '/morg-pkg-import') {
+                        const rawPkg = opts?.morgPkg;
+                        if (rawPkg == null || typeof rawPkg !== 'object') {
+                            return {
+                                ok: false,
+                                message:
+                                    'API-Body: Feld „morgPkg“ mit dem vollständigen JSON-Paket mitschicken (siehe UI „.morg-pkg importieren“).',
+                            };
+                        }
+                        const pmIm = sessionState.peerMap;
+                        if (!pmIm?.size) return { ok: false, message: 'Nicht verbunden (Absender-ECDH-Key aus Handshake nötig).' };
+                        if (!isMorgPkgV1Shape(rawPkg)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'morgPkg ungültig: schema morgendrot.morgpkg.v1, version 1, Felder sender/recipient/ivB64/ciphertextB64.',
+                            };
+                        }
+                        const normFrom = normalizeAddress(rawPkg.sender);
+                        const peerIm =
+                            [...pmIm.values()].find((p) => normalizeAddress(p.address) === normFrom) ??
+                            pmIm.get(rawPkg.sender) ??
+                            pmIm.get(normFrom);
+                        if (!peerIm) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Absender (pkg.sender) nicht in peerMap – vor dem Öffnen mit dem Absender Handshake/Connect ausführen.',
+                            };
+                        }
+                        try {
+                            const plain = await decryptMorgPkgV1(rawPkg, {
+                                myAddress: MY_ADDR,
+                                myPrivKey: keys!.privateKey,
+                                senderPubRaw: peerIm.pubKeyRaw,
+                            });
+                            return { ok: true, message: 'Paket entschlüsselt.', plaintext: plain, text: plain };
+                        } catch (e: any) {
+                            return { ok: false, message: String(e?.message || e) };
+                        }
                     }
                     if (c === '/set-package-id' && a[0]) {
                         const id = a[0].trim();
@@ -1103,7 +1489,14 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             await sendPlaintextOnly(valid[0].trim(), cmdText);
                         } else {
                             const nonce = BigInt(Date.now());
-                            await storePlaintextMessageBatch(valid, MY_ADDR, new TextEncoder().encode(cmdText), nonce, getWalletPassword());
+                            await storePlaintextMessageBatch(
+                                valid,
+                                MY_ADDR,
+                                new TextEncoder().encode(cmdText),
+                                nonce,
+                                getWalletPassword(),
+                                messengerGasPolicyOpts()
+                            );
                         }
                         return { ok: true, message: `Befehl an ${valid.length} Ziel(e) gesendet` + (valid.length > 1 ? ' (PTB: 1 TX für alle).' : '.') };
                     }

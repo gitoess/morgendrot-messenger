@@ -3,6 +3,8 @@
  * Setzt ENABLE_UI=false, falls nicht in .env gesetzt, und startet die gleiche App-Logik wie wallet-bridge.
  * Nutzung: npx tsx src/worker-headless.ts  oder  npm run start:headless
  */
+import './install-webcrypto-node.js';
+
 import dotenv from 'dotenv';
 import { loadEncryptedEnvIfConfigured } from './load-secrets.js';
 

@@ -20,6 +20,8 @@
   </style>
 </head>
 <body class="min-h-screen bg-slate-950 text-slate-100 antialiased" x-data="morgendrotApp()" x-init="init()">
+  <input type="file" id="morg-lite-morg-pkg-import" class="hidden" accept=".json,.morg-pkg,application/json" @change="importMorgPkgFromFile($event)" />
+  <input type="file" id="morg-lite-morg-pkg-device" class="hidden" multiple accept="image/*,.txt,text/plain,.opus,.ogg,audio/ogg,audio/opus,application/ogg" @change="exportMorgPkgFromDeviceFiles($event)" />
   <script>
     window.API_BASE = window.location.origin;
   </script>
@@ -405,7 +407,7 @@
               <span class="text-xs text-slate-400" x-text="'Gesamt-Rebate: ~' + rebateTotalIota + ' IOTA'"></span>
               <span class="text-xs text-slate-500" x-show="gasRefPrice" x-text="'(Gas-Ref: ' + gasRefPrice + ' NANOS)'"></span>
             </div>
-            <p class="text-[11px] text-slate-500 mb-2 rounded border border-slate-600/60 bg-slate-800/40 px-2 py-1.5">Purge braucht <strong class="text-slate-300">Wallet entsperrt</strong>, <strong class="text-slate-300">ENABLE_PURGE=true</strong>, bei Mailbox-Nachrichten/Handshakes <strong class="text-slate-300">MAILBOX_ID</strong>. Handshake-Zeile: <strong class="text-slate-300">Empfänger + Sender</strong> (nicht Object-ID). Nachricht: <strong class="text-slate-300">Empfänger, Sender, Nonce</strong>. Einzel-Purge blockiert ggf. durch <span class="font-mono text-slate-400">PURGE_MIN_REBATE_MIST</span>.</p>
+            <p class="text-[11px] text-slate-500 mb-2 rounded border border-slate-600/60 bg-slate-800/40 px-2 py-1.5">Purge braucht <strong class="text-slate-300">Wallet entsperrt</strong>, <strong class="text-slate-300">ENABLE_PURGE=true</strong>, bei Mailbox-Nachrichten/Handshakes <strong class="text-slate-300">MAILBOX_ID</strong>. Handshake-Zeile: <strong class="text-slate-300">Empfänger + Sender</strong> (nicht Object-ID). Nachricht: <strong class="text-slate-300">Empfänger, Sender, Nonce</strong>. Einzel-Purge blockiert ggf. durch <span class="font-mono text-slate-400">PURGE_MIN_REBATE_MIST</span>. <strong class="text-slate-400">Mailbox-Nachricht:</strong> Verschlüsselte (<span class="font-mono text-slate-500">MsgKey</span>) und gespeicherte Klartexte (<span class="font-mono text-slate-500">PlainMsgKey</span>, <span class="font-mono text-slate-500">MAILBOX_STORE_PLAINTEXT</span>) sind unterschiedliche Einträge — der Client versucht zuerst <span class="font-mono text-slate-500">purge_message</span>, bei Bedarf automatisch <span class="font-mono text-slate-500">purge_plaintext_mail_entry</span> (bis zu zwei TX; erste kann fehlschlagen, zweite löscht).</p>
             <template x-if="rebateData.keys.length > 0">
               <div>
                 <div class="flex justify-between items-center mb-1">
@@ -526,7 +528,7 @@
                           <td class="px-2 py-1 font-mono text-slate-400" x-text="(m.sender||'').slice(0,10)+'…'"></td>
                           <td class="px-2 py-1 font-mono text-slate-400" x-text="m.nonce || '—'"></td>
                           <td class="px-2 py-1 text-right text-emerald-400" x-text="m.storageRebate ? (Number(m.storageRebate) / 1e9).toFixed(4) : '—'"></td>
-                          <td class="px-2 py-1 text-right"><button type="button" @click="runCmd('/purge-msg', [m.recipient, m.sender, String(m.nonce)])" :disabled="cmdLoading || !m.recipient || !m.sender || m.nonce == null || m.nonce === ''" class="rounded bg-red-600/60 px-2 py-0.5 text-white hover:bg-red-500/60 disabled:opacity-30" title="/purge-msg: Empfänger, Sender, Nonce">Purge</button></td>
+                          <td class="px-2 py-1 text-right"><button type="button" @click="runCmd('/purge-msg', [m.recipient, m.sender, String(m.nonce)])" :disabled="cmdLoading || !m.recipient || !m.sender || m.nonce == null || m.nonce === ''" class="rounded bg-red-600/60 px-2 py-0.5 text-white hover:bg-red-500/60 disabled:opacity-30" title="/purge-msg: Empfänger, Sender, Nonce. PlainMsgKey: ggf. zweite TX (siehe Hinweis oben).">Purge</button></td>
                         </tr>
                       </template>
                     </tbody>
@@ -570,6 +572,8 @@
               </select>
               <button type="button" @click="loadPackageSelectorList()" :disabled="packageSelectorLoading" class="rounded border border-slate-600 px-2 py-1.5 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50" title="Dropdown aus Historie, Hints und Chain neu füllen">Liste laden</button>
               <button @click="fetchInbox()" :disabled="chat.loading" class="rounded bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500 disabled:opacity-50" x-text="chat.loading ? 'Lade…' : 'Aktualisieren'"></button>
+              <button type="button" @click="document.getElementById('morg-lite-morg-pkg-import')?.click()" class="rounded border border-emerald-600/50 bg-emerald-900/20 px-2 py-1.5 text-xs text-emerald-200 hover:bg-emerald-900/40" title="morgendrot.morgpkg.v1 – ECDH wie /send; Absender muss in peerMap">.morg-pkg import</button>
+              <button type="button" @click="document.getElementById('morg-lite-morg-pkg-device')?.click()" :disabled="cmdLoading" class="rounded border border-sky-600/50 bg-sky-900/20 px-2 py-1.5 text-xs text-sky-200 hover:bg-sky-900/40 disabled:opacity-50" title="Mehrere Bilder, .txt, Opus → ein Bundle-.morg-pkg">Gerät → .morg-pkg</button>
               <span class="text-slate-400 text-sm" x-show="chat.messages.length > 0" x-text="chat.messages.length + ' Nachricht(en)'"></span>
               <span class="text-amber-400/90 text-xs font-mono" x-show="chat.lastInboxBackend && !chat.loading" x-text="chat.lastInboxBackend"></span>
             </div>
@@ -586,7 +590,30 @@
                   <span x-show="contactLabelFor(m.sender || m.from)" class="text-slate-500"> · </span>
                   <span x-text="(m.sender || m.from || '').slice(0,16)+'…'"></span>
                 </div>
-                <div class="font-mono text-sm text-white" x-text="m.text || m.content || '(leer)'"></div>
+                <template x-if="inboxIsCompactImage(m)">
+                  <div class="mt-2 space-y-2">
+                    <p class="text-sm text-emerald-300">📷 Kompaktes Bild (Luma+Chroma)</p>
+                    <button type="button" @click="loadCompactImagePreview(m)" :disabled="m.compactPreviewLoading" class="rounded border border-emerald-600/50 bg-emerald-900/20 px-2 py-1 text-[11px] text-emerald-200 hover:bg-emerald-900/40 disabled:opacity-50" x-text="m.compactPreviewLoading ? 'Lade…' : (m.compactPreview ? 'Vorschau neu laden' : 'Bild anzeigen')"></button>
+                    <p class="text-[11px] text-amber-300/95" x-show="m.compactPreviewError" x-text="m.compactPreviewError"></p>
+                    <img x-show="m.compactPreview" :src="m.compactPreview" class="max-h-72 max-w-full rounded border border-slate-600 object-contain" alt="Vorschau" decoding="async" @error="onCompactImagePreviewImgError(m)" />
+                    <p class="text-[11px] text-slate-500">Next-Dashboard rendert Medien automatisch; hier pro Nachricht <strong class="text-slate-400">Bild anzeigen</strong> → <span class="font-mono">/api/compact-image-preview</span>.</p>
+                  </div>
+                </template>
+                <template x-if="!inboxIsCompactImage(m) && inboxIsMorgAudioV1(m)">
+                  <div class="mt-2 space-y-2 rounded border border-sky-600/40 bg-slate-800/80 p-2">
+                    <div class="flex flex-wrap items-center gap-2 text-sm text-sky-200">
+                      <span>🔊 Sprachnachricht (Opus/Ogg)</span>
+                      <button type="button" @click="playInboxMorgAudioV1(m)" class="rounded border border-sky-500/60 px-2 py-1 text-[11px] text-sky-200 hover:bg-slate-700">Play / Leiste anzeigen</button>
+                    </div>
+                    <audio x-show="m.audioObjectUrl" :id="m.audioObjectUrl ? m.audioElementId : ''" :src="m.audioObjectUrl" controls class="w-full max-w-md rounded border border-slate-600" preload="metadata" playsinline></audio>
+                    <a x-show="m.audioObjectUrl" :href="m.audioObjectUrl" download="morg-sprache.ogg" class="inline-block text-[11px] text-sky-400 hover:underline">Als .ogg speichern (z. B. VLC)</a>
+                  </div>
+                </template>
+                <div class="font-mono text-sm text-white break-all" x-show="!inboxIsCompactImage(m) && !inboxIsMorgAudioV1(m)" x-text="m.text || m.content || '(leer)'"></div>
+                <span class="mt-2 flex flex-wrap gap-2 items-center">
+                  <button type="button" @click="exportInboxMorgPkg(m)" class="rounded border border-emerald-500/50 bg-emerald-900/25 px-2 py-0.5 text-[11px] text-emerald-200 hover:bg-emerald-900/45" title="ECDH+AES-GCM wie /send; ein Partner auto, sonst Partner-Adresse im Chat (Handshake)">ECDH .morg-pkg</button>
+                  <button type="button" @click="exportInboxSneakernet(m)" class="rounded border border-slate-600 px-2 py-0.5 text-[11px] text-amber-300/90 hover:bg-slate-700" title="JSON-Klartext-Snapshot (Wire)">JSON</button>
+                </span>
               </li>
             </template>
           </ul>
@@ -645,6 +672,16 @@
 
     <!-- ==================== Chat (Nachrichten) ==================== -->
     <div x-show="view === 'chat'" x-cloak class="space-y-6">
+      <div class="rounded-xl border border-sky-600/35 bg-slate-900/50 px-3 py-2.5 text-[11px] leading-relaxed text-slate-400 space-y-2">
+        <p><strong class="text-slate-200">Projekt-Sprachen:</strong> überwiegend <strong class="text-slate-200">TypeScript/JavaScript</strong> (Node-Backend, React/Next-Dashboard), <strong class="text-slate-200">Move</strong> (IOTA-Package auf der Chain), diese Seite = <strong class="text-slate-200">HTML + Alpine.js</strong> (Lite-UI).</p>
+        <p><strong class="text-slate-200">Sendepfad Online / Nur Funk (Mesh):</strong> gibt es <em>nur</em> im <strong class="text-slate-200">Next-Dashboard</strong> unter Kachel <strong class="text-slate-200">Nachrichten</strong> → Unterkachel <strong class="text-slate-200">Privat</strong>, mit <strong class="text-slate-200">Verschlüsselt</strong> eingeschaltet und nach <strong class="text-slate-200">Connect</strong>. Hier auf Port <span class="font-mono text-slate-500" x-text="status.apiListenPort || '?'"></span> ist diese Leiste nicht eingebaut (Klartext läuft immer über die Chain).</p>
+        <p class="flex flex-wrap items-center gap-x-2 gap-y-1">Next öffnen:
+          <a class="text-sky-400 hover:underline font-mono" :href="dashboardHref()" target="_blank" rel="noopener" x-text="dashboardHref()"></a>
+          <span class="text-slate-600">(Port aus <span class="font-mono">/api/status</span> → <span class="font-mono">dashboardPort</span>, sonst 3341)</span>
+        </p>
+        <p class="text-[11px] text-amber-400/90"><strong class="text-slate-300">Verbindung abgelehnt auf :3341?</strong> <span class="font-mono">npm start</span> startet oft nur API/Lite; das Next-Dashboard braucht zusätzlich <span class="font-mono">npm run dev</span> (bzw. <span class="font-mono">npm run dev:frontend</span>) im Projektroot.</p>
+        <p><strong class="text-slate-200">Bilder in der Lite-UI:</strong> Vorschau wird <em>nicht</em> automatisch geladen – pro Nachricht <strong class="text-slate-200">„Bild anzeigen“</strong> klicken (<span class="font-mono">POST /api/compact-image-preview</span>). Ton bei Opus: nach „Play“ die Browser-Leiste nutzen; Encoding mit <span class="font-mono">scripts/encode-opus-messenger.mjs</span> (Standard 8 kbit/s, kein silenceremove ohne <span class="font-mono">MORG_OPUS_USE_SILENCE_REMOVE=1</span>) – bei Problemen <strong class="text-slate-200">„Datei speichern“</strong> und in VLC testen.</p>
+      </div>
       <div id="messenger-connect-panel" class="glass rounded-xl p-4 border border-emerald-600/35 ring-1 ring-emerald-500/20">
         <h4 class="mb-2 font-semibold text-white flex flex-wrap items-center gap-2"><span class="text-emerald-400 text-xs font-normal uppercase tracking-wide">Schritt 1–3</span> Partner, Handshake &amp; Connect</h4>
         <p class="text-xs text-slate-400 mb-3">Zuerst <strong class="text-slate-200">Handshake</strong>, dann <strong class="text-slate-200">Connect</strong> (grüner Button) – bis in der Leiste unten „Verbunden“ steht.</p>
@@ -652,6 +689,31 @@
           <input type="text" x-model="chat.partner" placeholder="Partner 0x… (Komma = mehrere)" class="rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 min-w-[200px] flex-1 max-w-xl" title="Partner-Adresse für Handshake/Connect" />
           <button type="button" @click="runCmd('/handshake', [chat.partner])" class="rounded-lg bg-slate-600 px-4 py-2 text-sm hover:bg-slate-500 shrink-0">Handshake</button>
           <button type="button" @click="runCmd('/connect', chat.partner ? [chat.partner] : [])" class="rounded-lg bg-emerald-600 px-6 py-3 text-base font-semibold text-white hover:bg-emerald-500 shrink-0 shadow-md shadow-emerald-900/40 min-h-[44px]">Connect</button>
+        </div>
+        <div class="mt-4 pt-3 border-t border-slate-600/50 space-y-2">
+          <h5 class="text-xs font-medium text-slate-300">IOTA Name <span class="text-slate-500 font-normal">(Indexer)</span></h5>
+          <p class="text-[11px] text-slate-500 leading-relaxed">Name → Wallet-Adresse + Registrierungs-NFT (<span class="font-mono text-slate-600">iotax_iotaNamesLookup</span>). Mit Allowlist unter <a href="#setup" @click.prevent="setView('setup')" class="text-sky-400 hover:underline">Setup</a> wird das NFT-Paket geprüft. <a href="https://docs.iota.org/iota-api-ref#iotax_iotanameslookup" target="_blank" rel="noopener" class="text-sky-400 hover:underline">IOTA API Reference</a></p>
+          <div class="flex flex-wrap gap-2 items-center">
+            <input type="text" x-model="chat.iotaNameInput" placeholder="z. B. partner.iota" dir="ltr" autocomplete="off" spellcheck="false" class="rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 min-w-[180px] flex-1 max-w-md" />
+            <button type="button" @click="lookupIotaName()" :disabled="chat.iotaNameLoading" class="rounded-lg bg-sky-600/90 px-3 py-2 text-sm text-white hover:bg-sky-500 disabled:opacity-50 shrink-0" x-text="chat.iotaNameLoading ? '…' : 'Auflösen'"></button>
+          </div>
+          <p class="text-xs text-red-400" x-show="chat.iotaNameError" x-text="chat.iotaNameError"></p>
+          <template x-if="chat.iotaNameResult && chat.iotaNameResult.ok">
+            <div class="rounded-lg border border-slate-600/80 bg-slate-800/60 p-3 text-xs space-y-2">
+              <div class="font-mono text-slate-200 break-all"><span class="text-slate-500">Adresse</span> <span x-text="(chat.iotaNameResult && chat.iotaNameResult.targetAddress) || '—'"></span></div>
+              <div class="font-mono text-slate-300 break-all text-[11px]"><span class="text-slate-500">NFT</span> <span x-text="(chat.iotaNameResult && chat.iotaNameResult.nftId) || '—'"></span></div>
+              <p class="text-[11px] text-slate-500 font-mono break-all" x-show="chat.iotaNameResult && chat.iotaNameResult.registrationNftType" x-text="'Typ: ' + (chat.iotaNameResult && chat.iotaNameResult.registrationNftType)"></p>
+              <div x-show="chat.iotaNameResult && chat.iotaNameResult.registrationNftVerified !== undefined && chat.iotaNameResult.registrationNftVerified !== null" class="flex flex-wrap items-center gap-2 text-[11px]">
+                <span class="text-slate-500">Allowlist</span>
+                <span class="font-medium" :class="chat.iotaNameResult && chat.iotaNameResult.registrationNftVerified ? 'text-emerald-400' : 'text-amber-400'" x-text="chat.iotaNameResult && chat.iotaNameResult.registrationNftVerified ? 'NFT-Typ erlaubt' : 'NFT-Typ nicht in VERIFIED_IOTA_NAME_PACKAGE_IDS'"></span>
+              </div>
+              <p class="text-[11px] text-slate-500" x-show="chat.iotaNameResult && chat.iotaNameResult.registrationNftVerified === undefined">Allowlist aus – nur Lookup, kein Paket-Check (Setup: VERIFIED_IOTA_NAME_PACKAGE_IDS).</p>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button type="button" @click="applyIotaNameToPartner()" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs text-white hover:bg-emerald-500">Als Partner übernehmen</button>
+                <button type="button" @click="copyIdToClipboard((chat.iotaNameResult && chat.iotaNameResult.targetAddress) || '', 'Adresse')" x-show="chat.iotaNameResult && isMorgendrotAddr64(chat.iotaNameResult.targetAddress)" class="rounded border border-slate-500 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700">Adresse kopieren</button>
+              </div>
+            </div>
+          </template>
         </div>
         <p class="mt-2 text-xs text-slate-500" x-show="cmdResult" x-text="cmdResult"></p>
       </div>
@@ -672,6 +734,12 @@
           <span class="text-xs px-2 py-1 rounded max-w-prose" :class="status && status.connected ? 'bg-emerald-600/25 text-emerald-100' : 'bg-amber-600/20 text-amber-100'" x-text="status && status.connected ? 'Verbunden – Senden und Posteingang nutzen.' : 'Handshake → Connect im grünen Kasten oben.'"></span>
           <button type="button" class="text-xs text-sky-400 hover:underline shrink-0" @click="document.getElementById('messenger-connect-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })">Zu Handshake / Connect</button>
         </div>
+        <p class="text-[11px] text-red-200/95 rounded border border-red-500/45 bg-red-950/40 px-2 py-1.5 mt-2 leading-relaxed" x-show="status && (status.plaintextMode === true || status.mailboxStorePlaintext === true)">
+          <strong>Hinweis Vertraulichkeit:</strong> <span class="font-mono text-red-100/90">ENABLE_PLAINTEXT_CHANNEL</span> und/oder <span class="font-mono text-red-100/90">MAILBOX_STORE_PLAINTEXT</span> ist aktiv – Nachrichteninhalte können zusätzlich oder als Klartext auf der Chain bzw. in der Mailbox gespeichert werden.
+        </p>
+        <p class="text-[11px] text-slate-500 mt-1 leading-relaxed" x-show="chat.encrypted">
+          Verschlüsselter Chat: Inhalt mit ECDH + AES-GCM (Handshake-Keys); Entschlüsselung auf diesem Node bei entsperrtem Vault – nicht vergleichbar mit Signal (kein Forward Secrecy). Metadaten (Adressen, Nonces) können auf L1 sichtbar sein.
+        </p>
       </div>
       <div class="glass rounded-xl p-4 border border-emerald-700/35">
         <h4 class="mb-2 font-semibold text-white text-sm">Nachrichten-Transport (Mailbox vs. Events)</h4>
@@ -751,8 +819,15 @@
       </div>
       <div class="glass rounded-xl p-4">
         <h4 class="mb-3 font-semibold text-white"><span class="text-slate-500 text-xs font-normal mr-2">Schritt 4</span>Nachricht senden</h4>
+        <p class="mb-2 text-[11px] text-slate-500">Optional: <strong class="text-slate-400">Bild</strong>, <strong class="text-slate-400">.txt</strong> oder <strong class="text-slate-400">Opus/Ogg</strong> (Wire <code class="text-slate-400">MORG_AUDIO_V1</code>, nur Boss/Kommandant) – Unterschrift optional im Textfeld. Audio nur per Play-Klick (kein Autoplay).</p>
+        <div class="mb-2 flex flex-wrap items-center gap-2">
+          <input type="file" accept="image/*,.txt,text/plain,.opus,.ogg,audio/ogg,audio/opus,application/ogg,video/ogg" class="hidden" id="morg-lite-compact-media-input" @change="pickCompactAttachment($event)" />
+          <button type="button" @click="document.getElementById('morg-lite-compact-media-input')?.click()" :disabled="chat.compactBusy" class="rounded-lg border border-slate-500 bg-slate-700 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-600 disabled:opacity-50" x-text="chat.compactBusy ? 'Anhang…' : '📎 Bild / .txt / Opus'"></button>
+          <span class="text-[11px] text-slate-500 font-mono" x-show="chat.compactMeta" x-text="chat.compactMeta"></span>
+          <button type="button" x-show="chat.compactBlobBase64 || chat.compactTxtFileText != null || chat.compactAudioBase64" @click="clearCompactAttachment()" class="text-[11px] text-red-400 hover:underline">Anhang entfernen</button>
+        </div>
         <div class="flex gap-2">
-          <input type="text" x-model="chat.message" :placeholder="chat.encrypted ? 'Text (verschlüsselt an Partner)' : 'Text (Klartext, im Explorer sichtbar)'" class="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-500" />
+          <input type="text" x-model="chat.message" :placeholder="chat.encrypted ? 'Text / Unterschrift zu Bild oder .txt' : 'Text (Klartext) / Unterschrift zu Anhang'" class="flex-1 rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-white placeholder-slate-500" />
           <button @click="sendMessage()" class="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">Senden</button>
         </div>
         <label class="mt-2 flex items-center gap-2 text-sm text-slate-400">
@@ -774,11 +849,13 @@
               </select>
               <button type="button" @click="loadPackageSelectorList()" :disabled="packageSelectorLoading" class="rounded border border-slate-600 px-2 py-1 text-xs text-slate-300 hover:bg-slate-700 disabled:opacity-50 shrink-0">Liste laden</button>
               <button @click="fetchInbox()" :disabled="chat.loading" class="rounded bg-slate-600 px-3 py-1 text-sm hover:bg-slate-500 disabled:opacity-50 shrink-0" x-text="chat.loading ? 'Lade…' : 'Aktualisieren'"></button>
+              <button type="button" @click="document.getElementById('morg-lite-morg-pkg-import')?.click()" class="rounded border border-emerald-600/50 bg-emerald-900/20 px-2 py-1 text-xs text-emerald-200 hover:bg-emerald-900/40 shrink-0" title="morgendrot.morgpkg.v1">.morg-pkg import</button>
+              <button type="button" @click="document.getElementById('morg-lite-morg-pkg-device')?.click()" :disabled="cmdLoading" class="rounded border border-sky-600/50 bg-sky-900/20 px-2 py-1 text-xs text-sky-200 hover:bg-sky-900/40 shrink-0 disabled:opacity-50" title="Bundle: mehrere Dateien → .morg-pkg">Gerät → .morg-pkg</button>
             </div>
             <input type="text" x-model="chat.inboxPackageManual" dir="ltr" placeholder="Oder Package-ID 0x… (64 Hex) – nur für diesen Fetch, Vorrang vor Dropdown" class="w-full max-w-3xl rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-white font-mono placeholder:text-slate-500" autocomplete="off" spellcheck="false" />
             <label class="flex items-start gap-2 text-[11px] text-slate-400 cursor-pointer max-w-prose">
-              <input type="checkbox" class="mt-0.5 rounded border-slate-500" x-model="chat.mergeLocalInbox" />
-              <span><strong class="text-slate-300">Lokalen Entschlüsselungs-Cache mischen</strong> (Datei <span class="font-mono text-slate-500">.morgendrot-vault…inbox</span>): nur sinnvoll für dieselbe <span class="font-mono">PACKAGE_ID</span> wie beim Speichern; Standard ist <strong class="text-slate-300">aus</strong>, damit keine alten Pakete in der Liste erscheinen.</span>
+              <input type="checkbox" class="mt-0.5 rounded border-slate-500" x-model="chat.mergeLocalInbox" title="Aus: nur Chain-Mailbox. An: zusätzlich lokale Kopien aus der Vault-Inbox-Datei (nur gleiche PACKAGE_ID)." />
+              <span><strong class="text-slate-300">Lokalen Entschlüsselungs-Cache mischen</strong> (<span class="font-mono text-slate-500">.morgendrot-vault…inbox.enc</span>): Standard <strong class="text-slate-300">aus</strong> = Posteingang nur von der Chain. <strong class="text-slate-300">An</strong> = zusätzlich Zeilen aus der Vault-Datei, die beim früheren Entschlüsseln zwischengespeichert wurden. <strong class="text-slate-300">Nur wenn</strong> die Einträge zur aktuellen <span class="font-mono">PACKAGE_ID</span> passen (Backend filtert strikt) – verhindert alte/inkompatible Klartexte nach Deploy oder Paket-Wechsel („Geister-Nachrichten“). Kein Ersatz fürs korrekte Bild-Parsing; bei Problemen erst einmal aus lassen und nur Chain laden.</span>
             </label>
           </div>
         </div>
@@ -795,9 +872,47 @@
                     <span x-text="(m.sender || m.from || '').slice(0,16)+'…'"></span>
                     <span class="text-slate-500" x-show="m.nonce" x-text="' · nonce ' + m.nonce"></span>
                   </div>
-                  <button type="button" @click="purgeChatMailboxMessage(m)" :disabled="cmdLoading || m.chainPurgeable !== true || !m.nonce" class="rounded bg-red-600/50 px-2 py-0.5 text-[10px] text-red-100 hover:bg-red-600/70 disabled:opacity-30 shrink-0" :title="m.chainPurgeable === true ? 'Mailbox-Nachricht (verschlüsselt) von der Chain entfernen' : 'Nur bei verschlüsselter Mailbox-Speicherung purgebar – Klartext/Legacy-Events haben kein Objekt in der Mailbox.'">Chain purgen</button>
+                  <button type="button" @click="purgeChatMailboxMessage(m)" :disabled="cmdLoading || m.chainPurgeable !== true || !m.nonce" class="rounded bg-red-600/50 px-2 py-0.5 text-[10px] text-red-100 hover:bg-red-600/70 disabled:opacity-30 shrink-0" :title="m.chainPurgeable === true ? (m.isPlain ? 'PlainMsgKey in der Mailbox entfernen (ggf. 2. TX nach verschlüsselt-Versuch)' : 'Verschlüsselte Mailbox-Nachricht entfernen (ggf. 2. TX wenn PlainMsgKey)') : 'Nur Mailbox-Objekte purgebar; reine Event-Klartexte ohne PlainMsgKey nicht.'">Chain purgen</button>
                 </div>
-                <div class="font-mono text-sm text-white mt-1" x-text="m.text || m.content || '(leer)'"></div>
+                <div class="mt-1 space-y-1">
+                  <div x-show="inboxIsCompactImage(m)" class="rounded border border-emerald-600/40 bg-emerald-950/25 p-2 space-y-2">
+                    <p class="text-sm text-emerald-200">📷 Kompaktes Bild (Luma+Chroma)</p>
+                    <button type="button" @click="loadCompactImagePreview(m)" :disabled="m.compactPreviewLoading" class="rounded border border-emerald-600/50 bg-emerald-900/20 px-2 py-1 text-[11px] text-emerald-200 hover:bg-emerald-900/40 disabled:opacity-50" x-text="m.compactPreviewLoading ? 'Lade…' : (m.compactPreview ? 'Vorschau neu laden' : 'Bild anzeigen')"></button>
+                    <p class="text-[11px] text-amber-300/95" x-show="m.compactPreviewError" x-text="m.compactPreviewError"></p>
+                    <img x-show="m.compactPreview" :src="m.compactPreview" class="max-h-72 max-w-full rounded border border-slate-600 object-contain" alt="Vorschau" decoding="async" @error="onCompactImagePreviewImgError(m)" />
+                    <p class="text-[11px] text-slate-500">Server: <span class="font-mono">POST /api/compact-image-preview</span> – Vorschau nur nach Klick oben.</p>
+                  </div>
+                  <div x-show="!inboxIsCompactImage(m) && inboxIsFileTxt(m)" class="rounded border border-slate-600 bg-slate-800/80 p-2 space-y-2">
+                    <div class="flex flex-wrap items-center gap-2 text-sm text-white">
+                      <span aria-hidden="true">📄</span>
+                      <span class="break-all font-medium" x-text="inboxFileTxtName(m)"></span>
+                      <span class="text-slate-500">.txt</span>
+                    </div>
+                    <button type="button" @click="downloadInboxFileTxt(m)" class="rounded border border-slate-500 px-2 py-1 text-[11px] text-sky-300 hover:bg-slate-700">Datei speichern…</button>
+                    <p class="text-sm text-slate-300 whitespace-pre-wrap" x-show="inboxFileTxtCaption(m)" x-text="inboxFileTxtCaption(m)"></p>
+                  </div>
+                  <div x-show="!inboxIsCompactImage(m) && !inboxIsFileTxt(m) && inboxIsMorgAudioV1(m)" class="rounded border border-slate-600 bg-slate-800/80 p-2 space-y-2">
+                    <div class="flex flex-wrap items-center gap-2 text-sm text-white">
+                      <span aria-hidden="true">🔊</span>
+                      <span class="font-medium">Sprachnachricht (Opus/Ogg)</span>
+                      <button type="button" @click="playInboxMorgAudioV1(m)" class="rounded border border-emerald-500/60 px-2 py-1 text-[11px] text-emerald-300 hover:bg-slate-700" title="Nur nach Klick – kein Autoplay">Play / Leiste anzeigen</button>
+                    </div>
+                    <audio x-show="m.audioObjectUrl" :id="m.audioObjectUrl ? m.audioElementId : ''" :src="m.audioObjectUrl" controls class="w-full max-w-md rounded border border-slate-600" preload="metadata" playsinline></audio>
+                    <a x-show="m.audioObjectUrl" :href="m.audioObjectUrl" download="morg-sprache.ogg" class="inline-block text-[11px] text-sky-400 hover:underline">Als .ogg speichern (z. B. VLC)</a>
+                    <p class="text-sm text-slate-300 whitespace-pre-wrap" x-show="inboxMorgAudioV1Caption(m)" x-text="inboxMorgAudioV1Caption(m)"></p>
+                  </div>
+                  <div x-show="!inboxIsCompactImage(m) && !inboxIsFileTxt(m) && !inboxIsMorgAudioV1(m) && inboxIsCompactTxt(m)" class="rounded bg-slate-800/80 p-2 max-h-60 overflow-auto">
+                    <pre class="whitespace-pre-wrap break-words text-sm text-white font-mono" x-text="inboxCompactTxtDecoded(m)"></pre>
+                    <p class="mt-1 text-sm text-slate-300 whitespace-pre-wrap" x-show="inboxCompactTxtCaption(m)" x-text="inboxCompactTxtCaption(m)"></p>
+                  </div>
+                  <div x-show="!inboxIsCompactImage(m) && !inboxIsFileTxt(m) && !inboxIsMorgAudioV1(m) && !inboxIsCompactTxt(m)" class="font-mono text-sm text-white whitespace-pre-wrap break-words" x-text="m.text || m.content || '(leer)'"></div>
+                  <span class="flex flex-wrap gap-2 items-center">
+                    <button type="button" @click="copyChatMessageText(m)" class="text-[11px] text-sky-400 hover:underline">Wire kopieren</button>
+                    <button type="button" x-show="inboxIsCompactTxt(m) || inboxIsFileTxt(m) || inboxIsMorgAudioV1(m)" @click="copyChatMessagePlainText(m)" class="text-[11px] text-emerald-400 hover:underline">Klartext kopieren</button>
+                    <button type="button" @click="exportInboxMorgPkg(m)" class="rounded border border-emerald-500/50 bg-emerald-900/25 px-2 py-0.5 text-[11px] text-emerald-200 hover:bg-emerald-900/45" title="ECDH+AES-GCM wie /send; ein Partner auto, sonst Partner-Adresse oben (Handshake)">ECDH .morg-pkg</button>
+                    <button type="button" @click="exportInboxSneakernet(m)" class="rounded border border-slate-600 px-2 py-0.5 text-[11px] text-amber-300/90 hover:bg-slate-700" title="JSON-Klartext-Snapshot (Wire) für USB/SD">JSON</button>
+                  </span>
+                </div>
               </li>
             </template>
           </ul>
@@ -1385,6 +1500,14 @@
 
       <template x-if="uiRole === 'boss' || uiRole === 'kommandant'">
         <div class="space-y-6">
+      <div class="glass rounded-xl p-3 border border-sky-500/25">
+        <p class="text-xs text-slate-300 leading-relaxed">
+          <strong class="text-sky-300">Meshtastic / Funk:</strong> Diese Boss-Ansicht (Lite-UI, Port 3342) hat kein Web Bluetooth.
+          Heltec koppeln, Chat-Sendepfade und Boss-Befehl mit optionalem Mesh-Parallelversand findest du in der
+          <strong class="text-white">Next-UI</strong> unter <span class="font-mono text-slate-400">http://127.0.0.1:3341</span>
+          (Kacheln <strong class="text-white">Nachrichten</strong> und <strong class="text-white">Steuerung</strong>).
+        </p>
+      </div>
       <!-- 1. Geräte-Verwaltung (Boss & Kommandant: Senden + Überwachen) -->
       <div class="glass rounded-xl p-4">
         <h4 class="mb-3 font-semibold text-white">Registrierte Geräte</h4>
@@ -1454,6 +1577,34 @@
                   <input type="text" x-model="boss.gasTopup" class="w-20 rounded border border-slate-600 bg-slate-700 px-2 py-1 text-xs text-white" />
                 </div>
                 <button @click="setConfig('GAS_STATION_MIN_IOTA', boss.gasMin); setConfig('GAS_STATION_TOPUP_IOTA', boss.gasTopup)" class="rounded bg-slate-600 px-3 py-1 text-xs hover:bg-slate-500">Speichern</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chain & Messenger-Defaults (TTL, Mailbox, Hierarchie-relevante Flags) -->
+          <div class="rounded-lg border border-emerald-800/50">
+            <button type="button" @click="boss.roleParamsOpen = boss.roleParamsOpen === 'chain' ? '' : 'chain'" class="w-full flex justify-between items-center px-3 py-2 text-sm text-white hover:bg-slate-700/50">
+              <span>Chain &amp; Messenger-Defaults</span><span x-text="boss.roleParamsOpen === 'chain' ? '▾' : '▸'" class="text-slate-500"></span>
+            </button>
+            <div x-show="boss.roleParamsOpen === 'chain'" x-cloak class="px-3 pb-3 space-y-2 border-t border-slate-700 text-xs">
+              <p class="text-slate-500 mt-2 leading-relaxed">Werte in die Boss-<span class="font-mono">.env</span> schreiben (wie Kommandant/Arbeiter-Flags). <span class="text-emerald-400/90">DEFAULT_TTL_DAYS</span> = Ablauf Handshake / Nachrichten / gespeicherten Klartext in der Mailbox. <span class="text-emerald-400/90">MAILBOX_STORE_PLAINTEXT</span> = Klartext zusätzlich speichern (purgebar, Rebate); braucht deploytes Move mit <span class="font-mono">store_plaintext_message_stored</span>.</p>
+              <div class="grid sm:grid-cols-2 gap-2">
+                <label class="space-y-0.5"><span class="text-slate-500">DEFAULT_TTL_DAYS (Ablauf)</span>
+                  <input type="number" min="0" max="3650" x-model="boss.chainTtlDays" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">DEFAULT_KEY_TTL_DAYS (Keys/Tickets)</span>
+                  <input type="number" min="0" max="3650" x-model="boss.chainKeyTtlDays" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5 sm:col-span-2"><span class="text-slate-500">MAILBOX_ID (0x…64, optional)</span>
+                  <input type="text" x-model="boss.chainMailboxId" placeholder="Leer = unverändert" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 font-mono text-white" /></label>
+              </div>
+              <div class="flex flex-wrap gap-x-4 gap-y-1">
+                <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="boss.chainUseMailbox" class="rounded border-slate-600" /> USE_MAILBOX</label>
+                <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="boss.chainMailboxStorePlain" class="rounded border-slate-600" /> MAILBOX_STORE_PLAINTEXT (Klartext speichern)</label>
+                <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="boss.chainEnablePurge" class="rounded border-slate-600" /> ENABLE_PURGE</label>
+                <label class="flex items-center gap-1 text-slate-300"><input type="checkbox" x-model="boss.chainPlainChannel" class="rounded border-slate-600" /> ENABLE_PLAINTEXT_CHANNEL</label>
+              </div>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button type="button" @click="saveBossChainDefaults()" class="rounded bg-emerald-700 px-3 py-1.5 text-white hover:bg-emerald-600">Alle Chain-Defaults speichern</button>
+                <button type="button" @click="loadBossConfig()" class="rounded bg-slate-600 px-3 py-1.5 text-slate-200 hover:bg-slate-500">Aus .env neu laden</button>
               </div>
             </div>
           </div>
@@ -1598,6 +1749,76 @@
           <p class="text-xs font-medium text-violet-200 mb-1">Embedded (Tiny/ESP32) und IOTA Rebased</p>
           <p class="text-xs text-slate-400">Der Chip ist <strong class="text-slate-200">kein Chain-Client</strong> (kein Fullnode, kein schwerer TLS/RPC-Stack). Er spricht mit einem <strong class="text-slate-200">Gateway oder einer Bridge</strong> (URL in <span class="font-mono">identity.h</span>); dort laufen <span class="font-mono">RPC_URL</span>, <span class="font-mono">PACKAGE_ID</span> und ggf. <span class="font-mono">SIGNER=remote</span> – dieselbe Move-Paket- und Befehlslogik wie beim Rest der Flotte. Der Export <span class="font-mono">identity.h</span> liefert nur die <strong class="text-slate-200">Gateway-Identität</strong> (HMAC), <strong>keinen</strong> privaten On-Chain-Key.</p>
         </div>
+
+        <div class="rounded-xl border border-fuchsia-600/45 bg-fuchsia-950/20 p-4 mb-4 space-y-3">
+          <h5 class="text-sm font-semibold text-fuchsia-200">Messenger exportieren <span class="text-fuchsia-400/80 font-normal">(ohne Geräte-Wizard / Arbeiter-Profil)</span></h5>
+          <p class="text-[11px] text-slate-400 leading-relaxed">Erzeugt <strong class="text-slate-300">nur Messenger-.env</strong> (ROLE=messenger, kein Lock/Listener aus Arbeiter-Templates). Stapel → <span class="font-mono">exports/messenger-shipments/&lt;Run&gt;/u001…</span> + <span class="font-mono">boss-only/manifest.json</span> (Signer-Imports). <strong class="text-slate-300">Verkauf (sales):</strong> optional Messenger-Credits-NFT pro Einheit minten (plug-in-fertige <span class="font-mono">MESSENGER_CREDITS_OBJECT_ID</span>). <strong class="text-slate-300">Standalone (free):</strong> alles selbst konfigurieren – <strong class="text-amber-200/90">kein</strong> NFT-Mint über diesen Stapel. Move-Paket muss <span class="font-mono">mint_messenger_credits_batch</span> / <span class="font-mono">*_with_credits</span> enthalten (deploy/upgrade). Bis zu <strong class="text-slate-300">2500</strong> Einheiten pro API-Lauf (Schutz vor Timeout/RPC-Last; <strong class="text-slate-300">mehr</strong> = mehrere Läufe mit neuer Run-ID). Anschließend: <span class="font-mono">npx tsx scripts/assemble-messenger-units.ts &lt;Run&gt; sales|standalone</span>. <strong class="text-amber-300/90">Shadow-Sweep / Gas</strong> nicht automatisch. <strong class="text-emerald-400/90">Felderhilfe (Repo):</strong> <span class="font-mono">docs/MESSENGER-EXPORT-FIELDS.md</span></p>
+          <details class="rounded-lg border border-fuchsia-500/30 bg-slate-900/40 px-3 py-2 text-[11px] text-slate-400 space-y-2">
+            <summary class="cursor-pointer font-medium text-fuchsia-200/90">Kurz: PACKAGE_ID · Verlauf · SIGNER</summary>
+            <ul class="list-disc list-inside space-y-1 pl-1">
+              <li><strong class="text-slate-300">PACKAGE_ID Quelle:</strong> <em>Boss-.env</em> = aktuelle <span class="font-mono">PACKAGE_ID</span>; <em>Eigene ID</em> = manuell 0x…64; <em>Verlauf</em> = lokale Datei <span class="font-mono">.morgendrot-package-id-history</span> — <strong>0</strong> = jüngster Eintrag, <strong>1</strong> = davor, …</li>
+              <li><strong class="text-slate-300">SIGNER:</strong> <span class="font-mono">sdk</span> = Kunde entsperrt in der UI; <span class="font-mono">cli</span> = IOTA-CLI auf dem Zielrechner; <span class="font-mono">remote</span> = Boss signiert (<span class="font-mono">npm run boss-signer</span>, siehe <span class="font-mono">docs/BOSS-MODUS.md</span>).</li>
+              <li>Alle Felder ausführlich: im Projektordner <span class="font-mono">docs/MESSENGER-EXPORT-FIELDS.md</span> öffnen (IDE/Markdown-Viewer).</li>
+            </ul>
+          </details>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+            <label class="space-y-1"><span class="text-slate-500">Edition</span>
+              <select x-model="boss.messengerStapel.edition" @change="if (boss.messengerStapel.edition !== 'sales') boss.messengerStapel.mintMessengerCredits = false" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white">
+                <option value="sales">Verkauf (plug-and-play, optional NFT)</option>
+                <option value="standalone">Standalone / free (ohne NFT-Stapel)</option>
+              </select></label>
+            <label class="space-y-1"><span class="text-slate-500">PACKAGE_ID</span>
+              <select x-model="boss.messengerStapel.packageSource" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" title="Verlauf = .morgendrot-package-id-history; 0=jüngster Eintrag">
+                <option value="boss">Boss-.env (aktuell)</option>
+                <option value="custom">Eigene ID</option>
+                <option value="history">Verlauf (lokal)</option>
+              </select></label>
+            <label class="space-y-1" x-show="boss.messengerStapel.packageSource === 'custom'"><span class="text-slate-500">Custom 0x…64</span>
+              <input type="text" x-model="boss.messengerStapel.customPackageId" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 font-mono text-white" placeholder="0x…" title="Anderes deploytes Paket" /></label>
+            <label class="space-y-1" x-show="boss.messengerStapel.packageSource === 'history'"><span class="text-slate-500">Verlauf: 0 = jüngste ID</span>
+              <input type="number" min="0" x-model.number="boss.messengerStapel.historyFromNewest" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" title="0=jüngster Eintrag in .morgendrot-package-id-history, 1=vorheriger, …" /></label>
+            <label class="space-y-1"><span class="text-slate-500">Anzahl (max. 2500 pro Lauf)</span>
+              <input type="number" min="1" max="2500" x-model.number="boss.messengerStapel.count" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" title="Mehr Einheiten: zweiten Lauf mit neuer Run-ID" /></label>
+            <label class="space-y-1"><span class="text-slate-500">SIGNER</span>
+              <select x-model="boss.messengerStapel.signer" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" title="sdk=UI/Endkunde · cli=IOTA-CLI am Ziel · remote=Boss-Signer (docs/BOSS-MODUS.md)">
+                <option value="sdk">sdk (Kunde entsperrt in UI)</option>
+                <option value="cli">cli (IOTA-CLI am Zielrechner)</option>
+                <option value="remote">remote (Boss-Signer, kein Wallet am Kunden-PC)</option>
+              </select></label>
+            <label class="space-y-1 sm:col-span-2"><span class="text-slate-500">Namens-Prefix (DEVICE_NAME)</span>
+              <input type="text" x-model="boss.messengerStapel.namePrefix" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" placeholder="z. B. Shop-Kunde" /></label>
+            <label class="flex items-center gap-2 mt-6"><input type="checkbox" x-model="boss.messengerStapel.registerAddresses" class="rounded border-slate-600" /><span class="text-slate-400">Adressen in Boss-<span class="font-mono">DEVICE_ROLES</span> als <span class="font-mono">messenger</span></span></label>
+            <label class="flex items-center gap-2 mt-6"><input type="checkbox" x-model="boss.messengerStapel.writeToBundle" class="rounded border-slate-600" /><span class="text-slate-400">Nur <strong>1</strong> Stück direkt ins Bundle (<span class="font-mono">exports/…-verkauf|standalone</span>) + <span class="font-mono">boss-only/</span></span></label>
+            <label class="space-y-1"><span class="text-slate-500">DEFAULT_TTL_DAYS im Export</span>
+              <input type="number" min="0" max="3650" placeholder="leer = nicht setzen" x-model="boss.messengerStapel.exportTtlDays" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 text-white" title="Optional: in jede exportierte .env schreiben" /></label>
+            <label class="flex items-center gap-2 mt-6 sm:col-span-2"><input type="checkbox" x-model="boss.messengerStapel.exportMailboxStorePlaintext" class="rounded border-slate-600" /><span class="text-slate-400 text-xs">Export: <span class="font-mono">MAILBOX_STORE_PLAINTEXT=true</span> (Klartext speichernd; neues Move nötig)</span></label>
+            <label class="space-y-1 sm:col-span-2"><span class="text-slate-500">Run-ID (optional, sonst Zeitstempel)</span>
+              <input type="text" x-model="boss.messengerStapel.runId" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1.5 font-mono text-sm text-white" placeholder="z. B. batch-2025-03-shop" /></label>
+            <div class="sm:col-span-2 lg:col-span-3 rounded-lg border border-fuchsia-700/40 bg-fuchsia-950/15 p-3 space-y-2" x-show="boss.messengerStapel.edition === 'sales'">
+              <p class="text-[10px] text-fuchsia-200/80">Nur <strong>Verkaufs-Edition</strong>: Boss mintet Credits-NFTs; Standalone bleibt ohne diesen Schritt.</p>
+              <label class="flex items-center gap-2"><input type="checkbox" x-model="boss.messengerStapel.mintMessengerCredits" class="rounded border-slate-600" /><span class="text-slate-300 text-xs font-medium">Messenger-Credits minten</span><span class="text-slate-500 text-[11px]">(Gas zahlt Boss; viele Einheiten = viele TX)</span></label>
+              <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 text-xs" x-show="boss.messengerStapel.mintMessengerCredits">
+                <label class="space-y-0.5"><span class="text-slate-500">Start-Guthaben</span>
+                  <input type="number" min="0" x-model.number="boss.messengerStapel.creditsInitialBalance" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">Max. Cap</span>
+                  <input type="number" min="0" x-model.number="boss.messengerStapel.creditsMaxBalance" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">Auffüllen alle (h)</span>
+                  <input type="number" min="0" step="0.5" x-model.number="boss.messengerStapel.creditsRefillIntervalHours" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" title="0 = kein Zeit-Auffüllen" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">Pro Intervall +</span>
+                  <input type="number" min="0" x-model.number="boss.messengerStapel.creditsRefillAmount" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">Kosten /handshake</span>
+                  <input type="number" min="0" x-model.number="boss.messengerStapel.creditsCostEcdhInit" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5"><span class="text-slate-500">Kosten /Nachricht</span>
+                  <input type="number" min="0" x-model.number="boss.messengerStapel.creditsCostStoreMessage" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 text-white" /></label>
+                <label class="space-y-0.5 sm:col-span-2 lg:col-span-3"><span class="text-slate-500">Boss-Wallet-Passwort (nur für Mint; nicht gespeichert)</span>
+                  <input type="password" autocomplete="off" x-model="boss.messengerStapel.bossWalletPassword" class="w-full rounded border border-slate-600 bg-slate-800 px-2 py-1 font-mono text-white" placeholder="Leer = Session-Passwort (falls entsperrt)" /></label>
+              </div>
+            </div>
+          </div>
+          <div x-show="boss.messengerStapel.feedback" class="rounded-lg border px-3 py-2 text-xs" :class="boss.messengerStapel.isError ? 'border-amber-600/60 bg-amber-950/40 text-amber-200' : 'border-emerald-600/50 bg-emerald-950/30 text-emerald-100'" x-text="boss.messengerStapel.feedback"></div>
+          <button type="button" @click="runMessengerStapelExport()" :disabled="boss.messengerStapel.loading" class="rounded-lg bg-fuchsia-600 px-4 py-2 text-sm text-white hover:bg-fuchsia-500 disabled:opacity-50" x-text="boss.messengerStapel.loading ? 'Erzeuge…' : 'Messenger-Stapel erzeugen'"></button>
+        </div>
+
         <p class="text-xs text-slate-500 mb-2">Tiny ohne WLAN? <a href="/setup-tiny.html" class="text-emerald-400 hover:underline">Config per AP-Modus senden</a> (Setup-Seite)</p>
 
         <!-- Step 1: Profil aus Bibliothek + Personalisierung -->
@@ -1769,9 +1990,13 @@
                 </div>
               </div>
               <div class="rounded-lg border border-violet-700/50 bg-violet-950/25 p-3 space-y-2">
-                <p class="text-xs font-medium text-violet-200">Messenger (Standalone)</p>
-                <p class="text-[11px] text-slate-500">Einmal im <strong class="text-slate-400">Hauptrepo</strong> ausführen: <span class="font-mono">npm run bundle:messenger</span>. Dann dieselbe Geräte-<span class="font-mono">.env</span> wie oben nach <span class="font-mono">exports/Morgendrot-Messenger-standalone</span> schreiben.</p>
-                <button type="button" x-show="boss.provResult && boss.provRole !== 'user'" @click="exportProvisionToProject('messenger')" class="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-500" title="Benötigt bundle:messenger und Schritt 2">Export Messenger</button>
+                <p class="text-xs font-medium text-violet-200">Messenger (Legacy: Geräte-.env)</p>
+                <p class="text-[11px] text-amber-200/85">Achtung: Die .env stammt vom <strong>gewählten Geräteprofil</strong> (z. B. Arbeiter) und kann <strong class="text-amber-100">Lock/Listener</strong> enthalten. Für saubere Messenger-Pakete besser <strong>„Messenger exportieren“</strong> oben oder Stapel-API.</p>
+                <p class="text-[11px] text-slate-500">Vorher: <span class="font-mono">npm run bundle:messenger</span>.</p>
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" x-show="boss.provResult && boss.provRole !== 'user'" @click="exportProvisionToProject('messenger')" class="rounded-lg bg-violet-600 px-4 py-2 text-sm text-white hover:bg-violet-500" title="exports/Morgendrot-Messenger-standalone">Export → Standalone-Ordner</button>
+                  <button type="button" x-show="boss.provResult && boss.provRole !== 'user'" @click="exportProvisionToProject('messenger-sales')" class="rounded-lg border border-violet-400/50 bg-violet-900/30 px-4 py-2 text-sm text-violet-100 hover:bg-violet-800/40" title="exports/Morgendrot-Messenger-verkauf">Export → Verkaufs-Ordner</button>
+                </div>
               </div>
             </div>
             <button type="button" @click="showProvisionQr()" class="rounded-lg bg-amber-600 px-4 py-2 text-sm text-white hover:bg-amber-500">QR-Code anzeigen</button>
@@ -1930,12 +2155,19 @@
 
     <!-- ==================== Config ==================== -->
     <div x-show="view === 'config'" x-cloak class="space-y-6">
-      <div class="flex justify-between items-center">
+        <div class="flex flex-wrap justify-between items-center gap-2">
         <h4 class="font-semibold text-white">Konfiguration (.env)</h4>
-        <button @click="loadConfig()" :disabled="configLoading" class="rounded-lg bg-slate-600 px-4 py-2 text-sm hover:bg-slate-500 disabled:opacity-50" x-text="configLoading ? 'Lade…' : 'Aktualisieren'"></button>
+        <div class="flex flex-wrap items-center gap-2">
+          <label x-show="uiMessengerMode && uiSalesMessenger" x-cloak class="flex items-center gap-2 text-xs text-amber-200/90 cursor-pointer select-none">
+            <input type="checkbox" class="rounded border-slate-600" :checked="uiExpertMessengerConfig" @change="toggleExpertMessengerConfig($event.target.checked)" />
+            Experten-Ansicht (alle Keys)
+          </label>
+          <button @click="loadConfig()" :disabled="configLoading" class="rounded-lg bg-slate-600 px-4 py-2 text-sm hover:bg-slate-500 disabled:opacity-50" x-text="configLoading ? 'Lade…' : 'Aktualisieren'"></button>
+        </div>
       </div>
+      <p x-show="uiMessengerMode && uiSalesMessenger && !uiExpertMessengerConfig" class="text-[11px] text-slate-500">Verkaufs-Messenger: es werden nur <strong class="text-slate-400">häufig gebrauchte</strong> Einträge gezeigt. Für alles andere: Experten-Ansicht aktivieren oder Setup nutzen.</p>
       <div class="space-y-2 max-h-96 overflow-auto">
-        <template x-for="item in configList" :key="item.envKey">
+        <template x-for="item in messengerConfigVisibleRows()" :key="item.envKey">
           <div class="flex flex-wrap items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 p-3">
             <span class="min-w-[200px] font-mono text-xs text-slate-400" x-text="item.envKey"></span>
             <input type="text" x-model="item.value" class="max-w-md flex-1 rounded border border-slate-600 bg-slate-700 px-2 py-1 font-mono text-sm text-white" />
@@ -2088,6 +2320,46 @@
         </div>
         <p class="text-[11px] text-slate-500 mt-2" x-show="setup.messengerMeta.rpcCandidateCount < 2">Für Rotation: in <span class="font-mono">RPC_URLS</span> weitere https-URLs (Komma) eintragen – Tab „.env“ oder Datei, ggf. Neustart.</p>
       </div>
+      <div class="glass rounded-xl p-4 border border-amber-500/25">
+        <h4 class="mb-2 font-semibold text-white">Messenger: Gas-Faucet &amp; NFT-Türsteher</h4>
+        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Die <strong class="text-slate-400">erste</strong> erfolgreiche Messenger-Chain-TX zahlst du selbst (nach Shadow-Sweep sind die Coins typischerweise zusammengeführt). Ab der <strong class="text-slate-400">zweiten</strong> kann die Node Gas übernehmen, wenn <span class="font-mono text-slate-400">MESSENGER_AUTO_SPONSOR=true</span>, Sponsoring aktiv ist, du <span class="font-mono text-slate-400">MESSENGER_LICENSE_NFT_OBJECT_ID</span> besitzt und <span class="font-mono text-slate-400">SPONSOR_GAS_PASSWORD</span> (Sponsor-Wallet) gesetzt ist. Viele kleine Coins: bis zu 128 Gas-Objekte pro TX.</p>
+        <ul class="text-[11px] text-slate-500 list-disc pl-5 mb-3 space-y-1">
+          <li>Lokaler Fortschritt: <span class="font-mono">.messenger-gas-state.json</span></li>
+          <li>Privates Peering: <span class="font-mono">PAIRING_GATE_NFT_OBJECT_ID</span> → <span class="font-mono">/pairing-offer</span> und <span class="font-mono">/pairing-find</span> nur mit diesem NFT in der Wallet</li>
+          <li><span class="font-mono">IOTA_GAS_STATION_URL</span>: Platzhalter für spätere Anbindung (Remote-Sponsor)</li>
+        </ul>
+        <label class="flex items-center gap-2 text-sm text-slate-400 mb-3">
+          <input type="checkbox" class="rounded border-slate-600" x-model="messengerGasUi.autoSponsor" @change="setConfig('MESSENGER_AUTO_SPONSOR', messengerGasUi.autoSponsor ? 'true' : 'false')" /> MESSENGER_AUTO_SPONSOR
+        </label>
+        <label class="block text-xs text-slate-500 mb-1">Lizenz-NFT (0x+64 Hex) für Sponsor ab TX 2</label>
+        <div class="flex gap-2 flex-wrap mb-3">
+          <input type="text" x-model="messengerGasUi.licenseNft" class="flex-1 min-w-[200px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 font-mono text-sm text-white" placeholder="MESSENGER_LICENSE_NFT_OBJECT_ID" autocomplete="off" />
+          <button type="button" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500" @click="setConfig('MESSENGER_LICENSE_NFT_OBJECT_ID', messengerGasUi.licenseNft)">Setzen</button>
+        </div>
+        <label class="block text-xs text-slate-500 mb-1">Pairing-Türsteher-NFT (optional)</label>
+        <div class="flex gap-2 flex-wrap mb-3">
+          <input type="text" x-model="messengerGasUi.pairingGateNft" class="flex-1 min-w-[200px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 font-mono text-sm text-white" placeholder="PAIRING_GATE_NFT_OBJECT_ID" autocomplete="off" />
+          <button type="button" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500" @click="setConfig('PAIRING_GATE_NFT_OBJECT_ID', messengerGasUi.pairingGateNft)">Setzen</button>
+        </div>
+        <div class="space-y-2 mt-1 pt-3 border-t border-slate-600/40 mb-3">
+          <p class="text-xs text-slate-400"><span class="font-mono text-slate-300">VERIFIED_IOTA_NAME_PACKAGE_IDS</span> – IOTA Names: erlaubte Move-Pakete für das Registrierungs-NFT (Komma/Leerzeichen, je 0x+64 Hex). Im Chat-Tab „Auflösen“ erscheint dann die Allowlist-Prüfung.</p>
+          <div class="flex flex-wrap gap-2 items-end">
+            <input type="text" x-model="messengerGasUi.verifiedIotaPackages" placeholder="0x…, 0x…" autocomplete="off" spellcheck="false" class="flex-1 min-w-[200px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 font-mono text-xs text-white" />
+            <button type="button" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500 shrink-0" @click="setVerifiedIotaNamePackagesFromUi()">Allowlist setzen</button>
+          </div>
+          <p class="text-[11px] text-slate-500"><a href="https://docs.iota.org/iota-api-ref#iotax_iotanameslookup" target="_blank" rel="noopener" class="text-sky-400 hover:underline">iotax_iotaNamesLookup</a> · <a href="https://docs.iota.org/" target="_blank" rel="noopener" class="text-sky-400 hover:underline">IOTA Documentation</a></p>
+        </div>
+        <label class="block text-xs text-slate-500 mb-1">IOTA Gas Station URL (vorbereitet)</label>
+        <div class="flex gap-2 flex-wrap mb-3">
+          <input type="text" x-model="messengerGasUi.gasStationUrl" class="flex-1 min-w-[200px] rounded border border-slate-600 bg-slate-700 px-2 py-1.5 font-mono text-sm text-white" placeholder="https://…" autocomplete="off" />
+          <button type="button" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500" @click="setConfig('IOTA_GAS_STATION_URL', messengerGasUi.gasStationUrl)">Setzen</button>
+        </div>
+        <label class="block text-xs text-slate-500 mb-1">Shadow-Sweep Reserve (MIST)</label>
+        <div class="flex gap-2 flex-wrap">
+          <input type="text" x-model="messengerGasUi.shadowReserve" class="w-44 rounded border border-slate-600 bg-slate-700 px-2 py-1.5 font-mono text-sm text-white" autocomplete="off" />
+          <button type="button" class="rounded-lg bg-slate-600 px-3 py-1.5 text-sm hover:bg-slate-500" @click="setConfig('SHADOW_SWEEP_GAS_RESERVE_MIST', messengerGasUi.shadowReserve)">Setzen</button>
+        </div>
+      </div>
       <div class="glass rounded-xl p-4 border border-amber-500/30">
         <h4 class="mb-2 font-semibold text-white">Schatten-Seed → Main (einmaliger Sweep)</h4>
         <p class="text-xs text-slate-400 mb-3 leading-relaxed">12+ Wörter der <strong class="text-slate-200">Schatten</strong>-Wallet. Es wird ein <strong class="text-slate-200">neues</strong> Main-Keypair erzeugt; MIST (minus Gas-Reserve) und transferierbare Owned Objects werden in einer Transaktion dorthin bewegt. Der <strong class="text-amber-200">Main-Secret-Key</strong> erscheint <strong>nur hier</strong> – sofort kopieren und sichern (Tresor/Papier). Nur sinnvoll mit <span class="font-mono text-slate-500">SIGNER=sdk</span> und passender Ableitung wie beim Import; API bindet an 127.0.0.1.</p>
@@ -2098,21 +2370,23 @@
         </div>
         <p class="mt-2 text-xs text-red-400" x-show="setup.shadowSweepOk === false && setup.shadowSweepMsg" x-text="setup.shadowSweepMsg"></p>
         <p class="mt-2 text-xs text-emerald-400" x-show="setup.shadowSweepOk === true && setup.shadowSweepMsg" x-text="setup.shadowSweepMsg"></p>
-        <div class="mt-4 rounded-lg border border-emerald-500/40 bg-slate-900/60 p-3 space-y-2 text-xs" x-show="setup.shadowSweepResult && setup.shadowSweepResult.mainAddress" x-cloak>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-slate-500 shrink-0">Main-Adresse</span>
-            <span class="font-mono text-emerald-200 break-all" x-text="setup.shadowSweepResult.mainAddress"></span>
-            <button type="button" @click="copyIdToClipboard(setup.shadowSweepResult.mainAddress, 'MAIN')" class="rounded bg-slate-600 px-2 py-1 text-white text-[11px]">Kopieren</button>
-          </div>
-          <div class="flex flex-col gap-1">
-            <span class="text-slate-500">Main Secret Key (einmalig)</span>
-            <div class="flex flex-wrap gap-2 items-start">
-              <span class="font-mono text-amber-200 break-all flex-1 min-w-0" x-text="setup.shadowSweepResult.mainSecretKey"></span>
-              <button type="button" @click="copyIdToClipboard(setup.shadowSweepResult.mainSecretKey, 'SECRET')" class="rounded bg-amber-700 px-2 py-1 text-white text-[11px] shrink-0">Kopieren</button>
+        <template x-if="setup.shadowSweepResult && setup.shadowSweepResult.mainAddress">
+          <div class="mt-4 rounded-lg border border-emerald-500/40 bg-slate-900/60 p-3 space-y-2 text-xs">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-slate-500 shrink-0">Main-Adresse</span>
+              <span class="font-mono text-emerald-200 break-all" x-text="setup.shadowSweepResult.mainAddress"></span>
+              <button type="button" @click="copyIdToClipboard(setup.shadowSweepResult.mainAddress, 'MAIN')" class="rounded bg-slate-600 px-2 py-1 text-white text-[11px]">Kopieren</button>
             </div>
+            <div class="flex flex-col gap-1">
+              <span class="text-slate-500">Main Secret Key (einmalig)</span>
+              <div class="flex flex-wrap gap-2 items-start">
+                <span class="font-mono text-amber-200 break-all flex-1 min-w-0" x-text="setup.shadowSweepResult.mainSecretKey"></span>
+                <button type="button" @click="copyIdToClipboard(setup.shadowSweepResult.mainSecretKey, 'SECRET')" class="rounded bg-amber-700 px-2 py-1 text-white text-[11px] shrink-0">Kopieren</button>
+              </div>
+            </div>
+            <div class="text-slate-500" x-show="setup.shadowSweepResult.digest">TX <span class="font-mono text-slate-300" x-text="setup.shadowSweepResult.digest"></span></div>
           </div>
-          <div class="text-slate-500" x-show="setup.shadowSweepResult.digest">TX <span class="font-mono text-slate-300" x-text="setup.shadowSweepResult.digest"></span></div>
-        </div>
+        </template>
       </div>
       <div class="glass rounded-xl p-4" x-show="setup.networkExpertMode">
         <h4 class="mb-3 font-semibold text-white">Package-ID</h4>
@@ -2212,7 +2486,7 @@
           { id: 'ids-history', title: 'IDs & Verlauf', subtitle: 'Alle Package-, Anchor- und Adress-Listen', icon: '📋', iconBg: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
         ],
         idsHistory: { packageIds: [], anchorIds: [], loading: false, currentId: '', historyIds: [], discoveredIds: [] },
-        chat: { partner: '', message: '', encrypted: true, useMailbox: true, messages: [], loading: false, inboxPackageId: '', inboxPackageManual: '', mergeLocalInbox: false, lastInboxBackend: '', pairingShareSecret: '', pairingFindSecret: '', pairingDisplayName: '', pairingTtlSec: '60', contactLabels: {}, qrShareDisplayName: '', qrIncludeNetworkInQr: false, qrImportRaw: '', qrImportError: '', qrImportParsed: null, qrImportApplyNetwork: false },
+        chat: { partner: '', message: '', encrypted: true, useMailbox: true, messages: [], loading: false, inboxPackageId: '', inboxPackageManual: '', mergeLocalInbox: false, lastInboxBackend: '', pairingShareSecret: '', pairingFindSecret: '', pairingDisplayName: '', pairingTtlSec: '60', contactLabels: {}, qrShareDisplayName: '', qrIncludeNetworkInQr: false, qrImportRaw: '', qrImportError: '', qrImportParsed: null, qrImportApplyNetwork: false, iotaNameInput: '', iotaNameLoading: false, iotaNameResult: null, iotaNameError: '', compactBlobBase64: null, compactAudioBase64: null, compactTxtFileName: '', compactTxtFileText: null, compactBusy: false, compactMeta: '' },
         lock: {
           keys: [], tickets: [], cmd: '', loading: false,
           keyLock: '', keyRecipient: '', keyTtl: '', keyCount: 1, keyNotify: false, lastCreated: [],
@@ -2260,6 +2534,31 @@
           provLoading: false,
           provExportFeedback: '',
           provExportIsError: false,
+          messengerStapel: {
+            edition: 'sales',
+            packageSource: 'boss',
+            customPackageId: '',
+            historyFromNewest: 0,
+            count: 10,
+            signer: 'sdk',
+            namePrefix: 'Kunde',
+            registerAddresses: true,
+            writeToBundle: false,
+            runId: '',
+            exportTtlDays: '',
+            exportMailboxStorePlaintext: false,
+            mintMessengerCredits: false,
+            creditsInitialBalance: 100,
+            creditsMaxBalance: 1000,
+            creditsRefillIntervalHours: 24,
+            creditsRefillAmount: 10,
+            creditsCostEcdhInit: 1,
+            creditsCostStoreMessage: 1,
+            bossWalletPassword: '',
+            loading: false,
+            feedback: '',
+            isError: false,
+          },
           gasEnabled: false, gasMin: '0.1', gasTopup: '1',
           sponsoredEnabled: false,
           kommBoss: '', kommWorkers: '',
@@ -2268,6 +2567,13 @@
           arbLockId: '', arbOpenCmd: '', arbCloseCmd: '',
           arbHeartbeatMs: '30000', arbHeartbeat: true,
           arbSigner: 'cli', arbRemoteSigner: '',
+          chainTtlDays: '30',
+          chainKeyTtlDays: '30',
+          chainMailboxId: '',
+          chainUseMailbox: true,
+          chainMailboxStorePlain: false,
+          chainEnablePurge: true,
+          chainPlainChannel: false,
         },
         vault: { password: '', notes: '', path: '', includeSdkMnemonicInBackup: false },
         vaultList: [],
@@ -2299,10 +2605,13 @@
         uiMessengerMode: false,
         /** true wenn Backend MESSENGER_EDITION=sales (Verkaufs-Bundle). */
         uiSalesMessenger: false,
+        /** Verkaufs-Messenger: volle .env-Liste (sonst nur Kernfelder). */
+        uiExpertMessengerConfig: false,
         _fullFeatures: null,
         messengerGuideOpen: true,
         setupStreamsHelpOpen: false,
         messengerOnboard: { network: false, package: false, wallet: false, vault: false },
+        messengerGasUi: { autoSponsor: false, licenseNft: '', pairingGateNft: '', gasStationUrl: '', shadowReserve: '55000000', verifiedIotaPackages: '' },
 
         persistMessengerOnboard() {
           try {
@@ -2350,6 +2659,9 @@
             if (localStorage.getItem('morgendrot_msgr_guide') === '1') this.messengerGuideOpen = false;
           } catch (e) {}
           this.loadMessengerOnboard();
+          try {
+            if (localStorage.getItem('morgendrot_expert_messenger_config') === '1') this.uiExpertMessengerConfig = true;
+          } catch (e) {}
           try { await this.fetchStatus(); } catch {}
           try { await this.loadCurrentIds(); } catch {}
           try { await this.loadPackageSelectorList(); } catch {}
@@ -3023,6 +3335,8 @@
           this.cmdLoading = true;
           this.cmdResult = '';
           const timeoutMs = 90000;
+          let timeoutId;
+          let retryTimeoutId;
           const doRequest = async (signal) => {
             const r = await fetch(_api() + '/api/command', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cmd, args: args || [] }), signal });
             const d = await r.json().catch(() => ({}));
@@ -3031,16 +3345,18 @@
           };
           try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+            timeoutId = setTimeout(() => controller.abort(), timeoutMs);
             let d = await doRequest(controller.signal);
             clearTimeout(timeoutId);
+            timeoutId = undefined;
             if (d._status === 503 && (d.error || '').includes('nicht bereit')) {
               this.cmdResult = 'App startet noch – warte 2 Sekunden und versuche erneut …';
               await new Promise(r => setTimeout(r, 2000));
               const c2 = new AbortController();
-              const t2 = setTimeout(() => c2.abort(), timeoutMs);
+              retryTimeoutId = setTimeout(() => c2.abort(), timeoutMs);
               d = await doRequest(c2.signal);
-              clearTimeout(t2);
+              clearTimeout(retryTimeoutId);
+              retryTimeoutId = undefined;
             }
             delete d._status;
             if (!d || typeof d !== 'object') d = { ok: false, error: 'Ungültige Antwort vom Backend' };
@@ -3048,18 +3364,23 @@
             if (cmd === '/inbox' || cmd === '/fetch') {
               const raw = d.data ?? d.messages ?? d.result?.data ?? d.result?.messages ?? [];
               const list = Array.isArray(raw) ? raw : [];
-              this.chat.messages = list.map((m, i) => ({
-                id: (m.sender || m.from || 'msg') + '_' + i + '_' + (m.nonce != null ? m.nonce : i),
-                sender: m.sender || m.from || '',
-                from: m.sender || m.from || '',
-                recipient: m.recipient || '',
-                nonce: m.nonce != null && m.nonce !== undefined ? String(m.nonce) : '',
-                ts: m.ts != null && m.ts !== '' ? Number(m.ts) : null,
-                chainPurgeable: m.chainPurgeable === true,
-                isPlain: !!m.isPlain,
-                text: m.text != null ? String(m.text) : (m.content != null ? String(m.content) : ''),
-                content: m.text != null ? String(m.text) : (m.content != null ? String(m.content) : '')
-              }));
+              this.chat.messages = list.map((m, i) => {
+                const rawT = m.text != null ? String(m.text) : ''
+                const rawC = m.content != null ? String(m.content) : ''
+                const body = this.coalesceInboxWireRaw(rawT, rawC)
+                return {
+                  id: (m.sender || m.from || 'msg') + '_' + i + '_' + (m.nonce != null ? m.nonce : i),
+                  sender: m.sender || m.from || '',
+                  from: m.sender || m.from || '',
+                  recipient: m.recipient || '',
+                  nonce: m.nonce != null && m.nonce !== undefined ? String(m.nonce) : '',
+                  ts: m.ts != null && m.ts !== '' ? Number(m.ts) : null,
+                  chainPurgeable: m.chainPurgeable === true,
+                  isPlain: !!m.isPlain,
+                  text: body,
+                  content: body,
+                }
+              }).sort((a, b) => (b.ts || 0) - (a.ts || 0));
               this.chat.lastInboxBackend = d.ok ? ('Backend: ' + list.length + ' Nachricht(en)') : (d.message || d.error || 'Backend: Fehler');
               if (list.length && !d.ok) this.cmdResult = (this.cmdResult || '') + ' [' + list.length + ' Nachricht(en) empfangen]';
             }
@@ -3080,7 +3401,8 @@
             if (['/streams-create', '/vault-save', '/streams-subscribe', '/streams-status'].includes(cmd)) this.monitor.setResult = '';
             return d;
           } catch (e) {
-            clearTimeout(timeoutId);
+            if (timeoutId !== undefined) clearTimeout(timeoutId);
+            if (retryTimeoutId !== undefined) clearTimeout(retryTimeoutId);
             this.cmdResult = (e && e.name === 'AbortError') ? 'Zeitüberschreitung – Backend antwortet nicht.' : ('Fehler: ' + (e.message || e));
             return { ok: false };
           }
@@ -3098,6 +3420,47 @@
             const d = await r.json();
             if (d.ok && d.labels) this.chat.contactLabels = d.labels;
           } catch (e) {}
+        },
+        async lookupIotaName() {
+          const name = String(this.chat.iotaNameInput || '').trim();
+          this.chat.iotaNameError = '';
+          this.chat.iotaNameResult = null;
+          if (!name) {
+            this.chat.iotaNameError = 'Name eingeben (z. B. beispiel.iota).';
+            return;
+          }
+          this.chat.iotaNameLoading = true;
+          try {
+            const r = await fetch(_api() + '/api/iota-name-lookup?name=' + encodeURIComponent(name));
+            const d = await r.json().catch(() => ({}));
+            if (!d.ok) {
+              this.chat.iotaNameError = d.error || ('HTTP ' + r.status);
+              return;
+            }
+            this.chat.iotaNameResult = d;
+          } catch (e) {
+            this.chat.iotaNameError = String((e && e.message) || e);
+          } finally {
+            this.chat.iotaNameLoading = false;
+          }
+        },
+        async applyIotaNameToPartner() {
+          const addr = String(this.chat.iotaNameResult?.targetAddress || '').trim();
+          if (!this.isMorgendrotAddr64(addr)) {
+            this.cmdResult = 'Keine gültige Ziel-Adresse (0x + 64 Hex) – Name evtl. nicht vergeben oder Indexer-Fehler.';
+            return;
+          }
+          const d = await this.setConfig('PARTNER_ADDRESS', addr);
+          if (!d || !d.ok) {
+            this.cmdResult = (d && d.error) || 'PARTNER_ADDRESS konnte nicht gesetzt werden.';
+            return;
+          }
+          this.chat.partner = addr;
+          this.cmdResult = 'Partner gesetzt (' + addr.slice(0, 12) + '…) – Handshake, dann Connect.';
+        },
+        async setVerifiedIotaNamePackagesFromUi() {
+          const d = await this.setConfig('VERIFIED_IOTA_NAME_PACKAGE_IDS', this.messengerGasUi.verifiedIotaPackages);
+          if (d && d.ok) await this.loadSetup();
         },
         contactLabelFor(addr) {
           const a = String(addr || '').trim().toLowerCase();
@@ -3300,9 +3663,801 @@
             if (this.cmdResult && !/fehlgeschlagen|fehler|Kein passendes/i.test(this.cmdResult)) this.chat.pairingFindSecret = '';
           });
         },
+        /** Wie Next-Dashboard: bei beiden Feldern den MORG-Wire-Träger wählen, nicht blind `content`. */
+        coalesceInboxWireRaw(rawT, rawC) {
+          if (!rawC) return rawT
+          if (!rawT) return rawC
+          const cM = rawC.includes('[[MORG_')
+          const tM = rawT.includes('[[MORG_')
+          if (cM !== tM) return cM ? rawC : rawT
+          return rawC.length >= rawT.length ? rawC : rawT
+        },
+        /** BOM / führende Leerzeichen – damit MORG_*-Marker nach API/Chain erkannt werden. */
+        _inboxWireTrim(m) {
+          if (!m) return ''
+          const rawT = m.text != null ? String(m.text) : ''
+          const rawC = m.content != null ? String(m.content) : ''
+          return this.coalesceInboxWireRaw(rawT, rawC).replace(/^\uFEFF/, '').trimStart()
+        },
+        inboxIsCompactImage(m) {
+          const t = this._inboxWireTrim(m);
+          return t.indexOf('[[MORG_COMPACT_IMG_V1:') >= 0;
+        },
+        dashboardHref() {
+          const host = (typeof window !== 'undefined' && window.location && window.location.hostname) ? window.location.hostname : '127.0.0.1';
+          const local = host === 'localhost' || host === '127.0.0.1' || host === '[::1]';
+          const proto = local ? 'http' : ((typeof window !== 'undefined' && window.location && window.location.protocol === 'https:') ? 'https' : 'http');
+          const p = this.status && this.status.dashboardPort;
+          const port = typeof p === 'number' && p > 0 && p < 65536 ? p : 3341;
+          return proto + '://' + host + ':' + port + '/';
+        },
+        _revokeCompactPreviewObjectUrl(m) {
+          if (!m || !m._compactPreviewObjectUrl) return;
+          try { URL.revokeObjectURL(m._compactPreviewObjectUrl); } catch (e) {}
+          m._compactPreviewObjectUrl = null;
+        },
+        onCompactImagePreviewImgError(m) {
+          if (!m) return;
+          m.compactPreviewError = 'PNG-Anzeige fehlgeschlagen.';
+          this.chat.messages = [...this.chat.messages];
+        },
+        async loadCompactImagePreview(m) {
+          if (!m) return;
+          m.compactPreviewLoading = true;
+          m.compactPreviewError = '';
+          this._revokeCompactPreviewObjectUrl(m);
+          m.compactPreview = '';
+          const wire = this._inboxWireTrim(m);
+          if (!wire || wire.length < 24) {
+            m.compactPreviewError = 'Kein Wire-Inhalt.';
+            m.compactPreviewLoading = false;
+            this.chat.messages = [...this.chat.messages];
+            return;
+          }
+          try {
+            const r = await fetch(_api() + '/api/compact-image-preview', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ wire }),
+              credentials: 'same-origin',
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!d.ok || !d.pngBase64) {
+              m.compactPreviewError = (d && d.error) ? String(d.error) : ('HTTP ' + r.status + (d && d.message ? ' – ' + d.message : ''));
+            } else if (String(d.pngBase64).length < 32) {
+              m.compactPreviewError = 'Server lieferte leere oder zu kurze PNG-Daten.';
+            } else {
+              const b64 = String(d.pngBase64).replace(/\s/g, '');
+              let bin;
+              try {
+                bin = atob(b64);
+              } catch (e) {
+                m.compactPreviewError = 'PNG-Base64 konnte nicht dekodiert werden.';
+                m.compactPreviewLoading = false;
+                this.chat.messages = [...this.chat.messages];
+                return;
+              }
+              const u8 = new Uint8Array(bin.length);
+              for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+              const blob = new Blob([u8], { type: 'image/png' });
+              if (typeof createImageBitmap === 'function') {
+                try {
+                  await createImageBitmap(blob);
+                } catch (e) {
+                  m.compactPreviewError = 'Vorschau: PNG lässt sich im Browser nicht dekodieren. (' + ((e && e.message) ? e.message : String(e)) + ')';
+                  m.compactPreviewLoading = false;
+                  this.chat.messages = [...this.chat.messages];
+                  return;
+                }
+              }
+              this._revokeCompactPreviewObjectUrl(m);
+              const url = URL.createObjectURL(blob);
+              m._compactPreviewObjectUrl = url;
+              m.compactPreview = url;
+              m.compactPreviewError = '';
+            }
+          } catch (e) {
+            m.compactPreviewError = (e && e.message) ? e.message : String(e);
+          } finally {
+            m.compactPreviewLoading = false;
+            this.chat.messages = [...this.chat.messages];
+          }
+        },
+        canCompactSendOpus() {
+          if (this.uiRole === 'boss' || this.uiRole === 'kommandant') return true;
+          const r = (this.status && this.status.role != null) ? String(this.status.role).toLowerCase().trim() : '';
+          return r === 'boss' || r === 'kommandant';
+        },
+        wrapCompactImageMessage(blobB64, caption) {
+          const P = '[[MORG_COMPACT_IMG_V1:';
+          const S = ']]';
+          const core = P + blobB64 + S;
+          const cap = String(caption || '').trim();
+          return cap ? core + '\n\n' + cap : core;
+        },
+        _sanitizeTxtFileName(name) {
+          const base = String(name || 'datei.txt').replace(/[/\\]/g, '_').replace(/[\x00-\x1f\x7f]/g, '').trim();
+          const n = base || 'datei.txt';
+          return n.length > 200 ? n.slice(0, 200) : n;
+        },
+        wrapFileTxtMessage(fileName, utf8Text, caption) {
+          const n = this._sanitizeTxtFileName(fileName);
+          const bytes = new TextEncoder().encode(String(utf8Text));
+          let bin = '';
+          for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+          const b = btoa(bin);
+          const inner = JSON.stringify({ n, b });
+          const innerBytes = new TextEncoder().encode(inner);
+          let bin2 = '';
+          for (let i = 0; i < innerBytes.length; i++) bin2 += String.fromCharCode(innerBytes[i]);
+          const outer = btoa(bin2);
+          const P = '[[MORG_FILE_TXT_V1:'; const S = ']]';
+          const core = P + outer + S;
+          const cap = String(caption || '').trim();
+          return cap ? core + '\n\n' + cap : core;
+        },
+        inboxIsFileTxt(m) {
+          const t = this._inboxWireTrim(m)
+          return t.indexOf('[[MORG_FILE_TXT_V1:') >= 0;
+        },
+        _inboxFileTxtPayload(m) {
+          const t = this._inboxWireTrim(m)
+          const P = '[[MORG_FILE_TXT_V1:'; const S = ']]';
+          const i = t.indexOf(P);
+          if (i === -1) return null;
+          const sub = t.slice(i);
+          const end = sub.indexOf(S, P.length);
+          if (end === -1) return null;
+          const outerB64 = sub.slice(P.length, end).replace(/\s/g, '');
+          const tail = sub.slice(end + S.length).trim();
+          try {
+            const raw = atob(outerB64);
+            const u8 = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i);
+            const innerJson = new TextDecoder().decode(u8);
+            const o = JSON.parse(innerJson);
+            if (typeof o.b !== 'string' || typeof o.n !== 'string') return null;
+            const raw2 = atob(o.b.replace(/\s/g, ''));
+            const u82 = new Uint8Array(raw2.length);
+            for (let j = 0; j < raw2.length; j++) u82[j] = raw2.charCodeAt(j);
+            const text = new TextDecoder().decode(u82);
+            return { name: this._sanitizeTxtFileName(o.n), text, caption: tail || '' };
+          } catch (e) {
+            return null;
+          }
+        },
+        inboxFileTxtName(m) {
+          const p = this._inboxFileTxtPayload(m);
+          return p ? p.name : '';
+        },
+        inboxFileTxtCaption(m) {
+          const p = this._inboxFileTxtPayload(m);
+          return p && p.caption ? p.caption : '';
+        },
+        downloadInboxFileTxt(m) {
+          const p = this._inboxFileTxtPayload(m);
+          if (!p || !p.text) { this.cmdResult = 'Datei konnte nicht dekodiert werden.'; return; }
+          const blob = new Blob([p.text], { type: 'text/plain;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = p.name;
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          this.cmdResult = 'Download gestartet.';
+        },
+        inboxIsMorgAudioV1(m) {
+          return this._inboxWireTrim(m).indexOf('[[MORG_AUDIO_V1:') >= 0;
+        },
+        inboxMorgAudioV1Caption(m) {
+          const t = this._inboxWireTrim(m);
+          const P = '[[MORG_AUDIO_V1:'; const S = ']]';
+          const i = t.indexOf(P);
+          if (i === -1) return '';
+          const sub = t.slice(i);
+          const end = sub.indexOf(S, P.length);
+          if (end === -1) return '';
+          return sub.slice(end + S.length).trim();
+        },
+        playInboxMorgAudioV1(m) {
+          const t = this._inboxWireTrim(m);
+          const P = '[[MORG_AUDIO_V1:'; const S = ']]';
+          const tryExtract = (s) => {
+            const i = s.indexOf(P);
+            if (i === -1) return null;
+            const sub = s.slice(i);
+            const end = sub.indexOf(S, P.length);
+            if (end === -1) return null;
+            return sub.slice(P.length, end).replace(/\s/g, '');
+          };
+          let b64 = tryExtract(t);
+          if (!b64 && (t.trim().startsWith('{') || t.trim().startsWith('[')) && t.includes('MORG_AUDIO_V1')) {
+            try {
+              const acc = [];
+              const walk = (v, d) => {
+                if (d > 8) return;
+                if (typeof v === 'string') { if (v.includes('[[MORG_')) acc.push(v); return; }
+                if (Array.isArray(v)) { for (const x of v) walk(x, d + 1); return; }
+                if (v && typeof v === 'object') for (const x of Object.values(v)) walk(x, d + 1);
+              };
+              walk(JSON.parse(t), 0);
+              acc.sort((a, b) => b.length - a.length);
+              for (const inner of acc) {
+                b64 = tryExtract(inner);
+                if (b64) break;
+              }
+            } catch (e) { /* ignore */ }
+          }
+          const ix = t.indexOf('MORG_AUDIO_V1:');
+          if (!b64 && ix >= 0) {
+            const st = t.lastIndexOf('[[', ix);
+            if (st >= 0) b64 = tryExtract(t.slice(st));
+          }
+          if (!b64) { this.cmdResult = 'Kein gültiges MORG_AUDIO_V1-Wire (Marker oder ]] fehlt, oder JSON-Hülle).'; return; }
+          try {
+            const bin = atob(b64);
+            const u8 = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+            if (u8.length < 4 || String.fromCharCode(u8[0], u8[1], u8[2], u8[3]) !== 'OggS') {
+              this.cmdResult = 'Kein Ogg-Container (Magic OggS).';
+              return;
+            }
+            const blob = new Blob([u8], { type: 'audio/ogg; codecs=opus' });
+            const url = URL.createObjectURL(blob);
+            if (m.audioObjectUrl) {
+              try { URL.revokeObjectURL(m.audioObjectUrl); } catch (e) { /* ignore */ }
+            }
+            const id = 'morg-audio-' + String(m.nonce != null ? m.nonce : m.id || Math.random()).replace(/[^a-zA-Z0-9_-]/g, '_');
+            m.audioElementId = id;
+            m.audioObjectUrl = url;
+            this.chat.messages = [...this.chat.messages];
+            const self = this;
+            setTimeout(() => {
+              const el = document.getElementById(id);
+              if (el && typeof el.play === 'function') {
+                el.muted = false;
+                el.volume = 1;
+                el.play().catch(() => {});
+              }
+              self.cmdResult = 'Audio geladen – Lautstärke im Browser prüfen; bei Stille ggf. VAD/DTX oder Aufnahme fast leer. „Als .ogg speichern“ → VLC.';
+            }, 80);
+          } catch (e) {
+            this.cmdResult = 'Audio-Daten ungültig: ' + (e && e.message ? e.message : e);
+          }
+        },
+        inboxIsCompactTxt(m) {
+          const t = this._inboxWireTrim(m)
+          return t.indexOf('[[MORG_TXT_V1:') >= 0;
+        },
+        inboxCompactTxtDecoded(m) {
+          const t = this._inboxWireTrim(m)
+          const P = '[[MORG_TXT_V1:';
+          const S = ']]';
+          const i = t.indexOf(P);
+          if (i === -1) return '';
+          const sub = t.slice(i);
+          const end = sub.indexOf(S, P.length);
+          if (end === -1) return '';
+          const b64 = sub.slice(P.length, end).replace(/\s/g, '');
+          try {
+            const raw = atob(b64);
+            const u8 = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i);
+            return new TextDecoder().decode(u8);
+          } catch (e) {
+            return '(Decode-Fehler)';
+          }
+        },
+        inboxCompactTxtCaption(m) {
+          const t = this._inboxWireTrim(m)
+          const P = '[[MORG_TXT_V1:';
+          const S = ']]';
+          const i = t.indexOf(P);
+          if (i === -1) return '';
+          const sub = t.slice(i);
+          const end = sub.indexOf(S, P.length);
+          if (end === -1) return '';
+          return sub.slice(end + S.length).trim();
+        },
+        copyChatMessageText(m) {
+          const raw = this._inboxWireTrim(m)
+          if (!raw) return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(raw).then(() => { this.cmdResult = 'Wire in Zwischenablage kopiert.'; })
+              .catch(() => { this.cmdResult = 'Kopieren fehlgeschlagen (Berechtigung?).'; });
+          } else {
+            this.cmdResult = 'Zwischenablage nicht verfügbar.';
+          }
+        },
+        exportInboxSneakernet(m) {
+          const payload = {
+            schema: 'morgendrot.sneakernet.v1',
+            exportedAt: Date.now(),
+            note: 'Klartext-Snapshot des Wire-Inhalts. Für ECDH-only-Transport: UI „ECDH .morg-pkg“ (schema morgendrot.morgpkg.v1).',
+            v1GoldTarget: 'ECDH-.morg-pkg: gleiche Krypto wie /send. Dieses JSON ist der ältere Klartext-Export.',
+            notImplementedYet: ['Kein automatischer USB-Stick-Observer.'],
+            message: {
+              id: m.id || '',
+              from: m.sender || m.from || '',
+              ts: m.ts != null ? Number(m.ts) : null,
+              isPlain: !!m.isPlain,
+              recipient: m.recipient || null,
+              content: this._inboxWireTrim(m),
+            },
+          };
+          const json = JSON.stringify(payload, null, 2);
+          const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const safe = String(m.id || 'msg').replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 96);
+          a.download = 'morgendrot-packet-' + safe + '.json';
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          this.cmdResult = 'Export: JSON-Paket gespeichert (Klartext-Wire).';
+        },
+        resolveMorgPkgRecipientLite() {
+          if (this.status && this.status.locked) {
+            return { recipient: null, error: 'Tresor entsperren – .morg-pkg braucht Messaging-Keys.' };
+          }
+          const addrs = this.status && Array.isArray(this.status.connectedAddresses) ? this.status.connectedAddresses : [];
+          if (!addrs.length) {
+            return { recipient: null, error: 'Zuerst /connect – .morg-pkg braucht Empfänger-Public-Key (peerMap).' };
+          }
+          if (addrs.length === 1) {
+            return { recipient: addrs[0], error: null };
+          }
+          const parts = String(this.chat.partner || '')
+            .split(',')
+            .map((s) => s.trim().toLowerCase())
+            .filter((x) => /^0x[a-fA-F0-9]{64}$/.test(x));
+          if (!parts.length) {
+            return {
+              recipient: null,
+              error: 'Mehrere Partner: Ziel-0x-Adresse im Partner-Feld (Handshake), ggf. erste passende aus Komma-Liste.',
+            };
+          }
+          let hit = null;
+          for (const p of parts) {
+            const f = addrs.find((a) => String(a).toLowerCase() === p);
+            if (f) {
+              hit = f;
+              break;
+            }
+          }
+          if (!hit) {
+            return { recipient: null, error: 'Keine der Partner-Feld-Adressen ist aktuell verbunden (peerMap).' };
+          }
+          return { recipient: hit, error: null };
+        },
+        inboxWirePlaintextForMorgPkg(m) {
+          return this._inboxWireTrim(m)
+        },
+        async exportMorgPkgFromDeviceFiles(event) {
+          const input = event.target;
+          const files = input.files;
+          input.value = '';
+          if (!files || !files.length) return;
+          const { recipient, error } = this.resolveMorgPkgRecipientLite();
+          if (!recipient) {
+            this.cmdResult = error || 'Empfänger unbekannt.';
+            return;
+          }
+          if (this.status && this.status.locked) {
+            this.cmdResult = 'Tresor entsperren.';
+            return;
+          }
+          this.cmdLoading = true;
+          this.cmdResult = '';
+          const BUNDLE_SCHEMA = 'morgendrot.morgpkg.bundle.v1';
+          try {
+            const items = [];
+            for (let fi = 0; fi < files.length; fi++) {
+              const f = files[fi];
+              const name = f.name || 'datei';
+              const isTxt = f.type === 'text/plain' || /\.txt$/i.test(name);
+              const isImg = f.type.startsWith('image/');
+              const isOpus =
+                /\.opus$/i.test(name) ||
+                f.type === 'audio/ogg' ||
+                f.type === 'audio/opus' ||
+                f.type === 'application/ogg';
+              if (isImg) {
+                const dataUrl = await new Promise((resolve, reject) => {
+                  const r = new FileReader();
+                  r.onload = () => resolve(String(r.result));
+                  r.onerror = () => reject(new Error('read'));
+                  r.readAsDataURL(f);
+                });
+                const encRes = await fetch(_api() + '/api/compact-image-encode', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ imageBase64: dataUrl }),
+                });
+                const enc = await encRes.json().catch(() => ({}));
+                if (!enc.ok || !enc.blobBase64) {
+                  this.cmdResult = enc.error || ('Bild „' + name + '“: Kodierung fehlgeschlagen.');
+                  return;
+                }
+                items.push({ kind: 'compact_image', wire: this.wrapCompactImageMessage(enc.blobBase64, '') });
+              } else if (isTxt) {
+                const text = await f.text();
+                items.push({ kind: 'file_txt', wire: this.wrapFileTxtMessage(name, text, '') });
+              } else if (isOpus) {
+                const buf = await f.arrayBuffer();
+                const u8 = new Uint8Array(buf);
+                const magic = String.fromCharCode(u8[0] || 0, u8[1] || 0, u8[2] || 0, u8[3] || 0);
+                if (u8.length < 4 || magic !== 'OggS') {
+                  this.cmdResult = '„' + name + '“: Kein Ogg-Container (OggS).';
+                  return;
+                }
+                if (u8.length > 10752) {
+                  this.cmdResult = '„' + name + '“: Opus zu groß (max. 10752 B).';
+                  return;
+                }
+                let bin = '';
+                for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+                const b64 = btoa(bin);
+                const wire = this.wrapMorgAudioV1Message(b64, '');
+                const aerr = this._morgAudioWireError(wire);
+                if (aerr) {
+                  this.cmdResult = '„' + name + '“: ' + aerr;
+                  return;
+                }
+                items.push({ kind: 'opus', wire });
+              } else if (f.type === 'application/pdf' || /\.pdf$/i.test(name)) {
+                this.cmdResult = 'PDF „' + name + '“: im Bundle nicht unterstützt.';
+                return;
+              } else {
+                this.cmdResult = 'Nicht unterstützt: „' + name + '“ (' + (f.type || '?') + ').';
+                return;
+              }
+            }
+            const bundle = { schema: BUNDLE_SCHEMA, version: 1, createdAtMs: Date.now(), items };
+            const plaintext = JSON.stringify(bundle);
+            if (new TextEncoder().encode(plaintext).length > 126976) {
+              this.cmdResult = 'Paket zu groß (> 126976 B UTF-8). Weniger/kleinere Dateien.';
+              return;
+            }
+            const d = await this.runCmd('/morg-pkg-export', [recipient, plaintext]);
+            if (!d || !d.ok || !d.morgPkg) {
+              this.cmdResult = (d && (d.message || d.error)) || 'Export fehlgeschlagen.';
+              return;
+            }
+            const json = JSON.stringify(d.morgPkg, null, 2);
+            const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download =
+              ('Fuer_' + String(recipient).slice(0, 10) + '_bundle_' + items.length + 'files').replace(/[^a-zA-Z0-9._-]+/g, '_') +
+              '.morg-pkg.json';
+            a.rel = 'noopener';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+            this.cmdResult = 'Gerät → .morg-pkg (' + items.length + ' Teile) heruntergeladen.';
+          } catch (e) {
+            this.cmdResult = e && e.message ? e.message : String(e);
+          } finally {
+            this.cmdLoading = false;
+          }
+        },
+        async exportInboxMorgPkg(m) {
+          const { recipient, error } = this.resolveMorgPkgRecipientLite();
+          if (!recipient) {
+            this.cmdResult = error || 'Empfänger unbekannt.';
+            return;
+          }
+          const wire = this.inboxWirePlaintextForMorgPkg(m);
+          if (!String(wire || '').trim()) {
+            this.cmdResult = 'Leerer Inhalt – kein .morg-pkg.';
+            return;
+          }
+          const d = await this.runCmd('/morg-pkg-export', [recipient, wire]);
+          if (!d || !d.ok || !d.morgPkg) {
+            return;
+          }
+          const json = JSON.stringify(d.morgPkg, null, 2);
+          const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const stem = ('Fuer_' + String(recipient).slice(0, 10) + '_' + String(m.id || 'msg').replace(/[^a-zA-Z0-9._-]+/g, '_')).slice(0, 120);
+          a.download = stem + '.morg-pkg.json';
+          a.rel = 'noopener';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          this.cmdResult = (d.message || 'OK') + ' Datei heruntergeladen.';
+        },
+        async importMorgPkgFromFile(event) {
+          const input = event.target;
+          const f = input.files && input.files[0];
+          input.value = '';
+          if (!f) return;
+          if (this.status && this.status.locked) {
+            this.cmdResult = 'Tresor entsperren, um .morg-pkg zu öffnen.';
+            return;
+          }
+          this.cmdLoading = true;
+          this.cmdResult = '';
+          try {
+            const text = await f.text();
+            const pkg = JSON.parse(text);
+            const r = await fetch(_api() + '/api/command', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ cmd: '/morg-pkg-import', args: [], morgPkg: pkg }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!d.ok) {
+              this.cmdResult = d.message || d.error || 'Import fehlgeschlagen.';
+              return;
+            }
+            const plain = d.plaintext != null ? String(d.plaintext) : d.text != null ? String(d.text) : '';
+            if (!plain) {
+              this.cmdResult = 'Antwort ohne Klartext.';
+              return;
+            }
+            const sender = typeof pkg.sender === 'string' && pkg.sender.startsWith('0x') ? pkg.sender : 'import';
+            const ts =
+              typeof pkg.createdAtMs === 'number' && Number.isFinite(pkg.createdAtMs) ? pkg.createdAtMs : Date.now();
+            let bundle = null;
+            try {
+              const o = JSON.parse(plain);
+              if (
+                o &&
+                o.schema === 'morgendrot.morgpkg.bundle.v1' &&
+                o.version === 1 &&
+                Array.isArray(o.items) &&
+                o.items.length > 0
+              ) {
+                bundle = o;
+              }
+            } catch (_) {}
+            if (bundle) {
+              const baseTs = ts;
+              const extra = [];
+              for (let i = 0; i < bundle.items.length; i++) {
+                const it = bundle.items[i];
+                let content = '';
+                if (it.kind === 'text') content = String(it.text || '');
+                else if (it.kind === 'compact_image') {
+                  const cap = String(it.caption || '').trim();
+                  content = cap ? String(it.wire || '') + '\n\n' + cap : String(it.wire || '');
+                } else content = String(it.wire || '');
+                extra.push({
+                  id: 'morg-pkg-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 9),
+                  sender,
+                  from: sender,
+                  recipient: this.status && this.status.myAddress ? this.status.myAddress : '',
+                  nonce: '',
+                  ts: baseTs + i,
+                  chainPurgeable: false,
+                  isPlain: false,
+                  text: content,
+                  content,
+                });
+              }
+              this.chat.messages = [...this.chat.messages, ...extra].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+              this.cmdResult = '.morg-pkg Bundle: ' + extra.length + ' Nachrichten (lokal).';
+            } else {
+              const newMsg = {
+                id: 'morg-pkg-' + Date.now() + '-' + Math.random().toString(36).slice(2, 9),
+                sender,
+                from: sender,
+                recipient: this.status && this.status.myAddress ? this.status.myAddress : '',
+                nonce: '',
+                ts,
+                chainPurgeable: false,
+                isPlain: false,
+                text: plain,
+                content: plain,
+              };
+              this.chat.messages = [...this.chat.messages, newMsg].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+              this.cmdResult = '.morg-pkg importiert (nur lokal in der Liste).';
+            }
+          } catch (e) {
+            this.cmdResult = (e && e.message) ? e.message : 'Ungültige Datei oder Netzwerkfehler.';
+          } finally {
+            this.cmdLoading = false;
+          }
+        },
+        copyChatMessagePlainText(m) {
+          if (this.inboxIsFileTxt(m)) {
+            const p = this._inboxFileTxtPayload(m);
+            if (!p) return this.copyChatMessageText(m);
+            const out = p.caption ? p.text + '\n\n' + p.caption : p.text;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(out).then(() => { this.cmdResult = 'Klartext kopiert.'; })
+                .catch(() => { this.cmdResult = 'Kopieren fehlgeschlagen (Berechtigung?).'; });
+            }
+            return;
+          }
+          if (this.inboxIsMorgAudioV1(m)) {
+            const cap = this.inboxMorgAudioV1Caption(m);
+            if (!cap) return this.copyChatMessageText(m);
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(cap).then(() => { this.cmdResult = 'Unterschrift kopiert.'; })
+                .catch(() => { this.cmdResult = 'Kopieren fehlgeschlagen (Berechtigung?).'; });
+            }
+            return;
+          }
+          if (!this.inboxIsCompactTxt(m)) {
+            return this.copyChatMessageText(m);
+          }
+          const body = this.inboxCompactTxtDecoded(m);
+          const cap = this.inboxCompactTxtCaption(m);
+          const out = cap ? body + '\n\n' + cap : body;
+          if (!out) return;
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(out).then(() => { this.cmdResult = 'Klartext kopiert.'; })
+              .catch(() => { this.cmdResult = 'Kopieren fehlgeschlagen (Berechtigung?).'; });
+          } else {
+            this.cmdResult = 'Zwischenablage nicht verfügbar.';
+          }
+        },
+        clearCompactAttachment() {
+          this.chat.compactBlobBase64 = null;
+          this.chat.compactAudioBase64 = null;
+          this.chat.compactTxtFileName = '';
+          this.chat.compactTxtFileText = null;
+          this.chat.compactMeta = '';
+        },
+        wrapMorgAudioV1Message(blobB64, caption) {
+          const P = '[[MORG_AUDIO_V1:'; const S = ']]';
+          const core = P + String(blobB64 || '').replace(/\s/g, '') + S;
+          const cap = String(caption || '').trim();
+          return cap ? core + '\n\n' + cap : core;
+        },
+        _morgAudioWireError(wire) {
+          const P = '[[MORG_AUDIO_V1:'; const S = ']]';
+          const w = String(wire || '').replace(/^\uFEFF/, '').trimStart();
+          const i = w.indexOf(P);
+          if (i === -1) return 'Kein MORG_AUDIO_V1.';
+          const sub = w.slice(i);
+          const end = sub.indexOf(S, P.length);
+          if (end === -1) return 'Audio-Wire unvollständig.';
+          const b64 = sub.slice(P.length, end).replace(/\s/g, '');
+          const pad = b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0;
+          const net = Math.max(0, Math.floor((b64.length * 3) / 4) - pad);
+          const MEDIA_NET = 10752;
+          if (net > MEDIA_NET) return 'Opus/Ogg zu groß (' + net + ' B Rohdaten, max. ' + MEDIA_NET + ' B).';
+          if (new TextEncoder().encode(w).length > 126976) return 'Nachricht zu lang (> 126976 Byte UTF-8).';
+          return '';
+        },
+        async pickCompactAttachment(ev) {
+          const input = ev && ev.target;
+          const f = input && input.files && input.files[0];
+          if (input) input.value = '';
+          if (!f) return;
+          const isTxt = f.type === 'text/plain' || /\.txt$/i.test(f.name);
+          const isLikelyOpus = /\.opus$/i.test(f.name) || f.type === 'audio/ogg' || f.type === 'audio/opus' || f.type === 'application/ogg';
+          if (!f.type.startsWith('image/') && !isTxt && !isLikelyOpus) {
+            this.cmdResult = 'Bitte Bild, .txt oder Opus/Ogg wählen.';
+            return;
+          }
+          if (isLikelyOpus) {
+            if (!this.canCompactSendOpus()) {
+              this.cmdResult = 'Opus-Blindübertragung nur für Rolle Boss oder Kommandant (UI-Rolle oder Backend-status.role).';
+              return;
+            }
+            this.chat.compactBusy = true;
+            this.cmdResult = '';
+            try {
+              const buf = await f.arrayBuffer();
+              const u8 = new Uint8Array(buf);
+              const magic = String.fromCharCode(u8[0] || 0, u8[1] || 0, u8[2] || 0, u8[3] || 0);
+              if (u8.length < 4 || magic !== 'OggS') {
+                this.cmdResult = 'Erwartet Ogg-Container (Magic „OggS“), typisch für .opus.';
+                return;
+              }
+              const MEDIA_NET = 10752;
+              if (u8.length > MEDIA_NET) {
+                this.cmdResult = 'Audiodatei zu groß (' + u8.length + ' B, max. ' + MEDIA_NET + ' B Rohdaten).';
+                return;
+              }
+              let bin = '';
+              for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+              const b64 = btoa(bin);
+              const probe = this.wrapMorgAudioV1Message(b64, '');
+              const err = this._morgAudioWireError(probe);
+              if (err) { this.cmdResult = err; return; }
+              this.chat.compactBlobBase64 = null;
+              this.chat.compactTxtFileName = '';
+              this.chat.compactTxtFileText = null;
+              this.chat.compactAudioBase64 = b64;
+              this.chat.compactMeta = 'Opus/Ogg · ' + u8.length + ' B Rohdaten (max. ' + MEDIA_NET + ' B)';
+            } catch (e) {
+              this.cmdResult = (e && e.message) ? e.message : String(e);
+            } finally {
+              this.chat.compactBusy = false;
+            }
+            return;
+          }
+          if (isTxt) {
+            this.chat.compactBusy = true;
+            this.cmdResult = '';
+            try {
+              const text = await f.text();
+              const probe = this.wrapFileTxtMessage(f.name, text, '');
+              if (new TextEncoder().encode(probe).length > 126976) {
+                this.cmdResult = '.txt zu groß (nach Kodierung > 126976 Byte UTF-8). Kürzere Datei.';
+                return;
+              }
+              this.chat.compactBlobBase64 = null;
+              this.chat.compactAudioBase64 = null;
+              this.chat.compactTxtFileName = f.name;
+              this.chat.compactTxtFileText = text;
+              this.chat.compactMeta = '.txt-Datei · ' + f.name + ' · ~' + new TextEncoder().encode(text).length + ' B UTF-8';
+            } catch (e) {
+              this.cmdResult = (e && e.message) ? e.message : String(e);
+            } finally {
+              this.chat.compactBusy = false;
+            }
+            return;
+          }
+          if (f.size > 12 * 1024 * 1024) {
+            this.cmdResult = 'Bild zu groß (max. 12 MB).';
+            return;
+          }
+          this.chat.compactBusy = true;
+          this.cmdResult = '';
+          try {
+            const dataUrl = await new Promise((resolve, reject) => {
+              const r = new FileReader();
+              r.onload = () => resolve(String(r.result));
+              r.onerror = () => reject(new Error('Datei lesen fehlgeschlagen'));
+              r.readAsDataURL(f);
+            });
+            const r = await fetch(_api() + '/api/compact-image-encode', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ imageBase64: dataUrl }),
+            });
+            const d = await r.json().catch(() => ({}));
+            if (!r.ok || !d.ok || !d.blobBase64) {
+              this.cmdResult = d.error || ('HTTP ' + r.status);
+              return;
+            }
+            this.chat.compactTxtFileName = '';
+            this.chat.compactTxtFileText = null;
+            this.chat.compactAudioBase64 = null;
+            this.chat.compactBlobBase64 = d.blobBase64;
+            this.chat.compactMeta = '~' + Math.round((d.totalBytes || 0) / 1024) + ' KB · q≈' + (d.usedQuality != null ? d.usedQuality : '?');
+          } catch (e) {
+            this.cmdResult = (e && e.message) ? e.message : String(e);
+          } finally {
+            this.chat.compactBusy = false;
+          }
+        },
         sendMessage() {
           const raw = (this.chat.message || '').trim();
           const enc = this.chat.encrypted;
+          const blob = this.chat.compactBlobBase64;
+          const audioB64 = this.chat.compactAudioBase64;
+          const txtText = this.chat.compactTxtFileText;
+          const txtName = this.chat.compactTxtFileName;
+          const wire = audioB64 ? this.wrapMorgAudioV1Message(audioB64, raw)
+            : blob ? this.wrapCompactImageMessage(blob, raw)
+            : (txtText != null && txtText !== '' ? this.wrapFileTxtMessage(txtName, txtText, raw) : raw);
+          if (audioB64) {
+            const ae = this._morgAudioWireError(wire);
+            if (ae) { this.cmdResult = ae; return; }
+          }
+          if ((blob || txtText != null || audioB64) && raw.startsWith('/')) {
+            this.cmdResult = 'Mit Anhang keinen /-Befehl im Textfeld; Anhang entfernen oder Text ohne /. ';
+            return;
+          }
           // Slash-Befehle im Nachrichtenfeld → /api/command (wie Terminal), z. B. /vault-load <passwort>
           if (raw.startsWith('/') && !/^\/send(\s|$)/i.test(raw) && !/^\/send-plain(\s|$)/i.test(raw)) {
             this.runCmdFromInput(raw).then((d) => {
@@ -3314,18 +4469,39 @@
             this.cmdResult = 'Bei Klartext zuerst Empfängeradresse (0x…) oben eintragen – beliebige Adresse, kein Handshake nötig.';
             return;
           }
-          this.runCmd(enc ? '/send' : '/send-plain', enc ? [this.chat.message] : [this.chat.partner, this.chat.message]).then(() => { if (this.cmdResult && !this.cmdResult.startsWith('Fehler')) this.chat.message = ''; });
+          if (!wire) {
+            this.cmdResult = 'Text eingeben oder Bild / .txt / Opus anhängen.';
+            return;
+          }
+          const wireUtf8 = new TextEncoder().encode(wire).length;
+          if (wireUtf8 > 126976) {
+            this.cmdResult = 'Nachricht zu lang für die Chain (max. ~126976 Byte UTF-8).';
+            return;
+          }
+          if (wire.length > 700000) {
+            this.cmdResult = 'Nachricht zu groß (~700k Zeichen). Kleineres Bild wählen.';
+            return;
+          }
+          this.runCmd(enc ? '/send' : '/send-plain', enc ? [wire] : [this.chat.partner, wire]).then(() => {
+            if (this.cmdResult && !this.cmdResult.startsWith('Fehler')) {
+              this.chat.message = '';
+              this.clearCompactAttachment();
+            }
+          });
         },
         async fetchInbox() {
           this.chat.loading = true;
-          const manual = (this.chat.inboxPackageManual || '').trim();
-          const fromList = (this.chat.inboxPackageId || '').trim();
-          const pkg = /^0x[a-fA-F0-9]{64}$/i.test(manual) ? manual : fromList;
-          const pkgArg = /^0x[a-fA-F0-9]{64}$/i.test(pkg) ? pkg : '';
-          const args = ['50', '', pkgArg, '', this.chat.mergeLocalInbox ? '1' : ''];
-          await this.runCmd('/inbox', args);
-          await this.loadContactLabels();
-          this.chat.loading = false;
+          try {
+            const manual = (this.chat.inboxPackageManual || '').trim();
+            const fromList = (this.chat.inboxPackageId || '').trim();
+            const pkg = /^0x[a-fA-F0-9]{64}$/i.test(manual) ? manual : fromList;
+            const pkgArg = /^0x[a-fA-F0-9]{64}$/i.test(pkg) ? pkg : '';
+            const args = ['50', '', pkgArg, '', this.chat.mergeLocalInbox ? '1' : ''];
+            await this.runCmd('/inbox', args);
+            await this.loadContactLabels();
+          } finally {
+            this.chat.loading = false;
+          }
         },
         purgeChatMailboxMessage(m) {
           if (m.isPlain || m.chainPurgeable !== true) {
@@ -3402,6 +4578,19 @@
           this.boss.roleBits = { D: !!(id & 32), LW: !!(id & 16), BW: !!(id & 8), L: !!(id & 4), S: !!(id & 2), P: !!(id & 1) };
           this.boss.computedRoleId = id;
         },
+        async saveBossChainDefaults() {
+          const ttl = String(parseInt(this.boss.chainTtlDays, 10) || 30);
+          const kttl = String(parseInt(this.boss.chainKeyTtlDays, 10) || parseInt(ttl, 10) || 30);
+          await this.setConfig('DEFAULT_TTL_DAYS', ttl);
+          await this.setConfig('DEFAULT_KEY_TTL_DAYS', kttl);
+          await this.setConfig('USE_MAILBOX', this.boss.chainUseMailbox ? 'true' : 'false');
+          await this.setConfig('MAILBOX_STORE_PLAINTEXT', this.boss.chainMailboxStorePlain ? 'true' : 'false');
+          await this.setConfig('ENABLE_PURGE', this.boss.chainEnablePurge ? 'true' : 'false');
+          await this.setConfig('ENABLE_PLAINTEXT_CHANNEL', this.boss.chainPlainChannel ? 'true' : 'false');
+          const mb = (this.boss.chainMailboxId || '').trim();
+          if (mb && /^0x[a-fA-F0-9]{64}$/.test(mb)) await this.setConfig('MAILBOX_ID', mb);
+          await this.fetchStatus();
+        },
         async loadBossConfig() {
           try {
             const r = await fetch(_api() + '/api/config');
@@ -3418,6 +4607,27 @@
             this.boss.arbKommandanten = v('KOMMANDANT_ADDRESSES');
             this.boss.arbHeartbeatMs = v('HEARTBEAT_INTERVAL_MS') || '30000';
             this.boss.arbHeartbeat = v('ENABLE_HEARTBEAT') === 'true';
+            const ttl = (v('DEFAULT_TTL_DAYS') || '30').replace(/\D/g, '') || '30';
+            this.boss.chainTtlDays = ttl;
+            const kttl = (v('DEFAULT_KEY_TTL_DAYS') || ttl).replace(/\D/g, '') || ttl;
+            this.boss.chainKeyTtlDays = kttl;
+            try {
+              const ir = await fetch(_api() + '/api/current-ids');
+              const ij = await ir.json();
+              if (ij.ok && ij.mailboxId && /^0x[a-fA-F0-9]{64}$/i.test(String(ij.mailboxId).trim())) {
+                this.boss.chainMailboxId = String(ij.mailboxId).trim();
+              } else {
+                this.boss.chainMailboxId = '';
+              }
+            } catch { this.boss.chainMailboxId = ''; }
+            this.boss.chainUseMailbox = v('USE_MAILBOX') === 'true';
+            this.boss.chainMailboxStorePlain = v('MAILBOX_STORE_PLAINTEXT') === 'true';
+            {
+              const ep = v('ENABLE_PURGE');
+              this.boss.chainEnablePurge = ep === '' || ep === 'true';
+              if (ep === 'false') this.boss.chainEnablePurge = false;
+            }
+            this.boss.chainPlainChannel = v('ENABLE_PLAINTEXT_CHANNEL') === 'true';
             const pubSigner = v('BOSS_SIGNER_PUBLIC_URL');
             if (pubSigner && pubSigner !== '(leer)' && !this.boss.arbRemoteSigner) this.boss.arbRemoteSigner = pubSigner;
             const myAddr = this.currentIds.myAddress || '';
@@ -3531,6 +4741,78 @@
           a.href = url; a.download = filename; a.click();
           URL.revokeObjectURL(url);
         },
+        messengerConfigVisibleRows() {
+          const list = this.configList || [];
+          if (!this.uiMessengerMode || !this.uiSalesMessenger || this.uiExpertMessengerConfig) return list;
+          const allow = new Set([
+            'PACKAGE_ID', 'RPC_URL', 'RPC_URLS', 'RPC_HTTP_PROXY', 'MY_ADDRESS', 'API_PORT', 'API_KILL_PREVIOUS_INSTANCE',
+            'NETWORK_TRUST_TIER', 'SIGNER', 'REMOTE_SIGNER_URL', 'REMOTE_SIGNER_TOKEN', 'ENABLE_UI', 'UI_VARIANT',
+            'MESSENGER_EDITION', 'ROLE', 'ROLE_ID', 'USE_MAILBOX', 'MAILBOX_ID', 'PARTNER_ADDRESS', 'ENABLE_PLAINTEXT_CHANNEL',
+            'MAILBOX_STORE_PLAINTEXT', 'DEFAULT_TTL_DAYS', 'DEFAULT_KEY_TTL_DAYS', 'ENABLE_PURGE',
+            'PAIRING_FIND_MAX_DECRYPT_ATTEMPTS', 'PAIRING_FIND_MAX_CANDIDATES',
+            'MESSENGER_AUTO_SPONSOR', 'MESSENGER_LICENSE_NFT_OBJECT_ID', 'MESSENGER_CREDITS_OBJECT_ID', 'PAIRING_GATE_NFT_OBJECT_ID', 'IOTA_GAS_STATION_URL',
+            'SHADOW_SWEEP_GAS_RESERVE_MIST', 'SPONSORED_TRANSACTION_ENABLED', 'SPONSOR_GAS_OWNER',
+          ]);
+          return list.filter((i) => allow.has(i.envKey));
+        },
+        toggleExpertMessengerConfig(on) {
+          this.uiExpertMessengerConfig = !!on;
+          try {
+            if (this.uiExpertMessengerConfig) localStorage.setItem('morgendrot_expert_messenger_config', '1');
+            else localStorage.removeItem('morgendrot_expert_messenger_config');
+          } catch (e) {}
+        },
+        async runMessengerStapelExport() {
+          const st = this.boss.messengerStapel;
+          st.feedback = '';
+          st.isError = false;
+          if (st.writeToBundle && st.count !== 1) {
+            st.feedback = '„Direkt ins Bundle“ nur mit Anzahl 1.';
+            st.isError = true;
+            return;
+          }
+          st.loading = true;
+          try {
+            const body = {
+              edition: st.edition,
+              count: st.count,
+              writeToEditionBundle: st.writeToBundle,
+              packageSource: st.packageSource,
+              customPackageId: st.customPackageId,
+              historyFromNewest: st.historyFromNewest,
+              signer: st.signer,
+              namePrefix: st.namePrefix,
+              registerAddresses: st.registerAddresses,
+              runId: (st.runId || '').trim() || undefined,
+              mintMessengerCredits: !!st.mintMessengerCredits,
+              creditsInitialBalance: st.creditsInitialBalance,
+              creditsMaxBalance: st.creditsMaxBalance,
+              creditsRefillIntervalHours: st.creditsRefillIntervalHours,
+              creditsRefillAmount: st.creditsRefillAmount,
+              creditsCostEcdhInit: st.creditsCostEcdhInit,
+              creditsCostStoreMessage: st.creditsCostStoreMessage,
+              ...(st.bossWalletPassword ? { bossWalletPassword: st.bossWalletPassword } : {}),
+              mailboxStorePlaintext: !!st.exportMailboxStorePlaintext,
+              ...(st.exportTtlDays !== '' && st.exportTtlDays != null && Number.isFinite(Number(st.exportTtlDays))
+                ? { exportTtlDays: Math.max(0, Math.min(3650, parseInt(String(st.exportTtlDays), 10))) }
+                : {}),
+            };
+            const r = await fetch(_api() + '/api/messenger-export-batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const d = await r.json().catch(() => ({}));
+            st.feedback = d.ok ? d.message : (d.error || 'Fehler');
+            st.isError = !d.ok;
+            this.cmdResult = st.feedback;
+          } catch (e) {
+            st.feedback = String(e.message || e);
+            st.isError = true;
+          } finally {
+            st.loading = false;
+          }
+        },
         async exportProvisionToProject(variant) {
           if (!this.boss.provResult || !this.boss.provResult.envContent) {
             const msg = 'Kein Provision-Ergebnis – zuerst Schritt 2 „Generieren & Weiter“ ausführen (ohne .env kann nichts in exports/ geschrieben werden).';
@@ -3546,7 +4828,13 @@
           try {
             const body = {
               variant:
-                variant === 'lite-ui' ? 'lite-ui' : variant === 'messenger' ? 'messenger' : 'headless',
+                variant === 'lite-ui'
+                  ? 'lite-ui'
+                  : variant === 'messenger-sales'
+                    ? 'messenger-sales'
+                    : variant === 'messenger'
+                      ? 'messenger'
+                      : 'headless',
               envContent: this.boss.provResult.envContent,
               jsonConfig: this.boss.provResult.jsonConfig || {},
               profileId: this.boss.provProfileId || undefined,
@@ -3687,12 +4975,30 @@
             this._scrollBossProvExportFeedback();
           }
         },
+        syncMessengerGasUiFromConfig(configArr) {
+          const list = configArr || [];
+          const find = (k) => String((list.find(c => (c.envKey || c.key) === k)?.value ?? '')).trim();
+          const auto = find('MESSENGER_AUTO_SPONSOR');
+          this.messengerGasUi.autoSponsor = auto === 'true' || auto === '1' || auto === 'yes';
+          const lic = find('MESSENGER_LICENSE_NFT_OBJECT_ID');
+          if (lic && lic !== '(leer)') this.messengerGasUi.licenseNft = lic;
+          const gate = find('PAIRING_GATE_NFT_OBJECT_ID');
+          if (gate && gate !== '(leer)') this.messengerGasUi.pairingGateNft = gate;
+          const url = find('IOTA_GAS_STATION_URL');
+          if (url && url !== '(leer)') this.messengerGasUi.gasStationUrl = url;
+          const resv = find('SHADOW_SWEEP_GAS_RESERVE_MIST');
+          if (resv && resv !== '(leer)') this.messengerGasUi.shadowReserve = resv;
+        },
         async loadConfig() {
           this.configLoading = true;
           try {
             const r = await fetch(_api() + '/api/config');
             const d = await r.json();
             this.configList = (d.config || []).map(c => ({ envKey: c.envKey || c.key, value: c.value ?? '' }));
+            this.syncMessengerGasUiFromConfig(this.configList);
+            if (Array.isArray(d.messengerMeta?.verifiedIotaNamePackageIds)) {
+              this.messengerGasUi.verifiedIotaPackages = d.messengerMeta.verifiedIotaNamePackageIds.join(', ');
+            }
           } catch (e) { this.configList = []; }
           this.configLoading = false;
         },
@@ -3812,6 +5118,10 @@
             if (rpc) this.setup.rpcUrl = rpc.value || '';
             if (dc.messengerMeta && typeof dc.messengerMeta === 'object') {
               this.setup.messengerMeta = { ...this.setup.messengerMeta, ...dc.messengerMeta };
+            }
+            this.syncMessengerGasUiFromConfig(dc.config || []);
+            if (Array.isArray(dc.messengerMeta?.verifiedIotaNamePackageIds)) {
+              this.messengerGasUi.verifiedIotaPackages = dc.messengerMeta.verifiedIotaNamePackageIds.join(', ');
             }
           } catch (e) {}
           try { await this.loadMessengerPresets(); } catch (e) {}

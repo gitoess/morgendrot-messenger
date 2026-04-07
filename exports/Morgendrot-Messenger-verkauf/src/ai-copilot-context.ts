@@ -67,21 +67,21 @@ PARTNER_ADDRESS, PARTNER_ADDRESSES – für /connect. AUTHORIZED_SENDERS – wer
 ENABLE_UI, API_PORT, UI_PORT – Web-UI. ENABLE_LISTENER – Nachrichten empfangen. ENABLE_AUTO_EXECUTE – Befehle automatisch ausführen (Kill-Switch: false = nur anzeigen).
 ENABLE_PLAINTEXT_CHANNEL – Klartext empfangen/anzeigen. ENABLE_PURGE – Purge erlauben. ENABLE_HARDWARE_OPEN – OPEN_COMMAND/OPEN_URL ausführen.
 OPEN_COMMAND, OPEN_URL – bei OPEN (Lock). OPEN_COMMAND_WORDS – Wörter die öffnen. LOCK_ID – Schloss-Adresse bei ROLE=lock.
-DEFAULT_KEY_TTL_DAYS – Standard-TTL für /create-key. FETCH_LAST_ON_START – beim Start N Nachrichten holen.
+DEFAULT_KEY_TTL_DAYS – Standard-TTL für /create-key. DEFAULT_TTL_DAYS – Standard für Nachrichten-TTL wo anwendbar. MAILBOX_STORE_PLAINTEXT – Klartext in Mailbox speichern (purgebare PlainMsgKey; neues Move). FETCH_LAST_ON_START – beim Start N Nachrichten holen.
 PAYMENT_TRIGGER_* – Zahlung → OPEN. MONITOR_DEVICES, MONITOR_OFFLINE_TIMEOUT_MS – Offline-Alarm. SIGNER (sdk/remote), REMOTE_SIGNER_URL – Boss-Signer.
 
 --- ABLÄUFE ---
 Neu einrichten: MY_ADDRESS setzen, PACKAGE_ID setzen (/set-package-id oder .env), Wallet einmal entsperren (UI oder Terminal). RPC_URL muss erreichbar sein.
 Verschlüsselter Chat: A sendet /handshake an B. B führt /connect aus (oder UI „Connect“). Danach /send von beiden Seiten.
 AccessKey: lock = Adresse des Schlosses (oft MY_ADDRESS der Lock-Instanz) oder Einlass-Gate. recipient = Gast. ttl in Tagen (2h ≈ 0.083).
-Rebate: /purge-handshake oder /purge-key nach ENABLE_PURGE. MAILBOX_ID für Handshake-Purge.
+Rebate: /purge-handshake oder /purge-key nach ENABLE_PURGE. MAILBOX_ID für Handshake-Purge. /purge-msg: bei Mailbox kann zuerst purge_message, bei Fehlschlag purge_plaintext_mail_entry folgen (zwei TX möglich).
 Nachrichten holen ohne Connect: /fetch n – liefert Handshakes von Chain; verschlüsselte nur mit Keys (Vault oder vorheriger Connect).
 
 --- DATEIEN ---
 .env – Konfiguration. .morgendrot-package-id – aktuelle Package-ID. .morgendrot-partner – Partner-Adresse(n). VAULT_FILE – verschlüsselte Keys. REPLAY_STATE_FILE – Nonce pro Sender.
 
 --- KACHELN (PROJEKTE) – Schritte, Refs, Verbindungen, Optionen ---
-chat: Nachrichten+Chat. Schritte 1–13: MY_ADDRESS, PACKAGE_ID (set-package-id oder deploy), isChainReachable, ENABLE_PLAINTEXT_CHANNEL (nur verschlüsselt / auch Klartext), PARTNER_ADDRESS/PARTNER_ADDRESSES, Empfänger aktiv/passiv, STREAMS, USE_MAILBOX/MAILBOX_ID, /handshake vs /connect, /send (nach Connect), /fetch, VAULT_FILE/vault-save/vault-onchain, Folgeoptionen (purge-handshake, FETCH_LAST_ON_START). Verbindung: Handshake → Connect → Send. Optionen pro Schritt in UI wählbar.
+chat: Nachrichten+Chat. Schritte 1–13: MY_ADDRESS, PACKAGE_ID (set-package-id oder deploy), isChainReachable, ENABLE_PLAINTEXT_CHANNEL (nur verschlüsselt / auch Klartext), MAILBOX_STORE_PLAINTEXT (Klartext in Mailbox vs nur Events), PARTNER_ADDRESS/PARTNER_ADDRESSES, Empfänger aktiv/passiv, STREAMS, USE_MAILBOX/MAILBOX_ID, DEFAULT_TTL_DAYS/DEFAULT_KEY_TTL_DAYS, ENABLE_PURGE, /handshake vs /connect, /send (nach Connect), /fetch, VAULT_FILE/vault-save/vault-onchain, Folgeoptionen (purge-handshake, FETCH_LAST_ON_START). Verbindung: Handshake → Connect → Send. Optionen pro Schritt in UI wählbar.
 ticket: Event-Ticketing & Leihgeräte. Schritte: Was ausstellen (AccessKey vs Ticket-NFT), Minting (/create-key, /create-keys, /create-key-and-notify PTB, /create-ticket), Personalisierung (metadata), Einlösen (/use-ticket, hasValidTicket), Transfer (/transfer-ticket, /transfer-key), Purge/Refund (/purge-ticket, /emergency-purge-ticket, /purge-key), /list-tickets, /list-keys. Verbindung: Key/Ticket = Objekt-Ownership; Gate prüft hasValidTicket.
 lieferkette: ROLE=monitor, MONITOR_DEVICES, STREAMS/Chain, MONITOR_OFFLINE_TIMEOUT_MS, MONITOR_ALARM_WEBHOOK_URL, State-Datei, Check-Intervall.
 heimnetzwerk: ROLE=lock, LOCK_ID/MY_ADDRESS, OPEN_COMMAND/OPEN_URL, OPEN_COMMAND_WORDS (Text/AES/COMMAND_REGISTRY_ID), PAYMENT_TRIGGER_ENABLED, OFFLINE_OPEN_ENABLED, OPEN_STREAMS_ENABLED, /create-key, AUTHORIZED_SENDERS.

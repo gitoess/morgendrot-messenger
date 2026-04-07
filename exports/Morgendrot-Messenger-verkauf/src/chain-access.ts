@@ -1,18 +1,60 @@
 /**
  * Chain Access Layer – alle IOTA-Calls (RPC, build, sign, execute, query).
  * Signatur: CLI, Remote-Boss oder SDK (Mnemonic, keine CLI nötig).
+ *
+ * PTB: Viele Flows nutzen `@iota/iota-sdk` `Transaction` (programmable transaction blocks) –
+ * z. B. Batches (mehrere AccessKeys/Tickets), kombinierte Moves, Klartext an mehrere Empfänger in einer TX.
+ * Typischer verschlüsselter Chat `/send` bleibt bewusst oft „eine Nachricht → eine Ausführung“, ist aber nicht „ohne PTB“ im SDK-Sinne.
  */
-import { CFG } from './config.js';
+import { CFG, isMessengerMailboxModeActive } from './config.js';
 import { coerceParsedJsonByteVector, normalizeAddress } from './utils.js';
 import { IotaClient, IotaHTTPTransport, getFullnodeUrl } from '@iota/iota-sdk/client';
 import type { Signer } from '@iota/iota-sdk/cryptography';
 import { Transaction } from '@iota/iota-sdk/transactions';
 import { bcs } from '@iota/iota-sdk/bcs';
-import { spawn } from 'child_process';
+import { spawn, type ChildProcess } from 'child_process';
+import { once } from 'node:events';
+import { createHash } from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
 import { logger } from './logger.js';
 import { fetch as undiciFetch, ProxyAgent } from 'undici';
+import { SocksProxyAgent } from 'socks-proxy-agent';
+import { getSelfPaidMessengerTxCount, recordSelfPaidMessengerTxSuccess } from './messenger-gas-milestone.js';
+
+/**
+ * Messenger-Nachricht als Klartext-String (UTF-8), vor AES-GCM. Muss mit Ciphertext-`vector<u8>` in eure PTB passen.
+ *
+ * **Defaults:** `MESSENGER_MAX_PLAINTEXT_UTF8_BYTES=16000`, `MESSENGER_MAX_PURE_VECTOR_U8_BYTES=16384` (stabil für PTB/CLI).
+ * Größere Werte sind per Env **nicht** erlaubbar (Clamp im Code).
+ *
+ * Siehe: https://docs.iota.org/developer/iota-101/transactions/ptb/programmable-transaction-blocks
+ */
+function parseMessengerIntEnv(key: string, fallback: number, min: number, max: number): number {
+    const raw = process.env[key]?.trim() ?? '';
+    const n = parseInt(raw, 10);
+    if (Number.isFinite(n) && n >= min && n <= max) return n;
+    return fallback;
+}
+
+/**
+ * Default **16000** UTF-8 Zeichen (Klartext-Wire inkl. `[[MORG_…`-Marker/Base64) — konsistent mit stabilem
+ * Messenger-Stand (kleine PTBs, CLI-`--data`-inline). Optional per Env, **nicht** über 16000/16384 anhebbar.
+ */
+export const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = parseMessengerIntEnv(
+    'MESSENGER_MAX_PLAINTEXT_UTF8_BYTES',
+    16000,
+    1024,
+    16000
+);
+
+/** Pro `vector<u8>`-Argument (Move „pure“-Limit historisch ~16 KiB). */
+export const MOVE_MAX_PURE_VECTOR_U8_BYTES = parseMessengerIntEnv(
+    'MESSENGER_MAX_PURE_VECTOR_U8_BYTES',
+    16384,
+    1024,
+    16384
+);
 
 let _sdkSigner: Signer | null = null;
 /** Bei SIGNER=sdk: Signer (z. B. aus Mnemonic) setzen. Muss vor signAndExecute aufgerufen werden. */
@@ -54,26 +96,166 @@ export function isIotaVersionMismatch(err: unknown): boolean {
     return /api version mismatch|client api version|server api version/i.test(msg);
 }
 
-function runIotaCli(args: string[], stdin?: string): Promise<{ stdout: string; stderr: string }> {
-    return new Promise((resolve, reject) => {
-        const child = spawn('iota', args, { shell: false, env: process.env });
-        let stdout = '';
-        let stderr = '';
-        child.stdout?.on('data', (d) => { stdout += d; });
-        child.stderr?.on('data', (d) => { stderr += d; });
-        if (stdin !== undefined) {
-            child.stdin?.end(stdin, 'utf-8');
-        }
-        child.on('error', reject);
-        child.on('close', (code) => {
-            if (code !== 0) {
-                const out = (stderr || stdout).trim();
-                const err = new Error(`iota exit ${code}: ${out.slice(0, 500)}`) as Error & { iotaVersionMismatch?: boolean };
-                if (/api version mismatch|client api version|server api version/i.test(out)) err.iotaVersionMismatch = true;
-                reject(err);
-            } else resolve({ stdout, stderr });
+/** `child_process.spawn` scheitert, wenn die Windows-Kommandozeile zu lang ist (ENAMETOOLONG / E2BIG). */
+function isEnametoolongSpawnError(err: unknown): boolean {
+    const code = (err as NodeJS.ErrnoException)?.code;
+    const msg = err instanceof Error ? err.message : String(err);
+    return (
+        code === 'ENAMETOOLONG' ||
+        code === 'E2BIG' ||
+        /ENAMETOOLONG|argument list too long|name too long|E2BIG/i.test(msg)
+    );
+}
+
+/**
+ * IOTA-CLI `client sign --data <DATA>` (vgl. `IotaClientCommands::Sign` in `client_commands.rs`):
+ * - `data` ist ein String → Rust `Base64::decode(&data)` → BCS `TransactionData`.
+ * - **`--data -`**: clap liest **stdin vollständig als `data`** — dort darf **nur** die Base64 der TX-Bytes stehen.
+ *   Kein Passwort davor; sonst scheitert `Base64::decode` mit `InvalidInput` / „Cannot deserialize … TransactionData“.
+ * - **Große TX:** **`--data -`** + **volle Base64 auf stdin** (ein `stdin.end(Buffer)` — kein CLI-`@file`, keine Tempdatei-Pipeline).
+ * - **`--data <inline>`** (kurze TX): Nutzlast in argv, **stdin** nur `password + '\n'` fürs Keystore (wie bisher).
+ *   Windows: Inline-Limit `maxIotaCliInlineB64Chars` (~24k), nicht cmd.exe-8191 — sonst landet fast jede TX fälschlich nur auf stdin ohne Passwort.
+ * - `execute-signed-tx`: immer **`--tx-bytes -`** + volle Base64 auf stdin bei großer Nutzlast (kein `@file`).
+ */
+function debugIotaCli(): boolean {
+    return process.env.MORG_DEBUG_IOTA_CLI === '1' || process.env.MORG_DEBUG_IOTA_CLI === 'true';
+}
+
+/**
+ * Maximale Länge der TX-Base64 in argv für `iota … --data <base64>`.
+ *
+ * **Windows:** Früher fälschlich wie cmd.exe (8191) begrenzt — dadurch gingen fast alle echten PTBs auf
+ * `--data -` (stdin = nur TX, **kein** Keystore-Passwort auf stdin). CreateProcess erlaubt ~32767
+ * Zeichen **gesamt**; konservativ ~24k für die Base64, Rest für Pfad/Flags/Lange Adresse.
+ *
+ * Override: `MORG_IOTA_CLI_INLINE_B64_MAX` (512 … 400000).
+ */
+function maxIotaCliInlineB64Chars(): number {
+    const raw = process.env.MORG_IOTA_CLI_INLINE_B64_MAX?.trim();
+    if (raw) {
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n) && n >= 512 && n <= 400_000) return n;
+    }
+    return process.platform === 'win32' ? 24_000 : 400_000;
+}
+
+/** `MORG_IOTA_CLI_TX_STDIN=1`: immer stdin (Debug). Sonst stdin nur wenn Base64 zu lang für argv. */
+function shouldPassIotaTxViaStdin(normalizedB64Length: number): boolean {
+    if (process.env.MORG_IOTA_CLI_TX_STDIN === '1' || process.env.MORG_IOTA_CLI_TX_STDIN === 'true') return true;
+    return normalizedB64Length > maxIotaCliInlineB64Chars();
+}
+
+function normalizeTxBase64(base64Tx: string): string {
+    return base64Tx.replace(/\s+/g, '');
+}
+
+/**
+ * stdin für `iota client sign`:
+ * - `--data -` (große TX): **nur** `txBase64Normalized` — clap weist stdin dem Flag `--data` zu.
+ * - `--data <inline>`: stdin nur Keystore-Passwortzeile (`password + '\n'`), nicht die TX.
+ */
+function buildIotaCliSignStdin(
+    walletPassword: string | undefined,
+    txBase64Normalized: string,
+    txOnStdin: boolean
+): string | undefined {
+    const pw = walletPassword !== undefined && walletPassword !== '' ? walletPassword : undefined;
+    if (txOnStdin) {
+        return txBase64Normalized;
+    }
+    if (pw) return `${pw}\n`;
+    return undefined;
+}
+
+function logPrepareMode(mode: 'inline' | 'stdin', b64len: number): void {
+    if (debugIotaCli()) {
+        logger.info(`morg.iota.cli.prepare ${mode} b64len=${b64len} maxInline=${maxIotaCliInlineB64Chars()}`);
+    }
+}
+
+/**
+ * stdin des Kindprozesses schreiben (TX-Base64 für `--data -` / `--tx-bytes -`, UTF-8-String als Buffer).
+ * Ein Aufruf `stdin.end(data)` — bewusst simpel (wie stabiler Legacy-Stand); bei `MORG_DEBUG_IOTA_CLI=1` nur Längen-Log.
+ */
+async function writeStdinToChild(child: ChildProcess, data: Buffer): Promise<void> {
+    const stdin = child.stdin;
+    if (!stdin) throw new Error('runIotaCli: kein stdin (stdio)');
+    if (debugIotaCli()) {
+        logger.info(`morg.iota.cli.stdin bytes=${data.length} pid=${child.pid ?? 'n/a'}`);
+    }
+    await new Promise<void>((resolve, reject) => {
+        const onErr = (e: unknown) => reject(e);
+        stdin.once('error', onErr);
+        stdin.once('finish', () => {
+            stdin.removeListener('error', onErr);
+            resolve();
         });
+        stdin.end(data);
     });
+}
+
+async function runIotaCli(
+    args: string[],
+    stdin?: string,
+    opts?: { cwd?: string }
+): Promise<{ stdout: string; stderr: string }> {
+    const child = spawn('iota', args, {
+        shell: false,
+        env: process.env,
+        cwd: opts?.cwd,
+        stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.setEncoding('utf8');
+    child.stderr?.setEncoding('utf8');
+    child.stdout?.on('data', (d: string | Buffer) => {
+        stdout += typeof d === 'string' ? d : d.toString('utf8');
+    });
+    child.stderr?.on('data', (d: string | Buffer) => {
+        stderr += typeof d === 'string' ? d : d.toString('utf8');
+    });
+    const closePromise = once(child, 'close') as Promise<[number | null, NodeJS.Signals | null]>;
+    const spawnFail = once(child, 'error').then((args) => {
+        const e = args[0];
+        throw e instanceof Error ? e : new Error(String(e));
+    });
+    try {
+        if (stdin !== undefined) {
+            const buf = Buffer.from(stdin, 'utf8');
+            if (debugIotaCli()) {
+                logger.info(`morg.iota.cli.stdin utf8Bytes=${buf.length}`);
+            }
+            await writeStdinToChild(child, buf);
+        } else {
+            child.stdin?.end();
+        }
+        const [code] = (await Promise.race([closePromise, spawnFail])) as [
+            number | null,
+            NodeJS.Signals | null,
+        ];
+        if (code !== 0) {
+            const out = (stderr || stdout).trim();
+            const err = new Error(`iota exit ${code}: ${out.slice(0, 500)}`) as Error & { iotaVersionMismatch?: boolean };
+            if (/api version mismatch|client api version|server api version/i.test(out)) err.iotaVersionMismatch = true;
+            throw err;
+        }
+        return { stdout, stderr };
+    } catch (e: unknown) {
+        try {
+            child.kill();
+        } catch {
+            /* ignore */
+        }
+        const err = e as NodeJS.ErrnoException & { code?: string };
+        const out = (stderr || stdout).trim();
+        if ((err?.code === 'EPIPE' || /EPIPE|write EOF/i.test(String((e as Error)?.message ?? ''))) && out) {
+            throw new Error(
+                `iota stdin (${err?.code ?? 'EPIPE'}): Pipe geschlossen (CLI oft vorzeitig beendet). stderr: ${out.slice(0, 700)}`
+            );
+        }
+        throw e;
+    }
 }
 
 /** Neue Adresse über IOTA-CLI erzeugen (Boss: Adressen für Maschinen). Optional: Keystore-Passwort auf stdin. */
@@ -190,6 +372,7 @@ export function getEffectiveRpcUrlLabel(): string {
 }
 
 function createRpcFetch(): typeof globalThis.fetch {
+    const socksUrl = (CFG.RPC_SOCKS_PROXY || '').trim();
     const proxy = (CFG.RPC_HTTP_PROXY || '').trim();
     const withTimeout = (base: typeof globalThis.fetch): typeof globalThis.fetch => {
         return (input, init) => {
@@ -208,6 +391,21 @@ function createRpcFetch(): typeof globalThis.fetch {
         };
     };
 
+    if (socksUrl) {
+        try {
+            const agent = new SocksProxyAgent(socksUrl);
+            const proxied: typeof globalThis.fetch = (input, init) =>
+                undiciFetch(input as Parameters<typeof undiciFetch>[0], {
+                    ...(init as object),
+                    dispatcher: agent,
+                } as unknown as Parameters<typeof undiciFetch>[1]);
+            return withTimeout(proxied);
+        } catch (e) {
+            logger.warn(
+                `RPC_SOCKS_PROXY ungültig oder nicht nutzbar (${String((e as Error)?.message ?? e)}), versuche HTTP-Proxy oder direktes fetch.`
+            );
+        }
+    }
     if (proxy) {
         try {
             const agent = new ProxyAgent(proxy);
@@ -215,7 +413,7 @@ function createRpcFetch(): typeof globalThis.fetch {
                 undiciFetch(input as Parameters<typeof undiciFetch>[0], {
                     ...(init as object),
                     dispatcher: agent,
-                } as Parameters<typeof undiciFetch>[1]);
+                } as unknown as Parameters<typeof undiciFetch>[1]);
             return withTimeout(proxied);
         } catch (e) {
             logger.warn(`RPC_HTTP_PROXY ungültig oder nicht nutzbar (${String((e as Error)?.message ?? e)}), nutze direktes fetch.`);
@@ -318,6 +516,22 @@ function parseGasSummary(effects: { gasUsed?: Record<string, unknown> } | null |
 /** ObjectRef für setGasPayment: { objectId, version, digest }. */
 type GasPaymentRef = { objectId: string; version: string | number; digest: string };
 
+/** Max. Gas-Coin-Refs pro TX (Validator-Limit nahe 256; konservativ für PTB-Größe). */
+const MAX_GAS_PAYMENT_OBJECTS = 128;
+const GAS_COIN_PAGE = 100;
+
+export type SignAndExecuteOptions = {
+    /** Bei Sponsored Transactions: Adresse, die Gas zahlt (z. B. Boss). Muss von signingAddress verschieden sein. */
+    sponsorAddress?: string;
+    /** Passwort des Sponsor-Wallets (nur nötig, wenn sponsorAddress gesetzt). */
+    sponsorPassword?: string;
+    /**
+     * Wenn true und kein sponsorAddress gesetzt: nach mind. einer erfolgreichen selbstbezahlten Messenger-TX (State-Datei)
+     * und Besitz von MESSENGER_LICENSE_NFT_OBJECT_ID → Gas durch SPONSOR_GAS_OWNER (MESSENGER_AUTO_SPONSOR).
+     */
+    messengerGasPolicy?: boolean;
+};
+
 function isIotaHttp404(err: unknown): boolean {
     const st = err && typeof err === 'object' && 'status' in err ? (err as { status?: number }).status : undefined;
     if (st === 404) return true;
@@ -325,12 +539,38 @@ function isIotaHttp404(err: unknown): boolean {
     return /\b404\b|Not Found/i.test(msg);
 }
 
-/** Holt Coin-Objekte einer Adresse für Gas-Zahlung (Sponsored Transactions). */
+/** Holt Coin-Objekte einer Adresse für Gas-Zahlung (paginiert, bis MAX_GAS_PAYMENT_OBJECTS). */
 export async function getSponsorGasCoins(client: IotaClient, sponsorAddress: string): Promise<GasPaymentRef[]> {
     assertSafeAddress(sponsorAddress);
-    let res;
+    const out: GasPaymentRef[] = [];
+    let cursor: string | null | undefined = undefined;
     try {
-        res = await client.getCoins({ owner: sponsorAddress, limit: 20 } as Parameters<IotaClient['getCoins']>[0]);
+        for (;;) {
+            const res = (await client.getCoins({
+                owner: sponsorAddress,
+                limit: GAS_COIN_PAGE,
+                ...(cursor ? { cursor } : {}),
+            } as Parameters<IotaClient['getCoins']>[0])) as {
+                data?: Array<{ coinObjectId?: string; version?: string | number; digest?: string; balance?: string }>;
+                nextCursor?: string | null;
+            };
+            const data = res.data ?? [];
+            for (const c of data) {
+                if (!c.coinObjectId || !c.digest) continue;
+                const v = c.version;
+                const version =
+                    v !== undefined && v !== null
+                        ? typeof v === 'number'
+                            ? v
+                            : parseInt(String(v), 10) || 0
+                        : 0;
+                out.push({ objectId: c.coinObjectId, version, digest: c.digest });
+                if (out.length >= MAX_GAS_PAYMENT_OBJECTS) break;
+            }
+            if (out.length >= MAX_GAS_PAYMENT_OBJECTS) break;
+            cursor = res.nextCursor ?? undefined;
+            if (!cursor) break;
+        }
     } catch (e) {
         if (isIotaHttp404(e)) {
             throw new Error(
@@ -339,16 +579,60 @@ export async function getSponsorGasCoins(client: IotaClient, sponsorAddress: str
         }
         throw e;
     }
-    const data = (res as { data?: Array<{ coinObjectId?: string; version?: string; digest?: string }> })?.data ?? [];
-    return data
-        .filter((c) => c.coinObjectId && c.digest)
-        .map((c) => {
-            const v = c.version;
-            const version = v !== undefined && v !== null
-                ? (typeof v === 'number' ? v : (parseInt(String(v), 10) || 0))
-                : 0;
-            return { objectId: c.coinObjectId!, version, digest: c.digest! };
-        });
+    return out;
+}
+
+/** Prüft, ob ownerAddress aktueller AddressOwner des Objekts ist (NFT/Lizenz-Gate). */
+export async function addressOwnsObject(client: IotaClient, objectId: string, ownerAddress: string): Promise<boolean> {
+    assertSafeAddress(ownerAddress);
+    const oid = String(objectId || '').trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(oid)) return false;
+    try {
+        const res = await client.getObject({
+            id: oid,
+            options: { showOwner: true },
+        } as Parameters<IotaClient['getObject']>[0]);
+        const owner = (res as { data?: { owner?: unknown } })?.data?.owner;
+        if (owner && typeof owner === 'object' && owner !== null && 'AddressOwner' in owner) {
+            const a = String((owner as { AddressOwner: string }).AddressOwner).trim();
+            return normalizeAddress(a) === normalizeAddress(ownerAddress);
+        }
+        return false;
+    } catch {
+        return false;
+    }
+}
+
+async function resolveMessengerAutoSponsorOptions(
+    signingAddress: string
+): Promise<Pick<SignAndExecuteOptions, 'sponsorAddress' | 'sponsorPassword'> | undefined> {
+    if (!CFG.MESSENGER_AUTO_SPONSOR) return undefined;
+    if (!CFG.SPONSORED_TRANSACTION_ENABLED || !CFG.SPONSOR_GAS_OWNER) return undefined;
+    const sponsor = CFG.SPONSOR_GAS_OWNER.trim();
+    if (!sponsor || normalizeAddress(sponsor) === normalizeAddress(signingAddress)) return undefined;
+    const license = (CFG.MESSENGER_LICENSE_NFT_OBJECT_ID || '').trim();
+    if (!license || !/^0x[a-fA-F0-9]{64}$/i.test(license)) return undefined;
+    if (getSelfPaidMessengerTxCount(signingAddress) < 1) return undefined;
+    const sponsorPassword = CFG.SPONSOR_GAS_PASSWORD?.trim();
+    if (!sponsorPassword) return undefined;
+    const client = getClient();
+    const owns = await addressOwnsObject(client, license, signingAddress);
+    if (!owns) return undefined;
+    return { sponsorAddress: sponsor, sponsorPassword };
+}
+
+function recordMessengerSelfPaidMilestoneIfNeeded(
+    track: boolean,
+    useSponsor: boolean,
+    signingAddress: string,
+    status: string | undefined,
+    digest: string | undefined
+): void {
+    if (!track || useSponsor) return;
+    const d = String(digest || '').trim();
+    if (!d) return;
+    // success = sicher; submitted = Timeout bei Execute, TX kann trotzdem durch sein (Auto-Sponsor-Freigabe)
+    if (status === 'success' || status === 'submitted') recordSelfPaidMessengerTxSuccess(signingAddress);
 }
 
 /** Anzahl nutzbarer Gas-Coins einer Adresse (für Hinweise: wenige Coins → viele TX blockieren sich). */
@@ -365,13 +649,6 @@ export async function getGasCoinCount(client: IotaClient, address: string): Prom
     return data.length;
 }
 
-export type SignAndExecuteOptions = {
-    /** Bei Sponsored Transactions: Adresse, die Gas zahlt (z. B. Boss). Muss von signingAddress verschieden sein. */
-    sponsorAddress?: string;
-    /** Passwort des Sponsor-Wallets (nur nötig, wenn sponsorAddress gesetzt). */
-    sponsorPassword?: string;
-};
-
 /** Pro Gas-Payer nur eine TX gleichzeitig – verhindert "object reserved for another transaction". */
 const txSerialByGasPayer = new Map<string, Promise<unknown>>();
 
@@ -379,7 +656,8 @@ const OBJECT_RESERVED_REGEX = /reserved for another transaction|object.*reserved
 /** Transiente Chain-Fehler (Sync-Lag, Package noch nicht indexiert) → Retry mit längerem Delay. */
 const TRANSIENT_CHAIN_REGEX = /Dependent package not found|transaction inputs.*try again|not found on-chain|-32002|issues with transaction inputs|not available for consumption|current version/i;
 /** Permanente Fehler (Gas/Balance): niemals retries – sauberer Abbruch, verständliche Meldung ans Frontend. */
-const PERMANENT_NO_RETRY_REGEX = /insufficient|not enough|hat keine Coin|keine Coin-Objekte|no coins|balance.*zero|empty balance|gas.*payment|SPONSOR_GAS_OWNER hat keine/i;
+const PERMANENT_NO_RETRY_REGEX =
+    /insufficient|not enough|hat keine Coin|keine Coin-Objekte|no coins|balance.*zero|empty balance|gas.*payment|SPONSOR_GAS_OWNER hat keine|maximum pure argument size|size limit exceeded.*16384/i;
 
 const TX_SERIAL_RETRY_ATTEMPTS = 3;
 const TX_SERIAL_RETRY_DELAY_MS = 2500;
@@ -409,8 +687,11 @@ export function isPermanentNoRetryError(err: unknown): boolean {
 
 async function withTxSerial<T>(gasPayerKey: string, fn: () => Promise<T>): Promise<T> {
     const prev = txSerialByGasPayer.get(gasPayerKey) ?? Promise.resolve();
-    const ourRun = prev.then(() => runWithRetry(fn));
-    const tail = ourRun.finally(() => {});
+    // Wichtig: Bei `prev.reject` (z. B. fehlgeschlagener CLI-Sign) darf die Kette nicht abbrechen —
+    // sonst läuft `runWithRetry` nie wieder und jede Folge-TX scheitert sofort bis Prozess-Neustart.
+    const ourRun = prev.catch(() => {}).then(() => runWithRetry(fn));
+    // Map-Eintrag immer „settled fulfilled“, damit die nächste Sendung nicht an einem rejected tail hängt.
+    const tail = ourRun.catch(() => {});
     txSerialByGasPayer.set(gasPayerKey, tail);
     return ourRun;
 }
@@ -449,8 +730,18 @@ export async function signAndExecute(
     options?: SignAndExecuteOptions
 ): Promise<SignAndExecuteResult> {
     assertSafeAddress(signingAddress);
-    const sponsorAddress = options?.sponsorAddress?.trim();
-    const sponsorPassword = options?.sponsorPassword;
+    let resolvedOptions = options;
+    if (options?.messengerGasPolicy && !options?.sponsorAddress) {
+        try {
+            const auto = await resolveMessengerAutoSponsorOptions(signingAddress);
+            if (auto) resolvedOptions = { ...options, ...auto };
+        } catch {
+            // NFT/RPC optional nicht erreichbar → ohne Sponsor fortfahren
+        }
+    }
+    const trackMessengerMilestone = Boolean(resolvedOptions?.messengerGasPolicy);
+    const sponsorAddress = resolvedOptions?.sponsorAddress?.trim();
+    const sponsorPassword = resolvedOptions?.sponsorPassword;
     const useSponsor = Boolean(
         CFG.SPONSORED_TRANSACTION_ENABLED &&
         CFG.SPONSOR_GAS_OWNER &&
@@ -483,7 +774,7 @@ export async function signAndExecute(
         txToSign.setGasBudget(BigInt(Number.isNaN(gasBudgetNum) ? 10_000_000 : gasBudgetNum));
         const coins = await getSponsorGasCoins(client, signAddress);
         if (coins.length === 0) throw new Error('Keine Coin-Objekte für Gas. Bitte IOTA aufladen (Wallet-Adresse: Signer).');
-        txToSign.setGasPayment(coins.slice(0, 1));
+        txToSign.setGasPayment(coins);
     }
 
     const execOptions = { options: { showEffects: true as const } };
@@ -495,38 +786,86 @@ export async function signAndExecute(
         const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string })?.effects;
         const createdObjectIds = parseCreatedObjectIds(effects);
         const gasSummary = parseGasSummary(effects);
-        return { digest: (resp as { digest?: string }).digest, status: effects?.status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        const status = effects?.status;
+        const out = { digest: (resp as { digest?: string }).digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, out.digest);
+        return out;
     }
 
     const bytes = await txToSign.build({ client });
+    /** ~128 KiB serielle TX; drüber drohen BCS/CLI-Fehler (u. a. „InvalidInput“ beim Sign). */
+    const maxTxBytes = 128 * 1024 - 4096;
+    if (bytes.length > maxTxBytes) {
+        throw new Error(
+            `Transaktion zu groß (${bytes.length} B, praktisches Limit ~${maxTxBytes} B). Kürzere Nachricht, kleineres Kompaktbild oder kürzeres Audio; bei ENABLE_PLAINTEXT_CHANNEL=doppelt Klartext weniger Nutzlast.`
+        );
+    }
     const base64Tx = Buffer.from(bytes).toString('base64');
+    if (debugIotaCli()) {
+        const h = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+        logger.info(
+            `morg.iota.cli.txBuilt bytes=${bytes.length} b64len=${base64Tx.length} sha256_16=${h} signAddr=${signAddress}`
+        );
+    }
+
+    const normalizedB64 = normalizeTxBase64(base64Tx);
+    const useStdinForSign = CFG.SIGNER === 'cli' && shouldPassIotaTxViaStdin(normalizedB64.length);
+    if (useStdinForSign) logPrepareMode('stdin', normalizedB64.length);
+    else logPrepareMode('inline', normalizedB64.length);
 
     let signature: string;
     if (CFG.SIGNER === 'remote' && CFG.REMOTE_SIGNER_URL) {
         signature = await fetchRemoteSignature(signAddress, base64Tx);
     } else {
-        const signStdin = signPassword !== undefined && signPassword !== '' ? signPassword + '\n' : undefined;
         let sig: string | undefined;
-        try {
-            const signJsonRes = await runIotaCli(['client', 'sign', '--json', '--address', signAddress, '--data', base64Tx], signStdin);
+
+        const runCliSignJson = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
+            const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
+            const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
+            const signJsonRes = await runIotaCli(
+                ['client', 'sign', '--json', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
+                stdinBody
+            );
             const signJson = tryParseJson<Record<string, unknown>>(signJsonRes.stdout.trim());
             sig =
                 pickString(signJson, ['iota_signature', 'iotaSignature', 'signature']) ||
                 pickString((signJson?.result as Record<string, unknown>) || {}, ['iota_signature', 'iotaSignature', 'signature']);
+        };
+
+        const runCliSignText = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
+            const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
+            const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
+            const signTextRes = await runIotaCli(
+                ['client', 'sign', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
+                stdinBody
+            );
+            const m =
+                signTextRes.stdout.match(/iota_signature\s*│\s*(.+?)\s*│/) ||
+                signTextRes.stdout.match(/iota_signature\s+(.+)\s*/);
+            sig = m?.[1]?.trim();
+        };
+
+        try {
+            await runCliSignJson();
         } catch (signErr: unknown) {
             if (isIotaVersionMismatch(signErr)) throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
-            // fallback: try text output
+            if (!useStdinForSign && isEnametoolongSpawnError(signErr)) {
+                logger.info('morg.iota.sign: ENAMETOOLONG bei Inline-Spawn, wiederhole mit --data - + stdin.');
+                await runCliSignJson({ forceTxStdin: true });
+            } else {
+                throw signErr;
+            }
         }
         if (!sig) {
             try {
-                const signTextRes = await runIotaCli(['client', 'sign', '--address', signAddress, '--data', base64Tx], signStdin);
-                const m =
-                    signTextRes.stdout.match(/iota_signature\s*│\s*(.+?)\s*│/) ||
-                    signTextRes.stdout.match(/iota_signature\s+(.+)\s*/);
-                sig = m?.[1]?.trim();
+                await runCliSignText();
             } catch (signErr2: unknown) {
                 if (isIotaVersionMismatch(signErr2)) throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
-                throw signErr2;
+                if (!useStdinForSign && isEnametoolongSpawnError(signErr2)) {
+                    await runCliSignText({ forceTxStdin: true });
+                } else {
+                    throw signErr2;
+                }
             }
         }
         if (!sig) throw new Error('Signatur-Fehler (CLI).');
@@ -550,7 +889,9 @@ export async function signAndExecute(
         status = effects?.status as string | undefined;
         const createdObjectIds = parseCreatedObjectIds(effects);
         const gasSummary = parseGasSummary(effects);
-        return { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        const out = { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, digest);
+        return out;
     } else {
         try {
             const resp = await client.executeTransactionBlock({
@@ -563,9 +904,22 @@ export async function signAndExecute(
             const effects = (resp as { effects?: Record<string, unknown> & { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } })?.effects;
             status = effects?.status as string | undefined;
             execJson = { digest, effects };
-        } catch (sdkErr: unknown) {
-            try {
-                const execRes = await runIotaCli(['client', 'execute-signed-tx', '--json', '--tx-bytes', base64Tx, '--signatures', signature]);
+        } catch (_sdkExecuteErr: unknown) {
+            const useStdinExec = shouldPassIotaTxViaStdin(normalizedB64.length);
+            const runExecCli = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
+                const txOnStdinPipe = opts?.forceTxStdin === true || useStdinExec;
+                const execRes = await runIotaCli(
+                    [
+                        'client',
+                        'execute-signed-tx',
+                        '--json',
+                        '--tx-bytes',
+                        txOnStdinPipe ? '-' : normalizedB64,
+                        '--signatures',
+                        signature,
+                    ],
+                    txOnStdinPipe ? normalizedB64 : undefined
+                );
                 execJson = tryParseJson<Record<string, unknown>>(execRes.stdout.trim()) ?? undefined;
                 digest =
                     pickString(execJson, ['digest', 'transactionDigest', 'txDigest']) ||
@@ -574,18 +928,26 @@ export async function signAndExecute(
                 status =
                     pickString((execJson?.effects as Record<string, unknown>)?.status as Record<string, unknown>, ['status']) ||
                     pickString((execJson?.effects as Record<string, unknown>) || {}, ['status']);
+            };
+            try {
+                await runExecCli();
             } catch (e: unknown) {
                 if (isIotaVersionMismatch(e)) throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
-                const errMsg = String((e as Error)?.message ?? e);
-                if (/Failed to confirm tx status.*within \d+ seconds/i.test(errMsg)) {
-                    const digestMatch = /TransactionDigest\(([A-Za-z0-9+/=]+)\)/.exec(errMsg);
-                    if (digestMatch) {
-                        digest = digestMatch[1];
-                        status = 'submitted';
-                        execJson = { digest, effects: { status: 'submitted' } };
+                if (!useStdinExec && isEnametoolongSpawnError(e)) {
+                    logger.info('morg.iota.execute-signed-tx: ENAMETOOLONG, wiederhole mit --tx-bytes - + stdin.');
+                    await runExecCli({ forceTxStdin: true });
+                } else {
+                    const errMsg = String((e as Error)?.message ?? e);
+                    if (/Failed to confirm tx status.*within \d+ seconds/i.test(errMsg)) {
+                        const digestMatch = /TransactionDigest\(([A-Za-z0-9+/=]+)\)/.exec(errMsg);
+                        if (digestMatch) {
+                            digest = digestMatch[1];
+                            status = 'submitted';
+                            execJson = { digest, effects: { status: 'submitted' } };
+                        }
                     }
+                    if (!digest) throw e;
                 }
-                if (!digest) throw e;
             }
         }
     }
@@ -593,7 +955,9 @@ export async function signAndExecute(
     const effects = execJson?.effects as { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } | undefined;
     const createdObjectIds = parseCreatedObjectIds(effects);
     const gasSummary = parseGasSummary(effects);
-    return { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+    const out = { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+    recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, digest);
+    return out;
     });
 }
 
@@ -619,7 +983,7 @@ export async function signAndExecuteWithSigner(
             txb.setGasBudget(BigInt(Number.isNaN(gasBudgetNum) ? 10_000_000 : gasBudgetNum));
             const coins = await getSponsorGasCoins(client, signingAddress);
             if (coins.length === 0) throw new Error('Keine Coin-Objekte für Gas.');
-            txb.setGasPayment(coins.slice(0, 1));
+            txb.setGasPayment(coins);
         }
         const execOptions = { options: { showEffects: true as const } };
         const resp = await client.signAndExecuteTransaction({ transaction: txb, signer, ...execOptions });
@@ -644,7 +1008,7 @@ export function buildHandshakeTransaction(senderAddress: string, recipientAddres
             arguments: [
                 txb.object(CFG.MAILBOX_ID),
                 txb.pure.address(recipientAddress),
-                txb.pure(bcs.vector(bcs.u8()).serialize(pubKeyRaw)),
+                txb.pure.vector('u8', Array.from(pubKeyRaw)),
                 txb.pure.u64(BigInt(Date.now())),
                 txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
             ],
@@ -654,7 +1018,7 @@ export function buildHandshakeTransaction(senderAddress: string, recipientAddres
             target: `${CFG.PACKAGE_ID}::messaging::emit_ecdh_init`,
             arguments: [
                 txb.pure.address(recipientAddress),
-                txb.pure(bcs.vector(bcs.u8()).serialize(pubKeyRaw)),
+                txb.pure.vector('u8', Array.from(pubKeyRaw)),
                 txb.pure.u64(BigInt(Date.now())),
             ],
         });
@@ -934,20 +1298,172 @@ export async function hasValidTicket(
 
 // --- Messaging: TX bauen + ausführen (Chain Access Layer – einzige Stelle für alle IOTA-TXs) ---
 
-function isRebasedStorageEnabled(): boolean {
-    return Boolean(CFG.PACKAGE_ID && CFG.MAILBOX_ID && CFG.USE_MAILBOX);
-}
-
 /** Mailbox nur nutzen, wenn eine echte Objekt-ID gesetzt ist (nicht Package-ID, sonst Chain-Fehler „move package passed“). */
 function useMailboxForPlaintext(): boolean {
     return Boolean(
-        isRebasedStorageEnabled() &&
+        isMessengerMailboxModeActive() &&
         CFG.MAILBOX_ID &&
         CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim()
     );
 }
 
-export function typeName(localName: 'HsKey' | 'MsgKey' | 'VaultKey'): string {
+/** Klartext zusätzlich in Mailbox speichern (Move: store_plaintext_message_stored). */
+function mailboxStoresPlaintext(): boolean {
+    return Boolean(CFG.MAILBOX_STORE_PLAINTEXT);
+}
+
+/** Gültige Credits-Objekt-ID für PTB (nicht PACKAGE_ID). */
+function messengerCreditsObjectIdForTx(): string | undefined {
+    const id = (CFG.MESSENGER_CREDITS_OBJECT_ID || '').trim();
+    if (!id || !/^0x[a-fA-F0-9]{64}$/i.test(id)) return undefined;
+    if (id.trim().toLowerCase() === (CFG.PACKAGE_ID || '').trim().toLowerCase()) return undefined;
+    return normalizeAddress(id);
+}
+
+/** On-chain MessengerCredits (Balance/Cap) für Status-API / Kunden-UI. */
+export type MessengerCreditsSnapshot = {
+    objectId: string;
+    balance: string;
+    maxBalance: string;
+};
+
+export async function getMessengerCreditsSnapshot(): Promise<MessengerCreditsSnapshot | null> {
+    const id = messengerCreditsObjectIdForTx();
+    if (!id) return null;
+    try {
+        const res = await getClient().getObject({
+            id,
+            options: { showContent: true, showType: true },
+        } as Parameters<IotaClient['getObject']>[0]);
+        const data = (res as { data?: { type?: string; content?: { fields?: Record<string, unknown> } } })?.data;
+        const typeStr = String(data?.type ?? '');
+        if (!typeStr.includes('MessengerCredits')) return null;
+        const fields = data?.content?.fields;
+        if (!fields || typeof fields !== 'object') return null;
+        const balRaw = fields.balance;
+        const maxRaw = fields.max_balance;
+        const balance = balRaw != null ? BigInt(String(balRaw)) : 0n;
+        const maxBalance = maxRaw != null ? BigInt(String(maxRaw)) : 0n;
+        return {
+            objectId: id,
+            balance: balance.toString(),
+            maxBalance: maxBalance.toString(),
+        };
+    } catch {
+        return null;
+    }
+}
+
+/** Max. Empfänger pro mint_messenger_credits_batch-TX (Gas/Größe). */
+const MESSENGER_CREDITS_MINT_CHUNK = 28;
+
+export type MessengerCreditsMintParams = {
+    initialBalance: bigint;
+    maxBalance: bigint;
+    refillIntervalMs: bigint;
+    refillAmount: bigint;
+    costEcdhInit: bigint;
+    costStoreMessage: bigint;
+};
+
+/** Liest MessengerCreditsMinted-Events einer erfolgreichen TX (recipient → credits_object_id). */
+export async function parseMessengerCreditsMintedFromDigest(client: IotaClient, digest: string): Promise<Map<string, string>> {
+    const map = new Map<string, string>();
+    const d = String(digest || '').trim();
+    if (!d) return map;
+    const pushFromEvents = (events: Array<{ type?: string; parsedJson?: Record<string, unknown> }>) => {
+        for (const ev of events) {
+            const t = String(ev.type || '');
+            if (!/::messaging::MessengerCreditsMinted$/i.test(t) && !/MessengerCreditsMinted/i.test(t)) continue;
+            const pj = ev.parsedJson;
+            if (!pj || typeof pj !== 'object') continue;
+            const recRaw = (pj as { recipient?: unknown }).recipient;
+            const idRaw = (pj as { credits_id?: unknown }).credits_id ?? (pj as { creditsId?: unknown }).creditsId;
+            const rec = typeof recRaw === 'string' ? normalizeAddress(recRaw) : null;
+            const cid =
+                typeof idRaw === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(idRaw.trim()) ? normalizeAddress(idRaw.trim()) : null;
+            if (rec && cid) map.set(rec, cid);
+        }
+    };
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    for (let attempt = 0; attempt < 4; attempt++) {
+        if (attempt > 0) await sleep(900);
+        try {
+            const res = await client.getTransactionBlock({
+                digest: d,
+                options: { showEvents: true },
+            } as Parameters<IotaClient['getTransactionBlock']>[0]);
+            const ev =
+                (res as { events?: Array<{ type?: string; parsedJson?: Record<string, unknown> }> }).events ??
+                (res as { transactionBlock?: { events?: Array<{ type?: string; parsedJson?: Record<string, unknown> }> } })
+                    ?.transactionBlock?.events ??
+                [];
+            pushFromEvents(ev ?? []);
+            if (map.size > 0) break;
+        } catch {
+            // retry
+        }
+    }
+    return map;
+}
+
+/**
+ * Boss signiert: mint_messenger_credits_batch in Chunks. Rückgabe: normalisierte Empfängeradresse → Credits-Objekt-ID.
+ */
+export async function mintMessengerCreditsBatchForRecipients(
+    bossAddress: string,
+    recipientAddresses: string[],
+    p: MessengerCreditsMintParams,
+    walletPassword?: string
+): Promise<Map<string, string>> {
+    assertSafeAddress(bossAddress);
+    const pkg = (CFG.PACKAGE_ID || '').trim();
+    if (!pkg) throw new Error('PACKAGE_ID fehlt.');
+    if (recipientAddresses.length === 0) return new Map();
+    const client = getClient();
+    const merged = new Map<string, string>();
+    const normBoss = normalizeAddress(bossAddress);
+    for (let i = 0; i < recipientAddresses.length; i += MESSENGER_CREDITS_MINT_CHUNK) {
+        const slice = recipientAddresses.slice(i, i + MESSENGER_CREDITS_MINT_CHUNK).map((a) => normalizeAddress(a));
+        const txb = new Transaction();
+        txb.setSender(normBoss);
+        txb.moveCall({
+            target: `${pkg}::messaging::mint_messenger_credits_batch`,
+            arguments: [
+                txb.pure.address(normBoss),
+                txb.pure.vector(
+                    'address',
+                    slice.map((a) => a)
+                ),
+                txb.pure.u64(p.initialBalance),
+                txb.pure.u64(p.maxBalance),
+                txb.pure.u64(p.refillIntervalMs),
+                txb.pure.u64(p.refillAmount),
+                txb.pure.u64(p.costEcdhInit),
+                txb.pure.u64(p.costStoreMessage),
+            ],
+        });
+        const res = await signAndExecute(client, txb, normBoss, walletPassword);
+        const st = String(res.status || '').toLowerCase();
+        if (st && st !== 'success' && st !== 'submitted') {
+            throw new Error(`Messenger-Credits-Mint: TX-Status ${res.status || '?'}`);
+        }
+        const dig = String(res.digest || '').trim();
+        if (!dig) throw new Error('Messenger-Credits-Mint: keine Transaktions-Digest.');
+        const chunkMap = await parseMessengerCreditsMintedFromDigest(client, dig);
+        for (const [k, v] of chunkMap) merged.set(k, v);
+        for (const a of slice) {
+            if (!merged.has(a)) {
+                throw new Error(
+                    `Messenger-Credits-Mint: keine Objekt-ID für ${a.slice(0, 12)}… (Chain-Events leer oder falsches Package – deploy/upgraden?)`
+                );
+            }
+        }
+    }
+    return merged;
+}
+
+export function typeName(localName: 'HsKey' | 'MsgKey' | 'PlainMsgKey' | 'VaultKey'): string {
     return `${CFG.PACKAGE_ID}::messaging::${localName}`;
 }
 
@@ -956,20 +1472,40 @@ export async function sendEcdhInit(
     recipient: string,
     senderAddress: string,
     pubKeyRaw: Uint8Array,
-    walletPassword?: string
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<{ digest?: string; status?: string }> {
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
+    const pkLen = pubKeyRaw?.length ?? 0;
+    if (pkLen < 32 || pkLen > 160) {
+        throw new Error(
+            `ECDH-Public-Key ungültig (${pkLen} B). Erwartet typisch 65 B (P-256 uncompressed). Vault prüfen oder neu laden.`
+        );
+    }
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
     const txb = new Transaction();
     txb.setSender(senderAddress);
-    if (isRebasedStorageEnabled() && CFG.MAILBOX_ID) {
+    const creditsId = messengerCreditsObjectIdForTx();
+    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID && creditsId) {
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::store_ecdh_init_with_credits`,
+            arguments: [
+                txb.object(CFG.MAILBOX_ID),
+                txb.object(creditsId),
+                txb.pure.address(recipient),
+                txb.pure.vector('u8', Array.from(pubKeyRaw)),
+                txb.pure.u64(BigInt(Date.now())),
+                txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
+            ],
+        });
+    } else if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_ecdh_init`,
             arguments: [
                 txb.object(CFG.MAILBOX_ID),
                 txb.pure.address(recipient),
-                txb.pure(bcs.vector(bcs.u8()).serialize(pubKeyRaw)),
+                txb.pure.vector('u8', Array.from(pubKeyRaw)),
                 txb.pure.u64(BigInt(Date.now())),
                 txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
             ],
@@ -979,12 +1515,12 @@ export async function sendEcdhInit(
             target: `${CFG.PACKAGE_ID}::messaging::emit_ecdh_init`,
             arguments: [
                 txb.pure.address(recipient),
-                txb.pure(bcs.vector(bcs.u8()).serialize(pubKeyRaw)),
+                txb.pure.vector('u8', Array.from(pubKeyRaw)),
                 txb.pure.u64(BigInt(Date.now())),
             ],
         });
     }
-    return signAndExecute(getClient(), txb, senderAddress, walletPassword);
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, signOptions);
 }
 
 /** Geheimnis-Peering: PairingOffer-Event emittieren (nach Package-Upgrade mit emit_pairing_offer). */
@@ -993,7 +1529,8 @@ export async function sendPairingOffer(
     nonce: Uint8Array,
     ciphertext: Uint8Array,
     expiresAtMs: bigint,
-    walletPassword?: string
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<{ digest?: string; status?: string }> {
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
@@ -1009,7 +1546,7 @@ export async function sendPairingOffer(
             txb.pure.u64(expiresAtMs),
         ],
     });
-    return signAndExecute(getClient(), txb, senderAddress, walletPassword);
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, signOptions);
 }
 
 export type PairingOfferCandidate = { nonce: Uint8Array; ciphertext: Uint8Array; expiresAtMs: number };
@@ -1151,14 +1688,43 @@ export async function storeEncryptedMessage(
     tag: Uint8Array,
     nonce: bigint,
     plaintext?: Uint8Array,
-    walletPassword?: string
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<{ digest?: string; status?: string }> {
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
     const txb = new Transaction();
     txb.setSender(senderAddress);
-    if (isRebasedStorageEnabled() && CFG.MAILBOX_ID) {
+    const creditsId = messengerCreditsObjectIdForTx();
+    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID && creditsId) {
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message_with_credits`,
+            arguments: [
+                txb.object(CFG.MAILBOX_ID),
+                txb.object(creditsId),
+                txb.pure.address(recipient),
+                txb.pure(bcs.vector(bcs.u8()).serialize(ciphertext)),
+                txb.pure(bcs.vector(bcs.u8()).serialize(iv)),
+                txb.pure(bcs.vector(bcs.u8()).serialize(tag)),
+                txb.pure.u64(nonce),
+                txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
+            ],
+        });
+        if (CFG.ENABLE_PLAINTEXT_CHANNEL && plaintext) {
+            txb.moveCall({
+                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits`,
+                arguments: [
+                    txb.object(CFG.MAILBOX_ID),
+                    txb.object(creditsId),
+                    txb.pure.address(recipient),
+                    txb.pure(bcs.vector(bcs.u8()).serialize(plaintext)),
+                    txb.pure.u64(nonce),
+                    txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
+                ],
+            });
+        }
+    } else if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message`,
             arguments: [
@@ -1205,7 +1771,7 @@ export async function storeEncryptedMessage(
             });
         }
     }
-    return signAndExecute(getClient(), txb, senderAddress, walletPassword);
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, signOptions);
 }
 
 /** Nur Klartext senden (kein Handshake nötig). */
@@ -1215,7 +1781,11 @@ export async function storePlaintextMessage(
     text: Uint8Array,
     nonce: bigint,
     walletPassword?: string,
-    options?: { /** Immer Event-Pfad (send_plaintext_message), nie Mailbox – z. B. für /send-plain. */ forceLegacyPlaintext?: boolean }
+    options?: {
+        /** Immer Event-Pfad (send_plaintext_message), nie Mailbox – z. B. für /send-plain. */
+        forceLegacyPlaintext?: boolean;
+        signOptions?: SignAndExecuteOptions;
+    }
 ): Promise<{ digest?: string; status?: string }> {
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
@@ -1227,7 +1797,44 @@ export async function storePlaintextMessage(
     // Nie Mailbox nutzen, wenn MAILBOX_ID = PACKAGE_ID (Chain-Fehler „move package passed“). /send-plain erzwingt Event-Pfad.
     const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
     const useMailbox = !options?.forceLegacyPlaintext && useMailboxForPlaintext() && mailboxIdValid;
-    if (useMailbox) {
+    const creditsId = messengerCreditsObjectIdForTx();
+    const storePlain = mailboxStoresPlaintext();
+    if (useMailbox && creditsId && storePlain) {
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits_stored`,
+            arguments: [
+                txb.object(CFG.MAILBOX_ID!),
+                txb.object(creditsId),
+                txb.pure.address(recipient),
+                txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                txb.pure.u64(nonceU64),
+                txb.pure.u64(ttlDays),
+            ],
+        });
+    } else if (useMailbox && creditsId) {
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits`,
+            arguments: [
+                txb.object(CFG.MAILBOX_ID!),
+                txb.object(creditsId),
+                txb.pure.address(recipient),
+                txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                txb.pure.u64(nonceU64),
+                txb.pure.u64(ttlDays),
+            ],
+        });
+    } else if (useMailbox && storePlain) {
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_stored`,
+            arguments: [
+                txb.object(CFG.MAILBOX_ID!),
+                txb.pure.address(recipient),
+                txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                txb.pure.u64(nonceU64),
+                txb.pure.u64(ttlDays),
+            ],
+        });
+    } else if (useMailbox) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message`,
             arguments: [
@@ -1248,7 +1855,7 @@ export async function storePlaintextMessage(
             ],
         });
     }
-    return signAndExecute(getClient(), txb, senderAddress, walletPassword);
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
 }
 
 /** PTB: Dieselbe Plaintext-Nachricht an mehrere Empfaenger in einer TX senden (Boss-Broadcast). */
@@ -1257,21 +1864,59 @@ export async function storePlaintextMessageBatch(
     senderAddress: string,
     text: Uint8Array,
     nonce: bigint,
-    walletPassword?: string
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<SignAndExecuteResult> {
     const valid = recipients.filter(r => r && /^0x[a-fA-F0-9]{64}$/.test(r.trim()));
     if (valid.length === 0) throw new Error('Mindestens ein gültiger Empfänger nötig (0x…).');
-    if (valid.length === 1) return storePlaintextMessage(valid[0], senderAddress, text, nonce, walletPassword);
+    if (valid.length === 1) return storePlaintextMessage(valid[0], senderAddress, text, nonce, walletPassword, { signOptions });
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
     const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
     const useMailbox = useMailboxForPlaintext() && mailboxIdValid;
+    const creditsId = messengerCreditsObjectIdForTx();
+    const storePlain = mailboxStoresPlaintext();
     const txb = new Transaction();
     txb.setSender(senderAddress);
     const nonceU64 = nonce != null && typeof nonce === 'bigint' ? nonce : BigInt(Number(nonce) || Date.now() || 0);
     const ttlDays = CFG.DEFAULT_TTL_DAYS != null ? CFG.DEFAULT_TTL_DAYS : 30n;
     for (const recipient of valid) {
-        if (useMailbox) {
+        if (useMailbox && creditsId && storePlain) {
+            txb.moveCall({
+                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits_stored`,
+                arguments: [
+                    txb.object(CFG.MAILBOX_ID!),
+                    txb.object(creditsId),
+                    txb.pure.address(recipient),
+                    txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                    txb.pure.u64(nonceU64),
+                    txb.pure.u64(ttlDays),
+                ],
+            });
+        } else if (useMailbox && creditsId) {
+            txb.moveCall({
+                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits`,
+                arguments: [
+                    txb.object(CFG.MAILBOX_ID!),
+                    txb.object(creditsId),
+                    txb.pure.address(recipient),
+                    txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                    txb.pure.u64(nonceU64),
+                    txb.pure.u64(ttlDays),
+                ],
+            });
+        } else if (useMailbox && storePlain) {
+            txb.moveCall({
+                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_stored`,
+                arguments: [
+                    txb.object(CFG.MAILBOX_ID!),
+                    txb.pure.address(recipient),
+                    txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+                    txb.pure.u64(nonceU64),
+                    txb.pure.u64(ttlDays),
+                ],
+            });
+        } else if (useMailbox) {
             txb.moveCall({
                 target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message`,
                 arguments: [
@@ -1293,12 +1938,18 @@ export async function storePlaintextMessageBatch(
             });
         }
     }
-    return signAndExecute(getClient(), txb, senderAddress, walletPassword);
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, signOptions);
 }
 
 /** Purge Handshake aus Mailbox. */
-export async function purgeHandshake(recipient: string, sender: string, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
-    if (!isRebasedStorageEnabled() || !CFG.MAILBOX_ID) throw new Error('Mailbox nicht konfiguriert.');
+export async function purgeHandshake(
+    recipient: string,
+    sender: string,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID) throw new Error('Mailbox nicht konfiguriert.');
     assertSafeAddress(recipient);
     assertSafeAddress(sender);
     assertSafeAddress(signingAddress);
@@ -1308,31 +1959,50 @@ export async function purgeHandshake(recipient: string, sender: string, signingA
         target: `${CFG.PACKAGE_ID}::messaging::purge_handshake`,
         arguments: [txb.object(CFG.MAILBOX_ID), txb.pure.address(recipient), txb.pure.address(sender)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
-/** Purge Nachricht aus Mailbox. */
-export async function purgeMessage(recipient: string, sender: string, nonce: bigint, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
-    if (!isRebasedStorageEnabled() || !CFG.MAILBOX_ID) throw new Error('Mailbox nicht konfiguriert.');
+/** Purge Nachricht aus Mailbox (verschlüsselt oder gespeicherter Klartext). */
+export async function purgeMessage(
+    recipient: string,
+    sender: string,
+    nonce: bigint,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID) throw new Error('Mailbox nicht konfiguriert.');
     assertSafeAddress(recipient);
     assertSafeAddress(sender);
     assertSafeAddress(signingAddress);
-    const txb = new Transaction();
-    txb.setSender(signingAddress);
-    txb.moveCall({
-        target: `${CFG.PACKAGE_ID}::messaging::purge_message`,
-        arguments: [
-            txb.object(CFG.MAILBOX_ID),
-            txb.pure.address(recipient),
-            txb.pure.address(sender),
-            txb.pure.u64(nonce),
-        ],
-    });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    const client = getClient();
+    const mb = CFG.MAILBOX_ID;
+    const run = async (target: 'purge_message' | 'purge_plaintext_mail_entry') => {
+        const txb = new Transaction();
+        txb.setSender(signingAddress);
+        txb.moveCall({
+            target: `${CFG.PACKAGE_ID}::messaging::${target}`,
+            arguments: [txb.object(mb), txb.pure.address(recipient), txb.pure.address(sender), txb.pure.u64(nonce)],
+        });
+        return signAndExecute(client, txb, signingAddress, walletPassword, signOptions);
+    };
+    try {
+        return await run('purge_message');
+    } catch (e1) {
+        try {
+            return await run('purge_plaintext_mail_entry');
+        } catch {
+            throw e1;
+        }
+    }
 }
 
 /** Vault: Notfall-Purge aktivieren. */
-export async function enableEmergencyPurgeVault(signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function enableEmergencyPurgeVault(
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(signingAddress);
     const txb = new Transaction();
@@ -1341,11 +2011,16 @@ export async function enableEmergencyPurgeVault(signingAddress: string, walletPa
         target: `${CFG.PACKAGE_ID}::messaging::enable_emergency_purge`,
         arguments: [txb.object(CFG.VAULT_REGISTRY_ID)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** Vault: löschen (nach enable_emergency_purge oder TTL). */
-export async function purgeVaultOnChain(ownerAddress: string, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function purgeVaultOnChain(
+    ownerAddress: string,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(ownerAddress);
     assertSafeAddress(signingAddress);
@@ -1355,11 +2030,16 @@ export async function purgeVaultOnChain(ownerAddress: string, signingAddress: st
         target: `${CFG.PACKAGE_ID}::messaging::purge_vault`,
         arguments: [txb.object(CFG.VAULT_REGISTRY_ID), txb.pure.address(ownerAddress)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** PTB: enable_emergency_purge + purge_vault in einer Transaktion (50% Gas-Ersparnis). */
-export async function emergencyPurgeVaultPtb(ownerAddress: string, signingAddress: string, walletPassword?: string): Promise<SignAndExecuteResult> {
+export async function emergencyPurgeVaultPtb(
+    ownerAddress: string,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<SignAndExecuteResult> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(ownerAddress);
     assertSafeAddress(signingAddress);
@@ -1373,7 +2053,7 @@ export async function emergencyPurgeVaultPtb(ownerAddress: string, signingAddres
         target: `${CFG.PACKAGE_ID}::messaging::purge_vault`,
         arguments: [txb.object(CFG.VAULT_REGISTRY_ID), txb.pure.address(ownerAddress)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /**
@@ -1440,6 +2120,7 @@ export async function createTicketsBatchPtb(
     count: number,
     signingAddress: string,
     walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<SignAndExecuteResult> {
     assertSafeAddress(eventId);
     assertSafeAddress(recipient);
@@ -1464,7 +2145,7 @@ export async function createTicketsBatchPtb(
             ],
         });
     }
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /**
@@ -1519,7 +2200,12 @@ export async function createAccessKeyAndSendPlain(
 }
 
 /** AccessKey: Notfall-Purge aktivieren. */
-export async function enableEmergencyPurgeKey(keyObjectId: string, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function enableEmergencyPurgeKey(
+    keyObjectId: string,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     const id = typeof keyObjectId === 'string' ? keyObjectId.trim() : '';
     if (!id || id.startsWith('<') || id.toLowerCase() === 'undefined' || !/^0x[0-9a-fA-F]+$/.test(id))
         throw new Error('Key-Objekt-ID fehlt (0x…).');
@@ -1530,11 +2216,16 @@ export async function enableEmergencyPurgeKey(keyObjectId: string, signingAddres
         target: `${CFG.PACKAGE_ID}::messaging::enable_emergency_purge_key`,
         arguments: [txb.object(id)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** AccessKey löschen. */
-export async function purgeKey(keyObjectId: string, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function purgeKey(
+    keyObjectId: string,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     const id = typeof keyObjectId === 'string' ? keyObjectId.trim() : '';
     if (!id || id.startsWith('<') || id.toLowerCase() === 'undefined' || !/^0x[0-9a-fA-F]+$/.test(id))
         throw new Error('Key-Objekt-ID fehlt (0x…). Bitte zuerst /list-keys ausführen und eine gültige keyId angeben.');
@@ -1545,18 +2236,19 @@ export async function purgeKey(keyObjectId: string, signingAddress: string, wall
         target: `${CFG.PACKAGE_ID}::messaging::purge_key`,
         arguments: [txb.object(id)],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** Mehrere AccessKeys in einer TX (PTB) löschen – eine Computation Fee, volle Storage Rebates. */
 export async function purgeMultipleKeys(
     keyObjectIds: string[],
     signingAddress: string,
-    walletPassword?: string
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
 ): Promise<SignAndExecuteResult> {
     const ids = keyObjectIds.filter((id) => id && typeof id === 'string' && id.trim().length > 0);
     if (ids.length === 0) throw new Error('Mindestens eine Key-Objekt-ID nötig (0x…).');
-    if (ids.length === 1) return purgeKey(ids[0], signingAddress, walletPassword);
+    if (ids.length === 1) return purgeKey(ids[0], signingAddress, walletPassword, signOptions);
     assertSafeAddress(signingAddress);
     const txb = new Transaction();
     txb.setSender(signingAddress);
@@ -1566,7 +2258,7 @@ export async function purgeMultipleKeys(
             arguments: [txb.object(id)],
         });
     }
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** AccessKey an neue Adresse übertragen (Weitergabe). */
@@ -2559,7 +3251,13 @@ function assertVaultPayloadSize(payload: Uint8Array): void {
 
 /** On-Chain-Vault erstellen. Bei bestehendem Vault: altes Objekt wird ersetzt (Rebate an Sender).
  * Signatur auf Chain: create_vault(registry, owner: address, encrypted_data, auto_purge_after_days). */
-export async function createVaultOnChain(encryptedPayload: Uint8Array, ttlDays: bigint, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function createVaultOnChain(
+    encryptedPayload: Uint8Array,
+    ttlDays: bigint,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(signingAddress);
     assertVaultPayloadSize(encryptedPayload);
@@ -2574,12 +3272,18 @@ export async function createVaultOnChain(encryptedPayload: Uint8Array, ttlDays: 
             txb.pure.u64(ttlDays),
         ],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** On-Chain-Vault aktualisieren (Objekt bleibt, nur encrypted_data wird ersetzt → kein Rebate-Verlust). Vault muss existieren.
  * Signatur auf Chain: update_vault(registry, owner: address, encrypted_data, auto_purge_after_days). */
-export async function updateVaultOnChain(encryptedPayload: Uint8Array, ttlDays: bigint, signingAddress: string, walletPassword?: string): Promise<{ digest?: string; status?: string }> {
+export async function updateVaultOnChain(
+    encryptedPayload: Uint8Array,
+    ttlDays: bigint,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
     if (!CFG.VAULT_REGISTRY_ID) throw new Error('VAULT_REGISTRY_ID nicht gesetzt.');
     assertSafeAddress(signingAddress);
     assertVaultPayloadSize(encryptedPayload);
@@ -2594,12 +3298,12 @@ export async function updateVaultOnChain(encryptedPayload: Uint8Array, ttlDays: 
             txb.pure.u64(ttlDays),
         ],
     });
-    return signAndExecute(getClient(), txb, signingAddress, walletPassword);
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** Handshake aus Mailbox lesen (Discovery). */
 export async function getHandshakeFromMailbox(recipient: string, sender: string): Promise<{ sender: string; pubKeyRaw: Uint8Array; nonce: bigint } | null> {
-    if (!isRebasedStorageEnabled() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID) return null;
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID) return null;
     try {
         const resp = await getClient().getDynamicFieldObject({
             parentObjectId: CFG.MAILBOX_ID,
@@ -2624,15 +3328,28 @@ export type MailboxMessageCandidate = { recipient: string; sender: string; nonce
 /** Mailbox-Inhalte auflisten, die die angegebene Adresse rebaten kann (Handshakes + Nachrichten). */
 export async function getMailboxRebateCandidates(myAddress: string): Promise<{ handshakes: MailboxHandshakeCandidate[]; messages: MailboxMessageCandidate[] }> {
     const out = { handshakes: [] as MailboxHandshakeCandidate[], messages: [] as MailboxMessageCandidate[] };
-    if (!isRebasedStorageEnabled() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID || !myAddress) return out;
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID || !myAddress) return out;
     const norm = (a: string) => (a || '').trim().toLowerCase();
     const me = norm(myAddress);
     try {
-        const page = await getClient().getDynamicFields({
-            parentId: CFG.MAILBOX_ID,
-            limit: 250,
-        } as Parameters<IotaClient['getDynamicFields']>[0]);
-        const entries = (page as { data?: Array<{ name?: { type?: string; value?: Record<string, unknown> }; objectId?: string }> })?.data ?? [];
+        const allEntries: Array<{ name?: { type?: string; value?: Record<string, unknown> }; objectId?: string }> = [];
+        let cursor: string | null = null;
+        const maxPages = 20;
+        const pageLimit = 500;
+        for (let pageNum = 0; pageNum < maxPages; pageNum++) {
+            const page = await getClient().getDynamicFields({
+                parentId: CFG.MAILBOX_ID,
+                limit: pageLimit,
+                ...(cursor ? { cursor } : {}),
+            } as Parameters<IotaClient['getDynamicFields']>[0]);
+            const chunk = (page as { data?: typeof allEntries })?.data ?? [];
+            allEntries.push(...chunk);
+            const hasNext = (page as { hasNextPage?: boolean })?.hasNextPage === true;
+            const nextCursor = (page as { nextCursor?: string | null })?.nextCursor;
+            if (!hasNext || !nextCursor) break;
+            cursor = nextCursor;
+        }
+        const entries = allEntries;
         const hsEntries: { recipient: string; sender: string; objectId: string }[] = [];
         const msgEntries: { recipient: string; sender: string; nonce: string; objectId: string }[] = [];
         for (const e of entries) {
@@ -2646,6 +3363,9 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
             if (!canPurge) continue;
             if (typeStr.includes('HsKey') || typeStr.endsWith('::messaging::HsKey')) {
                 hsEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), objectId: objId });
+            } else if (typeStr.includes('PlainMsgKey') || typeStr.endsWith('::messaging::PlainMsgKey')) {
+                const nonce = String(name?.nonce ?? '');
+                msgEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), nonce, objectId: objId });
             } else if (typeStr.includes('MsgKey') || typeStr.endsWith('::messaging::MsgKey')) {
                 const nonce = String(name?.nonce ?? '');
                 msgEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), nonce, objectId: objId });
@@ -2653,17 +3373,21 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
         }
         const allIds = [...hsEntries.map((h) => h.objectId), ...msgEntries.map((m) => m.objectId)];
         if (allIds.length === 0) return out;
-        const objs = await getClient().multiGetObjects({
-            ids: allIds,
-            options: { showStorageRebate: true },
-        } as Parameters<IotaClient['multiGetObjects']>[0]);
-        const objList = (objs as unknown[]) ?? [];
         const rebateById = new Map<string, string>();
-        for (let i = 0; i < allIds.length; i++) {
-            const o = objList[i] as { data?: { storageRebate?: string }; error?: unknown };
-            if (o?.error) continue;
-            const rb = o?.data?.storageRebate;
-            if (rb != null) rebateById.set(allIds[i], String(rb));
+        const BATCH = 50;
+        for (let off = 0; off < allIds.length; off += BATCH) {
+            const slice = allIds.slice(off, off + BATCH);
+            const objs = await getClient().multiGetObjects({
+                ids: slice,
+                options: { showStorageRebate: true },
+            } as Parameters<IotaClient['multiGetObjects']>[0]);
+            const objList = (objs as unknown[]) ?? [];
+            for (let i = 0; i < slice.length; i++) {
+                const o = objList[i] as { data?: { storageRebate?: string }; error?: unknown };
+                if (o?.error) continue;
+                const rb = o?.data?.storageRebate;
+                if (rb != null) rebateById.set(slice[i], String(rb));
+            }
         }
         for (const h of hsEntries) {
             out.handshakes.push({
@@ -2692,7 +3416,7 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
 export async function findAnyIncomingMailboxHandshake(
     myAddress: string
 ): Promise<{ sender: string; pubKeyRaw: Uint8Array; nonce: bigint } | null> {
-    if (!isRebasedStorageEnabled() || !CFG.MAILBOX_ID) return null;
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID) return null;
     const me = normalizeAddress(myAddress);
     if (!me.startsWith('0x') || me.length !== 66) return null;
     try {

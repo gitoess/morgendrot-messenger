@@ -16,6 +16,7 @@ Hinweis Editionen: MESSENGER_EDITION=standalone (klassisch) vs sales (Verkaufs-B
 Hinweis SIGNER=cli: IOTA-CLI muss zur RPC passen (gleiche API-Version), sonst Client/Server api version mismatch. SIGNER=sdk signiert ohne CLI.
 /vault-load <passwort> [pfad]   Bestehende .morgendrot-vault entschlüsseln (ohne /connect). Antwort enthält notes + personalSecrets (Mein Safe, KeePass-ähnlich).
 /vault-load-from-chain <passwort>   Vault aus VAULT_REGISTRY_ID laden (wenn konfiguriert). Ebenfalls personalSecrets.
+/vault-show-signer-import <passwort> [pfad]   Nur SIGNER=sdk: gespeicherten Mnemonic/Bech32-Import aus der Vault-Datei anzeigen (Backup prüfen). Erfordert denselben Import wie bei „Signer-Import mit speichern“.
 /vault-save [passwort] [notizen] [pfad]   Keys + Notizen + personalSecrets in lokaler Vault-Datei speichern (Keys müssen im RAM sein).
 /vault-lock              Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert. Vault-Datei bleibt.
 Hinweis UI/API: GET/POST /api/vault-personal-secrets – Safe-Einträge nur bei entsperrtem Tresor; persistLocal=true schreibt sofort die Vault-Datei.
@@ -54,5 +55,7 @@ hole letzten <n>         Wie /fetch – natürliche Eingabe (z.B. hole letzten 1
 /pairing-offer <Geheimnis> [Name] [Sek]   Geheimnis-Peering (nach Move-Upgrade). Wie in HELP_START.
 /pairing-find <Geheimnis>
 /pairing-wait
+/morg-pkg-export <0xEmpfänger> <Text>   Sneakernet: ECDH+AES-GCM wie /send (Klartext = ein Wire oder JSON-Bundle morgendrot.morgpkg.bundle.v1).
+/morg-pkg-import         Nur per API: JSON-Body-Feld morgPkg – UI „.morg-pkg importieren“.
 /help                    Diese Hilfe anzeigen.
 \x1b[0m`;

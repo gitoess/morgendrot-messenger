@@ -8,7 +8,32 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { CFG, getConfigDisplay, getConnectAddresses, setEnvKey, assignDeviceRoleInEnv, savePackageIdToFile, readPackageIdHistory, readPackageIdHints, savePackageIdHint, readStreamsAnchorIdHistory, seedStreamsAnchorHistoryFromKnownFiles, dedupeStreamAnchorIds, getHierarchyPermissions, isHierarchyConfigKey, type HierarchyPermissions, buildDeviceEnv, buildDeviceJson, buildQrPayload, buildIdentityHeader, generateDeviceSecret, type DeviceProvisionParams } from './config.js';
+import {
+    CFG,
+    getConfigDisplay,
+    getConnectAddresses,
+    setEnvKey,
+    assignDeviceRoleInEnv,
+    savePackageIdToFile,
+    readPackageIdHistory,
+    readPackageIdHints,
+    savePackageIdHint,
+    readStreamsAnchorIdHistory,
+    seedStreamsAnchorHistoryFromKnownFiles,
+    dedupeStreamAnchorIds,
+    getHierarchyPermissions,
+    isHierarchyConfigKey,
+    type HierarchyPermissions,
+    buildDeviceEnv,
+    buildDeviceJson,
+    buildQrPayload,
+    buildIdentityHeader,
+    generateDeviceSecret,
+    type DeviceProvisionParams,
+    buildMessengerExportEnv,
+    buildMessengerExportJson,
+    resolveMessengerExportPackageId,
+} from './config.js';
 import {
     findPeerHandshake,
     isChainReachable,
@@ -31,24 +56,45 @@ import {
     getActiveRpcUrl,
     getRpcCandidateCount,
     getEffectiveRpcUrlLabel,
+    mintMessengerCreditsBatchForRecipients,
+    getMessengerCreditsSnapshot,
+    MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
+    MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from './chain-access.js';
+import { handleShopApi } from './api/shop/handle-shop-api.js';
+import { normalizeAddress } from './utils.js';
 import { HELP_START, HELP_CHAT, getWalletPassword } from './wallet-bridge.js';
 import { logger } from './logger.js';
 import { getMonitorStatus } from './monitoring.js';
 import { exportAuditCsv, exportAuditPdfStream, appendAuditEvent, readAuditEvents } from './audit-log.js';
 import { runGasStationCheck } from './gas-station.js';
 import { verifyTinyHmac, processTinyMessage } from './tiny-gateway.js';
+import { extractCompactImageBase64FromWire } from './compact-image-wire-extract.js';
+import { fuseLoraProgressiveJpegsSharp, prepareImageForLoRa } from './lora-progressive-image.js';
 import archiver from 'archiver';
+import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from './shared/heartbeat-presets.js';
 import {
     vaultFileExists,
     loadVaultLocal,
     loadVaultContent,
     loadVaultFromChainPayload,
+    purgeInboxCache,
     sanitizePersonalSecrets,
     type PersonalSecretEntry,
 } from './vault-local.js';
 import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
-import { saveContactLabel } from './contact-labels.js';
+import {
+    saveContactLabel,
+    saveContactMeshFields,
+    loadContactDirectory,
+    getContactByMeshNodeId,
+    getContactByBleUuid,
+    getContactLabel,
+} from './contact-labels.js';
+import { VaultImagePipeline } from './vault-image-pipeline.js';
+import { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } from './messenger-media-limits.js';
+import { transcodeBrowserAudioToMessengerOpus } from './messenger-audio-opus-encode.js';
+import { consumeClaimTokenOnce } from './voucher-claim-state.js';
 
 /** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
 let lastVaultOnchainSuccessAt: number | undefined;
@@ -73,16 +119,40 @@ export type ApiStatus = {
     uiVariant?: 'full' | 'messenger';
     /** standalone = klassischer Messenger; sales = Kunden-Bundle (Schatten-Seed / Sweep). */
     messengerEdition?: 'standalone' | 'sales';
+    /** MAILBOX_STORE_PLAINTEXT: Klartext zusätzlich in Mailbox speichern (purgebar). */
+    mailboxStorePlaintext?: boolean;
     /** USE_MAILBOX: true = Move speichert in Mailbox-Objekt; false = Event-Pfad (queryEvents). */
     useMailbox?: boolean;
     /** MAILBOX_ID gesetzt und 0x+64Hex (sonst kann Mailbox-Modus nicht greifen). */
     mailboxConfigured?: boolean;
     /** cli | sdk | remote – UI zeigt ggf. Mnemonic-Feld beim Entsperren. */
     signer?: string;
+    /** MESSENGER_CREDITS_OBJECT_ID syntaktisch gültig und ≠ PACKAGE_ID. */
+    messengerCreditsConfigured?: boolean;
+    /** Wenn konfiguriert: Balance/Cap vom Objekt (sonst null). */
+    messengerCredits?: { balance: string; maxBalance: string } | null;
+    /** true: ID konfiguriert, aber Objekt nicht lesbar (RPC/Falsches Objekt). */
+    messengerCreditsFetchFailed?: boolean;
+    /** Konfigurations-Widersprüche / Hinweise (keine Secrets). */
+    configHints?: string[];
+    /** Kurzdarstellung RPC_URL (Host/Pfad) für Einstellungen / Setup. */
+    rpcUrlLabel?: string;
+    /** PACKAGE_ID aus .env (lokale Admin-UI; wie /api/current-ids). */
+    packageId?: string;
+    /** RPC läuft über SOCKS5 (z. B. Tor) – keine URL, nur Flag für UI. */
+    rpcSocksProxyActive?: boolean;
+    /** RPC läuft über HTTP(S)-Proxy. */
+    rpcHttpProxyActive?: boolean;
 };
 
 type GetStatusFn = () => Partial<ApiStatus>;
-export type CommandApiOptions = { sponsorForSender?: string; silentFetch?: boolean; shadowMnemonic?: string };
+export type CommandApiOptions = {
+    sponsorForSender?: string;
+    silentFetch?: boolean;
+    shadowMnemonic?: string;
+    /** Body-Feld für /morg-pkg-import (vollständiges JSON-Objekt). */
+    morgPkg?: unknown;
+};
 type CommandHandlerFn = (cmd: string, args: string[], options?: CommandApiOptions) => Promise<{ ok: boolean; message?: string }>;
 type PurgeAfterLieferungFn = (purges: Array<{ sender: string; recipient: string; nonce: string | number }>) => Promise<{ ok: boolean; message?: string; count?: number }>;
 
@@ -114,6 +184,30 @@ function recordCommandRateLimit(ip: string): void {
     if (!entry || now >= entry.resetAt) {
         entry = { count: 0, resetAt: now + windowMs };
         commandRateLimitByIp.set(ip, entry);
+    }
+    entry.count++;
+}
+
+/** Rate-Limit für POST /api/voucher-claim (öffentlich, wenn aktiviert). */
+const voucherClaimRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
+function checkVoucherClaimRateLimit(ip: string): boolean {
+    const limit = CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE;
+    if (limit <= 0) return true;
+    const now = Date.now();
+    const entry = voucherClaimRateLimitByIp.get(ip);
+    if (!entry) return true;
+    if (now >= entry.resetAt) return true;
+    return entry.count < limit;
+}
+function recordVoucherClaimRateLimit(ip: string): void {
+    const limit = CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE;
+    if (limit <= 0) return;
+    const now = Date.now();
+    const windowMs = 60_000;
+    let entry = voucherClaimRateLimitByIp.get(ip);
+    if (!entry || now >= entry.resetAt) {
+        entry = { count: 0, resetAt: now + windowMs };
+        voucherClaimRateLimitByIp.set(ip, entry);
     }
     entry.count++;
 }
@@ -155,7 +249,7 @@ export function setCommandHandler(handler: CommandHandlerFn | null): void {
     _commandHandler = handler;
 }
 
-/** Optional: „Mein Safe“ (personalSecrets) im entsperrten Vault-RAM. Setzt wallet-bridge nach Init. */
+/** Optional: Zugriff auf „Mein Safe“ (personalSecrets) im entsperrten Vault-RAM. Setzt wallet-bridge nach Init. */
 export type VaultPersonalSecretsBridge = {
     getEntries: () => PersonalSecretEntry[] | null;
     setEntries: (
@@ -185,11 +279,51 @@ function mask(s: string, showChars = 8): string {
     return s.slice(0, showChars) + '…' + s.slice(-4);
 }
 
+/** Kurzdarstellung von RPC_URL (Host + ggf. Pfad) für Status-UI — kein Geheimnis. */
+function rpcUrlLabel(url: string): string {
+    const u = (url || '').trim();
+    if (!u) return '';
+    try {
+        const p = new URL(u);
+        const path = p.pathname && p.pathname !== '/' ? p.pathname.replace(/\/$/, '') : '';
+        const pathShort = path.length > 40 ? `${path.slice(0, 37)}…` : path;
+        return pathShort ? `${p.host}${pathShort}` : p.host;
+    } catch {
+        return u.length > 48 ? `${u.slice(0, 45)}…` : u;
+    }
+}
+
+/** Browser-Origin z. B. vom Handy im WLAN (192.168.x.x) — für CORS, wenn die UI die API direkt anspricht. */
+function isPrivateLanOrigin(origin: string): boolean {
+    try {
+        const u = new URL(origin);
+        const h = u.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return true;
+        const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
+        if (!m) return false;
+        const a = Number(m[1]);
+        const b = Number(m[2]);
+        const c = Number(m[3]);
+        const d = Number(m[4]);
+        if ([a, b, c, d].some((n) => n > 255)) return false;
+        if (a === 10) return true;
+        if (a === 172 && b >= 16 && b <= 31) return true;
+        if (a === 192 && b === 168) return true;
+        return false;
+    } catch {
+        return false;
+    }
+}
+
 function corsHeaders(req: http.IncomingMessage): Record<string, string> {
     const origin = req.headers.origin;
     const defaultOrigin = 'http://127.0.0.1:' + CFG.UI_PORT;
-    const isLocal = !origin || origin === 'null' || origin === '' ||
-        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin);
+    const isLocal =
+        !origin ||
+        origin === 'null' ||
+        origin === '' ||
+        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ||
+        isPrivateLanOrigin(origin);
     const allowOrigin = isLocal && origin ? origin : defaultOrigin;
     return {
         'Access-Control-Allow-Origin': allowOrigin,
@@ -220,7 +354,56 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
-        const url = req.url?.split('?')[0] || '/';
+        const rawPath = req.url?.split('?')[0] || '/';
+        const url = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.replace(/\/+$/, '') : rawPath;
+
+        const shopHandled = await handleShopApi(req, res, url, cors, sendJson);
+        if (shopHandled) return;
+
+        /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
+        if (url === '/api/voucher-claim' && req.method === 'POST') {
+            if (!CFG.ENABLE_VOUCHER_CLAIM_API) {
+                sendJson(res, 404, { ok: false, error: 'Voucher-Claim-API ist deaktiviert (ENABLE_VOUCHER_CLAIM_API=false).' }, cors);
+                return;
+            }
+            const ip = (req.socket?.remoteAddress || 'unknown').replace(/^::ffff:/, '');
+            if (CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE > 0 && !checkVoucherClaimRateLimit(ip)) {
+                sendJson(res, 429, { ok: false, error: 'Rate-Limit überschritten (VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE).' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { claimToken?: string };
+                    const claimToken = String(data.claimToken ?? '').trim();
+                    if (!claimToken) {
+                        sendJson(res, 400, { ok: false, error: 'claimToken fehlt (JSON-Body).' }, cors);
+                        return;
+                    }
+                    const result = await consumeClaimTokenOnce(claimToken);
+                    if (CFG.VOUCHER_CLAIM_RATE_LIMIT_PER_MINUTE > 0) recordVoucherClaimRateLimit(ip);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            status: result.status,
+                            claimKeyPrefix: result.claimKeyPrefix,
+                            consumedAt: result.consumedAt,
+                            note: 'Nur Idempotenz-Schicht. Burn/Mint/Provisioning noch anbinden — siehe docs/API-VOUCHER-CLAIM-SPEC.md',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    sendJson(res, 400, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
 
         if (url === '/api/status' && req.method === 'GET') {
             const custom = { ...(getStatus?.() ?? {}), ..._sessionStatus };
@@ -228,22 +411,84 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
             const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
             const mailboxConfigured = Boolean(mailboxIdTrim && /^0x[a-fA-F0-9]{64}$/i.test(mailboxIdTrim));
+            const packageTrim = (CFG.PACKAGE_ID || '').trim();
+            const configHints: string[] = [];
+            if (CFG.MAILBOX_STORE_PLAINTEXT && !mailboxConfigured) {
+                configHints.push(
+                    'MAILBOX_STORE_PLAINTEXT ist aktiv, aber MAILBOX_ID fehlt oder ist keine gültige Objekt-ID (0x + 64 Hex).'
+                );
+            }
+            if (
+                mailboxIdTrim &&
+                packageTrim &&
+                mailboxIdTrim.toLowerCase() === packageTrim.toLowerCase()
+            ) {
+                configHints.push('MAILBOX_ID entspricht PACKAGE_ID — Mailbox-Aufrufe schlagen fehl („move package passed“).');
+            }
+            const credRaw = (CFG.MESSENGER_CREDITS_OBJECT_ID || '').trim();
+            if (credRaw && !/^0x[a-fA-F0-9]{64}$/i.test(credRaw)) {
+                configHints.push('MESSENGER_CREDITS_OBJECT_ID ist kein gültiges 0x+64-Hex-Format.');
+            }
+            if (credRaw && packageTrim && credRaw.toLowerCase() === packageTrim.toLowerCase()) {
+                configHints.push('MESSENGER_CREDITS_OBJECT_ID darf nicht die PACKAGE_ID sein.');
+            }
+            if (CFG.MAILBOX_STORE_PLAINTEXT && (!packageTrim || !/^0x[a-fA-F0-9]{64}$/i.test(packageTrim))) {
+                configHints.push(
+                    'MAILBOX_STORE_PLAINTEXT: gültige PACKAGE_ID (0x+64 Hex) und deploytes Move mit store_plaintext_message_*_stored nötig.'
+                );
+            }
+            let messengerCredits: { balance: string; maxBalance: string } | null | undefined;
+            let messengerCreditsFetchFailed: boolean | undefined;
+            const credLooksValid = credRaw && /^0x[a-fA-F0-9]{64}$/i.test(credRaw) && credRaw.toLowerCase() !== packageTrim.toLowerCase();
+            if (credLooksValid) {
+                try {
+                    const snap = await getMessengerCreditsSnapshot();
+                    if (snap) messengerCredits = { balance: snap.balance, maxBalance: snap.maxBalance };
+                    else {
+                        messengerCredits = null;
+                        messengerCreditsFetchFailed = true;
+                    }
+                } catch {
+                    messengerCredits = null;
+                    messengerCreditsFetchFailed = true;
+                }
+            }
             const status: ApiStatus & {
                 locked?: boolean;
                 role?: string;
                 roleId?: number;
                 permissions?: HierarchyPermissions;
                 streams?: { active: boolean; anchorId?: string; anchorIdFull?: string };
+                heartbeat?: {
+                    enabled: boolean;
+                    intervalMs: number;
+                    streamsReady: boolean;
+                    presetsMinutes?: number[];
+                    intervalMatchesPreset?: boolean;
+                };
+                /** Volle eigene Adresse (nur lokal/vertraut) – zum Kopieren für Explorer; myAddress bleibt maskiert. */
+                myAddressFull?: string;
+                serveLiteUiStatic?: boolean;
+                apiListenPort?: number;
+                dashboardPort?: number;
+                compactImageEncode?: boolean;
+                loraProgressiveEncode?: boolean;
             } = {
                 backendRunning: true,
                 locked: !!_resolvePassword,
                 connected: custom.connected ?? false,
                 hasKeys: custom.hasKeys,
                 myAddress: custom.myAddress ?? (CFG.MY_ADDRESS ? mask(CFG.MY_ADDRESS) : undefined),
+                /** Wie /api/current-ids – nach SDK-Unlock oft erst in process.env gesetzt. */
+                myAddressFull: (() => {
+                    const raw = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                    return raw || undefined;
+                })(),
                 partnerAddress: custom.partnerAddress ?? (CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS) : undefined),
                 partnerCount: custom.partnerCount,
                 connectedAddresses: custom.connectedAddresses,
                 plaintextMode: CFG.ENABLE_PLAINTEXT_CHANNEL,
+                mailboxStorePlaintext: CFG.MAILBOX_STORE_PLAINTEXT,
                 role: CFG.ROLE,
                 roleId: CFG.ROLE_ID,
                 permissions: perms,
@@ -252,15 +497,39 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     anchorId: CFG.STREAMS_ANCHOR_ID ? mask(CFG.STREAMS_ANCHOR_ID, 12) : undefined,
                     anchorIdFull: CFG.STREAMS_ANCHOR_ID || '',
                 },
+                /** Messenger-UI: Puls an Basis (Streams), ohne neue Endpoints. */
+                heartbeat: {
+                    enabled: CFG.ENABLE_HEARTBEAT,
+                    intervalMs: CFG.HEARTBEAT_INTERVAL_MS,
+                    streamsReady: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
+                    presetsMinutes: HEARTBEAT_INTERVAL_PRESETS_MS.map((ms) => ms / 60_000),
+                    intervalMatchesPreset: isAllowedHeartbeatIntervalMs(CFG.HEARTBEAT_INTERVAL_MS),
+                },
                 vaultStatus: {
                     hasLocal: vaultFileExists(vaultFileResolved),
                     ...(lastVaultOnchainSuccessAt != null && { lastSavedToChainAt: lastVaultOnchainSuccessAt }),
                 },
                 uiVariant: CFG.UI_VARIANT === 'messenger' ? 'messenger' : 'full',
+                /** false: am API-Port keine statische ui/index.html (nur Next unter UI_PORT). */
+                serveLiteUiStatic: CFG.SERVE_LITE_UI_STATIC,
                 messengerEdition: CFG.MESSENGER_EDITION,
                 useMailbox: CFG.USE_MAILBOX,
                 mailboxConfigured,
                 signer: CFG.SIGNER,
+                messengerCreditsConfigured: !!credLooksValid,
+                ...(messengerCredits !== undefined && { messengerCredits }),
+                ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
+                ...(configHints.length > 0 && { configHints }),
+                rpcUrlLabel: rpcUrlLabel(CFG.RPC_URL || ''),
+                rpcSocksProxyActive: Boolean((CFG.RPC_SOCKS_PROXY || '').trim()),
+                rpcHttpProxyActive: Boolean((CFG.RPC_HTTP_PROXY || '').trim()),
+                /** Tatsächlich gebundener Port (nach EADDRINUSE-Ausweich). Next-Rewrite: MORGENDROT_API_INTERNAL_URL anpassen. */
+                apiListenPort: getActualApiPort(),
+                /** Next.js-Dashboard (Sendepfad Auto/Online/Funk, ChatMessageBody) – aus .env UI_PORT. */
+                dashboardPort: CFG.UI_PORT,
+                compactImageEncode: true,
+                loraProgressiveEncode: true,
+                ...(packageTrim ? { packageId: packageTrim } : {}),
             };
             sendJson(res, 200, status, cors);
             return;
@@ -272,6 +541,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     ok: true,
                     myAddress: CFG.MY_ADDRESS || '',
                     packageId: CFG.PACKAGE_ID || '',
+                    mailboxId: CFG.MAILBOX_ID || '',
                     streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
                     streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
                 }, cors);
@@ -652,8 +922,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             rpcCandidateCount: getRpcCandidateCount(),
                             activeRpcUrl: getEffectiveRpcUrlLabel(),
                             rpcHttpProxySet: Boolean((CFG.RPC_HTTP_PROXY || '').trim()),
+                            rpcSocksProxySet: Boolean((CFG.RPC_SOCKS_PROXY || '').trim()),
                             enableHdContactAddresses: CFG.ENABLE_HD_CONTACT_ADDRESSES,
                             messengerEdition: CFG.MESSENGER_EDITION,
+                            verifiedIotaNamePackageIds: [...CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS],
                         },
                     },
                     cors
@@ -711,6 +983,44 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 sendJson(res, 200, { ok: true, reachable }, cors);
             } catch (e: any) {
                 sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url.startsWith('/api/iota-name-lookup') && req.method === 'GET') {
+            try {
+                const u = new URL(req.url || '', 'http://localhost');
+                const name = (u.searchParams.get('name') || '').trim();
+                if (!name) {
+                    sendJson(res, 400, { ok: false, error: 'Query ?name= erforderlich (z. B. beispiel.iota).' }, cors);
+                    return;
+                }
+                const { iotaNamesLookup, registrationNftMatchesAllowedPackages } = await import('./iota-names-lookup.js');
+                const rec = await iotaNamesLookup(CFG.RPC_URL, name);
+                const allow = CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS;
+                let registrationNftVerified: boolean | undefined;
+                let registrationNftType: string | undefined;
+                if (allow.length > 0) {
+                    const m = await registrationNftMatchesAllowedPackages(getClient(), rec.nftId, allow);
+                    registrationNftVerified = m.matches;
+                    registrationNftType = m.objectType;
+                }
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        name,
+                        nftId: rec.nftId,
+                        targetAddress: rec.targetAddress,
+                        expirationTimestampMs: rec.expirationTimestampMs,
+                        registrationNftVerified,
+                        registrationNftType,
+                    },
+                    cors
+                );
+            } catch (e: unknown) {
+                sendJson(res, 502, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
             }
             return;
         }
@@ -823,10 +1133,112 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (url === '/api/contact-labels' && req.method === 'GET') {
             try {
                 const { loadContactLabels } = await import('./contact-labels.js');
-                sendJson(res, 200, { ok: true, labels: loadContactLabels() }, cors);
+                sendJson(
+                    res,
+                    200,
+                    { ok: true, labels: loadContactLabels(), directory: loadContactDirectory() },
+                    cors
+                );
             } catch (e: unknown) {
                 sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
             }
+            return;
+        }
+
+        if (url === '/api/mesh-contact-lookup' && req.method === 'GET') {
+            try {
+                const q = new URL(req.url || '', 'http://x');
+                const nodeId = String(q.searchParams.get('nodeId') ?? '').trim();
+                if (!nodeId) {
+                    sendJson(res, 400, { ok: false, error: 'nodeId fehlt' }, cors);
+                    return;
+                }
+                const hit = getContactByMeshNodeId(nodeId);
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        verified: !!hit,
+                        ...(hit && { address: hit.address, entry: hit.entry }),
+                    },
+                    cors
+                );
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/mesh-contact-lookup-ble' && req.method === 'GET') {
+            try {
+                const q = new URL(req.url || '', 'http://x');
+                const uuid = String(q.searchParams.get('uuid') ?? '').trim();
+                if (!uuid) {
+                    sendJson(res, 400, { ok: false, error: 'uuid fehlt' }, cors);
+                    return;
+                }
+                const hit = getContactByBleUuid(uuid);
+                sendJson(
+                    res,
+                    200,
+                    {
+                        ok: true,
+                        verified: !!hit,
+                        ...(hit && { address: hit.address, entry: hit.entry }),
+                    },
+                    cors
+                );
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/contact-mesh-export-encrypted' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const password = String(data.password ?? '');
+                    if (password.length < 8) {
+                        sendJson(res, 400, { ok: false, error: 'Passwort mindestens 8 Zeichen.' }, cors);
+                        return;
+                    }
+                    const { exportEncryptedContactMesh } = await import('./contact-mesh-sync.js');
+                    const bundle = exportEncryptedContactMesh(password);
+                    sendJson(res, 200, { ok: true, bundle }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/contact-mesh-import-encrypted' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const password = String(data.password ?? '');
+                    const bundle = data.bundle;
+                    if (password.length < 8) {
+                        sendJson(res, 400, { ok: false, error: 'Passwort mindestens 8 Zeichen.' }, cors);
+                        return;
+                    }
+                    if (!bundle || typeof bundle !== 'object') {
+                        sendJson(res, 400, { ok: false, error: 'bundle fehlt' }, cors);
+                        return;
+                    }
+                    const { importEncryptedContactMesh } = await import('./contact-mesh-sync.js');
+                    const { merged } = importEncryptedContactMesh(password, bundle);
+                    sendJson(res, 200, { ok: true, merged, message: `${merged} Kontakt(e) zusammengeführt.` }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 400, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
             return;
         }
 
@@ -837,13 +1249,35 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 try {
                     const data = JSON.parse(body || '{}');
                     const address = String(data.address ?? '').trim();
-                    const label = String(data.label ?? 'Partner').trim().slice(0, 64) || 'Partner';
                     if (!/^0x[a-fA-F0-9]{64}$/.test(address)) {
                         sendJson(res, 400, { ok: false, error: 'address muss 0x + 64 Hex sein.' }, cors);
                         return;
                     }
+                    const hasExplicitLabel = Object.prototype.hasOwnProperty.call(data, 'label');
+                    const label = hasExplicitLabel
+                        ? String(data.label ?? '').trim().slice(0, 64) || 'Partner'
+                        : getContactLabel(address) || 'Partner';
                     saveContactLabel(address, label);
-                    sendJson(res, 200, { ok: true, message: 'Anzeigename gespeichert.' }, cors);
+                    if (data.clearMesh === true) {
+                        saveContactMeshFields(address, {
+                            meshNodeId: null,
+                            meshPublicKeyHex: null,
+                            bleUuid: null,
+                        });
+                    } else if (
+                        data.meshNodeId !== undefined ||
+                        data.meshPublicKeyHex !== undefined ||
+                        data.bleUuid !== undefined
+                    ) {
+                        saveContactMeshFields(address, {
+                            ...(data.meshNodeId !== undefined && { meshNodeId: String(data.meshNodeId) }),
+                            ...(data.meshPublicKeyHex !== undefined && {
+                                meshPublicKeyHex: String(data.meshPublicKeyHex),
+                            }),
+                            ...(data.bleUuid !== undefined && { bleUuid: String(data.bleUuid) }),
+                        });
+                    }
+                    sendJson(res, 200, { ok: true, message: 'Kontakt gespeichert.' }, cors);
                 } catch (e: unknown) {
                     sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
                 }
@@ -1148,6 +1582,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        /** KeePass-ähnlicher Safe: Einträge nur im entsperrten Backend-RAM; optional sofort in Vault-Datei schreiben. */
         if (url === '/api/vault-personal-secrets' && req.method === 'GET') {
             try {
                 if (!_vaultPersonalSecretsBridge) {
@@ -1189,6 +1624,384 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     sendJson(res, 200, { ok: true, message: result.message, entries: sanitized }, cors);
                 } catch (e: unknown) {
                     sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Lokaler Klartext-Chat-Cache (verschlüsselte Datei .inbox.enc neben dem Vault) – ohne Wallet nötig. */
+        if (url === '/api/clear-local-history' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    let shred = true;
+                    try {
+                        const data = JSON.parse(body || '{}');
+                        if (data.shred === false) shred = false;
+                    } catch {
+                        /* leerer Body → Standard shred */
+                    }
+                    const vp = CFG.VAULT_FILE || '.morgendrot-vault';
+                    purgeInboxCache(vp, { shred });
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            message: shred
+                                ? 'Lokaler Inbox-Cache geschreddert und entfernt.'
+                                : 'Lokale Inbox-Datei gelöscht.',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
+         * Luma+Chroma-Pipeline (sharp) → `MORG_COMPACT_IMG_V1` für **IOTA/Online**.
+         * LoRa/Meshtastic: eigene progressive Ziele – siehe `src/morgendrot-image-transport-policy.ts`.
+         */
+        if (url === '/api/compact-image-encode' && req.method === 'POST') {
+            const MAX_BODY = 28 * 1024 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    // Kein Wallet nötig: reine Bildpipeline (sharp); Signatur passiert erst bei /send.
+                    const data = JSON.parse(body || '{}');
+                    const rawB64 = typeof data.imageBase64 === 'string' ? data.imageBase64 : '';
+                    const m = rawB64.match(/^data:image\/[\w+.-]+;base64,(.+)$/i);
+                    const b64 = (m ? m[1] : rawB64).replace(/\s/g, '');
+                    if (!b64) {
+                        sendJson(res, 400, { ok: false, error: 'imageBase64 fehlt (Data-URL oder rohes Base64).' }, cors);
+                        return;
+                    }
+                    let raw: Buffer;
+                    try {
+                        raw = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    if (raw.length < 32 || raw.length > 24 * 1024 * 1024) {
+                        sendJson(res, 400, { ok: false, error: 'Bildgröße ungültig (32 B … 24 MB).' }, cors);
+                        return;
+                    }
+                    const WIRE_PREFIX = '[[MORG_COMPACT_IMG_V1:';
+                    const WIRE_SUFFIX = ']]';
+                    const fit = data.fitLuma !== false;
+                    if (fit) {
+                        const mp = Number(data.maxPlaintextBytes);
+                        /** Netto-Blob ≤ MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES (IOTA/Online, MORG_COMPACT_IMG_V1). */
+                        const maxBlob =
+                            Number.isFinite(mp) && mp >= 4000 && mp <= MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES
+                                ? Math.floor(mp)
+                                : MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES;
+                        const r = await VaultImagePipeline.encodeToPlaintextBlobFitChain(raw, maxBlob);
+                        if (r.plaintext.length > maxBlob) {
+                            sendJson(
+                                res,
+                                500,
+                                {
+                                    ok: false,
+                                    error: `Encoder liefert ${r.plaintext.length} B Blob > Limit ${maxBlob}. Backend/Sharp prüfen.`,
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                        const b64 = r.plaintext.toString('base64');
+                        const wireLen = WIRE_PREFIX.length + b64.length + WIRE_SUFFIX.length;
+                        if (wireLen > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+                            sendJson(
+                                res,
+                                500,
+                                {
+                                    ok: false,
+                                    error: `Intern: Wire ${wireLen} B UTF-8 > ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}; Encoder/Limit prüfen.`,
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                        sendJson(
+                            res,
+                            200,
+                            {
+                                ok: true,
+                                blobBase64: b64,
+                                lumaBytes: r.lumaWebpBytes,
+                                chromaBytes: r.chromaPngBytes,
+                                totalBytes: r.plaintext.length,
+                                sha256Hex: r.originalSha256.toString('hex'),
+                                usedQuality: r.usedQuality,
+                                usedMaxDim: r.usedMaxDim,
+                                chromaW: r.chromaW,
+                                chromaH: r.chromaH,
+                                wireUtf8Approx: wireLen,
+                            },
+                            cors
+                        );
+                    } else {
+                        const q = Number(data.lumaQuality);
+                        const lq = Number.isFinite(q) && q >= 1 && q <= 100 ? q : 78;
+                        const r = await VaultImagePipeline.encodeToPlaintextBlob(raw, { lumaQuality: lq });
+                        const b64 = r.plaintext.toString('base64');
+                        if (WIRE_PREFIX.length + b64.length + WIRE_SUFFIX.length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+                            sendJson(
+                                res,
+                                413,
+                                {
+                                    ok: false,
+                                    error:
+                                        `Blob zu groß für Messenger (UTF-8-Wire max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} B; Move pure arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B). fitLuma=true (Standard) nutzen.`,
+                                    totalBytes: r.plaintext.length,
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                        sendJson(
+                            res,
+                            200,
+                            {
+                                ok: true,
+                                blobBase64: b64,
+                                lumaBytes: r.lumaWebpBytes,
+                                chromaBytes: r.chromaPngBytes,
+                                totalBytes: r.plaintext.length,
+                                sha256Hex: r.originalSha256.toString('hex'),
+                                usedQuality: lq,
+                            },
+                            cors
+                        );
+                    }
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
+         * LoRa/Mesh: zweiphasig Luma+Chroma (JPEG, harte Byte-Budgets) – **nicht** IOTA `MORG_COMPACT_IMG_V1`.
+         * POST JSON: { imageBase64 }
+         */
+        if (url === '/api/lora-progressive-encode' && req.method === 'POST') {
+            const MAX_BODY = 28 * 1024 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const rawB64 = typeof data.imageBase64 === 'string' ? data.imageBase64 : '';
+                    const m = rawB64.match(/^data:image\/[\w+.-]+;base64,(.+)$/i);
+                    const b64 = (m ? m[1] : rawB64).replace(/\s/g, '');
+                    if (!b64) {
+                        sendJson(res, 400, { ok: false, error: 'imageBase64 fehlt (Data-URL oder rohes Base64).' }, cors);
+                        return;
+                    }
+                    let raw: Buffer;
+                    try {
+                        raw = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    if (raw.length < 32 || raw.length > 24 * 1024 * 1024) {
+                        sendJson(res, 400, { ok: false, error: 'Bildgröße ungültig (32 B … 24 MB).' }, cors);
+                        return;
+                    }
+                    const r = await prepareImageForLoRa(raw);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            messageId: r.messageId,
+                            lumaWire: r.lumaWire,
+                            chromaWire: r.chromaWire,
+                            lumaJpegBytes: r.lumaJpegBytes,
+                            chromaJpegBytes: r.chromaJpegBytes,
+                            lumaWireUtf8Bytes: r.lumaWireUtf8Bytes,
+                            chromaWireUtf8Bytes: r.chromaWireUtf8Bytes,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
+         * Messenger: Browser-MediaRecorder (WebM/…) → Ogg/Opus (8 kHz Mono, voip, libopus). Braucht **ffmpeg** im PATH.
+         * POST JSON: { audioBase64, mimeType? } — kein Wallet.
+         */
+        if (url === '/api/messenger-audio-to-opus' && req.method === 'POST') {
+            const MAX_BODY = 8 * 1024 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const rawB64 = typeof data.audioBase64 === 'string' ? data.audioBase64 : '';
+                    const m = rawB64.match(/^data:audio\/[\w+.-]+;base64,(.+)$/i);
+                    const b64 = (m ? m[1] : rawB64).replace(/\s/g, '');
+                    if (!b64) {
+                        sendJson(res, 400, { ok: false, error: 'audioBase64 fehlt (Data-URL oder rohes Base64).' }, cors);
+                        return;
+                    }
+                    let raw: Buffer;
+                    try {
+                        raw = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    const mimeType = typeof data.mimeType === 'string' ? data.mimeType : 'audio/webm';
+                    const { opus } = await transcodeBrowserAudioToMessengerOpus(raw, mimeType);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            opusBase64: opus.toString('base64'),
+                            bytes: opus.length,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
+         * LoRa-Empfänger: Luma+Chroma-JPEG → ein JPEG (sharp `composite` blend `over`). Kein Wallet.
+         * POST JSON: { lumaJpegBase64, chromaJpegBase64 } (roh oder data-URL)
+         */
+        if (url === '/api/lora-progressive-fuse' && req.method === 'POST') {
+            const MAX_BODY = 2 * 1024 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const strip = (s: string) => {
+                        const t = typeof s === 'string' ? s : '';
+                        const m = t.match(/^data:image\/[\w+.-]+;base64,(.+)$/i);
+                        return (m ? m[1] : t).replace(/\s/g, '');
+                    };
+                    const lb = strip(data.lumaJpegBase64 ?? '');
+                    const cb = strip(data.chromaJpegBase64 ?? '');
+                    if (!lb || !cb) {
+                        sendJson(res, 400, { ok: false, error: 'lumaJpegBase64 und chromaJpegBase64 nötig.' }, cors);
+                        return;
+                    }
+                    let lumaBuf: Buffer;
+                    let chromaBuf: Buffer;
+                    try {
+                        lumaBuf = Buffer.from(lb, 'base64');
+                        chromaBuf = Buffer.from(cb, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    if (lumaBuf.length < 16 || chromaBuf.length < 16 || lumaBuf.length > 6 * 1024 * 1024 || chromaBuf.length > 512 * 1024) {
+                        sendJson(res, 400, { ok: false, error: 'JPEG-Größe außerhalb des erlaubten Bereichs.' }, cors);
+                        return;
+                    }
+                    const fused = await fuseLoraProgressiveJpegsSharp(lumaBuf, chromaBuf);
+                    sendJson(
+                        res,
+                        200,
+                        { ok: true, fusedJpegBase64: fused.toString('base64') },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Kompaktes Bild (MORG_COMPACT_IMG_V1-Wire) → PNG für Lite-UI-Vorschau (Sharp, kein Wallet). */
+        if (url === '/api/compact-image-preview' && req.method === 'POST') {
+            const MAX_BODY = 512 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const rawWire = typeof data.wire === 'string' ? data.wire : '';
+                    const b64 = extractCompactImageBase64FromWire(rawWire);
+                    if (!b64) {
+                        sendJson(res, 400, {
+                            ok: false,
+                            error: 'Kein gültiges MORG_COMPACT_IMG_V1-Wire (Marker/]]/JSON-Hülle prüfen).',
+                        }, cors);
+                        return;
+                    }
+                    let blob: Buffer;
+                    try {
+                        blob = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64 im Bild-Wire.' }, cors);
+                        return;
+                    }
+                    if (blob.length < 16) {
+                        sendJson(res, 400, { ok: false, error: 'Blob zu kurz.' }, cors);
+                        return;
+                    }
+                    const png = await VaultImagePipeline.reconstructBlendToPng(blob);
+                    sendJson(
+                        res,
+                        200,
+                        { ok: true, pngBase64: png.toString('base64'), mime: 'image/png' },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 400, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
                 }
             });
             return;
@@ -1440,6 +2253,433 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        /**
+         * Messenger-Stapel: eigene .env pro Einheit (ohne Arbeiter-Provisioning), optional Boss DEVICE_ROLES.
+         * Schreibt exports/messenger-shipments/<runId>/u001/… + boss-only/manifest.json (Geheimnisse nur dort).
+         * Optional: einzeln direkt ins Bundle (count=1, writeToEditionBundle).
+         */
+        if (url === '/api/messenger-export-batch' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const edition: 'standalone' | 'sales' = data.edition === 'sales' ? 'sales' : 'standalone';
+                    /** Obergrenze pro Lauf: verhindert extreme Laufzeiten/RPC-Last; große Mengen in mehreren Läufen. */
+                    const count = Math.max(1, Math.min(2500, parseInt(String(data.count), 10) || 1));
+                    const writeToEditionBundle = data.writeToEditionBundle === true || data.writeToEditionBundle === 'true';
+                    if (writeToEditionBundle && count !== 1) {
+                        sendJson(res, 400, { ok: false, error: 'writeToEditionBundle nur mit count=1.' }, cors);
+                        return;
+                    }
+                    const registerAddresses = data.registerAddresses !== false && data.registerAddresses !== 'false';
+                    const pkgRes = resolveMessengerExportPackageId({
+                        source: data.packageSource === 'custom' ? 'custom' : data.packageSource === 'history' ? 'history' : 'boss',
+                        customPackageId: String(data.customPackageId || '').trim(),
+                        historyFromNewest: parseInt(String(data.historyFromNewest ?? 0), 10) || 0,
+                    });
+                    if (!pkgRes.ok) {
+                        sendJson(res, 400, { ok: false, error: pkgRes.error }, cors);
+                        return;
+                    }
+                    const rpcUrl = String(data.rpcUrl || CFG.RPC_URL || '').trim() || 'https://api.testnet.iota.cafe';
+                    const bossAddress = String(data.bossAddress || CFG.MY_ADDRESS || '').trim();
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(bossAddress)) {
+                        sendJson(res, 400, { ok: false, error: 'bossAddress / Boss MY_ADDRESS: 0x+64Hex nötig.' }, cors);
+                        return;
+                    }
+                    const signerRaw = String(data.signer || 'sdk').toLowerCase();
+                    const signer = signerRaw === 'cli' || signerRaw === 'remote' ? signerRaw : 'sdk';
+                    const remoteSignerUrl = String(data.remoteSignerUrl || CFG.BOSS_SIGNER_PUBLIC_URL || '').trim();
+                    const namePrefix = String(data.namePrefix || 'Messenger').replace(/[^\wäöüÄÖÜß .\-]/gi, '').slice(0, 48) || 'Messenger';
+                    const roleId = Math.max(0, Math.min(63, parseInt(String(data.roleId ?? 14), 10) || 14));
+                    const mailboxId = String(data.mailboxId || CFG.MAILBOX_ID || '').trim();
+                    const exportMailboxStorePlaintext =
+                        data.mailboxStorePlaintext === true || data.mailboxStorePlaintext === 'true';
+                    const ttlRaw = data.exportTtlDays ?? data.defaultTtlDays;
+                    let exportTtlDays: number | undefined;
+                    if (ttlRaw !== undefined && ttlRaw !== null && String(ttlRaw).trim() !== '') {
+                        const n = parseInt(String(ttlRaw), 10);
+                        if (Number.isFinite(n) && n >= 0 && n <= 3650) exportTtlDays = n;
+                    }
+                    const mintMessengerCredits =
+                        data.mintMessengerCredits === true ||
+                        data.mintMessengerCredits === 'true' ||
+                        data.mintCredits === true ||
+                        data.mintCredits === 'true';
+                    if (mintMessengerCredits && edition !== 'sales') {
+                        sendJson(res, 400, {
+                            ok: false,
+                            error:
+                                'Messenger-Credits (NFT) nur bei Edition „Verkauf“ (sales). Standalone/Free: kein Boss-Mint – eigene .env ohne vorgefertigtes Credits-Objekt.',
+                        }, cors);
+                        return;
+                    }
+
+                    const u64FromBody = (n: unknown, fallback: number): bigint => {
+                        const x =
+                            typeof n === 'bigint'
+                                ? Number(n)
+                                : typeof n === 'number'
+                                  ? n
+                                  : parseInt(String(n ?? '').trim(), 10);
+                        if (!Number.isFinite(x) || x < 0) return BigInt(fallback);
+                        return BigInt(Math.min(Math.floor(x), Number.MAX_SAFE_INTEGER));
+                    };
+
+                    const { Ed25519Keypair } = await import('@iota/iota-sdk/keypairs/ed25519');
+                    const repoRoot = process.cwd();
+                    const runId =
+                        String(data.runId || '').replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 80) ||
+                        `batch-${new Date().toISOString().replace(/[:.]/g, '-')}`;
+
+                    type UnitOut = {
+                        index: number;
+                        address: string;
+                        deviceName: string;
+                        directory?: string;
+                        envRel?: string;
+                    };
+                    const units: UnitOut[] = [];
+                    const bossSecrets: Array<{ index: number; address: string; signerImport: string; deviceName: string }> = [];
+
+                    if (writeToEditionBundle) {
+                        const sub = edition === 'sales' ? 'Morgendrot-Messenger-verkauf' : 'Morgendrot-Messenger-standalone';
+                        const exportsRoot = path.resolve(repoRoot, 'exports', sub);
+                        const marker = path.join(exportsRoot, 'src', 'start-with-secrets.ts');
+                        if (!fs.existsSync(marker)) {
+                            sendJson(res, 400, {
+                                ok: false,
+                                error: `Ordner exports/${sub} ohne Code – zuerst npm run bundle:messenger.`,
+                            }, cors);
+                            return;
+                        }
+                        const kp = new Ed25519Keypair();
+                        let address = String(kp.getPublicKey().toIotaAddress() || '').trim();
+                        if (address && !/^0x/i.test(address)) address = '0x' + address;
+                        const signerImport = String(kp.getSecretKey() || '').trim();
+                        const addrNorm = normalizeAddress(address);
+                        let creditsObjectId: string | undefined;
+                        if (mintMessengerCredits) {
+                            const pwBody = String(data.bossWalletPassword || '').trim();
+                            const pw = pwBody || getWalletPassword() || '';
+                            if (!pw) {
+                                sendJson(res, 400, {
+                                    ok: false,
+                                    error:
+                                        'Messenger-Credits minten: Boss-Wallet-Passwort angeben oder Session entsperren (gleiche Maschine wie Boss-API).',
+                                }, cors);
+                                return;
+                            }
+                            const initialB = u64FromBody(data.creditsInitialBalance, 100);
+                            let maxB = u64FromBody(data.creditsMaxBalance, 1000);
+                            if (maxB < initialB) maxB = initialB;
+                            const refillHours = Math.max(
+                                0,
+                                Math.min(87600, parseFloat(String(data.creditsRefillIntervalHours ?? 24)) || 0)
+                            );
+                            const refillIntervalMs = BigInt(Math.round(refillHours * 3600000));
+                            const refillAmount = u64FromBody(data.creditsRefillAmount, 10);
+                            const costEcdh = u64FromBody(data.creditsCostEcdhInit, 1);
+                            const costMsg = u64FromBody(data.creditsCostStoreMessage, 1);
+                            const credMap = await mintMessengerCreditsBatchForRecipients(
+                                normalizeAddress(bossAddress),
+                                [addrNorm],
+                                {
+                                    initialBalance: initialB,
+                                    maxBalance: maxB,
+                                    refillIntervalMs,
+                                    refillAmount,
+                                    costEcdhInit: costEcdh,
+                                    costStoreMessage: costMsg,
+                                },
+                                pw
+                            );
+                            creditsObjectId = credMap.get(addrNorm);
+                            if (!creditsObjectId) {
+                                sendJson(res, 500, { ok: false, error: 'Messenger-Credits: keine Objekt-ID aus Chain-Events.' }, cors);
+                                return;
+                            }
+                        }
+                        const params = {
+                            deviceName: `${namePrefix}-1`,
+                            address,
+                            packageId: pkgRes.packageId,
+                            rpcUrl,
+                            bossAddress,
+                            edition,
+                            signer: signer as 'sdk' | 'cli' | 'remote',
+                            remoteSignerUrl: signer === 'remote' ? remoteSignerUrl : undefined,
+                            roleId,
+                            mailboxId: mailboxId && /^0x[a-fA-F0-9]{64}$/i.test(mailboxId) ? mailboxId : undefined,
+                            creditsObjectId,
+                            mailboxStorePlaintext: exportMailboxStorePlaintext || undefined,
+                            exportTtlDays,
+                        };
+                        let envContent: string;
+                        try {
+                            envContent = buildMessengerExportEnv(params);
+                        } catch (e: any) {
+                            sendJson(res, 400, { ok: false, error: String(e?.message || e) }, cors);
+                            return;
+                        }
+                        const jsonConfig = buildMessengerExportJson(params);
+                        fs.mkdirSync(exportsRoot, { recursive: true });
+                        fs.writeFileSync(path.join(exportsRoot, '.env'), envContent + (envContent.endsWith('\n') ? '' : '\n'), 'utf-8');
+                        fs.writeFileSync(path.join(exportsRoot, 'config.json'), JSON.stringify(jsonConfig, null, 2) + '\n', 'utf-8');
+                        const bossOnly = path.join(exportsRoot, 'boss-only');
+                        fs.mkdirSync(bossOnly, { recursive: true });
+                        fs.writeFileSync(
+                            path.join(bossOnly, 'signer-import-u001.txt'),
+                            `${signerImport}\n`,
+                            'utf-8'
+                        );
+                        fs.writeFileSync(
+                            path.join(bossOnly, 'README-BOSS.txt'),
+                            [
+                                'NUR FÜR DEN BOSS – nicht an Kunden.',
+                                'signer-import-u001.txt = Bech32/Export für SIGNER=sdk (im Messenger unter Entsperren einfügen).',
+                                'Kunde erhält nur die .env im Ordnerroot (ohne diese Dateien), wenn ihr boss-only/ vor ZIP entfernt.',
+                                '',
+                            ].join('\n'),
+                            'utf-8'
+                        );
+                        if (registerAddresses) {
+                            const reg = assignDeviceRoleInEnv(address, 'messenger');
+                            if (!reg.ok) {
+                                sendJson(res, 400, { ok: false, error: reg.error || 'DEVICE_ROLES' }, cors);
+                                return;
+                            }
+                        }
+                        sendJson(
+                            res,
+                            200,
+                            {
+                                ok: true,
+                                message: `Messenger-.env nach exports/${sub}/ geschrieben. Geheimnis nur unter boss-only/.`,
+                                runId,
+                                edition,
+                                units: [{ index: 1, address, deviceName: params.deviceName, directory: `exports/${sub}` }],
+                            },
+                            cors
+                        );
+                        return;
+                    }
+
+                    const shipRoot = path.resolve(repoRoot, 'exports', 'messenger-shipments', runId);
+                    const bossDir = path.join(shipRoot, 'boss-only');
+                    fs.mkdirSync(bossDir, { recursive: true });
+
+                    type GenUnit = {
+                        index: number;
+                        address: string;
+                        addressNorm: string;
+                        signerImport: string;
+                        deviceName: string;
+                    };
+                    const generated: GenUnit[] = [];
+                    for (let i = 1; i <= count; i++) {
+                        const kp = new Ed25519Keypair();
+                        let address = String(kp.getPublicKey().toIotaAddress() || '').trim();
+                        if (address && !/^0x/i.test(address)) address = '0x' + address;
+                        const signerImport = String(kp.getSecretKey() || '').trim();
+                        const deviceName = `${namePrefix}-${i}`;
+                        generated.push({
+                            index: i,
+                            address,
+                            addressNorm: normalizeAddress(address),
+                            signerImport,
+                            deviceName,
+                        });
+                    }
+
+                    let creditsByAddress = new Map<string, string>();
+                    if (mintMessengerCredits) {
+                        const pwBody = String(data.bossWalletPassword || '').trim();
+                        const pw = pwBody || getWalletPassword() || '';
+                        if (!pw) {
+                            sendJson(res, 400, {
+                                ok: false,
+                                error:
+                                    'Messenger-Credits minten: Boss-Wallet-Passwort angeben oder Session entsperren (gleiche Maschine wie Boss-API).',
+                            }, cors);
+                            return;
+                        }
+                        const initialB = u64FromBody(data.creditsInitialBalance, 100);
+                        let maxB = u64FromBody(data.creditsMaxBalance, 1000);
+                        if (maxB < initialB) maxB = initialB;
+                        const refillHours = Math.max(
+                            0,
+                            Math.min(87600, parseFloat(String(data.creditsRefillIntervalHours ?? 24)) || 0)
+                        );
+                        const refillIntervalMs = BigInt(Math.round(refillHours * 3600000));
+                        const refillAmount = u64FromBody(data.creditsRefillAmount, 10);
+                        const costEcdh = u64FromBody(data.creditsCostEcdhInit, 1);
+                        const costMsg = u64FromBody(data.creditsCostStoreMessage, 1);
+                        try {
+                            creditsByAddress = await mintMessengerCreditsBatchForRecipients(
+                                normalizeAddress(bossAddress),
+                                generated.map((g) => g.addressNorm),
+                                {
+                                    initialBalance: initialB,
+                                    maxBalance: maxB,
+                                    refillIntervalMs,
+                                    refillAmount,
+                                    costEcdhInit: costEcdh,
+                                    costStoreMessage: costMsg,
+                                },
+                                pw
+                            );
+                        } catch (mintErr: any) {
+                            sendJson(res, 500, { ok: false, error: String(mintErr?.message || mintErr) }, cors);
+                            return;
+                        }
+                    }
+
+                    for (const g of generated) {
+                        const i = g.index;
+                        const creditsObjectId = creditsByAddress.get(g.addressNorm);
+                        if (mintMessengerCredits && !creditsObjectId) {
+                            sendJson(res, 500, {
+                                ok: false,
+                                error: `Messenger-Credits: keine Objekt-ID für Einheit ${i} (${g.addressNorm.slice(0, 12)}…).`,
+                            }, cors);
+                            return;
+                        }
+                        const params = {
+                            deviceName: g.deviceName,
+                            address: g.address,
+                            packageId: pkgRes.packageId,
+                            rpcUrl,
+                            bossAddress,
+                            edition,
+                            signer: signer as 'sdk' | 'cli' | 'remote',
+                            remoteSignerUrl: signer === 'remote' ? remoteSignerUrl : undefined,
+                            roleId,
+                            mailboxId: mailboxId && /^0x[a-fA-F0-9]{64}$/i.test(mailboxId) ? mailboxId : undefined,
+                            creditsObjectId,
+                            mailboxStorePlaintext: exportMailboxStorePlaintext || undefined,
+                            exportTtlDays,
+                        };
+                        let envContent: string;
+                        try {
+                            envContent = buildMessengerExportEnv(params);
+                        } catch (e: any) {
+                            sendJson(res, 400, { ok: false, error: `Einheit ${i}: ${String(e?.message || e)}` }, cors);
+                            return;
+                        }
+                        const jsonConfig = buildMessengerExportJson(params);
+                        const udir = path.join(shipRoot, `u${String(i).padStart(3, '0')}`);
+                        fs.mkdirSync(udir, { recursive: true });
+                        fs.writeFileSync(path.join(udir, '.env'), envContent + (envContent.endsWith('\n') ? '' : '\n'), 'utf-8');
+                        fs.writeFileSync(path.join(udir, 'config.json'), JSON.stringify(jsonConfig, null, 2) + '\n', 'utf-8');
+                        fs.writeFileSync(
+                            path.join(udir, 'LIESMICH-KUNDE.txt'),
+                            [
+                                'Morgendrot Messenger – Kundenpaket (nur Metadaten).',
+                                '1) Den kompletten Programmordner von eurem Anbieter erhalten (npm install dort).',
+                                '2) Diese .env und config.json in DEN Ordner legen (ersetzen).',
+                                '3) npm start – im Browser entsperren: Code aus eurem Lieferdokument (nicht per E-Mail/WhatsApp).',
+                                edition === 'sales' ? '4) Verkaufs-Messenger: ggf. Setup → Schatten-Sweep wie angeleitet.' : '',
+                                mintMessengerCredits
+                                    ? '5) Messenger-Credits: nur mit MAILBOX_ID + USE_MAILBOX + deployedem Package (store_*_with_credits).'
+                                    : '',
+                                '',
+                            ]
+                                .filter(Boolean)
+                                .join('\n'),
+                            'utf-8'
+                        );
+                        fs.writeFileSync(path.join(bossDir, `signer-import-u${String(i).padStart(3, '0')}.txt`), g.signerImport + '\n', 'utf-8');
+                        bossSecrets.push({
+                            index: i,
+                            address: g.address,
+                            signerImport: g.signerImport,
+                            deviceName: g.deviceName,
+                        });
+                        units.push({
+                            index: i,
+                            address: g.address,
+                            deviceName: g.deviceName,
+                            directory: path.join('exports', 'messenger-shipments', runId, `u${String(i).padStart(3, '0')}`),
+                        });
+
+                        if (registerAddresses) {
+                            const reg = assignDeviceRoleInEnv(g.address, 'messenger');
+                            if (!reg.ok) {
+                                sendJson(res, 400, { ok: false, error: `Einheit ${i}: ${reg.error || 'DEVICE_ROLES'}` }, cors);
+                                return;
+                            }
+                        }
+                    }
+
+                    fs.writeFileSync(
+                        path.join(bossDir, 'manifest.json'),
+                        JSON.stringify(
+                            {
+                                runId,
+                                edition,
+                                packageId: pkgRes.packageId,
+                                rpcUrl,
+                                bossAddress,
+                                signer,
+                                mintMessengerCredits,
+                                createdAt: new Date().toISOString(),
+                                units: bossSecrets.map((b) => ({
+                                    index: b.index,
+                                    address: b.address,
+                                    deviceName: b.deviceName,
+                                    signerImport: b.signerImport,
+                                    ...(mintMessengerCredits
+                                        ? { messengerCreditsObjectId: creditsByAddress.get(normalizeAddress(b.address)) }
+                                        : {}),
+                                })),
+                            },
+                            null,
+                            2
+                        ) + '\n',
+                        'utf-8'
+                    );
+                    fs.writeFileSync(
+                        path.join(shipRoot, 'README.txt'),
+                        [
+                            'Stapel-Export Messenger',
+                            `- Run: ${runId}`,
+                            `- Einheiten: ${count} (u001 …)`,
+                            `- boss-only/: manifest.json + signer-import-*.txt – VERTRAULICH`,
+                            '- Pro verkaufbarem Ordner: npm run assemble:messenger-units (siehe package.json) oder Bundle manuell kopieren.',
+                            '',
+                        ].join('\n'),
+                        'utf-8'
+                    );
+
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            message: `${count} Messenger-Einheiten unter exports/messenger-shipments/${runId}/. Geheimnisse nur boss-only/.`,
+                            runId,
+                            edition,
+                            packageId: pkgRes.packageId,
+                            directory: path.join('exports', 'messenger-shipments', runId),
+                            units,
+                        },
+                        cors
+                    );
+                } catch (e: any) {
+                    sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
         /** Schreibt Provisionierungs-Dateien in exports/… (Raspi oder Messenger-Standalone, letzterer braucht vorher npm run bundle:messenger). */
         if (url === '/api/export-provision-bundle' && req.method === 'POST') {
             if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
@@ -1457,14 +2697,31 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         'lite-ui': 'Morgendrot-Raspi-lite-ui',
                         liteui: 'Morgendrot-Raspi-lite-ui',
                         messenger: 'Morgendrot-Messenger-standalone',
+                        'messenger-standalone': 'Morgendrot-Messenger-standalone',
+                        'messenger-sales': 'Morgendrot-Messenger-verkauf',
+                        messengersales: 'Morgendrot-Messenger-verkauf',
                     };
                     const sub = dirNames[variant];
                     if (!sub) {
-                        sendJson(res, 400, { ok: false, error: 'variant: headless, lite-ui oder messenger' }, cors);
+                        sendJson(
+                            res,
+                            400,
+                            {
+                                ok: false,
+                                error:
+                                    'variant: headless, lite-ui, messenger | messenger-standalone | messenger-sales',
+                            },
+                            cors
+                        );
                         return;
                     }
                     const exportsRoot = path.resolve(process.cwd(), 'exports', sub);
-                    if (variant === 'messenger') {
+                    const isMessengerVariant =
+                        variant === 'messenger' ||
+                        variant === 'messenger-standalone' ||
+                        variant === 'messenger-sales' ||
+                        variant === 'messengersales';
+                    if (isMessengerVariant) {
                         const marker = path.join(exportsRoot, 'src', 'start-with-secrets.ts');
                         if (!fs.existsSync(marker)) {
                             sendJson(res, 400, {
@@ -1483,9 +2740,13 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     const jsonConfig = data.jsonConfig != null && typeof data.jsonConfig === 'object' ? data.jsonConfig : {};
                     fs.mkdirSync(exportsRoot, { recursive: true });
                     let envOut = envContent + (envContent.endsWith('\n') ? '' : '\n');
-                    if (variant === 'messenger') {
+                    if (isMessengerVariant) {
                         if (!/\bUI_VARIANT\s*=/.test(envOut)) envOut += 'UI_VARIANT=messenger\n';
                         if (!/\bENABLE_UI\s*=/.test(envOut)) envOut += 'ENABLE_UI=true\n';
+                        const wantSales = variant === 'messenger-sales' || variant === 'messengersales';
+                        const editionFromBody = String(data.messengerEdition || '').toLowerCase() === 'sales' ? 'sales' : '';
+                        const edition = wantSales || editionFromBody === 'sales' ? 'sales' : 'standalone';
+                        if (!/\bMESSENGER_EDITION\s*=/.test(envOut)) envOut += `MESSENGER_EDITION=${edition}\n`;
                     }
                     fs.writeFileSync(path.join(exportsRoot, '.env'), envOut, 'utf-8');
                     fs.writeFileSync(path.join(exportsRoot, 'config.json'), JSON.stringify(jsonConfig, null, 2) + '\n', 'utf-8');
@@ -1500,10 +2761,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     const rel = path.join('exports', sub);
                     sendJson(res, 200, {
                         ok: true,
-                        message:
-                            variant === 'messenger'
-                                ? `Export nach ${rel}/ (.env/config). Ordner ist lauffähig nach „npm install“ auf dem Zielrechner (vollständiges Bundle – vorher im Repo: npm run bundle:messenger).`
-                                : `Export nach ${rel}/ geschrieben (${written.join(', ')}). Raspi: vollständiges Repo oder angepasster Deploy-Ordner + npm ci && npm start.`,
+                        message: isMessengerVariant
+                            ? `Export nach ${rel}/ (.env/config). Lauffähig nach npm install (Bundle vorher: npm run bundle:messenger).`
+                            : `Export nach ${rel}/ geschrieben (${written.join(', ')}). Raspi: vollständiges Repo oder angepasster Deploy-Ordner + npm ci && npm start.`,
                         directory: rel,
                         files: written,
                     }, cors);
@@ -1710,6 +2970,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     if (typeof data.shadowMnemonic === 'string' && data.shadowMnemonic.trim()) {
                         commandApiOptions.shadowMnemonic = data.shadowMnemonic.trim();
                     }
+                    if (data.morgPkg != null && typeof data.morgPkg === 'object') {
+                        commandApiOptions.morgPkg = data.morgPkg;
+                    }
                     const result = await _commandHandler(cmd, args, commandApiOptions);
                     if (cmd === '/vault-onchain' && result?.ok) lastVaultOnchainSuccessAt = Date.now();
                     if (cmd === '/vault-save' && result?.ok) lastVaultOnchainSuccessAt = undefined;
@@ -1735,8 +2998,28 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
-        // Lite-UI (Alpine + Tailwind): statisch aus ui/ ausliefern
+        // Lite-UI (Alpine + Tailwind): statisch aus ui/ ausliefern (abschaltbar: SERVE_LITE_UI_STATIC=false)
         if (req.method === 'GET' && !url.startsWith('/api')) {
+            if (!CFG.SERVE_LITE_UI_STATIC) {
+                const nextHint = `http://127.0.0.1:${CFG.UI_PORT}/`;
+                if (url === '/' || url === '/index.html') {
+                    const body = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Morgendrot API</title></head><body style="font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem"><p>Statische Lite-UI ist aus (<code>SERVE_LITE_UI_STATIC=false</code>).</p><p>Next-Dashboard: <a href="${nextHint}">${nextHint}</a></p><p>API: <a href="/api/status">/api/status</a></p></body></html>`;
+                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...cors });
+                    res.end(body);
+                    return;
+                }
+                sendJson(
+                    res,
+                    404,
+                    {
+                        ok: false,
+                        error:
+                            'Lite-UI am API-Port aus (SERVE_LITE_UI_STATIC=false). Nur /api/* — Oberfläche unter UI_PORT (Next).',
+                    },
+                    cors
+                );
+                return;
+            }
             const __dirname = path.dirname(fileURLToPath(import.meta.url));
             const uiDir = path.resolve(__dirname, '..', 'ui');
             const safePath = url === '/' || url === '/index.html' ? 'index.html' : url.replace(/^\//, '').replace(/\.\./g, '');
@@ -1796,7 +3079,17 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         const onSuccess = () => {
             server.removeListener('error', onError);
             _actualApiPort = p;
-            logger.info(`Morgendrot API: http://127.0.0.1:${p}/api/status  Lite-UI: http://127.0.0.1:${p}/`);
+            const gate = (CFG.PAIRING_GATE_NFT_OBJECT_ID || '').trim();
+            if (gate && !/^0x[a-fA-F0-9]{64}$/i.test(gate)) {
+                logger.warn(
+                    'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt aber kein gültiges 0x+64-Hex – Türsteher-Peering greift nicht zuverlässig; .env prüfen.'
+                );
+            }
+            logger.info(
+                CFG.SERVE_LITE_UI_STATIC
+                    ? `Morgendrot API: http://127.0.0.1:${p}/api/status  Lite-UI: http://127.0.0.1:${p}/`
+                    : `Morgendrot API: http://127.0.0.1:${p}/api/status  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
+            );
         };
         const onError = (err: NodeJS.ErrnoException) => {
             server.removeListener('error', onError);

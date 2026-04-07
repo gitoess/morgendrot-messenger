@@ -10,6 +10,10 @@ export function setWalletPassword(p: string): void {
     _walletPassword = p;
 }
 
+export function clearWalletPassword(): void {
+    _walletPassword = undefined;
+}
+
 export function getWalletPassword(): string | undefined {
     return _walletPassword;
 }

@@ -58,4 +58,12 @@
 
 ---
 
+## 7. Kurztext für Einsatz-Folie / Schulung: Lieferwege Boss → Helfer
+
+**Den folgenden Absatz könnt ihr 1:1 auf eine Folie oder ins Schulungsheft übernehmen** (ohne Marketing-Zusätze; Stand Abgleich mit API und UI):
+
+**Lieferwege (Boss → Helfer, technisch korrekt):** Nach `POST /api/provision-device` liegt das Paket zuerst im **Boss-Browser** — es gibt **keinen** automatischen „Server-Push“ zur Helfer-App. **Mit Netz** übergibt ihr das Paket **manuell**: Datei (`.env` / JSON), **Export**, **QR** (kompakte Einrichtungsdaten), oder Kopie per Messenger/USB — je nach Einsatz. **LoRa/Mesh** ist im Morgendrot-Repo v. a. für **Nachrichten** und Funk-Brücken spezifiziert, **nicht** als durchgängiger Standardweg für das **vollständige** Provisioning inkl. großem Bundle aus dem Wizard. **QR im Provisioning:** Der **Boss zeigt** den QR; Inhalt sind **Metadaten zur Einrichtung** (Rolle, Boss-Adresse, Package-ID, RPC, …) — **nicht** „der Helfer hält sein Handy hin, Boss scannt den Public Key, um das Paket zu verschlüsseln“. **Backup:** typische Exporte sind **Klartext-Artefakte** — Übertragungskanal absichern; verschlüsselte Sonderformate sind **andere** Produkte (z. B. Einsatzbericht). **Low-Tech:** kleiner **Text-QR** am Gerät (Parameter kurz halten) bleibt sinnvoll.
+
+---
+
 *Stand: Abgleich mit `src/einsatz-role-templates.ts`, `src/initial-profile-provision.ts`, Lite-UI `/api/doc`, Next `/handbook`, `frontend/public/sw.js`.*
