@@ -26,7 +26,7 @@ Es gibt also **nicht** „einen Vault für Keys“ und „einen Vault für Passw
 
 Details: **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** (Persistenz).
 
-Notfall-Purge (was genau gelöscht wird, Vault-Datei vs. Inbox-Cache): **`docs/NOTFALL-PURGE-MESSENGER.md`**.
+Notfall-Purge (was genau gelöscht wird, Vault-Datei vs. Inbox-Cache): **`docs/NOTFALL-PURGE-MESSENGER.md`**. Optional-Zielbild Vault in Bildern tarnen: **`docs/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md`**.
 
 Exporte (Einsatzbericht, ZIP) nutzen die geladenen Messages — das ist **kein** „Verlauf in der Vault-Datei speichern“.
 

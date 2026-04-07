@@ -85,6 +85,12 @@ Kurzbewertung der einzelnen Schichten des Projekts. **Sicherheit** = Krypto, Zug
 
 ---
 
+## Erweiterungen (Zielbild, kein Layer-Score)
+
+- **Vault-Tarnung in Bilddateien (Steganographie):** Siehe **`docs/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md`**. Erhöht ggf. den Aufwand bei **oberflächlicher** Durchsuchung; ersetzt weder starkes Passwort noch professionelle Forensik; **Standard-PWA-Icons** aus dem Build sind **kein** sicherer Ort für einen **nutzerspezifischen** Vault ohne eigenes Träger-Asset (siehe `npm run build:pwa-icons`).
+
+---
+
 ## Gesamteindruck
 
 - **Stärken:** Krypto (ECDH, AES-GCM, PBKDF2), keine Shell bei kritischen Befehlen, Replay-Schutz, Zugriffskontrolle on-chain, klare Layer-Trennung.

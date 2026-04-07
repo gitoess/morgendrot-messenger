@@ -35,6 +35,9 @@ const PS_MAX_TITLE = 256;
 const PS_MAX_USER = 256;
 const PS_MAX_SECRET = 16_384;
 const PS_MAX_NOTE = 50_000;
+
+/** Freitext-Notizen im Vault-JSON (nicht Passwortmanager). Begrenzt Blob-Größe / Chain-Kosten; große Journale extern lagern. */
+export const VAULT_FREETEXT_NOTES_MAX_CHARS = 500_000;
 const PS_ID_RE = /^[a-zA-Z0-9_-]{1,80}$/;
 
 /** Normalisiert und begrenzt Safe-Einträge (UI/API → RAM / Vault-JSON). */
@@ -106,10 +109,11 @@ function keysToPayload(
         const a = Buffer.from(pkcs8).toString('base64');
         const b = Buffer.from(pubRaw).toString('base64');
         const imp = (iotaSdkSignerImport ?? '').trim();
+        const notesTrim = typeof notes === 'string' ? notes.slice(0, VAULT_FREETEXT_NOTES_MAX_CHARS) : '';
         const base: Record<string, unknown> = {
             pkcs8: a,
             pubRaw: b,
-            notes: notes ?? '',
+            notes: notesTrim,
             personalSecrets: personalSecrets ?? [],
         };
         if (imp) {

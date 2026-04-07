@@ -15,6 +15,7 @@ const HANDBOOK_URLS = [
   '/handbook/BOSS-ORIENTIERUNG.md',
   '/handbook/PWA-HANDBUCH-OFFLINE.md',
   '/handbook/NOTFALL-PURGE-MESSENGER.md',
+  '/handbook/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',
 ]
 
 self.addEventListener('install', (event) => {

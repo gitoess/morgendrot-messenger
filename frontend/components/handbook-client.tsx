@@ -9,6 +9,7 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
   { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge & lokaler Cache' },
+  { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault & Bild-Tarnung (Zielbild)' },
 ]
 
 export function HandbookClient() {

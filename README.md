@@ -747,7 +747,7 @@ iota client call --package <PACKAGE_ID> --module messaging --function purge_tick
 
 **In der App (Chat):** `/purge-handshake`, `/purge-msg <nonce>`, `/emergency-purge` (Vault), `/emergency-purge-key <keyObjectId>`, `/purge-key <keyObjectId>`.
 
-**Messenger-Notfall-Purge (UI / `/emergency-purge`):** Entfernt den **Vault-Eintrag auf der Chain** und schreddert den **lokalen Klartext-Inbox-Cache** (`.inbox.enc`). Die **verschlüsselte Vault-Datei** auf dem Datenträger (z. B. `.morgendrot-vault`) wird **nicht** automatisch gelöscht – bei vollständiger Gerätereinigung manuell entfernen. Drei Umfänge in der UI (Voll / nur Cache / nur Sperren): siehe **`docs/NOTFALL-PURGE-MESSENGER.md`**.
+**Messenger-Notfall-Purge (UI / `/emergency-purge`):** Entfernt den **Vault-Eintrag auf der Chain** und schreddert den **lokalen Klartext-Inbox-Cache** (`.inbox.enc`). Die **verschlüsselte Vault-Datei** auf dem Datenträger (z. B. `.morgendrot-vault`) wird **nicht** automatisch gelöscht – bei vollständiger Gerätereinigung manuell entfernen. Drei Umfänge in der UI (Voll / nur Cache / nur Sperren): siehe **`docs/NOTFALL-PURGE-MESSENGER.md`**. **Zielbild** Vault in einem Bild / App-Icon zu tarnen (Steganographie): kritische Einordnung in **`docs/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md`** (nicht Ersatz für Passwort/Backup; Release-Icons ≠ persönlicher Träger).
 
 ---
 
