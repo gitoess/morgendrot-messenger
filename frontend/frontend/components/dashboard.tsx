@@ -113,12 +113,12 @@ const features: Feature[] = [
   },
   {
     id: 'vault',
-    title: 'Tresor',
-    subtitle: 'Daten sichern',
+    title: 'Tresor & Passwortmanager',
+    subtitle: 'Keys & Zugänge sichern',
     icon: <Shield className="h-6 w-6" />,
     color: 'bg-red-500/10 text-red-400 border-red-500/20',
     variants: [
-      { id: 'local-vault', title: 'Backup', hint: 'Daten speichern' },
+      { id: 'local-vault', title: 'Tresor öffnen', hint: 'Sichern, Passwortmanager' },
       { id: 'emergency-purge', title: 'Notfall', hint: 'Alles löschen' },
     ],
   },

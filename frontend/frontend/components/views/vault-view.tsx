@@ -241,11 +241,11 @@ export function VaultView({ variant }: VaultViewProps) {
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">
-            {variant === 'local-vault' ? 'Datentresor' : 'Notfall-Löschung'}
+            {variant === 'local-vault' ? 'Tresor & Passwortmanager' : 'Notfall-Löschung'}
           </h2>
           <p className="text-sm text-muted-foreground">
             {variant === 'local-vault'
-              ? 'Sichere deine Daten lokal oder on-chain'
+              ? 'Messaging-Identität sichern — Passwörter/Zugänge im selben verschlüsselten Container (kein Chatverlauf hier)'
               : 'Lösche alle sensiblen Daten sofort'}
           </p>
           {variant === 'local-vault' && (
@@ -260,7 +260,7 @@ export function VaultView({ variant }: VaultViewProps) {
                     : 'bg-muted text-muted-foreground hover:bg-accent'
                 )}
               >
-                Backup &amp; Tresor
+                Tresor öffnen &amp; sichern
               </button>
               <button
                 type="button"
@@ -273,7 +273,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 )}
               >
                 <KeyRound className="h-3.5 w-3.5" />
-                Mein Safe
+                Passwortmanager
               </button>
             </div>
           )}
@@ -302,18 +302,18 @@ export function VaultView({ variant }: VaultViewProps) {
               <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-4">
                 <h4 className="mb-1 flex items-center gap-2 font-semibold text-foreground">
                   <KeyRound className="h-5 w-5 text-violet-500" />
-                  Morgendrot Secret Safe
+                  Passwortmanager
                 </h4>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Einträge liegen im <strong className="text-foreground">verschlüsselten Vault</strong> (AES-GCM, gleicher Blob wie die Messaging-Keys).
-                  Im Klartext nur im Backend-RAM, solange der Tresor entsperrt ist.{' '}
-                  <strong className="text-foreground">Tresor sperren</strong> entfernt Keys und Safe aus der Sitzung.
-                  Nach dem Kopieren ggf. Zwischenablage leeren. „Auf Chain sichern“ übernimmt den Safe mit.
+                  <strong className="text-foreground">Anlegen / bearbeiten:</strong> Einträge unten.{' '}
+                  <strong className="text-foreground">Speichern:</strong> zuerst „Übernehmen (Sitzung)“, dann „Passwortmanager in Tresor-Datei schreiben“ — damit landen die Daten im{' '}
+                  <strong className="text-foreground">selben</strong> verschlüsselten Container wie die Messaging-Keys (keine zweite Vault-Datei).
+                  Klartext nur im Backend-RAM bei entsperrtem Tresor. Nach dem Kopieren ggf. Zwischenablage leeren. „Auf Chain sichern“ (im Tab Tresor) sichert den gesamten Blob inkl. Passwortmanager mit.
                 </p>
               </div>
               {hasKeys !== true ? (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200">
-                  Zuerst Wallet entsperren und Tresor nutzen („Daten laden“ oder App-Start mit Vault). Danach kannst du den Safe bearbeiten.
+                  Zuerst Wallet entsperren und <strong className="font-medium">Tresor öffnen</strong> (Tab „Tresor öffnen &amp; sichern“: „Daten laden“ oder App-Start mit Vault). Danach kannst du den Passwortmanager nutzen.
                 </p>
               ) : (
                 <>
@@ -353,13 +353,13 @@ export function VaultView({ variant }: VaultViewProps) {
                         const r = await saveVaultPersonalSecrets(safeEntries, false)
                         setSafeBusy(false)
                         if (r.ok) {
-                          setSafeMsg(r.message ?? 'Im Backend-RAM übernommen (noch nicht in Datei).')
+                          setSafeMsg(r.message ?? 'Passwortmanager in der Sitzung übernommen (noch nicht in der Datei).')
                           if (r.entries) setSafeEntries(r.entries)
                         } else setSafeMsg(r.error ?? 'Fehler')
                       }}
                       className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
                     >
-                      Übernehmen (Sitzung)
+                      Passwortmanager übernehmen (nur Sitzung)
                     </button>
                     <button
                       type="button"
@@ -370,14 +370,14 @@ export function VaultView({ variant }: VaultViewProps) {
                         const r = await saveVaultPersonalSecrets(safeEntries, true)
                         setSafeBusy(false)
                         if (r.ok) {
-                          setSafeMsg(r.message ?? 'In Vault-Datei gespeichert.')
+                          setSafeMsg(r.message ?? 'Passwortmanager in Tresor-Datei gespeichert.')
                           if (r.entries) setSafeEntries(r.entries)
                           void refreshVaultStatus()
                         } else setSafeMsg(r.error ?? 'Fehler')
                       }}
                       className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                     >
-                      Speichern + Vault-Datei
+                      Passwortmanager in Tresor-Datei schreiben
                     </button>
                   </div>
                   <div className="space-y-3">
@@ -472,8 +472,15 @@ export function VaultView({ variant }: VaultViewProps) {
             </div>
           ) : (
             <>
+          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
+            <strong className="text-foreground">Wichtig:</strong> Der <strong className="text-foreground">Chat- und Nachrichtenverlauf</strong> wird{' '}
+            <strong className="text-foreground">nicht</strong> in der Vault-Datei gespeichert — er kommt von der Chain und optional lokal aus{' '}
+            <span className="font-mono">.inbox.enc</span> (Cache). Hier sicherst du nur <strong className="text-foreground">Messaging-Keys</strong>,{' '}
+            optional Signer-Notizen und (im Tab Passwortmanager) Zugangsdaten im selben Blob. Doku:{' '}
+            <span className="font-mono">docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md</span> (im Repo).
+          </div>
           <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Ablauf in vier Schritten</h4>
+            <h4 className="mb-2 text-sm font-semibold text-foreground">Tresor: Ablauf in vier Schritten</h4>
             <ol className="list-decimal space-y-1.5 pl-4 text-xs text-muted-foreground">
               <li>
                 <span className="text-foreground font-medium">Wallet</span> oben in der App entsperren (Passwort für Signatur
@@ -538,8 +545,8 @@ export function VaultView({ variant }: VaultViewProps) {
             </div>
             <p className="mb-2 text-xs text-muted-foreground">
               Alle Dateien, die wie <span className="font-mono">.morgendrot-vault*</span> heißen (ein Datei = ein
-              verschlüsselter Container für Messaging-Keys + optional Mein Safe + Notizen). Es gibt kein separates
-              „KeePass-Dateiformat“ – <strong className="text-foreground">Mein Safe</strong> ist ein Bereich innerhalb
+              verschlüsselter Container für Messaging-Keys + optional Passwortmanager-Einträge + Notizen). Es gibt kein separates
+              „KeePass-Dateiformat“ – <strong className="text-foreground">Passwortmanager</strong> ist ein Bereich innerhalb
               desselben Vault-Blobs. Standardpfad für „Daten laden“:{' '}
               <span className="font-mono text-foreground">{vaultDefaultPath ?? '.morgendrot-vault'}</span>
               . Anderen Pfad nur per CLI <span className="font-mono">/vault-load &lt;pw&gt; &lt;pfad&gt;</span>.

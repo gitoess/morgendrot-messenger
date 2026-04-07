@@ -101,6 +101,7 @@ Exporte (Einsatzbericht, Protokoll) nutzen die zusammengeführten Messages — s
 
 ## 7. Nicht verwechseln
 
+- **Vault-Datei (`.morgendrot-vault`)** enthält **keinen** Chatverlauf — nur Messaging-Keys, Notizen, optional Signer-Import und **Passwortmanager-Einträge** (`personalSecrets`) im selben verschlüsselten Blob. Chat-Historie = Chain + optional **`.inbox.enc`** + Browser; siehe **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`**.
 - **IOTA Streams (L0.5)** ≠ Posteingang. Streams sind eigener Kanal (Lite-UI Tab „Streams“); siehe **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`**.
 - **Pinnwand vs. Privat** ändert Kontext/Variante in der UI, nicht die grundlegende Mailbox-Pipeline (solange dieselbe Wallet/Package-Konfiguration gilt).
 

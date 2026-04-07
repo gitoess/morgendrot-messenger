@@ -5,6 +5,8 @@ Der Vault ist dein digitaler Tresor: Hier werden die **geheimen Schlüssel** ges
 **Was der Vault ist (Definition):**  
 Sicherer Speicher für **ECDH-Messaging-Keys** und optional **Streams Anchor-ID** (und Package-ID-Kontext). Gespeichert wird **eine** verschlüsselte Datei (lokal) bzw. **ein** verschlüsselter Blob pro Adresse on-chain. Es gibt **keinen** Ordner mit mehreren Dateien, **keinen** Befehl zum Versenden des Vaults an andere und **keinen** `/vault-add` für beliebige Einträge – nur `/vault-save` (lokal) und `/vault-onchain` (on-chain). Wer mehr dazu wissen will: **VAULT-KRITIK-BESCHREIBUNG.md** vergleicht diese Definition mit der Code-Realität.
 
+**Passwortmanager:** Einträge für Zugangsdaten (Titel, Benutzername, Geheimnis) liegen **im selben** verschlüsselten Vault-Blob (`personalSecrets`) — **keine** zweite Vault-Datei. **Chatverlauf** liegt **nicht** im Vault; siehe **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`**.
+
 **4 Schritte – folge einfach der Reihenfolge.**
 
 Du musst nicht alles machen – nimm nur, was du brauchst. Fang mit Schritt 1 an.
