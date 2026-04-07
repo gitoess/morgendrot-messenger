@@ -40,7 +40,7 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 
 **Entwicklerhinweis:** Für `npm run dev` laufen API (3342) und Next (3341) parallel; die Lite-UI bleibt zusätzlich unter **3342** erreichbar. Wer nur den schlanken Messenger testet, nutzt oft **`npm start`** und **3342**.
 
-**Boss: „Was kann ich wohin?“** — **`docs/BOSS-ORIENTIERUNG.md`**; Lite-UI **Steuerung** → Dokumentation-Buttons (`GET /api/doc?name=…`). **Messenger-PWA:** **`/handbook`** — Quellen sind **`docs/BOSS-ORIENTIERUNG.md`** und **`docs/PWA-HANDBUCH-OFFLINE.md`**; nach inhaltlichen Änderungen daran im Repo-Root **`npm run sync:handbook`** ausführen (Kopie nach **`frontend/public/handbook/`**), oder **`npm run build`** im Ordner **`frontend/`** ( **`prebuild`** sync’t). Details: **`docs/PWA-HANDBUCH-OFFLINE.md`**.
+**Boss: „Was kann ich wohin?“** — **`docs/BOSS-ORIENTIERUNG.md`**; Lite-UI **Steuerung** → Dokumentation-Buttons (`GET /api/doc?name=…`). **Messenger-PWA:** **`/handbook`** — Quellen sind **`docs/BOSS-ORIENTIERUNG.md`** und **`docs/PWA-HANDBUCH-OFFLINE.md`**; nach inhaltlichen Änderungen daran im Repo-Root **`npm run sync:handbook`** ausführen (Kopie nach **`frontend/public/handbook/`**), oder **`npm run build`** im Ordner **`frontend/`** ( **`prebuild`** sync’t). Details: **`docs/PWA-HANDBUCH-OFFLINE.md`**. Vor Release: **`docs/PWA-MANUAL-CHECKS.md`** (Install/Offline).
 
 **Test-Routinen:** Schnellcheck nach größeren Änderungen, Playwright mit API, Chain-Hinweise und offene Next-Themen → **`docs/TESTING.md`** (Abschnitte *Smoke nach Merge*, *Playwright Lite/Messenger*, *Chain / Move-Paket*, *Roadmap Kunden-UI*).
 

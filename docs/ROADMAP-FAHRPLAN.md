@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Onboarding/Wallet/Session **`docs/ONBOARDING-WALLET-UX-SPEC.md`** — Ist, Lücken-Backlog L1–L6, Roadmap **§8**; Unlock-Dialog **signer-abhängig**; Shop-Tooltip; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, Test **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, Shop-Theorie **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Betrieb/Lücken **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, Runbook **§ H.3c**, Meshtastic **§ H.3d**, **`TESTING.md`**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — u. a. **PWA manuelle Checks** dokumentiert (**`docs/PWA-MANUAL-CHECKS.md`**, Fahrplan **§ H.2**); Onboarding/Wallet/Session **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6, **§8**); Unlock-Dialog **signer-abhängig**; Shop-Tooltip; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**.  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -93,7 +93,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **Chat-Header: „Puls an Basis“** (Streams bereit/fehlt, Heartbeat an/aus, Intervall, S-Bit-Hinweis) | umgesetzt | `chat-view-chat-header.tsx`, GET `/api/status` liefert `heartbeat` + `streams`. |
 | **`/heartbeat` + Streams** nur aktivieren, wenn `STREAMS_BRIDGE_URL` + Anchor da sind (bestehend) | kein neuer Code | Boss sieht „online“ ohne neue Features. |
 | **QR-Kontakt v2** | Spez nur (**`docs/QR-CONTACT-SCHEMA-V2.md`**) | Einheitliche Felder für Anchor/API/Gateway vor Implementierung; verhindert RPC-vs.-API-Verwechslung. |
-| **Projekt-Doku verlinken** (dieser Fahrplan + `MACRO-OPERATIONAL-PATTERNS`) | gering | Onboarding. |
+| **Projekt-Doku verlinken** (dieser Fahrplan + `MACRO-OPERATIONAL-PATTERNS`) | gering | Onboarding — **Ist:** **`README.md`** Einstiegspunkt **6**; siehe auch **`docs/PWA-MANUAL-CHECKS.md`**. |
 
 ### C.3 Bewusst **nicht** vor B priorisieren
 
@@ -112,6 +112,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** – Gateway, Interpreter.  
 - **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Package-ID-Banner, Abgleich mit `/api/status`).  
 - **`docs/UX-MESSENGER-INVENTORY.md`** – Abgleich Wunsch-UX (Login, Rollen, Wald-Check, PWA) vs. Ist  
+- **`docs/PWA-MANUAL-CHECKS.md`** – Manuelle PWA-Prüf (Install, Offline-Shell, Handbuch); **§ H.2**  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
@@ -256,7 +257,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 | Priorität | # | Thema |
 |-----------|---|--------|
-| 1 | **5** | **PWA:** Manifest + SW + **PNG-Icons** (§A.5). **Nächster Schritt:** manuelle **PWA-Checks** (Installation „Zum Home-Bildschirm“, Offline-Shell). **Optional:** Offline-Fallback-Seite, SW erweitern. Bei **Änderung von `icon.svg`:** `npm run build:pwa-icons` erneut ausführen. |
+| 1 | **5** | **PWA:** Manifest + SW + **PNG-Icons** (§A.5). **Manuelle Checks:** Checkliste **`docs/PWA-MANUAL-CHECKS.md`** (Install, Offline-Shell, Handbuch-Cache, Icons nach `icon.svg`). **Optional:** Offline-Fallback-Seite, SW erweitern. Bei **Änderung von `icon.svg`:** `npm run build:pwa-icons` erneut ausführen. |
 | 2 | **6** | Fehlermeldungen/Status konsistent (laufend). |
 | 3 | **8** | **Kabel-Bridge** (hoch, spec-nah) – siehe §A.8; Backlog, nicht parallel zu Phase-B-Kern. |
 

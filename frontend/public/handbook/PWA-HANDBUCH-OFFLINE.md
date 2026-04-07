@@ -2,7 +2,7 @@
 
 **Zweck:** Die Story „Handbuch in der tiefsten Höhle“ **präzise** halten — was der **Service Worker** wirklich tut, was **nicht** automatisch geht.
 
-**Verwandt:** `docs/BOSS-ORIENTIERUNG.md`, `frontend/public/sw.js`, `frontend/public/handbook/*.md` (Kopien aus `docs/`, siehe `scripts/sync-pwa-handbook.mjs`).
+**Verwandt:** `docs/BOSS-ORIENTIERUNG.md`, `frontend/public/sw.js`, `frontend/public/handbook/*.md` (Kopien aus `docs/`, siehe `scripts/sync-pwa-handbook.mjs`). **Manuelle Release-/Feld-Checks:** **`docs/PWA-MANUAL-CHECKS.md`**.
 
 ---
 
