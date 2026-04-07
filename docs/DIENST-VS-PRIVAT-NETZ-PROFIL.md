@@ -51,7 +51,26 @@ Die Richtung **getrennte Kontexte statt Merge** ist **richtig** (siehe auch Abgl
 
 ---
 
-## 5. Was **nicht** ohne Weiteres behauptet werden sollte
+## 5. „Vor dem Anmelden“ Netz wählen — sinnvoll, aber aufwendig im Code?
+
+**Kurz:** Die **Idee** (beim ersten Start klar entscheiden: Testnet vs. Mainnet) ist **fachlich richtig** — sie verringert das Risiko, im falschen Netz zu „funktionieren“. **Technisch** bindet sie aber nicht nur an `RPC_URL`, sondern an ein **konsistentes Paket** aus Umgebungsvariablen und oft **getrennten** On-Chain-Objekten (`PACKAGE_ID`, `MAILBOX_ID`, …). Das Backend liest beim Start **`process.env`** / `CFG`; ein sauberer **Laufzeit-Wechsel** aller relevanten Parameter inkl. neu initialisiertem RPC-Client, Caches und UI-Zustand wäre **spürbar mehr** als ein Dialog — **kein** kleines Feature ohne Architektur-Review.
+
+**Für Interessierte / optional:** Eine **Startwahl-UI** ist **machbar** als Produktentscheidung, aber **nicht** „nur ein Dropdown“ — eher Profil-Persistenz, Validierung und klare Regeln beim Wechsel.
+
+**Pragmatische „Morgendrot-Lösung“ (wenig Code, hohe Trennschärfe):** Zwei **getrennte Arbeitsverzeichnisse** (oder zwei Portable-Bundles), jeweils eigene **`.env`**, eigener **`VAULT_FILE`**-Pfad, ggf. eigene Shortcuts:
+
+| Variante | Inhalt |
+|----------|--------|
+| **Icon / Starter „EINSATZ“** | Start im Ordner A → Mainnet-`.env` → nur Dienst-Kontext. |
+| **Icon / Starter „TEST“** | Start im Ordner B → Testnet-`.env` → nur Privat/Übung. |
+
+**Vorteile:** Keine neue Kernlogik nötig; **physische** Trennung der Konfiguration; im Dienst-Fenster sieht man **nur** den Dienst-Chat (andere Dateien, andere Chain-IDs). **Nachteil:** Zwei Installationen pflegen (Updates zweimal oder symlinked binary mit unterschiedlichem `cwd`).
+
+**Fazit:** „Vor dem Anmelden entscheiden“ ist **nicht** zu kompliziert als **Konzept** — aber **in einer einzigen App-Instanz** sauber zu bauen ist **aufwendiger** als zwei Starter. Für **Helfer im Einsatz** bleibt ohnehin meist **ein** Profil (Organisationsvorgabe); die **Zwei-Ordner-Idee** richtet sich an **Interessierte** und Labore, nicht als Pflicht für das Einsatzpersonal.
+
+---
+
+## 6. Was **nicht** ohne Weiteres behauptet werden sollte
 
 Der folgende Satz aus Diskussionsentwürfen sollte **nicht** als Lieferumfang des Kern-Messengers stehen:
 
@@ -66,7 +85,7 @@ Der folgende Satz aus Diskussionsentwürfen sollte **nicht** als Lieferumfang de
 
 ---
 
-## 6. Empfohlene Kurzfassung für Texte / Schulungen
+## 7. Empfohlene Kurzfassung für Texte / Schulungen
 
 1. **Einsatz:** Ein **definiertes** Mainnet-Profil (Organisation stellt `.env` + Vault-Pfad aus).  
 2. **Privat/Testnet:** **Separates** Profil, **nie** dieselbe Oberfläche ohne klaren Modus-Hinweis wie der Dienst-Chat.  
@@ -83,4 +102,4 @@ Der folgende Satz aus Diskussionsentwürfen sollte **nicht** als Lieferumfang de
 
 ---
 
-*Stand: 2026-03-28 — Abgleich mit `src/config.ts`, `src/wallet-bridge.ts`, `src/messenger-nest/messenger-fetch.ts`.*
+*Stand: 2026-03-28 (§ 5 ergänzt) — Abgleich mit `src/config.ts`, `src/wallet-bridge.ts`, `src/messenger-nest/messenger-fetch.ts`.*
