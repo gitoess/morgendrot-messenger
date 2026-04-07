@@ -265,7 +265,9 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/vault-load') {
                         const loadPath = (a[1] != null && String(a[1]).trim()) ? String(a[1]).trim() : (CFG.VAULT_FILE || '.morgendrot-vault');
-                        const pw = getWalletPassword() || a[0];
+                        /** Explizites Arg zuerst (UI „Tresor-Passwort“), sonst Sitzung — sonst ignorieren zweiter Vault-Passwort beim Entsperren. */
+                        const explicitPw = a[0] != null && String(a[0]).trim() ? String(a[0]).trim() : '';
+                        const pw = explicitPw || getWalletPassword() || '';
                         if (!pw) return { ok: false, message: 'Kein Passwort.' };
                         if (!vaultFileExists(loadPath)) return { ok: false, message: 'Vault-Datei existiert nicht: ' + loadPath + ' – zuerst „Lokal sichern“.' };
                         try {
@@ -466,7 +468,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     if (c === '/vault-load-from-chain') {
                         if (!CFG.VAULT_REGISTRY_ID || !CFG.PACKAGE_ID) return { ok: false, message: 'VAULT_REGISTRY_ID und PACKAGE_ID nötig.' };
-                        const pw = getWalletPassword() || a[0];
+                        const explicitPw = a[0] != null && String(a[0]).trim() ? String(a[0]).trim() : '';
+                        const pw = explicitPw || getWalletPassword() || '';
                         if (!pw) return { ok: false, message: 'Kein Passwort.' };
                         try {
                             const enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);

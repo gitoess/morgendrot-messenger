@@ -479,6 +479,15 @@ export function VaultView({ variant }: VaultViewProps) {
             optional Signer-Notizen und (im Tab Passwortmanager) Zugangsdaten im selben Blob. Doku:{' '}
             <span className="font-mono">docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md</span> (im Repo).
           </div>
+          <div className="rounded-xl border border-sky-500/25 bg-sky-500/5 p-4 text-xs text-muted-foreground leading-relaxed">
+            <p className="font-semibold text-foreground">Andere Vault-Datei = Tresor wechseln (kein Windows-Logout)</p>
+            <p className="mt-1.5">
+              <strong className="text-foreground">„Daten laden“</strong> ersetzt die <strong className="text-foreground">Tresor-Daten in dieser Backend-Sitzung</strong> (Messaging-Keys, Notizen, Passwortmanager) durch den Inhalt der Datei — vergleichbar mit einem <strong className="text-foreground">anderen Tresor-Nutzer</strong> für Chat/Handshake, <strong className="text-foreground">nicht</strong> mit einem zweiten PC-Benutzerkonto. Die Web-App bleibt entsperrt; du wirst <strong className="text-foreground">nicht</strong> automatisch zum Passwort-Dialog geschickt (außer du nutzt „Tresor sperren“).
+            </p>
+            <p className="mt-2">
+              <strong className="text-foreground">Passwort:</strong> Trage unten das <strong className="text-foreground">Passwort dieser Vault-Datei</strong> ein — es hat Vorrang vor dem Wallet-Passwort der Sitzung. Leer lassen nur, wenn Vault und App-Entsperren <strong className="text-foreground">dieselbe</strong> Passphrase nutzen.
+            </p>
+          </div>
           <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
             <h4 className="mb-2 text-sm font-semibold text-foreground">Tresor: Ablauf in vier Schritten</h4>
             <ol className="list-decimal space-y-1.5 pl-4 text-xs text-muted-foreground">
@@ -579,7 +588,9 @@ export function VaultView({ variant }: VaultViewProps) {
               <h4 className="font-semibold text-foreground">Tresor-Passwort</h4>
             </div>
             <label className="mb-1.5 block text-sm text-muted-foreground">
-              Für Vault-Datei und Chain-Backup (kann vom Wallet-Passwort abweichen)
+              Für Vault-Datei und Chain-Backup; beim <strong className="text-foreground">Laden</strong> hat dieses Feld{' '}
+              <strong className="text-foreground">Vorrang</strong> vor dem Wallet-Passwort der Sitzung (andere Datei =
+              anderes Passwort möglich)
             </label>
             <input
               type="password"
@@ -593,9 +604,8 @@ export function VaultView({ variant }: VaultViewProps) {
               <li>
                 <span className="font-medium text-foreground">Wann brauchst du es?</span> Beim{' '}
                 <strong className="text-foreground">Entschlüsseln</strong> (Laden von Platte/Chain) und beim{' '}
-                <strong className="text-foreground">neuen Verschlüsseln</strong> (Speichern). Wenn das Feld leer ist, nutzt
-                das Backend ggf. das <strong className="text-foreground">Wallet-Passwort der Sitzung</strong> – nur sinnvoll,
-                wenn du beides gleich halten willst.
+                <strong className="text-foreground">neuen Verschlüsseln</strong> (Speichern). Beim <strong className="text-foreground">Laden</strong>: ausgefülltes Feld = dieses Passwort zuerst (andere Vault-Datei). Leer = Fallback auf{' '}
+                <strong className="text-foreground">Wallet-Passwort</strong> der Sitzung.
               </li>
               <li>
                 <span className="font-medium text-foreground">Mehrere Vault-Dateien?</span> Jede Datei kann ein eigenes

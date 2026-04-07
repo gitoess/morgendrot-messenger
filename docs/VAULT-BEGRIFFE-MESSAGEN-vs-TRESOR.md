@@ -67,4 +67,17 @@ Sobald du Nachrichten nutzen willst, **regelmäßig „Lokal sichern“** (und b
 
 ---
 
-*Stand: Abgleich mit `src/vault-local.ts`, `src/messenger-nest/messenger-command-handler.ts` (`/vault-save`), `frontend/.../vault-view.tsx`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`.*
+## 6. „Benutzer wechseln“ — andere Vault-Datei laden
+
+**Worum es geht:** Eine **andere** `.morgendrot-vault`-Datei zu laden ersetzt im Backend die **Tresor-Daten in der RAM-Sitzung**: andere **Messaging-Keys**, andere **Notizen**, anderer **Passwortmanager**-Inhalt (sofern in der Datei). Das ist **kein** Wechsel des Windows-/Linux-Benutzerkontos — aber für **Morgendrot** wirkt es wie ein **Wechsel der Tresor-/Chat-Schlüsselidentität** (Partner-Handshake-Logik kann sich unterscheiden).
+
+| Frage | Kurzantwort |
+|--------|--------------|
+| Bin ich danach „ein neuer Nutzer“? | **Für den Tresor ja** (andere Keys/Notizen/Safe). **Wallet-/Chain-Adresse** (`MY_ADDRESS` aus Signer/`.env`) bleibt in der Regel dieselbe Konfiguration — es sei denn, die geladene Vault bringt einen anderen Signer-Kontext mit (z. B. SDK-Import in der Datei). Nicht mit einem zweiten OS-Login verwechseln. |
+| Werde ich aus der Web-App **ausgeloggt**? | **Nein** automatisch: `GET /api/status` bleibt „entsperrt“, solange das Backend läuft und du nicht **`/vault-lock`** ausführst. Beim **Laden** werden nur die **Tresor-Keys im RAM** ausgetauscht — kein erzwungenes erneutes **`POST /api/unlock`**. |
+| Brauchen **beide** Vaults dasselbe Passwort wie zum App-Entsperren? | **Nein zwingend.** Jede Datei wurde mit **ihrem** Vault-Passwort verschlüsselt. In der UI: Wenn du ein **Tresor-Passwort** im Feld einträgst, wird es **zuerst** zum Entschlüsseln dieser Datei verwendet (Vorrang vor dem Wallet-Passwort der Sitzung). **Leeres Feld:** es wird das **Wallet-Passwort** der Sitzung versucht — praktisch nur passend, wenn du für Vault und Unlock dasselbe Passwort nutzt. |
+| Zwei Dateien = zwei Kopien? | Nur wenn du **bewusst** zweimal mit **unterschiedlichen Pfaden** speicherst. Standard: wiederholtes „Lokal sichern“ **überschreibt** eine Datei. |
+
+---
+
+*Stand: Abgleich mit `src/vault-local.ts`, `src/messenger-nest/messenger-command-handler.ts` (`/vault-save`, `/vault-load`, `/vault-load-from-chain`), `frontend/.../vault-view.tsx`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`.*
