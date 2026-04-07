@@ -36,6 +36,7 @@ import { WorkerActionCenterView } from './views/worker-action-center-view'
 import { DeviceRadarView } from './views/device-radar-view'
 import { SetupOverlay } from '@/components/setup-overlay'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
+import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
 import {
   Dialog,
   DialogContent,
@@ -166,6 +167,8 @@ export function Dashboard() {
   const [rpcProxyActive, setRpcProxyActive] = useState(false)
   const [workspaceTileSet, setWorkspaceTileSet] = useState<WorkspaceTileSet>('full')
   const [apiSnapshot, setApiSnapshot] = useState<(ApiStatus & { error?: string }) | null>(null)
+  /** Hinweis nach automatischem Import aus „Einsatz-Profil“ (localStorage-Warteschlange). */
+  const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
 
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
@@ -209,6 +212,23 @@ export function Dashboard() {
     const interval = setInterval(checkStatus, 10000)
     return () => clearInterval(interval)
   }, [])
+
+  /** Pending `initialProfile` aus Einstellungen anwenden, sobald API läuft (Paket 4 / Roadmap H.3g). */
+  useEffect(() => {
+    if (backendReachable !== true) return
+    if (apiSnapshot?.backendRunning === false) return
+    let cancelled = false
+    void (async () => {
+      const r = await tryApplyPendingInitialProfileFromStorage()
+      if (cancelled) return
+      if (r.ok && !r.skipped && r.message) {
+        setInitialProfileBanner(r.message)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [backendReachable, apiSnapshot?.backendRunning])
 
   const handleUnlock = async () => {
     setUnlockError('')
@@ -393,6 +413,22 @@ export function Dashboard() {
 
         {/* View Content */}
         <main className="mx-auto max-w-5xl p-4">
+          {initialProfileBanner ? (
+            <div
+              className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
+              role="status"
+            >
+              <span>{initialProfileBanner}</span>
+              <button
+                type="button"
+                className="shrink-0 rounded px-2 py-0.5 text-emerald-300/90 hover:bg-emerald-500/20 hover:text-emerald-50"
+                onClick={() => setInitialProfileBanner(null)}
+                aria-label="Schließen"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
           {activeView.type === 'settings' && (
             <SettingsView
               onOpenConfig={() => setActiveView({ type: 'config' })}
@@ -516,6 +552,22 @@ export function Dashboard() {
 
       {/* Main Content */}
       <main className="mx-auto max-w-5xl px-4 py-8">
+        {initialProfileBanner ? (
+          <div
+            className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
+            role="status"
+          >
+            <span>{initialProfileBanner}</span>
+            <button
+              type="button"
+              className="shrink-0 rounded px-2 py-0.5 text-emerald-300/90 hover:bg-emerald-500/20 hover:text-emerald-50"
+              onClick={() => setInitialProfileBanner(null)}
+              aria-label="Schließen"
+            >
+              ×
+            </button>
+          </div>
+        ) : null}
         {/* Arbeiter/Lock: Action Center statt Kacheln */}
         {(role === 'arbeiter' || role === 'lock') && !showAllTiles && (
           <>

@@ -63,8 +63,14 @@ Die **Lite-UI** bietet nach erfolgreichem Provisioning einen Button **„Kontakt
 
 ---
 
-## Client (Helfer-Gerät / Next)
+## Client (Helfer-Gerät / Next PWA)
 
-Import auf dem **Helfer-Gerät** aus Export/ZIP ist weiterhin **optional** (Roadmap § H.3g, Next-PWA) — hier zuerst Boss-seitige Übernahme und Lite-UI.
+**Einstellungen → „Einsatz-Profil / Kontakte“** (`frontend/frontend/components/views/settings-view.tsx`):
 
-**Code:** `src/initial-profile-provision.ts` (`parseAndValidateInitialProfile`).
+- JSON einfügen oder **`.json`-Datei** laden (vollständiges `jsonConfig` oder nur `initialProfile`).
+- **„Jetzt ins Telefonbuch“** → `POST /api/contact-labels/apply-initial-profile`.
+- **„Für später merken“** → `localStorage` (`morgendrot.pendingInitialProfileJson`); beim erreichbaren Backend läuft der Import automatisch (`tryApplyPendingInitialProfileFromStorage` in `frontend/frontend/lib/initial-profile-import.ts`, Hinweis-Banner im Dashboard).
+
+**IndexedDB** wird nicht genutzt — eine Quelle der Wahrheit: Backend **`.morgendrot-contact-labels.json`**.
+
+**Code (Server):** `src/initial-profile-provision.ts` (`parseAndValidateInitialProfile`).

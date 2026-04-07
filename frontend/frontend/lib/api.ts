@@ -812,9 +812,44 @@ export async function revealVaultSignerImport(password: string): Promise<{
 /** Kontakt mit optionalem Meshtastic-Mapping (GET /api/contact-labels → directory). */
 export type ContactMeshEntryClient = {
   label: string
+  /** Einsatz-Tags (z. B. Medic) — Anzeige, siehe initialProfile */
+  roleTags?: string[]
   meshNodeId?: string
   meshPublicKeyHex?: string
   bleUuid?: string
+}
+
+/** POST /api/contact-labels/apply-initial-profile — gleiches Schema wie Server `InitialProfile`. */
+export async function applyInitialProfileProvisioning(profile: Record<string, unknown>): Promise<{
+  ok: boolean
+  applied?: number
+  message?: string
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE}/api/contact-labels/apply-initial-profile`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(profile),
+    })
+    const data = (await response.json()) as {
+      ok?: boolean
+      applied?: number
+      message?: string
+      error?: string
+    }
+    return {
+      ok: data.ok === true,
+      applied: typeof data.applied === 'number' ? data.applied : undefined,
+      message: typeof data.message === 'string' ? data.message : undefined,
+      error: data.error,
+    }
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen',
+    }
+  }
 }
 
 export async function fetchContactDirectory(): Promise<{

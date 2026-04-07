@@ -150,6 +150,18 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
                 <p className="font-mono text-[11px] text-muted-foreground break-all" title={addr}>
                   {addr}
                 </p>
+                {entry.roleTags && entry.roleTags.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {entry.roleTags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="space-y-1">
                     <label className="text-[10px] font-medium text-muted-foreground">Anzeigename</label>
