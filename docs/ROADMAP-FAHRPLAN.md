@@ -91,6 +91,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 ### C.1 Pflichtpfad (größter Nutzen)
 
+**Leitplanke:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**, Anti-Feature-Creep) — hier nur die **operative** Reihenfolge.
+
 1. **Produkt/UX (Einsatz & Messenger)** – schlanke UI, verlässliches Entsperren, optional nur Messenger-Kacheln („Wanderer“), Seed/Passwort-UX wo nötig (**§ H.0**). *Vorziehen gegenüber rein technischer Feinarbeit, wenn Feldtest oder Handy-Abgabe drängt.*  
 2. **Phase A** (technisch) – Stabilität, `chat-view`, kleine Schritte, `tsc`/Tests (**§ H.1**).  
 3. **Phase B** – zuverlässiges Mesh v2, **Delayed LoRa → IOTA** (MVP laut Spec).  
