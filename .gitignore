@@ -1,3 +1,12 @@
+# OS / Explorer
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Lokale Profil-/Geräte-Dumps (optional; nicht ins Repo)
+profiles/
+
 node_modules/
 frontend/node_modules/
 .env

@@ -17,6 +17,9 @@ import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-s
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'
 
+/** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
+const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
+
 /** UI: „IDs & Puls“ → Strikt ohne Funk-Fallback bei Online-Versand. */
 function readStrictOnlineNoMeshFallback(): boolean {
   if (typeof window === 'undefined') return false
@@ -213,27 +216,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       | { ok: false }
 
     const sendOnePart = async (textSnap: string): Promise<PartOk> => {
-      if (!isPrivate) {
-        const res = await sendMessage(recipient, textSnap, encrypted)
-        if (res.ok) return { ok: true }
+      const failSend = (msg: string): PartOk => {
         setStatus('error')
-        setStatusMsg(res.error || 'Fehler')
+        setStatusMsg(msg)
         return { ok: false }
+      }
+      const tryMailbox = async (enc: boolean): Promise<PartOk> => {
+        const res = await sendMessage(recipient, textSnap, enc)
+        if (res.ok) return { ok: true }
+        return failSend(res.error || 'Fehler')
+      }
+
+      if (!isPrivate) {
+        return tryMailbox(encrypted)
       }
 
       if (!encrypted) {
         if (forcedTransport === 'internet') {
-          const res = await sendMessage(recipient, textSnap, false)
-          if (res.ok) return { ok: true }
-          setStatus('error')
-          setStatusMsg(res.error || 'Fehler')
-          return { ok: false }
+          return tryMailbox(false)
         }
         if (forcedTransport === 'mesh') {
           if (!meshtastic.connected) {
-            setStatus('error')
-            setStatusMsg('Meshtastic/Web Bluetooth nicht verbunden (Heltec).')
-            return { ok: false }
+            return failSend(MESH_BT_NOT_CONNECTED_MSG)
           }
           try {
             await meshtastic.sendMeshText(textSnap)
@@ -263,9 +267,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       if (forcedTransport === 'mesh') {
         if (!meshtastic.connected) {
-          setStatus('error')
-          setStatusMsg('Meshtastic/Web Bluetooth nicht verbunden (Heltec).')
-          return { ok: false }
+          return failSend(MESH_BT_NOT_CONNECTED_MSG)
         }
         let wireText = textSnap
         if (

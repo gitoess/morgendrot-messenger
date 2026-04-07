@@ -13,6 +13,16 @@ import type { Message } from '@/frontend/lib/types'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { parseJsonObjectFromFileText } from '@/frontend/lib/morg-pkg-import-utils'
 
+function showMorgPkgRecipientError(
+  error: string | null,
+  setStatus: UseChatViewSendFlowParams['setStatus'],
+  setStatusMsg: UseChatViewSendFlowParams['setStatusMsg']
+): void {
+  setStatus('error')
+  setStatusMsg(error || 'Empfänger unbekannt.')
+  setTimeout(() => setStatus('idle'), 8000)
+}
+
 export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
   const {
     apiStatus,
@@ -53,9 +63,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     async (msg: Message) => {
       const { recipient: rec, error } = resolveMorgPkgRecipient()
       if (!rec) {
-        setStatus('error')
-        setStatusMsg(error || 'Empfänger unbekannt.')
-        setTimeout(() => setStatus('idle'), 8000)
+        showMorgPkgRecipientError(error, setStatus, setStatusMsg)
         return
       }
       const r = await morgPkgExport(rec, msg.content)
@@ -81,9 +89,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       if (!list?.length) return
       const { recipient: rec, error } = resolveMorgPkgRecipient()
       if (!rec) {
-        setStatus('error')
-        setStatusMsg(error || 'Empfänger unbekannt.')
-        setTimeout(() => setStatus('idle'), 8000)
+        showMorgPkgRecipientError(error, setStatus, setStatusMsg)
         return
       }
       setMorgPkgDeviceBusy(true)

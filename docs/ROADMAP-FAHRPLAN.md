@@ -383,6 +383,8 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 
 Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**.
 
+**Kleine Hygiene (Phase A, ohne Feature-Umbau):** **`.gitignore`** bei neuen lokalen Artefakten aktualisieren; **tote Dateien** nur entfernen, wenn sie wirklich unreferenziert sind (kein Raten); **Kommentare** nur streichen, wenn sie eindeutig überholt sind. **Kein** großes Neu-Zerlegen von **`use-chat-view-core.ts`** ohne Nutzen — siehe **§ A Punkt 4**.
+
 ### H.6 Zukünftige Ideen (**nicht** gebucht, nur merken)
 
 | Idee | Anmerkung |
