@@ -324,6 +324,25 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Risiko** | Öffentliche Chain-Objekte + Profildaten → **Privacy**; Credits mit Profil **mischen** → Upgrade-/Gas-Komplexität. |
 | **Nächste sinnvolle Stufe** | **Stufe A** (ohne Move): Boss-**Export**/Vault-JSON für **lokales** Einsatzprofil; **Stufe B/C** erst nach Architektur-Review — **nicht** vor Mesh-MVP blockieren. |
 | **Verwandt** | **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** |
+| **Offline-Boss / `initialProfile`** | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** — Warteschlange **nicht** mit `mintMessengerCreditsBatchForRecipients` verwechseln; Profil-Payload vs. Kontakt-API / Lite-UI vs. Next-PWA. |
+| **Einsatzleitung UI (Rollen-Manager, Provisioning-Maske)** | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** — Medic/Scout vs. Chain-`ROLE`; Handshake braucht Pubkey; Kanal „Sektor Nord“ = Profil-Tag bis Mehrkanal-Modell klar ist. |
+
+### H.3g Umsetzungspaket: `initialProfile`, Offline-Relay-Queue, Einsatzleitung (nicht vergessen)
+
+**Ziel:** Alle diskutierten Bausteine **gebündelt** auf der Roadmap halten — **Reihenfolge** und **Abhängigkeiten** explizit.
+
+| # | Arbeitspaket | Kurzinhalt | Abhängigkeit |
+|---|----------------|------------|--------------|
+| **1** | **API `initialProfile` + Schema** | `POST /api/provision-device` optional: `initialProfile` (Kontakte, Einsatz-Labels, Kanal-Tags); JSON-Schema, Größenlimit; Antwortfeld für Client/Export. | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
+| **2** | **Boss-Worker / Persistenz** | Wo Templates leben (Boss-Instanz): Datei unter `process.cwd()` oder bestehendes Vault/Provision-Pattern; **keine** Secrets im Klartext-Log. | API aus **1** |
+| **3** | **Lite-UI-Import** | Beim ersten Start: Profil → **`/api/contact-labels`** (Schleife) oder neuer **Bulk**-Endpoint; Icons/Labels nur Client. | **1**, **2** |
+| **4** | **Next-PWA-Import** | Gleiche API; IndexedDB nur wenn offline-first festgelegt — sonst **eine** Quelle (**API**). | **1**–**3** |
+| **5** | **Handshake-Subflow in der Maske** | UI/Flow: Pubkey + Adressen vorhanden → dann `POST /api/boss-provision-handshake` nach `provision-device` (Reihenfolge dokumentieren). | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** |
+| **6** | **Rollen-Manager (Boss-Werkstatt)** | `ui/`: Templates (Einsatz-Rolle → Chain-`ROLE`/`roleId`); Medic/Scout als **Labels**, nicht als neue Chain-Enums. | **1**, **2** |
+| **7** | **Offline-Relay-Queue (Boss ohne Internet)** | Eigenes Modul nach Vorbild **`settlement-queue.ts`**; **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`; typisierte Einträge + Flush. | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
+| **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). | Laufend |
+
+**Priorität für die nächste Implementierung (wenn gestartet):** typischerweise **1 → 2 → 6** (API + Persistenz + Boss-UI), parallel Doku; **7** wenn LoRa/Offline-Boss konkret wird; **3/4** wenn Endnutzer-PWA im Fokus ist.
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 
@@ -341,7 +360,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 | Idee | Anmerkung |
 |------|-----------|
-| **Boss-/Basis-Management-Dashboard** („wer ist aktiv“, Rechte per Klick) | Braucht klare **Quelle der Wahrheit** (Chain vs. Server-`.env`); sonst nur UI-Schein. Später mit Security-Konzept. |
+| **Boss-/Basis-Management-Dashboard** („wer ist aktiv“, Rechte per Klick) | Braucht klare **Quelle der Wahrheit** (Chain vs. Server-`.env`); sonst nur UI-Schein. Konkretere gebuchte Pakete: **§ H.3g** + **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**. |
 | **Narrative** (Root-of-Trust-Signatur, Admin-QR → Boss, NFT = Basis) | Teilweise **Zielbild**; gegen Code prüfen (**`docs/ARCHITECTURE-ROLES-AND-HUB.md`**, **`docs/BOSS-MODUS.md`**) bevor es in öffentliche Texte wandert. |
 
 ### H.7 Einsatz-Abgabe **Standalone Smartphone** (Ist) & Backlog
