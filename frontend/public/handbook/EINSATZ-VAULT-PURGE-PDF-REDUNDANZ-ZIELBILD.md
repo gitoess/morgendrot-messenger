@@ -89,6 +89,7 @@ Die Idee, das **Trägerbild** in einen **PDF-Einsatzbericht** einzubetten und Ja
 ## 8. Verwandte Dokumente
 
 - `docs/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md` — Trägerbild, User-Dir, UI  
+- `docs/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md` — Rettung: vorgefertigte Träger, Beschriftung, Ordnung  
 - `docs/NOTFALL-PURGE-MESSENGER.md` — was Purge heute tut  
 - `docs/EINSATZBERICHT-EXPORT.md` — Export-Stand  
 - `docs/BOSS-ORIENTIERUNG.md` — Provisioning, keine falschen QR-Mythen  
