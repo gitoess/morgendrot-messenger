@@ -6,6 +6,27 @@
 
 ---
 
+## Vorprüfung am Schreibtisch (ohne Smartphone — **§ H.0 #5**)
+
+Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt zu simulieren.
+
+| # | Aktion | Erwartung |
+|---|--------|-----------|
+| A | Root: **`npm run build:pwa-icons`** | Nach Änderung an **`frontend/public/icon.svg`** — PNG/Manifest-Icons aktualisiert (**Roadmap § H.4**). |
+| B | Root: **`npm run sync:handbook`** (oder nur **`frontend/`:** **`npm run build`**, dann sync’t **`prebuild`**) | Dateien unter **`frontend/public/handbook/`** entsprechen **`scripts/sync-pwa-handbook.mjs`**. |
+| C | **`frontend/`:** **`npm run build`** | **`prebuild`** → Handbuch-Sync; **`next build`** ohne Fehler = PWA-Bundle inkl. SW/Manifest konsistent. |
+| D | Bei Änderung an **`frontend/public/sw.js`:** **`VERSION`** (`morgendrot-sw-*`) erhöhen | Browser laden den neuen Service Worker; **`HANDBOOK_URLS`** muss zu den kopierten **`/handbook/*.md`** passen. |
+
+**Hinweis:** Die **kurze Checkliste** unten (Install, Offline, …) bleibt **manuell** am Gerät — Tabelle A–D ersetzt sie nicht.
+
+### Protokoll (manuell pflegen)
+
+| Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
+|-------|-------------------|---------------|----------------|------------|
+| 2026-03-28 | ✓ | ✓ (via prebuild) | ✓ | Automatisierte Vorprüfung im Repo |
+
+---
+
 ## Voraussetzungen
 
 - Messenger-PWA gebaut oder im Dev-Modus: Root **`npm run dev`** → Next **http://127.0.0.1:3341/**, API wie in **`docs/DEV-START.md`**.

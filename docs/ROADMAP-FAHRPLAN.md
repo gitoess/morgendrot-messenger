@@ -133,7 +133,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md`** – Rettung/Einsatz: vorgefertigte Träger pro Rolle, generierte Beschriftung, Organisation statt Tarn-Narrativ  
 - **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`** – `ROLE` vs `ROLE_ID` (0–63), Lock vs Messenger vs Arbeiter, Vorlagen  
 - **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`** – Einsatz: Rollenwechsel (Provisioning/`ROLE_ID` vs. Boss-`DEVICE_ROLES`, Trägerbild-Zielbild vs. Ist)  
-- **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** – Dienst/Mainnet vs. privat/Testnet (Zielgruppe „Interessierte“); zwei Kontexte = Vault **+** `.env`, keine NACK/RS485-Produktclaims  
+- **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** – Dienst/Mainnet vs. privat/Testnet (Zielgruppe „Interessierte“); zwei Kontexte = Vault **+** `.env`, keine NACK/RS485-Produktclaims
+- **`docs/WANDERER-STANDALONE-BUNDLE.md`** – „Wanderer“-Abgabe: `bundle:standalone-smartphone`, Boss→Helfer, optional zwei Ordner (**§ H.0 #2**, **§ H.7**)  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
@@ -257,10 +258,10 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | # | Paket | Status (2026-03) | Hinweis |
 |---|--------|-------------------|---------|
 | 1 | **Lite / Messenger-Modus** | **Teilweise erledigt** | **`/api/status` → `uiVariant`**; Dashboard erzwingt **Messenger-Kachelset** bei `UI_VARIANT=messenger`; **`workspace-projects-panel`**. **2026-03:** „Erste Schritte“-Karte mit Zusatzsatz **Lite** (nur Nachrichten + Tresor), wenn `uiVariant=messenger`. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** (volle rollen-basierte Workspaces = Backlog). |
-| 2 | **„Wanderer“-Abgabe** | **Doku/Bundles** | **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`**; Abgleich **§ H.7**. |
+| 2 | **„Wanderer“-Abgabe** | **Doku erledigt (2026-03)** | Kanon: **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Bundle bauen, Boss→Helfer, optional zwei Ordner). **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`**; technische Details **§ H.7**. |
 | 3 | **Kacheln nach Rolle** | **Teilweise** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar — siehe **`dashboard.tsx`**, Spec **`docs/UI-ROLLEN-WORKSPACES.md`** (weitere Verdichtung offen). |
 | 4 | **Unlock- & Secret-UX** | **L2 teilweise** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**. **„Erste Schritte“** + **`GET /api/help`:** **`HELP_UI_INTRO`** + Befehlsliste — **2026-03:** Hilfe-Dialog im **Header** (?) und Button in der Karte **„Erste Schritte“** (vorher Dialog ohne UI-Trigger). **Offen:** geführter Wizard / **H.7** Export-Assistent. |
-| 5 | **PWA-Realität** | **Doku + Checks** | **`docs/PWA-MANUAL-CHECKS.md`**, **§ H.2**; optional Offline-Fallback-Seite Backlog. |
+| 5 | **PWA-Realität** | **Doku + Checks (2026-03)** | **`docs/PWA-MANUAL-CHECKS.md`** — manuelle Feldprüf + **Vorprüfung am Schreibtisch** (Build/Icons/Handbuch); **§ H.2**; optional Offline-Fallback-Seite Backlog. |
 
 **Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.
 
@@ -424,6 +425,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Manuelle Anpassung** | Pro Kunde/Test: **`.env`** editieren (z. B. `PACKAGE_ID`, `RPC_URL`, `BOSS_ADDRESS` / Partner) — **sinnvoll und ausreichend** für erste Einsätze. |
 | **Geheimnisse** | **Nie** Seed oder Vault-Passwort auf das Medium schreiben; nur lokale Eingabe auf dem Telefon. |
 | **Backlog (optional)** | **Boss-Export-Assistent** in der Werkstatt: Formular → ZIP + fertige **`.env`** (ohne Secrets) + Kurz-README — **Komfort**, kein Blocker für Feldtests. |
+| **Einstieg „Wanderer“** | **`docs/WANDERER-STANDALONE-BUNDLE.md`** — Narrativ H.0 #2 + Verknüpfung zu **§ H.8** (zwei Ordner Dienst/Test). |
 
 ### H.8 Dienst (Mainnet) vs. privat (Testnet) — **zwei Installationen**, Doku, **kein** Sofort-Coding
 
