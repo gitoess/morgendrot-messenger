@@ -2,12 +2,24 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** — u. a. **PWA manuelle Checks** dokumentiert (**`docs/PWA-MANUAL-CHECKS.md`**, Fahrplan **§ H.2**); Onboarding/Wallet/Session **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6, **§8**); Unlock-Dialog **signer-abhängig**; Shop-Tooltip; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**.  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**.  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
 **Nächste konkrete Schritte:** → **§ H.0** (Produkt/UX), dann **§ H.1 ff.** (§ I **nicht** parallel zu technischer Phase-A-Robustheit abarbeiten).
+
+### Ist das der „komplette“ Plan? Heltec, Firmware, …
+
+**Nein — absichtlich mehrstufig.** Dieses Dokument ist die **Arbeits- und Prioritätenliste**, nicht „alles ist erledigt“.
+
+| Phase | Inhalt | Stand (Kurz) |
+|--------|--------|----------------|
+| **A** | Messenger-UI, Stabilität, PWA, Tests (**§ A**, **§ H.1–H.2**) | **Teils erledigt**, laufend (z. B. Fehlertexte, Regression). |
+| **B** | Mesh v2, **Delayed LoRa → IOTA** (**§ H.3**), **Heltec/Meshtastic**-Integration (**§ A.7**, `meshtastic/`, Firmware) | **Nicht** abgeschlossen — eigenes Engineering (Spec **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**). |
+| **C** | Gateway, Makros, erweiterte Custody (**§ E–G**, **§ I**) | **Backlog** — nach stabilem B-Kern. |
+
+**Kurz:** Heltec **programmieren** / Firmware / vollständige Funk-Kette sind **Phase B**, nicht „alle Punkte schon grün“ in § A.
 
 ---
 
@@ -233,13 +245,13 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 ### H.0 Jetzt zuerst – Produkt/UX (früher „später“, jetzt **Punkt 1**)
 
-| # | Paket | Hinweis |
-|---|--------|---------|
-| 1 | **Lite / Messenger-Modus** | `UI_VARIANT` / `workspaceTileSet` mit **`/api/status`** (`uiVariant`) an einem Ort führen – weniger „falsches“ Dashboard auf dem Handy. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`**. |
-| 2 | **„Wanderer“-Abgabe** | Bundle nur Messenger-Fluss (Kacheln reduziert), konsistent mit **H.7** Standalone-Smartphone. |
-| 3 | **Kacheln nach Rolle** | z. B. Boss: optional nur Steuerung + Nachrichten (kein Zwang zur Voll-Fläche); Umsetzung nur mit klarer Default-Policy. |
-| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). **Spezifikation & Backlog:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6). **Teil erledigt (2026-03-28):** Unlock-Dialog mit **signer-spezifischem** Kurztext (`cli` / `sdk` / `remote`); Chat-Banner ohne Schloss-Irrtum; Shop-Adressfeld mit **Tooltip** (Mint vs. Claim). **Recovery (2026-03-28):** **`docs/RECOVERY-PHRASE-BACKUP.md`**, Befehl **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup** (`SIGNER=sdk` + Vault mit Import). **Offen:** narrative „Erste Schritte“-Kachel (L2), weiterer Hilfeabsatz in `fetchHelp`. |
-| 5 | **PWA-Realität** | Installation „Zum Home-Bildschirm“, statische Shell offline – eng mit **§ A.5** / **H.2** verzahnen (kein Konflikt mit UX-1). |
+| # | Paket | Status (2026-03) | Hinweis |
+|---|--------|-------------------|---------|
+| 1 | **Lite / Messenger-Modus** | **Teilweise erledigt** | **`/api/status` → `uiVariant`**; Dashboard erzwingt **Messenger-Kachelset** bei `UI_VARIANT=messenger`; **`workspace-projects-panel`**. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** (volle rollen-basierte Workspaces = Backlog). |
+| 2 | **„Wanderer“-Abgabe** | **Doku/Bundles** | **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`**; Abgleich **§ H.7**. |
+| 3 | **Kacheln nach Rolle** | **Teilweise** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar — siehe **`dashboard.tsx`**, Spec **`docs/UI-ROLLEN-WORKSPACES.md`** (weitere Verdichtung offen). |
+| 4 | **Unlock- & Secret-UX** | **L2 teilweise** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**. **Neu:** „**Erste Schritte**“-Hinweis im Dashboard (Handbuch, Einstellungen); **`GET /api/help`** mit **`HELP_UI_INTRO`**. **Offen:** geführter Wizard / **H.7** Export-Assistent. |
+| 5 | **PWA-Realität** | **Doku + Checks** | **`docs/PWA-MANUAL-CHECKS.md`**, **§ H.2**; optional Offline-Fallback-Seite Backlog. |
 
 **Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.
 

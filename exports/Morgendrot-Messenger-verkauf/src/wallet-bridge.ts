@@ -47,14 +47,14 @@ export { setWalletPassword, getWalletPassword, clearWalletPassword };
 export { preFlightCheck, type PreFlightOptions } from './messenger-nest/messenger-preflight.js';
 export type { FetchedMessage } from './messenger-nest/messenger-fetch.js';
 
-import { HELP_START, HELP_CHAT } from './messenger-nest/messenger-help.js';
+import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from './messenger-nest/messenger-help.js';
 
 /** Nach fehlgeschlagener Vault-Entschlüsselung (ENABLE_UI): neuer Resolver – kein Terminal-Fallback (readline-sync blockiert auf Windows die Event-Loop → API tot). */
 async function awaitWalletPasswordAfterVaultFailureUi(): Promise<string> {
     const { setPasswordResolver } = await import('./api-server.js');
     return await new Promise<string>((resolve) => setPasswordResolver(resolve));
 }
-export { HELP_START, HELP_CHAT };
+export { HELP_START, HELP_CHAT, HELP_UI_INTRO };
 import { createMessengerCommandHandler } from './messenger-nest/messenger-command-handler.js';
 import { isRebasedStorageEnabled } from './messenger-nest/messenger-fetch.js';
 import type { PeerState } from './messenger-nest/peer-state.js';

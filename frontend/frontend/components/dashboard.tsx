@@ -130,6 +130,7 @@ interface ActiveView {
 }
 
 const FULL_TILES_STORAGE_KEY = 'morgendrot_show_all_tiles'
+const FIRST_STEPS_DISMISS_KEY = 'morgendrot.hideFirstStepsCard'
 
 function readShowAllTilesPref(): boolean {
   if (typeof window === 'undefined') return false
@@ -171,11 +172,29 @@ export function Dashboard() {
   const [apiSnapshot, setApiSnapshot] = useState<(ApiStatus & { error?: string }) | null>(null)
   /** Hinweis nach automatischem Import aus „Einsatz-Profil“ (localStorage-Warteschlange). */
   const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
+  /** Roadmap H.0 / ONBOARDING L2: „Erste Schritte“-Hinweis (per „Ausblenden“ dauerhaft aus). */
+  const [hideFirstStepsCard, setHideFirstStepsCard] = useState(false)
 
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
     setWorkspaceTileSet(readWorkspaceTileSet())
+    try {
+      if (typeof window !== 'undefined' && window.localStorage.getItem(FIRST_STEPS_DISMISS_KEY) === '1') {
+        setHideFirstStepsCard(true)
+      }
+    } catch {
+      /* ignore */
+    }
   }, [])
+
+  const dismissFirstStepsCard = () => {
+    try {
+      window.localStorage.setItem(FIRST_STEPS_DISMISS_KEY, '1')
+    } catch {
+      /* ignore */
+    }
+    setHideFirstStepsCard(true)
+  }
 
   /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite darf nicht durch altes localStorage „full“ überschrieben werden. */
   const liteMessengerFromApi = apiSnapshot?.backendRunning !== false && apiSnapshot?.uiVariant === 'messenger'
@@ -301,7 +320,9 @@ export function Dashboard() {
               <HelpCircle className="h-5 w-5" />
               Hilfe
             </DialogTitle>
-            <DialogDescription>Befehle und Ablauf – vom Backend</DialogDescription>
+            <DialogDescription>
+              Oben Kurzüberblick (Next-Messenger), darunter vollständige Befehlsliste — vom Backend
+            </DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-auto rounded-lg border border-border bg-muted/30 p-4 text-sm whitespace-pre-wrap font-mono">
             {helpLoading ? (
@@ -578,6 +599,51 @@ export function Dashboard() {
             </button>
           </div>
         ) : null}
+        {!locked && !hideFirstStepsCard && (
+          <div
+            className="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-4 text-sm shadow-sm"
+            role="region"
+            aria-label="Erste Schritte"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 space-y-2">
+                <h3 className="flex items-center gap-2 font-semibold text-foreground">
+                  <BookOpen className="h-4 w-4 shrink-0 text-emerald-400" />
+                  Erste Schritte
+                </h3>
+                <p className="text-muted-foreground">
+                  <strong className="text-foreground/90">Deine Adresse</strong>, Package-ID und RPC kommen typischerweise aus dem{' '}
+                  <strong className="text-foreground/90">Bundle der Basis</strong> (Server-<span className="font-mono text-xs">.env</span>) — nicht
+                  alles lässt sich hier in der App ändern. Das <strong className="text-foreground/90">Handbuch</strong> beschreibt Einrichtung und
+                  Lieferwege (Boss → Helfer); nach dem ersten Laden oft auch ohne Netz lesbar.
+                </p>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Link
+                    href="/handbook"
+                    className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                  >
+                    Handbuch öffnen
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setActiveView({ type: 'settings' })}
+                    className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    Einstellungen (Wallet, Einsatz-Profil)
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={dismissFirstStepsCard}
+                className="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Erste Schritte ausblenden"
+              >
+                Ausblenden
+              </button>
+            </div>
+          </div>
+        )}
         {/* Arbeiter/Lock: Action Center statt Kacheln */}
         {(role === 'arbeiter' || role === 'lock') && !showAllTiles && (
           <>

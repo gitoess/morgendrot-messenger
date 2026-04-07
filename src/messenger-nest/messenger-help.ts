@@ -1,3 +1,12 @@
+/** Plain text for GET /api/help (Next „?“-Dialog) — prepended before CLI command lists. Roadmap H.0 / ONBOARDING L2. */
+export const HELP_UI_INTRO = `--- Next-Messenger (Kurz) ---
+• Entsperren: Backend-Sitzung (Vault-Passwort); bei SIGNER=sdk ggf. Mnemonic/Bech32 einmalig, wenn noch nicht in der Vault-Datei.
+• Adresse, Package-ID, RPC: typischerweise in der Server-.env (Boss/Bundle) — nicht alles in dieser App änderbar; Setup-Icon oben oder Lite-UI am API-Port.
+• Handbuch in der PWA: Menü „Buch“-Symbol → /handbook (nach erstem Laden oft offline).
+• Chat: Nachrichten öffnen → Partner/Handshake wie in der Einrichtung — siehe Handbuch (Boss → Helfer, Lieferwege).
+
+`;
+
 export const HELP_START = `
 \x1b[90m--- BEFEHLE (vor /connect) ---
 /handshake <Adresse>     Handshake an Partner senden (ECDH-Key austauschen). Partner in .morgendrot-partner gespeichert.

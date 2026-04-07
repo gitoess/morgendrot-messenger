@@ -53,7 +53,7 @@ Die gleichen Punkte als **nachverfolgbare** Liste; Umsetzung priorisiert **Roadm
 | ID | Lücke | Risiko / Nutzerfrustration | Status |
 |----|--------|----------------------------|--------|
 | L1 | **Keine narrative Einheit** zwischen Next-Dashboard, Unlock-Dialog, Tresor und Shop | Session-Passwort vs. Vault vs. Keystore vs. Credits verwechselt | **Teilweise:** Unlock-Dialog **signer-abhängig** (`dashboard.tsx`); Chat-Banner präzisiert; diese Doku + **`docs/DEV-START.md`** |
-| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Backlog:** optional geführte „Erste Schritte“-Seite oder Boss-Export-Assistent (**Roadmap H.7**); bis dahin Lite-UI-Hinweis (`ui/index.html`) + **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
+| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Teilweise (2026-03-28):** Next-Dashboard **„Erste Schritte“**-Hinweis (Links Handbuch, Einstellungen; ausblendbar) + **`GET /api/help`** mit Kurzabsatz **`HELP_UI_INTRO`** vor der CLI-Liste. Vollständiger Wizard / Boss-Export-Assistent weiter **Roadmap H.7**; Lite-UI (`ui/index.html`) + **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
 | L3 | **„Credits statt IOTA“** ohne Klartext | Credits ≠ native MIST; Marketing irreführend | **Teilweise:** **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, Shop-Tooltip (`/shop`), **`TESTING.md`** Smoke |
 | L4 | **Wiederkehrende Nutzer** („neues Gerät“) | Kein UX für „Vault auf neuem Rechner“ vs. Erststart | **Teilweise:** Einstellungen **Wallet & Backup** + **`docs/RECOVERY-PHRASE-BACKUP.md`**; vollständiger Gerätewechsel-Flow weiter Backlog |
 | L5 | **SIGNER=sdk vs. cli** im Dialog | Falsche Erwartung (Mnemonic vs. nur Keystore) | **Erledigt (Copy):** bedingter Hilfetext im Unlock-Dialog je **`GET /api/status` → `signer`** |
@@ -100,7 +100,7 @@ Ziel ist **kein** neues Login-System, sondern **klare Phasen** und **UI-Texte**,
 - **Verlinkung:** README-Einstiegsliste + **`docs/DEV-START.md`** + **`docs/ROADMAP-FAHRPLAN.md` § H.0** verweisen auf diese Datei — **erledigt**.
 - **Shop:** Tooltip auf dem Adressfeld (`/shop`) — **erledigt** (Mint vs. Claim-Token).
 
-**Noch offen (nächste sinnvolle Iterationen, klein):** Einstellungen: ein Absatz „Wallet & Session“ mit Link-Sammlung (ohne Pflicht); optional **`fetchHelp()`**-Eintrag im Backend-Hilfetext — Backlog **H.0**.
+**Noch offen (nächste sinnvolle Iterationen, klein):** Einstellungen: ein Absatz „Wallet & Session“ mit Link-Sammlung (ohne Pflicht). **`GET /api/help`:** Kurzabsatz **`HELP_UI_INTRO`** — **erledigt** (`src/messenger-nest/messenger-help.ts`). Backlog **H.0** für weitere Texte.
 
 ---
 

@@ -63,7 +63,7 @@ import {
 } from './chain-access.js';
 import { handleShopApi } from './api/shop/handle-shop-api.js';
 import { normalizeAddress } from './utils.js';
-import { HELP_START, HELP_CHAT, getWalletPassword } from './wallet-bridge.js';
+import { HELP_START, HELP_CHAT, HELP_UI_INTRO, getWalletPassword } from './wallet-bridge.js';
 import { logger } from './logger.js';
 import { getMonitorStatus } from './monitoring.js';
 import { exportAuditCsv, exportAuditPdfStream, appendAuditEvent, readAuditEvents } from './audit-log.js';
@@ -1125,7 +1125,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/help' && req.method === 'GET') {
-            const helpText = _sessionStatus.connected ? HELP_CHAT : HELP_START;
+            const helpText =
+                HELP_UI_INTRO + (_sessionStatus.connected ? HELP_CHAT : HELP_START);
             sendJson(res, 200, { ok: true, helpText }, cors);
             return;
         }
