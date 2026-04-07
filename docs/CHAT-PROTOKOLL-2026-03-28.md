@@ -108,3 +108,20 @@
 | Doku | `docs/UX-MESSENGER-INVENTORY.md`, `README.md` (Verweis UX) |
 
 **Tests:** `npx tsc` (Root + `frontend/`), `npm run validate:ui`, `npm run test` (Modultests).
+
+---
+
+## Nachtrag (2026-03-28) – Rollenwechsel im Team (Ist-Abgleich)
+
+**Anliegen:** Narrativ prüfen: „Boss ändert `ROLE_ID` per Knopf / Trägerbild = neue Rolle / gleiche Hardware“.
+
+**Ergebnis:**
+
+| Thema | Kurz |
+|--------|------|
+| **Provisioning** | `POST /api/provision-device` setzt u. a. `ROLE_ID` in der **generierten** Geräte-`.env`; **kein** automatischer Remote-Push auf das Helfergerät — Übergabe manuell (siehe `docs/BOSS-ORIENTIERUNG.md`). |
+| **`/set-role` am Boss** | Pflegt **Hierarchie-Slots** (`DEVICE_ROLES` …), **nicht** identisch mit dem **Bitfeld** auf dem Endgerät. |
+| **Trägerbild** | Zielbild-Dokumentation; vollständiger Endnutzer-Flow „Vault aus JPEG“ **nicht** als überall fertiges Produkt-Feature behauptet. |
+| **Gleiche Software** | **Stimmt** — Rechte/Identität aus `.env` + Vault. |
+
+**Artefakt:** `docs/ROLLENWECHSEL-TEAM-EINSATZ.md`; Verweise in `docs/ROADMAP-FAHRPLAN.md` (§ D), `README.md`.

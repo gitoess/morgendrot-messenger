@@ -7,7 +7,7 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-2'
+const VERSION = 'morgendrot-sw-3'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 /** Muss zu scripts/sync-pwa-handbook.mjs und frontend/public/handbook/ passen */
@@ -18,6 +18,7 @@ const HANDBOOK_URLS = [
   '/handbook/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',
   '/handbook/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md',
   '/handbook/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md',
+  '/handbook/ROLLENWECHSEL-TEAM-EINSATZ.md',
 ]
 
 self.addEventListener('install', (event) => {

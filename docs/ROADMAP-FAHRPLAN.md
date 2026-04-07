@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**.  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**.  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -130,6 +130,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md`** – Einsatz-Ende: Shred vs. Append, Offline/Online, PDF/Chain-Archiv (kritisch)  
 - **`docs/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md`** – Rettung/Einsatz: vorgefertigte Träger pro Rolle, generierte Beschriftung, Organisation statt Tarn-Narrativ  
 - **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`** – `ROLE` vs `ROLE_ID` (0–63), Lock vs Messenger vs Arbeiter, Vorlagen  
+- **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`** – Einsatz: Rollenwechsel (Provisioning/`ROLE_ID` vs. Boss-`DEVICE_ROLES`, Trägerbild-Zielbild vs. Ist)  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
@@ -361,7 +362,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **5** | **Handshake-Subflow in der Maske** | **`Ist (2026-03):`** Lite-UI Provisioning Schritt 3: optional Partner + ECDH-Pubkey (Base64) → `POST /api/boss-provision-handshake` nach erfolgreichem `provision-device` — **`ui/index.html`** (`sendProvisionHandshake`). | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** |
 | **6** | **Rollen-Manager (Boss-Werkstatt)** | `ui/`: Templates (Einsatz-Rolle → Chain-`ROLE`/`roleId`); Medic/Scout als **Labels**, nicht als neue Chain-Enums. | **1**, **2** |
 | **7** | **Offline-Relay-Queue (Boss ohne Internet)** | Eigenes Modul nach Vorbild **`settlement-queue.ts`**; **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`; typisierte Einträge + Flush. | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
-| **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). | Laufend |
+| **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`** ergänzt (2026-03-28): klare Trennung Provisioning vs. Fern-Push vs. Trägerbild-Ist. | Laufend |
 
 **Priorität für die nächste Implementierung (wenn gestartet):** typischerweise **1 → 2 → 6** (API + Persistenz + Boss-UI), parallel Doku; **7** wenn LoRa/Offline-Boss konkret wird; **3/4** wenn Endnutzer-PWA im Fokus ist.
 

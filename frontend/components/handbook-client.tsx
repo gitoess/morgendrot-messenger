@@ -12,6 +12,7 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault & Bild-Tarnung (Zielbild)' },
   { file: 'EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md', title: 'Einsatz: Purge, PDF, Redundanz' },
   { file: 'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md', title: 'Trägerbild: Einsatz & Organisation' },
+  { file: 'ROLLENWECHSEL-TEAM-EINSATZ.md', title: 'Rollenwechsel im Team (Einsatz)' },
 ]
 
 export function HandbookClient() {

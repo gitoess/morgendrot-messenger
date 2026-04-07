@@ -209,6 +209,7 @@ Die **Zahlen** unten sind **exakt** die Summe der Bits (nicht frei erfunden):
 
 - `docs/ARCHITECTURE-ROLES-AND-HUB.md` — Boss, Kommandant, Arbeiter  
 - `docs/API-EINSATZ-ROLE-TEMPLATES.md` — Einsatz-Vorlagen-API  
+- `docs/ROLLENWECHSEL-TEAM-EINSATZ.md` — Team-Rollenwechsel (Provisioning vs. `DEVICE_ROLES`, Trägerbild-Ist)  
 - `src/config.ts` — `ROLE_BITS`, `ROLE_ID`, `hasRoleBit`  
 
 ---

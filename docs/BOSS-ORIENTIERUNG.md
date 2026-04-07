@@ -2,7 +2,7 @@
 
 **Zweck:** Gegen „in drei Monaten weiß niemand mehr, was wohin gehört“ — **eine** Einstiegsseite: Ist vs. Vision, typische Fehler, Links ins „Gesetzbuch“. **Lite-UI (Boss):** `GET /api/doc?name=BOSS-ORIENTIERUNG.md`. **Messenger-PWA (Next):** eingebettetes Handbuch unter **`/handbook`** (Markdown aus `frontend/public/handbook/`, siehe `docs/PWA-HANDBUCH-OFFLINE.md`).
 
-**Verwandt:** `docs/API-INITIAL-PROFILE.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`, `docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`, `docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`, `docs/UI-BEFEHLE-CHECKLISTE.md`, `docs/PWA-HANDBUCH-OFFLINE.md`.
+**Verwandt:** `docs/API-INITIAL-PROFILE.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`, `docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`, `docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`, `docs/UI-BEFEHLE-CHECKLISTE.md`, `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/ROLLENWECHSEL-TEAM-EINSATZ.md` (Provisioning vs. `DEVICE_ROLES`, kein Auto-Push zum Helfer).
 
 ---
 
