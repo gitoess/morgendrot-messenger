@@ -10,6 +10,7 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
   { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge & lokaler Cache' },
   { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault & Bild-Tarnung (Zielbild)' },
+  { file: 'EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md', title: 'Einsatz: Purge, PDF, Redundanz' },
 ]
 
 export function HandbookClient() {

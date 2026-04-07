@@ -16,6 +16,7 @@ const HANDBOOK_URLS = [
   '/handbook/PWA-HANDBUCH-OFFLINE.md',
   '/handbook/NOTFALL-PURGE-MESSENGER.md',
   '/handbook/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',
+  '/handbook/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md',
 ]
 
 self.addEventListener('install', (event) => {
