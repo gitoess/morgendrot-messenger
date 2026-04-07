@@ -46,4 +46,25 @@ Exporte (Einsatzbericht, ZIP) nutzen die geladenen Messages — das ist **kein**
 - **Tresor öffnen & sichern** = Messaging-Keys laden/speichern, Chain-Backup, Vault-Datei — **Identität für Chat/Signatur**.
 - **Passwortmanager** = Einträge bearbeiten und in **dieselbe** Vault-Datei mitschreiben — **kein** eigener „Mini-Vault“.
 
-*Stand: Abgleich mit `src/vault-local.ts`, `frontend/.../vault-view.tsx`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`.*
+---
+
+## 5. FAQ: „Vault erstellen“, Export, erneut speichern (Ist vs. Missverständnis)
+
+**Wir nennen den Schritt in der Next-UI nicht „Vault erstellen“, sondern typisch „Lokal sichern“** — technisch **`/vault-save`**. Die folgenden Punkte beziehen sich auf **diesen** Ablauf.
+
+| Aussage (häufig gehört) | Stimmt so im Projekt? |
+|-------------------------|------------------------|
+| „Das ist eher ein Export der aktuellen Identität.“ | **Grundsätzlich ja:** Es werden die **aktuell in der Sitzung** vorhandenen Messaging-Keys (plus Notizen, Passwortmanager-Einträge) in **eine verschlüsselte Datei** geschrieben — portabel, wie ein verschlüsselter Export. |
+| „Vorher liegen die Keys lose und ungeschützt.“ | **Zu stark formuliert.** Nach dem Entsperren liegen die Keys im **Backend-RAM**; sie sind nicht automatisch „öffentlich“, aber **ohne** `/vault-save` gehen sie bei manchen Neustarts / nach `/vault-lock` verloren, wenn nichts auf Platte/Chain liegt. |
+| „Beim Erstellen wird der Container zum ersten Mal erzeugt.“ | **Jedes Speichern** erzeugt neuen Salt/IV und überschreibt die Zieldatei — nicht nur „das erste Mal“. Der erste erfolgreiche Speichervorgang **legt** die Datei unter dem Standardpfad an, falls sie noch nicht existiert. |
+| „Wenn ich nochmal auf den Button drücke, entsteht eine Kopie?“ | **Nein (Standardpfad):** Es wird die **gleiche** Datei (z. B. `.morgendrot-vault` laut `VAULT_FILE`) **überschrieben** — **keine** automatische zweite Datei mit neuem Namen. |
+| „Das System fragt: Überschreiben oder neu?“ | **Nein** — im normalen Flow **kein** solcher Dialog; Überschreiben ist das erwartete Verhalten. **Andere Datei** nur, wenn du bewusst einen **anderen Pfad** nutzt (z. B. CLI-Argument bei `/vault-save`). |
+| „Zwei Vaults = zwei getrennte Schließfächer ohne Bezug.“ | **Zwei Dateien** sind **zwei unabhängige Dateien**; sie „wissen“ nichts voneinander. Inhalt kann sich **gleichen**, wenn du aus **derselben** laufenden Sitzung zweimal mit **unterschiedlichem** Pfad speicherst — dann hast du **Kopien** desselben Stands. |
+| „Passwortmanager wird erst beim Erstellen aktiv.“ | **Nein.** Sobald die Sitzung Keys hat und du im UI Einträge anlegst und speicherst, landen sie im RAM und beim nächsten **Lokal sichern** in derselben Datei. War noch nie gespeichert, ist die Datei beim ersten Mal ohne Passwortmanager-Einträge oder mit leerem Array. |
+
+**Goldene Regel (technisch korrekt):**  
+Sobald du Nachrichten nutzen willst, **regelmäßig „Lokal sichern“** (und bei Bedarf **On-Chain**), wenn sich Keys, Notizen oder Passwortmanager-Einträge geändert haben — nicht weil jedes Mal eine „neue“ Vault entsteht, sondern weil die **Datei den aktuellen Stand** widerspiegeln soll.
+
+---
+
+*Stand: Abgleich mit `src/vault-local.ts`, `src/messenger-nest/messenger-command-handler.ts` (`/vault-save`), `frontend/.../vault-view.tsx`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`.*

@@ -647,7 +647,7 @@ export function VaultView({ variant }: VaultViewProps) {
             <h4 className="mb-2 font-semibold text-foreground">2. Notizen &amp; Freitext</h4>
             <p className="mb-2 text-xs text-muted-foreground">
               Landen im gleichen verschlüsselten Vault wie die Keys. Strukturierte Geheimnisse: Reiter{' '}
-              <strong className="text-foreground">Mein Safe</strong>.
+              <strong className="text-foreground">Passwortmanager</strong>.
             </p>
             <textarea
               value={notes}
@@ -672,7 +672,9 @@ export function VaultView({ variant }: VaultViewProps) {
               >
                 <Download className="h-8 w-8 text-emerald-400" />
                 <span className="font-semibold text-foreground">{processing ? 'Speichere…' : 'Lokal sichern'}</span>
-                <span className="text-xs text-muted-foreground">Schreibt/aktualisiert die Vault-Datei auf diesem Rechner</span>
+                <span className="text-xs text-muted-foreground">
+                  Schreibt/aktualisiert die Vault-Datei (Standardpfad) — überschreibt dieselbe Datei, kein „Kopie“-Dialog
+                </span>
               </button>
               <button
                 type="button"
@@ -729,7 +731,7 @@ export function VaultView({ variant }: VaultViewProps) {
             <h4 className="mb-2 font-semibold text-foreground">Was wird gesichert?</h4>
             <ul className="space-y-1 text-sm text-muted-foreground">
               <li>ECDH-Schlüssel (Messaging) und Handshake-Informationen</li>
-              <li>Mein Safe: Titel, Benutzername, Geheimtext, Notiz (im Vault-Payload)</li>
+              <li>Passwortmanager: Titel, Benutzername, Geheimtext, Notiz (im Vault-Payload)</li>
               <li>Optionale Streams Anchor-ID und Konfiguration</li>
             </ul>
             <p className="mt-2 text-xs text-muted-foreground">
