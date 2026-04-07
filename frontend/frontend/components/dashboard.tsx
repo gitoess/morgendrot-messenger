@@ -562,6 +562,16 @@ export function Dashboard() {
             </div>
             {/* Setup (Package-ID, RPC, .env) */}
             <SetupOverlay onOpenConfig={() => setActiveView({ type: 'config' })} />
+            {/* Hilfe: HELP_UI_INTRO + Befehle (GET /api/help) — Roadmap H.0 */}
+            <button
+              type="button"
+              onClick={() => void openHelp()}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title="Hilfe — Kurzüberblick und Befehle"
+              aria-label="Hilfe öffnen"
+            >
+              <HelpCircle className="h-5 w-5" />
+            </button>
             {/* Handbuch (PWA, /handbook) */}
             <Link
               href="/handbook"
@@ -617,7 +627,21 @@ export function Dashboard() {
                   alles lässt sich hier in der App ändern. Das <strong className="text-foreground/90">Handbuch</strong> beschreibt Einrichtung und
                   Lieferwege (Boss → Helfer); nach dem ersten Laden oft auch ohne Netz lesbar.
                 </p>
+                {liteMessengerFromApi ? (
+                  <p className="text-muted-foreground">
+                    <strong className="text-foreground/90">Lite messenger:</strong> Es erscheinen nur die Kacheln{' '}
+                    <strong className="text-foreground/90">Nachrichten</strong> und <strong className="text-foreground/90">Tresor</strong> — absichtlich
+                    schlank für den Einsatz (<span className="font-mono text-xs">UI_VARIANT=messenger</span> am Backend).
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void openHelp()}
+                    className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
+                  >
+                    Hilfe (Kurz + Befehle)
+                  </button>
                   <Link
                     href="/handbook"
                     className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
