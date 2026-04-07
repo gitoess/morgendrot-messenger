@@ -2,6 +2,8 @@
 
 Kurzbeschreibung, ob sich Morgendrot mit Factory I/O testen lässt und wie die Anbindung funktioniert.
 
+**Messenger-Hinweis:** Diese Anbindung ist **optional** und **kein** Bestandteil des Messenger-Kernflows. Standard: `ENABLE_FACTORY_IO=false` in der `.env` – die Lite-UI zeigt den Abschnitt „Factory I/O Feeder“ erst nach **`ENABLE_FACTORY_IO=true`** (Backend neu starten). Vorlage: **`env.factory-io.example`**.
+
 ---
 
 ## Passt das zusammen?
@@ -30,7 +32,7 @@ Technisch nutzt Morgendrot eine **Streams-Bridge** (z. B. `streams-bridge-mock
 
 1. **Streams-Bridge starten** (läuft bereits bei `npm start` auf Port 9343).
 2. **In Morgendrot:** In der UI unter **Streams** einen **Kanal erstellen** (oder bestehenden wählen). Die **STREAMS_ANCHOR_ID** dieses Kanals notieren bzw. in der Konfiguration setzen.
-3. **Poll-Intervall (optional):** In der Lite-UI unter **Streams** → Abschnitt **„Factory I/O Feeder“** → Feld **„Poll alle (ms)“** (z. B. `10000` für 10 s oder `30000` für 30 s) eintragen und **Setzen** klicken. Der laufende Feeder liest den Wert vom Backend (ohne Neustart). **Hinweis:** Wenn `FACTORY_IO_POLL_MS` in der `.env` gesetzt ist, überschreibt das die UI (für Skripte/CI).
+3. **Poll-Intervall (optional):** Zuerst **`ENABLE_FACTORY_IO=true`** setzen und Backend neu starten. In der Lite-UI unter **Streams** → Abschnitt **„Factory I/O Feeder“** → Feld **„Poll alle (ms)“** (z. B. `10000` für 10 s oder `30000` für 30 s) eintragen und **Setzen** klicken. Der laufende Feeder liest den Wert vom Backend (ohne Neustart). **Hinweis:** Wenn `FACTORY_IO_POLL_MS` in der `.env` gesetzt ist, überschreibt das die UI (für Skripte/CI).
 
 4. **Feeder starten** (liest Factory I/O und schreibt in die Bridge):
 

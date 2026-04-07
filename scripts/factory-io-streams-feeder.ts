@@ -10,7 +10,7 @@
  * Voraussetzung: Factory I/O Ultimate, Web-API aktiv (app.web_server = True, Port 7410).
  *
  * Env:
- *   FACTORY_IO_URL          – Basis-URL (überschreibt UI). Default: aus Backend /api/config oder http://127.0.0.1:7410
+ *   FACTORY_IO_URL          – Basis-URL (überschreibt UI). Default: aus Backend /api/config (nur wenn ENABLE_FACTORY_IO=true) oder http://127.0.0.1:7410
  *   STREAMS_BRIDGE_URL      – Bridge (default http://127.0.0.1:9343)
  *   STREAMS_ANCHOR_ID       – Kanal-ID; muss gesetzt sein, damit publiziert wird
  *   FACTORY_IO_POLL_MS      – Poll-Intervall in ms (überschreibt UI). Wenn nicht gesetzt: Wert aus Morgendrot-UI (.env), Default 10000

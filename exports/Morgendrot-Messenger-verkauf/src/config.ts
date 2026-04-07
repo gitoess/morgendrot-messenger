@@ -423,6 +423,7 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'OPEN_STREAMS_ENABLED': (CFG as { OPEN_STREAMS_ENABLED: boolean }).OPEN_STREAMS_ENABLED = truthy(v); break;
         case 'STREAMS_LISTEN_ENABLED': (CFG as { STREAMS_LISTEN_ENABLED: boolean }).STREAMS_LISTEN_ENABLED = truthy(v); break;
         case 'STREAMS_BRIDGE_URL': (CFG as { STREAMS_BRIDGE_URL: string }).STREAMS_BRIDGE_URL = v; break;
+        case 'ENABLE_FACTORY_IO': (CFG as { ENABLE_FACTORY_IO: boolean }).ENABLE_FACTORY_IO = truthy(v); break;
         case 'FACTORY_IO_URL': CFG.FACTORY_IO_URL = v; break;
         case 'FACTORY_IO_POLL_MS': {
             const n = parseInt(v, 10);
@@ -686,7 +687,12 @@ export const CFG = {
     STREAMS_LISTEN_ENABLED: envBool('STREAMS_LISTEN_ENABLED', false),
     /** Streams: HTTP-Bridge-URL zum Pollen (z. B. https://streams-bridge.local/messages). Leer = Stub. */
     STREAMS_BRIDGE_URL: process.env.STREAMS_BRIDGE_URL?.trim() || '',
-    /** Optional: Factory-I/O-Web-API (Industrie-Feeder). Leer = aus. */
+    /**
+     * Factory-I/O-Feeder (Demos/Industrie-Simulation) – kein Bestandteil des Messenger-Kernflows.
+     * false: keine Factory-Keys in /api/config und Copy-Popup (siehe env.factory-io.example).
+     */
+    ENABLE_FACTORY_IO: envBool('ENABLE_FACTORY_IO', false),
+    /** Optional: Factory-I/O-Web-API (nur wenn ENABLE_FACTORY_IO). Leer = aus. */
     FACTORY_IO_URL: process.env.FACTORY_IO_URL?.trim() || '',
     /** Poll-Intervall für Factory-I/O-Feeder (ms). 500–86400000. */
     FACTORY_IO_POLL_MS: Math.max(500, Math.min(86400000, envInt('FACTORY_IO_POLL_MS', 10000))),
@@ -1127,8 +1133,13 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'STREAMS_TOPIC', value: CFG.STREAMS_TOPIC || '(leer)', envKey: 'STREAMS_TOPIC' },
         { key: 'STREAMS_LISTEN_ENABLED', value: String(CFG.STREAMS_LISTEN_ENABLED), envKey: 'STREAMS_LISTEN_ENABLED' },
         { key: 'STREAMS_BRIDGE_URL', value: CFG.STREAMS_BRIDGE_URL || '(leer)', envKey: 'STREAMS_BRIDGE_URL' },
-        { key: 'FACTORY_IO_URL', value: CFG.FACTORY_IO_URL || '(leer)', envKey: 'FACTORY_IO_URL' },
-        { key: 'FACTORY_IO_POLL_MS', value: String(CFG.FACTORY_IO_POLL_MS), envKey: 'FACTORY_IO_POLL_MS' },
+        { key: 'ENABLE_FACTORY_IO', value: String(CFG.ENABLE_FACTORY_IO), envKey: 'ENABLE_FACTORY_IO' },
+        ...(CFG.ENABLE_FACTORY_IO
+            ? [
+                  { key: 'FACTORY_IO_URL', value: CFG.FACTORY_IO_URL || '(leer)', envKey: 'FACTORY_IO_URL' },
+                  { key: 'FACTORY_IO_POLL_MS', value: String(CFG.FACTORY_IO_POLL_MS), envKey: 'FACTORY_IO_POLL_MS' },
+              ]
+            : []),
         { key: 'OFFLINE_OPEN_ENABLED', value: String(CFG.OFFLINE_OPEN_ENABLED), envKey: 'OFFLINE_OPEN_ENABLED' },
         { key: 'OFFLINE_CACHE_TTL_MS', value: String(CFG.OFFLINE_CACHE_TTL_MS), envKey: 'OFFLINE_CACHE_TTL_MS' },
         { key: 'OFFLINE_QUEUE_FILE', value: CFG.OFFLINE_QUEUE_FILE || '(aus)', envKey: 'OFFLINE_QUEUE_FILE' },

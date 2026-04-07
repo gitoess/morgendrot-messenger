@@ -1435,9 +1435,9 @@
               <button @click="setConfig('STREAMS_TOPIC', streams.topic)" class="rounded-lg bg-slate-600 px-3 py-2 text-sm hover:bg-slate-500 shrink-0">Setzen</button>
             </div>
           </div>
-          <div class="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-3">
-            <label class="block text-xs text-cyan-300/90 mb-1">4. Factory I/O Feeder (optional)</label>
-            <p class="text-xs text-slate-500 mb-2">Wenn du <code class="bg-slate-800 px-1 rounded">npm run factory-io-feeder</code> nutzt: Hier das <strong>Poll-Intervall</strong> einstellen (wie oft Tags in die Streams-Bridge geschrieben werden). Ohne Env-Variable liest der Feeder diese Werte vom laufenden Backend (nach „Setzen“ ohne Feeder-Neustart). <strong>Env <code class="bg-slate-800 px-1">FACTORY_IO_POLL_MS</code> überschreibt</strong> die UI, falls gesetzt.</p>
+          <div x-show="streams.factoryIoEnabled" class="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-3">
+            <label class="block text-xs text-cyan-300/90 mb-1">4. Factory I/O Feeder (optional, nicht Messenger-Kern)</label>
+            <p class="text-xs text-slate-500 mb-2">Nur sichtbar, wenn <code class="bg-slate-800 px-1 rounded">ENABLE_FACTORY_IO=true</code> in der <code class="bg-slate-800 px-1 rounded">.env</code> steht (siehe <code class="bg-slate-800 px-1 rounded">env.factory-io.example</code>). Wenn du <code class="bg-slate-800 px-1 rounded">npm run factory-io-feeder</code> nutzt: <strong>Poll-Intervall</strong> (wie oft Tags in die Streams-Bridge geschrieben werden). Ohne Env-Variable liest der Feeder diese Werte vom laufenden Backend (nach „Setzen“ ohne Feeder-Neustart). <strong>Env <code class="bg-slate-800 px-1">FACTORY_IO_POLL_MS</code> überschreibt</strong> die UI, falls gesetzt.</p>
             <div class="flex flex-wrap gap-2 items-end mb-2">
               <div class="flex-1 min-w-[140px]">
                 <span class="block text-xs text-slate-500 mb-1">Poll alle (ms)</span>
@@ -2586,7 +2586,7 @@
         },
         assetTwin: { assets: [], assetName: '', assetMetadata: '', assetStreamsAnchorId: '', lastCreatedObjectId: '', lastExplorerLink: '', qrObjectId: '', qrExplorerLink: '', qrCanvasId: 'asset-twin-qr-canvas', labelPrintSize: '', transferAssetId: '', transferAssetNewOwner: '', transferPackageAssetId: '', transferPackageKeyId: '', transferPackageNewOwner: '', focusObjectId: '', assetPackageId: '', assetMailboxId: '', assetMonitorDeviceId: '', assetVaultRegistryId: '', assetAuthorizedKeyId: '', showSuperAssetFields: false },
         monitor: { interval: '30000', devices: '', enableMonitor: false, enableHeartbeat: false, anchorId: '', bridgeUrl: '', setResult: '', vaultPassword: '', anchorChannelList: [] },
-        streams: { bridgeUrl: '', anchorId: '', topic: '', factoryIoUrl: '', factoryIoPollMs: '10000', listenEnabled: false, openStreamsEnabled: false, auditEnabled: false, testPayload: '', lastFetchMessages: [], loading: false },
+        streams: { bridgeUrl: '', anchorId: '', topic: '', factoryIoEnabled: false, factoryIoUrl: '', factoryIoPollMs: '10000', listenEnabled: false, openStreamsEnabled: false, auditEnabled: false, testPayload: '', lastFetchMessages: [], loading: false },
         roleProfiles: [
           { id: 12, name: 'Passiver Beobachter', desc: 'Hoert nur, Boss zahlt Gas', bits: ['BW','L'], role: 'arbeiter' },
           { id: 14, name: 'Standard Arbeiter', desc: 'Hoert & antwortet, Boss zahlt', bits: ['BW','L','S'], role: 'arbeiter' },
@@ -5455,6 +5455,7 @@
             const anchor = v('STREAMS_ANCHOR_ID');
             if (anchor && anchor !== '(leer)') this.streams.anchorId = anchor;
             this.streams.topic = v('STREAMS_TOPIC');
+            this.streams.factoryIoEnabled = v('ENABLE_FACTORY_IO') === 'true';
             const fiUrl = v('FACTORY_IO_URL');
             if (fiUrl && fiUrl !== '(leer)') this.streams.factoryIoUrl = fiUrl;
             const fiPoll = v('FACTORY_IO_POLL_MS');

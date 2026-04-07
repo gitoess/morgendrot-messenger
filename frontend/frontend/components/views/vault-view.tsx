@@ -32,6 +32,7 @@ import {
   type VaultStatus,
   type PersonalSecretEntry,
 } from '../../lib/api'
+import { VAULT_FREETEXT_NOTES_MAX_CHARS } from '../../lib/vault-limits'
 
 interface VaultViewProps {
   variant: 'local-vault' | 'emergency-purge'
@@ -656,16 +657,24 @@ export function VaultView({ variant }: VaultViewProps) {
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-2 font-semibold text-foreground">2. Notizen &amp; Freitext</h4>
             <p className="mb-2 text-xs text-muted-foreground">
-              Landen im gleichen verschlüsselten Vault wie die Keys. Strukturierte Geheimnisse: Reiter{' '}
-              <strong className="text-foreground">Passwortmanager</strong>.
+              Landen im gleichen verschlüsselten Vault wie die Keys (max.{' '}
+              {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen — verhindert zu große Blobs). Lange Tagebücher
+              lieber <strong className="text-foreground">außerhalb</strong> des Vaults ablegen. Strukturierte Zugangsdaten: Reiter{' '}
+              <strong className="text-foreground">Passwortmanager</strong> (pro Eintrag begrenzt).
             </p>
             <textarea
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) =>
+                setNotes(e.target.value.slice(0, VAULT_FREETEXT_NOTES_MAX_CHARS))
+              }
+              maxLength={VAULT_FREETEXT_NOTES_MAX_CHARS}
               rows={5}
               placeholder="Notizen, Mnemonics, beliebiger Text…"
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y min-h-[100px]"
             />
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {notes.length.toLocaleString('de-DE')} / {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen
+            </p>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
@@ -760,10 +769,12 @@ export function VaultView({ variant }: VaultViewProps) {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-6 w-6 shrink-0 text-red-400" />
               <div>
-                <h4 className="font-semibold text-red-400">Achtung: Unwiderruflich!</h4>
+                <h4 className="font-semibold text-red-400">Achtung: Unwiderruflich (Chain-Teil)!</h4>
                 <p className="mt-1 text-sm text-red-300/80">
-                  Die Notfall-Löschung entfernt alle lokalen Daten permanent.
-                  Diese Aktion kann nicht rückgängig gemacht werden.
+                  Der Umfang hängt von der gewählten Option ab (siehe unten). On-Chain gelöschte Vault-Daten sind
+                  dauerhaft weg. Die lokale Vault-Datei wird vom Notfall-Purge{' '}
+                  <strong className="text-red-200">nicht automatisch gelöscht</strong> – bei Bedarf Datei manuell
+                  entfernen.
                 </p>
               </div>
             </div>
@@ -771,20 +782,33 @@ export function VaultView({ variant }: VaultViewProps) {
 
           {/* What gets deleted */}
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">Was wird gelöscht?</h4>
-            <ul className="space-y-2">
-              {[
-                'Alle privaten Schlüssel',
-                'Alle Handshake-Daten',
-                'Alle AccessKeys und Tickets',
-                'Alle Geräte-Konfigurationen',
-                'Alle lokalen Einstellungen',
-              ].map((item, i) => (
-                <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Trash2 className="h-4 w-4 text-red-400" />
-                  {item}
-                </li>
-              ))}
+            <h4 className="mb-3 font-semibold text-foreground">Was passiert bei welcher Option?</h4>
+            <ul className="space-y-2 text-sm text-muted-foreground">
+              <li className="flex gap-2">
+                <Trash2 className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
+                <span>
+                  <strong className="text-foreground">Vollständig:</strong> Eine Chain-Transaktion entfernt den
+                  Vault-Eintrag im Registry (verschlüsselter On-Chain-Backup-Inhalt). Zusätzlich wird der lokale
+                  Klartext-Inbox-Cache (<code className="text-xs">.inbox.enc</code>) geschreddert. Die Datei{' '}
+                  <code className="text-xs">.morgendrot-vault</code> (oder <code className="text-xs">VAULT_FILE</code>)
+                  bleibt auf der Platte – Inhalt ist weiter verschlüsselt, Recovery von der Chain ist nach Purge nicht
+                  mehr möglich.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <Trash2 className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
+                <span>
+                  <strong className="text-foreground">Nur lokale Klartext-Spuren:</strong> nur Inbox-Cache schreddern;
+                  keine Chain-TX; Vault-Datei und On-Chain-Vault unverändert.
+                </span>
+              </li>
+              <li className="flex gap-2">
+                <Lock className="h-4 w-4 shrink-0 text-slate-400 mt-0.5" />
+                <span>
+                  <strong className="text-foreground">Nur Sitzung sperren:</strong> Keys und Wallet-Passwort aus RAM;
+                  Inbox-Cache schreddern; Vault-Datei bleibt.
+                </span>
+              </li>
             </ul>
           </div>
 

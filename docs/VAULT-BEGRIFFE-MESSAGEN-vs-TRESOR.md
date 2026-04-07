@@ -26,6 +26,8 @@ Es gibt also **nicht** „einen Vault für Keys“ und „einen Vault für Passw
 
 Details: **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** (Persistenz).
 
+Notfall-Purge (was genau gelöscht wird, Vault-Datei vs. Inbox-Cache): **`docs/NOTFALL-PURGE-MESSENGER.md`**.
+
 Exporte (Einsatzbericht, ZIP) nutzen die geladenen Messages — das ist **kein** „Verlauf in der Vault-Datei speichern“.
 
 ---
@@ -80,4 +82,21 @@ Sobald du Nachrichten nutzen willst, **regelmäßig „Lokal sichern“** (und b
 
 ---
 
-*Stand: Abgleich mit `src/vault-local.ts`, `src/messenger-nest/messenger-command-handler.ts` (`/vault-save`, `/vault-load`, `/vault-load-from-chain`), `frontend/.../vault-view.tsx`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`.*
+## 7. Größe: Notizen extra speichern? Ist das bedacht?
+
+**Design-Entscheidung:** Ein **einziges** verschlüsseltes Blob (Datei / Chain) hält **alles**, was zum Wiederherstellen der **Messaging-Identität** und der **optionalen** Zusatzdaten nötig ist — **ein** Passwort, **ein** Backup. Das ist bewusst **einfach**, nicht „alles in eigene Dateien splitten“.
+
+**Was begrenzt ist (Stand Code):**
+
+| Bereich | Begrenzung |
+|---------|------------|
+| **Passwortmanager** (`personalSecrets`) | Max. **300** Einträge; pro Eintrag u. a. Titel/User/Geheimnis/Notiz mit Obergrenzen (siehe `sanitizePersonalSecrets` in `src/vault-local.ts`). |
+| **Freitext-Notizen** (`notes` im JSON) | Max. **`VAULT_FREETEXT_NOTES_MAX_CHARS`** (500.000 Zeichen) — verhindert unkontrolliert riesige Blobs und teure On-Chain-Schreibvorgänge. Überschuss wird beim Speichern **abgeschnitten**. |
+
+**Warum keine separate Notizendatei im Produkt?** Zusätzliche Dateien würden **zweites** Backup, **zweites** Passwort oder Sync-Konflikte bedeuten. Stattdessen: **kurze** Notizen im Vault; **große** Texte/Journale extern (USB, Cloud außerhalb Morgendrot) — in der UI ist das kurz erklärt.
+
+**Fazit:** Ja, **Größe ist bedacht** (Caps + klare UI-Hinweise); **bewusst keine** getrennte Notiz-Datei im Kern — Tradeoff **Einfachheit** vs. maximale Aufteilung.
+
+---
+
+*Stand: Abgleich mit `src/vault-local.ts` (`VAULT_FREETEXT_NOTES_MAX_CHARS`, `sanitizePersonalSecrets`), `src/messenger-nest/messenger-command-handler.ts`, `frontend/.../vault-view.tsx`, `frontend/.../lib/vault-limits.ts`, `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`, `docs/NOTFALL-PURGE-MESSENGER.md`.*

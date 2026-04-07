@@ -142,6 +142,18 @@ Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.ex
 
 ---
 
+## Factory I/O (optional, nicht Messenger-Kern)
+
+| Variable | Erklärung |
+|----------|-----------|
+| **ENABLE_FACTORY_IO** | `true`: Factory-URL und Poll erscheinen in `/api/config`, Lite-UI (Streams) und Copy-Popup. Default: **false**. |
+| **FACTORY_IO_URL** | Basis-URL der Factory-I/O-Web-API (nur wenn `ENABLE_FACTORY_IO=true`). |
+| **FACTORY_IO_POLL_MS** | Poll-Intervall für den Feeder (ms). |
+
+Vorlage und Skript: **`env.factory-io.example`**, **`docs/FACTORY-IO-INTEGRATION.md`**, `npm run factory-io-feeder`.
+
+---
+
 ## Signer
 
 | Variable | Erklärung |

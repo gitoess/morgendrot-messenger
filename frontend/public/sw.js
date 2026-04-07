@@ -11,7 +11,11 @@ const VERSION = 'morgendrot-sw-2'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 /** Muss zu scripts/sync-pwa-handbook.mjs und frontend/public/handbook/ passen */
-const HANDBOOK_URLS = ['/handbook/BOSS-ORIENTIERUNG.md', '/handbook/PWA-HANDBUCH-OFFLINE.md']
+const HANDBOOK_URLS = [
+  '/handbook/BOSS-ORIENTIERUNG.md',
+  '/handbook/PWA-HANDBUCH-OFFLINE.md',
+  '/handbook/NOTFALL-PURGE-MESSENGER.md',
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

@@ -12,7 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(__dirname, '..');
 const destDir = path.join(root, 'frontend', 'public', 'handbook');
 
-const FILES = ['BOSS-ORIENTIERUNG.md', 'PWA-HANDBUCH-OFFLINE.md'];
+const FILES = ['BOSS-ORIENTIERUNG.md', 'PWA-HANDBUCH-OFFLINE.md', 'NOTFALL-PURGE-MESSENGER.md'];
 
 fs.mkdirSync(destDir, { recursive: true });
 let n = 0;

@@ -4,6 +4,8 @@
 
 **Wichtig:** Der „Chat-Verlauf“ im Next-Messenger ist **kein** klassischer Server-Chat mit einer Thread-ID. Sichtbar ist das, was aus **IOTA-Mailbox / Chain-Events** geladen und mit **lokalen Mesh-Zeilen** zusammengeführt wird.
 
+**Lokaler Cache löschen (Notfall):** Umfang von Purge vs. Vault-Datei — **`docs/NOTFALL-PURGE-MESSENGER.md`**.
+
 ---
 
 ## 1. Kurzüberblick

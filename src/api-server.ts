@@ -755,8 +755,16 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     { key: 'RPC_URL', label: 'RPC-URL', value: CFG.RPC_URL || '' },
                     { key: 'STREAMS_ANCHOR_ID', label: 'Streams Anchor-ID', value: CFG.STREAMS_ANCHOR_ID || '' },
                     { key: 'STREAMS_BRIDGE_URL', label: 'Streams Bridge-URL', value: CFG.STREAMS_BRIDGE_URL || '' },
-                    { key: 'FACTORY_IO_URL', label: 'Factory I/O Web-API-URL', value: CFG.FACTORY_IO_URL || '' },
-                    { key: 'FACTORY_IO_POLL_MS', label: 'Factory I/O Feeder Poll (ms)', value: String(CFG.FACTORY_IO_POLL_MS) },
+                    ...(CFG.ENABLE_FACTORY_IO
+                        ? [
+                              { key: 'FACTORY_IO_URL', label: 'Factory I/O Web-API-URL', value: CFG.FACTORY_IO_URL || '' },
+                              {
+                                  key: 'FACTORY_IO_POLL_MS',
+                                  label: 'Factory I/O Feeder Poll (ms)',
+                                  value: String(CFG.FACTORY_IO_POLL_MS),
+                              },
+                          ]
+                        : []),
                     { key: 'VAULT_REGISTRY_ID', label: 'Vault Registry-ID', value: CFG.VAULT_REGISTRY_ID || '' },
                     { key: 'MAILBOX_ID', label: 'Mailbox-ID', value: CFG.MAILBOX_ID || '' },
                     { key: 'COMMAND_REGISTRY_ID', label: 'Command Registry-ID', value: CFG.COMMAND_REGISTRY_ID || '' },

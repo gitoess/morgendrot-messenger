@@ -308,8 +308,9 @@ VAULT_FILE=.morgendrot-vault
 REPLAY_STATE_FILE=.morgendrot-replay-state
 # OPEN_COMMAND=node relay-on.js
 # OPEN_URL=https://smartlock.local/open
-# Optional – Streams als letzte Meile: OPEN_STREAMS_ENABLED=true, STREAMS_ANCHOR_ID=…, STREAMS_BRIDGE_URL=http://localhost:9342 (LoRa-Bridge: npm run lora-bridge; siehe lora-bridge/README.md). **Factory I/O:** Simulation als Datenquelle – docs/FACTORY-IO-INTEGRATION.md, `npm run factory-io-feeder`.
+# Optional – Streams als letzte Meile: OPEN_STREAMS_ENABLED=true, STREAMS_ANCHOR_ID=…, STREAMS_BRIDGE_URL=http://localhost:9342 (LoRa-Bridge: npm run lora-bridge; siehe lora-bridge/README.md).
 # Optional – Zahlungs-Trigger (z. B. Ladesäule): PAYMENT_TRIGGER_ENABLED=true, PAYMENT_TRIGGER_MIN_IOTA=0.001, PAYMENT_TRIGGER_STATE_FILE=.morgendrot-payment-state
+# Factory I/O (Demos, nicht Messenger-Kern): env.factory-io.example, docs/FACTORY-IO-INTEGRATION.md
 ```
 
 ---
@@ -333,6 +334,8 @@ Oder **start.cmd** (verwendet bei Vorhandensein `node\node.exe` im Ordner).
   - **SIGNER=sdk:** Zuerst **Mnemonic (24 Wörter)** (maskiert), dann **Wallet-Passwort** (für Vault).  
   - **SIGNER=remote:** **Wallet-Passwort** (für Vault).  
 - Danach erscheint die **Befehlszeile**.
+
+**Logdateien:** Bei `ENABLE_FILE_LOGGING=true` (Standard) schreibt das Backend rotierende Logs unter **`logs/`** (Dateiname und Rotation: `LOG_MAX_FILES`, `LOG_MAX_SIZE` in `.env` / `docs/CONFIG-REFERENCE.md`). Chatverläufe als Klartext liegen dort nicht zentral – lokal vor allem im **Inbox-Cache** (siehe Notfall-Purge-Doku).
 
 ### Terminal-Befehle (Messenger)
 
@@ -743,6 +746,8 @@ iota client call --package <PACKAGE_ID> --module messaging --function purge_tick
 ```
 
 **In der App (Chat):** `/purge-handshake`, `/purge-msg <nonce>`, `/emergency-purge` (Vault), `/emergency-purge-key <keyObjectId>`, `/purge-key <keyObjectId>`.
+
+**Messenger-Notfall-Purge (UI / `/emergency-purge`):** Entfernt den **Vault-Eintrag auf der Chain** und schreddert den **lokalen Klartext-Inbox-Cache** (`.inbox.enc`). Die **verschlüsselte Vault-Datei** auf dem Datenträger (z. B. `.morgendrot-vault`) wird **nicht** automatisch gelöscht – bei vollständiger Gerätereinigung manuell entfernen. Drei Umfänge in der UI (Voll / nur Cache / nur Sperren): siehe **`docs/NOTFALL-PURGE-MESSENGER.md`**.
 
 ---
 
