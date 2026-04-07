@@ -59,7 +59,7 @@
 - **Objekt-IDs allein** reichen nicht — wer die ID kennt, darf noch nicht senden. Es braucht **Besitznachweis** (Signatur).
 - **Atomarität:** „Nachricht speichern“ und „Credit abziehen“ sollten im **gleichen** Move-Design **konsistent** sein (eine TX oder klar definierte Reihenfolge mit Failure-Handling), sonst drohen **Race Conditions** oder **Doppelverbrauch**.
 
-**Ist-Stand:** `MESSENGER_CREDITS_OBJECT_ID` und Credits-Anzeige in **`/api/status`** — Details der Vertragslogik im Move-Package prüfen.
+**Ist-Stand:** `MESSENGER_CREDITS_OBJECT_ID` und Credits-Anzeige in **`/api/status`** — Details der Vertragslogik im Move-Package prüfen. **Vision** („Credits als Identity mit Kanal-/Rollen-Verweisen“) vs. **Ist** (`MessengerCredits` = Tarif-Felder): **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, Roadmap **§ H.3f**.
 
 ### Kauf & „wer hat gekauft?“ (On-Chain vs. Betrieb)
 

@@ -114,6 +114,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/UX-MESSENGER-INVENTORY.md`** – Abgleich Wunsch-UX (Login, Rollen, Wald-Check, PWA) vs. Ist  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
+- **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmungen inkl. Standalone-Abgabe, `.env`)  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
@@ -312,6 +313,17 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Logs** | **`logs/`** bei **`ENABLE_FILE_LOGGING`** (Winston, Rotation); operative Ereignisse auch in Konsole; keine Claim-Tokens / Mnemonics in Support-Logs. |
 | **Shop/Voucher-State** | `.morgendrot-shop-*.json`, `.morgendrot-voucher-claim-state.json` — nur auf Fulfillment-Host, **Backup** bei Produktion. |
 | **Noch offen (Produkt)** | Voucher-Claim **Stufe 2** (Move an `/api/voucher-claim`); optionale **dedizierte** Admin-Route „Credits schenken“ (aktuell: Provision-Flow); **Mehrinstanz**: Shop-State-Datei → DB bei horizontaler Skalierung. |
+
+### H.3f Vision: Provisioning-Payload & „Identity-Credits“ (Doku, keine Phase-B-Pflicht)
+
+**Kontext:** Produktidee — beim Setup nicht nur Seed, sondern **Kontakt-/Rollen-/Kanal-Metadaten**; **Credits-Objekt** als Anker für **Einsatz-Kontext** (nicht nur Zähler).
+
+| Aspekt | Kurz |
+|--------|------|
+| **Kritik / Ist-Abgleich** | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** — `EcdhInit` hat **kein** freies Metadaten-Feld; `MessengerCredits` hat **keine** Rollen-/Kanal-Felder; Rollen kommen aus **`.env`** / Export. |
+| **Risiko** | Öffentliche Chain-Objekte + Profildaten → **Privacy**; Credits mit Profil **mischen** → Upgrade-/Gas-Komplexität. |
+| **Nächste sinnvolle Stufe** | **Stufe A** (ohne Move): Boss-**Export**/Vault-JSON für **lokales** Einsatzprofil; **Stufe B/C** erst nach Architektur-Review — **nicht** vor Mesh-MVP blockieren. |
+| **Verwandt** | **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`**, **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** |
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 
