@@ -143,6 +143,7 @@ Der verschlüsselte Blob wächst mit **Passwortmanager** (max. **300** Einträge
 
 - `docs/NOTFALL-PURGE-MESSENGER.md` — was bei Purge wirklich weg ist  
 - `docs/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md` — Purge/Shred vs. Append, Online/Offline, PDF-Fallen  
+- `docs/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md` — Rettung: eine Datei pro Rolle, Beschriftung, ohne Spionage-Fokus  
 - `docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md` — Vault vs. Chatverlauf  
 - `docs/ROADMAP-FAHRPLAN.md` — PWA-Icons und Build-Kette  
 

@@ -17,6 +17,7 @@ const HANDBOOK_URLS = [
   '/handbook/NOTFALL-PURGE-MESSENGER.md',
   '/handbook/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',
   '/handbook/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md',
+  '/handbook/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md',
 ]
 
 self.addEventListener('install', (event) => {
