@@ -2,7 +2,7 @@
 
 **Zweck:** Eine **kritische** Einordnung, was Morgendrot **heute** kann, was **fehlt**, und ein **Zielbild** für Endnutzer-Onboarding — ohne bestehende Architektur (IOTA-Rebased, Backend-Session, Vault) zu verleugnen.
 
-**Verwandte Doku:** `docs/DEV-START.md` (Start/Ports), `docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md` (Credits vs. MIST), `docs/API-SHOP-SPEC.md` / `docs/STRIPE-TEST-SETUP.md` (Shop + optional Chain-Mint), `src/wallet-bridge.ts` (Ablauf), `src/api-server.ts` (`GET /api/status`, `POST /api/unlock`).
+**Verwandte Doku:** `docs/DEV-START.md` (Start/Ports), **`docs/RECOVERY-PHRASE-BACKUP.md`** (Recovery/Sicher anzeigen, Szenario Geräteverlust), `docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md` (Credits vs. MIST), `docs/API-SHOP-SPEC.md` / `docs/STRIPE-TEST-SETUP.md` (Shop + optional Chain-Mint), `src/wallet-bridge.ts` (Ablauf), `src/api-server.ts` (`GET /api/status`, `POST /api/unlock`).
 
 ---
 
@@ -55,7 +55,7 @@ Die gleichen Punkte als **nachverfolgbare** Liste; Umsetzung priorisiert **Roadm
 | L1 | **Keine narrative Einheit** zwischen Next-Dashboard, Unlock-Dialog, Tresor und Shop | Session-Passwort vs. Vault vs. Keystore vs. Credits verwechselt | **Teilweise:** Unlock-Dialog **signer-abhängig** (`dashboard.tsx`); Chat-Banner präzisiert; diese Doku + **`docs/DEV-START.md`** |
 | L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Backlog:** optional geführte „Erste Schritte“-Seite oder Boss-Export-Assistent (**Roadmap H.7**); bis dahin Lite-UI-Hinweis (`ui/index.html`) + **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
 | L3 | **„Credits statt IOTA“** ohne Klartext | Credits ≠ native MIST; Marketing irreführend | **Teilweise:** **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, Shop-Tooltip (`/shop`), **`TESTING.md`** Smoke |
-| L4 | **Wiederkehrende Nutzer** („neues Gerät“) | Kein UX für „Vault auf neuem Rechner“ vs. Erststart | **Backlog:** kurze Kopfzeile in Einstellungen/Tresor (Schritte: Vault-Datei / Chain laden); technisch unverändert |
+| L4 | **Wiederkehrende Nutzer** („neues Gerät“) | Kein UX für „Vault auf neuem Rechner“ vs. Erststart | **Teilweise:** Einstellungen **Wallet & Backup** + **`docs/RECOVERY-PHRASE-BACKUP.md`**; vollständiger Gerätewechsel-Flow weiter Backlog |
 | L5 | **SIGNER=sdk vs. cli** im Dialog | Falsche Erwartung (Mnemonic vs. nur Keystore) | **Erledigt (Copy):** bedingter Hilfetext im Unlock-Dialog je **`GET /api/status` → `signer`** |
 | L6 | **`WALLET_PASSWORD` in `.env`** | Klartext auf Platte | **Doku:** Dev/CI-Hilfe; Betrieb: **`docs/SECRETS-OPTIONS.md`**, **`docs/ROADMAP-FAHRPLAN.md` § H.3c** |
 

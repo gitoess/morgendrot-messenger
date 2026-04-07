@@ -113,6 +113,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Package-ID-Banner, Abgleich mit `/api/status`).  
 - **`docs/UX-MESSENGER-INVENTORY.md`** – Abgleich Wunsch-UX (Login, Rollen, Wald-Check, PWA) vs. Ist  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
+- **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmungen inkl. Standalone-Abgabe, `.env`)  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
@@ -235,10 +236,10 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | 1 | **Lite / Messenger-Modus** | `UI_VARIANT` / `workspaceTileSet` mit **`/api/status`** (`uiVariant`) an einem Ort führen – weniger „falsches“ Dashboard auf dem Handy. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`**. |
 | 2 | **„Wanderer“-Abgabe** | Bundle nur Messenger-Fluss (Kacheln reduziert), konsistent mit **H.7** Standalone-Smartphone. |
 | 3 | **Kacheln nach Rolle** | z. B. Boss: optional nur Steuerung + Nachrichten (kein Zwang zur Voll-Fläche); Umsetzung nur mit klarer Default-Policy. |
-| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). **Spezifikation & Backlog:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6). **Teil erledigt (2026-03-28):** Unlock-Dialog mit **signer-spezifischem** Kurztext (`cli` / `sdk` / `remote`); Chat-Banner ohne Schloss-Irrtum; Shop-Adressfeld mit **Tooltip** (Mint vs. Claim). **Offen:** narrative „Erste Schritte“-Kachel (L2/L4), Settings-Hilfeabsatz. |
+| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). **Spezifikation & Backlog:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6). **Teil erledigt (2026-03-28):** Unlock-Dialog mit **signer-spezifischem** Kurztext (`cli` / `sdk` / `remote`); Chat-Banner ohne Schloss-Irrtum; Shop-Adressfeld mit **Tooltip** (Mint vs. Claim). **Recovery (2026-03-28):** **`docs/RECOVERY-PHRASE-BACKUP.md`**, Befehl **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup** (`SIGNER=sdk` + Vault mit Import). **Offen:** narrative „Erste Schritte“-Kachel (L2), weiterer Hilfeabsatz in `fetchHelp`. |
 | 5 | **PWA-Realität** | Installation „Zum Home-Bildschirm“, statische Shell offline – eng mit **§ A.5** / **H.2** verzahnen (kein Konflikt mit UX-1). |
 
-**Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip.
+**Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.
 
 *Abgrenzung:* Keine neuen **Macro-/Gateway**-Features hier – nur Bedienung, Sichtbarkeit, Rollen-UI und Einsatz-Abgabe.
 

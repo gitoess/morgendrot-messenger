@@ -772,6 +772,10 @@ export const getStatus = (): Promise<
     backendOnline: boolean
     /** Messenger-Peer (/connect) — nicht dasselbe wie Backend. */
     chatConnected: boolean
+    /** IOTA-Signatur-Backend: cli | sdk | remote — siehe `docs/RECOVERY-PHRASE-BACKUP.md`. */
+    signer?: string
+    /** Lokale Vault-Datei vorhanden (GET /api/status → vaultStatus.hasLocal). */
+    vaultHasLocal?: boolean
   }>
 > =>
   fetchStatus().then((s) => ({
@@ -782,9 +786,28 @@ export const getStatus = (): Promise<
       packageId: s.packageId || '',
       backendOnline: !!s.backendRunning,
       chatConnected: !!s.connected,
+      signer: s.signer,
+      vaultHasLocal: s.vaultStatus?.hasLocal,
     },
     ...(s.locked && { locked: true }),
   }))
+
+/** Nur SIGNER=sdk + lokale Vault mit gespeichertem Import. Passwort = Vault-Passwort (erneute Eingabe). */
+export async function revealVaultSignerImport(password: string): Promise<{
+  ok: boolean
+  signerImport?: string
+  message?: string
+  error?: string
+}> {
+  const r = await executeCommand<{ signerImport?: string }>('/vault-show-signer-import', [password])
+  const raw = r as { ok?: boolean; signerImport?: string; message?: string; error?: string }
+  return {
+    ok: raw.ok === true,
+    signerImport: typeof raw.signerImport === 'string' ? raw.signerImport : undefined,
+    message: typeof raw.message === 'string' ? raw.message : undefined,
+    error: raw.error ?? (raw.ok === false && typeof raw.message === 'string' ? raw.message : undefined),
+  }
+}
 
 /** Kontakt mit optionalem Meshtastic-Mapping (GET /api/contact-labels → directory). */
 export type ContactMeshEntryClient = {

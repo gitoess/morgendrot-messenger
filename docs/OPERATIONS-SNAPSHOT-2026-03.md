@@ -15,6 +15,7 @@
 | **Notify (E-Mail extern)** | `SHOP_CLAIM_NOTIFY_WEBHOOK_URL` / `SHOP_CLAIM_NOTIFY_SECRET` |
 | **Shadow-Sweep vs. Mint** | **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`** |
 | **Onboarding / Wallet / Session** | **`docs/ONBOARDING-WALLET-UX-SPEC.md`** — Unlock-Flow, Credits vs. Adresse, Backlog L1–L6; UX-Abgleich **`docs/UX-MESSENGER-INVENTORY.md`** §1 |
+| **Recovery Phrase / Signer-Backup** | **`docs/RECOVERY-PHRASE-BACKUP.md`** — Befehl **`/vault-show-signer-import`**, Next **Einstellungen → Wallet & Backup** (`SIGNER=sdk` + Vault mit Import); kein zentraler Key-Speicher |
 
 ---
 

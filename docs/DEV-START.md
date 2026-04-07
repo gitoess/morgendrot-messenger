@@ -48,6 +48,8 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 
 **Onboarding, Wallet, Session** (Ist-Zustand, Lücken, Ziel-Spezifikation): **`docs/ONBOARDING-WALLET-UX-SPEC.md`**.
 
+**Recovery / Signer-Backup anzeigen** (`SIGNER=sdk`, gespeicherter Vault-Import): **`docs/RECOVERY-PHRASE-BACKUP.md`**.
+
 ## Warum „UI offline“ / keine Passwortabfrage?
 
 Das passiert, wenn das **Backend** nicht läuft oder mit Fehlercode beendet wurde. Die UI spricht mit der API unter 127.0.0.1:3342 – ohne laufendes Backend bleibt sie offline und zeigt kein Passwort-Dialog.

@@ -209,7 +209,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -294,6 +294,57 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             const msg = String((e as Error)?.message ?? e);
                             const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(msg);
                             return { ok: false, message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : ('Vault laden fehlgeschlagen: ' + msg) };
+                        }
+                    }
+                    if (c === '/vault-show-signer-import') {
+                        if (CFG.SIGNER !== 'sdk') {
+                            return {
+                                ok: false,
+                                message:
+                                    'Nur bei SIGNER=sdk. Bei SIGNER=cli liegt der Key im IOTA-CLI-Keystore — kein Mnemonic in der Morgendrot-Vault.',
+                            };
+                        }
+                        const loadPath =
+                            a[1] != null && String(a[1]).trim() ? String(a[1]).trim() : CFG.VAULT_FILE || '.morgendrot-vault';
+                        const pw = String(a[0] ?? '').trim();
+                        if (!pw) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /vault-show-signer-import <passwort> [pfad-zur-vault-datei]',
+                            };
+                        }
+                        if (!vaultFileExists(loadPath)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Keine Vault-Datei: ' +
+                                    loadPath +
+                                    '. Zuerst im Tresor „Lokal sichern“ (mit „Signer-Import mit speichern“) oder /vault-load-from-chain.',
+                            };
+                        }
+                        try {
+                            const content = await loadVaultContent(pw, loadPath);
+                            const imp = (content.iotaSdkSignerImport || '').trim();
+                            if (!imp) {
+                                return {
+                                    ok: false,
+                                    message:
+                                        'Kein gespeicherter Signer-Import in dieser Vault. Beim Speichern „Signer-Import mit speichern“ aktivieren oder externes Backup nutzen.',
+                                };
+                            }
+                            return {
+                                ok: true,
+                                message:
+                                    'Signer-Import aus lokaler Vault gelesen. An einem sicheren Ort notieren; nicht weitergeben. Ohne Backup gehen Identität und ggf. gebundene Credits bei Geräteverlust verloren.',
+                                signerImport: imp,
+                            };
+                        } catch (e) {
+                            const msg = String((e as Error)?.message ?? e);
+                            const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(msg);
+                            return {
+                                ok: false,
+                                message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : 'Fehler: ' + msg,
+                            };
                         }
                     }
                     if (c === '/purge-handshake') {

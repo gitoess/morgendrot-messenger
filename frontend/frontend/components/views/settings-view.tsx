@@ -14,10 +14,11 @@ import {
   Wallet,
   Server,
   Smartphone,
+  KeyRound,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
-import { getStatus, transferCoins, restartBackend } from '../../lib/api'
+import { getStatus, revealVaultSignerImport, transferCoins, restartBackend } from '../../lib/api'
 
 /** Minimal typing for `beforeinstallprompt` (nicht überall als DOM-Typ geladen). */
 type DeferredPwaPrompt = {
@@ -45,6 +46,8 @@ export function SettingsView({
     packageId: string
     backendOnline: boolean
     chatConnected: boolean
+    signer?: string
+    vaultHasLocal?: boolean
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
@@ -60,6 +63,12 @@ export function SettingsView({
   /** Chrome/Edge/Android: gespeichertes beforeinstallprompt */
   const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(null)
   const [pwaStandalone, setPwaStandalone] = useState(false)
+
+  /** Recovery phrase / SDK-Import aus Vault (SIGNER=sdk). */
+  const [recoveryPw, setRecoveryPw] = useState('')
+  const [recoveryBusy, setRecoveryBusy] = useState(false)
+  const [recoveryErr, setRecoveryErr] = useState('')
+  const [revealedSigner, setRevealedSigner] = useState<string | null>(null)
 
   const loadStatus = async () => {
     setLoading(true)
@@ -142,6 +151,26 @@ export function SettingsView({
   const maskAddress = (addr: string) => {
     if (!addr || addr.length < 16) return addr
     return `${addr.slice(0, 10)}...${addr.slice(-8)}`
+  }
+
+  const handleRevealSignerImport = async () => {
+    setRecoveryErr('')
+    if (!recoveryPw.trim()) {
+      setRecoveryErr('Vault-Passwort eingeben.')
+      return
+    }
+    setRecoveryBusy(true)
+    try {
+      const res = await revealVaultSignerImport(recoveryPw.trim())
+      if (res.ok && res.signerImport) {
+        setRevealedSigner(res.signerImport)
+        setRecoveryPw('')
+      } else {
+        setRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
+      }
+    } finally {
+      setRecoveryBusy(false)
+    }
   }
 
   const handlePwaInstallClick = async () => {
@@ -334,6 +363,108 @@ export function SettingsView({
           </div>
         )}
       </div>
+
+      {/* Wallet & Backup: explizite Anzeige gespeicherter Recovery-Daten (SIGNER=sdk) */}
+      {status?.backendOnline && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <KeyRound className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <h4 className="font-semibold text-foreground">Wallet & Backup</h4>
+              <p className="text-sm text-muted-foreground">
+                Wenn beim ersten Einrichten eine Mnemonic nur kurz sichtbar war: Ohne sicheres Backup sind bei
+                Geräteverlust <strong className="text-foreground">Identität und gebundene Berechtigungen</strong> (z. B.
+                Messenger-Credits auf der Chain) nicht wiederherstellbar — der Server speichert keinen Klartext-Key.
+                Hier kannst du den <strong className="text-foreground">in der Vault-Datei gespeicherten</strong>{' '}
+                Signer-Import erneut anzeigen, wenn du ihn beim Tresor-Speichern mit abgelegt hast (
+                <span className="font-mono text-xs">Signer-Import mit speichern</span> in der Lite-UI / Tresor).
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Technik und Risiken: <span className="font-mono">docs/RECOVERY-PHRASE-BACKUP.md</span>,{' '}
+                <span className="font-mono">docs/ONBOARDING-WALLET-UX-SPEC.md</span>.
+              </p>
+            </div>
+          </div>
+
+          {status.signer === 'sdk' ? (
+            <>
+              {!status.vaultHasLocal ? (
+                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+                  Keine lokale Vault-Datei am erwarteten Ort — zuerst Tresor „lokal sichern“ mit aktiviertem Signer-Import,
+                  oder Vault von der Chain laden.
+                </p>
+              ) : null}
+              <div className="space-y-3">
+                <label className="block text-sm">
+                  <span className="text-muted-foreground">Vault-Passwort (erneut eingeben)</span>
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={recoveryPw}
+                    onChange={(e) => setRecoveryPw(e.target.value)}
+                    className="mt-1 w-full max-w-md rounded-lg border border-border bg-input px-3 py-2 text-foreground"
+                    placeholder="••••••••"
+                  />
+                </label>
+                {recoveryErr ? <p className="text-sm text-destructive">{recoveryErr}</p> : null}
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={recoveryBusy || !status.vaultHasLocal}
+                    onClick={() => void handleRevealSignerImport()}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
+                  </button>
+                  {revealedSigner ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setRevealedSigner(null)
+                        setRecoveryErr('')
+                      }}
+                      className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
+                    >
+                      Ausblenden
+                    </button>
+                  ) : null}
+                </div>
+                {revealedSigner ? (
+                  <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                    <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
+                      Nur an einem sicheren Ort notieren — nicht teilen, nicht Screenshots in unsichere Clouds.
+                    </p>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
+                      {revealedSigner}
+                    </pre>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void navigator.clipboard.writeText(revealedSigner)
+                        setCopied('signerImport')
+                        setTimeout(() => setCopied(null), 2000)
+                      }}
+                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                    >
+                      {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      In Zwischenablage kopieren
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              <span className="font-mono">SIGNER={status.signer ?? '?'}</span>: Die Recovery-Phrase wird hier nur für{' '}
+              <span className="font-mono">sdk</span> aus der Morgendrot-Vault gelesen. Bei{' '}
+              <span className="font-mono">cli</span> nutzt du das Backup des IOTA-CLI-Keystores; bei{' '}
+              <span className="font-mono">remote</span> verwaltet der Boss die Signatur.
+            </p>
+          )}
+        </div>
+      )}
 
       {canToggleFullTiles && onShowAllTilesChange && (
         <div className="rounded-xl border border-border bg-card p-4">
