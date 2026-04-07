@@ -8,8 +8,11 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 
 ## 1. Login & Sicherheit (Entsperr-Dialog)
 
+**Gesamtbild & Backlog (L1–L6):** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**.
+
 | Thema | Stand im Projekt | Sinn / nächster Schritt |
 |--------|-------------------|-------------------------|
+| **Signer-spezifischer Hilfetext** | Unlock-Dialog: zweiter Absatz je **`signer`** (`cli` = Keystore zu MY_ADDRESS, `sdk` = Mnemonic-Hinweis, `remote` = Vault + Remote-Signatur) | Reduziert Verwechslung Mnemonic vs. CLI-Passwort (**H.0 #4**). |
 | **Mnemonic / SDK bei SIGNER=sdk** | Dashboard-Dialog sendet Passwort + optional `sdkSignerImport`, wenn `/api/status` → `signer: 'sdk'` | Passt; Overlay nur auf dem Dashboard – bei Navigation in den Chat bleibt der Dialog sichtbar (`sharedDialogs`). |
 | **Session-Passwort für Schlüssel im Gerätespeicher** | Backend: `setWalletPassword` (RAM). **Kein** separates „lokales Handy-Passwort“ zum Verschlüsseln eines persistierten Keys in IndexedDB ohne Vault-Datei | **Sinnvoll als nächste Ausbaustufe**, wenn Keys clientseitig zwischengespeichert werden sollen – aktuell primär Server-Session + Vault-Datei. |
 | **Login-Status in der Sidebar** | Chat: `ChatViewChatHeader` / Pulse-Zeile bei `apiStatus.locked`; Inbox-Toolbar deaktiviert Aktionen bei `locked` | **Vollständige „Sidebar“** wie klassische Apps: nur teilweise (Header/Toolbar). Erweiterung: kompakte Zeile „Gesperrt/Entsperrt“ in einem festen Chat-Layout. |

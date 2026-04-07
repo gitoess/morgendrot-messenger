@@ -37,6 +37,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     exportEcdhMorgPkgForMessage,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
+    onForwardMessage,
     onHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,
@@ -93,6 +94,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
           onHideInboxMessageLocal={onHideInboxMessageLocal}
           onPurgeInboxMessageChain={onPurgeInboxMessageChain}
+          onForwardMessage={onForwardMessage}
           toggleProtokollMark={toggleProtokollMark}
           protokollMarkedIds={protokollMarkedIds}
           inboxSelectMode={inboxSelectMode}

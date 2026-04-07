@@ -179,10 +179,11 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
       {isPrivate && apiStatus?.locked === true && (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          <strong className="font-semibold">Tresor gesperrt.</strong> Zum Senden/Empfangen mit deinen Keys das Wallet im
-          Backend entsperren (Schloss-Kachel im Dashboard oder <span className="font-mono text-xs">/vault-load</span>).
-          Diese Oberfläche hat <strong>keinen geführten Erststart</strong> (kein Seed-Assistent beim ersten Öffnen) –
-          Einrichtung über die übrigen Kacheln (Wallet, Setup, Partner verbinden).
+          <strong className="font-semibold">Tresor gesperrt.</strong> Zum Senden/Empfangen auf der{' '}
+          <strong>Startseite</strong> den Dialog <strong>Wallet entsperren</strong> nutzen (oder nach manuellem Sperren
+          den Befehl <span className="font-mono text-xs">/vault-load</span> in der Lite-UI bzw. Konsole). Diese Oberfläche
+          hat <strong>keinen geführten Erststart</strong> (kein Seed-Assistent beim ersten Öffnen) — Einrichtung über
+          Konfiguration, Tresor und Partner verbinden.
         </div>
       )}
 

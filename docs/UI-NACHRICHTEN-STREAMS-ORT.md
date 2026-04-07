@@ -15,6 +15,10 @@ Die **gespeicherten Nachrichten** (z. B. aus einem Test) kommen aus der **Mailbo
 
 **Technik:** Die Chat-View ruft beim Öffnen `fetchInbox(50)` auf (Backend: `/inbox` → `/fetch`). Das Backend liest aus der **Mailbox** (MAILBOX_ID) oder aus Chain-Events — **eingehende und ausgehende** Nachrichten (Mailbox-Keys mit Empfänger = ich bzw. Absender = ich). Wenn du mit derselben Instanz (gleiche MY_ADDRESS, MAILBOX_ID) getestet hast, sollten die Nachrichten hier erscheinen. Keine Nachrichten? Prüfen: PACKAGE_ID gesetzt, Backend verbunden, ggf. „Aktualisieren“ erneut klicken.
 
+**Privat vs. Pinnwand:** Beides ist dieselbe **Nachrichten-Chat-View** (gleicher Posteingang, gleiche Zeilenaktionen), nur mit anderem Modus (1:1 vs. Broadcast/Klartext je nach Konfiguration). Die Pinnwand ist keine separate App-Oberfläche — beim Wechsel der Kachel **Empfänger und Verschlüsselung** im Sendebereich prüfen.
+
+**Weiterleiten:** Über das Menü (⋯) bei einer Zeile: **Weiterleiten** mit oder ohne **Absenderzeile** — der extrahierte Klartext landet im Eingabefeld; Medien-Wire wird nur als Hinweis übernommen, nicht als Rohdaten.
+
 ### Filter: Alle / Eingang / Ausgang
 
 - **Alle:** gesamte Liste.

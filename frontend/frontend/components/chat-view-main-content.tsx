@@ -118,6 +118,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
+    onForwardMessage,
     onHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,
@@ -317,6 +318,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         protokollMarkedIds={protokollMarkedIds}
         onHideInboxMessageLocal={onHideInboxMessageLocal}
         onPurgeInboxMessageChain={onPurgeInboxMessageChain}
+        onForwardMessage={onForwardMessage}
         onHideAllVisibleLocal={onHideAllVisibleLocal}
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}

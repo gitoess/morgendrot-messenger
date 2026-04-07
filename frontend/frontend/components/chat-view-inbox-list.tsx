@@ -15,13 +15,25 @@
  * Wird von `ChatViewInboxPanel` zusammen mit `ChatViewInboxToolbar` eingebunden.
  */
 
-import { Download, Lock, MessageCircle, MoreHorizontal, ShieldCheck, Star, Trash2 } from 'lucide-react'
+import {
+  Download,
+  Forward,
+  Lock,
+  MessageCircle,
+  MoreHorizontal,
+  ShieldCheck,
+  Star,
+  Trash2,
+} from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
@@ -46,6 +58,8 @@ export type ChatViewInboxListProps = {
   exportEcdhMorgPkgForMessage: (msg: Message) => void | Promise<void>
   onHideInboxMessageLocal: (id: string) => void
   onPurgeInboxMessageChain: (msg: Message) => void | Promise<void>
+  /** Text ins Composer-Feld; optional mit Absenderzeile. */
+  onForwardMessage?: (msg: Message, includeSender: boolean) => void
   toggleProtokollMark: (id: string) => void
   protokollMarkedIds: Set<string>
   inboxSelectMode: boolean
@@ -70,6 +84,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     exportEcdhMorgPkgForMessage,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
+    onForwardMessage,
     toggleProtokollMark,
     protokollMarkedIds,
     inboxSelectMode,
@@ -283,6 +298,22 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     />
                     {protokollMarkedIds.has(row.msg.id) ? 'Protokoll-Markierung entfernen' : 'Für Protokoll markieren'}
                   </DropdownMenuItem>
+                  {onForwardMessage ? (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>
+                        <Forward className="mr-2 h-4 w-4" />
+                        Weiterleiten
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-56">
+                        <DropdownMenuItem onClick={() => onForwardMessage(row.msg, true)}>
+                          Mit Absenderzeile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
+                          Ohne Absenderadresse
+                        </DropdownMenuItem>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ) : null}
                   <DropdownMenuItem onClick={() => onHideInboxMessageLocal(row.msg.id)}>
                     <MessageCircle className="mr-2 h-4 w-4 opacity-60" />
                     Lokal ausblenden

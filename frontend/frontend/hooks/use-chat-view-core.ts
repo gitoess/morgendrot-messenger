@@ -27,6 +27,8 @@ import {
 } from '@/frontend/hooks/use-chat-view-package-id'
 import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-connection-actions'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
+import type { Message } from '@/frontend/lib/types'
+import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 
 export type UseChatViewCoreParams = {
   isPrivate: boolean
@@ -327,6 +329,16 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     void applyPackageIdBackend(raw)
   }, [apiStatus?.packageId, applyPackageIdBackend])
 
+  const onForwardMessage = useCallback(
+    (msg: Message, includeSender: boolean) => {
+      clearCompactAttachmentAndSos()
+      setMessage(buildForwardComposerPayload(msg, includeSender))
+      setStatus('success')
+      setStatusMsg('Text ins Eingabefeld übernommen – Empfänger prüfen und senden.')
+    },
+    [clearCompactAttachmentAndSos, setMessage, setStatus, setStatusMsg]
+  )
+
   return {
     isPrivate,
     role,
@@ -433,6 +445,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
+    onForwardMessage,
     onHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,

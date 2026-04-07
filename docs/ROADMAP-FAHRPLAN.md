@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Shop/Stripe **`docs/API-SHOP-SPEC.md`**, Test **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, Shop-Theorie **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Betrieb/Lücken **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, Runbook **§ H.3c**, Meshtastic **§ H.3d**, **`TESTING.md`**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** (Onboarding/Wallet/Session **`docs/ONBOARDING-WALLET-UX-SPEC.md`** — Ist, Lücken-Backlog L1–L6, Roadmap **§8**; Unlock-Dialog **signer-abhängig**; Shop-Tooltip; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, Test **`docs/STRIPE-TEST-SETUP.md`**, Shadow/Credits **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher-Claim **`docs/API-VOUCHER-CLAIM-SPEC.md`**, Shop-Theorie **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8, Betrieb/Lücken **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, Runbook **§ H.3c**, Meshtastic **§ H.3d**, **`TESTING.md`**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -112,6 +112,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** – Gateway, Interpreter.  
 - **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Package-ID-Banner, Abgleich mit `/api/status`).  
 - **`docs/UX-MESSENGER-INVENTORY.md`** – Abgleich Wunsch-UX (Login, Rollen, Wald-Check, PWA) vs. Ist  
+- **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmungen inkl. Standalone-Abgabe, `.env`)  
 - **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** – vor großem Commit lesen  
 - **§ I** – Zentralserver, Relay, DID, Anonymität: **I.0** Kurz-Zielbild (Basis / Server / IOTA), **I.1 ff.** Kritik & Reihenfolge  
@@ -234,10 +235,10 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | 1 | **Lite / Messenger-Modus** | `UI_VARIANT` / `workspaceTileSet` mit **`/api/status`** (`uiVariant`) an einem Ort führen – weniger „falsches“ Dashboard auf dem Handy. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`**. |
 | 2 | **„Wanderer“-Abgabe** | Bundle nur Messenger-Fluss (Kacheln reduziert), konsistent mit **H.7** Standalone-Smartphone. |
 | 3 | **Kacheln nach Rolle** | z. B. Boss: optional nur Steuerung + Nachrichten (kein Zwang zur Voll-Fläche); Umsetzung nur mit klarer Default-Policy. |
-| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). |
+| 4 | **Unlock- & Secret-UX** | Passwort/Mnemonic klar trennen; bei kritischen Aktionen **doppelte Bestätigung**; Status **gesperrt/entsperrt** überall konsistent (Backend + UI). **Spezifikation & Backlog:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (L1–L6). **Teil erledigt (2026-03-28):** Unlock-Dialog mit **signer-spezifischem** Kurztext (`cli` / `sdk` / `remote`); Chat-Banner ohne Schloss-Irrtum; Shop-Adressfeld mit **Tooltip** (Mint vs. Claim). **Offen:** narrative „Erste Schritte“-Kachel (L2/L4), Settings-Hilfeabsatz. |
 | 5 | **PWA-Realität** | Installation „Zum Home-Bildschirm“, statische Shell offline – eng mit **§ A.5** / **H.2** verzahnen (kein Konflikt mit UX-1). |
 
-**Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert.
+**Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip.
 
 *Abgrenzung:* Keine neuen **Macro-/Gateway**-Features hier – nur Bedienung, Sichtbarkeit, Rollen-UI und Einsatz-Abgabe.
 

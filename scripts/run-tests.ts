@@ -618,6 +618,30 @@ async function testChatWaldConnection() {
     }
 }
 
+async function testChatForwardText() {
+    console.log('\n--- chat-forward-text (frontend) ---');
+    try {
+        const { buildForwardComposerPayload } = await import('../frontend/frontend/lib/chat-forward-text.ts');
+        const base = {
+            id: '1',
+            from: '0x' + 'a'.repeat(64),
+            content: 'Hallo Welt',
+            timestamp: 1_700_000_000_000,
+            recipient: '0x' + 'b'.repeat(64),
+        };
+        const withSender = buildForwardComposerPayload(base, true);
+        assert(withSender.includes('Von ' + base.from), 'header has from');
+        assert(withSender.includes('An ' + base.recipient), 'header has recipient');
+        assert(withSender.includes('Hallo Welt'), 'body text');
+        const noSender = buildForwardComposerPayload(base, false);
+        assert(!noSender.includes('Von '), 'no from when omitted');
+        assert(noSender.includes('Hallo Welt'), 'body without sender');
+        ok('buildForwardComposerPayload');
+    } catch (e) {
+        fail('chat-forward-text', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -635,6 +659,7 @@ async function main() {
     await testPackageIdCompareFrontend();
     await testShopCatalog();
     await testChatWaldConnection();
+    await testChatForwardText();
     await testVaultLocal();
     await testVaultImagePipeline();
     await testReplayState();

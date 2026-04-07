@@ -164,7 +164,12 @@ function ShopContent() {
       )}
 
       <label className="mb-4 block text-sm">
-        <span className="text-slate-400">IOTA-Adresse (0x+64 Hex, optional — für direkten Credits-Mint wenn ENABLE_SHOP_CHAIN_MINT)</span>
+        <span
+          className="text-slate-400"
+          title="Eigene Wallet-Adresse. Für direkten On-Chain-Mint der Messenger-Credits nach Zahlung (wenn ENABLE_SHOP_CHAIN_MINT). Ohne gültige Adresse oft nur Claim-Token — siehe docs/STRIPE-TEST-SETUP.md und docs/API-SHOP-SPEC.md."
+        >
+          IOTA-Adresse (0x+64 Hex, optional — für direkten Credits-Mint wenn ENABLE_SHOP_CHAIN_MINT)
+        </span>
         <input
           type="text"
           value={recipientIota}

@@ -14,6 +14,7 @@
 | **Credits nach Zahlung (optional)** | `ENABLE_SHOP_CHAIN_MINT`, `mint_messenger_credits_batch` in **`src/api/iota/shop-fulfillment.ts`** |
 | **Notify (E-Mail extern)** | `SHOP_CLAIM_NOTIFY_WEBHOOK_URL` / `SHOP_CLAIM_NOTIFY_SECRET` |
 | **Shadow-Sweep vs. Mint** | **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`** |
+| **Onboarding / Wallet / Session** | **`docs/ONBOARDING-WALLET-UX-SPEC.md`** — Unlock-Flow, Credits vs. Adresse, Backlog L1–L6; UX-Abgleich **`docs/UX-MESSENGER-INVENTORY.md`** §1 |
 
 ---
 
