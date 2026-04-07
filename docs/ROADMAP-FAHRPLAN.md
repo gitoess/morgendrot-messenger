@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -179,6 +179,8 @@ Nach Phase-B-Kern: **Registry** (`src/shared/opcodes.ts`) → **Gateway** → **
 - **`POST /api/clear-local-history`**: nur **lokaler Inbox-Cache** (`.inbox.enc`), kein vollständiger Vault-Chain-Purge.  
 - **UI „Notfall“**: `VaultView` + `emergencyPurge()` – inkl. Scope-Wahl (`full` / `local_cache` / `lock_session`).
 
+**Operative Reichweite (wer wird im Ernstfall erreicht, Brücken zu 112, LoRa/Meshtastic-Backlog):** nicht hier — siehe **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
 ### Fern-Befehl / Makro „alles löschen“
 
 | Aspekt | Bewertung |
@@ -245,6 +247,7 @@ Kurzfassung für Partner- und Betriebstexte (ohne Marketing-Garantien):
 
 - **`docs/PROTOCOL-CHANNELS-TX-VS-STREAMS.md`** – DID/Twin/Gas, Kanal-Policy §7.  
 - **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** – Gateway, Opcodes, **nach Phase B**.  
+- **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** – Notfall: Gegenstellen, 112-Brücke, Entscheid **kein** Pflicht-Klartext-Meshtastic-SOS (Backlog).  
 - **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** – Phase C-Tabelle (Ergänzung Verweis **§ I**).
 
 ---
@@ -257,7 +260,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 | # | Paket | Status (2026-03) | Hinweis |
 |---|--------|-------------------|---------|
-| 1 | **Lite / Messenger-Modus** | **Teilweise erledigt** | **`/api/status` → `uiVariant`**; Dashboard erzwingt **Messenger-Kachelset** bei `UI_VARIANT=messenger`; **`workspace-projects-panel`**. **2026-03:** „Erste Schritte“-Karte mit Zusatzsatz **Lite** (nur Nachrichten + Tresor), wenn `uiVariant=messenger`. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** (volle rollen-basierte Workspaces = Backlog). |
+| 1 | **Lite / Messenger-Modus** | **Teilweise erledigt** | **`/api/status` → `uiVariant`**; bei `UI_VARIANT=messenger` erzwingt das Dashboard **Messenger-Kachelset** (Nachrichten + Tresor) für **alle Rollen außer `boss`**; **`boss`** kann **Volldashboard** wählen. **`workspace-projects-panel`**, „Erste Schritte“-Karte mit rollenabhängigem Lite-Text. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** § 5 (volle rollen-basierte Workflows = Backlog). |
 | 2 | **„Wanderer“-Abgabe** | **Doku erledigt (2026-03)** | Kanon: **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Bundle bauen, Boss→Helfer, optional zwei Ordner). **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`**; technische Details **§ H.7**. |
 | 3 | **Kacheln nach Rolle** | **Teilweise (2026-03)** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar bei Volldashboard. **Neu:** rollenbezogene Hinweise im Panel **„Arbeitsbereich & Projekte“** + Kurzzeilen in Action Center / Radar — **`dashboard.tsx`**, **`workspace-projects-panel.tsx`**, Spec **`docs/UI-ROLLEN-WORKSPACES.md`** (Workflow-Tiefe = Backlog). |
 | 4 | **Unlock- & Secret-UX** | **L2 teilweise** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**. **„Erste Schritte“** + **`GET /api/help`:** **`HELP_UI_INTRO`** + Befehlsliste — **2026-03:** Hilfe-Dialog im **Header** (?) und Button in der Karte **„Erste Schritte“** (vorher Dialog ohne UI-Trigger). **Offen:** geführter Wizard / **H.7** Export-Assistent. |

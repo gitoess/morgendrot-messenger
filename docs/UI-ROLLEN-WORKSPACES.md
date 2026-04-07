@@ -64,4 +64,5 @@
 ## 5. Stand Umsetzung (2026-03, H.0 #3)
 
 - **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Boss/Kommandant** bei **Volldashboard** **Geräte-Radar** oben. **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis (inkl. wann Radar fehlt bei Messenger-Arbeitsbereich).
+- **Lite-Messenger (`GET /api/status` → `uiVariant: 'messenger'`, entspricht `UI_VARIANT=messenger` am Backend):** Für alle Rollen **außer `boss`** ist das sichtbare Kachelset auf **Nachrichten + Tresor** (inkl. Notfall-Purge) begrenzt; **Volldashboard** ist in **„Arbeitsbereich & Projekte“** für diese Rollen **deaktiviert**. **`boss`** kann weiterhin **Volldashboard** wählen (alle Kacheln, Radar). **`kommandant`** erhält im Lite-Bundle **keine** Boss-Ausnahme — nur Messenger-Kacheln + entsprechende Hinweise im Panel.
 - **Offen:** Vollständige **Workflow-Oberfläche** (Spec § 3) ohne Kachel-Navigation — weiterhin Backlog.

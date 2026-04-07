@@ -62,6 +62,8 @@ Siehe `src/emergency-envelope.ts`.
   ```
   Wire: 1 Byte Version `2`, 4 Byte `nonce` (uint32 BE), 32 Byte SHA-256(IOTA-Adresse), dann Ciphertext. Gesamtlänge ≤ `LORA_MAX_PAYLOAD_BYTES`. Siehe `src/emergency-binary.ts`.
 
+**Operative Reichweite:** Wen ein Notfall über Funk/Kette **tatsächlich** erreicht und wie die **Brücke** zu professioneller Hilfe gedacht ist (kein Ersatz für 112) — **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
 ## HAL (Simulation / Serial)
 
 | Modus | Umgebung | Treiber |

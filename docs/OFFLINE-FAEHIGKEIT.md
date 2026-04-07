@@ -114,6 +114,8 @@ Es gibt mehrere Bausteine – von „schon umgesetzt“ bis „möglich, aber mi
 
 **Wichtig:** Meshtastic-Verschlüsselung (Kanal/DM) und **Morgendrot-E2EE** sind **zwei Schichten**. Für maximale Klarheit: online IOTA-Handshake → Vault speichert Kontext → über Funk nur noch Umschlag mit `f` (Absender-Fingerprint) und `b` (Ciphertext).
 
+**Operative Notfall-Erwartung:** Wen ihr im Ernstfall **wirklich** erreicht (Team vs. 112 vs. Fremd-Mesh) und welche **Brücken** realistisch sind — siehe **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
 ---
 
 ### Möglichkeit D – Offline-Queue (lokale Datei als Befehlseingang) – bereits umgesetzt

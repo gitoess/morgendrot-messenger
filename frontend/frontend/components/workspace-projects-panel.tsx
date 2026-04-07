@@ -33,14 +33,23 @@ const BUNDLE_NOTE =
 
 function roleWorkspaceHint(
   role: string | undefined,
-  tileSet: WorkspaceTileSet
+  tileSet: WorkspaceTileSet,
+  liteMessengerLocksTiles: boolean
 ): { title: string; body: string } | null {
   const r = (role || '').toLowerCase()
   if (r === 'arbeiter' || r === 'lock') {
     return {
       title: 'Rollen-Workspace: Arbeiter / Lock',
+      body: liteMessengerLocksTiles
+        ? 'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Nachrichten & Tresor anzeigen“ erreichst du nur diese beiden Module (Lite-Messenger, keine weiteren Kacheln). Spec: docs/UI-ROLLEN-WORKSPACES.md.'
+        : 'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Alle Funktionen (Kacheln)“ erreichst du Nachrichten, Tresor und weitere Module. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
+    }
+  }
+  if (r === 'kommandant' && liteMessengerLocksTiles) {
+    return {
+      title: 'Rollen-Workspace: Kommandant (Lite-Messenger)',
       body:
-        'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Alle Funktionen (Kacheln)“ erreichst du Nachrichten, Tresor und weitere Module. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
+        'Im Messenger-Bundle ist Volldashboard nur für die Rolle Boss verfügbar. Du siehst Nachrichten und Tresor; Geräte-Radar und weitere Kacheln sind hier nicht freigeschaltet. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
     }
   }
   if (r === 'boss' || r === 'kommandant') {
@@ -64,8 +73,8 @@ interface WorkspaceProjectsPanelProps {
   /** `GET /api/status` → `role` — für rollenbezogene Hinweise (H.0 #3). */
   dashboardRole?: string
   /**
-   * `true`: Backend liefert `uiVariant: 'messenger'` (UI_VARIANT=messenger) – Volldashboard ist am Server nicht vorgesehen;
-   * der Schalter „Volldashboard“ ist deaktiviert.
+   * `true`: Lite-Messenger-Bundle (`uiVariant: 'messenger'`) und Nutzer ist nicht Boss – nur Nachrichten + Tresor;
+   * Schalter „Volldashboard“ ist deaktiviert. Boss kann weiter auf Volldashboard wechseln.
    */
   liteUiEnforcedByBackend?: boolean
 }
@@ -82,7 +91,7 @@ export function WorkspaceProjectsPanel({
   const apiPort = apiStatus?.apiListenPort
   const uiVar = apiStatus?.uiVariant
   const edition = apiStatus?.messengerEdition
-  const roleHint = roleWorkspaceHint(dashboardRole, tileSet)
+  const roleHint = roleWorkspaceHint(dashboardRole, tileSet, liteUiEnforcedByBackend)
 
   const copy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text)
@@ -119,7 +128,7 @@ export function WorkspaceProjectsPanel({
           onClick={() => onTileSetChange('full')}
           title={
             liteUiEnforcedByBackend
-              ? 'Backend: UI_VARIANT=messenger – nur Messenger-Kacheln (siehe /api/status).'
+              ? 'Lite-Messenger: Volldashboard nur für die Rolle Boss. Siehe /api/status (uiVariant, role).'
               : undefined
           }
           className={cn(
@@ -147,8 +156,8 @@ export function WorkspaceProjectsPanel({
       </div>
       {liteUiEnforcedByBackend ? (
         <p className="mb-3 text-[11px] leading-snug text-sky-600/90 dark:text-sky-300/90">
-          Arbeitsbereich folgt dem Backend: <span className="font-mono">UI_VARIANT=messenger</span> – dieselbe
-          Kachel-Auswahl wie die Lite-UI am API-Port.
+          <span className="font-mono">UI_VARIANT=messenger</span>: Für deine Rolle nur Messenger-Kacheln (Nachrichten +
+          Tresor). Volldashboard kann nur die Rolle <strong className="text-foreground/90">Boss</strong> wählen.
         </p>
       ) : null}
 

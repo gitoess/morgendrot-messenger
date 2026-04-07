@@ -196,15 +196,19 @@ export function Dashboard() {
     setHideFirstStepsCard(true)
   }
 
-  /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite darf nicht durch altes localStorage „full“ überschrieben werden. */
+  /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite. */
   const liteMessengerFromApi = apiSnapshot?.backendRunning !== false && apiSnapshot?.uiVariant === 'messenger'
-  const effectiveWorkspaceTileSet: WorkspaceTileSet = liteMessengerFromApi ? 'messenger' : workspaceTileSet
+  const isBossRole = (role || '').toLowerCase() === 'boss'
+  /** Lite-Messenger: nur Boss darf Volldashboard + alle Kacheln; alle anderen nur Nachrichten + Tresor/Notfall. */
+  const liteMessengerLocksTiles = liteMessengerFromApi && !isBossRole
+  const effectiveWorkspaceTileSet: WorkspaceTileSet = liteMessengerLocksTiles ? 'messenger' : workspaceTileSet
 
   useEffect(() => {
     if (apiSnapshot?.uiVariant !== 'messenger') return
+    if ((apiSnapshot?.role || '').toLowerCase() === 'boss') return
     setWorkspaceTileSet('messenger')
     writeWorkspaceTileSet('messenger')
-  }, [apiSnapshot?.uiVariant])
+  }, [apiSnapshot?.uiVariant, apiSnapshot?.role])
 
   const setShowAllTilesPersist = (value: boolean) => {
     setShowAllTiles(value)
@@ -283,7 +287,7 @@ export function Dashboard() {
   }
 
   const setWorkspaceTileSetPersist = (v: WorkspaceTileSet) => {
-    if (liteMessengerFromApi && v === 'full') return
+    if (liteMessengerFromApi && v === 'full' && !isBossRole) return
     setWorkspaceTileSet(v)
     writeWorkspaceTileSet(v)
   }
@@ -629,9 +633,20 @@ export function Dashboard() {
                 </p>
                 {liteMessengerFromApi ? (
                   <p className="text-muted-foreground">
-                    <strong className="text-foreground/90">Lite messenger:</strong> Es erscheinen nur die Kacheln{' '}
-                    <strong className="text-foreground/90">Nachrichten</strong> und <strong className="text-foreground/90">Tresor</strong> — absichtlich
-                    schlank für den Einsatz (<span className="font-mono text-xs">UI_VARIANT=messenger</span> am Backend).
+                    <strong className="text-foreground/90">Lite messenger</strong> (<span className="font-mono text-xs">UI_VARIANT=messenger</span>
+                    ):{' '}
+                    {isBossRole ? (
+                      <>
+                        Als <strong className="text-foreground/90">Boss</strong> kannst du unter „Arbeitsbereich &amp; Projekte“{' '}
+                        <strong className="text-foreground/90">Volldashboard</strong> wählen (alle Kacheln, Geräte-Radar). Standard ist
+                        schlank wie beim Helfer, wenn du auf <strong className="text-foreground/90">Messenger-Projekt</strong> stellst.
+                      </>
+                    ) : (
+                      <>
+                        Für deine Rolle nur <strong className="text-foreground/90">Nachrichten</strong> und{' '}
+                        <strong className="text-foreground/90">Tresor</strong> (inkl. Notfall) — keine weiteren Kacheln, Einsatz schlank.
+                      </>
+                    )}
                   </p>
                 ) : null}
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -680,7 +695,9 @@ export function Dashboard() {
                 onClick={() => setShowAllTilesPersist(true)}
                 className="text-sm text-muted-foreground underline hover:text-foreground"
               >
-                Alle Funktionen (Kacheln) anzeigen
+                {liteMessengerLocksTiles
+                  ? 'Nachrichten & Tresor anzeigen'
+                  : 'Alle Funktionen (Kacheln) anzeigen'}
               </button>
             </div>
           </>
@@ -699,7 +716,7 @@ export function Dashboard() {
           tileSet={effectiveWorkspaceTileSet}
           onTileSetChange={setWorkspaceTileSetPersist}
           dashboardRole={role}
-          liteUiEnforcedByBackend={liteMessengerFromApi}
+          liteUiEnforcedByBackend={liteMessengerLocksTiles}
         />
 
         {/* Kacheln: immer für Boss/Kommandant; für Arbeiter/Lock nur wenn showAllTiles */}

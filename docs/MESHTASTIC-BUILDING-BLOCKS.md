@@ -60,4 +60,16 @@ Verknüpft: **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (optionale Tiefe), **`docs
 
 ---
 
+## 6. Entscheidungsprotokoll: Notfall-Reichweite (2026-03)
+
+**Kontext:** Diskussion, ob ein **zusätzlicher** Notrufpfad über **Klartext** auf **öffentlichen Meshtastic-Kanälen** („HILFE“, maximale Relay-Reichweite durch Fremdknoten) sinnvoll wäre — sowie **Plugin vs. Firmware** und **Dual-Stack** (Morgendrot + natives Meshtastic auf einem Heltec).
+
+**Entscheid:** Die **laufende Linie** bleibt: **Morgendrot-Notfall** über die **spezifizierten** Transporte (**Emergency Envelope / Binary**, Bridge, Team/Gateway), **Meshtastic-First** ohne Pflicht zu einem zweiten „Weltbus“-Klartextkanal.
+
+**Begründung (Kurz):** Öffentliche Kanäle sind **regionen-, community- und firmwareabhängig**; **kein** garantierter globaler Relay; Klartext **maximiert Lesbarkeit und Spoofing**; Erwartung „offizielle Hilfe sieht mit“ wäre **falsch**. Siehe ausführlich **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
+**Backlog:** Opt-in-Klartext-SOS mit eigener Spec/UI-Warnung; optional Dual-Use-Heltec — **nur** nach Bedarf und Aufwandabschätzung.
+
+---
+
 *Dieses Dokument präzisiert die Nutzer-Vorgabe **Meshtastic-First** und setzt **PHASE-2-FIRMWARE-SPEC** als **optionale** Tiefe, nicht als Default-Pflicht.*

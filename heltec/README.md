@@ -8,6 +8,10 @@ Dieser Ordner dokumentiert die **Heltec-Hardware-Rolle** im Morgendrot-Kontext. 
 - Im **Messenger-Dashboard** (Next.js, Chrome/Edge): Anbindung per **Web Bluetooth** an den Heltec-Stick (`frontend/frontend/hooks/use-meshtastic-ble.ts`).
 - Sendet/empfängt **PRIVATE_APP**-Binärpakete im Morgendrot-**Emergency Binary v2**-Format (sehr kleines Gesamtpaket → aktuell **240 B** Rohwire, siehe `src/messenger-nest/messenger-chain-wrap.ts`).
 
+## Notfall / Erreichbarkeit (operativ)
+
+Wer im Ernstfall **Gegenstelle** ist (Team, Gateway vs. offizielle Rettung) und welche Produktentscheidungen zum **Meshtastic-/LoRa-Notruf** gelten — **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
 ## Grenzen (Stand ohne Phase 2)
 
 - **Kein** Transport vollständiger `MORG_LUMA_V1` / `MORG_CHROMA_V1`-Wires über Mesh-v2 (Wire viel größer als 240 B).
