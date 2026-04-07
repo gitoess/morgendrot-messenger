@@ -34,6 +34,7 @@ import {
     buildMessengerExportJson,
     resolveMessengerExportPackageId,
 } from './config.js';
+import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import {
     findPeerHandshake,
     isChainReachable,
@@ -2170,6 +2171,15 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 400, { ok: false, error: 'role muss einer von: ' + allowedRoles.join(', ') + ' sein.' }, cors);
                         return;
                     }
+                    let initialProfile: DeviceProvisionParams['initialProfile'];
+                    if (data.initialProfile !== undefined && data.initialProfile !== null) {
+                        const v = parseAndValidateInitialProfile(data.initialProfile);
+                        if (!v.ok) {
+                            sendJson(res, 400, { ok: false, error: v.error }, cors);
+                            return;
+                        }
+                        initialProfile = v.profile;
+                    }
                     const hardwareType = data.hardwareType || 'desktop';
                     const isTiny = hardwareType === 'tiny';
                     const deviceSecret = isTiny && (data.deviceSecret === true || data.generateDeviceSecret) ? generateDeviceSecret() : (data.deviceSecret || undefined);
@@ -2202,6 +2212,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         gatewayUrl: data.gatewayUrl || '',
                         deviceSecret,
                         ticketOrKeyObjectId: data.ticketOrKeyObjectId || data.ticketObjectId || '',
+                        ...(initialProfile ? { initialProfile } : {}),
                     };
                     /** Plug-and-play: IoT-Gateway ohne Mnemonic → Boss signiert (kein iota-CLI auf dem Pi nötig). */
                     const isGateway = hardwareType === 'gateway';
@@ -2242,6 +2253,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         envContent,
                         jsonConfig,
                         qrPayload,
+                        ...(initialProfile ? { initialProfile } : {}),
                         ...(identityHeader ? { identityHeader } : {}),
                         ...(explorerLink ? { explorerLink } : {}),
                         ...(deviceSecret ? { deviceSecretForGateway: deviceSecret } : {}),

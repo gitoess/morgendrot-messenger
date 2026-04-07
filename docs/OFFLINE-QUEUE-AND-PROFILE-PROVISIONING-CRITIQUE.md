@@ -47,7 +47,7 @@ Bei **`POST /api/provision-device`** zusätzlich ein **JSON** (`initialProfile`:
 
 ### Ist-Stand API
 
-- **`/api/provision-device`** liefert u. a. `envContent`, `jsonConfig`, `qrPayload` — **kein** `initialProfile` (siehe **`api-server.ts`**).
+- **`/api/provision-device`** liefert u. a. `envContent`, `jsonConfig`, `qrPayload`; optional **`initialProfile`** (validiert, siehe **`docs/API-INITIAL-PROFILE.md`**, Code **`src/initial-profile-provision.ts`**).
 - Kontakte im Messenger: **`/api/contact-labels`** (GET/POST), **serverseitige** Datei + Client-State — **nicht** standardmäßig **IndexedDB** im Next-Frontend (siehe Hooks `use-contact-directory`).
 
 ### Kritik / Verbesserung

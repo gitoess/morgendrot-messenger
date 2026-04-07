@@ -333,7 +333,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 
 | # | Arbeitspaket | Kurzinhalt | Abhängigkeit |
 |---|----------------|------------|--------------|
-| **1** | **API `initialProfile` + Schema** | `POST /api/provision-device` optional: `initialProfile` (Kontakte, Einsatz-Labels, Kanal-Tags); JSON-Schema, Größenlimit; Antwortfeld für Client/Export. | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
+| **1** | **API `initialProfile` + Schema** | **`Ist (2026-03):** `POST /api/provision-device` akzeptiert optional `initialProfile` (version 1); Validierung in **`src/initial-profile-provision.ts`**; Antwort **`initialProfile`** + Eintrag in **`jsonConfig`** — Spec **`docs/API-INITIAL-PROFILE.md`**. Client-Import (Lite-UI/Next) = noch **offen** (Pakete 3–4). | **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`docs/API-INITIAL-PROFILE.md`** |
 | **2** | **Boss-Worker / Persistenz** | Wo Templates leben (Boss-Instanz): Datei unter `process.cwd()` oder bestehendes Vault/Provision-Pattern; **keine** Secrets im Klartext-Log. | API aus **1** |
 | **3** | **Lite-UI-Import** | Beim ersten Start: Profil → **`/api/contact-labels`** (Schleife) oder neuer **Bulk**-Endpoint; Icons/Labels nur Client. | **1**, **2** |
 | **4** | **Next-PWA-Import** | Gleiche API; IndexedDB nur wenn offline-first festgelegt — sonst **eine** Quelle (**API**). | **1**–**3** |

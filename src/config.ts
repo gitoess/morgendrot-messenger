@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { randomBytes } from 'node:crypto';
 import { normalizeAddress } from './utils.js';
+import type { InitialProfile } from './initial-profile-provision.js';
 dotenv.config();
 
 const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/;
@@ -1247,6 +1248,8 @@ export interface DeviceProvisionParams {
     deviceSecret?: string;
     /** User (nur NFT/QR): Objekt-ID des Tickets oder AccessKeys für QR/Explorer-Link. */
     ticketOrKeyObjectId?: string;
+    /** Optional: Kontext nach Start (Kontakte, Tags) — siehe docs/API-INITIAL-PROFILE.md */
+    initialProfile?: InitialProfile;
 }
 
 /** Nur vollständige Adressen/Objekt-IDs: 0x + 64 Hex (keine Kürzung mit …). */
@@ -1554,6 +1557,7 @@ export function buildDeviceJson(p: DeviceProvisionParams): Record<string, unknow
     if (p.sponsorGasOwner) o.sponsorGasOwner = p.sponsorGasOwner;
     if (p.hardwareType) o.hardwareType = p.hardwareType;
     if (p.gatewayUrl) o.gatewayUrl = p.gatewayUrl;
+    if (p.initialProfile) o.initialProfile = p.initialProfile;
     return o;
 }
 

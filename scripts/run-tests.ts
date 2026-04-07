@@ -618,6 +618,53 @@ async function testChatWaldConnection() {
     }
 }
 
+async function testInitialProfileProvision() {
+    console.log('\n--- initial-profile-provision ---');
+    try {
+        const { parseAndValidateInitialProfile, INITIAL_PROFILE_MAX_CONTACTS } = await import(
+            '../src/initial-profile-provision.js'
+        );
+        const addr = '0x' + 'a'.repeat(64);
+        const addr2 = '0x' + 'b'.repeat(64);
+        const good = parseAndValidateInitialProfile({
+            version: 1,
+            deploymentChannelTag: 'Nord',
+            contacts: [{ name: 'Boss', address: addr, roleTags: ['Leitung'] }],
+        });
+        assert(good.ok === true && good.profile.contacts.length === 1, 'valid profile');
+        assert(good.ok && good.profile.contacts[0].roleTags?.includes('Leitung'), 'roleTags');
+
+        const badVer = parseAndValidateInitialProfile({ version: 2, contacts: [] });
+        assert(badVer.ok === false, 'reject version !== 1');
+
+        const dup = parseAndValidateInitialProfile({
+            version: 1,
+            contacts: [
+                { name: 'A', address: addr },
+                { name: 'B', address: addr },
+            ],
+        });
+        assert(dup.ok === false, 'reject duplicate address');
+
+        const badAddr = parseAndValidateInitialProfile({ version: 1, contacts: [{ name: 'X', address: '0x123' }] });
+        assert(badAddr.ok === false, 'reject short address');
+
+        const many = {
+            version: 1,
+            contacts: Array.from({ length: INITIAL_PROFILE_MAX_CONTACTS + 1 }, (_, i) => ({
+                name: 'N' + i,
+                address: '0x' + String(i).padStart(64, '0'),
+            })),
+        };
+        const tooMany = parseAndValidateInitialProfile(many);
+        assert(tooMany.ok === false, 'reject too many contacts');
+
+        ok('parseAndValidateInitialProfile');
+    } catch (e) {
+        fail('initial-profile-provision', e);
+    }
+}
+
 async function testChatForwardText() {
     console.log('\n--- chat-forward-text (frontend) ---');
     try {
@@ -669,6 +716,7 @@ async function main() {
     await testChainAccessValidation();
     await testChainAccessAmounts();
     await testConfigDisplay();
+    await testInitialProfileProvision();
     await testMessengerExportEnv();
     await testSetEnvKeyBlocklist();
     await testMessengerGasMilestone();
