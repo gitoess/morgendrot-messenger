@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --port 3341 --hostname 127.0.0.1",
     "dev:lan": "next dev --port 3341 --hostname 0.0.0.0",
+    "prebuild": "node ../scripts/sync-pwa-handbook.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint ."

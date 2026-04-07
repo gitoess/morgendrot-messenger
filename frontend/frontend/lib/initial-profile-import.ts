@@ -7,6 +7,21 @@ import { applyInitialProfileProvisioning } from './api'
 
 const LS_PENDING = 'morgendrot.pendingInitialProfileJson'
 const LS_DONE_FP = 'morgendrot.initialProfileAppliedFingerprint'
+/** Anzeige der Boss-Notiz (`offlineBriefing`) in den Einstellungen */
+export const LS_OFFLINE_BRIEFING_DISPLAY = 'morgendrot.offlineBriefingDisplay'
+
+/** Speichert optionale Einsatz-Notiz lokal (Klartext, Browser-Storage). */
+export function persistOfflineBriefingFromProfile(profile: Record<string, unknown>): void {
+  if (typeof window === 'undefined') return
+  const b = profile.offlineBriefing
+  if (typeof b === 'string' && b.trim()) {
+    try {
+      localStorage.setItem(LS_OFFLINE_BRIEFING_DISPLAY, b.trim())
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 export function extractInitialProfileFromPaste(raw: string): Record<string, unknown> | null {
   let obj: unknown
@@ -51,7 +66,9 @@ export function fingerprintInitialProfile(profile: Record<string, unknown>): str
         .map((k) => `${k}=${String((profile.metadata as Record<string, unknown>)[k] ?? '')}`)
         .join('&')
     : ''
-  return `v1|${ch}|vu:${vu}|m:${meta}|${parts}`
+  const ob =
+    typeof profile.offlineBriefing === 'string' ? profile.offlineBriefing.trim().slice(0, 120) : ''
+  return `v1|${ch}|vu:${vu}|m:${meta}|ob:${ob}|${parts}`
 }
 
 export function queueInitialProfileForNextApply(profile: Record<string, unknown>): void {
@@ -117,6 +134,7 @@ export async function tryApplyPendingInitialProfileFromStorage(): Promise<{
   if (!res.ok) {
     return { ok: false, error: res.error || 'Import fehlgeschlagen' }
   }
+  persistOfflineBriefingFromProfile(profile)
   try {
     if (fp) localStorage.setItem(LS_DONE_FP, fp)
     localStorage.removeItem(LS_PENDING)

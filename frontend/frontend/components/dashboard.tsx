@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import {
   MessageSquare,
   Lock,
@@ -13,6 +14,7 @@ import {
   Settings,
   ChevronLeft,
   HelpCircle,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { fetchStatus, unlockBackend, fetchHelp, type ApiStatus } from '../lib/api'
@@ -539,6 +541,14 @@ export function Dashboard() {
             </div>
             {/* Setup (Package-ID, RPC, .env) */}
             <SetupOverlay onOpenConfig={() => setActiveView({ type: 'config' })} />
+            {/* Handbuch (PWA, /handbook) */}
+            <Link
+              href="/handbook"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title="Handbuch — nach erstem Laden oft offline"
+            >
+              <BookOpen className="h-5 w-5" />
+            </Link>
             {/* Settings */}
             <button
               onClick={() => setActiveView({ type: 'settings' })}

@@ -15,6 +15,7 @@ Feld **`initialProfile`** im JSON-Body:
 | `contacts` | Array | ja (darf leer sein) |
 | `metadata` | Objekt | nein — **flache** Schlüssel → String-Werte (v1), siehe **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** |
 | `validUntil` | Zahl | nein — Unix-Zeit **ms**; nach Ablauf sollen Clients lokale Daten entsorgen (**Honor-System**) |
+| `offlineBriefing` | string | nein — max. **2000** Zeichen; Kurznotiz (z. B. „Was tun bei Funkabbruch?“). **Klartext** im Paket; in der PWA nach Import optional in **localStorage** angezeigt — **kein** automatischer Vault ohne expliziten Vault-Schritt. |
 
 **`contacts[]`:**
 
@@ -25,6 +26,16 @@ Feld **`initialProfile`** im JSON-Body:
 | `roleTags` | string[] | nein (max. 20 Tags, je max. 48 Zeichen) |
 
 **Grenzen:** Max. **200** Kontakte; serialisiertes Profil max. **65536** Bytes UTF-8; keine doppelten Adressen. **`metadata`:** max. **48** Schlüssel; Schlüssel `[a-zA-Z0-9_.-]{1,64}`; Werte nach Trim max. **2048** Zeichen (Zahl/Bool werden zu String); **keine** verschachtelten Objekte in v1 — komplexe Daten als **JSON-String** in einem Wert.
+
+### Namens-Anker (Team-Konvention, nicht automatisch erzwungen)
+
+Das **„Gesetzbuch“** für freiwillige **`metadata`**-Schlüssel — damit in drei Monaten noch klar ist, was ihr damit meintet. **Kein** Pflicht-Move-Upgrade; Werte bleiben **Strings**. UI-Dropdowns (Label → Key) sind **Roadmap** (siehe **`docs/BOSS-ORIENTIERUNG.md`**).
+
+- **`teamid`** — Beispiel: `sektor-sued`, `zentrale`. Nur nötig, wenn ihr **nicht** nur **`deploymentChannelTag`** für dieselbe Semantik nutzt; **nicht** dieselbe Zuordnung doppelt führen.
+- **`gear`** — Beispiel: `funkgeraet`, `sanitaet`. Frei vereinbart; Anzeige in der App = eigene Client-Logik.
+- **`sector_label`** — Beispiel: `Sektor Süd` (menschenlesbar); Filter können bei euch `teamid` bevorzugen.
+
+Neue Keys: hier und in **`docs/BOSS-ORIENTIERUNG.md`** kurz dokumentieren.
 
 ## Response
 

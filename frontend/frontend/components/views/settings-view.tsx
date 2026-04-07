@@ -25,7 +25,10 @@ import {
   extractInitialProfileFromPaste,
   queueInitialProfileForNextApply,
   clearPendingInitialProfile,
+  persistOfflineBriefingFromProfile,
+  LS_OFFLINE_BRIEFING_DISPLAY,
 } from '../../lib/initial-profile-import'
+import Link from 'next/link'
 
 /** Minimal typing for `beforeinstallprompt` (nicht überall als DOM-Typ geladen). */
 type DeferredPwaPrompt = {
@@ -81,6 +84,8 @@ export function SettingsView({
   const [einsatzProfilJson, setEinsatzProfilJson] = useState('')
   const [einsatzProfilBusy, setEinsatzProfilBusy] = useState(false)
   const [einsatzProfilMsg, setEinsatzProfilMsg] = useState('')
+  /** Aus initialProfile.offlineBriefing (lokal, nach Import) */
+  const [offlineBriefingDisplay, setOfflineBriefingDisplay] = useState<string | null>(null)
 
   const loadStatus = async () => {
     setLoading(true)
@@ -93,6 +98,16 @@ export function SettingsView({
 
   useEffect(() => {
     loadStatus()
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const v = localStorage.getItem(LS_OFFLINE_BRIEFING_DISPLAY)
+      setOfflineBriefingDisplay(v && v.trim() ? v : null)
+    } catch {
+      setOfflineBriefingDisplay(null)
+    }
   }, [])
 
   useEffect(() => {
@@ -210,6 +225,10 @@ export function SettingsView({
     try {
       const res = await applyInitialProfileProvisioning(extracted)
       if (res.ok) {
+        persistOfflineBriefingFromProfile(extracted)
+        if (typeof extracted.offlineBriefing === 'string' && extracted.offlineBriefing.trim()) {
+          setOfflineBriefingDisplay(extracted.offlineBriefing.trim())
+        }
         setEinsatzProfilMsg(res.message || `${res.applied ?? 0} Kontakt(e) übernommen.`)
       } else {
         setEinsatzProfilMsg(res.error || 'Import fehlgeschlagen.')
@@ -227,6 +246,10 @@ export function SettingsView({
       return
     }
     queueInitialProfileForNextApply(extracted)
+    persistOfflineBriefingFromProfile(extracted)
+    if (typeof extracted.offlineBriefing === 'string' && extracted.offlineBriefing.trim()) {
+      setOfflineBriefingDisplay(extracted.offlineBriefing.trim())
+    }
     setEinsatzProfilMsg('Gespeichert. Wird beim nächsten erfolgreichen API-Kontakt automatisch ins Telefonbuch geschrieben.')
   }
 
@@ -282,11 +305,17 @@ export function SettingsView({
                   Installation anbieten
                 </button>
               ) : (
-                <p className="text-xs text-muted-foreground">
-                  Wenn der Browser eine Installation erlaubt (meist HTTPS oder localhost), erscheint hier ein Button –
-                  sonst Browser-Menü „App installieren“ nutzen.
-                </p>
+              <p className="text-xs text-muted-foreground">
+                Wenn der Browser eine Installation erlaubt (meist HTTPS oder localhost), erscheint hier ein Button –
+                sonst Browser-Menü „App installieren“ nutzen.
+              </p>
               )}
+              <p className="text-xs text-muted-foreground">
+                <Link href="/handbook" className="text-primary underline hover:no-underline">
+                  Handbuch (Boss-Orientierung, Offline-Hinweise)
+                </Link>{' '}
+                — im Produktionsbuild per Service Worker gecacht.
+              </p>
             </div>
           </div>
         </div>
@@ -306,13 +335,22 @@ export function SettingsView({
                 die gesamte <span className="font-mono text-xs">jsonConfig</span> (enthält{' '}
                 <span className="font-mono text-xs">initialProfile</span>). Wird ins Backend{' '}
                 <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben — siehe{' '}
-                <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>.
+                <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
+                <span className="font-mono text-xs">offlineBriefing</span> (Kurznotiz, z. B. Funkabbruch).
               </p>
             </div>
+            {offlineBriefingDisplay ? (
+              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">
+                  Einsatz-Notiz (aus Provisioning)
+                </p>
+                <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
+              </div>
+            ) : null}
             <Textarea
               value={einsatzProfilJson}
               onChange={(e) => setEinsatzProfilJson(e.target.value)}
-              placeholder='{"version":1,"contacts":[{"name":"…","address":"0x…64hex…","roleTags":["Medic"]}]}'
+              placeholder='{"version":1,"contacts":[],"offlineBriefing":"Bei Funkabbruch: …"}'
               className="min-h-[120px] font-mono text-xs"
               spellCheck={false}
             />

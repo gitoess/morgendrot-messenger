@@ -668,6 +668,16 @@ async function testInitialProfileProvision() {
         assert(withMeta.ok === true && withMeta.profile.metadata?.team_id === 'nord-1', 'metadata + validUntil');
         assert(withMeta.ok && withMeta.profile.validUntil === 2000000000000, 'validUntil');
 
+        const withBrief = parseAndValidateInitialProfile({
+            version: 1,
+            contacts: [],
+            offlineBriefing: 'Bei Funkabbruch: Ruhe bewahren. Mesh prüfen.',
+        });
+        assert(
+            withBrief.ok === true && withBrief.profile.offlineBriefing?.includes('Funkabbruch'),
+            'offlineBriefing'
+        );
+
         const badMeta = parseAndValidateInitialProfile({
             version: 1,
             contacts: [],

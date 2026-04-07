@@ -40,6 +40,8 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 
 **Entwicklerhinweis:** Für `npm run dev` laufen API (3342) und Next (3341) parallel; die Lite-UI bleibt zusätzlich unter **3342** erreichbar. Wer nur den schlanken Messenger testet, nutzt oft **`npm start`** und **3342**.
 
+**Boss: „Was kann ich wohin?“** — **`docs/BOSS-ORIENTIERUNG.md`**; Lite-UI **Steuerung** → Dokumentation-Buttons (`GET /api/doc?name=…`). **Messenger-PWA:** **`/handbook`** (nach `npm run sync:handbook` bzw. automatisch vor `next build`). Details: **`docs/PWA-HANDBUCH-OFFLINE.md`**.
+
 **Test-Routinen:** Schnellcheck nach größeren Änderungen, Playwright mit API, Chain-Hinweise und offene Next-Themen → **`docs/TESTING.md`** (Abschnitte *Smoke nach Merge*, *Playwright Lite/Messenger*, *Chain / Move-Paket*, *Roadmap Kunden-UI*).
 
 **Rollen & Hub:** Boss als Steuerung/Export, Kommandant/Arbeiter, optionale zentrale Orchestrierung → **`docs/ARCHITECTURE-ROLES-AND-HUB.md`**; offene Sicherheitsfragen → **`docs/DISCUSSION-OPEN.md`**.

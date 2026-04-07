@@ -1,0 +1,99 @@
+'use client'
+
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { BookOpen } from 'lucide-react'
+import { HandbookMarkdown } from '@/components/handbook-markdown'
+
+const DOCS: { file: string; title: string }[] = [
+  { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
+  { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
+]
+
+export function HandbookClient() {
+  const [active, setActive] = useState(DOCS[0].file)
+  const [body, setBody] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError('')
+    setBody(null)
+    void (async () => {
+      try {
+        const r = await fetch('/handbook/' + active, { cache: 'no-store' })
+        if (!r.ok) throw new Error('HTTP ' + r.status)
+        const t = await r.text()
+        if (!cancelled) setBody(t)
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [active])
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border px-4 py-3">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            ← Dashboard
+          </Link>
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-cyan-500/90" aria-hidden />
+            <h1 className="text-lg font-semibold">Handbuch</h1>
+          </div>
+          <p className="w-full text-xs text-muted-foreground sm:ml-auto sm:w-auto">
+            Statische Markdown-Dateien — nach erstem Laden oft offline lesbar (Service Worker).
+          </p>
+        </div>
+      </header>
+      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-6 md:flex-row">
+        <nav className="shrink-0 md:w-52">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Inhalt
+          </p>
+          <ul className="space-y-1">
+            {DOCS.map((d) => (
+              <li key={d.file}>
+                <button
+                  type="button"
+                  onClick={() => setActive(d.file)}
+                  className={
+                    'w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ' +
+                    (active === d.file
+                      ? 'bg-accent font-medium text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-muted hover:text-foreground')
+                  }
+                >
+                  {d.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <article className="min-w-0 flex-1 rounded-xl border border-border bg-card/30 p-4 md:p-6">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Lade…</p>
+          ) : error ? (
+            <p className="text-sm text-destructive">
+              {error} — Ist <span className="font-mono">npm run sync:handbook</span> gelaufen und{' '}
+              <span className="font-mono">frontend/public/handbook/</span> vorhanden?
+            </p>
+          ) : body ? (
+            <HandbookMarkdown text={body} />
+          ) : null}
+        </article>
+      </div>
+    </div>
+  )
+}

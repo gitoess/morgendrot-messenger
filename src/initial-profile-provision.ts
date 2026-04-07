@@ -22,6 +22,8 @@ const MAX_TAG_LEN = 48;
 const MAX_METADATA_KEY_LEN = 64;
 const MAX_METADATA_VALUE_LEN = 2048;
 const METADATA_KEY_REGEX = /^[a-zA-Z0-9_.-]{1,64}$/;
+/** Kurznotiz für Offline/Einsatz (Boss → Helfer), Klartext im Paket — siehe docs/API-INITIAL-PROFILE.md */
+export const INITIAL_PROFILE_OFFLINE_BRIEFING_MAX = 2000;
 
 export type InitialProfileContact = {
     name: string;
@@ -45,6 +47,11 @@ export type InitialProfile = {
      * Optional: Unix-Zeit in Millisekunden — nach Ablauf sollen Clients lokale Profildaten entsorgen (Honor-System).
      */
     validUntil?: number;
+    /**
+     * Optional: 3–4 Sätze „Was tun bei Funkabbruch?“ — **Klartext** im Provisioning-Paket.
+     * Kein Ersatz für Vault-Verschlüsselung; Anzeige in der PWA nach Import möglich.
+     */
+    offlineBriefing?: string;
 };
 
 function trimStr(s: unknown, max: number): string {
@@ -123,6 +130,12 @@ export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profil
         validUntil = n;
     }
 
+    let offlineBriefing: string | undefined;
+    if (o.offlineBriefing !== undefined && o.offlineBriefing !== null) {
+        const t = trimStr(o.offlineBriefing, INITIAL_PROFILE_OFFLINE_BRIEFING_MAX);
+        if (t) offlineBriefing = t;
+    }
+
     const contacts: InitialProfileContact[] = [];
     const seen = new Set<string>();
     for (let i = 0; i < contactsRaw.length; i++) {
@@ -170,6 +183,7 @@ export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profil
         contacts,
         ...(metadata ? { metadata } : {}),
         ...(validUntil !== undefined ? { validUntil } : {}),
+        ...(offlineBriefing ? { offlineBriefing } : {}),
     };
 
     const serialized = JSON.stringify(profile);

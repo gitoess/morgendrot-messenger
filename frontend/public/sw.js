@@ -1,16 +1,35 @@
 /**
  * Morgendrot PWA – Service Worker (minimal, stabil)
  *
- * - Cached nur Same-Origin Requests unter /_next/static/ (JS/CSS-Chunks nach erstem Laden).
+ * - Cached Same-Origin: /_next/static/ (JS/CSS-Chunks) + /handbook/*.md (Handbuch, offline nach erstem Abruf / Install).
  * - Kein Cache für /api/* : Backend bleibt „online first“; ohne Netz keine API.
- * - Erste Ladung ohne Netz: nicht unterstützt (Next braucht Server/Build).
+ * - Erste App-Session ohne Netz: begrenzt (Handbuch nur wenn precache oder vorher geladen).
  *
- * Version erhöhen, wenn sich Caching-Strategie ändert (Clients holen neue sw.js).
+ * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-1'
+const VERSION = 'morgendrot-sw-2'
 const STATIC_CACHE = `next-static-${VERSION}`
+const HANDBOOK_CACHE = `handbook-${VERSION}`
+/** Muss zu scripts/sync-pwa-handbook.mjs und frontend/public/handbook/ passen */
+const HANDBOOK_URLS = ['/handbook/BOSS-ORIENTIERUNG.md', '/handbook/PWA-HANDBUCH-OFFLINE.md']
 
 self.addEventListener('install', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const cache = await caches.open(HANDBOOK_CACHE)
+        await Promise.all(
+          HANDBOOK_URLS.map((url) =>
+            fetch(url).then((res) => {
+              if (res.ok) return cache.put(url, res)
+            })
+          )
+        )
+      } catch {
+        /* Handbuch-Dateien fehlen im Build — überspringen */
+      }
+    })()
+  )
   self.skipWaiting()
 })
 
@@ -19,7 +38,13 @@ self.addEventListener('activate', (event) => {
     (async () => {
       const keys = await caches.keys()
       await Promise.all(
-        keys.filter((k) => k.startsWith('next-static-') && k !== STATIC_CACHE).map((k) => caches.delete(k))
+        keys
+          .filter(
+            (k) =>
+              (k.startsWith('next-static-') && k !== STATIC_CACHE) ||
+              (k.startsWith('handbook-') && k !== HANDBOOK_CACHE)
+          )
+          .map((k) => caches.delete(k))
       )
       await self.clients.claim()
     })()
@@ -34,6 +59,8 @@ self.addEventListener('fetch', (event) => {
     if (url.origin !== self.location.origin) return
     if (url.pathname.startsWith('/_next/static/')) {
       event.respondWith(staticCacheFirst(req))
+    } else if (url.pathname.startsWith('/handbook/') && url.pathname.endsWith('.md')) {
+      event.respondWith(handbookCacheFirst(req))
     }
   } catch {
     /* ignore */
@@ -53,5 +80,24 @@ async function staticCacheFirst(request) {
       (await cache.match(request)) ||
       new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
     )
+  }
+}
+
+async function handbookCacheFirst(request) {
+  const cache = await caches.open(HANDBOOK_CACHE)
+  const hit = await cache.match(request)
+  if (hit) return hit
+  try {
+    const res = await fetch(request)
+    if (res.ok) cache.put(request, res.clone())
+    return res
+  } catch {
+    const fallback = await cache.match(request)
+    if (fallback) return fallback
+    return new Response('Handbuch offline nicht verfügbar — einmal mit Netz öffnen.', {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    })
   }
 }
