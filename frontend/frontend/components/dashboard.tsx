@@ -698,6 +698,7 @@ export function Dashboard() {
           apiStatus={apiSnapshot}
           tileSet={effectiveWorkspaceTileSet}
           onTileSetChange={setWorkspaceTileSetPersist}
+          dashboardRole={role}
           liteUiEnforcedByBackend={liteMessengerFromApi}
         />
 

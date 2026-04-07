@@ -58,3 +58,10 @@
    - Anzeige: Tabelle/Liste mit Gerät (device), Status (online/offline/warning), letztes Heartbeat (lastSeen).
 
 **Referenzen:** `frontend/frontend/components/dashboard.tsx`, `src/api-server.ts` (status: role, roleId), `src/config.ts` (getHierarchyPermissions), `/api/monitor-status`, `/api/audit-events`.
+
+---
+
+## 5. Stand Umsetzung (2026-03, H.0 #3)
+
+- **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Boss/Kommandant** bei **Volldashboard** **Geräte-Radar** oben. **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis (inkl. wann Radar fehlt bei Messenger-Arbeitsbereich).
+- **Offen:** Vollständige **Workflow-Oberfläche** (Spec § 3) ohne Kachel-Navigation — weiterhin Backlog.

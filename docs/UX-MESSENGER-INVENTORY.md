@@ -2,7 +2,7 @@
 
 Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`docs/ROADMAP-FAHRPLAN.md` § H.0**).
 
-**Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`. **Lite-UI:** `uiVariant` aus `/api/status` synchron mit Kachel-Auswahl (`dashboard.tsx` + `workspace-projects-panel.tsx`). **Recovery:** Einstellungen **Wallet & Backup**, API `revealVaultSignerImport` → **`/vault-show-signer-import`**; Doku **`docs/RECOVERY-PHRASE-BACKUP.md`**. **H.0 (gleicher Tag):** **`GET /api/help`** — Hilfe-Button im **Dashboard-Header** + in **„Erste Schritte“**; „Erste Schritte“ erklärt **Lite messenger** explizit bei `uiVariant=messenger`.
+**Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`. **Lite-UI:** `uiVariant` aus `/api/status` synchron mit Kachel-Auswahl (`dashboard.tsx` + `workspace-projects-panel.tsx`). **Recovery:** Einstellungen **Wallet & Backup**, API `revealVaultSignerImport` → **`/vault-show-signer-import`**; Doku **`docs/RECOVERY-PHRASE-BACKUP.md`**. **H.0 (gleicher Tag):** **`GET /api/help`** — Hilfe-Button im **Dashboard-Header** + in **„Erste Schritte“**; „Erste Schritte“ erklärt **Lite messenger** explizit bei `uiVariant=messenger`. **H.0 #3:** Rollen-Hinweise **Arbeitsbereich & Projekte** + Action Center / Geräte-Radar.
 
 **Posteingang / Chat-Verlauf (2026-03):** Backend lädt ein- und ausgehende Mailbox-/Event-Nachrichten; Next-UI nutzt `myAddressFull` und sichere Identitätsvergleiche; Filter Eingang|Ausgang|Alle inkl. Selbstnachrichten. **Doku:** `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`, `docs/UI-NACHRICHTEN-STREAMS-ORT.md`.
 
@@ -27,6 +27,7 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 | **Einfacher Modus: IOTA-Details ausblenden** | `effectiveWorkspaceTileSet === 'messenger'` (inkl. Backend `uiVariant=messenger`) filtert Kacheln; Package-ID-Banner existiert für Mismatch | **Sinn:** Messenger-Rolle: technische Hashes standardmäßig einklappen (nur auf Klick). |
 | **`uiVariant` ↔ Arbeitsbereich** | Bei `uiVariant: 'messenger'` erzwingt das Dashboard **Messenger-Kacheln**; „Volldashboard“ ist deaktiviert; State + `localStorage` werden angeglichen | Kein Konflikt mehr zwischen altem `localStorage` und `UI_VARIANT=messenger`. |
 | **Hilfe (`/api/help`)** | Header-Button + **„Hilfe (Kurz + Befehle)“** in „Erste Schritte“ → Dialog mit **`HELP_UI_INTRO`** + `HELP_START`/`HELP_CHAT` | Vorher war der Dialog im Code ohne sichtbaren Trigger (**Roadmap H.0 #4**). |
+| **Rollen-Hinweise (H.0 #3)** | **`workspace-projects-panel`:** Infokasten je **Arbeiter/Lock** vs. **Boss/Kommandant** (Radar nur Volldashboard); Action Center + Radar mit Fußzeile zur Spec | Reduziert Verwechslung Messenger- vs. Volldashboard bei Boss. |
 
 ## 3. Status („Wald-Check“)
 

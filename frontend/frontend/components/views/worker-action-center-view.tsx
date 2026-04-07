@@ -116,6 +116,10 @@ export function WorkerActionCenterView() {
           <p className="text-sm text-muted-foreground">
             Heartbeat, Ticket prüfen, Keys/Tickets verwalten – alles an einem Ort
           </p>
+          <p className="mt-1 text-[11px] text-muted-foreground/85">
+            Standard-Workspace für Rolle <span className="font-mono">arbeiter</span> /{' '}
+            <span className="font-mono">lock</span> (Fahrplan H.0 #3 · docs/UI-ROLLEN-WORKSPACES.md).
+          </p>
         </div>
       </div>
 

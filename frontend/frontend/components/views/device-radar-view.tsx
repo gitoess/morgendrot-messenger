@@ -84,6 +84,10 @@ export function DeviceRadarView() {
           Aktualisieren
         </button>
       </div>
+      <p className="mb-3 text-[11px] text-muted-foreground">
+        Workspace für <span className="font-mono">boss</span> / <span className="font-mono">kommandant</span> bei
+        Volldashboard — Daten von <span className="font-mono">GET /api/monitor-status</span> (H.0 #3).
+      </p>
       {error && (
         <p className="mb-3 text-sm text-red-400">{error}</p>
       )}

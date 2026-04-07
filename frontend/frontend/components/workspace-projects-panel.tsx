@@ -31,11 +31,38 @@ const BUNDLE_CMD = 'npm run bundle:messenger'
 const BUNDLE_NOTE =
   'Erzeugt u. a. exports/Morgendrot-Messenger-standalone/ – Ordner kopieren, dort npm install && npm start.'
 
+function roleWorkspaceHint(
+  role: string | undefined,
+  tileSet: WorkspaceTileSet
+): { title: string; body: string } | null {
+  const r = (role || '').toLowerCase()
+  if (r === 'arbeiter' || r === 'lock') {
+    return {
+      title: 'Rollen-Workspace: Arbeiter / Lock',
+      body:
+        'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Alle Funktionen (Kacheln)“ erreichst du Nachrichten, Tresor und weitere Module. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
+    }
+  }
+  if (r === 'boss' || r === 'kommandant') {
+    const radar =
+      tileSet === 'full'
+        ? 'Oben: Geräte-Radar (Monitor-Status). Darunter Kacheln und Arbeitsbereich.'
+        : 'Geräte-Radar ist nur bei Arbeitsbereich „Volldashboard“ sichtbar — dort umschalten (sofern vom Backend erlaubt).'
+    return {
+      title: 'Rollen-Workspace: Boss / Kommandant',
+      body: `${radar} Spec: docs/UI-ROLLEN-WORKSPACES.md.`,
+    }
+  }
+  return null
+}
+
 interface WorkspaceProjectsPanelProps {
   apiStatus: (ApiStatus & { error?: string }) | null
   className?: string
   tileSet: WorkspaceTileSet
   onTileSetChange: (v: WorkspaceTileSet) => void
+  /** `GET /api/status` → `role` — für rollenbezogene Hinweise (H.0 #3). */
+  dashboardRole?: string
   /**
    * `true`: Backend liefert `uiVariant: 'messenger'` (UI_VARIANT=messenger) – Volldashboard ist am Server nicht vorgesehen;
    * der Schalter „Volldashboard“ ist deaktiviert.
@@ -48,12 +75,14 @@ export function WorkspaceProjectsPanel({
   className,
   tileSet,
   onTileSetChange,
+  dashboardRole,
   liteUiEnforcedByBackend = false,
 }: WorkspaceProjectsPanelProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const apiPort = apiStatus?.apiListenPort
   const uiVar = apiStatus?.uiVariant
   const edition = apiStatus?.messengerEdition
+  const roleHint = roleWorkspaceHint(dashboardRole, tileSet)
 
   const copy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text)
@@ -72,6 +101,16 @@ export function WorkspaceProjectsPanel({
         <Layers className="h-4 w-4 text-primary" />
         Arbeitsbereich &amp; Projekte
       </div>
+
+      {roleHint ? (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.07] p-3 text-xs leading-relaxed text-muted-foreground">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
+          <div>
+            <div className="mb-1 font-medium text-foreground">{roleHint.title}</div>
+            <p>{roleHint.body}</p>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button
