@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**.  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -422,6 +422,25 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Manuelle Anpassung** | Pro Kunde/Test: **`.env`** editieren (z. B. `PACKAGE_ID`, `RPC_URL`, `BOSS_ADDRESS` / Partner) — **sinnvoll und ausreichend** für erste Einsätze. |
 | **Geheimnisse** | **Nie** Seed oder Vault-Passwort auf das Medium schreiben; nur lokale Eingabe auf dem Telefon. |
 | **Backlog (optional)** | **Boss-Export-Assistent** in der Werkstatt: Formular → ZIP + fertige **`.env`** (ohne Secrets) + Kurz-README — **Komfort**, kein Blocker für Feldtests. |
+
+### H.8 Dienst (Mainnet) vs. privat (Testnet) — **zwei Installationen**, Doku, **kein** Sofort-Coding
+
+**Zielgruppe:** vor allem **Interessierte** / Labore; **Einsatzhelfer** typisch **ein** Profil nach Vorgabe.
+
+| Frage | Empfehlung |
+|--------|------------|
+| **Machen zwei getrennte Installationen am meisten Sinn?** | **Ja (pragmatisch):** zwei Arbeitsverzeichnisse (oder zwei Portable-Bundles), je eigene **`.env`** (`RPC_URL`, `PACKAGE_ID`, …) und eigener **`VAULT_FILE`**-Pfad; zwei Starter/Icons (z. B. „EINSATZ“ / „TEST“). **Wenig** Kern-Code, **hohe** Trennschärfe — siehe **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** (§ 2, § 5). |
+| **Alles „ganz hinten“ dokumentieren — reicht das?** | **Ja:** Fahrplan **§ H.8** + genannte Doku; **kein** eigener Implementierungs-Sprint nötig, solange kein Bedarf nach **In-App-Profilwahl** (wäre mehr Aufwand, siehe § 5 dort). |
+| **Gleich im Code umsetzen (Start-Dialog Testnet/Mainnet)?** | **Nein als Priorität** vor **Phase A**-Stabilität und vor **§ H.0/H.1** (siehe **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**). Optional später als Produktentscheidung — nicht parallel zum Mesh-MVP erzwingen. |
+
+**Aufräumarbeiten „fertig“?** Es gibt **kein** einmaliges „alles erledigt“: **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** + **§ H.5** beschreiben **laufende** Hygiene (keine Secrets, sinnvolle Commits, `tsc`/Tests vor größeren Merges). Der **architektonische** Aufräum-Stand (Chat-Hooks, keine sinnlosen Rollbacks) ist dort als **„behalten“** festgehalten — weiteres Aufräumen nur **punktuell** mit Nutzen (**§ A Punkt 4**).
+
+**Wie weitermachen (Reihenfolge):**  
+1. **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** — Phasen **A → B → C** einhalten.  
+2. **`§ H.0`** (Produkt/UX, Messenger schlank, Entsperren) und **`§ H.1`** (Phase A technisch: Stabilität, Tests, kleine UI-Fixes).  
+3. **`§ H.2`** — PWA-Checks, Status/Fehlermeldungen, Kabel-Bridge nur wenn Kapazität.  
+4. **Phase B** erst bei „A genug stabil“ — Mesh v2, **Delayed LoRa → IOTA** laut Spec.  
+5. **Nicht** parallel: volles Macro-Gateway, **§ I**-Narrative als Pflichtsprint, oder **Testnet/Mainnet-Profil-UI** ohne konkreten Bedarf.
 
 ---
 

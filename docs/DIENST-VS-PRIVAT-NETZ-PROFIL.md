@@ -96,6 +96,7 @@ Der folgende Satz aus Diskussionsentwürfen sollte **nicht** als Lieferumfang de
 
 ## Verwandte Dokumente
 
+- `docs/ROADMAP-FAHRPLAN.md` — **§ H.8** (zwei Installationen, Prioritäten, „nicht gleich coden“)  
 - `docs/ROLLENWECHSEL-TEAM-EINSATZ.md` — Rollen/Vault vs. Provisioning  
 - `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md` — Inbox, Cache, `PACKAGE_ID`  
 - `docs/BOSS-ORIENTIERUNG.md` — Lieferwege Konfiguration  
