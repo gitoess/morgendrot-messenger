@@ -173,6 +173,28 @@ Die **Zahlen** unten sind **exakt** die Summe der Bits (nicht frei erfunden):
 
 ---
 
+## 10. Komplexität dreier Schichten — ehrliche Einordnung
+
+### 10.1 Was stimmt an der Kritik?
+
+- **Drei Stellen** (`ROLE`, `ROLE_ID`, `getHierarchyPermissions`) können **für neue Entwickler** schwer durchschaubar sein — **ja**.
+- **Inkonsistente Konfiguration** ist möglich (z. B. `ROLE=boss`, aber `ROLE_ID` ohne **S**): Dann schlagen **bestimmte** Befehle fehl (`/send`, `/boss-command` bei Hierarchie), während **`/send-plain`** bewusst **ohne** `ROLE_ID`-Check läuft (`messenger-command-handler.ts`). Das ist weniger „Sicherheitslücke“ als **Konfigurations-Falle** und **unterschiedliche Produktregeln** (Klartext vs. Mailbox-Verschlüsselung).
+- **Redundanz:** Teils **absichtlich** (Gas-Modell **LW/BW** ist nicht dasselbe wie „darf senden“), teils **historisch gewachsen**.
+
+### 10.2 Was an der Kritik übertrieben ist?
+
+- **„Angreifer hebelt Hierarchie aus“** — in der Regel **nein**: viele Pfade prüfen **beides** oder **Move/Wallet**; das reale Risiko ist eher **falsche `.env`** als ein Bit, das die Chain umgeht.
+- **„6 Bits abschaffen“** — möglich, aber **großer** Refactor (UI, Provisioning, Tests, Migration). Ohne **Migrationsplan** riskanter als der Status quo.
+- **„Nur MESSENGER / RELAY / BOSS“** — ignoriert **`lock`**, **`monitor`**, **`waerter`**, **`messenger`** als Chat-Rolle — **nicht** 1:1 ins bestehende Produkt übertragbar.
+
+### 10.3 Sinnvolle Richtung (ohne Implementierungszwang)
+
+1. **Dokumentation & Defaults:** Empfohlene **`ROLE`+`ROLE_ID`-Kombinationen** pro Szenario (Boss → id-63 o. Ä.); Warnungen in UI (gibt es teils schon).
+2. **Langfristig:** Ein **einheitliches** Berechtigungsmodell **spezifizieren**, dann erst Code zusammenziehen — nicht umgekehrt.
+3. **Nicht** beliebig neue Bits (**R/A/V/E**) ergänzen, solange die bestehende Matrix nicht verstanden ist.
+
+---
+
 ## Verwandte Dokumente
 
 - `docs/ARCHITECTURE-ROLES-AND-HUB.md` — Boss, Kommandant, Arbeiter  
@@ -181,4 +203,4 @@ Die **Zahlen** unten sind **exakt** die Summe der Bits (nicht frei erfunden):
 
 ---
 
-*Stand: Abgleich mit `src/config.ts`, `src/messenger-nest/messenger-command-handler.ts`, `src/api-server.ts` (`/api/profiles`), `ui/index.html` (`roleProfiles`). §§ 6–9: kritische Korrektur gängiger Bit-Fehldeutungen.*
+*Stand: Abgleich mit `src/config.ts`, `src/messenger-nest/messenger-command-handler.ts`, `src/api-server.ts` (`/api/profiles`), `ui/index.html` (`roleProfiles`). §§ 6–9: kritische Korrektur gängiger Bit-Fehldeutungen. § 10: Komplexität/Diskussion.*
