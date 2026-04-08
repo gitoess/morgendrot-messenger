@@ -57,4 +57,16 @@ Die **Web-Oberfläche** ist bewusst **dünn**: eine **gemeinsame API** (`/api/*`
 
 ---
 
-*Stand: 2026-03-28 — präzisiert die Alltagsformulierung „läuft über Backend, nicht direkt zu IOTA“.*
+## 6. Produktentscheid (Notfall-Messenger, Stabilität)
+
+**Diskutiert:** optionaler **Hybrid-Modus** (Backend vs. Signatur **direkt** im Browser / Wallet-Extension) und minimaler „Backup“-Pfad nur für **Coin-Transfer** oder kurze Nachrichten.
+
+**Festgelegt:** Es bleibt bei der **bestehenden Architektur** — **ein** primärer Pfad: **laufender Morgendrot-Node** baut und signiert, **UI** spricht **`/api/*`**. **Kein** paralleler Produkt-Pfad für Browser-/Extension-Signatur geplant (geringere Wartung, weniger Kanten für einen **Notfall-Messenger**).
+
+**Optional operativ (nur Doku, kein Pflicht-Feature):** Wenn das **Backend** ausfällt, kann ein **eigenständiges IOTA-Wallet** (beliebige App) für einen **vereinbarten MIST-Transfer** an eine **Bekannten-Adresse** genutzt werden — als **organisatorischer** Notfall-Beacon, **ohne** Integration in Morgendrot. Später ggf. ein Absatz im **Handbuch** / Einsatz-Doku; bis dahin reicht der Verweis auf dieses Kapitel.
+
+**Nicht Ziel:** nachträglicher „Umzug“ der gesamten Messenger-Logik **in die PWA** als Abschlussschritt — zu wartungsintensiv; vgl. Abwägung in Reviews (Remote-Signer o. Ä. höchstens **separat** diskutieren).
+
+---
+
+*Stand: 2026-03-28 — § 6 ergänzt 2026-03-28 (Produktentscheid Hybrid).*
