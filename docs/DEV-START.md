@@ -1,16 +1,31 @@
 # Entwicklung starten
 
-## Ein Befehl: Backend + UI
+## Wichtig: `npm start` ≠ Next auf Port 3341
+
+| Befehl | Port **3342** (API + Lite-UI `ui/`) | Port **3341** (Next.js Messenger / „Standalone“-Dev) |
+|--------|--------------------------------------|--------------------------------------------------------|
+| **`npm start`** | **Ja** (Backend + Streams-Mock) | **Nein** — Next wird **nicht** gestartet. |
+| **`npm run dev`** | **Ja** | **Ja** (parallel über `concurrently`) |
+
+**Häufiger Irrtum:** Nur **`http://127.0.0.1:3342`** zu sehen ist **normal bei `npm start`**. Die **PWA/Messenger-Oberfläche** im Entwicklungsmodus ist **`http://127.0.0.1:3341`** und braucht **`npm run dev`**.
+
+**Nicht verwenden:** `npm start dev` — das ist **kein** offizielles Script; das zweite Wort kann **`concurrently`** stören oder ignoriert werden. Richtig: **`npm run dev`**.
+
+**Nur Next nachträglich:** Backend läuft schon → zweites Terminal: `cd frontend && npm run dev` (3341).
+
+---
+
+## Ein Befehl: Backend + UI (3341 + 3342)
 
 ```bash
 npm run dev
 ```
 
 - **Backend (API):** http://127.0.0.1:3342  
-- **Next.js-UI:** http://127.0.0.1:3341 (wenn mit `dev:frontend` gestartet)  
+- **Next.js-UI:** http://127.0.0.1:3341  
 - **Lite-UI / Boss-Werkstatt (Alpine + Tailwind):** http://127.0.0.1:3342/ – wird vom API-Server aus dem Ordner `ui/` ausgeliefert. Kein separates `npm install` für `ui/` nötig.
 
-Zum Testen der **Lite-UI**: **`npm start`** ausführen, dann im Browser **http://127.0.0.1:3342/** öffnen. Passwort-Dialog erscheint, wenn das Backend gesperrt ist. Bedeutung **Boss vs. Kunden-UI**: nächster Abschnitt.
+**Nur Lite-UI / Werkstatt testen (ohne Next):** **`npm start`**, dann **http://127.0.0.1:3342/**. Passwort-Dialog erscheint, wenn das Backend gesperrt ist. Bedeutung **Boss vs. Kunden-UI**: nächster Abschnitt.
 
 ### Handy im WLAN (Android / Chrome)
 

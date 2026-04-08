@@ -28,6 +28,8 @@ Kurzreferenz: **was** welcher Schalter löscht und **was nicht**.
 
 - **Factory I/O** ist **kein** Messenger-Kern: Standard ist `ENABLE_FACTORY_IO=false`; optionale Variablen liegen in **`env.factory-io.example`**. Siehe `docs/FACTORY-IO-INTEGRATION.md`.
 
+**Verwandt (operativ, nicht Purge-Technik):** **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** — wen man im Ernstfall erreicht, Brücken zur professionellen Hilfe.
+
 ---
 
 *Technische Quelle: `purgeInboxCache` / `inboxCachePath` in `src/vault-local.ts`, Emergency-Purge in `messenger-command-handler.ts`.*

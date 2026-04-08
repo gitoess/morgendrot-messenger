@@ -26,10 +26,19 @@
 | **`initialProfile.offlineBriefing`** | Kurznotiz (vom Boss) im Provision-Paket — **Klartext im JSON** bis zur eigenen Speicherlogik; **kein** automatischer „immer im verschlüsselten Vault“ ohne expliziten Vault-Schritt (siehe `API-INITIAL-PROFILE.md`). |
 | **Papier / QR am Gerät** | Low-Tech; QR kann nur begrenzt viel Nutzlast fassen — Parameter kurz halten. |
 
-## 4. Pflege
+## 4. Entwicklung: Port 3341 vs. 3342
+
+- **`npm start`** startet **nur** das Morgendrot-Backend (typisch **3342**) und den Streams-Mock — **ohne** Next.js. Es gibt **keine** Dev-Oberfläche auf **3341**.
+- **`npm run dev`** startet **3342** und **3341** parallel (Messenger/PWA im Browser: **http://127.0.0.1:3341**). Details: **`docs/DEV-START.md`**.
+
+## 5. Notfall ohne laufendes Morgendrot-Backend (Kurz)
+
+Ohne laufenden Node gibt es **kein** zuverlässiges **`/api`**. Für einen **organisatorischen** Notfall-Beacon (vereinbarter **MIST-Transfer** an eine bekannte Adresse) kann ein **eigenständiges IOTA-Wallet** genutzt werden — **ohne** Pflicht-Integration in Morgendrot. Produktentscheid und Abgrenzung zu einem Browser-Hybrid: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6.
+
+## 6. Pflege
 
 - Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md` oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*`.
 
 ---
 
-*Stand: Abgleich mit implementiertem SW und Next `public/handbook/`.*
+*Stand: Abgleich mit implementiertem SW und Next `public/handbook/`; § 4–5 ergänzt 2026-03-28.*

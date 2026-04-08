@@ -29,7 +29,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 ## Voraussetzungen
 
-- Messenger-PWA gebaut oder im Dev-Modus: Root **`npm run dev`** → Next **http://127.0.0.1:3341/**, API wie in **`docs/DEV-START.md`**.
+- Messenger-PWA gebaut oder im Dev-Modus: Root **`npm run dev`** → Next **http://127.0.0.1:3341/**, API wie in **`docs/DEV-START.md`**. (**`npm start`** allein startet **kein** Next — nur **3342**; siehe **`docs/DEV-START.md`** Tabelle oben.)
 - **Chrome/Edge (Android/Desktop):** „Zum Startbildschirm hinzufügen“ / Install-Prompt ist plattformabhängig; **iOS Safari** hat andere Install-Regeln (Teilen → „Zum Home-Bildschirm“).
 
 ---
