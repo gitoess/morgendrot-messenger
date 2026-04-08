@@ -33,6 +33,8 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 
 **Eine Schnittstelle:** **`/api/*`** (z. B. `GET /api/status`, `POST /api/command`) ist die **gemeinsame** Schicht. Neue Fähigkeiten werden **zuerst** in `src/api-server.ts` und den dahinterliegenden Modulen (`wallet-bridge`, `chain-access`, …) umgesetzt; beide UIs sind nur Clients. So bleibt eine **Quelle der Wahrheit** auf dem Server.
 
+**„Direkt zu IOTA“ vs. lokaler Node:** Die **Chain** wird vom laufenden **Backend** über **`RPC_URL`** angesprochen — das ist der **normale** Weg zu den IOTA-Nodes, **ohne** Pflicht zu einem **Morgendrot-Zentralserver**. Trotzdem bauen und signieren **nicht** primär der Browser, sondern der **Node-Prozess**. Präzise Einordnung: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**.
+
 **Wo neue Features landen (Vereinbarung):**
 
 - **Messenger-Erlebnis** für Endnutzer (z. B. Credits-Anzeige, „Tank-Balken“, Chat-Feinschliff, Tor-/Lock-Status im Dashboard): **Priorität `frontend/`** (Next/React).

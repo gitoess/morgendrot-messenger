@@ -4,7 +4,7 @@ Sicherer Messenger und M2M-Lock auf IOTA Rebased: ECDH P-256, AES-GCM, Vault (lo
 
 **Einstieg (empfohlene Lese-Reihenfolge für neue Entwickler):**
 
-1. **`docs/DEV-START.md`** — Lokales Setup, Rollen, die zwei Web-Oberflächen (**`frontend/`** = Next-Kundenprodukt, **`ui/`** = Boss-Werkstatt am API-Port), typische Ports und Startbefehle.
+1. **`docs/DEV-START.md`** — Lokales Setup, Rollen, die zwei Web-Oberflächen (**`frontend/`** = Next-Kundenprodukt, **`ui/`** = Boss-Werkstatt am API-Port), typische Ports und Startbefehle. **Backend vs. „direkt zu IOTA“:** **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. **ATAK/CoT (Backlog):** **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md`**, Fahrplan **§ H.9**.
 2. **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** — Wenn du am Messenger, Posteingang oder Chat-Verlauf arbeitest: Datenfluss Chain → Backend → UI, Persistenz, zentrale Dateipfade; ergänzend **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`** (wo Nutzer was sieht). Für andere Themen zuerst **`docs/architecture.mmd`** und **`docs/CONFIG-REFERENCE.md`** als Überblick.
 3. **`TESTING.md`** — Smoke-Ablauf (`npm run test:smoke`) und manuelle Checklisten vor Merge oder Release.
 4. **`docs/ONBOARDING-WALLET-UX-SPEC.md`** — Wallet/Session (Unlock, Vault, Credits vs. MIST), **Backlog L1–L6**, Verknüpfung **`docs/ROADMAP-FAHRPLAN.md` § H.0**.
