@@ -79,12 +79,13 @@ export function SetupOverlay({ onOpenConfig }: SetupOverlayProps) {
         getCurrentIds(),
         getPackageIdHistory(),
       ])
-      setStatus({
+      setStatus((prev) => ({
+        ...prev,
         address: statusRes.address ?? statusRes.myAddress ?? idsRes.myAddress,
         packageId: statusRes.packageId ?? idsRes.packageId,
         network: statusRes.rpcUrlLabel || statusRes.network,
         version: statusRes.version,
-      })
+      }))
       if (historyRes.ok) {
         setPackageHistory({ current: historyRes.current, history: historyRes.history || [] })
         setSelectedPackageId(historyRes.current ?? '')
