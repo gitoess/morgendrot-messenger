@@ -5,6 +5,12 @@
 
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 
+/** Phase der UI-Aufnahme (Idle → Start → Recording → Encoding). */
+export type VoiceRecordPhase = 'idle' | 'starting' | 'recording' | 'encoding'
+
+/** Normal- vs. SOS-Slot. */
+export type VoiceRecordKind = 'normal' | 'emergency'
+
 /**
  * Kurze Clips für Funk (LoRa) und für SOS (Notfall: schnell raus, gleiche Opus-Pipeline).
  * Normale Sprachmemo bei Online (IOTA) darf länger sein (mehr Bandbreite).

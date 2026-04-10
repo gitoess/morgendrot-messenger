@@ -9,11 +9,11 @@ import {
   getMessengerVoiceEmergencyMaxMs,
   getMessengerVoiceNormalMaxMs,
   pickVoiceRecorderMimeType,
+  type VoiceRecordKind,
+  type VoiceRecordPhase,
 } from '@/frontend/features/voice/messenger-voice-record'
 
-export type VoiceRecordPhase = 'idle' | 'starting' | 'recording' | 'encoding'
-
-export type VoiceRecordKind = 'normal' | 'emergency'
+export type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/features/voice/messenger-voice-record'
 
 export function useChatViewVoiceRecord(p: {
   forcedTransport: ForcedTransport

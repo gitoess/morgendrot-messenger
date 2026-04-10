@@ -2,7 +2,7 @@
 
 import { Mic, Square, Loader2, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/hooks/use-chat-view-voice-record'
+import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/features/voice/messenger-voice-record'
 
 export type ChatViewVoiceRecordProps = {
   slot: 'normal' | 'emergency'

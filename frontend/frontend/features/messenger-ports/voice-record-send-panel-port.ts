@@ -1,4 +1,4 @@
-import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/hooks/use-chat-view-voice-record'
+import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/features/voice/messenger-voice-record'
 
 /**
  * Phase-2: Sprachmemo-UI im Send-Panel (Phase, Slots, Limits, SOS-Hinweis).
