@@ -1,6 +1,6 @@
 # `features/` — Messenger-UI vertical slices
 
-**Konvention:** Größere Themen bekommen einen Unterordner (`attachments/`, `send/`, später `inbox/`, …). Neuer Code, der klar zu einem Thema gehört, landet hier; geteilte Typen bleiben in `lib/` bis es einen stabilen `features/_shared`- oder `lib/messenger-types`-Cut gibt.
+**Konvention:** Größere Themen bekommen einen Unterordner (`attachments/`, `send/`, `inbox/`, …). Neuer Code, der klar zu einem Thema gehört, landet hier; geteilte Typen bleiben in `lib/` bis es einen stabilen `features/_shared`- oder `lib/messenger-types`-Cut gibt.
 
 - **`send/`** — Mesh/Send-Pipeline (`chat-view-mesh-send`, `mesh-delayed-upload`, Outgoing/Validierung/`.txt`-Split); Tests bei `send/*.test.ts`.
 
