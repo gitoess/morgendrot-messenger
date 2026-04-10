@@ -85,7 +85,7 @@ Gleichzeitig offen zu halten: **IOTA-Verankerung**, **Delayed Upload + Custody**
 ## 4. Kurz-IST (nur zur Orientierung)
 
 - **`chat-view.tsx`:** nur noch Verdrahtung (Variante → **`use-chat-view-core`** → **`ChatViewMainContent`**); Größenordnung **&lt; ~50 Zeilen**.
-- **Anhänge / Senden:** Logik in **`lib/chat-view-attachment-ingest.ts`**, **`use-chat-view-attachment-previews.ts`**, **`lib/chat-view-outgoing-payload.ts`**, **`lib/chat-view-send-utils.ts`**; **`use-chat-view-attachments.ts`** und **`use-chat-view-send-flow.ts`** bleiben dünne Hooks/Fassaden.
+- **Anhänge / Senden:** Ingest unter **`features/attachments/`** (Re-Export **`lib/chat-view-attachment-ingest.ts`**); Send-Pfad unter **`features/send/`** (u. a. Outgoing-Payload, Send-Utils, `.txt`-Split; dünne Re-Exports unter **`lib/chat-view-*.ts`**); **`use-chat-view-attachment-previews.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-send-flow.ts`** bleiben Hooks/Fassaden.
 - **Bundle:** `npm run bundle:messenger` spiegelt **`src/`** – nicht manuell im Export pflegen.
 
 ---

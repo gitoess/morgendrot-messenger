@@ -6,8 +6,8 @@ import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-sen
 import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
-} from '@/frontend/lib/chat-view-outgoing-payload'
-import { buildTxtFileWireParts } from '@/frontend/lib/chat-view-txt-split'
+} from '@/frontend/features/send/chat-view-outgoing-payload'
+import { buildTxtFileWireParts } from '@/frontend/features/send/chat-view-txt-split'
 import {
   validateLoraDualWireUtf8,
   validateMeshDisallowsIotaCompactBlob,
