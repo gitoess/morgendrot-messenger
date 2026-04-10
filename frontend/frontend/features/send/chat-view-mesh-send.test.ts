@@ -5,7 +5,7 @@ vi.mock('@/frontend/lib/api', () => ({
 }))
 
 import { meshBuildV2Wires } from '@/frontend/lib/api'
-import { sendMeshV2WireBurst } from './chat-view-mesh-send'
+import { MESH_V2_BURST_INTER_PACKET_MS_DEFAULT, sendMeshV2WireBurst } from './chat-view-mesh-send'
 
 const meshBuild = vi.mocked(meshBuildV2Wires)
 
@@ -47,5 +47,50 @@ describe('sendMeshV2WireBurst', () => {
     await expect(
       sendMeshV2WireBurst('x', vi.fn().mockResolvedValue(undefined), undefined, { interPacketDelayMs: 0 })
     ).rejects.toThrow('Mesh-Build fehlgeschlagen')
+  })
+
+  it('hält MESH_V2_BURST_INTER_PACKET_MS_DEFAULT zwischen zwei Paketen ein (Fake-Timer)', async () => {
+    vi.useFakeTimers()
+    try {
+      meshBuild.mockResolvedValue({
+        ok: true,
+        wires: [
+          { recipient: '', wireBase64: btoa('a'), meshNonce: 1 },
+          { recipient: '', wireBase64: btoa('b'), meshNonce: 2 },
+        ],
+      })
+      const sendBinaryV2 = vi.fn().mockResolvedValue(undefined)
+
+      const burstPromise = sendMeshV2WireBurst('hi', sendBinaryV2)
+
+      for (let n = 0; n < 20 && sendBinaryV2.mock.calls.length < 1; n++) {
+        await Promise.resolve()
+      }
+      expect(sendBinaryV2).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(MESH_V2_BURST_INTER_PACKET_MS_DEFAULT - 1)
+      expect(sendBinaryV2).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(1)
+      await burstPromise
+      expect(sendBinaryV2).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('bei nur einem Wire kein Zwischen-Timer (auch mit Default-Intervall)', async () => {
+    vi.useFakeTimers()
+    try {
+      meshBuild.mockResolvedValue({
+        ok: true,
+        wires: [{ recipient: '', wireBase64: btoa('x'), meshNonce: 1 }],
+      })
+      const sendBinaryV2 = vi.fn().mockResolvedValue(undefined)
+      await sendMeshV2WireBurst('hi', sendBinaryV2)
+      expect(sendBinaryV2).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
