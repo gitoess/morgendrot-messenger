@@ -2,7 +2,7 @@
 
 **Status:** **Fahrplan-Pflicht** — ergänzt **`docs/ROADMAP-FAHRPLAN.md`** **§ H.1a**; **kein** Ersatz für **Playwright** (E2E) oder bestehende **`tsx`/`npm run test`**-Module.
 
-**Verknüpft:** **`docs/ROADMAP-FAHRPLAN.md`**, **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**).
+**Verknüpft:** **`docs/ROADMAP-FAHRPLAN.md`** (**§ H.1b** Messenger-UI-Modularität), **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**).
 
 ---
 

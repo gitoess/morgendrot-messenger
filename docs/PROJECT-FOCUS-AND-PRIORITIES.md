@@ -3,7 +3,7 @@
 **Zweck:** Ein gemeinsames Bild für Mensch und KI – **gegen Feature-Creep** und **falsche Parallelität**.  
 **Stand:** lebendes Dokument (Abgleich **2026-03-28**); bei Abweichung im Code lieber **dieses Dokument** oder den Code anpassen.
 
-**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen in **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
+**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.1b** Messenger-UI-Modularität — **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen in **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
 
 ---
 
@@ -49,6 +49,7 @@ Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DE
 - **Dokumentierte Randthemen** (verhindern Erwartungsdruck auf neuen Code): Rollenwechsel im Team (**`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**), Dienst/Mainnet vs. privat/Testnet und **zwei Installationen** (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, Fahrplan **`docs/ROADMAP-FAHRPLAN.md` § H.8**). Das sind **Betriebs- und Organisationsantworten**, **kein** zusätzlicher Pflichtumfang für Phase A (kein In-App-Testnet/Mainnet-Schalter vor expliziter Priorität).
 
 - **`chat-view.tsx`** (und nahe liegende Chat-Teile) **schrittweise** zerlegen; Zielbild: **deutlich unter ~1000 Zeilen** für die View, Logik in **Hooks** / **Hilfsmodulen** (z. B. **`use-chat-view-send-flow.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-inbox.ts`** (Mailbox-Fetch + Mesh-Merge), **`chat-view-attachment-bar.tsx`**, **`chat-view-send-panel.tsx`**, **`chat-view-setup-panel.tsx`**, **`chat-view-chat-header.tsx`**, **`chat-view-transport-card.tsx`**, **`chat-view-inbox-list.tsx`**, **`chat-view-inbox-toolbar.tsx`**, **`chat-view-inbox-panel.tsx`**). In **`chat-view-inbox-list.tsx`** ist kurz dokumentiert, welche Inbox-Teile **Meshtastic-nah** (Anzeige bereits zusammengeführter Nachrichten) vs. **Morgendrot** (MORG_*-Darstellung, Exporte) sind. **Prüfer-Übersicht** Messenger-Fähigkeiten: **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`**.
+- **Modularität (Grenzen, nicht nur Dateianzahl):** verbindlicher Plan **§ H.1b** im Fahrplan und **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** — Feature-Ordner, weiche Dateibudgets, `lib/api/`-Split, Ports zwischen Send/Inbox/Attachments; **kein** 3-Tage-Big-Bang; optional Paket nur mit zweitem Consumer.
 - **Kein** großflächiges Löschen in **`exports/Morgendrot-Messenger-*`** – Quelle bleibt **`src/`** (siehe **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**).
 - Änderungen in **kleinen, reviewbaren** Schritten mit **`tsc`/Tests** nach jedem Schritt.
 
