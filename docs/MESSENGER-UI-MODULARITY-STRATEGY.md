@@ -59,7 +59,7 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 - **Leichte** Konvention dokumentieren (dieses Dokument + **ein** Absatz in **`MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** oder Diagramm).  
 - **`api.ts`:** erste Aufteilung in **`lib/api/*.ts`** + Re-Export (bereits vorhandene Helfer wie `api-fetch-text` bleiben unter `lib/`). **Inventar und Konvention:** **`docs/FRONTEND-API-MODULARITY.md`**.
 
-**Erfolgskriterium:** Ordnerstruktur + grüne **`tsc`** + **`npm run test:frontend-unit`** + Smoke-Teilmenge wie in **`TESTING.md`**.
+**Erfolgskriterium:** Ordnerstruktur + grüne **`tsc`** (Root + **`frontend/`**) + **`npm run test:frontend-unit`** + **`npm run lint`** + **`npm run check:circular`** im Ordner **`frontend/`** + Root-**`test:smoke`** — gebündelt als **Qualitätsritual** in **`TESTING.md`** § *Qualitätsritual vor Merge*.
 
 ### Phase 2 — Kopplung reduzieren (ca. 2–4 Wochen, nach 1–2 erfolgreichen Scheiben)
 
@@ -83,4 +83,4 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 
 ---
 
-*Stand: 2026-03-28 — in den Fahrplan aufgenommen als **§ H.1b**.*
+*Stand: 2026-03-29 — in den Fahrplan aufgenommen als **§ H.1b**; Erfolgskriterium an Merge-Ritual (**`TESTING.md`**) und CI **`frontend-checks`** angeglichen.*

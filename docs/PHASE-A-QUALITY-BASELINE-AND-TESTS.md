@@ -47,13 +47,14 @@
 2. **Doku + `.gitignore`** auf Stand bringen; **`npm run sync:handbook`** (Handbuch mit README/Fahrplan konsistent halten).
 3. **Verifikation vor Tag/Release-Claim** (mindestens; bei euch anpassen):
    - Root: **`npx tsc --noEmit`**
-   - Frontend: **`cd frontend && npx tsc --noEmit`**
-   - **`npm run validate:ui`**
-   - **`npm run test:smoke`** (oder dokumentierte Teilmenge)
+   - Frontend: **`cd frontend && npx tsc --noEmit`**, **`npm run lint`**, **`npm run check:circular`**, **`npm run test:unit`** (oder von Root: **`npm run test:frontend-unit`** statt letzterem)
+   - Root: **`npm run validate:ui`**
+   - Root: **`npm run test:smoke`** (oder dokumentierte Teilmenge)
+   - **Tabelle + Reihenfolge:** **`TESTING.md`** § *Qualitätsritual vor Merge*; **CI-Spiegel (Frontend-Schritte):** **`.github/workflows/frontend-checks.yml`**
 4. **Git:** ein **klarer Commit** (Message listet Kernänderungen).
 5. **Optional `git tag -a`:** **Nur** mit **ehrlicher** Beschreibung — Tag-Text **muss** die **tatsächlich gelaufenen** Kommandos aus (3) nennen oder auf dieses Dokument verweisen. **Kein** Marketing-Claim ohne Laufnachweis.
 
-**Beispiel-Tag-Message (Schema):** `Baseline 2026-04-02 — nach tsc (root+frontend), validate:ui, test:smoke; Hotspot-Typing in chat-view-send/api; Doku/Handbuch-Sync.`
+**Beispiel-Tag-Message (Schema):** `Baseline 2026-04-02 — nach tsc (root+frontend), frontend lint+check:circular+vitest, validate:ui, test:smoke; Hotspot-Typing in chat-view-send/api; Doku/Handbuch-Sync.`
 
 ---
 
@@ -95,7 +96,7 @@
 
 ---
 
-*Stand: 2026-03-28 — Abgleich mit Team-Plan „Baseline / Vitest / AppError“; Vitest+Grundmodule eingeführt; Bestandsaufnahme/Kritik und Parallelität Phase 2+3 ergänzt. **Aktualisiert (gleicher Tag):** API-Client-Härtung (**`fetchApiText`**, keine **`json()`** in **`api.ts`**), erweiterte Vitest-Abdeckung, Toasts Setup/Shadow-Sweep.*
+*Stand: 2026-03-29 — Abgleich mit Team-Plan „Baseline / Vitest / AppError“; Vitest+Grundmodule eingeführt; Bestandsaufnahme/Kritik und Parallelität Phase 2+3 ergänzt. **2026-03-28:** API-Client-Härtung (**`fetchApiText`**, keine **`response.json()`** im Messenger-API-Client (nur **`fetchApiText`** / Envelope)), erweiterte Vitest-Abdeckung, Toasts Setup/Shadow-Sweep. **2026-03-29:** Verifikationsliste um **`frontend/`** **`lint`**, **`check:circular`**, **`test:unit`** ergänzt; **`TESTING.md`** § *Qualitätsritual vor Merge*; CI **`frontend-checks`**.*
 
 ---
 

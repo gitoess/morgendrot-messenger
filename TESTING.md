@@ -10,6 +10,28 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 **Sync / Source of Truth (Offline vs. IOTA, Konflikte):** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** — **`docs/ROADMAP-FAHRPLAN.md`** § **H.12** (mit Delayed-Upload-Spec und Offline-Queue-Kritik abgleichen).
 
+**Merge-Ritual (Phase A, vor größeren PRs):** unten § **Qualitätsritual vor Merge** — deckt sich mit **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** Phase 1 und spiegelt **`.github/workflows/frontend-checks.yml`** (Frontend) plus Root-Smoke.
+
+---
+
+## Qualitätsritual vor Merge (Phase A)
+
+**Ziel:** Gleiche Sicherheitsnetze wie in CI, plus Root-`tsc` und Modultests. Nach Änderungen unter **`frontend/frontend/`**, **`frontend/eslint.config.mjs`**, oder geteilten **`src/`**-Helfern **vor** Merge ausführen. **Optional `git tag -a`:** nur mit **ehrlicher** Kommandoliste — Schema in **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** Phase 1.
+
+**Reihenfolge (lokal, Repo-Root):**
+
+| # | Kommando | Zweck |
+|---|-----------|--------|
+| 1 | **`npx tsc --noEmit`** | Root-Typecheck |
+| 2 | **`cd frontend`** dann **`npx tsc --noEmit`** | Next-/Messenger-`tsconfig` |
+| 3 | **`npm run lint`** | ESLint Messenger-Baum (`features/send`↔`inbox`, …) |
+| 4 | **`npm run check:circular`** | madge, Zyklen unter **`./frontend`** |
+| 5 | **`npm run test:unit`** | Vitest (RTL + Lib-Tests); äquivalent von Root: **`npm run test:frontend-unit`** |
+| 6 | *(zurück nach Root)* **`npm run validate:ui`** | UI-Referenzen |
+| 7 | **`npm run test:smoke`** | `validate:ui` + **`npm run test`** (Modultests ohne Chain) |
+
+**Inhaltliche** Änderungen an **`docs/BOSS-ORIENTIERUNG.md`** oder **`docs/PWA-HANDBUCH-OFFLINE.md`:** im Root **`npm run sync:handbook`** (oder **`npm run build`** im Ordner **`frontend/`** — **`prebuild`** sync’t). Siehe **`docs/PWA-HANDBUCH-OFFLINE.md`**.
+
 ---
 
 ## Smoke nach Merge (automatisch)

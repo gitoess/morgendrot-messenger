@@ -66,10 +66,12 @@ Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `a
 
 ## Qualitätssicherung
 
-Nach Änderungen an der API-Schicht im Ordner **`frontend/`**:
+Nach Änderungen an der API-Schicht im Ordner **`frontend/`** (und vor Merge größerer UI-PRs — vollständiges Ritual **`TESTING.md`** § *Qualitätsritual vor Merge*):
 
 ```bash
 npx tsc --noEmit
+npm run lint
+npm run check:circular
 npx vitest run
 ```
 
@@ -82,4 +84,4 @@ npx vitest run
 
 ---
 
-*Stand der Modulliste: 2026-03-28 — bei neuen Dateien unter `lib/api/` diese Tabelle ergänzen.*
+*Stand der Modulliste: 2026-03-29 — bei neuen Dateien unter `lib/api/` diese Tabelle ergänzen; QA-Zeile um **lint** / **check:circular** erweitert (Merge-Ritual).*
