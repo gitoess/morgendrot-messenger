@@ -36,6 +36,11 @@ export type UseChatViewCoreParams = {
   myAddress: string
 }
 
+/**
+ * Rückgabe `messages` ist die gefilterte Posteingangs-Anzeige (`displayMessages`); zusammen mit `myAddress`
+ * entspricht das dem Leseschnittstellen-Typ `InboxFeedReadPort` (`features/messenger-ports/inbox-feed-read-port.ts`)
+ * für `ChatViewInboxPanel` / Toolbar / Liste.
+ */
 export function useChatViewCore(p: UseChatViewCoreParams) {
   const { isPrivate, role, myAddress } = p
 

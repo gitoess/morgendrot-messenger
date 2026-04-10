@@ -22,7 +22,7 @@ type ScopeMode = 'all' | 'ids' | 'range'
 
 export function ChatViewProtokollAnchorButton(p: {
   messageCount: number
-  messages: Message[]
+  messages: readonly Message[]
   myAddress: string
   recipient: string
   apiConnected: boolean

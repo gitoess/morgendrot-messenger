@@ -10,10 +10,10 @@ import type { ChangeEvent, RefObject } from 'react'
 import { Archive, FileDown, Inbox, KeyRound, Lock, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
-import type { Message } from '@/frontend/lib/types'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
 
-export type ChatViewInboxToolbarProps = {
+export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number
   inboxRowCount: number
   role: string
@@ -34,8 +34,6 @@ export type ChatViewInboxToolbarProps = {
   onExportEinsatzprotokollPlainZip: () => void | Promise<void>
   onExportEinsatzprotokollMarked: () => void | Promise<void>
   protokollMarkedCount: number
-  messages: Message[]
-  myAddress: string
   recipient: string
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void

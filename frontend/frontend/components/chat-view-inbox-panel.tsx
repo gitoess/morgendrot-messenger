@@ -13,10 +13,18 @@ import {
 } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+
+type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
+type InboxToolbarRest = Omit<
+  ComponentProps<typeof ChatViewInboxToolbar>,
+  'selectedInboxCount' | keyof InboxFeedReadPort
+>
 
 /** `selectedInboxCount` wird aus `selectedInboxIds` im Panel abgeleitet. */
-export type ChatViewInboxPanelProps = Omit<ComponentProps<typeof ChatViewInboxToolbar>, 'selectedInboxCount'> &
-  ComponentProps<typeof ChatViewInboxList> & {
+export type ChatViewInboxPanelProps = InboxFeedReadPort &
+  InboxListRest &
+  InboxToolbarRest & {
     inboxPartnerOptions: InboxPartnerOption[]
     inboxPartnerKey: string | null
     setInboxPartnerKey: (k: string | null) => void

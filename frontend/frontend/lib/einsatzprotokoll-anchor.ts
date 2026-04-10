@@ -17,7 +17,7 @@ export type ProtokollAnchorScope =
   | { kind: 'ids'; ids: string[] }
   | { kind: 'range'; fromMs: number; toMs: number }
 
-export function filterMessagesForAnchor(messages: Message[], scope: ProtokollAnchorScope): Message[] {
+export function filterMessagesForAnchor(messages: readonly Message[], scope: ProtokollAnchorScope): Message[] {
   let list = [...messages]
   if (scope.kind === 'ids' && scope.ids.length > 0) {
     const s = new Set(scope.ids)
@@ -28,7 +28,7 @@ export function filterMessagesForAnchor(messages: Message[], scope: ProtokollAnc
   return list.sort((a, b) => a.timestamp - b.timestamp)
 }
 
-export function canonicalJsonForAnchorHash(messages: Message[]): string {
+export function canonicalJsonForAnchorHash(messages: readonly Message[]): string {
   return JSON.stringify(
     messages.map((m) => ({
       id: m.id,
@@ -63,7 +63,7 @@ export type AnchorOnChainResult = { ok: true } | { ok: false; error: string }
 /** Variante A: Klartext auf Chain (Explorer). Variante B: vollständiges JSON verschlüsselt /send. */
 export async function anchorEinsatzprotokollOnIota(p: {
   variant: 'hash' | 'full'
-  messages: Message[]
+  messages: readonly Message[]
   scope: ProtokollAnchorScope
   exportedByAddress?: string
   /** Für Hash-Variante: Empfänger der /send-plain-Transaktion (z. B. eigene 0x…). */
