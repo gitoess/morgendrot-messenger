@@ -8,8 +8,8 @@
 
 ## Barrel (`frontend/frontend/lib/api.ts`)
 
-- Importiert **`executeCommand`** und Re-Exporte aus den Modulen unten.
-- Enthält weiterhin alles, was noch nicht ausgelagert ist (Chat-Befehle, Keys, Tickets, Heartbeat, Boss, Transfer, **`getStatus`**, **`revealVaultSignerImport`**, …).
+- Re-exportiert **`executeCommand`** und alle Domänen-Module unten.
+- Enthält nur noch **`getStatus`** (Kompatibilitäts-Mapping auf `fetchStatus`) als eigene Implementierung.
 
 **Regel für neue HTTP-/Command-APIs:** Wenn möglich **neues Modul** unter `lib/api/<thema>.ts` anlegen und in `api.ts` **nur re-exportieren** — nicht wieder alles in `api.ts` wachsen lassen.
 
@@ -41,6 +41,13 @@
 | **`vault-commands.ts`** | `vaultSave`, `vaultLoad`, `vaultListLocalFiles`, `vaultLoadFromChain`, `vaultOnchain`, `emergencyPurge`, `vaultLockCommand` |
 | **`mesh-morg-pkg.ts`** | `MeshV2Wire`, `meshBuildV2Wires`, `meshDecryptV2Wire`, `morgPkgExport`, `morgPkgImport` |
 | **`inbox.ts`** | `fetchInbox`, `fetchAllInboxMessagesForExport` |
+| **`chat-commands.ts`** | `sendMessage`, `sendEncryptedMessageWithTimeout`, `purgeMailboxMessage` |
+| **`package-connect.ts`** | `setPackageIdCommand`, `startHandshake`, `connect` |
+| **`keys.ts`** | `createKey`, `createKeys`, `transferKey`, `purgeKey`, `listKeys` |
+| **`tickets.ts`** | `createTicket`, `createTickets`, `useTicket`, `transferTicket`, `purgeTicket`, `listTickets` |
+| **`device-heartbeat.ts`** | `getDeviceStatus`, `sendHeartbeat`, `setHeartbeatInterval`, `setHeartbeatEnabled` |
+| **`boss-transfer.ts`** | `setBossRole`, `sendBossCommand`, `transferCoins` |
+| **`vault-signer-import.ts`** | `revealVaultSignerImport` |
 
 Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `api-simple-ok-envelope.ts`).
 
