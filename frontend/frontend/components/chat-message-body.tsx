@@ -143,7 +143,7 @@ function LoRaProgressiveLumaBody({
   copiedRaw,
 }: {
   content: string
-  inboxMessages: Message[]
+  inboxMessages: readonly Message[]
   selfMessage: Message
   copyRaw: () => void
   copiedRaw: boolean
@@ -338,7 +338,7 @@ export function ChatMessageBody({
 }: {
   content: string
   /** Für LoRa Luma/Chroma-Zusammenführung (gleiche Inbox). */
-  inboxMessages?: Message[]
+  inboxMessages?: readonly Message[]
   /** Aktuelle Nachrichtenzeile (Absender, Zeitstempel). */
   selfMessage?: Message
 }) {

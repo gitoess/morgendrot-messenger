@@ -44,14 +44,13 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
 
-export type ChatViewInboxListProps = {
+export type ChatViewInboxListProps = InboxFeedReadPort & {
   loadError: string | null
   /** GET /api/status derzeit nicht erreichbar (zusätzlicher Hinweis bei leerem Posteingang). */
   basisUnreachable?: boolean
-  messages: Message[]
   inboxRows: ChatInboxRow[]
-  myAddress: string
   /** Kontaktverzeichnis für Anzeigenamen neben 0x… */
   contactDirectory: Record<string, ContactMeshEntryClient>
   isMeshVerifiedForAddress: (address: string) => boolean

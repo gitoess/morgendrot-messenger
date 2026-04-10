@@ -135,7 +135,7 @@ export async function fuseLoraProgressiveJpegsToDataUrl(luma: Uint8Array, chroma
 
 /** Passendes Chroma zur Luma-Zeile (gleicher Absender, msgId, Zeit ≥ Luma). */
 export function findPartnerChromaJpeg(
-  inbox: Message[],
+  inbox: readonly Message[],
   from: string,
   msgId: string,
   lumaTimestamp: number
