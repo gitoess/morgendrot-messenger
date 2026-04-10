@@ -1,38 +1,13 @@
 'use client'
 
-import type { ChangeEvent, RefObject } from 'react'
 import { useRef, useState } from 'react'
 import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
-import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import type { AttachmentBarPort } from '@/frontend/features/messenger-ports'
 import { prefersFileCameraCapture } from '@/frontend/lib/device-detect'
 import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-webcam-capture-dialog'
 
-export type ChatViewAttachmentBarProps = {
-  compactFileRef: RefObject<HTMLInputElement | null>
-  compactBusy: boolean
-  sending: boolean
-  /** z. B. während Sprachaufnahme / Kodierung */
-  pickDisabled?: boolean
-  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void
-  /** Gleiche Pipeline wie Datei-Import (Bild → Kompakt/LoRa). */
-  ingestChatAttachmentFile: (file: File, opts?: { transportOverride?: ForcedTransport }) => Promise<void>
-  compactMeta: {
-    total: number
-    luma: number
-    chroma: number
-    q: number
-    mode?: 'iota' | 'lora'
-  } | null
-  attachedBlobBase64: string | null
-  attachedLora: ChatAttachedLora | null
-  attachedTxtFile: { name: string; text: string } | null
-  attachedAudioBase64: string | null
-  clearCompactAttachment: () => void
-  compactPreviewUrl: string | null
-  loraPreviewUrl: string | null
-}
+export type ChatViewAttachmentBarProps = AttachmentBarPort
 
 export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
   const {

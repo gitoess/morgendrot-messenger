@@ -19,14 +19,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import type { ApiStatus } from '@/frontend/lib/api'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import type { SendTransportChoicePort } from '@/frontend/features/messenger-ports'
 
-export type ChatViewTransportCardProps = {
+export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
-  encrypted: boolean
-  onEncryptedChange: (encrypted: boolean) => void
-  forcedTransport: ForcedTransport
-  onForcedTransportChange: (t: ForcedTransport) => void
   apiStatus: ApiStatus | null
   /** Web Bluetooth / Heltec – für Hinweise unter „funk“. */
   meshBleSupported?: boolean

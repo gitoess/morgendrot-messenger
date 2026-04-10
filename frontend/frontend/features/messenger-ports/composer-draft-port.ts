@@ -17,3 +17,8 @@ export function asComposerDraft(
 ): ComposerDraftPort {
   return { message, recipient, onMessageChange, onRecipientChange }
 }
+
+/** Send-Hooks: Empfänger/Nachricht lesen + nur `setMessage` (Empfänger steuert die UI). */
+export type ComposerDraftSendFlowPort = Pick<ComposerDraftPort, 'message' | 'recipient'> & {
+  setMessage: ComposerDraftPort['onMessageChange']
+}

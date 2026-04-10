@@ -8,23 +8,25 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { AlertCircle, Check, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ChatViewAttachmentBar, type ChatViewAttachmentBarProps } from '@/frontend/components/chat-view-attachment-bar'
+import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/hooks/use-chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { isLoRaMeshTransport, MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
-import type { ComposerDraftPort } from '@/frontend/features/messenger-ports'
+import type {
+  AttachmentBarPort,
+  ComposerDraftPort,
+  SendMeshMirrorDelayPort,
+  SendTransportReadPort,
+} from '@/frontend/features/messenger-ports'
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
-export type ChatViewSendPanelProps = ChatViewAttachmentBarProps &
-  ComposerDraftPort & {
+export type ChatViewSendPanelProps = AttachmentBarPort &
+  ComposerDraftPort &
+  SendTransportReadPort &
+  SendMeshMirrorDelayPort & {
   isPrivate: boolean
-  /** Delayed Upload: Marker im Klartext, Empfänger spiegelt per /send (nur Text-Mesh). */
-  delayMirrorToIota: boolean
-  onDelayMirrorToIotaChange: (v: boolean) => void
-  encrypted: boolean
   sending: boolean
   loraOnlineFallbackOffer: { reasonLabel: string } | null
   onConfirmLoraOnline: () => void | Promise<void>
@@ -39,7 +41,6 @@ export type ChatViewSendPanelProps = ChatViewAttachmentBarProps &
   voiceMaxSeconds: number
   voiceEmergencyMaxSeconds: number
   sosVoiceFollowsOnline: boolean
-  forcedTransport: ForcedTransport
   onVoiceToggle: () => void
   onVoiceEmergencyToggle: () => void
   voiceNormalBlockedStart: boolean

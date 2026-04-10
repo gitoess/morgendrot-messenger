@@ -5,16 +5,14 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import type { Message } from '@/frontend/lib/types'
 import type { ForcedTransport, MeshtasticBleSendApi } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
+import type { ComposerDraftSendFlowPort } from '@/frontend/features/messenger-ports'
 
-export type UseChatViewSendFlowParams = {
+export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   isPrivate: boolean
   encrypted: boolean
   forcedTransport: ForcedTransport
-  recipient: string
   partner: string
   myAddress: string
-  message: string
-  setMessage: (v: string) => void
   apiStatus: ApiStatus | null
   attachedLora: ChatAttachedLora | null
   attachedBlobBase64: string | null

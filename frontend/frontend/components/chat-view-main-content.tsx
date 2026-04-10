@@ -5,11 +5,20 @@
  */
 
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
-import { asComposerDraft, asInboxFeedRead } from '@/frontend/features/messenger-ports'
+import {
+  asComposerDraft,
+  asInboxFeedRead,
+  asSendMeshMirrorDelay,
+  asSendTransportChoice,
+  asSendTransportRead,
+} from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'
-import { ChatViewTransportCard } from '@/frontend/components/chat-view-transport-card'
+import {
+  ChatViewTransportCard,
+  type ChatViewTransportCardProps,
+} from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 
@@ -208,10 +217,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
+    ...asSendTransportRead(encrypted, forcedTransport),
+    ...asSendMeshMirrorDelay(delayMirrorToIota, setDelayMirrorToIota),
     isPrivate,
-    encrypted,
-    delayMirrorToIota,
-    onDelayMirrorToIotaChange: setDelayMirrorToIota,
     sending,
     loraOnlineFallbackOffer,
     onConfirmLoraOnline: confirmLoraSendViaOnline,
@@ -248,6 +256,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loraPreviewUrl,
   } satisfies ChatViewSendPanelProps
 
+  const transportCardProps = {
+    ...asSendTransportChoice(encrypted, setEncrypted, forcedTransport, setForcedTransport),
+    isPrivate,
+    apiStatus,
+    meshBleSupported: meshtastic.bleSupported,
+    meshBleConnected: meshtastic.connected,
+    onOpenPartnerSetup: openPartnerSetupPanel,
+  } satisfies ChatViewTransportCardProps
+
   return (
     <div className="space-y-6">
       <ChatViewChatHeader
@@ -271,17 +288,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      <ChatViewTransportCard
-        isPrivate={isPrivate}
-        encrypted={encrypted}
-        onEncryptedChange={setEncrypted}
-        forcedTransport={forcedTransport}
-        onForcedTransportChange={setForcedTransport}
-        apiStatus={apiStatus}
-        meshBleSupported={meshtastic.bleSupported}
-        meshBleConnected={meshtastic.connected}
-        onOpenPartnerSetup={openPartnerSetupPanel}
-      />
+      <ChatViewTransportCard {...transportCardProps} />
 
       {isPrivate && showSetup && (
         <ChatViewSetupPanel
