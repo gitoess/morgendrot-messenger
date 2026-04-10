@@ -4,7 +4,8 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
-import { ChatViewInboxPanel } from '@/frontend/components/chat-view-inbox-panel'
+import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
+import { asInboxFeedRead } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'
@@ -149,6 +150,62 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sosVoiceAwaitingSend,
   } = c
 
+  const inboxPanelProps = {
+    ...asInboxFeedRead(messages, myAddress),
+    messageCount: messages.length,
+    inboxRowCount: inboxRows.length,
+    role,
+    bossView,
+    onBossViewChange: setBossView,
+    morgPkgFileRef,
+    morgPkgDeviceFilesRef,
+    onMorgPkgImportFile,
+    onMorgPkgDeviceFiles,
+    morgPkgDeviceBusy,
+    apiStatus,
+    onRefresh: () => void loadMessages('reset'),
+    loading,
+    loadingMore,
+    loadMoreInbox,
+    inboxHasMore,
+    loadError,
+    basisUnreachable,
+    inboxPartnerOptions,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    selectInboxPartnerForSend,
+    inboxRows,
+    contactDirectory: directory,
+    isMeshVerifiedForAddress,
+    exportEcdhMorgPkgForMessage,
+    onExportEinsatzberichtJson,
+    onExportEinsatzberichtTxt,
+    onExportEinsatzberichtEncrypted,
+    onExportEinsatzprotokoll,
+    onExportEinsatzprotokollPlainZip,
+    onExportEinsatzprotokollMarked,
+    protokollMarkedCount: protokollMarkedIds.size,
+    protokollMarkedIds,
+    onHideInboxMessageLocal,
+    onPurgeInboxMessageChain,
+    onForwardMessage,
+    onHideAllVisibleLocal,
+    inboxSelectMode,
+    setInboxSelectMode,
+    selectedInboxIds,
+    toggleInboxSelection,
+    onSelectAllVisible: selectAllVisibleInbox,
+    onClearInboxSelection: clearInboxSelection,
+    onBulkHideSelected,
+    onBulkPurgeSelected,
+    toggleProtokollMark,
+    recipient,
+    setStatus,
+    setStatusMsg,
+  } satisfies ChatViewInboxPanelProps
+
   return (
     <div className="space-y-6">
       <ChatViewChatHeader
@@ -277,62 +334,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         loraPreviewUrl={loraPreviewUrl}
       />
 
-      <ChatViewInboxPanel
-        messageCount={messages.length}
-        inboxRowCount={inboxRows.length}
-        role={role}
-        bossView={bossView}
-        onBossViewChange={setBossView}
-        morgPkgFileRef={morgPkgFileRef}
-        morgPkgDeviceFilesRef={morgPkgDeviceFilesRef}
-        onMorgPkgImportFile={onMorgPkgImportFile}
-        onMorgPkgDeviceFiles={onMorgPkgDeviceFiles}
-        morgPkgDeviceBusy={morgPkgDeviceBusy}
-        apiStatus={apiStatus}
-        onRefresh={() => void loadMessages('reset')}
-        loading={loading}
-        loadingMore={loadingMore}
-        loadMoreInbox={loadMoreInbox}
-        inboxHasMore={inboxHasMore}
-        loadError={loadError}
-        basisUnreachable={basisUnreachable}
-        inboxPartnerOptions={inboxPartnerOptions}
-        inboxPartnerKey={inboxPartnerKey}
-        setInboxPartnerKey={setInboxPartnerKey}
-        inboxDirectionFilter={inboxDirectionFilter}
-        setInboxDirectionFilter={setInboxDirectionFilter}
-        selectInboxPartnerForSend={selectInboxPartnerForSend}
-        messages={messages}
-        inboxRows={inboxRows}
-        myAddress={myAddress}
-        contactDirectory={directory}
-        isMeshVerifiedForAddress={isMeshVerifiedForAddress}
-        exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
-        onExportEinsatzberichtJson={onExportEinsatzberichtJson}
-        onExportEinsatzberichtTxt={onExportEinsatzberichtTxt}
-        onExportEinsatzberichtEncrypted={onExportEinsatzberichtEncrypted}
-        onExportEinsatzprotokoll={onExportEinsatzprotokoll}
-        onExportEinsatzprotokollPlainZip={onExportEinsatzprotokollPlainZip}
-        onExportEinsatzprotokollMarked={onExportEinsatzprotokollMarked}
-        protokollMarkedCount={protokollMarkedIds.size}
-        protokollMarkedIds={protokollMarkedIds}
-        onHideInboxMessageLocal={onHideInboxMessageLocal}
-        onPurgeInboxMessageChain={onPurgeInboxMessageChain}
-        onForwardMessage={onForwardMessage}
-        onHideAllVisibleLocal={onHideAllVisibleLocal}
-        inboxSelectMode={inboxSelectMode}
-        setInboxSelectMode={setInboxSelectMode}
-        selectedInboxIds={selectedInboxIds}
-        toggleInboxSelection={toggleInboxSelection}
-        onSelectAllVisible={selectAllVisibleInbox}
-        onClearInboxSelection={clearInboxSelection}
-        onBulkHideSelected={onBulkHideSelected}
-        onBulkPurgeSelected={onBulkPurgeSelected}
-        toggleProtokollMark={toggleProtokollMark}
-        recipient={recipient}
-        setStatus={setStatus}
-        setStatusMsg={setStatusMsg}
-      />
+      <ChatViewInboxPanel {...inboxPanelProps} />
     </div>
   )
 }
