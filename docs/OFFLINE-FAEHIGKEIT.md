@@ -33,6 +33,8 @@ Rebased (wie jede echte Blockchain) braucht eine Verbindung zur Kette, um:
 
 Es gibt mehrere Bausteine – von „schon umgesetzt“ bis „möglich, aber mit Aufwand“.
 
+**Karten & Geodaten (optional, Zielbild):** für **Orientierung** und **Einsatz** — Stufenmodell, PWA-Speicher-Realität, ATAK-Bezug → **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**`docs/ROADMAP-FAHRPLAN.md`** § **H.11**).
+
 ---
 
 ### Möglichkeit A – Offline-Cache für AccessKeys (bereits umgesetzt)
@@ -100,7 +102,7 @@ Es gibt mehrere Bausteine – von „schon umgesetzt“ bis „möglich, aber mi
 
 **Aufwand:** ca. 6–12 Stunden + 20–40 € pro Heltec.
 
-**Hinweis:** Unter `lora-bridge/` gibt es bereits eine HTTP-Bridge (Morgendrot ↔ LoRa/Meshtastic). Siehe `lora-bridge/README.md`. **Notfall-Payload-Format (App-E2EE, Transport getrennt):** `lora-bridge/src/emergency-envelope.ts` und README-Abschnitt „Notfall-Umschlag v1“.
+**Hinweis:** Unter `lora-bridge/` gibt es bereits eine HTTP-Bridge (Morgendrot ↔ LoRa/Meshtastic). Siehe `lora-bridge/README.md`. **Notfall-Payload-Format (App-E2EE, Transport getrennt):** `lora-bridge/src/emergency-envelope.ts` und README-Abschnitt „Notfall-Umschlag v1“. **EU-Funk (Subbänder, Antennen, Rollen von Wanderer bis Einsatz):** **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**.
 
 #### Meshtastic & Handy: Kurzüberblick (Abgleich mit Morgendrot)
 

@@ -2,7 +2,7 @@
 
 **Zweck:** Abgleich mit **`docs/ROADMAP-FAHRPLAN.md`** § **H.2** (Priorität 1 aus der 8-Punkte-Liste: PWA-Realität). **Kein** Ersatz für automatische Tests — ergänzt **`TESTING.md`** (Smoke) um **Installation** und **Offline-Shell**.
 
-**Hintergrund:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (was der Service Worker wirklich cached).
+**Hintergrund:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (was der Service Worker wirklich cached). **Größere Offline-Karten / Geodaten (Zielbild, Einsatz vs. Wanderer):** **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**Fahrplan § H.11**).
 
 ---
 

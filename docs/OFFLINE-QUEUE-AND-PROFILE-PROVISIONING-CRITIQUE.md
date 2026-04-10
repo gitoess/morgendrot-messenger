@@ -2,7 +2,7 @@
 
 **Zweck:** Zwei eng verwandte Produktvorhaben **gegen Ist-Code** prüfen — **fehlerhafte Begriffsverknüpfungen** vermeiden, bevor implementiert wird.
 
-**Verwandt:** **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (`metadata`, `validUntil`, Präsenz vs. Profil), **`src/settlement-queue.ts`**, **`src/chain-access.ts`** (`mintMessengerCreditsBatchForRecipients`), **`src/api-server.ts`** (`POST /api/provision-device`), Roadmap **§ H.3f** / **§ H.3g** / **§ H.3h**.
+**Verwandt:** **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (`metadata`, `validUntil`, Präsenz vs. Profil), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Source of Truth pro Vorgang, CRDT-Grenzen, Mehrgeräte), **`src/settlement-queue.ts`**, **`src/chain-access.ts`** (`mintMessengerCreditsBatchForRecipients`), **`src/api-server.ts`** (`POST /api/provision-device`), Roadmap **§ H.3f** / **§ H.3g** / **§ H.3h** / **§ H.12**.
 
 ---
 
@@ -36,6 +36,8 @@ Eingehende LoRa-/lokale Vorgänge sollen **nicht sofort** on-chain, sondern bei 
 
 - **Neues** Modul z. B. `offline-relay-queue.ts` nach **Vorbild** Settlement-Queue: **Schema pro Operation**, **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`.
 - **Credits** nur, wenn die **tatsächliche** ausstehende Operation ein **Credits-Mint** ist (selten in der gleichen Warteschlange wie LoRa-Nachrichten).
+
+**Gesamteinordnung Offline/Online:** Welche Welt „gewinnt“ bei Konflikten — **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**. **CRDTs** ersetzen **nicht** Ledger-Logik für **Guthaben**; **Delayed LoRa → IOTA** bleibt **Nachrichten-Pfad**-Spezialfall (**`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**).
 
 ---
 

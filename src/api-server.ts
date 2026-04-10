@@ -98,6 +98,13 @@ import { VaultImagePipeline } from './vault-image-pipeline.js';
 import { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } from './messenger-media-limits.js';
 import { transcodeBrowserAudioToMessengerOpus } from './messenger-audio-opus-encode.js';
 import { consumeClaimTokenOnce } from './voucher-claim-state.js';
+import {
+    resolveProvisionIdempotencyKey,
+    provisionRequestFingerprint,
+    tryProvisionIdempotentReplayOrConflict,
+    saveProvisionIdempotencySuccess,
+    withProvisionDeviceIdempotencyLock,
+} from './provision-idempotency-state.js';
 
 /** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
 let lastVaultOnchainSuccessAt: number | undefined;
@@ -2237,100 +2244,169 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', async () => {
                 try {
-                    const data = JSON.parse(body || '{}');
-                    const role = data.role;
-                    const allowedRoles = ['kommandant', 'arbeiter', 'lock', 'monitor', 'waerter', 'user'];
-                    if (!allowedRoles.includes(role)) {
-                        sendJson(res, 400, { ok: false, error: 'role muss einer von: ' + allowedRoles.join(', ') + ' sein.' }, cors);
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const idemResolved = resolveProvisionIdempotencyKey(req.headers['idempotency-key'], data);
+                    if (idemResolved.error) {
+                        sendJson(res, 400, { ok: false, error: idemResolved.error }, cors);
                         return;
                     }
-                    let initialProfile: DeviceProvisionParams['initialProfile'];
-                    if (data.initialProfile !== undefined && data.initialProfile !== null) {
-                        const v = parseAndValidateInitialProfile(data.initialProfile);
-                        if (!v.ok) {
-                            sendJson(res, 400, { ok: false, error: v.error }, cors);
+                    const idemKey = idemResolved.key;
+                    const idemFp = idemKey ? provisionRequestFingerprint(data) : null;
+
+                    const runProvision = (): void => {
+                        const role = data.role as string;
+                        const allowedRoles = ['kommandant', 'arbeiter', 'lock', 'monitor', 'waerter', 'user'];
+                        if (!allowedRoles.includes(role)) {
+                            sendJson(res, 400, { ok: false, error: 'role muss einer von: ' + allowedRoles.join(', ') + ' sein.' }, cors);
                             return;
                         }
-                        initialProfile = v.profile;
-                    }
-                    const hardwareType = data.hardwareType || 'desktop';
-                    const isTiny = hardwareType === 'tiny';
-                    const deviceSecret = isTiny && (data.deviceSecret === true || data.generateDeviceSecret) ? generateDeviceSecret() : (data.deviceSecret || undefined);
-                    const params: DeviceProvisionParams = {
-                        role,
-                        roleId: role === 'waerter' ? 14 : (parseInt(data.roleId) || (role === 'monitor' ? 12 : 14)),
-                        deviceName: data.deviceName || '',
-                        address: data.address || '',
-                        mnemonic: data.mnemonic || '',
-                        bossAddress: data.bossAddress || CFG.MY_ADDRESS || '',
-                        kommandantAddresses: data.kommandantAddresses || [],
-                        workerAddresses: data.workerAddresses || [],
-                        packageId: data.packageId || CFG.PACKAGE_ID || '',
-                        rpcUrl: data.rpcUrl || CFG.RPC_URL || '',
-                        lockId: data.lockId || '',
-                        openCommand: data.openCommand || '',
-                        closeCommand: data.closeCommand || '',
-                        heartbeatIntervalMs: parseInt(data.heartbeatIntervalMs) || 30000,
-                        enableHeartbeat: data.enableHeartbeat === true || data.enableHeartbeat === 'true',
-                        signer: data.signer || 'cli',
-                        remoteSigner: data.remoteSigner || '',
-                        streamsAnchorId: data.streamsAnchorId || CFG.STREAMS_ANCHOR_ID || '',
-                        streamsBridgeUrl: data.streamsBridgeUrl || CFG.STREAMS_BRIDGE_URL || '',
-                        monitorDevices: Array.isArray(data.monitorDevices) ? data.monitorDevices : (data.monitorDevices ? [data.monitorDevices] : []),
-                        mailboxId: data.mailboxId || CFG.MAILBOX_ID || '',
-                        commandRegistryId: data.commandRegistryId || CFG.COMMAND_REGISTRY_ID || '',
-                        sponsorGasOwner: data.sponsorGasOwner || CFG.MY_ADDRESS || '',
-                        enableUi: data.enableUi !== false && hardwareType === 'desktop',
-                        hardwareType: hardwareType as DeviceProvisionParams['hardwareType'],
-                        gatewayUrl: data.gatewayUrl || '',
-                        deviceSecret,
-                        ticketOrKeyObjectId: data.ticketOrKeyObjectId || data.ticketObjectId || '',
-                        ...(initialProfile ? { initialProfile } : {}),
+                        let initialProfile: DeviceProvisionParams['initialProfile'];
+                        if (data.initialProfile !== undefined && data.initialProfile !== null) {
+                            const v = parseAndValidateInitialProfile(data.initialProfile);
+                            if (!v.ok) {
+                                sendJson(res, 400, { ok: false, error: v.error }, cors);
+                                return;
+                            }
+                            initialProfile = v.profile;
+                        }
+                        const hardwareType = (data.hardwareType as string) || 'desktop';
+                        const isTiny = hardwareType === 'tiny';
+                        const deviceSecret =
+                            isTiny && (data.deviceSecret === true || data.generateDeviceSecret)
+                                ? generateDeviceSecret()
+                                : ((data.deviceSecret as string | undefined) || undefined);
+                        const params: DeviceProvisionParams = {
+                            role: role as DeviceProvisionParams['role'],
+                            roleId: role === 'waerter' ? 14 : (parseInt(String(data.roleId)) || (role === 'monitor' ? 12 : 14)),
+                            deviceName: (data.deviceName as string) || '',
+                            address: (data.address as string) || '',
+                            mnemonic: (data.mnemonic as string) || '',
+                            bossAddress: (data.bossAddress as string) || CFG.MY_ADDRESS || '',
+                            kommandantAddresses: (data.kommandantAddresses as string[] | undefined) || [],
+                            workerAddresses: (data.workerAddresses as string[] | undefined) || [],
+                            packageId: (data.packageId as string) || CFG.PACKAGE_ID || '',
+                            rpcUrl: (data.rpcUrl as string) || CFG.RPC_URL || '',
+                            lockId: (data.lockId as string) || '',
+                            openCommand: (data.openCommand as string) || '',
+                            closeCommand: (data.closeCommand as string) || '',
+                            heartbeatIntervalMs: parseInt(String(data.heartbeatIntervalMs)) || 30000,
+                            enableHeartbeat: data.enableHeartbeat === true || data.enableHeartbeat === 'true',
+                            signer: (data.signer as DeviceProvisionParams['signer']) || 'cli',
+                            remoteSigner: (data.remoteSigner as string) || '',
+                            streamsAnchorId: (data.streamsAnchorId as string) || CFG.STREAMS_ANCHOR_ID || '',
+                            streamsBridgeUrl: (data.streamsBridgeUrl as string) || CFG.STREAMS_BRIDGE_URL || '',
+                            monitorDevices: Array.isArray(data.monitorDevices)
+                                ? (data.monitorDevices as string[])
+                                : data.monitorDevices
+                                  ? [String(data.monitorDevices)]
+                                  : [],
+                            mailboxId: (data.mailboxId as string) || CFG.MAILBOX_ID || '',
+                            commandRegistryId: (data.commandRegistryId as string) || CFG.COMMAND_REGISTRY_ID || '',
+                            sponsorGasOwner: (data.sponsorGasOwner as string) || CFG.MY_ADDRESS || '',
+                            enableUi: data.enableUi !== false && hardwareType === 'desktop',
+                            hardwareType: hardwareType as DeviceProvisionParams['hardwareType'],
+                            gatewayUrl: (data.gatewayUrl as string) || '',
+                            deviceSecret,
+                            ticketOrKeyObjectId: (data.ticketOrKeyObjectId as string) || (data.ticketObjectId as string) || '',
+                            ...(initialProfile ? { initialProfile } : {}),
+                        };
+                        /** Plug-and-play: IoT-Gateway ohne Mnemonic → Boss signiert (kein iota-CLI auf dem Pi nötig). */
+                        const isGateway = hardwareType === 'gateway';
+                        const seedless = !params.mnemonic;
+                        const remoteDefaultRoles = ['arbeiter', 'lock', 'kommandant', 'monitor'];
+                        if (isGateway && seedless && remoteDefaultRoles.includes(role)) {
+                            params.signer = 'remote';
+                            const pub = (process.env.BOSS_SIGNER_PUBLIC_URL || '').trim();
+                            if (pub && !String(params.remoteSigner || '').trim()) {
+                                params.remoteSigner = pub;
+                            }
+                        }
+                        const envContent = buildDeviceEnv(params);
+                        const jsonConfig = buildDeviceJson(params);
+                        const qrPayload =
+                            role === 'user' && params.ticketOrKeyObjectId
+                                ? params.ticketOrKeyObjectId
+                                : buildQrPayload(params);
+                        let identityHeader: string | undefined;
+                        if (isTiny && (params.deviceSecret || params.gatewayUrl || params.deviceName)) {
+                            identityHeader = buildIdentityHeader(params);
+                        }
+                        const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(
+                            /\/$/,
+                            ''
+                        );
+                        const explorerLink =
+                            role === 'user' && params.ticketOrKeyObjectId
+                                ? `${explorerBase}/${params.ticketOrKeyObjectId}`
+                                : undefined;
+
+                        const hierarchyProvisionRoles = new Set([
+                            'kommandant',
+                            'arbeiter',
+                            'lock',
+                            'monitor',
+                            'waerter',
+                            'boss',
+                            'messenger',
+                        ]);
+                        if (params.address && hierarchyProvisionRoles.has(role)) {
+                            const reg = assignDeviceRoleInEnv(params.address, role);
+                            if (!reg.ok) {
+                                sendJson(
+                                    res,
+                                    400,
+                                    {
+                                        ok: false,
+                                        error: reg.error || 'DEVICE_ROLES / Listen konnten nicht aktualisiert werden.',
+                                    },
+                                    cors
+                                );
+                                return;
+                            }
+                        }
+
+                        const successPayload: Record<string, unknown> = {
+                            ok: true,
+                            envContent,
+                            jsonConfig,
+                            qrPayload,
+                            ...(initialProfile ? { initialProfile } : {}),
+                            ...(identityHeader ? { identityHeader } : {}),
+                            ...(explorerLink ? { explorerLink } : {}),
+                            ...(deviceSecret ? { deviceSecretForGateway: deviceSecret } : {}),
+                        };
+                        if (idemKey && idemFp) {
+                            saveProvisionIdempotencySuccess(idemKey, idemFp, successPayload);
+                        }
+                        sendJson(res, 200, successPayload, cors);
                     };
-                    /** Plug-and-play: IoT-Gateway ohne Mnemonic → Boss signiert (kein iota-CLI auf dem Pi nötig). */
-                    const isGateway = hardwareType === 'gateway';
-                    const seedless = !params.mnemonic;
-                    const remoteDefaultRoles = ['arbeiter', 'lock', 'kommandant', 'monitor'];
-                    if (isGateway && seedless && remoteDefaultRoles.includes(role)) {
-                        params.signer = 'remote';
-                        const pub = (process.env.BOSS_SIGNER_PUBLIC_URL || '').trim();
-                        if (pub && !String(params.remoteSigner || '').trim()) {
-                            params.remoteSigner = pub;
-                        }
-                    }
-                    const envContent = buildDeviceEnv(params);
-                    const jsonConfig = buildDeviceJson(params);
-                    const qrPayload = role === 'user' && params.ticketOrKeyObjectId
-                        ? params.ticketOrKeyObjectId
-                        : buildQrPayload(params);
-                    let identityHeader: string | undefined;
-                    if (isTiny && (params.deviceSecret || params.gatewayUrl || params.deviceName)) {
-                        identityHeader = buildIdentityHeader(params);
-                    }
-                    const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(/\/$/, '');
-                    const explorerLink = role === 'user' && params.ticketOrKeyObjectId
-                        ? `${explorerBase}/${params.ticketOrKeyObjectId}`
-                        : undefined;
 
-                    const hierarchyProvisionRoles = new Set(['kommandant', 'arbeiter', 'lock', 'monitor', 'waerter', 'boss', 'messenger']);
-                    if (params.address && hierarchyProvisionRoles.has(role)) {
-                        const reg = assignDeviceRoleInEnv(params.address, role);
-                        if (!reg.ok) {
-                            sendJson(res, 400, { ok: false, error: reg.error || 'DEVICE_ROLES / Listen konnten nicht aktualisiert werden.' }, cors);
-                            return;
-                        }
+                    if (idemKey && idemFp) {
+                        await withProvisionDeviceIdempotencyLock(async () => {
+                            const idem = tryProvisionIdempotentReplayOrConflict(idemKey, idemFp);
+                            if (idem.kind === 'replay') {
+                                sendJson(res, 200, { ...idem.response, idempotentReplay: true }, cors);
+                                return;
+                            }
+                            if (idem.kind === 'conflict') {
+                                sendJson(
+                                    res,
+                                    409,
+                                    {
+                                        ok: false,
+                                        error:
+                                            'Idempotency-Key wurde bereits mit anderem Anfrageinhalt verwendet. Neuen Key erzeugen oder denselben Body senden.',
+                                        code: 'IDEMPOTENCY_KEY_REUSE',
+                                    },
+                                    cors
+                                );
+                                return;
+                            }
+                            runProvision();
+                        });
+                    } else {
+                        runProvision();
                     }
-
-                    sendJson(res, 200, {
-                        ok: true,
-                        envContent,
-                        jsonConfig,
-                        qrPayload,
-                        ...(initialProfile ? { initialProfile } : {}),
-                        ...(identityHeader ? { identityHeader } : {}),
-                        ...(explorerLink ? { explorerLink } : {}),
-                        ...(deviceSecret ? { deviceSecretForGateway: deviceSecret } : {}),
-                    }, cors);
                 } catch (e: any) {
                     sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
                 }

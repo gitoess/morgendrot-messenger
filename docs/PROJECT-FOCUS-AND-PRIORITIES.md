@@ -3,7 +3,7 @@
 **Zweck:** Ein gemeinsames Bild für Mensch und KI – **gegen Feature-Creep** und **falsche Parallelität**.  
 **Stand:** lebendes Dokument (Abgleich **2026-03-28**); bei Abweichung im Code lieber **dieses Dokument** oder den Code anpassen.
 
-**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen in **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
+**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen in **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
 
 ---
 
@@ -26,7 +26,7 @@
 
 **Meshtastic-First (für alle weiteren Vorschläge):** Möglichst **Standard-Meshtastic** (Firmware + Client/Ökosystem); **nur gezielte, minimale Erweiterungen** (z. B. eigene PortNum, Airtime-/Prioritäts-Hooks, Custody-Metadaten). **Kein** großes eigenes Chunk-Protokoll und **kein** Routing-Neuaufbau, **wenn** es sich vermeiden lässt. Übersicht **1:1 vs. Eigenlogik:** **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**. **Gilt auch für Refactorings** (UI, Skripte, API): keine parallelen Funk- oder Chunk-Pfade einführen, wenn Meshtastic/Module/MQTT dieselbe Rolle tragen können.
 
-Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`hardware/README.md`**. **Macro-/Gateway-Epic** (Steuerung über IOTA + lokale Ausführung am Gerät): **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** (Wald↔Netz, Opcodes 0x40–0xB0), **`docs/ROADMAP-FAHRPLAN.md`** (C.1, E) – **erst nach Phase B**, siehe Phase-C-Tabelle.
+Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Offline/Online, Idempotenz, **§ H.12**), **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** (Kern vs. Transport-/Funk-Adapter, Auto-Modus mit Override, Interop realistisch eingrenzen), **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** (Sicherheits-/Vertrauens-Roadmap, **§ H.10** — parallel zu A/B/C), **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`hardware/README.md`**. **Macro-/Gateway-Epic** (Steuerung über IOTA + lokale Ausführung am Gerät): **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** (Wald↔Netz, Opcodes 0x40–0xB0), **`docs/ROADMAP-FAHRPLAN.md`** (C.1, E) – **erst nach Phase B**, siehe Phase-C-Tabelle.
 
 ### Frequenz-Strategie (868 / 433 / BOS)
 

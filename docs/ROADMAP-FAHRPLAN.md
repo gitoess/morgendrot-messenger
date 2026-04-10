@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-28** — **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
@@ -144,6 +144,17 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/QR-CONTACT-SCHEMA-V2.md`** – Kontakt-QR **v2** (kompakt: `b`/`g`/`s` u. a.); v1 bleibt gültig; Code-Import folgt bei Bedarf  
 - **`docs/SECRETS-OPTIONS.md`** – Option C: externe Secret-Manager (Doppler, …); kritische Grenzen  
 - **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`** – Hop-Limit/TTL, Brücken, Re-Broadcast-Sturm-Risiko  
+- **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** – EU868/Subband P, Antennen, USB, Rollen & Szenarien; **§ H.3j**  
+- **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** – Kern vs. Adapter, Auto-Modus, Interop-Grenzen; **§ H.3k**  
+- **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** – Serial vs. BLE, Web Serial, NACK/Turbo-Mythen; **§ H.3l**
+- **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** – Vertrauen, Lieferkette, Keystore-Pfad, Abgrenzung „Regierungs-Niveau“; **§ H.10**
+- **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** – Vektor/Raster, PWA-Speicher, Wanderer vs. Einsatz, LoRa-Layer; **§ H.11** (mit **§ H.9** ATAK)
+- **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** – Offline/Online, Idempotenz, CRDT-Grenzen, Mehrgeräte; **§ H.12**
+- **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** – Local-First vs. Ledger, Idempotenz **Ende-zu-Ende**, PQ/Agility **ohne** Kurzschluss
+- **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** – Schlankheit/Härtung: korrigierte Top-Dateien, Claim-Routen; **§ H.13**
+- **`docs/API-PROVISION-DEVICE-IDEMPOTENCY-SKIZZE.md`** – `POST /api/provision-device`: Doppel-POST, Idempotency-Key (Skizze)
+- **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** – PWA-Verschlüsselung, Lite-UI L2, Wipe, Idempotenz, PTB-Audit; **§ H.14**
+- **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** – Baseline-Commit/Tag, Vitest-Strategie, AppError; **§ H.1a**
 - **`docs/CREDITS-PURCHASE-ONCHAIN-CRITIQUE.md`** – Kauf/Credits on-chain: Server ohne Käufer-DB?, Grenzen „reines IOTA“  
 - **`docs/WANDERER-REDEEM-PROVISIONING-FLOW.md`** – Voucher A–D vs. Ist-Code; „Shadow“-Begriff vs. `shadow-sweep`  
 - **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** – Pre-Mint auf Chain, Shop-Fulfillment vs. blindes Relay, Papier-QR  
@@ -280,6 +291,18 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | 2 | **Regression** Bild/Audio/LoRa-Sendepfad | Bei Änderungen an Chat/Send kurz manuell oder E2E prüfen. |
 | 3 | **Exports** | Keine manuellen Edits in **`exports/Morgendrot-Messenger-*`** – Bundle aus **`src/`** / `frontend/` bauen (`MESSENGER-BUNDLE-SOURCE-OF-TRUTH`). |
 
+### H.1a Phase A — Baseline, Vitest, AppError (verbindlich, vor Phase-B-Schwerpunkt)
+
+**Doku:** **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** — dreiphasiger, **kontrollierter** Ausbau (kein Wildwuchs).
+
+| Phase | Inhalt (Kurz) |
+|-------|----------------|
+| **1 — Baseline** | Hotspot-Typing (`use-chat-view-core`, `api.ts`, Send-Helfer); Doku/`.gitignore`; **`npm run sync:handbook`**; **Commit**; optional **`git tag -a`** **nur** mit **Verifikationsliste** (`tsc` root + frontend, `validate:ui`, `test:smoke` — im Detail in der Doku). |
+| **2 — Vitest** | **Festgelegt:** **Vitest** als **einziger** neuer Unit-Runner: **RTL + Vitest** in **`frontend/`**; **`src/`** mit **`environment: 'node'`** (Sharp/FS, reine Parser). **Playwright** + **`tsx`/`npm run test`** bleiben parallel. |
+| **3 — Defensive Schicht** | **`AppError`**-Konzept; **Zod** an API/Mesh-Grenzen schrittweise; **Error Boundaries** + **einheitliche** Toasts. |
+
+**Priorität:** Mit **§ H.1**-Tabelle oben verzahnen; **blockiert Phase B** nicht, solange keine großen parallelen Refactors in denselben Mesh-Dateien.
+
 ### H.2 Als Nächstes – aus 8-Punkte-Liste (nach Stabilität)
 
 | Priorität | # | Thema |
@@ -292,10 +315,14 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 | Paket | Quelle |
 |--------|--------|
-| **Mesh v2** zuverlässig (Senden/Empfangen, Web-BT) | `PROJECT-FOCUS` Phase B, Tests/Handbuch |
-| **Delayed LoRa → IOTA MVP** | **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** – Queue, Gateway, Custody |
+| **Mesh v2** zuverlässig (Senden/Empfangen, Web-BT) | `PROJECT-FOCUS` Phase B; manuelle Schritte **`TESTING.md`** § *Phase B — Mesh / Web-BT*; Code: sauberes **BLE-Trennen**, **Burst-Pause** zwischen v2-Paketen (`MESH_V2_BURST_INTER_PACKET_MS_DEFAULT`) |
+| **Delayed LoRa → IOTA MVP** | **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** – Queue, Gateway, Custody; **Abgleich** mit **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**) |
 | **Kein** paralleler Start: volles Macro-Gateway, Reticulum, DID/Twin-Produkt | Nur Doku/Specs pflegen |
 | **Globales Relay / „jede Basis → ein VPS“** | **Nicht** vor Phase-B-Kern; Einordnung **§ I** – erst Trust-/Gateway-Spec, dann Phase C |
+| **EU-Funk / Hardware / Einsatzprofile (Doku)** | **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** — EU868/Subband-P-Einordnung, eine HF-Kette, Kanal-/Gateway-Abstimmung, Antenne/USB/LNA/PA-Grenzen, Szenarien (Höhle, Krise, Wandern, professionelle Einsätze); **keine** Rechtsberatung |
+| **Modularer Kern, Adapter, Auto-Modus, Interop (Doku)** | **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** — Kern vs. Transport- vs. Funk-Adapter; Auto-Detection **mit Override**; realistische „volle“ Interop; BOS/HSM als **Rand**, nicht Kern-Fork-Pflicht |
+| **USB-Serial vs. Web-BT (Doku + später Code)** | **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** — Durchsatz/OTG/Web-Serial-Matrix; Meshtastic-Protokoll vs. `lora-bridge`-Rohserial; Transport-Interface statt `if (USB)`-Wildwuchs; **Vorbereitung:** Spike **Web Serial auf Android** (**§ H.3l**, **ohne** Blockade für Mesh/BLE) |
+| **Offline-Karten / Geodaten (Zielbild)** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — Wanderer (Basis) vs. Einsatzpaket; **§ H.11**; **nach** Phase-B-Kern, mit **§ H.9** ATAK verzahnbar |
 
 ### H.3b Optional (Doku, kein Sprint-Zwang)
 
@@ -370,7 +397,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **4** | **Next-PWA-Import** | **`Ist:`** Einstellungen → **Einsatz-Profil** (JSON / Datei); `applyInitialProfileProvisioning` + automatische Warteschlange `localStorage` + Banner; Telefonbuch zeigt **`roleTags`**. IndexedDB bewusst nicht — **eine** Quelle (Backend-Datei). | **1**–**3** |
 | **5** | **Handshake-Subflow in der Maske** | **`Ist (2026-03):`** Lite-UI Provisioning Schritt 3: optional Partner + ECDH-Pubkey (Base64) → `POST /api/boss-provision-handshake` nach erfolgreichem `provision-device` — **`ui/index.html`** (`sendProvisionHandshake`). | **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** |
 | **6** | **Rollen-Manager (Boss-Werkstatt)** | `ui/`: Templates (Einsatz-Rolle → Chain-`ROLE`/`roleId`); Medic/Scout als **Labels**, nicht als neue Chain-Enums. | **1**, **2** |
-| **7** | **Offline-Relay-Queue (Boss ohne Internet)** | Eigenes Modul nach Vorbild **`settlement-queue.ts`**; **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`; typisierte Einträge + Flush. | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
+| **7** | **Offline-Relay-Queue (Boss ohne Internet)** | Eigenes Modul nach Vorbild **`settlement-queue.ts`**; **kein** Missbrauch von `mintMessengerCreditsBatchForRecipients`; typisierte Einträge + Flush; **Sync-Regeln** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**). | **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** |
 | **8** | **Doku & Git** | Nach jedem größeren Schritt: **`README.md`** (Links), **`docs/ROADMAP-FAHRPLAN.md`** (Statuszeile), **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei Betriebsrelevanz; Commit ohne Secrets (**`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`**). **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`** ergänzt (2026-03-28): klare Trennung Provisioning vs. Fern-Push vs. Trägerbild-Ist. | Laufend |
 
 **Priorität für die nächste Implementierung (wenn gestartet):** typischerweise **1 → 2 → 6** (API + Persistenz + Boss-UI), parallel Doku; **7** wenn LoRa/Offline-Boss konkret wird; **3/4** wenn Endnutzer-PWA im Fokus ist.
@@ -397,6 +424,49 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Kernkorrektur** | Chain-Settlement = **signierte TX / definiertes Gateway** (`lora-bridge`, Morgendrot-API) — **nicht** beliebiger HTTP-Post an eine öffentliche Node-URL. |
 | **Doku** | **`docs/HEIM-HELTEC-GATEWAY-NARRATIVE-CRITIQUE.md`**; Ist: **`lora-bridge/README.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**. |
 | **Offen** | Firmware-Header (**`MORG`**), Sicherheit (TLS/API-Key), Sponsor-Queue — eigene Arbeitspakete bei Produktreife. |
+
+### H.3j LoRa / EU-Funk: Subbänder, Hardware, Einsatzprofile (Doku, Phase-B-Vorbereitung)
+
+| Thema | Kurz |
+|--------|------|
+| **Zweck** | Einheitliche **technische** und **rollenbezogene** Einordnung für Feldtests und Marketing — **ohne** Zulassungs- oder Reichweite-Garantie. |
+| **Nutzergruppen** | Privat/Wanderer, Freundesgruppen, Hilfsorganisationen, professionelle Einsatzkräfte; **taktische oder sicherheitsrelevante** Szenen nur **sachneutral** (Behörden/Organisationen), kein „Kampfprodukt“-Narrativ. |
+| **Szenarien** | Nicht nur **Höhle**, sondern **Katastrophe/Blackout**, **professionelle SAR-Übungen**, **Wandern** — gleicher Funk-Baukasten, unterschiedliche **Topologie** und **Schulung**. |
+| **Technik** | Subband **P** vs. restliches EU868; **kein** echtes gleichzeitiges Dual-Band auf einem SX1262; **nur** mesh-weite „Turbo“-Kanäle mit **abgestimmten** Empfängern/Gateways; **Antenne vor Watt**; **USB/UART** Handy↔Heltec; **keine** sinnvolle LoRa-Nutzung der **LTE-Handyantenne**; externe LoRa-Antenne statt RF-Switch am Smartphone. |
+| **Doku** | **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** — Verweise auf **LORA-IOTA-Delayed-Upload-Spec**, **MESHTASTIC-BUILDING-BLOCKS**, **MESHTASTIC-HOP-LIMIT-AND-BRIDGE**, **NOTFALL-REICHWEITE**, **heltec/README**. |
+
+### H.3k Modularer Kern, Adapter, Auto-Modus, Interoperabilität (Doku, Zielbild)
+
+| Thema | Kurz |
+|--------|------|
+| **Kern** | Messenger-/Chain-Semantik, Vault, Emergency-Envelope — **ohne** Pflicht zu jedem Funkstack. |
+| **Adapter** | Meshtastic/BT/Serial, `lora-bridge`, MQTT (Spec); **BOS** = **externes** Funk-Subsystem + Schnittstelle, nicht „Softwareschalter“ auf ISM-Hardware. |
+| **Auto-Detection** | Sinnvoll als **Vorschlag** + **Override** (USB kann Laptop sein; ohne Display ≠ immer gewünschtes Relay); Umsetzung **Firmware + Host**, siehe **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**. |
+| **Interop** | Schichtweise (Mesh-Kanal, Envelope-Version, APIs); **kein** Anspruch auf weltweite Plug-and-Play-Interop ohne Abstimmung. |
+
+### H.3l USB-Serial vs. BLE zum Heltec (Doku; Code Phase B optional)
+
+| Thema | Kurz |
+|--------|------|
+| **Priorität** | **Stabilität Phase B (Mesh / Web-BT)** geht **vor** Serial-Produktivcode. Serial-Spike ist **Vorbereitung**, blockiert **keinen** Mesh-MVP. |
+| **Zweck** | Kritische Einordnung: wann **UART/USB** echten Mehrwert bringt (Durchsatz Handy↔Radio, Debug-Logs), wo **Behauptungen zu stark** sind (NACK **zwingend** Kabel, Feld-Flash vom Handy, „nur USB“ für Akku/Turbo). |
+| **Ist-Code** | **Web Bluetooth** im Frontend (`use-meshtastic-ble.ts`); **Serial** auf dem **PC** in **`lora-bridge`** — **kein** Web-Serial in der PWA bisher. |
+| **Nächste Code-Schritte (wenn priorisiert)** | Transport-Abstraktion (BLE vs. Serial) **oberhalb** Meshtastic-Payload; **Geräte/Browser-Matrix** für Web Serial / OTG; Meshtastic-konformes Serial-Protokoll **nicht** mit `lora-bridge`-Rohpfad verwechseln. |
+| **Arbeitspaket (Spike)** | **„Spike: Web Serial auf Android“** — siehe Tabelle unten und **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** § 5. Ziel: auf **Ziel-Handys** klären, ob **USB-OTG + Web Serial** als **Highspeed-Kanal** für **große Daten zum Heltec** taugt, **bevor** das Protokoll fest darauf zugeschnitten wird. |
+| **CM4-Hinweis** | **CM4 ≠ Android.** Dort kein „Web Serial“-Spike nötig: typisch **Linux UART** / bestehende **`lora-bridge`**-Serial (`serialport`). Optional separater Mini-Spike: **Durchsatz/Baud** Pi↔Heltec — nicht dieselbe API wie im Browser. |
+| **Doku** | **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`**. |
+
+**Spike „Web Serial auf Android“ — Schritte (manuell, Ergebnis dokumentieren):**
+
+| # | Schritt | Erfolgskriterium (minimal) |
+|---|---------|------------------------------|
+| **1** | **Zielgeräte festhalten** (Handymodell(e), Android-Version, Chrome-Version, USB-C-Kabel/OTG-Adapter). | Liste in **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** § 5.1 oder Team-Notiz; reproduzierbar. |
+| **2** | Prüfen, ob **`navigator.serial`** auf dem Gerät **existiert** und eine Seite mit **HTTPS/lokal** den Prompt öffnen darf. | Ja/Nein pro Gerät; Screenshots oder Kurzlog. |
+| **3** | Heltec per **USB-OTG** verbinden; im Chrome-Dialog **CDC-ACM** / passenden COM-Port wählen (Gerätebezeichnung je nach Firmware). | Port öffnet sich **ohne** Kernel-Fehler; ggf. nur **Lesen** von Boot-Logs als Rauchtest. |
+| **4** | **Durchsatz-Rauchtest:** definierte Bytefolge (z. B. **16–64 KB** in Chunks) **schreiben** und Roundtrip oder **Echo** messen (kleines **Test-HTML** im Repo optional später). | Grobe **KB/s** und **Latenz** notieren; mit **gleichem** Payload **BLE**-Pfad vergleichen (wenn möglich). |
+| **5** | **Fazit:** „Serial taugt / taugt nicht / nur Gerät X“ für **Bild-/Chunk-Pfad**; **Blocker** (Permissions, Chrome-Build, Strom, Kabel) listen. | Absatz in § 5.2; **kein** Pflicht-Produktcode vor diesem Fazit. |
+
+**Kritische Einordnung:** Der Spike misst vor allem **Handy↔Heltec**. **LoRa-Airtime** bleibt unabhängig davon der oft größere Engpass — Fazit trotzdem wertvoll für **host-seitige** LUMA-/NACK-Schleifen.
 
 ### H.4 Kurz-Check vor jedem größeren Merge
 
@@ -446,10 +516,15 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Wie weitermachen (Reihenfolge):**  
 1. **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** — Phasen **A → B → C** einhalten.  
-2. **`§ H.0`** (Produkt/UX, Messenger schlank, Entsperren) und **`§ H.1`** (Phase A technisch: Stabilität, Tests, kleine UI-Fixes).  
+2. **`§ H.0`** (Produkt/UX, Messenger schlank, Entsperren) und **`§ H.1`** (Phase A technisch: Stabilität, Tests, kleine UI-Fixes) **sowie § H.1a** (**Baseline + Vitest + AppError** — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**).  
 3. **`§ H.2`** — PWA-Checks, Status/Fehlermeldungen, Kabel-Bridge nur wenn Kapazität.  
 4. **Phase B** erst bei „A genug stabil“ — Mesh v2, **Delayed LoRa → IOTA** laut Spec.  
-5. **Nicht** parallel: volles Macro-Gateway, **§ I**-Narrative als Pflichtsprint, oder **Testnet/Mainnet-Profil-UI** ohne konkreten Bedarf.
+5. **Nicht** parallel: volles Macro-Gateway, **§ I**-Narrative als Pflichtsprint, oder **Testnet/Mainnet-Profil-UI** ohne konkreten Bedarf.  
+6. **§ H.10** (Sicherheit/Vertrauen/Schlankheit): Stufe 0–1 aus **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** **nebenbei** — **ohne** Phase B zu verdrängen.  
+7. **§ H.11** (Offline-Karten/Geodaten): nur bei **Bedarf** nach Phase-B-Kern — **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**.  
+8. **§ H.12** (Sync/Source of Truth): bei **Queue-/Multi-Gerät-Design** mitlesen — **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; umsetzen **im Rahmen** Delayed-Upload + Offline-Queues.  
+9. **§ H.13** (Schlankheit & Härtung): korrigierte Datei-/API-Namen, Idempotenz/PTB/Outbox — **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`**; **kein** Feature-Wildwuchs, **Wartbarkeit** (`api-server` entzerren) vor „neue Wunder-Datei“.  
+10. **§ H.14** (Hardening V3): PWA-Speicher verschlüsseln, Lite-UI-Onboarding L2, Client-Wipe, Idempotenz-Review, **`maxTxBytes`**-Audit — **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**.
 
 ### H.9 ATAK / Cursor-on-Target (CoT) — **Backlog**, nach stabilen Kernpfaden
 
@@ -460,6 +535,52 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Priorität** | **Nach** Phase-A-Robustheit und **Phase B** (LoRa/IOTA-MVP), sofern kein dringender Kundenauftrag — kein Parallel-Sprint zu **§ H.0–H.2**. |
 | **Spec** | **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md`** (Zielbild, Sicherheit, Mapper/Gateway — **ohne** Implementationspflicht). |
 | **Verwechslung vermeiden** | „Direkt zu IOTA“ vs. lokaler Node: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
+| **Offline-Karten** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**§ H.11**) — Basiskarte vs. Einsatzpaket; ergänzt Lage/CoT, **ersetzt** keine UDP/TAK-Spec. |
+
+### H.10 Sicherheit, Vertrauen, schlanke Härtung (eigener Track, **blockiert** A/B/C **nicht**)
+
+| Aspekt | Kurz |
+|--------|------|
+| **Zweck** | Realistische **Roadmap** für **transparentere** Lieferkette, **klarere** Sicherheitsansprüche, optional **Keystore/HSM** — **ohne** Behauptung behördlicher Zulassung. |
+| **Doku** | **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** — Ist-Review (Stichprobe), Stufen 0–5, **nächste logische Schritte** A–D. |
+| **Bezug** | **`SECURITY-RATING.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13** — konkrete Härtungs-/Schlankheits-Checkliste). |
+| **Priorität** | **Parallel** zu **§ H.0–H.2** und **Phase B** nur mit **kleinem** Zeitbudget; **kein** Ersatz für Mesh-/IOTA-MVP. |
+
+### H.11 Offline-Karten & Geodaten (Zielbild, **Backlog**)
+
+| Aspekt | Kurz |
+|--------|------|
+| **Zweck** | **Optional** zum Messenger-Kern: **Vektor-Basis** (klein), **Einsatzpakete** (größer, nach Provisioning), **Live-Layer** (minimal über Funk/Online); **Wanderer** vs. **Einsatzkraft** differenziert. |
+| **Doku** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — kritische Korrekturen (Cache-Eviction, Lizenz, WGS84, LoRa-Payload). |
+| **Priorität** | **Nach** Phase-B-Kern (Mesh, Delayed IOTA) und **parallel** nur mit klarem Bedarf — **nicht** vor **H.0–H.2**-Stabilität erzwingen. |
+| **ATAK** | Lage-Layer weiter **§ H.9** / **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md`**; Karten-Doku **ergänzt**, **ersetzt** keine CoT-Spec. |
+
+### H.12 Sync: Source of Truth & Konflikte (Doku, Phase B/C-Vorbereitung)
+
+| Aspekt | Kurz |
+|--------|------|
+| **Zweck** | **Festhalten**, wie **Mesh/Offline** und **IOTA** zusammenspielen **ohne** Mythos „CRDT löst alles“; **pro Vorgang** Autorität (Chain vs. Queue vs. UI). |
+| **Doku** | **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** — Verknüpfung zu **`LORA-IOTA-DELAYED-UPLOAD-SPEC`**, **`OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE`**, **`SECURITY-RATING`**. |
+| **Umsetzung** | **Dedup** (`canonical_msg_ref`), typisierte **Offline-Queues**, **Mehrgeräte-Politik** — **im** Delayed-Upload-MVP und **separaten** Boss-Relay-Queue (**§ H.3g**) konkretisieren, nicht als **Parallel-Epik** zur Spec. |
+| **Priorität** | **Mit** Phase B **Delayed Upload** lesen und **beim Implementieren** anwenden; **kein** Blocker vor erstem Mesh-Smoke. |
+
+### H.13 Code-Schlankheit & Härtung (Priorität, **kein** Parallel-Epik)
+
+| Aspekt | Kurz |
+|--------|------|
+| **Zweck** | **Besserer** Code statt nur **mehr** Code: klare Grenze **lokal vs. chain-bestätigt**, **Idempotenz** pro Vorgang, **PTB-Limits** zuverlässig, **`api-server.ts`** langfristig **wartbarer** (Auszüge nach **`src/api/*`**). |
+| **Doku** | **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** — korrigierte Pfade (`wallet-bridge`, `chain-access`, **kein** `messenger-logic.ts`), echte Claim-Routen, Doku-Set statt „ein Gesetzbuch“. **`docs/API-PROVISION-DEVICE-IDEMPOTENCY-SKIZZE.md`** — `provision-device` + Idempotenz-Key. |
+| **Bezug** | **§ H.12**, **§ H.3g**, **`voucher-claim-state.ts`**, **`chain-access.ts`** (`maxTxBytes`), Frontend-Hooks (**`chat-view-messenger-transport`**, Inbox/Delayed-Queue). |
+| **Priorität** | **Mit** Phase A/B und Delayed Upload **verzahnen**; **§ H.10** bleibt Sicherheits-/Schlankheits-**Track** — **H.13** ist die **konkrete** Umsetzungs-Checkliste dazu. |
+
+### H.14 Hardening V3 — PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB (Arbeitspaket)
+
+| Aspekt | Kurz |
+|--------|------|
+| **Zweck** | **`docs/ONBOARDING-WALLET-UX-SPEC.md`** operationalisieren: **Browser-Speicher** schützen (PBKDF2 + AES-GCM), **Lite-UI**-Erststart (**L2**), **PWA Emergency Wipe**, **Idempotenz** (Provisioning vs. Voucher getrennt), **128-KiB-PTB**-Audit in **`chain-access.ts`**. |
+| **Doku** | **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** — Master-Prompt mit **Leitplanken** (kein HSM-Mythos im Browser, Lite-UI ≠ PWA). |
+| **Bezug** | **§ H.0** (#4), **§ H.13**, **`provision-idempotency-state.ts`**, **`voucher-claim-state.ts`**, **`docs/PWA-MANUAL-CHECKS.md`**, **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`**. |
+| **Priorität** | **Mit Phase A / § H.0–H.2**; **parallel** zu **§ H.13**; **blockiert Phase B** nicht — außer bei direkten Konflikten in denselben Modulen. |
 
 ---
 

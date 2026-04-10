@@ -43,6 +43,7 @@ test-results/
 .morgendrot-package-hints.json
 .messenger-gas-state.json
 .morgendrot-voucher-claim-state.json
+.morgendrot-provision-idempotency.json
 .morgendrot-shop-session-claims.json
 .morgendrot-shop-stripe-events.json
 .morgendrot-rules

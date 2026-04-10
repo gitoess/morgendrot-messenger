@@ -4,13 +4,29 @@ import { meshBuildV2Wires } from '@/frontend/lib/api'
 import { base64ToUint8Array } from '@/frontend/lib/emergency-binary-browser'
 
 /**
+ * Pause zwischen zwei Mesh-v2-Frames über Web-BT: reduziert Überlastung von GATT/ESP beim Burst
+ * (Phase B Stabilität). Bei Bedarf 0 setzen (z. B. Tests).
+ */
+export const MESH_V2_BURST_INTER_PACKET_MS_DEFAULT = 80
+
+export type SendMeshV2WireBurstOptions = {
+  /** Millisekunden Wartezeit vor dem nächsten Paket (nach dem ersten). Default siehe Konstante. */
+  interPacketDelayMs?: number
+}
+
+/**
  * Baut Mesh-v2-Wires für `text` und sendet sie nacheinander per Meshtastic BINARY v2 (Broadcast).
  */
 export async function sendMeshV2WireBurst(
   text: string,
   sendBinaryV2: (raw: Uint8Array, destination?: number | 'broadcast') => Promise<unknown>,
-  onProgress?: (sent: number, total: number) => void
+  onProgress?: (sent: number, total: number) => void,
+  options?: SendMeshV2WireBurstOptions
 ): Promise<void> {
+  const inter =
+    options?.interPacketDelayMs !== undefined
+      ? options.interPacketDelayMs
+      : MESH_V2_BURST_INTER_PACKET_MS_DEFAULT
   const b = await meshBuildV2Wires(text)
   if (!b.ok || !b.wires?.length) {
     throw new Error(b.error || b.message || 'Mesh-Build fehlgeschlagen')
@@ -20,5 +36,8 @@ export async function sendMeshV2WireBurst(
     const raw = base64ToUint8Array(b.wires[i]!.wireBase64)
     await sendBinaryV2(raw, 'broadcast')
     onProgress?.(i + 1, total)
+    if (i + 1 < total && inter > 0) {
+      await new Promise((r) => setTimeout(r, inter))
+    }
   }
 }

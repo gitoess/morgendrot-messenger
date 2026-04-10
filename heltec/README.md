@@ -20,13 +20,14 @@ Wer im Ernstfall **Gegenstelle** ist (Team, Gateway vs. offizielle Rettung) und 
 ## Verbindung zum Host
 
 - Physikalisch: **USB** zum Rechner / **CM4-Träger** (siehe [`../cm4/README.md`](../cm4/README.md)).
-- Optional: **serielle Bridge** statt Browser BT → [`../lora-bridge/README.md`](../lora-bridge/README.md).
+- Optional: **serielle Bridge** statt Browser BT → [`../lora-bridge/README.md`](../lora-bridge/README.md). **Kritische Einordnung USB vs. BLE (Durchsatz, Web Serial, NACK):** [`../docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`](../docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md).
 
 ## Praxis
 
-- Antenne: richtige Polarisation/Länge, in Höhlen oft schlechte Ausbreitung → siehe Rettungs-Konzepte in `docs/` (allgemein), nicht in diesem Ordner wiederholen.
+- Antenne: richtige Polarisation/Länge, in Höhlen oft schlechte Ausbreitung — **[EU-Funk & Einsatzprofile](../docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md)**; weitere Konzepte in `docs/` allgemein.
 - Strom/Akku: je nach Einsatzdauer; **kein** wasserdichtes „aktives Relais im Siphon“ hier spezifiziert – nur Geräte-Rolle **Funk-Knoten / BT-Peripherie**.
 
 ## Nächste Ausbaustufe
 
 - **Phase 2:** Chunking + Selective NACK, Relais-Smart-Buffer, Prioritäten, optional **Kabel-Hybrid / Siphon-Brücke** (RS485 oder differentieller Bus, Lackdraht-Szenario, LoRa↔Draht↔LoRa) + Standalone – [`../meshtastic/PHASE-2-FIRMWARE-SPEC.md`](../meshtastic/PHASE-2-FIRMWARE-SPEC.md) (**§7**).
+- **Auto-Relais vs. Messenger (Zielbild):** Erkennung nur **sinnvoll mit Override** (USB kann Laptop sein); siehe **[`docs/MODULAR-KERN-ADAPTER-INTEROP.md`](../docs/MODULAR-KERN-ADAPTER-INTEROP.md)** § 2.

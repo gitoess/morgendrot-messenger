@@ -20,6 +20,8 @@
 
 **Ziel:** Logik im Node.js-Code fehlerfrei. **Ausführung:** `npm run test`, `npm run test:security`.
 
+**Ausbau (Phase A, verbindlich):** **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** — **Vitest** für **`frontend/`** (RTL) und für **`src/`** mit **`environment: 'node'`**; bestehende **`npm run test`**-Module und **Playwright** bleiben; siehe **Fahrplan § H.1a**.
+
 ---
 
 ## 2. Move-Smart-Contract-Tests (On-Chain-Sicherheit)

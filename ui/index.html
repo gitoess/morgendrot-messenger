@@ -1929,7 +1929,7 @@
               <button type="button" @click="loadEinsatzTemplates()" class="text-xs text-sky-400 hover:underline">Neu laden</button>
             </div>
           </div>
-          <button @click="boss.provStep = 2" :disabled="!boss.provProfileId" class="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 disabled:opacity-50 mt-2">Weiter</button>
+          <button @click="boss.provStep = 2; boss.provIdempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('idem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 14))" :disabled="!boss.provProfileId" class="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 disabled:opacity-50 mt-2">Weiter</button>
         </div>
 
         <!-- Step 2 -->
@@ -1971,7 +1971,7 @@
             <textarea x-model="boss.provInitialProfileJson" rows="5" placeholder='{"version":1,"deploymentChannelTag":"Sektor Nord","contacts":[{"name":"Leitung","address":"0x…64hex…","roleTags":["Einsatzleiter"]}]}' class="mt-2 w-full rounded border border-slate-600 bg-slate-900 px-2 py-1 text-xs font-mono text-slate-200"></textarea>
           </details>
           <div class="flex gap-2 mt-2">
-            <button @click="boss.provStep = 1" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
+            <button @click="boss.provStep = 1; boss.provIdempotencyKey = ''" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
             <button @click="provisionGenerate()" :disabled="boss.provLoading || (boss.provRole === 'user' && !boss.provTicketOrKeyObjectId)" class="rounded-lg bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-500 disabled:opacity-50" x-text="boss.provLoading ? 'Generiere…' : 'Generieren & Weiter'"></button>
           </div>
         </div>
@@ -2069,7 +2069,7 @@
           <div id="boss-qr-canvas" class="mt-3"></div>
 
           <div class="flex gap-2 mt-2">
-            <button type="button" @click="boss.provStep = 2; boss.provResult = null; boss.provExportFeedback = ''; boss.provExportIsError = false; boss.provHandshakeFeedback = ''; boss.provHandshakeIsError = false" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
+            <button type="button" @click="boss.provStep = 2; boss.provResult = null; boss.provExportFeedback = ''; boss.provExportIsError = false; boss.provHandshakeFeedback = ''; boss.provHandshakeIsError = false; boss.provIdempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('idem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 14))" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Zurück</button>
             <button @click="resetProvision()" class="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700">Neues Gerät</button>
           </div>
         </div>
@@ -2606,6 +2606,8 @@
           computedRoleId: 0,
           roleParamsOpen: '',
           provStep: 1,
+          /** Pro Schritt-2-Eintritt neu; Header Idempotency-Key für POST /api/provision-device */
+          provIdempotencyKey: '',
           provProfileId: '',
           provTemplate: null,
           provStreamsAnchorId: '',
@@ -4846,7 +4848,12 @@
               streamsBridgeUrl: this.setup.streamsBridgeUrl || this.currentIds.streamsBridgeUrl || undefined,
             };
             if (extraInitial) params.initialProfile = extraInitial;
-            const r2 = await fetch(_api() + '/api/provision-device', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(params) });
+            const idem = this.boss.provIdempotencyKey || ((this.boss.provIdempotencyKey = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : ('idem_' + Date.now() + '_' + Math.random().toString(36).slice(2, 14))));
+            const r2 = await fetch(_api() + '/api/provision-device', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idem },
+              body: JSON.stringify(params),
+            });
             const d2 = await r2.json();
             if (d2.ok) {
               this.boss.provResult = d2;
@@ -5114,6 +5121,7 @@
         },
         resetProvision() {
           this.boss.provStep = 1;
+          this.boss.provIdempotencyKey = '';
           this.boss.provAddress = '';
           this.boss.provSecretKey = '';
           this.boss.provResult = null;

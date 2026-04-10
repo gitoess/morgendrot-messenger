@@ -3,7 +3,7 @@
 **Kontext:** Morgendrot ist ein **Notfall-/Krisen-Messenger**, **kein** Alltags-Chat. **IOTA Rebased** = primärer Pfad bei Verfügbarkeit; **LoRa/Meshtastic** = starker **Offline-Fallback**.  
 **Leitlinie:** So **nah am Standard-Meshtastic** bleiben wie möglich; **eigenes Protokoll / großer Fork** nur, wenn es **fachlich nicht anders** geht.
 
-Verknüpft: **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (optionale Tiefe), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`** (Hop-Limit/TTL, Brücken — kritisch).
+Verknüpft: **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (optionale Tiefe), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** (EU-Bänder, Antenne/USB, Einsatzprofile), **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** (Kern/Adapter, Auto-Modus, Interop), **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **`docs/MESHTASTIC-HOP-LIMIT-AND-BRIDGE.md`** (Hop-Limit/TTL, Brücken — kritisch).
 
 ---
 

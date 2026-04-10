@@ -2,7 +2,13 @@
 
 Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package deployed, `create_globals` ausgeführt, `.env` mit PACKAGE_ID, VAULT_REGISTRY_ID, MAILBOX_ID, MY_ADDRESS (und ggf. PARTNER_ADDRESS). **Hinweis:** Nach **`npm install`** wird **`.env`** aus **`.env.example`** angelegt, falls noch keine existiert (`postinstall`).
 
-**Fünf-Säulen-Strategie:** Siehe **docs/TEST-STRATEGY.md** (Unit, Move, Integration, KI-Validierung, Stresstest/Resilience).
+**Fünf-Säulen-Strategie:** Siehe **docs/TEST-STRATEGY.md** (Unit, Move, Integration, KI-Validierung, Stresstest/Resilience). **Phase-A-Qualität (Baseline, Vitest, AppError):** **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** — **Fahrplan § H.1a**.
+
+**Sicherheit, Vertrauen, schlanke Härtung (eigener Fahrplan, parallel zu Feature-Phasen):** **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** — **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**; technische Layer-Bewertung weiter **`SECURITY-RATING.md`**.
+
+**Offline-Karten / Geodaten (Zielbild, Backlog):** **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — **`docs/ROADMAP-FAHRPLAN.md`** § **H.11** (mit **§ H.9** ATAK).
+
+**Sync / Source of Truth (Offline vs. IOTA, Konflikte):** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** — **`docs/ROADMAP-FAHRPLAN.md`** § **H.12** (mit Delayed-Upload-Spec und Offline-Queue-Kritik abgleichen).
 
 ---
 
@@ -10,7 +16,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 Empfohlene Reihenfolge ohne Chain:
 
-1. **`npm run test:smoke`** — führt **`npm run validate:ui`** und **`npm run test`** aus (UI-Referenzen + Modultests).
+1. **`npm run test:smoke`** — führt **`npm run validate:ui`** und **`npm run test`** aus (UI-Referenzen + Modultests). Optional danach **`npm run test:frontend-unit`** — Vitest im **Next-PWA** (`frontend/`: Dedup, Send-Validierung, `AppError`, API-Envelope/JSON-Guard, **`api-fetch-text`**, **`compact-image-wire`**, Kontakt-/Unlock-Envelope); siehe **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** § H.1a und Fuß „GitHub / Release-Notes“.
 2. **Manuell:** Backend starten (`npm run start:secrets` oder `npm start`), **http://127.0.0.1:3342/** öffnen, Wallet entsperren, einen kurzen Befehl oder Tab prüfen.
 3. **Mit Next:** `npm run dev` → **http://127.0.0.1:3341/** — Chat-Kachel: Credits-Balken erscheint, wenn **`MESSENGER_CREDITS_OBJECT_ID`** gültig ist und die API das Objekt lesen kann; Lock-Kachel: Statuszeile „Backend / Chat / Keys“. Optional: **`/handbook`** (Markdown-Handbuch; Produktion: SW-Cache) — siehe **`docs/PWA-HANDBUCH-OFFLINE.md`**. Vor Release/Feldtest: manuelle **PWA-Checks** (Install, Offline-Shell, Handbuch) — **`docs/PWA-MANUAL-CHECKS.md`** (Fahrplan **§ H.2**).
 4. **Credits vs. MIST (kein Vermischen):** **`MESSENGER_CREDITS_OBJECT_ID`** bezieht sich auf **Messenger-Credits** (Tarif/Kontingent als Move-Objekt), **nicht** auf natives **Gas-Guthaben** (MIST) auf der Wallet. Kurz: **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8. Smoke: **`GET /api/status`** (3342) — wenn Credits gesetzt und lesbar: Anzeige/Hinweise plausibel; in Support/UI nicht „Credits = IOTA“ gleichsetzen.
@@ -26,6 +32,40 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 - [ ] **Verifizierung / „Verifiziert“:** **Mesh:** Shield-Icon nur, wenn der Absender im Kontaktverzeichnis mit Mesh gebunden ist (**nicht** on-chain-Protokoll-Verankerung – die bleibt Spec/offen, siehe **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**).
 - [ ] **Gesperrter Tresor:** `.morg-pkg` Import/Export und verschlüsseltes Senden zeigen die erwarteten Fehlermeldungen (Keys/Vault); kein stiller Fehlschlag.
 - [ ] **Klartext-Modus (Pinnwand/privat unverschlüsselt):** Umschalten sichtbar; Senden nur mit gültigem Empfängerfeld wo die UI es verlangt; Hinweise aus **`/api/status`** (Klartext-Kanal, Konfiguration) konsistent mit dem Chat-Header/Transport-Karte.
+
+### Phase B — Mesh / Web-BT (Heltec, Schritt für Schritt)
+
+**Ziel:** Stabilität **Senden/Empfangen** über **Web Bluetooth** vor Serial-/Protokoll-Erweiterungen (Fahrplan **`docs/ROADMAP-FAHRPLAN.md`** § **H.3**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** Phase B). **Voraussetzung:** **Android + Chrome** (Web Bluetooth); Heltec mit **Meshtastic** und **gleichem Kanal/PSK** wie Gegenstelle; **Antenne** montiert.
+
+**Schritt 1 — Stack starten**
+
+1. Root: API wie gewohnt (**`npm start`** oder **`npm run dev`** — siehe **`docs/DEV-START.md`**).
+2. Next-Messenger: **`http://127.0.0.1:3341/`** (oder eure LAN-URL vom Handy aus — **HTTPS** bzw. gleiche Origin-Regeln für Web Bluetooth beachten).
+
+**Schritt 2 — Koppeln**
+
+1. Im Chat **Setup / Funk**: **Meshtastic verbinden** → Gerät wählen.
+2. Bei Fehler: **Trennen** klicken (trennt GATT sauber), Heltec **kurz stromlos**, erneut verbinden.
+
+**Schritt 3 — Kurztext (ein Wire)**
+
+1. Transport **Funk/Mesh**, kurzer **verschlüsselter** Text ohne Anhang.
+2. Erwartung: Status **Erfolg**; bei mehrteiligen v2-Bursts Fortschritt **„Mesh v2 x/y Pakete“**; zwischen Paketen kurze Pause (**ca. 80 ms**, `MESH_V2_BURST_INTER_PACKET_MS_DEFAULT` in **`frontend/frontend/lib/chat-view-mesh-send.ts`**).
+
+**Schritt 4 — Empfang**
+
+1. Zweites Gerät oder Gegenstation sendet; **Posteingang** zeigt **📡** / `source === 'mesh'`.
+2. MF1-Fragmente: zusammengeführter Klartext ohne Dubletten.
+
+**Schritt 5 — Bild (LUMA + CHROMA)**
+
+1. Nur wenn Schritt 3–4 stabil: **Funk**, Bild anhängen, senden (zwei Phasen LUMA/CHROMA, jeweils ggf. mehrere v2-Pakete).
+2. Bei Abbrüchen: zuerst **Abstand/LoRa**, dann BLE erneut koppeln; optional Pause zwischen Bursts in der Konstante erhöhen (nur zu Testzwecken).
+
+**Schritt 6 — Regression**
+
+1. **`npx tsc --noEmit`** im Ordner **`frontend/`** nach Mesh-Änderungen.
+2. Spike **Web Serial Android** (**`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** § 5) **parallel** möglich — **blockiert** Mesh-MVP nicht.
 
 **Posteingang: Richtung & Identität** — technische Referenz **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, UI-Ort **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`**:
 

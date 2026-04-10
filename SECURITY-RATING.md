@@ -1,5 +1,7 @@
 # Bewertung: Layer nach Sicherheit und Logik (1–100)
 
+**Roadmap Vertrauen / Lieferkette / Abgrenzung Hochzulassung:** **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** (**Fahrplan § H.10**).
+
 Kurzbewertung der einzelnen Schichten des Projekts. **Sicherheit** = Krypto, Zugriffskontrolle, Injection-Resistenz, SPOF. **Logik** = Korrektheit des Ablaufs, Lesbarkeit, Fehlerbehandlung.
 
 ---
@@ -17,7 +19,7 @@ Kurzbewertung der einzelnen Schichten des Projekts. **Sicherheit** = Krypto, Zug
 | **Lock** | `m2m-lock.ts` | 86 | 90 | Kein Shell bei OPEN_COMMAND; Replay → Auth → AccessKey; nur Nachrichten an lockAddress. |
 | **Messenger** | `wallet-bridge.ts` | 82 | 85 | normalizeAddress; Befehle fest; Adressen vor TX validiert; große Angriffsfläche, aber kontrolliert. |
 | **Move (Chain)** | `messaging.move` | 90 | 90 | sender == lock_id bei set_open_words; Vault/Mailbox/AccessKey Berechtigungen klar. |
-| **Config** | `config.ts` | 75 | 88 | Nur Konfiguration; sensible Werte in Anzeige maskiert; keine kritische Logik. |
+| **Config** | `config.ts` | 82 | 88 | Wie §10: maskierte Anzeige, **setEnvKey-Blocklist** für kritische Keys. |
 
 ---
 

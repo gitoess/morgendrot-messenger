@@ -12,6 +12,33 @@ import { stripDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'
 
 const V2_MAX_BYTES = 240
 
+/** BLE/Web-BT: Gerät sauber vom GATT trennen (verhindert „hängende“ Verbindungen beim erneuten Koppeln). */
+async function disconnectMeshDevice(device: MeshDevice | null): Promise<void> {
+  if (!device) return
+  const d = device as unknown as {
+    disconnect?: () => void | Promise<void>
+    close?: () => void | Promise<void>
+    transport?: { disconnect?: () => void | Promise<void>; close?: () => void | Promise<void> }
+  }
+  try {
+    if (typeof d.disconnect === 'function') {
+      await Promise.resolve(d.disconnect())
+      return
+    }
+    if (typeof d.close === 'function') {
+      await Promise.resolve(d.close())
+      return
+    }
+    const t = d.transport
+    if (t) {
+      if (typeof t.disconnect === 'function') await Promise.resolve(t.disconnect())
+      else if (typeof t.close === 'function') await Promise.resolve(t.close())
+    }
+  } catch {
+    /* Verbindung schon weg — Zustand wird trotzdem zurückgesetzt */
+  }
+}
+
 export type MeshtasticBleOptions = {
   contactDirectory?: Record<string, ContactMeshEntryClient>
   onMeshChatMessage?: (msg: Message) => void
@@ -29,6 +56,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const [device, setDevice] = useState<MeshDevice | null>(null)
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const deviceRef = useRef<MeshDevice | null>(null)
 
   const dirRef = useRef(opts?.contactDirectory ?? {})
   const onMsgRef = useRef(opts?.onMeshChatMessage)
@@ -47,6 +75,10 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   useEffect(() => {
     delayMirrorRef.current = opts?.onDelayMirrorPlaintext
   }, [opts?.onDelayMirrorPlaintext])
+
+  useEffect(() => {
+    deviceRef.current = device
+  }, [device])
 
   const bleSupported =
     typeof navigator !== 'undefined' && typeof navigator.bluetooth !== 'undefined'
@@ -154,6 +186,12 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     setError(null)
     setConnecting(true)
     try {
+      const prev = deviceRef.current
+      if (prev) {
+        await disconnectMeshDevice(prev)
+        deviceRef.current = null
+        setDevice(null)
+      }
       const [{ MeshDevice }, { TransportWebBluetooth }] = await Promise.all([
         import('@meshtastic/core'),
         import('@meshtastic/transport-web-bluetooth'),
@@ -165,14 +203,20 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const msg = e instanceof Error ? e.message : String(e)
       setError(msg)
       setDevice(null)
+      deviceRef.current = null
     } finally {
       setConnecting(false)
     }
   }, [])
 
   const disconnect = useCallback(() => {
-    setDevice(null)
-    setError(null)
+    void (async () => {
+      const current = deviceRef.current
+      deviceRef.current = null
+      await disconnectMeshDevice(current)
+      setDevice(null)
+      setError(null)
+    })()
   }, [])
 
   const sendBinaryV2 = useCallback(

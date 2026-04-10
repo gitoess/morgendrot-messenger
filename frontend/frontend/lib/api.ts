@@ -4,6 +4,13 @@ import {
   pickInboxRawMessages,
   type InboxApiRow,
 } from '@/frontend/lib/inbox-map-messages'
+import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
+import { parseApiJsonEnvelope, parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
+import {
+  parseOkEnvelopePassthrough,
+  parseSimpleOkEnvelopeText,
+} from '@/frontend/lib/api-simple-ok-envelope'
+import { parseUnlockBackendEnvelopeText } from '@/frontend/lib/api-unlock-envelope'
 
 /** Explizit setzen, wenn kein Next-Rewrite (z. B. statischer Export). Sonst leer = gleiche Origin + `rewrites` in next.config.mjs. */
 function resolveApiBase(): string {
@@ -25,13 +32,26 @@ export async function executeCommand<T = unknown>(
       opts?.signal ?? (opts?.timeoutMs != null ? AbortSignal.timeout(opts.timeoutMs) : undefined)
     const body: Record<string, unknown> = { cmd: command, args: args.map(String) }
     if (opts?.morgPkg != null && typeof opts.morgPkg === 'object') body.morgPkg = opts.morgPkg
-    const response = await fetch(`${API_BASE}/api/command`, {
+    const fr = await fetchApiText(API_BASE, '/api/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
       signal,
     })
-    const data = (await response.json()) as ApiResponse<T>
+    if (!fr.ok) {
+      return { ok: false, error: fr.error } as ApiResponse<T>
+    }
+    const envelope = parseApiJsonEnvelope(fr.text)
+    if (!envelope.ok) {
+      return {
+        ok: false,
+        error:
+          envelope.error === 'invalid_json'
+            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            : 'Unerwartetes Antwortformat (API).',
+      } as ApiResponse<T>
+    }
+    const data = envelope.data as ApiResponse<T>
     if (data && typeof data === 'object' && data.ok === false) {
       const msg = data.message
       if (!data.error && typeof msg === 'string' && msg.length > 0) {
@@ -40,17 +60,7 @@ export async function executeCommand<T = unknown>(
     }
     return data
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    if (e instanceof DOMException && e.name === 'TimeoutError') {
-      return { ok: false, error: 'Zeitüberschreitung (Timeout).' }
-    }
-    const offline = /failed to fetch|network|load failed|Connection refused|aborted|AbortError/i.test(msg)
-    return {
-      ok: false,
-      error: offline
-        ? 'Backend nicht erreichbar oder abgebrochen. Tor/SOCKS, „npm run dev“ und Wallet prüfen.'
-        : msg,
-    }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -133,14 +143,32 @@ export type ApiStatus = {
 
 export async function fetchStatus(): Promise<ApiStatus & { error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/status`)
-    const data = await response.json()
+    const fr = await fetchApiText(API_BASE, '/api/status')
+    if (!fr.ok) {
+      return {
+        backendRunning: false,
+        connected: false,
+        error: fr.error,
+      }
+    }
+    const p = parseJsonObjectRecord(fr.text)
+    if (!p.ok) {
+      return {
+        backendRunning: false,
+        connected: false,
+        error:
+          p.error === 'invalid_json'
+            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            : 'Unerwartetes Antwortformat (API).',
+      }
+    }
+    const data = p.data as ApiStatus & { backendRunning?: boolean }
     return { ...data, backendRunning: data.backendRunning !== false }
   } catch (error) {
     return {
       backendRunning: false,
       connected: false,
-      error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen',
+      error: formatFetchFailureMessage(error),
     }
   }
 }
@@ -153,14 +181,15 @@ export async function unlockBackend(
     const body: Record<string, string> = { password }
     const extra = (opts?.sdkSignerImport ?? '').trim()
     if (extra) body.sdkSignerImport = extra
-    const response = await fetch(`${API_BASE}/api/unlock`, {
+    const fr = await fetchApiText(API_BASE, '/api/unlock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    return parseUnlockBackendEnvelopeText(fr.text)
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -302,21 +331,20 @@ export async function fetchPackageIdHistory(): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/package-id-history`)
-    const data = await response.json()
+    const fr = await fetchApiText(API_BASE, '/api/package-id-history')
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Package-ID-Verlauf nicht lesbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
     return {
-      ok: data.ok === true,
-      current: typeof data.current === 'string' ? data.current : '',
-      history: Array.isArray(data.history) ? data.history : [],
-      discovered: Array.isArray(data.discovered) ? data.discovered : [],
-      hints: data.hints && typeof data.hints === 'object' ? data.hints : undefined,
-      error: typeof data.error === 'string' ? data.error : undefined,
+      ok: true,
+      current: typeof b.current === 'string' ? b.current : '',
+      history: Array.isArray(b.history) ? (b.history as string[]) : [],
+      discovered: Array.isArray(b.discovered) ? (b.discovered as string[]) : [],
+      hints: b.hints && typeof b.hints === 'object' && !Array.isArray(b.hints) ? (b.hints as Record<string, unknown>) : undefined,
     }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen',
-    }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -414,11 +442,14 @@ export const getDeviceStatus = () =>
 /** Geräte-Status für Radar (GET /api/monitor-status). Boss/Kommandant: alle Worker mit letztem Heartbeat. */
 export async function fetchMonitorStatus(): Promise<{ ok: boolean; devices?: Array<{ device: string; lastSeen: number; status: string }>; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/monitor-status`)
-    const data = await response.json()
-    return { ok: data.ok === true, devices: data.devices }
+    const fr = await fetchApiText(API_BASE, '/api/monitor-status')
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Monitor-Status nicht lesbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    return { ok: true, devices: Array.isArray(b.devices) ? (b.devices as Array<{ device: string; lastSeen: number; status: string }>) : undefined }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -427,11 +458,17 @@ export type AuditEvent = { ts: number; type: string; device?: string; message?: 
 
 export async function fetchAuditEvents(limit = 100): Promise<{ ok: boolean; events?: AuditEvent[]; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/audit-events?limit=${Math.max(1, Math.min(500, limit))}`)
-    const data = await response.json()
-    return { ok: data.ok === true, events: data.events || [] }
+    const fr = await fetchApiText(
+      API_BASE,
+      `/api/audit-events?limit=${Math.max(1, Math.min(500, limit))}`
+    )
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Audit-Events nicht lesbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    return { ok: true, events: Array.isArray(b.events) ? (b.events as AuditEvent[]) : [] }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -461,10 +498,18 @@ export async function fetchVaultPersonalSecrets(): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/vault-personal-secrets`)
-    return await response.json()
+    const fr = await fetchApiText(API_BASE, '/api/vault-personal-secrets')
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Safe-API nicht lesbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    return {
+      ok: true,
+      unlocked: b.unlocked === true,
+      entries: Array.isArray(b.entries) ? (b.entries as PersonalSecretEntry[]) : undefined,
+    }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -473,14 +518,23 @@ export async function saveVaultPersonalSecrets(
   persistLocal: boolean
 ): Promise<{ ok: boolean; message?: string; error?: string; entries?: PersonalSecretEntry[] }> {
   try {
-    const response = await fetch(`${API_BASE}/api/vault-personal-secrets`, {
+    const fr = await fetchApiText(API_BASE, '/api/vault-personal-secrets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ entries, persistLocal }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Safe speichern fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    return {
+      ok: true,
+      message: typeof b.message === 'string' ? b.message : undefined,
+      error: typeof b.error === 'string' ? b.error : undefined,
+      entries: Array.isArray(b.entries) ? (b.entries as PersonalSecretEntry[]) : undefined,
+    }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -570,7 +624,7 @@ export async function compactImageEncode(
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/compact-image-encode`, {
+    const fr = await fetchApiText(API_BASE, '/api/compact-image-encode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -581,9 +635,24 @@ export async function compactImageEncode(
         maxPlaintextBytes: options?.maxPlaintextBytes,
       }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Bildkodierung fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    if (typeof b.blobBase64 !== 'string' || !b.blobBase64.length) {
+      return { ok: false, error: 'Unerwartete Encoder-Antwort (blobBase64).' }
+    }
+    return {
+      ok: true,
+      blobBase64: b.blobBase64,
+      lumaBytes: typeof b.lumaBytes === 'number' ? b.lumaBytes : undefined,
+      chromaBytes: typeof b.chromaBytes === 'number' ? b.chromaBytes : undefined,
+      totalBytes: typeof b.totalBytes === 'number' ? b.totalBytes : undefined,
+      sha256Hex: typeof b.sha256Hex === 'string' ? b.sha256Hex : undefined,
+      usedQuality: typeof b.usedQuality === 'number' ? b.usedQuality : undefined,
+    }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -600,14 +669,34 @@ export async function loraProgressiveEncode(imageBase64: string): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/lora-progressive-encode`, {
+    const fr = await fetchApiText(API_BASE, '/api/lora-progressive-encode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ imageBase64 }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'LoRa-Kodierung fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    if (
+      typeof b.messageId !== 'string' ||
+      typeof b.lumaWire !== 'string' ||
+      typeof b.chromaWire !== 'string'
+    ) {
+      return { ok: false, error: 'Unerwartete LoRa-Encoder-Antwort.' }
+    }
+    return {
+      ok: true,
+      messageId: b.messageId,
+      lumaWire: b.lumaWire,
+      chromaWire: b.chromaWire,
+      lumaJpegBytes: typeof b.lumaJpegBytes === 'number' ? b.lumaJpegBytes : undefined,
+      chromaJpegBytes: typeof b.chromaJpegBytes === 'number' ? b.chromaJpegBytes : undefined,
+      lumaWireUtf8Bytes: typeof b.lumaWireUtf8Bytes === 'number' ? b.lumaWireUtf8Bytes : undefined,
+      chromaWireUtf8Bytes: typeof b.chromaWireUtf8Bytes === 'number' ? b.chromaWireUtf8Bytes : undefined,
+    }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -617,14 +706,21 @@ export async function loraProgressiveFuse(
   chromaJpegBase64: string
 ): Promise<{ ok: boolean; fusedJpegBase64?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/lora-progressive-fuse`, {
+    const fr = await fetchApiText(API_BASE, '/api/lora-progressive-fuse', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lumaJpegBase64, chromaJpegBase64 }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'LoRa-Zusammenführung fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    if (typeof b.fusedJpegBase64 !== 'string' || !b.fusedJpegBase64.length) {
+      return { ok: false, error: 'Unerwartete Fuse-Antwort.' }
+    }
+    return { ok: true, fusedJpegBase64: b.fusedJpegBase64 }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -636,14 +732,25 @@ export async function messengerAudioToOpus(
   mimeType: string
 ): Promise<{ ok: boolean; opusBase64?: string; bytes?: number; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/messenger-audio-to-opus`, {
+    const fr = await fetchApiText(API_BASE, '/api/messenger-audio-to-opus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ audioBase64, mimeType }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Audio-Transkodierung fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    if (typeof b.opusBase64 !== 'string' || !b.opusBase64.length) {
+      return { ok: false, error: 'Unerwartete Opus-Antwort.' }
+    }
+    return {
+      ok: true,
+      opusBase64: b.opusBase64,
+      bytes: typeof b.bytes === 'number' ? b.bytes : undefined,
+    }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -658,14 +765,17 @@ export async function clearLocalHistory(options?: {
   shred?: boolean
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/clear-local-history`, {
+    const fr = await fetchApiText(API_BASE, '/api/clear-local-history', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ shred: options?.shred !== false }),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseSimpleOkEnvelopeText(fr.text)
+    if (!r.ok) return { ok: false, error: r.error }
+    return { ok: true, message: r.message }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -686,17 +796,29 @@ export async function postShadowSweep(
   shadowMnemonic: string
 ): Promise<ShadowSweepApiResult | { ok: false; error: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/shadow-sweep`, {
+    const fr = await fetchApiText(API_BASE, '/api/shadow-sweep', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ shadowMnemonic: shadowMnemonic.trim() }),
     })
-    const data = (await response.json()) as Record<string, unknown>
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const { response, text } = fr
+    const envelope = parseApiJsonEnvelope(text)
+    if (!envelope.ok) {
+      return {
+        ok: false,
+        error:
+          envelope.error === 'invalid_json'
+            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            : 'Unerwartetes Antwortformat (API).',
+      }
+    }
+    const data = envelope.data as Record<string, unknown>
     if (!response.ok || data.ok === false) {
       const err =
-        typeof data.error === 'string' && data.error.length > 0
-          ? data.error
-          : `Sweep fehlgeschlagen (${response.status}).`
+        (typeof data.error === 'string' && data.error.length > 0 && data.error) ||
+        (typeof data.message === 'string' && data.message.length > 0 && data.message) ||
+        `Sweep fehlgeschlagen (${response.status}).`
       return { ok: false, error: err }
     }
     if (
@@ -720,12 +842,7 @@ export async function postShadowSweep(
     }
     return { ok: false, error: 'Unerwartete Antwort vom Server.' }
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e)
-    const offline = /failed to fetch|network|load failed|Connection refused/i.test(msg)
-    return {
-      ok: false,
-      error: offline ? 'Backend nicht erreichbar (nur localhost/API).' : msg,
-    }
+    return { ok: false, error: formatFetchFailureMessage(e) }
   }
 }
 
@@ -743,22 +860,27 @@ export const transferCoins = (recipient: string, amount: number) =>
 /** Hilfetext vom Backend (GET /api/help) – kontextabhängig (Start vs. verbunden). */
 export async function fetchHelp(): Promise<{ ok: boolean; helpText?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/help`)
-    const data = await response.json()
-    return { ok: data.ok === true, helpText: data.helpText }
+    const fr = await fetchApiText(API_BASE, '/api/help')
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Hilfetext nicht verfügbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const helpText = typeof r.body.helpText === 'string' ? r.body.helpText : undefined
+    return { ok: true, helpText }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
 /** Backend neu starten (POST /api/restart). Nach Erfolg ist die Verbindung weg. */
 export async function restartBackend(): Promise<{ ok: boolean; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/restart`, { method: 'POST' })
-    const data = await response.json()
-    return { ok: data.ok === true, error: data.error }
+    const fr = await fetchApiText(API_BASE, '/api/restart', { method: 'POST' })
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseSimpleOkEnvelopeText(fr.text)
+    if (!r.ok) return { ok: false, error: r.error }
+    return { ok: true }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -827,28 +949,23 @@ export async function applyInitialProfileProvisioning(profile: Record<string, un
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/contact-labels/apply-initial-profile`, {
+    const fr = await fetchApiText(API_BASE, '/api/contact-labels/apply-initial-profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile),
     })
-    const data = (await response.json()) as {
-      ok?: boolean
-      applied?: number
-      message?: string
-      error?: string
-    }
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Profil konnte nicht angewendet werden.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
     return {
-      ok: data.ok === true,
-      applied: typeof data.applied === 'number' ? data.applied : undefined,
-      message: typeof data.message === 'string' ? data.message : undefined,
-      error: data.error,
+      ok: true,
+      applied: typeof b.applied === 'number' ? b.applied : undefined,
+      message: typeof b.message === 'string' ? b.message : undefined,
+      error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen',
-    }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -859,19 +976,19 @@ export async function fetchContactDirectory(): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/contact-labels`)
-    const data = await response.json()
+    const fr = await fetchApiText(API_BASE, '/api/contact-labels')
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Kontakte nicht lesbar.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
     return {
-      ok: data.ok === true,
-      labels: data.labels,
-      directory: data.directory,
-      error: data.error,
+      ok: true,
+      labels: b.labels as Record<string, string> | undefined,
+      directory: b.directory as Record<string, ContactMeshEntryClient> | undefined,
+      error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen',
-    }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -885,14 +1002,22 @@ export async function saveContactEntry(body: {
   clearMesh?: boolean
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/contact-label`, {
+    const fr = await fetchApiText(API_BASE, '/api/contact-label', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    return await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Kontakt speichern fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    return {
+      ok: true,
+      message: typeof b.message === 'string' ? b.message : undefined,
+      error: typeof b.error === 'string' ? b.error : undefined,
+    }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -903,15 +1028,36 @@ export async function exportContactMeshEncrypted(password: string): Promise<{
   error?: string
 }> {
   try {
-    const response = await fetch(`${API_BASE}/api/contact-mesh-export-encrypted`, {
+    const fr = await fetchApiText(API_BASE, '/api/contact-mesh-export-encrypted', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
     })
-    const data = await response.json()
-    return { ok: data.ok === true, bundle: data.bundle, error: data.error }
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Mesh-Export fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    const raw = b.bundle
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return { ok: false, error: 'Unerwartete Export-Antwort (bundle).' }
+    }
+    const o = raw as Record<string, unknown>
+    if (
+      typeof o.v !== 'number' ||
+      typeof o.salt !== 'string' ||
+      typeof o.iv !== 'string' ||
+      typeof o.tag !== 'string' ||
+      typeof o.ciphertext !== 'string'
+    ) {
+      return { ok: false, error: 'Unerwartetes Bundle-Format.' }
+    }
+    return {
+      ok: true,
+      bundle: { v: o.v, salt: o.salt, iv: o.iv, tag: o.tag, ciphertext: o.ciphertext },
+      error: typeof b.error === 'string' ? b.error : undefined,
+    }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }
 
@@ -920,19 +1066,22 @@ export async function importContactMeshEncrypted(
   bundle: { v: number; salt: string; iv: string; tag: string; ciphertext: string }
 ): Promise<{ ok: boolean; merged?: number; message?: string; error?: string }> {
   try {
-    const response = await fetch(`${API_BASE}/api/contact-mesh-import-encrypted`, {
+    const fr = await fetchApiText(API_BASE, '/api/contact-mesh-import-encrypted', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password, bundle }),
     })
-    const data = await response.json()
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Mesh-Import fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
     return {
-      ok: data.ok === true,
-      merged: data.merged,
-      message: data.message,
-      error: data.error,
+      ok: true,
+      merged: typeof b.merged === 'number' ? b.merged : undefined,
+      message: typeof b.message === 'string' ? b.message : undefined,
+      error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'Verbindung fehlgeschlagen' }
+    return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }

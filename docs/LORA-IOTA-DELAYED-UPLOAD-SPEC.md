@@ -3,7 +3,11 @@
 **Status:** Entwurf zur Priorisierung (kein implementierter Code in diesem Dokument).  
 **Ziele:** Lückenloser **späterer Upload** von über LoRa empfangenen Nachrichten nach **IOTA**, sobald ein Knoten **Internet** hat; **E2E-Verschlüsselung unverändert**; **nachvollziehbare Hop-Kette**; UI: **Transportpfad + IOTA-Anchor-Status**.
 
-**Verwandt:** **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** (was 1:1 aus Meshtastic kommt), **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`docs/DRONE-RELAY-STRATEGY.md`**, **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**, **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (nur bei Bedarf), Mesh v2 **`MESH_V2_MAX_BYTES = 240`**.
+**Verwandt:** **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** (was 1:1 aus Meshtastic kommt), **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** (Frequenz-/Hardware-Rahmen, Einsatzprofile), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Offline vs. Online, **kein** CRDT-Mythos; Dedup, Mehrgeräte), **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`docs/DRONE-RELAY-STRATEGY.md`**, **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**, **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (nur bei Bedarf), Mesh v2 **`MESH_V2_MAX_BYTES = 240`**.
+
+### Offline vs. Online: Abgleich (Kurz)
+
+Mesh/Queue und IOTA sind **keine** gleichwertigen „Wahrheiten“ ohne Regeln: **pro Vorgang** gilt eine **Autorität** (typisch **Chain** für globale Wirkung, **Queue** nur bis zum erfolgreichen Upload). **`canonical_msg_ref`** und Queue-Dedup (§8–9) sind der **Kern** für **Nachrichten**; **Credits** und andere PTBs brauchen **eigene** idempotente Pfade — ausführlich **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, Fahrplan **§ H.12**.
 
 ### Meshtastic-First (Bridge)
 
@@ -299,3 +303,5 @@ Dieser Abschnitt bündelt **Bridge**, **IOTA-Upload** und **Nachweis** für dies
 ---
 
 *Technischer Entwurf für Priorisierung; Umsetzung: MVP-Queue + Manifest, Morgendrot-Device-Key, danach Phase-2-Firmware für volle `custody_chain`.*
+
+**Sync-Gesamtbild:** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**Fahrplan § H.12**).

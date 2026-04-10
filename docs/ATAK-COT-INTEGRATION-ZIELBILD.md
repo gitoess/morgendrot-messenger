@@ -4,6 +4,8 @@
 
 **Kontext:** Morgendrot liefert Einsatzdaten (Position, Status, optional Bilder/Metadaten). **ATAK** (Android Team Awareness Kit) zeigt **Lage** auf der Karte, wenn die Daten als **CoT-Events** (XML) oder über einen **TAK-kompatiblen Server** ankommen.
 
+**Offline-Basiskarten / Tile-Strategie (Wanderer vs. Einsatz):** **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — ergänzt dieses Zielbild um **Kartenstufen**, **PWA-Speicher-Realität** und **LoRa-taugliche** Layer.
+
 ---
 
 ## 1. Warum zwei Wege?

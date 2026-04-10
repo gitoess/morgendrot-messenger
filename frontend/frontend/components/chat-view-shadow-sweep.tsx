@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { Check, Copy, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 import { postShadowSweep } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import {
@@ -62,8 +63,10 @@ export function ChatViewShadowSweep() {
       const res = await postShadowSweep(mnemonic)
       if (!res.ok) {
         setError(res.error)
+        toast.error(res.error)
         return
       }
+      toast.success('Sweep abgeschlossen. Main-Secret jetzt sichern (Tresor).')
       setResult(res)
       setMnemonic('')
     } finally {

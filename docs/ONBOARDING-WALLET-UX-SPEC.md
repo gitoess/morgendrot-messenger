@@ -2,7 +2,7 @@
 
 **Zweck:** Eine **kritische** Einordnung, was Morgendrot **heute** kann, was **fehlt**, und ein **Zielbild** für Endnutzer-Onboarding — ohne bestehende Architektur (IOTA-Rebased, Backend-Session, Vault) zu verleugnen.
 
-**Verwandte Doku:** `docs/DEV-START.md` (Start/Ports), **`docs/RECOVERY-PHRASE-BACKUP.md`** (Recovery/Sicher anzeigen, Szenario Geräteverlust), `docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md` (Credits vs. MIST), `docs/API-SHOP-SPEC.md` / `docs/STRIPE-TEST-SETUP.md` (Shop + optional Chain-Mint), `src/wallet-bridge.ts` (Ablauf), `src/api-server.ts` (`GET /api/status`, `POST /api/unlock`).
+**Verwandte Doku:** `docs/DEV-START.md` (Start/Ports), **`docs/RECOVERY-PHRASE-BACKUP.md`** (Recovery/Sicher anzeigen, Szenario Geräteverlust), `docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md` (Credits vs. MIST), `docs/API-SHOP-SPEC.md` / `docs/STRIPE-TEST-SETUP.md` (Shop + optional Chain-Mint), `src/wallet-bridge.ts` (Ablauf), `src/api-server.ts` (`GET /api/status`, `POST /api/unlock`). **Gebündeltes Härtungs-Arbeitspaket (PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB):** **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**Fahrplan § H.14**).
 
 ---
 
@@ -126,6 +126,7 @@ Ziel ist **kein** neues Login-System, sondern **klare Phasen** und **UI-Texte**,
 | Ort | Inhalt |
 |-----|--------|
 | **`docs/ROADMAP-FAHRPLAN.md` § H.0** | Produkt/UX zuerst; **#4 Unlock- & Secret-UX** deckt diese Spezifikation ab. |
+| **`docs/ROADMAP-FAHRPLAN.md` § H.14** | **Hardening V3:** PWA-Verschlüsselungsschicht, Lite-UI-Wizard L2, Client-Wipe, Idempotenz-Review, PTB-Audit — **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**. |
 | **`docs/ROADMAP-FAHRPLAN.md` § H.3c** | Shop, Credits-Mint, `WALLET_PASSWORD` / Secret-Manager — Betrieb, nicht Endnutzer-„ohne Wallet“. |
 | **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** | Vor Commit: keine Secrets; State-Dateien ignorieren. |
 

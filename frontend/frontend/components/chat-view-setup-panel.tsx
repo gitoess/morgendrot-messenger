@@ -7,6 +7,7 @@
 
 import type { Dispatch, SetStateAction } from 'react'
 import { AlertTriangle, QrCode, Radio, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 import {
   clearLocalHistory,
   exportContactMeshEncrypted,
@@ -346,8 +347,11 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 if (r.ok && r.bundle) {
                   onMeshImportJsonChange(JSON.stringify(r.bundle))
                   setMeshSyncMsg('Bundle unten im Import-Feld – als QR encodieren oder kopieren.')
+                  toast.success('Mesh-Daten exportiert – Bundle steht im Import-Feld.')
                 } else {
-                  setMeshSyncMsg(r.error || 'Export fehlgeschlagen')
+                  const err = r.error || 'Export fehlgeschlagen'
+                  setMeshSyncMsg(err)
+                  toast.error(err)
                 }
               }}
               className="w-full rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
@@ -374,11 +378,13 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 const s = await scanMeshBundleQrWithCamera()
                 if ('error' in s) {
                   setMeshSyncMsg(s.error)
+                  toast.error(s.error)
                   setMeshSyncBusy(false)
                   return
                 }
                 onMeshImportJsonChange(s.bundleJson)
                 setMeshSyncMsg('QR gelesen – Passwort prüfen und „Import anwenden“.')
+                toast.success('QR gelesen – Import mit Passwort abschließen.')
                 setMeshSyncBusy(false)
               }}
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
@@ -399,7 +405,9 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               onClick={async () => {
                 const bundle = parseMeshBundleFromQrText(meshImportJson)
                 if (!bundle) {
-                  setMeshSyncMsg('Ungültiges Bundle-JSON')
+                  const err = 'Ungültiges Bundle-JSON'
+                  setMeshSyncMsg(err)
+                  toast.error(err)
                   return
                 }
                 setMeshSyncBusy(true)
@@ -407,10 +415,14 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 const r = await importContactMeshEncrypted(meshImportPw, bundle)
                 setMeshSyncBusy(false)
                 if (r.ok) {
-                  setMeshSyncMsg(r.message || `Import OK (${r.merged ?? 0})`)
+                  const msg = r.message || `Import OK (${r.merged ?? 0})`
+                  setMeshSyncMsg(msg)
+                  toast.success(msg)
                   refreshContactDirectory()
                 } else {
-                  setMeshSyncMsg(r.error || 'Import fehlgeschlagen')
+                  const err = r.error || 'Import fehlgeschlagen'
+                  setMeshSyncMsg(err)
+                  toast.error(err)
                 }
               }}
               className="w-full rounded-lg bg-primary py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
@@ -452,8 +464,11 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               if (r.ok) {
                 setMessages([])
                 setMeshSyncMsg('Lokaler Inbox-Cache geschreddert; Chat-Liste geleert. Kontakte unverändert.')
+                toast.success('Lokaler Inbox-Cache geschreddert; Liste geleert.')
               } else {
-                setMeshSyncMsg(r.error || 'Lokales Löschen fehlgeschlagen')
+                const err = r.error || 'Lokales Löschen fehlgeschlagen'
+                setMeshSyncMsg(err)
+                toast.error(err)
               }
             }}
             className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-300"

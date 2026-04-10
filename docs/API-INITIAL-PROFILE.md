@@ -2,6 +2,8 @@
 
 **Endpoint:** `POST /api/provision-device` (Boss/Messenger-Rolle)
 
+**Doppel-POST / Idempotenz:** **`docs/API-PROVISION-DEVICE-IDEMPOTENCY-SKIZZE.md`** — optionaler **`Idempotency-Key`** (Header) bzw. **`idempotencyKey`** (Body); Boss-Lite-UI sendet den Header. Replay derselben **200**-Antwort (u. a. **`deviceSecretForGateway`** bei Tiny).
+
 **Zweck:** Neben `envContent` / `jsonConfig` optional ein **lokales Einsatzprofil** übergeben: Kontakte (Name + IOTA-Adresse), **Anzeige-Tags** (z. B. „Medic“, „Sektor Nord“). Das ist **kein** On-Chain-Metadaten-Feld — siehe **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**.
 
 ## Request (optional)

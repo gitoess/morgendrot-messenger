@@ -1,6 +1,6 @@
 # Meshtastic / LoRa-Erweiterungen (Morgendrot)
 
-Dieser Ordner ist der **Arbeitsplatz für Firmware- und Protokollarbeit** rund um Meshtastic (Gerätetypisch z. B. **Heltec** – Hardware-Doku: [`../heltec/README.md`](../heltec/README.md), Host: [`../cm4/README.md`](../cm4/README.md), Gesamtindex: [`../hardware/README.md`](../hardware/README.md)).
+Dieser Ordner ist der **Arbeitsplatz für Firmware- und Protokollarbeit** rund um Meshtastic (Gerätetypisch z. B. **Heltec** – Hardware-Doku: [`../heltec/README.md`](../heltec/README.md), Host: [`../cm4/README.md`](../cm4/README.md), Gesamtindex: [`../hardware/README.md`](../hardware/README.md)). **Modularität, Auto-Relais vs. Messenger, Interop-Grenzen:** [`../docs/MODULAR-KERN-ADAPTER-INTEROP.md`](../docs/MODULAR-KERN-ADAPTER-INTEROP.md).
 
 Die **App-/Node-Pipeline** erzeugt **zwei Klartext-Wires** (Luma + Chroma); sie ersetzt **kein** zuverlässiges Funkprotokoll für große Nutzlasten.
 
