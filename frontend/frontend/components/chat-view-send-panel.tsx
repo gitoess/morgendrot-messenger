@@ -14,19 +14,17 @@ import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/hooks/use-cha
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { isLoRaMeshTransport, MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
+import type { ComposerDraftPort } from '@/frontend/features/messenger-ports'
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
-export type ChatViewSendPanelProps = ChatViewAttachmentBarProps & {
+export type ChatViewSendPanelProps = ChatViewAttachmentBarProps &
+  ComposerDraftPort & {
   isPrivate: boolean
   /** Delayed Upload: Marker im Klartext, Empfänger spiegelt per /send (nur Text-Mesh). */
   delayMirrorToIota: boolean
   onDelayMirrorToIotaChange: (v: boolean) => void
   encrypted: boolean
-  recipient: string
-  onRecipientChange: (v: string) => void
-  message: string
-  onMessageChange: (v: string) => void
   sending: boolean
   loraOnlineFallbackOffer: { reasonLabel: string } | null
   onConfirmLoraOnline: () => void | Promise<void>

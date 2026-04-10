@@ -5,9 +5,9 @@
  */
 
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
-import { asInboxFeedRead } from '@/frontend/features/messenger-ports'
+import { asComposerDraft, asInboxFeedRead } from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
-import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
+import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewTransportCard } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
@@ -206,6 +206,48 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setStatusMsg,
   } satisfies ChatViewInboxPanelProps
 
+  const sendPanelProps = {
+    ...asComposerDraft(message, recipient, setMessage, setRecipient),
+    isPrivate,
+    encrypted,
+    delayMirrorToIota,
+    onDelayMirrorToIotaChange: setDelayMirrorToIota,
+    sending,
+    loraOnlineFallbackOffer,
+    onConfirmLoraOnline: confirmLoraSendViaOnline,
+    onDismissLoraOnlineFallback: dismissLoraOnlineFallback,
+    apiStatus,
+    onSend: handleSend,
+    status,
+    statusMsg,
+    voicePhase,
+    voiceActiveKind,
+    voiceProgress01,
+    voiceMaxSeconds,
+    voiceEmergencyMaxSeconds,
+    sosVoiceFollowsOnline,
+    forcedTransport,
+    onVoiceToggle,
+    onVoiceEmergencyToggle,
+    voiceNormalBlockedStart,
+    voiceEmergencyBlockedStart,
+    voiceBusy,
+    voiceRecording,
+    sosVoiceAwaitingSend,
+    compactFileRef,
+    compactBusy,
+    onFileChange: handleCompactAttachmentPick,
+    ingestChatAttachmentFile,
+    compactMeta,
+    attachedBlobBase64,
+    attachedLora,
+    attachedTxtFile,
+    attachedAudioBase64,
+    clearCompactAttachment,
+    compactPreviewUrl,
+    loraPreviewUrl,
+  } satisfies ChatViewSendPanelProps
+
   return (
     <div className="space-y-6">
       <ChatViewChatHeader
@@ -289,50 +331,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       )}
 
-      <ChatViewSendPanel
-        isPrivate={isPrivate}
-        encrypted={encrypted}
-        delayMirrorToIota={delayMirrorToIota}
-        onDelayMirrorToIotaChange={setDelayMirrorToIota}
-        recipient={recipient}
-        onRecipientChange={setRecipient}
-        message={message}
-        onMessageChange={setMessage}
-        sending={sending}
-        loraOnlineFallbackOffer={loraOnlineFallbackOffer}
-        onConfirmLoraOnline={confirmLoraSendViaOnline}
-        onDismissLoraOnlineFallback={dismissLoraOnlineFallback}
-        apiStatus={apiStatus}
-        onSend={handleSend}
-        status={status}
-        statusMsg={statusMsg}
-        voicePhase={voicePhase}
-        voiceActiveKind={voiceActiveKind}
-        voiceProgress01={voiceProgress01}
-        voiceMaxSeconds={voiceMaxSeconds}
-        voiceEmergencyMaxSeconds={voiceEmergencyMaxSeconds}
-        sosVoiceFollowsOnline={sosVoiceFollowsOnline}
-        forcedTransport={forcedTransport}
-        onVoiceToggle={onVoiceToggle}
-        onVoiceEmergencyToggle={onVoiceEmergencyToggle}
-        voiceNormalBlockedStart={voiceNormalBlockedStart}
-        voiceEmergencyBlockedStart={voiceEmergencyBlockedStart}
-        voiceBusy={voiceBusy}
-        voiceRecording={voiceRecording}
-        sosVoiceAwaitingSend={sosVoiceAwaitingSend}
-        compactFileRef={compactFileRef}
-        compactBusy={compactBusy}
-        onFileChange={handleCompactAttachmentPick}
-        ingestChatAttachmentFile={ingestChatAttachmentFile}
-        compactMeta={compactMeta}
-        attachedBlobBase64={attachedBlobBase64}
-        attachedLora={attachedLora}
-        attachedTxtFile={attachedTxtFile}
-        attachedAudioBase64={attachedAudioBase64}
-        clearCompactAttachment={clearCompactAttachment}
-        compactPreviewUrl={compactPreviewUrl}
-        loraPreviewUrl={loraPreviewUrl}
-      />
+      <ChatViewSendPanel {...sendPanelProps} />
 
       <ChatViewInboxPanel {...inboxPanelProps} />
     </div>
