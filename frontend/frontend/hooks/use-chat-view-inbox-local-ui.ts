@@ -12,7 +12,7 @@ import {
   filterInboxMessagesByPartnerAndDirection,
   uniqueCounterpartyAddresses,
   type InboxDirectionFilter,
-} from '@/frontend/lib/inbox-partner-filter'
+} from '@/frontend/features/inbox/inbox-partner-filter'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxLocalUiParams = {

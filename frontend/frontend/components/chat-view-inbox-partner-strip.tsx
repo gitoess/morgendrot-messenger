@@ -6,7 +6,7 @@
  */
 
 import { cn } from '@/lib/utils'
-import type { InboxDirectionFilter } from '@/frontend/lib/inbox-partner-filter'
+import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 
 export type InboxPartnerOption = { address: string; label: string }
 

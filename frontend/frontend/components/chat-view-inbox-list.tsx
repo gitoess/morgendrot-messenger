@@ -43,7 +43,7 @@ import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
-import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/lib/inbox-partner-filter'
+import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
 
 export type ChatViewInboxListProps = {
   loadError: string | null

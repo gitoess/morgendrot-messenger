@@ -12,7 +12,7 @@ import {
   type InboxPartnerOption,
 } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
-import type { InboxDirectionFilter } from '@/frontend/lib/inbox-partner-filter'
+import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 
 /** `selectedInboxCount` wird aus `selectedInboxIds` im Panel abgeleitet. */
 export type ChatViewInboxPanelProps = Omit<ComponentProps<typeof ChatViewInboxToolbar>, 'selectedInboxCount'> &
