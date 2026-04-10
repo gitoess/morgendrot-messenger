@@ -6,7 +6,7 @@
  * Meshtastic stays 1:1 on air; Morgendrot adds MORG_* correlation (e.g. hide chroma when luma exists).
  */
 import type { Message } from './types'
-import type { CompletedSlideSequence } from './inbox-slideshow'
+import type { CompletedSlideSequence } from '@/frontend/features/inbox/inbox-slideshow'
 import { parseLoraProgressiveMessage } from './lora-progressive-image-client'
 
 export type MeshInboundEntry = {

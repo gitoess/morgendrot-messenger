@@ -59,7 +59,7 @@ Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `a
 - **`frontend/frontend/features/README.md`** — Konvention.
 - **`features/attachments/chat-view-attachment-ingest.ts`** — Anhang-Ingest; **`lib/chat-view-attachment-ingest.ts`** ist dünner Re-Export für alte Pfade.
 - **`features/send/`** — Mesh-Burst, Delayed-Upload-Marker, Send-Validierung, Outgoing-Wire, `.txt`-Split; dünne Re-Exports unter **`lib/chat-view-*.ts`** und **`lib/mesh-delayed-upload.ts`** für alte Importe.
-- **`features/inbox/`** — **`inbox-load-error.ts`**, **`inbox-partner-filter.ts`**; **`lib/inbox-*.ts`** re-exportiert.
+- **`features/inbox/`** — **`inbox-load-error.ts`**, **`inbox-partner-filter.ts`**, **`inbox-slideshow.ts`**; **`lib/inbox-*.ts`** re-exportiert.
 
 ---
 
