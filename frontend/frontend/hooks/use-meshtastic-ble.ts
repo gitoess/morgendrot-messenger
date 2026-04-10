@@ -8,7 +8,7 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { Message } from '@/frontend/lib/types'
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import { MeshFragReassembler } from '@/frontend/lib/mesh-v2-fragment'
-import { stripDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'
+import { stripDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
 
 const V2_MAX_BYTES = 240
 

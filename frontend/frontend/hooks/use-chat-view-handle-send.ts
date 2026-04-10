@@ -15,7 +15,7 @@ import {
 } from '@/frontend/features/send/chat-view-send-utils'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
-import { prependDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'
+import { prependDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
