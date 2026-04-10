@@ -1,0 +1,116 @@
+import { describe, it, expect } from 'vitest'
+import type { Message } from '@/frontend/lib/types'
+import {
+  addressMatchesIdentity,
+  filterInboxMessagesByPartnerAndDirection,
+  isMessageOutgoing,
+  isMessageSelfToSelf,
+  messageCounterpartyAddress,
+  uniqueCounterpartyAddresses,
+} from './inbox-partner-filter'
+
+function m(p: Partial<Message> & Pick<Message, 'id' | 'from' | 'content' | 'timestamp'>): Message {
+  return {
+    encrypted: false,
+    ...p,
+  }
+}
+
+describe('addressMatchesIdentity', () => {
+  it('gleiche Adresse nach Normalisierung', () => {
+    expect(addressMatchesIdentity(' 0xAbC ', '0xabc')).toBe(true)
+  })
+
+  it('maskierte UI-Adresse mit Kopf und Schwanz', () => {
+    const full = '0x1234567890abcdef1234567890abcdef12345678'
+    const mask = '0x12345678…5678'
+    expect(addressMatchesIdentity(full, mask)).toBe(true)
+  })
+
+  it('lehnt zu kurze Masken-Teile ab', () => {
+    expect(addressMatchesIdentity('0x1234567890abcdef', '0x123…ef')).toBe(false)
+  })
+
+  it('leer → false', () => {
+    expect(addressMatchesIdentity('', '0x1')).toBe(false)
+  })
+})
+
+describe('isMessageOutgoing / isMessageSelfToSelf', () => {
+  const me = '0x1111111111111111111111111111111111111111'
+
+  it('outgoing wenn from = ich', () => {
+    expect(isMessageOutgoing(m({ id: '1', from: me, content: '', timestamp: 1 }), me)).toBe(true)
+  })
+
+  it('nicht outgoing wenn from ≠ ich', () => {
+    expect(isMessageOutgoing(m({ id: '1', from: '0x2222', content: '', timestamp: 1 }), me)).toBe(false)
+  })
+
+  it('self-to-self: from und recipient matchen mich', () => {
+    const msg = m({
+      id: '1',
+      from: me,
+      recipient: me,
+      content: '',
+      timestamp: 1,
+    })
+    expect(isMessageSelfToSelf(msg, me)).toBe(true)
+  })
+})
+
+describe('messageCounterpartyAddress', () => {
+  const me = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const them = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+
+  it('bei ausgehend: Empfänger', () => {
+    const msg = m({ id: '1', from: me, recipient: them, content: '', timestamp: 1 })
+    expect(messageCounterpartyAddress(msg, me)).toBe(them)
+  })
+
+  it('bei eingehend: Absender', () => {
+    const msg = m({ id: '1', from: them, recipient: me, content: '', timestamp: 1 })
+    expect(messageCounterpartyAddress(msg, me)).toBe(them)
+  })
+})
+
+describe('filterInboxMessagesByPartnerAndDirection', () => {
+  const me = '0x1000000000000000000000000000000000000000'
+  const alice = '0x2000000000000000000000000000000000000000'
+  const bob = '0x3000000000000000000000000000000000000000'
+
+  const incoming = m({ id: 'in', from: alice, recipient: me, content: 'hi', timestamp: 2 })
+  const outgoing = m({ id: 'out', from: me, recipient: bob, content: 'yo', timestamp: 3 })
+
+  it('direction in blendet eigene Sendungen aus', () => {
+    const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing], me, null, 'in')
+    expect(r.map((x) => x.id)).toEqual(['in'])
+  })
+
+  it('direction out nur eigene Sendungen', () => {
+    const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing], me, null, 'out')
+    expect(r.map((x) => x.id)).toEqual(['out'])
+  })
+
+  it('partner-Filter auf Gegenüber', () => {
+    const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing], me, alice, 'all')
+    expect(r).toHaveLength(1)
+    expect(r[0]!.id).toBe('in')
+  })
+})
+
+describe('uniqueCounterpartyAddresses', () => {
+  const me = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const p1 = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  const p2 = '0xcccccccccccccccccccccccccccccccccccccccc'
+
+  it('sammelt eindeutig und sortiert', () => {
+    const messages = [
+      m({ id: '1', from: p1, recipient: me, content: '', timestamp: 1 }),
+      m({ id: '2', from: p1, recipient: me, content: '', timestamp: 2 }),
+      m({ id: '3', from: me, recipient: p2, content: '', timestamp: 3 }),
+    ]
+    const u = uniqueCounterpartyAddresses(messages, me)
+    expect(u).toEqual([p1, p2].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())))
+  })
+})
