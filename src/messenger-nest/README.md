@@ -1,5 +1,7 @@
 # Messenger-Nest (`messenger-nest/`)
 
+**Kein NestJS-Framework:** Der Ordnername bezieht sich auf die **Ameisen-/Kammer-Metapher** (siehe unten), nicht auf [NestJS](https://nestjs.com/). Es handelt sich um **normale TypeScript-Module** unter `wallet-bridge` / `POST /api/command` — keine `@nestjs/*`-Abhängigkeit, kein DI-Container.
+
 Fortführung der **Layer- / Ameisennest-Analogie** ([`docs/ARCHITECTURE-CHECKS.md`](../docs/ARCHITECTURE-CHECKS.md)): Hier liegt nur **Orchestrierung** für den Messenger – keine zweite Chain-Schicht.
 
 **UI-Rollen:** Terminal und **`POST /api/command`** teilen sich dieselbe Befehlslogik. Welche **Browser-Oberfläche** wofür gedacht ist (Boss-Werkstatt `ui/` vs. Kunden-Next `frontend/`), steht in [`docs/DEV-START.md`](../docs/DEV-START.md) (*Zwei Oberflächen*).

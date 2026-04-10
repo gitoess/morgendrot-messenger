@@ -64,7 +64,7 @@
 2. Unit-Tests für **reine** Funktionen: Bild-/Wire-Pipeline (soweit ohne echte Hardware testbar), Payload-Builder, Dedup, Metadaten-Normalisierung.
 3. **`src/`**-Node-Projekt in Vitest anlegen oder nachziehen; kritische **reine** Hilfsfunktionen aus `src/` dort ablegen bzw. importieren und testen.
 
-**Ist (2026-03-28):** **`frontend/vitest.config.ts`**, Scripts **`npm run test:unit`** / Root **`npm run test:frontend-unit`**; Tests u. a. **`message-dedup`**, **`chat-view-send-utils`**, **`app-error`**, **`api-response-guard`**, **`compact-image-wire`**, **`api-simple-ok-envelope`**, **`api-unlock-envelope`**, **`api-fetch-text`**. **Ergänzt (2026-03):** RTL-Smokes **`components/ui/button.test.tsx`**, **`frontend/frontend/components/chat-view-transport-card.test.tsx`**; **`frontend/eslint.config.mjs`** (Messenger **`features/send` ↔ `features/inbox`**); **`npm run check:circular`** (madge); CI **`.github/workflows/frontend-checks.yml`**. **`src/`**-Vitest-Node folgt.
+**Ist (2026-03-28):** **`frontend/vitest.config.ts`**, Scripts **`npm run test:unit`** / Root **`npm run test:frontend-unit`**; Tests u. a. **`message-dedup`**, **`chat-view-send-utils`**, **`app-error`**, **`api-response-guard`**, **`compact-image-wire`**, **`api-simple-ok-envelope`**, **`api-unlock-envelope`**, **`api-fetch-text`**. **Ergänzt (2026-03):** RTL-Smokes **`components/ui/button.test.tsx`**, **`frontend/frontend/components/chat-view-transport-card.test.tsx`**, **`frontend/frontend/components/chat-view-send-panel.test.tsx`**; **`frontend/eslint.config.mjs`** (Messenger **`features/send` ↔ `features/inbox`**); **`npm run check:circular`** (madge); CI **`.github/workflows/frontend-checks.yml`**. **`src/`**-Vitest-Node folgt.
 
 ---
 
@@ -96,7 +96,7 @@
 
 ---
 
-*Stand: 2026-03-29 — Abgleich mit Team-Plan „Baseline / Vitest / AppError“; Vitest+Grundmodule eingeführt; Bestandsaufnahme/Kritik und Parallelität Phase 2+3 ergänzt. **2026-03-28:** API-Client-Härtung (**`fetchApiText`**, keine **`response.json()`** im Messenger-API-Client (nur **`fetchApiText`** / Envelope)), erweiterte Vitest-Abdeckung, Toasts Setup/Shadow-Sweep. **2026-03-29:** Verifikationsliste um **`frontend/`** **`lint`**, **`check:circular`**, **`test:unit`** ergänzt; **`TESTING.md`** § *Qualitätsritual vor Merge*; CI **`frontend-checks`**.*
+*Stand: 2026-03-29 — Abgleich mit Team-Plan „Baseline / Vitest / AppError“; Vitest+Grundmodule eingeführt; Bestandsaufnahme/Kritik und Parallelität Phase 2+3 ergänzt. **2026-03-28:** API-Client-Härtung (**`fetchApiText`**, keine **`response.json()`** im Messenger-API-Client (nur **`fetchApiText`** / Envelope)), erweiterte Vitest-Abdeckung, Toasts Setup/Shadow-Sweep. **2026-03-29:** Verifikationsliste um **`frontend/`** **`lint`**, **`check:circular`**, **`test:unit`** ergänzt; **`TESTING.md`** § *Qualitätsritual vor Merge*; CI **`frontend-checks`**. **PR-Vorlage:** **`.github/pull_request_template.md`**. RTL **`chat-view-send-panel.test.tsx`**. **`src/messenger-nest/README.md`:** Klarstellung „kein NestJS-Framework“. *
 
 ---
 

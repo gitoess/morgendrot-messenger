@@ -3,7 +3,7 @@
 **Zweck:** Kurz beschreiben, **was der Morgendrot-Messenger (Next-UI + API) heute kann**, wie er zum **Morgendrot-Gesamtprojekt** passt, und **was bewusst noch nicht** implementiert ist.  
 **Stand:** lebendes Dokument; bei Abweichung zum Code bitte Code oder dieses Dokument anpassen.
 
-**Verwandt:** Root-**`README.md`** (Funktionsbreite des Repos), **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (geplant, nicht = implementiert).
+**Verwandt:** Root-**`README.md`** (Funktionsbreite des Repos), **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (geplant, nicht = implementiert). **Backend-Messenger-Kammer (Plain Node, nicht NestJS):** **`src/messenger-nest/README.md`**.
 
 ---
 

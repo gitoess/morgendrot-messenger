@@ -10,7 +10,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 **Sync / Source of Truth (Offline vs. IOTA, Konflikte):** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** — **`docs/ROADMAP-FAHRPLAN.md`** § **H.12** (mit Delayed-Upload-Spec und Offline-Queue-Kritik abgleichen).
 
-**Merge-Ritual (Phase A, vor größeren PRs):** unten § **Qualitätsritual vor Merge** — deckt sich mit **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** Phase 1 und spiegelt **`.github/workflows/frontend-checks.yml`** (Frontend) plus Root-Smoke.
+**Merge-Ritual (Phase A, vor größeren PRs):** unten § **Qualitätsritual vor Merge** — deckt sich mit **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** Phase 1 und spiegelt **`.github/workflows/frontend-checks.yml`** (Frontend) plus Root-Smoke. **Pull Requests:** Checkliste in **`.github/pull_request_template.md`**.
 
 ---
 
