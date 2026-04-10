@@ -9,6 +9,7 @@ export default defineConfig({
     globals: false,
     include: ['**/*.test.{ts,tsx}'],
     passWithNoTests: true,
+    setupFiles: ['./tests/vitest-setup.ts'],
   },
   resolve: {
     alias: {
