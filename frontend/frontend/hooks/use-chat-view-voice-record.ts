@@ -9,7 +9,7 @@ import {
   getMessengerVoiceEmergencyMaxMs,
   getMessengerVoiceNormalMaxMs,
   pickVoiceRecorderMimeType,
-} from '@/frontend/lib/messenger-voice-record'
+} from '@/frontend/features/voice/messenger-voice-record'
 
 export type VoiceRecordPhase = 'idle' | 'starting' | 'recording' | 'encoding'
 
