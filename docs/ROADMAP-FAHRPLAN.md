@@ -338,6 +338,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | **Modularer Kern, Adapter, Auto-Modus, Interop (Doku)** | **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** — Kern vs. Transport- vs. Funk-Adapter; Auto-Detection **mit Override**; realistische „volle“ Interop; BOS/HSM als **Rand**, nicht Kern-Fork-Pflicht |
 | **USB-Serial vs. Web-BT (Doku + später Code)** | **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** — Durchsatz/OTG/Web-Serial-Matrix; Meshtastic-Protokoll vs. `lora-bridge`-Rohserial; Transport-Interface statt `if (USB)`-Wildwuchs; **Vorbereitung:** Spike **Web Serial auf Android** (**§ H.3l**, **ohne** Blockade für Mesh/BLE) |
 | **Offline-Karten / Geodaten (Zielbild)** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** — Wanderer (Basis) vs. Einsatzpaket; **§ H.11**; **nach** Phase-B-Kern, mit **§ H.9** ATAK verzahnbar |
+| **Ad-hoc / Smartphone-Direct (BLE)** | **Nach** Phase-B-Kern (Mesh/Web-BT zuverlässig): Sendepfad **`adhoc`** in der UI ist **Platzhalter** — **direktes** Handy-zu-Handy-BLE (**nicht** Web-BT→Heltec→LoRa). Konzept/Daten: **`bleUuid`** im Vault, Advertising/Scan; vgl. Hinweise in **`use-chat-view-handle-send.ts`** / Transport-Karte. **Abgrenzung:** **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`** (**funk** = Meshtastic, **adhoc** = BLE-Direct, noch offen). |
 
 ### H.3b Optional (Doku, kein Sprint-Zwang)
 
