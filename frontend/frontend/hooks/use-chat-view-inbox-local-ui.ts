@@ -13,10 +13,10 @@ import {
   uniqueCounterpartyAddresses,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
 import type { Message } from '@/frontend/lib/types'
 
-export type UseChatViewInboxLocalUiParams = {
-  messages: Message[]
+export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: unknown) => Promise<void>
   setSending: (v: boolean) => void
