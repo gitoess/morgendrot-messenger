@@ -14,6 +14,9 @@ describe('validateMeshDisallowsIotaCompactBlob', () => {
     const r = validateMeshDisallowsIotaCompactBlob('internet', 'YmFzZTY0')
     expect(r.ok).toBe(true)
   })
+  it('ohne Blob: immer ok (auch mesh)', () => {
+    expect(validateMeshDisallowsIotaCompactBlob('mesh', null).ok).toBe(true)
+  })
 })
 
 describe('validateLoraDualWireUtf8', () => {
