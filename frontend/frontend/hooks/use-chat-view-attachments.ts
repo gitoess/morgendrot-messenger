@@ -3,8 +3,8 @@
 import { useCallback, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import { ingestCompactAttachmentPick } from '@/frontend/lib/chat-view-attachment-ingest'
-import type { CompactAttachmentMeta } from '@/frontend/lib/chat-view-attachment-ingest'
+import { ingestCompactAttachmentPick } from '@/frontend/features/attachments/chat-view-attachment-ingest'
+import type { CompactAttachmentMeta } from '@/frontend/features/attachments/chat-view-attachment-ingest'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import { useChatViewAttachmentPreviews } from '@/frontend/hooks/use-chat-view-attachment-previews'
 

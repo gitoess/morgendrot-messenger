@@ -57,7 +57,7 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 
 - **Feature-Ordner** anlegen und **bestehende** Dateien **verschieben** (Imports anpassen), **ohne** Verhalten zu ändern — idealerweise **eine vertikale Scheibe** pro Woche (z. B. nur **attachments** oder nur **voice**), damit Git **bisect-fähig** bleibt.  
 - **Leichte** Konvention dokumentieren (dieses Dokument + **ein** Absatz in **`MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** oder Diagramm).  
-- **`api.ts`:** erste Aufteilung in **`lib/api/*.ts`** + Re-Export (bereits vorhandene Helfer wie `api-fetch-text` bleiben unter `lib/`).
+- **`api.ts`:** erste Aufteilung in **`lib/api/*.ts`** + Re-Export (bereits vorhandene Helfer wie `api-fetch-text` bleiben unter `lib/`). **Inventar und Konvention:** **`docs/FRONTEND-API-MODULARITY.md`**.
 
 **Erfolgskriterium:** Ordnerstruktur + grüne **`tsc`** + **`npm run test:frontend-unit`** + Smoke-Teilmenge wie in **`TESTING.md`**.
 
