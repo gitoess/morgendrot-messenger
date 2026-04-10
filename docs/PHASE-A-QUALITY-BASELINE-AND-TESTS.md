@@ -63,7 +63,7 @@
 2. Unit-Tests für **reine** Funktionen: Bild-/Wire-Pipeline (soweit ohne echte Hardware testbar), Payload-Builder, Dedup, Metadaten-Normalisierung.
 3. **`src/`**-Node-Projekt in Vitest anlegen oder nachziehen; kritische **reine** Hilfsfunktionen aus `src/` dort ablegen bzw. importieren und testen.
 
-**Ist (2026-03-28):** **`frontend/vitest.config.ts`**, Scripts **`npm run test:unit`** / Root **`npm run test:frontend-unit`**; Tests u. a. **`message-dedup`**, **`chat-view-send-utils`**, **`app-error`**, **`api-response-guard`**, **`compact-image-wire`**, **`api-simple-ok-envelope`**, **`api-unlock-envelope`**, **`api-fetch-text`**. RTL-Komponententests und **`src/`**-Vitest-Node folgen.
+**Ist (2026-03-28):** **`frontend/vitest.config.ts`**, Scripts **`npm run test:unit`** / Root **`npm run test:frontend-unit`**; Tests u. a. **`message-dedup`**, **`chat-view-send-utils`**, **`app-error`**, **`api-response-guard`**, **`compact-image-wire`**, **`api-simple-ok-envelope`**, **`api-unlock-envelope`**, **`api-fetch-text`**. **Ergänzt (2026-03):** RTL-Smokes **`components/ui/button.test.tsx`**, **`frontend/frontend/components/chat-view-transport-card.test.tsx`**; **`frontend/eslint.config.mjs`** (Messenger **`features/send` ↔ `features/inbox`**); **`npm run check:circular`** (madge); CI **`.github/workflows/frontend-checks.yml`**. **`src/`**-Vitest-Node folgt.
 
 ---
 

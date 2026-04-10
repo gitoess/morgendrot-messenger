@@ -65,7 +65,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | 1 | Stabilität Bild + Audio | — | Basis; bei Änderungen testen. |
 | 2 | Einsatzprotokoll / Export (ZIP) | Mittel | **Erledigt:** vollständiger Posteingang, ZIP, `.zip.enc.json`, Decrypt-Seite → **`docs/EINSATZBERICHT-EXPORT.md`**. |
 | 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
-| 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; **Kopplung** bleibt hoch → **§ H.1b** **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** (Feature-Ordner, Ports, `lib/api/`-Split). |
+| 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; **Kopplung** bleibt hoch → **§ H.1b** **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** (Feature-Ordner, Ports, `lib/api/`-Split unter **`frontend/frontend/lib/api/`**). **Neu:** ESLint send↔inbox, madge **`check:circular`**, RTL Transport-Karte, CI **`frontend-checks`** — Details **§ H.1b** Absatz *Ist — Weitergang*. |
 | 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts` (inkl. **192×192** / **512×512** PNG + maskable), `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Favicons `icon-light/dark-32x32.png`, `apple-icon.png` aus **`icon.svg`** via **`npm run build:pwa-icons`**. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. **Offen:** manuelle Installations-Checks, optional Offline-Fallback-Seite. |
 | 6 | Fehlerbehandlung / Status | Mittel | **Stand 2026-03:** Next-Messenger: Posteingang bei nicht erreichbarer Basis (Hinweis „Funk-Modus“), Partner-/Richtungsfilter, Eingang/Ausgang-Badges; Abgleich Package-ID Filter vs. `/api/status` → Banner „Jetzt updaten“ (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, Checks in **`TESTING.md`**). Laufend verfeinern. |
 | 7 | Heltec / LoRa Firmware | Hoch | Spez-lastig (`meshtastic/`). |
@@ -317,6 +317,10 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 **Nicht-Ziel:** Big-Bang in 3 Tagen; starre „max. 300 Zeilen“ ohne Ausnahmelogik — siehe Strategie-Doku.
 
 **Verzahnung:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** Phase A; **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** (Funk/Transport vs. UI-Modularität).
+
+**Ist — Weitergang Phase 1/2 (2026-03):** Durchsetzbare Grenzen: ESLint **`no-restricted-imports`** für **`features/send` ↔ `features/inbox`** (`frontend/eslint.config.mjs`, Ziel **`npm run lint`**); **`npm run check:circular`** (madge auf `./frontend`, in CI siehe **`.github/workflows/frontend-checks.yml`**); Vitest + RTL: `components/ui/button.test.tsx`, **`frontend/frontend/components/chat-view-transport-card.test.tsx`** (Sendepfad/Partner); **`TESTING.md`** verweist auf Lint + Workflow.
+
+**Als Nächstes (klein, empfohlen):** (a) Weitere ESLint-Zonen nur ergänzen, wenn **messbare** Querimports entstehen (z. B. **attachments**↔**inbox**); (b) Legacy-**`@/lib/api`** (Paket-Root) vs. Barrel **`@/frontend/lib/api`** langsam angleichen — Leitfaden **`docs/FRONTEND-API-MODULARITY.md`**; (c) § **H.2** PWA-Checks oder § **H.1a** ein weiterer RTL-/Vitest-Slice am **Send-Panel**, wenn Mesh-Dateien nicht parallel stark bewegt werden.
 
 ### H.2 Als Nächstes – aus 8-Punkte-Liste (nach Stabilität)
 
