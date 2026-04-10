@@ -43,10 +43,10 @@ Einordnung: **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, Fahrplan **§ H.8**.
 
 ## Verwandte Dokumente
 
-- **`docs/ROADMAP-FAHRPLAN.md`** — **§ H.0** (#2), **§ H.7** (Ist/Backlog)  
+- **`docs/ROADMAP-FAHRPLAN.md`** — **§ H.0** (#2), **§ H.7** (Ist/Backlog), **§ H.7b** (Feld: Backpack-Node + Heltec + Betriebsmodi / Degraded-Zielbild)  
 - **`docs/DEV-START.md`** — Ports, zwei Oberflächen (Lite-UI vs. Next)  
 - **`README.md`** — Skript `bundle:standalone-smartphone`  
 
 ---
 
-*Stand: 2026-03-28 — ergänzt H.0 #2 „Wanderer“/Bundle als kanonische Einstiegsseite.*
+*Stand: 2026-03-29 — Verweis **§ H.7b** (Backpack-Node, Heltec, Degraded-Zielbild); H.0 #2 „Wanderer“/Bundle bleibt kanonische Einstiegsseite.*

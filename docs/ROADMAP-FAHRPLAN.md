@@ -523,6 +523,39 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Geheimnisse** | **Nie** Seed oder Vault-Passwort auf das Medium schreiben; nur lokale Eingabe auf dem Telefon. |
 | **Backlog (optional)** | **Boss-Export-Assistent** in der Werkstatt: Formular → ZIP + fertige **`.env`** (ohne Secrets) + Kurz-README — **Komfort**, kein Blocker für Feldtests. |
 | **Einstieg „Wanderer“** | **`docs/WANDERER-STANDALONE-BUNDLE.md`** — Narrativ H.0 #2 + Verknüpfung zu **§ H.8** (zwei Ordner Dienst/Test). |
+| **Feld: Backpack + Betriebsmodi** | **§ H.7b** — Referenzarchitektur (Node im Rucksack, Heltec, PWA); **Degraded / Delayed Upload** = Zielbild Phase B, nicht vollständig implementiert. |
+
+### H.7b Feld-Architektur: **Backpack-Node**, Heltec, PWA — **Zielbild & Grenzen**
+
+**Zweck:** Die Diskussion aus **Chat/Abstimmung (2026-03)** in **eine** kanonische Stelle bringen — **ohne** alle Szenarien als fertiges Produkt zu behaupten. Ergänzt **§ H.0**, **§ H.3**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**).
+
+#### Hardware-Kombination (typisch)
+
+| Rolle | Komponente | Kurz |
+|--------|-------------|------|
+| **„Gehirn“ (Backend)** | Kleiner **Linux-Host** im Rucksack (**Backpack-Node**): führt den **Morgendrot-Node** (`npm start` / API-Port) aus — **Vault, `/api/*`, IOTA-SDK, Signatur** (siehe **`src/messenger-nest/README.md`**: **Plain Node/TS**, **kein** NestJS-Framework). **Referenz-Hardware:** **CM4** oder **günstiger Pi Zero 2 W**; **sehr kleine** Boards (z. B. Luckfox-Klasse) nur mit **RAM-/BSP-Absicherung** und ggf. **abgespecktem** Deploy — nicht als Drop-in ohne Messung. |
+| **„Stimme“ (Funk)** | **Heltec V3** (o. ä.; optional **T-Beam** mit GPS): **Meshtastic** / LoRa. **Zwei Anbindungen:** (a) **USB/Serial/UART** an den Linux-Host (**Pi↔Heltec**, vgl. **`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`**, **`lora-bridge`**); (b) **Web Bluetooth** vom **Handy** zum Heltec (**Ist** im Next-Frontend — **§ H.3l**). |
+| **„Display“ (UI)** | **Smartphone** mit **PWA**: spricht per **WLAN** mit dem Backpack-Node (typ. **Hotspot** des Hosts; **API-Basis** muss zur erreichbaren IP zeigen). |
+
+**WLAN-Reichweite** Handy↔Backpack ist **eng** (2,4 GHz, kleine Antenne): **Faustwerte** nur zur Einordnung — **vor Ort messen** (Topografie, Gehäuse, Last).
+
+#### Betriebsmodi (Flexibilität — **Ist** vs. **Ziel**)
+
+| Modus | Datenfluss (idealisiert) | **Ist / Hinweis** |
+|--------|----------------------------|-------------------|
+| **Online** | Handy → Node → Internet → **RPC / IOTA** | **Wie heute**, wenn Node erreichbar (**`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**). |
+| **Hybrid (Nahbereich)** | Handy → Node (WLAN) + **Mesh** über Heltec (Serial **oder** Web-BT vom Handy) | **Teilweise Ist** (Mesh/Web-BT, Node signiert); **Serial-Host-Pfad** Produktivcode = Phase B optional (**§ H.3l**). |
+| **Entfernt / „LoRa-only“-Minimum** | Handy → **Web-BT** → **eigenes** Heltec → **LoRa-Mesh** (**ohne** WLAN zum Node) | **Zielbild:** eingeschränkter **Degraded Mode** — **kein** vollständiger Ersatz für alle IOTA-/Vault-Flows ohne weiteren Architektur-Schritt; **verzögerte Verankerung** nur im Rahmen von **Delayed LoRa → IOTA** / **Sync-Regeln** (**Spec § H.12**), **nicht** als pauschales „stellvertretend signieren“ ohne **Custody-/Vertrauensmodell**. |
+
+**Kapazität / Last:** „X Personen pro Node“ nur mit **Messung** (Nachrichtenlast, gleichzeitige RPC); kleiner AP + SoC kann bei vielen WLAN-Clients **instabil** werden — **Stresstest** statt feste Marketingzahl.
+
+#### Energie & Betrieb
+
+- **Backpack-Node + WLAN-Hotspot + Funk** ziehen **dauerhaft** Strom; **kleine** Zellen reichen oft nur **wenige Stunden** — **Powerbank (häufig 10–20 Ah-Klasse)** realistischer für **Tagesnutzung**; **gemessen** dokumentieren, nicht raten.
+
+#### Qualitätssicherung (Ritual)
+
+- Änderungen an **Sendepfad, Queue, Transport, IOTA-Grenzen** — zwingend **Merge-Ritual** (**`TESTING.md`** § *Qualitätsritual vor Merge*) bzw. CI **`.github/workflows/frontend-checks.yml`**, damit **Funk** und **Mailbox-Logik** sich nicht gegenseitig regressieren.
 
 ### H.8 Dienst (Mainnet) vs. privat (Testnet) — **zwei Installationen**, Doku, **kein** Sofort-Coding
 
