@@ -8,8 +8,8 @@
 
 ## Barrel (`frontend/frontend/lib/api.ts`)
 
-- Re-exportiert **`executeCommand`** und alle Domänen-Module unten.
-- Enthält nur noch **`getStatus`** (Kompatibilitäts-Mapping auf `fetchStatus`) als eigene Implementierung.
+- Re-exportiert **`executeCommand`** und alle Domänen-Module unten — **ohne** eigene Logik (reine Barrel-Datei).
+- **`getStatus`** (Kompatibilitäts-Mapping auf `fetchStatus`) liegt in **`get-status-compat.ts`**.
 
 **Regel für neue HTTP-/Command-APIs:** Wenn möglich **neues Modul** unter `lib/api/<thema>.ts` anlegen und in `api.ts` **nur re-exportieren** — nicht wieder alles in `api.ts` wachsen lassen.
 
@@ -29,6 +29,7 @@
 | Datei | Exporte (Auszug) |
 |--------|-------------------|
 | **`status.ts`** | `ApiStatus`, `HierarchyPermissions`, `VaultStatus`, `fetchStatus`, `unlockBackend` |
+| **`get-status-compat.ts`** | `getStatus` (Legacy-Mapping auf `fetchStatus`) |
 | **`contacts.ts`** | `ContactMeshEntryClient`, Kontakt-Labels, Mesh-Import/Export |
 | **`media.ts`** | `compactImageEncode`, `loraProgressiveEncode`, `loraProgressiveFuse`, `messengerAudioToOpus` |
 | **`clear-local-history.ts`** | `clearLocalHistory` |
