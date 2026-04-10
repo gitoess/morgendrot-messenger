@@ -13,7 +13,7 @@ import {
 } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
-import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<

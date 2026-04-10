@@ -13,7 +13,7 @@ import {
   uniqueCounterpartyAddresses,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
-import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {

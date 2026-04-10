@@ -5,7 +5,7 @@
  */
 
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
-import { asInboxFeedRead } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+import { asInboxFeedRead } from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'

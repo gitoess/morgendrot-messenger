@@ -44,7 +44,7 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
-import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 
 export type ChatViewInboxListProps = InboxFeedReadPort & {
   loadError: string | null

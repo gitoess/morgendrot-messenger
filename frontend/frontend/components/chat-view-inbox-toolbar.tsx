@@ -11,7 +11,7 @@ import { Archive, FileDown, Inbox, KeyRound, Lock, RefreshCw } from 'lucide-reac
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
-import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports/inbox-feed-read-port'
+import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 
 export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number
