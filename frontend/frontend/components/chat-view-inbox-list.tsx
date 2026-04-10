@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
-import type { ChatInboxRow } from '@/frontend/lib/chat-view-inbox-rows'
+import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { downloadSneakernetPackage } from '@/frontend/lib/sneakernet-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'

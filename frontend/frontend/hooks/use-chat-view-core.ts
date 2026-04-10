@@ -8,7 +8,7 @@
 import { useState, useCallback, useRef, useMemo } from 'react'
 import { meshDecryptV2Wire, fetchAllInboxMessagesForExport } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/features/inbox/inbox-slideshow'
-import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/lib/chat-view-inbox-rows'
+import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
