@@ -7,6 +7,7 @@ import {
   asSendTransportChoice,
   asSendTransportRead,
 } from './send-transport-ports'
+import { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
 
 describe('asInboxFeedRead', () => {
   it('behält Referenzen für messages und myAddress', () => {
@@ -45,6 +46,29 @@ describe('asSendMeshMirrorDelay', () => {
     p.onDelayMirrorToIotaChange(false)
     expect(p.delayMirrorToIota).toBe(true)
     expect(fn).toHaveBeenCalledWith(false)
+  })
+})
+
+describe('asVoiceRecordSendPanel', () => {
+  it('merged Hook-Slice und sosVoiceAwaitingSend', () => {
+    const fromHook = {
+      voicePhase: 'idle' as const,
+      voiceActiveKind: null,
+      voiceProgress01: 0,
+      voiceMaxSeconds: 10,
+      voiceEmergencyMaxSeconds: 10,
+      sosVoiceFollowsOnline: true,
+      onVoiceToggle: vi.fn(),
+      onVoiceEmergencyToggle: vi.fn(),
+      voiceNormalBlockedStart: false,
+      voiceEmergencyBlockedStart: false,
+      voiceBusy: false,
+      voiceRecording: false,
+    }
+    const p = asVoiceRecordSendPanel(fromHook, true)
+    expect(p.sosVoiceAwaitingSend).toBe(true)
+    expect(p.voicePhase).toBe('idle')
+    expect(p.onVoiceToggle).toBe(fromHook.onVoiceToggle)
   })
 })
 

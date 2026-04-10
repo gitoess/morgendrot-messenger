@@ -1,4 +1,6 @@
 export type { AttachmentBarPort } from './attachment-bar-port'
+export type { VoiceRecordFromHook, VoiceRecordSendPanelPort } from './voice-record-send-panel-port'
+export { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
 export { asInboxFeedRead } from './inbox-feed-read-port'
 export type { ComposerDraftPort, ComposerDraftSendFlowPort } from './composer-draft-port'

@@ -10,7 +10,6 @@ import { AlertCircle, Check, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
-import type { VoiceRecordKind, VoiceRecordPhase } from '@/frontend/hooks/use-chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isLoRaMeshTransport, MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import type {
@@ -18,6 +17,7 @@ import type {
   ComposerDraftPort,
   SendMeshMirrorDelayPort,
   SendTransportReadPort,
+  VoiceRecordSendPanelPort,
 } from '@/frontend/features/messenger-ports'
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
@@ -25,7 +25,8 @@ const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler T
 export type ChatViewSendPanelProps = AttachmentBarPort &
   ComposerDraftPort &
   SendTransportReadPort &
-  SendMeshMirrorDelayPort & {
+  SendMeshMirrorDelayPort &
+  VoiceRecordSendPanelPort & {
   isPrivate: boolean
   sending: boolean
   loraOnlineFallbackOffer: { reasonLabel: string } | null
@@ -35,20 +36,6 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onSend: () => void | Promise<void>
   status: 'idle' | 'success' | 'error'
   statusMsg: string
-  voicePhase: VoiceRecordPhase
-  voiceActiveKind: VoiceRecordKind | null
-  voiceProgress01: number
-  voiceMaxSeconds: number
-  voiceEmergencyMaxSeconds: number
-  sosVoiceFollowsOnline: boolean
-  onVoiceToggle: () => void
-  onVoiceEmergencyToggle: () => void
-  voiceNormalBlockedStart: boolean
-  voiceEmergencyBlockedStart: boolean
-  voiceBusy: boolean
-  voiceRecording: boolean
-  /** Nach SOS-Sprachmemo: prominenter Hinweis + „Jetzt senden“. */
-  sosVoiceAwaitingSend: boolean
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {

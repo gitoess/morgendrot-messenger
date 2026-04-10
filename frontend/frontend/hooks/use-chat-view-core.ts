@@ -42,7 +42,7 @@ export type UseChatViewCoreParams = {
  * für `ChatViewInboxPanel` / Toolbar / Liste.
  *
  * `message`, `recipient`, `setMessage`, `setRecipient` bilden zusammen `ComposerDraftPort` fürs `ChatViewSendPanel`.
- * Send-Flow-Parameter enthalten `ComposerDraftSendFlowPort`; Transport-Card/Panel nutzen `SendTransportChoicePort` bzw. Leseschnitt + `SendMeshMirrorDelayPort`; Anhang-Zeile: `AttachmentBarPort`.
+ * Send-Flow-Parameter enthalten `ComposerDraftSendFlowPort`; Transport-Card/Panel nutzen `SendTransportChoicePort` bzw. Leseschnitt + `SendMeshMirrorDelayPort`; Anhang-Zeile: `AttachmentBarPort`; Sprachmemo-UI: `VoiceRecordSendPanelPort` (`useChatViewVoiceRecord` + `sosVoiceAwaitingSend`).
  */
 export function useChatViewCore(p: UseChatViewCoreParams) {
   const { isPrivate, role, myAddress } = p
