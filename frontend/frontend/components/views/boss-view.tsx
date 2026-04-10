@@ -21,7 +21,7 @@ import { MeshFunkPanel } from '@/frontend/components/mesh-funk-panel'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { base64ToUint8Array } from '@/frontend/lib/emergency-binary-browser'
-import { MESH_V2_BURST_INTER_PACKET_MS_DEFAULT } from '@/frontend/lib/chat-view-mesh-send'
+import { MESH_V2_BURST_INTER_PACKET_MS_DEFAULT } from '@/frontend/features/send/chat-view-mesh-send'
 import type { Message } from '@/frontend/lib/types'
 
 interface BossViewProps {

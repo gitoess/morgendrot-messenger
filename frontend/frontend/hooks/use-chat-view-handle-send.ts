@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 import { sendMessage, sendEncryptedMessageWithTimeout } from '@/frontend/lib/api'
-import { sendMeshV2WireBurst } from '@/frontend/lib/chat-view-mesh-send'
+import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
@@ -12,7 +12,7 @@ import {
   validateLoraDualWireUtf8,
   validateMeshDisallowsIotaCompactBlob,
   validateStandardOutgoingWire,
-} from '@/frontend/lib/chat-view-send-utils'
+} from '@/frontend/features/send/chat-view-send-utils'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependDelayMirrorMarker } from '@/frontend/lib/mesh-delayed-upload'

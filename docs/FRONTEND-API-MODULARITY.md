@@ -58,6 +58,7 @@ Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `a
 
 - **`frontend/frontend/features/README.md`** — Konvention.
 - **`features/attachments/chat-view-attachment-ingest.ts`** — Anhang-Ingest; **`lib/chat-view-attachment-ingest.ts`** ist dünner Re-Export für alte Pfade.
+- **`features/send/`** — Mesh-Burst und Send-Validierung; **`lib/chat-view-mesh-send.ts`** / **`lib/chat-view-send-utils.ts`** re-exportieren für alte Importe.
 
 ---
 
