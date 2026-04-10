@@ -8,8 +8,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInbox } from '../lib/api'
 import { mergeAllMessages, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
-import type { InboxApiRow } from '@/frontend/lib/inbox-map-messages'
-import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/lib/inbox-map-messages'
+import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
+import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxParams = {

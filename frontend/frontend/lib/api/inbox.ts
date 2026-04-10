@@ -3,7 +3,7 @@ import {
   mapInboxApiRowsToMessages,
   pickInboxRawMessages,
   type InboxApiRow,
-} from '@/frontend/lib/inbox-map-messages'
+} from '@/frontend/features/inbox/inbox-map-messages'
 import { executeCommand } from '@/frontend/lib/api/execute-command'
 
 /** limit, optional senderFilter (0x…), optional packageId, optional bossView, optional offset (ältere Seiten). */
