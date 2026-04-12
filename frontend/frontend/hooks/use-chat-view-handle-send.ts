@@ -44,6 +44,19 @@ function readSosIotaMirrorEnabled(): boolean {
   }
 }
 
+/**
+ * B2+: Zwischen Funk-Wiederholungen `/send` versuchen — erfolgreiche Mailbox = Basis erreicht → **keine** weiteren LoRa-Versuche (Airtime).
+ * Opt-out: `localStorage` **`morgendrot.sosRetryStopOnServerAck`** = **`0`**.
+ */
+function readSosRetryStopOnServerAckEnabled(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    return window.localStorage.getItem('morgendrot.sosRetryStopOnServerAck') !== '0'
+  } catch {
+    return true
+  }
+}
+
 function applyValidationError(
   v: { ok: false; message: string; idleMs?: number },
   setStatus: UseChatViewSendFlowParams['setStatus'],
@@ -80,6 +93,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    /** Snaps, die bereits per `/send` (Mailbox) angekommen sind — kein erneuter B2-Spiegel. */
+    const sosMailboxAckedSnaps = new Set<string>()
+    /** Mindestens ein SOS-Teil wurde nach Funkfehler nur/noch über Mailbox zugestellt (Retry gestoppt). */
+    let sosDeliveredViaMailboxAck = false
     const meshBurstOpts: SendMeshV2WireBurstOptions | undefined = isEmergencySend
       ? { priorityFlash: true }
       : undefined
@@ -109,6 +126,18 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         } catch (e) {
           lastErr = e
           if (attempt + 1 >= max) break
+          if (encrypted && isPrivate && readSosRetryStopOnServerAckEnabled()) {
+            setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Basis)…')
+            const ack = await sendEncryptedMessageWithTimeout(wireText)
+            if (ack.ok) {
+              sosMailboxAckedSnaps.add(wireText)
+              sosDeliveredViaMailboxAck = true
+              setStatusMsg(
+                'SOS: Basis hat die Nachricht über die Mailbox — Funk-Wiederholungen gestoppt (Airtime).'
+              )
+              return
+            }
+          }
           const delay = sosMeshRetryDelayMs(attempt)
           setStatusMsg(
             `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
@@ -456,6 +485,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
         if (forcedTransport === 'mesh') return 'Klartext über LoRa (Meshtastic-Text) gesendet.'
       }
+      if (forcedTransport === 'mesh' && encrypted && sosDeliveredViaMailboxAck) {
+        return 'SOS: über IOTA-Mailbox zugestellt (Funk-Wiederholungen nach Basis-Eingang gestoppt).'
+      }
       if (forcedTransport === 'mesh') return 'Nur Funk: Mesh v2 (PRIVATE_APP) gesendet.'
       if (forcedTransport === 'internet') return 'Online (IOTA/Mailbox) gesendet.'
       return 'Gesendet.'
@@ -494,11 +526,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         isEmergencySend &&
         forcedTransport === 'mesh' &&
         encrypted &&
+        sosDeliveredViaMailboxAck &&
+        textSnaps.length > 1
+      ) {
+        mirrorFootnote +=
+          ' Mindestens ein Teil über IOTA-Mailbox zugestellt (Funk-Wiederholungen für diesen Teil gestoppt).'
+      }
+      if (
+        isEmergencySend &&
+        forcedTransport === 'mesh' &&
+        encrypted &&
         isPrivate &&
         readSosIotaMirrorEnabled()
       ) {
         for (let mi = 0; mi < textSnaps.length; mi++) {
           const snap = textSnaps[mi]!
+          if (sosMailboxAckedSnaps.has(snap)) continue
           const mr = await sendEncryptedMessageWithTimeout(snap)
           if (!mr.ok) {
             mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mr.error || mr.message || '?'}.`

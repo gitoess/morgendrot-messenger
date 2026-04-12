@@ -58,8 +58,8 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 ### SOS / `MORG_EMERGENCY_V1` (B1–B2, automatisiert + manuell)
 
 - **Unit (Root):** `npm run test` — enthält **`morg-emergency-v1-text`** (prepend/strip) und **`morg-sos-mesh-retry`** (Backoff, Cap bei `jitterRatio: 0`).
-- **B2 Verhalten:** Mesh-SOS (Text/Sprache) wiederholt bei Funkfehler bis zu **5×** mit steigender Wartezeit; nach **erfolgreichem** Funk wird die gleiche Nutzlast **zusätzlich** per verschlüsselter Mailbox gespeichert (IOTA-Spiegel). **Abschalten Spiegel:** `localStorage.setItem('morgendrot.sosIotaMirror','0')` (Reload); Standard an.
-- **Anzeige:** Posteingang (Mailbox) und Mesh-Klartext nutzen dieselbe Normalisierung — Inhalt mit SOS-Marker erscheint mit Präfix **`[SOS]`** statt Roh-`[[MORG_EMERGENCY_V1:…]]`.
+- **B2 Verhalten:** Mesh-SOS (Text/Sprache) wiederholt bei Funkfehler bis zu **5×** mit steigender Wartezeit. **Zwischen** den Funk-Versuchen: verschlüsselter **`/send`** (Mailbox) — bei **Erfolg** werden **keine** weiteren Funk-Wiederholungen für diesen Snap ausgeführt (Basis erreicht, Airtime). **Abschalten Ack-Stop:** `localStorage.setItem('morgendrot.sosRetryStopOnServerAck','0')`. Nach **erfolgreichem** Funk (ohne vorherigen Mailbox-Ack) weiterhin **IOTA-Spiegel**; **Abschalten Spiegel:** `localStorage.setItem('morgendrot.sosIotaMirror','0')`.
+- **Anzeige:** Posteingang (Mailbox) und Mesh-Klartext nutzen dieselbe Normalisierung — Inhalt mit SOS-Marker erscheint mit Präfix **`[SOS]`** statt Roh-`[[MORG_EMERGENCY_V1:…]]`. **Automatisiert:** `npm run test:unit --prefix frontend` — `chat-message-display-normalize.test.ts` (u. a. **MORG_COMPACT_IMG_V1**, **MF1** unverändert).
 
 ### Phase B — Mesh / Web-BT (Heltec, Schritt für Schritt)
 
