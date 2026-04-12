@@ -110,7 +110,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.1b** | Messenger-UI-Modularität (ESLint, madge, RTL) |
 | **§ H.2** | Als Nächstes: PWA-Checks, Status, Kabel-Bridge-Backlog |
 | **§ H.3** | **Phase B**-Kern (Mesh v2, Delayed LoRa→IOTA) |
-| **§ H.3b–n** | Optional: QR v2 … USB-Serial/BLE (**H.3m** Notfall/TX-Realität), **H.3n** **`MORG_EMERGENCY_V1`** / SOS-Wire (**`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**) |
+| **§ H.3b–n** | Optional: QR v2, Betrieb, Meshtastic-Hops, Ops/Git, Vision Provisioning, **H.3g** Umsetzungspaket, **H.3h** Metadata, Heim-Heltec-Narrativ, EU-Funk, Kern/Adapter, USB-Serial/BLE (**H.3l**), **H.3m** Notfall/LoRa-Realität, **H.3n** SOS / **`MORG_EMERGENCY_V1`** (**`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**) |
 | **§ H.4** | Merge-/Qualitätscheck vor großen Merges |
 | **§ H.5** | Git-Aufräumen |
 | **§ H.6** | Ideen (nicht gebucht) |
