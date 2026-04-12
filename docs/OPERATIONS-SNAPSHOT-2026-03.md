@@ -13,7 +13,7 @@
 | LoRa/Notfall vs. volle IOTA-TX, Gateway | **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **§ H.3m** |
 | Sitzungsreferenz | **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Nachtrag 2026-03-29) |
 
-**Hinweis:** Vier **Doku-Commits** auf `main` (u. a. `2e62acf` … `6732ac5`) — **Push** zu **`origin/main`** bei Bedarf nachziehen.
+**Hinweis:** Doku-Commits inkl. README/Protokoll/Snapshot; **Push** zu **`origin/main`** erledigt (Stand Branch-Tip **`a3afb77`**).
 
 ---
 
