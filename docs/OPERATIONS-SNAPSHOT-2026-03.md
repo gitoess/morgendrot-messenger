@@ -4,6 +4,19 @@
 
 ---
 
+## Nachtrag (2026-03-29): Fahrplan & Policy (**Doku**)
+
+| Thema | Pfad / § |
+|--------|-----------|
+| Backpack-Node, Heltec, Betriebsmodi | **`docs/ROADMAP-FAHRPLAN.md`** **§ H.7b** |
+| Boss/Arbeiter-Seed-Custody (Zielbild, kein Implementationszwang) | **`docs/BOSS-WORKER-SEED-CUSTODY.md`**, **§ H.10b**; **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** §6 |
+| LoRa/Notfall vs. volle IOTA-TX, Gateway | **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **§ H.3m** |
+| Sitzungsreferenz | **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Nachtrag 2026-03-29) |
+
+**Hinweis:** Vier **Doku-Commits** auf `main` (u. a. `2e62acf` … `6732ac5`) — **Push** zu **`origin/main`** bei Bedarf nachziehen.
+
+---
+
 ## 1. Kurz: was im Repo **fertig** ist (Shop / Voucher / Credits)
 
 | Bereich | Ist (Code/Doku) |
