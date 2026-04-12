@@ -1,6 +1,7 @@
 # Notfall: Reichweite, Brücken zur Hilfe, Backlog (Entscheid 2026-03)
 
-**Zweck:** Operative Erwartungshaltung und Produktentscheidungen festhalten — **getrennt** von **`docs/NOTFALL-PURGE-MESSENGER.md`** (technischer Purge/Cache) und **`docs/NOTFALL-DATENSPEICHER.md`** (Testament o. Ä.).
+**Zweck:** Operative Erwartungshaltung und Produktentscheidungen festhalten — **getrennt** von **`docs/NOTFALL-PURGE-MESSENGER.md`** (technischer Purge/Cache) und **`docs/NOTFALL-DATENSPEICHER.md`** (Testament o. Ä.).  
+**Technik LoRa ↔ IOTA:** **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`** (**Fahrplan § H.3m**) — keine volle TX über Funk; Gateway/Delayed Upload.
 
 ---
 
