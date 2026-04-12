@@ -1,9 +1,9 @@
 # LoRa, Notfall & IOTA: Realitätscheck (keine volle TX über Funk)
 
 **Zweck:** Eine **kanonische** Einordnung der Idee „im Notfall eine **IOTA-Transaktion** über **LoRa** schicken, Gateway leitet ins Internet“.  
-**Stand:** 2026-03-29  
+**Stand:** 2026-03-30  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.3m**  
-**Verwandt:** **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (Delayed Upload, `MESH_V2_MAX_BYTES`, Gateway), **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** (112, Leitstellen, **kein** offizieller IOTA-Notruf), **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/ROADMAP-FAHRPLAN.md`** **§ H.7b** (Backpack-Node / Basis).
+**Verwandt:** **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (Delayed Upload, `MESH_V2_MAX_BYTES`, Gateway), **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§ H.3n** — SOS-Wire, App-Priorität, Basis), **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** (112, Leitstellen, **kein** offizieller IOTA-Notruf), **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/ROADMAP-FAHRPLAN.md`** **§ H.7b** (Backpack-Node / Basis).
 
 ---
 
