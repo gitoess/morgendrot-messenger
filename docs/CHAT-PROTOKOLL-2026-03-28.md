@@ -138,7 +138,7 @@
 | **Boss speichert Worker-Seed?** Policy, Team vs. dezentral, E2E-Fußnote, Audit **ohne** Geheimnisse in Logs | `docs/BOSS-WORKER-SEED-CUSTODY.md`; `docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md` §6; Fahrplan **§ H.10b** |
 | **Feinschliff** Custody-Doku | Commit `01112c8` (Tabellen, Fußnote E2E / `SECURITY-RATING`) |
 | **LoRa: keine volle IOTA-TX über Funk**; Gateway + Delayed Upload | `docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`; Fahrplan **§ H.3m**; Verweise in `LORA-IOTA-DELAYED-UPLOAD-SPEC`, `NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG` |
-| **Git** | Commits `2e62acf`, `7b164ac`, `01112c8`, `6732ac5` auf Branch **`main`**; **Push zu `origin`** zum Session-Ende ggf. noch ausstehend — lokal `git status` prüfen |
+| **Git** | Commits `2e62acf` … `6732ac5` plus Nachziehen **README/Protokoll/Snapshot** → `cf97468`; **`git push origin main`** erledigt (Remote aktualisiert). |
 
 **Merge-Ritual / CI:** Unverändert — **`TESTING.md`** § *Qualitätsritual vor Merge*, **`.github/workflows/frontend-checks.yml`**. Die genannten Commits betrafen überwiegend **`docs/`**; vor nächsten **Code**-Änderungen an Messenger/LoRa Ritual vollständig ausführen.
 
