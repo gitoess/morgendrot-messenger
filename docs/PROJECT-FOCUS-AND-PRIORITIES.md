@@ -1,9 +1,9 @@
 # Ausrichtung, Prioritäten und Reihenfolge (Morgendrot Messenger)
 
 **Zweck:** Ein gemeinsames Bild für Mensch und KI – **gegen Feature-Creep** und **falsche Parallelität**.  
-**Stand:** lebendes Dokument (Abgleich **2026-03-29**); bei Abweichung im Code lieber **dieses Dokument** oder den Code anpassen. **Merge-Ritual (Messenger/Frontend):** **`TESTING.md`** § *Qualitätsritual vor Merge* + CI **`frontend-checks`**.
+**Stand:** lebendes Dokument (Abgleich **2026-03-30**); bei Abweichung im Code lieber **dieses Dokument** oder den Code anpassen. **Merge-Ritual (Messenger/Frontend):** **`TESTING.md`** § *Qualitätsritual vor Merge* + CI **`frontend-checks`**.
 
-**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.1b** Messenger-UI-Modularität — **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen in **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
+**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Kanonische **Ausführungsreihenfolge** (Stabilität, Queue vor Doppelarbeit): **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**. Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.1b** Messenger-UI-Modularität — **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **H.2** PWA/Status, **H.8** Randthemen nur Doku) stehen dort (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
 
 ---
 
