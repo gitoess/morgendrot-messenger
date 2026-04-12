@@ -122,6 +122,8 @@ export const MorgTextWireMarker = {
     CHROMA_V1: '[[MORG_CHROMA_V1:' as const,
     SLIDE_V1: '[[MORG_SLIDE_V1:' as const,
     PROTOKOLL_ANCHOR_V1: '[[MORG_PROTOKOLL_ANCHOR_V1:' as const,
+    /** Text-Hülle: Hilferuf vor Nutzlast (Klartext vor AES-GCM / Mesh); siehe `morg-emergency-v1-text.ts` + `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md` */
+    EMERGENCY_V1: '[[MORG_EMERGENCY_V1:' as const,
     /** Platzhalter-Zeile für Delayed-Upload-Spiegel (exakt dieser String) */
     DELAY_MIRROR_V1: '[[MORG_DELAY_MIRROR_V1]]' as const,
     /** Body mit angehängtem Wire nach Newline */

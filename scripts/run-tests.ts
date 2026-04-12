@@ -77,6 +77,58 @@ async function testMeshPeerWireRoundtrip() {
     }
 }
 
+async function testMorgEmergencyV1TextMarker() {
+    console.log('\n--- morg-emergency-v1-text (shared) ---');
+    try {
+        const {
+            prependMorgEmergencyV1Marker,
+            stripLeadingMorgEmergencyV1Marker,
+            plaintextStartsWithMorgEmergencyV1,
+        } = await import('../src/shared/morg-emergency-v1-text.js');
+
+        const inner = 'Hilfe benötigt';
+        const w = prependMorgEmergencyV1Marker(inner, 'text');
+        assert(plaintextStartsWithMorgEmergencyV1(w), 'starts with marker');
+        const st = stripLeadingMorgEmergencyV1Marker(w);
+        assert(st.emergency === true && st.kind === 'text' && st.body === inner, 'strip roundtrip text');
+
+        const audioWire = '[[MORG_AUDIO_V1:{"x":1}]]';
+        const wv = prependMorgEmergencyV1Marker(audioWire, 'voice');
+        const sv = stripLeadingMorgEmergencyV1Marker(wv);
+        assert(sv.emergency === true && sv.kind === 'voice' && sv.body === audioWire, 'strip voice wrap');
+
+        const only = prependMorgEmergencyV1Marker('', 'text');
+        const so = stripLeadingMorgEmergencyV1Marker(only);
+        assert(so.emergency === true && so.body === '', 'marker-only body');
+
+        ok('prepend / strip MORG_EMERGENCY_V1');
+    } catch (e) {
+        fail('morg-emergency-v1-text', e);
+    }
+}
+
+async function testMorgSosMeshRetry() {
+    console.log('\n--- morg-sos-mesh-retry (shared) ---');
+    try {
+        const { sosMeshRetryDelayMs, SOS_MESH_RETRY_DEFAULTS } = await import('../src/shared/morg-sos-mesh-retry.js');
+        assert.strictEqual(SOS_MESH_RETRY_DEFAULTS.maxAttempts, 5, 'maxAttempts');
+        const d0 = sosMeshRetryDelayMs(0, { jitterRatio: 0 });
+        assert.strictEqual(d0, 12_000, `d0=${d0}`);
+        const d1 = sosMeshRetryDelayMs(1, { jitterRatio: 0 });
+        assert.strictEqual(d1, 24_000, `d1=${d1}`);
+        const dCap = sosMeshRetryDelayMs(10, {
+            jitterRatio: 0,
+            initialDelayMs: 12_000,
+            maxDelayMs: 120_000,
+            backoffMultiplier: 2,
+        });
+        assert.strictEqual(dCap, 120_000, `dCap=${dCap}`);
+        ok('sos mesh retry delay (backoff + cap, jitter off)');
+    } catch (e) {
+        fail('morg-sos-mesh-retry', e);
+    }
+}
+
 // --- Vault Local (encrypt/decrypt UTF-8 payload) ---
 async function testVaultLocal() {
     console.log('\n--- vault-local ---');
@@ -798,6 +850,8 @@ async function main() {
 
     await testCryptoLayer();
     await testMeshPeerWireRoundtrip();
+    await testMorgEmergencyV1TextMarker();
+    await testMorgSosMeshRetry();
     await testPackageIdCompareFrontend();
     await testShopCatalog();
     await testChatWaldConnection();

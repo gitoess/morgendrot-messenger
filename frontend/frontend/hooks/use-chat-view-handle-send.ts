@@ -16,6 +16,10 @@ import {
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
+import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
+import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
+import type { SendMeshV2WireBurstOptions } from '@/frontend/features/send/chat-view-mesh-send'
+import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -27,6 +31,16 @@ function readStrictOnlineNoMeshFallback(): boolean {
     return window.localStorage.getItem('morgendrot.strictOnlineNoMeshFallback') === '1'
   } catch {
     return false
+  }
+}
+
+/** B2: nach erfolgreichem Funk-SOS zusätzlich verschlüsselt in die Mailbox spiegeln (Opt-out: `localStorage` `morgendrot.sosIotaMirror` = `0`). */
+function readSosIotaMirrorEnabled(): boolean {
+  if (typeof window === 'undefined') return true
+  try {
+    return window.localStorage.getItem('morgendrot.sosIotaMirror') !== '0'
+  } catch {
+    return true
   }
 }
 
@@ -63,13 +77,47 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     delayMirrorToIota,
   } = p
 
-  const handleSend = useCallback(async () => {
+  const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
+    const emergencyKind = opts?.emergencyWire
+    const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    const meshBurstOpts: SendMeshV2WireBurstOptions | undefined = isEmergencySend
+      ? { priorityFlash: true }
+      : undefined
+
     const sendMeshBurst = (text: string) =>
-      sendMeshV2WireBurst(text, meshtastic.sendBinaryV2.bind(meshtastic), (sent, total) => {
-        if (total > 1) {
-          setStatusMsg(`Funk: Mesh v2 ${sent}/${total} Pakete…`)
+      sendMeshV2WireBurst(
+        text,
+        meshtastic.sendBinaryV2.bind(meshtastic),
+        (sent, total) => {
+          if (total > 1) {
+            setStatusMsg(`Funk: Mesh v2 ${sent}/${total} Pakete…`)
+          }
+        },
+        meshBurstOpts
+      )
+
+    const runEmergencyMeshBurstWithRetry = async (wireText: string): Promise<void> => {
+      const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
+      let lastErr: unknown
+      for (let attempt = 0; attempt < max; attempt++) {
+        try {
+          if (!meshtastic.connected) {
+            throw new Error(MESH_BT_NOT_CONNECTED_MSG)
+          }
+          await sendMeshBurst(wireText)
+          return
+        } catch (e) {
+          lastErr = e
+          if (attempt + 1 >= max) break
+          const delay = sosMeshRetryDelayMs(attempt)
+          setStatusMsg(
+            `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
+          )
+          await new Promise((r) => setTimeout(r, delay))
         }
-      })
+      }
+      throw lastErr
+    }
 
     if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh') {
       const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
@@ -132,6 +180,51 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
+    if (isEmergencySend) {
+      if (!isPrivate || !encrypted) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'SOS (Hilferuf) ist nur im privaten Chat mit aktivierter Verschlüsselung verfügbar.',
+            idleMs: 8000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      if (emergencyKind === 'voice' && !attachedAudioBase64) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'SOS-Sprache: keine Audiodaten im Composer – bitte Aufnahme nutzen und erneut senden.',
+            idleMs: 7000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      if (
+        emergencyKind === 'text' &&
+        (attachedAudioBase64 || attachedBlobBase64 || attachedTxtFile || attachedLora)
+      ) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'SOS-Text: nicht zusammen mit Anhängen. Anhang entfernen oder „SOS jetzt über LoRa“ für die Sprachvariante.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+    }
+
     const cap = message.trim() || undefined
     const useTxtSplit =
       attachedTxtFile != null && !attachedBlobBase64 && !attachedAudioBase64 && !attachedLora
@@ -153,8 +246,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         attachedBlobBase64,
         attachedTxtFile,
       })
-      if (!single) return
-      textSnaps = [single]
+      if (!single && !(isEmergencySend && emergencyKind === 'text')) return
+      textSnaps = [single ?? '']
+    }
+
+    if (isEmergencySend && emergencyKind) {
+      const k = emergencyKind === 'text' ? 'text' : 'voice'
+      textSnaps = textSnaps.map((s) => prependMorgEmergencyV1Marker(s, k))
     }
 
     if (!encrypted && !recipient.trim()) return
@@ -236,6 +334,30 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return tryMailbox(false)
         }
         if (forcedTransport === 'mesh') {
+          if (isEmergencySend) {
+            const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
+            let lastErr: unknown
+            for (let attempt = 0; attempt < max; attempt++) {
+              try {
+                if (!meshtastic.connected) {
+                  throw new Error(MESH_BT_NOT_CONNECTED_MSG)
+                }
+                await meshtastic.sendMeshText(textSnap)
+                return { ok: true }
+              } catch (e) {
+                lastErr = e
+                if (attempt + 1 >= max) break
+                const delay = sosMeshRetryDelayMs(attempt)
+                setStatusMsg(
+                  `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
+                )
+                await new Promise((r) => setTimeout(r, delay))
+              }
+            }
+            setStatus('error')
+            setStatusMsg(lastErr instanceof Error ? lastErr.message : String(lastErr))
+            return { ok: false }
+          }
           if (!meshtastic.connected) {
             return failSend(MESH_BT_NOT_CONNECTED_MSG)
           }
@@ -266,21 +388,32 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (forcedTransport === 'mesh') {
-        if (!meshtastic.connected) {
-          return failSend(MESH_BT_NOT_CONNECTED_MSG)
-        }
         let wireText = textSnap
         if (
           delayMirrorToIota &&
           encrypted &&
+          !isEmergencySend &&
           !attachedBlobBase64 &&
           !attachedAudioBase64 &&
           !attachedTxtFile
         ) {
           wireText = prependDelayMirrorMarker(textSnap)
         }
-        await sendMeshBurst(wireText)
-        return { ok: true }
+        try {
+          if (isEmergencySend) {
+            await runEmergencyMeshBurstWithRetry(wireText)
+          } else {
+            if (!meshtastic.connected) {
+              return failSend(MESH_BT_NOT_CONNECTED_MSG)
+            }
+            await sendMeshBurst(wireText)
+          }
+          return { ok: true }
+        } catch (e) {
+          setStatus('error')
+          setStatusMsg(e instanceof Error ? e.message : String(e))
+          return { ok: false }
+        }
       }
 
       if (forcedTransport === 'internet') {
@@ -289,7 +422,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
         if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
           try {
-            await sendMeshBurst(textSnap)
+            if (isEmergencySend) {
+              await runEmergencyMeshBurstWithRetry(textSnap)
+            } else {
+              await sendMeshBurst(textSnap)
+            }
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
             setStatus('error')
@@ -352,15 +489,33 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         lastOk = r
       }
 
+      let mirrorFootnote = ''
+      if (
+        isEmergencySend &&
+        forcedTransport === 'mesh' &&
+        encrypted &&
+        isPrivate &&
+        readSosIotaMirrorEnabled()
+      ) {
+        for (let mi = 0; mi < textSnaps.length; mi++) {
+          const snap = textSnaps[mi]!
+          const mr = await sendEncryptedMessageWithTimeout(snap)
+          if (!mr.ok) {
+            mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mr.error || mr.message || '?'}.`
+            break
+          }
+        }
+      }
+
       setStatus('success')
       if (textSnaps.length > 1) {
-        setStatusMsg(`Alle ${textSnaps.length} Teile gesendet.`)
+        setStatusMsg(`Alle ${textSnaps.length} Teile gesendet.${mirrorFootnote}`)
       } else if (lastOk?.ok && lastOk.meshFallback) {
         setStatusMsg(
-          `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.`
+          `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${mirrorFootnote}`
         )
       } else {
-        setStatusMsg(singleWireSuccessMsg())
+        setStatusMsg(singleWireSuccessMsg() + mirrorFootnote)
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {

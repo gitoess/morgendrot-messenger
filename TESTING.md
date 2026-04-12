@@ -55,6 +55,12 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 - [ ] **Gesperrter Tresor:** `.morg-pkg` Import/Export und verschlüsseltes Senden zeigen die erwarteten Fehlermeldungen (Keys/Vault); kein stiller Fehlschlag.
 - [ ] **Klartext-Modus (Pinnwand/privat unverschlüsselt):** Umschalten sichtbar; Senden nur mit gültigem Empfängerfeld wo die UI es verlangt; Hinweise aus **`/api/status`** (Klartext-Kanal, Konfiguration) konsistent mit dem Chat-Header/Transport-Karte.
 
+### SOS / `MORG_EMERGENCY_V1` (B1–B2, automatisiert + manuell)
+
+- **Unit (Root):** `npm run test` — enthält **`morg-emergency-v1-text`** (prepend/strip) und **`morg-sos-mesh-retry`** (Backoff, Cap bei `jitterRatio: 0`).
+- **B2 Verhalten:** Mesh-SOS (Text/Sprache) wiederholt bei Funkfehler bis zu **5×** mit steigender Wartezeit; nach **erfolgreichem** Funk wird die gleiche Nutzlast **zusätzlich** per verschlüsselter Mailbox gespeichert (IOTA-Spiegel). **Abschalten Spiegel:** `localStorage.setItem('morgendrot.sosIotaMirror','0')` (Reload); Standard an.
+- **Anzeige:** Posteingang (Mailbox) und Mesh-Klartext nutzen dieselbe Normalisierung — Inhalt mit SOS-Marker erscheint mit Präfix **`[SOS]`** statt Roh-`[[MORG_EMERGENCY_V1:…]]`.
+
 ### Phase B — Mesh / Web-BT (Heltec, Schritt für Schritt)
 
 **Ziel:** Stabilität **Senden/Empfangen** über **Web Bluetooth** vor Serial-/Protokoll-Erweiterungen (Fahrplan **`docs/ROADMAP-FAHRPLAN.md`** § **H.3**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** Phase B). **Voraussetzung:** **Android + Chrome** (Web Bluetooth); Heltec mit **Meshtastic** und **gleichem Kanal/PSK** wie Gegenstelle; **Antenne** montiert.

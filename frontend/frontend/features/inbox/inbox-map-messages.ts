@@ -4,6 +4,7 @@
 
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
+import { normalizeChatMessageContentForDisplay } from '@/frontend/lib/chat-message-display-normalize'
 
 export type InboxApiRow = {
   sender?: string
@@ -37,7 +38,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
     const from = m.sender ?? m.from ?? ''
     const rawT = m.text != null ? String(m.text) : ''
     const rawC = m.content != null ? String(m.content) : ''
-    const content = (() => {
+    const contentRaw = (() => {
       if (!rawC) return rawT
       if (!rawT) return rawC
       const cM = rawC.includes('[[MORG_')
@@ -45,6 +46,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       if (cM !== tM) return cM ? rawC : rawT
       return rawC.length >= rawT.length ? rawC : rawT
     })()
+    const content = normalizeChatMessageContentForDisplay(contentRaw)
     const tsRaw = m.ts ?? m.timestamp
     let timestamp =
       typeof tsRaw === 'number' && !Number.isNaN(tsRaw)

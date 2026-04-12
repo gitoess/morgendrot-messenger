@@ -19,6 +19,7 @@ import type {
   SendTransportReadPort,
   VoiceRecordSendPanelPort,
 } from '@/frontend/features/messenger-ports'
+import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
@@ -33,7 +34,7 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onConfirmLoraOnline: () => void | Promise<void>
   onDismissLoraOnlineFallback: () => void
   apiStatus: ApiStatus | null
-  onSend: () => void | Promise<void>
+  onSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
   status: 'idle' | 'success' | 'error'
   statusMsg: string
 }
@@ -140,6 +141,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     loraOnlineFallbackOffer == null &&
     isLoRaMeshTransport(forcedTransport)
 
+  const canOfferSosText =
+    isPrivate &&
+    encrypted &&
+    (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
+    !attachmentBarProps.attachedBlobBase64 &&
+    !attachmentBarProps.attachedAudioBase64 &&
+    !attachmentBarProps.attachedTxtFile &&
+    !attachmentBarProps.attachedLora &&
+    !sosSendMode &&
+    loraOnlineFallbackOffer == null
+
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="space-y-4">
@@ -186,6 +198,32 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </label>
         )}
 
+        {canOfferSosText ? (
+          <div className="rounded-xl border-2 border-red-600/60 bg-red-950/35 p-3 dark:bg-red-950/25">
+            <p className="mb-2 text-xs font-medium text-red-100">
+              Hilferuf (Text): wird als <span className="font-mono">MORG_EMERGENCY_V1</span> vor der
+              Verschlüsselung gesetzt; Funk-Versand nutzt Burst ohne Paketpause (App-Priorität Flash).
+            </p>
+            <button
+              type="button"
+              disabled={sending || apiStatus?.locked}
+              onClick={() => {
+                if (
+                  !window.confirm(
+                    'Echten Hilferuf (SOS) senden?\n\nDie Nachricht wird als Notfall gekennzeichnet (MORG_EMERGENCY_V1). Nur nutzen, wenn wirklich Hilfe nötig ist.'
+                  )
+                ) {
+                  return
+                }
+                void onSend({ emergencyWire: 'text' })
+              }}
+              className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-bold tracking-tight text-white shadow-lg transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              SOS — Hilferuf (Text)
+            </button>
+          </div>
+        ) : null}
+
         <div
           onDragEnter={onComposerDragEnter}
           onDragLeave={onComposerDragLeave}
@@ -231,14 +269,23 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           {sosSendMode ? (
             <div className="rounded-xl border-2 border-orange-500/70 bg-orange-950/40 p-3">
               <p id="sos-send-hint" className="sr-only">
-                Sendepfad Funk. Eine Sprachdatei ist angehängt. Klick sendet sofort über LoRa, ohne weitere
-                Bestätigung.
+                Sendepfad Funk. Eine SOS-Sprachdatei ist angehängt. Nach Bestätigung wird der Hilferuf als
+                MORG_EMERGENCY_V1 mit hoher Burst-Priorität über LoRa gesendet.
               </p>
               <button
                 type="button"
                 disabled={sendDisabled}
                 aria-describedby="sos-send-hint"
-                onClick={() => void onSend()}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      'SOS-Sprachnachricht als Hilferuf senden?\n\nDie Aufnahme wird als MORG_EMERGENCY_V1 gekennzeichnet. Nur nutzen, wenn wirklich Hilfe nötig ist.'
+                    )
+                  ) {
+                    return
+                  }
+                  void onSend({ emergencyWire: 'voice' })
+                }}
                 className="flex min-h-[3.75rem] w-full items-center justify-center gap-3 rounded-xl bg-orange-600 px-5 py-4 text-lg font-bold tracking-tight text-white shadow-lg transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {sending ? <RefreshCw className="h-7 w-7 shrink-0 animate-spin" aria-hidden /> : <Send className="h-7 w-7 shrink-0" aria-hidden />}

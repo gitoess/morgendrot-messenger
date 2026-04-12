@@ -28,6 +28,7 @@ import { base64ToUint8 } from '../shared/bytes-base64.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
+import { plaintextStartsWithMorgEmergencyV1 } from '../shared/morg-emergency-v1-text.js';
 
 /** Optionen für Sponsored Transaction: sender = logischer Absender (z. B. Gast), Sponsor zahlt Gas. */
 export type SponsorOpts = { sponsorForSender?: string };
@@ -55,6 +56,7 @@ function debugSendWire(): boolean {
 }
 
 function wireKindForLog(plaintext: string): string {
+    if (plaintextStartsWithMorgEmergencyV1(plaintext)) return 'emergency_v1';
     if (plaintext.startsWith('[[MORG_COMPACT_IMG_V1:')) return 'compact_img';
     if (plaintext.startsWith('[[MORG_FILE_TXT_V1:')) return 'file_txt';
     if (plaintext.startsWith('[[MORG_TXT_V1:')) return 'txt_v1';
@@ -76,6 +78,11 @@ export async function sendEncryptedMessage(
         );
     }
     assertMessengerMediaNetBlobWithinLimit(message);
+    if (plaintextStartsWithMorgEmergencyV1(message)) {
+        logger.warn(
+            `morg.sos.outgoing kind=emergency_v1 utf8=${msgUtf8} head=${JSON.stringify(message.slice(0, 120))}`
+        );
+    }
     if (debugSendWire()) {
         logger.info(
             `morg.send.wire kind=${wireKindForLog(message)} utf8=${msgUtf8} head=${JSON.stringify(message.slice(0, 80))}`
@@ -114,6 +121,11 @@ export async function sendPlaintextOnly(recipient: string, text: string) {
         );
     }
     assertMessengerMediaNetBlobWithinLimit(text);
+    if (plaintextStartsWithMorgEmergencyV1(text)) {
+        logger.warn(
+            `morg.sos.outgoing plaintext kind=emergency_v1 utf8=${n} head=${JSON.stringify(text.slice(0, 120))}`
+        );
+    }
     const nonce = BigInt(Date.now());
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
     return storePlaintextMessage(recipient, MY_ADDR, new TextEncoder().encode(text), nonce, getWalletPassword(), {

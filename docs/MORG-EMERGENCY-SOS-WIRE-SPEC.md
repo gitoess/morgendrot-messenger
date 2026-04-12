@@ -1,7 +1,7 @@
 # MORG_EMERGENCY_V1 / SOS — Zielbild (LoRa, Priorität, Basis, IOTA)
 
 **Zweck:** Kanonisches **Zielbild** für einen **dedizierten Notfall-Sendepfad**: sofortiger SOS über LoRa/Mesh, **höchste App-Priorität**, kompaktes Wire-Format, **Basis** erkennt und **priorisiert** Verarbeitung (Queue, IOTA-Verankerung, optionale Webhooks).  
-**Stand:** 2026-03-30  
+**Stand:** 2026-03-28  
 **Status:** **Spec / Phase B** — noch **kein** verbindliches Byte-Layout in allen Clients; Abgleich mit **`emergency-binary-wire.ts` (v2, Byte `0x02`)** bei Freeze.  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.3n**  
 **Verwandt:** **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`** (**§ H.3m**), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3, **`src/shared/opcodes.ts`** (`MacroPriorityClass.Flash`), **`src/shared/emergency-binary-wire.ts`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
@@ -78,12 +78,35 @@ So bleibt klar: **Nicht jede LoRa-Nachricht ist ein Hilferuf.**
 
 | Phase | Inhalt |
 |-------|--------|
-| **B1** | App: SOS-Buttons + **Flash-Queue** + **kein** Blockieren durch Bild-Sender; Meshtastic-Pfad unverändert. |
-| **B2** | Wire-Layout **einfrieren** (Text-Marker und/oder Binär-Extension zu v2); `lora-bridge` spiegeln wenn nötig. |
-| **B3** | Basis: Parser + **priorisierte** Queue + IOTA + optional Notify. |
+| **B1** (**Ist, minimal**) | App: **SOS Text** + **SOS Sprache** mit Bestätigungs-Dialog; Klartext-Präfix **`[[MORG_EMERGENCY_V1:{…}]]`** (`src/shared/morg-emergency-v1-text.ts`, `MorgTextWireMarker.EMERGENCY_V1` in `opcodes.ts`); Mesh-v2-Burst mit **`priorityFlash`** (keine Inter-Packet-Pause = App-seitiges **`MacroPriorityClass.Flash`**-Äquivalent, Meshtastic priorisiert nicht von selbst). **Kein** automatisches IOTA-Mirror-Flag bei SOS (Delayed Upload wird unterdrückt). **Keine** automatische Wiederholung/Backoff. Basis: **Erkennung + `logger.warn`** beim verschlüsselten/ Klartext-Versand (`messenger-chain-wrap.ts`). **Noch keine** echte priorisierte Outbox-Queue auf dem Server. |
+| **B2** (**Ist**) | **Text-Marker eingefroren** — siehe **§7**. App: **Mesh-SOS** bei Fehlschlag **automatische Wiederholungen** mit **Backoff + Jitter** (`src/shared/morg-sos-mesh-retry.ts`, Spiegel `frontend/frontend/lib/morg-sos-mesh-retry.ts`; max. 5 Versuche). Nach **erfolgreichem** verschlüsseltem Funk-SOS: **automatischer IOTA-Mailbox-Spiegel** derselben Nutzlast (`sendEncryptedMessageWithTimeout`); **Opt-out:** `localStorage` **`morgendrot.sosIotaMirror`** = **`0`**. **Anzeige:** Mailbox- und Mesh-Klartext durch **`normalizeChatMessageContentForDisplay`** (`frontend/frontend/lib/chat-message-display-normalize.ts`) — konsistentes **`[SOS]`** statt Rohmarker. **`lora-bridge`:** unverändert (Binär-Emergency v2 bleibt eigener Pfad; Text-SOS geht über App/Mailbox). |
+| **B3** | Basis: dedizierter Parser-Pfad + **priorisierte** Outbox + IOTA + optional Notify. |
 | **B4** | Wiederholung + Ack + Duty-Cycle-Tests im **Feld**. |
 
 **Nicht** parallel: komplette **H.1b**-Umstrukturierung und **B1** in derselben Woche ohne Absprache (**`ROADMAP-FAHRPLAN.md`** **§ C.0b**).
+
+---
+
+## 7. Eingefrorenes Textlayout `MORG_EMERGENCY_V1` (B2)
+
+**Status:** eingefroren für **Klartext-in-UTF-8 vor AES-GCM** (Mesh v2 innerer Text / Mailbox-Plaintext-Hülle). Änderungen nur mit **Versionsfeld** `v` > 1 und Migrationspfad.
+
+**Präfix (exakt):** `[[MORG_EMERGENCY_V1:`  
+**Suffix der Kopfzeile:** `]]`  
+**Dazwischen:** ein JSON-Objekt **ohne** eingebettete Zeilenumbrüche im Kopf (eine Zeile), UTF-8.
+
+**Pflichtfelder (v = 1):**
+
+| Feld | Typ | Bedeutung |
+|------|-----|-----------|
+| `v` | `1` | Schemaversion |
+| `k` | `"t"` \| `"v"` | Hilferuf **Text** bzw. **Sprache** (Audio-Wire folgt nach `\n`) |
+| `ts` | Zahl | Unix-Zeit in ms (Absendezeitpunkt laut Gerät; nicht vertrauenswürdig, nur Hinweis) |
+
+**Beispiel-Kopf:** `[[MORG_EMERGENCY_V1:{"v":1,"k":"t","ts":1710000000000}]]`  
+**Optionaler Body:** ein `\n`, danach beliebiger bestehender Chat-Wire (Klartext, z. B. `MORG_AUDIO_V1`).
+
+**Parser:** `stripLeadingMorgEmergencyV1Marker` / `prependMorgEmergencyV1Marker` in **`src/shared/morg-emergency-v1-text.ts`** (Node) und **`frontend/frontend/lib/morg-emergency-v1-text.ts`** (Browser, identischer Präfix).
 
 ---
 

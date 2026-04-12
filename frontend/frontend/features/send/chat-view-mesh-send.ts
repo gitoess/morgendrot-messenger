@@ -12,6 +12,10 @@ export const MESH_V2_BURST_INTER_PACKET_MS_DEFAULT = 80
 export type SendMeshV2WireBurstOptions = {
   /** Millisekunden Wartezeit vor dem nächsten Paket (nach dem ersten). Default siehe Konstante. */
   interPacketDelayMs?: number
+  /**
+   * B1 SOS: `MacroPriorityClass.Flash` — Burst ohne Pausen zwischen MF1-Fragmenten (App-seitig; Meshtastic selbst priorisiert nicht).
+   */
+  priorityFlash?: boolean
 }
 
 /**
@@ -23,8 +27,9 @@ export async function sendMeshV2WireBurst(
   onProgress?: (sent: number, total: number) => void,
   options?: SendMeshV2WireBurstOptions
 ): Promise<void> {
-  const inter =
-    options?.interPacketDelayMs !== undefined
+  const inter = options?.priorityFlash
+    ? 0
+    : options?.interPacketDelayMs !== undefined
       ? options.interPacketDelayMs
       : MESH_V2_BURST_INTER_PACKET_MS_DEFAULT
   const b = await meshBuildV2Wires(text)

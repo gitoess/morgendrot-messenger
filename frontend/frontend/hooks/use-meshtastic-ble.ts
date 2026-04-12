@@ -9,6 +9,10 @@ import type { Message } from '@/frontend/lib/types'
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import { MeshFragReassembler } from '@/frontend/lib/mesh-v2-fragment'
 import { stripDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
+import {
+  formatSosVisibleContent,
+  normalizeChatMessageContentForDisplay,
+} from '@/frontend/lib/chat-message-display-normalize'
 
 const V2_MAX_BYTES = 240
 
@@ -120,6 +124,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
               body = strip.body
               void delayMirrorRef.current?.(strip.body, senderAddr)
             }
+            body = formatSosVisibleContent(body)
           } else {
             body = `[Mesh v2] Entschlüsselung fehlgeschlagen (Absender ${senderAddr.slice(0, 8)}…).`
           }
@@ -159,7 +164,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       seen.add(dedup)
       const fromMesh = nodeNumToMeshId(pm.from)
       const ts = pm.rxTime.getTime()
-      const body = pm.data
+      const body = normalizeChatMessageContentForDisplay(pm.data)
       const dedupKey = contentDedupKey(`mesh:${fromMesh}`, body, ts)
       onMsgRef.current?.({
         id: `mesh-txt-${pm.from}-${pm.id}`,

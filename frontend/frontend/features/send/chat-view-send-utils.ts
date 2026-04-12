@@ -15,6 +15,7 @@ import {
   decodedBase64BinaryLength,
 } from '@/frontend/lib/compact-image-wire'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { stripLeadingMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 
 export type ChatSendValidation = { ok: true } | { ok: false; message: string; idleMs?: number }
 
@@ -60,7 +61,9 @@ export function validateStandardOutgoingWire(
   if (ctx.hasAttachedAudio) {
     const maxRaw =
       ctx.forcedTransport === 'mesh' ? MEDIA_LORA_AUDIO_RAW_MAX_BYTES : MEDIA_IOTA_AUDIO_RAW_MAX_BYTES
-    const audioLim = morgAudioWirePassesLimits(textSnap, { maxRawBinaryBytes: maxRaw })
+    const em = stripLeadingMorgEmergencyV1Marker(textSnap)
+    const wireForAudio = em.emergency ? em.body : textSnap
+    const audioLim = morgAudioWirePassesLimits(wireForAudio, { maxRawBinaryBytes: maxRaw })
     if (!audioLim.ok) {
       const hint =
         ctx.forcedTransport === 'mesh'
