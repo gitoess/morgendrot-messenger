@@ -3,7 +3,7 @@
 **Zweck:** Ein **realistischer**, zum Projekt passender **Fahrplan** für **stabilere**, **schlankere** und **besser erklärbare** Sicherheit — **getrennt** vom operativen Feature-Fahrplan (**`docs/ROADMAP-FAHRPLAN.md`**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**).  
 **Nicht** Ziel dieses Dokuments: Behauptung einer **zulassungsfertigen** „Regierungs-“ oder „Military-Grade“-Software **ohne** separates Budget, **TOE** (Target of Evaluation) und **Audit**.
 
-**Verknüpft:** **`SECURITY-RATING.md`**, **`docs/CONFIG-REFERENCE.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**), **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**§ H.14**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**.
+**Verknüpft:** **`SECURITY-RATING.md`**, **`docs/CONFIG-REFERENCE.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**), **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**§ H.14**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/BOSS-WORKER-SEED-CUSTODY.md`** (**§ H.10b** — Boss/Arbeiter-Seed, Team vs. dezentral), **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**.
 
 ---
 
@@ -105,4 +105,14 @@ Diese Phasen **überlagern** **nicht** **A/B/C** — sie **füttern** Entscheidu
 
 ---
 
-*Stand: 2026-03-28*
+## 6. Boss / Arbeiter: Seed-Verwahrung (Teil des Threat Models)
+
+**Kurz:** Ob der **Boss** Worker-**Seeds** dauerhaft **verschlüsselt** mitschreibt, ist **kein** reines Crypto-Detail, sondern **Custody vs. Autarkie**. Für Rettungs-/Team-Einsätze oft **gewollt**; für Privatnutzung **riskant**, wenn still passiert.
+
+**Ausführlich (Policy, Tabellen, Alternativen, UX-Pflicht):** **`docs/BOSS-WORKER-SEED-CUSTODY.md`** — im Fahrplan **`docs/ROADMAP-FAHRPLAN.md`** als **§ H.10b** geführt.
+
+**Stufe 0 (Threat Model):** Bei der nächsten Aktualisierung des Kurz-Bedrohungsbildes explizit festhalten: *Welcher Modus ist Default? Wer darf welche Geheimnisse in welcher Form lagern?*
+
+---
+
+*Stand: 2026-03-29*
