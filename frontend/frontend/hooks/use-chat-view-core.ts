@@ -179,6 +179,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     useChatViewApiStatusPoll({
       runMirrorDrain,
       localPackageId: inboxPackageFilter.trim(),
+      probeGeolocationForDeviceTime: isPrivate,
     })
 
   const selectInboxPartnerForSend = useCallback(

@@ -26,17 +26,45 @@ export type UseChatViewApiStatusPollParams = {
    * (siehe `shouldShowPackageIdMismatchBanner`).
    */
   localPackageId: string
+  /**
+   * Einmaliger Versuch: **Geolocation** nur für **GPS-Zeit-Vertrauen** (`position.timestamp`, § H.6c).
+   * Browser zeigt ggf. Nutzerdialog; bei Verweigerung bleibt der Pfad ohne GPS.
+   */
+  probeGeolocationForDeviceTime?: boolean
 }
 
 export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
-  const { runMirrorDrain, pollIntervalMs = 12000, localPackageId } = p
+  const {
+    runMirrorDrain,
+    pollIntervalMs = 12000,
+    localPackageId,
+    probeGeolocationForDeviceTime = true,
+  } = p
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
   /** Letzter erfolgreicher Status-Poll (HTTP `Date`, § H.6c). */
   const [pollClockHint, setPollClockHint] = useState<StatusPollClockHint | null>(null)
+  /** `GeolocationPosition.timestamp` plausibel (Satelliten-/Hybridzeit), § H.6c. */
+  const [hasTrustedGpsUtcFix, setHasTrustedGpsUtcFix] = useState(false)
   /** GET /api/status fehlgeschlagen (Netzwerk, Backend aus). */
   const [basisUnreachable, setBasisUnreachable] = useState(false)
   /** Einmal Toast, wenn die Basis nach Ausfall wieder erreichbar ist. */
   const hadBasisUnreachable = useRef(false)
+  const gpsProbeStartedRef = useRef(false)
+
+  useEffect(() => {
+    if (!probeGeolocationForDeviceTime) return
+    if (typeof navigator === 'undefined' || !navigator.geolocation) return
+    if (gpsProbeStartedRef.current) return
+    gpsProbeStartedRef.current = true
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const ts = pos.timestamp
+        if (Number.isFinite(ts) && ts > 1_600_000_000_000) setHasTrustedGpsUtcFix(true)
+      },
+      () => {},
+      { enableHighAccuracy: false, timeout: 12_000, maximumAge: 0 }
+    )
+  }, [probeGeolocationForDeviceTime])
 
   useEffect(() => {
     if (basisUnreachable) {
@@ -97,7 +125,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     inferDeviceTimeTrust({
       navigatorOnline: navOnline,
       hadRecentPlausibleServerOrChainTime: hadServerTime,
-      hasTrustedGpsUtcFix: false,
+      hasTrustedGpsUtcFix,
     })
   )
 
