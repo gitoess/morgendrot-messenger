@@ -63,6 +63,7 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 
 ### Phase 2 — Kopplung reduzieren (ca. 2–4 Wochen, nach 1–2 erfolgreichen Scheiben)
 
+- **ESLint** (`frontend/eslint.config.mjs`): **`features/inbox`** darf **`features/send`** und **`features/attachments`** nicht importieren; **`features/attachments`** darf **`features/inbox`** nicht importieren (gemeinsame Typen/Helfer über **`lib/`** oder **`shared/`**).  
 - **Stärkste Kanten** identifizieren (z. B. gemeinsamer State zwischen **Send** und **Inbox**): **kleine Interfaces** („Port“) statt direkter Hook-zu-Hook-Imports.  
 - **Vitest** für extrahierte **reine** Funktionen; für UI: **dünne RTL-Tests** auf kritische Trigger (siehe Phase-A-Doku).  
 - **Kein** paralleles Großprojekt in denselben Mesh-BLE-Dateien wie **Phase B** — Zeitfenster mit **`PROJECT-FOCUS`** abstimmen.
