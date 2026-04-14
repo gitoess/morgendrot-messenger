@@ -120,6 +120,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     waitForMeshSosAckDigest,
     setMeshProgress,
     onOfflineMailboxQueueChanged,
+    deviceTimeTrustWarn,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -433,6 +434,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         recipient,
         payload: textSnap,
         encrypted,
+        timeIsTrusted: !deviceTimeTrustWarn,
         lastError: lastErr,
       })
       if (en.ok && en.queued) {
@@ -718,6 +720,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setMeshProgress,
     waitForMeshSosAckDigest,
     onOfflineMailboxQueueChanged,
+    deviceTimeTrustWarn,
   ])
 
   return { handleSend }

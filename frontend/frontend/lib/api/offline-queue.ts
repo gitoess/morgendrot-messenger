@@ -12,6 +12,10 @@
  *
  * **Risiko:** `payload` entspricht den **Command-Args** — kann Klartext, Wire mit Anhang o. Ä. enthalten.
  * Nur auf **vertrauten** Geräten aktivieren.
+ *
+ * **§ H.6c / Forensic-Vorbereitung:** `timeIsTrusted` = **„high“**-Zeitvertrauen zum **Enqueue**-Zeitpunkt
+ * (frischer plausibler Server-`Date`-Poll **oder** verifizierter GPS-UTC-Fix), vgl. `inferDeviceTimeTrust` in **`device-time-trust.ts`**.
+ * Legacy-Einträge ohne Feld gelten als **`false`** (ehrlich: unbekannt).
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
@@ -40,6 +44,11 @@ export type OfflineMailboxQueueItem = {
   /** Ein Argument an `/send` bzw. Klartextteil für `/send-plain`. */
   payload: string
   encrypted: boolean
+  /**
+   * `true` nur bei **DeviceTimeTrustLevel `high`** (§ H.6c): frischer plausibler HTTP-`Date` vom Status-Poll
+   * oder verifizierter GPS-UTC-Fix — nicht bloß `navigator.onLine`.
+   */
+  timeIsTrusted: boolean
   createdAt: number
   attempts: number
   lastAttemptAt: number
@@ -55,26 +64,48 @@ export function isOfflineMailboxQueueEnabled(): boolean {
   }
 }
 
+function normalizeOfflineMailboxItem(o: Record<string, unknown>): OfflineMailboxQueueItem | null {
+  if (
+    typeof o.id !== 'string' ||
+    (o.kind !== 'encrypted_send' && o.kind !== 'plain_send') ||
+    typeof o.status !== 'string' ||
+    typeof o.recipient !== 'string' ||
+    typeof o.payload !== 'string' ||
+    typeof o.encrypted !== 'boolean' ||
+    typeof o.createdAt !== 'number' ||
+    typeof o.attempts !== 'number' ||
+    typeof o.lastAttemptAt !== 'number'
+  ) {
+    return null
+  }
+  const lastError = o.lastError
+  return {
+    id: o.id,
+    kind: o.kind,
+    status: o.status as OfflineMailboxQueueItem['status'],
+    recipient: o.recipient,
+    payload: o.payload,
+    encrypted: o.encrypted,
+    timeIsTrusted: o.timeIsTrusted === true,
+    createdAt: o.createdAt,
+    attempts: o.attempts,
+    lastAttemptAt: o.lastAttemptAt,
+    ...(typeof lastError === 'string' ? { lastError } : {}),
+  }
+}
+
 function safeParse(raw: string | null): OfflineMailboxQueueItem[] {
   if (!raw) return []
   try {
     const a = JSON.parse(raw) as unknown
     if (!Array.isArray(a)) return []
-    return a.filter((x): x is OfflineMailboxQueueItem => {
-      if (x == null || typeof x !== 'object') return false
-      const o = x as Record<string, unknown>
-      return (
-        typeof o.id === 'string' &&
-        (o.kind === 'encrypted_send' || o.kind === 'plain_send') &&
-        typeof o.status === 'string' &&
-        typeof o.recipient === 'string' &&
-        typeof o.payload === 'string' &&
-        typeof o.encrypted === 'boolean' &&
-        typeof o.createdAt === 'number' &&
-        typeof o.attempts === 'number' &&
-        typeof o.lastAttemptAt === 'number'
-      )
-    })
+    const out: OfflineMailboxQueueItem[] = []
+    for (const x of a) {
+      if (x == null || typeof x !== 'object') continue
+      const n = normalizeOfflineMailboxItem(x as Record<string, unknown>)
+      if (n) out.push(n)
+    }
+    return out
   } catch {
     return []
   }
@@ -129,12 +160,14 @@ export function enqueueOfflineMailboxFailure(opts: {
   recipient: string
   payload: string
   encrypted: boolean
+  /** § H.6c: `true` = `DeviceTimeTrustLevel` „high“ beim Enqueue (Caller: typ. `!deviceTimeTrustWarn`). */
+  timeIsTrusted: boolean
   lastError?: string
 }): EnqueueOfflineMailboxResult {
   if (!isOfflineMailboxQueueEnabled()) {
     return { ok: true, queued: false }
   }
-  const { kind, recipient, payload, encrypted, lastError } = opts
+  const { kind, recipient, payload, encrypted, timeIsTrusted, lastError } = opts
   if (payload.length > MAX_PAYLOAD_CHARS) {
     return { ok: false, queued: false, reason: 'Nutzlaste zu groß für lokale Warteschlange.' }
   }
@@ -154,6 +187,7 @@ export function enqueueOfflineMailboxFailure(opts: {
     recipient: recipient.trim(),
     payload,
     encrypted,
+    timeIsTrusted,
     createdAt: Date.now(),
     attempts: 0,
     lastAttemptAt: 0,

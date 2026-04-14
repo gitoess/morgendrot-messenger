@@ -72,6 +72,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       recipient: '0xr',
       payload: 'wire',
       encrypted: true,
+      timeIsTrusted: true,
       lastError: 'net',
     })
     expect(r).toEqual({ ok: true, queued: true })
@@ -79,6 +80,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     expect(items).toHaveLength(1)
     expect(items[0]?.status).toBe(OFFLINE_QUEUE_ITEM_STATUS.PENDING)
     expect(items[0]?.payload).toBe('wire')
+    expect(items[0]?.timeIsTrusted).toBe(true)
   })
 
   it('dedupliziert gleichen Inhalt', () => {
@@ -87,6 +89,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       recipient: '0xr',
       payload: 'same',
       encrypted: true,
+      timeIsTrusted: false,
       lastError: 'e',
     }
     expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: true })
@@ -101,6 +104,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       recipient: '0xa',
       payload: 'hi',
       encrypted: false,
+      timeIsTrusted: false,
     })
     expect(r).toEqual({ ok: true, queued: false })
     expect(loadOfflineMailboxQueue()).toHaveLength(0)
@@ -114,11 +118,29 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       recipient: '0x',
       payload: `${i}`,
       encrypted: true,
+      timeIsTrusted: false,
       createdAt: i,
       attempts: 0,
       lastAttemptAt: 0,
     }))
     saveOfflineMailboxQueue(many)
     expect(loadOfflineMailboxQueue()).toHaveLength(60)
+  })
+
+  it('setzt timeIsTrusted auf false wenn Feld fehlt (Legacy-JSON)', () => {
+    store['morgendrot.offline-mailbox-queue.v1'] = JSON.stringify([
+      {
+        id: 'legacy-1',
+        kind: 'encrypted_send',
+        status: 'pending',
+        recipient: '0x',
+        payload: 'x',
+        encrypted: true,
+        createdAt: 1,
+        attempts: 0,
+        lastAttemptAt: 0,
+      },
+    ])
+    expect(loadOfflineMailboxQueue()[0]?.timeIsTrusted).toBe(false)
   })
 })

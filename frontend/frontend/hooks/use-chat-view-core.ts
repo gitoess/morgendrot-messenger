@@ -160,6 +160,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const {
     mirrorQueuePending,
     offlineMailboxQueuePending,
+    offlineMailboxQueueUntrustedTimeCount,
     refreshOfflineMailboxQueueCount,
     runMirrorDrain,
     runOfflineMailboxDrain,
@@ -352,6 +353,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     waitForMeshSosAckDigest,
     setMeshProgress: setLoraMeshProgressLine,
     onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
+    deviceTimeTrustWarn,
   })
 
   const {
@@ -432,6 +434,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     syncCanonicalPackageIdFromServer,
     mirrorQueuePending,
     offlineMailboxQueuePending,
+    offlineMailboxQueueUntrustedTimeCount,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,

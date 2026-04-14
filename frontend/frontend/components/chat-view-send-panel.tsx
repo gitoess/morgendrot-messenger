@@ -39,6 +39,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   statusMsg: string
   /** § H.3g 7a: Einträge in der lokalen Mailbox-Warteschlange (Opt-in). */
   offlineMailboxQueuePending?: number
+  /** § H.6c: Einträge mit `timeIsTrusted === false` (Legacy ohne Feld zählt als unvertraut). */
+  offlineMailboxQueueUntrustedTimeCount?: number
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -60,6 +62,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     status,
     statusMsg,
     offlineMailboxQueuePending = 0,
+    offlineMailboxQueueUntrustedTimeCount = 0,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -379,6 +382,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ? 'Eine Nachricht wartet auf die Basis — wird mit dem Status-Takt erneut versucht.'
                 : `${offlineMailboxQueuePending} Nachrichten warten auf die Basis — werden mit dem Status-Takt erneut versucht.`}
             </span>
+            {offlineMailboxQueueUntrustedTimeCount > 0 ? (
+              <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
+                Bei {offlineMailboxQueueUntrustedTimeCount}{' '}
+                {offlineMailboxQueueUntrustedTimeCount === 1 ? 'Eintrag' : 'Einträgen'} war die Gerätezeit beim
+                Einreihen nicht verifiziert (§ H.6c — weder frischer Server-Zeitstempel noch GPS-UTC); für spätere
+                Attestation/Export gespeichert als <span className="font-mono">timeIsTrusted: false</span>.
+              </span>
+            ) : null}
           </div>
         ) : null}
 

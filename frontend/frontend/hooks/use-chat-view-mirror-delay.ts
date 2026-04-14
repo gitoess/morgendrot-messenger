@@ -18,6 +18,7 @@ import {
 import {
   drainOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
+  loadOfflineMailboxQueue,
 } from '@/frontend/lib/api/offline-queue'
 
 export type UseChatViewMirrorDelayParams = {
@@ -34,10 +35,13 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const offlineMailboxDrainInFlightRef = useRef(false)
   const [mirrorQueuePending, setMirrorQueuePending] = useState(0)
   const [offlineMailboxQueuePending, setOfflineMailboxQueuePending] = useState(0)
+  const [offlineMailboxQueueUntrustedTimeCount, setOfflineMailboxQueueUntrustedTimeCount] = useState(0)
 
   const refreshOfflineMailboxQueueCount = useCallback(() => {
     try {
-      setOfflineMailboxQueuePending(getOfflineMailboxQueueCount())
+      const items = loadOfflineMailboxQueue()
+      setOfflineMailboxQueuePending(items.length)
+      setOfflineMailboxQueueUntrustedTimeCount(items.filter((q) => q.timeIsTrusted !== true).length)
     } catch {
       /* ignore */
     }
@@ -154,6 +158,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   return {
     mirrorQueuePending,
     offlineMailboxQueuePending,
+    offlineMailboxQueueUntrustedTimeCount,
     refreshOfflineMailboxQueueCount,
     runMirrorDrain,
     runOfflineMailboxDrain,

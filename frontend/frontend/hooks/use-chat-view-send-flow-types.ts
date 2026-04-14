@@ -28,6 +28,8 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   setMorgPkgDeviceBusy: (v: boolean) => void
   setLoraOnlineFallbackOffer: (v: { reasonLabel: string } | null) => void
   loraOnlineOfferPayloadRef: MutableRefObject<{ lumaText: string; chromaText: string } | null>
+  /** § H.6c: gleiche Quelle wie Export-Gate — `true` = Gerätezeit nicht „high“-vertrauenswürdig. */
+  deviceTimeTrustWarn: boolean
   /** Mesh-Text: vor Versand Marker für Delayed Upload (Empfänger spiegelt per IOTA). */
   delayMirrorToIota: boolean
   /** Optional: nach erfolgreichem Mesh-SOS auf `MORG_SOS_ACK_V1` mit gleichem SHA-256 warten (`morgendrot.sosWaitMeshAckMs`). */
