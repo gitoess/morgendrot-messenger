@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-03-30** — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-03-30** — **§ H.6b** Handy-Only Resilience (Sovereign Node / Sync-on-Open / optionales Gas-Relay) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Merge-Ritual (Phase A):** **`TESTING.md`** § *Qualitätsritual vor Merge* — Root **`tsc`**, **`validate:ui`**, **`test:smoke`**; Ordner **`frontend/`** zusätzlich **`lint`**, **`check:circular`**, **`tsc`**, **`test:unit`**. **CI:** **`.github/workflows/frontend-checks.yml`**. **Handbuch:** nach Änderung an **`docs/BOSS-ORIENTIERUNG.md`** / **`PWA-HANDBUCH-OFFLINE.md`:** Root **`npm run sync:handbook`**.
@@ -114,6 +114,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.4** | Merge-/Qualitätscheck vor großen Merges |
 | **§ H.5** | Git-Aufräumen |
 | **§ H.6** | Ideen (nicht gebucht) |
+| **§ H.6b** | **Handy-Only Resilience** — Sovereign-Node-, Sync-, Relay-Zielbild (**kritisch eingeordnet**) |
 | **§ H.7** | Standalone Smartphone + **§ H.7b** Backpack-Feldarchitektur |
 | **§ H.8** | Dienst vs. privat (Doku, zwei Installationen) |
 | **§ H.9** | ATAK/CoT Backlog |
@@ -205,7 +206,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/BOSS-WORKER-SEED-CUSTODY.md`** – Boss speichert Worker-Seed? Team- vs. Dezentral-Modus, Threat Model, UX-Pflicht; **§ H.10b**
 - **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** – Vektor/Raster, PWA-Speicher, Wanderer vs. Einsatz, LoRa-Layer; **§ H.11** (mit **§ H.9** ATAK)
 - **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** – Offline/Online, Idempotenz, CRDT-Grenzen, Mehrgeräte; **§ H.12**
-- **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** – Local-First vs. Ledger, Idempotenz **Ende-zu-Ende**, PQ/Agility **ohne** Kurzschluss
+- **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** – Local-First vs. Ledger, Idempotenz **Ende-zu-Ende**, PQ/Agility **ohne** Kurzschluss  
+- **§ H.6b** (in diesem Dokument) — Handy-Only Resilience: Sovereign Node, Burst-Sync on Open, Cable-First, optionales Gas-Relay (**kritische Caveats** zu Heltec-Flash, Serial-Baud, CM4/Boss)
 - **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** – Schlankheit/Härtung: korrigierte Top-Dateien, Claim-Routen; **§ H.13**
 - **`docs/API-PROVISION-DEVICE-IDEMPOTENCY-SKIZZE.md`** – `POST /api/provision-device`: Doppel-POST, Idempotency-Key (Skizze)
 - **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** – PWA-Verschlüsselung, Lite-UI L2, Wipe, Idempotenz, PTB-Audit; **§ H.14**
@@ -284,6 +286,7 @@ Kurzfassung für Partner- und Betriebstexte (ohne Marketing-Garantien):
 | **Tangle/Mailbox als dezentrales Archiv, Server eher Konfig/Wegweiser** | **Passt** zur bestehenden **Mailbox-/Event-Logik** – der Server **ersetzt** keine unbegrenzte zentrale Nachrichten-DB; viel liegt **on-chain** bzw. an **Streams/Bridge**. |
 | **Basis = kurzzeitiger Cache bis Upload** | **Passt** zu **Delayed Upload** / Einsatzrealität – siehe **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**. |
 | **End-to-End-Verschlüsselung, fremde Relais sehen „Datensalat“** | **Richtung stimmt** für **euren** verschlüsselten Pfad – **aber:** Klartext-Kanäle, Logs, Monitoring und **Betreiber** müssen **explizit** genannt werden (keine falsche „total anonym“-Garantie). |
+| **Öffentliche IOTA-Nodes + optional Sponsor/Gas („Cloud-Relay“)** | **Sinnvoll** als **Produktwahl**: **Autarkie** (eigener oder Boss-RPC) vs. **Komfort** (Gas-Station / Sponsor nur **opt-in**) — **§ H.6b**, **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
 
 ### I.2 Was **so noch nicht** stimmt oder **überzeichnet** ist
 
@@ -582,6 +585,37 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |------|-----------|
 | **Boss-/Basis-Management-Dashboard** („wer ist aktiv“, Rechte per Klick) | Braucht klare **Quelle der Wahrheit** (Chain vs. Server-`.env`); sonst nur UI-Schein. Konkretere gebuchte Pakete: **§ H.3g** + **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**. |
 | **Narrative** (Root-of-Trust-Signatur, Admin-QR → Boss, NFT = Basis) | Teilweise **Zielbild**; gegen Code prüfen (**`docs/ARCHITECTURE-ROLES-AND-HUB.md`**, **`docs/BOSS-MODUS.md`**) bevor es in öffentliche Texte wandert. |
+| **Ack-/Quittungs-Begriffe trennen** (Produkt + Doku) | **Mesh-Peer** (z. B. `MORG_SOS_ACK_V1`) ≠ **Basis/Gateway-Digest** (leichtes Log, Airtime-Stop) ≠ **Mailbox/on-chain** (starker Boss/Archiv-Pfad). Keine Leitstellen-Garantie aus dem falschen „ACK“. |
+| **SOS Zielbild §5** (öffentlich / privat) | Schrittweise: Marker-Daten für Typ + **eine** Koordinate (Policy), getrennt vom verschlüsselten Morgendrot-Body; **EXTERNER HELFER**-Darstellung ausbauen — **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**. |
+| **E2E-IOTA-Quittung vs. Digest-Stop** | **Tangle-verankerte** Rückbestätigung + schlanker Burst = **eigenes** Priorität‑1-Ziel; optionale Digest-/Gateway-Hooks **ersetzen** das narrativ **nicht** — siehe **§ H.6b**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
+| **`@morgendrot/core` / geteilter TS-Kern** | Wire, Hash, Retry, Opcodes **eine** Bibliothek für Handy + optional Laptop — Schrittweise aus **`src/shared`** + Frontend-Spiegel konsolidieren (**§ C.1** Prio‑1‑Reihe). |
+
+### H.6b **Handy-Only Resilience** (Vorschlag — **kritisch eingeordnet**, kein harter Architektur-Bruch)
+
+**Ausgang:** Drei Säulen — (1) **Smartphone = Sovereign Node** (100 % Signieren/Verschlüsseln/TX-Erstellung via Shared Core), (2) **Heltec = reines Funk-Modem** + **Burst-Sync beim App-Öffnen**; Heltec puffert im Flash (**LittleFS**); Ziehung per **USB-Serial (hohe Baud)** oder **BLE-Batch**; **Kabel-First** im Notfall, (3) **App → öffentliche IOTA-Nodes**; **Server = optionales Sponsor-/Gas-Relay** nur bei expliziter Einstellung (**Komfort vs. Autarkie**).
+
+**Was wir übernehmen (Zielbild, mit bestehender Vision vereinbar):**
+
+| Element | Einordnung |
+|--------|------------|
+| **Local-First / optionaler Server** | Entspricht bereits **§ I**, **§ H.7b**, **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** — Server bleibt **Erweiterung**, nicht Pflicht. |
+| **Burst-Sync / „on open“, kein blindes Background-Polling** | Deckt sich mit **§ H.12** (`SYNC-SOURCE-OF-TRUTH-…`), **§ A.8** Kabel-Bridge, **§ H.3l** — **richtige** Priorität für Android/iOS-Realität. |
+| **Cable-First als Reihenfolge** | Sinnvoll als **Einsatz-Default** (USB-OTG / Station), **parallel** zu Web-BT — nicht als **Ausschluss** von BLE (Wanderer ohne Kabel). |
+| **Gas / Sponsor nur opt-in** | Passt zu **§ I.1**, **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**, `gas-station` — UI/Policy: **Autarkie** default, **Komfort** explizit. |
+| **Weniger „Intelligenz“ auf dem Heltec** | Konsistent mit **Meshtastic-Standard-Firmware** + App-seitiger Queue/Priorität — **kein** Pflicht-Sprint für Custom-Firmware. |
+
+**Kritik / Grenzen (damit kein falsches „final pivot“-Versprechen entsteht):**
+
+| Punkt | Bewertung |
+|--------|------------|
+| **„Heltec puffert autonom im LittleFS“** | Mit **Stock-Meshtastic** ist das **kein** Morgendrot-spezifischer Ringpuffer ohne **eigene Firmware** oder **definierten** Seitenkanal — Umsetzung = **Phase B+** mit Spec (**`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`**, ggf. `lora-bridge`), nicht kurzfristig als erledigt behaupten. |
+| **921 600 Baud + Handy-USB** | **OTG**, Treiber, **Web Serial auf Android** (Coverage, Hersteller) — **§ H.3l** Spike; **Boss/CM4** bleibt realistischer **Erst-Anker** für Serial-Turbo. |
+| **100 % TX nur auf dem Handy** | **Akku**, **Offline-RPC**, Wallet-/MIST-UX, **Rate-Limits** öffentlicher Nodes — technisch erstrebenswert, **Produkt** muss **degradierte Modi** (Mailbox über Basis, Delayed Upload) **weiter** erlauben (**§ H.7b** „LoRa-only-Minimum“). |
+| **CM4/Boss „wegdefinieren“** | **Widerspricht** Einsatzrealität (**§ H.7b**): Backpack-Node bleibt **sinnvolle** Rolle; das Ziel ist **optional**, nicht **entfernt**. |
+
+**Operative Verdichtung (Fahrplan, ohne Phasen zu sprengen):** **§ C.0b** beibehalten — **Phase A** stabil, dann **Phase B** Mesh + Delayed Upload; **Handy-Only**-Härtung als **Querschnitt**: Shared Core, Sync-on-Open-Semantik, direkter RPC-Pfad wo sicher, Gas optional — **§ H.6b** bei jedem größeren Transport-/Queue-Refactor mitlesen.
+
+**Siehe auch:** **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** §8, **`docs/SPONSORING-AND-CREDITS-DOUBLE-FLOOR.md`**.
 
 ### H.7 Einsatz-Abgabe **Standalone Smartphone** (Ist) & Backlog
 
