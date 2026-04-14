@@ -12,6 +12,8 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 **Merge-Ritual (Phase A, vor größeren PRs):** unten § **Qualitätsritual vor Merge** — deckt sich mit **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** Phase 1 und spiegelt **`.github/workflows/frontend-checks.yml`** (Frontend) plus Root-Smoke. **Pull Requests:** Checkliste in **`.github/pull_request_template.md`**.
 
+**Protokoll (Architektur → Code, schrittweise):** Cold-Start / Geräte-Uhr — **`src/shared/device-time-trust.ts`** + Root-Test **`scripts/run-tests.ts`** (`device-time-trust`); Spec **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** §6; Fahrplan **`docs/ROADMAP-FAHRPLAN.md`** § **H.6c** (Zeile Cold-Start verweist auf den Modul-Schritt). *Weitere Schritte (UI-Warnung, GPS-API): nach Einbindung in Messenger ohne Ritual zu überspringen.*
+
 ---
 
 ## Qualitätsritual vor Merge (Phase A)

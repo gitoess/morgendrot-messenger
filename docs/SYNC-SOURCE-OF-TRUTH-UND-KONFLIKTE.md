@@ -2,7 +2,7 @@
 
 **Status:** **Architektur-Doku** — festhalten, **warum** „zwei Welten“ (Mesh vs. IOTA) **kein** automatisches **CRDT-Universalproblem** lösen und **wie** Morgendrot **trotzdem** konsistent bleiben kann. **Kein** vollständig implementierter Merge-Algorithmus in diesem Dokument.
 
-**Verknüpft:** **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (`canonical_msg_ref`, Queue, Dedup), **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** (Local-First-Idee, Idempotenz, PQ — **kritisch präzisiert**), **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`SECURITY-RATING.md`** (Replay, Mailbox), **`docs/ROADMAP-FAHRPLAN.md`** § **H.12**, **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**.
+**Verknüpft:** **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** (`canonical_msg_ref`, Queue, Dedup), **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** (Local-First-Idee, Idempotenz, PQ — **kritisch präzisiert**), **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`SECURITY-RATING.md`** (Replay, Mailbox), **`docs/ROADMAP-FAHRPLAN.md`** § **H.12** / **H.6c** (Geräte-Uhr), **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, Code **`src/shared/device-time-trust.ts`** (§6 unten).
 
 ---
 
@@ -69,7 +69,22 @@ Diese Optionen **dokumentieren** und **nicht** durch „wir bauen später CRDT�
 
 ---
 
-## 6. Fazit
+## 6. Geräte-Uhr (Cold-Start, ohne Internet)
+
+**Problem:** Nach längerem Aus oder **Funkloch** kann `Date` auf dem Handy **falsch** sein — **IOTA-Zeitstempel**, **GPS-Logs** und **Attestation-Metadaten** werden **fälschlich** eingeordnet (**Fahrplan § H.6c**).
+
+| Signal (Beispiele) | Einordnung |
+|--------------------|------------|
+| **Explizite** Referenzzeit (Server-Date, Indexer/Chain im Toleranzfenster) | **Hoch** — UI darf ohne Zusatzwarnung stempeln (Policy trotzdem prüfen). |
+| **GPS-UTC** aus gültigem Satelliten-Fix (nicht nur Koordinate) | **Hoch** — typisch im Gelände offline. |
+| Nur `navigator.onLine === true` | **Mittel** — Uhr kann manuell falsch sein. |
+| Offline **und** kein GPS-Zeit | **Niedrig** — vor **MSG_ATTESTATION** / Export **warnen** oder blockieren (Produktentscheid). |
+
+**Implementierungsanker (rein logisch, ohne I/O):** `inferDeviceTimeTrust` in **`src/shared/device-time-trust.ts`** — die App setzt die Booleans aus `navigator`, letzter API-Antwort und Geolocation.
+
+---
+
+## 7. Fazit
 
 - Die **Lücke** ist real: **Abgleich** zwischen **Transport/Offline** und **Chain** braucht **klare Regeln**, **Idempotenz** und **Dedup** — nicht **eine** magische **CRDT-Schicht** über alles.  
 - **Delayed Upload** + **`canonical_msg_ref`** sind der **richtige Kern** für **Nachrichten-Pfad**; **Credits** und **andere Move-Calls** brauchen **eigene** Queues/Regeln (**Offline-Queue-Kritik**).  
@@ -77,4 +92,4 @@ Diese Optionen **dokumentieren** und **nicht** durch „wir bauen später CRDT�
 
 ---
 
-*Stand: 2026-03-28*
+*Stand: 2026-03-30*

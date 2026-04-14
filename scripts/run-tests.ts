@@ -836,6 +836,34 @@ async function testChatForwardText() {
     }
 }
 
+async function testDeviceTimeTrust() {
+    console.log('\n--- device-time-trust (shared) ---');
+    try {
+        const { inferDeviceTimeTrust, shouldWarnUntrustedDeviceTime } = await import(
+            '../src/shared/device-time-trust.js'
+        );
+        assert(
+            inferDeviceTimeTrust({
+                navigatorOnline: false,
+                hadRecentPlausibleServerOrChainTime: true,
+            }) === 'high',
+            'server time wins when offline flag false'
+        );
+        assert(
+            inferDeviceTimeTrust({ navigatorOnline: false, hasTrustedGpsUtcFix: true }) === 'high',
+            'GPS UTC offline is high'
+        );
+        assert(inferDeviceTimeTrust({ navigatorOnline: true }) === 'medium', 'online alone is medium');
+        assert(inferDeviceTimeTrust({ navigatorOnline: false }) === 'low', 'offline no GPS is low');
+        assert(shouldWarnUntrustedDeviceTime('high') === false, 'no warn high');
+        assert(shouldWarnUntrustedDeviceTime('medium') === true, 'warn medium');
+        assert(shouldWarnUntrustedDeviceTime('low') === true, 'warn low');
+        ok('inferDeviceTimeTrust + shouldWarnUntrustedDeviceTime');
+    } catch (e) {
+        fail('device-time-trust', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -852,6 +880,7 @@ async function main() {
     await testMeshPeerWireRoundtrip();
     await testMorgEmergencyV1TextMarker();
     await testMorgSosMeshRetry();
+    await testDeviceTimeTrust();
     await testPackageIdCompareFrontend();
     await testShopCatalog();
     await testChatWaldConnection();
