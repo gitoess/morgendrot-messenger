@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Layers, Copy, Check, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ApiStatus } from '../lib/api'
+import type { ApiStatus } from '@/frontend/lib/api'
 
 export type WorkspaceTileSet = 'full' | 'messenger'
 

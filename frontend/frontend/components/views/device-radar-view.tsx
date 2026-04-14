@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Radio, RefreshCw, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchMonitorStatus } from '../../lib/api'
+import { fetchMonitorStatus } from '@/frontend/lib/api'
 
 /** API liefert device (string), lastSeen, status ('online'|'offline'|'alarm'). */
 type MonitorDevice = { device: string; lastSeen: number; status: 'online' | 'offline' | 'alarm' }

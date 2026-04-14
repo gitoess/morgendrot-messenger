@@ -17,7 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchStatus, unlockBackend, fetchHelp, type ApiStatus } from '../lib/api'
+import { fetchStatus, unlockBackend, fetchHelp, type ApiStatus } from '@/frontend/lib/api'
 import type { ProjectType, ProjectVariant } from '../lib/types'
 import {
   WorkspaceProjectsPanel,

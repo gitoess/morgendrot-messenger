@@ -29,8 +29,8 @@ import {
   purgeTicket,
   listTickets,
   fetchStatus,
-} from '../../lib/api'
-import type { ApiStatus } from '../../lib/api'
+  type ApiStatus,
+} from '@/frontend/lib/api'
 import type { KeyData, TicketData } from '../../lib/types'
 
 interface LockViewProps {

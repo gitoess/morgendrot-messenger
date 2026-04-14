@@ -17,7 +17,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getDeviceStatus, sendHeartbeat, setHeartbeatInterval } from '../../lib/api'
+import { getDeviceStatus, sendHeartbeat, setHeartbeatInterval } from '@/frontend/lib/api'
 import type { DeviceStatus } from '../../lib/types'
 
 interface MonitorViewProps {

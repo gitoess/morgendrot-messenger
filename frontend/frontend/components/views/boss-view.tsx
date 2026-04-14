@@ -16,7 +16,7 @@ import {
   sendBossCommand,
   meshBuildV2Wires,
   meshDecryptV2Wire,
-} from '../../lib/api'
+} from '@/frontend/lib/api'
 import { MeshFunkPanel } from '@/frontend/components/mesh-funk-panel'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'

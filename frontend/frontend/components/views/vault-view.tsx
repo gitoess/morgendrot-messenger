@@ -31,7 +31,7 @@ import {
   vaultListLocalFiles,
   type VaultStatus,
   type PersonalSecretEntry,
-} from '../../lib/api'
+} from '@/frontend/lib/api'
 import { VAULT_FREETEXT_NOTES_MAX_CHARS } from '../../lib/vault-limits'
 
 interface VaultViewProps {

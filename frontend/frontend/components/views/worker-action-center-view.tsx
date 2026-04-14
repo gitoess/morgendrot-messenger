@@ -21,7 +21,7 @@ import {
   purgeKey,
   purgeTicket,
   useTicket,
-} from '../../lib/api'
+} from '@/frontend/lib/api'
 import type { KeyData, TicketData } from '../../lib/types'
 
 /**

@@ -29,8 +29,8 @@ import {
   applyInitialProfileProvisioning,
   fetchEinsatzRoleTemplates,
   saveEinsatzRoleTemplates,
-} from '../../lib/api'
-import type { EinsatzRoleTemplate } from '../../lib/api'
+  type EinsatzRoleTemplate,
+} from '@/frontend/lib/api'
 import {
   extractInitialProfileFromPaste,
   queueInitialProfileForNextApply,
