@@ -4,6 +4,7 @@ import {
   offlineMailboxDedupKey,
   enqueueOfflineMailboxFailure,
   loadOfflineMailboxQueue,
+  nextOfflineMailboxClientOutSeq,
   saveOfflineMailboxQueue,
 } from '@/frontend/lib/api/offline-queue'
 
@@ -81,6 +82,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     expect(items[0]?.status).toBe(OFFLINE_QUEUE_ITEM_STATUS.PENDING)
     expect(items[0]?.payload).toBe('wire')
     expect(items[0]?.timeIsTrusted).toBe(true)
+    expect(items[0]?.clientOutSeq).toBe(1)
   })
 
   it('dedupliziert gleichen Inhalt', () => {
@@ -95,6 +97,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: true })
     expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: false })
     expect(loadOfflineMailboxQueue()).toHaveLength(1)
+    expect(loadOfflineMailboxQueue()[0]?.clientOutSeq).toBe(1)
   })
 
   it('queued false wenn Opt-in aus', () => {
@@ -119,6 +122,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       payload: `${i}`,
       encrypted: true,
       timeIsTrusted: false,
+      clientOutSeq: i + 1,
       createdAt: i,
       attempts: 0,
       lastAttemptAt: 0,
@@ -141,6 +145,50 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         lastAttemptAt: 0,
       },
     ])
-    expect(loadOfflineMailboxQueue()[0]?.timeIsTrusted).toBe(false)
+    const row = loadOfflineMailboxQueue()[0]
+    expect(row?.timeIsTrusted).toBe(false)
+    expect(row?.clientOutSeq).toBe(0)
+  })
+
+  it('vergibt monoton steigende clientOutSeq für unterschiedliche Nutzlasten', () => {
+    expect(
+      enqueueOfflineMailboxFailure({
+        kind: 'encrypted_send',
+        recipient: '0x1',
+        payload: 'a',
+        encrypted: true,
+        timeIsTrusted: true,
+      })
+    ).toEqual({ ok: true, queued: true })
+    expect(
+      enqueueOfflineMailboxFailure({
+        kind: 'encrypted_send',
+        recipient: '0x1',
+        payload: 'b',
+        encrypted: true,
+        timeIsTrusted: true,
+      })
+    ).toEqual({ ok: true, queued: true })
+    const items = loadOfflineMailboxQueue().sort((a, b) => a.clientOutSeq - b.clientOutSeq)
+    expect(items.map((x) => x.clientOutSeq)).toEqual([1, 2])
+  })
+
+  it('nextOfflineMailboxClientOutSeq folgt dem Maximum in der Queue', () => {
+    saveOfflineMailboxQueue([
+      {
+        id: 'x',
+        kind: 'encrypted_send',
+        status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+        recipient: '0x',
+        payload: 'p',
+        encrypted: true,
+        timeIsTrusted: false,
+        clientOutSeq: 7,
+        createdAt: 1,
+        attempts: 0,
+        lastAttemptAt: 0,
+      },
+    ])
+    expect(nextOfflineMailboxClientOutSeq()).toBe(8)
   })
 })

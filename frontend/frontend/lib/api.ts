@@ -41,6 +41,7 @@ export {
   enqueueOfflineMailboxFailure,
   drainOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
+  nextOfflineMailboxClientOutSeq,
   offlineMailboxDedupKey,
 } from '@/frontend/lib/api/offline-queue'
 

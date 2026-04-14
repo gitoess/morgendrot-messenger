@@ -5,7 +5,8 @@
  *
  * - **Nicht** die Boss-/Settlement-„Offline-Relay-Queue“ (`src/settlement-queue.ts`, § **H.12**).
  * - **Nicht** der LoRa→IOTA-Delayed-Mirror (`lib/delayed-mirror-queue.ts`).
- * - Idempotenz / `canonical_msg_ref` bleiben **nach** § **H.12** + Delayed-Upload-MVP zu verzahnen — hier nur stabile `id` + Dedup-Key.
+ * - Idempotenz / `canonical_msg_ref` bleiben **nach** § **H.12** + Delayed-Upload-MVP zu verzahnen — hier **`id`**, Dedup-Key und
+ *   monotonische **`clientOutSeq`** (Gerät-lokal, § **H.6c** „outSeq“-Vorbereitung).
  *
  * **Opt-in:** `localStorage` **`morgendrot.offlineMailboxQueue`** = **`1`** (Default: aus).
  * Persistenz: `localStorage` (MVP); später IndexedDB/SQLite möglich, ohne dieses API-Shape zu brechen.
@@ -49,6 +50,11 @@ export type OfflineMailboxQueueItem = {
    * oder verifizierter GPS-UTC-Fix — nicht bloß `navigator.onLine`.
    */
   timeIsTrusted: boolean
+  /**
+   * Monoton steigend pro Gerät (1…), beim ersten Enqueue nach Laden der Queue.
+   * § H.6c / spätere Attestation: stabile **Ausgangs-Reihenfolge** unabhängig von `createdAt`-Drift.
+   */
+  clientOutSeq: number
   createdAt: number
   attempts: number
   lastAttemptAt: number
@@ -79,6 +85,11 @@ function normalizeOfflineMailboxItem(o: Record<string, unknown>): OfflineMailbox
     return null
   }
   const lastError = o.lastError
+  const rawSeq = o.clientOutSeq
+  const clientOutSeq =
+    typeof rawSeq === 'number' && Number.isFinite(rawSeq) && rawSeq >= 0 && Math.floor(rawSeq) === rawSeq
+      ? rawSeq
+      : 0
   return {
     id: o.id,
     kind: o.kind,
@@ -87,6 +98,7 @@ function normalizeOfflineMailboxItem(o: Record<string, unknown>): OfflineMailbox
     payload: o.payload,
     encrypted: o.encrypted,
     timeIsTrusted: o.timeIsTrusted === true,
+    clientOutSeq,
     createdAt: o.createdAt,
     attempts: o.attempts,
     lastAttemptAt: o.lastAttemptAt,
@@ -143,6 +155,21 @@ export function getOfflineMailboxQueueCount(): number {
   return loadOfflineMailboxQueue().length
 }
 
+function maxClientOutSeqIn(items: OfflineMailboxQueueItem[]): number {
+  let max = 0
+  for (const q of items) {
+    if (typeof q.clientOutSeq === 'number' && Number.isFinite(q.clientOutSeq) && q.clientOutSeq > max) {
+      max = q.clientOutSeq
+    }
+  }
+  return max
+}
+
+/** Nächste monotonische Ausgangs-Sequenznummer (max in persistierter Queue + 1). */
+export function nextOfflineMailboxClientOutSeq(): number {
+  return maxClientOutSeqIn(loadOfflineMailboxQueue()) + 1
+}
+
 function backoffMs(attempts: number): number {
   return Math.min(120_000, 1500 * Math.pow(2, Math.min(attempts, 8)))
 }
@@ -188,6 +215,7 @@ export function enqueueOfflineMailboxFailure(opts: {
     payload,
     encrypted,
     timeIsTrusted,
+    clientOutSeq: maxClientOutSeqIn(cur) + 1,
     createdAt: Date.now(),
     attempts: 0,
     lastAttemptAt: 0,
@@ -206,7 +234,10 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  const items = loadOfflineMailboxQueue().sort((a, b) => a.createdAt - b.createdAt)
+  const items = loadOfflineMailboxQueue().sort((a, b) => {
+    const d = a.clientOutSeq - b.clientOutSeq
+    return d !== 0 ? d : a.createdAt - b.createdAt
+  })
   if (items.length === 0) return { sent: 0, failed: 0, remaining: 0 }
 
   const now = Date.now()
