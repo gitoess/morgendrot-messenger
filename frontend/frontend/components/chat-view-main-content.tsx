@@ -52,6 +52,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     basisUnreachable,
     packageIdMismatch,
     deviceTimeTrustWarn,
+    offlineMailboxQueuePending,
     syncCanonicalPackageIdFromServer,
     inboxPackageFilter,
     setInboxPackageFilter,
@@ -231,6 +232,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onSend: handleSend,
     status,
     statusMsg,
+    offlineMailboxQueuePending,
     ...asVoiceRecordSendPanel(
       {
         voicePhase,

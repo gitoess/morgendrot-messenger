@@ -34,4 +34,6 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   waitForMeshSosAckDigest?: (digestHex: string, timeoutMs: number) => Promise<boolean>
   /** Nur MF1/LoRa: kurze Fortschrittszeile z. B. „Luma 2/5 – Chroma 0/3“ (ohne „Funk:“-Präfix). */
   setMeshProgress?: (line: string | null) => void
+  /** Nach Enqueue in die Mailbox-Offline-Warteschlange (§ H.3g 7a): UI-Zähler aktualisieren. */
+  onOfflineMailboxQueueChanged?: () => void
 }

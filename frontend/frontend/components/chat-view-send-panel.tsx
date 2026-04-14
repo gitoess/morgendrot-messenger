@@ -6,7 +6,7 @@
  */
 
 import { useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, Check, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
@@ -37,6 +37,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
   status: 'idle' | 'success' | 'error'
   statusMsg: string
+  /** § H.3g 7a: Einträge in der lokalen Mailbox-Warteschlange (Opt-in). */
+  offlineMailboxQueuePending?: number
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -57,6 +59,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onSend,
     status,
     statusMsg,
+    offlineMailboxQueuePending = 0,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -355,6 +358,30 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         ) : null}
 
+        {isPrivate && offlineMailboxQueuePending > 0 ? (
+          <div
+            className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-600/45 bg-amber-950/25 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-50"
+            role="status"
+            aria-live="polite"
+          >
+            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-100">
+              <ListOrdered className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Mailbox-Warteschlange
+            </span>
+            <span
+              className="rounded-full bg-amber-600/90 px-2 py-0.5 font-mono text-[11px] font-bold text-white tabular-nums dark:bg-amber-500/90"
+              title="Lokal zwischengespeicherte Sendeversuche (Opt-in: localStorage morgendrot.offlineMailboxQueue = 1)"
+            >
+              {offlineMailboxQueuePending}
+            </span>
+            <span className="text-amber-900/90 dark:text-amber-100/90">
+              {offlineMailboxQueuePending === 1
+                ? 'Eine Nachricht wartet auf die Basis — wird mit dem Status-Takt erneut versucht.'
+                : `${offlineMailboxQueuePending} Nachrichten warten auf die Basis — werden mit dem Status-Takt erneut versucht.`}
+            </span>
+          </div>
+        ) : null}
+
         <div className="flex items-center justify-between gap-3">
           {!sosSendMode ? (
             <button
@@ -377,16 +404,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           {status !== 'idle' && (
             <span
               className={cn(
-                'flex items-center gap-1.5 text-sm font-medium',
+                'flex min-w-0 items-center gap-1.5 text-sm font-medium',
                 status === 'success' ? 'text-emerald-400' : 'text-red-400'
               )}
             >
               {status === 'success' ? (
-                <Check className="h-4 w-4" />
+                <Check className="h-4 w-4 shrink-0" />
               ) : (
-                <AlertCircle className="h-4 w-4" />
+                <AlertCircle className="h-4 w-4 shrink-0" />
               )}
-              {statusMsg}
+              <span className="min-w-0 break-words">{statusMsg}</span>
             </span>
           )}
         </div>

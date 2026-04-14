@@ -114,4 +114,56 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     )
     expect(screen.getByRole('status')).toHaveTextContent(/Luma 2\/5 · Chroma ausstehend/)
   })
+
+  it('zeigt Mailbox-Warteschlange-Banner bei pending > 0 (privat)', () => {
+    render(
+      <ChatViewSendPanel
+        isPrivate
+        encrypted
+        recipient=""
+        message=""
+        onRecipientChange={vi.fn()}
+        onMessageChange={vi.fn()}
+        delayMirrorToIota={false}
+        onDelayMirrorToIotaChange={vi.fn()}
+        forcedTransport="internet"
+        voicePhase="idle"
+        voiceActiveKind={null}
+        voiceProgress01={0}
+        voiceMaxSeconds={35}
+        voiceEmergencyMaxSeconds={30}
+        sosVoiceFollowsOnline={false}
+        onVoiceToggle={vi.fn()}
+        onVoiceEmergencyToggle={vi.fn()}
+        voiceNormalBlockedStart={false}
+        voiceEmergencyBlockedStart={false}
+        voiceBusy={false}
+        voiceRecording={false}
+        sosVoiceAwaitingSend={false}
+        compactFileRef={createRef()}
+        compactBusy={false}
+        onFileChange={vi.fn()}
+        ingestChatAttachmentFile={vi.fn().mockResolvedValue(undefined)}
+        compactMeta={null}
+        attachedBlobBase64={null}
+        attachedLora={null}
+        attachedTxtFile={null}
+        attachedAudioBase64={null}
+        clearCompactAttachment={vi.fn()}
+        compactPreviewUrl={null}
+        loraPreviewUrl={null}
+        sending={false}
+        loraOnlineFallbackOffer={null}
+        onConfirmLoraOnline={vi.fn()}
+        onDismissLoraOnlineFallback={vi.fn()}
+        apiStatus={null}
+        onSend={vi.fn()}
+        status="idle"
+        statusMsg=""
+        offlineMailboxQueuePending={2}
+      />
+    )
+    expect(screen.getByText(/Mailbox-Warteschlange/)).toBeInTheDocument()
+    expect(screen.getByText(/2 Nachrichten warten auf die Basis/)).toBeInTheDocument()
+  })
 })

@@ -160,6 +160,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const {
     mirrorQueuePending,
     offlineMailboxQueuePending,
+    refreshOfflineMailboxQueueCount,
     runMirrorDrain,
     runOfflineMailboxDrain,
     onDelayMirrorPlaintext,
@@ -350,6 +351,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     delayMirrorToIota,
     waitForMeshSosAckDigest,
     setMeshProgress: setLoraMeshProgressLine,
+    onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
   })
 
   const {

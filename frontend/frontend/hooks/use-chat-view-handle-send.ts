@@ -119,6 +119,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     delayMirrorToIota,
     waitForMeshSosAckDigest,
     setMeshProgress,
+    onOfflineMailboxQueueChanged,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -434,7 +435,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         encrypted,
         lastError: lastErr,
       })
-      return en.ok && en.queued
+      if (en.ok && en.queued) {
+        onOfflineMailboxQueueChanged?.()
+        return true
+      }
+      return false
     }
 
     type PartOk =
@@ -712,6 +717,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setStatusMsg,
     setMeshProgress,
     waitForMeshSosAckDigest,
+    onOfflineMailboxQueueChanged,
   ])
 
   return { handleSend }

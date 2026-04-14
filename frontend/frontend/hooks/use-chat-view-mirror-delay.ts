@@ -35,14 +35,22 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const [mirrorQueuePending, setMirrorQueuePending] = useState(0)
   const [offlineMailboxQueuePending, setOfflineMailboxQueuePending] = useState(0)
 
-  useEffect(() => {
+  const refreshOfflineMailboxQueueCount = useCallback(() => {
     try {
-      setMirrorQueuePending(getMirrorQueueCount())
       setOfflineMailboxQueuePending(getOfflineMailboxQueueCount())
     } catch {
       /* ignore */
     }
   }, [])
+
+  useEffect(() => {
+    try {
+      setMirrorQueuePending(getMirrorQueueCount())
+      refreshOfflineMailboxQueueCount()
+    } catch {
+      /* ignore */
+    }
+  }, [refreshOfflineMailboxQueueCount])
 
   const runMirrorDrain = useCallback(async () => {
     if (mirrorDrainInFlightRef.current) return
@@ -85,7 +93,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     offlineMailboxDrainInFlightRef.current = true
     try {
       const r = await drainOfflineMailboxQueue()
-      setOfflineMailboxQueuePending(r.remaining)
+      refreshOfflineMailboxQueueCount()
       if (r.sent > 0) {
         setStatus('success')
         setStatusMsg(
@@ -99,7 +107,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     } finally {
       offlineMailboxDrainInFlightRef.current = false
     }
-  }, [loadMessages, setStatus, setStatusMsg])
+  }, [loadMessages, refreshOfflineMailboxQueueCount, setStatus, setStatusMsg])
 
   const onDelayMirrorPlaintext = useCallback(
     async (body: string, fromAddress: string) => {
@@ -146,6 +154,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   return {
     mirrorQueuePending,
     offlineMailboxQueuePending,
+    refreshOfflineMailboxQueueCount,
     runMirrorDrain,
     runOfflineMailboxDrain,
     onDelayMirrorPlaintext,
