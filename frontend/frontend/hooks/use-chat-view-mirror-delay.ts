@@ -40,7 +40,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const runMirrorDrain = useCallback(async () => {
     if (mirrorDrainInFlightRef.current) return
     const s = await fetchStatus()
-    if (s.error || s.backendRunning === false || s.locked) return
+    if (!('pollClockHint' in s) || s.backendRunning === false || s.locked) return
     if (getMirrorQueueCount() === 0) return
     mirrorDrainInFlightRef.current = true
     try {

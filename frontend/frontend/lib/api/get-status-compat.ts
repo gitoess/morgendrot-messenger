@@ -1,5 +1,5 @@
 import type { ApiResponse } from '../types'
-import { fetchStatus } from '@/frontend/lib/api/status'
+import { fetchStatus, type ApiStatusFetchOk } from '@/frontend/lib/api/status'
 
 /** Für Dashboard-Kompatibilität: nutze bevorzugt `fetchStatus()`; dieses Mapping bleibt für ältere Aufrufer. */
 export const getStatus = (): Promise<
@@ -17,16 +17,31 @@ export const getStatus = (): Promise<
     vaultHasLocal?: boolean
   }>
 > =>
-  fetchStatus().then((s) => ({
-    ok: !!s.backendRunning,
-    data: {
-      network: s.rpcUrlLabel || s.network || '—',
-      address: s.myAddress || '',
-      packageId: s.packageId || '',
-      backendOnline: !!s.backendRunning,
-      chatConnected: !!s.connected,
-      signer: s.signer,
-      vaultHasLocal: s.vaultStatus?.hasLocal,
-    },
-    ...(s.locked && { locked: true }),
-  }))
+  fetchStatus().then((s) => {
+    if (!('pollClockHint' in s)) {
+      return {
+        ok: false,
+        data: {
+          network: '—',
+          address: '',
+          packageId: '',
+          backendOnline: false,
+          chatConnected: false,
+        },
+      }
+    }
+    const t = s as ApiStatusFetchOk
+    return {
+      ok: !!t.backendRunning,
+      data: {
+        network: t.rpcUrlLabel || t.network || '—',
+        address: t.myAddress || '',
+        packageId: t.packageId || '',
+        backendOnline: !!t.backendRunning,
+        chatConnected: !!t.connected,
+        signer: t.signer,
+        vaultHasLocal: t.vaultStatus?.hasLocal,
+      },
+      ...(t.locked && { locked: true }),
+    }
+  })

@@ -7,7 +7,37 @@
 
 export type DeviceTimeTrustLevel = 'high' | 'medium' | 'low'
 
-/** Signale, die die UI aus `navigator`, letztem API-Response und Geolocation ableitet. */
+/** Erfolgreicher GET /api/status mit optionalem HTTP-`Date`-Header (UTC). */
+export type StatusPollClockHint = {
+  okAtMs: number
+  /** `Date.parse` des Response-`Date`-Headers, sonst `null`. */
+  httpDateUtcMs: number | null
+}
+
+/** Max. Alter des letzten Status-Polls, ab dem die Referenz verworfen wird (15 min). */
+export const STATUS_POLL_CLOCK_MAX_AGE_MS = 15 * 60 * 1000
+
+export function isPlausibleHttpDateUtcMs(ms: number): boolean {
+  if (!Number.isFinite(ms) || ms <= 0) return false
+  const y = new Date(ms).getUTCFullYear()
+  return y >= 2024 && y <= 2037
+}
+
+export function isFreshPollClock(hint: StatusPollClockHint, nowMs: number): boolean {
+  const age = nowMs - hint.okAtMs
+  return age >= 0 && age <= STATUS_POLL_CLOCK_MAX_AGE_MS
+}
+
+/** `true`, wenn frischer Poll **und** plausibles HTTP-Datum — dann `hadRecentPlausibleServerOrChainTime`. */
+export function hadRecentPlausibleServerTimeFromPoll(
+  hint: StatusPollClockHint | null,
+  nowMs: number
+): boolean {
+  if (!hint || !isFreshPollClock(hint, nowMs)) return false
+  if (hint.httpDateUtcMs == null) return false
+  return isPlausibleHttpDateUtcMs(hint.httpDateUtcMs)
+}
+
 export type DeviceTimeTrustSignals = {
   /** Entspricht typ. `navigator.onLine`. */
   navigatorOnline: boolean

@@ -62,8 +62,10 @@ export function VaultView({ variant }: VaultViewProps) {
   const refreshVaultStatus = useCallback(async () => {
     try {
       const s = await fetchStatus()
-      setVaultStatus(s.vaultStatus ?? null)
-      setHasKeys(s.hasKeys)
+      if ('pollClockHint' in s) {
+        setVaultStatus(s.vaultStatus ?? null)
+        setHasKeys(s.hasKeys)
+      }
     } catch {
       setVaultStatus(null)
       setHasKeys(undefined)

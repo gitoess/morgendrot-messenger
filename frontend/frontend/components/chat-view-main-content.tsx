@@ -51,6 +51,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     refreshApiStatus,
     basisUnreachable,
     packageIdMismatch,
+    deviceTimeTrustWarn,
     syncCanonicalPackageIdFromServer,
     inboxPackageFilter,
     setInboxPackageFilter,
@@ -282,6 +283,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         basisUnreachable={basisUnreachable}
         meshBleConnected={meshtastic.connected}
         role={role}
+        deviceTimeTrustWarn={deviceTimeTrustWarn}
       />
 
       {isPrivate ? (

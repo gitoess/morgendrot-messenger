@@ -2,6 +2,7 @@ import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetc
 import { parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
 import { parseUnlockBackendEnvelopeText } from '@/frontend/lib/api-unlock-envelope'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 
 /** Rechte aus getHierarchyPermissions (nur bei role boss/kommandant/arbeiter). */
 export type HierarchyPermissions = {
@@ -80,7 +81,19 @@ export type ApiStatus = {
   myAddressFull?: string
 }
 
-export async function fetchStatus(): Promise<ApiStatus & { error?: string }> {
+/** Erfolgreicher `fetchStatus` inkl. Referenz für Geräte-Uhr (HTTP `Date`, § H.6c). */
+export type ApiStatusFetchOk = ApiStatus & { pollClockHint: StatusPollClockHint }
+
+export type ApiStatusFetchResult = ApiStatusFetchOk | (ApiStatus & { error: string; backendRunning?: boolean })
+
+function parseResponseDateMs(res: Response): number | null {
+  const raw = res.headers.get('date')
+  if (raw == null || !raw.trim()) return null
+  const ms = Date.parse(raw)
+  return Number.isFinite(ms) ? ms : null
+}
+
+export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/status')
     if (!fr.ok) {
@@ -102,7 +115,11 @@ export async function fetchStatus(): Promise<ApiStatus & { error?: string }> {
       }
     }
     const data = p.data as ApiStatus & { backendRunning?: boolean }
-    return { ...data, backendRunning: data.backendRunning !== false }
+    const pollClockHint: StatusPollClockHint = {
+      okAtMs: Date.now(),
+      httpDateUtcMs: parseResponseDateMs(fr.response),
+    }
+    return { ...data, backendRunning: data.backendRunning !== false, pollClockHint }
   } catch (error) {
     return {
       backendRunning: false,

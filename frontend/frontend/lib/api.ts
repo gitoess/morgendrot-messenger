@@ -1,6 +1,12 @@
 export { executeCommand } from '@/frontend/lib/api/execute-command'
 
-export type { HierarchyPermissions, VaultStatus, ApiStatus } from '@/frontend/lib/api/status'
+export type {
+  HierarchyPermissions,
+  VaultStatus,
+  ApiStatus,
+  ApiStatusFetchOk,
+  ApiStatusFetchResult,
+} from '@/frontend/lib/api/status'
 export { fetchStatus, unlockBackend } from '@/frontend/lib/api/status'
 
 export {

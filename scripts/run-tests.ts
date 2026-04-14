@@ -839,9 +839,13 @@ async function testChatForwardText() {
 async function testDeviceTimeTrust() {
     console.log('\n--- device-time-trust (shared) ---');
     try {
-        const { inferDeviceTimeTrust, shouldWarnUntrustedDeviceTime } = await import(
-            '../src/shared/device-time-trust.js'
-        );
+        const {
+            inferDeviceTimeTrust,
+            shouldWarnUntrustedDeviceTime,
+            isPlausibleHttpDateUtcMs,
+            hadRecentPlausibleServerTimeFromPoll,
+            STATUS_POLL_CLOCK_MAX_AGE_MS,
+        } = await import('../src/shared/device-time-trust.js');
         assert(
             inferDeviceTimeTrust({
                 navigatorOnline: false,
@@ -858,6 +862,27 @@ async function testDeviceTimeTrust() {
         assert(shouldWarnUntrustedDeviceTime('high') === false, 'no warn high');
         assert(shouldWarnUntrustedDeviceTime('medium') === true, 'warn medium');
         assert(shouldWarnUntrustedDeviceTime('low') === true, 'warn low');
+        assert(isPlausibleHttpDateUtcMs(Date.parse('Thu, 01 Jan 2026 12:00:00 GMT')) === true, 'plausible 2026');
+        assert(isPlausibleHttpDateUtcMs(Date.parse('Thu, 01 Jan 2010 12:00:00 GMT')) === false, 'reject 2010');
+        const now = 1_000_000_000_000;
+        assert(
+            hadRecentPlausibleServerTimeFromPoll(
+                { okAtMs: now - 60_000, httpDateUtcMs: Date.parse('Wed, 01 Jan 2026 00:00:00 GMT') },
+                now
+            ) === true,
+            'fresh poll + date = plausible server'
+        );
+        assert(
+            hadRecentPlausibleServerTimeFromPoll(
+                { okAtMs: now - STATUS_POLL_CLOCK_MAX_AGE_MS - 1, httpDateUtcMs: Date.parse('Wed, 01 Jan 2026 00:00:00 GMT') },
+                now
+            ) === false,
+            'stale poll rejected'
+        );
+        assert(
+            hadRecentPlausibleServerTimeFromPoll({ okAtMs: now - 60_000, httpDateUtcMs: null }, now) === false,
+            'no date header = no high'
+        );
         ok('inferDeviceTimeTrust + shouldWarnUntrustedDeviceTime');
     } catch (e) {
         fail('device-time-trust', e);

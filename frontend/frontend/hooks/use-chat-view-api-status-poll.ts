@@ -8,8 +8,14 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
-import { fetchStatus, type ApiStatus } from '@/frontend/lib/api'
+import { fetchStatus, type ApiStatus, type ApiStatusFetchOk } from '@/frontend/lib/api'
 import { shouldShowPackageIdMismatchBanner } from '@/frontend/lib/package-id-compare'
+import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
+import {
+  hadRecentPlausibleServerTimeFromPoll,
+  inferDeviceTimeTrust,
+  shouldWarnUntrustedDeviceTime,
+} from '@/frontend/lib/device-time-trust'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
@@ -25,6 +31,8 @@ export type UseChatViewApiStatusPollParams = {
 export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const { runMirrorDrain, pollIntervalMs = 12000, localPackageId } = p
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
+  /** Letzter erfolgreicher Status-Poll (HTTP `Date`, § H.6c). */
+  const [pollClockHint, setPollClockHint] = useState<StatusPollClockHint | null>(null)
   /** GET /api/status fehlgeschlagen (Netzwerk, Backend aus). */
   const [basisUnreachable, setBasisUnreachable] = useState(false)
   /** Einmal Toast, wenn die Basis nach Ausfall wieder erreichbar ist. */
@@ -41,29 +49,37 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     }
   }, [basisUnreachable])
 
+  const applyStatusOk = useCallback((s: ApiStatusFetchOk) => {
+    const { pollClockHint: hint, ...rest } = s
+    setPollClockHint(hint)
+    setApiStatus(rest)
+  }, [])
+
   const refreshApiStatus = useCallback(async () => {
     const s = await fetchStatus()
-    if (s.error) {
+    if (!('pollClockHint' in s)) {
       setBasisUnreachable(true)
       setApiStatus(null)
+      setPollClockHint(null)
       return
     }
     setBasisUnreachable(false)
-    setApiStatus(s)
-  }, [])
+    applyStatusOk(s)
+  }, [applyStatusOk])
 
   useEffect(() => {
     let alive = true
     const tick = async () => {
       const s = await fetchStatus()
       if (!alive) return
-      if (s.error) {
+      if (!('pollClockHint' in s)) {
         setBasisUnreachable(true)
         setApiStatus(null)
+        setPollClockHint(null)
         return
       }
       setBasisUnreachable(false)
-      setApiStatus(s)
+      applyStatusOk(s)
       await runMirrorDrain()
     }
     void tick()
@@ -72,12 +88,23 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       alive = false
       clearInterval(id)
     }
-  }, [runMirrorDrain, pollIntervalMs])
+  }, [runMirrorDrain, pollIntervalMs, applyStatusOk])
+
+  /** Jeder Render: `Date.now()` gegen `okAtMs` — kein `useMemo`, sonst veraltet die Warnung nach 15 min ohne Re-Render. */
+  const navOnline = typeof navigator !== 'undefined' && navigator.onLine
+  const hadServerTime = hadRecentPlausibleServerTimeFromPoll(pollClockHint, Date.now())
+  const deviceTimeTrustWarn = shouldWarnUntrustedDeviceTime(
+    inferDeviceTimeTrust({
+      navigatorOnline: navOnline,
+      hadRecentPlausibleServerOrChainTime: hadServerTime,
+      hasTrustedGpsUtcFix: false,
+    })
+  )
 
   const packageIdMismatch = useMemo(
     () => shouldShowPackageIdMismatchBanner(localPackageId, apiStatus?.packageId, basisUnreachable),
     [localPackageId, apiStatus?.packageId, basisUnreachable]
   )
 
-  return { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch }
+  return { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn }
 }

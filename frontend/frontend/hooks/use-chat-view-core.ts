@@ -175,10 +175,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
   })
-  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch } = useChatViewApiStatusPoll({
-    runMirrorDrain,
-    localPackageId: inboxPackageFilter.trim(),
-  })
+  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
+    useChatViewApiStatusPoll({
+      runMirrorDrain,
+      localPackageId: inboxPackageFilter.trim(),
+    })
 
   const selectInboxPartnerForSend = useCallback(
     (address: string) => {
@@ -412,6 +413,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     refreshApiStatus,
     basisUnreachable,
     packageIdMismatch,
+    deviceTimeTrustWarn,
     syncCanonicalPackageIdFromServer,
     mirrorQueuePending,
     inboxPackageFilter,

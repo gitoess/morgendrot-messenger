@@ -24,6 +24,8 @@ export type ChatViewChatHeaderProps = {
   meshBleConnected: boolean
   /** Aus /api/status / Chat-View (ROLE). */
   role: string
+  /** Keine sichere Referenzzeit (HTTP-`Date` / GPS) — Fahrplan § H.6c. */
+  deviceTimeTrustWarn?: boolean
 }
 
 function roleBadgeLabel(role: string): string {
@@ -119,6 +121,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     basisUnreachable,
     meshBleConnected,
     role,
+    deviceTimeTrustWarn = false,
   } = p
 
   const waldTier = computeWaldConnectionTier(basisUnreachable, meshBleConnected)
@@ -175,6 +178,16 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
       {isPrivate && apiStatus && (
         <ChatViewPulseSettings apiStatus={apiStatus} onApplied={onRefreshStatus} />
+      )}
+
+      {isPrivate && deviceTimeTrustWarn && (
+        <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sm text-sky-950 dark:text-sky-100">
+          <strong className="font-semibold">Geräte-Uhr:</strong> Keine abgesicherte Referenzzeit (frischer{' '}
+          <span className="font-mono text-xs">Date</span>-Header der Basis oder GPS-UTC). Zeitstempel in Export,
+          Protokoll und Attestation können <strong>abweichen</strong> — siehe{' '}
+          <span className="font-mono text-[11px]">docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md</span> §6 / Fahrplan §
+          H.6c.
+        </div>
       )}
 
       {isPrivate && apiStatus?.locked === true && (

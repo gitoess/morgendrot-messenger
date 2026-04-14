@@ -129,7 +129,10 @@ export function LockView({ variant }: LockViewProps) {
     let alive = true
     const tick = () => {
       fetchStatus().then((s) => {
-        if (alive && !s.error) setChainStrip(s)
+        if (alive && 'pollClockHint' in s) {
+          const { pollClockHint: _h, ...rest } = s
+          setChainStrip(rest)
+        }
       })
     }
     tick()

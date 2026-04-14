@@ -217,8 +217,13 @@ export function Dashboard() {
 
   const checkStatus = async () => {
     const res = await fetchStatus()
-    setApiSnapshot(res)
-    if (res.backendRunning) {
+    if ('pollClockHint' in res) {
+      const { pollClockHint: _hint, ...snap } = res
+      setApiSnapshot(snap)
+    } else {
+      setApiSnapshot(res)
+    }
+    if ('pollClockHint' in res && res.backendRunning) {
       setBackendReachable(true)
       setConnected(!!res.connected)
       setNetworkInfo(res.rpcUrlLabel || res.network || 'IOTA Rebased')
@@ -269,6 +274,7 @@ export function Dashboard() {
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 1500))
         const s = await fetchStatus()
+        if (!('pollClockHint' in s)) continue
         if (s.connected) {
           setConnected(true)
           setLocked(!!s.locked)
