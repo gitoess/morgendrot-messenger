@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
-import { getConfig, setConfig } from '@/lib/api'
+import { getConfig, setConfig } from '@/frontend/lib/api'
 import type { MonitorDevice } from '@/lib/types'
 
 const MONITOR_CONFIG_KEYS = [

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getConfig, setConfig } from '@/lib/api'
+import { getConfig, setConfig } from '@/frontend/lib/api'
 
 const PINNWAND_KEYS = [
   'ENABLE_BROADCAST_PINNWAND',

@@ -59,7 +59,7 @@ export function VaultProject({ variant }: VaultProjectProps) {
 
     setIsPurging(true)
     try {
-      const { executeCommand } = await import('@/lib/api')
+      const { executeCommand } = await import('@/frontend/lib/api')
       await executeCommand('/emergency-purge-all', [])
     } catch {
       // Handle error

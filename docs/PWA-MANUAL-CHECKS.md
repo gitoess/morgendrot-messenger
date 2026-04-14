@@ -24,6 +24,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
 |-------|-------------------|---------------|----------------|------------|
 | 2026-03-28 | ✓ | ✓ (via prebuild) | ✓ | Automatisierte Vorprüfung im Repo |
+| 2026-03-30 | ✓ | ✓ | ✓ | A–C erneut; **D** (SW-`VERSION`) unverändert — kein Edit an `sw.js` in diesem Durchlauf |
 
 ---
 
@@ -43,6 +44,16 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 3 | **Offline-Shell** | Flugmodus / Netz aus: zuvor besuchte **statische** Assets (**`/_next/static/*`**) und App-UI oft noch nutzbar; **`/api/*`** bleibt offline **nicht** zuverlässig (Hinweis „offline“ / Fehler ist ok). |
 | 4 | **Handbuch offline** | Einmal **`/handbook`** mit Netz laden, dann offline: Markdown-Inhalt der kopierten Dateien (**`BOSS-ORIENTIERUNG.md`**, **`PWA-HANDBUCH-OFFLINE.md`**) lesbar, sofern SW-Cache greift — siehe **`frontend/public/sw.js`** (`HANDBOOK_URLS`, `VERSION`). |
 | 5 | **Icons nach SVG-Änderung** | Wenn **`frontend/public/icon.svg`** geändert wurde: **`npm run build:pwa-icons`** (Manifest/PNG) — **`docs/ROADMAP-FAHRPLAN.md`** § **H.4**. |
+
+### Lücken / nur am Gerät (nicht im CI ersetzbar)
+
+| # | Thema | Stand / nächste Aktion |
+|---|--------|-------------------------|
+| L1 | **Install (#1)** | Chrome/Edge „App installieren“ bzw. Android-Menü; **iOS Safari**: Teilen → „Zum Home-Bildschirm“ — einmal pro Zielgerät prüfen. |
+| L2 | **Start vom Icon (#2)** | Nach L1: Kaltstart, kein harter JS-Fehler; ggf. Rollen-Dashboard vs. Messenger-Pfad. |
+| L3 | **Offline-Shell (#3)** | Flugmodus: erwartbar, dass **`/api/*`** fehlschlägt; prüfen, ob Shell/`/_next/static` noch sinnvoll reagiert (kein weißer Screen). |
+| L4 | **Handbuch offline (#4)** | Einmal **`/handbook`** online laden, dann offline — inhaltliche Lesbarkeit; Abgleich mit **`HANDBOOK_URLS`** in **`frontend/public/sw.js`**. |
+| L5 | **Service-Worker-Update (Tabelle D)** | Bei jedem bewussten **`sw.js`-Edit:** Konstante **`VERSION`** (`morgendrot-sw-*`) erhöhen und erneut L3/L4 testen. |
 
 ---
 

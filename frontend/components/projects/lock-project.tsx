@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CommandForm } from '@/components/command-form'
-import { listKeys, listTickets, getConfig, setConfig } from '@/lib/api'
+import { listKeys, listTickets, getConfig, setConfig } from '@/frontend/lib/api'
 import type { FormField } from '@/lib/types'
 
 const LOCK_CONFIG_KEYS = [

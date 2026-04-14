@@ -54,7 +54,7 @@
 
 Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `api-simple-ok-envelope.ts`).
 
-**Hinweis:** `frontend/lib/api.ts` re-exportiert nur noch **`@/frontend/lib/api`** (Abwärtskompatibilität für `@/lib/api`); neue Imports sollten den Barrel **`@/frontend/lib/api`** nutzen.
+**Hinweis:** `frontend/lib/api.ts` re-exportiert **`@/frontend/lib/api`** (Abwärtskompatibilität für alte **`@/lib/api`-**Pfade). **Dashboard/Projektkacheln** unter `frontend/components/` nutzen direkt **`@/frontend/lib/api`**; neuer Code ebenfalls dort einbinden.
 
 ---
 

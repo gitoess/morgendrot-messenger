@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { executeCommand, getPackageIdHistory, getCurrentIds } from '@/lib/api'
+import { executeCommand, getPackageIdHistory, getCurrentIds } from '@/frontend/lib/api'
 import type { Message } from '@/lib/types'
 
 interface InboxProps {

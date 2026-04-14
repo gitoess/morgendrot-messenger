@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { executeCommand, type CommandResponse } from '@/lib/api'
+import { executeCommand, type CommandResponse } from '@/frontend/lib/api'
 import type { FormField, CommandResult } from '@/lib/types'
 
 interface CommandFormProps {

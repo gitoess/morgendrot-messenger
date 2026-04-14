@@ -10,7 +10,7 @@ import {
   Trash2,
   Shield,
 } from 'lucide-react'
-import { getStatus, getCurrentIds } from '@/lib/api'
+import { getStatus, getCurrentIds } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -97,7 +97,7 @@ export function ChatProject({ variant }: ChatProjectProps) {
     setSendResult({ status: 'idle' })
 
     try {
-      const { executeCommand } = await import('@/lib/api')
+      const { executeCommand } = await import('@/frontend/lib/api')
       const cmd = isPrivate ? '/send' : '/send-plain'
       const args = isPrivate ? [message] : [recipient, message]
 
@@ -296,7 +296,7 @@ export function ChatProject({ variant }: ChatProjectProps) {
                     setPurgeStatus('loading')
                     setPurgeMessage('')
                     try {
-                      const { executeCommand } = await import('@/lib/api')
+                      const { executeCommand } = await import('@/frontend/lib/api')
                       const res = await executeCommand('/purge-handshake', [])
                       if (res.ok) {
                         setPurgeStatus('success')

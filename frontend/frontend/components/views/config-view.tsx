@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { getConfig, setConfig } from '@/lib/api'
+import { getConfig, setConfig } from '@/frontend/lib/api'
 
 export function ConfigView() {
   const [items, setItems] = useState<Array<{ key: string; value: string; envKey: string }>>([])

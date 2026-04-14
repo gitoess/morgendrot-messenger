@@ -28,7 +28,7 @@ import {
   executeCommand,
   getConfig,
   setConfig,
-} from '@/lib/api'
+} from '@/frontend/lib/api'
 
 function shortRpcUrl(url: string): string {
   const u = (url || '').trim()
