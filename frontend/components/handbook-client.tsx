@@ -6,6 +6,7 @@ import { BookOpen } from 'lucide-react'
 import { HandbookMarkdown } from '@/components/handbook-markdown'
 
 const DOCS: { file: string; title: string }[] = [
+  { file: 'API-EINSATZ-ROLE-TEMPLATES.md', title: 'API: Einsatz-Rollen-Templates' },
   { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
   { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge & lokaler Cache' },

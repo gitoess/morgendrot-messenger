@@ -7,11 +7,12 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-3'
+const VERSION = 'morgendrot-sw-4'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 /** Muss zu scripts/sync-pwa-handbook.mjs und frontend/public/handbook/ passen */
 const HANDBOOK_URLS = [
+  '/handbook/API-EINSATZ-ROLE-TEMPLATES.md',
   '/handbook/BOSS-ORIENTIERUNG.md',
   '/handbook/PWA-HANDBUCH-OFFLINE.md',
   '/handbook/NOTFALL-PURGE-MESSENGER.md',

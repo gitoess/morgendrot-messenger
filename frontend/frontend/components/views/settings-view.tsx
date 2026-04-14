@@ -487,8 +487,14 @@ export function SettingsView({
                 <h4 className="font-semibold text-foreground">Einsatz-Rollen-Vorlagen</h4>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Schreibt die Boss-Datei <span className="font-mono text-xs">.morgendrot-einsatz-templates.json</span> am
-                  Backend (gleiche API wie Lite-Provisioning). Schema:{' '}
-                  <span className="font-mono text-xs">docs/API-EINSATZ-ROLE-TEMPLATES.md</span> — Orientierung:{' '}
+                  Backend (gleiche API wie Lite-Provisioning). Spezifikation:{' '}
+                  <Link
+                    href="/handbook/API-EINSATZ-ROLE-TEMPLATES.md"
+                    className="text-primary underline hover:no-underline"
+                  >
+                    API: Einsatz-Rollen-Templates
+                  </Link>{' '}
+                  (offline nach erstem Abruf) — Orientierung:{' '}
                   <Link href="/handbook/BOSS-ORIENTIERUNG.md" className="text-primary underline hover:no-underline">
                     Boss-Handbuch
                   </Link>

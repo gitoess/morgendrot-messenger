@@ -13,6 +13,7 @@ const root = path.join(__dirname, '..');
 const destDir = path.join(root, 'frontend', 'public', 'handbook');
 
 const FILES = [
+  'API-EINSATZ-ROLE-TEMPLATES.md',
   'BOSS-ORIENTIERUNG.md',
   'PWA-HANDBUCH-OFFLINE.md',
   'NOTFALL-PURGE-MESSENGER.md',

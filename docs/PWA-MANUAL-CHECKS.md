@@ -24,7 +24,8 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
 |-------|-------------------|---------------|----------------|------------|
 | 2026-03-28 | ✓ | ✓ (via prebuild) | ✓ | Automatisierte Vorprüfung im Repo |
-| 2026-03-30 | ✓ | ✓ | ✓ | A–C erneut; **D** (SW-`VERSION`) unverändert — kein Edit an `sw.js` in diesem Durchlauf |
+| 2026-03-30 | ✓ | ✓ (7 Dateien) | ✓ | A–C; **D** zunächst ohne SW-Edit. |
+| 2026-03-30 | — | ✓ (8 Dateien) | empfohlen | **D:** `VERSION` → **`morgendrot-sw-4`**; **`API-EINSATZ-ROLE-TEMPLATES.md`** in `sync-pwa-handbook` + `HANDBOOK_URLS` — nach Deploy: Handbuch einmal online öffnen (L4). |
 
 ---
 
@@ -42,7 +43,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 1 | **Install** | App lässt sich als installierbare PWA hinzufügen (Manifest + SW aktiv; in Dev ggf. nur über Menü — normal). |
 | 2 | **Start vom Icon** | Nach Installation öffnet die App **ohne** Adresszeilen-Fokus auf die Messenger-Oberfläche (kein harter Fehler beim Start). |
 | 3 | **Offline-Shell** | Flugmodus / Netz aus: zuvor besuchte **statische** Assets (**`/_next/static/*`**) und App-UI oft noch nutzbar; **`/api/*`** bleibt offline **nicht** zuverlässig (Hinweis „offline“ / Fehler ist ok). |
-| 4 | **Handbuch offline** | Einmal **`/handbook`** mit Netz laden, dann offline: Markdown-Inhalt der kopierten Dateien (**`BOSS-ORIENTIERUNG.md`**, **`PWA-HANDBUCH-OFFLINE.md`**) lesbar, sofern SW-Cache greift — siehe **`frontend/public/sw.js`** (`HANDBOOK_URLS`, `VERSION`). |
+| 4 | **Handbuch offline** | Einmal **`/handbook`** mit Netz laden, dann offline: Markdown-Inhalt der in **`HANDBOOK_URLS`** eingetragenen Dateien (u. a. **`BOSS-ORIENTIERUNG.md`**, **`API-EINSATZ-ROLE-TEMPLATES.md`**, **`PWA-HANDBUCH-OFFLINE.md`**) lesbar, sofern SW-Cache greift — siehe **`frontend/public/sw.js`**. |
 | 5 | **Icons nach SVG-Änderung** | Wenn **`frontend/public/icon.svg`** geändert wurde: **`npm run build:pwa-icons`** (Manifest/PNG) — **`docs/ROADMAP-FAHRPLAN.md`** § **H.4**. |
 
 ### Lücken / nur am Gerät (nicht im CI ersetzbar)
