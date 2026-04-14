@@ -9,7 +9,9 @@ import {
   parseFileTxtMessage,
   parseMorgAudioV1Message,
 } from '@/frontend/lib/compact-image-wire'
-import { reconstructCompactImageToDataUrl } from '@/frontend/lib/compact-image-canvas'
+import {
+  reconstructCompactImageToDataUrlWithMeta,
+} from '@/frontend/lib/compact-image-canvas'
 import type { Message } from '@/frontend/lib/types'
 import {
   parseLoraProgressiveMessage,
@@ -25,6 +27,18 @@ import { cn } from '@/lib/utils'
 
 const TXT_PREVIEW_CHARS = 480
 const TXT_COLLAPSE_MAX_H = 'max-h-36' /* 9rem */
+
+function IncompleteMediaBadge({ title }: { title: string }) {
+  return (
+    <span
+      className="pointer-events-none absolute left-2 top-2 z-[1] rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-black shadow-sm"
+      title={title}
+      role="status"
+    >
+      Unvollständig
+    </span>
+  )
+}
 
 function downloadTextFile(fileName: string, utf8Text: string) {
   const blob = new Blob([utf8Text], { type: 'text/plain;charset=utf-8' })
@@ -238,11 +252,16 @@ function LoRaProgressiveLumaBody({
         <p className="text-xs text-muted-foreground">Bild wird dekodiert…</p>
       )}
       {displayUrl ? (
-        <img
-          src={displayUrl}
-          alt={hasChroma ? 'LoRa Bild (Luma+Chroma)' : 'LoRa S/W (Luma)'}
-          className="max-h-96 max-w-full rounded-lg border border-border object-contain"
-        />
+        <div className="relative inline-block max-w-full">
+          {!hasChroma ? (
+            <IncompleteMediaBadge title="Nur S/W (Luma); Farbphase (Chroma) fehlt oder steht noch aus." />
+          ) : null}
+          <img
+            src={displayUrl}
+            alt={hasChroma ? 'LoRa Bild (Luma+Chroma)' : 'LoRa S/W (Luma)'}
+            className="max-h-96 max-w-full rounded-lg border border-border object-contain"
+          />
+        </div>
       ) : null}
       {displayUrl && !hasChroma && !chromaTimedOut ? (
         <p className="text-xs text-muted-foreground">Farbübertragung läuft…</p>
@@ -354,21 +373,27 @@ export function ChatMessageBody({
     parsedImg || parsedFile || parsedAudio || parsedTxt ? null : parseLoraProgressiveMessage(raw)
 
   const [imgUrl, setImgUrl] = useState<string | null>(null)
+  const [imgIncomplete, setImgIncomplete] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [copied, setCopied] = useState<'raw' | 'plain' | false>(false)
 
   useEffect(() => {
     if (!parsedImg) {
       setImgUrl(null)
+      setImgIncomplete(false)
       setErr(null)
       return
     }
     let alive = true
     setImgUrl(null)
+    setImgIncomplete(false)
     setErr(null)
-    void reconstructCompactImageToDataUrl(parsedImg.blobBase64)
-      .then((u) => {
-        if (alive) setImgUrl(u)
+    void reconstructCompactImageToDataUrlWithMeta(parsedImg.blobBase64)
+      .then((r) => {
+        if (alive) {
+          setImgUrl(r.dataUrl)
+          setImgIncomplete(r.incomplete)
+        }
       })
       .catch((e) => {
         if (alive) setErr(e instanceof Error ? e.message : String(e))
@@ -408,11 +433,16 @@ export function ChatMessageBody({
         {err && <p className="text-xs text-red-400">{err}</p>}
         {!imgUrl && !err && <p className="text-xs text-muted-foreground">Bild wird dekodiert…</p>}
         {imgUrl ? (
-          <img
-            src={imgUrl}
-            alt="Kompaktes Bild (Luma+Chroma)"
-            className="max-h-96 max-w-full rounded-lg border border-border object-contain"
-          />
+          <div className="relative inline-block max-w-full">
+            {imgIncomplete ? (
+              <IncompleteMediaBadge title="Nur Graustufen-WebP oder abgeschnittener Blob; Farbe/Chroma fehlt oder war defekt." />
+            ) : null}
+            <img
+              src={imgUrl}
+              alt={imgIncomplete ? 'Kompaktes Bild (Luma, unvollständig)' : 'Kompaktes Bild (Luma+Chroma)'}
+              className="max-h-96 max-w-full rounded-lg border border-border object-contain"
+            />
+          </div>
         ) : null}
         {parsedImg.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedImg.caption}</p>
