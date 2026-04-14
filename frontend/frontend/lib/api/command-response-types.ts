@@ -1,6 +1,6 @@
 /**
  * Legacy-Formen für Dashboard-/Projekt-Komponenten (`frontend/components/*`),
- * die früher `frontend/lib/api.ts` importierten — jetzt über Barrel `@/frontend/lib/api`.
+ * die früher den Messenger-API-Barrel importierten — jetzt über `@/frontend/lib/api`.
  */
 
 export type CommandResponse = {

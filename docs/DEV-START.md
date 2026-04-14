@@ -31,7 +31,7 @@ npm run dev
 
 - **`npm run dev`** startet Next nur auf **`127.0.0.1:3341`** — vom **anderen Gerät** im LAN erreichst du die Seite **nicht**. Verwende **`npm run dev:lan`**: Next lauscht auf **`0.0.0.0:3341`**, dann im Handy **`http://<PC-LAN-IP>:3341`** (z. B. `http://192.168.178.41:3341`).
 - **„Nicht sicher“ / Warnung:** Bei **HTTP** (ohne TLS) zeigt Chrome das normal — **Fortfahren** wählen oder explizit **`http://`** nutzen (kein `https://` zur IP tippen).
-- **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Siehe `frontend/lib/api.ts` und `next.config.mjs`.
+- **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Client-Aufrufe: Barrel **`frontend/frontend/lib/api.ts`** (`@/frontend/lib/api`), Basis-URL u. a. **`frontend/frontend/lib/api/api-base.ts`**; Rewrites in **`frontend/next.config.mjs`**.
 - **Firewall (Windows):** Erster Zugriff kann blockiert werden — Node.js für **private Netzwerke** erlauben oder eingehend **TCP 3341** (und ggf. 3342 nur wenn ihr direkt zur API testet) freigeben.
 - **Next-Warnung „Cross origin … /_next/*“:** `frontend/next.config.mjs` lädt die **Root-`.env`** und erlaubt u. a. `localhost` / `127.0.0.1:3341`. Für **Handy per LAN-IP** in derselben **einen** `.env** (Projektroot): `NEXT_ALLOWED_DEV_ORIGINS=http://192.168.178.41:3341` (eigene IP; mehrere URLs kommagetrennt). **Keine** zweite `.env` unter `frontend/`.
 

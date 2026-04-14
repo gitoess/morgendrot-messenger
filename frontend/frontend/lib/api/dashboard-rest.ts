@@ -1,6 +1,6 @@
 /**
  * Einfache GET/POST-JSON-Endpunkte für Dashboard/Setup (kein `/api/command`-Envelope).
- * Vorher in `frontend/lib/api.ts`; hier mit `API_BASE` wie die übrige Messenger-API.
+ * Vor der Aufteilung im Messenger-API-Monolith; hier mit `API_BASE` wie die übrige Messenger-API.
  */
 
 import { API_BASE } from '@/frontend/lib/api/api-base'
@@ -55,7 +55,7 @@ export async function getCurrentIds(): Promise<{ ok: boolean; myAddress?: string
   }
 }
 
-/** Rohes JSON wie früher `frontend/lib/api.ts` — für Inbox/Setup ohne Envelope-Parser. */
+/** Rohes JSON wie früher im zentralen API-Barrel — für Inbox/Setup ohne Envelope-Parser. */
 export async function getPackageIdHistory(): Promise<{
   ok: boolean
   current?: string
