@@ -24,6 +24,16 @@ export type UseChatViewEinsatzExportsParams = {
   protokollMarkedIds: Set<string>
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
+  /** Aus `useChatViewApiStatusPoll` — bei `true` vor Export zusätzlich bestätigen (§ H.6c). */
+  deviceTimeTrustWarn: boolean
+}
+
+/** Vor forensischen Downloads: Nutzer explizit einbinden, wenn die Geräte-Uhr unsicher ist. */
+export function confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn: boolean): boolean {
+  if (!deviceTimeTrustWarn || typeof window === 'undefined') return true
+  return window.confirm(
+    'Hinweis: Die Geräte-Uhr ist nicht gegen Basis (HTTP-Datum) oder GPS abgesichert. Zeitstempel im Export können für Auswertung oder Attestation unzuverlässig sein.\n\nTrotzdem exportieren?'
+  )
 }
 
 function parseOptionalMessageIdsFromPrompt(raw: string | null): string[] | undefined {
@@ -36,7 +46,15 @@ function parseOptionalMessageIdsFromPrompt(raw: string | null): string[] | undef
 }
 
 export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
-  const { messagesLength, messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg } = p
+  const {
+    messagesLength,
+    messagesForExport,
+    myAddress,
+    protokollMarkedIds,
+    setStatus,
+    setStatusMsg,
+    deviceTimeTrustWarn,
+  } = p
 
   const onExportEinsatzberichtJson = useCallback(async () => {
     if (messagesLength === 0) {
@@ -45,6 +63,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     try {
       setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
@@ -63,7 +82,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   const onExportEinsatzberichtTxt = useCallback(async () => {
     if (messagesLength === 0) {
@@ -72,6 +91,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     try {
       setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
@@ -90,7 +110,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   const onExportEinsatzprotokoll = useCallback(async () => {
     if (messagesLength === 0) {
@@ -99,6 +119,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
     const raw = window.prompt(
       'Optional: nur diese Nachrichten-IDs (kommagetrennt). Leer = gesamter Verlauf:'
@@ -142,7 +163,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   const onExportEinsatzprotokollPlainZip = useCallback(async () => {
     if (messagesLength === 0) {
@@ -151,6 +172,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
     if (
       !window.confirm(
@@ -177,7 +199,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   const onExportEinsatzprotokollMarked = useCallback(async () => {
     if (protokollMarkedIds.size === 0) {
@@ -186,6 +208,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 6000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
     const p1 = window.prompt('Passwort für das Protokoll-ZIP (mind. 8 Zeichen):')
     if (p1 == null) return
@@ -229,7 +252,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg])
+  }, [messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   const onExportEinsatzberichtEncrypted = useCallback(async () => {
     if (messagesLength === 0) {
@@ -238,6 +261,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
     const p1 = window.prompt('Passwort für verschlüsselten Einsatzbericht (mind. 8 Zeichen):')
     if (p1 == null) return
@@ -276,7 +300,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
 
   return {
     onExportEinsatzberichtJson,

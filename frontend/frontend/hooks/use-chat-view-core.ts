@@ -155,6 +155,18 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     contactDirectory: directory,
   })
 
+  const { mirrorQueuePending, runMirrorDrain, onDelayMirrorPlaintext } = useChatViewMirrorDelay({
+    loadMessages,
+    setStatus,
+    setStatusMsg,
+  })
+  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
+    useChatViewApiStatusPoll({
+      runMirrorDrain,
+      localPackageId: inboxPackageFilter.trim(),
+      probeGeolocationForDeviceTime: isPrivate,
+    })
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -169,18 +181,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     protokollMarkedIds,
     setStatus,
     setStatusMsg,
+    deviceTimeTrustWarn,
   })
-  const { mirrorQueuePending, runMirrorDrain, onDelayMirrorPlaintext } = useChatViewMirrorDelay({
-    loadMessages,
-    setStatus,
-    setStatusMsg,
-  })
-  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
-    useChatViewApiStatusPoll({
-      runMirrorDrain,
-      localPackageId: inboxPackageFilter.trim(),
-      probeGeolocationForDeviceTime: isPrivate,
-    })
 
   const selectInboxPartnerForSend = useCallback(
     (address: string) => {
