@@ -122,6 +122,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   }, [messages, inboxPackageFilter, bossView, role])
 
   const [delayMirrorToIota, setDelayMirrorToIota] = useState(false)
+  /** LoRa LUMA/CHROMA Mesh-v2: Fortschrittszeile für die Anhang-Leiste (`Luma x/y · …`). */
+  const [loraMeshProgressLine, setLoraMeshProgressLine] = useState<string | null>(null)
 
   const {
     protokollMarkedIds,
@@ -340,6 +342,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
     waitForMeshSosAckDigest,
+    setMeshProgress: setLoraMeshProgressLine,
   })
 
   const {
@@ -470,6 +473,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     compactMeta,
     compactPreviewUrl,
     loraPreviewUrl,
+    loraMeshProgressLine,
     loraOnlineFallbackOffer,
     compactBusy,
     compactFileRef,

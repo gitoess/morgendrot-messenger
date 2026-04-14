@@ -103,6 +103,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     compactMeta,
     compactPreviewUrl,
     loraPreviewUrl,
+    loraMeshProgressLine,
     loraOnlineFallbackOffer,
     compactBusy,
     compactFileRef,
@@ -260,6 +261,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     clearCompactAttachment,
     compactPreviewUrl,
     loraPreviewUrl,
+    loraMeshProgressLine,
   } satisfies ChatViewSendPanelProps
 
   const transportCardProps = {

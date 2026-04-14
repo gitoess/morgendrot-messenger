@@ -112,6 +112,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
     waitForMeshSosAckDigest,
+    setMeshProgress,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -219,9 +220,29 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           offeredOnline = true
         } else {
           setStatusMsg('Funk: LUMA (Mesh v2)…')
-          await sendMeshBurst(lumaText)
+          let lumaPktTotal = 1
+          await sendMeshV2WireBurst(
+            lumaText,
+            meshtastic.sendBinaryV2.bind(meshtastic),
+            (sent, total) => {
+              lumaPktTotal = total
+              setMeshProgress?.(`Luma ${sent}/${total} · Chroma ausstehend`)
+              if (total > 1) setStatusMsg(`Funk: LUMA (Mesh v2) ${sent}/${total} …`)
+              else setStatusMsg('Funk: LUMA (Mesh v2)…')
+            },
+            meshBurstOpts
+          )
           setStatusMsg('Funk: CHROMA (Mesh v2)…')
-          await sendMeshBurst(chromaText)
+          await sendMeshV2WireBurst(
+            chromaText,
+            meshtastic.sendBinaryV2.bind(meshtastic),
+            (sent, total) => {
+              setMeshProgress?.(`Luma ${lumaPktTotal}/${lumaPktTotal} · Chroma ${sent}/${total}`)
+              if (total > 1) setStatusMsg(`Funk: CHROMA (Mesh v2) ${sent}/${total} …`)
+              else setStatusMsg('Funk: CHROMA (Mesh v2)…')
+            },
+            meshBurstOpts
+          )
           setStatus('success')
           setStatusMsg(
             'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler; jede Phase kann mehrere Mesh-v2-Pakete nutzen).'
@@ -237,6 +258,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setLoraOnlineFallbackOffer({ reasonLabel: raw })
         offeredOnline = true
       } finally {
+        setMeshProgress?.(null)
         clearCompactAttachment()
         setSending(false)
         if (!offeredOnline) {
@@ -615,6 +637,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setStatus('error')
       setStatusMsg(e instanceof Error ? e.message : String(e))
     } finally {
+      setMeshProgress?.(null)
       clearCompactAttachment()
       setSending(false)
       setTimeout(() => setStatus('idle'), 4000)
@@ -639,6 +662,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setSending,
     setStatus,
     setStatusMsg,
+    setMeshProgress,
     waitForMeshSosAckDigest,
   ])
 

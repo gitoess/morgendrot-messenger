@@ -26,4 +26,6 @@ export type AttachmentBarPort = {
   clearCompactAttachment: () => void
   compactPreviewUrl: string | null
   loraPreviewUrl: string | null
+  /** Während LoRa-LUMA/CHROMA per Mesh v2: z. B. „Luma 2/5 · Chroma ausstehend“. */
+  loraMeshProgressLine?: string | null
 }

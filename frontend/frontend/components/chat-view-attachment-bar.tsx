@@ -25,6 +25,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     clearCompactAttachment,
     compactPreviewUrl,
     loraPreviewUrl,
+    loraMeshProgressLine,
   } = p
 
   const cameraCaptureRef = useRef<HTMLInputElement>(null)
@@ -151,6 +152,15 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           />
         </div>
       )}
+      {attachedLora != null && loraMeshProgressLine ? (
+        <p
+          className="mb-2 rounded-md border border-border bg-muted/30 px-2 py-1.5 text-xs font-medium tabular-nums text-foreground"
+          role="status"
+          aria-live="polite"
+        >
+          Funk (Mesh v2): {loraMeshProgressLine}
+        </p>
+      ) : null}
       {attachedTxtFile != null && !attachedBlobBase64 && (
         <div className="mb-2 max-h-28 overflow-auto rounded-md border border-border bg-muted/20 p-2">
           <p className="mb-1 text-xs text-muted-foreground">Vorschau .txt (gekürzt):</p>
