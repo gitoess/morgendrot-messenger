@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { sendMessage, sendEncryptedMessageWithTimeout } from '@/frontend/lib/api'
+import { sendMessage, sendEncryptedMessageWithTimeout, sosGatewayAckDigest } from '@/frontend/lib/api'
 import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
   buildChatOutgoingWireContent,
@@ -20,6 +20,7 @@ import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-h
 import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 import type { SendMeshV2WireBurstOptions } from '@/frontend/features/send/chat-view-mesh-send'
 import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
+import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -57,6 +58,28 @@ function readSosRetryStopOnServerAckEnabled(): boolean {
   }
 }
 
+/** Optional: vor `/send` nur `/sos-gateway-ack` (Log, keine Mailbox) — aktivieren mit `localStorage` `morgendrot.sosUseDedicatedGatewayAck` = `1`. */
+function readSosUseDedicatedGatewayAck(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem('morgendrot.sosUseDedicatedGatewayAck') === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Nach erfolgreichem Funk-SOS auf Mesh-Ack warten (ms), `localStorage` `morgendrot.sosWaitMeshAckMs` (0 = aus, max 120000). */
+function readSosWaitMeshAckAfterSendMs(): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const v = parseInt(window.localStorage.getItem('morgendrot.sosWaitMeshAckMs') || '0', 10)
+    if (!Number.isFinite(v) || v <= 0) return 0
+    return Math.min(v, 120_000)
+  } catch {
+    return 0
+  }
+}
+
 function applyValidationError(
   v: { ok: false; message: string; idleMs?: number },
   setStatus: UseChatViewSendFlowParams['setStatus'],
@@ -88,6 +111,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
+    waitForMeshSosAckDigest,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -97,6 +121,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const sosMailboxAckedSnaps = new Set<string>()
     /** Mindestens ein SOS-Teil wurde nach Funkfehler nur/noch über Mailbox zugestellt (Retry gestoppt). */
     let sosDeliveredViaMailboxAck = false
+    /** Nach erfolgreichem Funk: optionaler Hinweis auf empfangenes `MORG_SOS_ACK_V1`. */
+    let sosMeshPeerAckFootnote = ''
     const meshBurstOpts: SendMeshV2WireBurstOptions | undefined = isEmergencySend
       ? { priorityFlash: true }
       : undefined
@@ -122,18 +148,38 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             throw new Error(MESH_BT_NOT_CONNECTED_MSG)
           }
           await sendMeshBurst(wireText)
+          const waitMs = readSosWaitMeshAckAfterSendMs()
+          if (waitMs > 0 && waitForMeshSosAckDigest) {
+            const digest = await sha256HexUtf8(wireText)
+            const got = await waitForMeshSosAckDigest(digest, waitMs)
+            if (got) {
+              sosMeshPeerAckFootnote = ' Funk-Empfang per [SOS-Ack] bestätigt.'
+            }
+          }
           return
         } catch (e) {
           lastErr = e
           if (attempt + 1 >= max) break
           if (encrypted && isPrivate && readSosRetryStopOnServerAckEnabled()) {
-            setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Basis)…')
-            const ack = await sendEncryptedMessageWithTimeout(wireText)
-            if (ack.ok) {
+            const digest = await sha256HexUtf8(wireText)
+            let acked = false
+            if (readSosUseDedicatedGatewayAck()) {
+              setStatusMsg('SOS: Funk fehlgeschlagen — leichtes Gateway-ACK…')
+              const g = await sosGatewayAckDigest(digest)
+              acked = !!(g && typeof g === 'object' && (g as { ok?: boolean }).ok === true)
+            }
+            if (!acked) {
+              setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Basis)…')
+              const ack = await sendEncryptedMessageWithTimeout(wireText)
+              acked = ack.ok
+            }
+            if (acked) {
               sosMailboxAckedSnaps.add(wireText)
               sosDeliveredViaMailboxAck = true
               setStatusMsg(
-                'SOS: Basis hat die Nachricht über die Mailbox — Funk-Wiederholungen gestoppt (Airtime).'
+                readSosUseDedicatedGatewayAck()
+                  ? 'SOS: Gateway/Mailbox-Pfad hat bestätigt — Funk-Wiederholungen gestoppt (Airtime).'
+                  : 'SOS: Basis hat die Nachricht über die Mailbox — Funk-Wiederholungen gestoppt (Airtime).'
               )
               return
             }
@@ -550,15 +596,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       }
 
+      const successTail = mirrorFootnote + sosMeshPeerAckFootnote
       setStatus('success')
       if (textSnaps.length > 1) {
-        setStatusMsg(`Alle ${textSnaps.length} Teile gesendet.${mirrorFootnote}`)
+        setStatusMsg(`Alle ${textSnaps.length} Teile gesendet.${successTail}`)
       } else if (lastOk?.ok && lastOk.meshFallback) {
         setStatusMsg(
-          `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${mirrorFootnote}`
+          `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${successTail}`
         )
       } else {
-        setStatusMsg(singleWireSuccessMsg() + mirrorFootnote)
+        setStatusMsg(singleWireSuccessMsg() + successTail)
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
@@ -592,6 +639,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setSending,
     setStatus,
     setStatusMsg,
+    waitForMeshSosAckDigest,
   ])
 
   return { handleSend }

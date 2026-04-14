@@ -8,6 +8,11 @@ export function sendEncryptedMessageWithTimeout(message: string, timeoutMs = 120
   return executeCommand('/send', [message], { timeoutMs })
 }
 
+/** SOS: leichtes Gateway-ACK (Log), **ohne** vollen Mailbox-Speicher — optional vor `/send` im Retry. */
+export function sosGatewayAckDigest(digestSha256Hex64: string) {
+  return executeCommand('/sos-gateway-ack', [digestSha256Hex64.trim()])
+}
+
 /** Nachricht aus Mailbox purgen (Storage-Rebate). Mit /connect: /purge-msg &lt;nonce&gt; [sender]. */
 export function purgeMailboxMessage(nonce: string, senderAddress?: string) {
   const args = senderAddress?.trim() ? [nonce, senderAddress.trim()] : [nonce]

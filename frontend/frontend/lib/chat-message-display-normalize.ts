@@ -7,6 +7,7 @@
 
 import { stripDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
 import { stripLeadingMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
+import { tryParseMorgSosAckV1Plaintext } from '@/frontend/lib/morg-sos-ack-wire'
 
 export function formatSosVisibleContent(plaintext: string): string {
   const e = stripLeadingMorgEmergencyV1Marker(plaintext)
@@ -22,6 +23,10 @@ export function normalizeChatMessageContentForDisplay(plaintext: string): string
   const d = stripDelayMirrorMarker(t)
   if (d.mirrored) {
     t = d.body
+  }
+  const ackD = tryParseMorgSosAckV1Plaintext(t)
+  if (ackD) {
+    return `[SOS-Bestätigung · …${ackD.slice(-8)}]`
   }
   return formatSosVisibleContent(t)
 }

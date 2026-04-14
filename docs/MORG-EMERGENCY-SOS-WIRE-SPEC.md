@@ -110,4 +110,23 @@ So bleibt klar: **Nicht jede LoRa-Nachricht ist ein Hilferuf.**
 
 ---
 
+## 8. Optionale Acks (B2+): Basis-Gateway und Mesh-Peer
+
+**Ziel:** Funk-Wiederholungen stoppen, sobald die Basis die Nutzlast **gesehen** hat (ohne vollen Mailbox-Write), und optional dem Sender ein **LoRa-Rücksignal** geben, dass ein Peer den Hilferuf **quittiert** hat.
+
+### 8.1 Leichtes Gateway-ACK (`/sos-gateway-ack`)
+
+- **API:** Messenger-Command **`/sos-gateway-ack`** mit einem Argument: **64 Zeichen** hex (klein), SHA-256 über **UTF-8** des **kompletten** SOS-Wire-Strings (derselbe String, der auch per Mesh v2 geburstet wird).
+- **Server:** Prüft Connect/`canSend` analog **`/send`**, schreibt **nicht** in die Mailbox — nur **`logger.warn`** (Basis „hat gesehen“).
+- **App:** Standard **aus**. Aktivierung: `localStorage` **`morgendrot.sosUseDedicatedGatewayAck`** = **`1`**. Wenn aktiv und **`morgendrot.sosRetryStopOnServerAck`** ≠ **`0`**, wird nach Funkfehlern **vor** dem verschlüsselten **`/send`** versucht, per Digest zu bestätigen; bei Erfolg entfallen weitere Funk-Wiederholungen für diesen Snap.
+
+### 8.2 Mesh-Ack `MORG_SOS_ACK_V1`
+
+- **Präfix:** `[[MORG_SOS_ACK_V1:` … `]]` — JSON-Hülle mit u. a. **`d`** = SHA-256-Hex (64) über den **Klartext** des empfangenen **`MORG_EMERGENCY_V1`**-Inhalts (wie beim Gateway-ACK: kanonischer UTF-8-String). Implementierung: **`src/shared/morg-sos-ack-wire.ts`** / **`frontend/frontend/lib/morg-sos-ack-wire.ts`**, Marker **`MorgTextWireMarker.SOS_ACK_V1`** in **`src/shared/opcodes.ts`**.
+- **UI-Anzeige:** `normalizeChatMessageContentForDisplay` → **`[SOS-Bestätigung · …<letzte8>]`**.
+- **Sender wartet auf Ack:** `localStorage` **`morgendrot.sosWaitMeshAckMs`** = Zahl in ms (**`0`** = aus; Wert wird in der App gecappt). Nach erfolgreichem Mesh-Burst kann die Erfolgsmeldung einen Zusatz **„Funk-Empfang per [SOS-Ack] bestätigt.“** enthalten.
+- **Auto-Antwort (Empfänger):** `localStorage` **`morgendrot.sosAutoMeshAckReply`** = **`1`** — bei eingehendem entschlüsseltem **`MORG_EMERGENCY_V1`** wird optional ein **`MORG_SOS_ACK_V1`**-Burst zurückgesendet (Dedup pro Digest, begrenzte Fenster).
+
+---
+
 *112 / Leitstelle: weiterhin **kein** automatisches „IOTA = Notruf“ — organisatorische Brücke siehe **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.*

@@ -1266,6 +1266,23 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         return { ok: true, message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.' };
                     }
+                    /** Leichtgewicht: SOS-Erreichbarkeit Basis/Gateway protokollieren — **keine** Mailbox-Speicherung (kein Doppel-/send). */
+                    if (c === '/sos-gateway-ack') {
+                        if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – SOS-Gateway-Ack verweigert.' };
+                        const pmAck = sessionState.peerMap;
+                        if (!pmAck?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
+                        const digest = String(a[0] ?? '')
+                            .trim()
+                            .toLowerCase();
+                        if (!/^[a-f0-9]{64}$/.test(digest)) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /sos-gateway-ack <sha256-hex-64> (Digest der SOS-Nutzlast UTF-8).',
+                            };
+                        }
+                        logger.warn(`morg.sos.gateway_ack digest=${digest} peers=${pmAck.size}`);
+                        return { ok: true, message: 'SOS-Gateway-Ack protokolliert (keine Mailbox-Transaktion).' };
+                    }
                     if (c === '/mesh-build-v2') {
                         if (!canSend) {
                             return {

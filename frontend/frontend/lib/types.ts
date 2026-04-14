@@ -23,7 +23,7 @@ export interface Message {
   recipient?: string
   /** Standard: Mailbox/IOTA; lokal vom Funk-Stick */
   source?: 'mailbox' | 'mesh'
-  meshMeta?: { kind: 'v2' | 'text'; fromNodeNum: number; nonce?: number }
+  meshMeta?: { kind: 'v2' | 'text'; fromNodeNum: number; nonce?: number; sosAckDigest?: string }
   /** Kanäle, über die derselbe Inhalt (dedupKey) angekommen ist */
   transports?: ('internet' | 'mesh' | 'adhoc')[]
   /** Inhalt + Absender + Zeitfenster – für Zusammenführung IOTA+Funk */

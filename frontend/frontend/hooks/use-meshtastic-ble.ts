@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import type { MeshDevice } from '@meshtastic/core'
 import { Protobuf } from '@meshtastic/core'
 import { findAddressByV2Fingerprint, tryParseEmergencyBinaryV2 } from '@/frontend/lib/emergency-binary-browser'
@@ -13,6 +13,9 @@ import {
   formatSosVisibleContent,
   normalizeChatMessageContentForDisplay,
 } from '@/frontend/lib/chat-message-display-normalize'
+import { plaintextStartsWithMorgEmergencyV1 } from '@/frontend/lib/morg-emergency-v1-text'
+import { buildMorgSosAckV1Wire, tryParseMorgSosAckV1Plaintext } from '@/frontend/lib/morg-sos-ack-wire'
+import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 
 const V2_MAX_BYTES = 240
 
@@ -50,6 +53,10 @@ export type MeshtasticBleOptions = {
   decryptMeshV2Wire?: (senderAddress: string, fullWire: Uint8Array) => Promise<string | null>
   /** Nach MF1-Merge: Klartext ohne Marker an IOTA spiegeln (Delayed Upload). */
   onDelayMirrorPlaintext?: (plaintext: string, senderAddress: string) => void | Promise<void>
+  /** Optional: verschlüsselten Mesh-Burst für `MORG_SOS_ACK_V1` (wird in Core gesetzt). */
+  sendSosAckBurstRef?: MutableRefObject<((wire: string) => Promise<void>) | null>
+  /** Optional: `localStorage` `morgendrot.sosAutoMeshAckReply` === `1` — bei eingehendem SOS automatisch Ack senden. */
+  shouldAutoAckSosMesh?: () => boolean
 }
 
 function nodeNumToMeshId(from: number): string {
@@ -66,6 +73,10 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const onMsgRef = useRef(opts?.onMeshChatMessage)
   const decryptRef = useRef(opts?.decryptMeshV2Wire)
   const delayMirrorRef = useRef(opts?.onDelayMirrorPlaintext)
+  /** Parent’s `MutableRefObject` to `sendMeshV2WireBurst` for SOS-Ack — not the burst fn itself. */
+  const sosAckBurstParentRef = useRef(opts?.sendSosAckBurstRef)
+  const shouldAutoAckSosMeshRef = useRef(opts?.shouldAutoAckSosMesh)
+  const recentSosAckDigestsRef = useRef(new Set<string>())
   const meshFragRef = useRef(new MeshFragReassembler())
   useEffect(() => {
     dirRef.current = opts?.contactDirectory ?? {}
@@ -79,6 +90,12 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   useEffect(() => {
     delayMirrorRef.current = opts?.onDelayMirrorPlaintext
   }, [opts?.onDelayMirrorPlaintext])
+  useEffect(() => {
+    sosAckBurstParentRef.current = opts?.sendSosAckBurstRef
+  }, [opts?.sendSosAckBurstRef])
+  useEffect(() => {
+    shouldAutoAckSosMeshRef.current = opts?.shouldAutoAckSosMesh
+  }, [opts?.shouldAutoAckSosMesh])
 
   useEffect(() => {
     deviceRef.current = device
@@ -111,20 +128,46 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         let body: string
         let encrypted = true
         let mf1Mid: string | undefined
+        let meshMetaOut: NonNullable<Message['meshMeta']> = {
+          kind: 'v2',
+          fromNodeNum: pm.from,
+          nonce: parsed.nonce,
+        }
         if (senderAddr && decrypt) {
           const plain = await decrypt(senderAddr, fullWire)
           if (plain) {
             const merged = meshFragRef.current.tryMerge(senderAddr, plain)
             if (merged.status === 'pending') return
-            body = merged.text
+            let rawBody = merged.text
             mf1Mid = merged.mf1Mid
             encrypted = false
-            const strip = stripDelayMirrorMarker(body)
+            const strip = stripDelayMirrorMarker(rawBody)
             if (strip.mirrored) {
-              body = strip.body
+              rawBody = strip.body
               void delayMirrorRef.current?.(strip.body, senderAddr)
             }
-            body = formatSosVisibleContent(body)
+            const ackDigest = tryParseMorgSosAckV1Plaintext(rawBody)
+            if (ackDigest) {
+              body = `[SOS-Bestätigung · …${ackDigest.slice(-8)}]`
+              meshMetaOut = { ...meshMetaOut, sosAckDigest: ackDigest }
+            } else if (
+              plaintextStartsWithMorgEmergencyV1(rawBody) &&
+              sosAckBurstParentRef.current?.current &&
+              shouldAutoAckSosMeshRef.current?.()
+            ) {
+              const d = await sha256HexUtf8(rawBody)
+              const recent = recentSosAckDigestsRef.current
+              if (!recent.has(d)) {
+                recent.add(d)
+                setTimeout(() => recent.delete(d), 120_000)
+                void sosAckBurstParentRef.current
+                  ?.current?.(buildMorgSosAckV1Wire(d))
+                  .catch(() => {})
+              }
+              body = formatSosVisibleContent(rawBody)
+            } else {
+              body = formatSosVisibleContent(rawBody)
+            }
           } else {
             body = `[Mesh v2] Entschlüsselung fehlgeschlagen (Absender ${senderAddr.slice(0, 8)}…).`
           }
@@ -148,7 +191,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
           source: 'mesh',
           transports: ['mesh'],
           dedupKey,
-          meshMeta: { kind: 'v2', fromNodeNum: pm.from, nonce: parsed.nonce },
+          meshMeta: meshMetaOut,
         })
       })
     }

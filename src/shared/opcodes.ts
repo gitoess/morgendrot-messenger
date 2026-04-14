@@ -124,6 +124,8 @@ export const MorgTextWireMarker = {
     PROTOKOLL_ANCHOR_V1: '[[MORG_PROTOKOLL_ANCHOR_V1:' as const,
     /** Text-Hülle: Hilferuf vor Nutzlast (Klartext vor AES-GCM / Mesh); siehe `morg-emergency-v1-text.ts` + `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md` */
     EMERGENCY_V1: '[[MORG_EMERGENCY_V1:' as const,
+    /** Optional: Empfangsbestätigung für SOS (SHA-256 der Originalnutzlast); siehe `morg-sos-ack-wire.ts` */
+    SOS_ACK_V1: '[[MORG_SOS_ACK_V1:' as const,
     /** Platzhalter-Zeile für Delayed-Upload-Spiegel (exakt dieser String) */
     DELAY_MIRROR_V1: '[[MORG_DELAY_MIRROR_V1]]' as const,
     /** Body mit angehängtem Wire nach Newline */

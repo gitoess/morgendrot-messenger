@@ -6,6 +6,7 @@ export { fetchStatus, unlockBackend } from '@/frontend/lib/api/status'
 export {
   sendMessage,
   sendEncryptedMessageWithTimeout,
+  sosGatewayAckDigest,
   purgeMailboxMessage,
 } from '@/frontend/lib/api/chat-commands'
 

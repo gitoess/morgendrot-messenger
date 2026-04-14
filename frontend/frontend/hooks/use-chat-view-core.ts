@@ -5,12 +5,13 @@
  * Meshtastic-First: Funk über `useMeshtasticBle` + Standard-Payloads; keine parallele Mesh-Implementierung hier.
  */
 
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { meshDecryptV2Wire, fetchAllInboxMessagesForExport } from '@/frontend/lib/api'
 import { extractCompletedSlideSequences } from '@/frontend/features/inbox/inbox-slideshow'
 import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
+import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { useChatViewSendFlow } from '@/frontend/hooks/use-chat-view-send-flow'
 import { useChatViewAttachments } from '@/frontend/hooks/use-chat-view-attachments'
@@ -92,6 +93,22 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     refreshContactDirectory,
     packageId: inboxPackageFilter.trim() || undefined,
   })
+
+  const messagesSnapshotRef = useRef(messages)
+  messagesSnapshotRef.current = messages
+
+  const waitForMeshSosAckDigest = useCallback(async (digestHex: string, timeoutMs: number) => {
+    const deadline = Date.now() + timeoutMs
+    while (Date.now() < deadline) {
+      for (const m of messagesSnapshotRef.current) {
+        if (m.meshMeta?.sosAckDigest === digestHex) return true
+      }
+      await new Promise((r) => setTimeout(r, 380))
+    }
+    return false
+  }, [])
+
+  const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
 
   const messagesForExport = useCallback(async () => {
     const fromApi = await fetchAllInboxMessagesForExport({
@@ -192,7 +209,28 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onMeshChatMessage: appendMeshMessage,
     decryptMeshV2Wire: decryptMeshWire,
     onDelayMirrorPlaintext,
+    sendSosAckBurstRef,
+    shouldAutoAckSosMesh: () => {
+      if (typeof window === 'undefined') return false
+      try {
+        return window.localStorage.getItem('morgendrot.sosAutoMeshAckReply') === '1'
+      } catch {
+        return false
+      }
+    },
   })
+
+  useEffect(() => {
+    sendSosAckBurstRef.current = async (ackWire: string) => {
+      if (!meshtastic.connected) return
+      await sendMeshV2WireBurst(
+        ackWire,
+        meshtastic.sendBinaryV2.bind(meshtastic),
+        undefined,
+        { priorityFlash: true }
+      )
+    }
+  }, [meshtastic.connected, meshtastic.sendBinaryV2])
 
   const {
     meshExportPw,
@@ -297,6 +335,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
+    waitForMeshSosAckDigest,
   })
 
   const {

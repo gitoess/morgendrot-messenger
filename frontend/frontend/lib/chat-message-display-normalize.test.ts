@@ -6,6 +6,7 @@ import {
 } from '@/frontend/lib/chat-message-display-normalize'
 import { wrapCompactImageMessage } from '@/frontend/lib/compact-image-wire'
 import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
+import { buildMorgSosAckV1Wire } from '@/frontend/lib/morg-sos-ack-wire'
 
 const HELLO_B64 = 'SGVsbG8='
 
@@ -49,6 +50,12 @@ describe('normalizeChatMessageContentForDisplay', () => {
   it('SOS nur Marker ohne Body', () => {
     const only = prependMorgEmergencyV1Marker('', 'text')
     expect(normalizeChatMessageContentForDisplay(only)).toBe('[SOS]')
+  })
+
+  it('mappt MORG_SOS_ACK_V1 auf [SOS-Bestätigung · …letzte8]', () => {
+    const d = 'a'.repeat(64)
+    const w = buildMorgSosAckV1Wire(d)
+    expect(normalizeChatMessageContentForDisplay(w)).toBe('[SOS-Bestätigung · …aaaaaaaa]')
   })
 })
 
