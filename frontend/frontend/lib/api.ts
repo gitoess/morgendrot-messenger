@@ -104,3 +104,6 @@ export {
   exportContactMeshEncrypted,
   importContactMeshEncrypted,
 } from '@/frontend/lib/api/contacts'
+
+export type { EinsatzRoleTemplate } from '@/frontend/lib/api/einsatz-role-templates'
+export { fetchEinsatzRoleTemplates, saveEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'

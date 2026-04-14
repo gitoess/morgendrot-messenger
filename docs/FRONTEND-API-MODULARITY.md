@@ -51,6 +51,7 @@
 | **`vault-signer-import.ts`** | `revealVaultSignerImport` |
 | **`command-response-types.ts`** | `CommandResponse`, `StatusResponse` (Dashboard-Legacy-Typen) |
 | **`dashboard-rest.ts`** | `getConfig`, `setConfig`, `getCurrentIds`, `getPackageIdHistory`, `getConnectAddresses`, `checkChainReachable` |
+| **`einsatz-role-templates.ts`** | `fetchEinsatzRoleTemplates`, `saveEinsatzRoleTemplates` — Boss/Werkstatt (`.morgendrot-einsatz-templates.json`) |
 
 Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `api-simple-ok-envelope.ts`).
 

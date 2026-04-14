@@ -16,11 +16,21 @@ import {
   Smartphone,
   KeyRound,
   Users,
+  ListOrdered,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { getStatus, revealVaultSignerImport, transferCoins, restartBackend, applyInitialProfileProvisioning } from '../../lib/api'
+import {
+  getStatus,
+  revealVaultSignerImport,
+  transferCoins,
+  restartBackend,
+  applyInitialProfileProvisioning,
+  fetchEinsatzRoleTemplates,
+  saveEinsatzRoleTemplates,
+} from '../../lib/api'
+import type { EinsatzRoleTemplate } from '../../lib/api'
 import {
   extractInitialProfileFromPaste,
   queueInitialProfileForNextApply,
@@ -58,6 +68,7 @@ export function SettingsView({
     chatConnected: boolean
     signer?: string
     vaultHasLocal?: boolean
+    role?: string
   } | null>(null)
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
@@ -86,6 +97,80 @@ export function SettingsView({
   const [einsatzProfilMsg, setEinsatzProfilMsg] = useState('')
   /** Aus initialProfile.offlineBriefing (lokal, nach Import) */
   const [offlineBriefingDisplay, setOfflineBriefingDisplay] = useState<string | null>(null)
+
+  /** Boss/Werkstatt: `GET/POST /api/einsatz-role-templates` (Roadmap § H.3g Paket 6). */
+  const [roleTemplatesJson, setRoleTemplatesJson] = useState('[]')
+  const [roleTemplatesBusy, setRoleTemplatesBusy] = useState(false)
+  const [roleTemplatesMsg, setRoleTemplatesMsg] = useState('')
+
+  const canManageEinsatzRoleTemplates =
+    status?.role === 'boss' || status?.role === 'messenger'
+
+  const loadRoleTemplates = async () => {
+    setRoleTemplatesMsg('')
+    if (!status?.backendOnline) {
+      setRoleTemplatesMsg('Backend offline.')
+      return
+    }
+    setRoleTemplatesBusy(true)
+    try {
+      const res = await fetchEinsatzRoleTemplates()
+      if (res.ok && res.templates) {
+        setRoleTemplatesJson(JSON.stringify(res.templates, null, 2))
+      } else {
+        setRoleTemplatesMsg(res.error || 'Vorlagen konnten nicht geladen werden.')
+      }
+    } finally {
+      setRoleTemplatesBusy(false)
+    }
+  }
+
+  const saveRoleTemplates = async () => {
+    setRoleTemplatesMsg('')
+    if (!status?.backendOnline) {
+      setRoleTemplatesMsg('Backend offline.')
+      return
+    }
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(roleTemplatesJson || '[]')
+    } catch {
+      setRoleTemplatesMsg('Kein gültiges JSON.')
+      return
+    }
+    if (!Array.isArray(parsed)) {
+      setRoleTemplatesMsg('Erwartet: JSON-Array von Vorlagen-Objekten.')
+      return
+    }
+    setRoleTemplatesBusy(true)
+    try {
+      const res = await saveEinsatzRoleTemplates(parsed as EinsatzRoleTemplate[])
+      if (res.ok && res.templates) {
+        setRoleTemplatesJson(JSON.stringify(res.templates, null, 2))
+        setRoleTemplatesMsg(res.message || 'Gespeichert.')
+      } else {
+        setRoleTemplatesMsg(res.error || 'Speichern fehlgeschlagen.')
+      }
+    } finally {
+      setRoleTemplatesBusy(false)
+    }
+  }
+
+  useEffect(() => {
+    const r = status?.role
+    if (!status?.backendOnline || (r !== 'boss' && r !== 'messenger')) return
+    let cancelled = false
+    void (async () => {
+      const res = await fetchEinsatzRoleTemplates()
+      if (cancelled) return
+      if (res.ok && res.templates) {
+        setRoleTemplatesJson(JSON.stringify(res.templates, null, 2))
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [status?.role, status?.backendOnline])
 
   const loadStatus = async () => {
     setLoading(true)
@@ -390,6 +475,60 @@ export function SettingsView({
           </div>
         </div>
       </div>
+
+      {canManageEinsatzRoleTemplates ? (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
+              <ListOrdered className="h-5 w-5" aria-hidden />
+            </div>
+            <div className="min-w-0 flex-1 space-y-3">
+              <div>
+                <h4 className="font-semibold text-foreground">Einsatz-Rollen-Vorlagen</h4>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Schreibt die Boss-Datei <span className="font-mono text-xs">.morgendrot-einsatz-templates.json</span> am
+                  Backend (gleiche API wie Lite-Provisioning). Schema:{' '}
+                  <span className="font-mono text-xs">docs/API-EINSATZ-ROLE-TEMPLATES.md</span> — Orientierung:{' '}
+                  <Link href="/handbook/BOSS-ORIENTIERUNG.md" className="text-primary underline hover:no-underline">
+                    Boss-Handbuch
+                  </Link>
+                  .
+                </p>
+              </div>
+              <Textarea
+                value={roleTemplatesJson}
+                onChange={(e) => setRoleTemplatesJson(e.target.value)}
+                className="min-h-[160px] font-mono text-xs"
+                spellCheck={false}
+                disabled={roleTemplatesBusy || !status?.backendOnline}
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={roleTemplatesBusy || !status?.backendOnline}
+                  onClick={() => void loadRoleTemplates()}
+                  className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                >
+                  Vom Backend laden
+                </button>
+                <button
+                  type="button"
+                  disabled={roleTemplatesBusy || !status?.backendOnline}
+                  onClick={() => void saveRoleTemplates()}
+                  className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  {roleTemplatesBusy ? '…' : 'Speichern'}
+                </button>
+              </div>
+              {roleTemplatesMsg ? (
+                <p className="text-xs text-muted-foreground" role="status">
+                  {roleTemplatesMsg}
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* Status Card */}
       <div className="rounded-xl border border-border bg-card">

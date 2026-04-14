@@ -17,6 +17,8 @@ export const getStatus = (): Promise<
     vaultHasLocal?: boolean
     /** Optional aus GET /api/status (Legacy-Dashboard). */
     version?: string
+    /** z. B. `boss` | `messenger` — für Werkstatt-APIs (Einsatz-Templates). */
+    role?: string
   }>
 > =>
   fetchStatus().then((s) => {
@@ -45,6 +47,7 @@ export const getStatus = (): Promise<
         signer: t.signer,
         vaultHasLocal: t.vaultStatus?.hasLocal,
         version: typeof raw.version === 'string' ? raw.version : undefined,
+        role: typeof t.role === 'string' ? t.role : undefined,
       },
       ...(t.locked && { locked: true }),
     }
