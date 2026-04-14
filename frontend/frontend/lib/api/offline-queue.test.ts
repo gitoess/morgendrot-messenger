@@ -1,0 +1,124 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import {
+  OFFLINE_QUEUE_ITEM_STATUS,
+  offlineMailboxDedupKey,
+  enqueueOfflineMailboxFailure,
+  loadOfflineMailboxQueue,
+  saveOfflineMailboxQueue,
+} from '@/frontend/lib/api/offline-queue'
+
+describe('offlineMailboxDedupKey', () => {
+  it('ist stabil für gleiche Nutzlast', () => {
+    const a = offlineMailboxDedupKey({
+      kind: 'encrypted_send',
+      recipient: '0xabc',
+      encrypted: true,
+      payload: 'hello',
+    })
+    const b = offlineMailboxDedupKey({
+      kind: 'encrypted_send',
+      recipient: '0xabc',
+      encrypted: true,
+      payload: 'hello',
+    })
+    expect(a).toBe(b)
+  })
+
+  it('unterscheidet Empfänger', () => {
+    const a = offlineMailboxDedupKey({
+      kind: 'plain_send',
+      recipient: '0x1',
+      encrypted: false,
+      payload: 'x',
+    })
+    const b = offlineMailboxDedupKey({
+      kind: 'plain_send',
+      recipient: '0x2',
+      encrypted: false,
+      payload: 'x',
+    })
+    expect(a).not.toBe(b)
+  })
+})
+
+describe('enqueueOfflineMailboxFailure (localStorage)', () => {
+  const store: Record<string, string> = {}
+
+  beforeEach(() => {
+    Object.keys(store).forEach((k) => delete store[k])
+    vi.stubGlobal(
+      'localStorage',
+      {
+        getItem: (k: string) => (k in store ? store[k] : null),
+        setItem: (k: string, v: string) => {
+          store[k] = v
+        },
+        removeItem: (k: string) => {
+          delete store[k]
+        },
+        clear: () => {
+          Object.keys(store).forEach((k) => delete store[k])
+        },
+        key: () => null,
+        length: 0,
+      } as Storage
+    )
+    store['morgendrot.offlineMailboxQueue'] = '1'
+  })
+
+  it('legt pending-Eintrag an', () => {
+    const r = enqueueOfflineMailboxFailure({
+      kind: 'encrypted_send',
+      recipient: '0xr',
+      payload: 'wire',
+      encrypted: true,
+      lastError: 'net',
+    })
+    expect(r).toEqual({ ok: true, queued: true })
+    const items = loadOfflineMailboxQueue()
+    expect(items).toHaveLength(1)
+    expect(items[0]?.status).toBe(OFFLINE_QUEUE_ITEM_STATUS.PENDING)
+    expect(items[0]?.payload).toBe('wire')
+  })
+
+  it('dedupliziert gleichen Inhalt', () => {
+    const p = {
+      kind: 'encrypted_send' as const,
+      recipient: '0xr',
+      payload: 'same',
+      encrypted: true,
+      lastError: 'e',
+    }
+    expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: true })
+    expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: false })
+    expect(loadOfflineMailboxQueue()).toHaveLength(1)
+  })
+
+  it('queued false wenn Opt-in aus', () => {
+    delete store['morgendrot.offlineMailboxQueue']
+    const r = enqueueOfflineMailboxFailure({
+      kind: 'plain_send',
+      recipient: '0xa',
+      payload: 'hi',
+      encrypted: false,
+    })
+    expect(r).toEqual({ ok: true, queued: false })
+    expect(loadOfflineMailboxQueue()).toHaveLength(0)
+  })
+
+  it('saveOfflineMailboxQueue kürzt auf MAX_ITEMS (60)', () => {
+    const many = Array.from({ length: 65 }, (_, i) => ({
+      id: `id-${i}`,
+      kind: 'encrypted_send' as const,
+      status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+      recipient: '0x',
+      payload: `${i}`,
+      encrypted: true,
+      createdAt: i,
+      attempts: 0,
+      lastAttemptAt: 0,
+    }))
+    saveOfflineMailboxQueue(many)
+    expect(loadOfflineMailboxQueue()).toHaveLength(60)
+  })
+})

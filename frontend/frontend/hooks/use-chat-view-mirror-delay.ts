@@ -15,6 +15,10 @@ import {
   mirrorPayloadFromWireBody,
   mirrorQueueDedupKey,
 } from '@/frontend/lib/delayed-mirror-queue'
+import {
+  drainOfflineMailboxQueue,
+  getOfflineMailboxQueueCount,
+} from '@/frontend/lib/api/offline-queue'
 
 export type UseChatViewMirrorDelayParams = {
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: string) => Promise<void>
@@ -27,11 +31,14 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
 
   const mirrorDedupRef = useRef(new Set<string>())
   const mirrorDrainInFlightRef = useRef(false)
+  const offlineMailboxDrainInFlightRef = useRef(false)
   const [mirrorQueuePending, setMirrorQueuePending] = useState(0)
+  const [offlineMailboxQueuePending, setOfflineMailboxQueuePending] = useState(0)
 
   useEffect(() => {
     try {
       setMirrorQueuePending(getMirrorQueueCount())
+      setOfflineMailboxQueuePending(getOfflineMailboxQueueCount())
     } catch {
       /* ignore */
     }
@@ -67,6 +74,30 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       }
     } finally {
       mirrorDrainInFlightRef.current = false
+    }
+  }, [loadMessages, setStatus, setStatusMsg])
+
+  const runOfflineMailboxDrain = useCallback(async () => {
+    if (offlineMailboxDrainInFlightRef.current) return
+    const s = await fetchStatus()
+    if (!('pollClockHint' in s) || s.backendRunning === false || s.locked) return
+    if (getOfflineMailboxQueueCount() === 0) return
+    offlineMailboxDrainInFlightRef.current = true
+    try {
+      const r = await drainOfflineMailboxQueue()
+      setOfflineMailboxQueuePending(r.remaining)
+      if (r.sent > 0) {
+        setStatus('success')
+        setStatusMsg(
+          r.sent === 1
+            ? 'Mailbox-Warteschlange: 1 Eintrag übertragen.'
+            : `Mailbox-Warteschlange: ${r.sent} Einträge übertragen.`
+        )
+        setTimeout(() => setStatus('idle'), 6000)
+        void loadMessages()
+      }
+    } finally {
+      offlineMailboxDrainInFlightRef.current = false
     }
   }, [loadMessages, setStatus, setStatusMsg])
 
@@ -114,7 +145,9 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
 
   return {
     mirrorQueuePending,
+    offlineMailboxQueuePending,
     runMirrorDrain,
+    runOfflineMailboxDrain,
     onDelayMirrorPlaintext,
   }
 }

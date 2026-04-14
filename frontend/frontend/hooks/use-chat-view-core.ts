@@ -157,7 +157,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     contactDirectory: directory,
   })
 
-  const { mirrorQueuePending, runMirrorDrain, onDelayMirrorPlaintext } = useChatViewMirrorDelay({
+  const {
+    mirrorQueuePending,
+    offlineMailboxQueuePending,
+    runMirrorDrain,
+    runOfflineMailboxDrain,
+    onDelayMirrorPlaintext,
+  } = useChatViewMirrorDelay({
     loadMessages,
     setStatus,
     setStatusMsg,
@@ -165,6 +171,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
     useChatViewApiStatusPoll({
       runMirrorDrain,
+      runOfflineMailboxDrain,
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
@@ -422,6 +429,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     deviceTimeTrustWarn,
     syncCanonicalPackageIdFromServer,
     mirrorQueuePending,
+    offlineMailboxQueuePending,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,

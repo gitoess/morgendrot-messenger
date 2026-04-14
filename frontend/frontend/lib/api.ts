@@ -27,6 +27,23 @@ export {
   purgeMailboxMessage,
 } from '@/frontend/lib/api/chat-commands'
 
+export type {
+  OfflineMailboxQueueItem,
+  OfflineMailboxKind,
+  OfflineQueueItemStatus,
+  EnqueueOfflineMailboxResult,
+} from '@/frontend/lib/api/offline-queue'
+export {
+  OFFLINE_QUEUE_ITEM_STATUS,
+  isOfflineMailboxQueueEnabled,
+  loadOfflineMailboxQueue,
+  saveOfflineMailboxQueue,
+  enqueueOfflineMailboxFailure,
+  drainOfflineMailboxQueue,
+  getOfflineMailboxQueueCount,
+  offlineMailboxDedupKey,
+} from '@/frontend/lib/api/offline-queue'
+
 export type { MeshV2Wire } from '@/frontend/lib/api/mesh-morg-pkg'
 export { meshBuildV2Wires, meshDecryptV2Wire, morgPkgExport, morgPkgImport } from '@/frontend/lib/api/mesh-morg-pkg'
 

@@ -1,7 +1,13 @@
 'use client'
 
 import { useCallback } from 'react'
-import { sendMessage, sendEncryptedMessageWithTimeout, sosGatewayAckDigest } from '@/frontend/lib/api'
+import {
+  sendMessage,
+  sendEncryptedMessageWithTimeout,
+  sosGatewayAckDigest,
+  enqueueOfflineMailboxFailure,
+  isOfflineMailboxQueueEnabled,
+} from '@/frontend/lib/api'
 import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
   buildChatOutgoingWireContent,
@@ -406,6 +412,31 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setStatusMsg(`Datei wird in ${textSnaps.length} Teile aufgeteilt…`)
     }
 
+    const allowOfflineMailboxQueue =
+      textSnaps.length === 1 &&
+      isOfflineMailboxQueueEnabled() &&
+      !attachedBlobBase64 &&
+      !attachedAudioBase64 &&
+      !attachedTxtFile &&
+      !attachedLora
+
+    const queueMailboxIfAllowed = (
+      kind: 'encrypted_send' | 'plain_send',
+      textSnap: string,
+      encrypted: boolean,
+      lastErr: string
+    ): boolean => {
+      if (!allowOfflineMailboxQueue) return false
+      const en = enqueueOfflineMailboxFailure({
+        kind,
+        recipient,
+        payload: textSnap,
+        encrypted,
+        lastError: lastErr,
+      })
+      return en.ok && en.queued
+    }
+
     type PartOk =
       | { ok: true; meshFallback?: { onlineErr: string } }
       | { ok: false }
@@ -419,7 +450,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
         const res = await sendMessage(recipient, textSnap, enc)
         if (res.ok) return { ok: true }
-        return failSend(res.error || 'Fehler')
+        const errText = res.error || 'Fehler'
+        if (queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', textSnap, enc, errText)) {
+          return failSend(
+            `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
+          )
+        }
+        return failSend(errText)
       }
 
       if (!isPrivate) {
@@ -526,12 +563,23 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             }
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
+            const meshMsg = meshErr instanceof Error ? meshErr.message : String(meshErr)
+            if (queueMailboxIfAllowed('encrypted_send', textSnap, true, `${onlineErr} / Funk: ${meshMsg}`)) {
+              return failSend(
+                `${onlineErr} Funk-Versuch fehlgeschlagen — zwischengespeichert; erneuter Mailbox-Versuch bei Basis (Opt-in).`
+              )
+            }
             setStatus('error')
-            setStatusMsg(
-              `${onlineErr} Funk-Versuch: ${meshErr instanceof Error ? meshErr.message : String(meshErr)}`
-            )
+            setStatusMsg(`${onlineErr} Funk-Versuch: ${meshMsg}`)
             return { ok: false }
           }
+        }
+        if (queueMailboxIfAllowed('encrypted_send', textSnap, true, onlineErr)) {
+          return failSend(
+            readStrictOnlineNoMeshFallback() && meshtastic.connected
+              ? `${onlineErr} „Strikt ohne Funk-Fallback“ — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder Transport auf „funk“ stellen.`
+              : `${onlineErr} Kein Funk (Heltec) verbunden — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder „funk“ wählen.`
+          )
         }
         setStatus('error')
         setStatusMsg(

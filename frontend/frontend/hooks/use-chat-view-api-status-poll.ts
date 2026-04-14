@@ -19,6 +19,8 @@ import {
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
+  /** § H.3g Paket 7 (Vorbereitung): fehlgeschlagene `/send`-Versuche nachziehen. */
+  runOfflineMailboxDrain?: () => Promise<void>
   /** Standard 12 s */
   pollIntervalMs?: number
   /**
@@ -36,6 +38,7 @@ export type UseChatViewApiStatusPollParams = {
 export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const {
     runMirrorDrain,
+    runOfflineMailboxDrain,
     pollIntervalMs = 12000,
     localPackageId,
     probeGeolocationForDeviceTime = true,
@@ -109,6 +112,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       setBasisUnreachable(false)
       applyStatusOk(s)
       await runMirrorDrain()
+      await runOfflineMailboxDrain?.()
     }
     void tick()
     const id = setInterval(() => void tick(), pollIntervalMs)
@@ -116,7 +120,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       alive = false
       clearInterval(id)
     }
-  }, [runMirrorDrain, pollIntervalMs, applyStatusOk])
+  }, [runMirrorDrain, runOfflineMailboxDrain, pollIntervalMs, applyStatusOk])
 
   /** Jeder Render: `Date.now()` gegen `okAtMs` — kein `useMemo`, sonst veraltet die Warnung nach 15 min ohne Re-Render. */
   const navOnline = typeof navigator !== 'undefined' && navigator.onLine
