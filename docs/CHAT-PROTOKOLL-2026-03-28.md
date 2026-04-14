@@ -143,3 +143,18 @@
 **Merge-Ritual / CI:** Unverändert — **`TESTING.md`** § *Qualitätsritual vor Merge*, **`.github/workflows/frontend-checks.yml`**. Die genannten Commits betrafen überwiegend **`docs/`**; vor nächsten **Code**-Änderungen an Messenger/LoRa Ritual vollständig ausführen.
 
 **README / Snapshot:** Eintragspunkt 6 + *Roadmap & Sitzungsprotokolle* um **§ H.10b**, **§ H.3m**, **§ H.7b** ergänzt; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** diesen Nachtrag mitverlinkt (gleicher Commit wie Protokoll-Update).
+
+---
+
+## Nachtrag (2026-03-30) – Sync-Check & Offline-Mailbox-Outbox (§ H.3g 7a / H.6c)
+
+**Kontext:** Abgleich GitHub/README/Logs/Chatverlauf mit dem Ist-Code; anschließend Doku nachgezogen.
+
+| Thema | Kurz |
+|--------|------|
+| **Git** | Branch **`main`**, **`origin/main`** abgeglichen, Arbeitsbaum **sauber** (keine offenen Änderungen zum Zeitpunkt der Prüfung). |
+| **Logs** | Verzeichnis **`logs/`** steht in **`.gitignore`** — nicht versioniert; lokale Laufzeitlogs separat pflegen. |
+| **Offline-Mailbox-Outbox** | Opt-in **`localStorage`**-Schlüssel **`morgendrot.offlineMailboxQueue`**; Implementierung **`frontend/frontend/lib/api/offline-queue.ts`**; Drain/Status über Spiegel-Poll; Send-Panel-Banner; **`timeIsTrusted`** und monotones **`clientOutSeq`** (**§ H.6c**). |
+| **Commits (Beispiel)** | `8be765d` … `03ede59` (Banner, `timeIsTrusted`, `clientOutSeq`). |
+
+**Artefakt:** dieser Nachtrag; Verweise in **`README.md`**, **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, **`TESTING.md`** (Protokollzeile).

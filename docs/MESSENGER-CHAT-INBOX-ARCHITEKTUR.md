@@ -78,7 +78,7 @@ Frontend
 |-----|--------|
 | **Chain** | Mailbox-Objekte + Events — Quelle der Wahrheit für `/fetch` |
 | **`.inbox.enc`** (neben Vault) | Optionaler Klartext-Cache nach erfolgreicher Entschlüsselung (Backend) |
-| **Browser** | Keine dauerhafte Chat-DB; Liste = frischer Fetch + Session-State (ausgeblendete IDs in `sessionStorage`) |
+| **Browser** | Keine dauerhafte Chat-DB; Liste = frischer Fetch + Session-State (ausgeblendete IDs in `sessionStorage`). Optional: **Mailbox-Offline-Outbox** in **`localStorage`** (Opt-in **`morgendrot.offlineMailboxQueue`** = `'1'`) — **`frontend/frontend/lib/api/offline-queue.ts`**; Drain bei erneutem Online-/Status-Poll. |
 | **Mesh** | Nur laufende Sitzung / Kontaktverzeichnis; Merge in die gleiche `messages`-Liste |
 
 Exporte (Einsatzbericht, Protokoll) nutzen die zusammengeführten Messages — siehe **`docs/EINSATZBERICHT-EXPORT.md`**.
@@ -98,6 +98,7 @@ Exporte (Einsatzbericht, Protokoll) nutzen die zusammengeführten Messages — s
 | Status / Adresse UI | `frontend/frontend/components/dashboard.tsx`, `frontend/frontend/lib/api.ts` (`ApiStatus`) |
 | Inbox-Liste | `frontend/frontend/components/chat-view-inbox-list.tsx` |
 | Orchestrierung Chat | `frontend/frontend/hooks/use-chat-view-core.ts` |
+| Mailbox-Offline-Outbox (Client, Opt-in) | `frontend/frontend/lib/api/offline-queue.ts`; Anbindung Send/Mirror: `use-chat-view-handle-send.ts`, `use-chat-view-mirror-delay.ts`; UI: `chat-view-send-panel.tsx`, `chat-view-main-content.tsx` |
 
 ---
 
