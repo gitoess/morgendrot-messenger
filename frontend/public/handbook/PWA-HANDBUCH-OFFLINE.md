@@ -14,7 +14,7 @@
 
 ## 2. Was nicht automatisch gilt
 
-- **„Saugt alle .md aus docs/“:** Nein — nur die Dateien, die **`sync-pwa-handbook`** nach **`frontend/public/handbook/`** kopiert und die im **Service Worker** eingetragen sind (Liste in `scripts/sync-pwa-handbook.mjs`). Erweiterung = Datei in `docs/` pflegen + Sync-Liste anpassen + ggf. SW-Liste + Eintrag in `frontend/components/handbook-client.tsx`.
+- **„Saugt alle .md aus docs/“:** Nein — nur die Dateien, die **`sync-pwa-handbook`** nach **`frontend/public/handbook/`** kopiert und die im **Service Worker** eingetragen sind (Liste in `scripts/sync-pwa-handbook.mjs`). Erweiterung = Datei in `docs/` pflegen + Sync-Liste anpassen + ggf. SW-Liste + **`VERSION`** in `sw.js` erhöhen + Eintrag in `frontend/components/handbook-client.tsx`.
 - **„Erster Start komplett ohne Netz“:** Ohne vorherigen erfolgreichen Besuch (oder Build mit precache) kann der Cache **leer** sein. Für echte Krisen bleiben **Papier/QR** und die optionale **`offlineBriefing`**-Notiz im Profil sinnvoll.
 - **`/api/*` offline:** Unverändert **nicht** zuverlässig — Backend muss laufen oder es gibt keine Befehle/Status.
 

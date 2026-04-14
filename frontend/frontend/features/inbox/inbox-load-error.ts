@@ -1,5 +1,13 @@
+import {
+  USER_MSG_FETCH_TIMEOUT,
+  userMessageIndicatesFetchNetworkFailure,
+} from '@/frontend/lib/api-fetch-text'
+
 /** Heuristik: Netzwerk/Backend nicht erreichbar (executeCommand + fetch-Fehler). */
 export function isInboxLoadErrorLikelyUnreachable(raw: string): boolean {
+  if (raw === USER_MSG_FETCH_TIMEOUT || userMessageIndicatesFetchNetworkFailure(raw)) {
+    return true
+  }
   return /Backend nicht erreichbar|failed to fetch|network|load failed|Verbindung fehlgeschlagen|Connection refused|abgebrochen|AbortError|Timeout|Zeitüberschreitung|ECONNREFUSED|ENOTFOUND|fetch/i.test(
     raw
   )

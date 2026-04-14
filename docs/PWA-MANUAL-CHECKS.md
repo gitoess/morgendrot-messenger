@@ -19,6 +19,11 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 **Hinweis:** Die **kurze Checkliste** unten (Install, Offline, …) bleibt **manuell** am Gerät — Tabelle A–D ersetzt sie nicht.
 
+### Status-/Fehlermeldungen (Messenger ↔ API, **§ H.2** Punkt 6)
+
+- Kanonische Nutzer-Strings für Fetch-**Timeout** und **Netzwerk/Offline**: **`frontend/frontend/lib/api-fetch-text.ts`** (`USER_MSG_FETCH_TIMEOUT`, `USER_MSG_FETCH_NETWORK_OFFLINE`, `userMessageIndicatesFetchNetworkFailure`).
+- Inbox-Banner („Basis offline“) nutzt dieselbe Erkennung: **`frontend/frontend/features/inbox/inbox-load-error.ts`**.
+
 ### Protokoll (manuell pflegen)
 
 | Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
@@ -26,6 +31,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 2026-03-28 | ✓ | ✓ (via prebuild) | ✓ | Automatisierte Vorprüfung im Repo |
 | 2026-03-30 | ✓ | ✓ (7 Dateien) | ✓ | A–C; **D** zunächst ohne SW-Edit. |
 | 2026-03-30 | — | ✓ (8 Dateien) | empfohlen | **D:** `VERSION` → **`morgendrot-sw-4`**; **`API-EINSATZ-ROLE-TEMPLATES.md`** in `sync-pwa-handbook` + `HANDBOOK_URLS` — nach Deploy: Handbuch einmal online öffnen (L4). |
+| 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. |
 
 ---
 

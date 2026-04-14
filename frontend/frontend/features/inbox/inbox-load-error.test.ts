@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
+  USER_MSG_FETCH_NETWORK_OFFLINE,
+  USER_MSG_FETCH_TIMEOUT,
+} from '@/frontend/lib/api-fetch-text'
+import {
   formatInboxLoadError,
   INBOX_BASIS_OFFLINE_HEADLINE,
   isInboxLoadErrorLikelyUnreachable,
@@ -9,6 +13,8 @@ describe('isInboxLoadErrorLikelyUnreachable', () => {
   it('erkennt typische Netzwerk-/Fetch-Texte', () => {
     expect(isInboxLoadErrorLikelyUnreachable('failed to fetch')).toBe(true)
     expect(isInboxLoadErrorLikelyUnreachable('Backend nicht erreichbar')).toBe(true)
+    expect(isInboxLoadErrorLikelyUnreachable(USER_MSG_FETCH_NETWORK_OFFLINE)).toBe(true)
+    expect(isInboxLoadErrorLikelyUnreachable(USER_MSG_FETCH_TIMEOUT)).toBe(true)
     expect(isInboxLoadErrorLikelyUnreachable('Connection refused')).toBe(true)
     expect(isInboxLoadErrorLikelyUnreachable('AbortError: user aborted')).toBe(true)
     expect(isInboxLoadErrorLikelyUnreachable('Zeitüberschreitung beim Laden')).toBe(true)

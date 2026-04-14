@@ -2,16 +2,31 @@ import { toAppError } from '@/frontend/lib/app-error'
 
 const NETWORKISH = /failed to fetch|network|load failed|Connection refused|aborted|AbortError/i
 
+/** Erster Satz der Netzwerk-Hinweismeldung — für Abgleich in Inbox/UI (§ H.2). */
+const FETCH_NETWORK_OFFLINE_FIRST_CLAUSE = 'Backend nicht erreichbar oder abgebrochen' as const
+
+/** Kanonischer Timeout-Text nach `fetch`/`AbortSignal` (überall gleicher Wortlaut). */
+export const USER_MSG_FETCH_TIMEOUT = 'Zeitüberschreitung (Timeout).' as const
+
+/** Kanonische Netzwerk-/Offline-Meldung (`fetchApiText`, `executeCommand`, …). */
+export const USER_MSG_FETCH_NETWORK_OFFLINE =
+  `${FETCH_NETWORK_OFFLINE_FIRST_CLAUSE}. Tor/SOCKS, „npm run dev“ und Wallet prüfen.` as const
+
+/** Ob `raw` die kanonische Fetch-Netzmeldung (oder ein klarer Teiltreffer) ist — für Inbox-Banner ohne duplizierte Regex-Pflege. */
+export function userMessageIndicatesFetchNetworkFailure(raw: string): boolean {
+  return raw.includes(FETCH_NETWORK_OFFLINE_FIRST_CLAUSE)
+}
+
 /**
  * Einheitliche Nutzermeldung bei typischen Fetch-Netzwerkfehlern (gleicher Wortlaut wie `executeCommand`).
  */
 export function formatFetchFailureMessage(e: unknown): string {
   if (e instanceof DOMException && e.name === 'TimeoutError') {
-    return 'Zeitüberschreitung (Timeout).'
+    return USER_MSG_FETCH_TIMEOUT
   }
   const msg = toAppError(e).message
   if (NETWORKISH.test(msg)) {
-    return 'Backend nicht erreichbar oder abgebrochen. Tor/SOCKS, „npm run dev“ und Wallet prüfen.'
+    return USER_MSG_FETCH_NETWORK_OFFLINE
   }
   return msg
 }
