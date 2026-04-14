@@ -49,8 +49,12 @@
 | **`device-heartbeat.ts`** | `getDeviceStatus`, `sendHeartbeat`, `setHeartbeatInterval`, `setHeartbeatEnabled` |
 | **`boss-transfer.ts`** | `setBossRole`, `sendBossCommand`, `transferCoins` |
 | **`vault-signer-import.ts`** | `revealVaultSignerImport` |
+| **`command-response-types.ts`** | `CommandResponse`, `StatusResponse` (Dashboard-Legacy-Typen) |
+| **`dashboard-rest.ts`** | `getConfig`, `setConfig`, `getCurrentIds`, `getPackageIdHistory`, `getConnectAddresses`, `checkChainReachable` |
 
 Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `api-simple-ok-envelope.ts`).
+
+**Hinweis:** `frontend/lib/api.ts` re-exportiert nur noch **`@/frontend/lib/api`** (Abwärtskompatibilität für `@/lib/api`); neue Imports sollten den Barrel **`@/frontend/lib/api`** nutzen.
 
 ---
 

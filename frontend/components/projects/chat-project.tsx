@@ -85,7 +85,7 @@ export function ChatProject({ variant }: ChatProjectProps) {
 
   useEffect(() => {
     Promise.all([getStatus(), getCurrentIds()]).then(([status, ids]) => {
-      const pkg = (ids.ok && ids.packageId) || status.packageId
+      const pkg = (ids.ok && ids.packageId) || (status.ok && status.data?.packageId)
       if (pkg) setCurrentPackageId(pkg)
     })
   }, [])

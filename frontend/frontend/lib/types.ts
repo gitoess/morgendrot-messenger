@@ -65,6 +65,13 @@ export interface ApiResponse<T = unknown> {
   message?: string
   error?: string
   txDigest?: string
+  /** z. B. `/fetch` — Dashboard-Inbox (`frontend/components/inbox.tsx`). */
+  messages?: Array<{
+    sender: string
+    text: string
+    isPlain?: boolean
+    nonce?: number
+  }>
 }
 
 export interface QuickAction {

@@ -385,7 +385,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 **Als Nächstes (klein, empfohlen):** (a) Weitere ESLint-Zonen nur ergänzen, wenn **messbare** Querimports entstehen (z. B. **attachments**↔**inbox**); (b) Legacy-**`@/lib/api`** (Paket-Root) vs. Barrel **`@/frontend/lib/api`** langsam angleichen — Leitfaden **`docs/FRONTEND-API-MODULARITY.md`**; (c) § **H.2** PWA-Checks oder § **H.1a** ein weiterer RTL-/Vitest-Slice am **Send-Panel**, wenn Mesh-Dateien nicht parallel stark bewegt werden.
 
-**Nachgezogen (2026-03-30):** Vitest **`chat-view-send-utils.test.ts`** (LoRa-Dual-Wire UTF-8-Limit, Funk vs. IOTA-Kompaktblob); Messenger **Export-Gate** bei unsicherer Gerätezeit; **LoRa-Mesh-v2**-Fortschrittszeile in der Anhang-Leiste (**`loraMeshProgressLine`**).
+**Nachgezogen (2026-03-30):** Vitest **`chat-view-send-utils.test.ts`** (LoRa-Dual-Wire UTF-8-Limit, Funk vs. IOTA-Kompaktblob); Messenger **Export-Gate** bei unsicherer Gerätezeit; **LoRa-Mesh-v2**-Fortschrittszeile in der Anhang-Leiste (**`loraMeshProgressLine`**). **`frontend/lib/api.ts`** re-exportiert den Barrel **`@/frontend/lib/api`**; Dashboard-Endpunkte in **`lib/api/dashboard-rest.ts`** + **`CommandResponse`**-Typen; **`getStatus`**-Kompatibilität (`data`/`messages`) für Setup/Inbox.
 
 ### H.2 Als Nächstes – aus 8-Punkte-Liste (nach Stabilität)
 

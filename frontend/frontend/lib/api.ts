@@ -1,3 +1,14 @@
+export type { CommandResponse, StatusResponse } from '@/frontend/lib/api/command-response-types'
+export {
+  getConfig,
+  setConfig,
+  getCurrentIds,
+  getPackageIdHistory,
+  getConnectAddresses,
+  checkChainReachable,
+} from '@/frontend/lib/api/dashboard-rest'
+export type { ConfigItem, ConfigResponse } from '@/frontend/lib/api/dashboard-rest'
+
 export { executeCommand } from '@/frontend/lib/api/execute-command'
 
 export type {

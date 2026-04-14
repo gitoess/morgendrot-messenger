@@ -15,6 +15,8 @@ export const getStatus = (): Promise<
     signer?: string
     /** Lokale Vault-Datei vorhanden (GET /api/status → vaultStatus.hasLocal). */
     vaultHasLocal?: boolean
+    /** Optional aus GET /api/status (Legacy-Dashboard). */
+    version?: string
   }>
 > =>
   fetchStatus().then((s) => {
@@ -31,6 +33,7 @@ export const getStatus = (): Promise<
       }
     }
     const t = s as ApiStatusFetchOk
+    const raw = t as ApiStatusFetchOk & { version?: string }
     return {
       ok: !!t.backendRunning,
       data: {
@@ -41,6 +44,7 @@ export const getStatus = (): Promise<
         chatConnected: !!t.connected,
         signer: t.signer,
         vaultHasLocal: t.vaultStatus?.hasLocal,
+        version: typeof raw.version === 'string' ? raw.version : undefined,
       },
       ...(t.locked && { locked: true }),
     }
