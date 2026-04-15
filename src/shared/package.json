@@ -8,8 +8,5 @@
   "exports": {
     "./einsatz-role-templates": "./einsatz-role-templates.ts",
     "./device-time-trust": "./device-time-trust.ts"
-  },
-  "dependencies": {
-    "@morgendrot/core": "file:../../packages/morgendrot-core"
   }
 }
