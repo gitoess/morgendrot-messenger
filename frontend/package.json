@@ -10,7 +10,9 @@
     "dev:lan": "next dev --port 3341 --hostname 0.0.0.0",
     "prebuild": "node ../scripts/sync-pwa-handbook.mjs",
     "build": "next build",
-    "start": "next start",
+    "build:next": "npm run build",
+    "start": "next start --port 3341 --hostname 127.0.0.1",
+    "start:lan": "next start --port 3341 --hostname 0.0.0.0",
     "lint": "eslint frontend",
     "lint:feature-boundaries": "eslint frontend/features/send frontend/features/inbox",
     "check:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx ./frontend"

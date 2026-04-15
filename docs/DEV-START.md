@@ -33,7 +33,26 @@ npm run dev
 - **„Nicht sicher“ / Warnung:** Bei **HTTP** (ohne TLS) zeigt Chrome das normal — **Fortfahren** wählen oder explizit **`http://`** nutzen (kein `https://` zur IP tippen).
 - **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Client-Aufrufe: Barrel **`frontend/frontend/lib/api.ts`** (`@/frontend/lib/api`), Basis-URL u. a. **`frontend/frontend/lib/api/api-base.ts`**; Rewrites in **`frontend/next.config.mjs`**.
 - **Firewall (Windows):** Erster Zugriff kann blockiert werden — Node.js für **private Netzwerke** erlauben oder eingehend **TCP 3341** (und ggf. 3342 nur wenn ihr direkt zur API testet) freigeben.
-- **Next-Warnung „Cross origin … /_next/*“:** `frontend/next.config.mjs` lädt die **Root-`.env`** und erlaubt u. a. `localhost` / `127.0.0.1:3341`. Für **Handy per LAN-IP** in derselben **einen** `.env** (Projektroot): `NEXT_ALLOWED_DEV_ORIGINS=http://192.168.178.41:3341` (eigene IP; mehrere URLs kommagetrennt). **Keine** zweite `.env` unter `frontend/`.
+- **Next-Warnung „Cross origin … /_next/*“:** `frontend/next.config.mjs` lädt die **Root-`.env`** und erlaubt u. a. `localhost` / `127.0.0.1:3341`. Für **Handy per LAN-IP** in derselben **Root-`.env`** (Projektroot): `NEXT_ALLOWED_DEV_ORIGINS=http://192.168.178.41:3341` (eigene IP; mehrere URLs kommagetrennt). **Keine** zweite `.env` unter `frontend/`.
+
+#### Handy: gebaute Next-App (Production) + API
+
+**Wichtig:** `build:next` / `start:prod:lan` sind im **Hauptrepo** als npm-Skripte im **Wurzelverzeichnis** `morgendrot\` definiert — **nicht** nur im Ordner `frontend\` (dort heißt der Build weiterhin `npm run build`; es gibt zusätzlich den Alias `build:next` = gleicher Ablauf wie `build`).
+
+1. **PowerShell / Terminal** öffnen → ins Repo-Root wechseln:  
+   `cd C:\Users\damast\Desktop\morgendrot` (Pfad anpassen).
+2. **Einmalig bauen** (nach Code-Änderungen wiederholen):  
+   `npm run build:next`  
+   (entspricht `npm run build` im Ordner `frontend/` inkl. `prebuild` / Handbuch-Sync.)
+3. **API + Next für WLAN** starten:  
+   `npm run start:prod:lan`  
+   → API auf **127.0.0.1:3342**, Next auf **0.0.0.0:3341** (vom Handy unter `http://<PC-LAN-IP>:3341` erreichbar). `/api` wird von Next zum Backend proxied (`frontend/next.config.mjs`).
+4. **PC-LAN-IP** ermitteln (z. B. `ipconfig` → „IPv4-Adresse“ des WLAN-Adapters).
+5. **Handy** (gleiches WLAN): Chrome öffnen → **`http://<PC-LAN-IP>:3341`** (wirklich `http://`, nicht `https://` zur IP). Bei Bedarf **Windows-Firewall** für **TCP 3341** freigeben.
+6. **Installieren:** Chrome-Menü → **„App installieren“** / **Zum Startbildschirm hinzufügen** (je nach Android-Version).
+7. **Messenger nutzen:** App öffnen → Tresor **entsperren** wie am PC (siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`**).
+
+**Schneller ohne Build (nur Entwicklung):** statt Schritt 2–3 **`npm run dev:lan`** im Root — gleiche LAN-URL, aber Hot-Reload; `NEXT_ALLOWED_DEV_ORIGINS` wie oben setzen, falls `/ _next /`-Cross-Origin-Warnungen auftreten.
 
 ## Zwei Oberflächen: Boss-Werkstatt und Kunden-Produkt
 

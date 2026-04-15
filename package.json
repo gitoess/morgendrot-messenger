@@ -21,6 +21,8 @@
     "start:with-streams": "npm run start",
     "dev": "npm run validate:ui && concurrently --names \"api,next\" -c \"cyan,magenta\" \"npm run start:secrets\" \"npm run dev:frontend\"",
     "dev:lan": "npm run validate:ui && concurrently --names \"api,next\" -c \"cyan,magenta\" \"npm run start:secrets\" \"npm run dev:frontend:lan\"",
+    "build:next": "npm run build --prefix frontend",
+    "start:prod:lan": "npm run validate:ui && concurrently --names \"api,next\" -c \"cyan,magenta\" \"npm run start:secrets\" \"npm run start:lan --prefix frontend\"",
     "start:secrets": "tsx src/start-with-secrets.ts",
     "start:secret": "npm run start:secrets",
     "start:headless": "tsx src/worker-headless.ts",
