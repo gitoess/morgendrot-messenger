@@ -2,7 +2,7 @@
 
 **Status:** **Strategie-Einordnung** — übernimmt sinnvolle Ziele, korrigiert **Missverständnisse**, die zu **Doppelbuchungen** oder **Überversprechen** (Post-Quantum) führen würden.
 
-**Verknüpft:** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (§ **H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (§ **H.13**), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`SECURITY-RATING.md`**, Ist-Krypto/README (ECDH P-256, AES-GCM).
+**Verknüpft:** **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** (Handy-first, Client-IOTA, **§ H.15**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (§ **H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (§ **H.13**), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**, **`SECURITY-RATING.md`**, Ist-Krypto/README (ECDH P-256, AES-GCM).
 
 ---
 

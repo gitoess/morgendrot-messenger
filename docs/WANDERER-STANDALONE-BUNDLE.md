@@ -22,7 +22,7 @@ npm run bundle:standalone-smartphone
 
 1. Bundle bauen (oder archivierte Kopie verwenden).
 2. Pro Einsatz/Kunde die **`.env`** im Bundle-Root anpassen (**keine** Seeds auf SD/USB): u. a. `PACKAGE_ID`, `RPC_URL`, `BOSS_ADDRESS` / Partner — siehe **`docs/BOSS-ORIENTIERUNG.md`** (Lieferwege).
-3. Auf dem Gerät: `npm install` (Root + ggf. `frontend/`), dann **`npm run dev`** oder produktionsnaher Start laut **`docs/DEV-START.md`**.
+3. Auf dem Gerät: `npm install` (Root + ggf. `frontend/`), dann **`npm run dev`** oder produktionsnaher Start laut **`docs/DEV-START.md`**. **Hinweis (Zielbild 2026-04):** Langfristig **kein Pflicht-Node** — siehe **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**; bis zur Umsetzung kann der Bundle-Start weiterhin **Node + Next** meinen.
 4. **Seed / Vault-Passwort nur auf dem Gerät** eingeben — nie auf das Medium schreiben.
 
 Vollständigere Tabelle: **`docs/ROADMAP-FAHRPLAN.md` § H.7**.
@@ -49,4 +49,4 @@ Einordnung: **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, Fahrplan **§ H.8**.
 
 ---
 
-*Stand: 2026-03-29 — Verweis **§ H.7b** (Backpack-Node, Heltec, Degraded-Zielbild); H.0 #2 „Wanderer“/Bundle bleibt kanonische Einstiegsseite.*
+*Stand: 2026-04-28 — Verweis **§ H.7b** (Backpack-Node, Heltec, Degraded-Zielbild); **§ H.15** (Handy-first, optionaler Node); H.0 #2 „Wanderer“/Bundle bleibt kanonische Einstiegsseite.*

@@ -48,7 +48,7 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 
 **Eine Schnittstelle:** **`/api/*`** (z. B. `GET /api/status`, `POST /api/command`) ist die **gemeinsame** Schicht. Neue Fähigkeiten werden **zuerst** in `src/api-server.ts` und den dahinterliegenden Modulen (`wallet-bridge`, `chain-access`, …) umgesetzt; beide UIs sind nur Clients. So bleibt eine **Quelle der Wahrheit** auf dem Server.
 
-**„Direkt zu IOTA“ vs. lokaler Node:** Die **Chain** wird vom laufenden **Backend** über **`RPC_URL`** angesprochen — das ist der **normale** Weg zu den IOTA-Nodes, **ohne** Pflicht zu einem **Morgendrot-Zentralserver**. Trotzdem bauen und signieren **nicht** primär der Browser, sondern der **Node-Prozess**. Präzise Einordnung: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**.
+**„Direkt zu IOTA“ vs. Morgendrot-Node:** **Zielbild (ab 2026-04-28):** **Client** baut/signiert **primär** und spricht **direkt** mit **IOTA-RPC**; der **Morgendrot-Node** ist **optional** (Relay, Gas, Komfort). **Repo-Ist** während der Migration: viele Flows noch über **`/api`** und den **Node-Prozess** — **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, Fahrplan **§ H.15**.
 
 **Wo neue Features landen (Vereinbarung):**
 

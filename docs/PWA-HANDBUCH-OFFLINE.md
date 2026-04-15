@@ -33,7 +33,7 @@
 
 ## 5. Notfall ohne laufendes Morgendrot-Backend (Kurz)
 
-Ohne laufenden Node gibt es **kein** zuverlässiges **`/api`**. Für einen **organisatorischen** Notfall-Beacon (vereinbarter **MIST-Transfer** an eine bekannte Adresse) kann ein **eigenständiges IOTA-Wallet** genutzt werden — **ohne** Pflicht-Integration in Morgendrot. Produktentscheid und Abgrenzung zu einem Browser-Hybrid: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6.
+**Übergang (Code noch Node-first):** Ohne laufenden Morgendrot-Node gibt es **kein** zuverlässiges **`/api`** für Relay-Pfade. **Zielbild (ab 2026-04-28):** Messenger **primär** ohne Pflicht-Node — Client-Signatur + **IOTA-RPC**; **`/api`** nur bei **opt-in** Relay — **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**. Für einen **organisatorischen** Notfall-Beacon (vereinbarter **MIST-Transfer**) kann weiterhin ein **eigenständiges IOTA-Wallet** genutzt werden.
 
 ## 6. Pflege
 
