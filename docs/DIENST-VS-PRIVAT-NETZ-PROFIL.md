@@ -3,6 +3,8 @@
 **Zielgruppe:** Teams, die den **Notfall-/Einsatz-Messenger** verstehen wollen, aber **zusätzlich** eine realistische Alltagsnutzung diskutieren (kostenloser Chat mit Bekannten auf dem Testnet).  
 **Kein Produktversprechen:** Der Fokus des Projekts bleibt **Einsatz und Zuverlässigkeit**, nicht „Freizeit-Chat als Hauptfeature“.
 
+**§ H.8 / Reihenfolge:** In **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** (Phase-A-Rand) steht **§ H.8** **direkt nach** **§ H.2** (PWA-/Status-Checks) — **nur Doku**, kein Implementierungszwang vor Phase-B-Kern. Praxisleine: **`TESTING.md`** (Smoke, *Qualitätsritual vor Merge*) und **`docs/PWA-MANUAL-CHECKS.md`** (Install, Offline-Shell, Handbuch); **keine** vorausgesetzte In-App-Profilwahl Testnet/Mainnet (siehe § 5 unten).
+
 ---
 
 ## 1. Szenario: sinnvoll, aber klar abgrenzen
