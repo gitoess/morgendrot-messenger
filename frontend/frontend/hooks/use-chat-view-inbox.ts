@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInbox } from '@/frontend/lib/api'
+import { tryFetchPlaintextInboxViaDirectIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { mergeAllMessages, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
@@ -50,6 +51,38 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
       try {
+        if (!useBossView) {
+          const direct = await tryFetchPlaintextInboxViaDirectIota({
+            limit: PAGE_SIZE,
+            offset,
+            packageIdOverride: pkg,
+          })
+          // Nur ohne `/inbox`, wenn der Fullnode-Pfad Klartext liefert; sonst API (z. B. nur verschlüsselt).
+          if (direct.ok && direct.rows.length > 0) {
+            const mapped: Message[] = mapRows(direct.rows)
+            if (mode === 'reset') {
+              mailboxOffsetRef.current = mapped.length
+            } else {
+              mailboxOffsetRef.current += mapped.length
+            }
+            if (mode === 'append' && mapped.length === 0) {
+              setInboxHasMore(false)
+            } else {
+              setInboxHasMore(mapped.length >= PAGE_SIZE)
+            }
+            setMessages((prev) => {
+              const meshLocal = prev.filter((m) => m.transports?.includes('mesh'))
+              if (mode === 'reset') {
+                return mergeAllMessages([...mapped, ...meshLocal])
+              }
+              const prevMailbox = prev.filter((m) => !m.transports?.includes('mesh'))
+              return mergeAllMessages([...prevMailbox, ...mapped, ...meshLocal])
+            })
+            refreshContactDirectory()
+            return
+          }
+        }
+
         const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset)
         const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
         const raw = pickInboxRawMessages(resLoose)
