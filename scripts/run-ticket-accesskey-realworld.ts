@@ -9,8 +9,15 @@
  * - Tauschen (transfer an andere Adresse)
  * - Entwerten (emergency_purge + purge für Storno/Rückgabe)
  *
- * Aufruf: npx tsx scripts/run-ticket-accesskey-realworld.ts
+ * Aufruf: **`npm run test:realworld`** oder **`npm run test:tickets-accesskey-realworld`** (gleiche Datei).
  * Env: API_BASE_A, API_BASE_B (optional), FORCE_SINGLE_WALLET=1 (optional)
+ *
+ * **Abgrenzung:** Messenger (Chat, Mailbox, Handshake, …) → **`npm run test:messages`** /
+ * **`scripts/run-messages-chat-realworld.ts`** — nicht dieses Skript.
+ *
+ * Hinweis: Schritte 4/6 (`has-valid-ticket`, Liste nach use-ticket) hängen an RPC/`getOwnedObjects`.
+ * Gate-Logik vergleicht `event_id` case-insensitive (siehe `hasValidTicket` in chain-access); bei langsamer
+ * Indizierung kurze Retries im Skript.
  */
 
 const API_A = process.env.API_BASE_A || 'http://127.0.0.1:3342';
@@ -18,6 +25,8 @@ const API_B = process.env.API_BASE_B || 'http://127.0.0.1:3343';
 const FORCE_SINGLE_WALLET = process.env.FORCE_SINGLE_WALLET === '1' || process.env.FORCE_SINGLE_WALLET === 'true';
 
 const EVENT_ID = '0x' + 'e'.repeat(64);
+
+const sameHexId = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 const LOCK_ID = '0x' + 'd'.repeat(64);
 const now = Date.now();
 const validFromMs = 0;
@@ -117,7 +126,15 @@ async function main() {
     console.log('Wallet A (Verkäufer/Lock):', addrA.slice(0, 18) + '…');
     console.log('Wallet 2 – Käufer (B):    ', addrB.slice(0, 18) + '…' + (useOnlyA ? ' (wie A, Ein-Wallet)' : '') + '\n');
   } catch (e) {
-    console.error('Voraussetzung: API A erreichbar, current-ids mit myAddress und gültiger PACKAGE_ID.', e);
+    const err = e as Error & { cause?: { code?: string; port?: number; address?: string } };
+    const cause = err.cause;
+    const refused3342 =
+      cause?.code === 'ECONNREFUSED' &&
+      (cause.port === 3342 || cause.address === '127.0.0.1');
+    const hint = refused3342
+      ? '\n→ Backend fehlt auf 3342: im Repo-Root z. B. `npm run start:secrets` oder `npm start` starten, Tresor entsperren, dann `npm run test:realworld` erneut. Optional: `API_BASE_A=http://…:3342`.'
+      : '';
+    console.error('Voraussetzung: API A erreichbar, current-ids mit myAddress und gültiger PACKAGE_ID.' + hint, e);
     process.exit(1);
   }
 
@@ -158,8 +175,12 @@ async function main() {
     log('3. Wallet 2 (Käufer) listet Tickets', ticketsB.length >= 0, ticketsB.length > 0 ? `${ticketsB.length} Ticket(s)` : createdTicketId1 ? '0 (nutze Object-ID aus Create)' : '0 Ticket(s)');
 
     if (ticket1?.objectId) {
-      // 4) Gate prüft: Hat Wallet 2 gültiges Ticket?
-      const valid = (await apiGet(API_A, `/api/has-valid-ticket?owner=${encodeURIComponent(addrB)}&eventId=${encodeURIComponent(EVENT_ID)}`)) as { valid?: boolean };
+      // 4) Gate prüft: Hat Wallet 2 gültiges Ticket? (Retries: RPC kann kurz hinter Create liegen)
+      let valid = (await apiGet(API_A, `/api/has-valid-ticket?owner=${encodeURIComponent(addrB)}&eventId=${encodeURIComponent(EVENT_ID)}`)) as { valid?: boolean };
+      for (let attempt = 0; attempt < 6 && valid.valid !== true; attempt++) {
+        await sleep(2000);
+        valid = (await apiGet(API_A, `/api/has-valid-ticket?owner=${encodeURIComponent(addrB)}&eventId=${encodeURIComponent(EVENT_ID)}`)) as { valid?: boolean };
+      }
       log('4. Gate: hasValidTicket(Wallet 2)', valid.valid === true, String(valid.valid));
 
       // 5) Käufer (Wallet 2) geht ein → Mutieren (used=true)
@@ -167,9 +188,14 @@ async function main() {
       log('5. Wallet 2 (Käufer) Einlass / use-ticket', r.ok === true, r.message || r.error);
       await sleep(2000);
 
-      // 6) Wallet 2 listet nach Einlass (used)
-      const listAfter = (await apiGet(API_A, `/api/list-tickets?owner=${encodeURIComponent(addrB)}`)) as { tickets?: Array<{ objectId: string; used: boolean }> };
-      const usedOne = (listAfter.tickets || []).find((t) => t.objectId === ticket1.objectId);
+      // 6) Wallet 2 listet nach Einlass (used) — Object-ID case-insensitive; Retries nach Mutation
+      let listAfter = (await apiGet(API_A, `/api/list-tickets?owner=${encodeURIComponent(addrB)}`)) as { tickets?: Array<{ objectId: string; used: boolean }> };
+      let usedOne = (listAfter.tickets || []).find((t) => sameHexId(t.objectId, ticket1.objectId));
+      for (let attempt = 0; attempt < 8 && (!usedOne || usedOne.used !== true); attempt++) {
+        await sleep(2500);
+        listAfter = (await apiGet(API_A, `/api/list-tickets?owner=${encodeURIComponent(addrB)}`)) as { tickets?: Array<{ objectId: string; used: boolean }> };
+        usedOne = (listAfter.tickets || []).find((t) => sameHexId(t.objectId, ticket1.objectId));
+      }
       log('6. Wallet 2: Liste nach Einlass (used)', usedOne?.used === true, usedOne ? 'used=true' : '–');
 
       // 7) Zweites Konzert: Verkäufer sendet weiteres Ticket an Wallet 2

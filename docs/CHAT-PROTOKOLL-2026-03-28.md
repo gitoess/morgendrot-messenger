@@ -173,3 +173,18 @@
 | **Code** | **Kein** neuer `android/`-Tree — nur Doku; Umsetzung = späterer Meilenstein (Capacitor/Kotlin o. ä.) |
 
 **Tests (lokal):** nach Doku-Änderungen **`npm run test:smoke`** (validate:ui + Modultests, alle grün) und **`cd frontend && npm run test:unit`** (Vitest **211** Tests). **`npm run test:realworld`** ausgeführt: Prozess endete mit Exit **0**, aber einzelne Schritte **[FAIL]** wegen **IOTA CLI ↔ RPC „Client/Server api version mismatch“** (personalisiertes Ticket / AccessKey-Teil) — lokal **IOTA-CLI-Version an den RPC-Server angleichen**, dann erneut laufen lassen. **Commit:** siehe **`git log -1 --oneline`** (Nachricht beginnt mit „docs: Android FG …“).
+
+---
+
+## Nachtrag (2026-04-15) – Messenger-Tests, Tickets/Gate, PWA-Schreibtisch (**§ H.2**)
+
+| Thema | Kurz |
+|--------|------|
+| **Messenger Realworld** | **`scripts/run-messages-chat-realworld.ts`**: `/vault-save` mit leeren Args nutzt **UI-Unlock-Sitzung** auf dem API-Prozess; **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop; Kopfkommentar + **`TESTING.md`** |
+| **Tickets vs. Messenger** | **`package.json`**: **`test:tickets-accesskey-realworld`**; **`README.md`** / **`TESTING.md`** — `test:realworld` = Tickets/Keys, **`test:messages*`** = Messenger |
+| **Gate / Liste** | **`src/chain-access.ts`**: **`hasValidTicket`** / **`hasValidAccessKey`** — **`normalizeAddress`**, Pagination; **`getOwnedTickets`** / **`getOwnedAccessKeys`** — normalisierte IDs |
+| **Ticket-Realworld-Skript** | Retries Schritte 4/6; ECONNREFUSED-Hinweis; Kopfkommentar |
+| **PWA § H.2** | **`npm run check:pwa-desk`** (A+B); Protokollzeile **`docs/PWA-MANUAL-CHECKS.md`** |
+| **Fahrplan** | **`docs/ROADMAP-FAHRPLAN.md`** — Nachtragzeile + Stand **2026-04-15** |
+
+**Tests (lokal, diese Runde):** **`npm run test:smoke`**, **`npm run test:frontend-unit`** (211), **`npm run test:messages:single`** (inkl. `/vault-save` + **hasLocal**), **`npm run check:pwa-desk`** (**§ H.2** A+B). **Commit/Push:** siehe **`git log -1 --oneline`** (Nachricht beginnt mit „feat: Messenger/ticket realworld …“).

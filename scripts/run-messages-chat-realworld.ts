@@ -7,10 +7,15 @@
  * Optional: Kompaktes Bild: lokal VaultImagePipeline.encodeToPlaintextBlobFitChain + /send-plain an die
  * eigene Adresse (Klartext, kein Handshake). Läuft direkt nach Unlock – unabhängig von API-Version und /connect.
  *
+ * **Abgrenzung:** Tickets / AccessKey (andere Kacheln, Event-/Schloss-Flows) sind **`npm run test:realworld`**
+ * bzw. **`scripts/run-ticket-accesskey-realworld.ts`** — nicht dieses Messenger-Skript.
+ *
  * Voraussetzung: Zwei laufende Morgendrot-Instanzen (z. B. Port 3342 und 3343),
- * beide Wallet entsperrt. Env: UNLOCK_PASSWORD (beide gleich) oder getrennt
- * UNLOCK_PASSWORD_A / UNLOCK_PASSWORD_B (optional), API_BASE_A/B, PAIRING_SECRET (min. 6 Zeichen),
- * SKIP_PEERING=1 (nur klassischer Handshake).
+ * beide Wallet entsperrt (in der UI oder so, dass die API-Sitzung entsperrt ist).
+ * Env **optional:** UNLOCK_PASSWORD (beide gleich) oder UNLOCK_PASSWORD_A / UNLOCK_PASSWORD_B — nur nötig,
+ * wenn `/vault-save` **ohne** vorheriges UI-Unlock am **selben** API-Prozess laufen soll; sonst reicht UI-Unlock:
+ * Abschnitt 7 ruft `/vault-save` mit leeren Args auf, dann nutzt der Server **`getWalletPassword()`** aus dem Unlock.
+ * Weitere Env: API_BASE_A/B, PAIRING_SECRET (min. 6 Zeichen), SKIP_PEERING=1 (nur klassischer Handshake).
  * Ein-Wallet-Realtest: SINGLE_WALLET=1 → nur API_BASE_A (oder Default 3342), Handshake+Connect an eigene Adresse, /send & /fetch auf derselben API.
  *
  * Aufruf: npm run test:messages  oder  npm run test:messenger
@@ -248,7 +253,9 @@ async function main() {
     await tryUnlock('A', API_A, UNLOCK_PASSWORD_A);
     await tryUnlock('B', API_B, UNLOCK_PASSWORD_B);
   } else {
-    console.log('  (Kein UNLOCK_PASSWORD / UNLOCK_PASSWORD_A|B – Wallets vorher in der UI entsperren.)\n');
+    console.log(
+      '  (Kein UNLOCK_PASSWORD / UNLOCK_PASSWORD_A|B – Wallets vorher in der UI entsperren; Abschnitt 7 ruft dann /vault-save ohne Passwort in den Args auf und nutzt die Server-Sitzung.)\n'
+    );
   }
 
   // ═══ 1d. Kompaktes Bild: Klartext an eigene Adresse (Move-Limit ~16 KiB; kein /connect nötig) ═══
@@ -573,41 +580,59 @@ async function main() {
   }));
   const purgeSkip = !purgeHandshake.ok && /MAILBOX_ID|Purge deaktiviert|purge/i.test(purgeHandshake.error || purgeHandshake.message || '');
   if (purgeHandshake.ok) {
-    log('A: /purge-handshake (Folgeoption)', true, purgeHandshake.message);
+    const pm = purgeHandshake.message || '';
+    const noopMailbox = /MAILBOX_ID nicht gesetzt|MAILBOX_ID fehlt|keine mailbox/i.test(pm);
+    log(
+      'A: /purge-handshake (Folgeoption)',
+      true,
+      noopMailbox ? `${pm} (OK · erwartbar ohne MAILBOX_ID / kein Purge-Pfad)` : pm
+    );
   } else {
     log('A: /purge-handshake (Folgeoption)', purgeSkip, purgeSkip ? purgeHandshake.error || purgeHandshake.message : (purgeHandshake.error || purgeHandshake.message || '–'));
   }
 
   // ═══ 7. Vault lokal sichern (API) ═══
   console.log('\n--- 7. Vault (/vault-save) + hasLocal ---');
-  if (UNLOCK_PASSWORD_A || UNLOCK_PASSWORD_B) {
-    const inc = process.env.VAULT_SAVE_INCLUDE_SDK === '1';
-    if (UNLOCK_PASSWORD_A) {
-      const vsA = await command(API_A, '/vault-save', vaultSaveArgs(UNLOCK_PASSWORD_A, inc));
-      log('A: /vault-save', vsA.ok === true, vsA.message || vsA.error || '');
-    } else {
-      log('A: /vault-save', true, 'übersprungen (kein UNLOCK_PASSWORD_A)');
-    }
-    if (UNLOCK_PASSWORD_B) {
-      const vsB = await command(API_B, '/vault-save', vaultSaveArgs(UNLOCK_PASSWORD_B, inc));
-      log('B: /vault-save', vsB.ok === true, vsB.message || vsB.error || '');
-    } else {
-      log('B: /vault-save', true, 'übersprungen (kein UNLOCK_PASSWORD_B)');
-    }
-    const stVA = (await apiGet(API_A, '/api/status').catch(() => ({}))) as { vaultStatus?: { hasLocal?: boolean } };
-    const stVB = (await apiGet(MSG_PEER, '/api/status').catch(() => ({}))) as { vaultStatus?: { hasLocal?: boolean } };
-    log('A: vaultStatus.hasLocal', stVA.vaultStatus?.hasLocal === true);
-    log('B: vaultStatus.hasLocal', stVB.vaultStatus?.hasLocal === true);
+  const incSdk = process.env.VAULT_SAVE_INCLUDE_SDK === '1';
+  /** Mit explizitem Passwort (Env) oder leer → Server nutzt Sitzung nach UI-Unlock (`getWalletPassword()`). */
+  const vaultSaveCmdArgs = (explicitPw: string): string[] => {
+    const pw = explicitPw.trim();
+    if (pw) return vaultSaveArgs(pw, incSdk);
+    return incSdk ? ['', '', '', 'includeIotaMnemonic'] : [];
+  };
+  const vsA = await command(API_A, '/vault-save', vaultSaveCmdArgs(UNLOCK_PASSWORD_A));
+  const detailA = vsA.message || vsA.error || '';
+  log(
+    'A: /vault-save',
+    vsA.ok === true,
+    detailA +
+      (!UNLOCK_PASSWORD_A && vsA.ok ? ' (Server-Sitzung: UI-Unlock, kein Env-Passwort nötig)' : '') +
+      (!vsA.ok && !UNLOCK_PASSWORD_A ? ' — Tipp: API nach `POST /api/unlock` nutzen oder UNLOCK_PASSWORD_A setzen.' : '')
+  );
+  if (!SINGLE_WALLET) {
+    const vsB = await command(API_B, '/vault-save', vaultSaveCmdArgs(UNLOCK_PASSWORD_B));
+    const detailB = vsB.message || vsB.error || '';
+    log(
+      'B: /vault-save',
+      vsB.ok === true,
+      detailB +
+        (!UNLOCK_PASSWORD_B && vsB.ok ? ' (Server-Sitzung: UI-Unlock)' : '') +
+        (!vsB.ok && !UNLOCK_PASSWORD_B ? ' — Tipp: zweite Instanz entsperren oder UNLOCK_PASSWORD_B setzen.' : '')
+    );
   } else {
-    console.log('  (Kein Vault-Passwort – /vault-save übersprungen.)\n');
+    console.log('  (Ein-Wallet: kein zweites /vault-save auf B.)\n');
   }
+  const stVA = (await apiGet(API_A, '/api/status').catch(() => ({}))) as { vaultStatus?: { hasLocal?: boolean } };
+  const stVB = (await apiGet(MSG_PEER, '/api/status').catch(() => ({}))) as { vaultStatus?: { hasLocal?: boolean } };
+  log('A: vaultStatus.hasLocal', stVA.vaultStatus?.hasLocal === true);
+  log('B: vaultStatus.hasLocal', stVB.vaultStatus?.hasLocal === true);
 
   console.log('\n=== Ende Nachrichten & Chat ===');
   console.log(
     'Durchgespielt: Einrichtung, optional kompaktes Bild (Klartext Selbst), Geheimnis-Peering optional, Handshake+Connect, /send, /fetch, Sender-Filter, /send-plain, purge-handshake, /vault-save + hasLocal.'
   );
   console.log(
-    'Env: UNLOCK_PASSWORD_A / UNLOCK_PASSWORD_B (oder UNLOCK_PASSWORD); SKIP_PEERING=1; PAIRING_SECRET=…; VAULT_SAVE_INCLUDE_SDK=1; SINGLE_WALLET=1 (eine API, Selbst-Connect); COMPACT_IMAGE_PATH; SKIP_COMPACT_IMAGE=1.\n'
+    'Env (Auszug): UNLOCK_PASSWORD_* optional für /vault-save in frischer API-Sitzung; sonst UI-Unlock vor dem Test. SKIP_PEERING=1; PAIRING_SECRET=…; VAULT_SAVE_INCLUDE_SDK=1; SINGLE_WALLET=1; COMPACT_IMAGE_PATH; SKIP_COMPACT_IMAGE=1.\n'
   );
 }
 

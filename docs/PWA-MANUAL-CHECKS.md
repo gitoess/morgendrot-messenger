@@ -41,6 +41,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 2026-03-30 | ✓ | ✓ (7 Dateien) | ✓ | A–C; **D** zunächst ohne SW-Edit. |
 | 2026-03-30 | — | ✓ (8 Dateien) | empfohlen | **D:** `VERSION` → **`morgendrot-sw-4`**; **`API-EINSATZ-ROLE-TEMPLATES.md`** in `sync-pwa-handbook` + `HANDBOOK_URLS` — nach Deploy: Handbuch einmal online öffnen (L4). |
 | 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. Root: **`npm run check:pwa-desk`** (= A+B), **`check:pwa-desk:full`** (+ C) — **`scripts/check-pwa-manual-desk.mjs`**; Lücken-Tabelle **Teil-Automatisierung**. |
+| 2026-04-15 | ✓ | ✓ (8 Dateien) | — | **A+B** (`npm run check:pwa-desk`) nach Messenger-/Chain-Testrunde + Doku-Update; **C**/`full` bei nächstem Release-Zyklus. |
 
 ---
 

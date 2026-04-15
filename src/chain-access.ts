@@ -1232,24 +1232,38 @@ export async function hasValidAccessKey(
 ): Promise<boolean> {
     if (!packageId || !lockId) return false;
     const nowMs = Date.now();
+    const wantLock = normalizeAddress(lockId);
+    if (!wantLock) return false;
     try {
-        const res = await client.getOwnedObjects({
-            owner: ownerAddress,
-            filter: { StructType: ACCESS_KEY_STRUCT_TYPE(packageId) },
-            options: { showContent: true },
-            limit: 50,
-        } as Parameters<IotaClient['getOwnedObjects']>[0]);
-        const data = (res as { data?: Array<{ content?: { fields?: Record<string, unknown> } }> })?.data ?? [];
-        for (const item of data) {
-            const fields = item?.content?.fields as Record<string, unknown> | undefined;
-            if (!fields) continue;
-            const lock_id = fields.lock_id as string | undefined;
-            const expires_at_ms = typeof fields.expires_at_ms === 'string'
-                ? Number(fields.expires_at_ms)
-                : (fields.expires_at_ms as number | undefined);
-            if (lock_id === lockId && expires_at_ms != null && expires_at_ms > nowMs) {
-                return true;
+        let cursor: string | null | undefined = null;
+        let hasNext = true;
+        while (hasNext) {
+            const res = await client.getOwnedObjects({
+                owner: ownerAddress,
+                filter: { StructType: ACCESS_KEY_STRUCT_TYPE(packageId) },
+                options: { showContent: true },
+                limit: 50,
+                ...(cursor ? { cursor } : {}),
+            } as Parameters<IotaClient['getOwnedObjects']>[0]);
+            const page = res as {
+                data?: Array<{ content?: { fields?: Record<string, unknown> } }>;
+                nextCursor?: string | null;
+                hasNextPage?: boolean;
+            };
+            const data = page?.data ?? [];
+            for (const item of data) {
+                const fields = item?.content?.fields as Record<string, unknown> | undefined;
+                if (!fields) continue;
+                const lock_id = fields.lock_id as string | undefined;
+                const expires_at_ms = typeof fields.expires_at_ms === 'string'
+                    ? Number(fields.expires_at_ms)
+                    : (fields.expires_at_ms as number | undefined);
+                if (normalizeAddress(lock_id) === wantLock && expires_at_ms != null && expires_at_ms > nowMs) {
+                    return true;
+                }
             }
+            cursor = page?.nextCursor ?? null;
+            hasNext = !!page?.hasNextPage && !!cursor;
         }
     } catch {
         // ignore
@@ -1270,25 +1284,42 @@ export async function hasValidTicket(
 ): Promise<boolean> {
     if (!packageId || !eventId) return false;
     const nowMs = Date.now();
+    const wantEvent = normalizeAddress(eventId);
+    if (!wantEvent) return false;
     try {
-        const res = await client.getOwnedObjects({
-            owner: ownerAddress,
-            filter: { StructType: TICKET_STRUCT_TYPE(packageId) },
-            options: { showContent: true },
-            limit: 50,
-        } as Parameters<IotaClient['getOwnedObjects']>[0]);
-        type OwnedObjItem = { content?: { fields?: Record<string, unknown> }; objectId?: string };
-        const data = (res as { data?: Array<OwnedObjItem> })?.data ?? [];
-        for (const item of data) {
-            const fields = item?.content?.fields as Record<string, unknown> | undefined;
-            if (!fields) continue;
-            const ev = fields.event_id as string | undefined;
-            const valid_from = typeof fields.valid_from_ms === 'string' ? Number(fields.valid_from_ms) : (fields.valid_from_ms as number | undefined);
-            const valid_until = typeof fields.valid_until_ms === 'string' ? Number(fields.valid_until_ms) : (fields.valid_until_ms as number | undefined);
-            const used = fields.used === true || fields.used === 'true';
-            if (ev === eventId && valid_from != null && valid_until != null && !used && nowMs >= valid_from && nowMs <= valid_until) {
-                return true;
+        let cursor: string | null | undefined = null;
+        let hasNext = true;
+        while (hasNext) {
+            const res = await client.getOwnedObjects({
+                owner: ownerAddress,
+                filter: { StructType: TICKET_STRUCT_TYPE(packageId) },
+                options: { showContent: true },
+                limit: 50,
+                ...(cursor ? { cursor } : {}),
+            } as Parameters<IotaClient['getOwnedObjects']>[0]);
+            type OwnedObjItem = { content?: { fields?: Record<string, unknown> }; objectId?: string };
+            const page = res as { data?: Array<OwnedObjItem>; nextCursor?: string | null; hasNextPage?: boolean };
+            const data = page?.data ?? [];
+            for (const item of data) {
+                const fields = item?.content?.fields as Record<string, unknown> | undefined;
+                if (!fields) continue;
+                const ev = fields.event_id as string | undefined;
+                const valid_from = typeof fields.valid_from_ms === 'string' ? Number(fields.valid_from_ms) : (fields.valid_from_ms as number | undefined);
+                const valid_until = typeof fields.valid_until_ms === 'string' ? Number(fields.valid_until_ms) : (fields.valid_until_ms as number | undefined);
+                const used = fields.used === true || fields.used === 'true';
+                if (
+                    normalizeAddress(ev) === wantEvent &&
+                    valid_from != null &&
+                    valid_until != null &&
+                    !used &&
+                    nowMs >= valid_from &&
+                    nowMs <= valid_until
+                ) {
+                    return true;
+                }
             }
+            cursor = page?.nextCursor ?? null;
+            hasNext = !!page?.hasNextPage && !!cursor;
         }
     } catch {
         // ignore
@@ -2321,10 +2352,10 @@ export async function getOwnedAccessKeys(
                 const storageRebate = d?.storageRebate ?? item?.storageRebate;
                 const objectId = d?.objectId ?? item?.objectId ?? '';
                 out.push({
-                    objectId,
-                    lockId: (fields.lock_id as string) ?? '',
+                    objectId: objectId ? normalizeAddress(objectId) : '',
+                    lockId: normalizeAddress((fields.lock_id as string) ?? ''),
                     expiresAtMs: expiresAt ?? 0,
-                    issuer: (fields.issuer as string) ?? '',
+                    issuer: normalizeAddress((fields.issuer as string) ?? ''),
                     storageRebate: storageRebate != null ? String(storageRebate) : undefined,
                 });
             }
@@ -2668,12 +2699,12 @@ export async function getOwnedTickets(
                 const storageRebate = d?.storageRebate ?? item?.storageRebate;
                 const objectId = d?.objectId ?? item?.objectId ?? '';
                 out.push({
-                    objectId,
-                    eventId: (fields.event_id as string) ?? '',
+                    objectId: objectId ? normalizeAddress(objectId) : '',
+                    eventId: normalizeAddress((fields.event_id as string) ?? ''),
                     validFromMs: validFrom ?? 0,
                     validUntilMs: validUntil ?? 0,
                     used: fields.used === true || fields.used === 'true',
-                    issuer: (fields.issuer as string) ?? '',
+                    issuer: normalizeAddress((fields.issuer as string) ?? ''),
                     storageRebate: storageRebate != null ? String(storageRebate) : undefined,
                 });
             }

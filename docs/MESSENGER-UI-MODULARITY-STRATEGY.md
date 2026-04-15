@@ -85,3 +85,5 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 ---
 
 *Stand: 2026-03-29 — in den Fahrplan aufgenommen als **§ H.1b**; Erfolgskriterium an Merge-Ritual (**`TESTING.md`**) und CI **`frontend-checks`** angeglichen.*
+
+**Fortschritt 2026-04-15 (kleine Scheibe, Doku + Qualität):** Messenger-Chain-Realworld **`test:messages*`** und Smoke/Vitest erneut grün; keine neue ESLint-Zone nötig. Nächste **§ H.1b**-Scheibe weiterhin: nur bei **messbar** neuen Querimports (z. B. send↔attachments) Regeln nachziehen oder eine **isolierte** Extraktion mit Vitest — nicht parallel zum Mesh-Kern refactoren (**`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** „Als Nächstes“).

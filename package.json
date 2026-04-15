@@ -41,6 +41,7 @@
     "test:tickets-keys": "tsx scripts/test-tickets-keys-flow.ts",
     "test:all-projects": "tsx scripts/test-all-projects-full.ts",
     "test:realworld": "tsx scripts/run-ticket-accesskey-realworld.ts",
+    "test:tickets-accesskey-realworld": "tsx scripts/run-ticket-accesskey-realworld.ts",
     "debug:outgoing-wire": "tsx scripts/debug-outgoing-wire.ts",
     "test:messages": "tsx scripts/run-messages-chat-realworld.ts",
     "test:messages:single": "cross-env SINGLE_WALLET=1 tsx scripts/run-messages-chat-realworld.ts",
