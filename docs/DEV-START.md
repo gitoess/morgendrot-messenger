@@ -54,6 +54,7 @@ npm run dev
 5. **Handy** (gleiches WLAN): Chrome öffnen → **`http://<PC-LAN-IP>:3341`** (wirklich `http://`, nicht `https://` zur IP). Bei Bedarf **Windows-Firewall** für **TCP 3341** freigeben.
 6. **Installieren:** Chrome-Menü → **„App installieren“** / **Zum Startbildschirm hinzufügen** (je nach Android-Version).
 7. **Messenger nutzen:** App öffnen → Tresor **entsperren** wie am PC (siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`**).
+8. **Fehler „failed to load chunk“ / `Loading chunk … failed`:** meist **alter Service-Worker + neuer `next build`** (Chunk-Hashes weichen ab). **Einmal:** Chrome → Seiteninfo → **Speicher/Daten löschen** für diese Origin (oder installierte PWA deinstallieren), danach Seite neu öffnen und neu installieren. Nach **`sw.js`‑Änderung** (z. B. Version **`morgendrot-sw-7`**) einmal **hart neu laden** bzw. Tab schließen, damit die neue **`/sw.js`** greift.
 
 **Schneller ohne Build (nur Entwicklung):** statt Schritt 2–3 **`npm run dev:lan`** im Root — gleiche LAN-URL, aber Hot-Reload; `NEXT_ALLOWED_DEV_ORIGINS` wie oben setzen, falls `/ _next /`-Cross-Origin-Warnungen auftreten.
 

@@ -1,14 +1,15 @@
 /**
  * Morgendrot PWA – Service Worker (minimal, stabil)
  *
- * - Cached Same-Origin: /_next/static/ (JS/CSS-Chunks) + /handbook/*.md (Handbuch, offline nach erstem Abruf / Install).
+ * - `/_next/static/`: **Network-first** (verhindert „failed to load chunk“ nach neuem Build + altem SW-Cache). Offline: Cache-Fallback.
+ * - `/handbook/*.md`: Cache-first (Handbuch, offline nach erstem Abruf / Install).
  * - Navigation (document): bei Netzfehler Fallback auf zuvor gecachte Route **`/offline`** (Install/Precache).
  * - Kein Cache für /api/* : Backend bleibt „online first“; ohne Netz keine API.
  * - Erste App-Session ohne Netz: begrenzt (Handbuch nur wenn precache oder vorher geladen).
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-6'
+const VERSION = 'morgendrot-sw-7'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
@@ -79,7 +80,7 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(req.url)
     if (url.origin !== self.location.origin) return
     if (url.pathname.startsWith('/_next/static/')) {
-      event.respondWith(staticCacheFirst(req))
+      event.respondWith(staticNetworkFirst(req))
     } else if (url.pathname.startsWith('/handbook/') && url.pathname.endsWith('.md')) {
       event.respondWith(handbookCacheFirst(req))
     } else if (req.mode === 'navigate') {
@@ -90,19 +91,20 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
-async function staticCacheFirst(request) {
+/**
+ * Next-Build-Chunks: zuerst Netzwerk (immer passende Hashes nach `next build`).
+ * Nur bei Netzfehler Cache — vermeidet „Loading chunk … failed“ nach Deploy/Rebuild bei alter gecachter HTML/Chunk-Kombination.
+ */
+async function staticNetworkFirst(request) {
   const cache = await caches.open(STATIC_CACHE)
-  const hit = await cache.match(request)
-  if (hit) return hit
   try {
     const res = await fetch(request)
-    if (res.ok) cache.put(request, res.clone())
+    if (res.ok) await cache.put(request, res.clone())
     return res
   } catch {
-    return (
-      (await cache.match(request)) ||
-      new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
-    )
+    const hit = await cache.match(request)
+    if (hit) return hit
+    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
   }
 }
 
