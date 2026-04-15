@@ -92,6 +92,12 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [directRpcProbe, setDirectRpcProbe] = useState<'idle' | 'ok' | 'err' | 'checking'>('idle')
   const [directDrainOn, setDirectDrainOn] = useState(false)
   const [ttlDaysStr, setTtlDaysStr] = useState('30')
+  /** Direkt-Pfad: Package / Mailbox / Absender — editierbar ohne /api/current-ids (Handy-first Bootstrap). */
+  const [chainPkg, setChainPkg] = useState('')
+  const [chainMb, setChainMb] = useState('')
+  const [chainAddr, setChainAddr] = useState('')
+  /** Wenn an: Flags für Klartext-Direktdrain schätzen (Mailbox+Klartext an, keine Messenger-Credits) — nötig wenn Basis offline. */
+  const [optimisticDrainFlags, setOptimisticDrainFlags] = useState(false)
   const [mnemoInput, setMnemoInput] = useState('')
   const [sessionAddr, setSessionAddr] = useState<string | null>(null)
   const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
@@ -112,7 +118,12 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       setIotaSubmitModeState(getIotaSubmitMode())
       setSessionAddr(getDirectIotaSessionSignerAddress())
       const snap = loadDirectMailboxChainSnapshotFromLs()
-      if (snap) setTtlDaysStr(String(snap.ttlDays))
+      if (snap) {
+        setTtlDaysStr(String(snap.ttlDays))
+        setChainPkg(snap.packageId)
+        setChainMb(snap.mailboxId)
+        setChainAddr(snap.senderAddress)
+      }
     } catch {
       /* ignore */
     }
@@ -132,12 +143,18 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
           mailboxId?: string
         }
         if (cancelled || j.ok !== true) return
+        const pkg = (j.packageId || '').trim()
+        const mb = (j.mailboxId || '').trim()
+        const addr = (j.myAddress || '').trim()
         setIdsOverride({
-          myAddress: (j.myAddress || '').trim(),
-          packageId: (j.packageId || '').trim(),
+          myAddress: addr,
+          packageId: pkg,
           streamsAnchorId: (j.streamsAnchorId || '').trim(),
-          mailboxId: (j.mailboxId || '').trim(),
+          mailboxId: mb,
         })
+        if (pkg) setChainPkg(pkg)
+        if (mb) setChainMb(mb)
+        if (addr) setChainAddr(addr)
       } catch {
         /* ignore */
       }
@@ -248,8 +265,10 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       <CollapsibleContent className="mt-2 space-y-4 rounded-lg border border-border/60 bg-card/50 px-3 py-3 text-xs">
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Werte kommen aus dem Backend (<span className="font-mono">/api/status</span>, beim Öffnen zusätzlich{' '}
-          <span className="font-mono">/api/current-ids</span>). Hier <strong className="text-foreground">nur kopieren</strong> – Bearbeitung von
-          Anchor/Package bleibt in der <strong className="text-foreground">.env</strong> / am Server.
+          <span className="font-mono">/api/current-ids</span>), falls erreichbar. Zum <strong className="text-foreground">Kopieren</strong> die Zeilen
+          unten. Für <strong className="text-foreground">Direkt-IOTA ohne dauernd erreichbare Basis</strong>: Ketten-IDs im Abschnitt{' '}
+          <strong className="text-foreground">„Direkt-RPC“</strong> eintragen und dort in <span className="font-mono">localStorage</span> speichern
+          (siehe Handbuch / Architektur H.15).
         </p>
 
         <div className="space-y-2">
@@ -517,6 +536,121 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
               TTL setzen
             </Button>
           </div>
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <p className="text-[11px] font-semibold text-foreground">Ketten-IDs (Package, Mailbox, eigene Adresse)</p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Für Direkt-Klartext ohne dauernd erreichbare Basis: IDs manuell eintragen oder — wenn die Basis antwortet — beim Öffnen dieses Panels per{' '}
+              <span className="font-mono">/api/current-ids</span> befüllen, dann hier speichern.
+            </p>
+            <div className="grid max-w-lg gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Package-ID</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  value={chainPkg}
+                  onChange={(e) => setChainPkg(e.target.value)}
+                  spellCheck={false}
+                  placeholder="0x…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Mailbox-ID</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  value={chainMb}
+                  onChange={(e) => setChainMb(e.target.value)}
+                  spellCheck={false}
+                  placeholder="0x…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Absender (IOTA-Adresse / Objekt)</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  value={chainAddr}
+                  onChange={(e) => setChainAddr(e.target.value)}
+                  spellCheck={false}
+                  placeholder="0x…"
+                />
+              </div>
+            </div>
+            <label className="flex cursor-pointer items-start gap-2 text-[10px] leading-snug text-muted-foreground">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={optimisticDrainFlags}
+                onChange={(e) => setOptimisticDrainFlags(e.target.checked)}
+              />
+              <span>
+                Flags für Klartext-Direktdrain <strong className="text-foreground">schätzen</strong> (Mailbox an, Klartext erlaubt,{' '}
+                <strong className="text-foreground">ohne</strong> Messenger-Credits) — aktivieren, wenn <span className="font-mono">/api/status</span> zuletzt
+                nicht verfügbar war oder die Kette anders konfiguriert ist.
+              </span>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  const pkg = (idsOverride?.packageId || '').trim()
+                  const mb = (idsOverride?.mailboxId || '').trim()
+                  const addr = (idsOverride?.myAddress || '').trim()
+                  if (!pkg && !mb && !addr) {
+                    setMsg('Keine API-IDs im Puffer — Basis verbinden und Panel erneut öffnen, oder manuell eintragen.')
+                    return
+                  }
+                  if (pkg) setChainPkg(pkg)
+                  if (mb) setChainMb(mb)
+                  if (addr) setChainAddr(addr)
+                  setMsg('Felder aus letztem /api/current-ids übernommen (noch nicht gespeichert).')
+                }}
+              >
+                Felder aus API füllen
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  const pkg = chainPkg.trim()
+                  const mb = chainMb.trim()
+                  const addr = chainAddr.trim()
+                  if (!isLikelyIotaObjectId(pkg) || !isLikelyIotaObjectId(mb) || !isLikelyIotaObjectId(addr)) {
+                    setMsg('Ketten-IDs: gültige 0x-Objekt-IDs für Package, Mailbox und Absender eingeben.')
+                    return
+                  }
+                  const ttlN = parseInt(ttlDaysStr, 10)
+                  const ttl = BigInt(Number.isFinite(ttlN) && ttlN > 0 && ttlN <= 3650 ? ttlN : 30)
+                  const flags = optimisticDrainFlags
+                    ? { useMailbox: true, mailboxStorePlaintext: true, messengerCreditsConfigured: false }
+                    : {
+                        useMailbox: apiStatus.useMailbox === true,
+                        mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
+                        messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
+                      }
+                  persistDirectMailboxChainSnapshot({
+                    packageId: pkg,
+                    mailboxId: mb,
+                    senderAddress: addr,
+                    ttlDays: ttl,
+                    flags,
+                  })
+                  let out = 'Ketten-IDs für Direkt-Pfad gespeichert (localStorage).'
+                  if (!optimisticDrainFlags && flags.messengerCreditsConfigured) {
+                    out += ' Hinweis: Messenger-Credits aktiv — Klartext-Direkt-Drain bleibt geblockt, bis die Kette ohne Credits läuft oder du die Flags schätzt.'
+                  }
+                  setMsg(out)
+                }}
+              >
+                Ketten-IDs speichern
+              </Button>
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label className="text-[11px] text-muted-foreground">Session-Signer (Mnemonic / Secret — nur RAM)</Label>
             <textarea
@@ -560,38 +694,6 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
                 }}
               >
                 Signer löschen
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                disabled={busy !== null}
-                onClick={() => {
-                  const pkg = (idsOverride?.packageId || '').trim()
-                  const mb = (idsOverride?.mailboxId || '').trim()
-                  const addr = (idsOverride?.myAddress || '').trim()
-                  if (!isLikelyIotaObjectId(pkg) || !isLikelyIotaObjectId(mb) || !isLikelyIotaObjectId(addr)) {
-                    setMsg('Ketten-IDs: zuerst Panel öffnen / Basis verbinden — oder gültige 0x-IDs in der Oberfläche.')
-                    return
-                  }
-                  const ttlN = parseInt(ttlDaysStr, 10)
-                  const ttl = BigInt(Number.isFinite(ttlN) && ttlN > 0 && ttlN <= 3650 ? ttlN : 30)
-                  persistDirectMailboxChainSnapshot({
-                    packageId: pkg,
-                    mailboxId: mb,
-                    senderAddress: addr,
-                    ttlDays: ttl,
-                    flags: {
-                      useMailbox: apiStatus.useMailbox === true,
-                      mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
-                      messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
-                    },
-                  })
-                  setMsg('Ketten-IDs für Direkt-Pfad übernommen (localStorage).')
-                }}
-              >
-                Ketten-IDs übernehmen
               </Button>
             </div>
             {sessionAddr && (
