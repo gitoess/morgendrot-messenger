@@ -374,7 +374,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 
 ### H.1b Messenger-UI — Modularität (Grenzen statt Zeilenzahl)
 
-**Volltext (Ist-Kritik, Leitregeln, 3 Phasen):** **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**.
+**Volltext (Ist-Kritik, Leitregeln, 3 Phasen):** **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**. **Operativ:** dieselbe Datei **§ 5** *Schritt für Schritt* (Stufen 0–5 + Qualitätsgitter).
 
 | Phase | Inhalt (Kurz) |
 |-------|----------------|

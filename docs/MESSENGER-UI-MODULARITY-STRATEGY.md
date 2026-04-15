@@ -77,13 +77,63 @@ Statt einer starren **„max. 300 Zeilen“**-Grenze (oft kontraproduktiv bei ei
 
 ---
 
-## 5. Was absichtlich *nicht* in diesem Dokument steht
+## 5. Schritt für Schritt (operativ, **§ H.1b**)
+
+**Prinzip:** Immer **eine vertikale Scheibe** (z. B. nur *attachments* oder nur *voice*), **kein** großer Umbau parallel zum **Mesh-Kern** (**Phase B**). Nach jeder Scheibe: Ritual unten — dann Merge oder nächste Scheibe.
+
+### Stufe 0 — Scheibe wählen & Zeitfenster
+
+1. **Thema festlegen** (ein Ordner aus § 3: z. B. `features/send/`, `features/inbox/`, `features/attachments/`).  
+2. **Kollision prüfen:** Läuft parallel ein **Mesh-/BLE-/handle-send**-Großeingriff? Wenn ja — **warten** oder Scheibe verschieben (**`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** / **§ C.0b**).  
+3. **Ziel formulieren** (ein Satz): z. B. „Inbox-Filter-Helfer nach `lib/` verschieben, Imports nur anpassieren“.
+
+### Stufe 1 — Ist verstehen (kurz)
+
+4. **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** und **`docs/FRONTEND-API-MODULARITY.md`** für betroffene Pfade lesen (oder nur die betroffenen Abschnitte).  
+5. Optional: **`npm run check:circular`** im Ordner **`frontend/`** *vor* der Änderung — Basislinie, falls später ein neuer Zyklus auftaucht.
+
+### Stufe 2 — Struktur (Phase 1 aus § 4)
+
+6. **Feature-Heimat:** Code nur unter dem gewählten `features/<name>/` (oder **`lib/`** / **`lib/api/`** für reine Helfer) anlegen oder dorthin **verschieben** — **Verhalten unverändert**, vor allem **keine** Logikänderung in derselben PR, wenn möglich.  
+7. **API:** Neue oder verschobene Aufrufe über **`lib/api/<domäne>.ts`** spiegeln; öffentlicher Einstieg für App-Code weiterhin **`@/frontend/lib/api`** (**`frontend/frontend/lib/api.ts`**).  
+8. **Imports:** Relative Pfade konsolidieren; **keine** neuen Verstöße gegen **`frontend/eslint.config.mjs`** (aktuell: **send**↔**inbox**, **inbox**↔**attachments**, **attachments**→**inbox**). Wenn eine **neue** problematische Kante messbar wird → erst **Umweg** über `lib/` / gemeinsame Typen, **dann** optional Regel in ESLint nachziehen (**Roadmap** „Als Nächstes“ (b)).
+
+### Stufe 3 — Kopplung (Phase 2 aus § 4, nur wenn nötig)
+
+9. **Stärkste Kante:** Wo importiert Send noch Inbox (oder umgekehrt)? **Port** (kleines Interface / Callback-Props) oder Verschiebung von **reiner** Logik nach **`lib/`** — weiterhin **kleine** Diff.  
+10. **Tests:** Pro extrahierter **reiner** Funktion oder kritischem UI-Trigger mindestens **ein** Vitest / RTL-Slice (**`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **§ H.1a**).
+
+### Stufe 4 — Qualitätsgitter (vor Merge)
+
+Im Ordner **`frontend/`** bzw. Repo-Root wie in **`TESTING.md`** § *Qualitätsritual vor Merge*:
+
+| # | Befehl | Zweck |
+|---|--------|--------|
+| 1 | `npx tsc --noEmit` (Root) | Root-Types |
+| 2 | `cd frontend` → `npx tsc --noEmit` | Next-/Messenger-`tsconfig` |
+| 3 | `npm run lint` | ESLint inkl. Feature-Grenzen |
+| 4 | `npm run check:circular` | madge, keine neuen Zyklen unter `./frontend` |
+| 5 | `npm run test:unit` | Vitest |
+| 6 | (Root) `npm run validate:ui` + `npm run test:smoke` | UI-Refs + Modultests |
+
+CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
+
+### Stufe 5 — Abschluss
+
+11. **PR-Text:** eine Zeile *Scheibe* + *kein paralleler Mesh-Kern*; bei großen Dateien **Kurzbegründung** (§ 3 „Weiche Budgets“).  
+12. **`docs/FRONTEND-API-MODULARITY.md`** oder dieses Dokument **eine Zeile** ergänzen, wenn sich eine **neue** Konvention ergibt.
+
+**„Als Nächstes“ (Roadmap, klein):** (a) weiterer RTL-/Vitest-Slice **Send-Panel** / Inbox-Rand (**§ H.1a**); (b) ESLint-Zonen nur bei **messbaren** neuen Querimports; (c) optional: Imports auf **`@/frontend/lib/api`** vereinheitlichen (kosmetisch) — siehe **`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** *Als Nächstes*.
+
+---
+
+## 6. Was absichtlich *nicht* in diesem Dokument steht
 
 - **Vollständige** Trennung von **Backend** (`src/`) und **Frontend** — hier nur **Messenger-UI** im Next-`frontend/`.  
 - **Ersetzen** der **API-Fassade** durch Microservices — nicht Ziel.
 
 ---
 
-*Stand: 2026-03-29 — in den Fahrplan aufgenommen als **§ H.1b**; Erfolgskriterium an Merge-Ritual (**`TESTING.md`**) und CI **`frontend-checks`** angeglichen.*
+*Stand: 2026-03-29 — in den Fahrplan aufgenommen als **§ H.1b**; Erfolgskriterium an Merge-Ritual (**`TESTING.md`**) und CI **`frontend-checks`** angeglichen. **§ 5 Schritt-für-Schritt** ergänzt 2026-04-15.*
 
 **Fortschritt 2026-04-15 (kleine Scheibe, Doku + Qualität):** Messenger-Chain-Realworld **`test:messages*`** und Smoke/Vitest erneut grün; keine neue ESLint-Zone nötig. Nächste **§ H.1b**-Scheibe weiterhin: nur bei **messbar** neuen Querimports (z. B. send↔attachments) Regeln nachziehen oder eine **isolierte** Extraktion mit Vitest — nicht parallel zum Mesh-Kern refactoren (**`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** „Als Nächstes“).
