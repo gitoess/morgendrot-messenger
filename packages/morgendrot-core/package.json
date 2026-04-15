@@ -8,7 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./queue/offline-mailbox": "./src/queue/offline-mailbox/index.ts",
-    "./ports": "./src/ports/index.ts"
+    "./ports": "./src/ports/index.ts",
+    "./device-time": "./src/device-time/index.ts"
   },
   "scripts": {
     "test:unit": "vitest run",

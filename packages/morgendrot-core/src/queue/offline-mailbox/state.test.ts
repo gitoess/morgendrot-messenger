@@ -9,6 +9,7 @@ import {
   shouldDeferDrainAttempt,
   tryEnqueueOfflineMailboxItem,
 } from './state.js'
+import { computeCanonicalMsgRefV1 } from './canonical-msg-ref.js'
 
 describe('offlineMailboxDedupKey', () => {
   it('ist stabil für gleiche Nutzlast', () => {
@@ -113,7 +114,13 @@ describe('backoffMsForDrainAttempt / shouldDeferDrainAttempt', () => {
 describe('tryEnqueueOfflineMailboxItem', () => {
   const base = (): OfflineMailboxQueueItem[] => []
 
-  it('legt pending-Eintrag an', () => {
+  it('legt pending-Eintrag an', async () => {
+    const canonicalMsgRef = await computeCanonicalMsgRefV1({
+      senderAddress: '',
+      recipientAddress: '0xr',
+      threadId: '',
+      payloadUtf8: 'wire',
+    })
     const r = tryEnqueueOfflineMailboxItem({
       items: base(),
       kind: 'encrypted_send',
@@ -124,6 +131,7 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       lastError: 'net',
       id: 'id-1',
       now: 42,
+      canonicalMsgRef,
     })
     expect(r.ok).toBe(true)
     if (!r.ok) return
@@ -134,9 +142,16 @@ describe('tryEnqueueOfflineMailboxItem', () => {
     expect(r.items[0]?.timeIsTrusted).toBe(true)
     expect(r.items[0]?.clientOutSeq).toBe(1)
     expect(r.items[0]?.createdAt).toBe(42)
+    expect(r.items[0]?.canonicalMsgRef).toBe(canonicalMsgRef)
   })
 
-  it('dedupliziert gleichen Inhalt', () => {
+  it('dedupliziert gleichen Inhalt', async () => {
+    const canonicalMsgRef = await computeCanonicalMsgRefV1({
+      senderAddress: '',
+      recipientAddress: '0xr',
+      threadId: '',
+      payloadUtf8: 'same',
+    })
     const first = tryEnqueueOfflineMailboxItem({
       items: base(),
       kind: 'encrypted_send',
@@ -147,6 +162,7 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       lastError: 'e',
       id: 'a',
       now: 1,
+      canonicalMsgRef,
     })
     expect(first.ok && first.queued).toBe(true)
     if (!first.ok || !first.queued) return
@@ -159,6 +175,43 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       timeIsTrusted: false,
       id: 'b',
       now: 2,
+      canonicalMsgRef,
+    })
+    expect(second.ok && second.queued === false).toBe(true)
+    if (!second.ok) return
+    expect(second.items).toHaveLength(1)
+  })
+
+  it('erkennt Duplikat gegen Legacy-Eintrag ohne canonicalMsgRef', async () => {
+    const legacy: OfflineMailboxQueueItem = {
+      id: 'old',
+      kind: 'encrypted_send',
+      status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+      recipient: '0xr',
+      payload: 'same',
+      encrypted: true,
+      timeIsTrusted: false,
+      clientOutSeq: 1,
+      createdAt: 0,
+      attempts: 0,
+      lastAttemptAt: 0,
+    }
+    const canonicalMsgRef = await computeCanonicalMsgRefV1({
+      senderAddress: '',
+      recipientAddress: '0xr',
+      threadId: '',
+      payloadUtf8: 'same',
+    })
+    const second = tryEnqueueOfflineMailboxItem({
+      items: [legacy],
+      kind: 'encrypted_send',
+      recipient: '0xr',
+      payload: 'same',
+      encrypted: true,
+      timeIsTrusted: false,
+      id: 'b',
+      now: 2,
+      canonicalMsgRef,
     })
     expect(second.ok && second.queued === false).toBe(true)
     if (!second.ok) return
@@ -176,12 +229,19 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       timeIsTrusted: false,
       id: 'x',
       now: 1,
+      canonicalMsgRef: '00'.repeat(32),
     })
     expect(r).toEqual({ ok: false, queued: false, reason: 'Nutzlaste zu groß für lokale Warteschlange.' })
   })
 
-  it('vergibt monoton steigende clientOutSeq', () => {
+  it('vergibt monoton steigende clientOutSeq', async () => {
     let items = base()
+    const refA = await computeCanonicalMsgRefV1({
+      senderAddress: '',
+      recipientAddress: '0x1',
+      threadId: '',
+      payloadUtf8: 'a',
+    })
     const r1 = tryEnqueueOfflineMailboxItem({
       items,
       kind: 'encrypted_send',
@@ -191,9 +251,16 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       timeIsTrusted: true,
       id: '1',
       now: 1,
+      canonicalMsgRef: refA,
     })
     if (!r1.ok || !r1.queued) throw new Error('expected queued')
     items = r1.items
+    const refB = await computeCanonicalMsgRefV1({
+      senderAddress: '',
+      recipientAddress: '0x1',
+      threadId: '',
+      payloadUtf8: 'b',
+    })
     const r2 = tryEnqueueOfflineMailboxItem({
       items,
       kind: 'encrypted_send',
@@ -203,6 +270,7 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       timeIsTrusted: true,
       id: '2',
       now: 2,
+      canonicalMsgRef: refB,
     })
     if (!r2.ok || !r2.queued) throw new Error('expected queued')
     const seqs = r2.items.map((x) => x.clientOutSeq).sort((a, b) => a - b)

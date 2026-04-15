@@ -96,8 +96,8 @@ So ist der **Core** in Vitest **vollständig** testbar; die PWA behält nur **IO
 
 ### 4.3 Idempotenz und § H.12
 
-- **`id`**, **`clientOutSeq`**, **`canonical_msg_ref`** (wenn eingeführt): im Core **eine** Definition von „gleicher logischer Sendung“.  
-- Abgleich mit **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** und **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** **pro PR**, sobald der Core mehr als MVP spiegelt.
+- **`id`**, **`clientOutSeq`**, **`canonical_msg_ref`**: im Core **eine** Definition von „gleicher logischer Sendung“ — **`computeCanonicalMsgRefV1`** (`morg_msg_ref_v1`, Web Crypto) + persistiertes Feld **`canonicalMsgRef`** auf **`OfflineMailboxQueueItem`**; Dedup kollidiert zusätzlich mit **Legacy**-Fingerprint (`offlineMailboxDedupKey`).  
+- Abgleich mit **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** und **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** **pro PR**, sobald sich Eingaben (Sender/Thread/Nonce) oder Hash-Reihenfolge ändern.
 
 ### 4.4 Persistenz‑Roadmap (kurz)
 
@@ -129,10 +129,11 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 
 1. **Scaffold** `packages/morgendrot-core` + `vitest` + erste leere `index.ts`. **Erledigt (2026-04-28):** Offline-Mailbox **model / codec / state** im Core + PWA-Adapter `frontend/.../offline-queue.ts` + Root **`npm run test:core`** + CI-Schritt in **`frontend-checks.yml`**.  
 2. **Ports + Manager (2026-04-28):** `createSystemClock` / `createFixedClock`, `createMemoryStringStorage` / `createNullableDelegatingStorage`, **`IdGeneratorPort`**, **`createOfflineMailboxManager`** (Load/Save/Enqueue), **`bumpOfflineMailboxItemAfterFailedSend`** (Drain-Fehler rein); PWA nutzt Manager + delegierendes Storage.  
-3. **Nächste Scheiben:** `canonical_msg_ref` / § **H.12**, Retry-/Konflikt-Politik, optional **`SendPort`** um Drain-Schleife weiter in den Core zu ziehen.  
-4. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten) — **erledigt** für `@morgendrot/core` v0.0.1.  
-5. **`device-time-trust`:** eine Quelle im Core, Frontend/Server stellen nur dünne Re‑Exports oder entfernen Duplikat (separate kleine Scheibe).  
-6. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
+3. **Erledigt (2026-03-28):** § **H.12** / **`canonical_msg_ref`** (v1 gemäß **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**) im Core + PWA-Enqueue (`senderAddress`, `threadId` aus **`stableOfflineMailboxThreadId`**). **`SendPort`** + **`drainOnce`** im Core; PWA-Adapter nutzt **`drainOfflineMailboxOnce`**.  
+4. **Nächste Scheiben:** Retry-/Konflikt-Politik verfeinern; optional **`messageNonceU64`** aus dem Mailbox-/E2E-Protokoll durchreichen, sobald der Client den Nonce kennt.  
+5. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten) — **erledigt** für `@morgendrot/core` v0.0.1.  
+6. **`device-time-trust`:** **erledigt** — eine Quelle im Core (`@morgendrot/core/device-time`), dünne Re‑Exports in **`src/shared`** / **`frontend/.../lib/device-time-trust.ts`**.  
+7. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
 
 ---
 
@@ -144,4 +145,4 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 
 ---
 
-*Stand: 2026-04-28 — Stufe‑1‑Detailplan; Abgleich mit **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**.*
+*Stand: 2026-03-28 — Stufe‑1‑Detailplan; Abgleich mit **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**.*

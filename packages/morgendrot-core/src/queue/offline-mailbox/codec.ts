@@ -22,6 +22,11 @@ export function normalizeOfflineMailboxItem(o: Record<string, unknown>): Offline
     return null
   }
   const lastError = o.lastError
+  let canonicalMsgRef: string | undefined
+  if (typeof o.canonicalMsgRef === 'string') {
+    const cr = o.canonicalMsgRef.trim().toLowerCase()
+    if (/^[0-9a-f]{64}$/.test(cr)) canonicalMsgRef = cr
+  }
   const rawSeq = o.clientOutSeq
   const clientOutSeq =
     typeof rawSeq === 'number' && Number.isFinite(rawSeq) && rawSeq >= 0 && Math.floor(rawSeq) === rawSeq
@@ -40,6 +45,7 @@ export function normalizeOfflineMailboxItem(o: Record<string, unknown>): Offline
     attempts: o.attempts,
     lastAttemptAt: o.lastAttemptAt,
     ...(typeof lastError === 'string' ? { lastError } : {}),
+    ...(canonicalMsgRef !== undefined ? { canonicalMsgRef } : {}),
   }
 }
 

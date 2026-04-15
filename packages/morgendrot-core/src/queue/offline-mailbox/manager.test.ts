@@ -42,22 +42,25 @@ describe('createOfflineMailboxManager', () => {
     expect(mgr.count()).toBe(1)
   })
 
-  it('enqueueFailure persistiert und erhöht clientOutSeq', () => {
-    expect(mgr.enqueueFailure({
-      kind: 'encrypted_send',
-      recipient: '0xr',
-      payload: 'wire',
-      encrypted: true,
-      timeIsTrusted: true,
-      lastError: 'net',
-    })).toEqual({ ok: true, queued: true })
+  it('enqueueFailure persistiert und erhöht clientOutSeq', async () => {
+    await expect(
+      mgr.enqueueFailure({
+        kind: 'encrypted_send',
+        recipient: '0xr',
+        payload: 'wire',
+        encrypted: true,
+        timeIsTrusted: true,
+        lastError: 'net',
+      })
+    ).resolves.toEqual({ ok: true, queued: true })
     expect(mgr.nextClientOutSeq()).toBe(2)
     const items = mgr.load()
     expect(items[0]?.id).toBe('t-1')
     expect(items[0]?.createdAt).toBe(1_000)
+    expect(items[0]?.canonicalMsgRef).toMatch(/^[0-9a-f]{64}$/)
   })
 
-  it('dedupliziert ohne zweiten Speicher-Schreib', () => {
+  it('dedupliziert ohne zweiten Speicher-Schreib', async () => {
     const p = {
       kind: 'encrypted_send' as const,
       recipient: '0x',
@@ -65,8 +68,25 @@ describe('createOfflineMailboxManager', () => {
       encrypted: true,
       timeIsTrusted: false,
     }
-    expect(mgr.enqueueFailure(p)).toEqual({ ok: true, queued: true })
-    expect(mgr.enqueueFailure(p)).toEqual({ ok: true, queued: false })
+    await expect(mgr.enqueueFailure(p)).resolves.toEqual({ ok: true, queued: true })
+    await expect(mgr.enqueueFailure(p)).resolves.toEqual({ ok: true, queued: false })
     expect(mgr.load()).toHaveLength(1)
+  })
+
+  it('drainOnce nutzt SendPort und persistiert', async () => {
+    await mgr.enqueueFailure({
+      kind: 'plain_send',
+      recipient: '0xz',
+      payload: 'drain-me',
+      encrypted: false,
+      timeIsTrusted: true,
+    })
+    const r = await mgr.drainOnce({
+      sendEncrypted: async () => ({ ok: false }),
+      sendPlain: async () => ({ ok: true }),
+    })
+    expect(r.sent).toBe(1)
+    expect(r.remaining).toBe(0)
+    expect(mgr.load()).toHaveLength(0)
   })
 })

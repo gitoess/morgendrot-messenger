@@ -32,6 +32,7 @@ export type {
   OfflineMailboxKind,
   OfflineQueueItemStatus,
   EnqueueOfflineMailboxResult,
+  ComputeCanonicalMsgRefV1Input,
 } from '@/frontend/lib/api/offline-queue'
 export {
   OFFLINE_QUEUE_ITEM_STATUS,
@@ -43,6 +44,9 @@ export {
   getOfflineMailboxQueueCount,
   nextOfflineMailboxClientOutSeq,
   offlineMailboxDedupKey,
+  computeCanonicalMsgRefV1,
+  stableOfflineMailboxThreadId,
+  normalizeMailboxAddressUtf8,
 } from '@/frontend/lib/api/offline-queue'
 
 export type { MeshV2Wire } from '@/frontend/lib/api/mesh-morg-pkg'

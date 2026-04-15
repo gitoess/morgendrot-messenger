@@ -40,4 +40,9 @@ export type OfflineMailboxQueueItem = {
   attempts: number
   lastAttemptAt: number
   lastError?: string
+  /**
+   * § H.12 — `canonical_msg_ref` (64 Hex, Kleinbuchstaben), vgl. `computeCanonicalMsgRefV1`.
+   * Fehlt bei Legacy-Einträgen; Dedup nutzt dann weiter `offlineMailboxDedupKey`.
+   */
+  canonicalMsgRef?: string
 }

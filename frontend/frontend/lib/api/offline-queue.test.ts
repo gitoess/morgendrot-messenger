@@ -67,8 +67,8 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     store['morgendrot.offlineMailboxQueue'] = '1'
   })
 
-  it('legt pending-Eintrag an', () => {
-    const r = enqueueOfflineMailboxFailure({
+  it('legt pending-Eintrag an', async () => {
+    const r = await enqueueOfflineMailboxFailure({
       kind: 'encrypted_send',
       recipient: '0xr',
       payload: 'wire',
@@ -83,9 +83,10 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     expect(items[0]?.payload).toBe('wire')
     expect(items[0]?.timeIsTrusted).toBe(true)
     expect(items[0]?.clientOutSeq).toBe(1)
+    expect(items[0]?.canonicalMsgRef).toMatch(/^[0-9a-f]{64}$/)
   })
 
-  it('dedupliziert gleichen Inhalt', () => {
+  it('dedupliziert gleichen Inhalt', async () => {
     const p = {
       kind: 'encrypted_send' as const,
       recipient: '0xr',
@@ -94,15 +95,15 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       timeIsTrusted: false,
       lastError: 'e',
     }
-    expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: true })
-    expect(enqueueOfflineMailboxFailure(p)).toEqual({ ok: true, queued: false })
+    await expect(enqueueOfflineMailboxFailure(p)).resolves.toEqual({ ok: true, queued: true })
+    await expect(enqueueOfflineMailboxFailure(p)).resolves.toEqual({ ok: true, queued: false })
     expect(loadOfflineMailboxQueue()).toHaveLength(1)
     expect(loadOfflineMailboxQueue()[0]?.clientOutSeq).toBe(1)
   })
 
-  it('queued false wenn Opt-in aus', () => {
+  it('queued false wenn Opt-in aus', async () => {
     delete store['morgendrot.offlineMailboxQueue']
-    const r = enqueueOfflineMailboxFailure({
+    const r = await enqueueOfflineMailboxFailure({
       kind: 'plain_send',
       recipient: '0xa',
       payload: 'hi',
@@ -150,8 +151,8 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     expect(row?.clientOutSeq).toBe(0)
   })
 
-  it('vergibt monoton steigende clientOutSeq für unterschiedliche Nutzlasten', () => {
-    expect(
+  it('vergibt monoton steigende clientOutSeq für unterschiedliche Nutzlasten', async () => {
+    await expect(
       enqueueOfflineMailboxFailure({
         kind: 'encrypted_send',
         recipient: '0x1',
@@ -159,8 +160,8 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         encrypted: true,
         timeIsTrusted: true,
       })
-    ).toEqual({ ok: true, queued: true })
-    expect(
+    ).resolves.toEqual({ ok: true, queued: true })
+    await expect(
       enqueueOfflineMailboxFailure({
         kind: 'encrypted_send',
         recipient: '0x1',
@@ -168,7 +169,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         encrypted: true,
         timeIsTrusted: true,
       })
-    ).toEqual({ ok: true, queued: true })
+    ).resolves.toEqual({ ok: true, queued: true })
     const items = loadOfflineMailboxQueue().sort((a, b) => a.clientOutSeq - b.clientOutSeq)
     expect(items.map((x) => x.clientOutSeq)).toEqual([1, 2])
   })

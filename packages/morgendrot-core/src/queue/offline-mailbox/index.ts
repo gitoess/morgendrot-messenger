@@ -16,6 +16,7 @@ export {
 
 export {
   offlineMailboxDedupKey,
+  offlineMailboxEnqueueCollides,
   maxClientOutSeqIn,
   nextClientOutSeqFromItems,
   sortOfflineMailboxForDrain,
@@ -32,3 +33,13 @@ export {
   type OfflineMailboxManagerDeps,
   type EnqueueOfflineMailboxFailureResult,
 } from './manager.js'
+
+export type { MailboxSendResult, OfflineMailboxSendPort } from './send-port.js'
+export { drainOfflineMailboxOnce } from './drain.js'
+
+export {
+  computeCanonicalMsgRefV1,
+  stableOfflineMailboxThreadId,
+  normalizeMailboxAddressUtf8,
+  type ComputeCanonicalMsgRefV1Input,
+} from './canonical-msg-ref.js'

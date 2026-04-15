@@ -7,6 +7,7 @@ import {
   sosGatewayAckDigest,
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
+  stableOfflineMailboxThreadId,
 } from '@/frontend/lib/api'
 import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
@@ -102,6 +103,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     encrypted,
     forcedTransport,
     recipient,
+    myAddress,
     message,
     setMessage,
     attachedLora,
@@ -422,20 +424,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       !attachedTxtFile &&
       !attachedLora
 
-    const queueMailboxIfAllowed = (
+    const queueMailboxIfAllowed = async (
       kind: 'encrypted_send' | 'plain_send',
       textSnap: string,
       encrypted: boolean,
       lastErr: string
-    ): boolean => {
+    ): Promise<boolean> => {
       if (!allowOfflineMailboxQueue) return false
-      const en = enqueueOfflineMailboxFailure({
+      const en = await enqueueOfflineMailboxFailure({
         kind,
         recipient,
         payload: textSnap,
         encrypted,
         timeIsTrusted: !deviceTimeTrustWarn,
         lastError: lastErr,
+        senderAddress: myAddress,
+        threadId: stableOfflineMailboxThreadId(myAddress, recipient),
       })
       if (en.ok && en.queued) {
         onOfflineMailboxQueueChanged?.()
@@ -458,7 +462,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const res = await sendMessage(recipient, textSnap, enc)
         if (res.ok) return { ok: true }
         const errText = res.error || 'Fehler'
-        if (queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', textSnap, enc, errText)) {
+        if (await queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', textSnap, enc, errText)) {
           return failSend(
             `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
           )
@@ -571,7 +575,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
             const meshMsg = meshErr instanceof Error ? meshErr.message : String(meshErr)
-            if (queueMailboxIfAllowed('encrypted_send', textSnap, true, `${onlineErr} / Funk: ${meshMsg}`)) {
+            if (await queueMailboxIfAllowed('encrypted_send', textSnap, true, `${onlineErr} / Funk: ${meshMsg}`)) {
               return failSend(
                 `${onlineErr} Funk-Versuch fehlgeschlagen — zwischengespeichert; erneuter Mailbox-Versuch bei Basis (Opt-in).`
               )
@@ -581,7 +585,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return { ok: false }
           }
         }
-        if (queueMailboxIfAllowed('encrypted_send', textSnap, true, onlineErr)) {
+        if (await queueMailboxIfAllowed('encrypted_send', textSnap, true, onlineErr)) {
           return failSend(
             readStrictOnlineNoMeshFallback() && meshtastic.connected
               ? `${onlineErr} „Strikt ohne Funk-Fallback“ — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder Transport auf „funk“ stellen.`
@@ -712,6 +716,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     message,
     meshtastic,
     recipient,
+    myAddress,
     setLoraOnlineFallbackOffer,
     setMessage,
     setSending,

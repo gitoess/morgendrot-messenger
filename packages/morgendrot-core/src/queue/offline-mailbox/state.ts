@@ -1,5 +1,7 @@
 import { OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS, OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model.js'
 
+const CANONICAL_MSG_REF_HEX_RE = /^[0-9a-f]{64}$/
+
 export function offlineMailboxDedupKey(item: {
   kind: OfflineMailboxKind
   recipient: string
@@ -8,6 +10,26 @@ export function offlineMailboxDedupKey(item: {
 }): string {
   const head = item.payload.slice(0, 2048)
   return `${item.kind}|${item.recipient}|${item.encrypted}|${item.payload.length}|${head}`
+}
+
+/** Dedup: gleicher § H.12-Ref **oder** gleicher Legacy-Fingerprint (Migration / Parallel-Einträge). */
+export function offlineMailboxEnqueueCollides(
+  items: OfflineMailboxQueueItem[],
+  candidate: {
+    kind: OfflineMailboxKind
+    recipient: string
+    encrypted: boolean
+    payload: string
+    canonicalMsgRef: string
+  }
+): boolean {
+  const normRef = candidate.canonicalMsgRef.toLowerCase()
+  const legacyKey = offlineMailboxDedupKey(candidate)
+  return items.some((q) => {
+    const qr = q.canonicalMsgRef?.toLowerCase()
+    if (qr && CANONICAL_MSG_REF_HEX_RE.test(qr) && qr === normRef) return true
+    return offlineMailboxDedupKey(q) === legacyKey
+  })
 }
 
 export function maxClientOutSeqIn(items: OfflineMailboxQueueItem[]): number {
@@ -63,13 +85,18 @@ export function tryEnqueueOfflineMailboxItem(params: {
   lastError?: string
   id: string
   now: number
+  /** § H.12 — 64 Hex (Kleinbuchstaben), z. B. von `computeCanonicalMsgRefV1`. */
+  canonicalMsgRef: string
 }): EnqueueOfflineMailboxPureResult {
-  const { items, kind, recipient, payload, encrypted, timeIsTrusted, lastError, id, now } = params
+  const { items, kind, recipient, payload, encrypted, timeIsTrusted, lastError, id, now, canonicalMsgRef } = params
   if (payload.length > OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS) {
     return { ok: false, queued: false, reason: 'Nutzlaste zu groß für lokale Warteschlange.' }
   }
-  const dedup = offlineMailboxDedupKey({ kind, recipient, encrypted, payload })
-  if (items.some((q) => offlineMailboxDedupKey(q) === dedup)) {
+  if (!CANONICAL_MSG_REF_HEX_RE.test(canonicalMsgRef.toLowerCase())) {
+    return { ok: false, queued: false, reason: 'canonicalMsgRef muss 64 Hexzeichen sein.' }
+  }
+  const normRef = canonicalMsgRef.toLowerCase()
+  if (offlineMailboxEnqueueCollides(items, { kind, recipient, encrypted, payload, canonicalMsgRef: normRef })) {
     return { ok: true, queued: false, items }
   }
   const next: OfflineMailboxQueueItem = {
@@ -84,6 +111,7 @@ export function tryEnqueueOfflineMailboxItem(params: {
     createdAt: now,
     attempts: 0,
     lastAttemptAt: 0,
+    canonicalMsgRef: normRef,
     ...(lastError !== undefined ? { lastError } : {}),
   }
   return { ok: true, queued: true, items: [...items, next] }

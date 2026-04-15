@@ -3,16 +3,14 @@
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
  *
- * Orchestrierung **Laden/Speichern/Enqueue:** `createOfflineMailboxManager` aus **`@morgendrot/core`**.
- * Diese Datei: **Browser-Ports** (`localStorage`), **Opt-in**, **Drain** über `chat-commands`.
+ * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxSendPort`** (`@morgendrot/core`).
+ * Diese Datei: **Browser-Storage**, **Opt-in**, **Send-Adapter** (`chat-commands`).
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem } from '@morgendrot/core'
+import type { OfflineMailboxSendPort } from '@morgendrot/core'
 import {
-  sortOfflineMailboxForDrain,
-  shouldDeferDrainAttempt,
-  bumpOfflineMailboxItemAfterFailedSend,
   createOfflineMailboxManager,
   createNullableDelegatingStorage,
   createSystemClock,
@@ -29,6 +27,10 @@ export {
   type OfflineMailboxKind,
   type OfflineMailboxQueueItem,
   offlineMailboxDedupKey,
+  computeCanonicalMsgRefV1,
+  stableOfflineMailboxThreadId,
+  normalizeMailboxAddressUtf8,
+  type ComputeCanonicalMsgRefV1Input,
 } from '@morgendrot/core'
 
 export type EnqueueOfflineMailboxResult =
@@ -42,6 +44,25 @@ export function isOfflineMailboxQueueEnabled(): boolean {
     return window.localStorage.getItem('morgendrot.offlineMailboxQueue') === '1'
   } catch {
     return false
+  }
+}
+
+function createChatCommandsSendPort(): OfflineMailboxSendPort {
+  return {
+    async sendEncrypted(payload: string) {
+      const r = await sendEncryptedMessageWithTimeout(payload)
+      return {
+        ok: r.ok === true,
+        error: r.error ?? (r as { message?: string }).message,
+      }
+    },
+    async sendPlain(recipient: string, payload: string) {
+      const r = await sendMessage(recipient, payload, false)
+      return {
+        ok: r.ok === true,
+        error: r.error ?? (r as { message?: string }).message,
+      }
+    },
   }
 }
 
@@ -79,7 +100,7 @@ export function nextOfflineMailboxClientOutSeq(): number {
 /**
  * Speichert einen fehlgeschlagenen Mailbox-Versuch — nur wenn **Opt-in** aktiv und Nutzlast klein genug.
  */
-export function enqueueOfflineMailboxFailure(opts: {
+export async function enqueueOfflineMailboxFailure(opts: {
   kind: OfflineMailboxKind
   recipient: string
   payload: string
@@ -87,7 +108,11 @@ export function enqueueOfflineMailboxFailure(opts: {
   /** § H.6c: `true` = `DeviceTimeTrustLevel` „high“ beim Enqueue (Caller: typ. `!deviceTimeTrustWarn`). */
   timeIsTrusted: boolean
   lastError?: string
-}): EnqueueOfflineMailboxResult {
+  /** § H.12 — Absender; Default leer (Core leitet Nonce aus Nutzlast ab). */
+  senderAddress?: string
+  threadId?: string
+  messageNonceU64?: bigint
+}): Promise<EnqueueOfflineMailboxResult> {
   if (!isOfflineMailboxQueueEnabled()) {
     return { ok: true, queued: false }
   }
@@ -102,41 +127,5 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  const mgr = getMailboxManager()
-  const items = sortOfflineMailboxForDrain(mgr.load())
-  if (items.length === 0) return { sent: 0, failed: 0, remaining: 0 }
-
-  const now = Date.now()
-  const kept: OfflineMailboxQueueItem[] = []
-  let sent = 0
-  let failed = 0
-
-  for (const item of items) {
-    if (shouldDeferDrainAttempt(item, now)) {
-      kept.push(item)
-      continue
-    }
-
-    let ok = false
-    let err: string | undefined
-    if (item.kind === 'encrypted_send') {
-      const r = await sendEncryptedMessageWithTimeout(item.payload)
-      ok = r.ok === true
-      err = r.error || (r as { message?: string }).message
-    } else {
-      const r = await sendMessage(item.recipient, item.payload, false)
-      ok = r.ok === true
-      err = r.error || (r as { message?: string }).message
-    }
-
-    if (ok) {
-      sent++
-    } else {
-      failed++
-      kept.push(bumpOfflineMailboxItemAfterFailedSend(item, err, Date.now()))
-    }
-  }
-
-  mgr.save(kept)
-  return { sent, failed, remaining: kept.length }
+  return getMailboxManager().drainOnce(createChatCommandsSendPort())
 }
