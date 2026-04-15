@@ -9,11 +9,11 @@
  * - Tauschen (transfer an andere Adresse)
  * - Entwerten (emergency_purge + purge für Storno/Rückgabe)
  *
- * Aufruf: **`npm run test:realworld`** oder **`npm run test:tickets-accesskey-realworld`** (gleiche Datei).
+ * Aufruf (empfohlener Name): **`npm run test:tickets-accesskey-realworld`** — Kurz-Alias: **`npm run test:realworld`** (gleiche Datei).
  * Env: API_BASE_A, API_BASE_B (optional), FORCE_SINGLE_WALLET=1 (optional)
  *
- * **Abgrenzung:** Messenger (Chat, Mailbox, Handshake, …) → **`npm run test:messages`** /
- * **`scripts/run-messages-chat-realworld.ts`** — nicht dieses Skript.
+ * **Abgrenzung:** **Messenger-Kachel** (Chat, Mailbox, Handshake, …) → **`npm run test:messages*`** /
+ * **`scripts/run-messages-chat-realworld.ts`** — **nicht** dieses Skript; Ticket-Realworld **gehört nicht** zum Messenger-Smoke.
  *
  * Hinweis: Schritte 4/6 (`has-valid-ticket`, Liste nach use-ticket) hängen an RPC/`getOwnedObjects`.
  * Gate-Logik vergleicht `event_id` case-insensitive (siehe `hasValidTicket` in chain-access); bei langsamer

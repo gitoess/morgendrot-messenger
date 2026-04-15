@@ -37,7 +37,7 @@
 
 **Ist-Lauf (lokal):** `test:smoke`, `test:frontend-unit`, `test:core`, `test:h15-direct-submit` **grün**. **`test:messages`** zwei-API ohne zweite Instanz → erwartbar abgebrochen; **`SINGLE_WALLET=1`** → Teilpfade OK, Chain-Senden wegen **`locked`** ausstehend bis UI-Unlock oder konfiguriertes Skript-Unlock.
 
-**Nachziehen:** **`npm run test:messages:single`** mit UI-Unlock → **vollständig OK** (siehe **`docs/TEST-RUN-LOGBOOK.md`**). **`npm run test:realworld`:** weiterhin **CLI/RPC api version mismatch** beim personalisierten Ticket — **Ist-Lücke** Betrieb/Toolchain, nicht Anwendungslogik; Logbuch + **`TESTING.md`** Smoke Punkt 3.
+**Nachziehen (getrennt):** **`npm run test:messages:single`** mit UI-Unlock → **Messenger-Kachel vollständig OK** (siehe **`docs/TEST-RUN-LOGBOOK.md`**). **`npm run test:tickets-accesskey-realworld`** (Alias **`test:realworld`**, **andere Kachel**): weiterhin **CLI/RPC api version mismatch** beim personalisierten Ticket — **Ist-Lücke** Betrieb/Toolchain; Logbuch + **`TESTING.md`** Smoke Punkt 3b — **ohne** Einfluss auf den Messenger-Smoke.
 
 ---
 

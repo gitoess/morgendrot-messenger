@@ -2,7 +2,7 @@
 
 **Zweck:** Nachvollziehbare **Ist-Läufe** von Smoke-, Frontend-, Core- und Realworld-Kommandos — **kein** Ersatz für CI; dient **Boss/Release** und **Handy-Entscheid** (**`docs/HANDY-TEST-WINDOW.md`**).
 
-**Regel:** Nach größeren Messenger-/Core-Änderungen oder vor **Handy-Feldtest** eine Zeile ergänzen.
+**Regel:** Nach größeren Messenger-/Core-Änderungen oder vor **Messenger-Handy-Feldtest** eine Zeile ergänzen — idealerweise **`test:messages*`** getrennt von Ticket-Läufen (**`test:tickets-accesskey-realworld`** / Alias **`test:realworld`**), weil letztere **eine andere Kachel** sind und **nicht** zum Messenger-Smoke gehören.
 
 ---
 
@@ -32,9 +32,9 @@
 
 ## Nächste Pflege
 
-- Nach CLI-Angleichung: **`test:realworld`** erneut und Zeile oben **OK** ergänzen (inkl. Commit-Hash optional).
+- Nach CLI-Angleichung: **`test:tickets-accesskey-realworld`** erneut und Zeile oben **OK** ergänzen (inkl. Commit-Hash optional).
 - CI: **`.github/workflows/frontend-checks.yml`** spiegelt Frontend-Unit; Root-Smoke lokal oder in eigener Pipeline pflegen.
 
 ---
 
-*Stand: 2026-04-28 — Agent-Lauf + Nachziehen Messenger-Realworld / Ticket-Teilfehler.*
+*Stand: 2026-04-28 — Messenger- und Ticket-Läufe getrennt dokumentiert (unterschiedliche Kacheln).*

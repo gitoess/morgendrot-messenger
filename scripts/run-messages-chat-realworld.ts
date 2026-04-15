@@ -634,6 +634,9 @@ async function main() {
   console.log(
     'Env (Auszug): UNLOCK_PASSWORD_* optional für /vault-save in frischer API-Sitzung; sonst UI-Unlock vor dem Test. SKIP_PEERING=1; PAIRING_SECRET=…; VAULT_SAVE_INCLUDE_SDK=1; SINGLE_WALLET=1; COMPACT_IMAGE_PATH; SKIP_COMPACT_IMAGE=1.\n'
   );
+  console.log(
+    'Hinweis: Ticket-/AccessKey-Realworld (andere Kacheln, nicht dieser Chat-Lauf) → npm run test:tickets-accesskey-realworld — nur bei Bedarf.\n'
+  );
 }
 
 main().catch((e) => {

@@ -28,9 +28,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Qualität / Handy
 
-- **`docs/TEST-RUN-LOGBOOK.md`** — Messenger **`test:messages:single`** **OK** (entsperrt); **`test:realworld`** **Teil** — bekannter **IOTA-CLI ↔ RPC**-Mismatch; Troubleshooting-Abschnitt ergänzt.
-- **`docs/HANDY-TEST-WINDOW.md`** — Hinweis Messenger-grün vs. Tickets-rot möglich.
-- **`TESTING.md`** — Smoke-Punkt 3 präziser (Mismatch, Logbuch-Verweis).
+- **Messenger vs. Ticket-Kachel:** **`TESTING.md`**, **`README.md`**, **`docs/HANDY-TEST-WINDOW.md`**, **`docs/TEST-RUN-LOGBOOK.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** — klar: **`test:messages*`** = Messenger-Smoke; **`test:tickets-accesskey-realworld`** (Alias **`test:realworld`**) = **andere Kachel**, nicht Teil des Messenger-Gates.
+- **`docs/TEST-RUN-LOGBOOK.md`** — Troubleshooting **api version mismatch** nur Ticket-Skript; Log-Zeilen weiterhin getrennt pflegbar.
+- **`scripts/run-messages-chat-realworld.ts`** — Abschlusshinweis auf separates Ticket-Skript.
+- **`scripts/run-ticket-accesskey-realworld.ts`** — Kopfkommentar: empfohlener npm-Name **`test:tickets-accesskey-realworld`**.
 
 ### Hinweis (Fahrplan)
 
