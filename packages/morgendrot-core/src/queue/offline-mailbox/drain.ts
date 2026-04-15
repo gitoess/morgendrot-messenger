@@ -1,6 +1,6 @@
-import type { OfflineMailboxQueueItem } from './model.js'
-import type { OfflineMailboxTrySend } from './send-port.js'
-import { shouldDeferDrainAttempt, bumpOfflineMailboxItemAfterFailedSend, sortOfflineMailboxForDrain } from './state.js'
+import type { OfflineMailboxQueueItem } from './model'
+import type { OfflineMailboxTrySend } from './send-port'
+import { shouldDeferDrainAttempt, bumpOfflineMailboxItemAfterFailedSend, sortOfflineMailboxForDrain } from './state'
 
 /**
  * Ein Drain-Durchlauf über **bereits sortierte** Items (typ. `sortOfflineMailboxForDrain`).

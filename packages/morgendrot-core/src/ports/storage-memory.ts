@@ -1,4 +1,4 @@
-import type { StringStoragePort } from './storage.js'
+import type { StringStoragePort } from './storage'
 
 /** In-Memory `Storage`-Subset für Vitest, Headless, CM4-Prototypen. */
 export function createMemoryStringStorage(

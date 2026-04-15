@@ -1,7 +1,7 @@
 import {
   OFFLINE_MAILBOX_MAX_ITEMS,
   type OfflineMailboxQueueItem,
-} from './model.js'
+} from './model'
 
 /**
  * Normalisiert ein JSON-Objekt zu `OfflineMailboxQueueItem` oder `null`.

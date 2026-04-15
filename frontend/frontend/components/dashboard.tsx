@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import {
   MessageSquare,
@@ -50,6 +50,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 
 interface Feature {
   id: ProjectType
@@ -149,6 +150,32 @@ function writeShowAllTilesPref(value: boolean) {
   }
 }
 
+const SIGNER_IMPORT_REQUIRED_CODE = 'SIGNER_IMPORT_REQUIRED' as const
+
+function normalizeSignerWords(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .join(' ')
+}
+
+function countSignerWords(s: string): number {
+  return s.trim().split(/\s+/).filter(Boolean).length
+}
+
+/** Genug für POST /api/unlock (Mnemonic ≥12 Wörter oder Hex32 / langes Bech32-Secret). */
+function isPlausibleSdkImport(s: string): boolean {
+  const t = s.trim()
+  if (!t) return false
+  if (countSignerWords(t) >= 12) return true
+  const hex = t.replace(/^0x/i, '').replace(/\s+/g, '')
+  if (/^[a-fA-F0-9]{64}$/i.test(hex)) return true
+  if (!/\s/.test(t) && t.length >= 60 && /^[a-z]{2,10}1[02-9ac-hj-np-z]+$/i.test(t)) return true
+  return false
+}
+
 export function Dashboard() {
   const [activeView, setActiveView] = useState<ActiveView | null>(null)
   const [connected, setConnected] = useState<boolean | null>(null)
@@ -157,8 +184,14 @@ export function Dashboard() {
   const [locked, setLocked] = useState(false)
   const [backendReachable, setBackendReachable] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
+  const [passwordConfirm, setPasswordConfirm] = useState('')
   /** Zusatz zu POST /api/unlock bei SIGNER=sdk (Mnemonic / Bech32), wenn nicht im Vault. */
   const [signerImport, setSignerImport] = useState('')
+  const [signerImportConfirm, setSignerImportConfirm] = useState('')
+  /** Öffnen = bestehende Vault-Datei / Sitzung; Neu anlegen = erstes Setup ohne lokale Datei (SIGNER=sdk: Seed+Vault-PW jeweils doppelt). */
+  const [unlockFlow, setUnlockFlow] = useState<'open' | 'create'>('open')
+  /** Bei „Öffnen“ + sdk: Mnemonic-Feld erst nach Bedarf (Backend-Code) oder Klick anzeigen. */
+  const [showSignerImportOpen, setShowSignerImportOpen] = useState(false)
   const [unlockError, setUnlockError] = useState('')
   const [unlocking, setUnlocking] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -174,6 +207,24 @@ export function Dashboard() {
   const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
   /** Roadmap H.0 / ONBOARDING L2: „Erste Schritte“-Hinweis (per „Ausblenden“ dauerhaft aus). */
   const [hideFirstStepsCard, setHideFirstStepsCard] = useState(false)
+
+  const prevLockedRef = useRef(false)
+  /** Zuletzt von GET /api/status gemeldet — für Entsperr-Dialog beim Wechsel auf „locked“ ohne veraltetes apiSnapshot. */
+  const vaultHasLocalRef = useRef(false)
+
+  useEffect(() => {
+    const prev = prevLockedRef.current
+    prevLockedRef.current = locked
+    if (locked && !prev) {
+      setUnlockError('')
+      setSignerImport('')
+      setSignerImportConfirm('')
+      setPassword('')
+      setPasswordConfirm('')
+      setShowSignerImportOpen(false)
+      setUnlockFlow(vaultHasLocalRef.current ? 'open' : 'create')
+    }
+  }, [locked])
 
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
@@ -228,12 +279,14 @@ export function Dashboard() {
       setConnected(!!res.connected)
       setNetworkInfo(res.rpcUrlLabel || res.network || 'IOTA Rebased')
       setLocked(!!res.locked)
+      vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
       setRole(res.role || '')
       setMyAddress((res.myAddressFull || res.myAddress || '').trim())
     } else {
       setBackendReachable(false)
       setConnected(false)
       setLocked(false)
+      vaultHasLocalRef.current = false
     }
   }
 
@@ -262,12 +315,55 @@ export function Dashboard() {
 
   const handleUnlock = async () => {
     setUnlockError('')
+    const signer = apiSnapshot?.signer
+
+    if (unlockFlow === 'create') {
+      if (!password.trim() || password !== passwordConfirm) {
+        setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
+        return
+      }
+      if (signer === 'sdk') {
+        const sa = signerImport.trim()
+        const sb = signerImportConfirm.trim()
+        if (!sa || normalizeSignerWords(sa) !== normalizeSignerWords(sb)) {
+          setUnlockError('Mnemonic / Secret und Wiederholung müssen übereinstimmen.')
+          return
+        }
+        if (!isPlausibleSdkImport(sa)) {
+          setUnlockError(
+            'Mnemonic: mindestens 12 Wörter — oder gültiges Bech32-/64-Hex-Secret (siehe Hilfe).'
+          )
+          return
+        }
+      }
+    } else if (signer === 'sdk' && showSignerImportOpen) {
+      const t = signerImport.trim()
+      if (t && !isPlausibleSdkImport(t)) {
+        setUnlockError(
+          'Mnemonic / Secret scheint ungültig (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
+        )
+        return
+      }
+    }
+
+    let sdkExtra: string | undefined
+    if (signer === 'sdk') {
+      if (unlockFlow === 'create') {
+        sdkExtra = signerImport.trim()
+      } else {
+        sdkExtra = showSignerImportOpen ? signerImport.trim() || undefined : undefined
+      }
+    }
+
     setUnlocking(true)
-    const res = await unlockBackend(password, { sdkSignerImport: signerImport })
+    const res = await unlockBackend(password, { sdkSignerImport: sdkExtra })
     setUnlocking(false)
     if (res.ok) {
       setPassword('')
+      setPasswordConfirm('')
       setSignerImport('')
+      setSignerImportConfirm('')
+      setShowSignerImportOpen(false)
       setLocked(false)
       await checkStatus()
       // Backend braucht ggf. etwas Zeit für Wallet – mehrfach Status holen
@@ -285,6 +381,9 @@ export function Dashboard() {
       }
     } else {
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
+      if (res.code === SIGNER_IMPORT_REQUIRED_CODE && apiSnapshot?.signer === 'sdk' && unlockFlow === 'open') {
+        setShowSignerImportOpen(true)
+      }
     }
   }
 
@@ -321,6 +420,18 @@ export function Dashboard() {
         ? 'tor'
         : 'internet'
 
+  const signerKind = apiSnapshot?.signer
+  const unlockButtonDisabled =
+    unlocking ||
+    !password.trim() ||
+    (unlockFlow === 'create' &&
+      (!passwordConfirm.trim() || password !== passwordConfirm)) ||
+    (unlockFlow === 'create' &&
+      signerKind === 'sdk' &&
+      (!signerImport.trim() ||
+        !signerImportConfirm.trim() ||
+        normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm)))
+
   const sharedDialogs = (
     <>
       <Dialog open={helpOpen} onOpenChange={setHelpOpen}>
@@ -353,65 +464,198 @@ export function Dashboard() {
           <DialogHeader>
             <DialogTitle>Wallet entsperren</DialogTitle>
             <DialogDescription asChild className="text-left space-y-2">
-              <div>
+              <div className="space-y-2">
                 <p>
-                  Entsperrt die <strong>Backend-Sitzung</strong> zum Signieren von Befehlen. Das Passwort entschlüsselt den
-                  lokalen oder On-Chain-Vault, falls konfiguriert — kein separates Web-Login.
+                  Entsperrt die <strong>Backend-Sitzung</strong> zum Signieren. Das Passwort entschlüsselt den lokalen oder
+                  On-Chain-Vault, falls vorhanden — kein separates Web-Login.
                 </p>
-                {apiSnapshot?.signer === 'cli' ? (
+                {signerKind === 'cli' ? (
                   <p>
                     Bei <span className="font-mono text-xs">SIGNER=cli</span>: Passwort des <strong>IOTA-CLI-Keystores</strong>{' '}
-                    zur konfigurierten Adresse (<span className="font-mono text-xs">MY_ADDRESS</span>) — hier kein Mnemonic-Feld.
+                    zur konfigurierten Adresse — kein Mnemonic in dieser App.
                   </p>
-                ) : apiSnapshot?.signer === 'sdk' ? (
+                ) : signerKind === 'sdk' ? (
                   <p>
-                    Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Mnemonic oder Bech32 unten nur nötig, wenn noch
-                    nicht im Vault gespeichert.
+                    Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Nach dem ersten erfolgreichen Speichern mit
+                    „Signer-Import mit speichern“ im Tresor reicht meist <strong>nur noch das Passwort</strong>. Der Mnemonic-Bereich
+                    erscheint nur bei Bedarf (Schaltfläche unten) oder wenn der Server danach fragt.
                   </p>
-                ) : apiSnapshot?.signer === 'remote' ? (
+                ) : signerKind === 'remote' ? (
                   <p>
-                    Bei <span className="font-mono text-xs">SIGNER=remote</span>: Passwort für den Vault; Signatur über den
-                    konfigurierten Remote-Signer bzw. Boss.
+                    Bei <span className="font-mono text-xs">SIGNER=remote</span>: Vault-Passwort; Signatur extern.
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-sm">
-                    Der genaue Hinweis hängt von <span className="font-mono text-xs">SIGNER</span> in der Server-Konfiguration
-                    ab (nach Start in <span className="font-mono text-xs">GET /api/status</span> sichtbar).
+                    <span className="font-mono text-xs">SIGNER</span> steht in der Server-Konfiguration (
+                    <span className="font-mono text-xs">GET /api/status</span>).
                   </p>
                 )}
+                <p className="text-xs text-muted-foreground border-t border-border pt-2">
+                  <strong className="text-foreground">Passwort vergessen?</strong> Ohne das bisherige Vault-Passwort ist der
+                  Inhalt der Datei kryptographisch nicht wiederherzustellen. Ein Seed beweist nur die IOTA-Wallet — die
+                  verschlüsselten Messaging-Keys liegen <strong>getrennt</strong> in der Vault. Mit dem Seed kannst du höchstens ein{' '}
+                  <strong>neues</strong> Profil aufsetzen (neuer Tresor); die alte Datei bleibt ohne altes Passwort unlesbar.
+                </p>
               </div>
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="wallet-password">Passwort</Label>
-              <Input
-                id="wallet-password"
-                type="password"
-                placeholder="Passwort eingeben"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleUnlock()}
-                autoComplete="current-password"
-              />
-            </div>
-            {apiSnapshot?.signer === 'sdk' && (
-              <div className="space-y-2">
-                <Label htmlFor="wallet-signer-import">Mnemonic / Bech32-Secret (optional, falls nicht im Vault)</Label>
-                <Textarea
-                  id="wallet-signer-import"
-                  placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
-                  value={signerImport}
-                  onChange={(e) => setSignerImport(e.target.value)}
-                  className="min-h-[88px] font-mono text-xs"
-                  autoComplete="off"
-                />
+          <div className="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto py-4 pr-1">
+            <RadioGroup
+              value={unlockFlow}
+              onValueChange={(v) => {
+                setUnlockFlow(v as 'open' | 'create')
+                setShowSignerImportOpen(false)
+                setUnlockError('')
+                setPasswordConfirm('')
+                if (v === 'open') {
+                  setSignerImportConfirm('')
+                }
+              }}
+              className="gap-3"
+            >
+              <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+                <RadioGroupItem value="open" id="uf-open" className="mt-1" />
+                <div className="min-w-0">
+                  <Label htmlFor="uf-open" className="cursor-pointer font-medium text-foreground">
+                    Tresor öffnen
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Bestehende Vault-Datei oder On-Chain-Vault — zuerst nur Passwort; Mnemonic nur falls nötig.
+                  </p>
+                </div>
               </div>
+              <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+                <RadioGroupItem value="create" id="uf-create" className="mt-1" />
+                <div className="min-w-0">
+                  <Label htmlFor="uf-create" className="cursor-pointer font-medium text-foreground">
+                    Neu anlegen
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Erstes Setup ohne lokale <span className="font-mono">.morgendrot-vault</span>. Bei{' '}
+                    <span className="font-mono text-xs">SIGNER=sdk</span>: Seed und Passwort jeweils zweimal bestätigen.
+                  </p>
+                </div>
+              </div>
+            </RadioGroup>
+            {apiSnapshot?.vaultStatus?.hasLocal && unlockFlow === 'create' ? (
+              <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">
+                Es existiert bereits eine lokale Vault-Datei. In der Regel <strong>Tresor öffnen</strong> wählen — „Neu anlegen“
+                nur bei zweitem Profil (eigene Datei / Server-Konfiguration).
+              </p>
+            ) : null}
+            {!apiSnapshot?.vaultStatus?.hasLocal && unlockFlow === 'open' && signerKind === 'sdk' ? (
+              <p className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+                Keine lokale Vault-Datei. Mit <strong>Tresor öffnen</strong> und nur Passwort entsperrt{' '}
+                <span className="font-mono text-xs">SIGNER=sdk</span> nicht — bitte <strong>Neu anlegen</strong> oder Mnemonic
+                über die Schaltfläche unten ergänzen.
+              </p>
+            ) : null}
+
+            {unlockFlow === 'open' ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="wallet-password">Passwort (Wallet / Vault)</Label>
+                  <Input
+                    id="wallet-password"
+                    type="password"
+                    placeholder="Passwort eingeben"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !unlockButtonDisabled && handleUnlock()}
+                    autoComplete="current-password"
+                  />
+                </div>
+                {signerKind === 'sdk' ? (
+                  showSignerImportOpen ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="wallet-signer-import">Mnemonic / Bech32-Secret</Label>
+                      <Textarea
+                        id="wallet-signer-import"
+                        placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
+                        value={signerImport}
+                        onChange={(e) => setSignerImport(e.target.value)}
+                        className="min-h-[88px] font-mono text-xs"
+                        autoComplete="off"
+                      />
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground underline hover:text-foreground"
+                        onClick={() => {
+                          setShowSignerImportOpen(false)
+                          setSignerImport('')
+                          setUnlockError('')
+                        }}
+                      >
+                        Mnemonic-Eingabe ausblenden
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="w-full rounded-lg border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                      onClick={() => setShowSignerImportOpen(true)}
+                    >
+                      Mnemonic oder Secret eingeben (nur wenn im Tresor noch kein Signer-Import gespeichert ist)
+                    </button>
+                  )
+                ) : null}
+              </>
+            ) : (
+              <>
+                {signerKind === 'sdk' ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-signer-a">Mnemonic / Bech32-Secret</Label>
+                      <Textarea
+                        id="create-signer-a"
+                        placeholder="12–24 Wörter oder Secret …"
+                        value={signerImport}
+                        onChange={(e) => setSignerImport(e.target.value)}
+                        className="min-h-[80px] font-mono text-xs"
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-signer-b">Mnemonic / Secret wiederholen</Label>
+                      <Textarea
+                        id="create-signer-b"
+                        placeholder="Zur Bestätigung erneut eingeben"
+                        value={signerImportConfirm}
+                        onChange={(e) => setSignerImportConfirm(e.target.value)}
+                        className="min-h-[80px] font-mono text-xs"
+                        autoComplete="off"
+                      />
+                    </div>
+                  </>
+                ) : null}
+                <div className="space-y-2">
+                  <Label htmlFor="wallet-password-create">Passwort (Vault / Wallet der Sitzung)</Label>
+                  <Input
+                    id="wallet-password-create"
+                    type="password"
+                    placeholder="Passwort wählen"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="wallet-password-create-2">Passwort wiederholen</Label>
+                  <Input
+                    id="wallet-password-create-2"
+                    type="password"
+                    placeholder="Passwort wiederholen"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !unlockButtonDisabled && handleUnlock()}
+                    autoComplete="new-password"
+                  />
+                </div>
+              </>
             )}
-            {unlockError && (
-              <p className="text-sm text-destructive">{unlockError}</p>
-            )}
-            <Button onClick={handleUnlock} disabled={unlocking || !password.trim()} className="w-full">
+
+            {unlockError ? <p className="text-sm text-destructive">{unlockError}</p> : null}
+            <Button onClick={() => void handleUnlock()} disabled={unlockButtonDisabled} className="w-full">
               {unlocking ? 'Wird entsperrt…' : 'Entsperren'}
             </Button>
           </div>

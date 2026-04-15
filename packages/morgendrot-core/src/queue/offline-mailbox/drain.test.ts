@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model.js'
-import { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle } from './drain.js'
-import type { OfflineMailboxSendPort } from './send-port.js'
-import { createOfflineMailboxTrySendFromSendPort } from './send-port.js'
+import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model'
+import { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle } from './drain'
+import type { OfflineMailboxSendPort } from './send-port'
+import { createOfflineMailboxTrySendFromSendPort } from './send-port'
 
 function plainItem(id: string, recipient: string, payload: string, seq: number): OfflineMailboxQueueItem {
   return {

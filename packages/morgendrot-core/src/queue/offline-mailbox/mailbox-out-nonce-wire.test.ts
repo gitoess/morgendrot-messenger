@@ -3,7 +3,7 @@ import {
   parseMailboxOutNonceMarker,
   parseMailboxProtocolNonceU64FromWire,
   prependMailboxOutNonceMarker,
-} from './mailbox-out-nonce-wire.js'
+} from './mailbox-out-nonce-wire'
 
 describe('mailbox-out-nonce-wire', () => {
   it('prepend + parse roundtrip', () => {

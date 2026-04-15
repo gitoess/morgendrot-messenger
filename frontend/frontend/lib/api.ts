@@ -133,3 +133,11 @@ export {
 
 export type { EinsatzRoleTemplate } from '@/frontend/lib/api/einsatz-role-templates'
 export { fetchEinsatzRoleTemplates, saveEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'
+
+export {
+  loadAttestationQueue,
+  saveAttestationQueue,
+  enqueueAttestationManifestDraft,
+  drainAttestationQueue,
+  defaultAttestationSubmit,
+} from '@/frontend/lib/attestation-queue'

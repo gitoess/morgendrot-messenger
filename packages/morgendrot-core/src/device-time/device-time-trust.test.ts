@@ -5,7 +5,7 @@ import {
   isPlausibleHttpDateUtcMs,
   hadRecentPlausibleServerTimeFromPoll,
   STATUS_POLL_CLOCK_MAX_AGE_MS,
-} from './device-time-trust.js'
+} from './device-time-trust'
 
 describe('device-time-trust (core)', () => {
   it('inferDeviceTimeTrust Stufen', () => {

@@ -1525,6 +1525,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                     } else {
                                         sendJson(res, 400, {
                                             ok: false,
+                                            code: 'SIGNER_IMPORT_REQUIRED',
                                             error:
                                                 'SIGNER=sdk: In diesem Vault ist kein gespeicherter Signer-Import (weder Mnemonic noch Bech32-Secret). Trage im Formular ein: 12–24 Wörter ODER den Secret-Key (Bech32 wie von generate-mnemonic) ODER 64 Hex-Zeichen. Danach optional unter Tresor „mit speichern“.',
                                         }, cors);
@@ -1575,6 +1576,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                             } else {
                                                 sendJson(res, 400, {
                                                     ok: false,
+                                                    code: 'SIGNER_IMPORT_REQUIRED',
                                                     error:
                                                         'SIGNER=sdk: On-Chain-Vault ohne Signer-Import – Mnemonic oder Bech32-Secret im Formular eintragen.',
                                                 }, cors);
@@ -1602,6 +1604,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         if (!signerPost) {
                             sendJson(res, 400, {
                                 ok: false,
+                                code: 'SIGNER_IMPORT_REQUIRED',
                                 error:
                                     'SIGNER=sdk: Ohne Vault mit gespeichertem Import bitte Mnemonic (12+ Wörter) oder IOTA-Bech32-Secret (Ausgabe generate-mnemonic) oder 64 Hex-Bytes eintragen. Alternative: SIGNER=cli mit IOTA-Wallet.',
                             }, cors);

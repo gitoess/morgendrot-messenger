@@ -231,13 +231,28 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     }
                     const peerMap = sessionState.peerMap;
                     if (c === '/vault-save') {
-                        const savePath = (a[2] != null && String(a[2]).trim()) ? String(a[2]).trim() : (CFG.VAULT_FILE || '.morgendrot-vault');
-                        const pw = getWalletPassword() || a[0];
+                        const raw = [...a].map((x) => String(x ?? ''))
+                        let includeIotaMnemonic = false
+                        if (raw.length > 0) {
+                            const tail = raw[raw.length - 1]!.trim()
+                            if (
+                                tail === 'includeIotaMnemonic' ||
+                                tail === '1' ||
+                                tail.toLowerCase() === 'true'
+                            ) {
+                                includeIotaMnemonic = true
+                                raw.pop()
+                            }
+                        }
+                        const savePath =
+                            raw[2] != null && String(raw[2]).trim()
+                                ? String(raw[2]).trim()
+                                : (CFG.VAULT_FILE || '.morgendrot-vault');
+                        const pw = getWalletPassword() || raw[0];
                         if (!pw) return { ok: false, message: 'Kein Passwort (eingeben oder Wallet entsperren).' };
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load (oder von Chain laden).' };
-                        const notes = (a[1] !== undefined && a[1] !== null) ? String(a[1]) : (vaultStateRef.current?.notes ?? '');
-                        const includeIotaMnemonic =
-                            a[3] === 'includeIotaMnemonic' || a[3] === '1' || String(a[3] ?? '').toLowerCase() === 'true';
+                        const notes =
+                            raw[1] !== undefined && raw[1] !== null ? String(raw[1]) : (vaultStateRef.current?.notes ?? '');
                         const phrase = includeIotaMnemonic ? getSessionIotaMnemonic() : undefined;
                         if (includeIotaMnemonic && !phrase) {
                             return {
@@ -422,11 +437,25 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     if (c === '/vault-onchain') {
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load.' };
                         if (!CFG.VAULT_REGISTRY_ID) return { ok: false, message: 'VAULT_REGISTRY_ID nicht gesetzt.' };
-                        const pw = getWalletPassword() || a[0];
+                        const rawOn = [...a].map((x) => String(x ?? ''));
+                        let includeMnOnChain = false;
+                        if (rawOn.length > 0) {
+                            const tailOn = rawOn[rawOn.length - 1]!.trim();
+                            if (
+                                tailOn === 'includeIotaMnemonic' ||
+                                tailOn === '1' ||
+                                tailOn.toLowerCase() === 'true'
+                            ) {
+                                includeMnOnChain = true;
+                                rawOn.pop();
+                            }
+                        }
+                        const pw = getWalletPassword() || rawOn[0];
                         if (!pw) return { ok: false, message: 'Kein Wallet-Passwort.' };
-                        const notes = (a[1] !== undefined && a[1] !== null) ? String(a[1]) : (vaultStateRef.current?.notes ?? '');
-                        const includeMnOnChain =
-                            a[2] === 'includeIotaMnemonic' || a[2] === '1' || String(a[2] ?? '').toLowerCase() === 'true';
+                        const notes =
+                            rawOn[1] !== undefined && rawOn[1] !== null
+                                ? String(rawOn[1])
+                                : (vaultStateRef.current?.notes ?? '');
                         const phraseOnChain = includeMnOnChain ? getSessionIotaMnemonic() : undefined;
                         if (includeMnOnChain && !phraseOnChain) {
                             return {

@@ -7,12 +7,32 @@ import { setHeartbeatEnabled, setHeartbeatInterval } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
+import {
+  getConfiguredDirectIotaRpcUrl,
+  probeBrowserDirectIotaIfConfigured,
+  sanitizeDirectIotaRpcUrl,
+  setBrowserDirectIotaRpcUrlOverride,
+} from '@/frontend/lib/direct-iota-rpc'
+import {
+  applyDirectMailboxChainSnapshotFromNetworkIds,
+  loadDirectMailboxChainSnapshotFromLs,
+  persistDirectMailboxChainSnapshot,
+  persistDirectMailboxTtlDays,
+} from '@/frontend/lib/direct-iota-chain-context'
+import {
+  applyDirectIotaMnemonicSession,
+  clearDirectIotaSessionSigner,
+  getDirectIotaSessionSignerAddress,
+} from '@/frontend/lib/direct-iota-mnemonic-session'
+import { isDirectMailboxDrainEnabled, setDirectMailboxDrainEnabled } from '@/frontend/lib/direct-iota-plain-submit'
 
 const LS_STRICT_ONLINE = 'morgendrot.strictOnlineNoMeshFallback'
 const LS_LORA_TX = 'morgendrot.loraTxTier'
@@ -46,7 +66,7 @@ function isLikelyIotaObjectId(s: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/i.test(s.trim())
 }
 
-type IdsOverride = { myAddress: string; packageId: string; streamsAnchorId: string }
+type IdsOverride = { myAddress: string; packageId: string; streamsAnchorId: string; mailboxId: string }
 
 type ChatViewPulseSettingsProps = {
   apiStatus: ApiStatus
@@ -61,6 +81,12 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [strictOnline, setStrictOnline] = useState(false)
   const [loraTier, setLoraTier] = useState(1)
   const [idsOverride, setIdsOverride] = useState<IdsOverride | null>(null)
+  const [directRpcUrl, setDirectRpcUrl] = useState('')
+  const [directRpcProbe, setDirectRpcProbe] = useState<'idle' | 'ok' | 'err' | 'checking'>('idle')
+  const [directDrainOn, setDirectDrainOn] = useState(false)
+  const [ttlDaysStr, setTtlDaysStr] = useState('30')
+  const [mnemoInput, setMnemoInput] = useState('')
+  const [sessionAddr, setSessionAddr] = useState<string | null>(null)
 
   const hb = apiStatus.heartbeat
   const streams = apiStatus.streams
@@ -73,6 +99,11 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       setStrictOnline(typeof window !== 'undefined' && window.localStorage.getItem(LS_STRICT_ONLINE) === '1')
       const t = parseInt(typeof window !== 'undefined' ? window.localStorage.getItem(LS_LORA_TX) || '1' : '1', 10)
       setLoraTier(t >= 0 && t <= 2 ? t : 1)
+      setDirectRpcUrl(getConfiguredDirectIotaRpcUrl() || '')
+      setDirectDrainOn(isDirectMailboxDrainEnabled())
+      setSessionAddr(getDirectIotaSessionSignerAddress())
+      const snap = loadDirectMailboxChainSnapshotFromLs()
+      if (snap) setTtlDaysStr(String(snap.ttlDays))
     } catch {
       /* ignore */
     }
@@ -89,12 +120,14 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
           myAddress?: string
           packageId?: string
           streamsAnchorId?: string
+          mailboxId?: string
         }
         if (cancelled || j.ok !== true) return
         setIdsOverride({
           myAddress: (j.myAddress || '').trim(),
           packageId: (j.packageId || '').trim(),
           streamsAnchorId: (j.streamsAnchorId || '').trim(),
+          mailboxId: (j.mailboxId || '').trim(),
         })
       } catch {
         /* ignore */
@@ -315,6 +348,209 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
             <div className="flex items-center gap-2 shrink-0">
               <Switch checked={strictOnline} onCheckedChange={onStrictChange} aria-label="Kein Funk-Fallback bei Online" />
             </div>
+          </div>
+        </div>
+
+        <div className="space-y-3 border-t border-border/50 pt-3">
+          <p className="text-[11px] font-semibold text-foreground">Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Für <strong className="text-foreground">Mailbox-Warteschlange Klartext</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Verschlüsselte Outbox-Einträge laufen weiter über <span className="font-mono">/api</span>, sobald die Basis
+            erreichbar ist.
+          </p>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">Fullnode-URL (https://…)</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                className="h-9 font-mono text-xs"
+                value={directRpcUrl}
+                onChange={(e) => setDirectRpcUrl(e.target.value)}
+                placeholder="https://api.testnet.iota.cafe"
+                spellCheck={false}
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-9 text-xs"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    try {
+                      const t = directRpcUrl.trim()
+                      if (!t) setBrowserDirectIotaRpcUrlOverride(null)
+                      else {
+                        sanitizeDirectIotaRpcUrl(t)
+                        setBrowserDirectIotaRpcUrlOverride(t)
+                      }
+                      setMsg(t ? 'Direkt-RPC-URL gespeichert (localStorage).' : 'Direkt-RPC-Override entfernt.')
+                    } catch (e) {
+                      setMsg(e instanceof Error ? e.message : String(e))
+                    }
+                  }}
+                >
+                  URL speichern
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-xs"
+                  disabled={busy !== null || directRpcProbe === 'checking'}
+                  onClick={() => {
+                    void (async () => {
+                      setDirectRpcProbe('checking')
+                      try {
+                        const ok = await probeBrowserDirectIotaIfConfigured()
+                        setDirectRpcProbe(ok ? 'ok' : 'err')
+                        setMsg(ok ? 'Direkt-RPC: Fullnode antwortet.' : 'Direkt-RPC: keine Antwort oder nicht konfiguriert.')
+                      } catch {
+                        setDirectRpcProbe('err')
+                        setMsg('Direkt-RPC: Prüfung fehlgeschlagen.')
+                      }
+                    })()
+                  }}
+                >
+                  Erreichbarkeit prüfen
+                </Button>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Status:{' '}
+              {directRpcProbe === 'idle' && '—'}
+              {directRpcProbe === 'checking' && '…'}
+              {directRpcProbe === 'ok' && <span className="text-emerald-600 dark:text-emerald-400">OK</span>}
+              {directRpcProbe === 'err' && <span className="text-amber-700 dark:text-amber-300">Fehler / nicht konfiguriert</span>}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] font-semibold text-foreground">Direkt-Mailbox-Drain (Klartext)</p>
+              <p className="text-[10px] text-muted-foreground">
+                Warteschlange: Klartext per IOTA-RPC + Signer; Basis darf aus sein. Flags (Mailbox-Klartext, ohne Credits) aus letztem <span className="font-mono">/api/status</span> oder localStorage.
+              </p>
+            </div>
+            <Switch
+              checked={directDrainOn}
+              disabled={busy !== null}
+              onCheckedChange={(v) => {
+                setDirectDrainOn(v)
+                setDirectMailboxDrainEnabled(v)
+                setMsg(v ? 'Direkt-Mailbox-Drain an — Mnemonic + Ketten-IDs nötig.' : 'Direkt-Mailbox-Drain aus.')
+              }}
+              aria-label="Direkt-Mailbox-Drain"
+            />
+          </div>
+          <div className="grid max-w-md grid-cols-[1fr_4rem] items-end gap-2">
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">TTL (Tage, Move)</Label>
+              <Input
+                className="h-9 font-mono text-xs"
+                value={ttlDaysStr}
+                onChange={(e) => setTtlDaysStr(e.target.value)}
+                inputMode="numeric"
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-9 text-xs"
+              disabled={busy !== null}
+              onClick={() => {
+                const n = parseInt(ttlDaysStr, 10)
+                if (!Number.isFinite(n) || n < 1 || n > 3650) {
+                  setMsg('TTL: 1–3650 Tage.')
+                  return
+                }
+                persistDirectMailboxTtlDays(BigInt(n))
+                setMsg(`TTL ${n} Tage gespeichert.`)
+              }}
+            >
+              TTL setzen
+            </Button>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[11px] text-muted-foreground">Session-Signer (Mnemonic / Secret — nur RAM)</Label>
+            <textarea
+              className="min-h-[72px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[11px] text-foreground"
+              value={mnemoInput}
+              onChange={(e) => setMnemoInput(e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder="Nicht persistieren — nach Schließen der Seite weg."
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  const r = applyDirectIotaMnemonicSession(mnemoInput)
+                  if (r.ok) {
+                    setSessionAddr(r.address)
+                    setMnemoInput('')
+                    setMsg(`Signer aktiv: ${r.address.slice(0, 10)}…`)
+                  } else {
+                    setMsg(r.error)
+                  }
+                }}
+              >
+                Signer anwenden
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  clearDirectIotaSessionSigner()
+                  setSessionAddr(null)
+                  setMsg('Session-Signer gelöscht.')
+                }}
+              >
+                Signer löschen
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  const pkg = (idsOverride?.packageId || '').trim()
+                  const mb = (idsOverride?.mailboxId || '').trim()
+                  const addr = (idsOverride?.myAddress || '').trim()
+                  if (!isLikelyIotaObjectId(pkg) || !isLikelyIotaObjectId(mb) || !isLikelyIotaObjectId(addr)) {
+                    setMsg('Ketten-IDs: zuerst Panel öffnen / Basis verbinden — oder gültige 0x-IDs in der Oberfläche.')
+                    return
+                  }
+                  const ttlN = parseInt(ttlDaysStr, 10)
+                  const ttl = BigInt(Number.isFinite(ttlN) && ttlN > 0 && ttlN <= 3650 ? ttlN : 30)
+                  persistDirectMailboxChainSnapshot({
+                    packageId: pkg,
+                    mailboxId: mb,
+                    senderAddress: addr,
+                    ttlDays: ttl,
+                    flags: {
+                      useMailbox: apiStatus.useMailbox === true,
+                      mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
+                      messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
+                    },
+                  })
+                  setMsg('Ketten-IDs für Direkt-Pfad übernommen (localStorage).')
+                }}
+              >
+                Ketten-IDs übernehmen
+              </Button>
+            </div>
+            {sessionAddr && (
+              <p className="text-[10px] font-mono text-muted-foreground">
+                Aktiver Signer: <span className="text-foreground">{sessionAddr}</span>
+              </p>
+            )}
           </div>
         </div>
 

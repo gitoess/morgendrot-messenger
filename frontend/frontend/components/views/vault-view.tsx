@@ -58,6 +58,9 @@ export function VaultView({ variant }: VaultViewProps) {
   const [safeMsg, setSafeMsg] = useState<string | null>(null)
   const [vaultPaths, setVaultPaths] = useState<string[]>([])
   const [vaultDefaultPath, setVaultDefaultPath] = useState<string | null>(null)
+  /** cli | sdk | remote — aus GET /api/status (SIGNER=sdk: optional Mnemonic in Backup). */
+  const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
+  const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackup] = useState(false)
 
   const refreshVaultStatus = useCallback(async () => {
     try {
@@ -65,10 +68,12 @@ export function VaultView({ variant }: VaultViewProps) {
       if ('pollClockHint' in s) {
         setVaultStatus(s.vaultStatus ?? null)
         setHasKeys(s.hasKeys)
+        setSignerKind(typeof s.signer === 'string' ? s.signer : undefined)
       }
     } catch {
       setVaultStatus(null)
       setHasKeys(undefined)
+      setSignerKind(undefined)
     }
   }, [])
 
@@ -147,7 +152,10 @@ export function VaultView({ variant }: VaultViewProps) {
 
   const handleOnchain = async () => {
     setSyncingOnchain(true)
-    const res = await vaultOnchain(password || undefined, notes)
+    const res = await vaultOnchain(password || undefined, notes, {
+      includeIotaMnemonic:
+        includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true,
+    })
     showStatus(res.ok, res.ok ? 'Tresor auf Chain gesichert.' : res.error || 'On-Chain-Speichern fehlgeschlagen')
     if (res.ok) {
       refreshVaultStatus()
@@ -684,6 +692,27 @@ export function VaultView({ variant }: VaultViewProps) {
             <p className="mb-3 text-xs text-muted-foreground">
               Nach Änderungen zuerst lokal sichern; Chain-Backup zusätzlich für anderen Rechner oder Verlust der Datei.
             </p>
+            {signerKind === 'sdk' ? (
+              <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={includeSdkMnemonicInBackup}
+                  onChange={(e) => setIncludeSdkMnemonicInBackup(e.target.checked)}
+                  disabled={hasKeys !== true}
+                  className="mt-0.5 shrink-0"
+                />
+                <span>
+                  <span className="font-medium text-foreground">Signer-Import mit speichern</span>
+                  {' — '}
+                  dieselbe Mnemonic/Bech32 wie beim Entsperren verschlüsselt in Vault-Datei bzw. Chain-Blob (wie Lite-UI).
+                  {hasKeys !== true ? (
+                    <span className="block pt-1 text-amber-700 dark:text-amber-300">
+                      Nur bei entsperrtem Tresor (Keys im RAM) möglich — zuerst laden oder Wallet entsperren.
+                    </span>
+                  ) : null}
+                </span>
+              </label>
+            ) : null}
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"

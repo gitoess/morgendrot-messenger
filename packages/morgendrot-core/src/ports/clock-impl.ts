@@ -1,4 +1,4 @@
-import type { ClockPort } from './clock.js'
+import type { ClockPort } from './clock'
 
 /** Produktion: `Date.now()` (Browser, Node, CM4). */
 export function createSystemClock(): ClockPort {

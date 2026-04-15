@@ -1,4 +1,4 @@
-import { OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS, OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model.js'
+import { OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS, OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model'
 
 const CANONICAL_MSG_REF_HEX_RE = /^[0-9a-f]{64}$/
 

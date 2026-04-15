@@ -8,4 +8,4 @@ export {
   type DeviceTimeTrustSignals,
   inferDeviceTimeTrust,
   shouldWarnUntrustedDeviceTime,
-} from './device-time-trust.js'
+} from './device-time-trust'

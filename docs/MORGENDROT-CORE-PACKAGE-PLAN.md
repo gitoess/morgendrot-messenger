@@ -46,8 +46,8 @@ packages/
           codec.ts
           manager.ts      # createOfflineMailboxManager — Orchestrierung Load/Save/Enqueue über Ports
         README.md         # Abgrenzung zu settlement-queue, delayed-mirror
-      iota/               # später: PTB-Helfer, RPC-Client-Port
-      attestation/       # später: Typen + Kanonisierung (device time, flags)
+      iota/               # **Scheibe 2026-03-28:** `createDirectIotaClient`, `probeDirectIotaRpc`, URL-Sanitizer (`@morgendrot/core/iota`); PTB-Helfer später
+      attestation/        # Queue v1 + Manifest-Typen (`@morgendrot/core/attestation`); IOTA-Submit-Port folgt
 ```
 
 **npm‑Verdrahtung (analog `@morgendrot/shared`):**
@@ -133,7 +133,9 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 4. **Nächste Scheiben:** Retry-/Konflikt-Politik verfeinern; optional **`messageNonceU64`** aus dem Mailbox-/E2E-Protokoll durchreichen, sobald der Client den Nonce kennt.  
 5. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten) — **erledigt** für `@morgendrot/core` v0.0.1.  
 6. **`device-time-trust`:** **erledigt** — eine Quelle im Core (`@morgendrot/core/device-time`), dünne Re‑Exports in **`src/shared`** / **`frontend/.../lib/device-time-trust.ts`**.  
-7. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
+7. **`iota/*` (Client-Skelett):** **erledigt (2026-03-28)** — `@morgendrot/core/iota` (`createDirectIotaClient`, `sanitizeDirectIotaRpcUrl`, `probeDirectIotaRpc`); PWA-Helfer **`frontend/frontend/lib/direct-iota-rpc.ts`** + **`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL`**. Nächster Schritt: PTB/Signatur im Browser + Outbox-Drain.  
+8. **`attestation/*`:** **Queue v1** (`enqueueAttestationDraft`, `drainAttestationQueueOnce`, localStorage-Adapter `frontend/.../attestation-queue.ts`) — Submit-Port noch Platzhalter bis IOTA-Anker.  
+9. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
 
 ---
 

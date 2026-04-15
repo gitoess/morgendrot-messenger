@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, OFFLINE_QUEUE_ITEM_STATUS } from './model.js'
-import { createMemoryStringStorage } from '../../ports/storage-memory.js'
-import { createFixedClock } from '../../ports/clock-impl.js'
-import { createSequencedIdGenerator } from '../../ports/id-generator.js'
-import { createOfflineMailboxManager } from './manager.js'
+import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, OFFLINE_QUEUE_ITEM_STATUS } from './model'
+import { createMemoryStringStorage } from '../../ports/storage-memory'
+import { createFixedClock } from '../../ports/clock-impl'
+import { createSequencedIdGenerator } from '../../ports/id-generator'
+import { createOfflineMailboxManager } from './manager'
 
 describe('createOfflineMailboxManager', () => {
   let storage: ReturnType<typeof createMemoryStringStorage>

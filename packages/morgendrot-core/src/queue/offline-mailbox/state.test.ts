@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model.js'
+import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model'
 import {
   offlineMailboxDedupKey,
   maxClientOutSeqIn,
@@ -8,8 +8,8 @@ import {
   backoffMsForDrainAttempt,
   shouldDeferDrainAttempt,
   tryEnqueueOfflineMailboxItem,
-} from './state.js'
-import { computeCanonicalMsgRefV1 } from './canonical-msg-ref.js'
+} from './state'
+import { computeCanonicalMsgRefV1 } from './canonical-msg-ref'
 
 describe('offlineMailboxDedupKey', () => {
   it('ist stabil für gleiche Nutzlast', () => {

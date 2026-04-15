@@ -20,6 +20,15 @@ import {
   getOfflineMailboxQueueCount,
   loadOfflineMailboxQueue,
 } from '@/frontend/lib/api/offline-queue'
+import { drainAttestationQueue } from '@/frontend/lib/attestation-queue'
+import {
+  applyDirectMailboxChainSnapshotFromNetworkIds,
+  syncDirectMailboxFlagsFromApiStatus,
+  getDirectMailboxChainSnapshot,
+} from '@/frontend/lib/direct-iota-chain-context'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { isDirectMailboxDrainEnabled } from '@/frontend/lib/direct-iota-plain-submit'
 
 export type UseChatViewMirrorDelayParams = {
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: string) => Promise<void>
@@ -91,11 +100,34 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
 
   const runOfflineMailboxDrain = useCallback(async () => {
     if (offlineMailboxDrainInFlightRef.current) return
-    const s = await fetchStatus()
-    if (!('pollClockHint' in s) || s.backendRunning === false || s.locked) return
     if (getOfflineMailboxQueueCount() === 0) return
     offlineMailboxDrainInFlightRef.current = true
     try {
+      const s = await fetchStatus()
+      const backendOk = 'pollClockHint' in s && s.backendRunning !== false && !s.locked
+      if (backendOk) {
+        syncDirectMailboxFlagsFromApiStatus(s)
+        try {
+          const res = await fetch('/api/current-ids')
+          const j = (await res.json()) as {
+            ok?: boolean
+            packageId?: string
+            mailboxId?: string
+            myAddress?: string
+          }
+          if (j.ok === true) applyDirectMailboxChainSnapshotFromNetworkIds(j)
+        } catch {
+          /* ignore */
+        }
+      }
+      const canDrainWithoutBackend =
+        !backendOk &&
+        isDirectMailboxDrainEnabled() &&
+        Boolean(getConfiguredDirectIotaRpcUrl()) &&
+        Boolean(getDirectIotaSessionSigner()) &&
+        Boolean(getDirectMailboxChainSnapshot())
+      if (!backendOk && !canDrainWithoutBackend) return
+
       const r = await drainOfflineMailboxQueue()
       refreshOfflineMailboxQueueCount()
       if (r.sent > 0) {
@@ -108,6 +140,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         setTimeout(() => setStatus('idle'), 6000)
         void loadMessages()
       }
+      await drainAttestationQueue()
     } finally {
       offlineMailboxDrainInFlightRef.current = false
     }

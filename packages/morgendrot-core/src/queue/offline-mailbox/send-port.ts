@@ -1,7 +1,7 @@
 /**
  * Abstraktion für `/send` bzw. `/send-plain` — injizierbar (PWA: `executeCommand`, Tests: Mocks).
  */
-import type { OfflineMailboxQueueItem } from './model.js'
+import type { OfflineMailboxQueueItem } from './model'
 
 export type MailboxSendResult = { ok: true } | { ok: false; error?: string }
 

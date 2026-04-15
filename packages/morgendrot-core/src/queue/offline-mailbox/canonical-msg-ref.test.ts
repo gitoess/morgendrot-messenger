@@ -3,7 +3,7 @@ import {
   computeCanonicalMsgRefV1,
   normalizeMailboxAddressUtf8,
   stableOfflineMailboxThreadId,
-} from './canonical-msg-ref.js'
+} from './canonical-msg-ref'
 
 describe('computeCanonicalMsgRefV1', () => {
   it('liefert 64 Kleinbuchstaben-Hex', async () => {

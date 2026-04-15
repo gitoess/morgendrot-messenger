@@ -6,13 +6,13 @@ export {
   type OfflineQueueItemStatus,
   type OfflineMailboxKind,
   type OfflineMailboxQueueItem,
-} from './model.js'
+} from './model'
 
 export {
   normalizeOfflineMailboxItem,
   parseOfflineMailboxQueueFromJson,
   serializeOfflineMailboxQueueToJson,
-} from './codec.js'
+} from './codec'
 
 export {
   offlineMailboxDedupKey,
@@ -25,37 +25,37 @@ export {
   tryEnqueueOfflineMailboxItem,
   bumpOfflineMailboxItemAfterFailedSend,
   type EnqueueOfflineMailboxPureResult,
-} from './state.js'
+} from './state'
 
 export {
   createOfflineMailboxManager,
   type OfflineMailboxManager,
   type OfflineMailboxManagerDeps,
   type EnqueueOfflineMailboxFailureResult,
-} from './manager.js'
+} from './manager'
 
 export type {
   MailboxSendResult,
   OfflineMailboxSendPort,
   OfflineMailboxTrySend,
   OfflineMailboxDrainOnceArg,
-} from './send-port.js'
+} from './send-port'
 export {
   createOfflineMailboxTrySendFromSendPort,
   coerceOfflineMailboxTrySend,
-} from './send-port.js'
-export { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle, type OfflineMailboxDrainCycleDeps } from './drain.js'
+} from './send-port'
+export { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle, type OfflineMailboxDrainCycleDeps } from './drain'
 
 export {
   computeCanonicalMsgRefV1,
   stableOfflineMailboxThreadId,
   normalizeMailboxAddressUtf8,
   type ComputeCanonicalMsgRefV1Input,
-} from './canonical-msg-ref.js'
+} from './canonical-msg-ref'
 
 export {
   parseMailboxOutNonceMarker,
   parseMailboxProtocolNonceU64FromWire,
   prependMailboxOutNonceMarker,
   type ParsedMailboxOutNonce,
-} from './mailbox-out-nonce-wire.js'
+} from './mailbox-out-nonce-wire'

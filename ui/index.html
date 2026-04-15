@@ -36,30 +36,67 @@
 
   <!-- Passwort-Dialog -->
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" x-show="status && status.locked" x-cloak>
-      <div class="w-full max-w-md rounded-xl bg-slate-800 p-6 shadow-xl">
+      <div class="max-h-[min(90vh,620px)] w-full max-w-md overflow-y-auto rounded-xl bg-slate-800 p-6 shadow-xl">
         <h3 class="text-lg font-semibold text-white">Wallet entsperren</h3>
-        <p class="mt-1 text-sm text-slate-400">Backend wartet auf Eingaben (nur lokal). Passwort = Verschlüsselung der Datei <span class="font-mono text-slate-300">.morgendrot-vault</span> bzw. gleiches wie beim Speichern unter Tresor.</p>
-        <div class="mt-4" x-show="status && status.signer === 'sdk'" x-cloak>
-            <label class="block text-xs font-medium text-slate-400 mb-1">IOTA-Signer (eines davon)</label>
-            <textarea x-model="unlockMnemonic" rows="3"
-              class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-mono"
-              placeholder="Mnemonic (12+ Wörter) ODER Bech32-Secret (secretKey von generate-mnemonic) ODER 64 Hex-Zeichen. Leer lassen, wenn der Vault bereits einen Import enthält."></textarea>
-            <p class="mt-1 text-[11px] text-slate-500"><span class="font-mono">SIGNER=sdk</span> = keine IOTA-CLI nötig. Nur <span class="font-mono">SIGNER=cli</span> nutzt das normale Wallet-Passwort der CLI ohne dieses Feld.</p>
+        <p class="mt-1 text-sm text-slate-400">Backend wartet auf Eingaben (nur lokal). Passwort = Verschlüsselung der Datei <span class="font-mono text-slate-300">.morgendrot-vault</span> — gleiches wie unter Tresor „Lokal sichern“.</p>
+        <p class="mt-2 text-xs text-slate-500 border-t border-slate-600 pt-2"><strong class="text-slate-300">Passwort vergessen?</strong> Ohne das alte Vault-Passwort ist der Datei-Inhalt nicht wiederherstellbar. Ein Seed beweist nur die IOTA-Wallet; Messaging-Keys liegen getrennt im Tresor. Mit Seed kannst du höchstens ein <strong class="text-slate-300">neues</strong> Profil anlegen.</p>
+        <div class="mt-4 space-y-3">
+          <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-600 p-3 hover:bg-slate-700/40">
+            <input type="radio" class="mt-1" name="lite-unlock-flow" value="open" x-model="unlockFlow" @change="showUnlockSignerImport = false; unlockError = ''; passwordConfirm = ''; unlockMnemonicConfirm = ''" />
+            <span><span class="font-medium text-white">Tresor öffnen</span><span class="block text-xs text-slate-400 mt-0.5">Bestehende Vault — zuerst nur Passwort; Mnemonic nur bei Bedarf (Schaltfläche).</span></span>
+          </label>
+          <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-600 p-3 hover:bg-slate-700/40">
+            <input type="radio" class="mt-1" name="lite-unlock-flow" value="create" x-model="unlockFlow" @change="showUnlockSignerImport = false; unlockError = ''" />
+            <span><span class="font-medium text-white">Neu anlegen</span><span class="block text-xs text-slate-400 mt-0.5">Ohne lokale <span class="font-mono">.morgendrot-vault</span>. Bei <span class="font-mono">SIGNER=sdk</span>: Seed + Passwort jeweils zweimal.</span></span>
+          </label>
         </div>
-        <label class="block text-xs font-medium text-slate-400 mt-3 mb-1">Vault- / Wallet-Passwort</label>
-        <input type="password" x-model="password" @keydown.enter="doUnlock()"
-          class="mt-1 w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
-          placeholder="Passwort eingeben" />
-        <label class="mt-3 flex cursor-pointer items-start gap-2 text-sm text-slate-300">
+        <p class="mt-2 rounded border border-amber-500/30 bg-amber-950/40 p-2 text-xs text-amber-200/95" x-show="status && status.vaultStatus && status.vaultStatus.hasLocal && unlockFlow === 'create'" x-cloak>Es existiert bereits eine lokale Vault-Datei — normalerweise <strong>Tresor öffnen</strong> wählen.</p>
+        <p class="mt-2 rounded border border-slate-600 bg-slate-900/50 p-2 text-xs text-slate-400" x-show="status && status.signer === 'sdk' && unlockFlow === 'open' && status.vaultStatus && !status.vaultStatus.hasLocal" x-cloak>Keine lokale Vault-Datei. Mit nur Passwort entsperrt <span class="font-mono">SIGNER=sdk</span> nicht — <strong class="text-slate-200">Neu anlegen</strong> oder Mnemonic über die Schaltfläche unten.</p>
+
+        <div class="mt-4 space-y-3" x-show="unlockFlow === 'open'" x-cloak>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Vault- / Wallet-Passwort</label>
+              <input type="password" x-model="password" @keydown.enter="!unlockSubmitDisabled() && doUnlock()"
+                class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+                placeholder="Passwort eingeben" autocomplete="current-password" />
+            </div>
+            <div x-show="status && status.signer === 'sdk'" x-cloak>
+              <button type="button" @click="showUnlockSignerImport = !showUnlockSignerImport" class="w-full rounded-lg border border-dashed border-slate-500 px-3 py-2 text-left text-xs text-slate-400 hover:bg-slate-700/60" x-text="showUnlockSignerImport ? 'Mnemonic-Eingabe ausblenden' : 'Mnemonic oder Secret eingeben (nur wenn Vault keinen Signer-Import enthält)'"></button>
+              <div class="mt-2 space-y-1" x-show="showUnlockSignerImport">
+                <label class="block text-xs font-medium text-slate-400">Mnemonic / Bech32-Secret</label>
+                <textarea x-model="unlockMnemonic" rows="3"
+                  class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-mono"
+                  placeholder="12+ Wörter oder Secret …" autocomplete="off"></textarea>
+              </div>
+            </div>
+        </div>
+        <div class="mt-4 space-y-3" x-show="unlockFlow === 'create'" x-cloak>
+            <div x-show="status && status.signer === 'sdk'" x-cloak class="space-y-2">
+              <label class="block text-xs font-medium text-slate-400">Mnemonic / Bech32-Secret</label>
+              <textarea x-model="unlockMnemonic" rows="3" class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white font-mono" placeholder="12+ Wörter oder Secret …" autocomplete="off"></textarea>
+              <label class="block text-xs font-medium text-slate-400">Wiederholung</label>
+              <textarea x-model="unlockMnemonicConfirm" rows="3" class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white font-mono" placeholder="Zur Bestätigung erneut" autocomplete="off"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Passwort (Vault / Wallet der Sitzung)</label>
+              <input type="password" x-model="password" class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white" placeholder="Passwort wählen" autocomplete="new-password" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Passwort wiederholen</label>
+              <input type="password" x-model="passwordConfirm" @keydown.enter="!unlockSubmitDisabled() && doUnlock()" class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white" placeholder="Wiederholen" autocomplete="new-password" />
+            </div>
+        </div>
+
+        <label class="mt-4 flex cursor-pointer items-start gap-2 text-sm text-slate-300">
           <input type="checkbox" x-model="unlockSaveVaultAfter" class="mt-1 rounded border-slate-600" />
           <span>Nach Entsperren automatisch <span class="font-mono text-slate-200">.morgendrot-vault</span> anlegen/aktualisieren (gleiches Passwort; sonst unter Tresor „Lokal sichern“).</span>
         </label>
         <label class="mt-2 flex cursor-pointer items-start gap-2 text-sm text-slate-300" x-show="status && status.signer === 'sdk'" x-cloak>
           <input type="checkbox" x-model="unlockIncludeSdkInVault" class="mt-1 rounded border-slate-600" />
-          <span>IOTA-Signer (Mnemonic/Secret aus dem Feld oben) verschlüsselt in die Vault-Datei speichern – nötig, damit du beim nächsten Start nicht erneut eintragen musst.</span>
+          <span>IOTA-Signer (Mnemonic/Secret) verschlüsselt in die Vault-Datei speichern — empfohlen, damit beim nächsten Start nur das Passwort nötig ist.</span>
         </label>
         <p class="mt-2 text-sm text-red-400" x-show="unlockError" x-text="unlockError"></p>
-        <button @click="doUnlock()" :disabled="unlocking || !password"
+        <button type="button" @click="doUnlock()" :disabled="unlockSubmitDisabled()"
           class="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-500 disabled:opacity-50">
           <span x-show="!unlocking">Entsperren</span>
           <span x-show="unlocking">Wird entsperrt…</span>
@@ -2543,7 +2580,12 @@
         view: null,
         networkInfo: '',
         password: '',
+        passwordConfirm: '',
         unlockMnemonic: '',
+        unlockMnemonicConfirm: '',
+        unlockFlow: 'open',
+        showUnlockSignerImport: false,
+        _prevLockedForUnlock: false,
         unlockError: '',
         unlockBanner: '',
         unlockSaveVaultAfter: true,
@@ -3285,6 +3327,11 @@
           try {
             const r = await fetch(_api() + '/api/status');
             this.status = await r.json();
+            const nowLocked = !!this.status.locked;
+            if (nowLocked && !this._prevLockedForUnlock) {
+              this.prepareUnlockDialog();
+            }
+            this._prevLockedForUnlock = nowLocked;
             this.networkInfo = this.status.network || 'IOTA Rebased';
             if (!this._uiRoleFromBackend) {
               const rl = (this.status.role || '').toLowerCase();
@@ -3329,6 +3376,7 @@
             }
           } catch (e) {
             this.status = { backendRunning: false };
+            this._prevLockedForUnlock = false;
             this._pollMs = Math.min(this._pollMs * 2, 60000);
           }
         },
@@ -3355,14 +3403,90 @@
           if (this.vault.includeSdkMnemonicInBackup) a.push('includeIotaMnemonic');
           return a;
         },
+        normalizeSignerWords(s) {
+          return String(s || '')
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean)
+            .join(' ');
+        },
+        isPlausibleSdkImport(s) {
+          const t = String(s || '').trim();
+          if (!t) return false;
+          const words = t.split(/\s+/).filter(Boolean);
+          if (words.length >= 12) return true;
+          const hex = t.replace(/^0x/i, '').replace(/\s+/g, '');
+          if (/^[a-fA-F0-9]{64}$/i.test(hex)) return true;
+          if (!/\s/.test(t) && t.length >= 60 && /^[a-z]{2,10}1[02-9ac-hj-np-z]+$/i.test(t)) return true;
+          return false;
+        },
+        prepareUnlockDialog() {
+          this.unlockError = '';
+          this.unlockMnemonic = '';
+          this.unlockMnemonicConfirm = '';
+          this.password = '';
+          this.passwordConfirm = '';
+          this.showUnlockSignerImport = false;
+          const has = this.status && this.status.vaultStatus && this.status.vaultStatus.hasLocal === true;
+          this.unlockFlow = has ? 'open' : 'create';
+        },
+        unlockSubmitDisabled() {
+          if (this.unlocking) return true;
+          const pw = (this.password || '').trim();
+          if (!pw) return true;
+          if (this.unlockFlow === 'create') {
+            const pc = (this.passwordConfirm || '').trim();
+            if (!pc || this.password !== this.passwordConfirm) return true;
+            if (this.status && this.status.signer === 'sdk') {
+              const a = (this.unlockMnemonic || '').trim();
+              const b = (this.unlockMnemonicConfirm || '').trim();
+              if (!a || !b || this.normalizeSignerWords(a) !== this.normalizeSignerWords(b)) return true;
+            }
+            return false;
+          }
+          return false;
+        },
         async doUnlock() {
           this.unlockError = '';
           this.unlockBanner = '';
+          const signer = this.status && this.status.signer;
+          if (this.unlockFlow === 'create') {
+            if (!this.password.trim() || this.password !== this.passwordConfirm) {
+              this.unlockError = 'Passwort und Wiederholung müssen übereinstimmen.';
+              return;
+            }
+            if (signer === 'sdk') {
+              const sa = (this.unlockMnemonic || '').trim();
+              const sb = (this.unlockMnemonicConfirm || '').trim();
+              if (!sa || this.normalizeSignerWords(sa) !== this.normalizeSignerWords(sb)) {
+                this.unlockError = 'Mnemonic / Secret und Wiederholung müssen übereinstimmen.';
+                return;
+              }
+              if (!this.isPlausibleSdkImport(sa)) {
+                this.unlockError = 'Mnemonic: mindestens 12 Wörter — oder gültiges Bech32-/64-Hex-Secret.';
+                return;
+              }
+            }
+          } else if (signer === 'sdk' && this.showUnlockSignerImport) {
+            const t = (this.unlockMnemonic || '').trim();
+            if (t && !this.isPlausibleSdkImport(t)) {
+              this.unlockError = 'Mnemonic / Secret scheint ungültig (mindestens 12 Wörter oder Bech32/Hex).';
+              return;
+            }
+          }
+          let imp = '';
+          if (signer === 'sdk') {
+            if (this.unlockFlow === 'create') {
+              imp = (this.unlockMnemonic || '').trim();
+            } else {
+              imp = this.showUnlockSignerImport ? (this.unlockMnemonic || '').trim() : '';
+            }
+          }
           this.unlocking = true;
           try {
             const unlockBody = { password: this.password };
-            const imp = (this.unlockMnemonic || '').trim();
-            if (this.status && this.status.signer === 'sdk' && imp) {
+            if (imp) {
               unlockBody.sdkSignerImport = imp;
               unlockBody.mnemonic = imp;
             }
@@ -3379,11 +3503,14 @@
               const pw = this.password;
               const saveVault = this.unlockSaveVaultAfter;
               const wantSdkInVault = this.unlockIncludeSdkInVault;
-              const signerImportThisUnlock = (this.unlockMnemonic || '').trim();
+              const signerImportThisUnlock = imp;
               this.helpOpen = false;
               this.unlockBanner = d.message || 'Wallet entsperrt.';
               this.password = '';
+              this.passwordConfirm = '';
               this.unlockMnemonic = '';
+              this.unlockMnemonicConfirm = '';
+              this.showUnlockSignerImport = false;
               await this.fetchStatus();
               for (let i = 0; i < 30 && !this.status.hasKeys; i++) {
                 await new Promise((res) => setTimeout(res, 400));
@@ -3429,6 +3556,9 @@
               setTimeout(() => { this.unlockBanner = ''; }, 14000);
             } else {
               this.unlockError = d.error || d.message || ('Anfrage fehlgeschlagen (HTTP ' + r.status + ').');
+              if (d.code === 'SIGNER_IMPORT_REQUIRED' && signer === 'sdk' && this.unlockFlow === 'open') {
+                this.showUnlockSignerImport = true;
+              }
             }
           } catch (e) { this.unlockError = e.message || 'Fehler'; }
           finally { this.unlocking = false; }

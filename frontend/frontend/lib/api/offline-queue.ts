@@ -8,7 +8,7 @@
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
-import type { OfflineMailboxKind, OfflineMailboxQueueItem } from '@morgendrot/core'
+import type { OfflineMailboxKind, OfflineMailboxQueueItem, OfflineMailboxTrySend } from '@morgendrot/core'
 import type { OfflineMailboxSendPort } from '@morgendrot/core'
 import {
   createOfflineMailboxManager,
@@ -18,6 +18,13 @@ import {
   offlineMailboxDedupKey,
   createOfflineMailboxTrySendFromSendPort,
 } from '@morgendrot/core'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
+import {
+  canUseDirectPlaintextMailboxDrain,
+  getDirectMailboxChainSnapshot,
+} from '@/frontend/lib/direct-iota-chain-context'
+import { isDirectMailboxDrainEnabled, trySubmitPlaintextMailboxViaDirectIota } from '@/frontend/lib/direct-iota-plain-submit'
 
 export {
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -68,6 +75,34 @@ function createChatCommandsSendPort(): OfflineMailboxSendPort {
         error: r.error ?? (r as { message?: string }).message,
       }
     },
+  }
+}
+
+function canAttemptDirectPlainMailbox(item: OfflineMailboxQueueItem): boolean {
+  return (
+    item.kind === 'plain_send' &&
+    item.encrypted === false &&
+    isDirectMailboxDrainEnabled() &&
+    Boolean(getConfiguredDirectIotaRpcUrl()) &&
+    Boolean(getDirectIotaSessionSigner()) &&
+    Boolean(getDirectMailboxChainSnapshot()) &&
+    canUseDirectPlaintextMailboxDrain()
+  )
+}
+
+function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
+  const viaHttp = createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort())
+  return async (item) => {
+    if (canAttemptDirectPlainMailbox(item)) {
+      const r = await trySubmitPlaintextMailboxViaDirectIota({
+        recipient: item.recipient,
+        payloadUtf8: item.payload,
+        nonce: BigInt(item.clientOutSeq),
+      })
+      if (r.ok) return { ok: true as const }
+      return { ok: false as const, error: r.error }
+    }
+    return viaHttp(item)
   }
 }
 
@@ -132,5 +167,5 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  return getMailboxManager().drainOnce(createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort()))
+  return getMailboxManager().drainOnce(createHybridOfflineMailboxTrySend())
 }

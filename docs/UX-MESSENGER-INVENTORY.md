@@ -2,7 +2,7 @@
 
 Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`docs/ROADMAP-FAHRPLAN.md` § H.0**).
 
-**Zuletzt umgesetzt (2026-03-28):** Wald-Check (grün/blau/rot) + Rollenzeile im Chat-Header; Toast „Basis wieder erreichbar“ nach API-Ausfall; globales `<Toaster />` (sonner); Modultest `computeWaldConnectionTier` in `scripts/run-tests.ts`. **Lite-UI:** `uiVariant` aus `/api/status` synchron mit Kachel-Auswahl (`dashboard.tsx` + `workspace-projects-panel.tsx`). **Recovery:** Einstellungen **Wallet & Backup**, API `revealVaultSignerImport` → **`/vault-show-signer-import`**; Doku **`docs/RECOVERY-PHRASE-BACKUP.md`**. **H.0 (gleicher Tag):** **`GET /api/help`** — Hilfe-Button im **Dashboard-Header** + in **„Erste Schritte“**; „Erste Schritte“ erklärt **Lite messenger** explizit bei `uiVariant=messenger`. **H.0 #3:** Rollen-Hinweise **Arbeitsbereich & Projekte** + Action Center / Geräte-Radar.
+**Zuletzt umgesetzt (2026-03-28):** **Unlock L2:** Next-**`dashboard.tsx`** und **Lite `ui/index.html`** — Radio **Tresor öffnen / Neu anlegen**, bei `SIGNER=sdk` Mnemonic/Secret **nur bei Bedarf** oder nach **`SIGNER_IMPORT_REQUIRED`** von **`POST /api/unlock`**; **Next-Tresor** Checkbox **Signer-Import mit speichern** (Parität Lite). **Tests:** `unlock-response-parse.test.ts`. **Zuvor (2026-03-28):** Wald-Check + Rollenzeile; Toast Basis wieder da; **Lite** `uiVariant`↔Kacheln; **Recovery** Wallet & Backup; **`GET /api/help`**; **H.0 #3** Rollen-Hinweise Arbeitsbereich / Action Center / Radar.
 
 **Posteingang / Chat-Verlauf (2026-03):** Backend lädt ein- und ausgehende Mailbox-/Event-Nachrichten; Next-UI nutzt `myAddressFull` und sichere Identitätsvergleiche; Filter Eingang|Ausgang|Alle inkl. Selbstnachrichten. **Doku:** `docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`, `docs/UI-NACHRICHTEN-STREAMS-ORT.md`.
 
@@ -12,9 +12,10 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 
 | Thema | Stand im Projekt | Sinn / nächster Schritt |
 |--------|-------------------|-------------------------|
-| **Signer-spezifischer Hilfetext** | Unlock-Dialog: zweiter Absatz je **`signer`** (`cli` = Keystore zu MY_ADDRESS, `sdk` = Mnemonic-Hinweis, `remote` = Vault + Remote-Signatur) | Reduziert Verwechslung Mnemonic vs. CLI-Passwort (**H.0 #4**). |
+| **Signer-spezifischer Hilfetext** | Unlock-Dialog: Absätze je **`signer`** (`cli` / `sdk` / `remote`) + Kurztext Passwort vergessen / kein Seed-Reset der alten Vault | **H.0 #4** |
 | **Recovery / Seed erneut anzeigen** | **Einstellungen** (`settings-view.tsx`): Abschnitt **Wallet & Backup**; nur **`SIGNER=sdk`** + lokale Vault mit `iotaSdkSignerImport`; Passwort erneut eingeben | **`docs/RECOVERY-PHRASE-BACKUP.md`**; Szenario Geräteverlust / Credits-Identität. |
-| **Mnemonic / SDK bei SIGNER=sdk** | Dashboard-Dialog sendet Passwort + optional `sdkSignerImport`, wenn `/api/status` → `signer: 'sdk'` | Passt; Overlay nur auf dem Dashboard – bei Navigation in den Chat bleibt der Dialog sichtbar (`sharedDialogs`). |
+| **Mnemonic / SDK bei SIGNER=sdk** | **Next + Lite:** Modus **Tresor öffnen** (nur Passwort; Mnemonic per Schaltfläche oder nach **`code: SIGNER_IMPORT_REQUIRED`**) bzw. **Neu anlegen** (Seed + Passwort jeweils doppelt). `POST /api/unlock` mit optionalem `sdkSignerImport` | Overlay Next: `sharedDialogs`. Lite: gleicher Ablauf im Passwort-Overlay. |
+| **Tresor: Signer im Backup** | **Next** `vault-view.tsx`: wie Lite Checkbox **Signer-Import mit speichern** → `includeIotaMnemonic` auf `/vault-save` und `/vault-onchain` | Parität Lite ↔ PWA (**3341**). |
 | **Session-Passwort für Schlüssel im Gerätespeicher** | Backend: `setWalletPassword` (RAM). **Kein** separates „lokales Handy-Passwort“ zum Verschlüsseln eines persistierten Keys in IndexedDB ohne Vault-Datei | **Sinnvoll als nächste Ausbaustufe**, wenn Keys clientseitig zwischengespeichert werden sollen – aktuell primär Server-Session + Vault-Datei. |
 | **Login-Status in der Sidebar** | Chat: `ChatViewChatHeader` / Pulse-Zeile bei `apiStatus.locked`; Inbox-Toolbar deaktiviert Aktionen bei `locked` | **Vollständige „Sidebar“** wie klassische Apps: nur teilweise (Header/Toolbar). Erweiterung: kompakte Zeile „Gesperrt/Entsperrt“ in einem festen Chat-Layout. |
 

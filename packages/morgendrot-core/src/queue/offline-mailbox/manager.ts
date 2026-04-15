@@ -1,13 +1,13 @@
-import type { ClockPort } from '../../ports/clock.js'
-import type { IdGeneratorPort } from '../../ports/id-generator.js'
-import type { StringStoragePort } from '../../ports/storage.js'
-import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model.js'
-import { parseOfflineMailboxQueueFromJson, serializeOfflineMailboxQueueToJson } from './codec.js'
-import { nextClientOutSeqFromItems, tryEnqueueOfflineMailboxItem } from './state.js'
-import { runOfflineMailboxDrainCycle } from './drain.js'
-import type { OfflineMailboxDrainOnceArg } from './send-port.js'
-import { coerceOfflineMailboxTrySend } from './send-port.js'
-import { computeCanonicalMsgRefV1 } from './canonical-msg-ref.js'
+import type { ClockPort } from '../../ports/clock'
+import type { IdGeneratorPort } from '../../ports/id-generator'
+import type { StringStoragePort } from '../../ports/storage'
+import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model'
+import { parseOfflineMailboxQueueFromJson, serializeOfflineMailboxQueueToJson } from './codec'
+import { nextClientOutSeqFromItems, tryEnqueueOfflineMailboxItem } from './state'
+import { runOfflineMailboxDrainCycle } from './drain'
+import type { OfflineMailboxDrainOnceArg } from './send-port'
+import { coerceOfflineMailboxTrySend } from './send-port'
+import { computeCanonicalMsgRefV1 } from './canonical-msg-ref'
 
 export type EnqueueOfflineMailboxFailureResult =
   | { ok: true; queued: true }

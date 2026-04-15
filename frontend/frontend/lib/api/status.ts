@@ -1,6 +1,6 @@
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
-import { parseUnlockBackendEnvelopeText } from '@/frontend/lib/api-unlock-envelope'
+import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib/api/unlock-response-parse'
 import { API_BASE } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 
@@ -129,10 +129,12 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   }
 }
 
+export type { UnlockBackendResult }
+
 export async function unlockBackend(
   password: string,
   opts?: { sdkSignerImport?: string }
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<UnlockBackendResult> {
   try {
     const body: Record<string, string> = { password }
     const extra = (opts?.sdkSignerImport ?? '').trim()
@@ -143,7 +145,7 @@ export async function unlockBackend(
       body: JSON.stringify(body),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
-    return parseUnlockBackendEnvelopeText(fr.text)
+    return parseUnlockApiResponse(fr.text, fr.response.ok)
   } catch (error) {
     return { ok: false, error: formatFetchFailureMessage(error) }
   }

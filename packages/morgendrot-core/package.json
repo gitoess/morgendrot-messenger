@@ -3,17 +3,22 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Messenger-Kern: offline-mailbox queue (model/codec/state), später IOTA — ohne React; transport- und speicherneutral (Ports).",
+  "description": "Messenger-Kern: offline-mailbox queue, direkter IOTA-Light-Client (optional), Attestation-Typen — ohne React; transport- und speicherneutral (Ports).",
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./queue/offline-mailbox": "./src/queue/offline-mailbox/index.ts",
     "./ports": "./src/ports/index.ts",
-    "./device-time": "./src/device-time/index.ts"
+    "./device-time": "./src/device-time/index.ts",
+    "./iota": "./src/iota/index.ts",
+    "./attestation": "./src/attestation/index.ts"
   },
   "scripts": {
     "test:unit": "vitest run",
     "test:unit:watch": "vitest"
+  },
+  "dependencies": {
+    "@iota/iota-sdk": "^1.11.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

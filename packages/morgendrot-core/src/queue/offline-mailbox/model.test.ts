@@ -4,7 +4,7 @@ import {
   OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS,
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
   OFFLINE_QUEUE_ITEM_STATUS,
-} from './model.js'
+} from './model'
 
 describe('offline-mailbox model constants', () => {
   it('behält erwartete Grenzen (Kompatibilität mit PWA-MVP)', () => {

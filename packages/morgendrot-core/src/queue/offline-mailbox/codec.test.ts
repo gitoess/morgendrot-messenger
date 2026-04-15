@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { OFFLINE_MAILBOX_MAX_ITEMS, OFFLINE_QUEUE_ITEM_STATUS } from './model.js'
+import { OFFLINE_MAILBOX_MAX_ITEMS, OFFLINE_QUEUE_ITEM_STATUS } from './model'
 import {
   normalizeOfflineMailboxItem,
   parseOfflineMailboxQueueFromJson,
   serializeOfflineMailboxQueueToJson,
-} from './codec.js'
+} from './codec'
 
 describe('normalizeOfflineMailboxItem', () => {
   it('akzeptiert gültigen Eintrag', () => {

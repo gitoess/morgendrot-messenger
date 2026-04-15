@@ -27,9 +27,11 @@
 - Existiert eine **Vault-Datei** und Entschlüsselung schlägt fehl → neuer Resolver für erneutes `/api/unlock` (`awaitWalletPasswordAfterVaultFailureUi`).
 - **`SIGNER=cli`:** Separates Verhältnis zum **IOTA-CLI-Keystore** — der Entsperr-Dialog fragt **kein** Mnemonic ab; Nutzerhilfe in Lite-UI beschreibt das explizit.
 
-### 2.2 UI: „Wallet entsperren“ (`frontend/.../dashboard.tsx`)
+### 2.2 UI: „Wallet entsperren“ (**Next** `frontend/frontend/components/dashboard.tsx` · **Lite** `ui/index.html`)
 
-- Dialog bei `locked`: **Passwort** + bei `signer === 'sdk'` optional **Mnemonic/Bech32**, falls nicht im Vault.
+- Dialog bei `locked`: Wahl **Tresor öffnen** vs. **Neu anlegen** (Standard aus `vaultStatus.hasLocal` beim ersten Sperren-Screen).
+- **`SIGNER=sdk`:** Mnemonic/Bech32 **nicht** dauernd sichtbar — nur im Modus **Neu anlegen** (mit Wiederholung) oder unter **Tresor öffnen** nach Klick bzw. wenn **`POST /api/unlock`** mit **`code: SIGNER_IMPORT_REQUIRED`** antwortet (Backend `src/api-server.ts`).
+- **`SIGNER=cli`:** nur Passwort (Keystore).
 - **`POST /api/unlock`:** Entschlüsselt lokalen oder on-chain Vault (wenn konfiguriert), wendet SDK-Import an, löst internen Passwort-Resolver auf.
 
 ### 2.3 Explizit **nicht** vorhanden (Next-Messenger)
@@ -53,7 +55,7 @@ Die gleichen Punkte als **nachverfolgbare** Liste; Umsetzung priorisiert **Roadm
 | ID | Lücke | Risiko / Nutzerfrustration | Status |
 |----|--------|----------------------------|--------|
 | L1 | **Keine narrative Einheit** zwischen Next-Dashboard, Unlock-Dialog, Tresor und Shop | Session-Passwort vs. Vault vs. Keystore vs. Credits verwechselt | **Teilweise:** Unlock-Dialog **signer-abhängig** (`dashboard.tsx`); Chat-Banner präzisiert; diese Doku + **`docs/DEV-START.md`** |
-| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Teilweise (2026-03-28):** Next-Dashboard **„Erste Schritte“**-Hinweis (Links Handbuch, Einstellungen; ausblendbar) + **`GET /api/help`** mit Kurzabsatz **`HELP_UI_INTRO`** vor der CLI-Liste. Vollständiger Wizard / Boss-Export-Assistent weiter **Roadmap H.7**; Lite-UI (`ui/index.html`) + **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
+| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Teilweise (2026-03-28):** Next-Dashboard **„Erste Schritte“** + **`GET /api/help`** (`HELP_UI_INTRO`). **Unlock:** „Neu anlegen“ mit doppelter Seed-/PW-Bestätigung (Next + Lite). Vollständiger Wizard / Boss-Export-Assistent weiter **Roadmap H.7**; **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
 | L3 | **„Credits statt IOTA“** ohne Klartext | Credits ≠ native MIST; Marketing irreführend | **Teilweise:** **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, Shop-Tooltip (`/shop`), **`TESTING.md`** Smoke |
 | L4 | **Wiederkehrende Nutzer** („neues Gerät“) | Kein UX für „Vault auf neuem Rechner“ vs. Erststart | **Teilweise:** Einstellungen **Wallet & Backup** + **`docs/RECOVERY-PHRASE-BACKUP.md`**; vollständiger Gerätewechsel-Flow weiter Backlog |
 | L5 | **SIGNER=sdk vs. cli** im Dialog | Falsche Erwartung (Mnemonic vs. nur Keystore) | **Erledigt (Copy):** bedingter Hilfetext im Unlock-Dialog je **`GET /api/status` → `signer`** |
@@ -72,8 +74,8 @@ Ziel ist **kein** neues Login-System, sondern **klare Phasen** und **UI-Texte**,
 
 ### Phase B — **Session-Entsperren** (jedes Backend-Start / nach `/vault-lock`)
 
-- **B1:** Ein Dialog: **Passwort** (Vault/Session).
-- **B2:** Nur wenn `SIGNER=sdk` **und** kein gespeicherter SDK-Import im Vault: **zweites Feld** Mnemonic/Bech32.
+- **B1:** Ein Dialog: Modus **öffnen** (bestehend) vs. **neu anlegen** (erstes Setup); **Passwort**; bei Neu anlegen **Passwort-Wiederholung**.
+- **B2:** Nur wenn `SIGNER=sdk`: bei **Neu anlegen** Mnemonic/Bech32 **mit Wiederholung**; bei **Öffnen** Mnemonic **nur bei Bedarf** (UI-Schaltfläche oder Server **`SIGNER_IMPORT_REQUIRED`**) — nicht dauernd dieselbe Maske wie ohne Vault.
 - **B3:** Nur wenn `SIGNER=cli`: Kurztext: „Passwort = IOTA-Keystore zu MY_ADDRESS“ — **kein** Mnemonic-Feld.
 - **B4:** Erfolg: `locked: false`, Nutzer kann Chat/Tresor nutzen.
 

@@ -26,7 +26,7 @@ Hinweis SIGNER=cli: IOTA-CLI muss zur RPC passen (gleiche API-Version), sonst Cl
 /vault-load <passwort> [pfad]   Bestehende .morgendrot-vault entschlüsseln (ohne /connect). Antwort enthält notes + personalSecrets (Mein Safe, KeePass-ähnlich).
 /vault-load-from-chain <passwort>   Vault aus VAULT_REGISTRY_ID laden (wenn konfiguriert). Ebenfalls personalSecrets.
 /vault-show-signer-import <passwort> [pfad]   Nur SIGNER=sdk: gespeicherten Mnemonic/Bech32-Import aus der Vault-Datei anzeigen (Backup prüfen). Erfordert denselben Import wie bei „Signer-Import mit speichern“.
-/vault-save [passwort] [notizen] [pfad]   Keys + Notizen + personalSecrets in lokaler Vault-Datei speichern (Keys müssen im RAM sein).
+/vault-save [passwort] [notizen] [pfad] [includeIotaMnemonic]   Keys + Notizen + personalSecrets in lokaler Vault-Datei speichern (Keys müssen im RAM sein). Optional letztes Argument includeIotaMnemonic (oder 1/true): SIGNER=sdk — Session-Mnemonic/Bech32 verschlüsselt in die Datei; ohne Pfad z. B. [passwort, notizen, includeIotaMnemonic].
 /vault-lock              Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert. Vault-Datei bleibt.
 Hinweis UI/API: GET/POST /api/vault-personal-secrets – Safe-Einträge nur bei entsperrtem Tresor; persistLocal=true schreibt sofort die Vault-Datei.
 /exit                    Programm beenden.
@@ -42,7 +42,7 @@ export const HELP_CHAT = `
 /fetch <n> [sender]      Letzte N Nachrichten laden (z.B. /fetch 15). Optional: nur von sender (z.B. /fetch 10 0x…). Ohne /connect: Handshakes von der Chain.
 hole letzten <n>         Wie /fetch – natürliche Eingabe (z.B. hole letzten 10).
 /vault-save              Messaging-Keys + Notizen + Mein Safe (personalSecrets) lokal speichern (VAULT_FILE). Erfordert Passwort.
-/vault-onchain           Tresor inkl. personalSecrets on-chain im VaultRegistry speichern. Erfordert VAULT_REGISTRY_ID.
+/vault-onchain [passwort] [notizen] [includeIotaMnemonic]   Tresor inkl. personalSecrets on-chain im VaultRegistry speichern. Erfordert VAULT_REGISTRY_ID. Optional letztes Argument includeIotaMnemonic wie bei /vault-save.
 /purge-handshake         Handshake aus Mailbox löschen (ENABLE_PURGE, MAILBOX_ID).
    /purge-msg <nonce> [sender]  Nachricht aus Mailbox löschen. Nonce aus Event/Explorer. Verschlüsselt (MsgKey) und gespeicherter Klartext (PlainMsgKey) sind verschiedene Einträge — der Client versucht ggf. zwei TX (purge_message, dann purge_plaintext_mail_entry).
    /purge-handshake-cache Lokalen Handshake-Tresor leeren (immer purgable).

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model.js'
-import { bumpOfflineMailboxItemAfterFailedSend } from './state.js'
+import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model'
+import { bumpOfflineMailboxItemAfterFailedSend } from './state'
 
 describe('bumpOfflineMailboxItemAfterFailedSend', () => {
   it('erhöht attempts und setzt lastError', () => {
