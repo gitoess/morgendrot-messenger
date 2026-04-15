@@ -34,13 +34,17 @@ packages/
     src/
       index.ts            # öffentliche Re-Exports (schmal halten)
       ports/
-        storage.ts        # z. B. OfflineQueueStoragePort { load, save }
-        clock.ts          # optional: now() für Tests
+        clock.ts          # ClockPort (Typ)
+        clock-impl.ts     # createSystemClock, createFixedClock
+        storage.ts        # StringStoragePort (Typ)
+        storage-memory.ts # createMemoryStringStorage, createNullableDelegatingStorage
+        id-generator.ts   # IdGeneratorPort + createCryptoUuidIdGenerator, createSequencedIdGenerator
       queue/
-        offline-mailbox/  # zuerst: aus frontend offline-queue.ts
-          model.ts        # Typen + reine Validierung / Normalisierung
-          state.ts        # enqueue, reorder, next clientOutSeq, dedup-Key — ohne fetch
-          codec.ts        # JSON roundtrip, Größenlimits (MAX_ITEMS, …)
+        offline-mailbox/
+          model.ts
+          state.ts        # u. a. bumpOfflineMailboxItemAfterFailedSend (Drain-Fehler rein)
+          codec.ts
+          manager.ts      # createOfflineMailboxManager — Orchestrierung Load/Save/Enqueue über Ports
         README.md         # Abgrenzung zu settlement-queue, delayed-mirror
       iota/               # später: PTB-Helfer, RPC-Client-Port
       attestation/       # später: Typen + Kanonisierung (device time, flags)
@@ -124,9 +128,9 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 ## 6. Konkrete Arbeitsscheiben (Reihenfolge)
 
 1. **Scaffold** `packages/morgendrot-core` + `vitest` + erste leere `index.ts`. **Erledigt (2026-04-28):** Offline-Mailbox **model / codec / state** im Core + PWA-Adapter `frontend/.../offline-queue.ts` + Root **`npm run test:core`** + CI-Schritt in **`frontend-checks.yml`**.  
-2. **`ports/storage.ts`** + In‑Memory‑Implementierung für Tests.  
-3. **Move** reine Teile aus `offline-queue.ts` → Core (`model`, `codec`, `state`); Frontend importiert aus `@morgendrot/core` und **löscht** duplizierte Zeilen (Verhalten unverändert).  
-4. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten).  
+2. **Ports + Manager (2026-04-28):** `createSystemClock` / `createFixedClock`, `createMemoryStringStorage` / `createNullableDelegatingStorage`, **`IdGeneratorPort`**, **`createOfflineMailboxManager`** (Load/Save/Enqueue), **`bumpOfflineMailboxItemAfterFailedSend`** (Drain-Fehler rein); PWA nutzt Manager + delegierendes Storage.  
+3. **Nächste Scheiben:** `canonical_msg_ref` / § **H.12**, Retry-/Konflikt-Politik, optional **`SendPort`** um Drain-Schleife weiter in den Core zu ziehen.  
+4. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten) — **erledigt** für `@morgendrot/core` v0.0.1.  
 5. **`device-time-trust`:** eine Quelle im Core, Frontend/Server stellen nur dünne Re‑Exports oder entfernen Duplikat (separate kleine Scheibe).  
 6. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
 

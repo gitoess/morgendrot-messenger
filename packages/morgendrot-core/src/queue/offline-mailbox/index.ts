@@ -22,5 +22,13 @@ export {
   backoffMsForDrainAttempt,
   shouldDeferDrainAttempt,
   tryEnqueueOfflineMailboxItem,
+  bumpOfflineMailboxItemAfterFailedSend,
   type EnqueueOfflineMailboxPureResult,
 } from './state.js'
+
+export {
+  createOfflineMailboxManager,
+  type OfflineMailboxManager,
+  type OfflineMailboxManagerDeps,
+  type EnqueueOfflineMailboxFailureResult,
+} from './manager.js'

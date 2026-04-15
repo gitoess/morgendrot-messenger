@@ -3,26 +3,20 @@
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
  *
- * Domänenlogik: **`@morgendrot/core`** (`queue/offline-mailbox`). Diese Datei: **Speicher** (`localStorage`),
- * **Opt-in-Flag**, **Drain** über `chat-commands`.
- *
- * - **Nicht** die Boss-/Settlement-„Offline-Relay-Queue“ (`src/settlement-queue.ts`, § **H.12**).
- * - **Nicht** der LoRa→IOTA-Delayed-Mirror (`lib/delayed-mirror-queue.ts`).
- *
- * **Opt-in:** `localStorage` **`morgendrot.offlineMailboxQueue`** = **`1`** (Default: aus).
+ * Orchestrierung **Laden/Speichern/Enqueue:** `createOfflineMailboxManager` aus **`@morgendrot/core`**.
+ * Diese Datei: **Browser-Ports** (`localStorage`), **Opt-in**, **Drain** über `chat-commands`.
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem } from '@morgendrot/core'
 import {
-  OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
-  OFFLINE_QUEUE_ITEM_STATUS,
-  parseOfflineMailboxQueueFromJson,
-  serializeOfflineMailboxQueueToJson,
   sortOfflineMailboxForDrain,
   shouldDeferDrainAttempt,
-  tryEnqueueOfflineMailboxItem,
-  nextClientOutSeqFromItems,
+  bumpOfflineMailboxItemAfterFailedSend,
+  createOfflineMailboxManager,
+  createNullableDelegatingStorage,
+  createSystemClock,
+  createCryptoUuidIdGenerator,
   offlineMailboxDedupKey,
 } from '@morgendrot/core'
 
@@ -51,41 +45,35 @@ export function isOfflineMailboxQueueEnabled(): boolean {
   }
 }
 
-function readRawQueue(): string | null {
-  if (typeof window === 'undefined') return null
-  try {
-    return localStorage.getItem(OFFLINE_MAILBOX_QUEUE_STORAGE_KEY)
-  } catch {
-    return null
+let mailboxManager: ReturnType<typeof createOfflineMailboxManager> | null = null
+
+function getMailboxManager(): ReturnType<typeof createOfflineMailboxManager> {
+  if (!mailboxManager) {
+    mailboxManager = createOfflineMailboxManager({
+      storage: createNullableDelegatingStorage(() =>
+        typeof window === 'undefined' ? null : localStorage
+      ),
+      clock: createSystemClock(),
+      ids: createCryptoUuidIdGenerator(),
+    })
   }
+  return mailboxManager
 }
 
 export function loadOfflineMailboxQueue() {
-  return parseOfflineMailboxQueueFromJson(readRawQueue())
+  return getMailboxManager().load()
 }
 
 export function saveOfflineMailboxQueue(items: OfflineMailboxQueueItem[]): void {
-  if (typeof window === 'undefined') return
-  try {
-    localStorage.setItem(OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, serializeOfflineMailboxQueueToJson(items))
-  } catch {
-    /* quota */
-  }
+  getMailboxManager().save(items)
 }
 
 export function getOfflineMailboxQueueCount(): number {
-  return loadOfflineMailboxQueue().length
+  return getMailboxManager().count()
 }
 
 export function nextOfflineMailboxClientOutSeq(): number {
-  return nextClientOutSeqFromItems(loadOfflineMailboxQueue())
-}
-
-function newOfflineMailboxId(): string {
-  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
-    return crypto.randomUUID()
-  }
-  return `ob-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+  return getMailboxManager().nextClientOutSeq()
 }
 
 /**
@@ -103,26 +91,7 @@ export function enqueueOfflineMailboxFailure(opts: {
   if (!isOfflineMailboxQueueEnabled()) {
     return { ok: true, queued: false }
   }
-  const { kind, recipient, payload, encrypted, timeIsTrusted, lastError } = opts
-  const cur = loadOfflineMailboxQueue()
-  const r = tryEnqueueOfflineMailboxItem({
-    items: cur,
-    kind,
-    recipient,
-    payload,
-    encrypted,
-    timeIsTrusted,
-    lastError,
-    id: newOfflineMailboxId(),
-    now: Date.now(),
-  })
-  if (!r.ok) {
-    return { ok: false, queued: false, reason: r.reason }
-  }
-  if (r.queued) {
-    saveOfflineMailboxQueue(r.items)
-  }
-  return { ok: true, queued: r.queued }
+  return getMailboxManager().enqueueFailure(opts)
 }
 
 export async function drainOfflineMailboxQueue(): Promise<{
@@ -133,7 +102,8 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  const items = sortOfflineMailboxForDrain(loadOfflineMailboxQueue())
+  const mgr = getMailboxManager()
+  const items = sortOfflineMailboxForDrain(mgr.load())
   if (items.length === 0) return { sent: 0, failed: 0, remaining: 0 }
 
   const now = Date.now()
@@ -163,16 +133,10 @@ export async function drainOfflineMailboxQueue(): Promise<{
       sent++
     } else {
       failed++
-      kept.push({
-        ...item,
-        status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
-        attempts: item.attempts + 1,
-        lastAttemptAt: Date.now(),
-        lastError: typeof err === 'string' ? err : String(err),
-      })
+      kept.push(bumpOfflineMailboxItemAfterFailedSend(item, err, Date.now()))
     }
   }
 
-  saveOfflineMailboxQueue(kept)
+  mgr.save(kept)
   return { sent, failed, remaining: kept.length }
 }

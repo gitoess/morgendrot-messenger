@@ -1,2 +1,6 @@
 export type { ClockPort } from './clock.js'
 export type { StringStoragePort } from './storage.js'
+export { createSystemClock, createFixedClock } from './clock-impl.js'
+export { createMemoryStringStorage, createNullableDelegatingStorage } from './storage-memory.js'
+export type { IdGeneratorPort } from './id-generator.js'
+export { createCryptoUuidIdGenerator, createSequencedIdGenerator } from './id-generator.js'

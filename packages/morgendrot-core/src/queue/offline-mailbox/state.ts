@@ -88,3 +88,18 @@ export function tryEnqueueOfflineMailboxItem(params: {
   }
   return { ok: true, queued: true, items: [...items, next] }
 }
+
+/** Nach fehlgeschlagenem Sendeversuch (Drain): Versuchszähler + Fehlertext — rein, ohne Netz. */
+export function bumpOfflineMailboxItemAfterFailedSend(
+  item: OfflineMailboxQueueItem,
+  err: unknown,
+  now: number
+): OfflineMailboxQueueItem {
+  return {
+    ...item,
+    status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+    attempts: item.attempts + 1,
+    lastAttemptAt: now,
+    lastError: typeof err === 'string' ? err : String(err),
+  }
+}
