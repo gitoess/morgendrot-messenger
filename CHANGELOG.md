@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Repository / Bundles
+
+- **Verkaufs-Messenger-Referenz:** `exports/Morgendrot-Messenger-verkauf/move-test/build/` aus dem Git-Index entfernt (336 Artefakte); lokal per `sui move build` reproduzierbar. `.gitignore`: `exports/**/move-test/build/`, IDE-Temporärdateien.
+
 ### Messenger (PWA)
 
 - **Puls / H.15:** Manuelle Ketten-IDs (Package, Mailbox, Absender) inkl. optional geschätzter Flags; **Chat-ECDH** (Peer-Pub in `localStorage`, JWK nur RAM) für verschlüsselten **Direkt-Mailbox-Drain** in der Offline-Warteschlange; **`@morgendrot/core`**: PTB **`store_encrypted_message`** (ohne Credits).

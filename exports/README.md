@@ -31,7 +31,7 @@ Ziel: **ein Ordner pro Edition**, den du auf einen beliebigen PC kopierst – na
 3. **Auf dem Ziel-PC:**  
    Den **gesamten** gewählten Ordner kopieren → darin **`npm install`** → **`npm start`** oder **`npm run desktop`**.
 
-Die Ordner sind per `.gitignore` vom Repo ausgeschlossen (Größe + Secrets); bauen und verteilen lokal oder über eure Release-Pipeline.
+Die **vollständigen** Messenger-Bundles unter `exports/` sind per `.gitignore` vom Repo ausgeschlossen (Größe + Secrets); bauen und verteilen lokal oder über eure Release-Pipeline. Die **Referenz-Kopie** `Morgendrot-Messenger-verkauf/` im Repo enthält Quellcode und Move-**Quellen** (`move-test/sources/`); **`move-test/build/`** ist nicht versioniert (siehe README dort).
 
 ## Standalone Smartphone / PWA (`morgendrot-standalone-smartphone`)
 

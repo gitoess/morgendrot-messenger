@@ -64,6 +64,13 @@ tools/ffmpeg/bin/*.dll
 exports/**/.env
 exports/**/config.json
 exports/**/template*.json
+# Move-Build-Artefakte in Export-Bäumen (groß, reproduzierbar per build)
+exports/**/move-test/build/
+
+# IDE / Editor (lokal)
+.idea/
+*.swp
+*~
 
 # Vollständiger Messenger-Build (npm run bundle:messenger) – nicht ins Repo committen
 exports/Morgendrot-Messenger-standalone/

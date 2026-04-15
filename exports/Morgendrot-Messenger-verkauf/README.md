@@ -2,6 +2,8 @@
 
 Dieser Ordner ist **dieselbe Software** wie `Morgendrot-Messenger-standalone`, aber mit **`MESSENGER_EDITION=sales`** (fest in `npm start`). Die Lite-UI zeigt den Titel **Verkaufs-Messenger** und **zusätzliche Hinweise** zur Kette Schatten-Seed → Sweep → Main-Entsperren → Tresor → Chat.
 
+**Move:** Quellen liegen unter `move-test/sources/` (im Repo). Der Ordner **`move-test/build/`** (Bytecode) ist **nicht** versioniert — bei Bedarf lokal mit `sui move build` im Verzeichnis `move-test/` erzeugen. Für den laufenden Messenger genügt die deployte **`PACKAGE_ID`** in der `.env`.
+
 ## Boss / Hersteller – vor Übergabe an den Kunden
 
 1. **Move-Paket:** Deploy, **`PACKAGE_ID`** notieren – muss für **alle** Chat-Teilnehmer **identisch** sein.
