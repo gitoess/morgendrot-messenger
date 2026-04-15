@@ -5,6 +5,8 @@
 
 **Verknüpft:** **`SECURITY-RATING.md`**, **`docs/CONFIG-REFERENCE.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**), **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**§ H.14**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/BOSS-WORKER-SEED-CUSTODY.md`** (**§ H.10b** — Boss/Arbeiter-Seed, Team vs. dezentral), **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**.
 
+**Einordnung § H.10:** In **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** (Phase-A-Rand) folgt **§ H.10** auf **§ H.8**; **parallel** dazu **§ H.10b** (**`BOSS-WORKER-SEED-CUSTODY.md`**). **Blockiert** Phase A/B/C **nicht** — kleines Doku-/Prozess-Budget neben **`TESTING.md`**, **`docs/PWA-MANUAL-CHECKS.md`** (§ **H.2**) und dem **Mesh-/IOTA-MVP** (**Phase B**).
+
 ---
 
 ## 1. Zielbild: was Morgendrot **ist** und **nicht** verspricht
@@ -78,7 +80,7 @@ Diese Phasen **überlagern** **nicht** **A/B/C** — sie **füttern** Entscheidu
 ## 4. Nächste **logische** Schritte (konkret, priorisiert)
 
 **A — Weiter wie im Produktfahrplan (ohne Umweg):**  
-1. **`docs/ROADMAP-FAHRPLAN.md` § C.1** einhalten: **H.0 / H.1 / H.2**, dann **Phase B** (Mesh, **Delayed LoRa → IOTA**).  
+1. **`docs/ROADMAP-FAHRPLAN.md`** § **C.1** und § **C.0b** einhalten: **H.0 / H.1 / H.1a / H.2**, **§ H.8** (Dienst/Testnet-Doku), **§ H.10** / **§ H.10b** (dieses Dokument + Seed-Custody — **kleines** Budget), dann **Phase B** (Mesh, **Delayed LoRa → IOTA**).  
 2. **`TESTING.md`** (inkl. **Phase B — Mesh/Web-BT**) bei jedem Release-ähnlichen Stand durchgehen.
 
 **B — Sicherheit/Schlankheit „klein und sofort“:**  
