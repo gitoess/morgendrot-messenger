@@ -39,6 +39,7 @@ import {
   LS_OFFLINE_BRIEFING_DISPLAY,
 } from '../../lib/initial-profile-import'
 import Link from 'next/link'
+import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
 
 /** Minimal typing for `beforeinstallprompt` (nicht überall als DOM-Typ geladen). */
 type DeferredPwaPrompt = {
@@ -373,39 +374,7 @@ export function SettingsView({
         </div>
       </div>
 
-      {/* § H.0 — Orientierung Wallet / Session / Handy-first (Handbuch offline nach sync) */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-400">
-            <KeyRound className="h-5 w-5" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1 space-y-2">
-            <h4 className="font-semibold text-foreground">Wallet &amp; Session</h4>
-            <p className="text-sm text-muted-foreground">
-              Entsperren, Vault, Credits vs. Gas (MIST) und optional{' '}
-              <strong className="text-foreground">Direkt-IOTA</strong> aus der PWA hängen zusammen, sind aber nicht
-              dasselbe. Kurzüberblick und Backlog:{' '}
-              <Link href="/handbook/ONBOARDING-WALLET-UX-SPEC.md" className="text-primary underline hover:no-underline">
-                Onboarding &amp; Wallet (UX)
-              </Link>
-              . Recovery / Signer nur bewusst anzeigen:{' '}
-              <Link href="/handbook/RECOVERY-PHRASE-BACKUP.md" className="text-primary underline hover:no-underline">
-                Recovery Phrase / Backup
-              </Link>
-              . Ports und zwei Web-Oberflächen:{' '}
-              <span className="font-mono text-xs">docs/DEV-START.md</span> im Repo — Handbuch-Auszug ggf. über{' '}
-              <Link href="/handbook/BOSS-ORIENTIERUNG.md" className="text-primary underline hover:no-underline">
-                Boss-Orientierung
-              </Link>
-              . Sendeweg Direkt vs. <span className="font-mono">/api</span>:{' '}
-              <Link href="/handbook/PWA-HANDBUCH-OFFLINE.md" className="text-primary underline hover:no-underline">
-                PWA &amp; Offline
-              </Link>{' '}
-              (§ 5) und Chat → <strong className="text-foreground">Puls</strong>.
-            </p>
-          </div>
-        </div>
-      </div>
+      <SettingsWalletSessionCard />
 
       {/* PWA: zum Home-Bildschirm (Chrome/Edge/Android; Safari iOS: manuell) */}
       {!pwaStandalone && (

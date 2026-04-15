@@ -107,6 +107,17 @@ Diese Optionen **dokumentieren** und **nicht** durch „wir bauen später CRDT�
 
 **Klartext einmal senden:** Pro logischer Nachricht gilt **`clientOutSeq`** / **`canonical_msg_ref`** aus dem Core — weder Direkt-RPC noch späterer HTTP-Retry darf dieselbe Nutzlast **doppelt** als neue Chain-Nachricht ausgeben; bei Konflikt **Fehler anzeigen** und Eintrag **pending** lassen (siehe Core-Drain-Tests).
 
+### 8.1 Retry / Backoff (**Stufe 3** — vertieft, Ist-Code)
+
+| Mechanismus | Ort | Kurzbeschreibung |
+|-------------|-----|------------------|
+| **Exponentielles Backoff** | **`@morgendrot/core`** `backoffMsForDrainAttempt(attempts)` | `min(120_000, 1500 * 2^min(attempts, 8))` ms — **`packages/morgendrot-core/src/queue/offline-mailbox/state.ts`**. |
+| **Defer** | **`shouldDeferDrainAttempt(item, now)`** | Eintrag wird im Drain-Durchlauf **übersprungen**, bis Wartezeit seit **`lastAttemptAt`** erreicht ist. |
+| **Fehler-Bump** | **`bumpOfflineMailboxItemAfterFailedSend`** | **`attempts++`**, **`lastError`**, bleibt **`PENDING`** — **kein** zweites Queue-Objekt für dieselbe logische Nachricht. |
+| **Tests** | **`state.test.ts`** | Deckt Backoff/Defer ab — bei Änderungen an der Retry-Politik **`npm run test:core`** ausführen. |
+
+**Konflikt mit „Settlement“:** Diese Outbox ist **Transport-Wiederholung** bis erfolgreicher **eine** Submit-Operation (Direkt oder HTTP); sie ersetzt **nicht** die spätere **Paket-7-voll**-Relay-/Settlement-Semantik (**§ H.3g**, **`OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`**).
+
 ---
 
-*Stand: 2026-03-30 — § 8 ergänzt 2026-04-28 (H.15 Stufe 3).*
+*Stand: 2026-03-30 — § 8 / § 8.1 ergänzt 2026-04-28 (H.15 Stufe 3).*

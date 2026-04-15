@@ -13,6 +13,9 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - **§ H.15 Stufe 3:** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (eine Wahrheit: Core + PWA-Adapter); Kommentar in **`frontend/frontend/lib/api/offline-queue.ts`**.
 - **§ H.0:** Einstellungen → Karte **„Wallet & Session“** mit Handbuch-Links (**`settings-view.tsx`**).
 - **§ H.2 / PWA:** Handbuch-Sync um **`ONBOARDING-WALLET-UX-SPEC.md`**, **`RECOVERY-PHRASE-BACKUP.md`**; **`sw.js`** **`morgendrot-sw-6`** + **`HANDBOOK_URLS`**; Protokollzeile **2026-04-28** in **`docs/PWA-MANUAL-CHECKS.md`**.
+- **§ H.15 Stufe 4:** Merge-Ritual **`TESTING.md`** Zeile **5c**; Root-/Frontend-Skript **`npm run test:h15-direct-submit`**; Anhang § 4 in **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**.
+- **§ H.15 Stufe 3 (vertieft):** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.1 (Retry/Backoff-**Ist**); **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`** Scheibe 4 Verweis.
+- **§ H.1b:** **`SettingsWalletSessionCard`** (`settings-wallet-session-card.tsx`); **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** Fortschritt **2026-04-28**.
 
 ### Dokumentation
 

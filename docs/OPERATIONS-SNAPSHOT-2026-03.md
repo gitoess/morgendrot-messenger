@@ -22,6 +22,9 @@
 | Stufe 3 eine Wahrheit (Outbox) | **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8, **`frontend/frontend/lib/api/offline-queue.ts`** (Kopfkommentar) |
 | H.0 Wallet & Session in der PWA | **`frontend/frontend/components/views/settings-view.tsx`**, **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § 5 |
 | H.2 PWA / Handbuch / SW | **`scripts/sync-pwa-handbook.mjs`** (10 Dateien), **`frontend/public/sw.js`** **`morgendrot-sw-6`**, **`docs/PWA-MANUAL-CHECKS.md`** Protokoll **2026-04-28** |
+| H.15 Stufe 4 + Skript | **`TESTING.md`** Ritual **5c**, Root **`npm run test:h15-direct-submit`**, Anhang § 4 **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** |
+| H.15 Stufe 3 vertieft | **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.1 (Backoff/Defer/Bump) |
+| § H.1b Mini-Scheibe | **`frontend/frontend/components/views/settings-wallet-session-card.tsx`**, **`frontend/frontend/features/README.md`** |
 
 ---
 

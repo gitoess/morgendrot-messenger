@@ -54,7 +54,7 @@
 | **`command-response-types.ts`** | `CommandResponse`, `StatusResponse` (Dashboard-Legacy-Typen) |
 | **`dashboard-rest.ts`** | `getConfig`, `setConfig`, `getCurrentIds`, `getPackageIdHistory`, `getConnectAddresses`, `checkChainReachable` |
 | **`einsatz-role-templates.ts`** | `fetchEinsatzRoleTemplates`, `saveEinsatzRoleTemplates` — Boss/Werkstatt (`.morgendrot-einsatz-templates.json`) |
-| **`offline-queue.ts`** | **§ H.3g Paket 7 (Vorbereitung):** Client-Mailbox-Outbox (`PENDING`/`SYNCING`/`SENT`-Konstanten, persistiert vorerst nur `pending`); **`timeIsTrusted`** (§ **H.6c**), monotonische **`clientOutSeq`** (Ausgangs-Reihenfolge); Opt-in **`localStorage`** `morgendrot.offlineMailboxQueue` = `1`; Drain im Status-Poll neben Delayed-Mirror. **Nicht** Settlement-Relay / § **H.12**. |
+| **`offline-queue.ts`** | **§ H.3g Paket 7 (Vorbereitung):** Client-Mailbox-Outbox (`PENDING`/`SYNCING`/`SENT`-Konstanten, persistiert vorerst nur `pending`); **`timeIsTrusted`** (§ **H.6c**), monotonische **`clientOutSeq`** (Ausgangs-Reihenfolge); Opt-in **`localStorage`** `morgendrot.offlineMailboxQueue` = `1`; Hybrid-Drain (Direkt vs. **`/api`**, vgl. **`direct-iota-plain-submit.ts`**). **Nicht** Settlement-Relay / § **H.12** — Retry-**Ist** in **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.1. Nach Änderungen: **`npm run test:h15-direct-submit`** (Root) bzw. **`TESTING.md`** Ritual **5c**. |
 
 Weitere Helfer bleiben bewusst unter **`lib/`** (z. B. `api-fetch-text.ts`, `api-simple-ok-envelope.ts`).
 

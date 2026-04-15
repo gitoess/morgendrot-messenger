@@ -16,6 +16,8 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 **Handy-first § H.15 — Stufe 2 (Direkt-Submit, kontrolliert):** Protokoll + Abhaken **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**; nach Änderungen an **`direct-iota-plain-submit.ts`** / Puls-Modus: im Ordner **`frontend/`** **`npm run test:unit`** (u. a. **`direct-iota-plain-submit.test.ts`**). Architektur-Stufen: **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4.
 
+**Handy-first § H.15 — Stufe 4 (Relay optional, Ritual):** Beide Sendewege im **Qualitätsritual** verankert — Tabellenzeile **5c** unten; Kurzcheckliste **§ 4** in **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**. **Default** = Direkt; **„Nur Morgendrot-API“** erzwingt **`/api`** für Klartext-Mailbox (kein paralleler „heimlicher“ RPC-Pfad).
+
 ---
 
 ## Qualitätsritual vor Merge (Phase A)
@@ -32,6 +34,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 | 4 | **`npm run check:circular`** | madge, Zyklen unter **`./frontend`** |
 | 5 | **`npm run test:unit`** | Vitest (RTL + Lib-Tests); äquivalent von Root: **`npm run test:frontend-unit`** |
 | 5b | **`npm run test:core`** | **`@morgendrot/core`** (Offline-Mailbox, **`canonical_msg_ref`**, device-time, …) — bei Änderungen unter **`packages/morgendrot-core/**`** |
+| 5c | **`npm run test:h15-direct-submit`** | Nur **`direct-iota-plain-submit.test.ts`** (§ **H.15** Direkt vs. Relay / Frühabbrüche) — bei Änderungen an **`direct-iota-plain-submit.ts`**, **`chat-view-pulse-settings.tsx`**, **`offline-queue.ts`** (Hybrid-Send) |
 | 6 | *(zurück nach Root)* **`npm run validate:ui`** | UI-Referenzen |
 | 7 | **`npm run test:smoke`** | `validate:ui` + **`npm run test`** (Modultests ohne Chain) |
 

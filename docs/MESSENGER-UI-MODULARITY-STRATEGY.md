@@ -137,3 +137,5 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 *Stand: 2026-03-29 — in den Fahrplan aufgenommen als **§ H.1b**; Erfolgskriterium an Merge-Ritual (**`TESTING.md`**) und CI **`frontend-checks`** angeglichen. **§ 5 Schritt-für-Schritt** ergänzt 2026-04-15.*
 
 **Fortschritt 2026-04-15:** Messenger-Chain-Realworld **`test:messages*`** + Smoke/Vitest grün; **§ H.1b Stufe 2–3:** **`pickInboxRawMessages`** → **`lib/inbox-pick-raw-messages.ts`**, Re-Export in **`features/inbox/inbox-map-messages.ts`**, **`lib/api/inbox.ts`** importiert **`pick`** aus **`lib/`**; Vitest **`lib/inbox-pick-raw-messages.test.ts`**. Nächste Scheibe: bei messbaren Querimports ESLint nachziehen oder weiter **`lib/`**-Helfer — nicht parallel Mesh-Kern (**`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** „Als Nächstes“).
+
+**Fortschritt 2026-04-28:** **§ H.1b** Mini-Scheibe — **`SettingsWalletSessionCard`** in **`frontend/frontend/components/views/settings-wallet-session-card.tsx`** (aus **`settings-view.tsx`**); Verweis in **`frontend/frontend/features/README.md`**.

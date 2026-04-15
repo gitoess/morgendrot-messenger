@@ -8,7 +8,8 @@
 
 ## 0. Automatisierte Mindestabdeckung
 
-- Root im Ordner **`frontend/`:** **`npm run test:unit`** — enthält **`direct-iota-plain-submit.test.ts`** (Frühabbrüche: Modus „Nur API“, Drain aus).
+- **Schnell (Repo-Root):** **`npm run test:h15-direct-submit`** — nur **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`** (Modus „Nur API“, Drain aus).
+- **Voll im Ordner `frontend/`:** **`npm run test:unit`** — gesamter Vitest-Lauf inkl. dieser Datei.
 
 ---
 
@@ -44,4 +45,24 @@
 
 ---
 
-*Stand: 2026-04-28 — Abgleich Fahrplan § H.15 Stufe 2.*
+## 4. Anhang: **Stufe 4** — Direkt vs. Morgendrot-Relay im Ritual
+
+**Zielbild:** **Direkt** bleibt Default; **Relay** = nur **`/api`**, sobald die Basis da ist — siehe **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** Stufe **4**.
+
+| # | Check (Release / größerer Messenger-PR) |
+|---|----------------------------------------|
+| 1 | **`npm run test:h15-direct-submit`** (Root) **grün**. |
+| 2 | **Puls:** Modus **Direkt** → Stufe **2** § 2 Schritte **1–3** mindestens einmal manuell oder dokumentiert erledigt. |
+| 3 | **Puls:** Modus **Nur Morgendrot-API** → Klartext **ohne** funktionierenden Fullnode-Pfad (kein stiller RPC-Submit); verschlüsselter Versand weiter über **`/api`**. |
+| 4 | Vollständiges Merge-Ritual: **`TESTING.md`** § *Qualitätsritual vor Merge* (inkl. **`test:unit`** / **`test:core`** bei Core-Änderungen). |
+
+---
+
+## 5. Vor dem Feldtest (Stufe 2 — technische Vorprüfung)
+
+- Root: **`npm run test:smoke`**; bei Änderungen unter **`frontend/frontend/`** zusätzlich **`npm run test:frontend-unit`**.
+- Schnell nur H.15-Direkt: **`npm run test:h15-direct-submit`**.
+
+---
+
+*Stand: 2026-04-28 — Stufe 2; Anhang Stufe 4 + Feldtest-Vorprüfung 2026-04-28.*
