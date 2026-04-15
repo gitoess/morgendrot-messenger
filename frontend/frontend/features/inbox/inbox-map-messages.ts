@@ -5,6 +5,7 @@
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
 import { normalizeChatMessageContentForDisplay } from '@/frontend/lib/chat-message-display-normalize'
+import { pickInboxRawMessages as pickInboxRawMessagesImpl } from '@/frontend/lib/inbox-pick-raw-messages'
 
 export type InboxApiRow = {
   sender?: string
@@ -20,18 +21,8 @@ export type InboxApiRow = {
   chainPurgeable?: boolean
 }
 
-/** API liefert oft `data` und `messages` identisch; niemals leeres `data` gegen volles `messages` tauschen. */
-export function pickInboxRawMessages(res: { data?: unknown; messages?: unknown }): unknown[] | undefined {
-  const d = res.data
-  const m = res.messages
-  const arrD = Array.isArray(d) ? d : null
-  const arrM = Array.isArray(m) ? m : null
-  if (arrD && arrD.length > 0) return arrD
-  if (arrM && arrM.length > 0) return arrM
-  if (arrD) return arrD
-  if (arrM) return arrM
-  return undefined
-}
+/** Re-Export: Implementierung in `lib/inbox-pick-raw-messages.ts` (**§ H.1b** — reine Inbox-Helfer unter `lib/`). */
+export const pickInboxRawMessages = pickInboxRawMessagesImpl
 
 export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
   const mapped: Message[] = raw.map((m, i) => {

@@ -28,6 +28,9 @@ const restrictedImportsMsgAttachmentsFromInbox =
 
 export default tseslint.config(
   {
+    ignores: ['**/.next/**', '**/node_modules/**', '**/dist/**'],
+  },
+  {
     files: ['frontend/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tseslint.parser,

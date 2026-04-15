@@ -1,24 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
-import { mapInboxApiRowsToMessages, pickInboxRawMessages, type InboxApiRow } from './inbox-map-messages'
-
-describe('pickInboxRawMessages', () => {
-  it('bevorzugt nicht-leeres data gegenüber messages', () => {
-    expect(pickInboxRawMessages({ data: [{ a: 1 }], messages: [{ b: 2 }] })).toEqual([{ a: 1 }])
-  })
-
-  it('fällt auf messages zurück wenn data leer', () => {
-    expect(pickInboxRawMessages({ data: [], messages: [{ x: 1 }] })).toEqual([{ x: 1 }])
-  })
-
-  it('leeres data-Array wenn messages fehlt', () => {
-    expect(pickInboxRawMessages({ data: [] })).toEqual([])
-  })
-
-  it('undefined wenn weder Arrays', () => {
-    expect(pickInboxRawMessages({ data: {}, messages: null })).toBeUndefined()
-  })
-})
+import { mapInboxApiRowsToMessages, type InboxApiRow } from './inbox-map-messages'
 
 describe('mapInboxApiRowsToMessages', () => {
   it('mappt sender, Inhalt und Mailbox-Felder', () => {
