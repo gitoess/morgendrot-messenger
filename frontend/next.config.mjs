@@ -15,19 +15,33 @@ const MORGENDROT_API_INTERNAL = (
   process.env.MORGENDROT_API_INTERNAL_URL || 'http://127.0.0.1:3342'
 ).replace(/\/$/, '')
 
-/** Dev: Next 16+ — Zugriff auf /_next/* von anderem Host (localhost vs 127.0.0.1 vs Handy-LAN). */
+/**
+ * Next 16 `allowedDevOrigins`: Hostname bzw. `host:port` (siehe nextjs.org/docs/…/allowedDevOrigins).
+ * Volle URLs aus `.env` (z. B. `http://192.168.…:3341`) hier auf `host`/`host:port` normalisieren.
+ */
+function normalizeAllowedDevOrigin(entry) {
+  const s = entry.trim()
+  if (!s) return null
+  if (s.includes('://')) {
+    try {
+      return new URL(s).host
+    } catch {
+      return null
+    }
+  }
+  return s
+}
+
 const extraDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS || '')
   .split(',')
-  .map((s) => s.trim())
+  .map(normalizeAllowedDevOrigin)
   .filter(Boolean)
+
+const defaultDevOrigins = ['localhost', '127.0.0.1', 'localhost:3341', '127.0.0.1:3341']
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  allowedDevOrigins: [
-    'http://localhost:3341',
-    'http://127.0.0.1:3341',
-    ...extraDevOrigins,
-  ],
+  allowedDevOrigins: [...new Set([...defaultDevOrigins, ...extraDevOrigins])],
   /* @morgendrot/shared + @morgendrot/core: lokale file:-Pakete — Next transpiliert .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md, docs/MORGENDROT-CORE-PACKAGE-PLAN.md). */
   transpilePackages: [
     '@meshtastic/core',
