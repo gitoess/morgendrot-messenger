@@ -43,6 +43,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. Root: **`npm run check:pwa-desk`** (= A+B), **`check:pwa-desk:full`** (+ C) — **`scripts/check-pwa-manual-desk.mjs`**; Lücken-Tabelle **Teil-Automatisierung**. |
 | 2026-04-15 | ✓ | ✓ (8 Dateien) | — | **A+B** (`npm run check:pwa-desk`) nach Messenger-/Chain-Testrunde + Doku-Update; **C**/`full` bei nächstem Release-Zyklus. |
 | 2026-04-16 | ✓ | ✓ (8 Dateien) | ✓ | **A+B+C** (`npm run check:pwa-desk:full`); Next **16.1.6**; **`frontend/next-env.d.ts`** → `./.next/types/routes.d.ts` nach Production-Build. Manuelle **L1–L5** (`§ H.2`) weiter separat. |
+| 2026-03-28 | ✓ | ✓ (8 Dateien) | ✓ | **§ C.0b / § H.2:** `check:pwa-desk` + `check:pwa-desk:full`; Handbook-Sync (**`PWA-HANDBUCH-OFFLINE.md`** u. a.); **`next-env.d.ts`** nach `next build`. |
 
 ---
 
