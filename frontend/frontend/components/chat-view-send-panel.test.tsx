@@ -184,6 +184,14 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(screen.getByText(/2 Nachrichten warten auf die Basis/)).toBeInTheDocument()
   })
 
+  it('blendet Mailbox-Warteschlange aus wenn offlineMailboxQueuePending=0 (§ H.1a)', () => {
+    const { container } = render(
+      <ChatViewSendPanel {...baseSendPanel({ offlineMailboxQueuePending: 0 })} />
+    )
+    expect(screen.queryByText(/Mailbox-Warteschlange/)).not.toBeInTheDocument()
+    expect(primarySend(container)).toBeEnabled()
+  })
+
   it('zeigt § H.6c-Hinweis wenn Einträge mit unverifizierter Zeit anstehen', () => {
     render(
       <ChatViewSendPanel
