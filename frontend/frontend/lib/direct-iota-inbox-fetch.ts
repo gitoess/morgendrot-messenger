@@ -1,7 +1,8 @@
 'use client'
 
 /**
- * §6.B.4: Mailbox-Posteingang per Fullnode — ohne `/api` `/inbox` (Klartext und/oder verschlüsselt, Entschlüsselung im Browser).
+ * §6.B.4: Mailbox-Posteingang per Fullnode (Klartext und/oder verschlüsselt, Entschlüsselung im Browser).
+ * Merge mit `/inbox` steuert **`use-chat-view-inbox`** (RPC vor API).
  */
 
 import {

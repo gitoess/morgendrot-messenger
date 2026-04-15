@@ -3,6 +3,9 @@
 /**
  * Posteingang: Mailbox-Fetch (IOTA/Backend), Merge mit lokalen Mesh-Zeilen, Dedup.
  * Standard: 50 Nachrichten pro Seite; „Weitere laden“ holt ältere Chunks (offset).
+ *
+ * **RPC vor API (§6.B.4):** Wenn der Direkt-Fullnode-Pfad möglich ist, kommt die Kette zuerst;
+ * `/inbox` ergänzt (Archive, Index-Verzug). Gleiche `dedupKey` → Eintrag von der Chain gewinnt.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -57,26 +60,42 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             offset,
             packageIdOverride: pkg,
           })
-          // Ohne `/inbox`, wenn Fullnode-Zeilen da sind (Klartext und/oder entschlüsselt); sonst API.
-          if (direct.ok && direct.rows.length > 0) {
-            const mapped: Message[] = mapRows(direct.rows)
-            if (mode === 'reset') {
-              mailboxOffsetRef.current = mapped.length
-            } else {
-              mailboxOffsetRef.current += mapped.length
+          // Kette zuerst (Wahrheit); Basis `/inbox` nur ergänzend — gleiche Seite parallel.
+          if (direct.ok) {
+            const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset)
+            const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
+            const rawApi = pickInboxRawMessages(resLoose)
+            const rpcMapped = mapRows(direct.rows as InboxApiRow[])
+            const apiMapped =
+              res.ok && rawApi != null ? mapRows(rawApi as InboxApiRow[]) : ([] as Message[])
+            if (!res.ok && direct.rows.length === 0) {
+              setLoadError(
+                (res as { error?: string; message?: string }).error ||
+                  (res as { message?: string }).message ||
+                  'Posteingang konnte nicht geladen werden.'
+              )
             }
-            if (mode === 'append' && mapped.length === 0) {
+            const mergedPage = mergeAllMessages([...apiMapped, ...rpcMapped])
+            const rpcN = direct.rows.length
+            const apiN = apiMapped.length
+            const stride = Math.max(rpcN, apiN)
+            if (mode === 'reset') {
+              mailboxOffsetRef.current = offset + stride
+            } else {
+              mailboxOffsetRef.current += stride
+            }
+            if (mode === 'append' && stride === 0) {
               setInboxHasMore(false)
             } else {
-              setInboxHasMore(mapped.length >= PAGE_SIZE)
+              setInboxHasMore(stride >= PAGE_SIZE)
             }
             setMessages((prev) => {
               const meshLocal = prev.filter((m) => m.transports?.includes('mesh'))
               if (mode === 'reset') {
-                return mergeAllMessages([...mapped, ...meshLocal])
+                return mergeAllMessages([...mergedPage, ...meshLocal])
               }
               const prevMailbox = prev.filter((m) => !m.transports?.includes('mesh'))
-              return mergeAllMessages([...prevMailbox, ...mapped, ...meshLocal])
+              return mergeAllMessages([...prevMailbox, ...mergedPage, ...meshLocal])
             })
             refreshContactDirectory()
             return

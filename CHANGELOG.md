@@ -13,6 +13,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 ### Messenger (PWA)
 
 - **§6.B.4 Stufe 1:** Posteingang **Klartext-Mailbox** per Fullnode (`fetchPlaintextMailboxInboxRows` / gemischter RPC, **`use-chat-view-inbox`**) ohne `/api/inbox`, wenn Snapshot/Flags wie Direkt-Klartext-Senden und Zeilen > 0; sonst weiter `/inbox`.
+- **§6.B.4:** **`use-chat-view-inbox`** — **RPC vor API:** bei erreichbarem Direkt-Fullnode-Pfad zuerst Chain, **`/inbox`** parallel als Ergänzung; gleicher `dedupKey` → Chain-Eintrag gewinnt (Archive / Basis-Verzug).
 - **§6.B.4 Stufe 2:** Posteingang **verschlüsselte Mailbox** (`MsgKey`) per Fullnode + Entschlüsselung im Client (**`tryFetchDirectMailboxInboxViaIota`**, Chat-ECDH); gemeinsam mit Klartext über **`fetchMailboxInboxRpcRows`**. Verschlüsselt nur mit **Direkt-Mailbox-Drain** (`localStorage`) wie Direkt-Submit.
 - **Puls / H.15:** Manuelle Ketten-IDs (Package, Mailbox, Absender) inkl. optional geschätzter Flags; **Chat-ECDH** (Peer-Pub in `localStorage`, JWK nur RAM) für verschlüsselten **Direkt-Mailbox-Drain** in der Offline-Warteschlange; **`@morgendrot/core`**: PTB **`store_encrypted_message`** (ohne Credits).
 - **§ H.15 Stufe 0 — IOTA-Sendeweg:** Chat **Puls**-Einstellungen: Modus **Direkt (Standard)** vs. **Nur Morgendrot-API** (`localStorage` **`morgendrot.iotaSubmitMode`** = `relay` oder leer). Bei „Nur API“: kein Klartext-Mailbox-Upload per Fullnode; Offline-Queue und Drain berücksichtigen den Modus.
