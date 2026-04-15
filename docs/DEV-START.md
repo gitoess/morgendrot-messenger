@@ -54,7 +54,14 @@ npm run dev
 5. **Handy** (gleiches WLAN): Chrome öffnen → **`http://<PC-LAN-IP>:3341`** (wirklich `http://`, nicht `https://` zur IP). Bei Bedarf **Windows-Firewall** für **TCP 3341** freigeben.
 6. **Installieren:** Chrome-Menü → **„App installieren“** / **Zum Startbildschirm hinzufügen** (je nach Android-Version).
 7. **Messenger nutzen:** App öffnen → Tresor **entsperren** wie am PC (siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`**).
-8. **Fehler „failed to load chunk“ / `Loading chunk … failed`:** meist **alter Service-Worker + neuer `next build`** (Chunk-Hashes weichen ab). **Einmal:** Chrome → Seiteninfo → **Speicher/Daten löschen** für diese Origin (oder installierte PWA deinstallieren), danach Seite neu öffnen und neu installieren. Nach **`sw.js`‑Änderung** (z. B. Version **`morgendrot-sw-7`**) einmal **hart neu laden** bzw. Tab schließen, damit die neue **`/sw.js`** greift.
+8. **Fehler „failed to load chunk“ / `Loading chunk … failed`:** meist **alter Service-Worker + neuer `next build`** (Chunk-Hashes weichen ab). **Einmal:** Chrome → Seiteninfo → **Speicher/Daten löschen** für diese Origin (oder installierte PWA deinstallieren), danach Seite neu öffnen und neu installieren. Nach **`sw.js`‑Änderung** (Versionspräfix **`morgendrot-sw-*`** in `frontend/public/sw.js`) einmal **hart neu laden** bzw. Tab schließen, damit die neue **`/sw.js`** greift.
+
+#### PWA nach USB-Abzug: „Keine Netzverbindung“ — Zielbild klären
+
+- **`adb reverse tcp:3341 …`** leitet nur **solange das USB-Kabel** steckt den **lokalen Port des Handys** `127.0.0.1:3341` zum PC. Die installierte PWA merkt sich die **Start-URL** (z. B. `http://127.0.0.1:3341/`). **Ohne Kabel** ist `127.0.0.1` auf dem Handy **das Handy selbst** — dort läuft kein Morgendrot-Server → **offline**, Meldung **„Keine Netzverbindung“** ist erwartbar.
+- **Für Nutzung ohne USB (im selben WLAN):** PWA **nicht** von `127.0.0.1` installieren, sondern von **`http://<PC-LAN-IP>:3341`** (Schritt 4–6 oben). Der **PC** muss **`npm run start:prod:lan`** (oder `dev:lan`) weiter ausführen — die App ist ein **Client zur Basis**, keine vollständig in sich geschlossene „nur Handy“-App.
+- **„Ohne PC“ im Sinne von Feld/Einsatz:** Morgendrot braucht eine **erreichbare Basis** (API + ggf. Next öffentlich). Üblich: **Deploy** (HTTPS-URL), Handy nutzt dieselbe URL — nicht `adb reverse`.
+- **Handbuch offline:** Der Service Worker cacht **`/handbook/*.md`**. Die **Next-Route** **`/handbook`** (React) lädt die Shell wie jede Seite von der Basis — **ohne erreichbare Basis** ist die Handbuch-**Oberfläche** oft nicht nutzbar, auch wenn einzelne `.md`-Dateien im Cache liegen. Das ist eine **PWA-/Offline-Grenze**, kein vollwertiger Offline-Reader-Ersatz.
 
 **Schneller ohne Build (nur Entwicklung):** statt Schritt 2–3 **`npm run dev:lan`** im Root — gleiche LAN-URL, aber Hot-Reload; `NEXT_ALLOWED_DEV_ORIGINS` wie oben setzen, falls `/ _next /`-Cross-Origin-Warnungen auftreten.
 

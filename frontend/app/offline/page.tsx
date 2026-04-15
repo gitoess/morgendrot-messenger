@@ -12,8 +12,22 @@ export default function OfflinePage() {
       <div className="max-w-md text-center space-y-3">
         <h1 className="text-xl font-semibold tracking-tight">Keine Netzverbindung</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Die Basis-API (<span className="font-mono text-xs">/api/*</span>) ist offline nicht erreichbar. Bereits
-          geladene App-Teile und das Handbuch können nach vorherigem Besuch aus dem Cache nutzbar sein.
+          Die Morgendrot-<strong>API</strong> (<span className="font-mono text-xs">/api/*</span>) läuft auf dem
+          Rechner/Server, den die PWA per Netz erreichen muss — Chat, Wallet und Kette sind ohne diese Basis nicht
+          nutzbar.
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          <strong>Wichtig bei Installation über</strong> <span className="font-mono text-xs">127.0.0.1</span> mit{' '}
+          <span className="font-mono text-xs">adb reverse</span>: Ohne USB-Kabel zeigt{' '}
+          <span className="font-mono text-xs">127.0.0.1</span> auf <em>dieses</em> Handy — der PC ist dann nicht
+          erreichbar. Für Nutzung ohne Kabel (im Heim-WLAN): PWA von der <strong>WLAN-IP des PCs</strong> aus
+          installieren (z. B. <span className="font-mono text-xs">http://192.168.…:3341</span>), solange dort{' '}
+          <span className="font-mono text-xs">npm run start:prod:lan</span> läuft.
+        </p>
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Die Handbuch-<strong>Markdown-Dateien</strong> unter <span className="font-mono text-xs">/handbook/*.md</span>{' '}
+          können vom Service Worker gecacht werden; die Next-Seite <span className="font-mono text-xs">/handbook</span>{' '}
+          lädt trotzdem zuerst wie jede Route die App von der Basis — ohne Netz zur Basis oft nicht nutzbar.
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-3 w-full max-w-sm justify-center">
