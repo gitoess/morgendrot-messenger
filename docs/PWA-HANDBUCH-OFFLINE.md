@@ -37,6 +37,8 @@
 
 **Sendeweg in der PWA (Stufe 0, § H.15):** Unter **Chat → Puls (Einstellungen)** kann der Modus **„Direkt (Standard)“** vs. **„Nur Morgendrot-API“** gewählt werden. Persistenz: **`localStorage`**-Schlüssel **`morgendrot.iotaSubmitMode`** — bei Wert **`relay`** sendet die Klartext-Mailbox **nicht** mehr per Fullnode aus dem Browser; es gilt dann **`/api`**, sobald die Basis erreichbar ist.
 
+**Posteingang per Fullnode (§6.B.4):** Ohne **`/api/inbox`**, wenn der Messenger Klartext- und/oder (mit aktivem **Direkt-Mailbox-Drain** und Chat-ECDH) verschlüsselte Mailbox-Einträge vom Fullnode lesen und anzeigen kann; sonst Posteingang wie gewohnt über die Basis.
+
 ## 6. Pflege
 
 - Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).

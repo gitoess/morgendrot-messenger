@@ -20,7 +20,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 **Handy-first § H.15 — Stufe 4 (Relay optional, Ritual):** Beide Sendewege im **Qualitätsritual** verankert — Tabellenzeile **5c** unten; Kurzcheckliste **§ 4** in **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**. **Default** = Direkt; **„Nur Morgendrot-API“** erzwingt **`/api`** für Klartext-Mailbox (kein paralleler „heimlicher“ RPC-Pfad).
 
-**Handy-first §6.B.4 — Stufe 1 (Klartext-Inbox per Fullnode):** Nach Änderungen an **`direct-iota-inbox-fetch.ts`**, **`use-chat-view-inbox.ts`**, **`mailbox-inbox-plain-rpc.ts`**: **`npm run test:unit`** im Ordner **`frontend/`** (u. a. **`direct-iota-inbox-fetch.test.ts`**) und **`npm run test:core`** im Root (u. a. **`mailbox-inbox-plain-rpc.test.ts`**).
+**Handy-first §6.B.4 — Posteingang per Fullnode (Klartext + verschlüsselt):** Nach Änderungen an **`direct-iota-inbox-fetch.ts`**, **`use-chat-view-inbox.ts`**, **`mailbox-inbox-plain-rpc.ts`**, **`mailbox-inbox-mixed-rpc.ts`**: **`npm run test:unit`** im Ordner **`frontend/`** (u. a. **`direct-iota-inbox-fetch.test.ts`**) und **`npm run test:core`** im Paket **`packages/morgendrot-core`** (u. a. **`mailbox-inbox-plain-rpc.test.ts`**, **`mailbox-inbox-mixed-rpc.test.ts`**).
 
 ---
 

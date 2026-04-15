@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { tryFetchPlaintextInboxViaDirectIota } from '@/frontend/lib/direct-iota-inbox-fetch'
+import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { setIotaSubmitMode } from '@/frontend/lib/direct-iota-plain-submit'
 
 describe('direct-iota-inbox-fetch', () => {
@@ -34,7 +34,7 @@ describe('direct-iota-inbox-fetch', () => {
 
   it('bricht bei Nur-API-Modus ab', async () => {
     setIotaSubmitMode('relay')
-    const r = await tryFetchPlaintextInboxViaDirectIota({ limit: 10, offset: 0 })
+    const r = await tryFetchDirectMailboxInboxViaIota({ limit: 10, offset: 0 })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toMatch(/Nur Morgendrot-API/)
   })

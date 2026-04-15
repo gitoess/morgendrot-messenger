@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInbox } from '@/frontend/lib/api'
-import { tryFetchPlaintextInboxViaDirectIota } from '@/frontend/lib/direct-iota-inbox-fetch'
+import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { mergeAllMessages, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
@@ -52,12 +52,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
       try {
         if (!useBossView) {
-          const direct = await tryFetchPlaintextInboxViaDirectIota({
+          const direct = await tryFetchDirectMailboxInboxViaIota({
             limit: PAGE_SIZE,
             offset,
             packageIdOverride: pkg,
           })
-          // Nur ohne `/inbox`, wenn der Fullnode-Pfad Klartext liefert; sonst API (z. B. nur verschlüsselt).
+          // Ohne `/inbox`, wenn Fullnode-Zeilen da sind (Klartext und/oder entschlüsselt); sonst API.
           if (direct.ok && direct.rows.length > 0) {
             const mapped: Message[] = mapRows(direct.rows)
             if (mode === 'reset') {

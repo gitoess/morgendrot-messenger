@@ -15,6 +15,7 @@ describe('mailbox-inbox-plain-rpc', () => {
 
   it('messagingStructType', () => {
     expect(messagingStructType(pkg, 'PlainMsgKey')).toBe(`${pkg}::messaging::PlainMsgKey`)
+    expect(messagingStructType(pkg, 'MsgKey')).toBe(`${pkg}::messaging::MsgKey`)
   })
 
   it('normalizeMailboxAddress', () => {

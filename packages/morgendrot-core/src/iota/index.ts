@@ -19,6 +19,13 @@ export {
   coerceMoveU8Vector,
 } from './mailbox-inbox-plain-rpc'
 export type { PlainMailboxRowForInbox, FetchPlaintextMailboxInboxInput } from './mailbox-inbox-plain-rpc'
+export { fetchMailboxInboxRpcRows } from './mailbox-inbox-mixed-rpc'
+export type {
+  MailboxInboxRpcRow,
+  MailboxInboxRpcPlainPiece,
+  MailboxInboxRpcEncryptedPiece,
+  FetchMailboxInboxRpcInput,
+} from './mailbox-inbox-mixed-rpc'
 export { signAndExecuteTransactionWithSigner } from './sign-and-execute'
 export type { DirectSignAndExecuteResult } from './sign-and-execute'
 export { collectGasCoinRefs, attachGasPaymentForOwner } from './gas-payment'
