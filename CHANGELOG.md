@@ -12,6 +12,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **UX (Posteingang / Dashboard):** **Weiterleiten** — flache Menüeinträge, **Sonner-Toast**, Scroll zu **`#chat-composer-message`**; **Protokoll** — markierte Zeilen mit Rand + **Protokoll**-Badge; **Einsatz-Profil** im privaten Chat (**`chat-view-einsatz-profil-inline.tsx`**); **PWA + IOTA-Überweisung** auf dem Haupt-Dashboard (**`dashboard-pwa-install-card`**, **`dashboard-iota-transfer-card`**); Einstellungen mit Kurzverweis. **Einsatz-Rollen-Vorlagen:** Text „Geräte / Worker“.
 - **§6.B.4 Stufe 1:** Posteingang **Klartext-Mailbox** per Fullnode (`fetchPlaintextMailboxInboxRows` / gemischter RPC, **`use-chat-view-inbox`**) ohne `/api/inbox`, wenn Snapshot/Flags wie Direkt-Klartext-Senden und Zeilen > 0; sonst weiter `/inbox`.
 - **§6.B.4:** **`use-chat-view-inbox`** — **RPC vor API:** bei erreichbarem Direkt-Fullnode-Pfad zuerst Chain, **`/inbox`** parallel als Ergänzung; gleicher `dedupKey` → Chain-Eintrag gewinnt (Archive / Basis-Verzug).
 - **§6.B.4 Stufe 2:** Posteingang **verschlüsselte Mailbox** (`MsgKey`) per Fullnode + Entschlüsselung im Client (**`tryFetchDirectMailboxInboxViaIota`**, Chat-ECDH); gemeinsam mit Klartext über **`fetchMailboxInboxRpcRows`**. Verschlüsselt nur mit **Direkt-Mailbox-Drain** (`localStorage`) wie Direkt-Submit.
@@ -27,6 +28,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Dokumentation
 
+- **§ H.17 (Roadmap):** Dashboard vs. **Volle Oberfläche** vs. Chat-**Boss-Ansicht** vs. **DeviceRadar**; Wanderer/Lite — Boss-Teile und Platzhalter-Kacheln später ausblendbar (**`docs/ROADMAP-FAHRPLAN.md`**).
 - **§ H.16 (Roadmap):** Telefonbuch mit Klarnamen, QR Einlesen/Anzeigen, Boss-LAN-Onboarding (Helfer scannen Install-QR); kritische Leitplanken (HTTPS, Same-Origin, § H.12, **§ H.3b** QR-Schema); Verweis aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 6.
 - **`docs/PWA-MANUAL-CHECKS.md`:** Protokoll-Tabelle chronologisch sortiert; doppelte **2026-03-28**-Zeile zu einer Eintragung zusammengeführt.
 - **`docs/OPERATIONS-SNAPSHOT-2026-03.md`:** Nachtrag **2026-03-28** (Doku-Pflege, Verweis PWA-Protokoll / Handy vs. Schreibtisch).

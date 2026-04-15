@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, type ChangeEvent } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Settings,
   Wifi,
@@ -13,9 +13,7 @@ import {
   Package,
   Wallet,
   Server,
-  Smartphone,
   KeyRound,
-  Users,
   ListOrdered,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -24,28 +22,13 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   getStatus,
   revealVaultSignerImport,
-  transferCoins,
   restartBackend,
-  applyInitialProfileProvisioning,
   fetchEinsatzRoleTemplates,
   saveEinsatzRoleTemplates,
 } from '@/frontend/lib/api'
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
-import {
-  extractInitialProfileFromPaste,
-  queueInitialProfileForNextApply,
-  clearPendingInitialProfile,
-  persistOfflineBriefingFromProfile,
-  LS_OFFLINE_BRIEFING_DISPLAY,
-} from '../../lib/initial-profile-import'
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
-
-/** Minimal typing for `beforeinstallprompt` (nicht überall als DOM-Typ geladen). */
-type DeferredPwaPrompt = {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -74,30 +57,14 @@ export function SettingsView({
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState<string | null>(null)
   
-  // Transfer state
-  const [transferTo, setTransferTo] = useState('')
-  const [transferAmount, setTransferAmount] = useState('')
-  const [transferring, setTransferring] = useState(false)
-  const [transferStatus, setTransferStatus] = useState<'idle' | 'success' | 'error'>('idle')
-  const [transferMsg, setTransferMsg] = useState('')
   const [restarting, setRestarting] = useState(false)
   const [restartMsg, setRestartMsg] = useState('')
-  /** Chrome/Edge/Android: gespeichertes beforeinstallprompt */
-  const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(null)
-  const [pwaStandalone, setPwaStandalone] = useState(false)
 
   /** Recovery phrase / SDK-Import aus Vault (SIGNER=sdk). */
   const [recoveryPw, setRecoveryPw] = useState('')
   const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [recoveryErr, setRecoveryErr] = useState('')
   const [revealedSigner, setRevealedSigner] = useState<string | null>(null)
-
-  /** jsonConfig oder reines initialProfile (JSON) — siehe docs/API-INITIAL-PROFILE.md */
-  const [einsatzProfilJson, setEinsatzProfilJson] = useState('')
-  const [einsatzProfilBusy, setEinsatzProfilBusy] = useState(false)
-  const [einsatzProfilMsg, setEinsatzProfilMsg] = useState('')
-  /** Aus initialProfile.offlineBriefing (lokal, nach Import) */
-  const [offlineBriefingDisplay, setOfflineBriefingDisplay] = useState<string | null>(null)
 
   /** Boss/Werkstatt: `GET/POST /api/einsatz-role-templates` (Roadmap § H.3g Paket 6). */
   const [roleTemplatesJson, setRoleTemplatesJson] = useState('[]')
@@ -191,63 +158,10 @@ export function SettingsView({
     loadStatus()
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const v = localStorage.getItem(LS_OFFLINE_BRIEFING_DISPLAY)
-      setOfflineBriefingDisplay(v && v.trim() ? v : null)
-    } catch {
-      setOfflineBriefingDisplay(null)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const mq = window.matchMedia('(display-mode: standalone)')
-    const syncStandalone = () => {
-      setPwaStandalone(
-        mq.matches || (window.navigator as Navigator & { standalone?: boolean }).standalone === true
-      )
-    }
-    syncStandalone()
-    mq.addEventListener('change', syncStandalone)
-
-    const onBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferredPwaPrompt(e as unknown as DeferredPwaPrompt)
-    }
-    window.addEventListener('beforeinstallprompt', onBeforeInstall)
-    return () => {
-      mq.removeEventListener('change', syncStandalone)
-      window.removeEventListener('beforeinstallprompt', onBeforeInstall)
-    }
-  }, [])
-
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
     setCopied(key)
     setTimeout(() => setCopied(null), 2000)
-  }
-
-  const handleTransfer = async () => {
-    if (!transferTo || !transferAmount) return
-    setTransferring(true)
-    setTransferStatus('idle')
-    
-    const res = await transferCoins(transferTo, parseFloat(transferAmount))
-    
-    if (res.ok) {
-      setTransferStatus('success')
-      setTransferMsg('Transfer erfolgreich!')
-      setTransferTo('')
-      setTransferAmount('')
-    } else {
-      setTransferStatus('error')
-      setTransferMsg(res.error || 'Transfer fehlgeschlagen')
-    }
-    
-    setTransferring(false)
-    setTimeout(() => setTransferStatus('idle'), 5000)
   }
 
   const handleRestart = async () => {
@@ -291,76 +205,6 @@ export function SettingsView({
     }
   }
 
-  const handlePwaInstallClick = async () => {
-    if (!deferredPwaPrompt) return
-    try {
-      await deferredPwaPrompt.prompt()
-      await deferredPwaPrompt.userChoice
-    } finally {
-      setDeferredPwaPrompt(null)
-    }
-  }
-
-  const handleEinsatzProfilApplyNow = async () => {
-    setEinsatzProfilMsg('')
-    const extracted = extractInitialProfileFromPaste(einsatzProfilJson)
-    if (!extracted) {
-      setEinsatzProfilMsg('Kein gültiges initialProfile: vollständiges JSON oder jsonConfig mit Feld initialProfile.')
-      return
-    }
-    if (!status?.backendOnline) {
-      setEinsatzProfilMsg('Backend offline — zuerst API erreichbar machen.')
-      return
-    }
-    setEinsatzProfilBusy(true)
-    try {
-      const res = await applyInitialProfileProvisioning(extracted)
-      if (res.ok) {
-        persistOfflineBriefingFromProfile(extracted)
-        if (typeof extracted.offlineBriefing === 'string' && extracted.offlineBriefing.trim()) {
-          setOfflineBriefingDisplay(extracted.offlineBriefing.trim())
-        }
-        setEinsatzProfilMsg(res.message || `${res.applied ?? 0} Kontakt(e) übernommen.`)
-      } else {
-        setEinsatzProfilMsg(res.error || 'Import fehlgeschlagen.')
-      }
-    } finally {
-      setEinsatzProfilBusy(false)
-    }
-  }
-
-  const handleEinsatzProfilQueue = () => {
-    setEinsatzProfilMsg('')
-    const extracted = extractInitialProfileFromPaste(einsatzProfilJson)
-    if (!extracted) {
-      setEinsatzProfilMsg('Kein gültiges initialProfile — siehe Hilfetext.')
-      return
-    }
-    queueInitialProfileForNextApply(extracted)
-    persistOfflineBriefingFromProfile(extracted)
-    if (typeof extracted.offlineBriefing === 'string' && extracted.offlineBriefing.trim()) {
-      setOfflineBriefingDisplay(extracted.offlineBriefing.trim())
-    }
-    setEinsatzProfilMsg('Gespeichert. Wird beim nächsten erfolgreichen API-Kontakt automatisch ins Telefonbuch geschrieben.')
-  }
-
-  const handleEinsatzProfilClearQueue = () => {
-    clearPendingInitialProfile()
-    setEinsatzProfilMsg('Warteschlange geleert.')
-  }
-
-  const handleEinsatzProfilFile = (e: ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0]
-    if (!f) return
-    const r = new FileReader()
-    r.onload = () => {
-      setEinsatzProfilJson(typeof r.result === 'string' ? r.result : '')
-      setEinsatzProfilMsg('Datei geladen.')
-    }
-    r.readAsText(f)
-    e.target.value = ''
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -376,113 +220,11 @@ export function SettingsView({
 
       <SettingsWalletSessionCard />
 
-      {/* PWA: zum Home-Bildschirm (Chrome/Edge/Android; Safari iOS: manuell) */}
-      {!pwaStandalone && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-              <Smartphone className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0 flex-1 space-y-2">
-              <h4 className="font-semibold text-foreground">App auf den Startbildschirm</h4>
-              <p className="text-sm text-muted-foreground">
-                Installierte PWAs starten ohne Browser-Leiste. Auf <strong className="text-foreground">iPhone/iPad</strong>{' '}
-                (Safari): Teilen-Menü → <strong className="text-foreground">Zum Home-Bildschirm</strong>.
-              </p>
-              {deferredPwaPrompt ? (
-                <button
-                  type="button"
-                  onClick={() => void handlePwaInstallClick()}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-                >
-                  Installation anbieten
-                </button>
-              ) : (
-              <p className="text-xs text-muted-foreground">
-                Wenn der Browser eine Installation erlaubt (meist HTTPS oder localhost), erscheint hier ein Button –
-                sonst Browser-Menü „App installieren“ nutzen.
-              </p>
-              )}
-              <p className="text-xs text-muted-foreground">
-                <Link href="/handbook" className="text-primary underline hover:no-underline">
-                  Handbuch (Boss-Orientierung, Offline-Hinweise)
-                </Link>{' '}
-                — im Produktionsbuild per Service Worker gecacht.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Einsatz-Profil (initialProfile aus Provisioning / jsonConfig) */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400">
-            <Users className="h-5 w-5" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1 space-y-3">
-            <div>
-              <h4 className="font-semibold text-foreground">Einsatz-Profil / Kontakte</h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                JSON aus dem Boss-Export einfügen: entweder nur <span className="font-mono text-xs">initialProfile</span> oder
-                die gesamte <span className="font-mono text-xs">jsonConfig</span> (enthält{' '}
-                <span className="font-mono text-xs">initialProfile</span>). Wird ins Backend{' '}
-                <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben — siehe{' '}
-                <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
-                <span className="font-mono text-xs">offlineBriefing</span> (Kurznotiz, z. B. Funkabbruch).
-              </p>
-            </div>
-            {offlineBriefingDisplay ? (
-              <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">
-                  Einsatz-Notiz (aus Provisioning)
-                </p>
-                <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
-              </div>
-            ) : null}
-            <Textarea
-              value={einsatzProfilJson}
-              onChange={(e) => setEinsatzProfilJson(e.target.value)}
-              placeholder='{"version":1,"contacts":[],"offlineBriefing":"Bei Funkabbruch: …"}'
-              className="min-h-[120px] font-mono text-xs"
-              spellCheck={false}
-            />
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs font-medium hover:bg-muted">
-                JSON-Datei wählen
-                <input type="file" accept=".json,application/json" className="sr-only" onChange={handleEinsatzProfilFile} />
-              </label>
-              <button
-                type="button"
-                disabled={einsatzProfilBusy || !status?.backendOnline}
-                onClick={() => void handleEinsatzProfilApplyNow()}
-                className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {einsatzProfilBusy ? 'Import…' : 'Jetzt ins Telefonbuch'}
-              </button>
-              <button
-                type="button"
-                onClick={handleEinsatzProfilQueue}
-                className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
-              >
-                Für später merken
-              </button>
-              <button
-                type="button"
-                onClick={handleEinsatzProfilClearQueue}
-                className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent"
-              >
-                Warteschlange leeren
-              </button>
-            </div>
-            {einsatzProfilMsg ? (
-              <p className="text-xs text-muted-foreground" role="status">
-                {einsatzProfilMsg}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </div>
+      <p className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+        <strong className="text-foreground">PWA installieren</strong> und <strong className="text-foreground">IOTA überweisen</strong> liegen
+        auf dem <strong className="text-foreground">Haupt-Dashboard</strong> (Kachel-Ansicht).{' '}
+        <strong className="text-foreground">Einsatz-Profil / Kontakte</strong> im privaten Chat unter „Nachrichten“.
+      </p>
 
       {canManageEinsatzRoleTemplates ? (
         <div className="rounded-xl border border-border bg-card p-4">
@@ -492,10 +234,12 @@ export function SettingsView({
             </div>
             <div className="min-w-0 flex-1 space-y-3">
               <div>
-                <h4 className="font-semibold text-foreground">Einsatz-Rollen-Vorlagen</h4>
+                <h4 className="font-semibold text-foreground">Einsatz-Rollen-Vorlagen (Geräte / Worker)</h4>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Schreibt die Boss-Datei <span className="font-mono text-xs">.morgendrot-einsatz-templates.json</span> am
-                  Backend (gleiche API wie Lite-Provisioning). Spezifikation:{' '}
+                  <strong className="text-foreground">Wozu?</strong> Vorgefertigte <strong>Rollen-Labels und Kurztexte</strong>, die
+                  der Boss beim Anlegen oder Zuweisen von Geräten/Workern nutzen kann (kein Chat-Inhalt). Landet in{' '}
+                  <span className="font-mono text-xs">.morgendrot-einsatz-templates.json</span> am Backend (API wie Lite-Provisioning).
+                  Spezifikation:{' '}
                   <Link
                     href="/handbook/API-EINSATZ-ROLE-TEMPLATES.md"
                     className="text-primary underline hover:no-underline"
@@ -799,57 +543,6 @@ export function SettingsView({
           </div>
         </div>
       )}
-
-      {/* Transfer Card */}
-      <div className="rounded-xl border border-border bg-card p-4">
-        <h4 className="mb-4 font-semibold text-foreground">IOTA überweisen</h4>
-        
-        {transferStatus !== 'idle' && (
-          <div
-            className={cn(
-              'mb-4 flex items-center gap-2 rounded-lg p-3 text-sm font-medium',
-              transferStatus === 'success'
-                ? 'bg-emerald-500/10 text-emerald-400'
-                : 'bg-red-500/10 text-red-400'
-            )}
-          >
-            {transferStatus === 'success' ? <Check className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
-            {transferMsg}
-          </div>
-        )}
-        
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm text-muted-foreground">Empfänger</label>
-            <input
-              type="text"
-              value={transferTo}
-              onChange={(e) => setTransferTo(e.target.value)}
-              placeholder="0x..."
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm text-muted-foreground">Betrag (IOTA)</label>
-            <input
-              type="number"
-              value={transferAmount}
-              onChange={(e) => setTransferAmount(e.target.value)}
-              placeholder="0.1"
-              step="0.01"
-              min="0"
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleTransfer}
-          disabled={transferring || !transferTo || !transferAmount}
-          className="mt-4 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          {transferring ? 'Überweise...' : 'Überweisen'}
-        </button>
-      </div>
 
       {/* Backend neu starten */}
       <div className="rounded-xl border border-border bg-card p-4">

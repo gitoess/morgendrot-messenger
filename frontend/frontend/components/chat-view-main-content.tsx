@@ -21,6 +21,7 @@ import {
   type ChatViewTransportCardProps,
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
+import { ChatViewEinsatzProfilInline } from '@/frontend/components/chat-view-einsatz-profil-inline'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 
 export type ChatViewMainContentProps = ChatViewCoreState
@@ -302,6 +303,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ) : null}
 
       <ChatViewTransportCard {...transportCardProps} />
+
+      {isPrivate ? (
+        <div className="space-y-4">
+          <ChatViewEinsatzProfilInline />
+        </div>
+      ) : null}
 
       {isPrivate && showSetup && (
         <ChatViewSetupPanel

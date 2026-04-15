@@ -331,6 +331,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             </div>
           )}
           <textarea
+            id="chat-composer-message"
             value={message}
             onChange={(e) => onMessageChange(e.target.value)}
             placeholder={MESSAGE_PLACEHOLDER}

@@ -37,6 +37,8 @@ import { ConfigView } from './views/config-view'
 import { WorkerActionCenterView } from './views/worker-action-center-view'
 import { DeviceRadarView } from './views/device-radar-view'
 import { SetupOverlay } from '@/components/setup-overlay'
+import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
+import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
 import {
@@ -954,6 +956,12 @@ export function Dashboard() {
             </button>
           </div>
         ) : null}
+        {!locked && (
+          <div className="mb-6 grid gap-4 sm:grid-cols-2">
+            <DashboardPwaInstallCard />
+            <DashboardIotaTransferCard />
+          </div>
+        )}
         {!locked && !hideFirstStepsCard && (
           <div
             className="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-4 text-sm shadow-sm"
@@ -1009,7 +1017,7 @@ export function Dashboard() {
                     onClick={() => setActiveView({ type: 'settings' })}
                     className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                   >
-                    Einstellungen (Wallet, Einsatz-Profil)
+                    Einstellungen (Wallet, Netzwerk, …)
                   </button>
                 </div>
               </div>

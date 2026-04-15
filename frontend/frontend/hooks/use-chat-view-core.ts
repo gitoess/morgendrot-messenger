@@ -30,6 +30,7 @@ import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-con
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
+import { toast } from 'sonner'
 
 export type UseChatViewCoreParams = {
   isPrivate: boolean
@@ -400,6 +401,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       setMessage(buildForwardComposerPayload(msg, includeSender))
       setStatus('success')
       setStatusMsg('Text ins Eingabefeld übernommen – Empfänger prüfen und senden.')
+      toast.success('Weiterleiten: Text im Nachrichtenfeld — Empfänger prüfen und senden.')
+      requestAnimationFrame(() => {
+        document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
     },
     [clearCompactAttachmentAndSos, setMessage, setStatus, setStatusMsg]
   )

@@ -31,9 +31,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SlideShowCrossfade } from '@/frontend/components/slide-show-crossfade'
@@ -200,7 +197,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
         ) : (
           <li
             key={row.msg.id}
-            className="rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30"
+            className={cn(
+              'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
+              protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]'
+            )}
           >
             {(() => {
               const fromLabel = contactDisplayLabel(contactDirectory, row.msg.from)
@@ -251,6 +251,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       Verschlüsselt
                     </span>
                   )}
+                  {protokollMarkedIds.has(row.msg.id) && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-600 dark:text-amber-300" aria-hidden />
+                      Protokoll
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <time className="tabular-nums" dateTime={new Date(row.msg.timestamp).toISOString()}>
@@ -298,20 +304,16 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     {protokollMarkedIds.has(row.msg.id) ? 'Protokoll-Markierung entfernen' : 'Für Protokoll markieren'}
                   </DropdownMenuItem>
                   {onForwardMessage ? (
-                    <DropdownMenuSub>
-                      <DropdownMenuSubTrigger>
+                    <>
+                      <DropdownMenuItem onClick={() => onForwardMessage(row.msg, true)}>
                         <Forward className="mr-2 h-4 w-4" />
-                        Weiterleiten
-                      </DropdownMenuSubTrigger>
-                      <DropdownMenuSubContent className="w-56">
-                        <DropdownMenuItem onClick={() => onForwardMessage(row.msg, true)}>
-                          Mit Absenderzeile
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
-                          Ohne Absenderadresse
-                        </DropdownMenuItem>
-                      </DropdownMenuSubContent>
-                    </DropdownMenuSub>
+                        Weiterleiten (mit Absenderzeile)
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
+                        <Forward className="mr-2 h-4 w-4" />
+                        Weiterleiten (ohne Absenderadresse)
+                      </DropdownMenuItem>
+                    </>
                   ) : null}
                   <DropdownMenuItem onClick={() => onHideInboxMessageLocal(row.msg.id)}>
                     <MessageCircle className="mr-2 h-4 w-4 opacity-60" />
