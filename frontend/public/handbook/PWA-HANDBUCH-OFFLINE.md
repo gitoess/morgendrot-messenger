@@ -35,6 +35,8 @@
 
 **Übergang (Code noch Node-first):** Ohne laufenden Morgendrot-Node gibt es **kein** zuverlässiges **`/api`** für Relay-Pfade. **Zielbild (ab 2026-04-28):** Messenger **primär** ohne Pflicht-Node — Client-Signatur + **IOTA-RPC**; **`/api`** nur bei **opt-in** Relay — **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**. Für einen **organisatorischen** Notfall-Beacon (vereinbarter **MIST-Transfer**) kann weiterhin ein **eigenständiges IOTA-Wallet** genutzt werden.
 
+**Sendeweg in der PWA (Stufe 0, § H.15):** Unter **Chat → Puls (Einstellungen)** kann der Modus **„Direkt (Standard)“** vs. **„Nur Morgendrot-API“** gewählt werden. Persistenz: **`localStorage`**-Schlüssel **`morgendrot.iotaSubmitMode`** — bei Wert **`relay`** sendet die Klartext-Mailbox **nicht** mehr per Fullnode aus dem Browser; es gilt dann **`/api`**, sobald die Basis erreichbar ist.
+
 ## 6. Pflege
 
 - Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md` oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*`.

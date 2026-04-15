@@ -28,7 +28,7 @@ import {
 } from '@/frontend/lib/direct-iota-chain-context'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { isDirectMailboxDrainEnabled } from '@/frontend/lib/direct-iota-plain-submit'
+import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
 export type UseChatViewMirrorDelayParams = {
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: string) => Promise<void>
@@ -122,6 +122,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       }
       const canDrainWithoutBackend =
         !backendOk &&
+        !isIotaRelayOnlyMode() &&
         isDirectMailboxDrainEnabled() &&
         Boolean(getConfiguredDirectIotaRpcUrl()) &&
         Boolean(getDirectIotaSessionSigner()) &&

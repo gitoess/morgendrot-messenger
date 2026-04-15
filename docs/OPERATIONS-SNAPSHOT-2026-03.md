@@ -4,6 +4,16 @@
 
 ---
 
+## Nachtrag (2026-03-28): Doku-Pflege & PWA-Protokoll
+
+| Thema | Pfad / Hinweis |
+|--------|----------------|
+| PWA-Manual-Protokoll (Tabelle) | **`docs/PWA-MANUAL-CHECKS.md`** — chronologische Sortierung; eine konsolidierte Zeile **2026-03-28** (**§ C.0b** / **§ H.2**: `check:pwa-desk`, `check:pwa-desk:full`, Handbook-Sync, `next-env.d.ts`) |
+| Änderungshistorie (Root) | **`CHANGELOG.md`** — Kurznotizen zu Releases und Doku-Pflege |
+| Handy vs. Schreibtisch | Fahrplan **§ C.0b** Stufe **0**/**2**, **§ H.2**: zuerst **`npm run check:pwa-desk`** / **`check:pwa-desk:full`**, danach manuelle **L1–L5** am Gerät (siehe **`docs/PWA-MANUAL-CHECKS.md`**) |
+
+---
+
 ## Nachtrag (2026-03-29): Fahrplan & Policy (**Doku**)
 
 | Thema | Pfad / § |

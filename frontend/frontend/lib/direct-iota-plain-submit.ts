@@ -14,6 +14,33 @@ import {
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 const LS_DRAIN = 'morgendrot.directMailboxDrain'
+/** H.15 Stufe 0: fehlt oder `client` = Direkt-RPC erlaubt (wenn Drain an); `relay` = kein Klartext-Upload per Fullnode aus der PWA. */
+const LS_SUBMIT_MODE = 'morgendrot.iotaSubmitMode'
+
+export type IotaSubmitMode = 'client' | 'relay'
+
+export function getIotaSubmitMode(): IotaSubmitMode {
+  if (typeof window === 'undefined') return 'client'
+  try {
+    return window.localStorage.getItem(LS_SUBMIT_MODE) === 'relay' ? 'relay' : 'client'
+  } catch {
+    return 'client'
+  }
+}
+
+export function setIotaSubmitMode(mode: IotaSubmitMode): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (mode === 'relay') window.localStorage.setItem(LS_SUBMIT_MODE, 'relay')
+    else window.localStorage.removeItem(LS_SUBMIT_MODE)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isIotaRelayOnlyMode(): boolean {
+  return getIotaSubmitMode() === 'relay'
+}
 
 export function isDirectMailboxDrainEnabled(): boolean {
   if (typeof window === 'undefined') return false
@@ -47,6 +74,12 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   payloadUtf8: string
   nonce: bigint
 }): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  if (isIotaRelayOnlyMode()) {
+    return {
+      ok: false,
+      error: 'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (Klartext-Mailbox) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',
+    }
+  }
   if (!isDirectMailboxDrainEnabled()) {
     return { ok: false, error: 'Direkt-Mailbox-Drain ist aus.' }
   }

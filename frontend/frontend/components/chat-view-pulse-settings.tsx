@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,7 +33,13 @@ import {
   clearDirectIotaSessionSigner,
   getDirectIotaSessionSignerAddress,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { isDirectMailboxDrainEnabled, setDirectMailboxDrainEnabled } from '@/frontend/lib/direct-iota-plain-submit'
+import {
+  getIotaSubmitMode,
+  isDirectMailboxDrainEnabled,
+  setDirectMailboxDrainEnabled,
+  setIotaSubmitMode,
+  type IotaSubmitMode,
+} from '@/frontend/lib/direct-iota-plain-submit'
 
 const LS_STRICT_ONLINE = 'morgendrot.strictOnlineNoMeshFallback'
 const LS_LORA_TX = 'morgendrot.loraTxTier'
@@ -87,6 +94,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [ttlDaysStr, setTtlDaysStr] = useState('30')
   const [mnemoInput, setMnemoInput] = useState('')
   const [sessionAddr, setSessionAddr] = useState<string | null>(null)
+  const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
 
   const hb = apiStatus.heartbeat
   const streams = apiStatus.streams
@@ -101,6 +109,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       setLoraTier(t >= 0 && t <= 2 ? t : 1)
       setDirectRpcUrl(getConfiguredDirectIotaRpcUrl() || '')
       setDirectDrainOn(isDirectMailboxDrainEnabled())
+      setIotaSubmitModeState(getIotaSubmitMode())
       setSessionAddr(getDirectIotaSessionSignerAddress())
       const snap = loadDirectMailboxChainSnapshotFromLs()
       if (snap) setTtlDaysStr(String(snap.ttlDays))
@@ -193,6 +202,19 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         ? 'Strikt: Bei Transport „Online“ kein automatischer Wechsel auf LoRa, wenn IOTA/RPC fehlschlägt.'
         : 'Standard: Online fehlgeschlagen → bei verbundenem Heltec automatisch Funk-Fallback.'
     )
+  }
+
+  const onIotaSubmitModeChange = (v: string) => {
+    const m: IotaSubmitMode = v === 'relay' ? 'relay' : 'client'
+    setIotaSubmitMode(m)
+    setIotaSubmitModeState(m)
+    if (m === 'relay') {
+      setDirectMailboxDrainEnabled(false)
+      setDirectDrainOn(false)
+      setMsg('Nur Morgendrot-API: Direkt-Mailbox-Drain aus.')
+    } else {
+      setMsg('Direkt (Standard): Direkt-Pfad möglich — Drain bei Bedarf einschalten.')
+    }
   }
 
   const onLoraTierChange = (vals: number[]) => {
@@ -352,6 +374,32 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         </div>
 
         <div className="space-y-3 border-t border-border/50 pt-3">
+          <p className="text-[11px] font-semibold text-foreground">IOTA-Sendeweg (Handy-first, § H.15)</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Direkt</strong> = Klartext-Mailbox darf über Fullnode + Signer (wenn unten konfiguriert). <strong className="text-foreground">Nur Morgendrot-API</strong> = kein direkter RPC-Upload aus dieser PWA; Mailbox über <span className="font-mono">/api</span>, sobald die Basis erreichbar ist. Gespeichert in <span className="font-mono">localStorage</span> unter <span className="font-mono">morgendrot.iotaSubmitMode</span> (Wert <span className="font-mono">relay</span> oder leer = Standard <span className="font-mono">client</span>).
+          </p>
+          <RadioGroup
+            className="grid gap-2"
+            value={iotaSubmitMode}
+            onValueChange={onIotaSubmitModeChange}
+            disabled={busy !== null}
+          >
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="client" id="iota-mode-client" className="mt-0.5" aria-label="Direkt Standard" />
+              <Label htmlFor="iota-mode-client" className="cursor-pointer text-[11px] font-normal leading-snug">
+                Direkt (Standard)
+              </Label>
+            </div>
+            <div className="flex items-start gap-2">
+              <RadioGroupItem value="relay" id="iota-mode-relay" className="mt-0.5" aria-label="Nur Morgendrot API" />
+              <Label htmlFor="iota-mode-relay" className="cursor-pointer text-[11px] font-normal leading-snug">
+                Nur Morgendrot-API (<span className="font-mono">/api</span>)
+              </Label>
+            </div>
+          </RadioGroup>
+        </div>
+
+        <div className="space-y-3 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             Für <strong className="text-foreground">Mailbox-Warteschlange Klartext</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Verschlüsselte Outbox-Einträge laufen weiter über <span className="font-mono">/api</span>, sobald die Basis
@@ -431,7 +479,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
             </div>
             <Switch
               checked={directDrainOn}
-              disabled={busy !== null}
+              disabled={busy !== null || iotaSubmitMode === 'relay'}
               onCheckedChange={(v) => {
                 setDirectDrainOn(v)
                 setDirectMailboxDrainEnabled(v)

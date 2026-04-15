@@ -24,7 +24,11 @@ import {
   canUseDirectPlaintextMailboxDrain,
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
-import { isDirectMailboxDrainEnabled, trySubmitPlaintextMailboxViaDirectIota } from '@/frontend/lib/direct-iota-plain-submit'
+import {
+  isDirectMailboxDrainEnabled,
+  isIotaRelayOnlyMode,
+  trySubmitPlaintextMailboxViaDirectIota,
+} from '@/frontend/lib/direct-iota-plain-submit'
 
 export {
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -82,6 +86,7 @@ function canAttemptDirectPlainMailbox(item: OfflineMailboxQueueItem): boolean {
   return (
     item.kind === 'plain_send' &&
     item.encrypted === false &&
+    !isIotaRelayOnlyMode() &&
     isDirectMailboxDrainEnabled() &&
     Boolean(getConfiguredDirectIotaRpcUrl()) &&
     Boolean(getDirectIotaSessionSigner()) &&

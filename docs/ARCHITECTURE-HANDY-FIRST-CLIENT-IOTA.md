@@ -53,7 +53,7 @@
 
 | Stufe | Inhalt | Erfolgskriterium (minimal) |
 |-------|--------|----------------------------|
-| **0 — Leitplanken** | Feature-Flag / Settings-Modell für **Direct vs Relay**; Telemetrie-Logs nur ohne Secrets; Handbuch-Zeile „was läuft wo“. | Schalter in UI + Persistenz; Doku committed. |
+| **0 — Leitplanken** | Feature-Flag / Settings-Modell für **Direct vs Relay**; Telemetrie-Logs nur ohne Secrets; Handbuch-Zeile „was läuft wo“. | **Ist (Messenger-PWA):** Chat **→ Puls** — Modus **Direkt** vs. **Nur Morgendrot-API** (`localStorage` **`morgendrot.iotaSubmitMode`**); **`docs/PWA-HANDBUCH-OFFLINE.md`** § 5; Telemetrie unverändert beachten. |
 | **1 — Core-Skelett** | Monorepo-Paket **`@morgendrot/core`**: reine Typen + **eine** PTB/TX-Hilfsfunktion aus `src/` **verschieben** (ohne Verhaltensänderung auf Node-Pfad). | Root + frontend `tsc`; Vitest im Paket grün. |
 | **2 — Erster Client-Submit** | Ein **kontrollierter** Flow (z. B. kleine Nachricht / Test-PTB) **vom Browser** über Core → RPC; Node-Pfad bleibt Fallback. | E2E oder manuelles Protokoll + Smoke. |
 | **3 — Offline-Queue** | Persistente Outbox auf dem Gerät; **Drain** bei Netz; **Idempotenz** / Dedup laut **§ H.12**; Konflikt mit bestehender **`offline-queue.ts`** **auflösen** (eine Wahrheit). | Keine doppelte Settlement-Spur; Tests. |
