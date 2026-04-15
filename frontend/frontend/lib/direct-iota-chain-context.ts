@@ -147,6 +147,15 @@ export function canUseDirectPlaintextMailboxDrain(): boolean {
   return true
 }
 
+/** `store_encrypted_message` ohne Credits — Mailbox an, keine Messenger-Credits (Credits-Pfad = separates PTB). */
+export function canUseDirectEncryptedMailboxDrain(): boolean {
+  const s = getDirectMailboxChainSnapshot()
+  if (!s) return false
+  if (!s.flags.useMailbox) return false
+  if (s.flags.messengerCreditsConfigured) return false
+  return true
+}
+
 export function persistDirectMailboxTtlDays(ttlDays: bigint): void {
   if (typeof window === 'undefined') return
   try {

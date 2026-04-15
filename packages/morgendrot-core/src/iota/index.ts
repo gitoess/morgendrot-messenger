@@ -7,6 +7,11 @@ export {
 export { probeDirectIotaRpc } from './chain-reachability'
 export { buildStorePlaintextMailboxTransaction, isLikelyIotaHexId } from './mailbox-plain-txb'
 export type { BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
+export {
+  buildStoreEncryptedMailboxTransaction,
+  DIRECT_MAILBOX_MAX_CIPHER_U8,
+} from './mailbox-encrypted-txb'
+export type { BuildStoreEncryptedMailboxTxInput } from './mailbox-encrypted-txb'
 export { signAndExecuteTransactionWithSigner } from './sign-and-execute'
 export type { DirectSignAndExecuteResult } from './sign-and-execute'
 export { collectGasCoinRefs, attachGasPaymentForOwner } from './gas-payment'
