@@ -2,6 +2,17 @@
 
 Ziel: **schnelle Sprachnotiz** direkt im Chat – besonders für **Höhlenrettung / Notfall** (kurze Lagemeldung ohne Tippen).
 
+## SOS-Hilferuf: Text vs. Sprache — **was passiert genau?**
+
+Die UI unterscheidet **zwei Hilferufe** (beide nur bei **echtem Bedarf**; kein Ersatz für **112** und keine Garantie, dass Dritte mitlesen):
+
+| Pfad | Du tust | Technisch (vereinfacht) | Was der Empfänger / die Basis sieht |
+|------|---------|---------------------------|----------------------------------------|
+| **SOS — Hilferuf (Text)** | Text im Composer schreiben, dann roten Button **„SOS — Hilferuf (Text)“** | Vor dem Versand wird der Klartext in einen **`[[MORG_EMERGENCY_V1:…]]`**-Umschlag gepackt (Wire-Notfall). Funk: App sendet mit **höchster Burst-Priorität** (`Flash`), damit der Hilferuf vor großen Bild-/Routine-Paketen rausgeht. | In der Oberfläche erscheint der Inhalt mit **`[SOS]`**-Präfix (siehe `chat-message-display-normalize`). Die **Basis** kann solche Nachrichten **priorisiert** in Warteschlange / später IOTA verarbeiten — Details **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**. |
+| **SOS-Sprache** (orangener Bereich) | **SOS-Sprache** aufnehmen → Opus-Anhang → **„SOS jetzt über LoRa senden“** (wenn Funk aktiv) | Aufnahme wird ebenfalls als **Notfall** (`MORG_EMERGENCY_V1` / `emergencyWire: 'voice'`) gekennzeichnet und mit **kurzer** Nutzlast / nachgelagerter Audio-Logik gesendet — **kein** „beliebig langer Sprachclip = ein LoRa-Frame“. | Empfänger erhält markierte Notfall-Nachricht; genaue Byte-Aufteilung Phase B → **`MORG-EMERGENCY-SOS-WIRE-SPEC.md`** §2.4. |
+
+**Wichtig:** Ein Hilferuf ist **kein** automatischer **Rettungsdienst-Anruf**. Er geht an den **gewählten Chat-Partner** bzw. den **konfigurierten Messenger-/Mesh-Pfad** — Reichweite und Zuverlässigkeit hängen von **Funk, Basis und Einsatzprofil** ab (**`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**).
+
 ## Ablauf
 
 1. **Browser** (z. B. Chromium auf **CM4** mit USB- oder MEMS-Mikro): `getUserMedia` + `MediaRecorder` (typisch **WebM/Opus**).
@@ -33,6 +44,10 @@ Ziel: **schnelle Sprachnotiz** direkt im Chat – besonders für **Höhlenrettun
 ## Offline / ohne ffmpeg
 
 Ohne ffmpeg liefert der Endpoint einen Fehler – weiterhin **Opus-Datei importieren** (Dateiauswahl) oder `scripts/encode-opus-messenger.mjs` auf dem Gerät nutzen.
+
+## TTS / STT (Roadmap **§ H.18**)
+
+**Text-to-Speech** (Nachrichten vorlesen) und **Speech-to-Text** (Diktat statt Tippen) sind **sinnvoll** als spätere Ergänzung (Barrierefreiheit, Freihand), stehen aber **nicht** im gleichen Pfad wie **Opus-Sprachmemo** oder **SOS-Wire**. Abwägung: Cloud-Dienste vs. **On-Device**, Offline, Datenschutz — siehe **`docs/ROADMAP-FAHRPLAN.md`** **§ H.18**.
 
 ## Einordnung (Deployment)
 

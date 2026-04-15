@@ -6,6 +6,8 @@
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.3n**  
 **Verwandt:** **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`** (**§ H.3m**), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3, **`src/shared/opcodes.ts`** (`MacroPriorityClass.Flash`), **`src/shared/emergency-binary-wire.ts`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
 
+**Nutzer-Kurzfassung (UI):** Was der rote **„SOS — Hilferuf (Text)“**-Button und die **SOS-Sprache** in der PWA tun, steht in **`docs/MESSENGER-SPRACHAUFNAHME.md`** → Abschnitt *„SOS-Hilferuf: Text vs. Sprache“* (Umschlag `MORG_EMERGENCY_V1`, Priorität, was **nicht** passiert: kein automatischer 112-Ruf).
+
 ---
 
 ## 1. Idealzustand (Produkt)

@@ -223,8 +223,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         {canOfferSosText ? (
           <div className="rounded-xl border-2 border-red-600/60 bg-red-950/35 p-3 dark:bg-red-950/25">
             <p className="mb-2 text-xs font-medium text-red-100">
-              Hilferuf (Text): wird als <span className="font-mono">MORG_EMERGENCY_V1</span> vor der
-              Verschlüsselung gesetzt; Funk-Versand nutzt Burst ohne Paketpause (App-Priorität Flash).
+              <strong className="block text-red-50">SOS — Hilferuf (Text)</strong>
+              <span className="mt-1 block font-normal leading-relaxed text-red-100/95">
+                Dein Composer-Text wird als Notfall-Nachricht verpackt (<span className="font-mono">MORG_EMERGENCY_V1</span>)
+                und wie gewohnt an den <strong>Chat-Empfänger</strong> gesendet — <strong>kein</strong> automatischer Anruf bei
+                112 oder „Rettungsdienst sieht mit“. Über <strong>Funk</strong> nutzt die App eine <strong>hohe Sendepriorität</strong>{' '}
+                (kurze Bursts ohne Pause zwischen kleinen Paketen), damit der Hilferuf vor großen Bild-/Routine-Daten rauskommt.
+                Empfänger sehen im Chat ein <strong className="text-red-50">[SOS]</strong>-Präfix. Details:{' '}
+                <span className="font-mono text-[10px]">docs/MESSENGER-SPRACHAUFNAHME.md</span> und{' '}
+                <span className="font-mono text-[10px]">docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md</span>.
+              </span>
             </p>
             <button
               type="button"
@@ -232,7 +240,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               onClick={() => {
                 if (
                   !window.confirm(
-                    'Echten Hilferuf (SOS) senden?\n\nDie Nachricht wird als Notfall gekennzeichnet (MORG_EMERGENCY_V1). Nur nutzen, wenn wirklich Hilfe nötig ist.'
+                    'Echten Hilferuf (SOS) senden?\n\n' +
+                      'Die Nachricht geht an deinen Chat-Empfänger (Funk oder Online — wie eingestellt), mit Notfall-Kennzeichnung MORG_EMERGENCY_V1. ' +
+                      'Kein automatischer 112-Ruf.\n\n' +
+                      'Nur nutzen, wenn wirklich Hilfe nötig ist.'
                   )
                 ) {
                   return
@@ -290,9 +301,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           />
           {sosSendMode ? (
             <div className="rounded-xl border-2 border-orange-500/70 bg-orange-950/40 p-3">
-              <p id="sos-send-hint" className="sr-only">
-                Sendepfad Funk. Eine SOS-Sprachdatei ist angehängt. Nach Bestätigung wird der Hilferuf als
-                MORG_EMERGENCY_V1 mit hoher Burst-Priorität über LoRa gesendet.
+              <p id="sos-send-hint" className="mb-3 text-xs leading-relaxed text-orange-50/95">
+                <strong className="text-orange-100">SOS — Hilferuf (Sprache):</strong> Es liegt eine{' '}
+                <strong>kurze SOS-Sprachaufnahme</strong> (Opus-Anhang) bereit. Nach dem Senden wird sie wie ein Hilferuf mit{' '}
+                <span className="font-mono">MORG_EMERGENCY_V1</span> gekennzeichnet und über den <strong>aktuellen Transport</strong>{' '}
+                (hier typisch <strong>Funk/LoRa</strong>) mit <strong>hoher Priorität</strong> ausgespielt — Ziel ist dein
+                Chat-Partner bzw. das Mesh in Reichweite, <strong>nicht</strong> ein automatischer Rettungsdienst-Ruf. Technische
+                Grenzen (Kurzclip, Frames):{' '}
+                <span className="font-mono text-[10px]">docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md</span>.
               </p>
               <button
                 type="button"
@@ -301,7 +317,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => {
                   if (
                     !window.confirm(
-                      'SOS-Sprachnachricht als Hilferuf senden?\n\nDie Aufnahme wird als MORG_EMERGENCY_V1 gekennzeichnet. Nur nutzen, wenn wirklich Hilfe nötig ist.'
+                      'SOS-Sprachnachricht als Hilferuf senden?\n\n' +
+                        'Die Aufnahme wird als Notfall (MORG_EMERGENCY_V1) über den gewählten Weg (z. B. LoRa) gesendet — Ziel ist der Chat-Partner / Mesh, kein 112.\n\n' +
+                        'Nur nutzen, wenn wirklich Hilfe nötig ist.'
                     )
                   ) {
                     return
