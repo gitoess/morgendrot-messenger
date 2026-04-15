@@ -12,6 +12,7 @@
 |--------|-----------|---------------------|----------|
 | **2026-03-28** | API **:3342**, Windows, `.env`; Status vor Connect bereits `connected=true` / `locked=false` | **`npm run test:smoke`** | **OK** — 36 bestanden, 0 fehlgeschlagen (`validate:ui` + `npm run test`). |
 | **2026-03-28** | selbe, `SINGLE_WALLET=1` | **`npm run test:messages:single`** | **OK** — Abschnitte **1**–**7** vollständig (kompaktes Bild, Handshake/Connect, `/send`/`/fetch`, Filter, Klartext, `purge-handshake`, `/vault-save`, `hasLocal`; Hinweiszeile Ticket-Skript am Ende). |
+| **2026-03-28** | selbe | **`npm run test:frontend-unit`** | **OK** — 37 Testdateien, 219 Tests, ~6 s. |
 | **2026-04-28** | Repo lokal (Windows), API **3342** laut `.env`, Wallet **locked** | **`npm run test:smoke`** | **OK** — 36/36 Modulgruppen (`validate:ui` + `npm run test`). |
 | **2026-04-28** | selbe | **`npm run test:frontend-unit`** | **OK** — Vitest 37 Dateien, 219 Tests. |
 | **2026-04-28** | selbe | **`npm run test:core`** | **OK** — `@morgendrot/core` 14 Dateien, 51 Tests. |
