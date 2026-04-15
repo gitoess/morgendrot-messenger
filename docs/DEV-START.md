@@ -44,9 +44,12 @@ npm run dev
 2. **Einmalig bauen** (nach Code-Änderungen wiederholen):  
    `npm run build:next`  
    (entspricht `npm run build` im Ordner `frontend/` inkl. `prebuild` / Handbuch-Sync.)
-3. **API + Next für WLAN** starten:  
+3. **API + Next für WLAN** starten — **ein Terminal**, **ein** Befehl:
    `npm run start:prod:lan`  
-   → API auf **127.0.0.1:3342**, Next auf **0.0.0.0:3341** (vom Handy unter `http://<PC-LAN-IP>:3341` erreichbar). `/api` wird von Next zum Backend proxied (`frontend/next.config.mjs`).
+   Das Tool **`concurrently`** startet darin **zwei Prozesse parallel** (du musst **kein** zweites Terminal öffnen):
+   - **API:** `npm run start:secrets` → Morgendrot-Backend auf **127.0.0.1:3342** (wie gewohnt nur auf dem PC).
+   - **Next (Production):** `next start` im Ordner `frontend/` auf **0.0.0.0:3341** — das ist der **fertige** Next-Server für den **bereits gebauten** Stand (`frontend/.next/` nach Schritt 2), **ohne** Hot-Reload (anders als `next dev`).  
+   Vom Handy: **`http://<PC-LAN-IP>:3341`**. Browser-Anfragen an **`/api/...`** bearbeitet Next und leitet sie per Rewrite an **3342** weiter (`frontend/next.config.mjs`) — das passiert **auf dem PC**, das Handy spricht nur mit Port **3341**.
 4. **PC-LAN-IP** ermitteln (z. B. `ipconfig` → „IPv4-Adresse“ des WLAN-Adapters).
 5. **Handy** (gleiches WLAN): Chrome öffnen → **`http://<PC-LAN-IP>:3341`** (wirklich `http://`, nicht `https://` zur IP). Bei Bedarf **Windows-Firewall** für **TCP 3341** freigeben.
 6. **Installieren:** Chrome-Menü → **„App installieren“** / **Zum Startbildschirm hinzufügen** (je nach Android-Version).
