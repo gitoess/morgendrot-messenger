@@ -727,7 +727,10 @@ export function Dashboard() {
             <MonitorView variant={activeView.variant as 'sensor-central' | 'device-monitor' | 'heartbeat-sender'} />
           )}
           {activeView.type === 'boss' && activeView.variant && (
-            <BossView variant={activeView.variant as 'boss-signer' | 'pinnwand-admin'} />
+            <BossView
+              variant={activeView.variant as 'boss-signer' | 'pinnwand-admin'}
+              apiSnapshot={apiSnapshot && !('error' in apiSnapshot && apiSnapshot.error) ? apiSnapshot : null}
+            />
           )}
           {activeView.type === 'vault' && activeView.variant && (
             <VaultView variant={activeView.variant as 'local-vault' | 'emergency-purge'} />

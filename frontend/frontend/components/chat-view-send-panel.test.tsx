@@ -252,6 +252,17 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
+  it('deaktiviert primäres Senden während sending=true (§ H.1a Send-Slice)', () => {
+    const onSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel {...baseSendPanel({ onSend, message: 'Noch unterwegs', sending: true })} />
+    )
+    const sendBtn = primarySend(container)
+    expect(sendBtn).toBeDisabled()
+    fireEvent.click(sendBtn)
+    expect(onSend).not.toHaveBeenCalled()
+  })
+
   it('deaktiviert Senden bei Klartext ohne Empfänger-Adresse', () => {
     const onSend = vi.fn()
     const { container } = render(

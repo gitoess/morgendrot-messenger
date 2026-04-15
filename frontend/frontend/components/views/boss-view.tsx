@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   Crown,
   Users,
@@ -9,6 +9,8 @@ import {
   Plus,
   Check,
   AlertCircle,
+  Package,
+  Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
@@ -16,7 +18,10 @@ import {
   sendBossCommand,
   meshBuildV2Wires,
   meshDecryptV2Wire,
+  downloadStandaloneSmartphoneHandoffZip,
 } from '@/frontend/lib/api'
+import type { ApiStatus } from '@/frontend/lib/api'
+import { API_BASE } from '@/frontend/lib/api/api-base'
 import { MeshFunkPanel } from '@/frontend/components/mesh-funk-panel'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
@@ -26,6 +31,8 @@ import type { Message } from '@/frontend/lib/types'
 
 interface BossViewProps {
   variant: 'boss-signer' | 'pinnwand-admin'
+  /** Für H.7-Handoff: PACKAGE_ID, Adressen aus Status (optional). */
+  apiSnapshot?: ApiStatus | null
 }
 
 type Role = 'boss' | 'commander' | 'worker'
@@ -35,7 +42,9 @@ interface TeamMember {
   role: Role
 }
 
-export function BossView({ variant }: BossViewProps) {
+type HandoffPkgSource = 'boss' | 'custom' | 'history'
+
+export function BossView({ variant, apiSnapshot }: BossViewProps) {
   const [address, setAddress] = useState('')
   const [role, setRole] = useState<Role>('worker')
   const [command, setCommand] = useState('')
@@ -46,6 +55,60 @@ export function BossView({ variant }: BossViewProps) {
   const [statusMsg, setStatusMsg] = useState('')
   const [meshPreviewLines, setMeshPreviewLines] = useState<string[]>([])
   const [parallelMesh, setParallelMesh] = useState(false)
+
+  /** § H.7 Export-Assistent (Standalone Smartphone / Wanderer-Bundle). */
+  const [handoffOpen, setHandoffOpen] = useState(false)
+  const [handoffLabel, setHandoffLabel] = useState('')
+  const [handoffRpc, setHandoffRpc] = useState('')
+  const [handoffPkgSource, setHandoffPkgSource] = useState<HandoffPkgSource>('boss')
+  const [handoffPkgCustom, setHandoffPkgCustom] = useState('')
+  const [handoffPkgHistory, setHandoffPkgHistory] = useState(0)
+  const [handoffBoss, setHandoffBoss] = useState('')
+  const [handoffPartners, setHandoffPartners] = useState('')
+  const [handoffMailbox, setHandoffMailbox] = useState('')
+  const [handoffCmdReg, setHandoffCmdReg] = useState('')
+  const [handoffVaultReg, setHandoffVaultReg] = useState('')
+  const [handoffDirectIota, setHandoffDirectIota] = useState('')
+  const [handoffBusy, setHandoffBusy] = useState(false)
+  const handoffSeeded = useRef(false)
+
+  useEffect(() => {
+    if (handoffSeeded.current || !apiSnapshot) return
+    handoffSeeded.current = true
+    const full = apiSnapshot.myAddressFull?.trim()
+    if (full && /^0x[a-fA-F0-9]{64}$/i.test(full)) setHandoffBoss(full)
+    const pkg = apiSnapshot.packageId?.trim()
+    if (pkg && /^0x[a-fA-F0-9]{64}$/i.test(pkg)) setHandoffPkgCustom(pkg)
+    const conn = apiSnapshot.connectedAddresses?.filter(Boolean) ?? []
+    if (conn.length) setHandoffPartners(conn.join(', '))
+  }, [apiSnapshot])
+
+  useEffect(() => {
+    if (!handoffOpen) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/api/current-ids`)
+        const j = (await r.json()) as {
+          mailboxId?: string
+          commandRegistryId?: string
+          vaultRegistryId?: string
+        }
+        if (cancelled || !r.ok) return
+        const mb = String(j.mailboxId || '').trim()
+        const cr = String(j.commandRegistryId || '').trim()
+        const vr = String(j.vaultRegistryId || '').trim()
+        if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) setHandoffMailbox((prev) => prev || mb)
+        if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) setHandoffCmdReg((prev) => prev || cr)
+        if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) setHandoffVaultReg((prev) => prev || vr)
+      } catch {
+        /* optional */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [handoffOpen])
 
   const { directory } = useContactDirectory()
 
@@ -174,6 +237,27 @@ export function BossView({ variant }: BossViewProps) {
     }
   }
 
+  const onHandoffDownload = async () => {
+    setHandoffBusy(true)
+    const r = await downloadStandaloneSmartphoneHandoffZip({
+      handoffLabel: handoffLabel.trim() || undefined,
+      rpcUrl: handoffRpc.trim() || undefined,
+      packageSource: handoffPkgSource,
+      customPackageId: handoffPkgCustom.trim() || undefined,
+      historyFromNewest: handoffPkgHistory,
+      bossAddress: handoffBoss.trim() || undefined,
+      partnerAddresses: handoffPartners.trim() || undefined,
+      /** Immer mitsenden, damit leerer String = keine MAILBOX_ID im Handoff (Server fällt sonst auf Boss-.env zurück). */
+      mailboxId: handoffMailbox.trim(),
+      commandRegistryId: handoffCmdReg.trim() || undefined,
+      vaultRegistryId: handoffVaultReg.trim() || undefined,
+      nextPublicDirectIotaRpcUrl: handoffDirectIota.trim() || undefined,
+    })
+    setHandoffBusy(false)
+    if (r.ok) showStatus(true, 'ZIP gespeichert (Handoff-.env + README).')
+    else showStatus(false, r.error || 'Download fehlgeschlagen')
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -240,6 +324,166 @@ export function BossView({ variant }: BossViewProps) {
               'Mit „Parallel per Mesh“ wird derselbe Befehl zusätzlich als verschlüsselter Mesh-v2-Broadcast gesendet (wie im Chat). Empfänger müssen ihn wie eine Nachricht auswerten – die API-Route /boss-command bleibt der kanonische Weg für die Kette.'
             }
           />
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <button
+              type="button"
+              onClick={() => setHandoffOpen((o) => !o)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="flex items-center gap-2 font-semibold text-foreground">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                Export-Assistent: Standalone Smartphone (H.7)
+              </span>
+              <span className="text-xs text-muted-foreground">{handoffOpen ? 'Einklappen' : 'Aufklappen'}</span>
+            </button>
+            {handoffOpen ? (
+              <div className="mt-4 space-y-3 border-t border-border pt-4 text-sm">
+                <p className="text-xs text-muted-foreground">
+                  ZIP mit öffentlicher Handoff-<span className="font-mono">.env</span> und Kurz-README — ohne Seed.
+                  Bundle vorher im Repo bauen:{' '}
+                  <span className="font-mono">npm run bundle:standalone-smartphone</span> →{' '}
+                  <span className="font-mono">exports/morgendrot-standalone-smartphone/</span>.
+                </p>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">Bezeichnung (Dateiname)</label>
+                  <input
+                    value={handoffLabel}
+                    onChange={(e) => setHandoffLabel(e.target.value)}
+                    placeholder="z. B. Feldtest-Nord"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">RPC_URL (optional, sonst Testnet-Default)</label>
+                  <input
+                    value={handoffRpc}
+                    onChange={(e) => setHandoffRpc(e.target.value)}
+                    placeholder="https://api.testnet.iota.cafe"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                  />
+                </div>
+                <div>
+                  <span className="mb-1 block text-xs text-muted-foreground">PACKAGE_ID</span>
+                  <div className="flex flex-wrap gap-3 text-xs">
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="handoff-pkg"
+                        checked={handoffPkgSource === 'boss'}
+                        onChange={() => setHandoffPkgSource('boss')}
+                      />
+                      Aus Boss-.env
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="handoff-pkg"
+                        checked={handoffPkgSource === 'custom'}
+                        onChange={() => setHandoffPkgSource('custom')}
+                      />
+                      Manuell
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <input
+                        type="radio"
+                        name="handoff-pkg"
+                        checked={handoffPkgSource === 'history'}
+                        onChange={() => setHandoffPkgSource('history')}
+                      />
+                      Historie
+                    </label>
+                  </div>
+                  {handoffPkgSource === 'custom' ? (
+                    <input
+                      value={handoffPkgCustom}
+                      onChange={(e) => setHandoffPkgCustom(e.target.value)}
+                      placeholder="0x…64 Hex"
+                      className="mt-2 w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                    />
+                  ) : null}
+                  {handoffPkgSource === 'history' ? (
+                    <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                      Index von neu:{' '}
+                      <input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={handoffPkgHistory}
+                        onChange={(e) => setHandoffPkgHistory(parseInt(e.target.value, 10) || 0)}
+                        className="w-16 rounded border border-border bg-input px-2 py-1 text-foreground"
+                      />
+                    </label>
+                  ) : null}
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">BOSS_ADDRESS (0x+64)</label>
+                  <input
+                    value={handoffBoss}
+                    onChange={(e) => setHandoffBoss(e.target.value)}
+                    placeholder="0x…"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-muted-foreground">
+                    Partner-Adressen (Komma, optional — sonst Helfer ergänzt)
+                  </label>
+                  <textarea
+                    value={handoffPartners}
+                    onChange={(e) => setHandoffPartners(e.target.value)}
+                    rows={2}
+                    placeholder="0x…, 0x…"
+                    className="w-full resize-y rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                  />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">MAILBOX_ID (optional)</label>
+                    <input
+                      value={handoffMailbox}
+                      onChange={(e) => setHandoffMailbox(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">COMMAND_REGISTRY_ID (optional)</label>
+                    <input
+                      value={handoffCmdReg}
+                      onChange={(e) => setHandoffCmdReg(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">VAULT_REGISTRY_ID (optional)</label>
+                    <input
+                      value={handoffVaultReg}
+                      onChange={(e) => setHandoffVaultReg(e.target.value)}
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs text-muted-foreground">NEXT_PUBLIC_DIRECT_IOTA_RPC_URL</label>
+                    <input
+                      value={handoffDirectIota}
+                      onChange={(e) => setHandoffDirectIota(e.target.value)}
+                      placeholder="optional PWA Light-Client"
+                      className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs text-foreground"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={handoffBusy}
+                  onClick={() => void onHandoffDownload()}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <Download className="h-4 w-4" />
+                  {handoffBusy ? 'ZIP wird erzeugt…' : 'ZIP herunterladen'}
+                </button>
+              </div>
+            ) : null}
+          </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-4 font-semibold text-foreground">Teammitglied hinzufügen</h4>

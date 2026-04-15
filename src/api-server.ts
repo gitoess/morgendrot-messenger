@@ -33,6 +33,8 @@ import {
     buildMessengerExportEnv,
     buildMessengerExportJson,
     resolveMessengerExportPackageId,
+    buildStandaloneSmartphoneHandoffEnv,
+    buildStandaloneSmartphoneHandoffReadme,
 } from './config.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
@@ -552,6 +554,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     myAddress: CFG.MY_ADDRESS || '',
                     packageId: CFG.PACKAGE_ID || '',
                     mailboxId: CFG.MAILBOX_ID || '',
+                    commandRegistryId: CFG.COMMAND_REGISTRY_ID || '',
+                    vaultRegistryId: CFG.VAULT_REGISTRY_ID || '',
                     streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
                     streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
                 }, cors);
@@ -2839,6 +2843,99 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     );
                 } catch (e: any) {
                     sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
+         * Roadmap § H.7: ZIP mit vorgefüllter Handoff-.env (ohne Secrets) + Kurz-README für das Standalone-Smartphone-Bundle.
+         * Bundle selbst: npm run bundle:standalone-smartphone (nicht Teil dieses ZIP).
+         */
+        if (url === '/api/standalone-smartphone-handoff-zip' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const pkgRes = resolveMessengerExportPackageId({
+                        source: data.packageSource === 'custom' ? 'custom' : data.packageSource === 'history' ? 'history' : 'boss',
+                        customPackageId: String(data.customPackageId || '').trim(),
+                        historyFromNewest: parseInt(String(data.historyFromNewest ?? 0), 10) || 0,
+                    });
+                    if (!pkgRes.ok) {
+                        sendJson(res, 400, { ok: false, error: pkgRes.error }, cors);
+                        return;
+                    }
+                    const rpcUrl = String(data.rpcUrl || CFG.RPC_URL || '').trim() || 'https://api.testnet.iota.cafe';
+                    const bossAddress = String(data.bossAddress || CFG.MY_ADDRESS || '').trim();
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(bossAddress)) {
+                        sendJson(res, 400, { ok: false, error: 'bossAddress / Boss MY_ADDRESS: 0x+64Hex nötig.' }, cors);
+                        return;
+                    }
+                    const partnerAddresses = String(data.partnerAddresses ?? data.partners ?? '').trim();
+                    const mailboxIdField = Object.prototype.hasOwnProperty.call(data, 'mailboxId')
+                        ? String(data.mailboxId ?? '').trim()
+                        : String(CFG.MAILBOX_ID || '').trim();
+                    const commandRegistryId = String(data.commandRegistryId ?? '').trim();
+                    const vaultRegistryId = String(data.vaultRegistryId ?? '').trim();
+                    const nextPublicDirectIotaRpcUrl = String(data.nextPublicDirectIotaRpcUrl ?? '').trim();
+                    const handoffLabel = String(data.handoffLabel ?? data.label ?? '').trim();
+                    let envContent: string;
+                    try {
+                        envContent = buildStandaloneSmartphoneHandoffEnv({
+                            rpcUrl,
+                            packageId: pkgRes.packageId,
+                            bossAddress,
+                            partnerAddresses: partnerAddresses || undefined,
+                            mailboxId: mailboxIdField || undefined,
+                            commandRegistryId: commandRegistryId || undefined,
+                            vaultRegistryId: vaultRegistryId || undefined,
+                            nextPublicDirectIotaRpcUrl: nextPublicDirectIotaRpcUrl || undefined,
+                        });
+                    } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        sendJson(res, 400, { ok: false, error: msg }, cors);
+                        return;
+                    }
+                    const createdAtIso = new Date().toISOString();
+                    const readme = buildStandaloneSmartphoneHandoffReadme({
+                        handoffLabel,
+                        createdAtIso,
+                        packageId: pkgRes.packageId,
+                        rpcUrl,
+                        bossAddress: normalizeAddress(bossAddress),
+                    });
+                    const slug =
+                        (handoffLabel || 'handoff').replace(/[^\wäöüÄÖÜß.-]/gi, '_').slice(0, 48) || 'handoff';
+                    const day = createdAtIso.slice(0, 10).replace(/-/g, '');
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+                    res.writeHead(200, {
+                        ...cors,
+                        'Content-Type': 'application/zip',
+                        'Content-Disposition': `attachment; filename="morgendrot-standalone-handoff-${slug}-${day}.zip"`,
+                    });
+                    archive.pipe(res);
+                    archive.append(envContent + (envContent.endsWith('\n') ? '' : '\n'), {
+                        name: 'morgendrot-standalone-handoff.env',
+                    });
+                    archive.append(Buffer.from(readme, 'utf8'), { name: 'README-HANDOFF.txt' });
+                    archive.finalize();
+                    archive.on('error', (err: Error) => {
+                        try {
+                            res.end();
+                        } catch {}
+                        logger.warn('standalone-smartphone-handoff-zip: ' + (err?.message || err));
+                    });
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    sendJson(res, 500, { ok: false, error: msg }, cors);
                 }
             });
             return;

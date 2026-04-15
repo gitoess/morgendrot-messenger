@@ -1537,6 +1537,150 @@ export function buildMessengerExportJson(p: MessengerExportParams): Record<strin
     };
 }
 
+/** Öffentliche Parameter für „Wanderer“-Bundle (Next+PWA); keine Secrets (Roadmap § H.7). */
+export interface StandaloneSmartphoneHandoffParams {
+    rpcUrl: string;
+    packageId: string;
+    bossAddress: string;
+    /** Komma/Leerzeichen/Semikolon-getrennte 0x-Adressen. */
+    partnerAddresses?: string;
+    mailboxId?: string;
+    commandRegistryId?: string;
+    vaultRegistryId?: string;
+    nextPublicDirectIotaRpcUrl?: string;
+}
+
+function parseHandoffAddressList(raw: string | undefined, bossNorm: string): string[] {
+    if (!raw?.trim()) return [];
+    const parts = raw.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of parts) {
+        const a = normalizeAddress(p);
+        if (!ADDR_64_HEX.test(a)) continue;
+        if (a === bossNorm) continue;
+        if (seen.has(a)) continue;
+        seen.add(a);
+        out.push(a);
+    }
+    return out;
+}
+
+/**
+ * Vorgefüllte `.env` für exports/morgendrot-standalone-smartphone (nach `npm run bundle:standalone-smartphone`).
+ * MY_ADDRESS bleibt leer — Helfer richtet Wallet/Tresor nur auf dem Gerät ein.
+ */
+export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHandoffParams): string {
+    const pkg = normalizeId(String(p.packageId || '').trim());
+    if (!PACKAGE_ID_REGEX.test(pkg)) throw new Error('PACKAGE_ID ungültig (0x + 64 Hex).');
+    const boss = normalizeAddress(String(p.bossAddress || '').trim());
+    if (!ADDR_64_HEX.test(boss)) throw new Error('BOSS_ADDRESS muss 0x + 64 Hex sein.');
+    const rpc = String(p.rpcUrl || '').trim() || 'https://api.testnet.iota.cafe';
+    const mbRaw = String(p.mailboxId || '').trim();
+    const mb = mbRaw && ADDR_64_HEX.test(normalizeAddress(mbRaw)) ? normalizeAddress(mbRaw) : '';
+    const crRaw = String(p.commandRegistryId || '').trim();
+    const cr = crRaw && ADDR_64_HEX.test(normalizeAddress(crRaw)) ? normalizeAddress(crRaw) : '';
+    const vrRaw = String(p.vaultRegistryId || '').trim();
+    const vr = vrRaw && ADDR_64_HEX.test(normalizeAddress(vrRaw)) ? normalizeAddress(vrRaw) : '';
+    const direct = String(p.nextPublicDirectIotaRpcUrl || '').trim();
+    const partners = parseHandoffAddressList(p.partnerAddresses, boss);
+    const iso = new Date().toISOString();
+
+    const lines: string[] = [
+        '# =============================================================================',
+        '# Morgendrot – Standalone Smartphone / PWA (Boss-Handoff, § H.7)',
+        `# Erzeugt: ${iso}`,
+        '# Nur öffentliche Werte — kein Seed, kein Vault-Passwort, keine .morgendrot-vault-Dateien.',
+        '# =============================================================================',
+        '',
+        '# --- Netz & Package ---',
+        `RPC_URL=${rpc}`,
+        `PACKAGE_ID=${pkg}`,
+    ];
+    if (mb) {
+        lines.push(`MAILBOX_ID=${mb}`, 'USE_MAILBOX=true');
+    } else {
+        lines.push('# MAILBOX_ID=', '# USE_MAILBOX=true');
+    }
+    if (cr) lines.push(`COMMAND_REGISTRY_ID=${cr}`);
+    else lines.push('# COMMAND_REGISTRY_ID=');
+    if (vr) lines.push(`VAULT_REGISTRY_ID=${vr}`);
+    else lines.push('# VAULT_REGISTRY_ID=');
+    lines.push('', '# --- Identität Helfer-Gerät (leer bis Tresor/Wallet auf dem Telefon) ---', 'MY_ADDRESS=', 'ROLE=messenger', 'ROLE_ID=14', '', `BOSS_ADDRESS=${boss}`, '');
+    if (partners.length === 1) {
+        lines.push(`PARTNER_ADDRESS=${partners[0]}`, '# PARTNER_ADDRESSES=');
+    } else if (partners.length > 1) {
+        lines.push(`PARTNER_ADDRESSES=${partners.join(',')}`, '# PARTNER_ADDRESS=');
+    } else {
+        lines.push(
+            '# PARTNER_ADDRESS=',
+            '# PARTNER_ADDRESSES=',
+            '# Mindestens eine Partner-Adresse setzen (z. B. BOSS_ADDRESS hierher kopieren), sonst kein verschlüsselter Chat.'
+        );
+    }
+    lines.push(
+        '',
+        '# =============================================================================',
+        '# PWA / Next + API — wie bundle-standalone-smartphone Overrides',
+        '# =============================================================================',
+        'ENABLE_UI=true',
+        'UI_VARIANT=full',
+        'API_PORT=3342',
+        'API_KILL_PREVIOUS_INSTANCE=true',
+        'SIGNER=sdk',
+        'NETWORK_TRUST_TIER=1',
+        'ENABLE_PURGE=true',
+        'ENABLE_REPLAY_PROTECTION=true',
+        'ENABLE_PLAINTEXT_CHANNEL=false',
+        ''
+    );
+    if (direct) {
+        lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${direct}`, '');
+    }
+    return lines.join('\n');
+}
+
+export function buildStandaloneSmartphoneHandoffReadme(p: {
+    handoffLabel?: string;
+    createdAtIso: string;
+    packageId: string;
+    rpcUrl: string;
+    bossAddress: string;
+}): string {
+    const label = (p.handoffLabel || '').trim() || '(ohne Bezeichnung)';
+    return [
+        'Morgendrot – Standalone-Smartphone-Handoff (Boss)',
+        '================================================',
+        '',
+        `Bezeichnung: ${label}`,
+        `Erzeugt: ${p.createdAtIso}`,
+        '',
+        'Inhalt dieses ZIP:',
+        '  • morgendrot-standalone-handoff.env  – öffentliche .env-Zeilen',
+        '  • README-HANDOFF.txt                 – diese Datei',
+        '',
+        'Voraussetzung: Im Haupt-Repository das Smartphone-Bundle gebaut haben:',
+        '  npm run bundle:standalone-smartphone',
+        '  → Ordner exports/morgendrot-standalone-smartphone/',
+        '',
+        'Ablauf für den Helfer (Medium ohne Geheimnisse):',
+        '  1) Bundle-Ordner auf den PC des Helfers kopieren (oder als ZIP vom Boss).',
+        '  2) Datei morgendrot-standalone-handoff.env aus diesem ZIP in das Bundle-Wurzelverzeichnis legen',
+        '     und in .env umbenennen (vorher vorhandene .env aus npm install sichern, falls nötig).',
+        '  3) Im Bundle-Root: npm install --omit=dev, dann cd frontend && npm install --omit=dev',
+        '  4) npm run build:next && npm run start:prod:lan (oder dev:lan) — Details im Bundle-README.',
+        '  5) Seed/Mnemonic und Vault-Passwort nur auf dem Telefon eingeben — nie auf dem USB mitliefern.',
+        '',
+        'Parameter in dieser Auslieferung (Kurz):',
+        `  PACKAGE_ID=${p.packageId}`,
+        `  RPC_URL=${p.rpcUrl}`,
+        `  BOSS_ADDRESS=${p.bossAddress}`,
+        '',
+        'Kanonische Doku: docs/WANDERER-STANDALONE-BUNDLE.md und docs/ROADMAP-FAHRPLAN.md § H.7.',
+        '',
+    ].join('\n');
+}
+
 export function buildDeviceJson(p: DeviceProvisionParams): Record<string, unknown> {
     const kommFiltered = filterFullChainAddresses(p.kommandantAddresses);
     const workerFiltered = filterFullChainAddresses(p.workerAddresses);

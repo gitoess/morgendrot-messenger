@@ -115,6 +115,12 @@ export { postShadowSweep } from '@/frontend/lib/api/shadow-sweep'
 
 export { setBossRole, sendBossCommand, transferCoins } from '@/frontend/lib/api/boss-transfer'
 
+export {
+  downloadStandaloneSmartphoneHandoffZip,
+  type StandaloneSmartphoneHandoffZipBody,
+  type StandaloneHandoffPackageSource,
+} from '@/frontend/lib/api/standalone-smartphone-handoff'
+
 export { fetchHelp } from '@/frontend/lib/api/help'
 export { restartBackend } from '@/frontend/lib/api/backend-restart'
 
