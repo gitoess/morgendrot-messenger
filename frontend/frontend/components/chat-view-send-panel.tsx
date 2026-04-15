@@ -23,6 +23,16 @@ import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-h
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
+/** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
+function dataTransferLooksLikeFileDrag(dt: DataTransfer | null): boolean {
+  if (!dt?.types?.length) return false
+  try {
+    return Array.from(dt.types).includes('Files')
+  } catch {
+    return false
+  }
+}
+
 export type ChatViewSendPanelProps = AttachmentBarPort &
   ComposerDraftPort &
   SendTransportReadPort &
@@ -88,6 +98,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
   const onComposerDragEnter = (e: DragEvent) => {
     if (dropDisabled) return
+    if (!dataTransferLooksLikeFileDrag(e.dataTransfer)) return
     e.preventDefault()
     e.stopPropagation()
     dragDepth.current += 1
@@ -95,6 +106,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   }
 
   const onComposerDragLeave = (e: DragEvent) => {
+    // Kein Files-Check: types kann beim Leave leer sein — Tiefe nur zurücksetzen, wenn wir ein File-Drag betreten hatten.
+    if (dragDepth.current === 0) return
     e.preventDefault()
     e.stopPropagation()
     dragDepth.current = Math.max(0, dragDepth.current - 1)
@@ -103,6 +116,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
   const onComposerDragOver = (e: DragEvent) => {
     if (dropDisabled) return
+    if (!dataTransferLooksLikeFileDrag(e.dataTransfer)) return
     e.preventDefault()
     e.stopPropagation()
   }
@@ -238,7 +252,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           onDragOver={onComposerDragOver}
           onDrop={onComposerDrop}
           className={cn(
-            'rounded-xl border border-transparent p-1 transition-colors',
+            'touch-pan-y rounded-xl border border-transparent p-1 transition-colors',
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
