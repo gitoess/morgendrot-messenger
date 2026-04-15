@@ -3,9 +3,10 @@ import type { IdGeneratorPort } from '../../ports/id-generator.js'
 import type { StringStoragePort } from '../../ports/storage.js'
 import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model.js'
 import { parseOfflineMailboxQueueFromJson, serializeOfflineMailboxQueueToJson } from './codec.js'
-import { nextClientOutSeqFromItems, tryEnqueueOfflineMailboxItem, sortOfflineMailboxForDrain } from './state.js'
-import { drainOfflineMailboxOnce } from './drain.js'
-import type { OfflineMailboxSendPort } from './send-port.js'
+import { nextClientOutSeqFromItems, tryEnqueueOfflineMailboxItem } from './state.js'
+import { runOfflineMailboxDrainCycle } from './drain.js'
+import type { OfflineMailboxDrainOnceArg } from './send-port.js'
+import { coerceOfflineMailboxTrySend } from './send-port.js'
 import { computeCanonicalMsgRefV1 } from './canonical-msg-ref.js'
 
 export type EnqueueOfflineMailboxFailureResult =
@@ -90,21 +91,16 @@ export function createOfflineMailboxManager(deps: OfflineMailboxManagerDeps) {
   }
 
   /**
-   * Ein vollständiger Drain-Durchlauf: sortiert, sendet über `send`, persistiert `kept`.
+   * Ein vollständiger Drain-Zyklus: **`runOfflineMailboxDrainCycle`** mit Storage dieses Managers.
+   * Argument: **`OfflineMailboxTrySend`** oder klassischer **`OfflineMailboxSendPort`** (wird gewrappt).
    */
-  async function drainOnce(send: OfflineMailboxSendPort): Promise<{
+  async function drainOnce(sendPortOrTrySend: OfflineMailboxDrainOnceArg): Promise<{
     sent: number
     failed: number
     remaining: number
   }> {
-    const sorted = sortOfflineMailboxForDrain(load())
-    if (sorted.length === 0) {
-      return { sent: 0, failed: 0, remaining: 0 }
-    }
-    const now = deps.clock.now()
-    const { kept, sent, failed } = await drainOfflineMailboxOnce(sorted, now, send)
-    save(kept)
-    return { sent, failed, remaining: kept.length }
+    const trySend = coerceOfflineMailboxTrySend(sendPortOrTrySend)
+    return runOfflineMailboxDrainCycle({ load, save, nowMs: deps.clock.now() }, trySend)
   }
 
   return { load, save, nextClientOutSeq, count, enqueueFailure, drainOnce }

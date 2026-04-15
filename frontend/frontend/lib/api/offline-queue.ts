@@ -3,7 +3,7 @@
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
  *
- * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxSendPort`** (`@morgendrot/core`).
+ * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
  * Diese Datei: **Browser-Storage**, **Opt-in**, **Send-Adapter** (`chat-commands`).
  */
 
@@ -16,6 +16,7 @@ import {
   createSystemClock,
   createCryptoUuidIdGenerator,
   offlineMailboxDedupKey,
+  createOfflineMailboxTrySendFromSendPort,
 } from '@morgendrot/core'
 
 export {
@@ -127,5 +128,5 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  return getMailboxManager().drainOnce(createChatCommandsSendPort())
+  return getMailboxManager().drainOnce(createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort()))
 }

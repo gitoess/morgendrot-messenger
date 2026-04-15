@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxQueueItem } from './model.js'
-import { drainOfflineMailboxOnce } from './drain.js'
+import { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle } from './drain.js'
 import type { OfflineMailboxSendPort } from './send-port.js'
+import { createOfflineMailboxTrySendFromSendPort } from './send-port.js'
 
 function plainItem(id: string, recipient: string, payload: string, seq: number): OfflineMailboxQueueItem {
   return {
@@ -42,7 +43,7 @@ describe('drainOfflineMailboxOnce', () => {
       sendPlain: async () => ({ ok: true }),
     }
     const sorted = [plainItem('1', '0xa', 'hi', 1)]
-    const r = await drainOfflineMailboxOnce(sorted, 1_000_000, send)
+    const r = await drainOfflineMailboxOnce(sorted, 1_000_000, createOfflineMailboxTrySendFromSendPort(send))
     expect(r.sent).toBe(1)
     expect(r.failed).toBe(0)
     expect(r.kept).toHaveLength(0)
@@ -54,7 +55,7 @@ describe('drainOfflineMailboxOnce', () => {
       sendPlain: async () => ({ ok: false, error: 'netz' }),
     }
     const sorted = [plainItem('1', '0xb', 'x', 1)]
-    const r = await drainOfflineMailboxOnce(sorted, 2_000_000, send)
+    const r = await drainOfflineMailboxOnce(sorted, 2_000_000, createOfflineMailboxTrySendFromSendPort(send))
     expect(r.sent).toBe(0)
     expect(r.failed).toBe(1)
     expect(r.kept).toHaveLength(1)
@@ -72,7 +73,30 @@ describe('drainOfflineMailboxOnce', () => {
       sendPlain: async () => ({ ok: false }),
     }
     const sorted = [encItem('e', 'wire-body', 1)]
-    await drainOfflineMailboxOnce(sorted, 3_000_000, send)
+    await drainOfflineMailboxOnce(sorted, 3_000_000, createOfflineMailboxTrySendFromSendPort(send))
     expect(used).toBe('wire-body')
+  })
+})
+
+describe('runOfflineMailboxDrainCycle', () => {
+  it('persistiert über load/save', async () => {
+    let stored: OfflineMailboxQueueItem[] = [plainItem('1', '0xa', 'hi', 1)]
+    const trySend = createOfflineMailboxTrySendFromSendPort({
+      sendEncrypted: async () => ({ ok: false }),
+      sendPlain: async () => ({ ok: true }),
+    })
+    const r = await runOfflineMailboxDrainCycle(
+      {
+        load: () => stored,
+        save: (items) => {
+          stored = items
+        },
+        nowMs: 9_000_000,
+      },
+      trySend
+    )
+    expect(r.sent).toBe(1)
+    expect(r.remaining).toBe(0)
+    expect(stored).toHaveLength(0)
   })
 })

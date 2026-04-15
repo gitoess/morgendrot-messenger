@@ -1,15 +1,15 @@
 import type { OfflineMailboxQueueItem } from './model.js'
-import type { OfflineMailboxSendPort } from './send-port.js'
-import { shouldDeferDrainAttempt, bumpOfflineMailboxItemAfterFailedSend } from './state.js'
+import type { OfflineMailboxTrySend } from './send-port.js'
+import { shouldDeferDrainAttempt, bumpOfflineMailboxItemAfterFailedSend, sortOfflineMailboxForDrain } from './state.js'
 
 /**
  * Ein Drain-Durchlauf über **bereits sortierte** Items (typ. `sortOfflineMailboxForDrain`).
- * Backoff/Defer und Fehler-Bump sind im Core; Netz nur über `send`.
+ * Backoff/Defer und Fehler-Bump sind im Core; Netz nur über **`trySend`**.
  */
 export async function drainOfflineMailboxOnce(
   sortedItems: OfflineMailboxQueueItem[],
   nowMs: number,
-  send: OfflineMailboxSendPort
+  trySend: OfflineMailboxTrySend
 ): Promise<{ kept: OfflineMailboxQueueItem[]; sent: number; failed: number }> {
   const kept: OfflineMailboxQueueItem[] = []
   let sent = 0
@@ -21,10 +21,7 @@ export async function drainOfflineMailboxOnce(
       continue
     }
 
-    const result =
-      item.kind === 'encrypted_send'
-        ? await send.sendEncrypted(item.payload)
-        : await send.sendPlain(item.recipient, item.payload)
+    const result = await trySend(item)
 
     if (result.ok) {
       sent++
@@ -35,4 +32,26 @@ export async function drainOfflineMailboxOnce(
   }
 
   return { kept, sent, failed }
+}
+
+export type OfflineMailboxDrainCycleDeps = {
+  load: () => OfflineMailboxQueueItem[]
+  save: (items: OfflineMailboxQueueItem[]) => void
+  nowMs: number
+}
+
+/**
+ * Lädt, sortiert, ein Drain-Durchlauf, speichert — Orchestrierung im Core (testbar mit In-Memory-`load`/`save`).
+ */
+export async function runOfflineMailboxDrainCycle(
+  deps: OfflineMailboxDrainCycleDeps,
+  trySend: OfflineMailboxTrySend
+): Promise<{ sent: number; failed: number; remaining: number }> {
+  const sorted = sortOfflineMailboxForDrain(deps.load())
+  if (sorted.length === 0) {
+    return { sent: 0, failed: 0, remaining: 0 }
+  }
+  const { kept, sent, failed } = await drainOfflineMailboxOnce(sorted, deps.nowMs, trySend)
+  deps.save(kept)
+  return { sent, failed, remaining: kept.length }
 }

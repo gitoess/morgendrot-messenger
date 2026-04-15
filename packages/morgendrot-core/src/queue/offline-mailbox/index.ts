@@ -34,8 +34,17 @@ export {
   type EnqueueOfflineMailboxFailureResult,
 } from './manager.js'
 
-export type { MailboxSendResult, OfflineMailboxSendPort } from './send-port.js'
-export { drainOfflineMailboxOnce } from './drain.js'
+export type {
+  MailboxSendResult,
+  OfflineMailboxSendPort,
+  OfflineMailboxTrySend,
+  OfflineMailboxDrainOnceArg,
+} from './send-port.js'
+export {
+  createOfflineMailboxTrySendFromSendPort,
+  coerceOfflineMailboxTrySend,
+} from './send-port.js'
+export { drainOfflineMailboxOnce, runOfflineMailboxDrainCycle, type OfflineMailboxDrainCycleDeps } from './drain.js'
 
 export {
   computeCanonicalMsgRefV1,

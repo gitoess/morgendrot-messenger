@@ -39,6 +39,20 @@ describe('computeCanonicalMsgRefV1', () => {
     const v = await computeCanonicalMsgRefV1({ ...base, payloadUtf8: 'b' })
     expect(u).not.toBe(v)
   })
+
+  it('messageNonceU64 steuert Ref unabhängig von abgeleitetem Nonce', async () => {
+    const base = {
+      senderAddress: '',
+      recipientAddress: '0x' + 'cc'.repeat(32),
+      threadId: 't',
+      payloadUtf8: 'same',
+    }
+    const derived = await computeCanonicalMsgRefV1({ ...base })
+    const explicit1 = await computeCanonicalMsgRefV1({ ...base, messageNonceU64: BigInt(1) })
+    const explicit2 = await computeCanonicalMsgRefV1({ ...base, messageNonceU64: BigInt(2) })
+    expect(explicit1).not.toBe(explicit2)
+    expect(explicit1).not.toBe(derived)
+  })
 })
 
 describe('normalizeMailboxAddressUtf8', () => {

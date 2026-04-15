@@ -8,6 +8,7 @@ import {
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
   stableOfflineMailboxThreadId,
+  nextOfflineMailboxClientOutSeq,
 } from '@/frontend/lib/api'
 import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
@@ -428,7 +429,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       kind: 'encrypted_send' | 'plain_send',
       textSnap: string,
       encrypted: boolean,
-      lastErr: string
+      lastErr: string,
+      /** § H.12: Monotoner Out-Snapshot beim Compose (vor `/send`); gleiche Semantik wie nächstes `clientOutSeq` bei Enqueue. */
+      messageNonceU64: bigint
     ): Promise<boolean> => {
       if (!allowOfflineMailboxQueue) return false
       const en = await enqueueOfflineMailboxFailure({
@@ -440,6 +443,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         lastError: lastErr,
         senderAddress: myAddress,
         threadId: stableOfflineMailboxThreadId(myAddress, recipient),
+        messageNonceU64,
       })
       if (en.ok && en.queued) {
         onOfflineMailboxQueueChanged?.()
@@ -459,10 +463,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return { ok: false }
       }
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
+        const messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
         const res = await sendMessage(recipient, textSnap, enc)
         if (res.ok) return { ok: true }
         const errText = res.error || 'Fehler'
-        if (await queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', textSnap, enc, errText)) {
+        if (await queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', textSnap, enc, errText, messageNonceU64)) {
           return failSend(
             `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
           )
@@ -562,6 +567,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (forcedTransport === 'internet') {
+        const messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
         const res = await sendEncryptedMessageWithTimeout(textSnap)
         if (res.ok) return { ok: true }
         const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
@@ -575,7 +581,15 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
             const meshMsg = meshErr instanceof Error ? meshErr.message : String(meshErr)
-            if (await queueMailboxIfAllowed('encrypted_send', textSnap, true, `${onlineErr} / Funk: ${meshMsg}`)) {
+            if (
+              await queueMailboxIfAllowed(
+                'encrypted_send',
+                textSnap,
+                true,
+                `${onlineErr} / Funk: ${meshMsg}`,
+                messageNonceU64
+              )
+            ) {
               return failSend(
                 `${onlineErr} Funk-Versuch fehlgeschlagen — zwischengespeichert; erneuter Mailbox-Versuch bei Basis (Opt-in).`
               )
@@ -585,7 +599,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return { ok: false }
           }
         }
-        if (await queueMailboxIfAllowed('encrypted_send', textSnap, true, onlineErr)) {
+        if (await queueMailboxIfAllowed('encrypted_send', textSnap, true, onlineErr, messageNonceU64)) {
           return failSend(
             readStrictOnlineNoMeshFallback() && meshtastic.connected
               ? `${onlineErr} „Strikt ohne Funk-Fallback“ — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder Transport auf „funk“ stellen.`
