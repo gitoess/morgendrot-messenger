@@ -28,6 +28,17 @@
 
 ---
 
+## Nachtrag (2026-04-28): Testläufe & Handy-Fenster
+
+| Thema | Pfad |
+|--------|------|
+| Dokumentierte Kommando-Läufe (Smoke, Frontend, Core, Realworld-Hinweise) | **`docs/TEST-RUN-LOGBOOK.md`** |
+| Entscheidung „ab wann Handy“ | **`docs/HANDY-TEST-WINDOW.md`** |
+
+**Ist-Lauf (lokal):** `test:smoke`, `test:frontend-unit`, `test:core`, `test:h15-direct-submit` **grün**. **`test:messages`** zwei-API ohne zweite Instanz → erwartbar abgebrochen; **`SINGLE_WALLET=1`** → Teilpfade OK, Chain-Senden wegen **`locked`** ausstehend bis UI-Unlock oder konfiguriertes Skript-Unlock.
+
+---
+
 ## Nachtrag (2026-03-29): Fahrplan & Policy (**Doku**)
 
 | Thema | Pfad / § |

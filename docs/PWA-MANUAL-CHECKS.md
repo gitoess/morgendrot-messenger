@@ -2,7 +2,7 @@
 
 **Zweck:** Abgleich mit **`docs/ROADMAP-FAHRPLAN.md`** § **H.2** (Priorität 1 aus der 8-Punkte-Liste: PWA-Realität). **Kein** Ersatz für automatische Tests — ergänzt **`TESTING.md`** (Smoke) um **Installation** und **Offline-Shell**. **Reihenfolge:** **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** — **§ H.2** vor **§ H.8** (Dienst/Testnet-Doku **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, ohne Profilwahl-Pflicht).
 
-**Hintergrund:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (was der Service Worker wirklich cached). **Größere Offline-Karten / Geodaten (Zielbild, Einsatz vs. Wanderer):** **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**Fahrplan § H.11**).
+**Hintergrund:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (was der Service Worker wirklich cached). **Größere Offline-Karten / Geodaten (Zielbild, Einsatz vs. Wanderer):** **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**Fahrplan § H.11**). **Wann nach diesen Checks am Smartphone weitermachen:** **`docs/HANDY-TEST-WINDOW.md`**.
 
 ---
 

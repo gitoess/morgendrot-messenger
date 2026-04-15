@@ -156,6 +156,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Nachtrag 2026-04-28 (Umsetzungstranche H.15 + H.0 + H.2 + Folge):** **Stufe 2** = Smoke-Doku + Vitest; **Stufe 3** = **`SYNC-*`** § 8 + § 8.1 (Backoff) + Adapter-Kommentar **`offline-queue.ts`**; **Stufe 4** = **`TESTING.md`** Ritual **5c** + **`npm run test:h15-direct-submit`** + Anhang **`HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 4; **H.0** = **Wallet & Session**; **H.2** = Handbuch **`sw-6`**; **§ H.1b** = **`settings-wallet-session-card.tsx`**. Details **`CHANGELOG.md`** [Unreleased], **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**.
 
+**Nachtrag 2026-04-28 (Tests & Handy):** **`docs/TEST-RUN-LOGBOOK.md`** (Smoke/Frontend/Core/H.15 grün; Realworld mit Unlock nachziehen); **`docs/HANDY-TEST-WINDOW.md`** — **Handy erst**, wenn Schreibtisch grün **und** deploybare URL **gleicher** Version; optional **`test:messages*`** / **`test:realworld`** mit entsperrter API.
+
 ### C.1 Pflichtpfad (größter Nutzen)
 
 **Leitplanke:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**, Anti-Feature-Creep) — hier nur die **operative** Reihenfolge.

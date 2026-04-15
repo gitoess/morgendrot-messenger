@@ -26,6 +26,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`:** Risiko-Abschnitt → Verweis **§ H.15** / **`SYNC-*`** § 8.
 - **`CHANGELOG.md`:** neu — zentrale Stelle für Release- und Doku-Notizen neben **`docs/ROADMAP-FAHRPLAN.md`**.
 
+### Qualität / Handy
+
+- **`docs/TEST-RUN-LOGBOOK.md`** — dokumentierter Lauf **2026-04-28** (Smoke, Frontend-, Core-, H.15-Vitest; Realworld teilweise wegen `locked` / zweiter API).
+- **`docs/HANDY-TEST-WINDOW.md`** — wann die PWA **am Gerät** testen (nach grünem Schreibtisch + optional Realworld mit Unlock).
+
 ### Hinweis (Fahrplan)
 
 - Operative Reihenfolge und „nächste drei“ Arbeiten: **`docs/ROADMAP-FAHRPLAN.md`** (**§ C.0b**, **§ H.0–H.2**, **§ H.15**).
