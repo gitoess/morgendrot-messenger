@@ -4,7 +4,7 @@
  *
  * **Next.js:** identische Präfix-/JSON-Logik im Messenger unter `frontend/frontend/lib/morg-emergency-v1-text.ts` (Turbopack-Pfad).
  */
-import { MorgTextWireMarker } from './opcodes.js';
+import { MorgTextWireMarker } from './opcodes';
 
 const CLOSE = ']]' as const;
 

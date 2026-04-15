@@ -10,6 +10,7 @@
 
 - **Schnell (Repo-Root):** **`npm run test:h15-direct-submit`** — nur **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`** (Modus „Nur API“, Drain aus).
 - **Voll im Ordner `frontend/`:** **`npm run test:unit`** — gesamter Vitest-Lauf inkl. dieser Datei.
+- **Schreibtisch (ohne Browser, 2026-03-28):** Root **`npm run test:smoke`** (36 Modulgruppen) + **`test:h15-direct-submit`** dokumentiert in **`docs/TEST-RUN-LOGBOOK.md`** — ersetzt **nicht** § 2 (Testnet / Puls / Basis aus).
 
 ---
 

@@ -2,9 +2,9 @@
  * Mesh v2: innerer AES-GCM-Blob + Emergency-Binary-Hülle (PRIVATE_APP).
  * Isomorph: nur morgendrot-crypto + emergency-binary-wire (shared).
  */
-import { base64ToUint8, uint8ToBase64 } from './bytes-base64.js';
-import { buildEmergencyBinaryV2, tryParseEmergencyBinaryV2 } from './emergency-binary-wire.js';
-import { deriveAesGcmKey, deriveSharedSecret, decryptMessage, encryptMessage } from './morgendrot-crypto.js';
+import { base64ToUint8, uint8ToBase64 } from './bytes-base64';
+import { buildEmergencyBinaryV2, tryParseEmergencyBinaryV2 } from './emergency-binary-wire';
+import { deriveAesGcmKey, deriveSharedSecret, decryptMessage, encryptMessage } from './morgendrot-crypto';
 
 const MESH_V2_MAX_BYTES = 240;
 

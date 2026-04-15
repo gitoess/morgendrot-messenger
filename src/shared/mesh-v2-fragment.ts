@@ -2,7 +2,7 @@
  * Mesh Emergency Binary v2: Fragmentierung (Sender).
  * Muss mit `frontend/frontend/lib/mesh-v2-fragment.ts` (Reassembly) übereinstimmen.
  */
-import { uint8ToHex } from './bytes-base64.js';
+import { uint8ToHex } from './bytes-base64';
 
 export const MESH_V2_MAX_PLAINTEXT_UTF8 = 175;
 

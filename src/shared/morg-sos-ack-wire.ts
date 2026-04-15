@@ -2,7 +2,7 @@
  * Optional: Mesh-SOS-Empfangsbestätigung (Sender kann darauf warten, siehe `morgendrot.sosWaitMeshAckMs`).
  * Browser-Kopie: `frontend/frontend/lib/morg-sos-ack-wire.ts`.
  */
-import { MorgTextWireMarker } from './opcodes.js';
+import { MorgTextWireMarker } from './opcodes';
 
 const CLOSE = ']]' as const;
 

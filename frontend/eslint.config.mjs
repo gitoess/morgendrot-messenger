@@ -25,6 +25,10 @@ const restrictedImportsMsgInboxFromAttachments =
   'features/inbox must not import features/attachments — use shared types, lib/, or parent orchestration (MESSENGER-UI-MODULARITY-STRATEGY).'
 const restrictedImportsMsgAttachmentsFromInbox =
   'features/attachments must not import features/inbox — use shared types, lib/, or parent orchestration (MESSENGER-UI-MODULARITY-STRATEGY).'
+const restrictedImportsMsgSendFromAttachments =
+  'features/send must not import features/attachments — use shared types, lib/, or parent orchestration (MESSENGER-UI-MODULARITY-STRATEGY).'
+const restrictedImportsMsgAttachmentsFromSend =
+  'features/attachments must not import features/send — use shared types, lib/, or parent orchestration (MESSENGER-UI-MODULARITY-STRATEGY).'
 
 export default tseslint.config(
   {
@@ -49,10 +53,16 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: inboxAliasPatterns.map((g) => ({
-            group: [g],
-            message: restrictedImportsMsgSend,
-          })),
+          patterns: [
+            ...inboxAliasPatterns.map((g) => ({
+              group: [g],
+              message: restrictedImportsMsgSend,
+            })),
+            ...attachmentsAliasPatterns.map((g) => ({
+              group: [g],
+              message: restrictedImportsMsgSendFromAttachments,
+            })),
+          ],
         },
       ],
     },
@@ -83,10 +93,16 @@ export default tseslint.config(
       'no-restricted-imports': [
         'error',
         {
-          patterns: inboxAliasPatterns.map((g) => ({
-            group: [g],
-            message: restrictedImportsMsgAttachmentsFromInbox,
-          })),
+          patterns: [
+            ...inboxAliasPatterns.map((g) => ({
+              group: [g],
+              message: restrictedImportsMsgAttachmentsFromInbox,
+            })),
+            ...sendAliasPatterns.map((g) => ({
+              group: [g],
+              message: restrictedImportsMsgAttachmentsFromSend,
+            })),
+          ],
         },
       ],
     },

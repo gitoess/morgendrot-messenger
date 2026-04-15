@@ -3,6 +3,7 @@
 **Zweck:** Kanonisches **Zielbild** für einen **dedizierten Notfall-Sendepfad**: sofortiger SOS über LoRa/Mesh, **höchste App-Priorität**, kompaktes Wire-Format, **Basis** erkennt und **priorisiert** Verarbeitung (Queue, IOTA-Verankerung, optionale Webhooks).  
 **Stand:** 2026-03-28  
 **Status:** **Spec / Phase B** — noch **kein** verbindliches Byte-Layout in allen Clients; Abgleich mit **`emergency-binary-wire.ts` (v2, Byte `0x02`)** bei Freeze.  
+**Abgleich § H.3n (2026-03-28, Schreibtisch):** **`EmergencyBinaryWireVersionByte = 0x02`** in **`src/shared/opcodes.ts`**; **`buildEmergencyBinaryV2` / `tryParseEmergencyBinaryV2`** in **`src/shared/emergency-binary-wire.ts`**; Textmarker **`[[MORG_EMERGENCY_V1:…]]`** in **`src/shared/morg-emergency-v1-text.ts`** und **`frontend/frontend/lib/morg-emergency-v1-text.ts`** — Spec § 7 unverändert.  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.3n**  
 **Verwandt:** **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`** (**§ H.3m**), **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3, **`src/shared/opcodes.ts`** (`MacroPriorityClass.Flash`), **`src/shared/emergency-binary-wire.ts`**, **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
 

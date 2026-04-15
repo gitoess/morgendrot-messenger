@@ -140,4 +140,6 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 
 **Fortschritt 2026-04-28:** **§ H.1b** Mini-Scheibe — **`SettingsWalletSessionCard`** in **`frontend/frontend/components/views/settings-wallet-session-card.tsx`** (aus **`settings-view.tsx`**); Verweis in **`frontend/frontend/features/README.md`**.
 
+**Fortschritt 2026-03-28:** **§ H.1b** — ESLint-Dreieck vervollständigt: **`features/send`** darf **`features/attachments`** nicht importieren und umgekehrt (**`no-restricted-imports`**); **`npm run lint:feature-boundaries`** erweitert um **`frontend/features/attachments`** — **`frontend/eslint.config.mjs`**, **`frontend/package.json`**.
+
 **Fortschritt 2026-03-29:** **§ H.1b** — Messenger-/Boss-Kachel-Whitelist (**§ H.17**) aus **`dashboard.tsx`** nach **`lib/dashboard-workspace-tile-visibility.ts`** + **`dashboard-workspace-tile-visibility.test.ts`** (Vitest).

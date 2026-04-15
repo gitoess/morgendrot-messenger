@@ -2,7 +2,7 @@
  * ECDH P-256 + AES-GCM – nur Web Crypto (globalThis.crypto.subtle), kein node:crypto.
  * Vor Import in Node: globalThis.crypto setzen (siehe start-with-secrets / run-tests).
  */
-import { base64ToUint8, uint8ToBase64 } from './bytes-base64.js';
+import { base64ToUint8, uint8ToBase64 } from './bytes-base64';
 
 function getSubtle(): SubtleCrypto {
   const s = globalThis.crypto?.subtle;

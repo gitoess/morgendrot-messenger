@@ -3,8 +3,8 @@
  * Nur Web Crypto (SHA-256) + Uint8Array – kein node:crypto / Buffer.
  * Spiegel: `lora-bridge/src/emergency-binary.ts` bei Protokoll-Änderungen angleichen.
  */
-import { uint8ToHex } from './bytes-base64.js';
-import { EmergencyBinaryWireVersionByte } from './opcodes.js';
+import { uint8ToHex } from './bytes-base64';
+import { EmergencyBinaryWireVersionByte } from './opcodes';
 
 export const EMERGENCY_BINARY_VERSION = EmergencyBinaryWireVersionByte;
 const HEADER_LEN = 37;

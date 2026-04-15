@@ -12,6 +12,8 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **Next / `@morgendrot/shared`:** Relative Imports unter **`src/shared/`** ohne **`.js`-Suffix** (z. B. `./bytes-base64`, `./opcodes`) — **Turbopack** (`next build`) löst sonst keine `.ts`-Datei für `./modul.js` auf.
+- **§ H.1b:** ESLint-Feature-Grenzen **send ↔ attachments** ergänzt; **`lint:feature-boundaries`** lintet **`features/attachments`** mit — **`frontend/eslint.config.mjs`**, **`frontend/package.json`**.
 - **§ H.1b:** Dashboard-Kachel-Whitelist (**§ H.17**) in **`lib/dashboard-workspace-tile-visibility.ts`** mit Vitest; **`dashboard.tsx`** ruft nur noch den Filter — **`features/README.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**.
 - **§ H.17 (UI):** `UI_VARIANT=messenger` — Posteingang-**Boss-Übersicht** (`bossView`) ausgeblendet + State zurückgesetzt; **Geräte-Radar** nur noch für **Boss** (nicht Kommandant) im Messenger-Bundle — **`chat-view-inbox-toolbar.tsx`**, **`use-chat-view-core.ts`**, **`dashboard.tsx`**, **`device-radar-view.tsx`**, Kurz-Hinweis **`workspace-projects-panel.tsx`**.
 - **§ H.17 (Kacheln):** Messenger-Bundle + **Boss** + Arbeitsbereich **`full`** → Dashboard-Kacheln nur **Nachrichten / Tresor / Steuerung** (`chat`, `vault`, `boss`); Zugang & Überwachung ausgeblendet — **`dashboard.tsx`**, Hinweis **`workspace-projects-panel.tsx`** (`liteMessengerBossFullTiles`).
