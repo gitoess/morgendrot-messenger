@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-03-28** | Repo lokal (Windows), nach TS-Kleinfix | **`cd frontend`**: **`npx tsc --noEmit`**, **`npm run lint`**, **`npm run check:circular`**, **`npm run test:unit`** (40 Dateien, 226 Tests); Root: **`npm run test:core`**, **`npm run test:h15-direct-submit`**, **`npm run test:smoke`** | **OK** — Frontend-`tsc` grün; Lint + madge grün; Vitest/Core/H.15/Smoke grün. Root **`npx tsc --noEmit`** weiterhin TS6059 (`rootDir` nur `src/` vs. `packages/morgendrot-core`) — bekannt; Qualität über Frontend-`tsc` + Core-Tests. |
 | **2026-03-28** | API **:3342**, Windows, `.env`; Status vor Connect bereits `connected=true` / `locked=false` | **`npm run test:smoke`** | **OK** — 36 bestanden, 0 fehlgeschlagen (`validate:ui` + `npm run test`). |
 | **2026-03-28** | selbe, `SINGLE_WALLET=1` | **`npm run test:messages:single`** | **OK** — Abschnitte **1**–**7** vollständig (kompaktes Bild, Handshake/Connect, `/send`/`/fetch`, Filter, Klartext, `purge-handshake`, `/vault-save`, `hasLocal`; Hinweiszeile Ticket-Skript am Ende). |
 | **2026-03-28** | selbe | **`npm run test:frontend-unit`** | **OK** — 37 Testdateien, 219 Tests, ~6 s. |

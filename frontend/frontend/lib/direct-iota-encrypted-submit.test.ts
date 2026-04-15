@@ -44,7 +44,7 @@ describe('direct-iota-encrypted-submit (H.15 — Smoke)', () => {
       ciphertext: ct,
       iv,
       tag,
-      nonce: 1n,
+      nonce: BigInt(1),
     })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toMatch(/Nur Morgendrot-API/)
@@ -57,7 +57,7 @@ describe('direct-iota-encrypted-submit (H.15 — Smoke)', () => {
       ciphertext: ct,
       iv,
       tag,
-      nonce: 1n,
+      nonce: BigInt(1),
     })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toMatch(/Drain/)

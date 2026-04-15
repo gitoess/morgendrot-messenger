@@ -157,7 +157,15 @@ export async function fetchMailboxInboxRpcRows(
       const outgoing = sender != null && normalizeMailboxAddress(sender) === myNorm
       if (!incoming && !outgoing) continue
 
-      const nonce = BigInt(f.nonce ?? 0)
+      const nonceRaw = f.nonce
+      const nonce =
+        typeof nonceRaw === 'bigint'
+          ? nonceRaw
+          : typeof nonceRaw === 'number' && Number.isFinite(nonceRaw)
+            ? BigInt(Math.trunc(nonceRaw))
+            : typeof nonceRaw === 'string' && nonceRaw.trim()
+              ? BigInt(nonceRaw)
+              : BigInt(0)
       const rawCreated = f.created_at_ms
       const createdNum =
         typeof rawCreated === 'bigint'

@@ -45,6 +45,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Qualität / Handy
 
+- **Frontend-`tsc` / Core:** `direct-iota-encrypted-submit.test.ts` — `BigInt(1)` statt Literal `1n` (Target ES6); **`mailbox-inbox-mixed-rpc.ts`** — `nonce` aus Move-`fields` robust nach `bigint` (Record `unknown`). Ritual-Lauf siehe **`docs/TEST-RUN-LOGBOOK.md`** (2026-03-28).
 - **Messenger vs. Ticket-Kachel:** **`TESTING.md`**, **`README.md`**, **`docs/HANDY-TEST-WINDOW.md`**, **`docs/TEST-RUN-LOGBOOK.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`** — klar: **`test:messages*`** = Messenger-Smoke; **`test:tickets-accesskey-realworld`** (Alias **`test:realworld`**) = **andere Kachel**, nicht Teil des Messenger-Gates.
 - **`docs/TEST-RUN-LOGBOOK.md`** — Troubleshooting **api version mismatch** nur Ticket-Skript; Log-Zeilen weiterhin getrennt pflegbar.
 - **`scripts/run-messages-chat-realworld.ts`** — Abschlusshinweis auf separates Ticket-Skript.

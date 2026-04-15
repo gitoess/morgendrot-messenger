@@ -32,7 +32,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 
 | # | Kommando | Zweck |
 |---|-----------|--------|
-| 1 | **`npx tsc --noEmit`** | Root-Typecheck |
+| 1 | **`npx tsc --noEmit`** | Root-Typecheck (**nur** `src/**` laut Root-`tsconfig.json`) — kann **TS6059** melden, wenn `src/` über Workspace auf **`packages/morgendrot-core`** zeigt; dann Schritt **2** + **`npm run test:core`** als wirksamer Spiegel bis Root-/tsconfig erweitert wird |
 | 2 | **`cd frontend`** dann **`npx tsc --noEmit`** | Next-/Messenger-`tsconfig` |
 | 3 | **`npm run lint`** | ESLint Messenger-Baum (`features/send`↔`inbox`, …) |
 | 4 | **`npm run check:circular`** | madge, Zyklen unter **`./frontend`** |
