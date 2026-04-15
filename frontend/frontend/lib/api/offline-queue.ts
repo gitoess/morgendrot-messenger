@@ -32,6 +32,10 @@ export {
   stableOfflineMailboxThreadId,
   normalizeMailboxAddressUtf8,
   type ComputeCanonicalMsgRefV1Input,
+  parseMailboxOutNonceMarker,
+  prependMailboxOutNonceMarker,
+  parseMailboxProtocolNonceU64FromWire,
+  type ParsedMailboxOutNonce,
 } from '@morgendrot/core'
 
 export type EnqueueOfflineMailboxResult =

@@ -29,6 +29,7 @@ import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
 import { plaintextStartsWithMorgEmergencyV1 } from '../shared/morg-emergency-v1-text.js';
+import { parseMailboxOutNonceMarker } from '../../packages/morgendrot-core/src/queue/offline-mailbox/mailbox-out-nonce-wire.js';
 
 /** Optionen für Sponsored Transaction: sender = logischer Absender (z. B. Gast), Sponsor zahlt Gas. */
 export type SponsorOpts = { sponsorForSender?: string };
@@ -57,6 +58,7 @@ function debugSendWire(): boolean {
 
 function wireKindForLog(plaintext: string): string {
     if (plaintextStartsWithMorgEmergencyV1(plaintext)) return 'emergency_v1';
+    if (plaintext.startsWith('[[MORG_MAILBOX_NONCE_V1:')) return 'mailbox_nonce_v1';
     if (plaintext.startsWith('[[MORG_COMPACT_IMG_V1:')) return 'compact_img';
     if (plaintext.startsWith('[[MORG_FILE_TXT_V1:')) return 'file_txt';
     if (plaintext.startsWith('[[MORG_TXT_V1:')) return 'txt_v1';
@@ -71,16 +73,18 @@ export async function sendEncryptedMessage(
     peerPubRaw: Uint8Array,
     myPrivKey: CryptoKey
 ) {
-    const msgUtf8 = new TextEncoder().encode(message).length;
+    const parsedNonce = parseMailboxOutNonceMarker(message);
+    const bodyForE2ee = parsedNonce ? parsedNonce.rest : message;
+    const msgUtf8 = new TextEncoder().encode(bodyForE2ee).length;
     if (msgUtf8 > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
         throw new Error(
             `Nachricht zu lang (${msgUtf8} B UTF-8, max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}; Move reines Arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B).`
         );
     }
-    assertMessengerMediaNetBlobWithinLimit(message);
-    if (plaintextStartsWithMorgEmergencyV1(message)) {
+    assertMessengerMediaNetBlobWithinLimit(bodyForE2ee);
+    if (plaintextStartsWithMorgEmergencyV1(bodyForE2ee)) {
         logger.warn(
-            `morg.sos.outgoing kind=emergency_v1 utf8=${msgUtf8} head=${JSON.stringify(message.slice(0, 120))}`
+            `morg.sos.outgoing kind=emergency_v1 utf8=${msgUtf8} head=${JSON.stringify(bodyForE2ee.slice(0, 120))}`
         );
     }
     if (debugSendWire()) {
@@ -90,9 +94,9 @@ export async function sendEncryptedMessage(
     }
     const sharedSecret = await deriveSharedSecret(myPrivKey, peerPubRaw);
     const aesKey = await deriveAesGcmKey(sharedSecret);
-    const encrypted = await encryptMessage(aesKey, message);
+    const encrypted = await encryptMessage(aesKey, bodyForE2ee);
     const full = base64ToUint8(encrypted.ciphertext);
-    const nonce = BigInt(Date.now());
+    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
     const ciphertext = new Uint8Array(full.subarray(0, -16));
     const iv = base64ToUint8(encrypted.iv);
     const tag = new Uint8Array(full.subarray(-16));
@@ -104,7 +108,7 @@ export async function sendEncryptedMessage(
         iv,
         tag,
         nonce,
-        CFG.ENABLE_PLAINTEXT_CHANNEL ? new TextEncoder().encode(message) : undefined,
+        CFG.ENABLE_PLAINTEXT_CHANNEL ? new TextEncoder().encode(bodyForE2ee) : undefined,
         getWalletPassword(),
         messengerGasPolicyOpts()
     );
@@ -114,21 +118,23 @@ export async function sendEncryptedMessage(
 
 /** Nur Klartext senden – kein Handshake nötig. */
 export async function sendPlaintextOnly(recipient: string, text: string) {
-    const n = new TextEncoder().encode(text).length;
+    const parsedNonce = parseMailboxOutNonceMarker(text);
+    const body = parsedNonce ? parsedNonce.rest : text;
+    const n = new TextEncoder().encode(body).length;
     if (n > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
         throw new Error(
             `Klartext zu lang (${n} B UTF-8, max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}; Move reines Arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B).`
         );
     }
-    assertMessengerMediaNetBlobWithinLimit(text);
-    if (plaintextStartsWithMorgEmergencyV1(text)) {
+    assertMessengerMediaNetBlobWithinLimit(body);
+    if (plaintextStartsWithMorgEmergencyV1(body)) {
         logger.warn(
-            `morg.sos.outgoing plaintext kind=emergency_v1 utf8=${n} head=${JSON.stringify(text.slice(0, 120))}`
+            `morg.sos.outgoing plaintext kind=emergency_v1 utf8=${n} head=${JSON.stringify(body.slice(0, 120))}`
         );
     }
-    const nonce = BigInt(Date.now());
+    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
-    return storePlaintextMessage(recipient, MY_ADDR, new TextEncoder().encode(text), nonce, getWalletPassword(), {
+    return storePlaintextMessage(recipient, MY_ADDR, new TextEncoder().encode(body), nonce, getWalletPassword(), {
         forceLegacyPlaintext: true,
         signOptions: messengerGasPolicyOpts(),
     });

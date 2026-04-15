@@ -36,7 +36,7 @@ Hinweis UI/API: GET/POST /api/vault-personal-secrets – Safe-Einträge nur bei 
 export const HELP_CHAT = `
 \x1b[90m--- BEFEHLE (im Chat) ---
 <Text>                    Verschlüsselte Nachricht an alle Partner senden (nur Terminal).
-/send <Text>             Verschlüsselte Nachricht senden (auch aus der UI).
+/send <Text>             Verschlüsselte Nachricht senden (auch aus der UI). Optional: erster Block [[MORG_MAILBOX_NONCE_V1:{"n":"<dezimal u64>"}]] dann Zeilenumbruch — explizite Mailbox-Nonce (PWA/Offline); sonst Zeitstempel.
 /transfer-coins <0x…> <IOTA>   Native Coins (IOTA) an Adresse senden (z.B. /transfer-coins 0x… 0.1).
 /exit                    Chat beenden, Programm beenden.
 /fetch <n> [sender]      Letzte N Nachrichten laden (z.B. /fetch 15). Optional: nur von sender (z.B. /fetch 10 0x…). Ohne /connect: Handshakes von der Chain.

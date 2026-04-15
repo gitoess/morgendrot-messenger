@@ -52,3 +52,10 @@ export {
   normalizeMailboxAddressUtf8,
   type ComputeCanonicalMsgRefV1Input,
 } from './canonical-msg-ref.js'
+
+export {
+  parseMailboxOutNonceMarker,
+  parseMailboxProtocolNonceU64FromWire,
+  prependMailboxOutNonceMarker,
+  type ParsedMailboxOutNonce,
+} from './mailbox-out-nonce-wire.js'
