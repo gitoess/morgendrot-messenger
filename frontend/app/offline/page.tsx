@@ -12,9 +12,14 @@ export default function OfflinePage() {
       <div className="max-w-md text-center space-y-3">
         <h1 className="text-xl font-semibold tracking-tight">Keine Netzverbindung</h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
-          Die Morgendrot-<strong>API</strong> (<span className="font-mono text-xs">/api/*</span>) läuft auf dem
-          Rechner/Server, den die PWA per Netz erreichen muss — Chat, Wallet und Kette sind ohne diese Basis nicht
-          nutzbar.
+          <strong>Zielbild:</strong> Messenger <strong>Handy-first</strong>, <strong>local-first</strong>,{' '}
+          <strong>direkt IOTA</strong> möglich; Morgendrot-Node <strong>optional</strong> — siehe{' '}
+          <span className="font-mono text-xs">docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md</span>.
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          <strong>Übergang (heute):</strong> Diese PWA spricht oft noch mit <span className="font-mono text-xs">/api/*</span>{' '}
+          auf einer erreichbaren Basis. Ohne Netz zur Basis sind viele Funktionen blockiert, bis der Client-Pfad
+          weiter ausgebaut ist.
         </p>
         <p className="text-sm text-muted-foreground leading-relaxed">
           <strong>Wichtig bei Installation über</strong> <span className="font-mono text-xs">127.0.0.1</span> mit{' '}

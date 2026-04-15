@@ -9,7 +9,7 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-8'
+const VERSION = 'morgendrot-sw-9'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
@@ -120,8 +120,8 @@ async function navigateOfflineFallback(request) {
   return new Response(
     '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Offline</title></head><body style="font-family:system-ui,sans-serif;padding:1rem;max-width:28rem;margin:auto;line-height:1.45">' +
       '<h1 style="font-size:1.1rem">Keine Netzverbindung</h1>' +
-      '<p>Wenn die installierte App <strong>http://127.0.0.1:3341</strong> nutzt: <strong>127.0.0.1</strong> ist <em>dieses</em> Gerät. Mit USB-<code>adb reverse</code> ging der Verkehr zum PC — <strong>ohne Kabel</strong> lauscht hier niemand. Lösung: PWA über die <strong>WLAN-IP des PCs</strong> (z. B. <code>http://192.168.…:3341</code>) installieren (PC muss dieselbe App/API weiter ausführen) <em>oder</em> eine gehostete Morgendrot-URL.</p>' +
-      '<p style="font-size:0.9rem;opacity:.85">Chat/Vault brauchen die Morgendrot-<strong>API</strong> — vollständig „ohne Server“ ist das nicht das heutige Zielbild.</p>' +
+      '<p>Wenn die installierte App <strong>http://127.0.0.1:3341</strong> nutzt: <strong>127.0.0.1</strong> ist <em>dieses</em> Gerät. Mit USB-<code>adb reverse</code> ging der Verkehr zum PC — <strong>ohne Kabel</strong> lauscht hier niemand. Lösung: PWA über die <strong>WLAN-IP des PCs</strong> (z. B. <code>http://192.168.…:3341</code>) installieren <em>oder</em> eine gehostete URL; Zielbild: Handy-first / direkt IOTA siehe Projekt-Architektur-Doku.</p>' +
+      '<p style="font-size:0.9rem;opacity:.85">Übergang: Viele Flows nutzen noch <code>/api</code> auf der Basis — bis der Client-Pfad weiter ausgebaut ist.</p>' +
       '</body></html>',
     { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
   )

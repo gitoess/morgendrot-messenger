@@ -56,12 +56,16 @@ npm run dev
 7. **Messenger nutzen:** App öffnen → Tresor **entsperren** wie am PC (siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`**).
 8. **Fehler „failed to load chunk“ / `Loading chunk … failed`:** meist **alter Service-Worker + neuer `next build`** (Chunk-Hashes weichen ab). **Einmal:** Chrome → Seiteninfo → **Speicher/Daten löschen** für diese Origin (oder installierte PWA deinstallieren), danach Seite neu öffnen und neu installieren. Nach **`sw.js`‑Änderung** (Versionspräfix **`morgendrot-sw-*`** in `frontend/public/sw.js`) einmal **hart neu laden** bzw. Tab schließen, damit die neue **`/sw.js`** greift.
 
-#### PWA nach USB-Abzug: „Keine Netzverbindung“ — Zielbild klären
+#### PWA nach USB-Abzug: „Keine Netzverbindung“ — Zielbild vs. heutiger Übergang
 
-- **`adb reverse tcp:3341 …`** leitet nur **solange das USB-Kabel** steckt den **lokalen Port des Handys** `127.0.0.1:3341` zum PC. Die installierte PWA merkt sich die **Start-URL** (z. B. `http://127.0.0.1:3341/`). **Ohne Kabel** ist `127.0.0.1` auf dem Handy **das Handy selbst** — dort läuft kein Morgendrot-Server → **offline**, Meldung **„Keine Netzverbindung“** ist erwartbar.
-- **Für Nutzung ohne USB (im selben WLAN):** PWA **nicht** von `127.0.0.1` installieren, sondern von **`http://<PC-LAN-IP>:3341`** (Schritt 4–6 oben). Der **PC** muss **`npm run start:prod:lan`** (oder `dev:lan`) weiter ausführen — die App ist ein **Client zur Basis**, keine vollständig in sich geschlossene „nur Handy“-App.
-- **„Ohne PC“ im Sinne von Feld/Einsatz:** Morgendrot braucht eine **erreichbare Basis** (API + ggf. Next öffentlich). Üblich: **Deploy** (HTTPS-URL), Handy nutzt dieselbe URL — nicht `adb reverse`.
-- **Handbuch offline:** Der Service Worker cacht **`/handbook/*.md`**. Die **Next-Route** **`/handbook`** (React) lädt die Shell wie jede Seite von der Basis — **ohne erreichbare Basis** ist die Handbuch-**Oberfläche** oft nicht nutzbar, auch wenn einzelne `.md`-Dateien im Cache liegen. Das ist eine **PWA-/Offline-Grenze**, kein vollwertiger Offline-Reader-Ersatz.
+**Produkt-Zielbild** (Handy-first, optionaler Node): **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6 — Messenger **primär** auf dem Handy, **local-first**, **direkt IOTA** möglich, Morgendrot-Node **optional**.
+
+**Was heute noch dazwischenfunkt:** Viele PWA-Flows nutzen weiterhin **`/api`** auf dem **Morgendrot-Prozess** (Übergang), bis die Stufen in **`ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 weitergezogen sind — das ist **Ist**, nicht Widerruf des Ziels.
+
+- **`adb reverse tcp:3341 …`** leitet nur **mit USB** `127.0.0.1:3341` **auf dem Handy** zum PC. Ohne Kabel zeigt **`127.0.0.1`** auf **das Handy** → keine Basis → **„Keine Netzverbindung“** (erwartbar für diese Installations-URL).
+- **Ohne USB, Heim-WLAN:** PWA von **`http://<PC-LAN-IP>:3341`** installieren; PC führt **`start:prod:lan`** aus, bis ihr **deployt** oder den **Direct-Pfad** vollständig nutzt.
+- **Feld / ohne eigenen PC im Rucksack:** **Deploy** (HTTPS) oder später **vollständig** client-lastiger Betrieb laut Architektur-Doku — nicht `127.0.0.1` über USB.
+- **Handbuch:** SW cacht **`/handbook/*.md`**; die **Next-Route** **`/handbook`** braucht für die Shell vorerst oft noch eine erreichbare Origin — **Offline-Grenze** während des Übergangs, kein Leitplanken-Widerruf.
 
 **Schneller ohne Build (nur Entwicklung):** statt Schritt 2–3 **`npm run dev:lan`** im Root — gleiche LAN-URL, aber Hot-Reload; `NEXT_ALLOWED_DEV_ORIGINS` wie oben setzen, falls `/ _next /`-Cross-Origin-Warnungen auftreten.
 

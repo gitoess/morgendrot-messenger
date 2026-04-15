@@ -3,6 +3,15 @@
 **Status:** Kanonisch **ab 2026-04-28** — ergänzt und ersetzt die frühere alleinige Primärleitlinie in **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6 (jetzt **§ 7 historisch** dort).  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.15**.
 
+**Leitsatz (Produkt, gültig — Kurzfassung):**
+
+1. **Messenger primär auf dem Handy** (Handy-first).  
+2. **Local-first:** speichern, signieren, puffern **lokal** auf dem Gerät.  
+3. **Direkt IOTA:** signierte Transaktionen **ohne zwingend** einen separaten Morgendrot-Node dazwischen (RPC konfigurierbar).  
+4. **Morgendrot-Server/Node nur optional** — z. B. Sponsored Gas, Archiv, Komfort.
+
+**Repo-Ist** bleibt bis zur schrittweisen Umsetzung (Stufen unten) teils **node-lastig**; das **widerspricht** dem Leitsatz **nicht**, sondern ist die dokumentierte **Übergangsphase** (siehe § 2 „Übergang“).
+
 ---
 
 ## 1. Zielbild (kurz)
