@@ -838,7 +838,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |--------|------|
 | **Zweck** | Messenger **primär** auf dem Handy; **local-first** (speichern, signieren, puffern); **direkter** Versand signierter TX an **IOTA-RPC** ohne **Pflicht**-Morgendrot-Node; Node/Relay **opt-in** (Gas, Archiv, Komfort). |
 | **App-Schalter** | **„Direkt ins IOTA senden“** = **Standard an**; **„Morgendrot Relay benutzen“** = optional. |
-| **Technik** | Shared **`@morgendrot/core`** (IOTA-Logik, Queue, Attestation-Hilfen); Offline-Queue + Delayed Upload **verzahnt** mit **§ H.12** — Details **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**. |
+| **Technik** | Shared **`@morgendrot/core`** (IOTA-Logik, Queue, Attestation-Hilfen); Offline-Queue + Delayed Upload **verzahnt** mit **§ H.12** — **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, Umsetzung Stufe **1:** **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`**. |
 | **Priorität** | **Stufenweise** (**Stufe 0–4** in Architektur-Doku); **parallel** zu **§ H.0–H.2** in kleinen Scheiben **erlaubt**; **nicht** unkontrolliert parallel zum **Mesh-Kern** (**§ C.0b**). |
 | **Risiko** | Custody/Threat-Model im Browser — mit **§ H.10**, **§ H.14**, **`MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`** abstimmen. |
 

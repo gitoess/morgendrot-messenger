@@ -45,6 +45,8 @@
 - Workspace: z. B. `packages/morgendrot-core` mit **`"name": "@morgendrot/core"`** — Root-`package.json` **`workspaces`** ergänzen, wenn angelegt.
 - **Node** und **Frontend** importieren dasselbe Paket; **`src/api-server`** darf schrittweise zum **Thin Relay** werden.
 
+**Stufe‑1‑Detailplan (Ordner, Module, Queue, Tests):** **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`** — inkl. Betriebsmodi (Handy±Server, PC±Server) und Abgrenzung zu **`@morgendrot/shared`**.
+
 ---
 
 ## 4. Pragmatischer Umsetzungsplan (Stufen)
