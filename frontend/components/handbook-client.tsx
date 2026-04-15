@@ -8,6 +8,8 @@ import { HandbookMarkdown } from '@/components/handbook-markdown'
 const DOCS: { file: string; title: string }[] = [
   { file: 'API-EINSATZ-ROLE-TEMPLATES.md', title: 'API: Einsatz-Rollen-Templates' },
   { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
+  { file: 'ONBOARDING-WALLET-UX-SPEC.md', title: 'Onboarding & Wallet (UX)' },
+  { file: 'RECOVERY-PHRASE-BACKUP.md', title: 'Recovery Phrase / Backup' },
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
   { file: 'NOTFALL-PURGE-MESSENGER.md', title: 'Notfall-Purge & lokaler Cache' },
   { file: 'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md', title: 'Vault & Bild-Tarnung (Zielbild)' },

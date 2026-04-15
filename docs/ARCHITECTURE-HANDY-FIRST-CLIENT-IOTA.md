@@ -55,8 +55,8 @@
 |-------|--------|----------------------------|
 | **0 — Leitplanken** | Feature-Flag / Settings-Modell für **Direct vs Relay**; Telemetrie-Logs nur ohne Secrets; Handbuch-Zeile „was läuft wo“. | **Ist (Messenger-PWA):** Chat **→ Puls** — Modus **Direkt** vs. **Nur Morgendrot-API** (`localStorage` **`morgendrot.iotaSubmitMode`**); **`docs/PWA-HANDBUCH-OFFLINE.md`** § 5; Telemetrie unverändert beachten. |
 | **1 — Core-Skelett** | Monorepo-Paket **`@morgendrot/core`**: reine Typen + **eine** PTB/TX-Hilfsfunktion aus `src/` **verschieben** (ohne Verhaltensänderung auf Node-Pfad). | Root + frontend `tsc`; Vitest im Paket grün. |
-| **2 — Erster Client-Submit** | Ein **kontrollierter** Flow (z. B. kleine Nachricht / Test-PTB) **vom Browser** über Core → RPC; Node-Pfad bleibt Fallback. | E2E oder manuelles Protokoll + Smoke. |
-| **3 — Offline-Queue** | Persistente Outbox auf dem Gerät; **Drain** bei Netz; **Idempotenz** / Dedup laut **§ H.12**; Konflikt mit bestehender **`offline-queue.ts`** **auflösen** (eine Wahrheit). | Keine doppelte Settlement-Spur; Tests. |
+| **2 — Erster Client-Submit** | Ein **kontrollierter** Flow (z. B. kleine Nachricht / Test-PTB) **vom Browser** über Core → RPC; Node-Pfad bleibt Fallback. | **Ist:** Manuelles Protokoll **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**; **`TESTING.md`** (Verweis); Vitest **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`** (Frühabbrüche); Merge-Ritual **`npm run test:unit`** im Ordner **`frontend/`**. |
+| **3 — Offline-Queue** | Persistente Outbox auf dem Gerät; **Drain** bei Netz; **Idempotenz** / Dedup laut **§ H.12**; Konflikt mit bestehender **`offline-queue.ts`** **auflösen** (eine Wahrheit). | **Ist:** Kanonische Queue-Logik nur in **`@morgendrot/core`**; **`frontend/.../offline-queue.ts`** = dünner Browser-Adapter (keine zweite Settlement-Implementierung) — **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8; **`npm run test:core`** / **`test:unit`** bei Änderungen. |
 | **4 — Relay optional** | **„Morgendrot Relay“** nutzt bestehendes `/api` für Gas-Sponsor, Archiv, komplexe Befehle; **Direct** bleibt Default. | Beide Modi in `TESTING.md`-Ritual; keine Regression Boss-UI. |
 
 **Parallelität:** **§ H.1b** (UI-Modularität) und **Phase B** (Mesh) **nicht** in derselben Woche wie große Core-Migration ohne Absprache — **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**.
@@ -65,8 +65,9 @@
 
 ## 5. Verwandte Dokumente
 
+- **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** — Stufe **2** (manuelles Smoke-Protokoll + Verweis auf Vitest).  
 - **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** — Ist vs. Ziel, **§ 7** historisch.  
-- **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**).  
+- **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**, **§ 8** Outbox vs. andere Queues).  
 - **`docs/MESSENGER-STRATEGIC-PRINCIPLES-LOCAL-FIRST-IDEMPOTENCY-PQ.md`**.  
 - **`docs/DEV-START.md`** — Ports/Rewrites solange Übergang Node+PWA.  
 - **`docs/WANDERER-STANDALONE-BUNDLE.md`** — Abgabe-Erzählung anpassen, wenn Bundle **ohne** Pflicht-Node verkürzt wird.

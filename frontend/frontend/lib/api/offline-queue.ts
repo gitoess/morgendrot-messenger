@@ -2,9 +2,11 @@
 
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
+ * **§ H.15 Stufe 3:** Kanonische Queue-Logik nur in **`@morgendrot/core`** — diese Datei bleibt ein **dünner**
+ * Browser-Adapter (`localStorage`, Hybrid-Send: Klartext ggf. **`trySubmitPlaintextMailboxViaDirectIota`**, sonst HTTP).
+ * Keine zweite Settlement-/Dedup-Implementierung; Abgleich **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.
  *
  * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
- * Diese Datei: **Browser-Storage**, **Opt-in**, **Send-Adapter** (`chat-commands`).
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'

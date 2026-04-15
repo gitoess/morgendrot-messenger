@@ -43,6 +43,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. Root: **`npm run check:pwa-desk`** (= A+B), **`check:pwa-desk:full`** (+ C) — **`scripts/check-pwa-manual-desk.mjs`**; Lücken-Tabelle **Teil-Automatisierung**. |
 | 2026-04-15 | ✓ | ✓ (8 Dateien) | — | **A+B** (`npm run check:pwa-desk`) nach Messenger-/Chain-Testrunde + Doku-Update; **C**/`full` bei nächstem Release-Zyklus. |
 | 2026-04-16 | ✓ | ✓ (8 Dateien) | ✓ | **A+B+C** (`npm run check:pwa-desk:full`); Next **16.1.6**; **`frontend/next-env.d.ts`** → `./.next/types/routes.d.ts` nach Production-Build. Manuelle **L1–L5** (`§ H.2`) weiter separat. |
+| 2026-04-28 | ✓ | ✓ (10 Dateien) | empfohlen | **§ H.15** Stufe 2–3 + **§ H.0** + **§ H.2:** neue Handbuch-Dateien (**`ONBOARDING-WALLET-UX-SPEC.md`**, **`RECOVERY-PHRASE-BACKUP.md`**); **`sw.js`** → **`morgendrot-sw-6`** + **`HANDBOOK_URLS`**; Doku **`HANDY-FIRST-STAGE2-*`**, **`SYNC-*`** § 8. **D** nach Deploy; **A+B** (`check:pwa-desk`) / bei Release **C** (`full`); **L1–L5** am Gerät. |
 
 ---
 

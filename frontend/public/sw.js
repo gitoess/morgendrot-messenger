@@ -8,7 +8,7 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-5'
+const VERSION = 'morgendrot-sw-6'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
@@ -16,6 +16,8 @@ const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
 const HANDBOOK_URLS = [
   '/handbook/API-EINSATZ-ROLE-TEMPLATES.md',
   '/handbook/BOSS-ORIENTIERUNG.md',
+  '/handbook/ONBOARDING-WALLET-UX-SPEC.md',
+  '/handbook/RECOVERY-PHRASE-BACKUP.md',
   '/handbook/PWA-HANDBUCH-OFFLINE.md',
   '/handbook/NOTFALL-PURGE-MESSENGER.md',
   '/handbook/VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',

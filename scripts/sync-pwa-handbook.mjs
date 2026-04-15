@@ -15,6 +15,8 @@ const destDir = path.join(root, 'frontend', 'public', 'handbook');
 const FILES = [
   'API-EINSATZ-ROLE-TEMPLATES.md',
   'BOSS-ORIENTIERUNG.md',
+  'ONBOARDING-WALLET-UX-SPEC.md',
+  'RECOVERY-PHRASE-BACKUP.md',
   'PWA-HANDBUCH-OFFLINE.md',
   'NOTFALL-PURGE-MESSENGER.md',
   'VAULT-STEGANOGRAPHIE-TRAGERBILD-ZIELBILD.md',

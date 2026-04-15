@@ -14,6 +14,17 @@
 
 ---
 
+## Nachtrag (2026-04-28): H.15 Reihenfolge Stufe 2–3, H.0, H.2
+
+| Thema | Pfad / Hinweis |
+|--------|----------------|
+| Stufe 2 Client-Submit (Protokoll + Unit) | **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**, **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`**, **`TESTING.md`** |
+| Stufe 3 eine Wahrheit (Outbox) | **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8, **`frontend/frontend/lib/api/offline-queue.ts`** (Kopfkommentar) |
+| H.0 Wallet & Session in der PWA | **`frontend/frontend/components/views/settings-view.tsx`**, **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § 5 |
+| H.2 PWA / Handbuch / SW | **`scripts/sync-pwa-handbook.mjs`** (10 Dateien), **`frontend/public/sw.js`** **`morgendrot-sw-6`**, **`docs/PWA-MANUAL-CHECKS.md`** Protokoll **2026-04-28** |
+
+---
+
 ## Nachtrag (2026-03-29): Fahrplan & Policy (**Doku**)
 
 | Thema | Pfad / § |

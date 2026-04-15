@@ -143,7 +143,7 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 
 - **Root `tsconfig.json`** umfasst aktuell nur **`src/**`** — Core unter `packages/` braucht **eigenes** `tsc` im Paket oder erweiterte Root‑Konfiguration; sonst nur Frontend+Vitest als Gate reicht für Stufe 1.  
 - **Bundle‑Größe PWA:** IOTA‑SDK im Core früh importieren **erhöht** Client‑Bundle — erst **nach** Queue‑Scheibe messen (`next build` Analyse).  
-- **Zwei Wahrheiten vermeiden:** Während der Migration kurzzeitig Core+Duplikat ok — **nach** Merge nur noch eine kanonische Queue‑Logik.
+- **Zwei Wahrheiten vermeiden:** Während der Migration kurzzeitig Core+Duplikat ok — **nach** Merge nur noch eine kanonische Queue‑Logik — **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (**H.15 Stufe 3**): PWA-**`offline-queue.ts`** bleibt Adapter, Core bleibt Autorität.
 
 ---
 
