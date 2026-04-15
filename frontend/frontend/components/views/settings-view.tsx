@@ -29,8 +29,8 @@ import {
   applyInitialProfileProvisioning,
   fetchEinsatzRoleTemplates,
   saveEinsatzRoleTemplates,
-  type EinsatzRoleTemplate,
 } from '@/frontend/lib/api'
+import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import {
   extractInitialProfileFromPaste,
   queueInitialProfileForNextApply,
@@ -142,9 +142,14 @@ export function SettingsView({
       setRoleTemplatesMsg('Erwartet: JSON-Array von Vorlagen-Objekten.')
       return
     }
+    const validated = validateEinsatzRoleTemplatesBody({ templates: parsed })
+    if (!validated.ok) {
+      setRoleTemplatesMsg(validated.error)
+      return
+    }
     setRoleTemplatesBusy(true)
     try {
-      const res = await saveEinsatzRoleTemplates(parsed as EinsatzRoleTemplate[])
+      const res = await saveEinsatzRoleTemplates(validated.templates)
       if (res.ok && res.templates) {
         setRoleTemplatesJson(JSON.stringify(res.templates, null, 2))
         setRoleTemplatesMsg(res.message || 'Gespeichert.')
