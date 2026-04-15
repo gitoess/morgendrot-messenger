@@ -34,9 +34,17 @@ const BUNDLE_NOTE =
 function roleWorkspaceHint(
   role: string | undefined,
   tileSet: WorkspaceTileSet,
-  liteMessengerLocksTiles: boolean
+  liteMessengerLocksTiles: boolean,
+  liteMessengerBossFullTiles: boolean
 ): { title: string; body: string } | null {
   const r = (role || '').toLowerCase()
+  if (r === 'boss' && liteMessengerBossFullTiles && tileSet === 'full') {
+    return {
+      title: 'Rollen-Workspace: Boss (Messenger-Bundle, Volldashboard)',
+      body:
+        'Kachelfläche ist absichtlich schlank: Nachrichten, Tresor & Notfall, Steuerung (z. B. Helfer/Boss-Modus) — kein Zugang- oder Überwachungs-Grid wie im Morgendrot-Hauptprojekt. Oben: Geräte-Radar. Spec: docs/UI-ROLLEN-WORKSPACES.md §6, docs/ROADMAP-FAHRPLAN.md §H.17.',
+    }
+  }
   if (r === 'arbeiter' || r === 'lock') {
     return {
       title: 'Rollen-Workspace: Arbeiter / Lock',
@@ -77,6 +85,8 @@ interface WorkspaceProjectsPanelProps {
    * Schalter „Volldashboard“ ist deaktiviert. Boss kann weiter auf Volldashboard wechseln.
    */
   liteUiEnforcedByBackend?: boolean
+  /** Boss im Messenger-Bundle mit Arbeitsbereich `full` — Kachel-Whitelist (H.17), für Hinweistext. */
+  liteMessengerBossFullTiles?: boolean
 }
 
 export function WorkspaceProjectsPanel({
@@ -86,12 +96,18 @@ export function WorkspaceProjectsPanel({
   onTileSetChange,
   dashboardRole,
   liteUiEnforcedByBackend = false,
+  liteMessengerBossFullTiles = false,
 }: WorkspaceProjectsPanelProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const apiPort = apiStatus?.apiListenPort
   const uiVar = apiStatus?.uiVariant
   const edition = apiStatus?.messengerEdition
-  const roleHint = roleWorkspaceHint(dashboardRole, tileSet, liteUiEnforcedByBackend)
+  const roleHint = roleWorkspaceHint(
+    dashboardRole,
+    tileSet,
+    liteUiEnforcedByBackend,
+    liteMessengerBossFullTiles
+  )
 
   const copy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text)

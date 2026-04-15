@@ -429,9 +429,19 @@ export function Dashboard() {
     writeWorkspaceTileSet(v)
   }
 
-  const messengerPackIds = new Set<ProjectType>(['chat', 'vault'])
+  /** Arbeitsbereich „Messenger-Projekt“: nur Chat + Tresor (alle Rollen im Messenger-Bundle so). */
+  const messengerSlimTileIds = new Set<ProjectType>(['chat', 'vault'])
+  /**
+   * Messenger-Bundle + Boss + Arbeitsbereich „Volldashboard“ (`full`): schlankes Boss-Set (**§ H.17**) —
+   * ohne Zugang/Überwachung; Steuerung (Helfer/Boss-Modus) dazu. Vollständiges Kachelset nur bei UI_VARIANT=full (Hauptprojekt).
+   */
+  const messengerBossFullTileIds = new Set<ProjectType>(['chat', 'vault', 'boss'])
   const visibleFeatures =
-    effectiveWorkspaceTileSet === 'messenger' ? features.filter((f) => messengerPackIds.has(f.id)) : features
+    effectiveWorkspaceTileSet === 'messenger'
+      ? features.filter((f) => messengerSlimTileIds.has(f.id))
+      : liteMessengerFromApi && isBossRole
+        ? features.filter((f) => messengerBossFullTileIds.has(f.id))
+        : features
 
   const handleBack = () => {
     setActiveView(null)
@@ -991,8 +1001,10 @@ export function Dashboard() {
                     {isBossRole ? (
                       <>
                         Als <strong className="text-foreground/90">Boss</strong> kannst du unter „Arbeitsbereich &amp; Projekte“{' '}
-                        <strong className="text-foreground/90">Volldashboard</strong> wählen (Arbeitsbereich <span className="font-mono text-xs">full</span>: alle Kacheln;{' '}
-                        <strong className="text-foreground/90">Geräte-Radar</strong> nur für dich als Boss). Standard ist
+                        <strong className="text-foreground/90">Volldashboard</strong> wählen (Arbeitsbereich <span className="font-mono text-xs">full</span>:{' '}
+                        <strong className="text-foreground/90">Nachrichten, Tresor, Steuerung</strong> +{' '}
+                        <strong className="text-foreground/90">Geräte-Radar</strong> — ohne Zugangs-/Überwachungs-Kacheln; im{' '}
+                        <span className="font-mono text-xs">UI_VARIANT=full</span>-Hauptprojekt weiterhin alle Module). Standard ist
                         schlank wie beim Helfer, wenn du auf <strong className="text-foreground/90">Messenger-Projekt</strong> stellst.
                       </>
                     ) : (
@@ -1071,6 +1083,7 @@ export function Dashboard() {
           onTileSetChange={setWorkspaceTileSetPersist}
           dashboardRole={role}
           liteUiEnforcedByBackend={liteMessengerLocksTiles}
+          liteMessengerBossFullTiles={liteMessengerFromApi && isBossRole && effectiveWorkspaceTileSet === 'full'}
         />
 
         {/* Kacheln: immer für Boss/Kommandant; für Arbeiter/Lock nur wenn showAllTiles */}

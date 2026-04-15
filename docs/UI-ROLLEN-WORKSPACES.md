@@ -63,7 +63,7 @@
 
 ## 5. Stand Umsetzung (2026-03, H.0 #3)
 
-- **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Geräte-Radar** (`DeviceRadarView`) oben nur bei Arbeitsbereich **`morgendrot_workspace_tile_set` = `full`** — im Messenger-Bundle nur **`boss`**, im Hauptprojekt zusätzlich **`kommandant`** mit `full`. **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis.
+- **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Geräte-Radar** (`DeviceRadarView`) oben nur bei Arbeitsbereich **`morgendrot_workspace_tile_set` = `full`** — im Messenger-Bundle nur **`boss`**, im Hauptprojekt zusätzlich **`kommandant`** mit `full`. **Messenger + Boss + `full`:** Kachel-Whitelist nur **`chat`**, **`vault`**, **`boss`** (kein `lock`/`monitor`). **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis (inkl. Boss-Volldashboard im Bundle).
 - **Lite-Messenger (`GET /api/status` → `uiVariant: 'messenger'`, entspricht `UI_VARIANT=messenger` am Backend):** Für alle Rollen **außer `boss`** ist das sichtbare Kachelset auf **Nachrichten + Tresor** (inkl. Notfall-Purge) begrenzt; Schalter **„Volldashboard“** (= **`full`**) ist für diese Rollen **deaktiviert**. **`boss`** kann **`full`** wählen (alle Kacheln + Radar). **`kommandant`** im Lite-Bundle: nur Messenger-Kacheln.
 - **Offen:** Vollständige **Workflow-Oberfläche** (Spec § 3) ohne Kachel-Navigation — weiterhin Backlog.
 
