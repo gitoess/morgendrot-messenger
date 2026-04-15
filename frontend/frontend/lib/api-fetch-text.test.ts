@@ -30,3 +30,19 @@ describe('formatFetchFailureMessage', () => {
     expect(formatFetchFailureMessage(new Error('parse error'))).toBe('parse error')
   })
 })
+
+describe('userMessageIndicatesFetchNetworkFailure', () => {
+  it('erkennt kanonische Netzwerk-Meldung', () => {
+    expect(userMessageIndicatesFetchNetworkFailure(USER_MSG_FETCH_NETWORK_OFFLINE)).toBe(true)
+  })
+
+  it('erkennt Präfix in längerem Text', () => {
+    expect(
+      userMessageIndicatesFetchNetworkFailure(`${USER_MSG_FETCH_NETWORK_OFFLINE} (retry)`)
+    ).toBe(true)
+  })
+
+  it('kein Treffer bei nur „Backend“', () => {
+    expect(userMessageIndicatesFetchNetworkFailure('Backend')).toBe(false)
+  })
+})
