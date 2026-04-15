@@ -4,6 +4,7 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
+import { useCallback } from 'react'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
   asComposerDraft,
@@ -23,6 +24,9 @@ import {
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewEinsatzProfilInline } from '@/frontend/components/chat-view-einsatz-profil-inline'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
+import { saveContactEntry } from '@/frontend/lib/api'
+import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 
 export type ChatViewMainContentProps = ChatViewCoreState
 
@@ -167,6 +171,38 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sosVoiceAwaitingSend,
   } = c
 
+  const addInboxSenderToContactBook = useCallback(
+    async (address: string) => {
+      const a = address.trim()
+      if (!a.startsWith('0x') || a.length < 66) {
+        setStatus('error')
+        setStatusMsg('Keine gültige 0x-Absenderadresse.')
+        setTimeout(() => setStatus('idle'), 4000)
+        return
+      }
+      if (myAddress.trim() && addressMatchesIdentity(a, myAddress)) {
+        setStatus('error')
+        setStatusMsg('Das ist deine eigene Adresse — nicht ins Telefonbuch nötig.')
+        setTimeout(() => setStatus('idle'), 4000)
+        return
+      }
+      const suggest = contactDisplayLabel(directory, a) || `${a.slice(0, 10)}…${a.slice(-4)}`
+      const label = window.prompt('Name im Telefonbuch (leer = Kurzadresse im Chat)', suggest)
+      if (label === null) return
+      const r = await saveContactEntry({ address: a, label: label.trim() || undefined })
+      if (r.ok) {
+        refreshContactDirectory()
+        setStatus('success')
+        setStatusMsg(r.message || 'Kontakt gespeichert.')
+      } else {
+        setStatus('error')
+        setStatusMsg(r.error || 'Kontakt speichern fehlgeschlagen.')
+      }
+      setTimeout(() => setStatus('idle'), 5000)
+    },
+    [directory, myAddress, refreshContactDirectory, setStatus, setStatusMsg]
+  )
+
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
     messageCount: messages.length,
@@ -221,6 +257,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     recipient,
     setStatus,
     setStatusMsg,
+    onAddSenderToContactBook: addInboxSenderToContactBook,
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {

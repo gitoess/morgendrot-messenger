@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import {
   MessageSquare,
@@ -17,7 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchStatus, unlockBackend, fetchHelp, type ApiStatus } from '@/frontend/lib/api'
+import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, type ApiStatus } from '@/frontend/lib/api'
 import type { ProjectType, ProjectVariant } from '../lib/types'
 import {
   WorkspaceProjectsPanel,
@@ -133,6 +133,37 @@ interface ActiveView {
   variant?: ProjectVariant
 }
 
+const ACTIVE_VIEW_SESSION_KEY = 'morgendrot.dashboard.activeView'
+
+function isPwaStandaloneDisplay(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    if (window.matchMedia('(display-mode: standalone)').matches) return true
+  } catch {
+    /* ignore */
+  }
+  return (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+}
+
+function parseStoredActiveView(raw: string | null): ActiveView | null {
+  if (!raw) return null
+  try {
+    const v = JSON.parse(raw) as unknown
+    if (!v || typeof v !== 'object') return null
+    const o = v as Record<string, unknown>
+    if (o.type === 'settings' || o.type === 'config') {
+      return { type: o.type }
+    }
+    if (typeof o.type !== 'string' || typeof o.variant !== 'string') return null
+    const feat = features.find((f) => f.id === o.type)
+    if (!feat) return null
+    if (!feat.variants.some((vv) => vv.id === o.variant)) return null
+    return { type: o.type as ProjectType, variant: o.variant as ProjectVariant }
+  } catch {
+    return null
+  }
+}
+
 const FULL_TILES_STORAGE_KEY = 'morgendrot_show_all_tiles'
 const FIRST_STEPS_DISMISS_KEY = 'morgendrot.hideFirstStepsCard'
 
@@ -218,11 +249,14 @@ export function Dashboard() {
   /** Zuletzt von GET /api/status gemeldet — für Entsperr-Dialog beim Wechsel auf „locked“ ohne veraltetes apiSnapshot. */
   const vaultHasLocalRef = useRef(false)
   const signerIsSdkRef = useRef(false)
+  /** Nach erneutem Sperren (z. B. PWA-Hintergrund) wieder eine Wiederherstellung der Kachel-Ansicht erlauben. */
+  const restoredDashboardViewRef = useRef(false)
 
   useEffect(() => {
     const prev = prevLockedRef.current
     prevLockedRef.current = locked
     if (locked && !prev) {
+      restoredDashboardViewRef.current = false
       setUnlockError('')
       setSignerImport('')
       setSignerImportConfirm('')
@@ -288,7 +322,7 @@ export function Dashboard() {
     writeShowAllTilesPref(value)
   }
 
-  const checkStatus = async () => {
+  const checkStatus = useCallback(async () => {
     const res = await fetchStatus()
     if ('pollClockHint' in res) {
       const { pollClockHint: _hint, ...snap } = res
@@ -312,13 +346,65 @@ export function Dashboard() {
       vaultHasLocalRef.current = false
       signerIsSdkRef.current = false
     }
-  }
+  }, [])
 
   useEffect(() => {
-    checkStatus()
-    const interval = setInterval(checkStatus, 10000)
+    void checkStatus()
+    const interval = setInterval(() => void checkStatus(), 10000)
     return () => clearInterval(interval)
-  }, [])
+  }, [checkStatus])
+
+  /** Installierte PWA: beim Wechsel in den Hintergrund Tresor sperren (`/vault-lock`) → Passwort beim erneuten Öffnen. */
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState !== 'hidden') return
+      if (!isPwaStandaloneDisplay()) return
+      void (async () => {
+        const r = await vaultLockCommand()
+        if (r.ok) await checkStatus()
+      })()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [checkStatus])
+
+  const persistDashboardView = (v: ActiveView | null) => {
+    try {
+      if (v == null) window.sessionStorage.removeItem(ACTIVE_VIEW_SESSION_KEY)
+      else window.sessionStorage.setItem(ACTIVE_VIEW_SESSION_KEY, JSON.stringify(v))
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const openSettingsView = () => {
+    const v: ActiveView = { type: 'settings' }
+    setActiveView(v)
+    persistDashboardView(v)
+  }
+
+  const openConfigView = () => {
+    const v: ActiveView = { type: 'config' }
+    setActiveView(v)
+    persistDashboardView(v)
+  }
+
+  /** Nach App-Neustart: letzte Kachel-Ansicht wiederherstellen (React-State geht verloren; Session bleibt). */
+  useEffect(() => {
+    if (locked || backendReachable !== true) return
+    if (restoredDashboardViewRef.current) return
+    try {
+      const raw = typeof window !== 'undefined' ? window.sessionStorage.getItem(ACTIVE_VIEW_SESSION_KEY) : null
+      const parsed = parseStoredActiveView(raw)
+      if (parsed) {
+        setActiveView(parsed)
+        persistDashboardView(parsed)
+        restoredDashboardViewRef.current = true
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [locked, backendReachable])
 
   /** Pending `initialProfile` aus Einstellungen anwenden, sobald API läuft (Paket 4 / Roadmap H.3g). */
   useEffect(() => {
@@ -421,7 +507,9 @@ export function Dashboard() {
   }
 
   const handleSelectFeature = (feature: Feature, variant: ProjectVariant) => {
-    setActiveView({ type: feature.id, variant })
+    const next: ActiveView = { type: feature.id, variant }
+    setActiveView(next)
+    persistDashboardView(next)
   }
 
   const setWorkspaceTileSetPersist = (v: WorkspaceTileSet) => {
@@ -438,6 +526,7 @@ export function Dashboard() {
 
   const handleBack = () => {
     setActiveView(null)
+    persistDashboardView(null)
   }
 
   const openHelp = async () => {
@@ -805,7 +894,7 @@ export function Dashboard() {
           ) : null}
           {activeView.type === 'settings' && (
             <SettingsView
-              onOpenConfig={() => setActiveView({ type: 'config' })}
+              onOpenConfig={openConfigView}
               showAllTiles={showAllTiles}
               onShowAllTilesChange={setShowAllTilesPersist}
               canToggleFullTiles={role === 'arbeiter' || role === 'lock'}
@@ -915,7 +1004,7 @@ export function Dashboard() {
               )}
             </div>
             {/* Setup (Package-ID, RPC, .env) */}
-            <SetupOverlay onOpenConfig={() => setActiveView({ type: 'config' })} />
+            <SetupOverlay onOpenConfig={openConfigView} />
             {/* Hilfe: HELP_UI_INTRO + Befehle (GET /api/help) — Roadmap H.0 */}
             <button
               type="button"
@@ -936,7 +1025,7 @@ export function Dashboard() {
             </Link>
             {/* Settings */}
             <button
-              onClick={() => setActiveView({ type: 'settings' })}
+              onClick={openSettingsView}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               <Settings className="h-5 w-5" />
@@ -1024,7 +1113,7 @@ export function Dashboard() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setActiveView({ type: 'settings' })}
+                    onClick={openSettingsView}
                     className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
                   >
                     Einstellungen (Wallet, Netzwerk, …)

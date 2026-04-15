@@ -65,6 +65,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     loadingMore,
     loadMoreInbox,
     inboxHasMore,
+    onAddSenderToContactBook,
     ...toolbarProps
   } = props
 
@@ -112,6 +113,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           loadingMore={loadingMore}
           loadMoreInbox={loadMoreInbox}
           inboxHasMore={inboxHasMore}
+          onAddSenderToContactBook={onAddSenderToContactBook}
         />
       </div>
     </div>

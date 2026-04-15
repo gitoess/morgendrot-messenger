@@ -24,6 +24,7 @@ import {
   ShieldCheck,
   Star,
   Trash2,
+  UserPlus,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
@@ -66,6 +67,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   loadingMore?: boolean
   loadMoreInbox?: () => void
   inboxHasMore?: boolean
+  /** Absender (0x…) ins Telefonbuch — POST /api/contact-label */
+  onAddSenderToContactBook?: (address: string) => void | Promise<void>
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -90,6 +93,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     loadingMore = false,
     loadMoreInbox,
     inboxHasMore = false,
+    onAddSenderToContactBook,
   } = p
 
   if (loadError) {
@@ -204,6 +208,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
           >
             {(() => {
               const fromLabel = contactDisplayLabel(contactDirectory, row.msg.from)
+              const outgoingRow = myAddress.trim() ? isMessageOutgoing(row.msg, myAddress) : false
+              const canAddContact =
+                !!onAddSenderToContactBook &&
+                !outgoingRow &&
+                row.msg.from.startsWith('0x') &&
+                row.msg.from.length >= 66
               return (
                 <>
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-3">
@@ -294,6 +304,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
+                  {canAddContact ? (
+                    <DropdownMenuItem onClick={() => void onAddSenderToContactBook?.(row.msg.from)}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Absender ins Telefonbuch
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => toggleProtokollMark(row.msg.id)}>
                     <Star
                       className={cn(

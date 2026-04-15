@@ -28,6 +28,7 @@ import {
   persistDirectMailboxChainSnapshot,
   persistDirectMailboxTtlDays,
 } from '@/frontend/lib/direct-iota-chain-context'
+import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
@@ -76,8 +77,16 @@ function formatActiveInterval(ms: number): string {
   return `${Math.round(ms / 60_000)} min`
 }
 
+/** Leerzeichen / Zero-Width entfernen; Kleinbuchstaben für 0x-Hex (Copy-Paste von Explorern). */
+function normalizeIotaHexInput(s: string): string {
+  return String(s || '')
+    .trim()
+    .replace(/[\u200b-\u200d\ufeff]/g, '')
+    .replace(/^0X/i, '0x')
+}
+
 function isLikelyIotaObjectId(s: string): boolean {
-  return /^0x[a-fA-F0-9]{64}$/i.test(s.trim())
+  return isLikelyIotaHexId(normalizeIotaHexInput(s))
 }
 
 type IdsOverride = { myAddress: string; packageId: string; streamsAnchorId: string; mailboxId: string }
@@ -629,11 +638,13 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
                 className="h-8 text-xs"
                 disabled={busy !== null}
                 onClick={() => {
-                  const pkg = chainPkg.trim()
-                  const mb = chainMb.trim()
-                  const addr = chainAddr.trim()
-                  if (!isLikelyIotaObjectId(pkg) || !isLikelyIotaObjectId(mb) || !isLikelyIotaObjectId(addr)) {
-                    setMsg('Ketten-IDs: gültige 0x-Objekt-IDs für Package, Mailbox und Absender eingeben.')
+                  const pkg = normalizeIotaHexInput(chainPkg)
+                  const mb = normalizeIotaHexInput(chainMb)
+                  const addr = normalizeIotaHexInput(chainAddr)
+                  if (!isLikelyIotaHexId(pkg) || !isLikelyIotaHexId(mb) || !isLikelyIotaHexId(addr)) {
+                    setMsg(
+                      'Ketten-IDs: je genau 0x + 64 Hex (Package, Mailbox, eigene Adresse). Leerzeichen entfernen; ggf. „Felder aus API füllen“.'
+                    )
                     return
                   }
                   const ttlN = parseInt(ttlDaysStr, 10)
@@ -652,6 +663,9 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
                     ttlDays: ttl,
                     flags,
                   })
+                  setChainPkg(pkg)
+                  setChainMb(mb)
+                  setChainAddr(addr)
                   let out = 'Ketten-IDs für Direkt-Pfad gespeichert (localStorage).'
                   if (!optimisticDrainFlags && flags.messengerCreditsConfigured) {
                     out += ' Hinweis: Messenger-Credits aktiv — Klartext-Direkt-Drain bleibt geblockt, bis die Kette ohne Credits läuft oder du die Flags schätzt.'
