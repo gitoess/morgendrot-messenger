@@ -29,9 +29,9 @@
 
 ### 2.2 UI: „Wallet entsperren“ (**Next** `frontend/frontend/components/dashboard.tsx` · **Lite** `ui/index.html`)
 
-- Dialog bei `locked`: Wahl **Tresor öffnen** vs. **Neu anlegen** (Standard aus `vaultStatus.hasLocal` beim ersten Sperren-Screen).
-- **`SIGNER=sdk`:** Mnemonic/Bech32 **nicht** dauernd sichtbar — nur im Modus **Neu anlegen** (mit Wiederholung) oder unter **Tresor öffnen** nach Klick bzw. wenn **`POST /api/unlock`** mit **`code: SIGNER_IMPORT_REQUIRED`** antwortet (Backend `src/api-server.ts`).
-- **`SIGNER=cli`:** nur Passwort (Keystore).
+- Dialog bei `locked`: drei gleichwertige Einstiege — **Tresor öffnen** (Passwort; Mnemonic bei `SIGNER=sdk` optional per Schaltfläche), **Seed importieren** (nur `SIGNER=sdk`: Passwort + Mnemonic/Bech32 sofort sichtbar), **Neu anlegen** (neues Profil: Passwort und Seed je zweimal bei `sdk`). Beim ersten Sperren ohne lokale Vault und mit `SIGNER=sdk`: Voreinstellung **Neu anlegen** (Wanderer-Erststart). **`POST /api/unlock`** mit **`code: SIGNER_IMPORT_REQUIRED`** schaltet auf **Seed importieren** um.
+- **`SIGNER=sdk`:** Unter **Tresor öffnen** bleibt der Mnemonic-Bereich weiterhin **optional** (progressiv), sofern nicht **Seed importieren** gewählt ist.
+- **`SIGNER=cli`:** nur Passwort (Keystore); die Radio-Option **Seed importieren** entfällt.
 - **`POST /api/unlock`:** Entschlüsselt lokalen oder on-chain Vault (wenn konfiguriert), wendet SDK-Import an, löst internen Passwort-Resolver auf.
 
 ### 2.3 Explizit **nicht** vorhanden (Next-Messenger)
@@ -55,7 +55,7 @@ Die gleichen Punkte als **nachverfolgbare** Liste; Umsetzung priorisiert **Roadm
 | ID | Lücke | Risiko / Nutzerfrustration | Status |
 |----|--------|----------------------------|--------|
 | L1 | **Keine narrative Einheit** zwischen Next-Dashboard, Unlock-Dialog, Tresor und Shop | Session-Passwort vs. Vault vs. Keystore vs. Credits verwechselt | **Teilweise:** Unlock-Dialog **signer-abhängig** (`dashboard.tsx`); Chat-Banner präzisiert; diese Doku + **`docs/DEV-START.md`** |
-| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Teilweise (2026-03-28):** Next-Dashboard **„Erste Schritte“** + **`GET /api/help`** (`HELP_UI_INTRO`). **Unlock:** „Neu anlegen“ mit doppelter Seed-/PW-Bestätigung (Next + Lite). Vollständiger Wizard / Boss-Export-Assistent weiter **Roadmap H.7**; **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
+| L2 | **Erstnutzer ohne vorkonfigurierte `.env`** | Kein geführter Pfad zu **MY_ADDRESS**, **PACKAGE_ID**, erstem **Handshake** | **Teilweise (2026-03-28):** Next-Dashboard **„Erste Schritte“** + **`GET /api/help`** (`HELP_UI_INTRO`). **Unlock:** Tresor öffnen / **Seed importieren** / **Neu anlegen** (Next + Lite, `SIGNER=sdk`). **Boss:** Handoff-ZIP für Standalone-Smartphone-Bundle (**`POST /api/standalone-smartphone-handoff-zip`**, § H.7). Vollständiger geführter Wizard weiter Backlog; **`docs/VAULT-EINRICHTEN.md`** / **`docs/DEV-START.md`** |
 | L3 | **„Credits statt IOTA“** ohne Klartext | Credits ≠ native MIST; Marketing irreführend | **Teilweise:** **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`**, Shop-Tooltip (`/shop`), **`TESTING.md`** Smoke |
 | L4 | **Wiederkehrende Nutzer** („neues Gerät“) | Kein UX für „Vault auf neuem Rechner“ vs. Erststart | **Teilweise:** Einstellungen **Wallet & Backup** + **`docs/RECOVERY-PHRASE-BACKUP.md`**; vollständiger Gerätewechsel-Flow weiter Backlog |
 | L5 | **SIGNER=sdk vs. cli** im Dialog | Falsche Erwartung (Mnemonic vs. nur Keystore) | **Erledigt (Copy):** bedingter Hilfetext im Unlock-Dialog je **`GET /api/status` → `signer`** |
@@ -132,7 +132,7 @@ Ziel ist **kein** neues Login-System, sondern **klare Phasen** und **UI-Texte**,
 | **`docs/ROADMAP-FAHRPLAN.md` § H.3c** | Shop, Credits-Mint, `WALLET_PASSWORD` / Secret-Manager — Betrieb, nicht Endnutzer-„ohne Wallet“. |
 | **`docs/GIT-CLEANUP-AND-COMMIT-PLAN.md`** | Vor Commit: keine Secrets; State-Dateien ignorieren. |
 
-**Nächster logischer Schritt** nach dieser Doku (wenn **H.0** weitergezogen wird): L2/L4 — **kompakte** „Erste Schritte“ in **Settings** oder **SetupOverlay** (nur Text + Links, kein neuer Chain-Code), oder Boss-**Export-Assistent** (**H.7**) — vor **Mesh-Phase B** nicht zwingend.
+**Nächster logischer Schritt** nach dieser Doku (wenn **H.0** weitergezogen wird): L2/L4 — **kompakte** „Erste Schritte“ in **Settings** oder **SetupOverlay** (nur Text + Links, kein neuer Chain-Code); optional **Seed im UI per Knopf zufällig erzeugen** (heute: extern erzeugen oder manuell eintragen) — vor **Mesh-Phase B** nicht zwingend.
 
 ---
 

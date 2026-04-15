@@ -48,7 +48,8 @@
 - **`docs/API-INITIAL-PROFILE.md`** — Request/Response, `metadata`, Kontakte.
 - **`docs/API-EINSATZ-ROLE-TEMPLATES.md`** — Boss-Vorlagen-Liste.
 - **`docs/UI-BEFEHLE-CHECKLISTE.md`** — welche API hat welchen Button.
-- **`docs/ROADMAP-FAHRPLAN.md`** — § **H.3g** (Einsatzleitung / Pakete).
+- **`docs/ROADMAP-FAHRPLAN.md`** — § **H.3g** (Einsatzleitung / Pakete), **§ H.7** (Standalone-Smartphone / Handoff-ZIP).
+- **`docs/WANDERER-STANDALONE-BUNDLE.md`** — „Wanderer“-Abgabe; **Next Boss-Modus → Export-Assistent** + **`POST /api/standalone-smartphone-handoff-zip`** (öffentliche `.env` in ZIP, ohne Secrets).
 
 ## 6. Messenger-PWA: Handbuch offline & Einsatz-Notiz
 
@@ -62,7 +63,7 @@
 
 **Den folgenden Absatz könnt ihr 1:1 auf eine Folie oder ins Schulungsheft übernehmen** (ohne Marketing-Zusätze; Stand Abgleich mit API und UI):
 
-**Lieferwege (Boss → Helfer, technisch korrekt):** Nach `POST /api/provision-device` liegt das Paket zuerst im **Boss-Browser** — es gibt **keinen** automatischen „Server-Push“ zur Helfer-App. **Mit Netz** übergibt ihr das Paket **manuell**: Datei (`.env` / JSON), **Export**, **QR** (kompakte Einrichtungsdaten), oder Kopie per Messenger/USB — je nach Einsatz. **LoRa/Mesh** ist im Morgendrot-Repo v. a. für **Nachrichten** und Funk-Brücken spezifiziert, **nicht** als durchgängiger Standardweg für das **vollständige** Provisioning inkl. großem Bundle aus dem Wizard. **QR im Provisioning:** Der **Boss zeigt** den QR; Inhalt sind **Metadaten zur Einrichtung** (Rolle, Boss-Adresse, Package-ID, RPC, …) — **nicht** „der Helfer hält sein Handy hin, Boss scannt den Public Key, um das Paket zu verschlüsseln“. **Backup:** typische Exporte sind **Klartext-Artefakte** — Übertragungskanal absichern; verschlüsselte Sonderformate sind **andere** Produkte (z. B. Einsatzbericht). **Low-Tech:** kleiner **Text-QR** am Gerät (Parameter kurz halten) bleibt sinnvoll.
+**Lieferwege (Boss → Helfer, technisch korrekt):** Nach `POST /api/provision-device` liegt das Paket zuerst im **Boss-Browser** — es gibt **keinen** automatischen „Server-Push“ zur Helfer-App. **Mit Netz** übergibt ihr das Paket **manuell**: Datei (`.env` / JSON), **Export**, **QR** (kompakte Einrichtungsdaten), optional **ZIP-Handoff** für das Standalone-Smartphone-Bundle (`POST /api/standalone-smartphone-handoff-zip`, nur öffentliche Keys), oder Kopie per Messenger/USB — je nach Einsatz. **LoRa/Mesh** ist im Morgendrot-Repo v. a. für **Nachrichten** und Funk-Brücken spezifiziert, **nicht** als durchgängiger Standardweg für das **vollständige** Provisioning inkl. großem Bundle aus dem Wizard. **QR im Provisioning:** Der **Boss zeigt** den QR; Inhalt sind **Metadaten zur Einrichtung** (Rolle, Boss-Adresse, Package-ID, RPC, …) — **nicht** „der Helfer hält sein Handy hin, Boss scannt den Public Key, um das Paket zu verschlüsseln“. **Backup:** typische Exporte sind **Klartext-Artefakte** — Übertragungskanal absichern; verschlüsselte Sonderformate sind **andere** Produkte (z. B. Einsatzbericht). **Low-Tech:** kleiner **Text-QR** am Gerät (Parameter kurz halten) bleibt sinnvoll.
 
 ---
 

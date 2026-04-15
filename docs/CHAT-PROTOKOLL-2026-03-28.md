@@ -83,9 +83,8 @@
 
 | Schritt | Hinweis |
 |---------|---------|
-| Boss | Bundle bauen, **`.env`** pro Einsatz/Kunde **manuell** anpassen (RPC, Package-IDs, Partner/Boss) — **keine** Seeds auf SD/USB. |
+| Boss | Bundle bauen, **`.env`** pro Einsatz/Kunde **manuell** anpassen (RPC, Package-IDs, Partner/Boss) — **keine** Seeds auf SD/USB. **Optional:** Next **Boss-Modus → Export-Assistent** — **`POST /api/standalone-smartphone-handoff-zip`** (ZIP mit Handoff-`.env` + README, § **H.7**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**). |
 | Helfer | `npm install`, ggf. `npm run build:next`; **Seed/Vault-Passwort nur auf dem Gerät**. |
-| Später | Optional **Boss-Export-Assistent** (ZIP + vorgefüllte `.env`) → **Fahrplan § H.7**. |
 
 **Doku:** `docs/ROADMAP-FAHRPLAN.md` (**§ B** Zeile Standalone, **§ H.7**), `README.md` (Einleitung + Skripttabelle `bundle:standalone-smartphone`).
 
