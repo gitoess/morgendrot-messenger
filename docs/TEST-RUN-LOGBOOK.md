@@ -17,14 +17,24 @@
 | **2026-04-28** | selbe | **`npm run test:messages`** (Default, zwei APIs) | **Nicht ausgeführt** — `ECONNREFUSED :3343` (zweite Instanz fehlt). Hinweis im Skript: **`npm run test:messages:single`** oder `$env:SINGLE_WALLET='1'`. |
 | **2026-04-28** | selbe | **`$env:SINGLE_WALLET='1'; npm run test:messages`** | **Teil OK** — Chain/help/connect-Checks; **Send/Handshake/Kompaktbild** ab **1d** mit `locked=true` fehlgeschlagen („Wallet entsperren“). **Vollständiger Lauf:** API starten, dann **UI-Unlock** oder **`UNLOCK_PASSWORD`** (siehe **`scripts/run-messages-chat-realworld.ts`** Kopfkommentar, **`.env.example`**). |
 | **2026-04-28** | selbe | **`npm run test:realworld`** | **Abbruch erwartbar** — gleiche Ursache `locked=true` (Tickets/Keys brauchen entsperrte Session). |
+| **2026-04-28** | API **:3342**, `locked=false` (UI-Unlock), `SINGLE_WALLET=1` | **`npm run test:messages:single`** | **OK** — vollständiger Ablauf laut Skript (Einrichtung **1**–**7**: kompaktes Bild `/send-plain`, Handshake/Connect, `/send`/`/fetch`, Filter, Klartext, `purge-handshake`-Noop ohne `MAILBOX_ID`, `/vault-save`, `hasLocal`). |
+| **2026-04-28** | selbe, Wallet entsperrt | **`npm run test:realworld`** | **Teil OK** — Ticket (1) Mint OK; (2) **FAIL** — **Client/Server api version mismatch** (IOTA-CLI ≠ RPC-API); (4) `hasValidTicket` **false** (Folge). **Maßnahme:** CLI-Version an **`RPC_URL`**-Server anpassen (**`TESTING.md`** Smoke, Punkt 3). |
+
+---
+
+## Bekannte Störung: „Client/Server api version mismatch“
+
+- **Symptom:** **`npm run test:realworld`** bricht bei **personalisiertem Ticket** / weiteren PTB-Schritten ab; Node/SDK und **IOTA-CLI** erwarten dieselbe **Wire-/API-Version**.
+- **Lösung:** Auf dem Rechner die **IOTA-CLI** installieren/aktualisieren, die zur **`.env`**-**`RPC_URL`** passt (`iota client …` / Release-Notes des Netzes); Skript erneut ausführen.
+- **Abgrenzung:** **`npm run test:messages:single`** nutzt primär die **Node-API** — kann **grün** sein, während **`test:realworld`** noch rot ist (CLI-Pfad).
 
 ---
 
 ## Nächste Pflege
 
-- Nach erfolgreichem Realworld-Lauf mit Unlock: neue Zeile mit **OK** und ggf. Commit-Hash.
+- Nach CLI-Angleichung: **`test:realworld`** erneut und Zeile oben **OK** ergänzen (inkl. Commit-Hash optional).
 - CI: **`.github/workflows/frontend-checks.yml`** spiegelt Frontend-Unit; Root-Smoke lokal oder in eigener Pipeline pflegen.
 
 ---
 
-*Stand: 2026-04-28 — Erste Zeilen aus Agent-Lauf.*
+*Stand: 2026-04-28 — Agent-Lauf + Nachziehen Messenger-Realworld / Ticket-Teilfehler.*

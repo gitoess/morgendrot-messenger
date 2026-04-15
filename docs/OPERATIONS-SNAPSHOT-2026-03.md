@@ -37,6 +37,8 @@
 
 **Ist-Lauf (lokal):** `test:smoke`, `test:frontend-unit`, `test:core`, `test:h15-direct-submit` **grün**. **`test:messages`** zwei-API ohne zweite Instanz → erwartbar abgebrochen; **`SINGLE_WALLET=1`** → Teilpfade OK, Chain-Senden wegen **`locked`** ausstehend bis UI-Unlock oder konfiguriertes Skript-Unlock.
 
+**Nachziehen:** **`npm run test:messages:single`** mit UI-Unlock → **vollständig OK** (siehe **`docs/TEST-RUN-LOGBOOK.md`**). **`npm run test:realworld`:** weiterhin **CLI/RPC api version mismatch** beim personalisierten Ticket — **Ist-Lücke** Betrieb/Toolchain, nicht Anwendungslogik; Logbuch + **`TESTING.md`** Smoke Punkt 3.
+
 ---
 
 ## Nachtrag (2026-03-29): Fahrplan & Policy (**Doku**)

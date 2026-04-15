@@ -28,8 +28,9 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Qualität / Handy
 
-- **`docs/TEST-RUN-LOGBOOK.md`** — dokumentierter Lauf **2026-04-28** (Smoke, Frontend-, Core-, H.15-Vitest; Realworld teilweise wegen `locked` / zweiter API).
-- **`docs/HANDY-TEST-WINDOW.md`** — wann die PWA **am Gerät** testen (nach grünem Schreibtisch + optional Realworld mit Unlock).
+- **`docs/TEST-RUN-LOGBOOK.md`** — Messenger **`test:messages:single`** **OK** (entsperrt); **`test:realworld`** **Teil** — bekannter **IOTA-CLI ↔ RPC**-Mismatch; Troubleshooting-Abschnitt ergänzt.
+- **`docs/HANDY-TEST-WINDOW.md`** — Hinweis Messenger-grün vs. Tickets-rot möglich.
+- **`TESTING.md`** — Smoke-Punkt 3 präziser (Mismatch, Logbuch-Verweis).
 
 ### Hinweis (Fahrplan)
 

@@ -9,7 +9,7 @@
 **Erst am Handy testen, wenn:**
 
 1. **Schreibtisch** — Root **`npm run test:smoke`**, **`npm run test:frontend-unit`**, **`npm run test:core`**, **`npm run test:h15-direct-submit`** sind **grün** (oder CI-Äquivalent). Siehe **`docs/TEST-RUN-LOGBOOK.md`** für den letzten dokumentierten Lauf.
-2. **Realworld (optional aber empfohlen vor Feldtest)** — **`npm run test:messages:single`** bzw. **`npm run test:realworld`** mit **entsperrter** API-Sitzung (UI-Unlock am laufenden **`npm run start:secrets`** / **`npm start`**, oder siehe Skriptköpfe zu **`UNLOCK_PASSWORD`*** in **`.env.example`** — **keine** Secrets in Git/Doku).
+2. **Realworld (optional aber empfohlen vor Feldtest)** — **`npm run test:messages:single`** (Messenger) bzw. **`npm run test:realworld`** (Tickets/Keys) mit **entsperrter** API-Sitzung (UI-Unlock am laufenden **`npm run start:secrets`** / **`npm start`**, oder siehe Skriptköpfe zu **`UNLOCK_PASSWORD`*** in **`.env.example`** — **keine** Secrets in Git/Doku). **Messenger grün + Tickets rot** ist möglich, wenn nur die **IOTA-CLI** zur **RPC_URL** passt — siehe **`docs/TEST-RUN-LOGBOOK.md`** („api version mismatch“).
 3. **Gleiche Version** — Die URL, die du auf dem Telefon öffnest (HTTPS oder **localhost** nur am PC), entspricht dem **Build**, den du gerade verifiziert hast; sonst vergleichst du unterschiedliche Stände.
 4. **Nach Deploy / vor Abgabe** — Zusätzlich Schreibtisch **`npm run check:pwa-desk`** bzw. bei Release **`check:pwa-desk:full`** (**`docs/PWA-MANUAL-CHECKS.md`**), dann am Gerät **L1–L5** (Install, Offline-Shell, Handbuch, …).
 
