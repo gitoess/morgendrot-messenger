@@ -34,6 +34,13 @@ import {
   getDirectIotaSessionSignerAddress,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
+  applyDirectChatEcdhPrivateJwk,
+  clearDirectChatEcdhPrivateKey,
+  clearDirectChatEcdhPeerPubs,
+  getDirectChatEcdhPrivateKey,
+  setDirectChatEcdhPeerPubBase64,
+} from '@/frontend/lib/direct-chat-ecdh-session'
+import {
   getIotaSubmitMode,
   isDirectMailboxDrainEnabled,
   setDirectMailboxDrainEnabled,
@@ -100,6 +107,10 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [optimisticDrainFlags, setOptimisticDrainFlags] = useState(false)
   const [mnemoInput, setMnemoInput] = useState('')
   const [sessionAddr, setSessionAddr] = useState<string | null>(null)
+  const [ecdhPeerAddr, setEcdhPeerAddr] = useState('')
+  const [ecdhPeerB64, setEcdhPeerB64] = useState('')
+  const [ecdhJwkInput, setEcdhJwkInput] = useState('')
+  const [ecdhPrivActive, setEcdhPrivActive] = useState(false)
   const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
 
   const hb = apiStatus.heartbeat
@@ -117,6 +128,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       setDirectDrainOn(isDirectMailboxDrainEnabled())
       setIotaSubmitModeState(getIotaSubmitMode())
       setSessionAddr(getDirectIotaSessionSignerAddress())
+      setEcdhPrivActive(getDirectChatEcdhPrivateKey() != null)
       const snap = loadDirectMailboxChainSnapshotFromLs()
       if (snap) {
         setTtlDaysStr(String(snap.ttlDays))
@@ -700,6 +712,121 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
               <p className="text-[10px] font-mono text-muted-foreground">
                 Aktiver Signer: <span className="text-foreground">{sessionAddr}</span>
               </p>
+            )}
+          </div>
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <p className="text-[11px] font-semibold text-foreground">Chat-ECDH (verschlüsselter Direkt-Drain / Warteschlange)</p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              P-256 wie `/send` auf der Basis: **Peer-Publickey** (raw 65 B, Base64) pro Empfänger in{' '}
+              <span className="font-mono">localStorage</span>; **Privatkey** nur als JWK im RAM (nicht persistieren). Wenn
+              beides gesetzt ist, kann die Mailbox-Warteschlange verschlüsselte Einträge per Fullnode drainen — ohne erneutes
+              `/api/command`.
+            </p>
+            <div className="grid max-w-lg gap-2">
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Empfänger (0x…)</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  value={ecdhPeerAddr}
+                  onChange={(e) => setEcdhPeerAddr(e.target.value)}
+                  spellCheck={false}
+                  placeholder="0x…"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">Peer-Pub (Base64, raw 65 Byte)</Label>
+                <Input
+                  className="h-9 font-mono text-xs"
+                  value={ecdhPeerB64}
+                  onChange={(e) => setEcdhPeerB64(e.target.value)}
+                  spellCheck={false}
+                  placeholder="Aus Handshake / Node-Export"
+                />
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  const r = setDirectChatEcdhPeerPubBase64(ecdhPeerAddr, ecdhPeerB64)
+                  if (r.ok) {
+                    setMsg(ecdhPeerB64.trim() ? 'Peer-Pub gespeichert (localStorage).' : 'Peer-Pub für diese Adresse entfernt.')
+                  } else {
+                    setMsg(r.error)
+                  }
+                }}
+              >
+                Peer-Pub speichern
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  clearDirectChatEcdhPeerPubs()
+                  setEcdhPeerB64('')
+                  setMsg('Alle gespeicherten Peer-Pubs gelöscht.')
+                }}
+              >
+                Alle Peer-Pubs löschen
+              </Button>
+            </div>
+            <Label className="text-[11px] text-muted-foreground">ECDH-Privatkey (JWK JSON — nur RAM)</Label>
+            <textarea
+              className="min-h-[56px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[10px] text-foreground"
+              value={ecdhJwkInput}
+              onChange={(e) => setEcdhJwkInput(e.target.value)}
+              spellCheck={false}
+              autoComplete="off"
+              placeholder='{"kty":"EC","crv":"P-256",…}'
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  void (async () => {
+                    const r = await applyDirectChatEcdhPrivateJwk(ecdhJwkInput)
+                    if (r.ok) {
+                      const on = getDirectChatEcdhPrivateKey() != null
+                      setEcdhPrivActive(on)
+                      setEcdhJwkInput('')
+                      setMsg(on ? 'Chat-ECDH-Privatkey aktiv (nur RAM).' : 'Chat-ECDH-Privatkey entfernt.')
+                    } else {
+                      setEcdhPrivActive(false)
+                      setMsg(r.error)
+                    }
+                  })()
+                }}
+              >
+                ECDH-JWK anwenden
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                disabled={busy !== null}
+                onClick={() => {
+                  clearDirectChatEcdhPrivateKey()
+                  setEcdhPrivActive(false)
+                  setMsg('Chat-ECDH-Privatkey gelöscht.')
+                }}
+              >
+                ECDH löschen
+              </Button>
+            </div>
+            {ecdhPrivActive && (
+              <p className="text-[10px] text-emerald-700 dark:text-emerald-400">ECDH-Session aktiv.</p>
             )}
           </div>
         </div>

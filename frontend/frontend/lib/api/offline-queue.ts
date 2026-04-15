@@ -23,6 +23,7 @@ import {
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
+  canUseDirectEncryptedMailboxDrain,
   canUseDirectPlaintextMailboxDrain,
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
@@ -31,6 +32,8 @@ import {
   isIotaRelayOnlyMode,
   trySubmitPlaintextMailboxViaDirectIota,
 } from '@/frontend/lib/direct-iota-plain-submit'
+import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
+import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 
 export {
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -97,6 +100,20 @@ function canAttemptDirectPlainMailbox(item: OfflineMailboxQueueItem): boolean {
   )
 }
 
+function canAttemptDirectEncryptedMailbox(item: OfflineMailboxQueueItem): boolean {
+  return (
+    item.kind === 'encrypted_send' &&
+    item.encrypted === true &&
+    !isIotaRelayOnlyMode() &&
+    isDirectMailboxDrainEnabled() &&
+    Boolean(getConfiguredDirectIotaRpcUrl()) &&
+    Boolean(getDirectIotaSessionSigner()) &&
+    Boolean(getDirectMailboxChainSnapshot()) &&
+    canUseDirectEncryptedMailboxDrain() &&
+    getDirectChatEcdhMaterialForRecipient(item.recipient) != null
+  )
+}
+
 function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
   const viaHttp = createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort())
   return async (item) => {
@@ -108,6 +125,19 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
       })
       if (r.ok) return { ok: true as const }
       return { ok: false as const, error: r.error }
+    }
+    if (canAttemptDirectEncryptedMailbox(item)) {
+      const mat = getDirectChatEcdhMaterialForRecipient(item.recipient)
+      if (mat) {
+        const r = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
+          recipient: item.recipient,
+          plaintextUtf8: item.payload,
+          peerPubRaw: mat.peerPubRaw,
+          ecdhPrivateKey: mat.ecdhPrivateKey,
+        })
+        if (r.ok) return { ok: true as const }
+        return { ok: false as const, error: r.error }
+      }
     }
     return viaHttp(item)
   }
