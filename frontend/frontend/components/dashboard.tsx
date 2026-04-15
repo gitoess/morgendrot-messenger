@@ -152,6 +152,9 @@ function writeShowAllTilesPref(value: boolean) {
 
 const SIGNER_IMPORT_REQUIRED_CODE = 'SIGNER_IMPORT_REQUIRED' as const
 
+/** Entsperr-Dialog: Tresor | Seed importieren (nur sdk) | Neu anlegen. */
+type UnlockMode = 'vault' | 'import' | 'create'
+
 function normalizeSignerWords(s: string): string {
   return s
     .trim()
@@ -188,9 +191,9 @@ export function Dashboard() {
   /** Zusatz zu POST /api/unlock bei SIGNER=sdk (Mnemonic / Bech32), wenn nicht im Vault. */
   const [signerImport, setSignerImport] = useState('')
   const [signerImportConfirm, setSignerImportConfirm] = useState('')
-  /** Öffnen = bestehende Vault-Datei / Sitzung; Neu anlegen = erstes Setup ohne lokale Datei (SIGNER=sdk: Seed+Vault-PW jeweils doppelt). */
-  const [unlockFlow, setUnlockFlow] = useState<'open' | 'create'>('open')
-  /** Bei „Öffnen“ + sdk: Mnemonic-Feld erst nach Bedarf (Backend-Code) oder Klick anzeigen. */
+  /** Tresor (nur PW, Mnemonic optional) | Seed importieren | Neu anlegen (PW+Seed je 2× bei sdk). */
+  const [unlockMode, setUnlockMode] = useState<UnlockMode>('vault')
+  /** Bei „vault“ + sdk: Mnemonic-Feld erst nach Bedarf oder Klick anzeigen. */
   const [showSignerImportOpen, setShowSignerImportOpen] = useState(false)
   const [unlockError, setUnlockError] = useState('')
   const [unlocking, setUnlocking] = useState(false)
@@ -211,6 +214,7 @@ export function Dashboard() {
   const prevLockedRef = useRef(false)
   /** Zuletzt von GET /api/status gemeldet — für Entsperr-Dialog beim Wechsel auf „locked“ ohne veraltetes apiSnapshot. */
   const vaultHasLocalRef = useRef(false)
+  const signerIsSdkRef = useRef(false)
 
   useEffect(() => {
     const prev = prevLockedRef.current
@@ -222,9 +226,20 @@ export function Dashboard() {
       setPassword('')
       setPasswordConfirm('')
       setShowSignerImportOpen(false)
-      setUnlockFlow(vaultHasLocalRef.current ? 'open' : 'create')
+      const hasVault = vaultHasLocalRef.current
+      const sdk = signerIsSdkRef.current
+      setUnlockMode(hasVault ? 'vault' : sdk ? 'create' : 'vault')
     }
   }, [locked])
+
+  useEffect(() => {
+    if (!locked) return
+    const s = apiSnapshot?.signer
+    if (s != null && s !== 'sdk' && unlockMode === 'import') {
+      setUnlockMode('vault')
+      setShowSignerImportOpen(false)
+    }
+  }, [apiSnapshot?.signer, unlockMode, locked])
 
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
@@ -280,6 +295,7 @@ export function Dashboard() {
       setNetworkInfo(res.rpcUrlLabel || res.network || 'IOTA Rebased')
       setLocked(!!res.locked)
       vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
+      signerIsSdkRef.current = res.signer === 'sdk'
       setRole(res.role || '')
       setMyAddress((res.myAddressFull || res.myAddress || '').trim())
     } else {
@@ -287,6 +303,7 @@ export function Dashboard() {
       setConnected(false)
       setLocked(false)
       vaultHasLocalRef.current = false
+      signerIsSdkRef.current = false
     }
   }
 
@@ -317,7 +334,7 @@ export function Dashboard() {
     setUnlockError('')
     const signer = apiSnapshot?.signer
 
-    if (unlockFlow === 'create') {
+    if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
         setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
         return
@@ -336,7 +353,15 @@ export function Dashboard() {
           return
         }
       }
-    } else if (signer === 'sdk' && showSignerImportOpen) {
+    } else if (signer === 'sdk' && unlockMode === 'import') {
+      const t = signerImport.trim()
+      if (!t || !isPlausibleSdkImport(t)) {
+        setUnlockError(
+          'Mnemonic / Secret erforderlich (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
+        )
+        return
+      }
+    } else if (signer === 'sdk' && unlockMode === 'vault' && showSignerImportOpen) {
       const t = signerImport.trim()
       if (t && !isPlausibleSdkImport(t)) {
         setUnlockError(
@@ -348,7 +373,7 @@ export function Dashboard() {
 
     let sdkExtra: string | undefined
     if (signer === 'sdk') {
-      if (unlockFlow === 'create') {
+      if (unlockMode === 'create' || unlockMode === 'import') {
         sdkExtra = signerImport.trim()
       } else {
         sdkExtra = showSignerImportOpen ? signerImport.trim() || undefined : undefined
@@ -381,7 +406,8 @@ export function Dashboard() {
       }
     } else {
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
-      if (res.code === SIGNER_IMPORT_REQUIRED_CODE && apiSnapshot?.signer === 'sdk' && unlockFlow === 'open') {
+      if (res.code === SIGNER_IMPORT_REQUIRED_CODE && apiSnapshot?.signer === 'sdk' && unlockMode === 'vault') {
+        setUnlockMode('import')
         setShowSignerImportOpen(true)
       }
     }
@@ -424,13 +450,21 @@ export function Dashboard() {
   const unlockButtonDisabled =
     unlocking ||
     !password.trim() ||
-    (unlockFlow === 'create' &&
+    (unlockMode === 'create' &&
       (!passwordConfirm.trim() || password !== passwordConfirm)) ||
-    (unlockFlow === 'create' &&
+    (unlockMode === 'create' &&
       signerKind === 'sdk' &&
       (!signerImport.trim() ||
         !signerImportConfirm.trim() ||
-        normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm)))
+        normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm))) ||
+    (unlockMode === 'import' &&
+      signerKind === 'sdk' &&
+      (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
+    (unlockMode === 'vault' &&
+      signerKind === 'sdk' &&
+      showSignerImportOpen &&
+      !!signerImport.trim() &&
+      !isPlausibleSdkImport(signerImport.trim()))
 
   const sharedDialogs = (
     <>
@@ -476,9 +510,11 @@ export function Dashboard() {
                   </p>
                 ) : signerKind === 'sdk' ? (
                   <p>
-                    Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Nach dem ersten erfolgreichen Speichern mit
-                    „Signer-Import mit speichern“ im Tresor reicht meist <strong>nur noch das Passwort</strong>. Der Mnemonic-Bereich
-                    erscheint nur bei Bedarf (Schaltfläche unten) oder wenn der Server danach fragt.
+                    Bei <span className="font-mono text-xs">SIGNER=sdk</span> wählst du unten:{' '}
+                    <strong>Tresor öffnen</strong> (Passwort, Mnemonic nur falls nötig),{' '}
+                    <strong>Seed importieren</strong> (bestehende Wallet + Passwort) oder{' '}
+                    <strong>Neu anlegen</strong> (neues Profil: Passwort und Seed je zweimal). Nach „Signer-Import mit speichern“
+                    im Tresor reicht oft nur noch <strong>Tresor öffnen</strong> mit Passwort.
                   </p>
                 ) : signerKind === 'remote' ? (
                   <p>
@@ -501,29 +537,49 @@ export function Dashboard() {
           </DialogHeader>
           <div className="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto py-4 pr-1">
             <RadioGroup
-              value={unlockFlow}
+              value={unlockMode}
               onValueChange={(v) => {
-                setUnlockFlow(v as 'open' | 'create')
-                setShowSignerImportOpen(false)
+                const m = v as UnlockMode
+                setUnlockMode(m)
                 setUnlockError('')
                 setPasswordConfirm('')
-                if (v === 'open') {
+                if (m === 'vault') {
+                  setShowSignerImportOpen(false)
                   setSignerImportConfirm('')
+                } else if (m === 'import') {
+                  setShowSignerImportOpen(true)
+                  setSignerImportConfirm('')
+                } else {
+                  setShowSignerImportOpen(false)
                 }
               }}
               className="gap-3"
             >
               <div className="flex items-start gap-3 rounded-lg border border-border p-3">
-                <RadioGroupItem value="open" id="uf-open" className="mt-1" />
+                <RadioGroupItem value="vault" id="uf-vault" className="mt-1" />
                 <div className="min-w-0">
-                  <Label htmlFor="uf-open" className="cursor-pointer font-medium text-foreground">
+                  <Label htmlFor="uf-vault" className="cursor-pointer font-medium text-foreground">
                     Tresor öffnen
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Bestehende Vault-Datei oder On-Chain-Vault — zuerst nur Passwort; Mnemonic nur falls nötig.
+                    Bestehende Vault — zuerst Passwort; Mnemonic nur falls der Tresor noch keinen Signer enthält (Schaltfläche
+                    unten) oder der Server danach fragt.
                   </p>
                 </div>
               </div>
+              {signerKind === 'sdk' ? (
+                <div className="flex items-start gap-3 rounded-lg border border-border p-3">
+                  <RadioGroupItem value="import" id="uf-import" className="mt-1" />
+                  <div className="min-w-0">
+                    <Label htmlFor="uf-import" className="cursor-pointer font-medium text-foreground">
+                      Seed importieren
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Bereits vorhandenen Mnemonic / Bech32-Secret mitgeben — z. B. bestehende IOTA-Wallet oder Wiederherstellung.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
               <div className="flex items-start gap-3 rounded-lg border border-border p-3">
                 <RadioGroupItem value="create" id="uf-create" className="mt-1" />
                 <div className="min-w-0">
@@ -531,27 +587,27 @@ export function Dashboard() {
                     Neu anlegen
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Erstes Setup ohne lokale <span className="font-mono">.morgendrot-vault</span>. Bei{' '}
-                    <span className="font-mono text-xs">SIGNER=sdk</span>: Seed und Passwort jeweils zweimal bestätigen.
+                    Neues Profil ohne passende lokale Vault. Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Seed
+                    (oder extern erzeugt) und Passwort jeweils zweimal bestätigen.
                   </p>
                 </div>
               </div>
             </RadioGroup>
-            {apiSnapshot?.vaultStatus?.hasLocal && unlockFlow === 'create' ? (
+            {apiSnapshot?.vaultStatus?.hasLocal && unlockMode === 'create' ? (
               <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-800 dark:text-amber-200">
                 Es existiert bereits eine lokale Vault-Datei. In der Regel <strong>Tresor öffnen</strong> wählen — „Neu anlegen“
                 nur bei zweitem Profil (eigene Datei / Server-Konfiguration).
               </p>
             ) : null}
-            {!apiSnapshot?.vaultStatus?.hasLocal && unlockFlow === 'open' && signerKind === 'sdk' ? (
+            {!apiSnapshot?.vaultStatus?.hasLocal && unlockMode === 'vault' && signerKind === 'sdk' ? (
               <p className="rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
-                Keine lokale Vault-Datei. Mit <strong>Tresor öffnen</strong> und nur Passwort entsperrt{' '}
-                <span className="font-mono text-xs">SIGNER=sdk</span> nicht — bitte <strong>Neu anlegen</strong> oder Mnemonic
-                über die Schaltfläche unten ergänzen.
+                Keine lokale Vault-Datei: Mit nur Passwort entsperrt <span className="font-mono text-xs">SIGNER=sdk</span> nicht
+                — bitte <strong>Seed importieren</strong> oder <strong>Neu anlegen</strong> wählen (oder Mnemonic unten
+                ergänzen).
               </p>
             ) : null}
 
-            {unlockFlow === 'open' ? (
+            {unlockMode === 'vault' ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="wallet-password">Passwort (Wallet / Vault)</Label>
@@ -600,7 +656,37 @@ export function Dashboard() {
                   )
                 ) : null}
               </>
-            ) : (
+            ) : null}
+
+            {unlockMode === 'import' && signerKind === 'sdk' ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="wallet-password-import">Passwort (Wallet / Vault)</Label>
+                  <Input
+                    id="wallet-password-import"
+                    type="password"
+                    placeholder="Passwort eingeben"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !unlockButtonDisabled && handleUnlock()}
+                    autoComplete="current-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="import-signer">Mnemonic / Bech32-Secret</Label>
+                  <Textarea
+                    id="import-signer"
+                    placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
+                    value={signerImport}
+                    onChange={(e) => setSignerImport(e.target.value)}
+                    className="min-h-[88px] font-mono text-xs"
+                    autoComplete="off"
+                  />
+                </div>
+              </>
+            ) : null}
+
+            {unlockMode === 'create' ? (
               <>
                 {signerKind === 'sdk' ? (
                   <>
@@ -652,7 +738,7 @@ export function Dashboard() {
                   />
                 </div>
               </>
-            )}
+            ) : null}
 
             {unlockError ? <p className="text-sm text-destructive">{unlockError}</p> : null}
             <Button onClick={() => void handleUnlock()} disabled={unlockButtonDisabled} className="w-full">

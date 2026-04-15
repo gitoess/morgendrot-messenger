@@ -43,15 +43,19 @@
         <div class="mt-4 space-y-3">
           <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-600 p-3 hover:bg-slate-700/40">
             <input type="radio" class="mt-1" name="lite-unlock-flow" value="open" x-model="unlockFlow" @change="showUnlockSignerImport = false; unlockError = ''; passwordConfirm = ''; unlockMnemonicConfirm = ''" />
-            <span><span class="font-medium text-white">Tresor öffnen</span><span class="block text-xs text-slate-400 mt-0.5">Bestehende Vault — zuerst nur Passwort; Mnemonic nur bei Bedarf (Schaltfläche).</span></span>
+            <span><span class="font-medium text-white">Tresor öffnen</span><span class="block text-xs text-slate-400 mt-0.5">Bestehende Vault — zuerst Passwort; Mnemonic nur bei Bedarf (Schaltfläche).</span></span>
+          </label>
+          <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-600 p-3 hover:bg-slate-700/40" x-show="status && status.signer === 'sdk'" x-cloak>
+            <input type="radio" class="mt-1" name="lite-unlock-flow" value="import" x-model="unlockFlow" @change="showUnlockSignerImport = true; unlockError = ''; passwordConfirm = ''; unlockMnemonicConfirm = ''" />
+            <span><span class="font-medium text-white">Seed importieren</span><span class="block text-xs text-slate-400 mt-0.5">Bestehenden Mnemonic / Bech32-Secret mit Passwort — z. B. Wiederherstellung.</span></span>
           </label>
           <label class="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-600 p-3 hover:bg-slate-700/40">
             <input type="radio" class="mt-1" name="lite-unlock-flow" value="create" x-model="unlockFlow" @change="showUnlockSignerImport = false; unlockError = ''" />
-            <span><span class="font-medium text-white">Neu anlegen</span><span class="block text-xs text-slate-400 mt-0.5">Ohne lokale <span class="font-mono">.morgendrot-vault</span>. Bei <span class="font-mono">SIGNER=sdk</span>: Seed + Passwort jeweils zweimal.</span></span>
+            <span><span class="font-medium text-white">Neu anlegen</span><span class="block text-xs text-slate-400 mt-0.5">Neues Profil ohne lokale <span class="font-mono">.morgendrot-vault</span>. Bei <span class="font-mono">SIGNER=sdk</span>: Seed + Passwort jeweils zweimal.</span></span>
           </label>
         </div>
         <p class="mt-2 rounded border border-amber-500/30 bg-amber-950/40 p-2 text-xs text-amber-200/95" x-show="status && status.vaultStatus && status.vaultStatus.hasLocal && unlockFlow === 'create'" x-cloak>Es existiert bereits eine lokale Vault-Datei — normalerweise <strong>Tresor öffnen</strong> wählen.</p>
-        <p class="mt-2 rounded border border-slate-600 bg-slate-900/50 p-2 text-xs text-slate-400" x-show="status && status.signer === 'sdk' && unlockFlow === 'open' && status.vaultStatus && !status.vaultStatus.hasLocal" x-cloak>Keine lokale Vault-Datei. Mit nur Passwort entsperrt <span class="font-mono">SIGNER=sdk</span> nicht — <strong class="text-slate-200">Neu anlegen</strong> oder Mnemonic über die Schaltfläche unten.</p>
+        <p class="mt-2 rounded border border-slate-600 bg-slate-900/50 p-2 text-xs text-slate-400" x-show="status && status.signer === 'sdk' && unlockFlow === 'open' && status.vaultStatus && !status.vaultStatus.hasLocal" x-cloak>Keine lokale Vault-Datei: mit nur Passwort entsperrt <span class="font-mono">SIGNER=sdk</span> nicht — <strong class="text-slate-200">Seed importieren</strong> oder <strong>Neu anlegen</strong> (oder Mnemonic unten ergänzen).</p>
 
         <div class="mt-4 space-y-3" x-show="unlockFlow === 'open'" x-cloak>
             <div>
@@ -68,6 +72,20 @@
                   class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-mono"
                   placeholder="12+ Wörter oder Secret …" autocomplete="off"></textarea>
               </div>
+            </div>
+        </div>
+        <div class="mt-4 space-y-3" x-show="unlockFlow === 'import'" x-cloak>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Vault- / Wallet-Passwort</label>
+              <input type="password" x-model="password" @keydown.enter="!unlockSubmitDisabled() && doUnlock()"
+                class="w-full rounded-lg border border-slate-600 bg-slate-700 px-4 py-2 text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+                placeholder="Passwort eingeben" autocomplete="current-password" />
+            </div>
+            <div x-show="status && status.signer === 'sdk'" x-cloak>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Mnemonic / Bech32-Secret</label>
+              <textarea x-model="unlockMnemonic" rows="3"
+                class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none font-mono"
+                placeholder="12+ Wörter oder Secret …" autocomplete="off"></textarea>
             </div>
         </div>
         <div class="mt-4 space-y-3" x-show="unlockFlow === 'create'" x-cloak>
@@ -3445,6 +3463,13 @@
             }
             return false;
           }
+          if (this.unlockFlow === 'import') {
+            if (this.status && this.status.signer === 'sdk') {
+              const t = (this.unlockMnemonic || '').trim();
+              if (!t || !this.isPlausibleSdkImport(t)) return true;
+            }
+            return false;
+          }
           return false;
         },
         async doUnlock() {
@@ -3468,6 +3493,12 @@
                 return;
               }
             }
+          } else if (signer === 'sdk' && this.unlockFlow === 'import') {
+            const t = (this.unlockMnemonic || '').trim();
+            if (!t || !this.isPlausibleSdkImport(t)) {
+              this.unlockError = 'Mnemonic / Secret erforderlich (mindestens 12 Wörter oder Bech32/Hex).';
+              return;
+            }
           } else if (signer === 'sdk' && this.showUnlockSignerImport) {
             const t = (this.unlockMnemonic || '').trim();
             if (t && !this.isPlausibleSdkImport(t)) {
@@ -3477,7 +3508,7 @@
           }
           let imp = '';
           if (signer === 'sdk') {
-            if (this.unlockFlow === 'create') {
+            if (this.unlockFlow === 'create' || this.unlockFlow === 'import') {
               imp = (this.unlockMnemonic || '').trim();
             } else {
               imp = this.showUnlockSignerImport ? (this.unlockMnemonic || '').trim() : '';
@@ -3557,6 +3588,7 @@
             } else {
               this.unlockError = d.error || d.message || ('Anfrage fehlgeschlagen (HTTP ' + r.status + ').');
               if (d.code === 'SIGNER_IMPORT_REQUIRED' && signer === 'sdk' && this.unlockFlow === 'open') {
+                this.unlockFlow = 'import';
                 this.showUnlockSignerImport = true;
               }
             }
