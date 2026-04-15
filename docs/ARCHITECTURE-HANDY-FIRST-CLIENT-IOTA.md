@@ -101,6 +101,8 @@
 5. **Peering (Handshake/Connect)** — solange nur über Node: **Relay-Modus** klar als opt-in; Ersatz (QR, on-chain, …) **nach** Fahrplan **§ C.0b** planen, nicht parallel zum großen Mesh-Kern.
 6. **Abgabe & Erwartungshaltung** — **`docs/WANDERER-STANDALONE-BUNDLE.md`** / Export-README: „Node optional“ statt implizit „`npm start` zuerst“.
 
+**Operator-UX (parallel, keine Blockade für B.2–B.4):** Telefonbuch mit Klarnamen, QR zum Einlesen/Teilen von Adressen und Installations-URLs, Boss-LAN-Szenario (Helfer scannen QR am Boss-PC → PWA installieren) — **kritische** Einordnung (HTTPS, Same-Origin, § H.12 Kontakt-Wahrheit, QR-Schema **§ H.3b**) in **`docs/ROADMAP-FAHRPLAN.md`** § **H.16**.
+
 **Messpunkt:** Wenn **B.2–B.4** für den privaten Chat erledigt sind, ist der Messenger für den Kernpfad **ohne** laufenden Morgendrot-Node nutzbar; **A** bleibt parallel für Teams, die bis dahin **deployen** wollen.
 
 ---
