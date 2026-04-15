@@ -595,6 +595,7 @@
                   <span class="text-slate-500" x-show="m.ts" x-text="m.ts ? new Date(m.ts).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' }) : ''"></span>
                   <span x-show="m.ts" class="text-slate-600"> · </span>
                   <span class="text-emerald-400/90 font-medium" x-show="contactLabelFor(m.sender || m.from)" x-text="contactLabelFor(m.sender || m.from)"></span>
+                  <span x-show="contactRoleTagsFor(m.sender || m.from)" class="text-cyan-400/85 text-[10px] ml-1" x-text="'(' + contactRoleTagsFor(m.sender || m.from) + ')'"></span>
                   <span x-show="contactLabelFor(m.sender || m.from)" class="text-slate-500"> · </span>
                   <span x-text="(m.sender || m.from || '').slice(0,16)+'…'"></span>
                 </div>
@@ -876,6 +877,7 @@
                     <span class="text-slate-500" x-show="m.ts" x-text="m.ts ? new Date(m.ts).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'medium' }) : ''"></span>
                     <span x-show="m.ts" class="text-slate-600"> · </span>
                     <span class="text-emerald-400/90 font-medium" x-show="contactLabelFor(m.sender || m.from)" x-text="contactLabelFor(m.sender || m.from)"></span>
+                    <span x-show="contactRoleTagsFor(m.sender || m.from)" class="text-cyan-400/85 text-[10px] ml-1" x-text="'(' + contactRoleTagsFor(m.sender || m.from) + ')'"></span>
                     <span x-show="contactLabelFor(m.sender || m.from)" class="text-slate-500"> · </span>
                     <span x-text="(m.sender || m.from || '').slice(0,16)+'…'"></span>
                     <span class="text-slate-500" x-show="m.nonce" x-text="' · nonce ' + m.nonce"></span>
@@ -2575,7 +2577,7 @@
           { id: 'ids-history', title: 'IDs & Verlauf', subtitle: 'Alle Package-, Anchor- und Adress-Listen', icon: '📋', iconBg: 'bg-slate-500/20 text-slate-300 border-slate-500/30' },
         ],
         idsHistory: { packageIds: [], anchorIds: [], loading: false, currentId: '', historyIds: [], discoveredIds: [] },
-        chat: { partner: '', message: '', encrypted: true, useMailbox: true, messages: [], loading: false, inboxPackageId: '', inboxPackageManual: '', mergeLocalInbox: false, lastInboxBackend: '', pairingShareSecret: '', pairingFindSecret: '', pairingDisplayName: '', pairingTtlSec: '60', contactLabels: {}, qrShareDisplayName: '', qrIncludeNetworkInQr: false, qrImportRaw: '', qrImportError: '', qrImportParsed: null, qrImportApplyNetwork: false, iotaNameInput: '', iotaNameLoading: false, iotaNameResult: null, iotaNameError: '', compactBlobBase64: null, compactAudioBase64: null, compactTxtFileName: '', compactTxtFileText: null, compactBusy: false, compactMeta: '' },
+        chat: { partner: '', message: '', encrypted: true, useMailbox: true, messages: [], loading: false, inboxPackageId: '', inboxPackageManual: '', mergeLocalInbox: false, lastInboxBackend: '', pairingShareSecret: '', pairingFindSecret: '', pairingDisplayName: '', pairingTtlSec: '60', contactLabels: {}, contactDirectory: {}, qrShareDisplayName: '', qrIncludeNetworkInQr: false, qrImportRaw: '', qrImportError: '', qrImportParsed: null, qrImportApplyNetwork: false, iotaNameInput: '', iotaNameLoading: false, iotaNameResult: null, iotaNameError: '', compactBlobBase64: null, compactAudioBase64: null, compactTxtFileName: '', compactTxtFileText: null, compactBusy: false, compactMeta: '' },
         lock: {
           keys: [], tickets: [], cmd: '', loading: false,
           keyLock: '', keyRecipient: '', keyTtl: '', keyCount: 1, keyNotify: false, lastCreated: [],
@@ -3542,7 +3544,17 @@
           try {
             const r = await fetch(_api() + '/api/contact-labels');
             const d = await r.json();
-            if (d.ok && d.labels) this.chat.contactLabels = d.labels;
+            if (!d.ok) return;
+            if (d.labels && typeof d.labels === 'object') this.chat.contactLabels = d.labels;
+            if (d.directory && typeof d.directory === 'object' && !Array.isArray(d.directory)) {
+              this.chat.contactDirectory = d.directory;
+            } else if (d.labels && typeof d.labels === 'object') {
+              const dir = {};
+              for (const [addr, label] of Object.entries(d.labels)) {
+                dir[addr] = { label: String(label || 'Partner') };
+              }
+              this.chat.contactDirectory = dir;
+            }
           } catch (e) {}
         },
         async lookupIotaName() {
@@ -3586,10 +3598,24 @@
           const d = await this.setConfig('VERIFIED_IOTA_NAME_PACKAGE_IDS', this.messengerGasUi.verifiedIotaPackages);
           if (d && d.ok) await this.loadSetup();
         },
+        contactDirectoryEntry(addr) {
+          const a = String(addr || '').trim().toLowerCase();
+          if (!a || !this.chat.contactDirectory) return null;
+          const e = this.chat.contactDirectory[a];
+          return e && typeof e === 'object' && !Array.isArray(e) ? e : null;
+        },
         contactLabelFor(addr) {
+          const e = this.contactDirectoryEntry(addr);
+          if (e && typeof e.label === 'string' && e.label.trim()) return e.label;
           const a = String(addr || '').trim().toLowerCase();
           if (!a || !this.chat.contactLabels) return '';
           return this.chat.contactLabels[a] || '';
+        },
+        /** roleTags aus Telefonbuch (§ H.3g Paket 3 — Parität Next-PWA). */
+        contactRoleTagsFor(addr) {
+          const e = this.contactDirectoryEntry(addr);
+          const tags = e && Array.isArray(e.roleTags) ? e.roleTags.map((t) => String(t).trim()).filter(Boolean) : [];
+          return tags.length ? tags.join(', ') : '';
         },
         isMorgendrotAddr64(s) {
           return /^0x[a-fA-F0-9]{64}$/.test(String(s || '').trim());
@@ -4962,6 +4988,7 @@
             if (d.ok) {
               this.boss.provExportFeedback = d.message || (d.applied + ' Kontakt(e) übernommen.');
               this.boss.provExportIsError = false;
+              await this.loadContactLabels();
             } else {
               this.boss.provExportFeedback = d.error || 'Übernahme fehlgeschlagen';
               this.boss.provExportIsError = true;

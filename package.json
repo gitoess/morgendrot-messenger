@@ -7,6 +7,8 @@
     "postinstall": "node scripts/ensure-env.mjs",
     "build:docs": "tsx scripts/build-doc-contents.ts",
     "validate:ui": "node scripts/validate-ui-data.js",
+    "check:pwa-desk": "node scripts/check-pwa-manual-desk.mjs",
+    "check:pwa-desk:full": "node scripts/check-pwa-manual-desk.mjs --full",
     "sync:handbook": "node scripts/sync-pwa-handbook.mjs",
     "bundle:messenger": "tsx scripts/bundle-messenger-standalone.ts",
     "bundle:messenger:standalone": "tsx scripts/bundle-messenger-standalone.ts --standalone-only",

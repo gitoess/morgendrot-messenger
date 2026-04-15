@@ -1,15 +1,9 @@
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import type { EinsatzRoleTemplate } from '@morgendrot/shared/einsatz-role-templates'
 
-/** Wie `docs/API-EINSATZ-ROLE-TEMPLATES.md` — Boss-PC, keine Chain. */
-export type EinsatzRoleTemplate = {
-  id: string
-  label: string
-  iconHint?: string
-  chainRole: string
-  roleId: number
-  defaultDeploymentChannelTag?: string
-}
+/** Wie `docs/API-EINSATZ-ROLE-TEMPLATES.md` — Boss-PC, keine Chain; Typ aus `src/shared`. */
+export type { EinsatzRoleTemplate }
 
 /** GET/POST `/api/einsatz-role-templates` — JSON-Parsing (Vitest, § H.1a / H.3g). */
 export function parseEinsatzRoleTemplatesResponse(text: string, httpStatus: number): {

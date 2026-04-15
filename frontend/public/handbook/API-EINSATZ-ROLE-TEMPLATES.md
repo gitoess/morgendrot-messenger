@@ -2,6 +2,8 @@
 
 **Zweck:** Auf dem **Boss-Rechner** eine Liste von **Einsatz-Vorlagen** (Anzeigename, `chainRole`, `roleId`, optional Kanal-Tag) persistieren. Die **Lite-UI** lädt sie im Provisioning-Wizard; **keine Chain**, keine Secrets.
 
+**Next-PWA (§ H.3g Paket 6):** Einstellungen → **Einsatz-Rollen-Vorlagen** — UI **`frontend/frontend/components/views/settings-view.tsx`**, API-Client **`frontend/frontend/lib/api/einsatz-role-templates.ts`**, **Client-Validierung** (gleiche Regeln wie Server) **`frontend/frontend/lib/einsatz-role-templates-validate.ts`** vor `POST`. **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** § **H.3g** (Pakete **2**/**6**), Ausführungsreihenfolge **§ C.0b** Stufe **3**.
+
 **Datei (Standard):** `.morgendrot-einsatz-templates.json` im Arbeitsverzeichnis des Prozesses — in **`.gitignore`**, nicht committen.
 
 **Override:** Umgebungsvariable **`EINSATZ_ROLE_TEMPLATES_FILE`** = absoluter oder cwd-bezogener Pfad.

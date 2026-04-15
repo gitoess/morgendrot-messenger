@@ -1,0 +1,11 @@
+import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
+
+export const metadata: Metadata = {
+  title: 'Offline · Morgendrot',
+  description: 'Messenger ohne Netz — eingeschränkte Ansicht',
+}
+
+export default function OfflineLayout({ children }: { children: ReactNode }) {
+  return children
+}

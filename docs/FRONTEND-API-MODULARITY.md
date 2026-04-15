@@ -4,6 +4,8 @@
 
 **Fahrplan-Anker:** `docs/MESSENGER-UI-MODULARITY-STRATEGY.md` (Phase 1, § H.1b in `docs/ROADMAP-FAHRPLAN.md`).
 
+**Kanonische Shared-Logik (Node + Next):** Paket **`@morgendrot/shared`** aus `src/shared/` — **`docs/MONOREPO-NEXT-AND-SHARED.md`**.
+
 ---
 
 ## Barrel (`frontend/frontend/lib/api.ts`)

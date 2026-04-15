@@ -28,15 +28,21 @@ const nextConfig = {
     'http://127.0.0.1:3341',
     ...extraDevOrigins,
   ],
-  transpilePackages: ['@meshtastic/core', '@meshtastic/transport-web-bluetooth'],
+  /* @morgendrot/shared: lokales file:-Paket ../src/shared — Next transpiliert dessen .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md). */
+  transpilePackages: ['@meshtastic/core', '@meshtastic/transport-web-bluetooth', '@morgendrot/shared'],
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
+  /**
+   * Monorepo-Parent: `node_modules/@morgendrot/shared` ist ein `file:`-Link auf `../src/shared` **außerhalb**
+   * von `frontend/` — mit Standard-Root (`frontend/`) löst Turbopack den Pfad nicht. Parent-Root + `transpilePackages`.
+   * @see https://nextjs.org/docs/app/api-reference/next-config-js/turbopack#root-directory
+   */
   turbopack: {
-    root: __dirname,
+    root: path.resolve(repoRoot),
   },
   async rewrites() {
     return [

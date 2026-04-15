@@ -15,6 +15,7 @@
     "check:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx ./frontend"
   },
   "dependencies": {
+    "@morgendrot/shared": "file:../src/shared",
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/core": "^8.3.0",
     "@hookform/resolvers": "^3.9.1",

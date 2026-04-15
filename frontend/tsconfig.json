@@ -25,6 +25,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@morgendrot/shared/einsatz-role-templates": [
+        "../src/shared/einsatz-role-templates.ts"
+      ],
+      "@morgendrot/shared/*": [
+        "../src/shared/*"
       ]
     }
   },

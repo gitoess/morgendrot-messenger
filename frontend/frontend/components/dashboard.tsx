@@ -352,32 +352,34 @@ export function Dashboard() {
         >
           <DialogHeader>
             <DialogTitle>Wallet entsperren</DialogTitle>
-            <DialogDescription className="text-left space-y-2">
-              <p>
-                Entsperrt die <strong>Backend-Sitzung</strong> zum Signieren von Befehlen. Das Passwort entschlüsselt den
-                lokalen oder On-Chain-Vault, falls konfiguriert — kein separates Web-Login.
-              </p>
-              {apiSnapshot?.signer === 'cli' ? (
+            <DialogDescription asChild className="text-left space-y-2">
+              <div>
                 <p>
-                  Bei <span className="font-mono text-xs">SIGNER=cli</span>: Passwort des <strong>IOTA-CLI-Keystores</strong>{' '}
-                  zur konfigurierten Adresse (<span className="font-mono text-xs">MY_ADDRESS</span>) — hier kein Mnemonic-Feld.
+                  Entsperrt die <strong>Backend-Sitzung</strong> zum Signieren von Befehlen. Das Passwort entschlüsselt den
+                  lokalen oder On-Chain-Vault, falls konfiguriert — kein separates Web-Login.
                 </p>
-              ) : apiSnapshot?.signer === 'sdk' ? (
-                <p>
-                  Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Mnemonic oder Bech32 unten nur nötig, wenn noch
-                  nicht im Vault gespeichert.
-                </p>
-              ) : apiSnapshot?.signer === 'remote' ? (
-                <p>
-                  Bei <span className="font-mono text-xs">SIGNER=remote</span>: Passwort für den Vault; Signatur über den
-                  konfigurierten Remote-Signer bzw. Boss.
-                </p>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Der genaue Hinweis hängt von <span className="font-mono text-xs">SIGNER</span> in der Server-Konfiguration
-                  ab (nach Start in <span className="font-mono text-xs">GET /api/status</span> sichtbar).
-                </p>
-              )}
+                {apiSnapshot?.signer === 'cli' ? (
+                  <p>
+                    Bei <span className="font-mono text-xs">SIGNER=cli</span>: Passwort des <strong>IOTA-CLI-Keystores</strong>{' '}
+                    zur konfigurierten Adresse (<span className="font-mono text-xs">MY_ADDRESS</span>) — hier kein Mnemonic-Feld.
+                  </p>
+                ) : apiSnapshot?.signer === 'sdk' ? (
+                  <p>
+                    Bei <span className="font-mono text-xs">SIGNER=sdk</span>: Mnemonic oder Bech32 unten nur nötig, wenn noch
+                    nicht im Vault gespeichert.
+                  </p>
+                ) : apiSnapshot?.signer === 'remote' ? (
+                  <p>
+                    Bei <span className="font-mono text-xs">SIGNER=remote</span>: Passwort für den Vault; Signatur über den
+                    konfigurierten Remote-Signer bzw. Boss.
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-sm">
+                    Der genaue Hinweis hängt von <span className="font-mono text-xs">SIGNER</span> in der Server-Konfiguration
+                    ab (nach Start in <span className="font-mono text-xs">GET /api/status</span> sichtbar).
+                  </p>
+                )}
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

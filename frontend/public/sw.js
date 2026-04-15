@@ -2,14 +2,16 @@
  * Morgendrot PWA – Service Worker (minimal, stabil)
  *
  * - Cached Same-Origin: /_next/static/ (JS/CSS-Chunks) + /handbook/*.md (Handbuch, offline nach erstem Abruf / Install).
+ * - Navigation (document): bei Netzfehler Fallback auf zuvor gecachte Route **`/offline`** (Install/Precache).
  * - Kein Cache für /api/* : Backend bleibt „online first“; ohne Netz keine API.
  * - Erste App-Session ohne Netz: begrenzt (Handbuch nur wenn precache oder vorher geladen).
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-4'
+const VERSION = 'morgendrot-sw-5'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
+const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
 /** Muss zu scripts/sync-pwa-handbook.mjs und frontend/public/handbook/ passen */
 const HANDBOOK_URLS = [
   '/handbook/API-EINSATZ-ROLE-TEMPLATES.md',
@@ -37,6 +39,13 @@ self.addEventListener('install', (event) => {
       } catch {
         /* Handbuch-Dateien fehlen im Build — überspringen */
       }
+      try {
+        const offlineCache = await caches.open(OFFLINE_SHELL_CACHE)
+        const offlineRes = await fetch('/offline')
+        if (offlineRes.ok) await offlineCache.put('/offline', offlineRes.clone())
+      } catch {
+        /* /offline nicht erreichbar beim Install — überspringen */
+      }
     })()
   )
   self.skipWaiting()
@@ -51,7 +60,8 @@ self.addEventListener('activate', (event) => {
           .filter(
             (k) =>
               (k.startsWith('next-static-') && k !== STATIC_CACHE) ||
-              (k.startsWith('handbook-') && k !== HANDBOOK_CACHE)
+              (k.startsWith('handbook-') && k !== HANDBOOK_CACHE) ||
+              (k.startsWith('pwa-offline-') && k !== OFFLINE_SHELL_CACHE)
           )
           .map((k) => caches.delete(k))
       )
@@ -70,6 +80,8 @@ self.addEventListener('fetch', (event) => {
       event.respondWith(staticCacheFirst(req))
     } else if (url.pathname.startsWith('/handbook/') && url.pathname.endsWith('.md')) {
       event.respondWith(handbookCacheFirst(req))
+    } else if (req.mode === 'navigate') {
+      event.respondWith(navigateOfflineFallback(req))
     }
   } catch {
     /* ignore */
@@ -90,6 +102,21 @@ async function staticCacheFirst(request) {
       new Response('Offline', { status: 503, statusText: 'Service Unavailable' })
     )
   }
+}
+
+async function navigateOfflineFallback(request) {
+  try {
+    const res = await fetch(request)
+    if (res.ok || res.status === 304) return res
+  } catch {
+    /* Netzwerkfehler — Fallback */
+  }
+  const shell = await caches.open(OFFLINE_SHELL_CACHE).then((c) => c.match('/offline'))
+  if (shell) return shell
+  return new Response(
+    '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Offline</title></head><body><p>Keine Netzverbindung.</p></body></html>',
+    { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+  )
 }
 
 async function handbookCacheFirst(request) {

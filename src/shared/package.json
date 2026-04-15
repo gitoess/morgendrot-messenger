@@ -1,0 +1,11 @@
+{
+  "name": "@morgendrot/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Isomorphe Hilfsmodule (Node + Next). Per file:-Link aus frontend/ eingebunden; siehe docs/MONOREPO-NEXT-AND-SHARED.md",
+  "sideEffects": false,
+  "exports": {
+    "./einsatz-role-templates": "./einsatz-role-templates.ts"
+  }
+}

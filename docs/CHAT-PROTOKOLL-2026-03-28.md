@@ -158,3 +158,18 @@
 | **Commits (Beispiel)** | `8be765d` … `03ede59` (Banner, `timeIsTrusted`, `clientOutSeq`). |
 
 **Artefakt:** dieser Nachtrag; Verweise in **`README.md`**, **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, **`TESTING.md`** (Protokollzeile).
+
+---
+
+## Nachtrag (2026-03-31) – Android: Foreground Service + minimale Sync-Ehrlichkeit (**§ H.6f**)
+
+**Kontext:** Abstimmung „FG-Service + klare Nutzererwartung“ vs. Überkomplexität (Watchdog-/Modul-Zoo); kanonische **Mittelweg**-Doku ins Repo übernommen.
+
+| Thema | Artefakt |
+|--------|-----------|
+| **Spez / Zielbild** | **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`** — OS-Ebene (nativ) vs. Mesh/Mailbox-Logik (bestehende Pfade); PWA ohne FG-Versprechen |
+| **Fahrplan** | **`docs/ROADMAP-FAHRPLAN.md`** neuer Abschnitt **§ H.6f** + Verweiszeile Stand 2026-03-31; §-Tabelle **H** |
+| **README / TESTING** | Einstiegspunkt 6 + Roadmap-Zeile; **`TESTING.md`** Protokoll-Absatz (manuelle Android-Checks nach Hülle) |
+| **Code** | **Kein** neuer `android/`-Tree — nur Doku; Umsetzung = späterer Meilenstein (Capacitor/Kotlin o. ä.) |
+
+**Tests (lokal):** nach Doku-Änderungen **`npm run test:smoke`** (validate:ui + Modultests, alle grün) und **`cd frontend && npm run test:unit`** (Vitest **211** Tests). **`npm run test:realworld`** ausgeführt: Prozess endete mit Exit **0**, aber einzelne Schritte **[FAIL]** wegen **IOTA CLI ↔ RPC „Client/Server api version mismatch“** (personalisiertes Ticket / AccessKey-Teil) — lokal **IOTA-CLI-Version an den RPC-Server angleichen**, dann erneut laufen lassen. **Commit:** siehe **`git log -1 --oneline`** (Nachricht beginnt mit „docs: Android FG …“).

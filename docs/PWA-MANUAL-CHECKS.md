@@ -17,6 +17,15 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | C | **`frontend/`:** **`npm run build`** | **`prebuild`** → Handbuch-Sync; **`next build`** ohne Fehler = PWA-Bundle inkl. SW/Manifest konsistent. |
 | D | Bei Änderung an **`frontend/public/sw.js`:** **`VERSION`** (`morgendrot-sw-*`) erhöhen | Browser laden den neuen Service Worker; **`HANDBOOK_URLS`** muss zu den kopierten **`/handbook/*.md`** passen. |
 
+### Automatisierte Vorprüfung (Root)
+
+| Befehl | Entspricht | Dauer (typ.) |
+|--------|------------|--------------|
+| **`npm run check:pwa-desk`** | **A** + **B** (Icons aus `icon.svg`, Handbuch → `frontend/public/handbook/`) | kurz |
+| **`npm run check:pwa-desk:full`** | **A** + **B** + **C** (`frontend/` → `prebuild` + **`next build`**) | länger — vor Release/Feldtest |
+
+**D** bleibt **manuell** (Konstante in `sw.js` + danach L4/L5 am Browser).
+
 **Hinweis:** Die **kurze Checkliste** unten (Install, Offline, …) bleibt **manuell** am Gerät — Tabelle A–D ersetzt sie nicht.
 
 ### Status-/Fehlermeldungen (Messenger ↔ API, **§ H.2** Punkt 6)
@@ -31,7 +40,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 | 2026-03-28 | ✓ | ✓ (via prebuild) | ✓ | Automatisierte Vorprüfung im Repo |
 | 2026-03-30 | ✓ | ✓ (7 Dateien) | ✓ | A–C; **D** zunächst ohne SW-Edit. |
 | 2026-03-30 | — | ✓ (8 Dateien) | empfohlen | **D:** `VERSION` → **`morgendrot-sw-4`**; **`API-EINSATZ-ROLE-TEMPLATES.md`** in `sync-pwa-handbook` + `HANDBOOK_URLS` — nach Deploy: Handbuch einmal online öffnen (L4). |
-| 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. |
+| 2026-03-31 | ✓ | ✓ (8 Dateien) | ✓ | A–C nach § **H.2**-Folgeschritt (Punkt 6: Fetch-/Inbox-Offline-Texte an `api-fetch-text`); **D** nur bei `sw.js`-Edit. Root: **`npm run check:pwa-desk`** (= A+B), **`check:pwa-desk:full`** (+ C) — **`scripts/check-pwa-manual-desk.mjs`**; Lücken-Tabelle **Teil-Automatisierung**. |
 
 ---
 
@@ -54,13 +63,13 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 ### Lücken / nur am Gerät (nicht im CI ersetzbar)
 
-| # | Thema | Stand / nächste Aktion |
-|---|--------|-------------------------|
-| L1 | **Install (#1)** | Chrome/Edge „App installieren“ bzw. Android-Menü; **iOS Safari**: Teilen → „Zum Home-Bildschirm“ — einmal pro Zielgerät prüfen. |
-| L2 | **Start vom Icon (#2)** | Nach L1: Kaltstart, kein harter JS-Fehler; ggf. Rollen-Dashboard vs. Messenger-Pfad. |
-| L3 | **Offline-Shell (#3)** | Flugmodus: erwartbar, dass **`/api/*`** fehlschlägt; prüfen, ob Shell/`/_next/static` noch sinnvoll reagiert (kein weißer Screen). |
-| L4 | **Handbuch offline (#4)** | Einmal **`/handbook`** online laden, dann offline — inhaltliche Lesbarkeit; Abgleich mit **`HANDBOOK_URLS`** in **`frontend/public/sw.js`**. |
-| L5 | **Service-Worker-Update (Tabelle D)** | Bei jedem bewussten **`sw.js`-Edit:** Konstante **`VERSION`** (`morgendrot-sw-*`) erhöhen und erneut L3/L4 testen. |
+| # | Thema | Stand / nächste Aktion | Teil-Automatisierung (CI / Schreibtisch) |
+|---|--------|-------------------------|------------------------------------------|
+| L1 | **Install (#1)** | Chrome/Edge „App installieren“ bzw. Android-Menü; **iOS Safari**: Teilen → „Zum Home-Bildschirm“ — einmal pro Zielgerät prüfen. | Playwright deckt **kein** OS-Install-Prompt ab; Messenger-Smoke: **`e2e/messenger-ui.spec.ts`** (Dashboard sichtbar), nur wenn **`UI_BASE_URL`** Next Messenger. |
+| L2 | **Start vom Icon (#2)** | Nach L1: Kaltstart, kein harter JS-Fehler; ggf. Rollen-Dashboard vs. Messenger-Pfad. | Nur Gerät / manueller Kaltstart vom Icon. |
+| L3 | **Offline-Shell (#3)** | Flugmodus: erwartbar, dass **`/api/*`** fehlschlägt; prüfen, ob Shell/`/_next/static` noch sinnvoll reagiert (kein weißer Screen). | Nutzer-Strings Timeout/Offline: Vitest **`api-fetch-text`** + **`inbox-load-error`**; kein Ersatz für echtes Flugmodus-Verhalten. |
+| L4 | **Handbuch offline (#4)** | Einmal **`/handbook`** online laden, dann offline — inhaltliche Lesbarkeit; Abgleich mit **`HANDBOOK_URLS`** in **`frontend/public/sw.js`**. | **`npm run check:pwa-desk`** synchronisiert Quellen; SW-Cache-Verhalten = Browser. |
+| L5 | **Service-Worker-Update (Tabelle D)** | Bei jedem bewussten **`sw.js`-Edit:** Konstante **`VERSION`** (`morgendrot-sw-*`) erhöhen und erneut L3/L4 testen. | Kein Skript — nur Review der **`VERSION`**-Zeile im Diff. |
 
 ---
 

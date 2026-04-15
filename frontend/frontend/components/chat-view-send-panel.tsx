@@ -192,6 +192,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               type="checkbox"
               checked={delayMirrorToIota}
               onChange={(e) => onDelayMirrorToIotaChange(e.target.checked)}
+              aria-label="Delayed Upload: Klartext nach Mailbox (IOTA) spiegeln"
+              data-testid="delayed-mirror-to-iot-checkbox"
               className="mt-0.5 rounded border-border"
             />
             <span>
@@ -399,6 +401,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               type="button"
               onClick={() => void onSend()}
               disabled={sendDisabled}
+              data-testid="chat-composer-primary-send"
               className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {sending ? (
