@@ -83,4 +83,26 @@
 
 ---
 
-*Stand: 2026-04-28 — erste Fassung nach Architektur-Pivot.*
+## 6. Weiterarbeit: Richtung „Handy-only“ / kein Morgendrot-PC im Betrieb
+
+**Zwei Ziele nicht vermischen:**
+
+| Stufe | Was „ohne PC“ hier heißt | Technisch |
+|--------|---------------------------|-----------|
+| **A — Sofort (Betrieb)** | Kein **Entwicklungs-PC** im Raum; Messenger nutzbar vom Handy aus | Morgendrot **deployed** (HTTPS): Next + API auf Server/VPS **oder** anderem dauerhaft laufenden Host. PWA von dieser URL installieren. Der **Morgendrot-Prozess** kann noch da sein — nur nicht auf deinem Laptop. |
+| **B — Produkt-Zielbild** | **Kein** Morgendrot-Node als **Pflicht**; Handy **primär** mit RPC + lokaler Queue | Schritte unten; deckt sich mit **§ 4** Stufen **2→3→4** + Erweiterungen (Lesen, verschlüsselt, Peering). |
+
+### Reihenfolge für **B** (Node optional, wirklich „Handy-first“)
+
+1. **Ketten-/Mailbox-Kontext ohne laufenden Node-Dialog** — Heute hängt der Direct-Klartext-Pfad u. a. an Snapshot/Flags aus **`/api/status`**. Alles, was dafür nötig ist, muss **einmalig** beschaffbar und **auf dem Gerät persistiert** werden (Puls/Settings erweitern, bis kein „erst Basis anpingen“ nötig ist).
+2. **Klartext-Mailbox client-only verifizieren** — **`trySubmitPlaintextMailboxViaDirectIota`** + Outbox/Drain (**`offline-queue.ts`**, **`@morgendrot/core`**) auf einem Referenzprofil **Handy/Schreibtisch** nach **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** grün bekommen.
+3. **Verschlüsselter Sendepfad** — gleiches Muster wie Klartext: PTB bauen + signieren in **`@morgendrot/core`**, Ausführung über **RPC**; **`executeCommand`/`/send`** nur noch Fallback/Relay.
+4. **Empfang ohne `/api/fetch`** — Inbox aus der Kette/RPC lesen (owned objects / dokumentierte Read-Pfade), Pagination + Dedup mit **§ H.12** / **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.
+5. **Peering (Handshake/Connect)** — solange nur über Node: **Relay-Modus** klar als opt-in; Ersatz (QR, on-chain, …) **nach** Fahrplan **§ C.0b** planen, nicht parallel zum großen Mesh-Kern.
+6. **Abgabe & Erwartungshaltung** — **`docs/WANDERER-STANDALONE-BUNDLE.md`** / Export-README: „Node optional“ statt implizit „`npm start` zuerst“.
+
+**Messpunkt:** Wenn **B.2–B.4** für den privaten Chat erledigt sind, ist der Messenger für den Kernpfad **ohne** laufenden Morgendrot-Node nutzbar; **A** bleibt parallel für Teams, die bis dahin **deployen** wollen.
+
+---
+
+*Stand: 2026-04-28 — erste Fassung nach Architektur-Pivot; **§ 6** ergänzt: Reihenfolge Handy-only vs. Deploy.*
