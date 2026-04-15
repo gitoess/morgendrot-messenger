@@ -11,7 +11,8 @@ export type EinsatzRoleTemplate = {
   defaultDeploymentChannelTag?: string
 }
 
-function parseTemplatesResponse(text: string, httpStatus: number): {
+/** GET/POST `/api/einsatz-role-templates` — JSON-Parsing (Vitest, § H.1a / H.3g). */
+export function parseEinsatzRoleTemplatesResponse(text: string, httpStatus: number): {
   ok: boolean
   templates?: EinsatzRoleTemplate[]
   message?: string
@@ -44,7 +45,7 @@ export async function fetchEinsatzRoleTemplates(): Promise<{
   try {
     const fr = await fetchApiText(API_BASE, '/api/einsatz-role-templates')
     if (!fr.ok) return { ok: false, error: fr.error }
-    const r = parseTemplatesResponse(fr.text, fr.response.status)
+    const r = parseEinsatzRoleTemplatesResponse(fr.text, fr.response.status)
     if (!r.ok) return { ok: false, error: r.error }
     return { ok: true, templates: r.templates }
   } catch (e) {
@@ -65,7 +66,7 @@ export async function saveEinsatzRoleTemplates(templates: EinsatzRoleTemplate[])
       body: JSON.stringify({ templates }),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
-    return parseTemplatesResponse(fr.text, fr.response.status)
+    return parseEinsatzRoleTemplatesResponse(fr.text, fr.response.status)
   } catch (e) {
     return { ok: false, error: formatFetchFailureMessage(e) }
   }
