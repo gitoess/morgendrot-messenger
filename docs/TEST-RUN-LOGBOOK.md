@@ -10,6 +10,8 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-03-28** | API **:3342**, Windows, `.env`; Status vor Connect bereits `connected=true` / `locked=false` | **`npm run test:smoke`** | **OK** — 36 bestanden, 0 fehlgeschlagen (`validate:ui` + `npm run test`). |
+| **2026-03-28** | selbe, `SINGLE_WALLET=1` | **`npm run test:messages:single`** | **OK** — Abschnitte **1**–**7** vollständig (kompaktes Bild, Handshake/Connect, `/send`/`/fetch`, Filter, Klartext, `purge-handshake`, `/vault-save`, `hasLocal`; Hinweiszeile Ticket-Skript am Ende). |
 | **2026-04-28** | Repo lokal (Windows), API **3342** laut `.env`, Wallet **locked** | **`npm run test:smoke`** | **OK** — 36/36 Modulgruppen (`validate:ui` + `npm run test`). |
 | **2026-04-28** | selbe | **`npm run test:frontend-unit`** | **OK** — Vitest 37 Dateien, 219 Tests. |
 | **2026-04-28** | selbe | **`npm run test:core`** | **OK** — `@morgendrot/core` 14 Dateien, 51 Tests. |
@@ -22,11 +24,11 @@
 
 ---
 
-## Bekannte Störung: „Client/Server api version mismatch“
+## Bekannte Störung: „Client/Server api version mismatch“ (nur Ticket-/AccessKey-Skript)
 
-- **Symptom:** **`npm run test:realworld`** bricht bei **personalisiertem Ticket** / weiteren PTB-Schritten ab; Node/SDK und **IOTA-CLI** erwarten dieselbe **Wire-/API-Version**.
-- **Lösung:** Auf dem Rechner die **IOTA-CLI** installieren/aktualisieren, die zur **`.env`**-**`RPC_URL`** passt (`iota client …` / Release-Notes des Netzes); Skript erneut ausführen.
-- **Abgrenzung:** **`npm run test:messages:single`** nutzt primär die **Node-API** — kann **grün** sein, während **`test:realworld`** noch rot ist (CLI-Pfad).
+- **Symptom:** **`npm run test:tickets-accesskey-realworld`** (Alias **`test:realworld`**) bricht bei **personalisiertem Ticket** / weiteren PTB-Schritten ab; Node/SDK und **IOTA-CLI** erwarten dieselbe **Wire-/API-Version**.
+- **Lösung:** Auf dem Rechner die **IOTA-CLI** installieren/aktualisieren, die zur **`.env`**-**`RPC_URL`** passt (`iota client …` / Release-Notes des Netzes); **Ticket-Skript** erneut ausführen.
+- **Abgrenzung:** **`npm run test:messages:single`** = **Messenger** (primär **Node-API**) — kann **grün** sein, während der **Ticket-Lauf** rot ist (CLI-Pfad). Messenger-Qualität **nicht** an den Ticket-Lauf koppeln.
 
 ---
 
@@ -37,4 +39,4 @@
 
 ---
 
-*Stand: 2026-04-28 — Messenger- und Ticket-Läufe getrennt dokumentiert (unterschiedliche Kacheln).*
+*Stand: 2026-03-28 — u. a. Smoke + `test:messages:single` OK; Messenger/Ticket-Läufe getrennt.*
