@@ -12,6 +12,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **`GET /api/status`:** festes **Fetch-Timeout (10 s)** — ohne Timeout blieb `fetch` bei ausgeschaltetem Dev-PC/LAN oft sehr lange hängen; die Meldung **Basis/Backend offline** erschien erst spät auf dem Handy — **`frontend/frontend/lib/api/status.ts`**.
 - **§ H.0 / § H.1 (UX):** Installierte PWA (**standalone**): bei Wechsel in den **Hintergrund** **`/vault-lock`** → erneutes Öffnen verlangt **Entsperren**; **letzte Kachel-Ansicht** (`chat`, Einstellungen, …) in **`sessionStorage`** über App-Neustart; Posteingang **„Absender ins Telefonbuch“** (**`POST /api/contact-label`**); Puls **Ketten-IDs speichern** mit Eingabe-Normalisierung + **`isLikelyIotaHexId`** — **`dashboard.tsx`**, **`chat-view-main-content.tsx`**, **`chat-view-inbox-list.tsx`**, **`chat-view-inbox-panel.tsx`**, **`chat-view-pulse-settings.tsx`**.
 - **Next Dev:** **`allowedDevOrigins`** im **Host-**/`host:port`-Format (Doku **Next 16**); **`NEXT_ALLOWED_DEV_ORIGINS`** aus **Root-`.env`** als volle URL wird normalisiert — **`frontend/next.config.mjs`**, **`docs/DEV-START.md`**, **`.env.example`**.
 - **Next / `@morgendrot/shared`:** Relative Imports unter **`src/shared/`** ohne **`.js`-Suffix** (z. B. `./bytes-base64`, `./opcodes`) — **Turbopack** (`next build`) löst sonst keine `.ts`-Datei für `./modul.js` auf.

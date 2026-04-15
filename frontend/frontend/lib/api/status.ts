@@ -93,9 +93,14 @@ function parseResponseDateMs(res: Response): number | null {
   return Number.isFinite(ms) ? ms : null
 }
 
+/** Ohne Timeout hängt `fetch` bei totem LAN-Host (Dev-Server aus) oft sehr lange — Handy zeigt erst spät „Basis offline“. */
+const STATUS_FETCH_TIMEOUT_MS = 10_000
+
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   try {
-    const fr = await fetchApiText(API_BASE, '/api/status')
+    const fr = await fetchApiText(API_BASE, '/api/status', {
+      signal: AbortSignal.timeout(STATUS_FETCH_TIMEOUT_MS),
+    })
     if (!fr.ok) {
       return {
         backendRunning: false,
