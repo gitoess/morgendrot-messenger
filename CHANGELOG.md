@@ -12,6 +12,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **§ H.1b:** Dashboard-Kachel-Whitelist (**§ H.17**) in **`lib/dashboard-workspace-tile-visibility.ts`** mit Vitest; **`dashboard.tsx`** ruft nur noch den Filter — **`features/README.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**.
 - **§ H.17 (UI):** `UI_VARIANT=messenger` — Posteingang-**Boss-Übersicht** (`bossView`) ausgeblendet + State zurückgesetzt; **Geräte-Radar** nur noch für **Boss** (nicht Kommandant) im Messenger-Bundle — **`chat-view-inbox-toolbar.tsx`**, **`use-chat-view-core.ts`**, **`dashboard.tsx`**, **`device-radar-view.tsx`**, Kurz-Hinweis **`workspace-projects-panel.tsx`**.
 - **§ H.17 (Kacheln):** Messenger-Bundle + **Boss** + Arbeitsbereich **`full`** → Dashboard-Kacheln nur **Nachrichten / Tresor / Steuerung** (`chat`, `vault`, `boss`); Zugang & Überwachung ausgeblendet — **`dashboard.tsx`**, Hinweis **`workspace-projects-panel.tsx`** (`liteMessengerBossFullTiles`).
 - **§ H.15 / § H.12 — Mailbox-Warteschlange (Konflikt & Drain):** Statuszeilen nach Drain bei `failed>0` (inkl. gemischt mit `sent`); Banner **Backoff** + Kurztext letzte **`lastError`**; Sendepfad: **Dedup** vs. **Reject** aus **`enqueueOfflineMailboxFailure`** — **`use-chat-view-mirror-delay`**, **`use-chat-view-handle-send`**, **`chat-view-send-panel`**; Re-Export **`shouldDeferDrainAttempt`** / **`backoffMsForDrainAttempt`** aus **`offline-queue.ts`**.

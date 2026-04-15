@@ -139,3 +139,5 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 **Fortschritt 2026-04-15:** Messenger-Chain-Realworld **`test:messages*`** + Smoke/Vitest grün; **§ H.1b Stufe 2–3:** **`pickInboxRawMessages`** → **`lib/inbox-pick-raw-messages.ts`**, Re-Export in **`features/inbox/inbox-map-messages.ts`**, **`lib/api/inbox.ts`** importiert **`pick`** aus **`lib/`**; Vitest **`lib/inbox-pick-raw-messages.test.ts`**. Nächste Scheibe: bei messbaren Querimports ESLint nachziehen oder weiter **`lib/`**-Helfer — nicht parallel Mesh-Kern (**`docs/ROADMAP-FAHRPLAN.md`** § **H.1b** „Als Nächstes“).
 
 **Fortschritt 2026-04-28:** **§ H.1b** Mini-Scheibe — **`SettingsWalletSessionCard`** in **`frontend/frontend/components/views/settings-wallet-session-card.tsx`** (aus **`settings-view.tsx`**); Verweis in **`frontend/frontend/features/README.md`**.
+
+**Fortschritt 2026-03-29:** **§ H.1b** — Messenger-/Boss-Kachel-Whitelist (**§ H.17**) aus **`dashboard.tsx`** nach **`lib/dashboard-workspace-tile-visibility.ts`** + **`dashboard-workspace-tile-visibility.test.ts`** (Vitest).

@@ -41,6 +41,7 @@ import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-ins
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
+import { filterFeaturesByMessengerWorkspaceTileSet } from '@/frontend/lib/dashboard-workspace-tile-visibility'
 import {
   Dialog,
   DialogContent,
@@ -429,19 +430,11 @@ export function Dashboard() {
     writeWorkspaceTileSet(v)
   }
 
-  /** Arbeitsbereich „Messenger-Projekt“: nur Chat + Tresor (alle Rollen im Messenger-Bundle so). */
-  const messengerSlimTileIds = new Set<ProjectType>(['chat', 'vault'])
-  /**
-   * Messenger-Bundle + Boss + Arbeitsbereich „Volldashboard“ (`full`): schlankes Boss-Set (**§ H.17**) —
-   * ohne Zugang/Überwachung; Steuerung (Helfer/Boss-Modus) dazu. Vollständiges Kachelset nur bei UI_VARIANT=full (Hauptprojekt).
-   */
-  const messengerBossFullTileIds = new Set<ProjectType>(['chat', 'vault', 'boss'])
-  const visibleFeatures =
-    effectiveWorkspaceTileSet === 'messenger'
-      ? features.filter((f) => messengerSlimTileIds.has(f.id))
-      : liteMessengerFromApi && isBossRole
-        ? features.filter((f) => messengerBossFullTileIds.has(f.id))
-        : features
+  const visibleFeatures = filterFeaturesByMessengerWorkspaceTileSet(features, {
+    workspaceTileSet: effectiveWorkspaceTileSet,
+    liteMessengerFromApi,
+    isBossRole,
+  })
 
   const handleBack = () => {
     setActiveView(null)
