@@ -9,8 +9,10 @@ import { fetchMonitorStatus } from '@/frontend/lib/api'
 type MonitorDevice = { device: string; lastSeen: number; status: 'online' | 'offline' | 'alarm' }
 
 /**
- * Geräte-Radar für Boss: Liste aller Worker/Geräte mit Status (aus /api/monitor-status).
- * Wird im Boss-Workspace oben angezeigt.
+ * Geräte-Radar: Liste Worker/Geräte mit Status (`GET /api/monitor-status`).
+ * Wird auf dem **Haupt-Dashboard** oben gerendert, wenn `dashboard.tsx` `showDeviceRadar` true ist
+ * (Arbeitsbereich `morgendrot_workspace_tile_set` = **full**; im Messenger-Bundle typ. nur **Boss**).
+ * Nicht zu verwechseln mit: Chat-**Boss-Übersicht** (`bossView`, Posteingang) oder `morgendrot_show_all_tiles`.
  */
 export function DeviceRadarView() {
   const [devices, setDevices] = useState<MonitorDevice[]>([])
@@ -85,8 +87,9 @@ export function DeviceRadarView() {
         </button>
       </div>
       <p className="mb-3 text-[11px] text-muted-foreground">
-        Workspace für <span className="font-mono">boss</span> / <span className="font-mono">kommandant</span> bei
-        Volldashboard — Daten von <span className="font-mono">GET /api/monitor-status</span> (H.0 #3).
+        Monitoring-Kachel (nicht Chat-Posteingang): sichtbar bei Dashboard-Arbeitsbereich{' '}
+        <span className="font-mono">full</span> — Daten <span className="font-mono">GET /api/monitor-status</span> (**§ H.0** /
+        **`docs/UI-ROLLEN-WORKSPACES.md`** §6).
       </p>
       {error && (
         <p className="mb-3 text-sm text-red-400">{error}</p>

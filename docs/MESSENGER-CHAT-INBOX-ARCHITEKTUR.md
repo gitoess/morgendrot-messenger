@@ -48,7 +48,7 @@ Frontend
 - **Ausgehend:** Einträge / Events, bei denen **Absender = MY_ADDRESS** (gesendete Nachrichten an einen Partner).
 - **Entschlüsselung:** Bei eingehenden Nachrichten ist der ECDH-Partner der **Absender**; bei ausgehenden der **Empfänger** (Nachricht wurde mit dem Schlüssel des Gegenübers verschlüsselt).
 - **Optional:** Merge mit lokalem Klartext-Cache `.inbox.enc` (Vault), wenn `mergeLocalInbox` gesetzt ist.
-- **Boss-Ansicht:** Sonderpfad mit `fetchPlaintextOnlyForRecipient` für Kommandanten — siehe Handler in `messenger-command-handler.ts` (`bossView`).
+- **Boss-Übersicht im Posteingang (`bossView`):** Sonderpfad: Boss kann optional Nachrichten **an konfigurierte Kommandanten-Adressen** einbeziehen (`fetchPlaintextOnlyForRecipient` / `messenger-command-handler.ts`). **Unabhängig** von Arbeitsbereich **`morgendrot_workspace_tile_set`** („Volldashboard“) und von **`DeviceRadarView`**. Im **Messenger-Bundle** (`UI_VARIANT=messenger`) ist der Schalter in der UI **ausgeblendet** (Nutzen für schlanken Messenger offen — **`docs/ROADMAP-FAHRPLAN.md`** **§ H.17**).
 
 **CLI-Kompatibilität:** `/inbox` wird intern auf `/fetch` gemappt (wallet-bridge / Handler).
 

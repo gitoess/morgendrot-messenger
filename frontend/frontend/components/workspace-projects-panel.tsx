@@ -56,7 +56,7 @@ function roleWorkspaceHint(
     const radar =
       tileSet === 'full'
         ? 'Oben: Geräte-Radar (Monitor-Status). Darunter Kacheln und Arbeitsbereich.'
-        : 'Geräte-Radar ist nur bei Arbeitsbereich „Volldashboard“ sichtbar — dort umschalten (sofern vom Backend erlaubt).'
+        : 'Geräte-Radar erscheint nur, wenn du auf „Volldashboard“ (intern: workspace full) schaltest — eigene Monitoring-Sektion, nicht die Chat-Boss-Übersicht.'
     return {
       title: 'Rollen-Workspace: Boss / Kommandant',
       body: `${radar} Spec: docs/UI-ROLLEN-WORKSPACES.md.`,
@@ -120,6 +120,14 @@ export function WorkspaceProjectsPanel({
           </div>
         </div>
       ) : null}
+
+      <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
+        <strong className="text-foreground/90">Hinweis:</strong> <span className="font-mono">morgendrot_workspace_tile_set</span>{' '}
+        (<strong>Volldashboard</strong> = <span className="font-mono">full</span>) ist{' '}
+        <strong>nicht</strong> dasselbe wie <span className="font-mono">morgendrot_show_all_tiles</span> in den
+        Einstellungen (Arbeiter/Lock: „alle Kacheln“) und <strong>nicht</strong> die Chat-**Boss-Übersicht** (
+        <span className="font-mono">bossView</span>).
+      </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button

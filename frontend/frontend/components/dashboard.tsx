@@ -267,9 +267,13 @@ export function Dashboard() {
   /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite. */
   const liteMessengerFromApi = apiSnapshot?.backendRunning !== false && apiSnapshot?.uiVariant === 'messenger'
   const isBossRole = (role || '').toLowerCase() === 'boss'
-  /** Lite-Messenger: nur Boss darf Volldashboard + alle Kacheln; alle anderen nur Nachrichten + Tresor/Notfall. */
+  /** Lite-Messenger: nur Boss darf Arbeitsbereich „full“ + alle Kacheln; alle anderen nur Nachrichten + Tresor/Notfall. */
   const liteMessengerLocksTiles = liteMessengerFromApi && !isBossRole
   const effectiveWorkspaceTileSet: WorkspaceTileSet = liteMessengerLocksTiles ? 'messenger' : workspaceTileSet
+  /** Geräte-Radar: eigene Sektion bei workspace `full`; im Messenger-Bundle nur Boss (Hauptprojekt: Kommandant + full weiter möglich). */
+  const showDeviceRadar =
+    effectiveWorkspaceTileSet === 'full' &&
+    (isBossRole || (!liteMessengerFromApi && (role || '').toLowerCase() === 'kommandant'))
 
   useEffect(() => {
     if (apiSnapshot?.uiVariant !== 'messenger') return
@@ -987,7 +991,8 @@ export function Dashboard() {
                     {isBossRole ? (
                       <>
                         Als <strong className="text-foreground/90">Boss</strong> kannst du unter „Arbeitsbereich &amp; Projekte“{' '}
-                        <strong className="text-foreground/90">Volldashboard</strong> wählen (alle Kacheln, Geräte-Radar). Standard ist
+                        <strong className="text-foreground/90">Volldashboard</strong> wählen (Arbeitsbereich <span className="font-mono text-xs">full</span>: alle Kacheln;{' '}
+                        <strong className="text-foreground/90">Geräte-Radar</strong> nur für dich als Boss). Standard ist
                         schlank wie beim Helfer, wenn du auf <strong className="text-foreground/90">Messenger-Projekt</strong> stellst.
                       </>
                     ) : (
@@ -1052,12 +1057,12 @@ export function Dashboard() {
           </>
         )}
 
-        {/* Boss/Kommandant: Geräte-Radar (nur Volldashboard – Messenger-Projekt wie Standalone schlanker) */}
-        {(role === 'boss' || role === 'kommandant') && effectiveWorkspaceTileSet === 'full' && (
+        {/* Geräte-Radar: nur bei Arbeitsbereich full — siehe showDeviceRadar (Messenger: nur Boss). */}
+        {showDeviceRadar ? (
           <div className="mb-8">
             <DeviceRadarView />
           </div>
-        )}
+        ) : null}
 
         <WorkspaceProjectsPanel
           className="mb-8"

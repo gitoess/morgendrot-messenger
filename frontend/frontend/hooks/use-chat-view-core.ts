@@ -181,6 +181,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       probeGeolocationForDeviceTime: isPrivate,
     })
 
+  /** Messenger-Bundle: Chat-Boss-Übersicht ausgeblendet — Flag sicher aus (§ H.17). */
+  useEffect(() => {
+    if (apiStatus?.uiVariant !== 'messenger') return
+    if ((role || '').toLowerCase() !== 'boss') return
+    setBossView(false)
+  }, [apiStatus?.uiVariant, role])
+
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,

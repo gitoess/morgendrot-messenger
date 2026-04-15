@@ -28,7 +28,7 @@ Kurzabgleich der besprochenen Punkte mit dem Code. Dient der Priorisierung (**`d
 | **Einfacher Modus: IOTA-Details ausblenden** | `effectiveWorkspaceTileSet === 'messenger'` (inkl. Backend `uiVariant=messenger`) filtert Kacheln; Package-ID-Banner existiert für Mismatch | **Sinn:** Messenger-Rolle: technische Hashes standardmäßig einklappen (nur auf Klick). |
 | **`uiVariant` ↔ Arbeitsbereich** | Bei `uiVariant: 'messenger'` erzwingt das Dashboard **Messenger-Kacheln**; „Volldashboard“ ist deaktiviert; State + `localStorage` werden angeglichen | Kein Konflikt mehr zwischen altem `localStorage` und `UI_VARIANT=messenger`. |
 | **Hilfe (`/api/help`)** | Header-Button + **„Hilfe (Kurz + Befehle)“** in „Erste Schritte“ → Dialog mit **`HELP_UI_INTRO`** + `HELP_START`/`HELP_CHAT` | Vorher war der Dialog im Code ohne sichtbaren Trigger (**Roadmap H.0 #4**). |
-| **Rollen-Hinweise (H.0 #3)** | **`workspace-projects-panel`:** Infokasten je **Arbeiter/Lock** vs. **Boss/Kommandant** (Radar nur Volldashboard); Action Center + Radar mit Fußzeile zur Spec | Reduziert Verwechslung Messenger- vs. Volldashboard bei Boss. |
+| **Rollen-Hinweise (H.0 #3)** | **`workspace-projects-panel`:** Glossar `show_all_tiles` vs. `workspace_tile_set` vs. Chat-`bossView`; **Geräte-Radar** nur bei Arbeitsbereich **`full`** (Messenger: nur **Boss**) | Verwechslung **Radar** vs. **Chat-Boss-Übersicht** vs. **„Volldashboard“**-Button vermeiden (**`docs/UI-ROLLEN-WORKSPACES.md`** §6). |
 
 ## 3. Status („Wald-Check“)
 

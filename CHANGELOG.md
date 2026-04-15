@@ -12,6 +12,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **§ H.17 (UI):** `UI_VARIANT=messenger` — Posteingang-**Boss-Übersicht** (`bossView`) ausgeblendet + State zurückgesetzt; **Geräte-Radar** nur noch für **Boss** (nicht Kommandant) im Messenger-Bundle — **`chat-view-inbox-toolbar.tsx`**, **`use-chat-view-core.ts`**, **`dashboard.tsx`**, **`device-radar-view.tsx`**, Kurz-Hinweis **`workspace-projects-panel.tsx`**.
 - **§ H.15 / § H.12 — Mailbox-Warteschlange (Konflikt & Drain):** Statuszeilen nach Drain bei `failed>0` (inkl. gemischt mit `sent`); Banner **Backoff** + Kurztext letzte **`lastError`**; Sendepfad: **Dedup** vs. **Reject** aus **`enqueueOfflineMailboxFailure`** — **`use-chat-view-mirror-delay`**, **`use-chat-view-handle-send`**, **`chat-view-send-panel`**; Re-Export **`shouldDeferDrainAttempt`** / **`backoffMsForDrainAttempt`** aus **`offline-queue.ts`**.
 - **SOS-Hilferuf (UI):** Sichtbare Kurzerklärung für **SOS — Hilferuf (Text)** und **SOS — Hilferuf (Sprache)**; `confirm`-Texte präzisieren Ziel (Chat/Mesh, **kein** 112) — **`chat-view-send-panel.tsx`**.
 - **UX (Posteingang / Dashboard):** **Weiterleiten** — flache Menüeinträge, **Sonner-Toast**, Scroll zu **`#chat-composer-message`**; **Protokoll** — markierte Zeilen mit Rand + **Protokoll**-Badge; **Einsatz-Profil** im privaten Chat (**`chat-view-einsatz-profil-inline.tsx`**); **PWA + IOTA-Überweisung** auf dem Haupt-Dashboard (**`dashboard-pwa-install-card`**, **`dashboard-iota-transfer-card`**); Einstellungen mit Kurzverweis. **Einsatz-Rollen-Vorlagen:** Text „Geräte / Worker“.
@@ -30,6 +31,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Dokumentation
 
+- **§ H.17 (Begriffe):** Trennung **Volle Oberfläche** (`morgendrot_show_all_tiles`), **Arbeitsbereich Volldashboard** (`morgendrot_workspace_tile_set` = `full`), **Geräte-Radar** (`DeviceRadarView`, Messenger nur Boss), **Chat-Boss-Übersicht** (`bossView`); Zielbild Messenger vs. Hauptprojekt — **`docs/ROADMAP-FAHRPLAN.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** §6, **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**.
 - **§ H.18 (Roadmap) + TTS/STT:** Fahrplan-Eintrag **TTS / STT**; **`docs/MESSENGER-SPRACHAUFNAHME.md`** — Abschnitt *SOS-Hilferuf: Text vs. Sprache* und Verweis **§ H.18**; **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Nutzer-Kurzfassung mit Verweis auf Messenger-Doku.
 - **§ H.17 (Roadmap):** Dashboard vs. **Volle Oberfläche** vs. Chat-**Boss-Ansicht** vs. **DeviceRadar**; Wanderer/Lite — Boss-Teile und Platzhalter-Kacheln später ausblendbar (**`docs/ROADMAP-FAHRPLAN.md`**).
 - **§ H.16 (Roadmap):** Telefonbuch mit Klarnamen, QR Einlesen/Anzeigen, Boss-LAN-Onboarding (Helfer scannen Install-QR); kritische Leitplanken (HTTPS, Same-Origin, § H.12, **§ H.3b** QR-Schema); Verweis aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 6.

@@ -110,7 +110,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             {inboxRowCount}
           </span>
         )}
-        {role === 'boss' && (
+        {role === 'boss' && apiStatus?.uiVariant !== 'messenger' ? (
           <label className="ml-2 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
@@ -118,9 +118,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               onChange={(e) => onBossViewChange(e.target.checked)}
               className="rounded border-border"
             />
-            Boss-Übersicht (an mich + an Kommandanten)
+            Boss-Übersicht (Posteingang: an mich + an Kommandanten)
           </label>
-        )}
+        ) : null}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <input

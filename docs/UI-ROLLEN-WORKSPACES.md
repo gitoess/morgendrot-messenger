@@ -63,6 +63,17 @@
 
 ## 5. Stand Umsetzung (2026-03, H.0 #3)
 
-- **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Boss/Kommandant** bei **Volldashboard** **Geräte-Radar** oben. **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis (inkl. wann Radar fehlt bei Messenger-Arbeitsbereich).
-- **Lite-Messenger (`GET /api/status` → `uiVariant: 'messenger'`, entspricht `UI_VARIANT=messenger` am Backend):** Für alle Rollen **außer `boss`** ist das sichtbare Kachelset auf **Nachrichten + Tresor** (inkl. Notfall-Purge) begrenzt; **Volldashboard** ist in **„Arbeitsbereich & Projekte“** für diese Rollen **deaktiviert**. **`boss`** kann weiterhin **Volldashboard** wählen (alle Kacheln, Radar). **`kommandant`** erhält im Lite-Bundle **keine** Boss-Ausnahme — nur Messenger-Kacheln + entsprechende Hinweise im Panel.
+- **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Geräte-Radar** (`DeviceRadarView`) oben nur bei Arbeitsbereich **`morgendrot_workspace_tile_set` = `full`** — im Messenger-Bundle nur **`boss`**, im Hauptprojekt zusätzlich **`kommandant`** mit `full`. **`workspace-projects-panel.tsx`** zeigt je Rolle einen kurzen Hinweis.
+- **Lite-Messenger (`GET /api/status` → `uiVariant: 'messenger'`, entspricht `UI_VARIANT=messenger` am Backend):** Für alle Rollen **außer `boss`** ist das sichtbare Kachelset auf **Nachrichten + Tresor** (inkl. Notfall-Purge) begrenzt; Schalter **„Volldashboard“** (= **`full`**) ist für diese Rollen **deaktiviert**. **`boss`** kann **`full`** wählen (alle Kacheln + Radar). **`kommandant`** im Lite-Bundle: nur Messenger-Kacheln.
 - **Offen:** Vollständige **Workflow-Oberfläche** (Spec § 3) ohne Kachel-Navigation — weiterhin Backlog.
+
+## 6. Glossar: nicht verwechseln (**H.17**)
+
+| Wort in der UI / im Team | Gemeint ist **nicht** | Gemeint ist |
+|--------------------------|----------------------|---------------|
+| **„Volldashboard“**-Button (Arbeitsbereich & Projekte) | Weder Chat-**Boss-Übersicht** noch „alle Einstellungen der Welt“ | Nur **`morgendrot_workspace_tile_set`** = **`full`**: Dashboard mit **vollem Kachel-Set**; **Geräte-Radar** erscheint **nur** in diesem Modus (s. `dashboard.tsx`). |
+| **Volle Oberfläche** / „Alle Funktionen (Kacheln)“ (Arbeiter/Lock) | Arbeitsbereich **`full`** | Nur **`morgendrot_show_all_tiles`**: Action Center vs. Kachel-Grid umschalten. |
+| **Chat → Boss-Übersicht** (`bossView`) | Radar oder Arbeitsbereich | Nur **Posteingang-API**: Boss sieht optional Traffic **an Kommandanten** (`/inbox` mit Flag). **Separater** Code-Pfad — **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**. |
+| **Geräte-Radar** | Das gesamte „Volldashboard“ | Eine **Monitoring-Sektion** (`DeviceRadarView`, `/api/monitor-status`) **oben** auf dem **Haupt-Dashboard**, wenn **`full`** aktiv (und Rolle laut Deploy). |
+
+**Produktlinien:** **Morgendrot Messenger** (Bundle) = schlanke Boss-Oberfläche + später weniger Kacheln als das **Hauptprojekt**; Hauptprojekt behält alle Kacheln für Entwicklung — Deploy/`UI_VARIANT` entscheidet.

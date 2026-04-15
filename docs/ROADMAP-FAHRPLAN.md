@@ -137,7 +137,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.14** | Hardening V3 (PWA-Speicher, Wipe, …) |
 | **§ H.15** | **Handy-first / Client-IOTA / optionaler Node** — **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** |
 | **§ H.16** | **Telefonbuch, QR (Ein/Aus), Boss-LAN-Onboarding** — Kontakte mit Klarnamen, QR-Fluss, Helfer installieren PWA ohne dauernd Boss-PC; **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**) |
-| **§ H.17** | **Dashboard / „Volldashboard“ vereinfachen** — Rollenabhängige Kachelfläche vs. Chat-**Boss-Ansicht** klären; **Wanderer/Lite:** Boss-Steuerung + Platzhalter-Kacheln später ausblendbar; **`WorkspaceProjectsPanel`** / `morgendrot_show_all_tiles` dokumentiert entkoppeln |
+| **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6 |
 | **§ H.18** | **TTS / STT (Spracheingabe & Vorlesen)** — optional nach **§ H.0**/**H.2**: Freihand/Feld ohne Tippen, Barrierefreiheit; **Privacy** (Cloud vs. on-device), **Offline**, EU-Daten; technisch Browser-**Web Speech API** vs. native Hülle — **`docs/MESSENGER-SPRACHAUFNAHME.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -864,15 +864,18 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.17 Dashboard, „Volldashboard“ & Platzhalter-Kacheln (**Produkt / § H.0**)
 
-**Nachtrag 2026-03-28 (Klarstellung + Backlog):** Im Code meinen **zwei verschiedene Dinge** oft „viel Fläche“:
+**Nachtrag 2026-03-28 — Begriffe strikt trennen (Code ≠ Marketing-Wort):** „Volldashboard“ wurde umgangssprachlich für **mehrere Schichten** benutzt. Kanonisch:
 
-| Begriff | Was es ist | Mit Boss? |
-|--------|------------|-----------|
-| **Volle Oberfläche** (Einstellungen-Schalter) | `localStorage` **`morgendrot_show_all_tiles`** — zeigt **alle** Funktions-Kacheln (Nachrichten, Zugang, Überwachung, …), statt z. B. nur Action Center für Arbeiter/Lock. | **Unabhängig** von der Chat-**Boss-Ansicht** (Posteingang aller Worker). |
-| **Chat → Boss-Ansicht** | Umschalten im **privaten Messenger**, ob der Posteingang die **Boss-Sicht** nutzt (`bossView`). | **Ja** — nur für Boss-Rolle sinnvoll. |
-| **Volldashboard** (Geräte-Radar) | **`DeviceRadarView`** oben auf dem **Haupt-Dashboard**, wenn Rolle **Boss/Kommandant** und Kachel-Set **`full`**. | **Ja** — Monitoring-Kachel. |
+| Begriff (UI / Doku) | Speicher / Code | Was passiert |
+|---------------------|------------------|----------------|
+| **Volle Oberfläche** (Einstellungen) | `localStorage` **`morgendrot_show_all_tiles`** | Nur **Arbeiter/Lock:** Kachel-Grid statt nur Action Center einblenden. **Kein** Bezug zu Chat oder Radar. |
+| **Arbeitsbereich „Volldashboard“** (Panel „Arbeitsbereich & Projekte“) | `localStorage` **`morgendrot_workspace_tile_set`** = **`full`** | Gegenstück zu **„Messenger-Projekt“** (`messenger`): bei **`full`** sieht **Boss** u. a. **alle** Dashboard-Kacheln; bei **`UI_VARIANT=messenger`** darf nur **Boss** auf **`full`** wechseln (andere Rollen: erzwungen schlank). |
+| **Geräte-Radar** | Komponente **`DeviceRadarView`** in **`dashboard.tsx`** | Eigene **Kachel/Sektion** oben auf dem **Haupt-Dashboard** — Daten **`GET /api/monitor-status`**. Sichtbar nur, wenn Arbeitsbereich **`full`** **und** (im Messenger-Bundle) nur **`role === 'boss'`**; im **Morgendrot-Hauptprojekt** (`UI_VARIANT` nicht Messenger) zusätzlich **`kommandant`** mit **`full`** (Flotten-Monitoring). **Nicht** „das Volldashboard“ = Radar; Radar ist **ein Teil** des **`full`**-Layouts. |
+| **Chat → Boss-Übersicht** (`bossView`) | React-State im Messenger, Flag an **`/inbox`** | **Separates** Feature: Posteingang lädt für **Boss** optional Nachrichten **an Kommandanten-Adressen** mit (Backend: `messenger-command-handler.ts`). **Kein** Ersatz für Arbeitsbereich **`full`** und **kein** Radar. **Produkt (2026-03):** Nutzen für schlanken Messenger **unklar** — im Bundle **`UI_VARIANT=messenger`** UI-Schalter **ausgeblendet**; Hauptprojekt behält Option für Feldtests. **Backlog:** „Helfer-Edition“ (mehr als Wanderer, weniger als Boss). |
 
-**Wanderer / schlanke Messenger-UI:** Später **können** Boss-only-Teile (Steuerung-Kachel, Radar, ggf. `BossView`-Einstieg) per **`UI_VARIANT=messenger`** / Rolle **`messenger`** **weitgehend entfallen** — dazu Abgleich **`docs/UI-ROLLEN-WORKSPACES.md`**, **`workspace-projects-panel.tsx`**, **`dashboard.tsx`**. **Platzhalter-Kacheln** (Monitor, Lock-Varianten ohne MVP): über **`WorkspaceProjectsPanel`** / reduzierte **`features`**-Liste oder **Rolle + Lite** ausblendbar; kein technischer Block für Mesh-Kern (**§ C.0b**).
+**Zielbild Messenger-Distribution (Boss):** Kacheln fokussieren auf **Nachrichten**, **Pinnwand**, **Tresor**, **Notfall** + Boss-only-Einstellungen (z. B. Helfer anlegen) — **Morgendrot-Hauptrepo** behält **alle** Kacheln zum Weiterentwickeln (**`UI_VARIANT`** / Deploy trennt Bundle). Umsetzung schrittweise; siehe **`docs/UI-ROLLEN-WORKSPACES.md`** § 5–6.
+
+**Platzhalter-Kacheln:** über **`WorkspaceProjectsPanel`** / Rolle ausblendbar; kein Blocker **§ C.0b**.
 
 ### H.18 TTS / STT — Text-to-Speech & Speech-to-Text (**Produkt / § H.0**, Backlog)
 
