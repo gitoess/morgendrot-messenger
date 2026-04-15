@@ -52,6 +52,8 @@ export {
   prependMailboxOutNonceMarker,
   parseMailboxProtocolNonceU64FromWire,
   type ParsedMailboxOutNonce,
+  shouldDeferDrainAttempt,
+  backoffMsForDrainAttempt,
 } from '@morgendrot/core'
 
 export type EnqueueOfflineMailboxResult =

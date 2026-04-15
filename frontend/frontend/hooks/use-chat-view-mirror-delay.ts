@@ -19,6 +19,7 @@ import {
   drainOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
   loadOfflineMailboxQueue,
+  shouldDeferDrainAttempt,
 } from '@/frontend/lib/api/offline-queue'
 import { drainAttestationQueue } from '@/frontend/lib/attestation-queue'
 import {
@@ -45,12 +46,24 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const [mirrorQueuePending, setMirrorQueuePending] = useState(0)
   const [offlineMailboxQueuePending, setOfflineMailboxQueuePending] = useState(0)
   const [offlineMailboxQueueUntrustedTimeCount, setOfflineMailboxQueueUntrustedTimeCount] = useState(0)
+  const [offlineMailboxQueueBackoffCount, setOfflineMailboxQueueBackoffCount] = useState(0)
+  const [offlineMailboxQueueErrorHint, setOfflineMailboxQueueErrorHint] = useState('')
 
   const refreshOfflineMailboxQueueCount = useCallback(() => {
     try {
       const items = loadOfflineMailboxQueue()
+      const now = Date.now()
       setOfflineMailboxQueuePending(items.length)
       setOfflineMailboxQueueUntrustedTimeCount(items.filter((q) => q.timeIsTrusted !== true).length)
+      setOfflineMailboxQueueBackoffCount(items.filter((q) => shouldDeferDrainAttempt(q, now)).length)
+      const withErr = items.filter((q) => q.lastError && q.lastError.trim())
+      if (withErr.length === 0) {
+        setOfflineMailboxQueueErrorHint('')
+      } else {
+        const top = [...withErr].sort((a, b) => b.attempts - a.attempts || a.createdAt - b.createdAt)[0]
+        const msg = (top?.lastError ?? '').replace(/\s+/g, ' ').trim()
+        setOfflineMailboxQueueErrorHint(msg.length > 140 ? `${msg.slice(0, 137)}…` : msg)
+      }
     } catch {
       /* ignore */
     }
@@ -131,7 +144,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
 
       const r = await drainOfflineMailboxQueue()
       refreshOfflineMailboxQueueCount()
-      if (r.sent > 0) {
+      if (r.sent > 0 && r.failed === 0) {
         setStatus('success')
         setStatusMsg(
           r.sent === 1
@@ -140,6 +153,28 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         )
         setTimeout(() => setStatus('idle'), 6000)
         void loadMessages()
+      } else if (r.sent > 0 && r.failed > 0) {
+        setStatus('error')
+        setStatusMsg(
+          r.failed === 1
+            ? `Mailbox-Warteschlange: ${r.sent} übertragen, 1 Eintrag erneut fehlgeschlagen (Backoff § H.12 / SYNC §8.1).`
+            : `Mailbox-Warteschlange: ${r.sent} übertragen, ${r.failed} erneut fehlgeschlagen (Backoff).`
+        )
+        setTimeout(() => setStatus('idle'), 9000)
+        void loadMessages()
+      } else if (r.failed > 0) {
+        setStatus('error')
+        const items = loadOfflineMailboxQueue()
+        const hint = items
+          .map((q) => q.lastError)
+          .find((e) => e && e.trim())
+        const tail = hint ? ` Letzte Meldung: ${hint.replace(/\s+/g, ' ').trim().slice(0, 120)}` : ''
+        setStatusMsg(
+          r.failed === 1
+            ? `Mailbox-Warteschlange: erneuter Versand für 1 Eintrag fehlgeschlagen.${tail}`
+            : `Mailbox-Warteschlange: erneuter Versand für ${r.failed} Einträge fehlgeschlagen.${tail}`
+        )
+        setTimeout(() => setStatus('idle'), 10000)
       }
       await drainAttestationQueue()
     } finally {
@@ -193,6 +228,8 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     mirrorQueuePending,
     offlineMailboxQueuePending,
     offlineMailboxQueueUntrustedTimeCount,
+    offlineMailboxQueueBackoffCount,
+    offlineMailboxQueueErrorHint,
     refreshOfflineMailboxQueueCount,
     runMirrorDrain,
     runOfflineMailboxDrain,

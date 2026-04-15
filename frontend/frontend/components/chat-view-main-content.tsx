@@ -55,6 +55,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     deviceTimeTrustWarn,
     offlineMailboxQueuePending,
     offlineMailboxQueueUntrustedTimeCount,
+    offlineMailboxQueueBackoffCount,
+    offlineMailboxQueueErrorHint,
     syncCanonicalPackageIdFromServer,
     inboxPackageFilter,
     setInboxPackageFilter,
@@ -236,6 +238,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     statusMsg,
     offlineMailboxQueuePending,
     offlineMailboxQueueUntrustedTimeCount,
+    offlineMailboxQueueBackoffCount,
+    offlineMailboxQueueErrorHint,
     ...asVoiceRecordSendPanel(
       {
         voicePhase,

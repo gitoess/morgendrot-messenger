@@ -51,6 +51,10 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   offlineMailboxQueuePending?: number
   /** § H.6c: Einträge mit `timeIsTrusted === false` (Legacy ohne Feld zählt als unvertraut). */
   offlineMailboxQueueUntrustedTimeCount?: number
+  /** § H.12 / SYNC §8.1: Einträge, die gerade im exponentiellen Backoff warten (kein sofortiger Retry). */
+  offlineMailboxQueueBackoffCount?: number
+  /** Kurztext der zuletzt gespeicherten Sendefehlermeldung (höchste `attempts`), nur lokal. */
+  offlineMailboxQueueErrorHint?: string
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -73,6 +77,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     statusMsg,
     offlineMailboxQueuePending = 0,
     offlineMailboxQueueUntrustedTimeCount = 0,
+    offlineMailboxQueueBackoffCount = 0,
+    offlineMailboxQueueErrorHint = '',
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -423,6 +429,21 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 {offlineMailboxQueueUntrustedTimeCount === 1 ? 'Eintrag' : 'Einträgen'} war die Gerätezeit beim
                 Einreihen nicht verifiziert (§ H.6c — weder frischer Server-Zeitstempel noch GPS-UTC); für spätere
                 Attestation/Export gespeichert als <span className="font-mono">timeIsTrusted: false</span>.
+              </span>
+            ) : null}
+            {offlineMailboxQueueBackoffCount > 0 ? (
+              <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
+                {offlineMailboxQueueBackoffCount === 1
+                  ? '1 Eintrag wartet im Backoff-Zeitfenster vor dem nächsten Versuch (exponentielles Warten — SYNC §8.1).'
+                  : `${offlineMailboxQueueBackoffCount} Einträge warten im Backoff vor dem nächsten Versuch (SYNC §8.1).`}
+              </span>
+            ) : null}
+            {offlineMailboxQueueErrorHint ? (
+              <span
+                className="w-full font-mono text-[10px] leading-snug text-amber-900/80 dark:text-amber-100/80"
+                title="Letzte gespeicherte Fehlermeldung aus einem Warteschlangen-Versuch"
+              >
+                Letzte Meldung: {offlineMailboxQueueErrorHint}
               </span>
             ) : null}
           </div>

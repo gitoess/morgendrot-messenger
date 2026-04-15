@@ -12,6 +12,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **§ H.15 / § H.12 — Mailbox-Warteschlange (Konflikt & Drain):** Statuszeilen nach Drain bei `failed>0` (inkl. gemischt mit `sent`); Banner **Backoff** + Kurztext letzte **`lastError`**; Sendepfad: **Dedup** vs. **Reject** aus **`enqueueOfflineMailboxFailure`** — **`use-chat-view-mirror-delay`**, **`use-chat-view-handle-send`**, **`chat-view-send-panel`**; Re-Export **`shouldDeferDrainAttempt`** / **`backoffMsForDrainAttempt`** aus **`offline-queue.ts`**.
 - **SOS-Hilferuf (UI):** Sichtbare Kurzerklärung für **SOS — Hilferuf (Text)** und **SOS — Hilferuf (Sprache)**; `confirm`-Texte präzisieren Ziel (Chat/Mesh, **kein** 112) — **`chat-view-send-panel.tsx`**.
 - **UX (Posteingang / Dashboard):** **Weiterleiten** — flache Menüeinträge, **Sonner-Toast**, Scroll zu **`#chat-composer-message`**; **Protokoll** — markierte Zeilen mit Rand + **Protokoll**-Badge; **Einsatz-Profil** im privaten Chat (**`chat-view-einsatz-profil-inline.tsx`**); **PWA + IOTA-Überweisung** auf dem Haupt-Dashboard (**`dashboard-pwa-install-card`**, **`dashboard-iota-transfer-card`**); Einstellungen mit Kurzverweis. **Einsatz-Rollen-Vorlagen:** Text „Geräte / Worker“.
 - **§6.B.4 Stufe 1:** Posteingang **Klartext-Mailbox** per Fullnode (`fetchPlaintextMailboxInboxRows` / gemischter RPC, **`use-chat-view-inbox`**) ohne `/api/inbox`, wenn Snapshot/Flags wie Direkt-Klartext-Senden und Zeilen > 0; sonst weiter `/inbox`.

@@ -427,6 +427,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       !attachedTxtFile &&
       !attachedLora
 
+    type QueueMailboxOutcome = 'queued' | 'duplicate' | 'skipped' | { reject: string }
+
     const queueMailboxIfAllowed = async (
       kind: 'encrypted_send' | 'plain_send',
       /** Exakt der an `/send` bzw. `/send-plain` gegebene Wire (kann `MORG_MAILBOX_NONCE_V1` enthalten). */
@@ -435,8 +437,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       lastErr: string,
       /** § H.12: aus Marker geparst oder Fallback `nextOfflineMailboxClientOutSeq` beim Compose. */
       messageNonceU64: bigint
-    ): Promise<boolean> => {
-      if (!allowOfflineMailboxQueue) return false
+    ): Promise<QueueMailboxOutcome> => {
+      if (!allowOfflineMailboxQueue) return 'skipped'
       const en = await enqueueOfflineMailboxFailure({
         kind,
         recipient,
@@ -448,11 +450,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         threadId: stableOfflineMailboxThreadId(myAddress, recipient),
         messageNonceU64,
       })
-      if (en.ok && en.queued) {
+      if (!en.ok) {
         onOfflineMailboxQueueChanged?.()
-        return true
+        return { reject: en.reason }
       }
-      return false
+      if (en.queued) {
+        onOfflineMailboxQueueChanged?.()
+        return 'queued'
+      }
+      onOfflineMailboxQueueChanged?.()
+      return 'duplicate'
     }
 
     type PartOk =
@@ -479,10 +486,25 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const res = await sendMessage(recipient, wireForApi, enc)
         if (res.ok) return { ok: true }
         const errText = res.error || 'Fehler'
-        if (await queueMailboxIfAllowed(enc ? 'encrypted_send' : 'plain_send', wireForApi, enc, errText, messageNonceU64)) {
+        const qm = await queueMailboxIfAllowed(
+          enc ? 'encrypted_send' : 'plain_send',
+          wireForApi,
+          enc,
+          errText,
+          messageNonceU64
+        )
+        if (qm === 'queued') {
           return failSend(
             `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
           )
+        }
+        if (qm === 'duplicate') {
+          return failSend(
+            `${errText} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
+          )
+        }
+        if (typeof qm === 'object' && 'reject' in qm) {
+          return failSend(`Warteschlange: ${qm.reject}`)
         }
         return failSend(errText)
       }
@@ -595,30 +617,46 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
             const meshMsg = meshErr instanceof Error ? meshErr.message : String(meshErr)
-            if (
-              await queueMailboxIfAllowed(
-                'encrypted_send',
-                wireForApi,
-                true,
-                `${onlineErr} / Funk: ${meshMsg}`,
-                messageNonceU64
-              )
-            ) {
+            const qmMesh = await queueMailboxIfAllowed(
+              'encrypted_send',
+              wireForApi,
+              true,
+              `${onlineErr} / Funk: ${meshMsg}`,
+              messageNonceU64
+            )
+            if (qmMesh === 'queued') {
               return failSend(
                 `${onlineErr} Funk-Versuch fehlgeschlagen — zwischengespeichert; erneuter Mailbox-Versuch bei Basis (Opt-in).`
               )
+            }
+            if (qmMesh === 'duplicate') {
+              return failSend(
+                `${onlineErr} Funk: ${meshMsg} — Eintrag existiert bereits in der Mailbox-Warteschlange (Dedup).`
+              )
+            }
+            if (typeof qmMesh === 'object' && 'reject' in qmMesh) {
+              return failSend(`Warteschlange: ${qmMesh.reject}`)
             }
             setStatus('error')
             setStatusMsg(`${onlineErr} Funk-Versuch: ${meshMsg}`)
             return { ok: false }
           }
         }
-        if (await queueMailboxIfAllowed('encrypted_send', wireForApi, true, onlineErr, messageNonceU64)) {
+        const qmOnline = await queueMailboxIfAllowed('encrypted_send', wireForApi, true, onlineErr, messageNonceU64)
+        if (qmOnline === 'queued') {
           return failSend(
             readStrictOnlineNoMeshFallback() && meshtastic.connected
               ? `${onlineErr} „Strikt ohne Funk-Fallback“ — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder Transport auf „funk“ stellen.`
               : `${onlineErr} Kein Funk (Heltec) verbunden — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder „funk“ wählen.`
           )
+        }
+        if (qmOnline === 'duplicate') {
+          return failSend(
+            `${onlineErr} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
+          )
+        }
+        if (typeof qmOnline === 'object' && 'reject' in qmOnline) {
+          return failSend(`Warteschlange: ${qmOnline.reject}`)
         }
         setStatus('error')
         setStatusMsg(
