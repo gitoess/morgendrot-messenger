@@ -28,8 +28,13 @@ const nextConfig = {
     'http://127.0.0.1:3341',
     ...extraDevOrigins,
   ],
-  /* @morgendrot/shared: lokales file:-Paket ../src/shared — Next transpiliert dessen .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md). */
-  transpilePackages: ['@meshtastic/core', '@meshtastic/transport-web-bluetooth', '@morgendrot/shared'],
+  /* @morgendrot/shared + @morgendrot/core: lokale file:-Pakete — Next transpiliert .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md, docs/MORGENDROT-CORE-PACKAGE-PLAN.md). */
+  transpilePackages: [
+    '@meshtastic/core',
+    '@meshtastic/transport-web-bluetooth',
+    '@morgendrot/shared',
+    '@morgendrot/core',
+  ],
   typescript: {
     ignoreBuildErrors: true,
   },

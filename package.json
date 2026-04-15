@@ -28,6 +28,7 @@
     "test": "tsx scripts/run-tests.ts",
     "test:smoke": "npm run validate:ui && npm run test",
     "test:frontend-unit": "npm run test:unit --prefix frontend",
+    "test:core": "npm run test:unit --prefix packages/morgendrot-core",
     "test:combinations": "tsx scripts/run-all-combinations.ts",
     "test:combinations:api": "tsx scripts/run-all-combinations.ts --api",
     "test:all": "npm run test && npm run test:combinations",

@@ -1,6 +1,6 @@
 # Monorepo: `src/shared` und die Next-PWA (`frontend/`)
 
-**Ziel:** Eine **kanonische** TypeScript-Quelle unter `src/shared/` für **Node** (z. B. `src/einsatz-role-templates.ts`) und **Next 16** (Messenger-PWA), **ohne** manuelle Spiegel-Dateien und **ohne** Symlinks.
+**Ziel:** Eine **kanonische** TypeScript-Quelle unter `src/shared/` für **Node** (z. B. `src/einsatz-role-templates.ts`) und **Next 16** (Messenger-PWA), **ohne** manuelle Spiegel-Dateien und **ohne** Symlinks. **Messenger-Kern (`@morgendrot/core`):** `packages/morgendrot-core/` — gleiches Muster: **`frontend/package.json`** → `"@morgendrot/core": "file:../packages/morgendrot-core"`, **`transpilePackages`** + **`turbopack.root`** (Repo-Parent); siehe **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`**.
 
 ---
 

@@ -3,63 +3,44 @@
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
  *
+ * Domänenlogik: **`@morgendrot/core`** (`queue/offline-mailbox`). Diese Datei: **Speicher** (`localStorage`),
+ * **Opt-in-Flag**, **Drain** über `chat-commands`.
+ *
  * - **Nicht** die Boss-/Settlement-„Offline-Relay-Queue“ (`src/settlement-queue.ts`, § **H.12**).
  * - **Nicht** der LoRa→IOTA-Delayed-Mirror (`lib/delayed-mirror-queue.ts`).
- * - Idempotenz / `canonical_msg_ref` bleiben **nach** § **H.12** + Delayed-Upload-MVP zu verzahnen — hier **`id`**, Dedup-Key und
- *   monotonische **`clientOutSeq`** (Gerät-lokal, § **H.6c** „outSeq“-Vorbereitung).
  *
  * **Opt-in:** `localStorage` **`morgendrot.offlineMailboxQueue`** = **`1`** (Default: aus).
- * Persistenz: `localStorage` (MVP); später IndexedDB/SQLite möglich, ohne dieses API-Shape zu brechen.
- *
- * **Risiko:** `payload` entspricht den **Command-Args** — kann Klartext, Wire mit Anhang o. Ä. enthalten.
- * Nur auf **vertrauten** Geräten aktivieren.
- *
- * **§ H.6c / Forensic-Vorbereitung:** `timeIsTrusted` = **„high“**-Zeitvertrauen zum **Enqueue**-Zeitpunkt
- * (frischer plausibler Server-`Date`-Poll **oder** verifizierter GPS-UTC-Fix), vgl. `inferDeviceTimeTrust` in **`device-time-trust.ts`**.
- * Legacy-Einträge ohne Feld gelten als **`false`** (ehrlich: unbekannt).
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
+import type { OfflineMailboxKind, OfflineMailboxQueueItem } from '@morgendrot/core'
+import {
+  OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
+  OFFLINE_QUEUE_ITEM_STATUS,
+  parseOfflineMailboxQueueFromJson,
+  serializeOfflineMailboxQueueToJson,
+  sortOfflineMailboxForDrain,
+  shouldDeferDrainAttempt,
+  tryEnqueueOfflineMailboxItem,
+  nextClientOutSeqFromItems,
+  offlineMailboxDedupKey,
+} from '@morgendrot/core'
 
-const STORAGE_KEY = 'morgendrot.offline-mailbox-queue.v1'
-const MAX_ITEMS = 60
-const MAX_PAYLOAD_CHARS = 512_000
+export {
+  OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
+  OFFLINE_MAILBOX_MAX_ITEMS,
+  OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS,
+  OFFLINE_QUEUE_ITEM_STATUS,
+  type OfflineQueueItemStatus,
+  type OfflineMailboxKind,
+  type OfflineMailboxQueueItem,
+  offlineMailboxDedupKey,
+} from '@morgendrot/core'
 
-/** Persistiert; `syncing` / `sent` sind für UI/Drain-Logik reserviert (MVP: Einträge werden bei Erfolg entfernt). */
-export const OFFLINE_QUEUE_ITEM_STATUS = {
-  PENDING: 'pending',
-  SYNCING: 'syncing',
-  SENT: 'sent',
-} as const
-
-export type OfflineQueueItemStatus =
-  (typeof OFFLINE_QUEUE_ITEM_STATUS)[keyof typeof OFFLINE_QUEUE_ITEM_STATUS]
-
-export type OfflineMailboxKind = 'encrypted_send' | 'plain_send'
-
-export type OfflineMailboxQueueItem = {
-  id: string
-  kind: OfflineMailboxKind
-  status: OfflineQueueItemStatus
-  recipient: string
-  /** Ein Argument an `/send` bzw. Klartextteil für `/send-plain`. */
-  payload: string
-  encrypted: boolean
-  /**
-   * `true` nur bei **DeviceTimeTrustLevel `high`** (§ H.6c): frischer plausibler HTTP-`Date` vom Status-Poll
-   * oder verifizierter GPS-UTC-Fix — nicht bloß `navigator.onLine`.
-   */
-  timeIsTrusted: boolean
-  /**
-   * Monoton steigend pro Gerät (1…), beim ersten Enqueue nach Laden der Queue.
-   * § H.6c / spätere Attestation: stabile **Ausgangs-Reihenfolge** unabhängig von `createdAt`-Drift.
-   */
-  clientOutSeq: number
-  createdAt: number
-  attempts: number
-  lastAttemptAt: number
-  lastError?: string
-}
+export type EnqueueOfflineMailboxResult =
+  | { ok: true; queued: true }
+  | { ok: true; queued: false }
+  | { ok: false; queued: false; reason: string }
 
 export function isOfflineMailboxQueueEnabled(): boolean {
   if (typeof window === 'undefined') return false
@@ -70,114 +51,42 @@ export function isOfflineMailboxQueueEnabled(): boolean {
   }
 }
 
-function normalizeOfflineMailboxItem(o: Record<string, unknown>): OfflineMailboxQueueItem | null {
-  if (
-    typeof o.id !== 'string' ||
-    (o.kind !== 'encrypted_send' && o.kind !== 'plain_send') ||
-    typeof o.status !== 'string' ||
-    typeof o.recipient !== 'string' ||
-    typeof o.payload !== 'string' ||
-    typeof o.encrypted !== 'boolean' ||
-    typeof o.createdAt !== 'number' ||
-    typeof o.attempts !== 'number' ||
-    typeof o.lastAttemptAt !== 'number'
-  ) {
+function readRawQueue(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem(OFFLINE_MAILBOX_QUEUE_STORAGE_KEY)
+  } catch {
     return null
   }
-  const lastError = o.lastError
-  const rawSeq = o.clientOutSeq
-  const clientOutSeq =
-    typeof rawSeq === 'number' && Number.isFinite(rawSeq) && rawSeq >= 0 && Math.floor(rawSeq) === rawSeq
-      ? rawSeq
-      : 0
-  return {
-    id: o.id,
-    kind: o.kind,
-    status: o.status as OfflineMailboxQueueItem['status'],
-    recipient: o.recipient,
-    payload: o.payload,
-    encrypted: o.encrypted,
-    timeIsTrusted: o.timeIsTrusted === true,
-    clientOutSeq,
-    createdAt: o.createdAt,
-    attempts: o.attempts,
-    lastAttemptAt: o.lastAttemptAt,
-    ...(typeof lastError === 'string' ? { lastError } : {}),
-  }
 }
 
-function safeParse(raw: string | null): OfflineMailboxQueueItem[] {
-  if (!raw) return []
-  try {
-    const a = JSON.parse(raw) as unknown
-    if (!Array.isArray(a)) return []
-    const out: OfflineMailboxQueueItem[] = []
-    for (const x of a) {
-      if (x == null || typeof x !== 'object') continue
-      const n = normalizeOfflineMailboxItem(x as Record<string, unknown>)
-      if (n) out.push(n)
-    }
-    return out
-  } catch {
-    return []
-  }
-}
-
-export function loadOfflineMailboxQueue(): OfflineMailboxQueueItem[] {
-  if (typeof window === 'undefined') return []
-  try {
-    return safeParse(localStorage.getItem(STORAGE_KEY))
-  } catch {
-    return []
-  }
+export function loadOfflineMailboxQueue() {
+  return parseOfflineMailboxQueueFromJson(readRawQueue())
 }
 
 export function saveOfflineMailboxQueue(items: OfflineMailboxQueueItem[]): void {
   if (typeof window === 'undefined') return
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items.slice(0, MAX_ITEMS)))
+    localStorage.setItem(OFFLINE_MAILBOX_QUEUE_STORAGE_KEY, serializeOfflineMailboxQueueToJson(items))
   } catch {
     /* quota */
   }
-}
-
-export function offlineMailboxDedupKey(item: {
-  kind: OfflineMailboxKind
-  recipient: string
-  encrypted: boolean
-  payload: string
-}): string {
-  const head = item.payload.slice(0, 2048)
-  return `${item.kind}|${item.recipient}|${item.encrypted}|${item.payload.length}|${head}`
 }
 
 export function getOfflineMailboxQueueCount(): number {
   return loadOfflineMailboxQueue().length
 }
 
-function maxClientOutSeqIn(items: OfflineMailboxQueueItem[]): number {
-  let max = 0
-  for (const q of items) {
-    if (typeof q.clientOutSeq === 'number' && Number.isFinite(q.clientOutSeq) && q.clientOutSeq > max) {
-      max = q.clientOutSeq
-    }
-  }
-  return max
-}
-
-/** Nächste monotonische Ausgangs-Sequenznummer (max in persistierter Queue + 1). */
 export function nextOfflineMailboxClientOutSeq(): number {
-  return maxClientOutSeqIn(loadOfflineMailboxQueue()) + 1
+  return nextClientOutSeqFromItems(loadOfflineMailboxQueue())
 }
 
-function backoffMs(attempts: number): number {
-  return Math.min(120_000, 1500 * Math.pow(2, Math.min(attempts, 8)))
+function newOfflineMailboxId(): string {
+  if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+    return crypto.randomUUID()
+  }
+  return `ob-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
-
-export type EnqueueOfflineMailboxResult =
-  | { ok: true; queued: true }
-  | { ok: true; queued: false }
-  | { ok: false; queued: false; reason: string }
 
 /**
  * Speichert einen fehlgeschlagenen Mailbox-Versuch — nur wenn **Opt-in** aktiv und Nutzlast klein genug.
@@ -195,35 +104,25 @@ export function enqueueOfflineMailboxFailure(opts: {
     return { ok: true, queued: false }
   }
   const { kind, recipient, payload, encrypted, timeIsTrusted, lastError } = opts
-  if (payload.length > MAX_PAYLOAD_CHARS) {
-    return { ok: false, queued: false, reason: 'Nutzlaste zu groß für lokale Warteschlange.' }
-  }
   const cur = loadOfflineMailboxQueue()
-  const dedup = offlineMailboxDedupKey({ kind, recipient, encrypted, payload })
-  if (cur.some((q) => offlineMailboxDedupKey(q) === dedup)) {
-    return { ok: true, queued: false }
-  }
-  const id =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `ob-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-  const next: OfflineMailboxQueueItem = {
-    id,
+  const r = tryEnqueueOfflineMailboxItem({
+    items: cur,
     kind,
-    status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
-    recipient: recipient.trim(),
+    recipient,
     payload,
     encrypted,
     timeIsTrusted,
-    clientOutSeq: maxClientOutSeqIn(cur) + 1,
-    createdAt: Date.now(),
-    attempts: 0,
-    lastAttemptAt: 0,
     lastError,
+    id: newOfflineMailboxId(),
+    now: Date.now(),
+  })
+  if (!r.ok) {
+    return { ok: false, queued: false, reason: r.reason }
   }
-  cur.push(next)
-  saveOfflineMailboxQueue(cur)
-  return { ok: true, queued: true }
+  if (r.queued) {
+    saveOfflineMailboxQueue(r.items)
+  }
+  return { ok: true, queued: r.queued }
 }
 
 export async function drainOfflineMailboxQueue(): Promise<{
@@ -234,10 +133,7 @@ export async function drainOfflineMailboxQueue(): Promise<{
   if (!isOfflineMailboxQueueEnabled()) {
     return { sent: 0, failed: 0, remaining: 0 }
   }
-  const items = loadOfflineMailboxQueue().sort((a, b) => {
-    const d = a.clientOutSeq - b.clientOutSeq
-    return d !== 0 ? d : a.createdAt - b.createdAt
-  })
+  const items = sortOfflineMailboxForDrain(loadOfflineMailboxQueue())
   if (items.length === 0) return { sent: 0, failed: 0, remaining: 0 }
 
   const now = Date.now()
@@ -246,8 +142,7 @@ export async function drainOfflineMailboxQueue(): Promise<{
   let failed = 0
 
   for (const item of items) {
-    const wait = backoffMs(item.attempts)
-    if (item.attempts > 0 && now - item.lastAttemptAt < wait) {
+    if (shouldDeferDrainAttempt(item, now)) {
       kept.push(item)
       continue
     }

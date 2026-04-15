@@ -6,11 +6,13 @@ on:
     paths:
       - 'frontend/**'
       - 'src/shared/**'
+      - 'packages/morgendrot-core/**'
       - '.github/workflows/frontend-checks.yml'
   pull_request:
     paths:
       - 'frontend/**'
       - 'src/shared/**'
+      - 'packages/morgendrot-core/**'
       - '.github/workflows/frontend-checks.yml'
 
 jobs:
@@ -30,6 +32,10 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - run: npm ci
+
+      - name: @morgendrot/core unit tests
+        working-directory: packages/morgendrot-core
+        run: npm ci && npm run test:unit
 
       - run: npm run lint
 

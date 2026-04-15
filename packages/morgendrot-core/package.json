@@ -1,0 +1,21 @@
+{
+  "name": "@morgendrot/core",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Messenger-Kern: offline-mailbox queue (model/codec/state), später IOTA — ohne React; transport- und speicherneutral (Ports).",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./queue/offline-mailbox": "./src/queue/offline-mailbox/index.ts",
+    "./ports": "./src/ports/index.ts"
+  },
+  "scripts": {
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.4"
+  }
+}

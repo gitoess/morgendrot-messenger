@@ -123,7 +123,7 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 
 ## 6. Konkrete Arbeitsscheiben (Reihenfolge)
 
-1. **Scaffold** `packages/morgendrot-core` + `vitest` + erste leere `index.ts`.  
+1. **Scaffold** `packages/morgendrot-core` + `vitest` + erste leere `index.ts`. **Erledigt (2026-04-28):** Offline-Mailbox **model / codec / state** im Core + PWA-Adapter `frontend/.../offline-queue.ts` + Root **`npm run test:core`** + CI-Schritt in **`frontend-checks.yml`**.  
 2. **`ports/storage.ts`** + In‑Memory‑Implementierung für Tests.  
 3. **Move** reine Teile aus `offline-queue.ts` → Core (`model`, `codec`, `state`); Frontend importiert aus `@morgendrot/core` und **löscht** duplizierte Zeilen (Verhalten unverändert).  
 4. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten).  

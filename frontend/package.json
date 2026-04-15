@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@morgendrot/shared": "file:../src/shared",
+    "@morgendrot/core": "file:../packages/morgendrot-core",
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/core": "^8.3.0",
     "@hookform/resolvers": "^3.9.1",
