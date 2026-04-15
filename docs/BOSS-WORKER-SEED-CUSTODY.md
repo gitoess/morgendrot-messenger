@@ -1,8 +1,10 @@
 # Boss, Arbeiter und Seed-Verwahrung — Policy & Architektur (Zielbild)
 
 **Zweck:** Eine **scharfe** Entscheidungshilfe: Soll der **Boss** die **Seeds** (bzw. äquivalente Wiederherstellungsgeheimnisse) der **Arbeiter** kennen und dauerhaft speichern?  
-**Stand:** 2026-03-29  
+**Stand:** 2026-03-31  
 **Verknüpft:** **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** (**§ H.10**), **`SECURITY-RATING.md`** (SPOF, Messenger-ECDH, Backend-Grenzen), **`docs/SICHERHEITS-AUDIT.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**, Rollen **`docs/UI-ROLLEN-WORKSPACES.md`**, Fahrplan **`docs/ROADMAP-FAHRPLAN.md`** (**§ H.10b**).
+
+**§ H.10b / Reihenfolge:** In **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** Stufe 2 steht **§ H.10b** **parallel** zu **§ H.10** — **nach** **§ H.8**, **ohne** Mesh-/IOTA-MVP (**Phase B**) zu verdrängen. Policy-Doku **ohne** Implementierungszwang; operative Qualität weiter **`TESTING.md`**, **`docs/PWA-MANUAL-CHECKS.md`**.
 
 ---
 
