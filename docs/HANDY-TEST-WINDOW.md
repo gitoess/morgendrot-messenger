@@ -13,6 +13,7 @@
    **Ticket-/AccessKey-Kachel** (eigener Zweck): nur bei Bedarf **`npm run test:tickets-accesskey-realworld`** (Alias **`test:realworld`**); **nicht** Teil des Messenger-Handy-Gates. Wenn nur die **IOTA-CLI** nicht zur **RPC_URL** passt, kann der Messenger-Lauf **grün** bleiben und der Ticket-Lauf rot — siehe **`docs/TEST-RUN-LOGBOOK.md`** („api version mismatch“).
 3. **Gleiche Version** — Die URL, die du auf dem Telefon öffnest (HTTPS oder **localhost** nur am PC), entspricht dem **Build**, den du gerade verifiziert hast; sonst vergleichst du unterschiedliche Stände.
 4. **Nach Deploy / vor Abgabe** — Zusätzlich Schreibtisch **`npm run check:pwa-desk`** bzw. bei Release **`check:pwa-desk:full`** (**`docs/PWA-MANUAL-CHECKS.md`**), dann am Gerät **L1–L5** (Install, Offline-Shell, Handbuch, …).
+5. **Installierte PWA** — Wenn sich **Sperrverhalten** oder **Dashboard-Kachel-Persistenz** ändern: einmal **App schließen / Hintergrund** → erneut öffnen prüfen (**`/vault-lock`**, Unlock, ob die **letzte Kachel** wiederhergestellt wird) — **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § 2.2.1.
 
 **Nicht nötig** am Handy nach jedem reinen Doku- oder Backend-only-Commit, wenn sich **PWA / Puls / Direkt-IOTA** nicht geändert haben.
 
@@ -29,4 +30,4 @@
 
 ---
 
-*Stand: 2026-04-28 — Abgestimmt mit Fahrplan § H.2 / § H.15.*
+*Stand: 2026-03-29 — Abgestimmt mit Fahrplan § H.0 / § H.2 / § H.15; § 2.2.1 in **`docs/ONBOARDING-WALLET-UX-SPEC.md`** (installierte PWA).*

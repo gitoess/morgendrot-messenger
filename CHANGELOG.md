@@ -12,6 +12,8 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **§ H.0 / § H.1 (UX):** Installierte PWA (**standalone**): bei Wechsel in den **Hintergrund** **`/vault-lock`** → erneutes Öffnen verlangt **Entsperren**; **letzte Kachel-Ansicht** (`chat`, Einstellungen, …) in **`sessionStorage`** über App-Neustart; Posteingang **„Absender ins Telefonbuch“** (**`POST /api/contact-label`**); Puls **Ketten-IDs speichern** mit Eingabe-Normalisierung + **`isLikelyIotaHexId`** — **`dashboard.tsx`**, **`chat-view-main-content.tsx`**, **`chat-view-inbox-list.tsx`**, **`chat-view-inbox-panel.tsx`**, **`chat-view-pulse-settings.tsx`**.
+- **Next Dev:** **`allowedDevOrigins`** im **Host-**/`host:port`-Format (Doku **Next 16**); **`NEXT_ALLOWED_DEV_ORIGINS`** aus **Root-`.env`** als volle URL wird normalisiert — **`frontend/next.config.mjs`**, **`docs/DEV-START.md`**, **`.env.example`**.
 - **Next / `@morgendrot/shared`:** Relative Imports unter **`src/shared/`** ohne **`.js`-Suffix** (z. B. `./bytes-base64`, `./opcodes`) — **Turbopack** (`next build`) löst sonst keine `.ts`-Datei für `./modul.js` auf.
 - **§ H.1b:** ESLint-Feature-Grenzen **send ↔ attachments** ergänzt; **`lint:feature-boundaries`** lintet **`features/attachments`** mit — **`frontend/eslint.config.mjs`**, **`frontend/package.json`**.
 - **§ H.1b:** Dashboard-Kachel-Whitelist (**§ H.17**) in **`lib/dashboard-workspace-tile-visibility.ts`** mit Vitest; **`dashboard.tsx`** ruft nur noch den Filter — **`features/README.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**.
@@ -35,6 +37,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Dokumentation
 
+- **§ H.0 / PWA:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § **2.2.1** (installierte PWA: Hintergrund-Sperre, Kachel-Wiederherstellung); **`docs/HANDY-TEST-WINDOW.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** — Abgleich mit Ist-Code Messenger.
 - **§ H.17 (Begriffe):** Trennung **Volle Oberfläche** (`morgendrot_show_all_tiles`), **Arbeitsbereich Volldashboard** (`morgendrot_workspace_tile_set` = `full`), **Geräte-Radar** (`DeviceRadarView`, Messenger nur Boss), **Chat-Boss-Übersicht** (`bossView`); Zielbild Messenger vs. Hauptprojekt — **`docs/ROADMAP-FAHRPLAN.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** §6, **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**.
 - **§ H.18 (Roadmap) + TTS/STT:** Fahrplan-Eintrag **TTS / STT**; **`docs/MESSENGER-SPRACHAUFNAHME.md`** — Abschnitt *SOS-Hilferuf: Text vs. Sprache* und Verweis **§ H.18**; **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Nutzer-Kurzfassung mit Verweis auf Messenger-Doku.
 - **§ H.17 (Roadmap):** Dashboard vs. **Volle Oberfläche** vs. Chat-**Boss-Ansicht** vs. **DeviceRadar**; Wanderer/Lite — Boss-Teile und Platzhalter-Kacheln später ausblendbar (**`docs/ROADMAP-FAHRPLAN.md`**).

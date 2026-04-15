@@ -54,6 +54,18 @@
 
 ---
 
+## Nachtrag (2026-03-29): Messenger-PWA, Puls, Dev-Netz
+
+| Thema | Pfad / Hinweis |
+|--------|----------------|
+| PWA **standalone** → Hintergrund → **`/vault-lock`**; Kachel-Wiederherstellung | **`frontend/frontend/components/dashboard.tsx`**, **`chat-view-main-content.tsx`** |
+| Posteingang → Telefonbuch | **`chat-view-inbox-list.tsx`**, **`POST /api/contact-label`** |
+| Puls Ketten-IDs (Normalize + **`isLikelyIotaHexId`**) | **`chat-view-pulse-settings.tsx`**, **`@morgendrot/core`** |
+| Next **16** Dev Cross-Origin | **`frontend/next.config.mjs`** **`allowedDevOrigins`** (Host-Format); **`docs/DEV-START.md`**, **`.env.example`** |
+| Protokolle | **`CHANGELOG.md`**, **`docs/TEST-RUN-LOGBOOK.md`**, **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § 2.2.1 |
+
+---
+
 ## 1. Kurz: was im Repo **fertig** ist (Shop / Voucher / Credits)
 
 | Bereich | Ist (Code/Doku) |

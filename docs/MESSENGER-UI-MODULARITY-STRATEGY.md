@@ -142,4 +142,6 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 
 **Fortschritt 2026-03-28:** **§ H.1b** — ESLint-Dreieck vervollständigt: **`features/send`** darf **`features/attachments`** nicht importieren und umgekehrt (**`no-restricted-imports`**); **`npm run lint:feature-boundaries`** erweitert um **`frontend/features/attachments`** — **`frontend/eslint.config.mjs`**, **`frontend/package.json`**.
 
+**Fortschritt 2026-03-29 (Nachtrag):** **§ H.0 / § H.1** — Posteingang **„Absender ins Telefonbuch“**; PWA **standalone**: Hintergrund → **`/vault-lock`**, **Kachel** in **`sessionStorage`**; Puls **Ketten-IDs** mit Normalize + **`isLikelyIotaHexId`** — **`chat-view-inbox-list.tsx`**, **`dashboard.tsx`**, **`chat-view-main-content.tsx`**, **`chat-view-pulse-settings.tsx`**.
+
 **Fortschritt 2026-03-29:** **§ H.1b** — Messenger-/Boss-Kachel-Whitelist (**§ H.17**) aus **`dashboard.tsx`** nach **`lib/dashboard-workspace-tile-visibility.ts`** + **`dashboard-workspace-tile-visibility.test.ts`** (Vitest).

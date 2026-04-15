@@ -11,6 +11,7 @@
 - **Same-Origin-Assets** der Next-PWA: `/_next/static/*` wird **cache-first** gehalten — App-Shell und JS/CSS sind nach dem ersten erfolgreichen Laden oft **ohne Netz** nutzbar (begrenzt: ohne Backend keine API).
 - **Handbuch als statische Dateien:** Unter **`/handbook/*.md`** liegen **Kopien** der Markdown-Dateien im `public/`-Ordner. Sie sind **Teil des Web-App-Bundles** (nicht `/api/doc` vom Node-Server). Die Seite **„Handbuch“** in der PWA lädt diese per `fetch` — der Service Worker kann sie **cachen**, sodass der Text **nach einmaligem erfolgreichen Abruf** offline lesbar ist.
 - **In-App statt externer Link:** Die Messenger-PWA zeigt die Texte **in der App** (`/handbook`), nicht als Weiterleitung auf eine fremde Domain.
+- **Installierte PWA (standalone):** Wechsel in den **Hintergrund** kann die **API-Sitzung sperren** (`/vault-lock`) — danach ist wieder **Entsperren** nötig; Details **§ 2.2.1** in **`docs/ONBOARDING-WALLET-UX-SPEC.md`**.
 
 ## 2. Was nicht automatisch gilt
 
