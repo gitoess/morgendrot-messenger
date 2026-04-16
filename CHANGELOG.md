@@ -55,6 +55,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Dokumentation
 
+- **Roadmap § C.0b nach grünem `check:pwa-desk:full`:** **`docs/ROADMAP-FAHRPLAN.md`** — „nächsten drei“ auf **§ H.1a**, Gerät **L1–L5**, dann **§ H.15 Stufe 2** ausgerichtet; **`docs/TEST-RUN-LOGBOOK.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 0 Verweis.
 - **Mailbox SSOT + README:** **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**; **`README.md`** Startliste Punkt 2 verweist darauf (neben **`MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**).
 - **`docs/ROADMAP-FAHRPLAN.md`:** **§ H.15 Stufe 2** (Handy-Smoke) nach **Schreibtisch-/PWA-/Mailbox-**Scheiben **hinten**; **§ C.0b**-Kette und „nächsten drei“ angepasst; Mailbox-Nachtrag **Persistent** / **`forceLegacyPlaintext`**.
 - **§ H.0 / PWA:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § **2.2.1** (installierte PWA: Hintergrund-Sperre, Kachel-Wiederherstellung); **`docs/HANDY-TEST-WINDOW.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** — Abgleich mit Ist-Code Messenger.
