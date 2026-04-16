@@ -6,7 +6,8 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchStatus, sendEncryptedMessageWithTimeout } from '@/frontend/lib/api'
+import { fetchStatus } from '@/frontend/lib/api'
+import { sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import {
   drainMirrorQueue,
   enqueueMirrorFailure,
@@ -35,10 +36,12 @@ export type UseChatViewMirrorDelayParams = {
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: string) => Promise<void>
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
+  /** Privater Chat: Peer-Adresse für Direct-Mailbox vor `/send` (Hybrid). */
+  mailboxRecipient: string
 }
 
 export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
-  const { loadMessages, setStatus, setStatusMsg } = p
+  const { loadMessages, setStatus, setStatusMsg, mailboxRecipient } = p
 
   const mirrorDedupRef = useRef(new Set<string>())
   const mirrorDrainInFlightRef = useRef(false)
@@ -87,9 +90,10 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     try {
       const r = await drainMirrorQueue(
         async (payload) => {
-          const res = await sendEncryptedMessageWithTimeout(payload)
-          const err = res.error || (res as { message?: string }).message
-          return { ok: res.ok === true, error: typeof err === 'string' ? err : undefined }
+          const res = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), payload)
+          if (res.ok) return { ok: true as const }
+          const err = res.error || res.message
+          return { ok: false as const, error: typeof err === 'string' ? err : undefined }
         },
         (item) => {
           mirrorDedupRef.current.add(mirrorQueueDedupKey(item.fromAddress, item.wireBody))
@@ -109,7 +113,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     } finally {
       mirrorDrainInFlightRef.current = false
     }
-  }, [loadMessages, setStatus, setStatusMsg])
+  }, [loadMessages, mailboxRecipient, setStatus, setStatusMsg])
 
   const runOfflineMailboxDrain = useCallback(async () => {
     if (offlineMailboxDrainInFlightRef.current) return
@@ -188,7 +192,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       if (mirrorDedupRef.current.has(dedup)) return
       if (hasMirrorQueuePending(fromAddress, body)) return
       try {
-        const r = await sendEncryptedMessageWithTimeout(mirrorPayloadFromWireBody(body))
+        const r = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), mirrorPayloadFromWireBody(body))
         if (r.ok) {
           mirrorDedupRef.current.add(dedup)
           setStatus('success')
@@ -199,14 +203,14 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
           const en = enqueueMirrorFailure({
             wireBody: body,
             fromAddress,
-            lastError: r.error || (r as { message?: string }).message,
+            lastError: r.error || r.message,
           })
           setMirrorQueuePending(getMirrorQueueCount())
           setStatus('error')
           setStatusMsg(
             en.queued
               ? `Delayed Upload: zwischengespeichert (${getMirrorQueueCount()} in Warteschlange). Wird bei Verbindung nachgeliefert.`
-              : en.reason || r.error || (r as { message?: string }).message || 'Mirror fehlgeschlagen.'
+              : en.reason || r.error || r.message || 'Mirror fehlgeschlagen.'
           )
           setTimeout(() => setStatus('idle'), 8000)
           void runMirrorDrain()
@@ -221,7 +225,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         void runMirrorDrain()
       }
     },
-    [loadMessages, runMirrorDrain, setStatus, setStatusMsg]
+    [loadMessages, mailboxRecipient, runMirrorDrain, setStatus, setStatusMsg]
   )
 
   return {

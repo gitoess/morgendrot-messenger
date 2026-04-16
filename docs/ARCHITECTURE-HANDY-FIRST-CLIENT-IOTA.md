@@ -70,6 +70,8 @@
 
 **Parallelität:** **§ H.1b** (UI-Modularität) und **Phase B** (Mesh) **nicht** in derselben Woche wie große Core-Migration ohne Absprache — **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**.
 
+**Ist (Messenger-PWA, Mailbox):** PTB + Signatur im Browser laufen in **`@morgendrot/core`** (`signAndExecuteTransactionWithSigner`, …) — aufgerufen über **`trySubmitPlaintextMailboxViaDirectIota`** / **`trySubmitEncryptedMailboxViaDirectIotaFromPlaintext`**. Alle nutzerrelevanten Versandpfade (Composer, SOS-Mailbox-Fallback, B2-Spiegel, Delayed-Mirror-Drain, LUMA/CHROMA-Online-Bestätigung, Einsatzprotokoll-Anker) gehen zentral über **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (**Direct zuerst**, **`/api`** als Fallback).
+
 ---
 
 ## 5. Verwandte Dokumente

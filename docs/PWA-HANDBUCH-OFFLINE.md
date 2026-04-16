@@ -40,7 +40,7 @@
 
 **Posteingang per Fullnode (§6.B.4):** Ohne **`/api/inbox`**, wenn der Messenger Klartext- und/oder (mit aktivem **Direkt-Mailbox-Drain** und Chat-ECDH) verschlüsselte Mailbox-Einträge vom Fullnode lesen und anzeigen kann; sonst Posteingang wie gewohnt über die Basis.
 
-**Live-Send (Composer):** Wenn Direct konfiguriert ist, wird **zuerst** die Fullnode-Route versucht; scheitert sie, folgt **`/api`** (wie Offline-Queue-Drain). Statuskurztext im Chat-Kopf: **`getDirectIotaPathUiState`**.
+**Live-Send & Mailbox-Spiegel:** Zentral **`mailbox-send-hybrid.ts`** — **Direct** (Fullnode + PTB im Browser) zuerst, sonst **`/api`** (Composer, SOS-Mailbox-Fallback, B2-Spiegel, Delayed-Mirror, LUMA/CHROMA-Online, Einsatzprotokoll-Anker). Status im Chat-Kopf: **`getDirectIotaPathUiState`**.
 
 ## 6. Pflege
 

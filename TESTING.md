@@ -38,7 +38,7 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Move-Package dep
 | 4 | **`npm run check:circular`** | madge, Zyklen unter **`./frontend`** |
 | 5 | **`npm run test:unit`** | Vitest (RTL + Lib-Tests); äquivalent von Root: **`npm run test:frontend-unit`** |
 | 5b | **`npm run test:core`** | **`@morgendrot/core`** (Offline-Mailbox, **`canonical_msg_ref`**, device-time, …) — bei Änderungen unter **`packages/morgendrot-core/**`** |
-| 5c | **`npm run test:h15-direct-submit`** | Nur **`direct-iota-plain-submit.test.ts`** (§ **H.15** Direkt vs. Relay / Frühabbrüche) — bei Änderungen an **`direct-iota-plain-submit.ts`**, **`direct-iota-encrypted-submit.ts`**, **`chat-view-pulse-settings.tsx`**, **`offline-queue.ts`**, **`use-chat-view-handle-send.ts`**, **`chat-view-chat-header.tsx`** (Hybrid Live + Drain + UI-Badge) |
+| 5c | **`npm run test:h15-direct-submit`** | Nur **`direct-iota-plain-submit.test.ts`** (§ **H.15** Direkt vs. Relay / Frühabbrüche) — bei Änderungen an **`direct-iota-plain-submit.ts`**, **`direct-iota-encrypted-submit.ts`**, **`mailbox-send-hybrid.ts`**, **`chat-view-pulse-settings.tsx`**, **`offline-queue.ts`**, **`use-chat-view-handle-send.ts`**, **`use-chat-view-mirror-delay.ts`**, **`use-chat-view-confirm-lora-online.ts`**, **`einsatzprotokoll-anchor.ts`**, **`chat-view-chat-header.tsx`** |
 | 6 | *(zurück nach Root)* **`npm run validate:ui`** | UI-Referenzen |
 | 7 | **`npm run test:smoke`** | `validate:ui` + **`npm run test`** (Modultests ohne Chain) |
 

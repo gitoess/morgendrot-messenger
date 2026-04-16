@@ -172,6 +172,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loadMessages,
     setStatus,
     setStatusMsg,
+    mailboxRecipient: recipient,
   })
   const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
     useChatViewApiStatusPoll({

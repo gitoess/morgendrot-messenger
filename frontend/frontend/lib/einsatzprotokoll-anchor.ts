@@ -5,7 +5,11 @@
  */
 
 import type { Message } from '@/frontend/lib/types'
-import { sendEncryptedMessageWithTimeout, sendMessage } from '@/frontend/lib/api'
+import { nextOfflineMailboxClientOutSeq } from '@/frontend/lib/api/offline-queue'
+import {
+  sendEncryptedMailboxHybrid,
+  sendPlaintextMailboxHybrid,
+} from '@/frontend/lib/mailbox-send-hybrid'
 import { buildEinsatzprotokollPayload } from '@/frontend/lib/einsatzprotokoll-export'
 import { MESSAGING_WIRE_UTF8_MAX } from '@/frontend/lib/compact-image-wire'
 
@@ -85,7 +89,11 @@ export async function anchorEinsatzprotokollOnIota(p: {
     if (u8.length > MESSAGING_WIRE_UTF8_MAX) {
       return { ok: false, error: `Anker-Wire zu lang (${u8.length} B UTF-8).` }
     }
-    const r = await sendMessage(p.recipientForPlain.trim(), wire, false)
+    const r = await sendPlaintextMailboxHybrid(
+      p.recipientForPlain.trim(),
+      wire,
+      BigInt(nextOfflineMailboxClientOutSeq())
+    )
     return r.ok ? { ok: true } : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
   }
 
@@ -98,6 +106,6 @@ export async function anchorEinsatzprotokollOnIota(p: {
       error: `Vollbericht zu groß für eine Transaktion (${n} B UTF-8, max. ${MESSAGING_WIRE_UTF8_MAX}). Nur Hash-Variante oder weniger Nachrichten.`,
     }
   }
-  const r = await sendEncryptedMessageWithTimeout(json)
+  const r = await sendEncryptedMailboxHybrid(p.recipientForPlain.trim(), json)
   return r.ok ? { ok: true } : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
 }

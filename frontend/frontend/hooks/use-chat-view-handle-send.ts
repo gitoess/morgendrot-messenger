@@ -2,8 +2,6 @@
 
 import { useCallback } from 'react'
 import {
-  sendMessage,
-  sendEncryptedMessageWithTimeout,
   sosGatewayAckDigest,
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
@@ -32,14 +30,9 @@ import type { SendMeshV2WireBurstOptions } from '@/frontend/features/send/chat-v
 import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
 import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 import {
-  canTryLivePlaintextDirectMailbox,
-  trySubmitPlaintextMailboxViaDirectIota,
-} from '@/frontend/lib/direct-iota-plain-submit'
-import {
-  canTryLiveEncryptedDirectMailbox,
-  trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
-} from '@/frontend/lib/direct-iota-encrypted-submit'
-import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
+  sendEncryptedMailboxHybrid,
+  sendPlaintextMailboxHybrid,
+} from '@/frontend/lib/mailbox-send-hybrid'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -192,8 +185,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               acked = !!(g && typeof g === 'object' && (g as { ok?: boolean }).ok === true)
             }
             if (!acked) {
-              setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Basis)…')
-              const ack = await sendEncryptedMessageWithTimeout(wireText)
+              setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Direct zuerst, sonst Basis)…')
+              const ack = await sendEncryptedMailboxHybrid(recipient.trim(), wireText)
               acked = ack.ok
             }
             if (acked) {
@@ -492,29 +485,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
           wireForApi = textSnap
         }
-        if (!enc && canTryLivePlaintextDirectMailbox()) {
-          const dr = await trySubmitPlaintextMailboxViaDirectIota({
-            recipient: recipient.trim(),
-            payloadUtf8: wireForApi,
-            nonce: messageNonceU64,
-          })
-          if (dr.ok) return { ok: true }
-        }
-        if (enc && canTryLiveEncryptedDirectMailbox(recipient)) {
-          const mat = getDirectChatEcdhMaterialForRecipient(recipient.trim())
-          if (mat) {
-            const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
-              recipient: recipient.trim(),
-              plaintextUtf8: wireForApi,
-              peerPubRaw: mat.peerPubRaw,
-              ecdhPrivateKey: mat.ecdhPrivateKey,
-            })
-            if (er.ok) return { ok: true }
-          }
-        }
-        const res = await sendMessage(recipient, wireForApi, enc)
+        const res = enc
+          ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
+          : await sendPlaintextMailboxHybrid(recipient.trim(), wireForApi, messageNonceU64)
         if (res.ok) return { ok: true }
-        const errText = res.error || 'Fehler'
+        const errText = res.error || res.message || 'Fehler'
         const qm = await queueMailboxIfAllowed(
           enc ? 'encrypted_send' : 'plain_send',
           wireForApi,
@@ -633,19 +608,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const existing = parseMailboxOutNonceMarker(textSnap)
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
-        if (canTryLiveEncryptedDirectMailbox(recipient)) {
-          const mat = getDirectChatEcdhMaterialForRecipient(recipient.trim())
-          if (mat) {
-            const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
-              recipient: recipient.trim(),
-              plaintextUtf8: wireForApi,
-              peerPubRaw: mat.peerPubRaw,
-              ecdhPrivateKey: mat.ecdhPrivateKey,
-            })
-            if (er.ok) return { ok: true }
-          }
-        }
-        const res = await sendEncryptedMessageWithTimeout(wireForApi)
+        const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
         if (res.ok) return { ok: true }
         const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
         if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
@@ -776,7 +739,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         for (let mi = 0; mi < textSnaps.length; mi++) {
           const snap = textSnaps[mi]!
           if (sosMailboxAckedSnaps.has(snap)) continue
-          const mr = await sendEncryptedMessageWithTimeout(snap)
+          const mr = await sendEncryptedMailboxHybrid(recipient.trim(), snap)
           if (!mr.ok) {
             mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mr.error || mr.message || '?'}.`
             break

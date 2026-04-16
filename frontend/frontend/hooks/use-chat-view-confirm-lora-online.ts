@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
-import { sendEncryptedMessageWithTimeout } from '@/frontend/lib/api'
+import { sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 
 /** Bestätigter Online-Versand von LUMA+CHROMA nach fehlgeschlagenem oder unmöglichem Funk. */
@@ -15,6 +15,7 @@ export function useChatViewConfirmLoraOnline(p: UseChatViewSendFlowParams) {
     clearCompactAttachment,
     loadMessages,
     setMessage,
+    recipient,
   } = p
 
   return useCallback(async () => {
@@ -25,13 +26,13 @@ export function useChatViewConfirmLoraOnline(p: UseChatViewSendFlowParams) {
     setSending(true)
     setStatus('idle')
     try {
-      const r1 = await sendEncryptedMessageWithTimeout(payload.lumaText)
+      const r1 = await sendEncryptedMailboxHybrid(recipient.trim(), payload.lumaText)
       if (!r1.ok) {
-        throw new Error(r1.error || (r1 as { message?: string }).message || 'LUMA über Online fehlgeschlagen.')
+        throw new Error(r1.error || r1.message || 'LUMA über Online fehlgeschlagen.')
       }
-      const r2 = await sendEncryptedMessageWithTimeout(payload.chromaText)
+      const r2 = await sendEncryptedMailboxHybrid(recipient.trim(), payload.chromaText)
       if (!r2.ok) {
-        throw new Error(r2.error || (r2 as { message?: string }).message || 'CHROMA über Online fehlgeschlagen.')
+        throw new Error(r2.error || r2.message || 'CHROMA über Online fehlgeschlagen.')
       }
       setStatus('success')
       setStatusMsg(
@@ -51,6 +52,7 @@ export function useChatViewConfirmLoraOnline(p: UseChatViewSendFlowParams) {
     clearCompactAttachment,
     loadMessages,
     loraOnlineOfferPayloadRef,
+    recipient,
     setLoraOnlineFallbackOffer,
     setMessage,
     setSending,
