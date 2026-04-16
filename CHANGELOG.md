@@ -49,6 +49,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Qualität / Tests
 
+- **§ H.1a:** Vitest **`package-id-compare.test.ts`** (**`normalizePackageIdHex`**, **`shouldShowPackageIdMismatchBanner`**); **`morg-emergency-v1-text.test.ts`** (SOS-Marker bauen/strippen, Fake-Timer); **`inbox-load-error.test.ts`** (Offline-Heuristik, **`formatInboxLoadError`**).
 - **§ H.1a:** Vitest **`frontend/frontend/lib/format-unknown-error.test.ts`** — **`formatUnknownError`** (Error, String, JSON-Objekt, leeres `{}`, Zirkelreferenz, Primitives).
 - **§ H.3n / § H.1a:** Vitest **`frontend/frontend/lib/morg-sos-mesh-retry.test.ts`**, **`morg-sos-ack-wire.test.ts`** (Backoff, **`MORG_SOS_ACK_V1`**-Parse). **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Abgleich-Block **§ H.3n** mit Ist-Pfaden erweitert.
 - **`TESTING.md`:** Ritual **5c** (Hybrid/API-Touch → auch **`test:unit`** / **`execute-command.test.ts`**); SOS-Abschnitt verweist auf SOS-Lib-Tests.
