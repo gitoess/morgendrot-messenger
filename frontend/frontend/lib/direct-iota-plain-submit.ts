@@ -17,6 +17,18 @@ const LS_DRAIN = 'morgendrot.directMailboxDrain'
 /** H.15 Stufe 0: fehlt oder `client` = Direkt-RPC erlaubt (wenn Drain an); `relay` = kein Klartext-Upload per Fullnode aus der PWA. */
 const LS_SUBMIT_MODE = 'morgendrot.iotaSubmitMode'
 
+/** Chat-Header / Einstellungen: gleicher Tab hört kein `storage` — nach LS-Änderungen feuern. */
+export const DIRECT_IOTA_UI_CHANGED = 'morgendrot-direct-iota-ui-changed' as const
+
+export function notifyDirectIotaUiChanged(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.dispatchEvent(new CustomEvent(DIRECT_IOTA_UI_CHANGED))
+  } catch {
+    /* ignore */
+  }
+}
+
 export type IotaSubmitMode = 'client' | 'relay'
 
 export function getIotaSubmitMode(): IotaSubmitMode {
@@ -36,6 +48,7 @@ export function setIotaSubmitMode(mode: IotaSubmitMode): void {
   } catch {
     /* ignore */
   }
+  notifyDirectIotaUiChanged()
 }
 
 export function isIotaRelayOnlyMode(): boolean {
@@ -110,6 +123,19 @@ export function isDirectMailboxDrainEnabled(): boolean {
   }
 }
 
+/** Live-Send (Composer): Direct-Klartext-Mailbox möglich — gleiche Voraussetzungen wie Offline-Drain. */
+export function canTryLivePlaintextDirectMailbox(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    !isIotaRelayOnlyMode() &&
+    isDirectMailboxDrainEnabled() &&
+    Boolean(getConfiguredDirectIotaRpcUrl()) &&
+    Boolean(getDirectIotaSessionSigner()) &&
+    Boolean(getDirectMailboxChainSnapshot()) &&
+    canUseDirectPlaintextMailboxDrain()
+  )
+}
+
 export function setDirectMailboxDrainEnabled(on: boolean): void {
   if (typeof window === 'undefined') return
   try {
@@ -118,6 +144,7 @@ export function setDirectMailboxDrainEnabled(on: boolean): void {
   } catch {
     /* ignore */
   }
+  notifyDirectIotaUiChanged()
 }
 
 function normalizeHexAddr(a: string): string {

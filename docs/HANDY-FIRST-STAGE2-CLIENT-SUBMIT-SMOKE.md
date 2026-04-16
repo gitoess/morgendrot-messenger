@@ -32,7 +32,7 @@
 
 1. [ ] **Sicherheit:** Mnemonic nur in vertrauenswürdiger Umgebung; nach Test **Signer löschen** in Puls.
 2. [ ] Chat: Transport **Online**, Empfänger gültig, **Klartext**-Nachricht (kurzer Text, eindeutiger Inhalt).
-3. [ ] Senden — **Erwartung:** Erfolg **oder** verständliche Fehlermeldung (Gas, Flags, Adresse). Bei Erfolg optional Digest/Explorer prüfen.
+3. [ ] Senden — **Erwartung:** Erfolg **oder** verständliche Fehlermeldung (Gas, Flags, Adresse). Bei Erfolg optional Digest/Explorer prüfen. **Ist (Hybrid Live):** Der Composer nutzt **dieselbe** Reihenfolge wie die Mailbox-Warteschlange — **Direct-IOTA zuerst**, bei Fehler **`/api`** (`sendMessage` / `sendEncryptedMessageWithTimeout`) — **`use-chat-view-handle-send.ts`**; Chat-Kopf zeigt **„Direkt-RPC aktiv“** / **„über Relay“** (`getDirectIotaPathUiState`).
 4. [ ] Basis kurz **stoppen** (`npm start` beenden): mit aktivem Drain und gültigem RPC soll **Outbox-Drain** (bzw. verzögerter Spiegel) **Klartext** weiterhin über **Direkt-RPC** versuchen — nicht über `/api` (solange Modus Direkt und Drain an).
 5. [ ] Modus auf **Nur Morgendrot-API** stellen: erneuter Klartext-Versuch darf **nicht** still per RPC gehen — Nutzerhinweis / HTTP-Pfad, sobald Basis wieder da.
 6. [ ] **`npm run test:unit`** im Ordner **`frontend/`** ausgeführt (grün).

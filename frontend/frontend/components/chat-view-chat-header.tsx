@@ -4,11 +4,17 @@
  * Chat-Kopf: Modus (Privat/Pinnwand), Verschlüsselungs-Hinweis, „Partner verbinden“, Status-Banner (Tresor, Klartext-Konfig).
  */
 
-import { Activity, Handshake, Lock, Unlock } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Activity, Handshake, Lock, Unlock, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
 import { computeWaldConnectionTier, type WaldConnectionTier } from '@/frontend/lib/chat-wald-connection'
+import {
+  DIRECT_IOTA_UI_CHANGED,
+  getDirectIotaPathUiState,
+  type DirectIotaPathUiState,
+} from '@/frontend/lib/direct-iota-plain-submit'
 
 export type ChatViewChatHeaderProps = {
   isPrivate: boolean
@@ -36,6 +42,34 @@ function roleBadgeLabel(role: string): string {
   if (r === 'lock') return 'Schloss'
   if (r === 'monitor') return 'Monitor'
   return role.trim() || '—'
+}
+
+/** IOTA-Mailbox: Direkt-RPC vs Relay — aktualisiert bei Puls/Einstellungen (`DIRECT_IOTA_UI_CHANGED`). */
+function IotaMailboxPathBadge() {
+  const [ui, setUi] = useState<DirectIotaPathUiState | null>(null)
+  useEffect(() => {
+    const tick = () => setUi(getDirectIotaPathUiState())
+    tick()
+    const on = () => tick()
+    window.addEventListener(DIRECT_IOTA_UI_CHANGED, on)
+    return () => window.removeEventListener(DIRECT_IOTA_UI_CHANGED, on)
+  }, [])
+  if (!ui) return null
+  const relay = ui.mode === 'relay'
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 truncate rounded-full border px-2 py-1 text-[11px]',
+        relay
+          ? 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100'
+          : 'border-sky-500/40 bg-sky-500/10 text-sky-950 dark:text-sky-100'
+      )}
+      title={ui.detail}
+    >
+      <Radio className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+      <span className="truncate font-medium">{ui.headline}</span>
+    </span>
+  )
 }
 
 function WaldCheckIndicator({ tier }: { tier: WaldConnectionTier }) {
@@ -156,6 +190,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
           <WaldCheckIndicator tier={waldTier} />
+          {isPrivate ? <IotaMailboxPathBadge /> : null}
           {isPrivate && (
             <button
               type="button"

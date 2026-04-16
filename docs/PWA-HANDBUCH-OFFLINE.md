@@ -40,6 +40,8 @@
 
 **Posteingang per Fullnode (§6.B.4):** Ohne **`/api/inbox`**, wenn der Messenger Klartext- und/oder (mit aktivem **Direkt-Mailbox-Drain** und Chat-ECDH) verschlüsselte Mailbox-Einträge vom Fullnode lesen und anzeigen kann; sonst Posteingang wie gewohnt über die Basis.
 
+**Live-Send (Composer):** Wenn Direct konfiguriert ist, wird **zuerst** die Fullnode-Route versucht; scheitert sie, folgt **`/api`** (wie Offline-Queue-Drain). Statuskurztext im Chat-Kopf: **`getDirectIotaPathUiState`**.
+
 ## 6. Pflege
 
 - Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).

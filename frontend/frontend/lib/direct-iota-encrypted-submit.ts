@@ -20,6 +20,7 @@ import {
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import {
   isDirectMailboxDrainEnabled,
   isIotaRelayOnlyMode,
@@ -27,6 +28,22 @@ import {
 
 /** Konsistent mit Server-Default `MESSENGER_MAX_PLAINTEXT_UTF8_BYTES` (16000). */
 const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = 16000
+
+/** Live-Send (Composer, verschlüsselt): Direct-Mailbox möglich — ECDH-Material für Empfänger nötig. */
+export function canTryLiveEncryptedDirectMailbox(recipientTrimmed: string): boolean {
+  if (typeof window === 'undefined') return false
+  const r = recipientTrimmed.trim()
+  if (!r) return false
+  return (
+    !isIotaRelayOnlyMode() &&
+    isDirectMailboxDrainEnabled() &&
+    Boolean(getConfiguredDirectIotaRpcUrl()) &&
+    Boolean(getDirectIotaSessionSigner()) &&
+    Boolean(getDirectMailboxChainSnapshot()) &&
+    canUseDirectEncryptedMailboxDrain() &&
+    getDirectChatEcdhMaterialForRecipient(r) != null
+  )
+}
 
 function normalizeHexAddr(a: string): string {
   const t = a.trim().toLowerCase()

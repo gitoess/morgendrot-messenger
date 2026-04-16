@@ -165,6 +165,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Nachtrag 2026-04-28 (Tests & Handy):** **`docs/TEST-RUN-LOGBOOK.md`** (Smoke/Frontend/Core/H.15 grün; Realworld mit Unlock nachziehen); **`docs/HANDY-TEST-WINDOW.md`** — **Handy erst**, wenn Schreibtisch grün **und** deploybare URL **gleicher** Version; optional **`test:messages*`** / **`test:realworld`** mit entsperrter API.
 
+**Betriebsrhythmus (regelmäßig, strategisch merken):** Nach abgeschlossenen Paketen **`git push`** zum Remote (Branch-Tip nicht nur lokal); **Schreibtisch** in Batches: Root **`npm run test:smoke`**, **`cd frontend`** **`npm run test:unit`**, bei § **H.15**-Touch **`npm run test:h15-direct-submit`** (**`TESTING.md`** Zeile **5c**) — kurz **`docs/TEST-RUN-LOGBOOK.md`** ergänzen. **Handy-Feldtest** nur laut **`docs/HANDY-TEST-WINDOW.md`** / **`docs/PWA-MANUAL-CHECKS.md`**. **Nächste große H.15-Scheibe (nach Hybrid Live+Drain):** vollständiger **PTB + Signatur**-Pfad im Browser weiter vereinheitlichen (Core + UX), ohne Relay-Pflicht.
+
 ### C.1 Pflichtpfad (größter Nutzen)
 
 **Leitplanke:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**, Anti-Feature-Creep) — hier nur die **operative** Reihenfolge.

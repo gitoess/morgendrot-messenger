@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
+  canTryLivePlaintextDirectMailbox,
   getDirectIotaPathUiState,
   getIotaSubmitMode,
   setIotaSubmitMode,
@@ -52,6 +53,12 @@ describe('direct-iota-plain-submit (H.15 Stufe 2 — Smoke-Mindestabdeckung)', (
     setIotaSubmitMode('relay')
     expect(getDirectIotaPathUiState().mode).toBe('relay')
     expect(getDirectIotaPathUiState().headline).toContain('Relay')
+  })
+
+  it('canTryLivePlaintextDirectMailbox: false im Nur-Relay-Modus', () => {
+    store['morgendrot.directMailboxDrain'] = '1'
+    setIotaSubmitMode('relay')
+    expect(canTryLivePlaintextDirectMailbox()).toBe(false)
   })
 
   it('trySubmitPlaintextMailboxViaDirectIota: bricht bei Modus Nur-API ab', async () => {
