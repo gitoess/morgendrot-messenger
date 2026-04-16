@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import {
   Settings,
   Wifi,
@@ -15,6 +15,7 @@ import {
   Server,
   KeyRound,
   ListOrdered,
+  Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
@@ -29,6 +30,13 @@ import {
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
+import {
+  getDirectIotaPathUiState,
+  getIotaSubmitMode,
+  setDirectMailboxDrainEnabled,
+  setIotaSubmitMode,
+  type DirectIotaPathUiState,
+} from '@/frontend/lib/direct-iota-plain-submit'
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -70,6 +78,11 @@ export function SettingsView({
   const [roleTemplatesJson, setRoleTemplatesJson] = useState('[]')
   const [roleTemplatesBusy, setRoleTemplatesBusy] = useState(false)
   const [roleTemplatesMsg, setRoleTemplatesMsg] = useState('')
+
+  const [iotaPathUi, setIotaPathUi] = useState<DirectIotaPathUiState | null>(null)
+  const refreshIotaPathUi = useCallback(() => {
+    setIotaPathUi(getDirectIotaPathUiState())
+  }, [])
 
   const canManageEinsatzRoleTemplates =
     status?.role === 'boss' || status?.role === 'messenger'
@@ -158,6 +171,14 @@ export function SettingsView({
     loadStatus()
   }, [])
 
+  useEffect(() => {
+    refreshIotaPathUi()
+  }, [refreshIotaPathUi])
+
+  useEffect(() => {
+    if (!loading) refreshIotaPathUi()
+  }, [loading, status?.packageId, status?.backendOnline, refreshIotaPathUi])
+
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
     setCopied(key)
@@ -219,6 +240,46 @@ export function SettingsView({
       </div>
 
       <SettingsWalletSessionCard />
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-start gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 text-sky-300">
+            <Zap className="h-5 w-5" aria-hidden />
+          </div>
+          <div className="min-w-0 flex-1 space-y-3">
+            <div>
+              <h4 className="font-semibold text-foreground">IOTA auf diesem Gerät</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                <strong className="text-foreground">Handy-first:</strong> Signatur und PTB im Browser über die
+                konfigurierte Fullnode — Morgendrot-API nur noch optionaler Relay. RPC, Drain und Session-Signer:{' '}
+                <strong className="text-foreground">Chat → Puls</strong>.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-sm text-foreground">Direkt mit IOTA verbinden</span>
+              <Switch
+                checked={getIotaSubmitMode() === 'client'}
+                onCheckedChange={(on) => {
+                  if (on) {
+                    setIotaSubmitMode('client')
+                  } else {
+                    setIotaSubmitMode('relay')
+                    setDirectMailboxDrainEnabled(false)
+                  }
+                  refreshIotaPathUi()
+                }}
+                aria-label="Direkt mit IOTA verbinden"
+              />
+            </div>
+            {iotaPathUi ? (
+              <div className="rounded-lg border border-border/80 bg-muted/15 px-3 py-2 text-xs">
+                <p className="font-medium text-foreground">{iotaPathUi.headline}</p>
+                <p className="mt-1 text-muted-foreground leading-relaxed">{iotaPathUi.detail}</p>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
 
       <p className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
         <strong className="text-foreground">PWA installieren</strong> und <strong className="text-foreground">IOTA überweisen</strong> liegen

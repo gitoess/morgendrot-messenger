@@ -3,7 +3,7 @@
 /**
  * § H.3g **Paket 7 — Vorbereitung:** Client-Mailbox-Outbox (fehlgeschlagene `/send` / `/send-plain`).
  * **§ H.15 Stufe 3:** Kanonische Queue-Logik nur in **`@morgendrot/core`** — diese Datei bleibt ein **dünner**
- * Browser-Adapter (`localStorage`, Hybrid-Send: Klartext ggf. **`trySubmitPlaintextMailboxViaDirectIota`**, sonst HTTP).
+ * Browser-Adapter (`localStorage`, Hybrid-Send: Klartext/Verschlüsselt zuerst **`trySubmit*ViaDirectIota`**, bei Fehler **Relay** `/api`).
  * Keine zweite Settlement-/Dedup-Implementierung; Abgleich **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.
  *
  * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
@@ -116,6 +116,13 @@ function canAttemptDirectEncryptedMailbox(item: OfflineMailboxQueueItem): boolea
   )
 }
 
+function mergeDirectThenRelayErrors(directErr: string | undefined, relayErr: string | undefined): string {
+  const d = (directErr || '').trim()
+  const r = (relayErr || '').trim()
+  if (d && r) return `Direkt: ${d} · Relay: ${r}`
+  return r || d || 'Senden fehlgeschlagen'
+}
+
 function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
   const viaHttp = createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort())
   return async (item) => {
@@ -126,7 +133,9 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
         nonce: BigInt(item.clientOutSeq),
       })
       if (r.ok) return { ok: true as const }
-      return { ok: false as const, error: r.error }
+      const httpR = await viaHttp(item)
+      if (httpR.ok) return { ok: true as const }
+      return { ok: false as const, error: mergeDirectThenRelayErrors(r.error, httpR.error) }
     }
     if (canAttemptDirectEncryptedMailbox(item)) {
       const mat = getDirectChatEcdhMaterialForRecipient(item.recipient)
@@ -138,7 +147,9 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
           ecdhPrivateKey: mat.ecdhPrivateKey,
         })
         if (r.ok) return { ok: true as const }
-        return { ok: false as const, error: r.error }
+        const httpR = await viaHttp(item)
+        if (httpR.ok) return { ok: true as const }
+        return { ok: false as const, error: mergeDirectThenRelayErrors(r.error, httpR.error) }
       }
     }
     return viaHttp(item)

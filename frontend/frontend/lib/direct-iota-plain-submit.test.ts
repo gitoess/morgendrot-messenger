@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import {
+  getDirectIotaPathUiState,
   getIotaSubmitMode,
   setIotaSubmitMode,
   trySubmitPlaintextMailboxViaDirectIota,
@@ -43,6 +44,14 @@ describe('direct-iota-plain-submit (H.15 Stufe 2 — Smoke-Mindestabdeckung)', (
     setIotaSubmitMode('client')
     expect(store['morgendrot.iotaSubmitMode']).toBeUndefined()
     expect(getIotaSubmitMode()).toBe('client')
+  })
+
+  it('getDirectIotaPathUiState: Relay vs Client ohne RPC', () => {
+    expect(getDirectIotaPathUiState().mode).toBe('client')
+    expect(getDirectIotaPathUiState().headline).toContain('Direkt gewählt')
+    setIotaSubmitMode('relay')
+    expect(getDirectIotaPathUiState().mode).toBe('relay')
+    expect(getDirectIotaPathUiState().headline).toContain('Relay')
   })
 
   it('trySubmitPlaintextMailboxViaDirectIota: bricht bei Modus Nur-API ab', async () => {

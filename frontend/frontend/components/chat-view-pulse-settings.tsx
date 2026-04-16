@@ -416,7 +416,12 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         <div className="space-y-3 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">IOTA-Sendeweg (Handy-first, § H.15)</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">Direkt</strong> = Klartext-Mailbox darf über Fullnode + Signer (wenn unten konfiguriert). <strong className="text-foreground">Nur Morgendrot-API</strong> = kein direkter RPC-Upload aus dieser PWA; Mailbox über <span className="font-mono">/api</span>, sobald die Basis erreichbar ist. Gespeichert in <span className="font-mono">localStorage</span> unter <span className="font-mono">morgendrot.iotaSubmitMode</span> (Wert <span className="font-mono">relay</span> oder leer = Standard <span className="font-mono">client</span>).
+            <strong className="text-foreground">Direkt</strong> = Klartext- und (mit ECDH) verschlüsselte Mailbox zuerst über Fullnode + Signer; bei Fehler{' '}
+            <strong className="text-foreground">Fallback</strong> über <span className="font-mono">/api</span>, wenn die Basis online ist.{' '}
+            <strong className="text-foreground">Nur Morgendrot-API</strong> = kein direkter RPC-Upload; nur Relay. Schalter auch unter{' '}
+            <strong className="text-foreground">Einstellungen → IOTA auf diesem Gerät</strong>. Gespeichert:{' '}
+            <span className="font-mono">morgendrot.iotaSubmitMode</span> (<span className="font-mono">relay</span> oder leer ={' '}
+            <span className="font-mono">client</span>).
           </p>
           <RadioGroup
             className="grid gap-2"
@@ -427,7 +432,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
             <div className="flex items-start gap-2">
               <RadioGroupItem value="client" id="iota-mode-client" className="mt-0.5" aria-label="Direkt Standard" />
               <Label htmlFor="iota-mode-client" className="cursor-pointer text-[11px] font-normal leading-snug">
-                Direkt (Standard)
+                Direkt mit IOTA (Standard)
               </Label>
             </div>
             <div className="flex items-start gap-2">
@@ -442,8 +447,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         <div className="space-y-3 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
-            Für <strong className="text-foreground">Mailbox-Warteschlange Klartext</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Verschlüsselte Outbox-Einträge laufen weiter über <span className="font-mono">/api</span>, sobald die Basis
-            erreichbar ist.
+            Für die <strong className="text-foreground">Mailbox-Warteschlange</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Klartext und (mit ECDH-Material) Verschlüsseltes zuerst direkt; scheitert der RPC-Versand, wird <span className="font-mono">/api</span> versucht, wenn die Basis erreichbar ist.
           </p>
           <div className="space-y-1.5">
             <Label className="text-[11px] text-muted-foreground">Fullnode-URL (https://…)</Label>
