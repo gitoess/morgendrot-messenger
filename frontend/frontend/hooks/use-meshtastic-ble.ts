@@ -16,6 +16,8 @@ import {
 import { plaintextStartsWithMorgEmergencyV1 } from '@/frontend/lib/morg-emergency-v1-text'
 import { buildMorgSosAckV1Wire, tryParseMorgSosAckV1Plaintext } from '@/frontend/lib/morg-sos-ack-wire'
 import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
+import { formatMeshtasticNodeIdFromNum } from '@/frontend/lib/meshtastic-node-id'
+import { throwIfMeshtasticRoutingFailed } from '@/frontend/lib/meshtastic-routing-error'
 
 const V2_MAX_BYTES = 240
 
@@ -92,10 +94,6 @@ export type MeshtasticBleOptions = {
   shouldAutoAckSosMesh?: () => boolean
 }
 
-function nodeNumToMeshId(from: number): string {
-  return `!${Number(from).toString(16)}`
-}
-
 export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const [device, setDevice] = useState<MeshDevice | null>(null)
   const [connecting, setConnecting] = useState(false)
@@ -154,7 +152,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       seen.add(dedup)
 
       const addrs = Object.keys(dirRef.current)
-      const fromMesh = nodeNumToMeshId(pm.from)
+      const fromMesh = formatMeshtasticNodeIdFromNum(pm.from)
       const fullWire = pm.data
       void findAddressByV2Fingerprint(parsed.fingerprintHex, addrs).then(async (senderAddr) => {
         const decrypt = decryptRef.current
@@ -238,7 +236,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const dedup = `txt:${pm.from}:${pm.id}`
       if (seen.has(dedup)) return
       seen.add(dedup)
-      const fromMesh = nodeNumToMeshId(pm.from)
+      const fromMesh = formatMeshtasticNodeIdFromNum(pm.from)
       const ts = pm.rxTime.getTime()
       const body = normalizeChatMessageContentForDisplay(pm.data)
       const dedupKey = contentDedupKey(`mesh:${fromMesh}`, body, ts)
@@ -302,7 +300,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const sendBinaryV2 = useCallback(
     async (wire: Uint8Array, destination: number | 'broadcast' = 'broadcast') => {
       if (!device) throw new Error('Meshtastic nicht verbunden')
-      return device.sendPacket(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
+      const r = await device.sendPacket(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
+      throwIfMeshtasticRoutingFailed(r, 'Mesh v2 (PRIVATE_APP)')
+      return r
     },
     [device]
   )
@@ -310,7 +310,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const sendMeshText = useCallback(
     async (text: string, destination: number | 'broadcast' = 'broadcast') => {
       if (!device) throw new Error('Meshtastic nicht verbunden')
-      return device.sendText(text, destination)
+      const r = await device.sendText(text, destination)
+      throwIfMeshtasticRoutingFailed(r, 'Meshtastic-Text (LongFast)')
+      return r
     },
     [device]
   )
