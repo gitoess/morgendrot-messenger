@@ -38,4 +38,7 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   setMeshProgress?: (line: string | null) => void
   /** Nach Enqueue in die Mailbox-Offline-Warteschlange (§ H.3g 7a): UI-Zähler aktualisieren. */
   onOfflineMailboxQueueChanged?: () => void
+  /** Klartext-Funk: an feste Node-ID (!hex) statt Mesh-Broadcast. */
+  meshPlaintextToNodeEnabled: boolean
+  meshPlaintextNodeId: string
 }

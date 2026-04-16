@@ -11,8 +11,8 @@ function primarySend(container: HTMLElement) {
   return el as HTMLButtonElement
 }
 
-function delayedMirrorCheckbox(container: HTMLElement) {
-  const el = container.querySelector('[data-testid="delayed-mirror-to-iot-checkbox"]')
+function loraTangleModeRadio(container: HTMLElement) {
+  const el = container.querySelector('[data-testid="lora-mode-lora-tangle"]')
   expect(el).toBeInstanceOf(HTMLInputElement)
   return el as HTMLInputElement
 }
@@ -61,6 +61,10 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     onSend: vi.fn(),
     status: 'idle',
     statusMsg: '',
+    meshPlaintextToNodeEnabled: false,
+    onMeshPlaintextToNodeEnabledChange: vi.fn(),
+    meshPlaintextNodeId: '',
+    onMeshPlaintextNodeIdChange: vi.fn(),
     ...over,
   }
 }
@@ -127,6 +131,10 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         onSend={vi.fn()}
         status="idle"
         statusMsg="Funk: LUMA …"
+        meshPlaintextToNodeEnabled={false}
+        onMeshPlaintextToNodeEnabledChange={vi.fn()}
+        meshPlaintextNodeId=""
+        onMeshPlaintextNodeIdChange={vi.fn()}
       />
     )
     expect(screen.getByRole('status')).toHaveTextContent(/Luma 2\/5 · Chroma ausstehend/)
@@ -178,6 +186,10 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         status="idle"
         statusMsg=""
         offlineMailboxQueuePending={2}
+        meshPlaintextToNodeEnabled={false}
+        onMeshPlaintextToNodeEnabledChange={vi.fn()}
+        meshPlaintextNodeId=""
+        onMeshPlaintextNodeIdChange={vi.fn()}
       />
     )
     expect(screen.getByText(/Mailbox-Warteschlange/)).toBeInTheDocument()
@@ -239,6 +251,10 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         statusMsg=""
         offlineMailboxQueuePending={1}
         offlineMailboxQueueUntrustedTimeCount={1}
+        meshPlaintextToNodeEnabled={false}
+        onMeshPlaintextToNodeEnabledChange={vi.fn()}
+        meshPlaintextNodeId=""
+        onMeshPlaintextNodeIdChange={vi.fn()}
       />
     )
     expect(screen.getByText(/Gerätezeit[\s\S]*?Einreihen nicht verifiziert/)).toBeInTheDocument()
@@ -292,6 +308,10 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         offlineMailboxQueuePending={1}
         offlineMailboxQueueBackoffCount={1}
         offlineMailboxQueueErrorHint="rpc timeout"
+        meshPlaintextToNodeEnabled={false}
+        onMeshPlaintextToNodeEnabledChange={vi.fn()}
+        meshPlaintextNodeId=""
+        onMeshPlaintextNodeIdChange={vi.fn()}
       />
     )
     expect(screen.getByText(/Backoff-Zeitfenster/)).toBeInTheDocument()
@@ -343,6 +363,23 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
+  it('Klartext-Funk-Broadcast: Senden ohne 0x-Empfänger möglich (Heltec-Pfad)', () => {
+    const onSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          recipient: '',
+          message: 'Hi mesh',
+          forcedTransport: 'mesh',
+          meshPlaintextToNodeEnabled: false,
+          onSend,
+        })}
+      />
+    )
+    expect(primarySend(container)).toBeEnabled()
+  })
+
   it('aktiviert Senden bei Klartext mit Empfänger und Kurznachricht', () => {
     const onSend = vi.fn()
     const addr = `0x${'a'.repeat(64)}`
@@ -363,7 +400,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
-  it('ruft onDelayMirrorToIotaChange bei Delayed-Upload-Checkbox (privat, Mesh) auf', () => {
+  it('ruft onDelayMirrorToIotaChange bei LoRa+Tangle (privat, Mesh) auf', () => {
     const onDelayMirrorToIotaChange = vi.fn()
     const { container } = render(
       <ChatViewSendPanel
@@ -374,7 +411,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    fireEvent.click(delayedMirrorCheckbox(container))
+    fireEvent.click(loraTangleModeRadio(container))
     expect(onDelayMirrorToIotaChange).toHaveBeenCalledWith(true)
   })
 

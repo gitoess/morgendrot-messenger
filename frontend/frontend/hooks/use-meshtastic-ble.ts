@@ -19,6 +19,39 @@ import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 
 const V2_MAX_BYTES = 240
 
+/** Chromium u. a.: Policy / sicherer Kontext — Nutzerhinweis anhängen. */
+function augmentWebBluetoothConnectError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  const extra: string[] = []
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (host === '0.0.0.0') {
+      extra.push(
+        'Du öffnest die App über http://0.0.0.0:… — das ist oft kein sicherer Kontext für Web Bluetooth. Am PC: http://127.0.0.1:3341 oder http://localhost:3341 (Next lauscht weiter auf allen Interfaces).'
+      )
+    }
+    if (!window.isSecureContext) {
+      extra.push(
+        'Diese Origin ist kein „sicherer Kontext“ (Web Bluetooth: nur HTTPS oder http://127.0.0.1 / localhost). Unter http://<LAN-IP>… blockiert Chrome die API oft — nutze z. B. USB-adb reverse zu 127.0.0.1:3341 oder eine HTTPS-Dev-URL.'
+      )
+    }
+  }
+  if (/globally disabled|enterprise policy|policy has disabled|blocked by policy/i.test(msg)) {
+    const brave = typeof navigator !== 'undefined' && /Brave/i.test(navigator.userAgent)
+    if (brave) {
+      extra.push(
+        'Brave schaltet Web Bluetooth standardmäßig ab (Privacy). brave://flags: „Web Bluetooth“ und/oder „Experimental Web Platform features“ auf Enabled, Brave neu starten; für localhost ggf. Löwen-Schild (Shields) für diese Site deaktivieren. Für den Heltec-Messenger-Test sind Google Chrome oder Microsoft Edge meist am unkompliziertesten.'
+      )
+    } else {
+      extra.push(
+        'Zusätzlich prüfen: Chrome-Profil ohne Unternehmens-/Kinderkontrolle, chrome://flags (Web Bluetooth / experimentelle Plattform-Features), normale Chrome-Installation (kein reiner WebView-Wrapper).'
+      )
+    }
+  }
+  if (extra.length === 0) return msg
+  return `${msg}\n\n${extra.join('\n\n')}`
+}
+
 /** BLE/Web-BT: Gerät sauber vom GATT trennen (verhindert „hängende“ Verbindungen beim erneuten Koppeln). */
 async function disconnectMeshDevice(device: MeshDevice | null): Promise<void> {
   if (!device) return
@@ -248,8 +281,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const mesh = new MeshDevice(transport)
       setDevice(mesh)
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setError(msg)
+      setError(augmentWebBluetoothConnectError(e))
       setDevice(null)
       deviceRef.current = null
     } finally {
@@ -276,9 +308,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   )
 
   const sendMeshText = useCallback(
-    async (text: string) => {
+    async (text: string, destination: number | 'broadcast' = 'broadcast') => {
       if (!device) throw new Error('Meshtastic nicht verbunden')
-      return device.sendText(text, 'broadcast')
+      return device.sendText(text, destination)
     },
     [device]
   )

@@ -142,24 +142,25 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             ? 'Lesbar nur mit Partner-Key; Entschlüsselung auf diesem Node bei entsperrtem Vault (kein Signal-PFS).'
             : forcedTransport === 'internet'
               ? 'Klartext: sichtbar in der Chain (/send-plain).'
-              : 'Klartext: LoRa-Pfad technisch noch nicht frei – zum Senden „online“ wählen oder verschlüsseln.'}
+              : 'Klartext + funk: Standard-Meshtastic-Text (LongFast), kein /connect. Verschlüsselt + funk = Mesh v2 (Handshake nötig).'}
         </span>
       </div>
 
-      {!isPrivate && (
-        <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
-          <strong className="text-foreground">Pinnwand:</strong> Sendepfad (Online/Funk) nur im{' '}
-          <strong className="text-foreground">privaten Chat</strong>.
+      {!isPrivate && !encrypted && (
+        <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">
+          <strong className="text-foreground">Pinnwand · Klartext:</strong> Du kannst{' '}
+          <strong className="text-foreground">„funk“</strong> wählen und (mit verbundenem Heltec) Meshtastic-Klartext
+          senden — ohne 0x-Empfänger bei Broadcast. Verschlüsselt/IOTA: privater Chat.
         </p>
       )}
 
-      {isPrivate && (
+      {(isPrivate || !encrypted) && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-4">
           <p className="text-sm font-medium text-foreground">Sendepfad</p>
-          {!encrypted && (
+          {!encrypted && forcedTransport !== 'mesh' && (
             <p className="rounded-md border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-[11px] text-orange-950 dark:text-orange-100/95">
-              <strong>Klartext:</strong> nur <strong>online (IOTA)</strong> wird gesendet. Funk/Ad-hoc: bitte auf{' '}
-              <strong>verschlüsselt</strong> wechseln oder Sendepfad <strong>online</strong> wählen.
+              <strong>Klartext:</strong> mit <strong>online</strong> über IOTA (<span className="font-mono">/send-plain</span>).
+              Für <strong>funk</strong> Meshtastic-Klartext wählen (kein 0x nötig bei Broadcast).
             </p>
           )}
           <p className="text-[11px] leading-relaxed text-muted-foreground border-b border-border pb-3">
@@ -231,23 +232,25 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
                 <span className="text-emerald-600 dark:text-emerald-400">Heltec/Web-BT verbunden – du kannst senden (LoRa-Pipeline / LUMA+CHROMA).</span>
               ) : meshBleSupported ? (
                 <span>
-                  Heltec noch nicht gekoppelt → unten{' '}
-                  <strong>Partner verbinden</strong> öffnen und <strong>Meshtastic verbinden</strong> (Web Bluetooth).
+                  Heltec noch nicht gekoppelt: <strong className="text-foreground">Partner-Setup</strong> öffnen
+                  (erscheint <strong className="text-foreground">zwischen</strong> dieser Karte und dem Nachrichtenfeld),
+                  dort <strong className="text-foreground">Heltec (Web Bluetooth) verbinden</strong> — der Browser
+                  (Chrome/Edge; bei Brave ggf. <span className="font-mono">brave://flags</span>) öffnet die Geräteliste zum Koppeln.
                 </span>
               ) : (
-                <span>Dieser Browser unterstützt kein Web Bluetooth – Chrome/Edge auf Desktop verwenden.</span>
+                <span>
+                  Dieser Browser unterstützt kein Web Bluetooth – Chrome/Edge auf Android oder Desktop; bei Brave Web
+                  Bluetooth oft deaktiviert (<span className="font-mono">brave://flags</span>).
+                </span>
               )}
               {onOpenPartnerSetup ? (
-                <>
-                  {' '}
-                  <button
-                    type="button"
-                    onClick={onOpenPartnerSetup}
-                    className="ml-1 inline font-medium text-primary underline-offset-2 hover:underline"
-                  >
-                    Partner verbinden öffnen
-                  </button>
-                </>
+                <button
+                  type="button"
+                  onClick={onOpenPartnerSetup}
+                  className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 sm:min-h-0 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-inherit sm:font-medium sm:text-primary sm:underline sm:underline-offset-2"
+                >
+                  Partner-Setup öffnen (Handshake + Mesh)
+                </button>
               ) : null}
             </div>
           )}

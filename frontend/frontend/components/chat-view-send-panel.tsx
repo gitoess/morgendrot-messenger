@@ -12,6 +12,7 @@ import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachmen
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isLoRaMeshTransport, MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
+import { parseMeshtasticNodeIdToNumber } from '@/frontend/lib/meshtastic-node-id'
 import type {
   AttachmentBarPort,
   ComposerDraftPort,
@@ -55,6 +56,11 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   offlineMailboxQueueBackoffCount?: number
   /** Kurztext der zuletzt gespeicherten Sendefehlermeldung (höchste `attempts`), nur lokal. */
   offlineMailboxQueueErrorHint?: string
+  /** Klartext-Funk: Ziel-Knoten (!hex) statt Broadcast. */
+  meshPlaintextToNodeEnabled: boolean
+  onMeshPlaintextToNodeEnabledChange: (v: boolean) => void
+  meshPlaintextNodeId: string
+  onMeshPlaintextNodeIdChange: (v: string) => void
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -79,6 +85,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     offlineMailboxQueueUntrustedTimeCount = 0,
     offlineMailboxQueueBackoffCount = 0,
     offlineMailboxQueueErrorHint = '',
+    meshPlaintextToNodeEnabled,
+    onMeshPlaintextToNodeEnabledChange,
+    meshPlaintextNodeId,
+    onMeshPlaintextNodeIdChange,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -154,11 +164,18 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       attachmentBarProps.attachedTxtFile != null ||
       attachmentBarProps.attachedLora != null)
 
+  /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
+  const meshKlartextRecipientOk =
+    encrypted ||
+    recipient.trim().length > 0 ||
+    (forcedTransport === 'mesh' &&
+      (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
+
   const sendDisabled =
     sending ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
-    (!encrypted && !recipient.trim()) ||
+    (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked
 
   const sosSendMode =
@@ -192,38 +209,113 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
             <p className="mt-1 text-xs text-muted-foreground">
-              Bei unverschlüsselten Nachrichten muss die Empfänger-Adresse angegeben werden
+              {forcedTransport === 'mesh'
+                ? 'Online/Mailbox: 0x-Empfänger nötig. Funk-Klartext-Broadcast: 0x leer lassen möglich, wenn Heltec verbunden und „an Node-ID“ aus ist.'
+                : 'Bei unverschlüsselten Nachrichten muss die Empfänger-Adresse (0x…) angegeben werden.'}
             </p>
           </div>
         )}
 
-        {isPrivate && encrypted && forcedTransport === 'mesh' && (
-          <label
-            className={cn(
-              'flex cursor-pointer items-start gap-2 rounded-lg border border-border bg-muted/20 p-3 text-sm text-foreground',
-              (attachmentBarProps.attachedLora != null ||
-                !!attachmentBarProps.attachedBlobBase64 ||
-                !!attachmentBarProps.attachedAudioBase64 ||
-                attachmentBarProps.attachedTxtFile != null) &&
-                'pointer-events-none opacity-50'
-            )}
-          >
-            <input
-              type="checkbox"
-              checked={delayMirrorToIota}
-              onChange={(e) => onDelayMirrorToIotaChange(e.target.checked)}
-              aria-label="Delayed Upload: Klartext nach Mailbox (IOTA) spiegeln"
-              data-testid="delayed-mirror-to-iot-checkbox"
-              className="mt-0.5 rounded border-border"
-            />
-            <span>
-              <span className="font-medium">Delayed Upload (Text)</span>
-              <span className="block text-xs text-muted-foreground">
-                Nach Empfang und Entschlüsselung wird der Klartext zusätzlich per IOTA-Mailbox gespeichert (nur
-                reiner Text ohne Anhang; LoRa-Bild-Zweiteiler folgt separat).
+        {!encrypted && forcedTransport === 'mesh' && (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
+            <p className="text-xs font-medium text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              Standard-Meshtastic-Text — <strong className="text-foreground">ohne</strong> Morgendrot-Mesh-v2 und{' '}
+              <strong className="text-foreground">ohne</strong> /connect. Broadcast an alle im Kanal, oder Ziel-Knoten
+              (!… wie am Radio angezeigt).
+            </p>
+            <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={meshPlaintextToNodeEnabled}
+                onChange={(e) => onMeshPlaintextToNodeEnabledChange(e.target.checked)}
+                className="mt-1 border-border"
+              />
+              <span>
+                An Node-ID senden (statt Broadcast)
+                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
+                  Nur Klartext + „funk“. Verschlüsselt + Funk nutzt weiter Mesh v2 und braucht Handshake + /connect.
+                </span>
               </span>
-            </span>
-          </label>
+            </label>
+            {meshPlaintextToNodeEnabled ? (
+              <div>
+                <label className="mb-1 block text-xs font-medium text-foreground">Node-ID</label>
+                <input
+                  type="text"
+                  value={meshPlaintextNodeId}
+                  onChange={(e) => onMeshPlaintextNodeIdChange(e.target.value.trim())}
+                  placeholder="!1a2b3c4d"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+                  spellCheck={false}
+                />
+                {meshPlaintextNodeId.trim() && parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) === null ? (
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Format: Ausrufezeichen + 1–8 Hex-Ziffern.</p>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {isPrivate && encrypted && forcedTransport === 'mesh' && (
+          <fieldset className="rounded-lg border border-border bg-muted/20 p-3">
+            <legend className="text-sm font-medium text-foreground">LoRa → Empfänger (Funk)</legend>
+            <p className="mb-3 text-xs text-muted-foreground">
+              Wähle, ob die Nachricht nur über LoRa geht oder zusätzlich nach dem Funk in den IOTA-Tangle gespiegelt
+              werden soll (Delayed Mirror — der Empfänger braucht später Basis/WLAN).
+            </p>
+            <div className="space-y-3">
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="morg-lora-tangle-mode"
+                  checked={!delayMirrorToIota}
+                  onChange={() => onDelayMirrorToIotaChange(false)}
+                  aria-label="Nur LoRa: Nachricht nur über Meshtastic, ohne IOTA-Spiegel"
+                  data-testid="lora-mode-nur-lora"
+                  className="mt-0.5 border-border"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="font-medium">Nur LoRa</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                    Klassisch: Text, Bild (kompakt), Audio, .txt oder LoRa-Bild (LUMA+CHROMA) nur über Mesh v2 —
+                    kein automatischer Mailbox-/Tangle-Schritt.
+                  </span>
+                  <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground/95">
+                    Ohne Tangle-Verankerung ist keine Forensic-Attestation für diese Funk-Sendung möglich (Manifest
+                    braucht Mailbox-/Chain-Bezug).
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDelayMirrorToIotaChange(true)}
+                    className="mt-2 inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/60"
+                    data-testid="lora-mode-spaeter-verankern"
+                  >
+                    Später verankern: auf „LoRa + Tangle“ wechseln
+                  </button>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
+                <input
+                  type="radio"
+                  name="morg-lora-tangle-mode"
+                  checked={delayMirrorToIota}
+                  onChange={() => onDelayMirrorToIotaChange(true)}
+                  aria-label="LoRa und Tangle: nach Empfang zusätzlich per Mailbox in den Tangle spiegeln"
+                  data-testid="lora-mode-lora-tangle"
+                  className="mt-0.5 border-border"
+                />
+                <span>
+                  <span className="font-medium">LoRa + Tangle</span>
+                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                    Zuerst Funk wie oben; nach Entschlüsselung beim Empfänger wird der Klartext per Delayed Mirror
+                    in die Mailbox geschrieben und damit im Tangle verankert (Delayed-Mirror-Warteschlange am
+                    Empfänger, wie zuvor die Checkbox „Delayed Upload“).
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
         )}
 
         {canOfferSosText ? (

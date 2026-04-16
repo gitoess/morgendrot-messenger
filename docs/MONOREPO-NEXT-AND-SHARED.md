@@ -28,7 +28,7 @@ Damit gilt: **Eine** Quelle auf der Platte (`src/shared/*.ts`), **kein** manuell
 | Variante | Wann sinnvoll | Nachteil |
 |----------|----------------|----------|
 | **`turbopack.root` = Monorepo-Parent** | **Hier aktiv** neben `file:` + `transpilePackages`, damit der Link nach `src/shared` aufgelöst wird | Etwas breiterer Watch-/Resolve-Raum; siehe [Turbopack root](https://nextjs.org/docs/app/api-reference/next-config-js/turbopack#root-directory). |
-| **`next dev --webpack` / `next build --webpack`** | Turbopack zickt auf einer Plattform | Langsamerer Dev/Build. |
+| **`next dev --webpack` / `next build --webpack`** | Turbopack zickt auf einer Plattform **oder** der Messenger braucht den **Webpack-only**-Alias `util` → `@meshtastic/core`-Shim (Turbopack: globaler `util`-Alias bricht u. a. **Server/pngjs**; unter Windows oft **keine** Auflösung absoluter Shim-Pfade) | Langsamerer Dev/Build. |
 | **Symlink nur im Repo** | Ohne npm-`file:` | Windows/Git/CI oft fragiler als `file:`. |
 | **Spiegel-Datei + Sync-Skript** | — | Zwei Quellen, leicht driftend — **verworfen**. |
 

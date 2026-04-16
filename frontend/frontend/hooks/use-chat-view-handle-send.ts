@@ -33,6 +33,13 @@ import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
+import {
+  isForensicImageMailboxAttestationEnabled,
+  runForensicMailboxAttestationAfterSend,
+  sha256HexFromBase64Bytes,
+} from '@/frontend/lib/forensic-mailbox-attestation'
+import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
+import { parseMeshtasticNodeIdToNumber, resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -128,6 +135,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setMeshProgress,
     onOfflineMailboxQueueChanged,
     deviceTimeTrustWarn,
+    meshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -142,6 +151,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const meshBurstOpts: SendMeshV2WireBurstOptions | undefined = isEmergencySend
       ? { priorityFlash: true }
       : undefined
+
+    const meshPlaintextDest = (): number | 'broadcast' | null =>
+      resolveMeshtasticPlaintextDestination(meshPlaintextToNodeEnabled, meshPlaintextNodeId)
 
     const sendMeshBurst = (text: string) =>
       sendMeshV2WireBurst(
@@ -210,6 +222,37 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       throw lastErr
     }
 
+    const singleWireSuccessMsg = (): string => {
+      if (!isPrivate) return 'Gesendet!'
+      if (!encrypted) {
+        if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
+        if (forcedTransport === 'mesh') return 'Klartext über LoRa (Meshtastic-Text) gesendet.'
+      }
+      if (forcedTransport === 'mesh' && encrypted && sosDeliveredViaMailboxAck) {
+        return 'SOS: über IOTA-Mailbox zugestellt (Funk-Wiederholungen nach Basis-Eingang gestoppt).'
+      }
+      if (forcedTransport === 'mesh' && encrypted && isPrivate && !isEmergencySend) {
+        return delayMirrorToIota
+          ? 'Nachricht per LoRa gesendet; wird beim Empfänger im Tangle verankert (Delayed Mirror).'
+          : 'Nur per LoRa gesendet (ohne Tangle — keine Forensic-Attestation für diese Sendung).'
+      }
+      if (forcedTransport === 'mesh') return 'Nur Funk: Mesh v2 (PRIVATE_APP) gesendet.'
+      if (forcedTransport === 'internet') return 'Online (IOTA/Mailbox) gesendet.'
+      return 'Gesendet.'
+    }
+
+    const shouldLoadMessagesAfterSend = (): boolean => {
+      if (!isPrivate) return true
+      if (!encrypted) {
+        if (forcedTransport === 'internet') return true
+        if (forcedTransport === 'mesh') return true
+        return false
+      }
+      if (forcedTransport === 'mesh') return false
+      if (forcedTransport === 'internet') return true
+      return false
+    }
+
     if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh') {
       const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
         attachedLora.lumaWire,
@@ -221,6 +264,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         applyValidationError(v, setStatus, setStatusMsg)
         return
       }
+      const meshLuma = delayMirrorToIota ? prependDelayMirrorMarker(lumaText) : lumaText
+      const meshChroma = delayMirrorToIota ? prependDelayMirrorMarker(chromaText) : chromaText
       setLoraOnlineFallbackOffer(null)
       loraOnlineOfferPayloadRef.current = null
       setSending(true)
@@ -237,7 +282,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setStatusMsg('Funk: LUMA (Mesh v2)…')
           let lumaPktTotal = 1
           await sendMeshV2WireBurst(
-            lumaText,
+            meshLuma,
             meshtastic.sendBinaryV2.bind(meshtastic),
             (sent, total) => {
               lumaPktTotal = total
@@ -249,7 +294,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           )
           setStatusMsg('Funk: CHROMA (Mesh v2)…')
           await sendMeshV2WireBurst(
-            chromaText,
+            meshChroma,
             meshtastic.sendBinaryV2.bind(meshtastic),
             (sent, total) => {
               setMeshProgress?.(`Luma ${lumaPktTotal}/${lumaPktTotal} · Chroma ${sent}/${total}`)
@@ -260,7 +305,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           )
           setStatus('success')
           setStatusMsg(
-            'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler; jede Phase kann mehrere Mesh-v2-Pakete nutzen).'
+            delayMirrorToIota
+              ? 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Wird beim Empfänger im Tangle verankert (Delayed Mirror; WLAN/Basis).'
+              : 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Nur per LoRa — ohne Tangle keine Forensic-Attestation.'
           )
           setMessage('')
           setTimeout(() => void loadMessages(), 500)
@@ -283,10 +330,71 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
+    if (attachedLora && encrypted && isPrivate && forcedTransport === 'internet') {
+      const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
+        attachedLora.lumaWire,
+        attachedLora.chromaWire,
+        message
+      )
+      const v = validateLoraDualWireUtf8(lumaText, chromaText)
+      if (!v.ok) {
+        applyValidationError(v, setStatus, setStatusMsg)
+        return
+      }
+      setLoraOnlineFallbackOffer(null)
+      loraOnlineOfferPayloadRef.current = null
+      setSending(true)
+      setStatus('idle')
+      try {
+        const rTrim = recipient.trim()
+        const n1 = BigInt(nextOfflineMailboxClientOutSeq())
+        const w1 = prependMailboxOutNonceMarker(lumaText, n1)
+        setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
+        const r1 = await sendEncryptedMailboxHybrid(rTrim, w1)
+        if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA fehlgeschlagen.')
+        const n2 = BigInt(nextOfflineMailboxClientOutSeq())
+        const w2 = prependMailboxOutNonceMarker(chromaText, n2)
+        setStatusMsg('Online: CHROMA (IOTA/Mailbox)…')
+        const r2 = await sendEncryptedMailboxHybrid(rTrim, w2)
+        if (!r2.ok) throw new Error(r2.error || r2.message || 'CHROMA fehlgeschlagen.')
+        const baseSuccess = 'Online (IOTA/Mailbox): LUMA + CHROMA gesendet.'
+        setStatus('success')
+        const mbTx = (r2.ok === true ? r2.txDigest : undefined) ?? (r1.ok === true ? r1.txDigest : undefined)
+        if (isForensicImageMailboxAttestationEnabled()) {
+          await runForensicMailboxAttestationAfterSend({
+            recipient: rTrim,
+            senderAddress: myAddress.trim(),
+            primary: { payloadUtf8: w1, messageNonceU64: n1 },
+            secondary: { payloadUtf8: w2, messageNonceU64: n2 },
+            imageContentSha256Hex: null,
+            deviceTimeTrustWarn: !!deviceTimeTrustWarn,
+            baseSuccessMsg: baseSuccess,
+            setStatusMsg,
+            mailboxTxDigest: mbTx,
+          })
+        } else {
+          setStatusMsg(baseSuccess + formatTxDigestStatusSuffix(mbTx))
+        }
+        setMessage('')
+        if (shouldLoadMessagesAfterSend()) {
+          setTimeout(() => void loadMessages(), 500)
+        }
+      } catch (e) {
+        setStatus('error')
+        setStatusMsg(e instanceof Error ? e.message : String(e))
+      } finally {
+        setMeshProgress?.(null)
+        clearCompactAttachment()
+        setSending(false)
+        setTimeout(() => setStatus('idle'), 6000)
+      }
+      return
+    }
+
     if (attachedLora) {
       setStatus('error')
       setStatusMsg(
-        'LoRa-Zweiphasen-Bild: nur privater Chat, Verschlüsselung an und Sendepfad „funk“. Oder Anhang entfernen.'
+        'LoRa-Zweiphasen-Bild: privater Chat, Verschlüsselung an — Sendepfad „online“ (IOTA) oder „funk“ (Mesh). Oder Anhang entfernen.'
       )
       setTimeout(() => setStatus('idle'), 6000)
       return
@@ -367,7 +475,25 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       textSnaps = textSnaps.map((s) => prependMorgEmergencyV1Marker(s, k))
     }
 
-    if (!encrypted && !recipient.trim()) return
+    const meshKlartextOkWithoutZeroXRecipient =
+      forcedTransport === 'mesh' &&
+      (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
+
+    if (!encrypted && !recipient.trim()) {
+      if (!meshKlartextOkWithoutZeroXRecipient) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'Klartext: Empfänger-Adresse (0x…) angeben — oder bei „funk“ ohne Ziel-Knoten das Heltec verbinden und Broadcast nutzen (Haken „an Node-ID“ aus). Mit Haken: gültige Node-ID z. B. !1a2b3c4d.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+    }
 
     const meshBlob = validateMeshDisallowsIotaCompactBlob(forcedTransport, attachedBlobBase64)
     if (!meshBlob.ok) {
@@ -464,8 +590,15 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return 'duplicate'
     }
 
+    type MailboxSendCapture = {
+      payloadUtf8: string
+      messageNonceU64: bigint
+      encrypted: boolean
+      txDigest?: string
+    }
+
     type PartOk =
-      | { ok: true; meshFallback?: { onlineErr: string } }
+      | { ok: true; meshFallback?: { onlineErr: string }; mailboxCapture?: MailboxSendCapture }
       | { ok: false }
 
     const sendOnePart = async (textSnap: string): Promise<PartOk> => {
@@ -488,7 +621,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const res = enc
           ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
           : await sendPlaintextMailboxHybrid(recipient.trim(), wireForApi, messageNonceU64)
-        if (res.ok) return { ok: true }
+        if (res.ok) {
+          return {
+            ok: true,
+            mailboxCapture: {
+              payloadUtf8: wireForApi,
+              messageNonceU64,
+              encrypted: enc,
+              txDigest: res.txDigest,
+            },
+          }
+        }
         const errText = res.error || res.message || 'Fehler'
         const qm = await queueMailboxIfAllowed(
           enc ? 'encrypted_send' : 'plain_send',
@@ -514,6 +657,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (!isPrivate) {
+        if (forcedTransport === 'mesh') {
+          if (encrypted) {
+            return failSend(
+              'Öffentlicher Kanal: verschlüsselter Funk braucht privaten Chat mit Handshake und /connect. Wähle Klartext + „funk“ oder wechsle in den privaten Chat.'
+            )
+          }
+          if (!meshtastic.connected) return failSend(MESH_BT_NOT_CONNECTED_MSG)
+          const dest = meshPlaintextDest()
+          if (dest === null) {
+            return failSend(
+              'Funk-Klartext an Node: gültige Node-ID (z. B. !1a2b3c4d) eintragen — oder Haken „an Node-ID“ deaktivieren für Broadcast.'
+            )
+          }
+          try {
+            await meshtastic.sendMeshText(textSnap, dest)
+            return { ok: true }
+          } catch (e) {
+            setStatus('error')
+            setStatusMsg(e instanceof Error ? e.message : String(e))
+            return { ok: false }
+          }
+        }
         return tryMailbox(encrypted)
       }
 
@@ -522,6 +687,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return tryMailbox(false)
         }
         if (forcedTransport === 'mesh') {
+          const dest = meshPlaintextDest()
+          if (dest === null) {
+            return failSend(
+              'Funk-Klartext: gültige Node-ID (z. B. !1a2b3c4d) oder Haken „an Node-ID“ aus für Broadcast.'
+            )
+          }
           if (isEmergencySend) {
             const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
             let lastErr: unknown
@@ -530,7 +701,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 if (!meshtastic.connected) {
                   throw new Error(MESH_BT_NOT_CONNECTED_MSG)
                 }
-                await meshtastic.sendMeshText(textSnap)
+                await meshtastic.sendMeshText(textSnap, dest)
                 return { ok: true }
               } catch (e) {
                 lastErr = e
@@ -550,7 +721,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return failSend(MESH_BT_NOT_CONNECTED_MSG)
           }
           try {
-            await meshtastic.sendMeshText(textSnap)
+            await meshtastic.sendMeshText(textSnap, dest)
             return { ok: true }
           } catch (e) {
             setStatus('error')
@@ -577,14 +748,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       if (forcedTransport === 'mesh') {
         let wireText = textSnap
-        if (
-          delayMirrorToIota &&
-          encrypted &&
-          !isEmergencySend &&
-          !attachedBlobBase64 &&
-          !attachedAudioBase64 &&
-          !attachedTxtFile
-        ) {
+        if (delayMirrorToIota && encrypted && !isEmergencySend) {
           wireText = prependDelayMirrorMarker(textSnap)
         }
         try {
@@ -609,7 +773,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
         const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
-        if (res.ok) return { ok: true }
+        if (res.ok) {
+          return {
+            ok: true,
+            mailboxCapture: {
+              payloadUtf8: wireForApi,
+              messageNonceU64,
+              encrypted: true,
+              txDigest: res.txDigest,
+            },
+          }
+        }
         const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
         if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
           try {
@@ -676,32 +850,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return { ok: false }
     }
 
-    const singleWireSuccessMsg = (): string => {
-      if (!isPrivate) return 'Gesendet!'
-      if (!encrypted) {
-        if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
-        if (forcedTransport === 'mesh') return 'Klartext über LoRa (Meshtastic-Text) gesendet.'
-      }
-      if (forcedTransport === 'mesh' && encrypted && sosDeliveredViaMailboxAck) {
-        return 'SOS: über IOTA-Mailbox zugestellt (Funk-Wiederholungen nach Basis-Eingang gestoppt).'
-      }
-      if (forcedTransport === 'mesh') return 'Nur Funk: Mesh v2 (PRIVATE_APP) gesendet.'
-      if (forcedTransport === 'internet') return 'Online (IOTA/Mailbox) gesendet.'
-      return 'Gesendet.'
-    }
-
-    const shouldLoadMessagesAfterSend = (): boolean => {
-      if (!isPrivate) return true
-      if (!encrypted) {
-        if (forcedTransport === 'internet') return true
-        if (forcedTransport === 'mesh') return true
-        return false
-      }
-      if (forcedTransport === 'mesh') return false
-      if (forcedTransport === 'internet') return true
-      return false
-    }
-
     try {
       let lastOk: PartOk | null = null
       for (let i = 0; i < textSnaps.length; i++) {
@@ -748,15 +896,43 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       const successTail = mirrorFootnote + sosMeshPeerAckFootnote
-      setStatus('success')
+      let successMsg: string
       if (textSnaps.length > 1) {
-        setStatusMsg(`Alle ${textSnaps.length} Teile gesendet.${successTail}`)
+        successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
       } else if (lastOk?.ok && lastOk.meshFallback) {
-        setStatusMsg(
-          `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${successTail}`
-        )
+        successMsg = `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${successTail}`
       } else {
-        setStatusMsg(singleWireSuccessMsg() + successTail)
+        successMsg = singleWireSuccessMsg() + successTail
+      }
+
+      const forensicGate =
+        isForensicImageMailboxAttestationEnabled() &&
+        encrypted &&
+        isPrivate &&
+        forcedTransport === 'internet' &&
+        attachedBlobBase64 &&
+        textSnaps.length === 1 &&
+        lastOk?.ok === true &&
+        lastOk.mailboxCapture?.encrypted === true
+
+      setStatus('success')
+      if (forensicGate && lastOk?.ok && lastOk.mailboxCapture) {
+        const imgHash = await sha256HexFromBase64Bytes(attachedBlobBase64)
+        await runForensicMailboxAttestationAfterSend({
+          recipient: recipient.trim(),
+          senderAddress: myAddress.trim(),
+          primary: {
+            payloadUtf8: lastOk.mailboxCapture.payloadUtf8,
+            messageNonceU64: lastOk.mailboxCapture.messageNonceU64,
+          },
+          imageContentSha256Hex: imgHash,
+          deviceTimeTrustWarn: !!deviceTimeTrustWarn,
+          baseSuccessMsg: successMsg,
+          setStatusMsg,
+          mailboxTxDigest: lastOk.mailboxCapture.txDigest,
+        })
+      } else {
+        setStatusMsg(successMsg + formatTxDigestStatusSuffix(lastOk?.mailboxCapture?.txDigest))
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
@@ -796,6 +972,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     waitForMeshSosAckDigest,
     onOfflineMailboxQueueChanged,
     deviceTimeTrustWarn,
+    meshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
   ])
 
   return { handleSend }

@@ -32,6 +32,9 @@ import type { Message } from '@/frontend/lib/types'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { toast } from 'sonner'
 
+/** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
+const DELAY_MIRROR_TO_IOTA_LS = 'morgendrot.delayMirrorToIota'
+
 export type UseChatViewCoreParams = {
   isPrivate: boolean
   role: string
@@ -122,7 +125,23 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     return mergeAllMessages([...fromApi, ...meshOnly])
   }, [messages, inboxPackageFilter, bossView, role])
 
-  const [delayMirrorToIota, setDelayMirrorToIota] = useState(false)
+  const [delayMirrorToIota, setDelayMirrorToIotaState] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem(DELAY_MIRROR_TO_IOTA_LS) === '1'
+    } catch {
+      return false
+    }
+  })
+  const setDelayMirrorToIota = useCallback((v: boolean) => {
+    setDelayMirrorToIotaState(v)
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(DELAY_MIRROR_TO_IOTA_LS, v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
   /** LoRa LUMA/CHROMA Mesh-v2: Fortschrittszeile für die Anhang-Leiste (`Luma x/y · …`). */
   const [loraMeshProgressLine, setLoraMeshProgressLine] = useState<string | null>(null)
 
@@ -173,6 +192,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
     mailboxRecipient: recipient,
+    senderAddress: myAddress,
   })
   const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
     useChatViewApiStatusPoll({
@@ -277,6 +297,12 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
+    contactMeshNodeId,
+    setContactMeshNodeId,
+    meshPlaintextToNodeEnabled,
+    setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    setMeshPlaintextNodeId,
   } = useChatViewMeshPanelState()
 
   const {
@@ -365,6 +391,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setMeshProgress: setLoraMeshProgressLine,
     onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
     deviceTimeTrustWarn,
+    meshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
   })
 
   const {
@@ -496,6 +524,12 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
+    contactMeshNodeId,
+    setContactMeshNodeId,
+    meshPlaintextToNodeEnabled,
+    setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    setMeshPlaintextNodeId,
     attachedBlobBase64,
     attachedTxtFile,
     attachedAudioBase64,

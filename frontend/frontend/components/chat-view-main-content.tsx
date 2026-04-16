@@ -105,6 +105,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
+    contactMeshNodeId,
+    setContactMeshNodeId,
+    meshPlaintextToNodeEnabled,
+    setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    setMeshPlaintextNodeId,
     attachedBlobBase64,
     attachedTxtFile,
     attachedAudioBase64,
@@ -277,6 +283,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     offlineMailboxQueueUntrustedTimeCount,
     offlineMailboxQueueBackoffCount,
     offlineMailboxQueueErrorHint,
+    meshPlaintextToNodeEnabled,
+    onMeshPlaintextToNodeEnabledChange: setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    onMeshPlaintextNodeIdChange: setMeshPlaintextNodeId,
     ...asVoiceRecordSendPanel(
       {
         voicePhase,
@@ -320,7 +330,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } satisfies ChatViewTransportCardProps
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <ChatViewChatHeader
         isPrivate={isPrivate}
         encrypted={encrypted}
@@ -372,6 +382,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onContactBleAddressChange={setContactBleAddress}
           contactBleUuid={contactBleUuid}
           onContactBleUuidChange={setContactBleUuid}
+          contactMeshNodeId={contactMeshNodeId}
+          onContactMeshNodeIdChange={setContactMeshNodeId}
           contactBleBusy={contactBleBusy}
           setContactBleBusy={setContactBleBusy}
           meshExportPw={meshExportPw}
@@ -399,7 +411,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       )}
 
-      <ChatViewSendPanel {...sendPanelProps} />
+      <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
+        <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
+          Nachricht verfassen
+        </h2>
+        <ChatViewSendPanel {...sendPanelProps} />
+      </section>
 
       <ChatViewInboxPanel {...inboxPanelProps} />
     </div>

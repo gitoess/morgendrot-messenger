@@ -39,6 +39,9 @@ const extraDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS || '')
 
 const defaultDevOrigins = ['localhost', '127.0.0.1', 'localhost:3341', '127.0.0.1:3341']
 
+/** Client-only: @meshtastic/core → Node `util.formatWithOptions`; Next's `util` stub lacks it. */
+const nodeUtilClientShim = path.join(__dirname, 'frontend/lib/node-util-client-shim.ts')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   allowedDevOrigins: [...new Set([...defaultDevOrigins, ...extraDevOrigins])],
@@ -62,6 +65,23 @@ const nextConfig = {
    */
   turbopack: {
     root: path.resolve(repoRoot),
+    /**
+     * Kein `resolveAlias.util` hier: Turbopack wendet Aliase **global** an — dann bricht **Server**-Code
+     * (`require('util')` in pngjs, RSC, …). Zudem sind **absolute Windows-Pfade** in Turbopack-Aliasen oft
+     * nicht auflösbar („windows imports are not implemented yet“). Client-`util`-Shim nur über **Webpack**
+     * (`npm run dev` / `build` mit `--webpack` wo nötig), siehe `webpack` unten.
+     */
+  },
+  /** Nur **Client**-Bundle: echtes Node-`util` bleibt auf dem Server. Dafür Dev mit `next dev --webpack`. */
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      const prev = config.resolve.alias
+      config.resolve.alias = {
+        ...(typeof prev === 'object' && prev && !Array.isArray(prev) ? prev : {}),
+        util: nodeUtilClientShim,
+      }
+    }
+    return config
   },
   async rewrites() {
     return [

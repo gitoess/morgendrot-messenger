@@ -41,6 +41,8 @@ export type ChatViewSetupPanelProps = {
   onContactBleAddressChange: (v: string) => void
   contactBleUuid: string
   onContactBleUuidChange: (v: string) => void
+  contactMeshNodeId: string
+  onContactMeshNodeIdChange: (v: string) => void
   contactBleBusy: boolean
   setContactBleBusy: (v: boolean) => void
   meshExportPw: string
@@ -88,6 +90,8 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     onContactBleAddressChange,
     contactBleUuid,
     onContactBleUuidChange,
+    contactMeshNodeId,
+    onContactMeshNodeIdChange,
     contactBleBusy,
     setContactBleBusy,
     meshExportPw,
@@ -117,7 +121,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
   const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
       <h3 className="mb-4 font-semibold text-foreground">Partner verbinden · IOTA-Handshake & Funk (LoRa/Web-Bluetooth)</h3>
       {role === 'boss' && (
         <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2.5 dark:bg-amber-950/25">
@@ -234,10 +238,28 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           <Radio className="h-4 w-4" />
           Mesh / Funk (experimentell)
         </h4>
+        {typeof window !== 'undefined' && !window.isSecureContext ? (
+          <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-amber-950 dark:text-amber-50/90">
+            <strong className="text-foreground">Web Bluetooth:</strong> Chromium-Browser erlauben die API nur in einem{' '}
+            <strong className="text-foreground">sicheren Kontext</strong> (HTTPS oder{' '}
+            <span className="font-mono">http://127.0.0.1</span> / <span className="font-mono">localhost</span>). Unter{' '}
+            <span className="font-mono">http://192.168.…</span> o. Ä. erscheint oft{' '}
+            <span className="font-mono">Web Bluetooth API globally disabled</span> — Abhilfe:{' '}
+            <strong className="text-foreground">adb reverse tcp:3341</strong> und am Telefon{' '}
+            <span className="font-mono">http://127.0.0.1:3341</span>, oder TLS-Dev-URL / Deploy mit HTTPS.
+          </p>
+        ) : null}
         <p className="mb-3 text-xs text-muted-foreground">
-          Heltec per Web Bluetooth (Chrome): eingehende Texte und PRIVATE_APP Binary v2 erscheinen im Posteingang
-          (v2-Zuordnung über Adress-Fingerprint im Kontaktverzeichnis). Export/Import: Mesh-Metadaten inkl.{' '}
-          <span className="font-mono">bleUuid</span>-Reserve.
+          Verbindung: <strong className="text-foreground">Heltec (Web Bluetooth) verbinden</strong> nutzt die
+          Meshtastic-Bibliothek (<span className="font-mono">TransportWebBluetooth</span>) — der Browser zeigt die
+          System-<strong className="text-foreground">Bluetooth-Geräteliste</strong> (kein eigener „Gerät suchen“-Dialog in
+          Morgendrot). <strong className="text-foreground">USB am PC</strong> lädt ggf. nur Strom/Firmware-Serial; der
+          Messenger-Pfad hier geht per <strong className="text-foreground">BLE</strong> vom Rechner zum Heltec (PC-Bluetooth
+          an, Heltec sendet im Mesh-Kanal). <strong className="text-foreground">Brave</strong> hat Web Bluetooth oft
+          standardmäßig aus — <span className="font-mono">brave://flags</span> aktivieren oder <strong className="text-foreground">Chrome/Edge</strong>{' '}
+          nutzen; sicheren Kontext beachten. Eingehende Texte und{' '}
+          <span className="font-mono">PRIVATE_APP</span> Binary v2 erscheinen im Posteingang (Zuordnung über
+          Adress-Fingerprint). Export/Import: Mesh-Metadaten inkl. <span className="font-mono">bleUuid</span>-Reserve.
         </p>
         <div className="mb-4 flex flex-wrap gap-2">
           {!meshtastic.bleSupported ? (
@@ -267,14 +289,19 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           )}
         </div>
         {meshtastic.error && (
-          <p className="mb-2 text-xs text-red-500 dark:text-red-400">{meshtastic.error}</p>
+          <p className="mb-2 whitespace-pre-wrap break-words text-xs text-red-500 dark:text-red-400">{meshtastic.error}</p>
         )}
 
         <div className="mb-4 rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-          <p className="text-xs font-semibold text-foreground">Adressbuch: Handy-ID (BLE-UUID)</p>
+          <p className="text-xs font-semibold text-foreground">Adressbuch: Partner-0x + optionale BLE-Geräte-UUID</p>
           <p className="text-[11px] text-muted-foreground">
-            Für eine spätere Direktkopplung zweier Handys (ohne Stick) – wird im lokalen Kontakt-JSON gespeichert,
-            Export/Import über Mesh-Bundle möglich. Format: UUID (32 Hex, mit oder ohne Bindestriche).
+            <strong className="text-foreground">0x… (64 Hex):</strong> deine bzw. Partner-<strong className="text-foreground">IOTA-/Mailbox-Kryptoadresse</strong> — dient
+            Entschlüsselung, Kontext und späterem <strong className="text-foreground">Online-/IOTA</strong>-Weg; das ist{' '}
+            <strong className="text-foreground">nicht</strong> die Meshtastic-Luftadresse.{' '}
+            <strong className="text-foreground">Meshtastic-Knoten</strong> (!… Hex) kommt aus dem Funkpaket; im Chat siehst du ggf.{' '}
+            <span className="font-mono">mesh:!…</span> bis der Absender per Fingerprint dieser 0x zugeordnet ist.{' '}
+            <strong className="text-foreground">BLE-Geräte-UUID:</strong> reserviert für <strong className="text-foreground">geplanten</strong> Smartphone-zu-Smartphone-BLE
+            (ohne Heltec) — <strong className="text-foreground">kein</strong> Web-Bluetooth zum Heltec; Export/Import über Mesh-Bundle. Format UUID mit/ohne Bindestriche.
           </p>
           <input
             type="text"
@@ -290,6 +317,19 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
             placeholder="BLE-Geräte-UUID"
             className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
           />
+          <label className="text-[11px] font-medium text-foreground">Meshtastic Node-ID (optional)</label>
+          <p className="text-[10px] text-muted-foreground">
+            Funk-ID wie am Gerät/Radio: <span className="font-mono">!1a2b3c4d</span> — für Zuordnung und spätere
+            Klartext-Ziele; unabhängig von der 0x-Mailbox-Adresse.
+          </p>
+          <input
+            type="text"
+            value={contactMeshNodeId}
+            onChange={(e) => onContactMeshNodeIdChange(e.target.value.trim())}
+            placeholder="!… (Meshtastic)"
+            className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+            spellCheck={false}
+          />
           <button
             type="button"
             disabled={contactBleBusy || contactBleAddress.length < 66}
@@ -299,6 +339,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               const r = await saveContactEntry({
                 address: contactBleAddress.trim(),
                 bleUuid: contactBleUuid.trim() || undefined,
+                meshNodeId: contactMeshNodeId.trim() || undefined,
               })
               setContactBleBusy(false)
               if (r.ok) {
@@ -310,14 +351,26 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
             }}
             className="w-full rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
           >
-            {contactBleBusy ? 'Speichere…' : 'BLE-UUID für Adresse speichern'}
+            {contactBleBusy ? 'Speichere…' : 'Kontakt speichern (0x + optional BLE / Node-ID)'}
           </button>
           {Object.keys(directory).length > 0 && (
             <ul className="mt-2 max-h-28 overflow-y-auto text-[10px] font-mono text-muted-foreground space-y-0.5">
               {Object.entries(directory).map(([addr, e]) =>
-                e.bleUuid ? (
+                e.bleUuid || e.meshNodeId ? (
                   <li key={addr}>
-                    {addr.slice(0, 10)}… → <span className="text-foreground">{e.bleUuid}</span>
+                    {addr.slice(0, 10)}…
+                    {e.meshNodeId ? (
+                      <>
+                        {' '}
+                        · Node <span className="text-foreground">{e.meshNodeId}</span>
+                      </>
+                    ) : null}
+                    {e.bleUuid ? (
+                      <>
+                        {' '}
+                        · BLE <span className="text-foreground">{e.bleUuid}</span>
+                      </>
+                    ) : null}
                   </li>
                 ) : null
               )}

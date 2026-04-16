@@ -17,6 +17,10 @@ export function useChatViewMeshPanelState() {
   const [contactBleAddress, setContactBleAddress] = useState('')
   const [contactBleUuid, setContactBleUuid] = useState('')
   const [contactBleBusy, setContactBleBusy] = useState(false)
+  const [contactMeshNodeId, setContactMeshNodeId] = useState('')
+  /** Composer: Klartext an einen Meshtastic-Knoten (!hex) statt Broadcast. */
+  const [meshPlaintextToNodeEnabled, setMeshPlaintextToNodeEnabled] = useState(false)
+  const [meshPlaintextNodeId, setMeshPlaintextNodeId] = useState('')
 
   return {
     meshExportPw,
@@ -37,5 +41,11 @@ export function useChatViewMeshPanelState() {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
+    contactMeshNodeId,
+    setContactMeshNodeId,
+    meshPlaintextToNodeEnabled,
+    setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    setMeshPlaintextNodeId,
   }
 }

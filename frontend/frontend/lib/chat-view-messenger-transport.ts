@@ -15,6 +15,6 @@ export function isLoRaMeshTransport(t: ForcedTransport): boolean {
 export type MeshtasticBleSendApi = {
   connected: boolean
   sendBinaryV2: (raw: Uint8Array, destination?: number | 'broadcast') => Promise<unknown>
-  /** Klartext über Meshtastic (TEXT_MESSAGE_APP / LongFast). */
-  sendMeshText: (text: string) => Promise<unknown>
+  /** Klartext über Meshtastic (TEXT_MESSAGE_APP). `destination` = Knoten-Nummer oder Broadcast. */
+  sendMeshText: (text: string, destination?: number | 'broadcast') => Promise<unknown>
 }
