@@ -49,6 +49,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Qualität / Tests
 
+- **§ H.1a:** Vitest **`morg-pkg-import-utils.test.ts`**, **`inbox-partner-filter.test.ts`** (Partner/Richtung/Maske); **`workspace-projects-panel-storage.test.ts`** (`readWorkspaceTileSet` / `writeWorkspaceTileSet`).
 - **§ H.1a:** Vitest **`slide-wire.test.ts`** (`parseSlideFragmentMessage`, `MORG_SLIDE_V1`); **`mesh-qr.test.ts`** (`parseMeshBundleFromQrText`); RTL **`dashboard-iota-transfer-card.test.tsx`** (Mock **`transferCoins`**, Erfolg/Fehler).
 - **§ H.1a:** Vitest **`chat-view-messenger-transport.test.ts`**, **`chat-wald-connection.test.ts`**, **`mesh-contact-verify.test.ts`**, **`device-detect.test.ts`** (`prefersFileCameraCapture`, UA/Touch-Heuristik).
 - **§ H.1a:** Vitest **`chat-view-send-utils.test.ts`** (LoRa-UTF-8, Mesh vs. Kompakt-Blob, Standard-Wire inkl. Audio/SOS/Kompaktbild); RTL **`dashboard-pwa-install-card.test.tsx`** (Haupt-Dashboard PWA-Karte, `matchMedia` standalone).

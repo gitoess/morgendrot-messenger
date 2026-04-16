@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-03-28** | Repo lokal (Windows), **§ H.1a** morg-pkg / Inbox-Partner / Workspace-Storage | **`cd frontend`**: **`npm run test:unit`** — **66** Dateien, **370** Tests | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** slide/mesh-QR + IOTA-Dashboard-RTL | **`cd frontend`**: **`npm run test:unit`** — **63** Dateien, **341** Tests | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** Transport/Wald/Mesh/Kamera | **`cd frontend`**: **`npm run test:unit`** — **60** Dateien, **323** Tests (**`chat-view-messenger-transport`**, **`chat-wald-connection`**, **`mesh-contact-verify`**, **`device-detect`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** Sendepfad + PWA-Dashboard-RTL | **`cd frontend`**: **`npm run test:unit`** — **56** Dateien, **311** Tests (**`chat-view-send-utils.test.ts`**, **`dashboard-pwa-install-card.test.tsx`**) | **OK**. |
