@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-03-28** | Repo lokal (Windows), **§ H.1a** Transport/Wald/Mesh/Kamera | **`cd frontend`**: **`npm run test:unit`** — **60** Dateien, **323** Tests (**`chat-view-messenger-transport`**, **`chat-wald-connection`**, **`mesh-contact-verify`**, **`device-detect`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** Sendepfad + PWA-Dashboard-RTL | **`cd frontend`**: **`npm run test:unit`** — **56** Dateien, **311** Tests (**`chat-view-send-utils.test.ts`**, **`dashboard-pwa-install-card.test.tsx`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** weitere Scheiben | **`cd frontend`**: **`npm run test:unit`** — **54** Dateien, **299** Tests (neu: **`package-id-compare`**, **`morg-emergency-v1-text`**, **`inbox-load-error`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a**-Scheibe | **`cd frontend`**: **`npm run test:unit`** — **51** Dateien, **276** Tests (neu: **`format-unknown-error.test.ts`**) | **OK** — weiter **L1–L5** / **H.15 Stufe 2** manuell. |
