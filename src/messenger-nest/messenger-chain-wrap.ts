@@ -116,8 +116,16 @@ export async function sendEncryptedMessage(
     return result;
 }
 
+export type SendPlaintextOnlyOptions = {
+  /**
+   * `true` (Default): Move-Event-Pfad `send_plaintext_message` (Legacy, z. B. CLI `/send-plain`).
+   * `false`: wenn `MAILBOX_STORE_PLAINTEXT` + gültige `MAILBOX_ID` — `store_plaintext_message*` (Mailbox).
+   */
+  forceLegacyPlaintext?: boolean;
+};
+
 /** Nur Klartext senden – kein Handshake nötig. */
-export async function sendPlaintextOnly(recipient: string, text: string) {
+export async function sendPlaintextOnly(recipient: string, text: string, sendOpts?: SendPlaintextOnlyOptions) {
     const parsedNonce = parseMailboxOutNonceMarker(text);
     const body = parsedNonce ? parsedNonce.rest : text;
     const n = new TextEncoder().encode(body).length;
@@ -134,8 +142,9 @@ export async function sendPlaintextOnly(recipient: string, text: string) {
     }
     const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    const forceLegacy = sendOpts?.forceLegacyPlaintext !== false;
     return storePlaintextMessage(recipient, MY_ADDR, new TextEncoder().encode(body), nonce, getWalletPassword(), {
-        forceLegacyPlaintext: true,
+        forceLegacyPlaintext: forceLegacy,
         signOptions: messengerGasPolicyOpts(),
     });
 }

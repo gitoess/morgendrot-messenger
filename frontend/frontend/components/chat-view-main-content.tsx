@@ -71,6 +71,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     packageIdBusy,
     forcedTransport,
     setForcedTransport,
+    messagingPersistenceMode,
+    setMessagingPersistenceMode,
     morgPkgDeviceBusy,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
@@ -121,6 +123,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loraMeshProgressLine,
     loraOnlineFallbackOffer,
     compactBusy,
+    attachmentPipelineHint,
     compactFileRef,
     clearCompactAttachment,
     handleCompactAttachmentPick,
@@ -311,6 +314,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     forcedTransport,
     compactFileRef,
     compactBusy,
+    attachmentPipelineHint,
     onFileChange: handleCompactAttachmentPick,
     ingestChatAttachmentFile,
     compactMeta,
@@ -325,7 +329,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } satisfies ChatViewSendPanelProps
 
   const transportCardProps = {
-    ...asSendTransportChoice(encrypted, setEncrypted, forcedTransport, setForcedTransport),
+    ...asSendTransportChoice(
+      encrypted,
+      setEncrypted,
+      forcedTransport,
+      setForcedTransport,
+      messagingPersistenceMode,
+      setMessagingPersistenceMode
+    ),
     isPrivate,
     apiStatus,
     meshBleSupported: meshtastic.bleSupported,

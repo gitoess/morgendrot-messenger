@@ -43,7 +43,10 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
   } = p
 
   const handleHandshake = useCallback(async () => {
-    if (!partner.trim()) return
+    if (!partner.trim()) {
+      toast.error('Partner-Adresse fehlt — im Setup-Panel „Partner (0x…)“ eintragen (nicht nur „An:“ im Composer).')
+      return
+    }
     setSending(true)
     const res = await startHandshake(partner)
     if (res.ok) {

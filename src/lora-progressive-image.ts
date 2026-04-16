@@ -163,6 +163,36 @@ export async function prepareImageForLoRa(originalBuffer: Buffer): Promise<LoRaP
     );
 }
 
+const LORA_ROBUST_DIMS = [480, 420, 360, 300, 240, 200, 160, 128, 104, 88] as const;
+
+/**
+ * Wie `prepareImageForLoRa`, aber bei „passt nicht unter Funk-Limits“ oder Wire-Deckel
+ * schrittweise kleinere Eingangs-Raster (JPEG), bis ein LUMA+CHROMA-Paar passt (Kompakt-Bild → Funk).
+ */
+export async function prepareImageForLoRaRobust(originalBuffer: Buffer): Promise<LoRaProgressivePrepareResult> {
+    let lastErr = new Error(
+        'LoRa: JPEG-Paar passt nicht unter Funk-Limits (Summe ≤ 6,5 KiB, Luma/Chroma je Phase). Anderes Motiv oder kleinere Vorlage.'
+    );
+    for (const dim of LORA_ROBUST_DIMS) {
+        try {
+            const scaled = await sharp(originalBuffer, { failOn: 'none' })
+                .rotate()
+                .resize({ width: dim, height: dim, fit: 'inside', withoutEnlargement: true })
+                .jpeg({ quality: 88, mozjpeg: true })
+                .toBuffer();
+            return await prepareImageForLoRa(scaled);
+        } catch (e) {
+            const m = e instanceof Error ? e.message : String(e);
+            if (/JPEG-Paar|Wire.*Limit|passt nicht unter|Messenger-Limit/i.test(m)) {
+                lastErr = e instanceof Error ? e : new Error(m);
+                continue;
+            }
+            throw e instanceof Error ? e : new Error(String(e));
+        }
+    }
+    throw lastErr;
+}
+
 /** Serverseitige Fusion (heuristisch, sharp `over`) – z. B. Tests oder Preview-API. */
 export async function fuseLoraProgressiveJpegsSharp(lumaJpeg: Buffer, chromaJpeg: Buffer): Promise<Buffer> {
     const meta = await sharp(lumaJpeg).metadata();

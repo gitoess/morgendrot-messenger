@@ -11,6 +11,7 @@
 - **Same-Origin-Assets** der Next-PWA: `/_next/static/*` wird **cache-first** gehalten — App-Shell und JS/CSS sind nach dem ersten erfolgreichen Laden oft **ohne Netz** nutzbar (begrenzt: ohne Backend keine API).
 - **Handbuch als statische Dateien:** Unter **`/handbook/*.md`** liegen **Kopien** der Markdown-Dateien im `public/`-Ordner. Sie sind **Teil des Web-App-Bundles** (nicht `/api/doc` vom Node-Server). Die Seite **„Handbuch“** in der PWA lädt diese per `fetch` — der Service Worker kann sie **cachen**, sodass der Text **nach einmaligem erfolgreichen Abruf** offline lesbar ist.
 - **In-App statt externer Link:** Die Messenger-PWA zeigt die Texte **in der App** (`/handbook`), nicht als Weiterleitung auf eine fremde Domain.
+- **Installierte PWA (standalone):** Wechsel in den **Hintergrund** kann die **API-Sitzung sperren** (`/vault-lock`) — danach ist wieder **Entsperren** nötig; Details **§ 2.2.1** in **`docs/ONBOARDING-WALLET-UX-SPEC.md`**.
 
 ## 2. Was nicht automatisch gilt
 
@@ -38,6 +39,8 @@
 **Sendeweg in der PWA (Stufe 0, § H.15):** Unter **Chat → Puls (Einstellungen)** kann der Modus **„Direkt (Standard)“** vs. **„Nur Morgendrot-API“** gewählt werden. Persistenz: **`localStorage`**-Schlüssel **`morgendrot.iotaSubmitMode`** — bei Wert **`relay`** sendet die Klartext-Mailbox **nicht** mehr per Fullnode aus dem Browser; es gilt dann **`/api`**, sobald die Basis erreichbar ist.
 
 **Posteingang per Fullnode (§6.B.4):** Ohne **`/api/inbox`**, wenn der Messenger Klartext- und/oder (mit aktivem **Direkt-Mailbox-Drain** und Chat-ECDH) verschlüsselte Mailbox-Einträge vom Fullnode lesen und anzeigen kann; sonst Posteingang wie gewohnt über die Basis.
+
+**Live-Send & Mailbox-Spiegel:** Zentral **`mailbox-send-hybrid.ts`** — **Direct** (Fullnode + PTB im Browser) zuerst, sonst **`/api`** (Composer, SOS-Mailbox-Fallback, B2-Spiegel, Delayed-Mirror, LUMA/CHROMA-Online, Einsatzprotokoll-Anker). Status im Chat-Kopf: **`getDirectIotaPathUiState`**.
 
 ## 6. Pflege
 

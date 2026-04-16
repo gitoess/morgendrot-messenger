@@ -63,6 +63,8 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     onEncryptedChange,
     forcedTransport,
     onForcedTransportChange,
+    messagingPersistenceMode,
+    onMessagingPersistenceModeChange,
     apiStatus,
     meshBleSupported = false,
     meshBleConnected = false,
@@ -145,6 +147,43 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               : 'Klartext + funk: Standard-Meshtastic-Text (LongFast), kein /connect. Verschlüsselt + funk = Mesh v2 (Handshake nötig).'}
         </span>
       </div>
+
+      {!encrypted && forcedTransport === 'internet' && (
+        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
+          <span className="text-sm font-medium text-foreground">Klartext auf IOTA:</span>
+          <div className="flex rounded-lg border border-border bg-background p-1">
+            <button
+              type="button"
+              onClick={() => onMessagingPersistenceModeChange('event')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                messagingPersistenceMode === 'event'
+                  ? 'bg-amber-500/20 text-amber-200'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Nur Event
+            </button>
+            <button
+              type="button"
+              onClick={() => onMessagingPersistenceModeChange('mailbox')}
+              className={cn(
+                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                messagingPersistenceMode === 'mailbox'
+                  ? 'bg-emerald-500/15 text-emerald-200'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Mailbox
+            </button>
+          </div>
+          <span className="max-w-xl text-[11px] leading-relaxed text-muted-foreground">
+            {messagingPersistenceMode === 'mailbox'
+              ? 'Speicherung in der Mailbox (wenn Backend/Move konfiguriert) — gleiche Quelle wie verschlüsselte Nachrichten.'
+              : 'Klassischer Event-Pfad (send_plaintext_message) — wie bisheriger Standard.'}
+          </span>
+        </div>
+      )}
 
       {!isPrivate && !encrypted && (
         <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">

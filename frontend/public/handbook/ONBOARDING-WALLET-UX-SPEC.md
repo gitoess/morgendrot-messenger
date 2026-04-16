@@ -34,6 +34,11 @@
 - **`SIGNER=cli`:** nur Passwort (Keystore); die Radio-Option **Seed importieren** entfällt.
 - **`POST /api/unlock`:** Entschlüsselt lokalen oder on-chain Vault (wenn konfiguriert), wendet SDK-Import an, löst internen Passwort-Resolver auf.
 
+### 2.2.1 Installierte PWA (**standalone**): Sperre im Hintergrund & Ansicht
+
+- Wenn die Messenger-PWA **vom Startbildschirm** (nicht nur Browser-Tab) läuft und die App in den **Hintergrund** geht, wird **`POST /vault-lock`** ausgeführt — der Server bleibt nicht „dauerhaft entsperrt“, bis du die App wieder öffnest. Beim erneuten Öffnen gilt wieder **Tresor öffnen** wie nach **§ 2.2**.
+- Die **zuletzt gewählte Kachel** (z. B. Chat, Einstellungen) wird in **`sessionStorage`** gehalten und nach erfolgreichem Unlock wiederhergestellt, sobald die Basis erreichbar ist (**`dashboard.tsx`** / **`chat-view-main-content.tsx`**).
+
 ### 2.3 Explizit **nicht** vorhanden (Next-Messenger)
 
 - **Kein** geführter **Erststart-Assistent** (kein Wizard: „Seed erzeugen → sichern → fertig“) — Hinweis bereits in `chat-view-chat-header.tsx`.

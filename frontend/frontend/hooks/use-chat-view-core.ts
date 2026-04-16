@@ -29,6 +29,11 @@ import {
 import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-connection-actions'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
+import {
+  readMessagingPersistenceModeFromStorage,
+  writeMessagingPersistenceModeToStorage,
+  type MessagingPersistenceMode,
+} from '@/frontend/lib/messaging-persistence-mode'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { toast } from 'sonner'
 
@@ -142,6 +147,15 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       /* ignore */
     }
   }, [])
+
+  const [messagingPersistenceMode, setMessagingPersistenceModeState] = useState<MessagingPersistenceMode>(() =>
+    readMessagingPersistenceModeFromStorage()
+  )
+  const setMessagingPersistenceMode = useCallback((m: MessagingPersistenceMode) => {
+    setMessagingPersistenceModeState(m)
+    writeMessagingPersistenceModeToStorage(m)
+  }, [])
+
   /** LoRa LUMA/CHROMA Mesh-v2: Fortschrittszeile für die Anhang-Leiste (`Luma x/y · …`). */
   const [loraMeshProgressLine, setLoraMeshProgressLine] = useState<string | null>(null)
 
@@ -319,6 +333,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     compactBusy,
+    attachmentPipelineHint,
     compactFileRef,
     clearCompactAttachment,
     handleCompactAttachmentPick,
@@ -370,6 +385,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     isPrivate,
     encrypted,
     forcedTransport,
+    messagingPersistenceMode,
     recipient,
     partner,
     myAddress,
@@ -494,6 +510,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     packageIdBusy,
     forcedTransport,
     setForcedTransport,
+    messagingPersistenceMode,
+    setMessagingPersistenceMode,
     morgPkgDeviceBusy,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
@@ -545,6 +563,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loraMeshProgressLine,
     loraOnlineFallbackOffer,
     compactBusy,
+    attachmentPipelineHint,
     compactFileRef,
     clearCompactAttachment: clearCompactAttachmentAndSos,
     handleCompactAttachmentPick,

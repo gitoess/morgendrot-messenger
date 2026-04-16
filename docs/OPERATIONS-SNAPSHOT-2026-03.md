@@ -9,6 +9,10 @@
 | Thema | Pfad / Hinweis |
 |--------|----------------|
 | PWA-Manual-Protokoll (Tabelle) | **`docs/PWA-MANUAL-CHECKS.md`** — chronologische Sortierung; eine konsolidierte Zeile **2026-03-28** (**§ C.0b** / **§ H.2**: `check:pwa-desk`, `check:pwa-desk:full`, Handbook-Sync, `next-env.d.ts`) |
+| Mailbox Event vs. Persistent (SSOT) | **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**; API **`messagingPersistenceMode`**, **`sendPlaintextOnly`** / **`forceLegacyPlaintext`**; **`README.md`** Startliste Punkt 2 |
+| SOS § H.3n / Tests | **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (Abgleich); Vitest **`morg-sos-mesh-retry.test.ts`**, **`morg-sos-ack-wire.test.ts`** |
+| LoRa-Kompaktbild (Server) | **`prepareImageForLoRaRobust`** — **`src/lora-progressive-image.ts`**, **`POST /api/compact-blob-to-lora-wires`** in **`src/api-server.ts`** |
+| Test-Logbuch | **`docs/TEST-RUN-LOGBOOK.md`** — Zeile **2026-03-28** (`test:smoke`, `test:h15-direct-submit`, `check:pwa-desk:full`, Frontend **`test:unit`**) |
 | Änderungshistorie (Root) | **`CHANGELOG.md`** — Kurznotizen zu Releases und Doku-Pflege |
 | Handy vs. Schreibtisch | Fahrplan **§ C.0b** Stufe **0**/**2**, **§ H.2**: zuerst **`npm run check:pwa-desk`** / **`check:pwa-desk:full`**, danach manuelle **L1–L5** am Gerät (siehe **`docs/PWA-MANUAL-CHECKS.md`**) |
 

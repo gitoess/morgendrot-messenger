@@ -7,6 +7,7 @@
  */
 
 import type { ApiResponse } from '@/frontend/lib/types'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { sendEncryptedMessageWithTimeout, sendMessage } from '@/frontend/lib/api/chat-commands'
 import {
   canTryLivePlaintextDirectMailbox,
@@ -38,7 +39,8 @@ function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
 export async function sendPlaintextMailboxHybrid(
   recipient: string,
   wireForApi: string,
-  messageNonceU64: bigint
+  messageNonceU64: bigint,
+  opts?: { messagingPersistenceMode?: MessagingPersistenceMode }
 ): Promise<MailboxHybridSendResult> {
   if (canTryLivePlaintextDirectMailbox()) {
     const dr = await trySubmitPlaintextMailboxViaDirectIota({
@@ -48,7 +50,9 @@ export async function sendPlaintextMailboxHybrid(
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
   }
-  return fromApiResponse(await sendMessage(recipient, wireForApi, false))
+  return fromApiResponse(
+    await sendMessage(recipient, wireForApi, false, { messagingPersistenceMode: opts?.messagingPersistenceMode })
+  )
 }
 
 /** Verschlüsselte Mailbox: Direct zuerst, dann `/send`. */

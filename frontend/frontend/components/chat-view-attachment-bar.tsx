@@ -13,6 +13,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
   const {
     compactFileRef,
     compactBusy,
+    attachmentPipelineHint = null,
     sending,
     pickDisabled = false,
     onFileChange,
@@ -67,6 +68,19 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         onOpenChange={setWebcamOpen}
         onCapture={(file) => ingestChatAttachmentFile(file)}
       />
+      {attachmentPipelineHint ? (
+        <div
+          className="mb-2 w-full max-w-xl space-y-2 rounded-md border border-sky-500/35 bg-sky-500/10 px-3 py-2 dark:bg-sky-950/25"
+          role="status"
+          aria-live="polite"
+          aria-busy="true"
+        >
+          <p className="text-xs font-medium text-sky-950 dark:text-sky-50/95">{attachmentPipelineHint}</p>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div className="h-full w-full origin-left animate-pulse rounded-full bg-gradient-to-r from-sky-600/25 via-sky-500/90 to-sky-600/25" />
+          </div>
+        </div>
+      ) : null}
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button
           type="button"

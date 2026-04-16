@@ -521,7 +521,7 @@ async function main() {
                     continue;
                 }
                 try {
-                    for (const addr of addrs) await sendPlaintextOnly(addr, text);
+                    for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext: true });
                     logger.info(
                         addrs.length > 1
                             ? `Klartext an ${addrs.length} Empfänger gesendet.`

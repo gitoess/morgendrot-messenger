@@ -6,6 +6,8 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 export type AttachmentBarPort = {
   compactFileRef: RefObject<HTMLInputElement | null>
   compactBusy: boolean
+  /** z. B. während Blob→LoRa auf dem Server: kurzer Text + Balken (kein Polling). */
+  attachmentPipelineHint?: string | null
   sending: boolean
   /** z. B. während Sprachaufnahme / Kodierung */
   pickDisabled?: boolean

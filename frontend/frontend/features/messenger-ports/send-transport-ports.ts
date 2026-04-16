@@ -1,4 +1,5 @@
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 
 /** Transport-Card: Verschlüsselung + Sendepfad mit Setter. */
 export type SendTransportChoicePort = {
@@ -6,6 +7,8 @@ export type SendTransportChoicePort = {
   readonly onEncryptedChange: (encrypted: boolean) => void
   readonly forcedTransport: ForcedTransport
   readonly onForcedTransportChange: (t: ForcedTransport) => void
+  readonly messagingPersistenceMode: MessagingPersistenceMode
+  readonly onMessagingPersistenceModeChange: (m: MessagingPersistenceMode) => void
 }
 
 /** Send-Panel: nur Lesen von Verschlüsselung und Transport (Umschalter in der Card). */
@@ -21,9 +24,18 @@ export function asSendTransportChoice(
   encrypted: boolean,
   onEncryptedChange: (encrypted: boolean) => void,
   forcedTransport: ForcedTransport,
-  onForcedTransportChange: (t: ForcedTransport) => void
+  onForcedTransportChange: (t: ForcedTransport) => void,
+  messagingPersistenceMode: MessagingPersistenceMode,
+  onMessagingPersistenceModeChange: (m: MessagingPersistenceMode) => void
 ): SendTransportChoicePort {
-  return { encrypted, onEncryptedChange, forcedTransport, onForcedTransportChange }
+  return {
+    encrypted,
+    onEncryptedChange,
+    forcedTransport,
+    onForcedTransportChange,
+    messagingPersistenceMode,
+    onMessagingPersistenceModeChange,
+  }
 }
 
 export function asSendTransportRead(

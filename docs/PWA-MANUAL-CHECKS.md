@@ -37,7 +37,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 | Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
 |-------|-------------------|---------------|----------------|------------|
-| 2026-03-28 | ✓ | ✓ (10 Dateien) | ✓ | **§ H.2** nach Fahrplan-Reihenfolge: **`npm run check:pwa-desk:full`** (A+B+C) grün; **`src/shared/*`** relative Imports ohne **`.js`-Suffix** für Turbopack (**Next 16.1.6**). **L1–L5** am Gerät separat. |
+| 2026-03-28 | ✓ | ✓ (10 Dateien) | ✓ | **§ H.2** nach Fahrplan-Reihenfolge: **`npm run check:pwa-desk:full`** (A+B+C) grün; Tranche **Mailbox-Persistent** (**`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**), SOS H.3n-Vitest-Abgleich, **`prepareImageForLoRaRobust`**; **`src/shared/*`** relative Imports ohne **`.js`-Suffix** für Turbopack (**Next 16.1.6**). **L1–L5** am Gerät separat. |
 | 2026-03-29 | ✓ | ✓ (10 Dateien) | — | **§ C.0b / § H.2:** `npm run check:pwa-desk` (A+B) nach Fahrplan-Schritt; **C**/`check:pwa-desk:full` bei Release-Zyklus; **L1–L5** am Gerät. **§ H.0:** installierte PWA — Hintergrund-Sperre & Kachel-Restore siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § 2.2.1 + **`docs/HANDY-TEST-WINDOW.md`**. |
 | 2026-03-28 | ✓ | ✓ (8 Dateien) | ✓ | **§ C.0b / § H.2:** `check:pwa-desk` + `check:pwa-desk:full`; Handbook-Sync (**`PWA-HANDBUCH-OFFLINE.md`** u. a.); **`next-env.d.ts`** nach `next build`. |
 | 2026-03-30 | ✓ | ✓ (7 Dateien) | ✓ | A–C; **D** zunächst ohne SW-Edit. |

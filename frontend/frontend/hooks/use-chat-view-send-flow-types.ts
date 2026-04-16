@@ -6,6 +6,7 @@ import type { Message } from '@/frontend/lib/types'
 import type { ForcedTransport, MeshtasticBleSendApi } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import type { ComposerDraftSendFlowPort } from '@/frontend/features/messenger-ports'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 
 /** Nach erfolgreichem Funk-Versand: lokale Echo-Zeile + `localStorage`-Archiv (siehe `mesh-local-archive`). */
 export type AppendMeshMessageFn = (msg: Message) => void
@@ -14,6 +15,7 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   isPrivate: boolean
   encrypted: boolean
   forcedTransport: ForcedTransport
+  messagingPersistenceMode: MessagingPersistenceMode
   partner: string
   myAddress: string
   apiStatus: ApiStatus | null

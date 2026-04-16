@@ -2,17 +2,37 @@ import type { ApiResponse } from '../types'
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { parseApiJsonEnvelope } from '@/frontend/lib/api-response-guard'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+
+export type ApiCommandPostBodyOpts = {
+  morgPkg?: unknown
+  messagingPersistenceMode?: MessagingPersistenceMode
+}
+
+/** POST-Body für `/api/command` — für Vitest und einheitliche Serialisierung. */
+export function buildApiCommandPostBody(
+  command: string,
+  args: (string | number)[] = [],
+  opts?: ApiCommandPostBodyOpts
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { cmd: command, args: args.map(String) }
+  if (opts?.morgPkg != null && typeof opts.morgPkg === 'object') body.morgPkg = opts.morgPkg
+  if (opts?.messagingPersistenceMode != null) body.messagingPersistenceMode = opts.messagingPersistenceMode
+  return body
+}
 
 export async function executeCommand<T = unknown>(
   command: string,
   args: (string | number)[] = [],
-  opts?: { timeoutMs?: number; signal?: AbortSignal; morgPkg?: unknown }
+  opts?: { timeoutMs?: number; signal?: AbortSignal; morgPkg?: unknown; messagingPersistenceMode?: MessagingPersistenceMode }
 ): Promise<ApiResponse<T>> {
   try {
     const signal =
       opts?.signal ?? (opts?.timeoutMs != null ? AbortSignal.timeout(opts.timeoutMs) : undefined)
-    const body: Record<string, unknown> = { cmd: command, args: args.map(String) }
-    if (opts?.morgPkg != null && typeof opts.morgPkg === 'object') body.morgPkg = opts.morgPkg
+    const body = buildApiCommandPostBody(command, args, {
+      morgPkg: opts?.morgPkg,
+      messagingPersistenceMode: opts?.messagingPersistenceMode,
+    })
     const fr = await fetchApiText(API_BASE, '/api/command', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

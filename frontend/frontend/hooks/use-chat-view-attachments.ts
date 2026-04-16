@@ -35,6 +35,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
   )
   const loraOnlineOfferPayloadRef = useRef<{ lumaText: string; chromaText: string } | null>(null)
   const [compactBusy, setCompactBusy] = useState(false)
+  const [attachmentPipelineHint, setAttachmentPipelineHint] = useState<string | null>(null)
   const compactFileRef = useRef<HTMLInputElement>(null)
 
   const { compactPreviewUrl, loraPreviewUrl } = useChatViewAttachmentPreviews(
@@ -48,6 +49,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     if (!attachedBlobBase64 || attachedLora != null) return
     let cancelled = false
     setCompactBusy(true)
+    setAttachmentPipelineHint('Funk: IOTA-Bild wird für LoRa (LUMA+CHROMA) umgewandelt …')
     setStatus('idle')
     setStatusMsg('Funk: IOTA-Bild wird für LoRa (LUMA+CHROMA) umgewandelt…')
     void (async () => {
@@ -92,11 +94,15 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
         setStatusMsg(e instanceof Error ? e.message : String(e))
         setTimeout(() => setStatus('idle'), 8000)
       } finally {
-        if (!cancelled) setCompactBusy(false)
+        if (!cancelled) {
+          setCompactBusy(false)
+          setAttachmentPipelineHint(null)
+        }
       }
     })()
     return () => {
       cancelled = true
+      setAttachmentPipelineHint(null)
     }
   }, [isPrivate, encrypted, forcedTransport, attachedBlobBase64, attachedLora, setStatus, setStatusMsg])
 
@@ -169,6 +175,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     compactBusy,
+    attachmentPipelineHint,
     compactFileRef,
     clearCompactAttachment,
     handleCompactAttachmentPick,

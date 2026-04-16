@@ -14,6 +14,8 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onEncryptedChange={noop}
         forcedTransport="mesh"
         onForcedTransportChange={noop}
+        messagingPersistenceMode="event"
+        onMessagingPersistenceModeChange={noop}
         apiStatus={null}
         meshBleSupported
         meshBleConnected={false}
@@ -34,6 +36,8 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onEncryptedChange={noop}
         forcedTransport="adhoc"
         onForcedTransportChange={noop}
+        messagingPersistenceMode="event"
+        onMessagingPersistenceModeChange={noop}
         apiStatus={null}
         onOpenPartnerSetup={onOpenPartnerSetup}
       />

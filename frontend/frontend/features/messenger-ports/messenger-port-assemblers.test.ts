@@ -7,6 +7,7 @@ import {
   asSendTransportChoice,
   asSendTransportRead,
 } from './send-transport-ports'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
 
 describe('asInboxFeedRead', () => {
@@ -73,15 +74,19 @@ describe('asVoiceRecordSendPanel', () => {
 })
 
 describe('asSendTransportChoice', () => {
-  it('mappt alle vier Felder', () => {
+  it('mappt Transport- und Persistenz-Felder', () => {
     const onEnc = vi.fn()
     const onTr = vi.fn()
-    const p = asSendTransportChoice(false, onEnc, 'internet', onTr)
+    const onPersist = vi.fn()
+    const p = asSendTransportChoice(false, onEnc, 'internet', onTr, 'event' as MessagingPersistenceMode, onPersist)
     p.onEncryptedChange(true)
     p.onForcedTransportChange('mesh')
+    p.onMessagingPersistenceModeChange('mailbox')
     expect(onEnc).toHaveBeenCalledWith(true)
     expect(onTr).toHaveBeenCalledWith('mesh')
+    expect(onPersist).toHaveBeenCalledWith('mailbox')
     expect(p.encrypted).toBe(false)
     expect(p.forcedTransport).toBe('internet')
+    expect(p.messagingPersistenceMode).toBe('event')
   })
 })

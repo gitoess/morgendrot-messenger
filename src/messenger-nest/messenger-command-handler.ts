@@ -997,7 +997,9 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             if (silent) fetchOpts.silent = true;
                             if (packageIdOverride) fetchOpts.packageId = packageIdOverride;
                             if (mergeLocalInbox) fetchOpts.mergeLocalInbox = true;
-                            const peerMapForFetch = packageIdOverride ? null : (peerMap ?? null);
+                            // Posteingang: immer „standalone“ (kein Session-peerMap-Filter), sonst fehlen alle Threads,
+                            // deren Gegenüber nicht in /connect steht (z. B. nur Selbst-Peer → nur Self-to-Self sichtbar).
+                            const peerMapForFetch = null;
                             let messages: FetchedMessage[];
                             if (bossView && CFG.ROLE === 'boss' && CFG.KOMMANDANT_ADDRESSES.length > 0) {
                                 const need = Math.min(2000, offset + n);
@@ -1010,7 +1012,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                     senderArg,
                                     { ...fetchOpts, offset: 0 }
                                 );
-                                const withRecipient: FetchedMessage[] = bossMessages.map((m) => ({ ...m, recipient: myAddrNorm }));
+                                // Echten Empfänger aus der Chain beibehalten (kein Überschreiben mit Boss-Adresse).
+                                const withRecipient: FetchedMessage[] = [...bossMessages];
                                 const perK = Math.max(5, Math.floor(need / (CFG.KOMMANDANT_ADDRESSES.length + 1)));
                                 const pkgId = packageIdOverride || String(CFG.PACKAGE_ID ?? '').trim();
                                 for (const kommandantAddr of CFG.KOMMANDANT_ADDRESSES) {
@@ -1022,7 +1025,15 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 messages = withRecipient.slice(offset, offset + n);
                             } else {
                                 fetchOpts.offset = offset;
-                                messages = await fetchLastMessages(myAddrNorm, peerMapForFetch, keys?.privateKey ?? null, n, undefined, senderArg, fetchOpts);
+                                messages = await fetchLastMessages(
+                                    myAddrNorm,
+                                    peerMapForFetch,
+                                    keys?.privateKey ?? null,
+                                    n,
+                                    undefined,
+                                    senderArg,
+                                    fetchOpts
+                                );
                             }
                             if (messages.length === 0) return { ok: true, message: 'Keine neuen Nachrichten auf der Chain gefunden.', messages: [], data: [] };
                             return { ok: true, message: senderArg ? `Letzte ${n} Nachrichten von ${senderArg.slice(0, 12)}… geladen.` : `${messages.length} Nachricht(en) geladen.`, messages, data: messages };
@@ -1274,7 +1285,9 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
-                        for (const addr of addrs) await sendPlaintextOnly(addr, text);
+                        const mp = String(opts?.messagingPersistenceMode ?? '').trim().toLowerCase();
+                        const forceLegacyPlaintext = mp !== 'mailbox';
+                        for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
                         return { ok: true, message: addrs.length > 1 ? `Klartext an ${addrs.length} Empfänger gesendet.` : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.` };
                     }
                     if (c === '/send') {

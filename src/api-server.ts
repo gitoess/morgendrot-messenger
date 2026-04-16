@@ -74,7 +74,7 @@ import { exportAuditCsv, exportAuditPdfStream, appendAuditEvent, readAuditEvents
 import { runGasStationCheck } from './gas-station.js';
 import { verifyTinyHmac, processTinyMessage } from './tiny-gateway.js';
 import { extractCompactImageBase64FromWire } from './compact-image-wire-extract.js';
-import { fuseLoraProgressiveJpegsSharp, prepareImageForLoRa } from './lora-progressive-image.js';
+import { fuseLoraProgressiveJpegsSharp, prepareImageForLoRaRobust } from './lora-progressive-image.js';
 import archiver from 'archiver';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from './shared/heartbeat-presets.js';
 import {
@@ -164,6 +164,8 @@ export type CommandApiOptions = {
     shadowMnemonic?: string;
     /** Body-Feld für /morg-pkg-import (vollständiges JSON-Objekt). */
     morgPkg?: unknown;
+    /** `/send-plain`: `mailbox` = optional Mailbox-Store; sonst/fehlend = Event-Pfad (Legacy). */
+    messagingPersistenceMode?: 'event' | 'mailbox';
 };
 type CommandHandlerFn = (cmd: string, args: string[], options?: CommandApiOptions) => Promise<{ ok: boolean; message?: string }>;
 type PurgeAfterLieferungFn = (purges: Array<{ sender: string; recipient: string; nonce: string | number }>) => Promise<{ ok: boolean; message?: string; count?: number }>;
@@ -1884,7 +1886,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 400, { ok: false, error: 'Bildgröße ungültig (32 B … 24 MB).' }, cors);
                         return;
                     }
-                    const r = await prepareImageForLoRa(raw);
+                    const r = await prepareImageForLoRaRobust(raw);
                     sendJson(
                         res,
                         200,
@@ -1948,7 +1950,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     const png = await VaultImagePipeline.reconstructBlendToPng(blob);
-                    const r = await prepareImageForLoRa(png);
+                    const r = await prepareImageForLoRaRobust(png);
                     sendJson(
                         res,
                         200,
@@ -3297,6 +3299,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     }
                     if (data.morgPkg != null && typeof data.morgPkg === 'object') {
                         commandApiOptions.morgPkg = data.morgPkg;
+                    }
+                    const mp = String(data.messagingPersistenceMode ?? '').trim().toLowerCase();
+                    if (mp === 'mailbox' || mp === 'event') {
+                        commandApiOptions.messagingPersistenceMode = mp as 'event' | 'mailbox';
                     }
                     const result = await _commandHandler(cmd, args, commandApiOptions);
                     if (cmd === '/vault-onchain' && result?.ok) lastVaultOnchainSuccessAt = Date.now();

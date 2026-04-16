@@ -12,6 +12,8 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **Mailbox-Klartext: Event vs. Persistent:** `localStorage` **`morgendrot.messagingPersistenceMode`** (`event` \| `mailbox`); Transport-Card **Nur Event** / **Mailbox** (nur Klartext + **online**). **`POST /api/command`:** Feld **`messagingPersistenceMode`**; **`sendPlaintextOnly`** / **`storePlaintextMessage`** mit **`forceLegacyPlaintext`** (Default **Legacy** = bisheriges Verhalten; **`mailbox`** → Mailbox-Store wenn Move/`.env` passen). **Terminal** `/send-plain` weiterhin explizit Legacy (**`wallet-bridge.ts`**). **Hybrid:** **`mailbox-send-hybrid.ts`**, **`chat-commands.ts`**, **`execute-command.ts`** (`buildApiCommandPostBody`), **`use-chat-view-core`**, **`send-transport-ports`**, **`chat-view-main-content`**, **`chat-view-transport-card`**. **Vitest:** **`messaging-persistence-mode.test.ts`**, **`execute-command.test.ts`**. **Spec:** **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**. **Export-Spiegel:** `exports/Morgendrot-Messenger-verkauf/…` (**`messenger-chain-wrap`**, **`messenger-command-handler`**, **`wallet-bridge`**).
+- **Anhang-Leiste — Pipeline-Hinweis:** optional **`attachmentPipelineHint`** + barrierefreier Status + Puls-Streifen (**`chat-view-attachment-bar.tsx`**, **`attachment-bar-port.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-core`**, **`chat-view-main-content`**).
 - **LoRa-Bild (automatisch):** IOTA-`MORG_COMPACT_IMG_V1`-Anhang im **privaten verschlüsselten** Chat bei Transport **„funk“** wird per **`POST /api/compact-blob-to-lora-wires`** (Sharp: Kompakt → PNG → LUMA+CHROMA) und **`useChatViewAttachments`**-Effect in den LoRa-Zweiteiler umgewandelt; Senden bleibt bis dahin deaktiviert (**`chat-view-send-panel`**). **LoRa-Encode:** `sharp(..., { failOn: 'none' })`, kleinere Chroma-Layouts. **Sprachmemo:** unverschlüsselter Funk blockiert Senden mit Hinweis (**`meshKlartextVoiceBlocked`**). Neuer Anhang setzt **`loraOnlineFallbackOffer`** zurück (kein festhängender grauer Senden-Button).
 - **Meshtastic / Web Bluetooth:** Rückgaben von `sendPacket` / `sendText` mit **`Routing.Error`** ausgewertet — verständliche Meldung plus **Aktions-Hinweis** (z. B. **NO_CHANNEL** → Kanal in der Meshtastic-App, **TOO_LARGE** → kürzen / LUMA+CHROMA oder online); **`TIMEOUT` (3)** beim Ausgang nicht als harter Fehler (**`meshtastic-routing-error.ts`**, **`use-meshtastic-ble.ts`**). **README:** Kurzüberblick Funk+Foto, Routing, lokales Mesh-Archiv, Filter „Nur LoRa/Mesh“.
 - **Meshtastic Klartext (LongFast):** Senden **ohne** `/connect` bei **unverschlüsselt + „funk“** (Broadcast oder optional **Node-ID** `!…` im Composer); **öffentliche Pinnwand** ebenfalls per Funk-Klartext möglich. **Adressbuch:** optionale **Meshtastic Node-ID** beim Speichern eines 0x-Kontakts. **Next-Dev:** `dev`/`dev:lan` mit **`--webpack`** + Client-**`util`**-Shim für `@meshtastic/core`. **UI:** Abschnitt „Nachricht verfassen“, Transport-Hinweise (IOTA vs. Funk) angepasst; größere UI-Trennung → Roadmap **§ H.1b**.
@@ -41,8 +43,20 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - **§ H.15 Stufe 3 (vertieft):** **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8.1 (Retry/Backoff-**Ist**); **`docs/MORGENDROT-CORE-PACKAGE-PLAN.md`** Scheibe 4 Verweis.
 - **§ H.1b:** **`SettingsWalletSessionCard`** (`settings-wallet-session-card.tsx`); **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** Fortschritt **2026-04-28**.
 
+### Server / API
+
+- **LoRa-Kompaktbild robust:** **`prepareImageForLoRaRobust`** in **`src/lora-progressive-image.ts`** — schrittweises Verkleinern bis LUMA+CHROMA unter Funk-Limits; **`POST /api/compact-blob-to-lora-wires`** nutzt Robust-Pfad (**`src/api-server.ts`**).
+
+### Qualität / Tests
+
+- **§ H.3n / § H.1a:** Vitest **`frontend/frontend/lib/morg-sos-mesh-retry.test.ts`**, **`morg-sos-ack-wire.test.ts`** (Backoff, **`MORG_SOS_ACK_V1`**-Parse). **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Abgleich-Block **§ H.3n** mit Ist-Pfaden erweitert.
+- **`TESTING.md`:** Ritual **5c** (Hybrid/API-Touch → auch **`test:unit`** / **`execute-command.test.ts`**); SOS-Abschnitt verweist auf SOS-Lib-Tests.
+- **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`:** Ist-Zeile um SOS-Vitest ergänzt.
+
 ### Dokumentation
 
+- **Mailbox SSOT + README:** **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**; **`README.md`** Startliste Punkt 2 verweist darauf (neben **`MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**).
+- **`docs/ROADMAP-FAHRPLAN.md`:** **§ H.15 Stufe 2** (Handy-Smoke) nach **Schreibtisch-/PWA-/Mailbox-**Scheiben **hinten**; **§ C.0b**-Kette und „nächsten drei“ angepasst; Mailbox-Nachtrag **Persistent** / **`forceLegacyPlaintext`**.
 - **§ H.0 / PWA:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`** § **2.2.1** (installierte PWA: Hintergrund-Sperre, Kachel-Wiederherstellung); **`docs/HANDY-TEST-WINDOW.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** — Abgleich mit Ist-Code Messenger.
 - **§ H.17 (Begriffe):** Trennung **Volle Oberfläche** (`morgendrot_show_all_tiles`), **Arbeitsbereich Volldashboard** (`morgendrot_workspace_tile_set` = `full`), **Geräte-Radar** (`DeviceRadarView`, Messenger nur Boss), **Chat-Boss-Übersicht** (`bossView`); Zielbild Messenger vs. Hauptprojekt — **`docs/ROADMAP-FAHRPLAN.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** §6, **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**.
 - **§ H.18 (Roadmap) + TTS/STT:** Fahrplan-Eintrag **TTS / STT**; **`docs/MESSENGER-SPRACHAUFNAHME.md`** — Abschnitt *SOS-Hilferuf: Text vs. Sprache* und Verweis **§ H.18**; **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — Nutzer-Kurzfassung mit Verweis auf Messenger-Doku.

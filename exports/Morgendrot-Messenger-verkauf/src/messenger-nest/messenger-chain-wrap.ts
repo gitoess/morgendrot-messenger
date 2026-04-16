@@ -105,8 +105,12 @@ export async function sendEncryptedMessage(
     return result;
 }
 
+export type SendPlaintextOnlyOptions = {
+    forceLegacyPlaintext?: boolean;
+};
+
 /** Nur Klartext senden – kein Handshake nötig. */
-export async function sendPlaintextOnly(recipient: string, text: string) {
+export async function sendPlaintextOnly(recipient: string, text: string, sendOpts?: SendPlaintextOnlyOptions) {
     const n = new TextEncoder().encode(text).length;
     if (n > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
         throw new Error(
@@ -116,8 +120,9 @@ export async function sendPlaintextOnly(recipient: string, text: string) {
     assertMessengerMediaNetBlobWithinLimit(text);
     const nonce = BigInt(Date.now());
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    const forceLegacy = sendOpts?.forceLegacyPlaintext !== false;
     return storePlaintextMessage(recipient, MY_ADDR, new TextEncoder().encode(text), nonce, getWalletPassword(), {
-        forceLegacyPlaintext: true,
+        forceLegacyPlaintext: forceLegacy,
         signOptions: messengerGasPolicyOpts(),
     });
 }

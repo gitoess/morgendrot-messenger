@@ -43,6 +43,7 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     sosVoiceAwaitingSend: false,
     compactFileRef: createRef(),
     compactBusy: false,
+    attachmentPipelineHint: null,
     onFileChange: vi.fn(),
     ingestChatAttachmentFile: vi.fn().mockResolvedValue(undefined),
     compactMeta: null,

@@ -1,7 +1,16 @@
 import { executeCommand } from '@/frontend/lib/api/execute-command'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 
-export const sendMessage = (recipient: string, message: string, encrypted = true) =>
-  executeCommand(encrypted ? '/send' : '/send-plain', encrypted ? [message] : [recipient, message])
+export const sendMessage = (
+  recipient: string,
+  message: string,
+  encrypted = true,
+  opts?: { messagingPersistenceMode?: MessagingPersistenceMode; timeoutMs?: number }
+) =>
+  executeCommand(encrypted ? '/send' : '/send-plain', encrypted ? [message] : [recipient, message], {
+    timeoutMs: opts?.timeoutMs,
+    messagingPersistenceMode: encrypted ? undefined : opts?.messagingPersistenceMode,
+  })
 
 /** Verschlüsseltes /send mit Timeout (Standard 120s – Chain/RPC kann langsam sein). */
 export function sendEncryptedMessageWithTimeout(message: string, timeoutMs = 120_000) {
