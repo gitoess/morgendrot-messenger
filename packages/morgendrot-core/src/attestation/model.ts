@@ -27,6 +27,15 @@ export type AttestationManifestDraftV1 = {
   manifestVersion: 1
   /** `canonical_msg_ref` v1 hex (64 chars), when known. */
   canonicalMsgRefHex: string | null
+  /** Zweites Mailbox-Segment (z. B. CHROMA nach LUMA), gleiches Format. */
+  secondaryCanonicalMsgRefHex?: string | null
+  /** SHA-256 (64 Hex) über Roh-Bildbytes (z. B. dekodiertes `attachedBlobBase64`). */
+  imageContentSha256Hex?: string | null
+  /**
+   * Optional: IOTA-Transaktions-Digest der **Mailbox-Spiegel**-TX (Delayed Mirror), Base58/Hex —
+   * Verweis auf denselben Vorgang wie `canonicalMsgRefHex` zur Nutzlast.
+   */
+  mirrorMailboxTxDigest?: string | null
   observedAtMs: number
   timeIsTrusted: boolean
 }

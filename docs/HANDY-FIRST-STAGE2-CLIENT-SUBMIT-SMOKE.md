@@ -1,8 +1,8 @@
 # H.15 Stufe 2 — Kontrollierter Client-Submit (Smoke / Feldprotokoll)
 
-**Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Delayed-Mirror, LUMA/CHROMA-Online, Einsatzprotokoll-Anker.
+**Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Delayed-Mirror, LUMA/CHROMA-Online, Einsatzprotokoll-Anker, **Attestation-Manifest-Anker** (`attestation-manifest-anchor.ts` → Klartext an eigene Adresse, **ohne** Mailbox-Offline-Outbox).
 
-**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe).
+**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-03-28** — Funk **LoRa + Tangle**, Mirror-Drain → Forensic-Attestation **`mtx`**; ergänzt **§ H.15** nicht, verknüpft nur den Messenger-Kontext).
 
 ---
 
@@ -11,6 +11,8 @@
 - **Schnell (Repo-Root):** **`npm run test:h15-direct-submit`** — nur **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`** (Modus „Nur API“, Drain aus).
 - **Voll im Ordner `frontend/`:** **`npm run test:unit`** — gesamter Vitest-Lauf inkl. dieser Datei.
 - **Schreibtisch (ohne Browser, 2026-03-28):** Root **`npm run test:smoke`** (36 Modulgruppen) + **`test:h15-direct-submit`** dokumentiert in **`docs/TEST-RUN-LOGBOOK.md`** — ersetzt **nicht** § 2 (Testnet / Puls / Basis aus).
+
+**Letzter automatisierter Lauf (Merge-Ritual):** **2026-03-28** — vollständiges **`TESTING.md`** *Qualitätsritual vor Merge* (Root-`tsc` mit bekannter TS6059, Frontend-`tsc`/`lint`/`check:circular`/`test:unit`, **`test:core`**, **`test:h15-direct-submit`**, **`validate:ui`**, **`test:smoke`**) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. § 2 weiter **manuell** abhaken.
 
 ---
 

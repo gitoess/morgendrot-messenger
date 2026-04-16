@@ -110,7 +110,11 @@ function backoffMs(attempts: number): number {
   return Math.min(180_000, 2000 * Math.pow(2, Math.min(attempts, 9)))
 }
 
-export type MirrorSendFn = (fullPayload: string) => Promise<{ ok: boolean; error?: string }>
+export type MirrorSendResult =
+  | { ok: true; txDigest?: string }
+  | { ok: false; error?: string }
+
+export type MirrorSendFn = (fullPayload: string) => Promise<MirrorSendResult>
 
 /**
  * Verarbeitet wartende Einträge nacheinander. Überspringt Einträge in Backoff.
@@ -149,7 +153,7 @@ export async function drainMirrorQueue(
         ...item,
         attempts: item.attempts + 1,
         lastAttemptAt: Date.now(),
-        lastError: r.error,
+        lastError: 'error' in r ? r.error : undefined,
       })
     }
   }

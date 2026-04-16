@@ -6,6 +6,7 @@
  * § H.15 — alle Pfade (Composer, SOS, Spiegel, Delayed-Mirror, …) sollen dieselbe Reihenfolge nutzen.
  */
 
+import type { ApiResponse } from '@/frontend/lib/types'
 import { sendEncryptedMessageWithTimeout, sendMessage } from '@/frontend/lib/api/chat-commands'
 import {
   canTryLivePlaintextDirectMailbox,
@@ -17,10 +18,19 @@ import {
 } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 
-export type MailboxHybridSendResult = { ok: true } | { ok: false; error?: string; message?: string }
+export type MailboxHybridSendResult =
+  | { ok: true; txDigest?: string }
+  | { ok: false; error?: string; message?: string }
 
-function fromApiResponse(res: { ok?: boolean; error?: string; message?: string }): MailboxHybridSendResult {
-  if (res.ok === true) return { ok: true }
+function txDigestFromApi(res: ApiResponse): string | undefined {
+  const d = (res as { digest?: string }).digest
+  if (typeof d === 'string' && d.trim()) return d.trim()
+  if (typeof res.txDigest === 'string' && res.txDigest.trim()) return res.txDigest.trim()
+  return undefined
+}
+
+function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
+  if (res.ok === true) return { ok: true, txDigest: txDigestFromApi(res) }
   return { ok: false, error: res.error, message: res.message }
 }
 
@@ -36,7 +46,7 @@ export async function sendPlaintextMailboxHybrid(
       payloadUtf8: wireForApi,
       nonce: messageNonceU64,
     })
-    if (dr.ok) return { ok: true }
+    if (dr.ok) return { ok: true, txDigest: dr.digest }
   }
   return fromApiResponse(await sendMessage(recipient, wireForApi, false))
 }
@@ -57,7 +67,7 @@ export async function sendEncryptedMailboxHybrid(
         peerPubRaw: mat.peerPubRaw,
         ecdhPrivateKey: mat.ecdhPrivateKey,
       })
-      if (er.ok) return { ok: true }
+      if (er.ok) return { ok: true, txDigest: er.digest }
     }
   }
   return fromApiResponse(await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000))

@@ -164,6 +164,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       attachmentBarProps.attachedTxtFile != null ||
       attachmentBarProps.attachedLora != null)
 
+  /** Privat + verschlüsselt + Funk: IOTA-Bild wird per Effect in LUMA+CHROMA umgewandelt — bis dahin nicht senden. */
+  const meshIotaBlobAwaitingLora =
+    isPrivate &&
+    encrypted &&
+    forcedTransport === 'mesh' &&
+    !!attachmentBarProps.attachedBlobBase64 &&
+    attachmentBarProps.attachedLora == null
+
+  const meshKlartextVoiceBlocked =
+    !encrypted && forcedTransport === 'mesh' && !!attachmentBarProps.attachedAudioBase64
+
   /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
   const meshKlartextRecipientOk =
     encrypted ||
@@ -176,7 +187,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
     (!encrypted && !meshKlartextRecipientOk) ||
-    meshPlaintextBlocked
+    meshPlaintextBlocked ||
+    meshIotaBlobAwaitingLora ||
+    meshKlartextVoiceBlocked
 
   const sosSendMode =
     sosVoiceAwaitingSend &&
@@ -256,6 +269,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) : null}
           </div>
         )}
+
+        {isPrivate && encrypted && forcedTransport === 'mesh' && attachmentBarProps.attachedAudioBase64 != null ? (
+          <div className="rounded-lg border border-sky-600/40 bg-sky-950/20 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
+            <strong className="text-sky-900 dark:text-sky-100">Sprache per Funk:</strong> nur{' '}
+            <strong className="text-foreground">kurze</strong> Opus-Memos (harte Byte-Grenze). Längere Sprache:{' '}
+            <strong className="text-foreground">online</strong>. In der Konsole „error: 3“ (TIMEOUT): typisch ohne
+            Mesh-ACK bei Broadcast — zweites Gerät zum Testen; kurze Memos reduzieren Timeouts.
+          </div>
+        ) : null}
 
         {isPrivate && encrypted && forcedTransport === 'mesh' && (
           <fieldset className="rounded-lg border border-border bg-muted/20 p-3">
@@ -446,6 +468,19 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 : null}
             </div>
           )}
+          {meshKlartextVoiceBlocked ? (
+            <div className="mb-2 rounded-md border border-rose-600/50 bg-rose-950/30 px-3 py-2 text-xs leading-snug text-rose-50">
+              <strong>Sprachmemo + unverschlüsselter Funk:</strong> nicht unterstützt —{' '}
+              <strong className="text-foreground">Verschlüsselung einschalten</strong> (privater Chat) oder{' '}
+              <strong className="text-foreground">„online“</strong> wählen, dann Sprachmemo erneut aufnehmen.
+            </div>
+          ) : null}
+          {meshIotaBlobAwaitingLora ? (
+            <div className="mb-2 rounded-md border border-sky-600/45 bg-sky-950/25 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
+              <strong>LoRa-Bild:</strong> IOTA-Kompakt wird automatisch in <strong>LUMA+CHROMA</strong> umgewandelt —{' '}
+              <span className="text-muted-foreground">Senden bleibt kurz deaktiviert, bis die Vorschau da ist.</span>
+            </div>
+          ) : null}
           <textarea
             id="chat-composer-message"
             value={message}

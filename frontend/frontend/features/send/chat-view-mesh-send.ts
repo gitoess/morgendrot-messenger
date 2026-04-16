@@ -34,13 +34,23 @@ export async function sendMeshV2WireBurst(
       : MESH_V2_BURST_INTER_PACKET_MS_DEFAULT
   const b = await meshBuildV2Wires(text)
   if (!b.ok || !b.wires?.length) {
-    const err = b.error || b.message || 'Mesh-Build fehlgeschlagen'
-    if (/connect|peerMap|Nicht verbunden/i.test(String(err))) {
+    const raw = b.error ?? b.message ?? 'Mesh-Build fehlgeschlagen'
+    const err =
+      typeof raw === 'string'
+        ? raw
+        : (() => {
+            try {
+              return JSON.stringify(raw)
+            } catch {
+              return String(raw)
+            }
+          })()
+    if (/connect|peerMap|Nicht verbunden/i.test(err)) {
       throw new Error(
         `${err} — Verschlüsselter Funk (Mesh v2) braucht Handshake und /connect (Wallet). Alternativen: Klartext + „funk“ (Standard-Meshtastic-Text, ohne /connect) oder zuerst Partner verbinden.`
       )
     }
-    throw new Error(String(err))
+    throw new Error(err)
   }
   const total = b.wires.length
   for (let i = 0; i < b.wires.length; i++) {

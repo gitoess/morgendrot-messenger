@@ -28,7 +28,7 @@ describe('validateMeshDisallowsIotaCompactBlob', () => {
   it('blockiert IOTA-Kompaktblob bei Transport funk', () => {
     const r = validateMeshDisallowsIotaCompactBlob('mesh', 'YmJi')
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.message).toMatch(/Funk:/)
+    if (!r.ok) expect(r.message).toMatch(/Funk|LUMA|Umwandlung/)
   })
 
   it('erlaubt Kompaktblob bei internet', () => {

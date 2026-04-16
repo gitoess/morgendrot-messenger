@@ -1,8 +1,10 @@
 'use client'
 
 /**
- * Delayed Upload (MVP): Sender kennzeichnet Klartext vor Mesh-v2; Empfänger spiegelt nach Decrypt per /send (IOTA).
- * Luma/Chroma: Marker nur bei reinem Text-Mesh – Bild-Wires nicht präfixen (Parser würde brechen).
+ * Delayed Upload (MVP): Sender setzt `[[MORG_DELAY_MIRROR_V1]]` vor den Klartext (Mesh v2); der Empfänger
+ * entfernt den Marker nach Decrypt und spiegelt den Inhalt per Mailbox in den Tangle (`onDelayMirrorPlaintext`).
+ * Gilt für **Nur-Text**, **kompakte Bilder**, **Audio/.txt** und **LoRa LUMA/CHROMA** — jeweils nur wenn der Nutzer
+ * **„LoRa + Tangle“** wählt (UI) und der Wire nach Marker-Präfix noch unter den Chain-Limits bleibt.
  */
 export const MORG_DELAY_MIRROR_V1 = '[[MORG_DELAY_MIRROR_V1]]'
 

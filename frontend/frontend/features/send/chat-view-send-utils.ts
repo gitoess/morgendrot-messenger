@@ -44,8 +44,8 @@ export function validateMeshDisallowsIotaCompactBlob(
     return {
       ok: false,
       message:
-        'Funk: IOTA-Kompaktblob hier unpassend – Bild entfernen und mit aktivem „funk“ erneut anhängen (LoRa-Pipeline).',
-      idleMs: 7000,
+        'Funk: IOTA-Kompakt-Bild wird in LUMA+CHROMA umgewandelt — bitte kurz warten. Wenn das nicht aufhört: Anhang entfernen, Backend (Sharp) prüfen, oder zuerst „online“ wählen und Bild anhängen.',
+      idleMs: 9000,
     }
   }
   return { ok: true }

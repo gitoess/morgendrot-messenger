@@ -18,6 +18,9 @@ export type ChatViewInboxPartnerStripProps = {
   onPartnerKeyChange: (key: string | null) => void
   direction: InboxDirectionFilter
   onDirectionChange: (d: InboxDirectionFilter) => void
+  /** Nur Zeilen mit Funk/Mesh (lokal + Echo nach Senden). */
+  meshTransportOnly: boolean
+  onMeshTransportOnlyChange: (v: boolean) => void
   /** Partner ausgewählt: Filter + Empfänger für Senden */
   onPartnerSelectForSend: (address: string) => void
 }
@@ -34,6 +37,8 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     onPartnerKeyChange,
     direction,
     onDirectionChange,
+    meshTransportOnly,
+    onMeshTransportOnlyChange,
     onPartnerSelectForSend,
   } = p
 
@@ -65,6 +70,19 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             {label}
           </button>
         ))}
+        <button
+          type="button"
+          title="Nur Mailbox+Mesh-Liste auf Funk/Mesh-Zeilen einschränken (lokal archiviert)."
+          onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
+          className={cn(
+            'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+            meshTransportOnly
+              ? 'border-sky-600 bg-sky-500/15 text-sky-900 dark:text-sky-100'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted'
+          )}
+        >
+          Nur LoRa/Mesh
+        </button>
       </div>
       ) : null}
       {options.length > 0 ? (

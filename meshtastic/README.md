@@ -13,7 +13,7 @@ Die **App-/Node-Pipeline** erzeugt **zwei Klartext-Wires** (Luma + Chroma); sie 
 | **Empfänger** | `MORG_LUMA_V1` sofort S/W + Hinweis/Timeout; `MORG_CHROMA_V1` → Fusion (`/api/lora-progressive-fuse` oder Canvas-Fallback). Siehe `frontend/…/chat-message-body.tsx`. |
 | **Manuelle UI-Tests** | `scripts/print-lora-wires-for-ui-test.ts`, Versand zweier Nachrichten über **Online-Pfad** (siehe unten). |
 
-**Code:** `frontend/frontend/components/views/chat-view.tsx`, `src/lora-progressive-image.ts`, `src/api-server.ts` (`/api/lora-progressive-encode`, `/api/lora-progressive-fuse`).
+**Code:** `frontend/frontend/components/views/chat-view.tsx`, `src/lora-progressive-image.ts`, `src/api-server.ts` (`/api/lora-progressive-encode`, **`/api/compact-blob-to-lora-wires`** IOTA-Kompakt → LUMA+CHROMA, `/api/lora-progressive-fuse`).
 
 ## Phase 1 vs. End-to-end über Heltec (wichtig)
 

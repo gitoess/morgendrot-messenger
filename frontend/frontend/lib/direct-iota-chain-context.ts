@@ -47,8 +47,10 @@ function readFlagsFromLs(): DirectMailboxDrainFlags | null {
   }
 }
 
-export function persistDirectMailboxChainSnapshot(s: DirectMailboxChainSnapshot): void {
-  if (typeof window === 'undefined') return
+export type PersistDirectMailboxChainResult = { ok: true } | { ok: false; error: string }
+
+export function persistDirectMailboxChainSnapshot(s: DirectMailboxChainSnapshot): PersistDirectMailboxChainResult {
+  if (typeof window === 'undefined') return { ok: false, error: 'Kein Browser (SSR).' }
   try {
     window.localStorage.setItem(LS_PKG, s.packageId.trim())
     window.localStorage.setItem(LS_MB, s.mailboxId.trim())
@@ -63,8 +65,10 @@ export function persistDirectMailboxChainSnapshot(s: DirectMailboxChainSnapshot)
       })
     )
     memorySnapshot = s
-  } catch {
-    /* ignore */
+    return { ok: true }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: msg || 'localStorage fehlgeschlagen' }
   }
 }
 
@@ -111,7 +115,7 @@ export function syncDirectMailboxFlagsFromApiStatus(status: ApiStatus): void {
   }
   if (memorySnapshot) {
     memorySnapshot = { ...memorySnapshot, flags: memoryFlagsOnly }
-    persistDirectMailboxChainSnapshot(memorySnapshot)
+    void persistDirectMailboxChainSnapshot(memorySnapshot)
   } else if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(LS_FLAGS, JSON.stringify(memoryFlagsOnly))
@@ -136,7 +140,7 @@ export function applyDirectMailboxChainSnapshotFromNetworkIds(j: {
     messengerCreditsConfigured: false,
   }
   const ttlDays = memorySnapshot?.ttlDays ?? BigInt(30)
-  persistDirectMailboxChainSnapshot({ packageId, mailboxId, senderAddress, ttlDays, flags })
+  void persistDirectMailboxChainSnapshot({ packageId, mailboxId, senderAddress, ttlDays, flags })
 }
 
 export function canUseDirectPlaintextMailboxDrain(): boolean {

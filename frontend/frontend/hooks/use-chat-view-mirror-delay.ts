@@ -6,8 +6,14 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchStatus } from '@/frontend/lib/api'
+import { fetchStatus, parseMailboxOutNonceMarker } from '@/frontend/lib/api'
 import { sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import {
+  isForensicImageMailboxAttestationEnabled,
+  prependMailboxNonceIfMissingForEncryptedWire,
+  runForensicMailboxAttestationAfterSend,
+} from '@/frontend/lib/forensic-mailbox-attestation'
+import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
 import {
   drainMirrorQueue,
   enqueueMirrorFailure,
@@ -22,7 +28,7 @@ import {
   loadOfflineMailboxQueue,
   shouldDeferDrainAttempt,
 } from '@/frontend/lib/api/offline-queue'
-import { drainAttestationQueue } from '@/frontend/lib/attestation-queue'
+import { drainAttestationQueue, loadAttestationQueue } from '@/frontend/lib/attestation-queue'
 import {
   applyDirectMailboxChainSnapshotFromNetworkIds,
   syncDirectMailboxFlagsFromApiStatus,
@@ -38,10 +44,12 @@ export type UseChatViewMirrorDelayParams = {
   setStatusMsg: (msg: string) => void
   /** Privater Chat: Peer-Adresse für Direct-Mailbox vor `/send` (Hybrid). */
   mailboxRecipient: string
+  /** Eigene Wallet-Adresse — für Forensic-`canonical_msg_ref` nach Delayed-Mirror. */
+  senderAddress: string
 }
 
 export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
-  const { loadMessages, setStatus, setStatusMsg, mailboxRecipient } = p
+  const { loadMessages, setStatus, setStatusMsg, mailboxRecipient, senderAddress } = p
 
   const mirrorDedupRef = useRef(new Set<string>())
   const mirrorDrainInFlightRef = useRef(false)
@@ -88,10 +96,17 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     if (getMirrorQueueCount() === 0) return
     mirrorDrainInFlightRef.current = true
     try {
+      let lastDigest: string | undefined
+      const mirrorSuccesses: { wire: string; txDigest?: string }[] = []
       const r = await drainMirrorQueue(
         async (payload) => {
-          const res = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), payload)
-          if (res.ok) return { ok: true as const }
+          const wire = prependMailboxNonceIfMissingForEncryptedWire(payload)
+          const res = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), wire)
+          if (res.ok) {
+            lastDigest = res.txDigest ?? lastDigest
+            mirrorSuccesses.push({ wire, txDigest: res.txDigest })
+            return { ok: true as const, txDigest: res.txDigest }
+          }
           const err = res.error || res.message
           return { ok: false as const, error: typeof err === 'string' ? err : undefined }
         },
@@ -102,22 +117,48 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       setMirrorQueuePending(r.remaining)
       if (r.sent > 0) {
         setStatus('success')
-        setStatusMsg(
+        const base =
           r.sent === 1
             ? 'Delayed Upload: 1 Eintrag aus Warteschlange nach IOTA übertragen.'
             : `Delayed Upload: ${r.sent} Einträge aus Warteschlange nach IOTA übertragen.`
-        )
+        let msg = base + formatTxDigestStatusSuffix(lastDigest)
+        const snd = senderAddress.trim()
+        if (snd && isForensicImageMailboxAttestationEnabled() && mirrorSuccesses.length > 0) {
+          for (let i = 0; i < mirrorSuccesses.length; i++) {
+            const row = mirrorSuccesses[i]!
+            const parsed = parseMailboxOutNonceMarker(row.wire)
+            if (!parsed) continue
+            const last = i === mirrorSuccesses.length - 1
+            await runForensicMailboxAttestationAfterSend({
+              recipient: mailboxRecipient.trim(),
+              senderAddress: snd,
+              primary: { payloadUtf8: row.wire, messageNonceU64: parsed.nonce },
+              imageContentSha256Hex: null,
+              deviceTimeTrustWarn: false,
+              baseSuccessMsg: msg,
+              setStatusMsg: last
+                ? (m) => {
+                    msg = m
+                  }
+                : () => {},
+              silent: !last,
+              mailboxTxDigest: row.txDigest,
+              mirrorMailboxTxDigest: row.txDigest ?? null,
+            })
+          }
+        }
+        setStatusMsg(msg)
         setTimeout(() => setStatus('idle'), 6000)
         void loadMessages()
       }
     } finally {
       mirrorDrainInFlightRef.current = false
     }
-  }, [loadMessages, mailboxRecipient, setStatus, setStatusMsg])
+  }, [loadMessages, mailboxRecipient, senderAddress, setStatus, setStatusMsg])
 
   const runOfflineMailboxDrain = useCallback(async () => {
     if (offlineMailboxDrainInFlightRef.current) return
-    if (getOfflineMailboxQueueCount() === 0) return
+    if (getOfflineMailboxQueueCount() === 0 && loadAttestationQueue().length === 0) return
     offlineMailboxDrainInFlightRef.current = true
     try {
       const s = await fetchStatus()
@@ -192,11 +233,34 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       if (mirrorDedupRef.current.has(dedup)) return
       if (hasMirrorQueuePending(fromAddress, body)) return
       try {
-        const r = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), mirrorPayloadFromWireBody(body))
+        const raw = mirrorPayloadFromWireBody(body)
+        const wire = prependMailboxNonceIfMissingForEncryptedWire(raw)
+        const r = await sendEncryptedMailboxHybrid(mailboxRecipient.trim(), wire)
         if (r.ok) {
           mirrorDedupRef.current.add(dedup)
           setStatus('success')
-          setStatusMsg('Delayed Upload: Inhalt zusätzlich per IOTA gespeichert.')
+          const baseOk = 'Delayed Upload: Inhalt zusätzlich per IOTA gespeichert.'
+          const snd = senderAddress.trim()
+          if (snd && isForensicImageMailboxAttestationEnabled()) {
+            const parsed = parseMailboxOutNonceMarker(wire)
+            if (parsed) {
+              await runForensicMailboxAttestationAfterSend({
+                recipient: mailboxRecipient.trim(),
+                senderAddress: snd,
+                primary: { payloadUtf8: wire, messageNonceU64: parsed.nonce },
+                imageContentSha256Hex: null,
+                deviceTimeTrustWarn: false,
+                baseSuccessMsg: baseOk,
+                setStatusMsg,
+                mailboxTxDigest: r.txDigest,
+                mirrorMailboxTxDigest: r.txDigest ?? null,
+              })
+            } else {
+              setStatusMsg(baseOk + formatTxDigestStatusSuffix(r.txDigest))
+            }
+          } else {
+            setStatusMsg(baseOk + formatTxDigestStatusSuffix(r.txDigest))
+          }
           setTimeout(() => setStatus('idle'), 6000)
           void loadMessages()
         } else {
@@ -225,7 +289,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         void runMirrorDrain()
       }
     },
-    [loadMessages, mailboxRecipient, runMirrorDrain, setStatus, setStatusMsg]
+    [loadMessages, mailboxRecipient, runMirrorDrain, senderAddress, setStatus, setStatusMsg]
   )
 
   return {

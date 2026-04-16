@@ -30,6 +30,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     setInboxPartnerKey: (k: string | null) => void
     inboxDirectionFilter: InboxDirectionFilter
     setInboxDirectionFilter: (d: InboxDirectionFilter) => void
+    inboxMeshTransportOnly: boolean
+    setInboxMeshTransportOnly: (v: boolean) => void
     selectInboxPartnerForSend: (address: string) => void
   }
 
@@ -60,6 +62,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
+    inboxMeshTransportOnly,
+    setInboxMeshTransportOnly,
     selectInboxPartnerForSend,
     onDismissMeshInboundBanner,
     loadingMore,
@@ -89,6 +93,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onPartnerKeyChange={setInboxPartnerKey}
         direction={inboxDirectionFilter}
         onDirectionChange={setInboxDirectionFilter}
+        meshTransportOnly={inboxMeshTransportOnly}
+        onMeshTransportOnlyChange={setInboxMeshTransportOnly}
         onPartnerSelectForSend={selectInboxPartnerForSend}
       />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">

@@ -12,6 +12,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInbox } from '@/frontend/lib/api'
 import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { mergeAllMessages, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
+import { appendMeshToLocalArchive, pickMeshRowsForInboxMerge } from '@/frontend/lib/mesh-local-archive'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
 import type { Message } from '@/frontend/lib/types'
@@ -36,6 +37,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const mailboxOffsetRef = useRef(0)
 
   const appendMeshMessage = useCallback((msg: Message) => {
+    appendMeshToLocalArchive(msg)
     setMessages((prev) => {
       if (prev.some((m) => m.id === msg.id)) return prev
       const merged = mergeMessageByDedup(prev, msg)
@@ -118,7 +120,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             setInboxHasMore(mapped.length >= PAGE_SIZE)
           }
           setMessages((prev) => {
-            const meshLocal = prev.filter((m) => m.transports?.includes('mesh'))
+            const meshLocal = pickMeshRowsForInboxMerge(prev)
             if (mode === 'reset') {
               return mergeAllMessages([...mapped, ...meshLocal])
             }

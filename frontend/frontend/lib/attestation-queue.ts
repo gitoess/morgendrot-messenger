@@ -8,9 +8,11 @@ import {
   serializeAttestationQueueJson,
   type AttestationManifestDraftV1,
   type AttestationQueueItem,
-  type AttestationSubmitResult,
 } from '@morgendrot/core/attestation'
 import { createCryptoUuidIdGenerator } from '@morgendrot/core'
+import { browserAttestationSubmit } from '@/frontend/lib/attestation-manifest-anchor'
+
+export { buildAttestationManifestWire, browserAttestationSubmit } from '@/frontend/lib/attestation-manifest-anchor'
 
 const ids = createCryptoUuidIdGenerator()
 
@@ -43,13 +45,11 @@ export function enqueueAttestationManifestDraft(draft: AttestationManifestDraftV
   return { ok: true, remaining: r.items.length }
 }
 
-/** Standard-Submit: Platzhalter — echte IOTA-Verankerung folgt. */
-export async function defaultAttestationSubmit(_draft: AttestationManifestDraftV1): Promise<AttestationSubmitResult> {
-  return { ok: false, error: 'Attestation-IOTA-Upload noch nicht implementiert.' }
-}
+/** Alias für ältere Importe — identisch mit **`browserAttestationSubmit`**. */
+export const defaultAttestationSubmit = browserAttestationSubmit
 
 export async function drainAttestationQueue(
-  submit = defaultAttestationSubmit
+  submit = browserAttestationSubmit
 ): Promise<{ sent: number; failed: number; remaining: number }> {
   const cur = loadAttestationQueue()
   if (cur.length === 0) return { sent: 0, failed: 0, remaining: 0 }

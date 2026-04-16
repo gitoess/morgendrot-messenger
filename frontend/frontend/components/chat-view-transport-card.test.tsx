@@ -21,7 +21,7 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
       />
     )
     expect(screen.getByText(/Heltec noch nicht gekoppelt/i)).toBeInTheDocument()
-    screen.getByRole('button', { name: /Partner verbinden öffnen/i }).click()
+    screen.getByRole('button', { name: /Partner-Setup öffnen/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })
 

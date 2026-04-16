@@ -100,6 +100,8 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<'interval' | 'enabled' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  /** Letzter Fehler beim Öffnen: `/api/current-ids` (Netzwerk, Rewrite, Basis). */
+  const [idsPanelErr, setIdsPanelErr] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [strictOnline, setStrictOnline] = useState(false)
   const [loraTier, setLoraTier] = useState(1)
@@ -153,9 +155,15 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   useEffect(() => {
     if (!open) return
     let cancelled = false
+    setIdsPanelErr(null)
     void (async () => {
       try {
         const res = await fetch('/api/current-ids')
+        if (cancelled) return
+        if (!res.ok) {
+          setIdsPanelErr(`/api/current-ids: HTTP ${res.status} — Basis erreichbar? Next-Rewrite → API-Port prüfen.`)
+          return
+        }
         const j = (await res.json()) as {
           ok?: boolean
           myAddress?: string
@@ -163,7 +171,11 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
           streamsAnchorId?: string
           mailboxId?: string
         }
-        if (cancelled || j.ok !== true) return
+        if (cancelled) return
+        if (j.ok !== true) {
+          setIdsPanelErr('/api/current-ids: ok≠true (Tresor/API prüfen).')
+          return
+        }
         const pkg = (j.packageId || '').trim()
         const mb = (j.mailboxId || '').trim()
         const addr = (j.myAddress || '').trim()
@@ -176,8 +188,10 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         if (pkg) setChainPkg(pkg)
         if (mb) setChainMb(mb)
         if (addr) setChainAddr(addr)
-      } catch {
-        /* ignore */
+      } catch (e) {
+        if (!cancelled) {
+          setIdsPanelErr(e instanceof Error ? e.message : String(e))
+        }
       }
     })()
     return () => {
@@ -291,6 +305,11 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
           <strong className="text-foreground">„Direkt-RPC“</strong> eintragen und dort in <span className="font-mono">localStorage</span> speichern
           (siehe Handbuch / Architektur H.15).
         </p>
+        {idsPanelErr ? (
+          <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
+            {idsPanelErr}
+          </p>
+        ) : null}
 
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-foreground">Explorer / Prüfen</p>
@@ -660,13 +679,17 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
                         mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
                         messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
                       }
-                  persistDirectMailboxChainSnapshot({
+                  const persisted = persistDirectMailboxChainSnapshot({
                     packageId: pkg,
                     mailboxId: mb,
                     senderAddress: addr,
                     ttlDays: ttl,
                     flags,
                   })
+                  if (!persisted.ok) {
+                    setMsg(`Ketten-IDs nicht gespeichert: ${persisted.error}`)
+                    return
+                  }
                   setChainPkg(pkg)
                   setChainMb(mb)
                   setChainAddr(addr)

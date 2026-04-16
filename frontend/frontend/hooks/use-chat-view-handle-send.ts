@@ -39,7 +39,13 @@ import {
   sha256HexFromBase64Bytes,
 } from '@/frontend/lib/forensic-mailbox-attestation'
 import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
-import { parseMeshtasticNodeIdToNumber, resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
+import {
+  formatMeshtasticNodeIdFromNum,
+  parseMeshtasticNodeIdToNumber,
+  resolveMeshtasticPlaintextDestination,
+} from '@/frontend/lib/meshtastic-node-id'
+import type { Message } from '@/frontend/lib/types'
+import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -109,6 +115,66 @@ function applyValidationError(
   setTimeout(() => setStatus('idle'), v.idleMs ?? 6000)
 }
 
+function recordMeshOutgoingPlaintext(
+  append: UseChatViewSendFlowParams['appendMeshMessage'],
+  myAddress: string,
+  text: string,
+  dest: number | 'broadcast'
+): void {
+  const addr = myAddress.trim()
+  if (!append || !addr) return
+  const destLabel = dest === 'broadcast' ? 'Meshtastic Broadcast' : `mesh:${formatMeshtasticNodeIdFromNum(dest)}`
+  const ts = Date.now()
+  const id = `mesh-out-plain-${ts}-${Math.random().toString(36).slice(2, 9)}`
+  append({
+    id,
+    from: addr,
+    recipient: destLabel,
+    content: text,
+    timestamp: ts,
+    encrypted: false,
+    source: 'mesh',
+    transports: ['mesh'],
+    dedupKey: `mesh-out-plain|${addr}|${text.slice(0, 80)}|${Math.floor(ts / 120_000)}`,
+    meshMeta:
+      dest === 'broadcast' ? { kind: 'text', fromNodeNum: 0 } : { kind: 'text', fromNodeNum: (dest as number) >>> 0 },
+  })
+}
+
+function mailboxHybridErr(res: { error?: unknown; message?: unknown }): string {
+  if (typeof res.error === 'string' && res.error.trim()) return res.error.trim()
+  if (typeof res.message === 'string' && res.message.trim()) return res.message.trim()
+  if (res.error !== undefined && res.error !== null) return formatUnknownError(res.error)
+  if (res.message !== undefined && res.message !== null) return formatUnknownError(res.message)
+  return 'Fehler'
+}
+
+function recordMeshOutgoingV2(
+  append: UseChatViewSendFlowParams['appendMeshMessage'],
+  myAddress: string,
+  wirePlain: string,
+  label = 'Meshtastic (Mesh v2)'
+): void {
+  const addr = myAddress.trim()
+  if (!append || !addr) return
+  const preview =
+    wirePlain.length > 280 ? `${wirePlain.slice(0, 260).trimEnd()}… (${wirePlain.length} Zeichen)` : wirePlain
+  const ts = Date.now()
+  const id = `mesh-out-v2-${ts}-${Math.random().toString(36).slice(2, 9)}`
+  append({
+    id,
+    from: addr,
+    recipient: label,
+    content: preview,
+    timestamp: ts,
+    encrypted: true,
+    source: 'mesh',
+    transports: ['mesh'],
+    dedupKey: `mesh-out-v2|${addr}|${ts}|${Math.random().toString(36).slice(2, 7)}`,
+    meshMeta: { kind: 'v2', fromNodeNum: 0 },
+  })
+}
+
 export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
   const {
     isPrivate,
@@ -137,6 +203,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    appendMeshMessage,
   } = p
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -309,11 +376,18 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               ? 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Wird beim Empfänger im Tangle verankert (Delayed Mirror; WLAN/Basis).'
               : 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Nur per LoRa — ohne Tangle keine Forensic-Attestation.'
           )
+          const cap = message.trim()
+          recordMeshOutgoingV2(
+            appendMeshMessage,
+            myAddress,
+            `[LoRa-Bild] LUMA+CHROMA${cap ? `: ${cap}` : ''}`,
+            'Meshtastic (Mesh v2 · LUMA+CHROMA)'
+          )
           setMessage('')
           setTimeout(() => void loadMessages(), 500)
         }
       } catch (e) {
-        const raw = e instanceof Error ? e.message : String(e)
+        const raw = formatUnknownError(e)
         setStatus('error')
         setStatusMsg(`LoRa (Funk) fehlgeschlagen – nichts gesendet. ${raw}`)
         loraOnlineOfferPayloadRef.current = { lumaText, chromaText }
@@ -381,7 +455,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       } catch (e) {
         setStatus('error')
-        setStatusMsg(e instanceof Error ? e.message : String(e))
+        setStatusMsg(formatUnknownError(e))
       } finally {
         setMeshProgress?.(null)
         clearCompactAttachment()
@@ -455,7 +529,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         textSnaps = buildTxtFileWireParts(attachedTxtFile.name, attachedTxtFile.text, cap)
       } catch (e) {
         setStatus('error')
-        setStatusMsg(e instanceof Error ? e.message : String(e))
+        setStatusMsg(formatUnknownError(e))
         setTimeout(() => setStatus('idle'), 7000)
         return
       }
@@ -632,7 +706,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             },
           }
         }
-        const errText = res.error || res.message || 'Fehler'
+        const errText = mailboxHybridErr(res)
         const qm = await queueMailboxIfAllowed(
           enc ? 'encrypted_send' : 'plain_send',
           wireForApi,
@@ -672,10 +746,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           try {
             await meshtastic.sendMeshText(textSnap, dest)
+            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
             return { ok: true }
           } catch (e) {
             setStatus('error')
-            setStatusMsg(e instanceof Error ? e.message : String(e))
+            setStatusMsg(formatUnknownError(e))
             return { ok: false }
           }
         }
@@ -702,6 +777,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                   throw new Error(MESH_BT_NOT_CONNECTED_MSG)
                 }
                 await meshtastic.sendMeshText(textSnap, dest)
+                recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
                 return { ok: true }
               } catch (e) {
                 lastErr = e
@@ -714,7 +790,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               }
             }
             setStatus('error')
-            setStatusMsg(lastErr instanceof Error ? lastErr.message : String(lastErr))
+            setStatusMsg(formatUnknownError(lastErr))
             return { ok: false }
           }
           if (!meshtastic.connected) {
@@ -722,10 +798,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           try {
             await meshtastic.sendMeshText(textSnap, dest)
+            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
             return { ok: true }
           } catch (e) {
             setStatus('error')
-            setStatusMsg(e instanceof Error ? e.message : String(e))
+            setStatusMsg(formatUnknownError(e))
             return { ok: false }
           }
         }
@@ -760,10 +837,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             }
             await sendMeshBurst(wireText)
           }
+          recordMeshOutgoingV2(appendMeshMessage, myAddress, wireText)
           return { ok: true }
         } catch (e) {
           setStatus('error')
-          setStatusMsg(e instanceof Error ? e.message : String(e))
+          setStatusMsg(formatUnknownError(e))
           return { ok: false }
         }
       }
@@ -784,7 +862,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             },
           }
         }
-        const onlineErr = res.error || res.message || 'Online-Versand fehlgeschlagen.'
+        const onlineErr = mailboxHybridErr(res) || 'Online-Versand fehlgeschlagen.'
         if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
           try {
             if (isEmergencySend) {
@@ -792,9 +870,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             } else {
               await sendMeshBurst(textSnap)
             }
+            recordMeshOutgoingV2(appendMeshMessage, myAddress, textSnap, 'Meshtastic (Mesh v2 · Online-Fallback)')
             return { ok: true, meshFallback: { onlineErr } }
           } catch (meshErr) {
-            const meshMsg = meshErr instanceof Error ? meshErr.message : String(meshErr)
+            const meshMsg = formatUnknownError(meshErr)
             const qmMesh = await queueMailboxIfAllowed(
               'encrypted_send',
               wireForApi,
@@ -889,7 +968,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           if (sosMailboxAckedSnaps.has(snap)) continue
           const mr = await sendEncryptedMailboxHybrid(recipient.trim(), snap)
           if (!mr.ok) {
-            mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mr.error || mr.message || '?'}.`
+            mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mailboxHybridErr(mr)}.`
             break
           }
         }
@@ -940,7 +1019,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     } catch (e) {
       setStatus('error')
-      setStatusMsg(e instanceof Error ? e.message : String(e))
+      setStatusMsg(formatUnknownError(e))
     } finally {
       setMeshProgress?.(null)
       clearCompactAttachment()
@@ -948,6 +1027,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setTimeout(() => setStatus('idle'), 4000)
     }
   }, [
+    appendMeshMessage,
     attachedAudioBase64,
     attachedBlobBase64,
     attachedLora,

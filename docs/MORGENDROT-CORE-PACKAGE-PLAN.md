@@ -134,7 +134,7 @@ Im Paket **`packages/morgendrot-core`** (oder nach Anlage des Ordners):
 5. **Root/Frontend** `package.json` + `transpilePackages` + **`npm install`** in `frontend/` → Lockfile commiten (**`docs/MONOREPO-NEXT-AND-SHARED.md`** beachten) — **erledigt** für `@morgendrot/core` v0.0.1.  
 6. **`device-time-trust`:** **erledigt** — eine Quelle im Core (`@morgendrot/core/device-time`), dünne Re‑Exports in **`src/shared`** / **`frontend/.../lib/device-time-trust.ts`**.  
 7. **`iota/*` (Client-Skelett):** **erledigt (2026-03-28)** — `@morgendrot/core/iota` (`createDirectIotaClient`, `sanitizeDirectIotaRpcUrl`, `probeDirectIotaRpc`); PWA-Helfer **`frontend/frontend/lib/direct-iota-rpc.ts`** + **`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL`**. Nächster Schritt: PTB/Signatur im Browser + Outbox-Drain.  
-8. **`attestation/*`:** **Queue v1** (`enqueueAttestationDraft`, `drainAttestationQueueOnce`, localStorage-Adapter `frontend/.../attestation-queue.ts`) — Submit-Port noch Platzhalter bis IOTA-Anker.  
+8. **`attestation/*`:** **Queue v1** (`enqueueAttestationDraft`, `drainAttestationQueueOnce`, localStorage-Adapter `frontend/.../attestation-queue.ts`) — Browser-**`browserAttestationSubmit`** (`attestation-manifest-anchor.ts`): Klartext-Hybrid an eigene Adresse (**MVP**); dediziertes Move-Attestation-PTB weiterhin offen.  
 9. **Doku:** diese Datei pflegen; **`docs/ROADMAP-FAHRPLAN.md`** § **H.15** bei Meilenstein „Core‑Scheibe 1 merged“ kurz aktualisieren.
 
 ---

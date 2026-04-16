@@ -6,7 +6,18 @@
  */
 
 import { useCallback, type MutableRefObject, type Dispatch, type SetStateAction } from 'react'
+import { toast } from 'sonner'
 import { startHandshake, connect } from '@/frontend/lib/api'
+
+const PARTNER_SETUP_ANCHOR_ID = 'chat-partner-setup-panel'
+
+function scrollPartnerSetupIntoView(): void {
+  requestAnimationFrame(() => {
+    window.setTimeout(() => {
+      document.getElementById(PARTNER_SETUP_ANCHOR_ID)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }, 120)
+  })
+}
 
 export type LoraOnlineFallbackState = { reasonLabel: string } | null
 
@@ -68,11 +79,17 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
   }, [loraOnlineOfferPayloadRef, setLoraOnlineFallbackOffer, setStatus])
 
   const toggleShowSetup = useCallback(() => {
-    setShowSetup((s) => !s)
+    setShowSetup((s) => {
+      const opening = !s
+      if (opening) scrollPartnerSetupIntoView()
+      return opening
+    })
   }, [setShowSetup])
 
   const openPartnerSetupPanel = useCallback(() => {
     setShowSetup(true)
+    scrollPartnerSetupIntoView()
+    toast.info('Partner-Setup geöffnet — Funk: „Heltec (Web Bluetooth) verbinden“ im Abschnitt Mesh.')
   }, [setShowSetup])
 
   return {

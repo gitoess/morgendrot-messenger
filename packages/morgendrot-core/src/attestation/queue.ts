@@ -1,6 +1,6 @@
 /**
  * Lokale Attestation-Outbox (Manifest-Entwürfe) — **noch ohne** festes On-Chain-Format.
- * Submit über **`AttestationSubmitPort`** (Browser: z. B. später IOTA-PTB; Default: Fehler/No-op).
+ * Submit über **`AttestationSubmitPort`** (Browser: z. B. **`browserAttestationSubmit`** im Frontend — Klartext-Hybrid; kein Core-Default).
  */
 
 import { ATTESTATION_QUEUE_ITEM_STATUS, type AttestationManifestDraftV1 } from './model'
@@ -53,11 +53,25 @@ export function parseAttestationQueueJson(raw: string | null | undefined): Attes
       if (!d || typeof d !== 'object') continue
       const dr = d as Record<string, unknown>
       if (dr.manifestVersion !== 1) continue
+      const optHex64 = (v: unknown): string | undefined => {
+        if (typeof v !== 'string') return undefined
+        const t = v.trim().toLowerCase()
+        return /^[0-9a-f]{64}$/.test(t) ? t : undefined
+      }
       const draft: AttestationManifestDraftV1 = {
         manifestVersion: 1,
         canonicalMsgRefHex: typeof dr.canonicalMsgRefHex === 'string' ? dr.canonicalMsgRefHex : null,
         observedAtMs: typeof dr.observedAtMs === 'number' && Number.isFinite(dr.observedAtMs) ? dr.observedAtMs : createdAt,
         timeIsTrusted: dr.timeIsTrusted === true,
+      }
+      const sec = optHex64(dr.secondaryCanonicalMsgRefHex)
+      if (sec !== undefined) draft.secondaryCanonicalMsgRefHex = sec
+      const imgH = optHex64(dr.imageContentSha256Hex)
+      if (imgH !== undefined) draft.imageContentSha256Hex = imgH
+      const mtxRaw = dr.mirrorMailboxTxDigest
+      if (typeof mtxRaw === 'string') {
+        const t = mtxRaw.trim()
+        if (t.length > 0 && t.length <= 128 && /^[0-9a-zA-Z+/=_-]+$/.test(t)) draft.mirrorMailboxTxDigest = t
       }
       if (!id) continue
       out.push({

@@ -103,7 +103,8 @@ function assertWireLimit(wire: string, label: string): void {
  * Kein `MORG_COMPACT_IMG_V1` – völlig getrennt von der IOTA-Pipeline.
  */
 export async function prepareImageForLoRa(originalBuffer: Buffer): Promise<LoRaProgressivePrepareResult> {
-    const normalized = await sharp(originalBuffer)
+    /** Viele Smartphone-JPEGs/PNG: `failOn: 'none'` verhindert unnötige 500er bei leicht korruptem EXIF. */
+    const normalized = await sharp(originalBuffer, { failOn: 'none' })
         .rotate()
         .resize({ width: 480, fit: 'inside', withoutEnlargement: true, kernel: sharp.kernel.lanczos3 })
         .toBuffer();
@@ -113,16 +114,21 @@ export async function prepareImageForLoRa(originalBuffer: Buffer): Promise<LoRaP
         { w: 36, h: 28, blur: 1.6 },
         { w: 32, h: 24, blur: 1.4 },
         { w: 28, h: 21, blur: 1.2 },
+        { w: 24, h: 18, blur: 1.0 },
+        { w: 20, h: 15, blur: 0.9 },
     ];
     const lumaQs = [50, 46, 42, 38, 34, 30, 28, 26, 24, 22];
     const chromaQs = [32, 28, 26, 24, 22, 20, 18];
 
     for (const { w, h, blur } of layouts) {
         for (const lumaQ of lumaQs) {
-            const luma = await sharp(normalized).greyscale().jpeg({ quality: lumaQ, mozjpeg: true }).toBuffer();
+                const luma = await sharp(normalized, { failOn: 'none' })
+                    .greyscale()
+                    .jpeg({ quality: lumaQ, mozjpeg: true })
+                    .toBuffer();
             if (luma.length > LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES) continue;
             for (const chromaQ of chromaQs) {
-                const chroma = await sharp(normalized)
+                const chroma = await sharp(normalized, { failOn: 'none' })
                     .resize(w, h, { fit: 'cover' })
                     .blur(blur)
                     .jpeg({ quality: chromaQ, mozjpeg: true })

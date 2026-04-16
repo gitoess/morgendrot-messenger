@@ -26,7 +26,7 @@ export function MeshFunkPanel({ ble: meshtastic, previewLines, contextHint }: Me
         Mesh / Funk (experimentell)
       </h4>
       <p className="mb-2 text-xs text-muted-foreground">
-        Heltec per Web Bluetooth (Chrome/Edge, localhost). Pro Browser-Tab meist nur eine aktive BT-Verbindung zum
+        Heltec per Web Bluetooth (Chrome/Edge; Brave oft aus — <span className="font-mono">brave://flags</span>, localhost). Pro Browser-Tab meist nur eine aktive BT-Verbindung zum
         gleichen Gerät – wenn du parallel <strong className="text-foreground">Nachrichten</strong> offen hast, dort oder
         hier koppeln, nicht doppelt.
       </p>

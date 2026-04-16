@@ -16,6 +16,12 @@ import {
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 
+const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
+
+function messageHasMeshTransport(m: Message): boolean {
+  return m.source === 'mesh' || (Array.isArray(m.transports) && m.transports.includes('mesh'))
+}
+
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: unknown) => Promise<void>
@@ -55,6 +61,26 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   /** Schnellfilter: Gesprächspartner + Richtung (Eingang/Ausgang). */
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
+  const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      setInboxMeshTransportOnly(sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
+    setInboxMeshTransportOnly(v)
+    if (typeof window === 'undefined') return
+    try {
+      sessionStorage.setItem(MESH_INBOX_ONLY_LS, v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   const inboxPartnerOptions = useMemo(() => {
     const addrs = uniqueCounterpartyAddresses(displayMessages, myAddress)
@@ -68,7 +94,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     })
   }, [displayMessages, myAddress, contactDirectory])
 
-  const filteredDisplayMessages = useMemo(
+  const partnerFilteredMessages = useMemo(
     () =>
       filterInboxMessagesByPartnerAndDirection(
         displayMessages,
@@ -78,6 +104,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       ),
     [displayMessages, myAddress, inboxPartnerKey, inboxDirectionFilter]
   )
+
+  const filteredDisplayMessages = useMemo(() => {
+    if (!inboxMeshTransportOnly) return partnerFilteredMessages
+    return partnerFilteredMessages.filter((m) => messageHasMeshTransport(m))
+  }, [partnerFilteredMessages, inboxMeshTransportOnly])
 
   const onHideInboxMessageLocal = useCallback((id: string) => {
     setHiddenInboxIds((prev) => {
@@ -234,6 +265,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
+    inboxMeshTransportOnly,
+    setInboxMeshTransportOnly: setInboxMeshTransportOnlyPersist,
     inboxPartnerOptions,
     toggleProtokollMark,
     onHideInboxMessageLocal,

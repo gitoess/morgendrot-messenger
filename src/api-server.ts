@@ -1908,6 +1908,70 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         /**
+         * IOTA-Kompaktblob (`MORG_COMPACT_IMG_V1`-Netto, wie im Composer) → LoRa LUMA+Chroma-Wires (nach Umschalten auf „funk“).
+         * POST JSON: { compactBlobBase64 } — kein Wallet.
+         */
+        if (url === '/api/compact-blob-to-lora-wires' && req.method === 'POST') {
+            const MAX_BODY = 6 * 1024 * 1024;
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+                if (body.length > MAX_BODY) {
+                    body = '';
+                    req.destroy();
+                }
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}');
+                    const rawB64 = typeof data.compactBlobBase64 === 'string' ? data.compactBlobBase64 : '';
+                    const b64 = rawB64.replace(/\s/g, '');
+                    if (!b64) {
+                        sendJson(res, 400, { ok: false, error: 'compactBlobBase64 fehlt.' }, cors);
+                        return;
+                    }
+                    let blob: Buffer;
+                    try {
+                        blob = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    /** Online-Kompakt kann bei XL-Presets deutlich über 11,8 KiB liegen (siehe `encodeToPlaintextBlobFitChain`). */
+                    if (blob.length < 16 || blob.length > 120_000) {
+                        sendJson(
+                            res,
+                            400,
+                            { ok: false, error: 'Kompakt-Blob-Länge ungültig (IOTA-Bild-Anhang erwartet).' },
+                            cors
+                        );
+                        return;
+                    }
+                    const png = await VaultImagePipeline.reconstructBlendToPng(blob);
+                    const r = await prepareImageForLoRa(png);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            messageId: r.messageId,
+                            lumaWire: r.lumaWire,
+                            chromaWire: r.chromaWire,
+                            lumaJpegBytes: r.lumaJpegBytes,
+                            chromaJpegBytes: r.chromaJpegBytes,
+                            lumaWireUtf8Bytes: r.lumaWireUtf8Bytes,
+                            chromaWireUtf8Bytes: r.chromaWireUtf8Bytes,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /**
          * Messenger: Browser-MediaRecorder (WebM/…) → Ogg/Opus (8 kHz Mono, voip, libopus). Braucht **ffmpeg** im PATH.
          * POST JSON: { audioBase64, mimeType? } — kein Wallet.
          */

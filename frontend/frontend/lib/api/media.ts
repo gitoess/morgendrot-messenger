@@ -55,6 +55,53 @@ export async function compactImageEncode(
   }
 }
 
+/**
+ * IOTA-`MORG_COMPACT_IMG_V1`-Netto-Blob (wie `attachedBlobBase64` im Composer) → LUMA+CHROMA-Wires für Funk.
+ * Server: Dekodieren → PNG → `prepareImageForLoRa`.
+ */
+export async function loraProgressiveFromCompactBlob(compactBlobBase64: string): Promise<{
+  ok: boolean
+  messageId?: string
+  lumaWire?: string
+  chromaWire?: string
+  lumaJpegBytes?: number
+  chromaJpegBytes?: number
+  lumaWireUtf8Bytes?: number
+  chromaWireUtf8Bytes?: number
+  error?: string
+}> {
+  try {
+    const fr = await fetchApiText(API_BASE, '/api/compact-blob-to-lora-wires', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ compactBlobBase64: compactBlobBase64.replace(/\s/g, '') }),
+    })
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'LoRa-Umwandlung fehlgeschlagen.' })
+    if (!r.ok) return { ok: false, error: r.error }
+    const b = r.body
+    if (
+      typeof b.messageId !== 'string' ||
+      typeof b.lumaWire !== 'string' ||
+      typeof b.chromaWire !== 'string'
+    ) {
+      return { ok: false, error: 'Unerwartete Antwort (LoRa aus Kompakt-Blob).' }
+    }
+    return {
+      ok: true,
+      messageId: b.messageId,
+      lumaWire: b.lumaWire,
+      chromaWire: b.chromaWire,
+      lumaJpegBytes: typeof b.lumaJpegBytes === 'number' ? b.lumaJpegBytes : undefined,
+      chromaJpegBytes: typeof b.chromaJpegBytes === 'number' ? b.chromaJpegBytes : undefined,
+      lumaWireUtf8Bytes: typeof b.lumaWireUtf8Bytes === 'number' ? b.lumaWireUtf8Bytes : undefined,
+      chromaWireUtf8Bytes: typeof b.chromaWireUtf8Bytes === 'number' ? b.chromaWireUtf8Bytes : undefined,
+    }
+  } catch (e) {
+    return { ok: false, error: formatFetchFailureMessage(e) }
+  }
+}
+
 /** Zweiphasig Luma+Chroma für Funk/Mesh (scharfes S/W + optionale Farbe) – kein IOTA-Kompaktformat. */
 export async function loraProgressiveEncode(imageBase64: string): Promise<{
   ok: boolean

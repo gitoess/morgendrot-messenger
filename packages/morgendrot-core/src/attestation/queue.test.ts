@@ -65,4 +65,55 @@ describe('attestation queue', () => {
     expect(items).toHaveLength(1)
     expect(items[0]?.id).toBe('x')
   })
+
+  it('parse: optionale ref2 / img', () => {
+    const ref = '11'.repeat(32)
+    const ref2 = '22'.repeat(32)
+    const img = '33'.repeat(32)
+    const items = parseAttestationQueueJson(
+      JSON.stringify([
+        {
+          id: 'y',
+          status: 'pending',
+          draft: {
+            manifestVersion: 1,
+            canonicalMsgRefHex: ref,
+            secondaryCanonicalMsgRefHex: ref2,
+            imageContentSha256Hex: img,
+            observedAtMs: 1,
+            timeIsTrusted: false,
+          },
+          createdAt: 1,
+          attempts: 0,
+          lastAttemptAt: 0,
+        },
+      ])
+    )
+    expect(items[0]?.draft.secondaryCanonicalMsgRefHex).toBe(ref2)
+    expect(items[0]?.draft.imageContentSha256Hex).toBe(img)
+  })
+
+  it('parse: optionales mirrorMailboxTxDigest (mtx)', () => {
+    const ref = 'aa'.repeat(32)
+    const mtx = '0xabc123deadbeef'
+    const items = parseAttestationQueueJson(
+      JSON.stringify([
+        {
+          id: 'z',
+          status: 'pending',
+          draft: {
+            manifestVersion: 1,
+            canonicalMsgRefHex: ref,
+            mirrorMailboxTxDigest: mtx,
+            observedAtMs: 2,
+            timeIsTrusted: true,
+          },
+          createdAt: 2,
+          attempts: 0,
+          lastAttemptAt: 0,
+        },
+      ])
+    )
+    expect(items[0]?.draft.mirrorMailboxTxDigest).toBe(mtx)
+  })
 })

@@ -105,6 +105,7 @@ export {
 export {
   compactImageEncode,
   loraProgressiveEncode,
+  loraProgressiveFromCompactBlob,
   loraProgressiveFuse,
   messengerAudioToOpus,
 } from '@/frontend/lib/api/media'
@@ -146,4 +147,6 @@ export {
   enqueueAttestationManifestDraft,
   drainAttestationQueue,
   defaultAttestationSubmit,
+  browserAttestationSubmit,
+  buildAttestationManifestWire,
 } from '@/frontend/lib/attestation-queue'

@@ -354,18 +354,46 @@ export function Dashboard() {
     return () => clearInterval(interval)
   }, [checkStatus])
 
-  /** Installierte PWA: beim Wechsel in den Hintergrund Tresor sperren (`/vault-lock`) → Passwort beim erneuten Öffnen. */
+  /**
+   * Installierte PWA: nach **längerem** Hintergrund Tresor sperren (`/vault-lock`) — Passwort beim erneuten Öffnen.
+   * **Nicht** sofort bei `hidden`: Android/WebView feuert das oft kurz bei **Tastatur**, Overlays oder Tab-UI → sonst
+   * `/vault-lock` auf der **gemeinsamen** API-Sitzung (PC + Handy gleicher Dev-Server) und spürbarer UI-Sprung.
+   * Opt-out: `localStorage` **`morgendrot.pwaBackgroundVaultLock`** = **`0`**.
+   */
   useEffect(() => {
+    let hideTimer: ReturnType<typeof setTimeout> | null = null
+    const PWA_BG_LOCK_MS = 45_000
     const onVis = () => {
+      if (document.visibilityState === 'visible') {
+        if (hideTimer != null) {
+          clearTimeout(hideTimer)
+          hideTimer = null
+        }
+        return
+      }
       if (document.visibilityState !== 'hidden') return
       if (!isPwaStandaloneDisplay()) return
-      void (async () => {
-        const r = await vaultLockCommand()
-        if (r.ok) await checkStatus()
-      })()
+      try {
+        if (typeof window !== 'undefined' && window.localStorage.getItem('morgendrot.pwaBackgroundVaultLock') === '0') {
+          return
+        }
+      } catch {
+        /* ignore */
+      }
+      if (hideTimer != null) clearTimeout(hideTimer)
+      hideTimer = setTimeout(() => {
+        hideTimer = null
+        void (async () => {
+          const r = await vaultLockCommand()
+          if (r.ok) await checkStatus()
+        })()
+      }, PWA_BG_LOCK_MS)
     }
     document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
+    return () => {
+      document.removeEventListener('visibilitychange', onVis)
+      if (hideTimer != null) clearTimeout(hideTimer)
+    }
   }, [checkStatus])
 
   const persistDashboardView = (v: ActiveView | null) => {
