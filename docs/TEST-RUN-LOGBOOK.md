@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-03-28** | Repo lokal (Windows), **§ H.1a** Sendepfad + PWA-Dashboard-RTL | **`cd frontend`**: **`npm run test:unit`** — **56** Dateien, **311** Tests (**`chat-view-send-utils.test.ts`**, **`dashboard-pwa-install-card.test.tsx`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** weitere Scheiben | **`cd frontend`**: **`npm run test:unit`** — **54** Dateien, **299** Tests (neu: **`package-id-compare`**, **`morg-emergency-v1-text`**, **`inbox-load-error`**) | **OK**. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a**-Scheibe | **`cd frontend`**: **`npm run test:unit`** — **51** Dateien, **276** Tests (neu: **`format-unknown-error.test.ts`**) | **OK** — weiter **L1–L5** / **H.15 Stufe 2** manuell. |
 | **2026-03-28** | Repo lokal (Windows), Fortsetzung **§ H.2** nach Roadmap | **`npm run check:pwa-desk:full`** — Next Production-Build (7 statische Routes, „Skipping validation of types“ laut Projektsetup), **`[check-pwa-manual-desk] OK`** | **OK** — Schreibtisch-Pflicht **§ C.0b Stufe 2** / **`docs/PWA-MANUAL-CHECKS.md`**; **als Nächstes** **§ H.1a**, Gerät **L1–L5**, dann **§ H.15 Stufe 2** manuell (**`HANDY-FIRST-STAGE2-…`**). |
