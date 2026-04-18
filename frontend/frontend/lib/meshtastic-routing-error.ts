@@ -80,6 +80,15 @@ export function meshtasticRoutingActionHint(code: number): string {
  */
 const MESHTASTIC_OUTBOUND_SOFT_ROUTING_ERRORS = new Set([3])
 
+/**
+ * Ob ein geworfener Fehler nach `throwIfMeshtasticRoutingFailed` **kurz wiederholt** werden darf
+ * (transiente Mesh-Routing-Codes — s. Beschreibungstext mit Klammer-Tag).
+ */
+export function meshtasticThrownErrorIsRetryable(err: unknown): boolean {
+  if (!(err instanceof Error)) return false
+  return /\((NO_ROUTE|MAX_RETRANSMIT|NO_RESPONSE)\)/.test(err.message)
+}
+
 /** `sendPacket` / `sendText` liefern manchmal `{ id, error }` statt zu werfen. */
 export function throwIfMeshtasticRoutingFailed(result: unknown, context: string): void {
   if (result == null || typeof result !== 'object') return

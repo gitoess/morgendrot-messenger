@@ -17,7 +17,12 @@ import { plaintextStartsWithMorgEmergencyV1 } from '@/frontend/lib/morg-emergenc
 import { buildMorgSosAckV1Wire, tryParseMorgSosAckV1Plaintext } from '@/frontend/lib/morg-sos-ack-wire'
 import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
 import { formatMeshtasticNodeIdFromNum } from '@/frontend/lib/meshtastic-node-id'
-import { throwIfMeshtasticRoutingFailed } from '@/frontend/lib/meshtastic-routing-error'
+import {
+  meshtasticThrownErrorIsRetryable,
+  throwIfMeshtasticRoutingFailed,
+} from '@/frontend/lib/meshtastic-routing-error'
+
+const MESH_TEXT_RETRY_BACKOFF_MS = [600, 1800] as const
 
 const V2_MAX_BYTES = 240
 
@@ -310,9 +315,22 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const sendMeshText = useCallback(
     async (text: string, destination: number | 'broadcast' = 'broadcast') => {
       if (!device) throw new Error('Meshtastic nicht verbunden')
-      const r = await device.sendText(text, destination)
-      throwIfMeshtasticRoutingFailed(r, 'Meshtastic-Text (LongFast)')
-      return r
+      const ctx = 'Meshtastic-Text (LongFast)'
+      let lastErr: unknown
+      for (let attempt = 0; attempt <= MESH_TEXT_RETRY_BACKOFF_MS.length; attempt++) {
+        try {
+          const r = await device.sendText(text, destination)
+          throwIfMeshtasticRoutingFailed(r, ctx)
+          return r
+        } catch (e) {
+          lastErr = e
+          const canRetry =
+            attempt < MESH_TEXT_RETRY_BACKOFF_MS.length && meshtasticThrownErrorIsRetryable(e)
+          if (!canRetry) throw e
+          await new Promise((res) => setTimeout(res, MESH_TEXT_RETRY_BACKOFF_MS[attempt]))
+        }
+      }
+      throw lastErr
     },
     [device]
   )

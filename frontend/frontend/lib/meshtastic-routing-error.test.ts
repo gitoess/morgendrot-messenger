@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { describeMeshtasticRoutingError, throwIfMeshtasticRoutingFailed } from '@/frontend/lib/meshtastic-routing-error'
+import {
+  describeMeshtasticRoutingError,
+  meshtasticThrownErrorIsRetryable,
+  throwIfMeshtasticRoutingFailed,
+} from '@/frontend/lib/meshtastic-routing-error'
 
 describe('describeMeshtasticRoutingError', () => {
   it('mappt TIMEOUT (3)', () => {
@@ -29,5 +33,26 @@ describe('throwIfMeshtasticRoutingFailed', () => {
   it('wirft nicht bei NONE / fehlendem error', () => {
     expect(() => throwIfMeshtasticRoutingFailed({ id: 1, error: 0 }, 'Test')).not.toThrow()
     expect(() => throwIfMeshtasticRoutingFailed({}, 'Test')).not.toThrow()
+  })
+})
+
+describe('meshtasticThrownErrorIsRetryable', () => {
+  it('true für NO_ROUTE / MAX_RETRANSMIT / NO_RESPONSE im Meldungstext', () => {
+    for (const code of [1, 5, 8] as const) {
+      try {
+        throwIfMeshtasticRoutingFailed({ error: code }, 'ctx')
+      } catch (e) {
+        expect(meshtasticThrownErrorIsRetryable(e)).toBe(true)
+      }
+    }
+  })
+
+  it('false für NO_CHANNEL und TIMEOUT', () => {
+    try {
+      throwIfMeshtasticRoutingFailed({ error: 6 }, 'ctx')
+    } catch (e) {
+      expect(meshtasticThrownErrorIsRetryable(e)).toBe(false)
+    }
+    expect(meshtasticThrownErrorIsRetryable(new Error('Zeitüberschreitung (TIMEOUT)'))).toBe(false)
   })
 })

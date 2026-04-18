@@ -601,18 +601,24 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         return
       }
-      const charCount = [...textSnaps[0]!].length
-      if (charCount > MESH_PLAINTEXT_MAX_CHARS) {
-        applyValidationError(
-          {
-            ok: false,
-            message: `Unverschlüsselter LoRa-Text maximal ${MESH_PLAINTEXT_MAX_CHARS} Zeichen (aktuell ${charCount}). Kürzen oder verschlüsselt senden.`,
-            idleMs: 9000,
-          },
-          setStatus,
-          setStatusMsg
-        )
-        return
+    }
+
+    /** LongFast / TEXT_MESSAGE: harte Nutzlastgrenze — galt fälschlich nur privat; öffentlicher Funk braucht dieselbe Kappe. */
+    if (!encrypted && forcedTransport === 'mesh') {
+      for (const snap of textSnaps) {
+        const charCount = [...snap].length
+        if (charCount > MESH_PLAINTEXT_MAX_CHARS) {
+          applyValidationError(
+            {
+              ok: false,
+              message: `Unverschlüsselter LoRa-Text maximal ${MESH_PLAINTEXT_MAX_CHARS} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder verschlüsselt senden (Mesh v2).`,
+              idleMs: 9000,
+            },
+            setStatus,
+            setStatusMsg
+          )
+          return
+        }
       }
     }
 
