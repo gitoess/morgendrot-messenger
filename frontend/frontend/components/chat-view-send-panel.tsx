@@ -6,8 +6,9 @@
  */
 
 import { useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, Check, Info, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
@@ -229,18 +230,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     return { luma, chroma }
   }, [loraOnlineFallbackOffer?.reasonLabel])
 
+  const showFunkPlaintextToMeshHint = isPrivate && encrypted && forcedTransport === 'internet'
+
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="space-y-4">
-        {isPrivate && encrypted && forcedTransport === 'internet' ? (
-          <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-950 dark:text-sky-50/95">
-            <strong className="text-foreground">Funk-Klartext:</strong> oben Sendepfad{' '}
-            <span className="font-mono">funk</span> wählen — kurz bestätigen, dann erscheinen hier{' '}
-            <strong className="text-foreground">An Node-ID senden</strong> und{' '}
-            <strong className="text-foreground">LoRa + eigene Verankerung (Pfad 4)</strong>.
-          </div>
-        ) : null}
-
         {!encrypted && (
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger-Adresse</label>
@@ -358,19 +352,48 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Deine Nachricht</label>
-          <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-            <span>
-              Sprachmemo max. {voiceMaxSeconds}s — nur bei <strong className="text-foreground">Online/IOTA</strong>.
-            </span>
-            <MessengerHandbookChatLink />
-          </p>
-          {forcedTransport !== 'internet' ? (
-            <div className="mb-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-              Sprachmemo ist im Einsatzmodus aktuell <strong className="text-foreground">nur bei Online/IOTA</strong>{' '}
-              aktiv — bei „online“ neben „Online senden“.
-            </div>
-          ) : null}
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="chat-composer-message" className="text-sm font-medium text-foreground">
+              Nachricht
+            </label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Info className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
+                  Hilfe (Text, Funk, Handbuch)
+                </button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="max-h-[min(70vh,24rem)] w-[min(calc(100vw-2rem),22rem)] space-y-3 overflow-y-auto text-xs leading-relaxed"
+                align="end"
+              >
+                {showFunkPlaintextToMeshHint ? (
+                  <p className="text-muted-foreground">
+                    <strong className="text-foreground">Funk-Klartext:</strong> oben Sendepfad{' '}
+                    <span className="font-mono">funk</span> wählen — kurz bestätigen, dann erscheinen hier{' '}
+                    <strong className="text-foreground">An Node-ID senden</strong> und{' '}
+                    <strong className="text-foreground">LoRa + eigene Verankerung (Pfad 4)</strong>.
+                  </p>
+                ) : null}
+                <p className="text-muted-foreground">
+                  Sprachmemo max. <span className="tabular-nums">{voiceMaxSeconds}s</span> — nur bei{' '}
+                  <strong className="text-foreground">Online/IOTA</strong>.
+                </p>
+                {forcedTransport !== 'internet' ? (
+                  <p className="text-muted-foreground">
+                    Sprachmemo ist im Einsatzmodus aktuell <strong className="text-foreground">nur bei Online/IOTA</strong>{' '}
+                    aktiv — bei „online“ neben „Online senden“.
+                  </p>
+                ) : null}
+                <div className="border-t border-border/60 pt-2">
+                  <MessengerHandbookChatLink />
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}

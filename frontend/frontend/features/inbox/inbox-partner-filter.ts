@@ -106,6 +106,11 @@ export function messageTouchesInternetTransport(m: Message): boolean {
   return true
 }
 
+/** Posteingang „Nur IOTA“: Mailbox-/Online-Zeilen ohne Mesh-Anteil (kein `source: mesh`, kein Mesh in `transports`). */
+export function messagePureInternetInboxRow(m: Message): boolean {
+  return messageTouchesInternetTransport(m) && !messageTouchesMeshTransport(m)
+}
+
 /** Gegenüber-Adressen, die mindestens eine Nachricht mit `messagePred` haben. */
 export function uniqueCounterpartyAddressesWhen(
   messages: Message[],

@@ -6,6 +6,7 @@ import {
   isMessageOutgoing,
   isMessageSelfToSelf,
   messageCounterpartyAddress,
+  messagePureInternetInboxRow,
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
@@ -125,6 +126,30 @@ describe('messageTouchesMeshTransport / messageTouchesInternetTransport', () => 
     const msg = m({ id: '1', from: '0x1', content: '', timestamp: 1, source: 'mailbox' })
     expect(messageTouchesMeshTransport(msg)).toBe(false)
     expect(messageTouchesInternetTransport(msg)).toBe(true)
+  })
+})
+
+describe('messagePureInternetInboxRow', () => {
+  it('Mailbox-Zeile ohne Mesh: ja', () => {
+    const msg = m({ id: '1', from: '0x1', content: '', timestamp: 1, source: 'mailbox' })
+    expect(messagePureInternetInboxRow(msg)).toBe(true)
+  })
+
+  it('reiner Mesh: nein', () => {
+    const msg = m({ id: '1', from: 'mesh:!1', content: '', timestamp: 1, source: 'mesh' })
+    expect(messagePureInternetInboxRow(msg)).toBe(false)
+  })
+
+  it('Mesh+Internet in transports: nein (Mesh-Anteil)', () => {
+    const msg = m({
+      id: '1',
+      from: '0x1',
+      content: '',
+      timestamp: 1,
+      source: 'mesh',
+      transports: ['mesh', 'internet'],
+    })
+    expect(messagePureInternetInboxRow(msg)).toBe(false)
   })
 })
 

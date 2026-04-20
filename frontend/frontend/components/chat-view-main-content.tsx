@@ -22,7 +22,6 @@ import {
   type ChatViewTransportCardProps,
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
-import { ChatViewEinsatzProfilInline } from '@/frontend/components/chat-view-einsatz-profil-inline'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
@@ -166,6 +165,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxDirectionFilter,
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+    setInboxIotaTransportOnly,
     inboxPartnerOptionsMesh,
     inboxPartnerOptionsIota,
     selectInboxPartnerForSend,
@@ -245,6 +246,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxDirectionFilter,
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+    setInboxIotaTransportOnly,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     inboxRows,
@@ -370,7 +373,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onForcedTransportChange: setForcedTransport,
           onEncryptedChange: setEncrypted,
         }}
-        afterPulse={isPrivate ? <ChatViewEinsatzProfilInline /> : undefined}
       />
 
       {isPrivate ? (

@@ -154,6 +154,9 @@ export type ChatViewInboxPartnerStripProps = {
   /** Nur Zeilen mit Funk/Mesh (lokal + Echo nach Senden). */
   meshTransportOnly: boolean
   onMeshTransportOnlyChange: (v: boolean) => void
+  /** Nur reine Mailbox-/IOTA-Zeilen (ohne Mesh-Anteil). */
+  iotaTransportOnly: boolean
+  onIotaTransportOnlyChange: (v: boolean) => void
   /** Partner ausgewählt: Filter + Empfänger für Senden */
   onPartnerSelectForSend: (address: string) => void
   onRemoveInboxPartnerFromQuickList?: (
@@ -173,6 +176,8 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     onDirectionChange,
     meshTransportOnly,
     onMeshTransportOnlyChange,
+    iotaTransportOnly,
+    onIotaTransportOnlyChange,
     onPartnerSelectForSend,
     onRemoveInboxPartnerFromQuickList,
   } = p
@@ -208,7 +213,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           ))}
           <button
             type="button"
-            title="Nur Mailbox+Mesh-Liste auf Funk/Mesh-Zeilen einschränken (lokal archiviert)."
+            title="Nur Zeilen mit Funk/Mesh (lokal archiviert). Schließt „Nur IOTA“ aus."
             onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
             className={cn(
               'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
@@ -218,6 +223,19 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             )}
           >
             Nur LoRa/Mesh
+          </button>
+          <button
+            type="button"
+            title="Nur Mailbox-/Online-Zeilen ohne Mesh-Anteil. Schließt „Nur LoRa/Mesh“ aus."
+            onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
+            className={cn(
+              'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+              iotaTransportOnly
+                ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
+                : 'border-border bg-background text-muted-foreground hover:bg-muted'
+            )}
+          >
+            Nur IOTA
           </button>
         </div>
       ) : null}

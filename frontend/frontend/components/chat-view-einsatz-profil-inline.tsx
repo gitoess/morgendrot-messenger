@@ -1,8 +1,8 @@
 'use client'
 
 /**
- * Einsatz-Profil / Kontakte (initialProfile) — im **privaten Chat** unterhalb der Transport-Karte,
- * damit Import zum Messenger gehört (nicht nur „Setup“ in den Einstellungen).
+ * Einsatz-Profil / Kontakte (`initialProfile`) — Steuerungs-Workflow (typisch **Boss**): im Posteingang
+ * unter „Boss: …“ ausklappbar; optional mit eigenem Collapsible, wenn nicht eingebettet.
  */
 
 import { useState, useEffect, type ChangeEvent } from 'react'
@@ -22,7 +22,13 @@ import {
   LS_OFFLINE_BRIEFING_DISPLAY,
 } from '@/frontend/lib/initial-profile-import'
 
-export function ChatViewEinsatzProfilInline() {
+export type ChatViewEinsatzProfilInlineProps = {
+  /** Kein inneres Auf/Zu — äußeres `<details>` o. Ä. übernimmt die Ein-/Ausblendung. */
+  hideOuterCollapsible?: boolean
+}
+
+export function ChatViewEinsatzProfilInline(p?: ChatViewEinsatzProfilInlineProps) {
+  const hideOuterCollapsible = p?.hideOuterCollapsible === true
   const [sectionOpen, setSectionOpen] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
   const [einsatzProfilJson, setEinsatzProfilJson] = useState('')
@@ -107,6 +113,74 @@ export function ChatViewEinsatzProfilInline() {
     e.target.value = ''
   }
 
+  const body = (
+    <div
+      className={
+        hideOuterCollapsible
+          ? 'space-y-3 px-1 pb-1 pt-0'
+          : 'space-y-3 border-t border-border/60 px-4 pb-4 pt-2'
+      }
+    >
+      <p className="text-sm text-muted-foreground">
+        JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
+        <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
+        <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
+        <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
+        <span className="font-mono text-xs">offlineBriefing</span>.
+      </p>
+      {offlineBriefingDisplay ? (
+        <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
+          <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
+        </div>
+      ) : null}
+      <Textarea
+        value={einsatzProfilJson}
+        onChange={(e) => setEinsatzProfilJson(e.target.value)}
+        placeholder='{"version":1,"contacts":[],"offlineBriefing":"…"}'
+        className="min-h-[100px] font-mono text-xs"
+        spellCheck={false}
+      />
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs font-medium hover:bg-muted">
+          JSON-Datei wählen
+          <input type="file" accept=".json,application/json" className="sr-only" onChange={handleEinsatzProfilFile} />
+        </label>
+        <button
+          type="button"
+          disabled={einsatzProfilBusy || !backendOnline}
+          onClick={() => void handleEinsatzProfilApplyNow()}
+          className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {einsatzProfilBusy ? 'Import…' : 'Jetzt ins Telefonbuch'}
+        </button>
+        <button
+          type="button"
+          onClick={handleEinsatzProfilQueue}
+          className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
+        >
+          Für später merken
+        </button>
+        <button
+          type="button"
+          onClick={handleEinsatzProfilClearQueue}
+          className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent"
+        >
+          Warteschlange leeren
+        </button>
+      </div>
+      {einsatzProfilMsg ? (
+        <p className="text-xs text-muted-foreground" role="status">
+          {einsatzProfilMsg}
+        </p>
+      ) : null}
+    </div>
+  )
+
+  if (hideOuterCollapsible) {
+    return <div className="rounded-lg border border-border/70 bg-card/80">{body}</div>
+  }
+
   return (
     <Collapsible open={sectionOpen} onOpenChange={setSectionOpen} className="rounded-xl border border-border bg-card">
       <CollapsibleTrigger asChild>
@@ -127,63 +201,7 @@ export function ChatViewEinsatzProfilInline() {
           )}
         </button>
       </CollapsibleTrigger>
-      <CollapsibleContent>
-        <div className="space-y-3 border-t border-border/60 px-4 pb-4 pt-2">
-          <p className="text-sm text-muted-foreground">
-            JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
-            <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
-            <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
-            <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
-            <span className="font-mono text-xs">offlineBriefing</span>.
-          </p>
-          {offlineBriefingDisplay ? (
-            <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
-              <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
-            </div>
-          ) : null}
-          <Textarea
-            value={einsatzProfilJson}
-            onChange={(e) => setEinsatzProfilJson(e.target.value)}
-            placeholder='{"version":1,"contacts":[],"offlineBriefing":"…"}'
-            className="min-h-[100px] font-mono text-xs"
-            spellCheck={false}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="cursor-pointer rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs font-medium hover:bg-muted">
-              JSON-Datei wählen
-              <input type="file" accept=".json,application/json" className="sr-only" onChange={handleEinsatzProfilFile} />
-            </label>
-            <button
-              type="button"
-              disabled={einsatzProfilBusy || !backendOnline}
-              onClick={() => void handleEinsatzProfilApplyNow()}
-              className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {einsatzProfilBusy ? 'Import…' : 'Jetzt ins Telefonbuch'}
-            </button>
-            <button
-              type="button"
-              onClick={handleEinsatzProfilQueue}
-              className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent"
-            >
-              Für später merken
-            </button>
-            <button
-              type="button"
-              onClick={handleEinsatzProfilClearQueue}
-              className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent"
-            >
-              Warteschlange leeren
-            </button>
-          </div>
-          {einsatzProfilMsg ? (
-            <p className="text-xs text-muted-foreground" role="status">
-              {einsatzProfilMsg}
-            </p>
-          ) : null}
-        </div>
-      </CollapsibleContent>
+      <CollapsibleContent>{body}</CollapsibleContent>
     </Collapsible>
   )
 }

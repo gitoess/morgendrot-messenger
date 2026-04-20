@@ -7,11 +7,18 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, FileDown, Inbox, KeyRound, Lock, RefreshCw, UserPlus } from 'lucide-react'
+import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number
@@ -122,7 +129,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           </label>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <input
           ref={morgPkgFileRef}
           type="file"
@@ -138,104 +145,119 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           className="hidden"
           onChange={onMorgPkgDeviceFiles}
         />
-        <button
-          type="button"
-          disabled={apiStatus?.connected !== true || apiStatus?.locked}
-          onClick={() => morgPkgFileRef.current?.click()}
-          className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-          title={morgImportTitle}
-        >
-          .morg-pkg import
-        </button>
-        <button
-          type="button"
-          disabled={morgPkgDeviceBusy || apiStatus?.locked || apiStatus?.connected !== true}
-          onClick={() => morgPkgDeviceFilesRef.current?.click()}
-          className="rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-          title={morgDeviceTitle}
-        >
-          {morgPkgDeviceBusy ? 'Paket…' : 'Gerät → .morg-pkg'}
-        </button>
-        <div
-          className="flex w-full flex-wrap items-center gap-2 border-l border-border/70 pl-3 sm:w-auto sm:pl-3"
-          role="group"
-          aria-label="Export Einsatzbericht"
-        >
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Export</span>
-          <button
-            type="button"
-            disabled={messageCount === 0}
-            onClick={onExportEinsatzberichtJson}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Rohdaten chronologisch (JSON). Für Technik/Backup; kann sehr sensibel sein."
-          >
-            <FileDown className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            JSON
-          </button>
-          <button
-            type="button"
-            disabled={messageCount === 0}
-            onClick={onExportEinsatzberichtTxt}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Kurzfassung lesbar als .txt – für schnelle Übersicht oder Weiterleitung."
-          >
-            Kurzbericht .txt
-          </button>
-          <button
-            type="button"
-            disabled={messageCount === 0}
-            onClick={() => void onExportEinsatzberichtEncrypted()}
-            className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Ein verschlüsselter Download (AES-GCM); öffnen mit einsatzbericht-decrypt.html im Projekt."
-          >
-            <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Kurzbericht verschl.
-          </button>
-          <button
-            type="button"
-            disabled={messageCount === 0}
-            onClick={() => void onExportEinsatzprotokoll()}
-            className="inline-flex max-w-[12rem] items-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-primary/15 disabled:opacity-50"
-            title="Erstellt intern ZIP (JSON/HTML/Medien), verschlüsselt es und lädt *.zip.enc.json herunter — kein direktes .zip. Passwort: zuerst bei den Browser-Abfragen, danach auf der Hilfsseite „ZIP aus .json“. 7-Zip/Explorer können die JSON-Datei nicht entschlüsseln."
-          >
-            <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            Einsatzbericht (ZIP)
-          </button>
-          <button
-            type="button"
-            disabled={messageCount === 0}
-            onClick={() => void onExportEinsatzprotokollPlainZip()}
-            className="inline-flex max-w-[11rem] items-center gap-1 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-amber-500/15 disabled:opacity-50"
-            title="Direktes .zip zum Entpacken (protokoll.json, protokoll.html, medien/) – vollständiger Verlauf von der API. Nur in vertrauenswürdiger Umgebung (nicht verschlüsselt)."
-          >
-            <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            ZIP Klartext
-          </button>
-          <button
-            type="button"
-            disabled={protokollMarkedCount === 0}
-            onClick={() => void onExportEinsatzprotokollMarked()}
-            className="inline-flex max-w-[12rem] items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title={
-              protokollMarkedCount === 0
-                ? 'Deaktiviert: Mindestens eine Posteingangszeile mit dem Stern (★) markieren.'
-                : 'Wie Einsatzbericht (ZIP), aber nur mit ★ markierte Nachrichten.'
-            }
-          >
-            <Archive className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            ZIP nur ★ ({protokollMarkedCount})
-          </button>
-          <a
-            href="/einsatzbericht-decrypt.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex max-w-[10rem] items-center gap-1 rounded-lg border border-dashed border-border bg-background px-2 py-1.5 text-xs text-foreground underline-offset-2 hover:bg-muted hover:underline"
-            title="Öffnet die Hilfsseite im Browser: JSON einfügen oder wählen, Passwort eingeben, echtes ZIP herunterladen (innerhalb und außerhalb des Messengers möglich)."
-          >
-            <KeyRound className="h-3.5 w-3.5 shrink-0" aria-hidden />
-            ZIP aus .json
-          </a>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Package className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              Pakete
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-[14rem]">
+            <DropdownMenuItem
+              disabled={apiStatus?.connected !== true || apiStatus?.locked}
+              title={morgImportTitle}
+              onSelect={(e) => {
+                e.preventDefault()
+                morgPkgFileRef.current?.click()
+              }}
+            >
+              .morg-pkg import
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={morgPkgDeviceBusy || apiStatus?.locked || apiStatus?.connected !== true}
+              title={morgDeviceTitle}
+              onSelect={(e) => {
+                e.preventDefault()
+                morgPkgDeviceFilesRef.current?.click()
+              }}
+            >
+              {morgPkgDeviceBusy ? 'Gerät → .morg-pkg (läuft…)' : 'Gerät → .morg-pkg'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <Archive className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+              Export
+              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,18rem)] overflow-y-auto">
+            <DropdownMenuItem
+              disabled={messageCount === 0}
+              title="Rohdaten chronologisch (JSON). Für Technik/Backup; kann sehr sensibel sein."
+              onSelect={() => onExportEinsatzberichtJson()}
+            >
+              <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+              JSON (voll)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={messageCount === 0}
+              title="Kurzfassung lesbar als .txt – für schnelle Übersicht oder Weiterleitung."
+              onSelect={() => onExportEinsatzberichtTxt()}
+            >
+              Kurzbericht .txt
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={messageCount === 0}
+              title="Ein verschlüsselter Download (AES-GCM); öffnen mit einsatzbericht-decrypt.html im Projekt."
+              onSelect={() => void onExportEinsatzberichtEncrypted()}
+            >
+              <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+              Kurzbericht verschlüsselt
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              disabled={messageCount === 0}
+              title="Intern ZIP, Download *.zip.enc.json — Passwort bei Abfragen und auf Hilfsseite."
+              onSelect={() => void onExportEinsatzprotokoll()}
+            >
+              <Archive className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+              Einsatzbericht (ZIP, verschlüsselt)
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={messageCount === 0}
+              title="Direktes .zip zum Entpacken — nur in vertrauenswürdiger Umgebung."
+              onSelect={() => void onExportEinsatzprotokollPlainZip()}
+            >
+              ZIP Klartext
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={protokollMarkedCount === 0}
+              title={
+                protokollMarkedCount === 0
+                  ? 'Mindestens eine Zeile mit ★ markieren.'
+                  : 'Nur ★-markierte Nachrichten.'
+              }
+              onSelect={() => void onExportEinsatzprotokollMarked()}
+            >
+              ZIP nur ★ ({protokollMarkedCount})
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <a
+                href="/einsatzbericht-decrypt.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex cursor-pointer items-center"
+                title="Hilfsseite: JSON + Passwort → echtes ZIP."
+              >
+                <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                ZIP aus .json (Hilfe)
+              </a>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <ChatViewProtokollAnchorButton
           messageCount={messageCount}
           messages={messages}

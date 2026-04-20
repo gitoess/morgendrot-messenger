@@ -8,7 +8,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
-- **Chat-Kopf (privat):** statische Zeile „E2E / ECDH + AES-GCM …“ entfernt — Verweis auf die Karte **„Verschlüsselung“** unter dem Nachrichtenbereich; Rolle bleibt sichtbar.
+- **Posteingang:** Filter **„Nur IOTA“** (reine Mailbox-/Online-Zeilen ohne Mesh-Anteil), gegenseitig exclusiv zu **„Nur LoRa/Mesh“** (`sessionStorage` **`morg.inbox.iotaTransportOnly.v1`**); **`messagePureInternetInboxRow`** in **`inbox-partner-filter.ts`** + Vitest.
+- **Posteingang-Kopf:** **Pakete**- und **Export**-Dropdowns (`.morg-pkg`, Einsatzbericht-/ZIP-Aktionen, Hilfe-Link); weniger Button-Leiste.
+- **Boss:** **Einsatz-Profil / Kontakte** aus dem Chat-Kopf entfernt — nur bei Rolle **Boss** im Posteingang unter ausklappbarem Block; **`ChatViewEinsatzProfilInline`** mit **`hideOuterCollapsible`**.
+- **Composer:** Hinweise **Funk-Klartext**, **Sprachmemo**, **Handbuch** in einem **Popover** „Hilfe (Text, Funk, Handbuch)“; Label **Nachricht** statt „Deine Nachricht“.
+- **Chat-Kopf (privat):** kein statisches E2E/ECDH-Band mehr; Untertitel: Schloss = Modus, konkreter Sendeweg/Schalter in **„Verschlüsselung“** unter dem Nachrichtenbereich; Rolle bleibt sichtbar.
 - **Posteingang:** Schnellliste **Funkpartner** / **IOTA·Mailbox** pro Chip per **×** aus der lokalen Vorschlagsliste entfernbar (`localStorage` **Blockliste** `morg.inbox.partnerMemoryBlocked.v1`); optional zweiter Schritt blendet sichtbare Zeilen mit diesem Gegenüber lokal aus (Funk vs. IOTA je nach Zeile). Hinweiszeile **Telefonbuch** unter der Posteingangs-Kopfzeile; Menüpunkt **„Ins Telefonbuch“** in jeder Zeile sichtbar, außerhalb gültiger 0x-Eingänge **deaktiviert** mit Tooltip.
 
 ### Repository / Bundles

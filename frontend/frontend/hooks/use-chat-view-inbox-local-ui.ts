@@ -11,6 +11,7 @@ import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import {
   filterInboxMessagesByPartnerAndDirection,
   messageCounterpartyAddress,
+  messagePureInternetInboxRow,
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
@@ -21,6 +22,7 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 
 const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
+const IOTA_INBOX_ONLY_LS = 'morg.inbox.iotaTransportOnly.v1'
 const INBOX_PARTNER_MEMORY_LS = 'morg.inbox.partnerMemory.v1'
 const INBOX_PARTNER_MEMORY_BLOCKED_LS = 'morg.inbox.partnerMemoryBlocked.v1'
 
@@ -68,13 +70,24 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
   const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
+  const [inboxIotaTransportOnly, setInboxIotaTransportOnly] = useState(false)
   const [inboxPartnerMemory, setInboxPartnerMemory] = useState<string[]>([])
   const [inboxPartnerBlockedNorms, setInboxPartnerBlockedNorms] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
-      setInboxMeshTransportOnly(sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1')
+      const meshOnly = sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1'
+      const iotaOnly = sessionStorage.getItem(IOTA_INBOX_ONLY_LS) === '1'
+      setInboxMeshTransportOnly(meshOnly)
+      setInboxIotaTransportOnly(iotaOnly && !meshOnly)
+      if (meshOnly && iotaOnly) {
+        try {
+          sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
+        } catch {
+          /* ignore */
+        }
+      }
       let blockedNorms = new Set<string>()
       const rawBlocked = window.localStorage.getItem(INBOX_PARTNER_MEMORY_BLOCKED_LS)
       if (rawBlocked) {
@@ -136,9 +149,39 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
     setInboxMeshTransportOnly(v)
+    if (v) {
+      setInboxIotaTransportOnly(false)
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
+        } catch {
+          /* ignore */
+        }
+      }
+    }
     if (typeof window === 'undefined') return
     try {
       sessionStorage.setItem(MESH_INBOX_ONLY_LS, v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  const setInboxIotaTransportOnlyPersist = useCallback((v: boolean) => {
+    setInboxIotaTransportOnly(v)
+    if (v) {
+      setInboxMeshTransportOnly(false)
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(MESH_INBOX_ONLY_LS, '0')
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    if (typeof window === 'undefined') return
+    try {
+      sessionStorage.setItem(IOTA_INBOX_ONLY_LS, v ? '1' : '0')
     } catch {
       /* ignore */
     }
@@ -315,9 +358,14 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   )
 
   const filteredDisplayMessages = useMemo(() => {
-    if (!inboxMeshTransportOnly) return partnerFilteredMessages
-    return partnerFilteredMessages.filter((m) => messageHasMeshTransport(m))
-  }, [partnerFilteredMessages, inboxMeshTransportOnly])
+    if (inboxMeshTransportOnly) {
+      return partnerFilteredMessages.filter((m) => messageHasMeshTransport(m))
+    }
+    if (inboxIotaTransportOnly) {
+      return partnerFilteredMessages.filter((m) => messagePureInternetInboxRow(m))
+    }
+    return partnerFilteredMessages
+  }, [partnerFilteredMessages, inboxMeshTransportOnly, inboxIotaTransportOnly])
 
   const onHideInboxMessageLocal = useCallback((id: string) => {
     setHiddenInboxIds((prev) => {
@@ -476,6 +524,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxDirectionFilter,
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly: setInboxMeshTransportOnlyPersist,
+    inboxIotaTransportOnly,
+    setInboxIotaTransportOnly: setInboxIotaTransportOnlyPersist,
     inboxPartnerOptions,
     inboxPartnerOptionsMesh,
     inboxPartnerOptionsIota,
