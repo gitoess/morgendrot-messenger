@@ -169,6 +169,20 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Nachtrag 2026-04-28 (Tests & Handy):** **`docs/TEST-RUN-LOGBOOK.md`** (Smoke/Frontend/Core/H.15 grün; Realworld mit Unlock nachziehen); **`docs/HANDY-TEST-WINDOW.md`** — **Handy erst**, wenn Schreibtisch grün **und** deploybare URL **gleicher** Version; optional **`test:messages*`** / **`test:realworld`** mit entsperrter API.
 
+**Nachtrag 2026-04-20 (LoRa-Basis nach Feldtest, nächste Prioritäten):**
+
+1. **LoRa unverschlüsselt (Bild + Sprache) robust machen** (**H.3 / H.18 Schnittmenge**): vorhandenen LUMA/CHROMA- und Sprachmemo-Pfad für **Klartext-Funk** stabilisieren (Retry, Vorschau, Fehlermeldungen, Größenlimits), bevor neue Kryptopfad-Varianten gebaut werden.
+2. **LoRa-„verschlüsselt“ klar trennen in zwei Modi** (**H.3 Architekturentscheidung**):
+   - **Modus A (Meshtastic Channel-Crypto):** Funkverschlüsselung wird vom Mesh-Kanal übernommen (PSK/256bit im Meshtastic-Ökosystem, vom Nutzer/Team eingerichtet).
+   - **Modus B (Morgendrot E2E / Mesh v2):** App-seitige Ende-zu-Ende-Semantik mit bestehender Handshake-/Schlüssel-Logik.
+   - **Leitplanke:** Kein „dritter Mischmodus“. UI muss die Modi explizit benennen.
+3. **IOTA lokal signieren + LoRa-Transport + spätere Tangle-Verankerung** (**H.15 + H.3m/H.12**): als **verzögerte Verankerung** behandeln (Outbox/Queue + Gateway/onlineer Knoten), nicht als „vollständige IOTA-TX direkt über LoRa“. Priorisiert nach stabiler LoRa-Basis (Punkt 1) und klarer Kryptotrennung (Punkt 2).
+
+**Konkrete nächsten drei Tickets (ab sofort):**
+- **Ticket A (H.3):** Unverschlüsselte LoRa-Bild-/Sprachsendung UX-stabil (Senden, Anzeige, Retry, klare Limits).
+- **Ticket B (H.3):** Transportkarte/Composer mit expliziter Auswahl „Klartext“, „Meshtastic-Kanal verschlüsselt“, „Morgendrot E2E (Mesh v2)“.
+- **Ticket C (H.15/H.12):** Spez/Implementationsskizze „lokal signierte IOTA-Nachricht -> LoRa Delayed Transport -> spätere Tangle-Verankerung“ (Queue, Idempotenz, Zustandsanzeige).
+
 **Nachtrag 2026-03-28 (§ H.3 Vorlauf — Delayed Mirror + Forensic):** **`localStorage`** **`morgendrot.delayMirrorToIota`** hält die Composer-Wahl **„Nur LoRa“** vs **„LoRa + Tangle“**. Nach **erfolgreichem Mirror-Drain** (`use-chat-view-mirror-delay.ts`): **Forensic-Attestation** je gespiegeltem Eintrag (bei **mehreren** Sends: stille Einreichung bis zum letzten, dann Statuszeile), Manifest **`mirrorMailboxTxDigest`** / Wire **`mtx`** (`@morgendrot/core` **`attestation/queue`**, **`forensic-mailbox-attestation.ts`**); **`onDelayMirrorPlaintext`** setzt **`mtx`** mit. **Send-Panel:** kurzer Hinweis *ohne Tangle keine Attestation* + Button **„Später verankern: auf ‚LoRa + Tangle‘ wechseln“**; **Erfolgstexte** unterscheiden LoRa-only vs. geplanter Tangle-Spiegel (`use-chat-view-handle-send.ts`). Vitest: **`queue.test.ts`** (`mtx`-Parse).
 
 **Nachtrag 2026-03-28 (§ H.3 — Pfad 4 „LoRa + eigene Verankerung“):** Vier-Pfad-Architektur — **Pfad 4** = Meshtastic-**Klartext** (LongFast, **kein** Mesh-v2/Peer-ECDH), danach automatisch **`sendPlaintextMailboxHybrid`** an **eigene MY_ADDRESS** (Mailbox/Tangle) mit Marker **`[[MORG_PATH4_SELF_ARCHIVE_V1]]`** + Outbound-Nonce (`frontend/frontend/features/send/mesh-path4-self-archive.ts`); optionale **Forensic-Attestation** (silent). **UI:** Checkbox **„LoRa + eigene Verankerung“** im Send-Panel (privat, Klartext, **funk**); **`localStorage`** **`morgendrot.meshSelfArchiveAfterLoRa`**; bei **Verschlüsselung an** oder **Transport ≠ funk** wird die Option automatisch ausgeschaltet. **Ist:** Kurztext + LoRa-Bildzweiteiler (**LUMA/CHROMA**) über den vorhandenen Bildpfad; **Backlog:** robustes Chunk/ACK-Protokoll, engere Verzahnung mit Offline-Warteschlange, Kurz-Eintrag in **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`** und **`TESTING.md`** § Funk/Smoke.
