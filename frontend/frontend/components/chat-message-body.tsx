@@ -204,6 +204,10 @@ function MorgAudioPlayer({ blobBase64 }: { blobBase64: string }) {
  * MORG_LUMA_V1 / MORG_CHROMA_V1 (gleiche msgId): S/W sofort, Hinweis unter dem Bild, Fusion ersetzt Anzeige.
  * 60 s ab erster Anzeige ohne Chroma → Fehlertext. Fusion: Backend sharp `over`, sonst Canvas-Fallback.
  */
+function revokeBlobUrlIfNeeded(url: string | null): void {
+  if (url?.startsWith('blob:')) revokeObjectUrlSafe(url)
+}
+
 function LoRaProgressiveLumaBody({
   content,
   inboxMessages,
@@ -219,6 +223,8 @@ function LoRaProgressiveLumaBody({
 }) {
   const [displayUrl, setDisplayUrl] = useState<string | null>(null)
   const [decErr, setDecErr] = useState<string | null>(null)
+  /** Formales Parsing ok, <img> kann JPEG nicht darstellen (korrupt / kein JPEG). */
+  const [imgSurfaceErr, setImgSurfaceErr] = useState<string | null>(null)
   const [chromaTimedOut, setChromaTimedOut] = useState(false)
   /** Wallclock-Start für 60 s Timeout – wird nicht bei jedem anderen Inbox-Eintrag zurückgesetzt. */
   const chromaWaitStartedAtRef = useRef<number | null>(null)
@@ -244,6 +250,7 @@ function LoRaProgressiveLumaBody({
     let alive = true
     let lumaObjUrl: string | null = null
     setDecErr(null)
+    setImgSurfaceErr(null)
     setDisplayUrl(null)
     const p = parseLoraProgressiveMessage(content)
     if (!p || p.kind !== 'luma' || !msgId) return
@@ -303,7 +310,8 @@ function LoRaProgressiveLumaBody({
   return (
     <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
       {decErr && <p className="text-xs text-red-400">{decErr}</p>}
-      {!displayUrl && !decErr && (
+      {imgSurfaceErr && <p className="text-xs text-amber-700 dark:text-amber-300">{imgSurfaceErr}</p>}
+      {!displayUrl && !decErr && !imgSurfaceErr && (
         <p className="text-xs text-muted-foreground">Bild wird dekodiert…</p>
       )}
       {displayUrl ? (
@@ -315,6 +323,15 @@ function LoRaProgressiveLumaBody({
             src={displayUrl}
             alt={hasChroma ? 'LoRa Bild (Luma+Chroma)' : 'LoRa S/W (Luma)'}
             className="max-h-96 max-w-full rounded-lg border border-border object-contain"
+            onError={() => {
+              setDisplayUrl((prev) => {
+                revokeBlobUrlIfNeeded(prev)
+                return null
+              })
+              setImgSurfaceErr(
+                'JPEG-Anzeige fehlgeschlagen (Datei beschädigt oder kein gültiges Bild). S/W-Export unten bleibt möglich.'
+              )
+            }}
           />
         </div>
       ) : null}
@@ -360,14 +377,17 @@ function LoRaChromaOrphanBody({
   copiedRaw: boolean
 }) {
   const [url, setUrl] = useState<string | null>(null)
+  const [imgSurfaceErr, setImgSurfaceErr] = useState<string | null>(null)
   const parsed = useMemo(() => parseLoraProgressiveMessage(content), [content])
   const msgId = parsed?.kind === 'chroma' ? parsed.msgId : ''
   useEffect(() => {
     const p = parseLoraProgressiveMessage(content)
     if (!p || p.kind !== 'chroma') {
       setUrl(null)
+      setImgSurfaceErr(null)
       return
     }
+    setImgSurfaceErr(null)
     const u = uint8ToObjectUrl(p.jpeg)
     setUrl(u)
     return () => revokeObjectUrlSafe(u)
@@ -380,11 +400,19 @@ function LoRaChromaOrphanBody({
       <p className="text-xs text-amber-700 dark:text-amber-300">
         LoRa Farbphase ohne zugehöriges S/W (msgId {msgId}) – nur Chroma-JPEG.
       </p>
+      {imgSurfaceErr ? <p className="text-xs text-amber-700 dark:text-amber-300">{imgSurfaceErr}</p> : null}
       {url ? (
         <img
           src={url}
           alt="LoRa Chroma (verwaist)"
           className="max-h-48 max-w-full rounded-lg border border-border object-contain"
+          onError={() => {
+            setUrl((prev) => {
+              revokeBlobUrlIfNeeded(prev)
+              return null
+            })
+            setImgSurfaceErr('Chroma-JPEG-Anzeige fehlgeschlagen — Export unten bleibt möglich.')
+          }}
         />
       ) : null}
       <button
