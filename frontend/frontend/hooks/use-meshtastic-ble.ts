@@ -46,20 +46,6 @@ function normalizeMeshRxTimestamp(ts: number): number {
 
 function decodeMeshTextPayload(v: unknown): string | null {
   if (typeof v === 'string') {
-    if (v.length === 0) return v
-    // Manche SDK-Events liefern payload als base64 statt Klartext.
-    try {
-      const b = atob(v)
-      if (b.length > 0) {
-        const bytes = new Uint8Array(Array.from(b, (ch) => ch.charCodeAt(0)))
-        const decoded = new TextDecoder().decode(bytes)
-        // Bei binären Daten kann decode "Muell" liefern; dann lieber den Originalstring lassen.
-        const printable = decoded.replace(/[\x20-\x7E\r\n\t]/g, '')
-        if (printable.length <= Math.max(2, decoded.length / 3)) return decoded
-      }
-    } catch {
-      /* plain string */
-    }
     return v
   }
   if (v instanceof Uint8Array) {
@@ -403,7 +389,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         recentOutgoingTextPacketIdsRef.current.delete(outgoingId)
         return
       }
-      const dedup = `txt:${fromNum}:${packetId}`
+      // Manche Firmware/Bridges können packetId wiederverwenden; deshalb Content einbeziehen,
+      // damit neue Texte nicht fälschlich als Duplikat verworfen werden.
+      const dedup = `txt:${fromNum}:${packetId}:${body}`
       const ts = normalizeMeshRxTimestamp(rxMs)
       if (markSeen(dedup, ts)) return
       const fromMesh = formatMeshtasticNodeIdFromNum(fromNum)
@@ -456,12 +444,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const portNum = typeof portRaw === 'number' ? portRaw : Number.parseInt(String(portRaw ?? ''), 10)
       const isTextPort =
         portNum === 1 ||
-        portNum === 7 ||
         portStr.includes('TEXT_MESSAGE_APP') ||
-        portStr.includes('TEXT_MESSAGE_COMPRESSED_APP') ||
         portStr === 'TEXT' ||
-        portStr === '1' ||
-        portStr === '7'
+        portStr === '1'
       if (!isTextPort) return
       const from =
         parseMeshNodeNum(o.from) ??
