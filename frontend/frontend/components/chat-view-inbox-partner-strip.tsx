@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Schnellfilter: Funkpartner + IOTA-Partner (Chips), Richtung Eingang/Ausgang.
+ * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang), optional Nur LoRa/Mesh bzw. Nur IOTA.
  * Überlauf hinter „+n“-Menü; Klick setzt Filter und Empfängerfeld für den nächsten Versand.
  */
 
@@ -30,10 +30,10 @@ function PartnerChipSection(p: {
   partnerKey: string | null
   onPartnerKeyChange: (key: string | null) => void
   onPartnerSelectForSend: (address: string) => void
-  stripTransport: 'mesh' | 'iota'
+  stripTransport: 'mesh' | 'iota' | 'all'
   onRemoveFromQuickList?: (
     address: string,
-    opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' }
+    opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
 }) {
   const { title, options, partnerKey, onPartnerKeyChange, onPartnerSelectForSend, stripTransport, onRemoveFromQuickList } =
@@ -90,13 +90,15 @@ function PartnerChipSection(p: {
                     e.preventDefault()
                     e.stopPropagation()
                     const ok1 = window.confirm(
-                      `„${o.label}“ aus der Schnellliste („${title}“) entfernen?\n\nNur auf diesem Gerät. Eine Blockliste verhindert, dass der Posteingang die Adresse erneut automatisch vorschlägt.`
+                      `„${o.label}“ aus der Partner-Schnellliste entfernen?\n\nNur auf diesem Gerät. Eine Blockliste verhindert, dass der Posteingang die Adresse erneut automatisch vorschlägt.`
                     )
                     if (!ok1) return
                     const ok2 = window.confirm(
-                      stripTransport === 'mesh'
-                        ? 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die Funk/Mesh nutzen? (nur lokal, diese Session)'
-                        : 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die IOTA/Mailbox nutzen? (nur lokal, diese Session)'
+                      stripTransport === 'all'
+                        ? 'Zusätzlich alle sichtbaren Posteingangs-Zeilen mit diesem Gegenüber lokal ausblenden? (nur diese Session)'
+                        : stripTransport === 'mesh'
+                          ? 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die Funk/Mesh nutzen? (nur lokal, diese Session)'
+                          : 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die IOTA/Mailbox nutzen? (nur lokal, diese Session)'
                     )
                     onRemoveFromQuickList(o.address, {
                       hideMatchingMessages: ok2,
@@ -143,8 +145,7 @@ function PartnerChipSection(p: {
 }
 
 export type ChatViewInboxPartnerStripProps = {
-  optionsMesh: InboxPartnerOption[]
-  optionsIota: InboxPartnerOption[]
+  partnerOptions: InboxPartnerOption[]
   /** Ohne eigene Adresse sind Eingang/Ausgang-Filter nicht sinnvoll – Zeile ausblenden. */
   myAddressKnown: boolean
   partnerKey: string | null
@@ -161,14 +162,13 @@ export type ChatViewInboxPartnerStripProps = {
   onPartnerSelectForSend: (address: string) => void
   onRemoveInboxPartnerFromQuickList?: (
     address: string,
-    opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' }
+    opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
 }
 
 export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
   const {
-    optionsMesh,
-    optionsIota,
+    partnerOptions,
     myAddressKnown,
     partnerKey,
     onPartnerKeyChange,
@@ -182,14 +182,14 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     onRemoveInboxPartnerFromQuickList,
   } = p
 
-  const hasAnyPartners = optionsMesh.length > 0 || optionsIota.length > 0
+  const hasAnyPartners = partnerOptions.length > 0
   if (!myAddressKnown && !hasAnyPartners) return null
 
   return (
     <div className="space-y-2 border-b border-border/80 bg-muted/20 px-3 py-2">
       {myAddressKnown ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Richtung</span>
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
           {(
             [
               ['all', 'Alle'],
@@ -238,26 +238,15 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
         </div>
       ) : null}
       {hasAnyPartners ? (
-        <div className="space-y-2">
-          <PartnerChipSection
-            title="Funkpartner"
-            stripTransport="mesh"
-            options={optionsMesh}
-            partnerKey={partnerKey}
-            onPartnerKeyChange={onPartnerKeyChange}
-            onPartnerSelectForSend={onPartnerSelectForSend}
-            onRemoveFromQuickList={onRemoveInboxPartnerFromQuickList}
-          />
-          <PartnerChipSection
-            title="IOTA / Mailbox"
-            stripTransport="iota"
-            options={optionsIota}
-            partnerKey={partnerKey}
-            onPartnerKeyChange={onPartnerKeyChange}
-            onPartnerSelectForSend={onPartnerSelectForSend}
-            onRemoveFromQuickList={onRemoveInboxPartnerFromQuickList}
-          />
-        </div>
+        <PartnerChipSection
+          title="Partner"
+          stripTransport="all"
+          options={partnerOptions}
+          partnerKey={partnerKey}
+          onPartnerKeyChange={onPartnerKeyChange}
+          onPartnerSelectForSend={onPartnerSelectForSend}
+          onRemoveFromQuickList={onRemoveInboxPartnerFromQuickList}
+        />
       ) : null}
     </div>
   )

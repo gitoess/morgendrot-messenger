@@ -195,15 +195,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                 </span>
               ) : null}
             </div>
-            {isPrivate ? (
-              <p className="sr-only">
-                {encrypted
-                  ? 'Privat verschlüsselt: Sendeweg und Optionen in der Karte Verschlüsselung unter dem Nachrichtenbereich.'
-                  : 'Klartext: Sendeweg in der Karte Verschlüsselung unter dem Nachrichtenbereich.'}
-              </p>
-            ) : (
-              <p className="sr-only">Pinnwand unverschlüsselt.</p>
-            )}
           </div>
         </div>
 

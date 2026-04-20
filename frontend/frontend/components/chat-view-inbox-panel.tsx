@@ -26,8 +26,7 @@ type InboxToolbarRest = Omit<
 export type ChatViewInboxPanelProps = InboxFeedReadPort &
   InboxListRest &
   InboxToolbarRest & {
-    inboxPartnerOptionsMesh: InboxPartnerOption[]
-    inboxPartnerOptionsIota: InboxPartnerOption[]
+    inboxPartnerOptions: InboxPartnerOption[]
     inboxPartnerKey: string | null
     setInboxPartnerKey: (k: string | null) => void
     inboxDirectionFilter: InboxDirectionFilter
@@ -39,7 +38,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     selectInboxPartnerForSend: (address: string) => void
     removeInboxPartnerFromQuickList: (
       address: string,
-      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' }
+      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' | 'all' }
     ) => void
   }
 
@@ -65,8 +64,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onBulkPurgeSelected,
     toggleProtokollMark,
     protokollMarkedIds,
-    inboxPartnerOptionsMesh,
-    inboxPartnerOptionsIota,
+    inboxPartnerOptions,
     inboxPartnerKey,
     setInboxPartnerKey,
     inboxDirectionFilter,
@@ -99,8 +97,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onHideAllVisibleLocal={onHideAllVisibleLocal}
       />
       <ChatViewInboxPartnerStrip
-        optionsMesh={inboxPartnerOptionsMesh}
-        optionsIota={inboxPartnerOptionsIota}
+        partnerOptions={inboxPartnerOptions}
         myAddressKnown={myAddress.trim().length > 0}
         partnerKey={inboxPartnerKey}
         onPartnerKeyChange={setInboxPartnerKey}

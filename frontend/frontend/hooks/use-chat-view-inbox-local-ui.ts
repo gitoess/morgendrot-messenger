@@ -15,7 +15,6 @@ import {
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
-  uniqueCounterpartyAddressesWhen,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
@@ -66,7 +65,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [messages, hiddenInboxIds]
   )
 
-  /** Schnellfilter: Gesprächspartner + Richtung (Eingang/Ausgang). */
+  /** Schnellfilter: Gesprächspartner + Kanal (Eingang/Ausgang). */
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
   const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
@@ -203,72 +202,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     })
   }, [displayMessages, myAddress, contactDirectory, inboxPartnerMemory, inboxPartnerBlockedNorms])
 
-  const partnerTransportFlags = useMemo(() => {
-    const flags = new Map<string, { mesh: boolean; iota: boolean }>()
-    if (!myAddress.trim()) return flags
-    for (const m of displayMessages) {
-      const cp = messageCounterpartyAddress(m, myAddress)
-      if (!cp) continue
-      const k = cp.trim().toLowerCase()
-      const cur = flags.get(k) ?? { mesh: false, iota: false }
-      if (messageTouchesMeshTransport(m)) cur.mesh = true
-      if (messageTouchesInternetTransport(m)) cur.iota = true
-      flags.set(k, cur)
-    }
-    return flags
-  }, [displayMessages, myAddress])
-
-  const inboxPartnerOptionsMesh = useMemo(() => {
-    const byNorm = new Map<string, string>()
-    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
-    for (const a of uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messageTouchesMeshTransport)) {
-      byNorm.set(a.trim().toLowerCase(), a.trim())
-    }
-    const addrs = Array.from(byNorm.values())
-      .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
-      .filter((address) => {
-        const k = address.trim().toLowerCase()
-        const f = partnerTransportFlags.get(k)
-        return f?.mesh === true
-      })
-    addrs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-    return addrs.map((address) => {
-      const label = contactDisplayLabel(contactDirectory, address)
-      const short =
-        address.startsWith('0x') && address.length > 12
-          ? `${address.slice(0, 8)}…${address.slice(-4)}`
-          : address
-      return { address, label: label || short }
-    })
-  }, [
-    displayMessages,
-    myAddress,
-    contactDirectory,
-    inboxPartnerMemory,
-    partnerTransportFlags,
-    inboxPartnerBlockedNorms,
-  ])
-
-  /** Nur Gegenüber mit mindestens einer reinen Mailbox-/Online-Zeile (ohne Mesh-Anteil) — keine LoRa-only-Partner. */
-  const inboxPartnerOptionsIota = useMemo(() => {
-    const addrs = uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messagePureInternetInboxRow).filter(
-      (a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase())
-    )
-    addrs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-    return addrs.map((address) => {
-      const label = contactDisplayLabel(contactDirectory, address)
-      const short =
-        address.startsWith('0x') && address.length > 12
-          ? `${address.slice(0, 8)}…${address.slice(-4)}`
-          : address
-      return { address, label: label || short }
-    })
-  }, [displayMessages, myAddress, contactDirectory, inboxPartnerBlockedNorms])
-
   const removeInboxPartnerFromQuickList = useCallback(
     (
       address: string,
-      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' }
+      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' | 'all' }
     ) => {
       const raw = address.trim()
       const n = raw.toLowerCase()
@@ -304,15 +241,20 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (opts?.hideMatchingMessages && opts.messageTransport && myAddress.trim()) {
         const transport = opts.messageTransport
         const pred =
-          transport === 'mesh'
+          transport === 'all'
             ? (m: Message) => {
                 const cp = messageCounterpartyAddress(m, myAddress)
-                return !!cp && cp.trim().toLowerCase() === n && messageTouchesMeshTransport(m)
+                return !!cp && cp.trim().toLowerCase() === n
               }
-            : (m: Message) => {
-                const cp = messageCounterpartyAddress(m, myAddress)
-                return !!cp && cp.trim().toLowerCase() === n && messageTouchesInternetTransport(m)
-              }
+            : transport === 'mesh'
+              ? (m: Message) => {
+                  const cp = messageCounterpartyAddress(m, myAddress)
+                  return !!cp && cp.trim().toLowerCase() === n && messageTouchesMeshTransport(m)
+                }
+              : (m: Message) => {
+                  const cp = messageCounterpartyAddress(m, myAddress)
+                  return !!cp && cp.trim().toLowerCase() === n && messageTouchesInternetTransport(m)
+                }
         setHiddenInboxIds((prev) => {
           const sett = new Set(prev)
           for (const m of messages) {
@@ -511,8 +453,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxIotaTransportOnly,
     setInboxIotaTransportOnly: setInboxIotaTransportOnlyPersist,
     inboxPartnerOptions,
-    inboxPartnerOptionsMesh,
-    inboxPartnerOptionsIota,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
