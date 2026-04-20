@@ -5,7 +5,21 @@ import type { ReactNode } from 'react'
 /**
  * Sehr kleiner Markdown-Renderer für Handbuch-.md (ohne extra Dependency).
  * Unterstützt: # / ## / ###, ---, **fett**, `code`, Absätze.
+ *
+ * ## / ### erhalten stabile `id` (für `href="#…"` aus der Messenger-UI).
  */
+export function handbookHeadingIdFromPlainTitle(raw: string): string {
+  const de = raw
+    .replace(/ä/gi, 'ae')
+    .replace(/ö/gi, 'oe')
+    .replace(/ü/gi, 'ue')
+    .replace(/ß/g, 'ss')
+  return de
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
 export function HandbookMarkdown({ text }: { text: string }) {
   const lines = text.split('\n')
   const out: ReactNode[] = []
@@ -47,27 +61,41 @@ export function HandbookMarkdown({ text }: { text: string }) {
     }
 
     if (line.startsWith('### ')) {
+      const plain = line.slice(4).trim()
+      const hid = handbookHeadingIdFromPlainTitle(plain)
       out.push(
-        <h3 key={key++} className="mb-2 mt-4 text-base font-semibold text-foreground">
-          {renderInline(line.slice(4))}
+        <h3
+          key={key++}
+          id={hid}
+          className="mb-2 mt-4 scroll-mt-20 text-base font-semibold text-foreground"
+        >
+          {renderInline(plain)}
         </h3>
       )
       i++
       continue
     }
     if (line.startsWith('## ')) {
+      const plain = line.slice(3).trim()
+      const hid = handbookHeadingIdFromPlainTitle(plain)
       out.push(
-        <h2 key={key++} className="mb-2 mt-6 text-lg font-semibold text-foreground">
-          {renderInline(line.slice(3))}
+        <h2
+          key={key++}
+          id={hid}
+          className="mb-2 mt-6 scroll-mt-20 text-lg font-semibold text-foreground"
+        >
+          {renderInline(plain)}
         </h2>
       )
       i++
       continue
     }
     if (line.startsWith('# ')) {
+      const plain = line.slice(2).trim()
+      const hid = handbookHeadingIdFromPlainTitle(plain)
       out.push(
-        <h1 key={key++} className="mb-3 mt-2 text-xl font-bold text-foreground">
-          {renderInline(line.slice(2))}
+        <h1 key={key++} id={hid} className="mb-3 mt-2 scroll-mt-20 text-xl font-bold text-foreground">
+          {renderInline(plain)}
         </h1>
       )
       i++

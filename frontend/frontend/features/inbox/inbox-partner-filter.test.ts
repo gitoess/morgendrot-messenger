@@ -6,7 +6,10 @@ import {
   isMessageOutgoing,
   isMessageSelfToSelf,
   messageCounterpartyAddress,
+  messageTouchesInternetTransport,
+  messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
+  uniqueCounterpartyAddressesWhen,
 } from './inbox-partner-filter'
 
 function m(p: Partial<Message> & Pick<Message, 'id' | 'from' | 'content' | 'timestamp'>): Message {
@@ -96,6 +99,58 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing], me, alice, 'all')
     expect(r).toHaveLength(1)
     expect(r[0]!.id).toBe('in')
+  })
+})
+
+describe('messageTouchesMeshTransport / messageTouchesInternetTransport', () => {
+  it('reiner Mesh-Quelle: mesh ja, internet nein', () => {
+    const msg = m({ id: '1', from: 'mesh:1', content: '', timestamp: 1, source: 'mesh' })
+    expect(messageTouchesMeshTransport(msg)).toBe(true)
+    expect(messageTouchesInternetTransport(msg)).toBe(false)
+  })
+
+  it('transports enthält internet: internet ja', () => {
+    const msg = m({
+      id: '1',
+      from: '0x1',
+      content: '',
+      timestamp: 1,
+      source: 'mesh',
+      transports: ['mesh', 'internet'],
+    })
+    expect(messageTouchesInternetTransport(msg)).toBe(true)
+  })
+
+  it('Mailbox ohne source: internet ja', () => {
+    const msg = m({ id: '1', from: '0x1', content: '', timestamp: 1, source: 'mailbox' })
+    expect(messageTouchesMeshTransport(msg)).toBe(false)
+    expect(messageTouchesInternetTransport(msg)).toBe(true)
+  })
+})
+
+describe('uniqueCounterpartyAddressesWhen', () => {
+  const me = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const p1 = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+
+  it('filtert nach Prädikat', () => {
+    const meshOnly = m({
+      id: 'm',
+      from: p1,
+      recipient: me,
+      content: '',
+      timestamp: 1,
+      source: 'mesh',
+    })
+    const chain = m({
+      id: 'c',
+      from: p1,
+      recipient: me,
+      content: '',
+      timestamp: 2,
+      source: 'mailbox',
+    })
+    expect(uniqueCounterpartyAddressesWhen([meshOnly, chain], me, messageTouchesMeshTransport)).toEqual([p1])
+    expect(uniqueCounterpartyAddressesWhen([meshOnly, chain], me, messageTouchesInternetTransport)).toEqual([p1])
   })
 })
 

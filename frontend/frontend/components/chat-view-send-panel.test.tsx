@@ -11,12 +11,6 @@ function primarySend(container: HTMLElement) {
   return el as HTMLButtonElement
 }
 
-function loraTangleModeRadio(container: HTMLElement) {
-  const el = container.querySelector('[data-testid="lora-mode-lora-tangle"]')
-  expect(el).toBeInstanceOf(HTMLInputElement)
-  return el as HTMLInputElement
-}
-
 function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSendPanelProps {
   return {
     isPrivate: true,
@@ -25,8 +19,6 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     message: 'Hallo Test',
     onRecipientChange: vi.fn(),
     onMessageChange: vi.fn(),
-    delayMirrorToIota: false,
-    onDelayMirrorToIotaChange: vi.fn(),
     meshSelfArchiveAfterLoRa: false,
     onMeshSelfArchiveAfterLoRaChange: vi.fn(),
     forcedTransport: 'internet',
@@ -91,8 +83,6 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         message=""
         onRecipientChange={vi.fn()}
         onMessageChange={vi.fn()}
-        delayMirrorToIota={false}
-        onDelayMirrorToIotaChange={vi.fn()}
         meshSelfArchiveAfterLoRa={false}
         onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="mesh"
@@ -154,8 +144,6 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         message=""
         onRecipientChange={vi.fn()}
         onMessageChange={vi.fn()}
-        delayMirrorToIota={false}
-        onDelayMirrorToIotaChange={vi.fn()}
         meshSelfArchiveAfterLoRa={false}
         onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
@@ -220,8 +208,6 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         message=""
         onRecipientChange={vi.fn()}
         onMessageChange={vi.fn()}
-        delayMirrorToIota={false}
-        onDelayMirrorToIotaChange={vi.fn()}
         meshSelfArchiveAfterLoRa={false}
         onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
@@ -278,8 +264,6 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         message=""
         onRecipientChange={vi.fn()}
         onMessageChange={vi.fn()}
-        delayMirrorToIota={false}
-        onDelayMirrorToIotaChange={vi.fn()}
         meshSelfArchiveAfterLoRa={false}
         onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
@@ -423,21 +407,6 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
-  })
-
-  it('ruft onDelayMirrorToIotaChange bei LoRa+Tangle (privat, Mesh) auf', () => {
-    const onDelayMirrorToIotaChange = vi.fn()
-    const { container } = render(
-      <ChatViewSendPanel
-        {...baseSendPanel({
-          forcedTransport: 'mesh',
-          delayMirrorToIota: false,
-          onDelayMirrorToIotaChange,
-        })}
-      />
-    )
-    fireEvent.click(loraTangleModeRadio(container))
-    expect(onDelayMirrorToIotaChange).toHaveBeenCalledWith(true)
   })
 
   it('blockiert Klartext-LoRa über Zeichenlimit und zeigt Zähler', () => {

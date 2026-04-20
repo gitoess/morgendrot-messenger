@@ -6,6 +6,7 @@ vi.mock('@/frontend/lib/api', () => ({
 }))
 
 import { compactImageEncode, loraProgressiveEncode } from '@/frontend/lib/api'
+import { CHAT_LORA_DUAL_IMAGE_POLICY_MSG } from '@/frontend/lib/chat-view-messenger-transport'
 import { ingestCompactAttachmentPick } from './chat-view-attachment-ingest'
 
 const compactImageEncodeMock = vi.mocked(compactImageEncode)
@@ -19,7 +20,13 @@ function tinyPngFile(): File {
   return new File([bin], 't.png', { type: 'image/png' })
 }
 
-const baseCtx = { role: 'test', forcedTransport: 'internet' as const }
+const baseCtx = {
+  role: 'test',
+  forcedTransport: 'internet' as const,
+  isPrivate: true,
+  encrypted: false,
+  meshSelfArchiveAfterLoRa: false,
+}
 
 describe('ingestCompactAttachmentPick', () => {
   beforeEach(() => {
@@ -68,7 +75,11 @@ describe('ingestCompactAttachmentPick', () => {
       lumaJpegBytes: 11,
       chromaJpegBytes: 22,
     })
-    const r = await ingestCompactAttachmentPick(tinyPngFile(), { ...baseCtx, forcedTransport: 'mesh' })
+    const r = await ingestCompactAttachmentPick(tinyPngFile(), {
+      ...baseCtx,
+      forcedTransport: 'mesh',
+      meshSelfArchiveAfterLoRa: true,
+    })
     expect(loraProgressiveEncodeMock).toHaveBeenCalledTimes(1)
     expect(compactImageEncodeMock).not.toHaveBeenCalled()
     expect(r.ok).toBe(true)
@@ -80,6 +91,29 @@ describe('ingestCompactAttachmentPick', () => {
       })
       expect(r.compactMeta.mode).toBe('lora')
     }
+  })
+
+  it('Bild + mesh ohne Pfad 4: kein LoRa-Encode, Policy-Meldung', async () => {
+    const r = await ingestCompactAttachmentPick(tinyPngFile(), {
+      ...baseCtx,
+      forcedTransport: 'mesh',
+      meshSelfArchiveAfterLoRa: false,
+    })
+    expect(loraProgressiveEncodeMock).not.toHaveBeenCalled()
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.message).toBe(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
+  })
+
+  it('Bild + mesh + Pfad 4 aber verschlüsselt: kein LoRa-Encode', async () => {
+    const r = await ingestCompactAttachmentPick(tinyPngFile(), {
+      ...baseCtx,
+      forcedTransport: 'mesh',
+      encrypted: true,
+      meshSelfArchiveAfterLoRa: true,
+    })
+    expect(loraProgressiveEncodeMock).not.toHaveBeenCalled()
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.message).toBe(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
   })
 
   it('transportOverride mesh bei sonst internet: LoRa-Encoder', async () => {
@@ -95,6 +129,7 @@ describe('ingestCompactAttachmentPick', () => {
       ...baseCtx,
       forcedTransport: 'internet',
       transportOverride: 'mesh',
+      meshSelfArchiveAfterLoRa: true,
     })
     expect(loraProgressiveEncodeMock).toHaveBeenCalled()
     expect(compactImageEncodeMock).not.toHaveBeenCalled()
@@ -109,7 +144,11 @@ describe('ingestCompactAttachmentPick', () => {
 
   it('loraProgressiveEncode Fehler → Failure', async () => {
     loraProgressiveEncodeMock.mockResolvedValue({ ok: false, error: 'LoRa kaputt' })
-    const r = await ingestCompactAttachmentPick(tinyPngFile(), { ...baseCtx, forcedTransport: 'mesh' })
+    const r = await ingestCompactAttachmentPick(tinyPngFile(), {
+      ...baseCtx,
+      forcedTransport: 'mesh',
+      meshSelfArchiveAfterLoRa: true,
+    })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.message).toContain('LoRa kaputt')
   })

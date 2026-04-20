@@ -28,7 +28,7 @@ describe('validateMeshDisallowsIotaCompactBlob', () => {
     const r = validateMeshDisallowsIotaCompactBlob('mesh', 'Ym9keQ==')
     expect(r.ok).toBe(false)
     if (!r.ok) {
-      expect(r.message).toMatch(/Funk:/)
+      expect(r.message).toMatch(/Funk:|LoRa-Bild/)
       expect(r.idleMs).toBe(9000)
     }
   })

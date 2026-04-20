@@ -4,12 +4,28 @@
 
 export type ForcedTransport = 'internet' | 'mesh' | 'adhoc'
 
-/** Max. Zeichen für unverschlüsselten Klartext auf LoRa (Mesh v2 Nutzlast). */
+/** Max. Zeichen für unverschlüsselten Klartext auf LoRa (Meshtastic TEXT_MESSAGE / LongFast). */
 export const MESH_PLAINTEXT_MAX_CHARS = 200
 
-/** `mesh` → LoRa/Meshtastic (JPEG LUMA+CHROMA). `internet` / `adhoc` → IOTA-Kompaktbild bei Anhängen. */
+/** `mesh` → Meshtastic-Funk. Bild: Roh→LUMA+CHROMA nur mit Pfad 4 (Klartext); sonst siehe `CHAT_LORA_DUAL_IMAGE_POLICY_MSG`. `internet`/`adhoc` → IOTA-Kompaktbild beim Import. */
 export function isLoRaMeshTransport(t: ForcedTransport): boolean {
   return t === 'mesh'
+}
+
+/** LUMA+CHROMA im Composer nur: online+verschlüsselt+privat, oder Funk+Pfad4+Klartext+privat. */
+export const CHAT_LORA_DUAL_IMAGE_POLICY_MSG =
+  'LoRa-Bild (LUMA+CHROMA): „online“ mit Verschlüsselung — oder „funk“ mit „LoRa + eigene Verankerung“ (Klartext, Pfad 4). Sonst Anhang entfernen.'
+
+export function isAttachedLoraDualComposerAllowed(p: {
+  isPrivate: boolean
+  encrypted: boolean
+  forcedTransport: ForcedTransport
+  meshSelfArchiveAfterLoRa: boolean
+}): boolean {
+  if (!p.isPrivate) return false
+  if (p.forcedTransport === 'internet' && p.encrypted) return true
+  if (isLoRaMeshTransport(p.forcedTransport) && !p.encrypted && p.meshSelfArchiveAfterLoRa) return true
+  return false
 }
 
 export type MeshtasticBleSendApi = {

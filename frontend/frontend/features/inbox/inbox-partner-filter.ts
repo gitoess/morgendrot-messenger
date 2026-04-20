@@ -93,3 +93,36 @@ export function uniqueCounterpartyAddresses(messages: Message[], myAddress: stri
   out.sort((a, b) => norm(a).localeCompare(norm(b)))
   return out
 }
+
+/** Nachricht hat LoRa/Mesh-Kanal (Klartext-Funk, Mesh-Meta, …). */
+export function messageTouchesMeshTransport(m: Message): boolean {
+  return m.source === 'mesh' || (Array.isArray(m.transports) && m.transports.includes('mesh'))
+}
+
+/** Nachricht über Mailbox/IOTA (nicht reiner Mesh-only-Pfad). */
+export function messageTouchesInternetTransport(m: Message): boolean {
+  if (Array.isArray(m.transports) && m.transports.includes('internet')) return true
+  if (m.source === 'mesh') return false
+  return true
+}
+
+/** Gegenüber-Adressen, die mindestens eine Nachricht mit `messagePred` haben. */
+export function uniqueCounterpartyAddressesWhen(
+  messages: Message[],
+  myAddress: string,
+  messagePred: (m: Message) => boolean
+): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const m of messages) {
+    if (!messagePred(m)) continue
+    const cp = messageCounterpartyAddress(m, myAddress)
+    if (!cp) continue
+    const k = norm(cp)
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(cp)
+  }
+  out.sort((a, b) => norm(a).localeCompare(norm(b)))
+  return out
+}

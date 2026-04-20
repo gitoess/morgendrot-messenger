@@ -2,11 +2,11 @@
 
 /**
  * Verschlüsselungs-Umschalter, Pinnwand-Hinweis, Sendepfad (IOTA vs. LoRa/Meshtastic).
- * Meshtastic-First: Funk nutzt den Standard-Meshtastic-/PRIVATE_APP-Pfad; getrennt vom IOTA-Mailbox-Klick in dieser UI.
+ * Funk ist **Klartext** (LongFast / Pfad 4); Verschlüsselung nur über **online** (IOTA/Mailbox).
  */
 
 import { useMemo, useState } from 'react'
-import { Lock, Unlock } from 'lucide-react'
+import { Handshake, Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { SendTransportChoicePort } from '@/frontend/features/messenger-ports'
+import { MessengerGuideHint } from '@/components/messenger-handbook-link'
 
 export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
@@ -29,32 +30,10 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   meshBleConnected?: boolean
   /** Panel „Partner verbinden“ öffnen (Meshtastic koppeln steht dort). */
   onOpenPartnerSetup?: () => void
+  /** Detail-Panel ein-/aus (nebeneinander mit Verschlüsselung). */
+  partnerSetupOpen?: boolean
+  onTogglePartnerSetup?: () => void
 }
-
-const INTERNET_OPTS = [
-  {
-    id: 'internet' as const,
-    icon: '🌍',
-    short: 'online',
-    label:
-      'IOTA/Mailbox über Backend (Timeout ca. 120 s); bei Fehler optional ein Funk-Versuch wenn Heltec verbunden',
-  },
-] as const
-
-const MESH_OPTS = [
-  {
-    id: 'mesh' as const,
-    icon: '📡',
-    short: 'funk',
-    label: 'Nur Funk (Mesh v2) – Heltec muss verbunden sein',
-  },
-  {
-    id: 'adhoc' as const,
-    icon: '📱',
-    short: 'adhoc',
-    label: 'Ad-hoc BLE (noch nicht implementiert)',
-  },
-] as const
 
 export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
   const {
@@ -69,6 +48,8 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     meshBleSupported = false,
     meshBleConnected = false,
     onOpenPartnerSetup,
+    partnerSetupOpen = false,
+    onTogglePartnerSetup,
   } = p
 
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
@@ -116,10 +97,17 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         <div className="flex rounded-lg border border-border bg-background p-1">
           <button
             type="button"
+            disabled={forcedTransport === 'mesh'}
+            title={
+              forcedTransport === 'mesh'
+                ? 'Verschlüsselung nur über „online“. Bei „funk“ ist LongFast-Klartext aktiv.'
+                : undefined
+            }
             onClick={() => onEncryptedChange(true)}
             className={cn(
               'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
-              encrypted ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground hover:text-foreground'
+              encrypted ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground hover:text-foreground',
+              forcedTransport === 'mesh' && 'cursor-not-allowed opacity-45 hover:text-muted-foreground'
             )}
           >
             <Lock className="h-4 w-4" />
@@ -139,13 +127,36 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             Unverschlüsselt
           </button>
         </div>
-        <span className="min-w-[12rem] text-xs text-muted-foreground">
-          {encrypted
-            ? 'Lesbar nur mit Partner-Key; Entschlüsselung auf diesem Node bei entsperrtem Vault (kein Signal-PFS).'
-            : forcedTransport === 'internet'
-              ? 'Klartext: sichtbar in der Chain (/send-plain).'
-              : 'Klartext + funk: Standard-Meshtastic-Text (LongFast), kein /connect. Verschlüsselt + funk = Mesh v2 (Handshake nötig).'}
+        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {encrypted ? (
+            <>
+              <span>Ende-zu-Ende mit Partner-Schlüssel (Vault am Node).</span>
+              <MessengerGuideHint ariaLabel="Hinweise Verschlüsselung" teaser="Mehr" />
+            </>
+          ) : forcedTransport === 'internet' ? (
+            'Klartext: sichtbar in der Chain (/send-plain).'
+          ) : (
+            <>
+              <span>funk = Klartext (LongFast). Verschlüsselung: „online“.</span>
+              <MessengerGuideHint ariaLabel="Hinweise Funk vs. online" teaser="Mehr" />
+            </>
+          )}
         </span>
+        {isPrivate && onTogglePartnerSetup ? (
+          <button
+            type="button"
+            onClick={onTogglePartnerSetup}
+            className={cn(
+              'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+              partnerSetupOpen
+                ? 'bg-primary text-primary-foreground'
+                : 'border border-border bg-muted/50 text-foreground hover:bg-muted'
+            )}
+          >
+            <Handshake className="h-4 w-4 shrink-0" aria-hidden />
+            Partner verbinden
+          </button>
+        ) : null}
       </div>
 
       {!encrypted && forcedTransport === 'internet' && (
@@ -193,141 +204,65 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         </p>
       )}
 
-      {(isPrivate || !encrypted) && (
-        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
-          <p className="text-sm font-medium text-foreground">Sendepfad</p>
-          {!encrypted && forcedTransport !== 'mesh' && (
-            <p className="rounded-md border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-[11px] text-orange-950 dark:text-orange-100/95">
-              <strong>Klartext:</strong> mit <strong>online</strong> über IOTA (<span className="font-mono">/send-plain</span>).
-              Für <strong>funk</strong> Meshtastic-Klartext wählen (kein 0x nötig bei Broadcast).
-            </p>
-          )}
-          <p className="text-[11px] leading-relaxed text-muted-foreground border-b border-border pb-3">
-            <strong className="text-foreground">Strikt getrennt:</strong>{' '}
-            <span className="text-emerald-600/90 dark:text-emerald-400/90">IOTA/Mailbox</span> läuft nur über das
-            Backend und die Chain.{' '}
-            <span className="text-sky-600/90 dark:text-sky-400/90">LoRa/Meshtastic</span> ist ein eigener Kanal
-            (Heltec, <span className="font-mono">PRIVATE_APP</span> v2) –{' '}
-            <strong className="text-foreground">ohne</strong> IOTA-Transaktion für denselben Klick.
-          </p>
-          <div className="space-y-2">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700/90 dark:text-emerald-400/80">
-              Blockchain · IOTA / Mailbox
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {INTERNET_OPTS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  title={opt.label}
-                  onClick={() => onForcedTransportChange(opt.id)}
-                  className={cn(
-                    'rounded-lg border px-2.5 py-1.5 text-sm transition-colors',
-                    forcedTransport === opt.id
-                      ? 'border-emerald-600/50 bg-emerald-500/10 text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-accent'
-                  )}
-                >
-                  <span className="mr-1">{opt.icon}</span>
-                  <span className="text-xs font-medium">{opt.short}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="space-y-2 border-t border-border pt-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-700/90 dark:text-sky-400/80">
-              LoRa-Funk + Bluetooth (Web-BT) · kein IOTA
-            </p>
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Visuell getrennt:</strong> oben{' '}
-              <span className="text-emerald-600/90 dark:text-emerald-400/90">🌍 Online</span> = Wallet/Chain/Tor; hier{' '}
-              <span className="text-sky-600/90 dark:text-sky-400/90">📡📱</span> = nur Heltec über{' '}
-              <strong className="text-foreground">Bluetooth</strong> im Browser (kein „WLAN-Funk“).
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {MESH_OPTS.map((opt) => (
-                <button
-                  key={opt.id}
-                  type="button"
-                  title={opt.label}
-                  onClick={() => onForcedTransportChange(opt.id)}
-                  className={cn(
-                    'rounded-lg border px-2.5 py-1.5 text-sm transition-colors',
-                    forcedTransport === opt.id
-                      ? 'border-sky-600/50 bg-sky-500/10 text-foreground'
-                      : 'border-border bg-background text-muted-foreground hover:bg-accent'
-                  )}
-                >
-                  <span className="mr-1">{opt.icon}</span>
-                  <span className="text-xs font-medium">{opt.short}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          {forcedTransport === 'mesh' && (
-            <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-[11px] leading-relaxed text-foreground">
-              <strong>Nächste Schritte (Funk):</strong>{' '}
-              {meshBleConnected ? (
-                <span className="text-emerald-600 dark:text-emerald-400">Heltec/Web-BT verbunden – du kannst senden (LoRa-Pipeline / LUMA+CHROMA).</span>
-              ) : meshBleSupported ? (
-                <span>
-                  Heltec noch nicht gekoppelt: <strong className="text-foreground">Partner-Setup</strong> öffnen
-                  (erscheint <strong className="text-foreground">zwischen</strong> dieser Karte und dem Nachrichtenfeld),
-                  dort <strong className="text-foreground">Heltec (Web Bluetooth) verbinden</strong> — der Browser
-                  (Chrome/Edge; bei Brave ggf. <span className="font-mono">brave://flags</span>) öffnet die Geräteliste zum Koppeln.
-                </span>
-              ) : (
-                <span>
-                  Dieser Browser unterstützt kein Web Bluetooth – Chrome/Edge auf Android oder Desktop; bei Brave Web
-                  Bluetooth oft deaktiviert (<span className="font-mono">brave://flags</span>).
-                </span>
-              )}
-              {onOpenPartnerSetup ? (
-                <button
-                  type="button"
-                  onClick={onOpenPartnerSetup}
-                  className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 sm:min-h-0 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-inherit sm:font-medium sm:text-primary sm:underline sm:underline-offset-2"
-                >
-                  Partner-Setup öffnen (Handshake + Mesh)
-                </button>
-              ) : null}
-            </div>
-          )}
-          {forcedTransport === 'adhoc' && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-100/90">
-              <strong>Ad-hoc BLE</strong> ist noch <strong>nicht implementiert</strong> (nur Platzhalter). Kontakt-<strong>bleUuid</strong> und
-              zukünftiges Advertising siehe Setup unter „Partner verbinden“. Senden wechselt auf{' '}
-              <strong>funk</strong> oder <strong>online</strong>.
-              {onOpenPartnerSetup ? (
-                <button
-                  type="button"
-                  onClick={onOpenPartnerSetup}
-                  className="ml-2 font-medium text-primary underline-offset-2 hover:underline"
-                >
-                  Setup öffnen
-                </button>
-              ) : null}
-            </div>
-          )}
-          <p className="text-[11px] leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">online:</strong> zuerst IOTA/Mailbox (Timeout ca. 120 s). Schlägt das
-            fehl und Heltec ist verbunden → automatisch <strong className="text-foreground">ein</strong> Versuch per
-            Funk. Ohne Funk nur Fehlermeldung (dann <strong className="text-foreground">funk</strong> wählen).{' '}
-            <strong className="text-foreground">funk:</strong> nur <span className="font-mono">PRIVATE_APP</span> v2 per
-            Mesh, nie IOTA.
-          </p>
-          <p className="text-[11px] text-muted-foreground">
-            Tor/SOCKS: wird vom <strong className="text-foreground">Backend</strong> genutzt, wenn{' '}
-            <span className="font-mono">RPC_SOCKS_PROXY</span> in der Server-<span className="font-mono">.env</span>{' '}
-            steht (oder über die Konfigurationsoberfläche geschrieben wurde).{' '}
-            {apiStatus?.rpcSocksProxyActive || apiStatus?.rpcHttpProxyActive ? (
-              <span className="text-emerald-600 dark:text-emerald-400">
-                Aktuell ist ein RPC-Proxy aktiv (SOCKS und/oder HTTP).
-              </span>
+      {(isPrivate || !encrypted) && !encrypted && forcedTransport !== 'mesh' && (
+        <p className="rounded-md border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-[11px] text-orange-950 dark:text-orange-100/95">
+          <strong>Klartext:</strong> mit <strong>online</strong> über IOTA (<span className="font-mono">/send-plain</span>). Für{' '}
+          <strong>funk</strong> Meshtastic-Klartext in der Kopfzeile wählen (kein 0x nötig bei Broadcast).
+        </p>
+      )}
+
+      {(isPrivate || !encrypted) && forcedTransport === 'mesh' && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-[11px] leading-relaxed text-foreground">
+            {meshBleConnected ? (
+              <p className="text-emerald-600 dark:text-emerald-400">
+                Heltec verbunden — Klartext senden (LoRa-Bild nur mit Pfad 4).
+              </p>
+            ) : meshBleSupported ? (
+              <p>
+                Heltec koppeln: <strong className="text-foreground">Partner verbinden</strong> öffnen, dort{' '}
+                <strong className="text-foreground">Web Bluetooth</strong> (Browser zeigt die Geräteliste).
+              </p>
             ) : (
-              <span>Ohne Proxy sieht der IOTA-Knoten die IP deines Servers/Rechners.</span>
+              <p>
+                Kein Web Bluetooth in diesem Browser — Chrome/Edge; bei Brave ggf.{' '}
+                <span className="font-mono">brave://flags</span>.
+              </p>
             )}
-          </p>
+            {onOpenPartnerSetup ? (
+              <button
+                type="button"
+                onClick={onOpenPartnerSetup}
+                className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 sm:min-h-0 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-inherit sm:font-medium sm:text-primary sm:underline sm:underline-offset-2"
+              >
+                Partner verbinden öffnen
+              </button>
+            ) : null}
+          </div>
+          {apiStatus?.rpcSocksProxyActive || apiStatus?.rpcHttpProxyActive ? (
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              RPC-Proxy aktiv (SOCKS und/oder HTTP) — Tor/HTTP siehe Handbuch.
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      {(isPrivate || !encrypted) && forcedTransport === 'adhoc' && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-100/90">
+            <strong>Ad-hoc BLE</strong> ist noch <strong>nicht implementiert</strong> (nur Platzhalter). Kontakt-<strong>bleUuid</strong> und
+            zukünftiges Advertising siehe Setup unter „Partner verbinden“. Bitte auf <strong>funk</strong> oder{' '}
+            <strong>online</strong> wechseln zum Senden.
+            {onOpenPartnerSetup ? (
+              <button
+                type="button"
+                onClick={onOpenPartnerSetup}
+                className="ml-2 font-medium text-primary underline-offset-2 hover:underline"
+              >
+                Setup öffnen
+              </button>
+            ) : null}
+          </div>
         </div>
       )}
 

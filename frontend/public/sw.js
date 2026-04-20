@@ -9,7 +9,7 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-9'
+const VERSION = 'morgendrot-sw-12'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
@@ -25,6 +25,7 @@ const HANDBOOK_URLS = [
   '/handbook/EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md',
   '/handbook/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md',
   '/handbook/ROLLENWECHSEL-TEAM-EINSATZ.md',
+  '/handbook/MESSENGER-CHAT-HANDBUCH.md',
 ]
 
 self.addEventListener('install', (event) => {

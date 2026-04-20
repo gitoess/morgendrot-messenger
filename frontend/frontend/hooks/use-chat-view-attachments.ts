@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ChangeEvent } from 'react'
-import { isLoRaMeshTransport, type ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+  isAttachedLoraDualComposerAllowed,
+  isLoRaMeshTransport,
+  type ForcedTransport,
+} from '@/frontend/lib/chat-view-messenger-transport'
 import { ingestCompactAttachmentPick } from '@/frontend/features/attachments/chat-view-attachment-ingest'
 import type { CompactAttachmentMeta } from '@/frontend/features/attachments/chat-view-attachment-ingest'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
@@ -16,6 +21,8 @@ export type UseChatViewAttachmentsParams = {
   isPrivate: boolean
   encrypted: boolean
   forcedTransport: ForcedTransport
+  /** Pfad 4: Kompaktbild → LUMA/CHROMA für Klartext-LoRa (verschlüsselter Funk ist abgeschaltet). */
+  meshSelfArchiveAfterLoRa: boolean
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
   /** Vor jedem neuen Import (SOS-Banner o. Ä. zurücksetzen). */
@@ -23,7 +30,16 @@ export type UseChatViewAttachmentsParams = {
 }
 
 export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
-  const { role, isPrivate, encrypted, forcedTransport, setStatus, setStatusMsg, onCompactIngestStart } = p
+  const {
+    role,
+    isPrivate,
+    encrypted,
+    forcedTransport,
+    meshSelfArchiveAfterLoRa,
+    setStatus,
+    setStatusMsg,
+    onCompactIngestStart,
+  } = p
 
   const [attachedBlobBase64, setAttachedBlobBase64] = useState<string | null>(null)
   const [attachedTxtFile, setAttachedTxtFile] = useState<{ name: string; text: string } | null>(null)
@@ -34,6 +50,8 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     null
   )
   const loraOnlineOfferPayloadRef = useRef<{ lumaText: string; chromaText: string } | null>(null)
+  /** Gemeinsamer Idle-Reset nach Policy-Hinweis (LUMA-Strip oder IOTA-Blob auf Funk). */
+  const attachmentPolicyIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [compactBusy, setCompactBusy] = useState(false)
   const [attachmentPipelineHint, setAttachmentPipelineHint] = useState<string | null>(null)
   const compactFileRef = useRef<HTMLInputElement>(null)
@@ -43,9 +61,9 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     attachedLora
   )
 
-  /** Privater Chat + verschlüsselt + „funk“: IOTA-Kompakt-Blob automatisch in LUMA+CHROMA (nach Online-Anhang oder Wechsel des Transports). */
+  /** Privater Chat + Pfad 4 + „funk“ + Klartext: IOTA-Kompakt-Blob automatisch in LUMA+CHROMA. */
   useEffect(() => {
-    if (!isPrivate || !encrypted || !isLoRaMeshTransport(forcedTransport)) return
+    if (!isPrivate || encrypted || !meshSelfArchiveAfterLoRa || !isLoRaMeshTransport(forcedTransport)) return
     if (!attachedBlobBase64 || attachedLora != null) return
     let cancelled = false
     setCompactBusy(true)
@@ -104,7 +122,88 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
       cancelled = true
       setAttachmentPipelineHint(null)
     }
-  }, [isPrivate, encrypted, forcedTransport, attachedBlobBase64, attachedLora, setStatus, setStatusMsg])
+  }, [
+    isPrivate,
+    encrypted,
+    meshSelfArchiveAfterLoRa,
+    forcedTransport,
+    attachedBlobBase64,
+    attachedLora,
+    setStatus,
+    setStatusMsg,
+  ])
+
+  useEffect(() => {
+    return () => {
+      if (attachmentPolicyIdleTimerRef.current) {
+        clearTimeout(attachmentPolicyIdleTimerRef.current)
+        attachmentPolicyIdleTimerRef.current = null
+      }
+    }
+  }, [])
+
+  /** LUMA+CHROMA nur für erlaubte Transport-/Verschlüsselungskombination — sonst Anhang verwerfen. */
+  useEffect(() => {
+    if (attachedLora == null) return
+    if (
+      isAttachedLoraDualComposerAllowed({
+        isPrivate,
+        encrypted,
+        forcedTransport,
+        meshSelfArchiveAfterLoRa,
+      })
+    ) {
+      return
+    }
+    if (attachmentPolicyIdleTimerRef.current) {
+      clearTimeout(attachmentPolicyIdleTimerRef.current)
+      attachmentPolicyIdleTimerRef.current = null
+    }
+    setAttachedLora(null)
+    setCompactMeta(null)
+    setLoraOnlineFallbackOffer(null)
+    loraOnlineOfferPayloadRef.current = null
+    setStatus('error')
+    setStatusMsg(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
+    attachmentPolicyIdleTimerRef.current = setTimeout(() => {
+      attachmentPolicyIdleTimerRef.current = null
+      setStatus('idle')
+    }, 8000)
+  }, [
+    attachedLora,
+    isPrivate,
+    encrypted,
+    forcedTransport,
+    meshSelfArchiveAfterLoRa,
+    setStatus,
+    setStatusMsg,
+  ])
+
+  /** IOTA-Kompakt auf Funk nur mit Pfad 4 + Klartext; verschlüsselt+Funk oder ohne Pfad 4 → verwerfen. */
+  useEffect(() => {
+    if (!attachedBlobBase64 || !isPrivate || !isLoRaMeshTransport(forcedTransport)) return
+    if (!encrypted && meshSelfArchiveAfterLoRa) return
+    if (attachmentPolicyIdleTimerRef.current) {
+      clearTimeout(attachmentPolicyIdleTimerRef.current)
+      attachmentPolicyIdleTimerRef.current = null
+    }
+    setAttachedBlobBase64(null)
+    setCompactMeta(null)
+    setStatus('error')
+    setStatusMsg(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
+    attachmentPolicyIdleTimerRef.current = setTimeout(() => {
+      attachmentPolicyIdleTimerRef.current = null
+      setStatus('idle')
+    }, 8000)
+  }, [
+    attachedBlobBase64,
+    isPrivate,
+    encrypted,
+    forcedTransport,
+    meshSelfArchiveAfterLoRa,
+    setStatus,
+    setStatusMsg,
+  ])
 
   const clearCompactAttachment = useCallback(() => {
     setAttachedBlobBase64(null)
@@ -128,6 +227,9 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
           role,
           forcedTransport,
           transportOverride: opts?.transportOverride,
+          isPrivate,
+          encrypted,
+          meshSelfArchiveAfterLoRa,
         })
         if (!result.ok) {
           setStatus('error')
@@ -153,7 +255,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
         setCompactBusy(false)
       }
     },
-    [role, forcedTransport, setStatus, setStatusMsg, onCompactIngestStart]
+    [role, forcedTransport, isPrivate, encrypted, meshSelfArchiveAfterLoRa, setStatus, setStatusMsg, onCompactIngestStart]
   )
 
   const handleCompactAttachmentPick = async (e: ChangeEvent<HTMLInputElement>) => {

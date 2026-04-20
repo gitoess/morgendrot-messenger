@@ -25,7 +25,8 @@ type InboxToolbarRest = Omit<
 export type ChatViewInboxPanelProps = InboxFeedReadPort &
   InboxListRest &
   InboxToolbarRest & {
-    inboxPartnerOptions: InboxPartnerOption[]
+    inboxPartnerOptionsMesh: InboxPartnerOption[]
+    inboxPartnerOptionsIota: InboxPartnerOption[]
     inboxPartnerKey: string | null
     setInboxPartnerKey: (k: string | null) => void
     inboxDirectionFilter: InboxDirectionFilter
@@ -33,6 +34,10 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     inboxMeshTransportOnly: boolean
     setInboxMeshTransportOnly: (v: boolean) => void
     selectInboxPartnerForSend: (address: string) => void
+    removeInboxPartnerFromQuickList: (
+      address: string,
+      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' }
+    ) => void
   }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -57,7 +62,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onBulkPurgeSelected,
     toggleProtokollMark,
     protokollMarkedIds,
-    inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     inboxPartnerKey,
     setInboxPartnerKey,
     inboxDirectionFilter,
@@ -65,6 +71,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
     selectInboxPartnerForSend,
+    removeInboxPartnerFromQuickList,
     onDismissMeshInboundBanner,
     loadingMore,
     loadMoreInbox,
@@ -87,7 +94,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onHideAllVisibleLocal={onHideAllVisibleLocal}
       />
       <ChatViewInboxPartnerStrip
-        options={inboxPartnerOptions}
+        optionsMesh={inboxPartnerOptionsMesh}
+        optionsIota={inboxPartnerOptionsIota}
         myAddressKnown={myAddress.trim().length > 0}
         partnerKey={inboxPartnerKey}
         onPartnerKeyChange={setInboxPartnerKey}
@@ -96,6 +104,12 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         meshTransportOnly={inboxMeshTransportOnly}
         onMeshTransportOnlyChange={setInboxMeshTransportOnly}
         onPartnerSelectForSend={selectInboxPartnerForSend}
+        onRemoveInboxPartnerFromQuickList={(address, opts) => {
+          removeInboxPartnerFromQuickList(address, {
+            hideMatchingMessages: opts.hideMatchingMessages,
+            messageTransport: opts.messageTransport,
+          })
+        }}
       />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
         <ChatViewInboxList

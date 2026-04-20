@@ -172,7 +172,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           role="status"
           aria-live="polite"
         >
-          Funk (Mesh v2): {loraMeshProgressLine}
+          Funk (LoRa-Zweiteiler): {loraMeshProgressLine}
         </p>
       ) : null}
       {attachedTxtFile != null && !attachedBlobBase64 && (

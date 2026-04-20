@@ -144,8 +144,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
-    delayMirrorToIota,
-    setDelayMirrorToIota,
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
@@ -168,8 +166,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxDirectionFilter,
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
-    inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     selectInboxPartnerForSend,
+    removeInboxPartnerFromQuickList,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -237,7 +237,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxHasMore,
     loadError,
     basisUnreachable,
-    inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     inboxPartnerKey,
     setInboxPartnerKey,
     inboxDirectionFilter,
@@ -245,6 +246,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
     selectInboxPartnerForSend,
+    removeInboxPartnerFromQuickList,
     inboxRows,
     contactDirectory: directory,
     isMeshVerifiedForAddress,
@@ -279,12 +281,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
     ...asSendTransportRead(encrypted, forcedTransport),
-    ...asSendMeshMirrorDelay(
-      delayMirrorToIota,
-      setDelayMirrorToIota,
-      meshSelfArchiveAfterLoRa,
-      setMeshSelfArchiveAfterLoRa
-    ),
+    ...asSendMeshMirrorDelay(meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRa),
     isPrivate,
     sending,
     loraOnlineFallbackOffer,
@@ -351,6 +348,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,
+    partnerSetupOpen: showSetup,
+    onTogglePartnerSetup: toggleShowSetup,
   } satisfies ChatViewTransportCardProps
 
   return (
@@ -358,14 +357,20 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       <ChatViewChatHeader
         isPrivate={isPrivate}
         encrypted={encrypted}
-        showSetup={showSetup}
-        onToggleSetup={toggleShowSetup}
         apiStatus={apiStatus}
         onRefreshStatus={refreshApiStatus}
         basisUnreachable={basisUnreachable}
         meshBleConnected={meshtastic.connected}
         role={role}
         deviceTimeTrustWarn={deviceTimeTrustWarn}
+        sendPath={{
+          visible: isPrivate || !encrypted,
+          encrypted,
+          forcedTransport,
+          onForcedTransportChange: setForcedTransport,
+          onEncryptedChange: setEncrypted,
+        }}
+        afterPulse={isPrivate ? <ChatViewEinsatzProfilInline /> : undefined}
       />
 
       {isPrivate ? (
@@ -379,12 +384,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       <ChatViewTransportCard {...transportCardProps} />
 
-      {isPrivate ? (
-        <div className="space-y-4">
-          <ChatViewEinsatzProfilInline />
-        </div>
-      ) : null}
-
       {isPrivate && showSetup && (
         <ChatViewSetupPanel
           partner={partner}
@@ -392,6 +391,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           sending={sending}
           onHandshake={handleHandshake}
           onConnect={handleConnect}
+          encrypted={encrypted}
+          forcedTransport={forcedTransport}
           meshtastic={{
             bleSupported: meshtastic.bleSupported,
             serialSupported: meshtastic.serialSupported,

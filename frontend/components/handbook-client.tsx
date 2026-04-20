@@ -16,6 +16,7 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'EINSATZ-VAULT-PURGE-PDF-REDUNDANZ-ZIELBILD.md', title: 'Einsatz: Purge, PDF, Redundanz' },
   { file: 'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md', title: 'Trägerbild: Einsatz & Organisation' },
   { file: 'ROLLENWECHSEL-TEAM-EINSATZ.md', title: 'Rollenwechsel im Team (Einsatz)' },
+  { file: 'MESSENGER-CHAT-HANDBUCH.md', title: 'Messenger (Chat)' },
 ]
 
 export function HandbookClient() {
@@ -23,6 +24,15 @@ export function HandbookClient() {
   const [body, setBody] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    try {
+      const f = new URLSearchParams(window.location.search).get('file')
+      if (f && DOCS.some((d) => d.file === f)) setActive(f)
+    } catch {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -45,6 +55,15 @@ export function HandbookClient() {
       cancelled = true
     }
   }, [active])
+
+  useEffect(() => {
+    if (!body || loading) return
+    const id = typeof window !== 'undefined' ? window.location.hash.slice(1) : ''
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [body, loading, active])
 
   return (
     <div className="min-h-screen bg-background text-foreground">

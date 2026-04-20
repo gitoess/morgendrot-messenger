@@ -16,7 +16,12 @@ import {
   MEDIA_IOTA_AUDIO_RAW_MAX_BYTES,
   MEDIA_LORA_AUDIO_RAW_MAX_BYTES,
 } from '@/frontend/lib/compact-image-wire'
-import { isLoRaMeshTransport, type ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+  isAttachedLoraDualComposerAllowed,
+  isLoRaMeshTransport,
+  type ForcedTransport,
+} from '@/frontend/lib/chat-view-messenger-transport'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 
 export const CHAT_ATTACHMENT_MAX_RAW_IMAGE_BYTES = 12 * 1024 * 1024
@@ -168,7 +173,8 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 async function ingestImage(
   file: File,
-  forcedTransport: ForcedTransport
+  forcedTransport: ForcedTransport,
+  policy: { isPrivate: boolean; encrypted: boolean; meshSelfArchiveAfterLoRa: boolean }
 ): Promise<AttachmentIngestFailure | AttachmentIngestSuccess> {
   if (file.size > CHAT_ATTACHMENT_MAX_RAW_IMAGE_BYTES) {
     return {
@@ -178,8 +184,18 @@ async function ingestImage(
     }
   }
   const dataUrl = await readFileAsDataUrl(file)
-  /** Funk: ausschließlich progressive LoRa-JPEG-Zweiteiler – nie `MORG_COMPACT_IMG_V1`. */
+  /** Funk: LUMA+CHROMA nur bei Pfad 4 (Klartext); sonst kein Anhang. */
   if (isLoRaMeshTransport(forcedTransport)) {
+    if (
+      !isAttachedLoraDualComposerAllowed({
+        isPrivate: policy.isPrivate,
+        encrypted: policy.encrypted,
+        forcedTransport,
+        meshSelfArchiveAfterLoRa: policy.meshSelfArchiveAfterLoRa,
+      })
+    ) {
+      return { ok: false, message: CHAT_LORA_DUAL_IMAGE_POLICY_MSG, idleMs: 9000 }
+    }
     const enc = await loraProgressiveEncode(dataUrl)
     if (!enc.ok || !enc.lumaWire || !enc.chromaWire) {
       return {
@@ -256,12 +272,24 @@ async function ingestImage(
  */
 export async function ingestCompactAttachmentPick(
   file: File,
-  ctx: { role: string; forcedTransport: ForcedTransport; transportOverride?: ForcedTransport }
+  ctx: {
+    role: string
+    forcedTransport: ForcedTransport
+    transportOverride?: ForcedTransport
+    isPrivate: boolean
+    encrypted: boolean
+    meshSelfArchiveAfterLoRa: boolean
+  }
 ): Promise<AttachmentIngestFailure | AttachmentIngestSuccess> {
   const typeErr = validateCompactPickFileType(file)
   if (typeErr) return typeErr
 
   const t = ctx.transportOverride ?? ctx.forcedTransport
+  const policy = {
+    isPrivate: ctx.isPrivate,
+    encrypted: ctx.encrypted,
+    meshSelfArchiveAfterLoRa: ctx.meshSelfArchiveAfterLoRa,
+  }
 
   if (isLikelyOpusFile(file)) {
     return ingestOpus(file, t)
@@ -272,7 +300,7 @@ export async function ingestCompactAttachmentPick(
   }
 
   try {
-    return await ingestImage(file, t)
+    return await ingestImage(file, t, policy)
   } catch (err) {
     return {
       ok: false,

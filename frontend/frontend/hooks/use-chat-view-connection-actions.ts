@@ -69,7 +69,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
           ? (res as { message: string }).message
           : 'Handshake gesendet.'
       setStatusMsg(
-        `${base} Anschließend „Schnell verbinden“ — erst danach ist der Wallet-Chat (u. a. verschlüsselt + Funk/Mesh v2) bereit.`
+        `${base} Anschließend „Schnell verbinden“ — erst danach ist der Wallet-Chat (verschlüsselt über Online/IOTA; Funk bleibt Klartext/Pfad 4) bereit.`
       )
       setShowSetup(false)
     } else {

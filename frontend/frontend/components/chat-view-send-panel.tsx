@@ -21,6 +21,13 @@ import type {
   VoiceRecordSendPanelPort,
 } from '@/frontend/features/messenger-ports'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
+import {
+  MessengerGuideHint,
+  MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_FUNK_KLARTEXT,
+  MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
+  MESSENGER_HB_ANCHOR_PATH4,
+} from '@/components/messenger-handbook-link'
 
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
@@ -67,8 +74,6 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const {
     isPrivate,
-    delayMirrorToIota,
-    onDelayMirrorToIotaChange,
     meshSelfArchiveAfterLoRa,
     onMeshSelfArchiveAfterLoRaChange,
     encrypted,
@@ -170,8 +175,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     ([...message].length > MESH_PLAINTEXT_MAX_CHARS ||
       !!attachmentBarProps.attachedBlobBase64 ||
       !!attachmentBarProps.attachedAudioBase64 ||
-      attachmentBarProps.attachedTxtFile != null ||
-      attachmentBarProps.attachedLora != null)
+      attachmentBarProps.attachedTxtFile != null)
 
   /** Pfad 4: erlaubt Klartext-Text und LoRa-LUMA/CHROMA, aber keine sonstigen Anhänge. */
   const meshPath4Blocked =
@@ -181,14 +185,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       !!attachmentBarProps.attachedBlobBase64 ||
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null)
-
-  /** Privat + verschlüsselt + Funk: IOTA-Bild wird per Effect in LUMA+CHROMA umgewandelt — bis dahin nicht senden. */
-  const meshIotaBlobAwaitingLora =
-    isPrivate &&
-    encrypted &&
-    forcedTransport === 'mesh' &&
-    !!attachmentBarProps.attachedBlobBase64 &&
-    attachmentBarProps.attachedLora == null
 
   /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
   const meshKlartextRecipientOk =
@@ -203,8 +199,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     hasNoPayload ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
-    meshPath4Blocked ||
-    meshIotaBlobAwaitingLora
+    meshPath4Blocked
 
   const canOfferSosText =
     (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
@@ -237,6 +232,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="space-y-4">
+        {isPrivate && encrypted && forcedTransport === 'internet' ? (
+          <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-950 dark:text-sky-50/95">
+            <strong className="text-foreground">Funk-Klartext:</strong> oben Sendepfad{' '}
+            <span className="font-mono">funk</span> wählen — kurz bestätigen, dann erscheinen hier{' '}
+            <strong className="text-foreground">An Node-ID senden</strong> und{' '}
+            <strong className="text-foreground">LoRa + eigene Verankerung (Pfad 4)</strong>.
+          </div>
+        ) : null}
+
         {!encrypted && (
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger-Adresse</label>
@@ -257,14 +261,29 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {!encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-foreground">
-              EINSATZMODUS: Funkpfad -&gt; Heltec verbinden -&gt; optional Node-ID -&gt; Senden.
-            </p>
-            <p className="text-xs font-medium text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-[11px] font-semibold text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
+              <MessengerGuideHint
+                ariaLabel="Hilfe Funk Klartext"
+                teaser="Mehr"
+                anchor={MESSENGER_HB_ANCHOR_FUNK_KLARTEXT}
+              />
+              <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_FUNK_KLARTEXT} />
+            </div>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Standard-Meshtastic-Text — <strong className="text-foreground">ohne</strong> Morgendrot-Mesh-v2 und{' '}
-              <strong className="text-foreground">ohne</strong> /connect. Broadcast an alle im Kanal, oder Ziel-Knoten
-              (!… wie am Radio angezeigt).
+              Standard-Meshtastic-Text — ohne Morgendrot-Mesh-v2 und ohne{' '}
+              <span className="font-mono">/connect</span>. Broadcast an alle im Kanal, oder Ziel-Knoten (
+              <span className="font-mono">!…</span> wie am Radio angezeigt).
+            </p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">Handshake:</span> Vor Handshake starten Partner-Adresse
+              prüfen. Nach erfolgreichem Handshake kann der Partner im Rahmen der Mailbox mit dir kommunizieren – Tresor
+              und operative Daten separat absichern.{' '}
+              <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST} className="align-middle" />
+            </p>
+            <p className="text-[11px] leading-relaxed text-muted-foreground">
+              <span className="font-medium text-foreground">Nur Klartext + „funk“.</span> Verschlüsselung nutzt den
+              Online/IOTA-Pfad — nicht den Funk-Composer.
             </p>
             <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
               <input
@@ -273,12 +292,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onChange={(e) => onMeshPlaintextToNodeEnabledChange(e.target.checked)}
                 className="mt-1 border-border"
               />
-              <span>
-                An Node-ID senden (statt Broadcast)
-                <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-                  Nur Klartext + „funk“. Verschlüsselt + Funk nutzt weiter Mesh v2 und braucht Handshake + /connect.
-                </span>
-              </span>
+              <span>An Node-ID senden (statt Broadcast)</span>
             </label>
             {meshPlaintextToNodeEnabled ? (
               <div>
@@ -301,6 +315,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {forcedTransport === 'mesh' && isPrivate && (
           <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
+            {encrypted ? (
+              <p className="mb-2 text-[11px] leading-snug text-emerald-100/90 dark:text-emerald-50/90">
+                E2E gilt für <strong className="text-foreground">Online/IOTA</strong>; Funk bleibt Klartext. Zum Node-Ziel
+                und weiteren Funk-Optionen: oben <span className="font-mono">funk</span> wählen (Klartext bestätigen).
+              </p>
+            ) : null}
             <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -309,148 +329,24 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 data-testid="mesh-path4-self-archive"
                 className="mt-0.5 border-border"
               />
-              <span>
-                <span className="font-medium">LoRa + eigene Verankerung</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                  Nach erfolgreichem Klartext-Funk: Kopie per Klartext-Mailbox an <strong className="text-foreground">deine</strong>{' '}
-                  MY_ADDRESS (Tangle) + optionale Forensic-Attestation. Unterstützt jetzt Kurztext sowie
-                  LoRa-Bildzweiteiler (LUMA/CHROMA) ohne Peer-ECDH; bei aktivem Pfad 4 wird kein Mesh-v2-/Handshake-Pfad
-                  genutzt. Nicht unterstützt: Audio/.txt/IOTA-Kompaktbild direkt.
+              <span className="min-w-0 flex-1 space-y-1">
+                <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
+                <span className="block space-y-1 text-xs text-muted-foreground">
+                  <span className="block leading-relaxed">
+                    Nach erfolgreichem Klartext-Funk: Kopie per Klartext-Mailbox an deine MY_ADDRESS (Tangle) + optionale
+                    Forensic-Attestation. Unterstützt jetzt Kurztext sowie LoRa-Bildzweiteiler (LUMA/CHROMA) als
+                    Klartext-Funk; Produkt-Versand kein App-Mesh-v2. Nicht unterstützt: Audio/.txt/IOTA-Kompaktbild
+                    direkt.
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <MessengerGuideHint ariaLabel="Hilfe Pfad 4" teaser="Mehr" anchor={MESSENGER_HB_ANCHOR_PATH4} />
+                    <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_PATH4} />
+                  </span>
                 </span>
               </span>
             </label>
           </div>
         )}
-
-        {isPrivate && encrypted && forcedTransport === 'mesh' && attachmentBarProps.attachedAudioBase64 != null ? (
-          <div className="rounded-lg border border-sky-600/40 bg-sky-950/20 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
-            <strong className="text-sky-900 dark:text-sky-100">Sprache per Funk:</strong> nur{' '}
-            <strong className="text-foreground">kurze</strong> Opus-Memos (harte Byte-Grenze). Längere Sprache:{' '}
-            <strong className="text-foreground">online</strong>. In der Konsole „error: 3“ (TIMEOUT): typisch ohne
-            Mesh-ACK bei Broadcast — zweites Gerät zum Testen; kurze Memos reduzieren Timeouts.
-          </div>
-        ) : null}
-
-        {isPrivate && encrypted && forcedTransport === 'mesh' && (
-          <fieldset className="rounded-lg border border-border bg-muted/20 p-3">
-            <legend className="text-sm font-medium text-foreground">LoRa → Empfänger (Funk)</legend>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Wähle, ob die Nachricht nur über LoRa geht oder zusätzlich nach dem Funk in den IOTA-Tangle gespiegelt
-              werden soll (Delayed Mirror — der Empfänger braucht später Basis/WLAN). Dieser Modus ist
-              <strong className="text-foreground"> empfängerbezogen</strong> und benötigt Handshake + /connect.
-            </p>
-            {(apiStatus?.connectedAddresses?.length ?? 0) > 0 ? (
-              <div className="mb-3 rounded-md border border-border bg-background/70 px-2.5 py-2">
-                <p className="mb-1 text-[11px] font-medium text-foreground">Verbundene Partner (Handshake)</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(apiStatus?.connectedAddresses ?? []).map((addr) => (
-                    <button
-                      key={addr}
-                      type="button"
-                      onClick={() => onRecipientChange(addr)}
-                      className="rounded border border-border px-2 py-1 font-mono text-[10px] text-foreground hover:bg-muted"
-                      title="Als Zieladresse übernehmen"
-                    >
-                      {addr.length > 16 ? `${addr.slice(0, 10)}…${addr.slice(-4)}` : addr}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-            {meshSelfArchiveAfterLoRa ? (
-              <div className="mb-3 rounded-md border border-amber-600/45 bg-amber-950/20 px-2.5 py-2 text-xs leading-snug text-amber-50">
-                Aktiv ist aktuell <strong className="text-foreground">„LoRa + eigene Verankerung“</strong> (Self-Archive).
-                Der Empfänger-Mirror-Modus ist dafür bewusst getrennt und hier deaktiviert.
-              </div>
-            ) : null}
-            <div className={cn('space-y-3', meshSelfArchiveAfterLoRa ? 'opacity-60 pointer-events-none' : '')}>
-              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
-                <input
-                  type="radio"
-                  name="morg-lora-tangle-mode"
-                  checked={!delayMirrorToIota}
-                  onChange={() => onDelayMirrorToIotaChange(false)}
-                  aria-label="Nur LoRa: Nachricht nur über Meshtastic, ohne IOTA-Spiegel"
-                  data-testid="lora-mode-nur-lora"
-                  className="mt-0.5 border-border"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="font-medium">Nur LoRa</span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                    Klassisch: Text, Bild (kompakt), Audio, .txt oder LoRa-Bild (LUMA+CHROMA) nur über Mesh v2 —
-                    kein automatischer Mailbox-/Tangle-Schritt.
-                  </span>
-                  <span className="mt-1.5 block text-xs leading-relaxed text-muted-foreground/95">
-                    Ohne Tangle-Verankerung ist keine Forensic-Attestation für diese Funk-Sendung möglich (Manifest
-                    braucht Mailbox-/Chain-Bezug).
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => onDelayMirrorToIotaChange(true)}
-                    className="mt-2 inline-flex items-center rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/60"
-                    data-testid="lora-mode-spaeter-verankern"
-                  >
-                    Später verankern: auf „LoRa + Tangle“ wechseln
-                  </button>
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
-                <input
-                  type="radio"
-                  name="morg-lora-tangle-mode"
-                  checked={delayMirrorToIota}
-                  onChange={() => onDelayMirrorToIotaChange(true)}
-                  aria-label="LoRa und Tangle: nach Empfang zusätzlich per Mailbox in den Tangle spiegeln"
-                  data-testid="lora-mode-lora-tangle"
-                  className="mt-0.5 border-border"
-                />
-                <span>
-                  <span className="font-medium">LoRa + Tangle</span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
-                    Zuerst Funk wie oben; nach Entschlüsselung beim Empfänger wird der Klartext per Delayed Mirror
-                    in die Mailbox geschrieben und damit im Tangle verankert (Delayed-Mirror-Warteschlange am
-                    Empfänger, wie zuvor die Checkbox „Delayed Upload“). Ohne /connect schlägt dieser Modus fehl.
-                  </span>
-                </span>
-              </label>
-            </div>
-          </fieldset>
-        )}
-
-        {canOfferSosText ? (
-          <div className="rounded-xl border-2 border-red-600/60 bg-red-950/35 p-3 dark:bg-red-950/25">
-            <p className="mb-2 text-xs font-medium text-red-100">
-              <strong className="block text-red-50">SOS — Hilferuf (Text)</strong>
-              <span className="mt-1 block font-normal leading-relaxed text-red-100/95">
-                Einsatzmodus: erst Text eingeben oder diktieren, dann SOS senden.
-              </span>
-            </p>
-            <button
-              type="button"
-              disabled={sending}
-              onClick={() => {
-                if (!message.trim()) {
-                  prepareSosDictation()
-                  return
-                }
-                if (
-                  !window.confirm(
-                    'Echten Hilferuf (SOS) senden?\n\n' +
-                      'Die Nachricht geht an deinen Chat-Empfänger (Funk oder Online — wie eingestellt), mit Notfall-Kennzeichnung MORG_EMERGENCY_V1. ' +
-                      'Kein automatischer 112-Ruf.\n\n' +
-                      'Nur nutzen, wenn wirklich Hilfe nötig ist.'
-                  )
-                ) {
-                  return
-                }
-                void onSend({ emergencyWire: 'text' })
-              }}
-              className="flex min-h-[3.25rem] w-full items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-3 text-base font-bold tracking-tight text-white shadow-lg transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              SOS — Hilferuf (Text)
-            </button>
-          </div>
-        ) : null}
 
         <div
           onDragEnter={onComposerDragEnter}
@@ -463,34 +359,18 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           )}
         >
           <label className="mb-1.5 block text-sm font-medium text-foreground">Deine Nachricht</label>
-          <p className="mb-2 text-xs text-muted-foreground">
-            Sprachmemo (max. {voiceMaxSeconds}s, nur Online/IOTA). Datei hier
-            ablegen, <span className="text-foreground/90">Datei importieren</span> oder{' '}
-            <span className="text-foreground/90">Von Kamera</span> (Handy: Kamera-App, PC: Webcam) – danach{' '}
-            <span className="text-foreground/90">Senden</span>.
+          <p className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>
+              Sprachmemo max. {voiceMaxSeconds}s — nur bei <strong className="text-foreground">Online/IOTA</strong>.
+            </span>
+            <MessengerHandbookChatLink />
           </p>
-          <div className="mb-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">EINSATZMODUS DIKTAT:</strong> Textfeld fokussieren und OS-Diktat nutzen.
-            <strong className="text-foreground"> Windows: Win+H</strong> |{' '}
-            <strong className="text-foreground">Android: Tastatur-Mikrofon</strong>.
-          </div>
-          {forcedTransport === 'internet' ? (
-            <ChatViewVoiceRecord
-              slot="normal"
-              activeKind={voiceActiveKind}
-              phase={voicePhase}
-              progress01={voiceProgress01}
-              maxSeconds={voiceMaxSeconds}
-              normalIsOnline={forcedTransport === 'internet'}
-              onToggle={onVoiceToggle}
-              blockedStart={voiceNormalBlockedStart}
-            />
-          ) : (
+          {forcedTransport !== 'internet' ? (
             <div className="mb-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
               Sprachmemo ist im Einsatzmodus aktuell <strong className="text-foreground">nur bei Online/IOTA</strong>{' '}
-              aktiv.
+              aktiv — bei „online“ neben „Online senden“.
             </div>
-          )}
+          ) : null}
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}
@@ -511,12 +391,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 : null}
             </div>
           )}
-          {meshIotaBlobAwaitingLora ? (
-            <div className="mb-2 rounded-md border border-sky-600/45 bg-sky-950/25 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
-              <strong>LoRa-Bild:</strong> IOTA-Kompakt wird automatisch in <strong>LUMA+CHROMA</strong> umgewandelt —{' '}
-              <span className="text-muted-foreground">Senden bleibt kurz deaktiviert, bis die Vorschau da ist.</span>
-            </div>
-          ) : null}
           <textarea
             id="chat-composer-message"
             value={message}
@@ -635,8 +509,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
             {forcedTransport === 'internet' && onlineConnected ? (
               <button
                 type="button"
@@ -670,11 +544,51 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => void onSend()}
                 disabled={sendDisabled}
                 data-testid="chat-composer-primary-send"
-                className="flex items-center gap-2 rounded-lg border border-sky-500/50 bg-sky-500/10 px-6 py-2.5 text-sm font-medium text-sky-900 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-sky-100"
+                className="flex items-center gap-2 rounded-lg border border-sky-700/70 bg-sky-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-300/40 dark:bg-sky-700 dark:hover:bg-sky-600"
               >
                 {sending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'LoRa senden'}
               </button>
+            ) : null}
+            {canOfferSosText ? (
+              <button
+                type="button"
+                disabled={sending}
+                title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
+                onClick={() => {
+                  if (!message.trim()) {
+                    prepareSosDictation()
+                    return
+                  }
+                  if (
+                    !window.confirm(
+                      'Echten Hilferuf (SOS) senden?\n\n' +
+                        'Die Nachricht geht an deinen Chat-Empfänger (Funk oder Online — wie eingestellt), mit Notfall-Kennzeichnung MORG_EMERGENCY_V1. ' +
+                        'Kein automatischer 112-Ruf.\n\n' +
+                        'Nur nutzen, wenn wirklich Hilfe nötig ist.'
+                    )
+                  ) {
+                    return
+                  }
+                  void onSend({ emergencyWire: 'text' })
+                }}
+                className="rounded-lg border-2 border-red-600/70 bg-red-600/95 px-3 py-2 text-xs font-bold tracking-tight text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                SOS — Hilferuf
+              </button>
+            ) : null}
+            {forcedTransport === 'internet' ? (
+              <ChatViewVoiceRecord
+                slot="normal"
+                density="compact"
+                activeKind={voiceActiveKind}
+                phase={voicePhase}
+                progress01={voiceProgress01}
+                maxSeconds={voiceMaxSeconds}
+                normalIsOnline
+                onToggle={onVoiceToggle}
+                blockedStart={voiceNormalBlockedStart}
+              />
             ) : null}
             {sending ? (
               <button

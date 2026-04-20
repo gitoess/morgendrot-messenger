@@ -63,3 +63,9 @@ export const LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES = 4096
 
 /** Max. Größe Chroma-JPEG allein (Rohbytes). */
 export const LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES = 2560
+
+/**
+ * Meshtastic `sendText` / LongFast: Firmware meldet oft „Message longer than 512 bytes“.
+ * Gesamte UTF-8-Länge **einer** Textnachricht (ein LUMA- bzw. ein CHROMA-Wire) muss darunter bleiben.
+ */
+export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 500

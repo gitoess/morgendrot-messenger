@@ -16,6 +16,10 @@ export type SendMeshV2WireBurstOptions = {
    * B1 SOS: `MacroPriorityClass.Flash` — Burst ohne Pausen zwischen MF1-Fragmenten (App-seitig; Meshtastic selbst priorisiert nicht).
    */
   priorityFlash?: boolean
+  /**
+   * Vor Wire-Build und vor jedem ausgehenden Paket — z. B. `throw` bei Nutzer-Abbruch.
+   */
+  beforeEachPacket?: () => void
 }
 
 /**
@@ -32,6 +36,7 @@ export async function sendMeshV2WireBurst(
     : options?.interPacketDelayMs !== undefined
       ? options.interPacketDelayMs
       : MESH_V2_BURST_INTER_PACKET_MS_DEFAULT
+  options?.beforeEachPacket?.()
   const b = await meshBuildV2Wires(text)
   if (!b.ok || !b.wires?.length) {
     const raw = b.error ?? b.message ?? 'Mesh-Build fehlgeschlagen'
@@ -54,6 +59,7 @@ export async function sendMeshV2WireBurst(
   }
   const total = b.wires.length
   for (let i = 0; i < b.wires.length; i++) {
+    options?.beforeEachPacket?.()
     const raw = base64ToUint8Array(b.wires[i]!.wireBase64)
     await sendBinaryV2(raw, 'broadcast')
     onProgress?.(i + 1, total)

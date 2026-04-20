@@ -42,6 +42,23 @@ describe('sendMeshV2WireBurst', () => {
     ).rejects.toThrow('kaputt')
   })
 
+  it('ruft beforeEachPacket vor Build und vor jedem Paket auf', async () => {
+    meshBuild.mockResolvedValue({
+      ok: true,
+      wires: [
+        { recipient: '', wireBase64: btoa('a'), meshNonce: 1 },
+        { recipient: '', wireBase64: btoa('b'), meshNonce: 2 },
+      ],
+    })
+    const hook = vi.fn()
+    const sendBinaryV2 = vi.fn().mockResolvedValue(undefined)
+    await sendMeshV2WireBurst('hi', sendBinaryV2, undefined, {
+      interPacketDelayMs: 0,
+      beforeEachPacket: hook,
+    })
+    expect(hook).toHaveBeenCalledTimes(3)
+  })
+
   it('wirft wenn keine Wires geliefert werden', async () => {
     meshBuild.mockResolvedValue({ ok: true, wires: [] })
     await expect(

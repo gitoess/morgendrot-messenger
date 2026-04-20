@@ -38,7 +38,6 @@ import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { toast } from 'sonner'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
-const DELAY_MIRROR_TO_IOTA_LS = 'morgendrot.delayMirrorToIota'
 const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
 
 export type UseChatViewCoreParams = {
@@ -65,9 +64,23 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [statusMsg, setStatusMsg] = useState('')
   const [showSetup, setShowSetup] = useState(false)
-  const [encrypted, setEncrypted] = useState(true)
+  const [encrypted, setEncryptedInternal] = useState(true)
   const [bossView, setBossView] = useState(false)
-  const [forcedTransport, setForcedTransport] = useState<ForcedTransport>('internet')
+  const [forcedTransport, setForcedTransportInternal] = useState<ForcedTransport>('internet')
+
+  /** Verschlüsselter Funk (Mesh v2 / PRIVATE_APP) ist produktseitig abgeschaltet — Funk = Klartext; Verschlüsselung nur Online/IOTA. */
+  const setForcedTransport = useCallback((t: ForcedTransport) => {
+    if (t === 'mesh') setEncryptedInternal(false)
+    setForcedTransportInternal(t)
+  }, [])
+
+  const setEncrypted = useCallback(
+    (v: boolean) => {
+      if (v && forcedTransport === 'mesh') setForcedTransportInternal('internet')
+      setEncryptedInternal(v)
+    },
+    [forcedTransport]
+  )
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
   const clearSosVoicePrompt = useCallback(() => setSosVoiceAwaitingSend(false), [])
@@ -104,20 +117,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     packageId: inboxPackageFilter.trim() || undefined,
   })
 
-  const messagesSnapshotRef = useRef(messages)
-  messagesSnapshotRef.current = messages
-
-  const waitForMeshSosAckDigest = useCallback(async (digestHex: string, timeoutMs: number) => {
-    const deadline = Date.now() + timeoutMs
-    while (Date.now() < deadline) {
-      for (const m of messagesSnapshotRef.current) {
-        if (m.meshMeta?.sosAckDigest === digestHex) return true
-      }
-      await new Promise((r) => setTimeout(r, 380))
-    }
-    return false
-  }, [])
-
   const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
 
   const messagesForExport = useCallback(async () => {
@@ -130,24 +129,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     if (meshOnly.length === 0) return fromApi
     return mergeAllMessages([...fromApi, ...meshOnly])
   }, [messages, inboxPackageFilter, bossView, role])
-
-  const [delayMirrorToIota, setDelayMirrorToIotaState] = useState(() => {
-    if (typeof window === 'undefined') return false
-    try {
-      return window.localStorage.getItem(DELAY_MIRROR_TO_IOTA_LS) === '1'
-    } catch {
-      return false
-    }
-  })
-  const setDelayMirrorToIota = useCallback((v: boolean) => {
-    setDelayMirrorToIotaState(v)
-    if (typeof window === 'undefined') return
-    try {
-      window.localStorage.setItem(DELAY_MIRROR_TO_IOTA_LS, v ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
-  }, [])
 
   const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -181,7 +162,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     writeMessagingPersistenceModeToStorage(m)
   }, [])
 
-  /** LoRa LUMA/CHROMA Mesh-v2: Fortschrittszeile für die Anhang-Leiste (`Luma x/y · …`). */
+  /** Optional: Fortschrittszeile für die Anhang-Leiste beim LoRa-Bild (z. B. SOS-/Retry-Text). */
   const [loraMeshProgressLine, setLoraMeshProgressLine] = useState<string | null>(null)
 
   const {
@@ -198,6 +179,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
     inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
@@ -207,6 +190,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onHideAllVisibleLocal,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    removeInboxPartnerFromQuickList,
   } = useChatViewInboxLocalUi({
     messages,
     setMessages,
@@ -368,6 +352,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     isPrivate,
     encrypted,
     forcedTransport,
+    meshSelfArchiveAfterLoRa,
     setStatus,
     setStatusMsg,
     onCompactIngestStart: clearSosVoicePrompt,
@@ -433,9 +418,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setMorgPkgDeviceBusy,
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
-    delayMirrorToIota,
     meshSelfArchiveAfterLoRa,
-    waitForMeshSosAckDigest,
     setMeshProgress: setLoraMeshProgressLine,
     onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
     deviceTimeTrustWarn,
@@ -612,8 +595,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
-    delayMirrorToIota,
-    setDelayMirrorToIota,
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
@@ -637,7 +618,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly,
     inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     selectInboxPartnerForSend,
+    removeInboxPartnerFromQuickList,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,

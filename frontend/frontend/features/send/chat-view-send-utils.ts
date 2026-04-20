@@ -14,7 +14,10 @@ import {
   parseCompactImageMessage,
   decodedBase64BinaryLength,
 } from '@/frontend/lib/compact-image-wire'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+  type ForcedTransport,
+} from '@/frontend/lib/chat-view-messenger-transport'
 import { stripLeadingMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 
 export type ChatSendValidation = { ok: true } | { ok: false; message: string; idleMs?: number }
@@ -43,8 +46,7 @@ export function validateMeshDisallowsIotaCompactBlob(
   if (forcedTransport === 'mesh' && attachedBlobBase64) {
     return {
       ok: false,
-      message:
-        'Funk: IOTA-Kompakt-Bild wird in LUMA+CHROMA umgewandelt — bitte kurz warten. Wenn das nicht aufhört: Anhang entfernen, Backend (Sharp) prüfen, oder zuerst „online“ wählen und Bild anhängen.',
+      message: `Funk: IOTA-Kompakt-Bild passt hier nicht (kein automatischer LoRa-Zweiteiler ohne erlaubte Kombination). ${CHAT_LORA_DUAL_IMAGE_POLICY_MSG}`,
       idleMs: 9000,
     }
   }

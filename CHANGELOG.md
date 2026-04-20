@@ -6,6 +6,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Messenger (PWA)
+
+- **Chat-Kopf (privat):** statische Zeile „E2E / ECDH + AES-GCM …“ entfernt — Verweis auf die Karte **„Verschlüsselung“** unter dem Nachrichtenbereich; Rolle bleibt sichtbar.
+- **Posteingang:** Schnellliste **Funkpartner** / **IOTA·Mailbox** pro Chip per **×** aus der lokalen Vorschlagsliste entfernbar (`localStorage` **Blockliste** `morg.inbox.partnerMemoryBlocked.v1`); optional zweiter Schritt blendet sichtbare Zeilen mit diesem Gegenüber lokal aus (Funk vs. IOTA je nach Zeile). Hinweiszeile **Telefonbuch** unter der Posteingangs-Kopfzeile; Menüpunkt **„Ins Telefonbuch“** in jeder Zeile sichtbar, außerhalb gültiger 0x-Eingänge **deaktiviert** mit Tooltip.
+
 ### Repository / Bundles
 
 - **Verkaufs-Messenger-Referenz:** `exports/Morgendrot-Messenger-verkauf/move-test/build/` aus dem Git-Index entfernt (336 Artefakte); lokal per `sui move build` reproduzierbar. `.gitignore`: `exports/**/move-test/build/`, IDE-Temporärdateien.

@@ -22,6 +22,7 @@ import {
     LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES,
     LORA_PROGRESSIVE_JPEG_PAIR_TOTAL_MAX_BYTES,
     LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES,
+    MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES,
     MORG_CHROMA_V1_PREFIX,
     MORG_LUMA_V1_PREFIX,
 } from './morgendrot-image-transport-policy.js';
@@ -89,7 +90,17 @@ export function parseLoraProgressiveWire(wire: string): ParsedLoraWire | null {
     return tryOne(MORG_LUMA_V1_PREFIX, 'luma') ?? tryOne(MORG_CHROMA_V1_PREFIX, 'chroma');
 }
 
-function assertWireLimit(wire: string, label: string): void {
+/** Eine Mesh-Textnachricht = ein Wire; Meshtastic bricht bei typ. >512 B UTF-8 ab. */
+function assertMeshtasticTextWireLimit(wire: string, label: string): void {
+    const n = utf8Len(wire);
+    if (n > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES) {
+        throw new Error(
+            `${label}: Wire ${n} B UTF-8 > Meshtastic-Text-Limit ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} B – Bild verkleinern oder Chunking (Roadmap).`
+        );
+    }
+}
+
+function assertMailboxWireLimit(wire: string, label: string): void {
     const n = utf8Len(wire);
     if (n > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
         throw new Error(
@@ -116,50 +127,61 @@ export async function prepareImageForLoRa(originalBuffer: Buffer): Promise<LoRaP
         { w: 28, h: 21, blur: 1.2 },
         { w: 24, h: 18, blur: 1.0 },
         { w: 20, h: 15, blur: 0.9 },
+        { w: 18, h: 14, blur: 0.85 },
+        { w: 16, h: 12, blur: 0.8 },
     ];
-    const lumaQs = [50, 46, 42, 38, 34, 30, 28, 26, 24, 22];
-    const chromaQs = [32, 28, 26, 24, 22, 20, 18];
+    /** S/W-Phase: Breite runter, bis Base64+Marker in ein Meshtastic-Textpaket (~512 B) passt. */
+    const lumaWidths = [480, 360, 300, 240, 200, 160, 128, 104, 88, 72, 64, 56, 48] as const;
+    const lumaQs = [50, 46, 42, 38, 34, 30, 28, 26, 24, 22, 20, 18, 16];
+    const chromaQs = [32, 28, 26, 24, 22, 20, 18, 16, 14];
 
-    for (const { w, h, blur } of layouts) {
-        for (const lumaQ of lumaQs) {
-                const luma = await sharp(normalized, { failOn: 'none' })
+    for (const lumaW of lumaWidths) {
+        const lumaSource = await sharp(normalized, { failOn: 'none' })
+            .resize({ width: lumaW, fit: 'inside', withoutEnlargement: true })
+            .toBuffer();
+        for (const { w, h, blur } of layouts) {
+            for (const lumaQ of lumaQs) {
+                const luma = await sharp(lumaSource, { failOn: 'none' })
                     .greyscale()
                     .jpeg({ quality: lumaQ, mozjpeg: true })
                     .toBuffer();
-            if (luma.length > LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES) continue;
-            for (const chromaQ of chromaQs) {
-                const chroma = await sharp(normalized, { failOn: 'none' })
-                    .resize(w, h, { fit: 'cover' })
-                    .blur(blur)
-                    .jpeg({ quality: chromaQ, mozjpeg: true })
-                    .toBuffer();
-                if (chroma.length > LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES) continue;
-                if (luma.length + chroma.length > LORA_PROGRESSIVE_JPEG_PAIR_TOTAL_MAX_BYTES) continue;
+                if (luma.length > LORA_PROGRESSIVE_LUMA_JPEG_MAX_BYTES) continue;
+                for (const chromaQ of chromaQs) {
+                    const chroma = await sharp(normalized, { failOn: 'none' })
+                        .resize(w, h, { fit: 'cover' })
+                        .blur(blur)
+                        .jpeg({ quality: chromaQ, mozjpeg: true })
+                        .toBuffer();
+                    if (chroma.length > LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES) continue;
+                    if (luma.length + chroma.length > LORA_PROGRESSIVE_JPEG_PAIR_TOTAL_MAX_BYTES) continue;
 
-                const messageId = newMessageId();
-                const lumaWire = buildLoraLumaWire(messageId, luma);
-                const chromaWire = buildLoraChromaWire(messageId, chroma);
-                try {
-                    assertWireLimit(lumaWire, 'LoRa Luma-Wire');
-                    assertWireLimit(chromaWire, 'LoRa Chroma-Wire');
-                } catch {
-                    continue;
+                    const messageId = newMessageId();
+                    const lumaWire = buildLoraLumaWire(messageId, luma);
+                    const chromaWire = buildLoraChromaWire(messageId, chroma);
+                    try {
+                        assertMeshtasticTextWireLimit(lumaWire, 'LoRa Luma-Wire');
+                        assertMeshtasticTextWireLimit(chromaWire, 'LoRa Chroma-Wire');
+                        assertMailboxWireLimit(lumaWire, 'LoRa Luma-Wire');
+                        assertMailboxWireLimit(chromaWire, 'LoRa Chroma-Wire');
+                    } catch {
+                        continue;
+                    }
+                    return {
+                        messageId,
+                        lumaWire,
+                        chromaWire,
+                        lumaJpegBytes: luma.length,
+                        chromaJpegBytes: chroma.length,
+                        lumaWireUtf8Bytes: utf8Len(lumaWire),
+                        chromaWireUtf8Bytes: utf8Len(chromaWire),
+                    };
                 }
-                return {
-                    messageId,
-                    lumaWire,
-                    chromaWire,
-                    lumaJpegBytes: luma.length,
-                    chromaJpegBytes: chroma.length,
-                    lumaWireUtf8Bytes: utf8Len(lumaWire),
-                    chromaWireUtf8Bytes: utf8Len(chromaWire),
-                };
             }
         }
     }
 
     throw new Error(
-        'LoRa: JPEG-Paar passt nicht unter Funk-Limits (Summe ≤ 6,5 KiB, Luma/Chroma je Phase). Anderes Motiv oder kleinere Vorlage.'
+        'LoRa: Kein JPEG-Paar passt unter Meshtastic-Textlimit (~512 B UTF-8 pro LUMA/CHROMA-Wire). Anderes Motiv wählen oder später Chunking (Roadmap).'
     );
 }
 
@@ -183,7 +205,7 @@ export async function prepareImageForLoRaRobust(originalBuffer: Buffer): Promise
             return await prepareImageForLoRa(scaled);
         } catch (e) {
             const m = e instanceof Error ? e.message : String(e);
-            if (/JPEG-Paar|Wire.*Limit|passt nicht unter|Messenger-Limit/i.test(m)) {
+            if (/JPEG-Paar|Wire.*Limit|passt nicht unter|Messenger-Limit|Meshtastic-Text-Limit/i.test(m)) {
                 lastErr = e instanceof Error ? e : new Error(m);
                 continue;
             }

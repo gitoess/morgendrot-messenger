@@ -87,6 +87,12 @@ export const COMPACT_FILE_TXT_SUFFIX = ']]'
 /** Wie Backend `MESSAGING_MAX_PLAINTEXT_UTF8_BYTES` (Default **16000**). */
 export const MESSAGING_WIRE_UTF8_MAX = 16_000
 
+/**
+ * Meshtastic `sendText` / LongFast: Firmware meldet oft „Message longer than 512 bytes“.
+ * Muss mit Backend `MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES` übereinstimmen.
+ */
+export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 500
+
 /** Opus/Ogg-Rohdaten für IOTA/Mailbox (`MORG_AUDIO_V1`). */
 export const MEDIA_IOTA_AUDIO_RAW_MAX_BYTES = 10_752
 

@@ -1,11 +1,12 @@
 'use client'
 
 /**
- * Chat-Kopf: Modus (Privat/Pinnwand), Verschlüsselungs-Hinweis, „Partner verbinden“, Status-Banner (Tresor, Klartext-Konfig).
+ * Chat-Kopf: Modus (Privat/Pinnwand), Verschlüsselungs-Hinweis, Status-Banner (Tresor, Klartext-Konfig). „Partner verbinden“ sitzt bei der Verschlüsselungs-Karte.
  */
 
+import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Activity, Handshake, Lock, Unlock, Radio } from 'lucide-react'
+import { Activity, Lock, Unlock, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
@@ -15,12 +16,12 @@ import {
   getDirectIotaPathUiState,
   type DirectIotaPathUiState,
 } from '@/frontend/lib/direct-iota-plain-submit'
+import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 
 export type ChatViewChatHeaderProps = {
   isPrivate: boolean
   encrypted: boolean
-  showSetup: boolean
-  onToggleSetup: () => void
   apiStatus: ApiStatus | null
   /** Nach Änderung an Puls/Heartbeat Status neu laden. */
   onRefreshStatus?: () => void | Promise<void>
@@ -32,6 +33,16 @@ export type ChatViewChatHeaderProps = {
   role: string
   /** Keine sichere Referenzzeit (HTTP-`Date` / GPS) — Fahrplan § H.6c. */
   deviceTimeTrustWarn?: boolean
+  /** Kompakter Sendepfad neben „Wald“ (online / funk / adhoc). */
+  sendPath?: {
+    visible: boolean
+    encrypted: boolean
+    forcedTransport: ForcedTransport
+    onForcedTransportChange: (t: ForcedTransport) => void
+    onEncryptedChange?: (encrypted: boolean) => void
+  }
+  /** Direkt unter Puls-Einstellungen (z. B. Einsatz-Profil). */
+  afterPulse?: ReactNode
 }
 
 function roleBadgeLabel(role: string): string {
@@ -148,14 +159,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
   const {
     isPrivate,
     encrypted,
-    showSetup,
-    onToggleSetup,
     apiStatus,
     onRefreshStatus,
     basisUnreachable,
     meshBleConnected,
     role,
     deviceTimeTrustWarn = false,
+    sendPath,
+    afterPulse,
   } = p
 
   const waldTier = computeWaldConnectionTier(basisUnreachable, meshBleConnected)
@@ -163,49 +174,45 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
   return (
     <>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-2 sm:items-center sm:gap-3">
           <div
             className={cn(
-              'flex h-12 w-12 shrink-0 items-center justify-center rounded-xl',
+              'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:mt-0 sm:h-12 sm:w-12',
               encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
             )}
           >
-            {encrypted ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
+            {encrypted ? <Lock className="h-5 w-5 sm:h-6 sm:w-6" /> : <Unlock className="h-5 w-5 sm:h-6 sm:w-6" />}
           </div>
-          <div className="min-w-0">
-            <h2 className="text-xl font-bold text-foreground">{isPrivate ? 'Privater Chat' : 'Pinnwand'}</h2>
-            <p className="text-sm text-muted-foreground">
-              {encrypted ? 'Inhalt: ECDH + AES-GCM (Handshake-Keys)' : 'Unverschlüsselt (Klartext)'}
-            </p>
-            {role.trim() ? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                Rolle:{' '}
-                <span className="rounded-md bg-muted/80 px-1.5 py-0.5 font-medium text-foreground/90">
-                  {roleBadgeLabel(role)}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
+                {isPrivate ? 'Privater Chat' : 'Pinnwand'}
+              </h2>
+              {role.trim() ? (
+                <span className="text-[11px] text-muted-foreground sm:text-xs">
+                  Rolle{' '}
+                  <span className="font-medium text-foreground/90">{roleBadgeLabel(role)}</span>
                 </span>
+              ) : null}
+            </div>
+            {isPrivate ? (
+              <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+                {encrypted
+                  ? 'Session- und Transport: Karte „Verschlüsselung“ unter dem Nachrichtenbereich (nicht nur das Schloss hier).'
+                  : 'Unverschlüsselt; Transport in der Karte „Verschlüsselung“ unten.'}
               </p>
-            ) : null}
+            ) : (
+              <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+                Unverschlüsselt auf der gewählten Route
+              </p>
+            )}
           </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
           <WaldCheckIndicator tier={waldTier} />
+          {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
           {isPrivate ? <IotaMailboxPathBadge /> : null}
-          {isPrivate && (
-            <button
-              type="button"
-              onClick={onToggleSetup}
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                showSetup
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-accent text-accent-foreground hover:bg-accent/80'
-              )}
-            >
-              <Handshake className="h-4 w-4" />
-              Partner verbinden
-            </button>
-          )}
         </div>
       </div>
 
@@ -214,6 +221,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
       {isPrivate && apiStatus && (
         <ChatViewPulseSettings apiStatus={apiStatus} onApplied={onRefreshStatus} />
       )}
+
+      {afterPulse}
 
       {isPrivate && deviceTimeTrustWarn && (
         <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sm text-sky-950 dark:text-sky-100">

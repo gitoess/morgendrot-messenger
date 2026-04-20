@@ -2,7 +2,6 @@
 
 import { useCallback, useRef } from 'react'
 import {
-  sosGatewayAckDigest,
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
   stableOfflineMailboxThreadId,
@@ -10,7 +9,6 @@ import {
   parseMailboxOutNonceMarker,
   prependMailboxOutNonceMarker,
 } from '@/frontend/lib/api'
-import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
 import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
@@ -22,14 +20,17 @@ import {
   validateStandardOutgoingWire,
 } from '@/frontend/features/send/chat-view-send-utils'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
-import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
-import { prependDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
+import {
+  CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+  MESH_PLAINTEXT_MAX_CHARS,
+} from '@/frontend/lib/chat-view-messenger-transport'
 import { prependPath4SelfArchiveMarker } from '@/frontend/features/send/mesh-path4-self-archive'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
-import type { SendMeshV2WireBurstOptions } from '@/frontend/features/send/chat-view-mesh-send'
-import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
-import { sha256HexUtf8 } from '@/frontend/lib/sha256-hex-utf8'
+import {
+  MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES,
+  wireUtf8ByteLength,
+} from '@/frontend/lib/compact-image-wire'
 import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
@@ -51,6 +52,13 @@ import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
 
+/** Abbruch-Button / `throwIfCancelled` — eine kanonische Meldung für `isUserCancelError`. */
+const CHAT_SEND_CANCELLED_MSG = 'Übertragung abgebrochen.'
+
+function isUserCancelError(e: unknown): boolean {
+  return e instanceof Error && e.message === CHAT_SEND_CANCELLED_MSG
+}
+
 /** UI: „IDs & Puls“ → Strikt ohne Funk-Fallback bei Online-Versand. */
 function readStrictOnlineNoMeshFallback(): boolean {
   if (typeof window === 'undefined') return false
@@ -58,51 +66,6 @@ function readStrictOnlineNoMeshFallback(): boolean {
     return window.localStorage.getItem('morgendrot.strictOnlineNoMeshFallback') === '1'
   } catch {
     return false
-  }
-}
-
-/** B2: nach erfolgreichem Funk-SOS zusätzlich verschlüsselt in die Mailbox spiegeln (Opt-out: `localStorage` `morgendrot.sosIotaMirror` = `0`). */
-function readSosIotaMirrorEnabled(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    return window.localStorage.getItem('morgendrot.sosIotaMirror') !== '0'
-  } catch {
-    return true
-  }
-}
-
-/**
- * B2+: Zwischen Funk-Wiederholungen `/send` versuchen — erfolgreiche Mailbox = Basis erreicht → **keine** weiteren LoRa-Versuche (Airtime).
- * Opt-out: `localStorage` **`morgendrot.sosRetryStopOnServerAck`** = **`0`**.
- */
-function readSosRetryStopOnServerAckEnabled(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    return window.localStorage.getItem('morgendrot.sosRetryStopOnServerAck') !== '0'
-  } catch {
-    return true
-  }
-}
-
-/** Optional: vor `/send` nur `/sos-gateway-ack` (Log, keine Mailbox) — aktivieren mit `localStorage` `morgendrot.sosUseDedicatedGatewayAck` = `1`. */
-function readSosUseDedicatedGatewayAck(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return window.localStorage.getItem('morgendrot.sosUseDedicatedGatewayAck') === '1'
-  } catch {
-    return false
-  }
-}
-
-/** Nach erfolgreichem Funk-SOS auf Mesh-Ack warten (ms), `localStorage` `morgendrot.sosWaitMeshAckMs` (0 = aus, max 120000). */
-function readSosWaitMeshAckAfterSendMs(): number {
-  if (typeof window === 'undefined') return 0
-  try {
-    const v = parseInt(window.localStorage.getItem('morgendrot.sosWaitMeshAckMs') || '0', 10)
-    if (!Number.isFinite(v) || v <= 0) return 0
-    return Math.min(v, 120_000)
-  } catch {
-    return 0
   }
 }
 
@@ -150,32 +113,6 @@ function mailboxHybridErr(res: { error?: unknown; message?: unknown }): string {
   return 'Fehler'
 }
 
-function recordMeshOutgoingV2(
-  append: UseChatViewSendFlowParams['appendMeshMessage'],
-  myAddress: string,
-  wirePlain: string,
-  label = 'Meshtastic (Mesh v2)'
-): void {
-  const addr = myAddress.trim()
-  if (!append || !addr) return
-  const preview =
-    wirePlain.length > 280 ? `${wirePlain.slice(0, 260).trimEnd()}… (${wirePlain.length} Zeichen)` : wirePlain
-  const ts = Date.now()
-  const id = `mesh-out-v2-${ts}-${Math.random().toString(36).slice(2, 9)}`
-  append({
-    id,
-    from: addr,
-    recipient: label,
-    content: preview,
-    timestamp: ts,
-    encrypted: true,
-    source: 'mesh',
-    transports: ['mesh'],
-    dedupKey: `mesh-out-v2|${addr}|${ts}|${Math.random().toString(36).slice(2, 7)}`,
-    meshMeta: { kind: 'v2', fromNodeNum: 0 },
-  })
-}
-
 const ADDR_64_LOWER = /^0x[a-f0-9]{64}$/
 
 export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
@@ -201,9 +138,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setStatusMsg,
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
-    delayMirrorToIota,
     meshSelfArchiveAfterLoRa,
-    waitForMeshSosAckDigest,
     setMeshProgress,
     onOfflineMailboxQueueChanged,
     deviceTimeTrustWarn,
@@ -215,98 +150,21 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
   const cancelSend = useCallback(() => {
     cancelRequestedRef.current = true
-  }, [])
+    setStatusMsg('Abbruch angefordert — stoppt nach dem laufenden Schritt …')
+  }, [setStatusMsg])
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
     cancelRequestedRef.current = false
     const throwIfCancelled = () => {
-      if (cancelRequestedRef.current) throw new Error('Übertragung abgebrochen.')
+      if (cancelRequestedRef.current) throw new Error(CHAT_SEND_CANCELLED_MSG)
     }
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
     /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
     const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
-    /** Snaps, die bereits per `/send` (Mailbox) angekommen sind — kein erneuter B2-Spiegel. */
-    const sosMailboxAckedSnaps = new Set<string>()
-    /** Mindestens ein SOS-Teil wurde nach Funkfehler nur/noch über Mailbox zugestellt (Retry gestoppt). */
-    let sosDeliveredViaMailboxAck = false
-    /** Nach erfolgreichem Funk: optionaler Hinweis auf empfangenes `MORG_SOS_ACK_V1`. */
-    let sosMeshPeerAckFootnote = ''
-    const meshBurstOpts: SendMeshV2WireBurstOptions | undefined = isEmergencySend
-      ? { priorityFlash: true }
-      : undefined
 
     const meshPlaintextDest = (): number | 'broadcast' | null =>
       resolveMeshtasticPlaintextDestination(meshPlaintextToNodeEnabled, meshPlaintextNodeId)
-
-    const sendMeshBurst = (text: string) =>
-      sendMeshV2WireBurst(
-        text,
-        meshtastic.sendBinaryV2.bind(meshtastic),
-        (sent, total) => {
-          if (total > 1) {
-            setStatusMsg(`Funk: Mesh v2 ${sent}/${total} Pakete…`)
-          }
-        },
-        meshBurstOpts
-      )
-
-    const runEmergencyMeshBurstWithRetry = async (wireText: string): Promise<void> => {
-      const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
-      let lastErr: unknown
-      for (let attempt = 0; attempt < max; attempt++) {
-        throwIfCancelled()
-        try {
-          if (!meshtastic.connected) {
-            throw new Error(MESH_BT_NOT_CONNECTED_MSG)
-          }
-          await sendMeshBurst(wireText)
-          const waitMs = readSosWaitMeshAckAfterSendMs()
-          if (waitMs > 0 && waitForMeshSosAckDigest) {
-            const digest = await sha256HexUtf8(wireText)
-            const got = await waitForMeshSosAckDigest(digest, waitMs)
-            if (got) {
-              sosMeshPeerAckFootnote = ' Funk-Empfang per [SOS-Ack] bestätigt.'
-            }
-          }
-          return
-        } catch (e) {
-          lastErr = e
-          if (attempt + 1 >= max) break
-          if (encrypted && isPrivate && readSosRetryStopOnServerAckEnabled()) {
-            const digest = await sha256HexUtf8(wireText)
-            let acked = false
-            if (readSosUseDedicatedGatewayAck()) {
-              setStatusMsg('SOS: Funk fehlgeschlagen — leichtes Gateway-ACK…')
-              const g = await sosGatewayAckDigest(digest)
-              acked = !!(g && typeof g === 'object' && (g as { ok?: boolean }).ok === true)
-            }
-            if (!acked) {
-              setStatusMsg('SOS: Funk fehlgeschlagen — versuche IOTA-Mailbox (Direct zuerst, sonst Basis)…')
-              const ack = await sendEncryptedMailboxHybrid(recipient.trim(), wireText)
-              acked = ack.ok
-            }
-            if (acked) {
-              sosMailboxAckedSnaps.add(wireText)
-              sosDeliveredViaMailboxAck = true
-              setStatusMsg(
-                readSosUseDedicatedGatewayAck()
-                  ? 'SOS: Gateway/Mailbox-Pfad hat bestätigt — Funk-Wiederholungen gestoppt (Airtime).'
-                  : 'SOS: Basis hat die Nachricht über die Mailbox — Funk-Wiederholungen gestoppt (Airtime).'
-              )
-              return
-            }
-          }
-          const delay = sosMeshRetryDelayMs(attempt)
-          setStatusMsg(
-            `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
-          )
-          await new Promise((r) => setTimeout(r, delay))
-          throwIfCancelled()
-        }
-      }
-      throw lastErr
-    }
 
     const singleWireSuccessMsg = (): string => {
       if (!isPrivate) return 'Gesendet!'
@@ -321,15 +179,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             : 'Klartext über LoRa (Meshtastic-Text) gesendet.'
         }
       }
-      if (forcedTransport === 'mesh' && encrypted && sosDeliveredViaMailboxAck) {
-        return 'SOS: über IOTA-Mailbox zugestellt (Funk-Wiederholungen nach Basis-Eingang gestoppt).'
-      }
-      if (forcedTransport === 'mesh' && encrypted && isPrivate && !isEmergencySend) {
-        return delayMirrorToIota
-          ? 'Nachricht per LoRa gesendet; wird beim Empfänger im Tangle verankert (Delayed Mirror).'
-          : 'Nur per LoRa gesendet (ohne Tangle — keine Forensic-Attestation für diese Sendung).'
-      }
-      if (forcedTransport === 'mesh') return 'Nur Funk: Mesh v2 (PRIVATE_APP) gesendet.'
       if (forcedTransport === 'internet') return 'Online (IOTA/Mailbox) gesendet.'
       return 'Gesendet.'
     }
@@ -337,17 +186,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const shouldLoadMessagesAfterSend = (): boolean => {
       if (!isPrivate) return true
       if (!encrypted) {
-        if (forcedTransport === 'internet') return true
-        if (forcedTransport === 'mesh') return true
+        if (forcedTransport === 'internet' || forcedTransport === 'mesh') return true
         return false
       }
-      if (forcedTransport === 'mesh') return false
       if (forcedTransport === 'internet') return true
       return false
     }
 
     const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<void> => {
       if (!meshSelfArchiveAfterLoRa || encrypted || forcedTransport !== 'mesh') return
+      throwIfCancelled()
       const selfAddr = myAddress.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(selfAddr)) {
         throw new Error('Eigen-Archiv: MY_ADDRESS ungültig (0x + 64 Hex).')
@@ -358,6 +206,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (!r1.ok) {
         throw new Error(`Eigen-Archiv LUMA: ${mailboxHybridErr(r1)}`)
       }
+      throwIfCancelled()
       const n2 = BigInt(nextOfflineMailboxClientOutSeq())
       const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
       const r2 = await sendPlaintextMailboxHybrid(selfAddr, w2, n2, { messagingPersistenceMode })
@@ -382,86 +231,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh') {
-      const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
-        attachedLora.lumaWire,
-        attachedLora.chromaWire,
-        message
+      applyValidationError(
+        {
+          ok: false,
+          message: CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+          idleMs: 12_000,
+        },
+        setStatus,
+        setStatusMsg
       )
-      const v = validateLoraDualWireUtf8(lumaText, chromaText)
-      if (!v.ok) {
-        applyValidationError(v, setStatus, setStatusMsg)
-        return
-      }
-      const meshLuma = delayMirrorToIota ? prependDelayMirrorMarker(lumaText) : lumaText
-      const meshChroma = delayMirrorToIota ? prependDelayMirrorMarker(chromaText) : chromaText
-      setLoraOnlineFallbackOffer(null)
-      loraOnlineOfferPayloadRef.current = null
-      setSending(true)
-      setStatus('idle')
-      let offeredOnline = false
-      try {
-        if (!meshtastic.connected) {
-          setStatus('error')
-          setStatusMsg('LoRa (Funk): Heltec/Web Bluetooth nicht verbunden – nichts gesendet.')
-          loraOnlineOfferPayloadRef.current = { lumaText, chromaText }
-          setLoraOnlineFallbackOffer({ reasonLabel: 'Kein Funkgerät gekoppelt.' })
-          offeredOnline = true
-        } else {
-          setStatusMsg('Funk: LUMA (Mesh v2)…')
-          let lumaPktTotal = 1
-          await sendMeshV2WireBurst(
-            meshLuma,
-            meshtastic.sendBinaryV2.bind(meshtastic),
-            (sent, total) => {
-              lumaPktTotal = total
-              setMeshProgress?.(`Luma ${sent}/${total} · Chroma ausstehend`)
-              if (total > 1) setStatusMsg(`Funk: LUMA (Mesh v2) ${sent}/${total} …`)
-              else setStatusMsg('Funk: LUMA (Mesh v2)…')
-            },
-            meshBurstOpts
-          )
-          setStatusMsg('Funk: CHROMA (Mesh v2)…')
-          await sendMeshV2WireBurst(
-            meshChroma,
-            meshtastic.sendBinaryV2.bind(meshtastic),
-            (sent, total) => {
-              setMeshProgress?.(`Luma ${lumaPktTotal}/${lumaPktTotal} · Chroma ${sent}/${total}`)
-              if (total > 1) setStatusMsg(`Funk: CHROMA (Mesh v2) ${sent}/${total} …`)
-              else setStatusMsg('Funk: CHROMA (Mesh v2)…')
-            },
-            meshBurstOpts
-          )
-          setStatus('success')
-          setStatusMsg(
-            delayMirrorToIota
-              ? 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Wird beim Empfänger im Tangle verankert (Delayed Mirror; WLAN/Basis).'
-              : 'Funk: LoRa LUMA + CHROMA gesendet (Zweiteiler). Nur per LoRa — ohne Tangle keine Forensic-Attestation.'
-          )
-          const cap = message.trim()
-          recordMeshOutgoingV2(
-            appendMeshMessage,
-            myAddress,
-            `[LoRa-Bild] LUMA+CHROMA${cap ? `: ${cap}` : ''}`,
-            'Meshtastic (Mesh v2 · LUMA+CHROMA)'
-          )
-          setMessage('')
-          setTimeout(() => void loadMessages(), 500)
-        }
-      } catch (e) {
-        const raw = formatUnknownError(e)
-        setStatus('error')
-        setStatusMsg(`LoRa (Funk) fehlgeschlagen – nichts gesendet. ${raw}`)
-        loraOnlineOfferPayloadRef.current = { lumaText, chromaText }
-        setLoraOnlineFallbackOffer({ reasonLabel: raw })
-        offeredOnline = true
-      } finally {
-        setMeshProgress?.(null)
-        clearCompactAttachment()
-        setSending(false)
-        if (!offeredOnline) {
-          setTimeout(() => setStatus('idle'), 4000)
-        }
-      }
+      clearCompactAttachment()
       return
     }
 
@@ -480,6 +259,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       loraOnlineOfferPayloadRef.current = null
       setSending(true)
       setStatus('idle')
+      let userCancelledLoraIota = false
       try {
         const rTrim = recipient.trim()
         const n1 = BigInt(nextOfflineMailboxClientOutSeq())
@@ -487,6 +267,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
         const r1 = await sendEncryptedMailboxHybrid(rTrim, w1)
         if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA fehlgeschlagen.')
+        throwIfCancelled()
         const n2 = BigInt(nextOfflineMailboxClientOutSeq())
         const w2 = prependMailboxOutNonceMarker(chromaText, n2)
         setStatusMsg('Online: CHROMA (IOTA/Mailbox)…')
@@ -515,13 +296,19 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setTimeout(() => void loadMessages(), 500)
         }
       } catch (e) {
-        setStatus('error')
-        setStatusMsg(formatUnknownError(e))
+        if (isUserCancelError(e)) {
+          userCancelledLoraIota = true
+          setStatus('error')
+          setStatusMsg(CHAT_SEND_CANCELLED_MSG)
+        } else {
+          setStatus('error')
+          setStatusMsg(formatUnknownError(e))
+        }
       } finally {
         setMeshProgress?.(null)
-        clearCompactAttachment()
+        if (!userCancelledLoraIota) clearCompactAttachment()
         setSending(false)
-        setTimeout(() => setStatus('idle'), 6000)
+        setTimeout(() => setStatus('idle'), userCancelledLoraIota ? 2500 : 6000)
       }
       return
     }
@@ -537,12 +324,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         applyValidationError(v, setStatus, setStatusMsg)
         return
       }
-      if (lumaText.length > 500 || chromaText.length > 500) {
+      if (
+        wireUtf8ByteLength(lumaText) > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES ||
+        wireUtf8ByteLength(chromaText) > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES
+      ) {
         applyValidationError(
           {
             ok: false,
-            message:
-              'Pfad 4 (Klartext-LoRa-Bild): Wire zu groß (>500 Zeichen) — Meshtastic-Text kann das nicht zuverlässig senden. Bitte kleineres Bild wählen oder verschlüsselt+Funk (Mesh v2) nutzen.',
+            message: `Pfad 4: pro Meshtastic-Nachricht max. ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} Byte UTF-8 (inkl. Unterschrift). Unterschrift kürzen oder Bild neu kodieren (kleiner).`,
             idleMs: 9000,
           },
           setStatus,
@@ -569,11 +358,32 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       loraOnlineOfferPayloadRef.current = null
       setSending(true)
       setStatus('idle')
+      let userCancelledPath4 = false
+      const sendPath4ChunkWithRetry = async (label: 'LUMA' | 'CHROMA', payload: string, dest: number | undefined) => {
+        const maxAttempts = 3
+        let lastErr: unknown
+        for (let i = 0; i < maxAttempts; i++) {
+          try {
+            throwIfCancelled()
+            setStatusMsg(`Funk: ${label} (Klartext)…${i > 0 ? ` Retry ${i + 1}/${maxAttempts}` : ''}`)
+            await meshtastic.sendMeshText(payload, dest)
+            return
+          } catch (e) {
+            if (isUserCancelError(e)) throw e
+            lastErr = e
+            const raw = formatUnknownError(e)
+            const retryable = /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
+            if (!retryable || i + 1 >= maxAttempts) break
+            await new Promise((r) => setTimeout(r, 350 + i * 450))
+            throwIfCancelled()
+          }
+        }
+        throw lastErr instanceof Error ? lastErr : new Error(formatUnknownError(lastErr))
+      }
       try {
-        setStatusMsg('Funk: LUMA (Klartext)…')
-        await meshtastic.sendMeshText(lumaText, dest)
-        setStatusMsg('Funk: CHROMA (Klartext)…')
-        await meshtastic.sendMeshText(chromaText, dest)
+        await sendPath4ChunkWithRetry('LUMA', lumaText, dest)
+        throwIfCancelled()
+        await sendPath4ChunkWithRetry('CHROMA', chromaText, dest)
         await runPath4SelfMirrorForLoraImage(lumaText, chromaText)
         setStatus('success')
         setStatusMsg('Bild per LoRa gesendet – wird später selbst im Tangle verankert.')
@@ -589,22 +399,32 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setTimeout(() => void loadMessages(), 500)
         }
       } catch (e) {
-        setStatus('error')
-        setStatusMsg(formatUnknownError(e))
+        if (isUserCancelError(e)) {
+          userCancelledPath4 = true
+          setStatus('error')
+          setStatusMsg(CHAT_SEND_CANCELLED_MSG)
+        } else {
+          const raw = formatUnknownError(e)
+          setStatus('error')
+          setStatusMsg(
+            /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
+              ? 'LoRa (Funk) hat nicht geantwortet (NO_RESPONSE / error 8). Bitte „Fehlende Teile nochmal senden“ oder näher/stabiler verbinden.'
+              : raw
+          )
+        }
       } finally {
         setMeshProgress?.(null)
-        clearCompactAttachment()
+        if (!userCancelledPath4) clearCompactAttachment()
         setSending(false)
-        setTimeout(() => setStatus('idle'), 6000)
+        setTimeout(() => setStatus('idle'), userCancelledPath4 ? 2500 : 6000)
       }
       return
     }
 
     if (attachedLora) {
       setStatus('error')
-      setStatusMsg(
-        'LoRa-Zweiphasen-Bild: privater Chat + Verschlüsselung an (Mesh v2) oder Pfad 4 „LoRa + eigene Verankerung“ im Klartext. Sonst Anhang entfernen.'
-      )
+      setStatusMsg(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
+      clearCompactAttachment()
       setTimeout(() => setStatus('idle'), 6000)
       return
     }
@@ -709,11 +529,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     if (isPrivate && !encrypted && forcedTransport === 'mesh') {
-      if (attachedBlobBase64 || attachedAudioBase64 || attachedTxtFile || attachedLora) {
+      const blocksPlaintextByAttachment =
+        !!attachedBlobBase64 ||
+        !!attachedAudioBase64 ||
+        attachedTxtFile != null ||
+        (attachedLora != null && !path4Active)
+      if (blocksPlaintextByAttachment) {
         applyValidationError(
           {
             ok: false,
-            message: 'Unverschlüsselter Funk: erlaubt nur Kurztext (keine Anhänge wie Bild/Sprachmemo/.txt/LoRa-Zweiteiler).',
+            message:
+              'Unverschlüsselter Funk: erlaubt nur Kurztext. LoRa-Bildzweiteiler nur mit aktivem „LoRa + eigene Verankerung“ (Pfad 4).',
             idleMs: 9000,
           },
           setStatus,
@@ -733,8 +559,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             {
               ok: false,
               message: attachedAudioBase64
-                ? `Unverschlüsseltes LoRa-Sprachmemo passt nicht in einen Meshtastic-Text-Frame (${charCount} Zeichen, max. ${plaintextMaxChars}). Für Sprache aktuell: verschlüsselt+Funk (Mesh v2 Burst) oder online. Unverschlüsselte Sprache über LoRa braucht erst Chunking+ACK/Reassembly (Roadmap Ticket A).`
-                : `Unverschlüsselter LoRa-Text maximal ${plaintextMaxChars} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder verschlüsselt senden (Mesh v2).`,
+                ? `Unverschlüsseltes LoRa-Sprachmemo passt nicht in einen Meshtastic-Text-Frame (${charCount} Zeichen, max. ${plaintextMaxChars}). Sprache: „online“ wählen. Unverschlüsselte Sprache über LoRa braucht Chunking+ACK (Roadmap).`
+                : `Unverschlüsselter LoRa-Text maximal ${plaintextMaxChars} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder für längere Inhalte „online“ mit Verschlüsselung.`,
               idleMs: 9000,
             },
             setStatus,
@@ -799,35 +625,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         return
       }
-    }
-
-    if (
-      isPrivate &&
-      forcedTransport === 'mesh' &&
-      encrypted &&
-      delayMirrorToIota &&
-      !path4Active &&
-      apiStatus?.connected !== true
-    ) {
-      const known = (apiStatus?.connectedAddresses ?? [])
-        .filter((a) => typeof a === 'string' && a.trim().length > 0)
-        .map((a) => a.trim())
-      const knownHint =
-        known.length > 0
-          ? ` Bereits verbundene Partner: ${known.slice(0, 3).join(', ')}${known.length > 3 ? ' …' : ''}.`
-          : ''
-      applyValidationError(
-        {
-          ok: false,
-          message:
-            '„LoRa + Tangle“ im verschlüsselten Mesh-v2-Modus braucht Handshake + /connect. Für handshake-freies Self-Archive aktiviere stattdessen „LoRa + eigene Verankerung“.' +
-            knownHint,
-          idleMs: 10_000,
-        },
-        setStatus,
-        setStatusMsg
-      )
-      return
     }
 
     setSending(true)
@@ -960,6 +757,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
+        throwIfCancelled()
         let wireForApi: string
         let messageNonceU64: bigint
         if (enc) {
@@ -1028,6 +826,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
+            if (isUserCancelError(e)) throw e
             setStatus('error')
             setStatusMsg(formatUnknownError(e))
             return { ok: false }
@@ -1060,6 +859,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
                 return { ok: true, path4Footnote: path4Footnote || undefined }
               } catch (e) {
+                if (isUserCancelError(e)) throw e
                 lastErr = e
                 if (attempt + 1 >= max) break
                 const delay = sosMeshRetryDelayMs(attempt)
@@ -1067,6 +867,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                   `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
                 )
                 await new Promise((r) => setTimeout(r, delay))
+                throwIfCancelled()
               }
             }
             setStatus('error')
@@ -1082,6 +883,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
+            if (isUserCancelError(e)) throw e
             setStatus('error')
             setStatusMsg(formatUnknownError(e))
             return { ok: false }
@@ -1105,32 +907,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (forcedTransport === 'mesh') {
-        let wireText = textSnap
-        if (delayMirrorToIota && encrypted && !isEmergencySend) {
-          wireText = prependDelayMirrorMarker(textSnap)
-        }
-        try {
-          if (isEmergencySend) {
-            await runEmergencyMeshBurstWithRetry(wireText)
-          } else {
-            if (!meshtastic.connected) {
-              return failSend(MESH_BT_NOT_CONNECTED_MSG)
-            }
-            await sendMeshBurst(wireText)
-          }
-          recordMeshOutgoingV2(appendMeshMessage, myAddress, wireText)
-          return { ok: true }
-        } catch (e) {
-          setStatus('error')
-          setStatusMsg(formatUnknownError(e))
-          return { ok: false }
-        }
+        return failSend(
+          'Verschlüsselter Funk ist deaktiviert. Wähle „online“ — oder Schloss aus für Klartext-LoRa (Meshtastic-Text / Pfad 4).'
+        )
       }
 
       if (forcedTransport === 'internet') {
         const existing = parseMailboxOutNonceMarker(textSnap)
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
+        throwIfCancelled()
         const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
         if (res.ok) {
           return {
@@ -1144,42 +930,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
         }
         const onlineErr = mailboxHybridErr(res) || 'Online-Versand fehlgeschlagen.'
-        if (meshtastic.connected && !readStrictOnlineNoMeshFallback()) {
-          try {
-            if (isEmergencySend) {
-              await runEmergencyMeshBurstWithRetry(textSnap)
-            } else {
-              await sendMeshBurst(textSnap)
-            }
-            recordMeshOutgoingV2(appendMeshMessage, myAddress, textSnap, 'Meshtastic (Mesh v2 · Online-Fallback)')
-            return { ok: true, meshFallback: { onlineErr } }
-          } catch (meshErr) {
-            const meshMsg = formatUnknownError(meshErr)
-            const qmMesh = await queueMailboxIfAllowed(
-              'encrypted_send',
-              wireForApi,
-              true,
-              `${onlineErr} / Funk: ${meshMsg}`,
-              messageNonceU64
-            )
-            if (qmMesh === 'queued') {
-              return failSend(
-                `${onlineErr} Funk-Versuch fehlgeschlagen — zwischengespeichert; erneuter Mailbox-Versuch bei Basis (Opt-in).`
-              )
-            }
-            if (qmMesh === 'duplicate') {
-              return failSend(
-                `${onlineErr} Funk: ${meshMsg} — Eintrag existiert bereits in der Mailbox-Warteschlange (Dedup).`
-              )
-            }
-            if (typeof qmMesh === 'object' && 'reject' in qmMesh) {
-              return failSend(`Warteschlange: ${qmMesh.reject}`)
-            }
-            setStatus('error')
-            setStatusMsg(`${onlineErr} Funk-Versuch: ${meshMsg}`)
-            return { ok: false }
-          }
-        }
         const qmOnline = await queueMailboxIfAllowed('encrypted_send', wireForApi, true, onlineErr, messageNonceU64)
         if (qmOnline === 'queued') {
           return failSend(
@@ -1210,6 +960,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return { ok: false }
     }
 
+    let userCancelledMain = false
     try {
       let lastOk: PartOk | null = null
       const path4Footnotes: string[] = []
@@ -1229,41 +980,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         lastOk = r
       }
 
-      let mirrorFootnote = ''
-      if (
-        isEmergencySend &&
-        forcedTransport === 'mesh' &&
-        encrypted &&
-        sosDeliveredViaMailboxAck &&
-        textSnaps.length > 1
-      ) {
-        mirrorFootnote +=
-          ' Mindestens ein Teil über IOTA-Mailbox zugestellt (Funk-Wiederholungen für diesen Teil gestoppt).'
-      }
-      if (
-        isEmergencySend &&
-        forcedTransport === 'mesh' &&
-        encrypted &&
-        isPrivate &&
-        readSosIotaMirrorEnabled()
-      ) {
-        for (let mi = 0; mi < textSnaps.length; mi++) {
-          const snap = textSnaps[mi]!
-          if (sosMailboxAckedSnaps.has(snap)) continue
-          const mr = await sendEncryptedMailboxHybrid(recipient.trim(), snap)
-          if (!mr.ok) {
-            mirrorFootnote = ` IOTA-Spiegel (${mi + 1}/${textSnaps.length}) fehlgeschlagen: ${mailboxHybridErr(mr)}.`
-            break
-          }
-        }
-      }
-
-      const successTail = mirrorFootnote + sosMeshPeerAckFootnote + path4Footnotes.join('')
+      const successTail = path4Footnotes.join('')
       let successMsg: string
       if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
-      } else if (lastOk?.ok && lastOk.meshFallback) {
-        successMsg = `Online fehlgeschlagen (${lastOk.meshFallback.onlineErr}) – stattdessen per Funk gesendet.${successTail}`
       } else {
         successMsg = singleWireSuccessMsg() + successTail
       }
@@ -1302,13 +1022,19 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setTimeout(() => loadMessages(), 500)
       }
     } catch (e) {
-      setStatus('error')
-      setStatusMsg(formatUnknownError(e))
+      if (isUserCancelError(e)) {
+        userCancelledMain = true
+        setStatus('error')
+        setStatusMsg(CHAT_SEND_CANCELLED_MSG)
+      } else {
+        setStatus('error')
+        setStatusMsg(formatUnknownError(e))
+      }
     } finally {
       setMeshProgress?.(null)
-      clearCompactAttachment()
+      if (!userCancelledMain) clearCompactAttachment()
       setSending(false)
-      setTimeout(() => setStatus('idle'), 4000)
+      setTimeout(() => setStatus('idle'), userCancelledMain ? 2500 : 4000)
     }
   }, [
     appendMeshMessage,
@@ -1318,7 +1044,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     attachedTxtFile,
     apiStatus,
     clearCompactAttachment,
-    delayMirrorToIota,
     meshSelfArchiveAfterLoRa,
     encrypted,
     forcedTransport,
@@ -1336,7 +1061,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setStatus,
     setStatusMsg,
     setMeshProgress,
-    waitForMeshSosAckDigest,
     onOfflineMailboxQueueChanged,
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,

@@ -308,12 +308,21 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                  {canAddContact ? (
-                    <DropdownMenuItem onClick={() => void onAddSenderToContactBook?.(row.msg.from)}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Absender ins Telefonbuch
-                    </DropdownMenuItem>
-                  ) : null}
+                  <DropdownMenuItem
+                    disabled={!canAddContact}
+                    title={
+                      canAddContact
+                        ? undefined
+                        : 'Nur bei eingehenden Zeilen mit gültiger 0x-Absenderadresse (nicht eigene Ausgänge).'
+                    }
+                    onClick={() => {
+                      if (!canAddContact || !onAddSenderToContactBook) return
+                      void onAddSenderToContactBook(row.msg.from)
+                    }}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Ins Telefonbuch
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => toggleProtokollMark(row.msg.id)}>
                     <Star
                       className={cn(

@@ -10,7 +10,7 @@
 | Ebene | Was sie löst | Wo im Projekt |
 |--------|----------------|----------------|
 | **A — OS / Prozess (Android)** | App wird nicht sofort gekillt; Nutzer sieht **bewusst**, dass etwas läuft | **Native Schale** (z. B. später **Capacitor**, **TWA+Companion**, oder **eigenes kleines Kotlin-Modul**) — **nicht** in der reinen **Browser-PWA** (`frontend/`). |
-| **B — Medium / Nutzlast** | Mehrpaket (z. B. Mesh-Bild), Vollständigkeit, Retries ohne Doppel-Settlement | **Bestehende** Messenger-Pfade (Mesh v2, LUMA/CHROMA, Fortschritt, ggf. Mailbox-Outbox **§ H.3g 7a**) — **schlank erweitern**, **keine** zweite parallele „Backfill“-Architektur ohne **§ H.12**. |
+| **B — Medium / Nutzlast** | Mehrpaket (z. B. LoRa-Bild), Vollständigkeit, Retries ohne Doppel-Settlement | **Bestehende** Messenger-Pfade (Mesh-v2-**Empfang**/Legacy, Pfad-4-/Online-**LUMA+CHROMA**, Fortschritt, ggf. Mailbox-Outbox **§ H.3g 7a**) — **schlank erweitern**, **keine** zweite parallele „Backfill“-Architektur ohne **§ H.12**. |
 
 **PWA (Chrome):** Es gibt **keinen** Foreground Service im Web. Gleiches **Nutzerversprechen** dort: ehrliche Texte, Status, Outbox-Opt-in — siehe **`docs/PWA-HANDBUCH-OFFLINE.md`**, **`docs/PWA-MANUAL-CHECKS.md`**.
 

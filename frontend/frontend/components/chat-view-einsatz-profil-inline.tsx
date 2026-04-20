@@ -6,8 +6,13 @@
  */
 
 import { useState, useEffect, type ChangeEvent } from 'react'
-import { Users } from 'lucide-react'
+import { ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible'
 import { getStatus, applyInitialProfileProvisioning } from '@/frontend/lib/api'
 import {
   extractInitialProfileFromPaste,
@@ -18,6 +23,7 @@ import {
 } from '@/frontend/lib/initial-profile-import'
 
 export function ChatViewEinsatzProfilInline() {
+  const [sectionOpen, setSectionOpen] = useState(false)
   const [backendOnline, setBackendOnline] = useState(false)
   const [einsatzProfilJson, setEinsatzProfilJson] = useState('')
   const [einsatzProfilBusy, setEinsatzProfilBusy] = useState(false)
@@ -102,22 +108,34 @@ export function ChatViewEinsatzProfilInline() {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400">
-          <Users className="h-5 w-5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <h4 className="font-semibold text-foreground">Einsatz-Profil / Kontakte</h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
-              <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
-              <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
-              <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
-              <span className="font-mono text-xs">offlineBriefing</span>.
-            </p>
-          </div>
+    <Collapsible open={sectionOpen} onOpenChange={setSectionOpen} className="rounded-xl border border-border bg-card">
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left hover:bg-muted/30"
+        >
+          <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/15 text-cyan-400">
+              <Users className="h-4 w-4" aria-hidden />
+            </span>
+            Einsatz-Profil / Kontakte
+          </span>
+          {sectionOpen ? (
+            <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          ) : (
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+          )}
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="space-y-3 border-t border-border/60 px-4 pb-4 pt-2">
+          <p className="text-sm text-muted-foreground">
+            JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
+            <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
+            <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
+            <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
+            <span className="font-mono text-xs">offlineBriefing</span>.
+          </p>
           {offlineBriefingDisplay ? (
             <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
@@ -165,7 +183,7 @@ export function ChatViewEinsatzProfilInline() {
             </p>
           ) : null}
         </div>
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }

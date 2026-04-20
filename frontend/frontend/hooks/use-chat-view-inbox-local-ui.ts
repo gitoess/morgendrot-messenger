@@ -10,7 +10,11 @@ import { purgeMailboxMessage, type ContactMeshEntryClient } from '@/frontend/lib
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import {
   filterInboxMessagesByPartnerAndDirection,
+  messageCounterpartyAddress,
+  messageTouchesInternetTransport,
+  messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
+  uniqueCounterpartyAddressesWhen,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
@@ -18,9 +22,10 @@ import type { Message } from '@/frontend/lib/types'
 
 const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
 const INBOX_PARTNER_MEMORY_LS = 'morg.inbox.partnerMemory.v1'
+const INBOX_PARTNER_MEMORY_BLOCKED_LS = 'morg.inbox.partnerMemoryBlocked.v1'
 
 function messageHasMeshTransport(m: Message): boolean {
-  return m.source === 'mesh' || (Array.isArray(m.transports) && m.transports.includes('mesh'))
+  return messageTouchesMeshTransport(m)
 }
 
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
@@ -64,11 +69,25 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
   const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
   const [inboxPartnerMemory, setInboxPartnerMemory] = useState<string[]>([])
+  const [inboxPartnerBlockedNorms, setInboxPartnerBlockedNorms] = useState<Set<string>>(() => new Set())
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
       setInboxMeshTransportOnly(sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1')
+      let blockedNorms = new Set<string>()
+      const rawBlocked = window.localStorage.getItem(INBOX_PARTNER_MEMORY_BLOCKED_LS)
+      if (rawBlocked) {
+        const b = JSON.parse(rawBlocked) as unknown
+        if (Array.isArray(b)) {
+          blockedNorms = new Set(
+            b
+              .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+              .map((v) => v.trim().toLowerCase())
+          )
+          setInboxPartnerBlockedNorms(blockedNorms)
+        }
+      }
       const raw = window.localStorage.getItem(INBOX_PARTNER_MEMORY_LS)
       if (raw) {
         const arr = JSON.parse(raw) as unknown
@@ -79,7 +98,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
                 .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
                 .map((v) => [v.trim().toLowerCase(), v.trim()])
             ).values()
-          )
+          ).filter((a) => !blockedNorms.has(a.trim().toLowerCase()))
           setInboxPartnerMemory(unique)
         }
       }
@@ -96,9 +115,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       for (const v of observed) {
         const t = v.trim()
         if (!t) continue
-        byNorm.set(t.toLowerCase(), t)
+        const n = t.toLowerCase()
+        if (inboxPartnerBlockedNorms.has(n)) continue
+        byNorm.set(n, t)
       }
-      const merged = Array.from(byNorm.values()).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+      const merged = Array.from(byNorm.values())
+        .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
+        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
       if (merged.length === prev.length && merged.every((v, i) => v === prev[i])) return prev
       if (typeof window !== 'undefined') {
         try {
@@ -109,7 +132,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       return merged
     })
-  }, [displayMessages, myAddress])
+  }, [displayMessages, myAddress, inboxPartnerBlockedNorms])
 
   const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
     setInboxMeshTransportOnly(v)
@@ -126,7 +149,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const byNorm = new Map<string, string>()
     for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
     for (const a of live) byNorm.set(a.trim().toLowerCase(), a.trim())
-    const addrs = Array.from(byNorm.values())
+    const addrs = Array.from(byNorm.values()).filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
     return addrs.map((address) => {
       const label = contactDisplayLabel(contactDirectory, address)
       const short =
@@ -135,7 +158,150 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           : address
       return { address, label: label || short }
     })
-  }, [displayMessages, myAddress, contactDirectory, inboxPartnerMemory])
+  }, [displayMessages, myAddress, contactDirectory, inboxPartnerMemory, inboxPartnerBlockedNorms])
+
+  const partnerTransportFlags = useMemo(() => {
+    const flags = new Map<string, { mesh: boolean; iota: boolean }>()
+    if (!myAddress.trim()) return flags
+    for (const m of displayMessages) {
+      const cp = messageCounterpartyAddress(m, myAddress)
+      if (!cp) continue
+      const k = cp.trim().toLowerCase()
+      const cur = flags.get(k) ?? { mesh: false, iota: false }
+      if (messageTouchesMeshTransport(m)) cur.mesh = true
+      if (messageTouchesInternetTransport(m)) cur.iota = true
+      flags.set(k, cur)
+    }
+    return flags
+  }, [displayMessages, myAddress])
+
+  const inboxPartnerOptionsMesh = useMemo(() => {
+    const byNorm = new Map<string, string>()
+    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
+    for (const a of uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messageTouchesMeshTransport)) {
+      byNorm.set(a.trim().toLowerCase(), a.trim())
+    }
+    const addrs = Array.from(byNorm.values())
+      .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
+      .filter((address) => {
+        const k = address.trim().toLowerCase()
+        const f = partnerTransportFlags.get(k)
+        return f?.mesh === true
+      })
+    addrs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    return addrs.map((address) => {
+      const label = contactDisplayLabel(contactDirectory, address)
+      const short =
+        address.startsWith('0x') && address.length > 12
+          ? `${address.slice(0, 8)}…${address.slice(-4)}`
+          : address
+      return { address, label: label || short }
+    })
+  }, [
+    displayMessages,
+    myAddress,
+    contactDirectory,
+    inboxPartnerMemory,
+    partnerTransportFlags,
+    inboxPartnerBlockedNorms,
+  ])
+
+  const inboxPartnerOptionsIota = useMemo(() => {
+    const byNorm = new Map<string, string>()
+    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
+    for (const a of uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messageTouchesInternetTransport)) {
+      byNorm.set(a.trim().toLowerCase(), a.trim())
+    }
+    const addrs = Array.from(byNorm.values())
+      .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
+      .filter((address) => {
+        const k = address.trim().toLowerCase()
+        const f = partnerTransportFlags.get(k)
+        if (f == null) return true
+        return f.iota === true
+      })
+    addrs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+    return addrs.map((address) => {
+      const label = contactDisplayLabel(contactDirectory, address)
+      const short =
+        address.startsWith('0x') && address.length > 12
+          ? `${address.slice(0, 8)}…${address.slice(-4)}`
+          : address
+      return { address, label: label || short }
+    })
+  }, [
+    displayMessages,
+    myAddress,
+    contactDirectory,
+    inboxPartnerMemory,
+    partnerTransportFlags,
+    inboxPartnerBlockedNorms,
+  ])
+
+  const removeInboxPartnerFromQuickList = useCallback(
+    (
+      address: string,
+      opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' }
+    ) => {
+      const raw = address.trim()
+      const n = raw.toLowerCase()
+      if (!n) return
+
+      setInboxPartnerBlockedNorms((prevBlocked) => {
+        const nextBlocked = new Set(prevBlocked)
+        nextBlocked.add(n)
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem(INBOX_PARTNER_MEMORY_BLOCKED_LS, JSON.stringify([...nextBlocked]))
+          } catch {
+            /* ignore */
+          }
+        }
+        return nextBlocked
+      })
+
+      setInboxPartnerMemory((prev) => {
+        const next = prev.filter((a) => a.trim().toLowerCase() !== n)
+        if (typeof window !== 'undefined') {
+          try {
+            window.localStorage.setItem(INBOX_PARTNER_MEMORY_LS, JSON.stringify(next))
+          } catch {
+            /* ignore */
+          }
+        }
+        return next
+      })
+
+      setInboxPartnerKey((cur) => (cur != null && cur.trim().toLowerCase() === n ? null : cur))
+
+      if (opts?.hideMatchingMessages && opts.messageTransport && myAddress.trim()) {
+        const transport = opts.messageTransport
+        const pred =
+          transport === 'mesh'
+            ? (m: Message) => {
+                const cp = messageCounterpartyAddress(m, myAddress)
+                return !!cp && cp.trim().toLowerCase() === n && messageTouchesMeshTransport(m)
+              }
+            : (m: Message) => {
+                const cp = messageCounterpartyAddress(m, myAddress)
+                return !!cp && cp.trim().toLowerCase() === n && messageTouchesInternetTransport(m)
+              }
+        setHiddenInboxIds((prev) => {
+          const sett = new Set(prev)
+          for (const m of messages) {
+            if (pred(m)) sett.add(m.id)
+          }
+          try {
+            sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...sett]))
+          } catch {
+            /* ignore */
+          }
+          return sett
+        })
+      }
+    },
+    [myAddress, messages]
+  )
 
   const partnerFilteredMessages = useMemo(
     () =>
@@ -311,6 +477,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxMeshTransportOnly,
     setInboxMeshTransportOnly: setInboxMeshTransportOnlyPersist,
     inboxPartnerOptions,
+    inboxPartnerOptionsMesh,
+    inboxPartnerOptionsIota,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
@@ -320,5 +488,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onHideAllVisibleLocal,
     onBulkHideSelected,
     onBulkPurgeSelected,
+    removeInboxPartnerFromQuickList,
   }
 }

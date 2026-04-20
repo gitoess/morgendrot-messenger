@@ -22,8 +22,8 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onOpenPartnerSetup={onOpenPartnerSetup}
       />
     )
-    expect(screen.getByText(/Heltec noch nicht gekoppelt/i)).toBeInTheDocument()
-    screen.getByRole('button', { name: /Partner-Setup öffnen/i }).click()
+    expect(screen.getByText(/Heltec koppeln/i)).toBeInTheDocument()
+    screen.getByRole('button', { name: /Partner verbinden öffnen/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })
 
@@ -42,7 +42,7 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onOpenPartnerSetup={onOpenPartnerSetup}
       />
     )
-    expect(screen.getAllByTitle('Ad-hoc BLE (noch nicht implementiert)').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/Ad-hoc BLE/)).toBeInTheDocument()
     expect(screen.getByText(/bleUuid/)).toBeInTheDocument()
     screen.getByRole('button', { name: /Setup öffnen/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)

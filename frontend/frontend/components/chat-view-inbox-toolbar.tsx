@@ -7,7 +7,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, FileDown, Inbox, KeyRound, Lock, RefreshCw } from 'lucide-react'
+import { Archive, FileDown, Inbox, KeyRound, Lock, RefreshCw, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -256,6 +256,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         </button>
       </div>
     </div>
+    <p className="bg-muted/20 px-4 py-2 text-[11px] leading-snug text-muted-foreground sm:text-xs">
+      <UserPlus className="mr-1 inline h-3 w-3 shrink-0 align-text-bottom opacity-80" aria-hidden />
+      <span className="font-medium text-foreground/80">Telefonbuch:</span> bei eingehenden Zeilen mit 0x-Absender im
+      Zeilenmenü <span className="font-mono text-[10px]">⋯</span> den Punkt „Ins Telefonbuch“ wählen (nicht bei
+      eigenen Ausgängen).
+    </p>
     <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-4 py-2 text-xs">
       <button
         type="button"
