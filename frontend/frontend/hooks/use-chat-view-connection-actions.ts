@@ -21,8 +21,12 @@ function scrollPartnerSetupIntoView(): void {
 
 export type LoraOnlineFallbackState = { reasonLabel: string } | null
 
+const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/
+
 export type UseChatViewConnectionActionsParams = {
   partner: string
+  /** Nach /connect den API-Status neu laden (peerMap wird erst asynchron gefüllt). */
+  refreshApiStatus?: () => void | Promise<void>
   setSending: (v: boolean) => void
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
@@ -34,6 +38,7 @@ export type UseChatViewConnectionActionsParams = {
 export function useChatViewConnectionActions(p: UseChatViewConnectionActionsParams) {
   const {
     partner,
+    refreshApiStatus,
     setSending,
     setStatus,
     setStatusMsg,
@@ -41,6 +46,14 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
   } = p
+
+  const scheduleStatusRefresh = useCallback(() => {
+    const run = () => void refreshApiStatus?.()
+    run()
+    setTimeout(run, 2500)
+    setTimeout(run, 8000)
+    setTimeout(run, 20000)
+  }, [refreshApiStatus])
 
   const handleHandshake = useCallback(async () => {
     if (!partner.trim()) {
@@ -51,29 +64,44 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
     const res = await startHandshake(partner)
     if (res.ok) {
       setStatus('success')
-      setStatusMsg('Handshake gestartet!')
+      const base =
+        typeof (res as { message?: unknown }).message === 'string'
+          ? (res as { message: string }).message
+          : 'Handshake gesendet.'
+      setStatusMsg(
+        `${base} Anschließend „Schnell verbinden“ — erst danach ist der Wallet-Chat (u. a. verschlüsselt + Funk/Mesh v2) bereit.`
+      )
       setShowSetup(false)
     } else {
       setStatus('error')
       setStatusMsg(res.error || 'Fehler')
     }
     setSending(false)
-    setTimeout(() => setStatus('idle'), 3000)
+    setTimeout(() => setStatus('idle'), 5000)
   }, [partner, setSending, setShowSetup, setStatus, setStatusMsg])
 
   const handleConnect = useCallback(async () => {
     setSending(true)
-    const res = await connect()
+    const raw = partner.trim()
+    const explicitAddr = ADDR_64_HEX.test(raw) ? raw.toLowerCase() : undefined
+    const res = await connect(explicitAddr)
     if (res.ok) {
       setStatus('success')
-      setStatusMsg('Verbunden!')
+      const backendMsg =
+        typeof (res as { message?: unknown }).message === 'string'
+          ? (res as { message: string }).message
+          : 'Connect gestartet.'
+      setStatusMsg(
+        `${backendMsg} Die eigentliche Verbindung (Schlüssel/peerMap) braucht oft einige Sekunden — Status im Header prüfen; verschlüsselt senden erst wenn dort „verbunden“.`
+      )
+      scheduleStatusRefresh()
     } else {
       setStatus('error')
       setStatusMsg(res.error || 'Fehler')
     }
     setSending(false)
-    setTimeout(() => setStatus('idle'), 3000)
-  }, [setSending, setStatus, setStatusMsg])
+    setTimeout(() => setStatus('idle'), 6000)
+  }, [partner, scheduleStatusRefresh, setSending, setStatus, setStatusMsg])
 
   const dismissLoraOnlineFallback = useCallback(() => {
     setLoraOnlineFallbackOffer(null)

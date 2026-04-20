@@ -27,6 +27,8 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     onMessageChange: vi.fn(),
     delayMirrorToIota: false,
     onDelayMirrorToIotaChange: vi.fn(),
+    meshSelfArchiveAfterLoRa: false,
+    onMeshSelfArchiveAfterLoRaChange: vi.fn(),
     forcedTransport: 'internet',
     voicePhase: 'idle',
     voiceActiveKind: null,
@@ -91,6 +93,8 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         onMessageChange={vi.fn()}
         delayMirrorToIota={false}
         onDelayMirrorToIotaChange={vi.fn()}
+        meshSelfArchiveAfterLoRa={false}
+        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="mesh"
         voicePhase="idle"
         voiceActiveKind={null}
@@ -152,6 +156,8 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         onMessageChange={vi.fn()}
         delayMirrorToIota={false}
         onDelayMirrorToIotaChange={vi.fn()}
+        meshSelfArchiveAfterLoRa={false}
+        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
         voicePhase="idle"
         voiceActiveKind={null}
@@ -216,6 +222,8 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         onMessageChange={vi.fn()}
         delayMirrorToIota={false}
         onDelayMirrorToIotaChange={vi.fn()}
+        meshSelfArchiveAfterLoRa={false}
+        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
         voicePhase="idle"
         voiceActiveKind={null}
@@ -272,6 +280,8 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         onMessageChange={vi.fn()}
         delayMirrorToIota={false}
         onDelayMirrorToIotaChange={vi.fn()}
+        meshSelfArchiveAfterLoRa={false}
+        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
         forcedTransport="internet"
         voicePhase="idle"
         voiceActiveKind={null}
@@ -401,6 +411,20 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
+  it('zeigt Pfad-4-Checkbox bei Klartext + Funk (privat)', () => {
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          recipient: '',
+          message: 'Hi',
+          forcedTransport: 'mesh',
+        })}
+      />
+    )
+    expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
+  })
+
   it('ruft onDelayMirrorToIotaChange bei LoRa+Tangle (privat, Mesh) auf', () => {
     const onDelayMirrorToIotaChange = vi.fn()
     const { container } = render(
@@ -430,6 +454,57 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     )
     expect(screen.getByText(new RegExp(`${MESH_PLAINTEXT_MAX_CHARS + 1}/${MESH_PLAINTEXT_MAX_CHARS}`))).toBeInTheDocument()
     expect(primarySend(container)).toBeDisabled()
+  })
+
+  it('erlaubt Pfad-4-Senden mit LoRa-Bildzweiteiler (LUMA/CHROMA)', () => {
+    const onSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          meshSelfArchiveAfterLoRa: true,
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:msgId=beef|len=4|ABCD]]',
+            chromaWire: '[[MORG_CHROMA_V1:msgId=beef|len=4|EFGH]]',
+            messageId: 'beef',
+            lumaJpegBytes: 40,
+            chromaJpegBytes: 60,
+          },
+          onSend,
+        })}
+      />
+    )
+    const sendBtn = primarySend(container)
+    expect(sendBtn).toBeEnabled()
+    fireEvent.click(sendBtn)
+    expect(onSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('Pfad 4 bleibt mit Encrypt-Toggle aktiv (kein Mesh-v2-Zwang)', () => {
+    const onSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: true,
+          forcedTransport: 'mesh',
+          meshSelfArchiveAfterLoRa: true,
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:msgId=cafe|len=4|ABCD]]',
+            chromaWire: '[[MORG_CHROMA_V1:msgId=cafe|len=4|EFGH]]',
+            messageId: 'cafe',
+            lumaJpegBytes: 44,
+            chromaJpegBytes: 62,
+          },
+          onSend,
+        })}
+      />
+    )
+    expect(screen.getByTestId('mesh-path4-self-archive')).toBeChecked()
+    const sendBtn = primarySend(container)
+    expect(sendBtn).toBeEnabled()
+    fireEvent.click(sendBtn)
+    expect(onSend).toHaveBeenCalledTimes(1)
   })
 
   it('LoRa-Online-Fallback: Bestätigen und Abbrechen', () => {

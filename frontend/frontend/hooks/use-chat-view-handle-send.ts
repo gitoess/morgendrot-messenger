@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import {
   sosGatewayAckDigest,
   enqueueOfflineMailboxFailure,
@@ -24,6 +24,7 @@ import {
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
+import { prependPath4SelfArchiveMarker } from '@/frontend/features/send/mesh-path4-self-archive'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 import type { SendMeshV2WireBurstOptions } from '@/frontend/features/send/chat-view-mesh-send'
@@ -175,12 +176,15 @@ function recordMeshOutgoingV2(
   })
 }
 
+const ADDR_64_LOWER = /^0x[a-f0-9]{64}$/
+
 export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
   const {
     isPrivate,
     encrypted,
     forcedTransport,
     messagingPersistenceMode,
+    apiStatus,
     recipient,
     myAddress,
     message,
@@ -198,6 +202,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
+    meshSelfArchiveAfterLoRa,
     waitForMeshSosAckDigest,
     setMeshProgress,
     onOfflineMailboxQueueChanged,
@@ -206,10 +211,21 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     meshPlaintextNodeId,
     appendMeshMessage,
   } = p
+  const cancelRequestedRef = useRef(false)
+
+  const cancelSend = useCallback(() => {
+    cancelRequestedRef.current = true
+  }, [])
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
+    cancelRequestedRef.current = false
+    const throwIfCancelled = () => {
+      if (cancelRequestedRef.current) throw new Error('Übertragung abgebrochen.')
+    }
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
+    const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
     /** Snaps, die bereits per `/send` (Mailbox) angekommen sind — kein erneuter B2-Spiegel. */
     const sosMailboxAckedSnaps = new Set<string>()
     /** Mindestens ein SOS-Teil wurde nach Funkfehler nur/noch über Mailbox zugestellt (Retry gestoppt). */
@@ -239,6 +255,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
       let lastErr: unknown
       for (let attempt = 0; attempt < max; attempt++) {
+        throwIfCancelled()
         try {
           if (!meshtastic.connected) {
             throw new Error(MESH_BT_NOT_CONNECTED_MSG)
@@ -285,6 +302,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
           )
           await new Promise((r) => setTimeout(r, delay))
+          throwIfCancelled()
         }
       }
       throw lastErr
@@ -292,9 +310,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     const singleWireSuccessMsg = (): string => {
       if (!isPrivate) return 'Gesendet!'
+      if (path4Active) {
+        return 'Klartext über LoRa gesendet; anschließend eigene Tangle-Kopie (Mailbox an dich).'
+      }
       if (!encrypted) {
         if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
-        if (forcedTransport === 'mesh') return 'Klartext über LoRa (Meshtastic-Text) gesendet.'
+        if (forcedTransport === 'mesh') {
+          return meshSelfArchiveAfterLoRa && isPrivate
+            ? 'Klartext über LoRa (Meshtastic-Text); anschließend eigene Tangle-Kopie (Mailbox an dich).'
+            : 'Klartext über LoRa (Meshtastic-Text) gesendet.'
+        }
       }
       if (forcedTransport === 'mesh' && encrypted && sosDeliveredViaMailboxAck) {
         return 'SOS: über IOTA-Mailbox zugestellt (Funk-Wiederholungen nach Basis-Eingang gestoppt).'
@@ -319,6 +344,41 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (forcedTransport === 'mesh') return false
       if (forcedTransport === 'internet') return true
       return false
+    }
+
+    const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<void> => {
+      if (!meshSelfArchiveAfterLoRa || encrypted || forcedTransport !== 'mesh') return
+      const selfAddr = myAddress.trim().toLowerCase()
+      if (!ADDR_64_LOWER.test(selfAddr)) {
+        throw new Error('Eigen-Archiv: MY_ADDRESS ungültig (0x + 64 Hex).')
+      }
+      const n1 = BigInt(nextOfflineMailboxClientOutSeq())
+      const w1 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(lumaText), n1)
+      const r1 = await sendPlaintextMailboxHybrid(selfAddr, w1, n1, { messagingPersistenceMode })
+      if (!r1.ok) {
+        throw new Error(`Eigen-Archiv LUMA: ${mailboxHybridErr(r1)}`)
+      }
+      const n2 = BigInt(nextOfflineMailboxClientOutSeq())
+      const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
+      const r2 = await sendPlaintextMailboxHybrid(selfAddr, w2, n2, { messagingPersistenceMode })
+      if (!r2.ok) {
+        throw new Error(`Eigen-Archiv CHROMA: ${mailboxHybridErr(r2)}`)
+      }
+      const mbTx = (r2.ok === true ? r2.txDigest : undefined) ?? (r1.ok === true ? r1.txDigest : undefined)
+      if (isForensicImageMailboxAttestationEnabled()) {
+        await runForensicMailboxAttestationAfterSend({
+          recipient: selfAddr,
+          senderAddress: selfAddr,
+          primary: { payloadUtf8: w1, messageNonceU64: n1 },
+          secondary: { payloadUtf8: w2, messageNonceU64: n2 },
+          imageContentSha256Hex: null,
+          deviceTimeTrustWarn: !!deviceTimeTrustWarn,
+          baseSuccessMsg: 'Eigen-Archiv: Bild in eigener Mailbox verankert.',
+          setStatusMsg,
+          mailboxTxDigest: mbTx,
+          silent: true,
+        })
+      }
     }
 
     if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh') {
@@ -466,10 +526,84 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
+    if (attachedLora && path4Active) {
+      const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
+        attachedLora.lumaWire,
+        attachedLora.chromaWire,
+        message
+      )
+      const v = validateLoraDualWireUtf8(lumaText, chromaText)
+      if (!v.ok) {
+        applyValidationError(v, setStatus, setStatusMsg)
+        return
+      }
+      if (lumaText.length > 500 || chromaText.length > 500) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              'Pfad 4 (Klartext-LoRa-Bild): Wire zu groß (>500 Zeichen) — Meshtastic-Text kann das nicht zuverlässig senden. Bitte kleineres Bild wählen oder verschlüsselt+Funk (Mesh v2) nutzen.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      if (!meshtastic.connected) {
+        setStatus('error')
+        setStatusMsg('LoRa (Funk): Heltec/Web Bluetooth nicht verbunden – nichts gesendet.')
+        setTimeout(() => setStatus('idle'), 6000)
+        return
+      }
+      const dest = meshPlaintextDest()
+      if (dest === null) {
+        setStatus('error')
+        setStatusMsg(
+          'Funk-Klartext an Node: gültige Node-ID (z. B. !1a2b3c4d) eintragen — oder Haken „an Node-ID“ deaktivieren für Broadcast.'
+        )
+        setTimeout(() => setStatus('idle'), 6000)
+        return
+      }
+      setLoraOnlineFallbackOffer(null)
+      loraOnlineOfferPayloadRef.current = null
+      setSending(true)
+      setStatus('idle')
+      try {
+        setStatusMsg('Funk: LUMA (Klartext)…')
+        await meshtastic.sendMeshText(lumaText, dest)
+        setStatusMsg('Funk: CHROMA (Klartext)…')
+        await meshtastic.sendMeshText(chromaText, dest)
+        await runPath4SelfMirrorForLoraImage(lumaText, chromaText)
+        setStatus('success')
+        setStatusMsg('Bild per LoRa gesendet – wird später selbst im Tangle verankert.')
+        const cap = message.trim()
+        recordMeshOutgoingPlaintext(
+          appendMeshMessage,
+          myAddress,
+          `[LoRa-Bild Pfad4] LUMA+CHROMA${cap ? `: ${cap}` : ''}`,
+          dest
+        )
+        setMessage('')
+        if (shouldLoadMessagesAfterSend()) {
+          setTimeout(() => void loadMessages(), 500)
+        }
+      } catch (e) {
+        setStatus('error')
+        setStatusMsg(formatUnknownError(e))
+      } finally {
+        setMeshProgress?.(null)
+        clearCompactAttachment()
+        setSending(false)
+        setTimeout(() => setStatus('idle'), 6000)
+      }
+      return
+    }
+
     if (attachedLora) {
       setStatus('error')
       setStatusMsg(
-        'LoRa-Zweiphasen-Bild: privater Chat, Verschlüsselung an — Sendepfad „online“ (IOTA) oder „funk“ (Mesh). Oder Anhang entfernen.'
+        'LoRa-Zweiphasen-Bild: privater Chat + Verschlüsselung an (Mesh v2) oder Pfad 4 „LoRa + eigene Verankerung“ im Klartext. Sonst Anhang entfernen.'
       )
       setTimeout(() => setStatus('idle'), 6000)
       return
@@ -622,6 +756,77 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
 
+    if (meshSelfArchiveAfterLoRa) {
+      if (!isPrivate || forcedTransport !== 'mesh') {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              '„LoRa + eigene Verankerung“ nur im privaten Chat mit Transport „funk“. Sonst Option deaktivieren.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      if (!ADDR_64_LOWER.test(myAddress.trim().toLowerCase())) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              '„LoRa + eigene Verankerung“: MY_ADDRESS (0x + 64 Hex) muss gesetzt sein — sonst keine Mailbox-Kopie an dich möglich.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+      if (apiStatus?.locked) {
+        applyValidationError(
+          {
+            ok: false,
+            message:
+              '„LoRa + eigene Verankerung“: Tresor entsperren — die Mailbox-Kopie braucht Wallet/Signatur.',
+            idleMs: 9000,
+          },
+          setStatus,
+          setStatusMsg
+        )
+        return
+      }
+    }
+
+    if (
+      isPrivate &&
+      forcedTransport === 'mesh' &&
+      encrypted &&
+      delayMirrorToIota &&
+      !path4Active &&
+      apiStatus?.connected !== true
+    ) {
+      const known = (apiStatus?.connectedAddresses ?? [])
+        .filter((a) => typeof a === 'string' && a.trim().length > 0)
+        .map((a) => a.trim())
+      const knownHint =
+        known.length > 0
+          ? ` Bereits verbundene Partner: ${known.slice(0, 3).join(', ')}${known.length > 3 ? ' …' : ''}.`
+          : ''
+      applyValidationError(
+        {
+          ok: false,
+          message:
+            '„LoRa + Tangle“ im verschlüsselten Mesh-v2-Modus braucht Handshake + /connect. Für handshake-freies Self-Archive aktiviere stattdessen „LoRa + eigene Verankerung“.' +
+            knownHint,
+          idleMs: 10_000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      return
+    }
+
     setSending(true)
     setStatus('idle')
     if (textSnaps.length > 1) {
@@ -679,15 +884,78 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     type PartOk =
-      | { ok: true; meshFallback?: { onlineErr: string }; mailboxCapture?: MailboxSendCapture }
+      | {
+          ok: true
+          meshFallback?: { onlineErr: string }
+          mailboxCapture?: MailboxSendCapture
+          path4Footnote?: string
+        }
       | { ok: false }
 
-    const sendOnePart = async (textSnap: string): Promise<PartOk> => {
+      const sendOnePart = async (textSnap: string): Promise<PartOk> => {
+        throwIfCancelled()
       const failSend = (msg: string): PartOk => {
         setStatus('error')
         setStatusMsg(msg)
         return { ok: false }
       }
+
+      /** Pfad 4 (MVP): nach LongFast-Klartext Mailbox-Kopie an eigene Adresse + optionale Forensic-Attestation. */
+      const runPath4MailboxSelfArchive = async (airUtf8: string): Promise<string> => {
+        if (!path4Active) return ''
+        const selfAddr = myAddress.trim().toLowerCase()
+        if (!ADDR_64_LOWER.test(selfAddr)) {
+          return ' Eigen-Archiv: MY_ADDRESS ungültig — keine Mailbox-Kopie.'
+        }
+        if (apiStatus?.locked) {
+          return ' Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.'
+        }
+        const n = BigInt(nextOfflineMailboxClientOutSeq())
+        const marked = prependPath4SelfArchiveMarker(airUtf8)
+        const wireForApi = prependMailboxOutNonceMarker(marked, n)
+        const res = await sendPlaintextMailboxHybrid(selfAddr, wireForApi, n, { messagingPersistenceMode })
+        if (!res.ok) {
+          const err = mailboxHybridErr(res)
+          if (allowOfflineMailboxQueue) {
+            const en = await enqueueOfflineMailboxFailure({
+              kind: 'plain_send',
+              recipient: selfAddr,
+              payload: wireForApi,
+              encrypted: false,
+              timeIsTrusted: !deviceTimeTrustWarn,
+              lastError: err,
+              senderAddress: myAddress.trim(),
+              threadId: stableOfflineMailboxThreadId(myAddress.trim(), selfAddr),
+              messageNonceU64: n,
+            })
+            onOfflineMailboxQueueChanged?.()
+            if (en.ok && en.queued) {
+              return ' Eigen-Archiv: Mailbox nicht erreichbar — Eintrag in Offline-Warteschlange (Opt-in).'
+            }
+          }
+          return ` Eigen-Archiv (Mailbox): ${err}`
+        }
+        const baseOk = 'Eigen-Archiv: Klartext-Mailbox an dich gesendet.'
+        const txDig = (res as { txDigest?: string }).txDigest
+        if (!isForensicImageMailboxAttestationEnabled()) {
+          return ` ${baseOk}${formatTxDigestStatusSuffix(txDig)}`
+        }
+        const attested = await runForensicMailboxAttestationAfterSend({
+          recipient: selfAddr,
+          senderAddress: selfAddr,
+          primary: { payloadUtf8: wireForApi, messageNonceU64: n },
+          imageContentSha256Hex: null,
+          deviceTimeTrustWarn: !!deviceTimeTrustWarn,
+          baseSuccessMsg: baseOk,
+          setStatusMsg,
+          mailboxTxDigest: txDig,
+          silent: true,
+        })
+        return attested
+          ? ` ${baseOk} Attestation verankert.${formatTxDigestStatusSuffix(txDig)}`
+          : ` ${baseOk} Attestation ausstehend oder fehlgeschlagen.${formatTxDigestStatusSuffix(txDig)}`
+      }
+
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
         let wireForApi: string
         let messageNonceU64: bigint
@@ -754,7 +1022,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           try {
             await meshtastic.sendMeshText(textSnap, dest)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
-            return { ok: true }
+            const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+            return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
             setStatus('error')
             setStatusMsg(formatUnknownError(e))
@@ -764,7 +1033,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return tryMailbox(encrypted)
       }
 
-      if (!encrypted) {
+      if (!encrypted || path4Active) {
         if (forcedTransport === 'internet') {
           return tryMailbox(false)
         }
@@ -785,7 +1054,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 }
                 await meshtastic.sendMeshText(textSnap, dest)
                 recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
-                return { ok: true }
+                const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+                return { ok: true, path4Footnote: path4Footnote || undefined }
               } catch (e) {
                 lastErr = e
                 if (attempt + 1 >= max) break
@@ -806,7 +1076,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           try {
             await meshtastic.sendMeshText(textSnap, dest)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
-            return { ok: true }
+            const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+            return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
             setStatus('error')
             setStatusMsg(formatUnknownError(e))
@@ -938,7 +1209,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     try {
       let lastOk: PartOk | null = null
+      const path4Footnotes: string[] = []
       for (let i = 0; i < textSnaps.length; i++) {
+        throwIfCancelled()
         const textSnap = textSnaps[i]!
         const r = await sendOnePart(textSnap)
         if (!r.ok) {
@@ -949,6 +1222,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           return
         }
+        if (r.path4Footnote) path4Footnotes.push(r.path4Footnote)
         lastOk = r
       }
 
@@ -981,7 +1255,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       }
 
-      const successTail = mirrorFootnote + sosMeshPeerAckFootnote
+      const successTail = mirrorFootnote + sosMeshPeerAckFootnote + path4Footnotes.join('')
       let successMsg: string
       if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
@@ -1039,8 +1313,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     attachedBlobBase64,
     attachedLora,
     attachedTxtFile,
+    apiStatus,
     clearCompactAttachment,
     delayMirrorToIota,
+    meshSelfArchiveAfterLoRa,
     encrypted,
     forcedTransport,
     messagingPersistenceMode,
@@ -1064,5 +1340,5 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     meshPlaintextNodeId,
   ])
 
-  return { handleSend }
+  return { handleSend, cancelSend }
 }

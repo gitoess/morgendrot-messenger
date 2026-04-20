@@ -24,6 +24,16 @@ import {
 
 const MESH_TEXT_RETRY_BACKOFF_MS = [600, 1800] as const
 
+/** Wenn `sendText`/`sendPacket` nie resolved (häufig Broadcast/Web-BLE), hängt die UI — Nachricht kann trotzdem raus sein. */
+const MESH_SEND_STALL_MS = 25_000
+
+async function raceMeshtasticOutbound<T>(promise: Promise<T>, stallFallback: T): Promise<T> {
+  return await Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(stallFallback), MESH_SEND_STALL_MS)),
+  ])
+}
+
 const V2_MAX_BYTES = 240
 
 /** Chromium u. a.: Policy / sicherer Kontext — Nutzerhinweis anhängen. */
@@ -104,6 +114,9 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const deviceRef = useRef<MeshDevice | null>(null)
+  /** Nach manueller Verbindung: Verbindung im Hintergrund erhalten/reconnecten. */
+  const stickyConnectRef = useRef(false)
+  const reconnectBusyRef = useRef(false)
 
   const dirRef = useRef(opts?.contactDirectory ?? {})
   const onMsgRef = useRef(opts?.onMeshChatMessage)
@@ -113,6 +126,8 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const sosAckBurstParentRef = useRef(opts?.sendSosAckBurstRef)
   const shouldAutoAckSosMeshRef = useRef(opts?.shouldAutoAckSosMesh)
   const recentSosAckDigestsRef = useRef(new Set<string>())
+  /** Lokales Loopback von soeben gesendeten Klartext-Paketen (Meshtastic echo) unterdrücken. */
+  const recentOutgoingTextPacketIdsRef = useRef(new Map<string, string>())
   const meshFragRef = useRef(new MeshFragReassembler())
   useEffect(() => {
     dirRef.current = opts?.contactDirectory ?? {}
@@ -238,12 +253,20 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       rxTime: Date
       data: string
     }) => {
+      const outgoingId = String(pm.id)
+      const body = normalizeChatMessageContentForDisplay(pm.data)
+      const expectedBody = recentOutgoingTextPacketIdsRef.current.get(outgoingId)
+      if (expectedBody != null && expectedBody === body) {
+        // Dieses Paket wurde lokal gerade via sendMeshText gesendet und kommt als Echo zurück.
+        // Wir haben bereits eine lokale Outgoing-Zeile erzeugt; kein doppelter Eintrag.
+        recentOutgoingTextPacketIdsRef.current.delete(outgoingId)
+        return
+      }
       const dedup = `txt:${pm.from}:${pm.id}`
       if (seen.has(dedup)) return
       seen.add(dedup)
       const fromMesh = formatMeshtasticNodeIdFromNum(pm.from)
       const ts = pm.rxTime.getTime()
-      const body = normalizeChatMessageContentForDisplay(pm.data)
       const dedupKey = contentDedupKey(`mesh:${fromMesh}`, body, ts)
       onMsgRef.current?.({
         id: `mesh-txt-${pm.from}-${pm.id}`,
@@ -266,9 +289,13 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     }
   }, [device])
 
-  const connect = useCallback(async () => {
-    setError(null)
-    setConnecting(true)
+  const connectInternal = useCallback(async (silent: boolean) => {
+    if (reconnectBusyRef.current) return false
+    reconnectBusyRef.current = true
+    if (!silent) {
+      setError(null)
+      setConnecting(true)
+    }
     try {
       const prev = deviceRef.current
       if (prev) {
@@ -283,16 +310,27 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       const transport = await TransportWebBluetooth.create()
       const mesh = new MeshDevice(transport)
       setDevice(mesh)
+      return true
     } catch (e) {
-      setError(augmentWebBluetoothConnectError(e))
+      if (!silent) {
+        setError(augmentWebBluetoothConnectError(e))
+      }
       setDevice(null)
       deviceRef.current = null
+      return false
     } finally {
-      setConnecting(false)
+      reconnectBusyRef.current = false
+      if (!silent) setConnecting(false)
     }
   }, [])
 
+  const connect = useCallback(async () => {
+    stickyConnectRef.current = true
+    await connectInternal(false)
+  }, [connectInternal])
+
   const disconnect = useCallback(() => {
+    stickyConnectRef.current = false
     void (async () => {
       const current = deviceRef.current
       deviceRef.current = null
@@ -302,24 +340,63 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     })()
   }, [])
 
+  useEffect(() => {
+    if (!stickyConnectRef.current) return
+    if (device) return
+    if (connecting) return
+    const t = setTimeout(() => {
+      void connectInternal(true)
+    }, 2500)
+    return () => clearTimeout(t)
+  }, [device, connecting, connectInternal])
+
   const sendBinaryV2 = useCallback(
     async (wire: Uint8Array, destination: number | 'broadcast' = 'broadcast') => {
-      if (!device) throw new Error('Meshtastic nicht verbunden')
-      const r = await device.sendPacket(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
+      let d = deviceRef.current
+      if (!d && stickyConnectRef.current) {
+        await connectInternal(true)
+        d = deviceRef.current
+      }
+      if (!d) throw new Error('Meshtastic nicht verbunden')
+      const r = await raceMeshtasticOutbound(
+        d.sendPacket(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination),
+        {} as Awaited<ReturnType<MeshDevice['sendPacket']>>
+      )
       throwIfMeshtasticRoutingFailed(r, 'Mesh v2 (PRIVATE_APP)')
       return r
     },
-    [device]
+    [connectInternal]
   )
 
   const sendMeshText = useCallback(
     async (text: string, destination: number | 'broadcast' = 'broadcast') => {
-      if (!device) throw new Error('Meshtastic nicht verbunden')
+      let d = deviceRef.current
+      if (!d && stickyConnectRef.current) {
+        await connectInternal(true)
+        d = deviceRef.current
+      }
+      if (!d) throw new Error('Meshtastic nicht verbunden')
       const ctx = 'Meshtastic-Text (LongFast)'
       let lastErr: unknown
       for (let attempt = 0; attempt <= MESH_TEXT_RETRY_BACKOFF_MS.length; attempt++) {
         try {
-          const r = await device.sendText(text, destination)
+          const r = await raceMeshtasticOutbound(
+            d.sendText(text, destination),
+            {} as Awaited<ReturnType<MeshDevice['sendText']>>
+          )
+          if (r && typeof r === 'object') {
+            const maybeId = (r as { id?: unknown }).id
+            if (maybeId != null) {
+              const id = String(maybeId)
+              recentOutgoingTextPacketIdsRef.current.set(
+                id,
+                normalizeChatMessageContentForDisplay(text)
+              )
+              setTimeout(() => {
+                recentOutgoingTextPacketIdsRef.current.delete(id)
+              }, 45_000)
+            }
+          }
           throwIfMeshtasticRoutingFailed(r, ctx)
           return r
         } catch (e) {
@@ -332,7 +409,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       }
       throw lastErr
     },
-    [device]
+    [connectInternal]
   )
 
   return {

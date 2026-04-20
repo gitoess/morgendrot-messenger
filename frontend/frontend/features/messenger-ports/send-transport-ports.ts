@@ -14,10 +14,12 @@ export type SendTransportChoicePort = {
 /** Send-Panel: nur Lesen von Verschlüsselung und Transport (Umschalter in der Card). */
 export type SendTransportReadPort = Pick<SendTransportChoicePort, 'encrypted' | 'forcedTransport'>
 
-/** Delayed-Upload-Marker (Mesh-Klartext → später IOTA). */
+/** Delayed-Upload-Marker (Mesh v2 → Empfänger spiegelt) + Pfad-4 „LoRa + eigene Verankerung“ (Klartext-Funk → Mailbox an sich). */
 export type SendMeshMirrorDelayPort = {
   readonly delayMirrorToIota: boolean
   readonly onDelayMirrorToIotaChange: (v: boolean) => void
+  readonly meshSelfArchiveAfterLoRa: boolean
+  readonly onMeshSelfArchiveAfterLoRaChange: (v: boolean) => void
 }
 
 export function asSendTransportChoice(
@@ -47,7 +49,14 @@ export function asSendTransportRead(
 
 export function asSendMeshMirrorDelay(
   delayMirrorToIota: boolean,
-  onDelayMirrorToIotaChange: (v: boolean) => void
+  onDelayMirrorToIotaChange: (v: boolean) => void,
+  meshSelfArchiveAfterLoRa: boolean,
+  onMeshSelfArchiveAfterLoRaChange: (v: boolean) => void
 ): SendMeshMirrorDelayPort {
-  return { delayMirrorToIota, onDelayMirrorToIotaChange }
+  return {
+    delayMirrorToIota,
+    onDelayMirrorToIotaChange,
+    meshSelfArchiveAfterLoRa,
+    onMeshSelfArchiveAfterLoRaChange,
+  }
 }

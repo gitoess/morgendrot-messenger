@@ -38,6 +38,8 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   deviceTimeTrustWarn: boolean
   /** Mesh-Text: vor Versand Marker für Delayed Upload (Empfänger spiegelt per IOTA). */
   delayMirrorToIota: boolean
+  /** Pfad 4 (MVP): nach Klartext-LoRa automatisch Klartext-Mailbox an eigene Adresse + Attestation. */
+  meshSelfArchiveAfterLoRa: boolean
   /** Optional: nach erfolgreichem Mesh-SOS auf `MORG_SOS_ACK_V1` mit gleichem SHA-256 warten (`morgendrot.sosWaitMeshAckMs`). */
   waitForMeshSosAckDigest?: (digestHex: string, timeoutMs: number) => Promise<boolean>
   /** Nur MF1/LoRa: kurze Fortschrittszeile z. B. „Luma 2/5 – Chroma 0/3“ (ohne „Funk:“-Präfix). */

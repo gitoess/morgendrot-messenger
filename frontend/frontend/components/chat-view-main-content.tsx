@@ -133,6 +133,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMorgPkgImportFile,
     confirmLoraSendViaOnline,
     handleSend,
+    cancelSend,
     handleHandshake,
     handleConnect,
     dismissLoraOnlineFallback,
@@ -145,6 +146,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokollMarked,
     delayMirrorToIota,
     setDelayMirrorToIota,
+    meshSelfArchiveAfterLoRa,
+    setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
     toggleProtokollMark,
     onHideInboxMessageLocal,
@@ -276,7 +279,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
     ...asSendTransportRead(encrypted, forcedTransport),
-    ...asSendMeshMirrorDelay(delayMirrorToIota, setDelayMirrorToIota),
+    ...asSendMeshMirrorDelay(
+      delayMirrorToIota,
+      setDelayMirrorToIota,
+      meshSelfArchiveAfterLoRa,
+      setMeshSelfArchiveAfterLoRa
+    ),
     isPrivate,
     sending,
     loraOnlineFallbackOffer,
@@ -284,6 +292,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onDismissLoraOnlineFallback: dismissLoraOnlineFallback,
     apiStatus,
     onSend: handleSend,
+    onCancelSend: cancelSend,
     status,
     statusMsg,
     offlineMailboxQueuePending,

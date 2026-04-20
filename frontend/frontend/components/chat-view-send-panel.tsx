@@ -5,7 +5,7 @@
  * Sendelogik bleibt im Hook (`useChatViewSendFlow`); dieses Panel ist reine Orchestrierung der bestehenden UI-Blöcke.
  */
 
-import { useRef, useState, type DragEvent } from 'react'
+import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
@@ -46,6 +46,7 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onDismissLoraOnlineFallback: () => void
   apiStatus: ApiStatus | null
   onSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
+  onCancelSend?: () => void
   status: 'idle' | 'success' | 'error'
   statusMsg: string
   /** § H.3g 7a: Einträge in der lokalen Mailbox-Warteschlange (Opt-in). */
@@ -68,6 +69,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     isPrivate,
     delayMirrorToIota,
     onDelayMirrorToIotaChange,
+    meshSelfArchiveAfterLoRa,
+    onMeshSelfArchiveAfterLoRaChange,
     encrypted,
     recipient,
     onRecipientChange,
@@ -79,6 +82,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onDismissLoraOnlineFallback,
     apiStatus,
     onSend,
+    onCancelSend,
     status,
     statusMsg,
     offlineMailboxQueuePending = 0,
@@ -107,6 +111,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   } = p
 
   const [dropHover, setDropHover] = useState(false)
+  const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
   const dragDepth = useRef(0)
 
   const voiceLocksComposer = voiceRecording || voiceBusy
@@ -158,11 +163,28 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const meshPlaintextBlocked =
     !encrypted &&
     forcedTransport === 'mesh' &&
+    !(
+      isPrivate &&
+      meshSelfArchiveAfterLoRa &&
+      attachmentBarProps.attachedLora != null &&
+      !attachmentBarProps.attachedBlobBase64 &&
+      !attachmentBarProps.attachedAudioBase64 &&
+      attachmentBarProps.attachedTxtFile == null
+    ) &&
     ([...message].length > MESH_PLAINTEXT_MAX_CHARS ||
       !!attachmentBarProps.attachedBlobBase64 ||
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null ||
       attachmentBarProps.attachedLora != null)
+
+  /** Pfad 4: erlaubt Klartext-Text und LoRa-LUMA/CHROMA, aber keine sonstigen Anhänge. */
+  const meshPath4Blocked =
+    meshSelfArchiveAfterLoRa &&
+    (!isPrivate ||
+      forcedTransport !== 'mesh' ||
+      !!attachmentBarProps.attachedBlobBase64 ||
+      !!attachmentBarProps.attachedAudioBase64 ||
+      attachmentBarProps.attachedTxtFile != null)
 
   /** Privat + verschlüsselt + Funk: IOTA-Bild wird per Effect in LUMA+CHROMA umgewandelt — bis dahin nicht senden. */
   const meshIotaBlobAwaitingLora =
@@ -188,6 +210,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     hasNoPayload ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
+    meshPath4Blocked ||
     meshIotaBlobAwaitingLora ||
     meshKlartextVoiceBlocked
 
@@ -207,6 +230,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !attachmentBarProps.attachedLora &&
     !sosSendMode &&
     loraOnlineFallbackOffer == null
+
+  const loraRetryDetails = useMemo(() => {
+    const reason = (loraOnlineFallbackOffer?.reasonLabel || '').toLowerCase()
+    const luma = reason.includes('luma') && !reason.includes('chroma') ? 'fehlgeschlagen' : 'ok/gesendet'
+    const chroma = reason.includes('chroma') ? 'fehlgeschlagen' : reason.includes('luma') ? 'ausstehend' : 'unklar'
+    return { luma, chroma }
+  }, [loraOnlineFallbackOffer?.reasonLabel])
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -231,6 +261,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {!encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
+            <p className="text-[11px] font-medium text-foreground">
+              Schrittfolge: 1) Funkpfad wählen 2) Heltec verbinden 3) optional Node-ID setzen 4) Senden.
+            </p>
             <p className="text-xs font-medium text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               Standard-Meshtastic-Text — <strong className="text-foreground">ohne</strong> Morgendrot-Mesh-v2 und{' '}
@@ -270,6 +303,29 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         )}
 
+        {forcedTransport === 'mesh' && isPrivate && (
+          <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
+            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
+              <input
+                type="checkbox"
+                checked={meshSelfArchiveAfterLoRa}
+                onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                data-testid="mesh-path4-self-archive"
+                className="mt-0.5 border-border"
+              />
+              <span>
+                <span className="font-medium">LoRa + eigene Verankerung</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
+                  Nach erfolgreichem Klartext-Funk: Kopie per Klartext-Mailbox an <strong className="text-foreground">deine</strong>{' '}
+                  MY_ADDRESS (Tangle) + optionale Forensic-Attestation. Unterstützt jetzt Kurztext sowie
+                  LoRa-Bildzweiteiler (LUMA/CHROMA) ohne Peer-ECDH; bei aktivem Pfad 4 wird kein Mesh-v2-/Handshake-Pfad
+                  genutzt. Nicht unterstützt: Audio/.txt/IOTA-Kompaktbild direkt.
+                </span>
+              </span>
+            </label>
+          </div>
+        )}
+
         {isPrivate && encrypted && forcedTransport === 'mesh' && attachmentBarProps.attachedAudioBase64 != null ? (
           <div className="rounded-lg border border-sky-600/40 bg-sky-950/20 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
             <strong className="text-sky-900 dark:text-sky-100">Sprache per Funk:</strong> nur{' '}
@@ -284,9 +340,34 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <legend className="text-sm font-medium text-foreground">LoRa → Empfänger (Funk)</legend>
             <p className="mb-3 text-xs text-muted-foreground">
               Wähle, ob die Nachricht nur über LoRa geht oder zusätzlich nach dem Funk in den IOTA-Tangle gespiegelt
-              werden soll (Delayed Mirror — der Empfänger braucht später Basis/WLAN).
+              werden soll (Delayed Mirror — der Empfänger braucht später Basis/WLAN). Dieser Modus ist
+              <strong className="text-foreground"> empfängerbezogen</strong> und benötigt Handshake + /connect.
             </p>
-            <div className="space-y-3">
+            {(apiStatus?.connectedAddresses?.length ?? 0) > 0 ? (
+              <div className="mb-3 rounded-md border border-border bg-background/70 px-2.5 py-2">
+                <p className="mb-1 text-[11px] font-medium text-foreground">Verbundene Partner (Handshake)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(apiStatus?.connectedAddresses ?? []).map((addr) => (
+                    <button
+                      key={addr}
+                      type="button"
+                      onClick={() => onRecipientChange(addr)}
+                      className="rounded border border-border px-2 py-1 font-mono text-[10px] text-foreground hover:bg-muted"
+                      title="Als Zieladresse übernehmen"
+                    >
+                      {addr.length > 16 ? `${addr.slice(0, 10)}…${addr.slice(-4)}` : addr}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {meshSelfArchiveAfterLoRa ? (
+              <div className="mb-3 rounded-md border border-amber-600/45 bg-amber-950/20 px-2.5 py-2 text-xs leading-snug text-amber-50">
+                Aktiv ist aktuell <strong className="text-foreground">„LoRa + eigene Verankerung“</strong> (Self-Archive).
+                Der Empfänger-Mirror-Modus ist dafür bewusst getrennt und hier deaktiviert.
+              </div>
+            ) : null}
+            <div className={cn('space-y-3', meshSelfArchiveAfterLoRa ? 'opacity-60 pointer-events-none' : '')}>
               <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
                 <input
                   type="radio"
@@ -332,7 +413,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">
                     Zuerst Funk wie oben; nach Entschlüsselung beim Empfänger wird der Klartext per Delayed Mirror
                     in die Mailbox geschrieben und damit im Tangle verankert (Delayed-Mirror-Warteschlange am
-                    Empfänger, wie zuvor die Checkbox „Delayed Upload“).
+                    Empfänger, wie zuvor die Checkbox „Delayed Upload“). Ohne /connect schlägt dieser Modus fehl.
                   </span>
                 </span>
               </label>
@@ -511,6 +592,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <div className="flex flex-wrap gap-2 pt-1">
               <button
                 type="button"
+                disabled={sending}
+                onClick={() => void onSend()}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Fehlende Teile nochmal senden
+              </button>
+              <button
+                type="button"
                 disabled={sending || apiStatus?.locked}
                 onClick={() => void onConfirmLoraOnline()}
                 className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
@@ -525,7 +614,22 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               >
                 Abbrechen
               </button>
+              <button
+                type="button"
+                disabled={sending}
+                onClick={() => setShowLoraChunkDetails((v) => !v)}
+                className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+              >
+                {showLoraChunkDetails ? 'Details ausblenden' : 'Details'}
+              </button>
             </div>
+            {showLoraChunkDetails ? (
+              <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
+                <div className="font-medium text-foreground">Chunk-Status (heuristisch)</div>
+                <div className="mt-1 font-mono">LUMA: {loraRetryDetails.luma}</div>
+                <div className="font-mono">CHROMA: {loraRetryDetails.chroma}</div>
+              </div>
+            ) : null}
           </div>
         ) : null}
 
@@ -578,20 +682,32 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         <div className="flex items-center justify-between gap-3">
           {!sosSendMode ? (
-            <button
-              type="button"
-              onClick={() => void onSend()}
-              disabled={sendDisabled}
-              data-testid="chat-composer-primary-send"
-              className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => void onSend()}
+                disabled={sendDisabled}
+                data-testid="chat-composer-primary-send"
+                className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {sending ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'Senden'}
+              </button>
               {sending ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'Senden'}
-            </button>
+                <button
+                  type="button"
+                  onClick={onCancelSend}
+                  data-testid="chat-composer-cancel-send"
+                  className="rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  Übertragung abbrechen
+                </button>
+              ) : null}
+            </div>
           ) : (
             <div className="min-w-[1px] flex-1" aria-hidden />
           )}

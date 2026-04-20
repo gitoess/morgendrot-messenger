@@ -41,12 +41,16 @@ describe('asSendTransportRead', () => {
 })
 
 describe('asSendMeshMirrorDelay', () => {
-  it('mappt Flag und Callback', () => {
+  it('mappt Delay-Mirror und Pfad-4-Callbacks', () => {
     const fn = vi.fn()
-    const p = asSendMeshMirrorDelay(true, fn)
+    const fn4 = vi.fn()
+    const p = asSendMeshMirrorDelay(true, fn, false, fn4)
     p.onDelayMirrorToIotaChange(false)
+    p.onMeshSelfArchiveAfterLoRaChange(true)
     expect(p.delayMirrorToIota).toBe(true)
+    expect(p.meshSelfArchiveAfterLoRa).toBe(false)
     expect(fn).toHaveBeenCalledWith(false)
+    expect(fn4).toHaveBeenCalledWith(true)
   })
 })
 

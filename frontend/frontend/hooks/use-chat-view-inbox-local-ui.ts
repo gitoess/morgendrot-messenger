@@ -17,6 +17,7 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 
 const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
+const INBOX_PARTNER_MEMORY_LS = 'morg.inbox.partnerMemory.v1'
 
 function messageHasMeshTransport(m: Message): boolean {
   return m.source === 'mesh' || (Array.isArray(m.transports) && m.transports.includes('mesh'))
@@ -62,15 +63,53 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
   const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
+  const [inboxPartnerMemory, setInboxPartnerMemory] = useState<string[]>([])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
       setInboxMeshTransportOnly(sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1')
+      const raw = window.localStorage.getItem(INBOX_PARTNER_MEMORY_LS)
+      if (raw) {
+        const arr = JSON.parse(raw) as unknown
+        if (Array.isArray(arr)) {
+          const unique = Array.from(
+            new Map(
+              arr
+                .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+                .map((v) => [v.trim().toLowerCase(), v.trim()])
+            ).values()
+          )
+          setInboxPartnerMemory(unique)
+        }
+      }
     } catch {
       /* ignore */
     }
   }, [])
+
+  useEffect(() => {
+    const observed = uniqueCounterpartyAddresses(displayMessages, myAddress)
+    if (observed.length === 0) return
+    setInboxPartnerMemory((prev) => {
+      const byNorm = new Map(prev.map((v) => [v.trim().toLowerCase(), v]))
+      for (const v of observed) {
+        const t = v.trim()
+        if (!t) continue
+        byNorm.set(t.toLowerCase(), t)
+      }
+      const merged = Array.from(byNorm.values()).sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
+      if (merged.length === prev.length && merged.every((v, i) => v === prev[i])) return prev
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(INBOX_PARTNER_MEMORY_LS, JSON.stringify(merged))
+        } catch {
+          /* ignore */
+        }
+      }
+      return merged
+    })
+  }, [displayMessages, myAddress])
 
   const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
     setInboxMeshTransportOnly(v)
@@ -83,7 +122,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [])
 
   const inboxPartnerOptions = useMemo(() => {
-    const addrs = uniqueCounterpartyAddresses(displayMessages, myAddress)
+    const live = uniqueCounterpartyAddresses(displayMessages, myAddress)
+    const byNorm = new Map<string, string>()
+    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
+    for (const a of live) byNorm.set(a.trim().toLowerCase(), a.trim())
+    const addrs = Array.from(byNorm.values())
     return addrs.map((address) => {
       const label = contactDisplayLabel(contactDirectory, address)
       const short =
@@ -92,7 +135,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           : address
       return { address, label: label || short }
     })
-  }, [displayMessages, myAddress, contactDirectory])
+  }, [displayMessages, myAddress, contactDirectory, inboxPartnerMemory])
 
   const partnerFilteredMessages = useMemo(
     () =>

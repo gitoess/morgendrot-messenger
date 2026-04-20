@@ -197,7 +197,11 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
         dein Handshake gesendet und auf die Gegenpartei gewartet. Typischer Ablauf: A trägt B ein und startet
         Handshake; B führt <span className="font-medium">Schnell verbinden</span> aus (nutzt{' '}
         <span className="font-mono">PARTNER_ADDRESS</span> / Kommandant aus <span className="font-mono">.env</span>
-        ) oder im Terminal <span className="font-mono">/connect 0x…</span> mit der Adresse von A.
+        ) oder im Terminal <span className="font-mono">/connect 0x…</span> mit der Adresse von A. Ist links eine
+        gültige <span className="font-mono">0x</span>+64-Hex eingetragen, verwendet Schnell verbinden genau diese
+        Adresse (hilfreich z. B. beim Test mit dir selbst). <span className="font-medium text-foreground">Wichtig:</span>{' '}
+        Nach dem Klick dauert die echte Verbindung oft noch Sekunden — erst wenn der Status „verbunden“ zeigt, klappt
+        verschlüsselt inkl. Mesh v2.
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-3">

@@ -39,6 +39,7 @@ import { toast } from 'sonner'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
 const DELAY_MIRROR_TO_IOTA_LS = 'morgendrot.delayMirrorToIota'
+const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
 
 export type UseChatViewCoreParams = {
   isPrivate: boolean
@@ -147,6 +148,30 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       /* ignore */
     }
   }, [])
+
+  const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() => {
+    if (typeof window === 'undefined') return false
+    try {
+      return window.localStorage.getItem(MESH_SELF_ARCHIVE_PATH4_LS) === '1'
+    } catch {
+      return false
+    }
+  })
+  const setMeshSelfArchiveAfterLoRa = useCallback((v: boolean) => {
+    setMeshSelfArchiveAfterLoRaState(v)
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(MESH_SELF_ARCHIVE_PATH4_LS, v ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (forcedTransport !== 'mesh') {
+      setMeshSelfArchiveAfterLoRa(false)
+    }
+  }, [forcedTransport, setMeshSelfArchiveAfterLoRa])
 
   const [messagingPersistenceMode, setMessagingPersistenceModeState] = useState<MessagingPersistenceMode>(() =>
     readMessagingPersistenceModeFromStorage()
@@ -381,6 +406,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onMorgPkgImportFile,
     confirmLoraSendViaOnline,
     handleSend,
+    cancelSend,
   } = useChatViewSendFlow({
     isPrivate,
     encrypted,
@@ -408,6 +434,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
     delayMirrorToIota,
+    meshSelfArchiveAfterLoRa,
     waitForMeshSosAckDigest,
     setMeshProgress: setLoraMeshProgressLine,
     onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
@@ -424,6 +451,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     openPartnerSetupPanel,
   } = useChatViewConnectionActions({
     partner,
+    refreshApiStatus,
     setSending,
     setStatus,
     setStatusMsg,
@@ -573,6 +601,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onMorgPkgImportFile,
     confirmLoraSendViaOnline,
     handleSend,
+    cancelSend,
     handleHandshake,
     handleConnect,
     dismissLoraOnlineFallback,
@@ -585,6 +614,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onExportEinsatzprotokollMarked,
     delayMirrorToIota,
     setDelayMirrorToIota,
+    meshSelfArchiveAfterLoRa,
+    setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
     toggleProtokollMark,
     onHideInboxMessageLocal,

@@ -16,11 +16,12 @@ export type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-s
 export function useChatViewSendFlow(p: UseChatViewSendFlowParams) {
   const morg = useChatViewMorgPkgActions(p)
   const confirmLoraSendViaOnline = useChatViewConfirmLoraOnline(p)
-  const { handleSend } = useChatViewHandleSend(p)
+  const { handleSend, cancelSend } = useChatViewHandleSend(p)
 
   return {
     ...morg,
     confirmLoraSendViaOnline,
     handleSend,
+    cancelSend,
   }
 }
