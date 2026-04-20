@@ -314,6 +314,21 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
+    /** Online: LUMA+CHROMA nur mit Schloss (zwei verschlüsselte Mailbox-Sends). */
+    if (attachedLora && isPrivate && forcedTransport === 'internet' && !encrypted) {
+      applyValidationError(
+        {
+          ok: false,
+          message:
+            'Bild (LUMA+CHROMA) über „online“: Schloss / Verschlüsselung aktivieren — zwei IOTA-Mailbox-Nachrichten. Alternative: Transport „funk“ mit „LoRa + eigene Verankerung“ (Pfad 4; Luft bleibt Klartext).',
+          idleMs: 12_000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      return
+    }
+
     if (attachedLora && path4Active) {
       const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
         attachedLora.lumaWire,
@@ -419,14 +434,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setSending(false)
         setTimeout(() => setStatus('idle'), userCancelledPath4 ? 2500 : 6000)
       }
-      return
-    }
-
-    if (attachedLora) {
-      setStatus('error')
-      setStatusMsg(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
-      clearCompactAttachment()
-      setTimeout(() => setStatus('idle'), 6000)
       return
     }
 
@@ -570,6 +577,24 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return
         }
       }
+    }
+
+    /** Noch nicht abgedeckte LUMA+CHROMA-Kombinationen (z. B. Ad-hoc, öffentlicher Chat). */
+    if (attachedLora) {
+      applyValidationError(
+        {
+          ok: false,
+          message: !isPrivate
+            ? 'LoRa-Bild (LUMA+CHROMA) gibt es nur im privaten Chat. Pinnwand: Kurztext — oder Bild über „online“ mit Verschlüsselung.'
+            : CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+          idleMs: 12_000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      clearCompactAttachment()
+      setTimeout(() => setStatus('idle'), 6000)
+      return
     }
 
     if (forcedTransport === 'mesh' && attachedAudioBase64) {
