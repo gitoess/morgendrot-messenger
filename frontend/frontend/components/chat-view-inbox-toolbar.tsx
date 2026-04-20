@@ -7,7 +7,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, UserPlus } from 'lucide-react'
+import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -91,27 +91,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onHideAllVisibleLocal,
   } = p
 
-  const morgImportTitle =
-    apiStatus?.connected !== true
-      ? '.morg-pkg import: API nicht verbunden (/connect).'
-      : apiStatus?.locked
-        ? '.morg-pkg import: Tresor gesperrt (unlock).'
-        : 'morgendrot.morgpkg.v1 – braucht Verbindung und Tresor; Absender der Datei muss in der peerMap sein'
-  const morgDeviceTitle =
-    morgPkgDeviceBusy
-      ? 'Paket wird erstellt…'
-      : apiStatus?.connected !== true
-        ? 'Gerät → .morg-pkg: API nicht verbunden (/connect).'
-        : apiStatus?.locked
-          ? 'Gerät → .morg-pkg: Tresor gesperrt.'
-          : 'Mehrere Bilder (.txt, Opus/Ogg) → ein .morg-pkg (Bundle v1); braucht Verbindung, Tresor und /compact-image-encode'
-
   return (
     <div className="border-b border-border">
     <div className="flex flex-wrap items-center justify-between gap-2 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Inbox className="h-5 w-5 text-primary" />
         <h3 className="font-semibold text-foreground">Posteingang</h3>
+        <span className="sr-only">Telefonbuch: Zeilenmenü bei eingehenden 0x-Absendern.</span>
         {messageCount > 0 && (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             {inboxRowCount}
@@ -159,7 +145,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           <DropdownMenuContent align="end" className="min-w-[14rem]">
             <DropdownMenuItem
               disabled={apiStatus?.connected !== true || apiStatus?.locked}
-              title={morgImportTitle}
               onSelect={(e) => {
                 e.preventDefault()
                 morgPkgFileRef.current?.click()
@@ -169,7 +154,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             </DropdownMenuItem>
             <DropdownMenuItem
               disabled={morgPkgDeviceBusy || apiStatus?.locked || apiStatus?.connected !== true}
-              title={morgDeviceTitle}
               onSelect={(e) => {
                 e.preventDefault()
                 morgPkgDeviceFilesRef.current?.click()
@@ -192,54 +176,26 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,18rem)] overflow-y-auto">
-            <DropdownMenuItem
-              disabled={messageCount === 0}
-              title="Rohdaten chronologisch (JSON). Für Technik/Backup; kann sehr sensibel sein."
-              onSelect={() => onExportEinsatzberichtJson()}
-            >
+            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtJson()}>
               <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
               JSON (voll)
             </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={messageCount === 0}
-              title="Kurzfassung lesbar als .txt – für schnelle Übersicht oder Weiterleitung."
-              onSelect={() => onExportEinsatzberichtTxt()}
-            >
+            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtTxt()}>
               Kurzbericht .txt
             </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={messageCount === 0}
-              title="Ein verschlüsselter Download (AES-GCM); öffnen mit einsatzbericht-decrypt.html im Projekt."
-              onSelect={() => void onExportEinsatzberichtEncrypted()}
-            >
+            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtEncrypted()}>
               <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
               Kurzbericht verschlüsselt
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={messageCount === 0}
-              title="Intern ZIP, Download *.zip.enc.json — Passwort bei Abfragen und auf Hilfsseite."
-              onSelect={() => void onExportEinsatzprotokoll()}
-            >
+            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokoll()}>
               <Archive className="mr-2 h-4 w-4 opacity-80" aria-hidden />
               Einsatzbericht (ZIP, verschlüsselt)
             </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={messageCount === 0}
-              title="Direktes .zip zum Entpacken — nur in vertrauenswürdiger Umgebung."
-              onSelect={() => void onExportEinsatzprotokollPlainZip()}
-            >
+            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokollPlainZip()}>
               ZIP Klartext
             </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={protokollMarkedCount === 0}
-              title={
-                protokollMarkedCount === 0
-                  ? 'Mindestens eine Zeile mit ★ markieren.'
-                  : 'Nur ★-markierte Nachrichten.'
-              }
-              onSelect={() => void onExportEinsatzprotokollMarked()}
-            >
+            <DropdownMenuItem disabled={protokollMarkedCount === 0} onSelect={() => void onExportEinsatzprotokollMarked()}>
               ZIP nur ★ ({protokollMarkedCount})
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -278,12 +234,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         </button>
       </div>
     </div>
-    <p className="bg-muted/20 px-4 py-2 text-[11px] leading-snug text-muted-foreground sm:text-xs">
-      <UserPlus className="mr-1 inline h-3 w-3 shrink-0 align-text-bottom opacity-80" aria-hidden />
-      <span className="font-medium text-foreground/80">Telefonbuch:</span> bei eingehenden Zeilen mit 0x-Absender im
-      Zeilenmenü <span className="font-mono text-[10px]">⋯</span> den Punkt „Ins Telefonbuch“ wählen (nicht bei
-      eigenen Ausgängen).
-    </p>
     <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-4 py-2 text-xs">
       <button
         type="button"
@@ -331,13 +281,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         disabled={messageCount === 0}
         onClick={onHideAllVisibleLocal}
         className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
-        title="Blendet alle aktuell sichtbaren Zeilen nur in diesem Browser aus (sessionStorage)."
       >
         Alle sichtbaren lokal ausblenden
       </button>
-      <span className="max-w-md text-muted-foreground" title="sessionStorage bis Tab schließen">
-        Lokal ausblenden: erscheint wieder nach Tab-Schließen/Leeren oder anderem Gerät; Chain unverändert.
-      </span>
+      <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
     </div>
     </div>
   )

@@ -196,15 +196,13 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
               ) : null}
             </div>
             {isPrivate ? (
-              <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
+              <p className="sr-only">
                 {encrypted
-                  ? 'Schloss = Modus „privat + verschlüsselt“ für diesen Chat. Konkreter Sendeweg (online / funk / …), Mailbox- und Basis-Optionen: Karte „Verschlüsselung“ direkt unter dem Nachrichtenbereich — nicht in dieser Kopfzeile.'
-                  : 'Kein E2E. Sendeweg und Schalter: Karte „Verschlüsselung“ unter dem Nachrichtenbereich.'}
+                  ? 'Privat verschlüsselt: Sendeweg und Optionen in der Karte Verschlüsselung unter dem Nachrichtenbereich.'
+                  : 'Klartext: Sendeweg in der Karte Verschlüsselung unter dem Nachrichtenbereich.'}
               </p>
             ) : (
-              <p className="mt-0.5 text-xs leading-snug text-muted-foreground sm:text-sm">
-                Unverschlüsselt auf der gewählten Route
-              </p>
+              <p className="sr-only">Pinnwand unverschlüsselt.</p>
             )}
           </div>
         </div>

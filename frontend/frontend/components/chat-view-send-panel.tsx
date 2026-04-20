@@ -6,9 +6,8 @@
  */
 
 import { useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, Check, Info, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
@@ -22,14 +21,6 @@ import type {
   VoiceRecordSendPanelPort,
 } from '@/frontend/features/messenger-ports'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
-import {
-  MessengerGuideHint,
-  MessengerHandbookChatLink,
-  MESSENGER_HB_ANCHOR_FUNK_KLARTEXT,
-  MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
-  MESSENGER_HB_ANCHOR_PATH4,
-} from '@/components/messenger-handbook-link'
-
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
 /** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
@@ -230,8 +221,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     return { luma, chroma }
   }, [loraOnlineFallbackOffer?.reasonLabel])
 
-  const showFunkPlaintextToMeshHint = isPrivate && encrypted && forcedTransport === 'internet'
-
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="space-y-4">
@@ -245,40 +234,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               placeholder="0x..."
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            <p className="mt-1 text-xs text-muted-foreground">
-              {forcedTransport === 'mesh'
-                ? 'Online/Mailbox: 0x-Empfänger nötig. Funk-Klartext-Broadcast: 0x leer lassen möglich, wenn Heltec verbunden und „an Node-ID“ aus ist.'
-                : 'Bei unverschlüsselten Nachrichten muss die Empfänger-Adresse (0x…) angegeben werden.'}
-            </p>
           </div>
         )}
 
         {!encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-semibold text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
-              <MessengerGuideHint
-                ariaLabel="Hilfe Funk Klartext"
-                teaser="Mehr"
-                anchor={MESSENGER_HB_ANCHOR_FUNK_KLARTEXT}
-              />
-              <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_FUNK_KLARTEXT} />
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              Standard-Meshtastic-Text — ohne Morgendrot-Mesh-v2 und ohne{' '}
-              <span className="font-mono">/connect</span>. Broadcast an alle im Kanal, oder Ziel-Knoten (
-              <span className="font-mono">!…</span> wie am Radio angezeigt).
-            </p>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Handshake:</span> Vor Handshake starten Partner-Adresse
-              prüfen. Nach erfolgreichem Handshake kann der Partner im Rahmen der Mailbox mit dir kommunizieren – Tresor
-              und operative Daten separat absichern.{' '}
-              <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST} className="align-middle" />
-            </p>
-            <p className="text-[11px] leading-relaxed text-muted-foreground">
-              <span className="font-medium text-foreground">Nur Klartext + „funk“.</span> Verschlüsselung nutzt den
-              Online/IOTA-Pfad — nicht den Funk-Composer.
-            </p>
+            <p className="text-[11px] font-semibold text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
             <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -309,12 +270,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {forcedTransport === 'mesh' && isPrivate && (
           <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
-            {encrypted ? (
-              <p className="mb-2 text-[11px] leading-snug text-emerald-100/90 dark:text-emerald-50/90">
-                E2E gilt für <strong className="text-foreground">Online/IOTA</strong>; Funk bleibt Klartext. Zum Node-Ziel
-                und weiteren Funk-Optionen: oben <span className="font-mono">funk</span> wählen (Klartext bestätigen).
-              </p>
-            ) : null}
             <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -323,21 +278,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 data-testid="mesh-path4-self-archive"
                 className="mt-0.5 border-border"
               />
-              <span className="min-w-0 flex-1 space-y-1">
-                <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
-                <span className="block space-y-1 text-xs text-muted-foreground">
-                  <span className="block leading-relaxed">
-                    Nach erfolgreichem Klartext-Funk: Kopie per Klartext-Mailbox an deine MY_ADDRESS (Tangle) + optionale
-                    Forensic-Attestation. Unterstützt jetzt Kurztext sowie LoRa-Bildzweiteiler (LUMA/CHROMA) als
-                    Klartext-Funk; Produkt-Versand kein App-Mesh-v2. Nicht unterstützt: Audio/.txt/IOTA-Kompaktbild
-                    direkt.
-                  </span>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <MessengerGuideHint ariaLabel="Hilfe Pfad 4" teaser="Mehr" anchor={MESSENGER_HB_ANCHOR_PATH4} />
-                    <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_PATH4} />
-                  </span>
-                </span>
-              </span>
+              <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
             </label>
           </div>
         )}
@@ -352,65 +293,23 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <label htmlFor="chat-composer-message" className="text-sm font-medium text-foreground">
-              Nachricht
-            </label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
-                  <Info className="h-3.5 w-3.5 shrink-0 opacity-90" aria-hidden />
-                  Hilfe (Text, Funk, Handbuch)
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="max-h-[min(70vh,24rem)] w-[min(calc(100vw-2rem),22rem)] space-y-3 overflow-y-auto text-xs leading-relaxed"
-                align="end"
-              >
-                {showFunkPlaintextToMeshHint ? (
-                  <p className="text-muted-foreground">
-                    <strong className="text-foreground">Funk-Klartext:</strong> oben Sendepfad{' '}
-                    <span className="font-mono">funk</span> wählen — kurz bestätigen, dann erscheinen hier{' '}
-                    <strong className="text-foreground">An Node-ID senden</strong> und{' '}
-                    <strong className="text-foreground">LoRa + eigene Verankerung (Pfad 4)</strong>.
-                  </p>
-                ) : null}
-                <p className="text-muted-foreground">
-                  Sprachmemo max. <span className="tabular-nums">{voiceMaxSeconds}s</span> — nur bei{' '}
-                  <strong className="text-foreground">Online/IOTA</strong>.
-                </p>
-                {forcedTransport !== 'internet' ? (
-                  <p className="text-muted-foreground">
-                    Sprachmemo ist im Einsatzmodus aktuell <strong className="text-foreground">nur bei Online/IOTA</strong>{' '}
-                    aktiv — bei „online“ neben „Online senden“.
-                  </p>
-                ) : null}
-                <div className="border-t border-border/60 pt-2">
-                  <MessengerHandbookChatLink />
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+          <label htmlFor="chat-composer-message" className="mb-2 block text-sm font-medium text-foreground">
+            Nachricht
+          </label>
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}
             pickDisabled={voiceLocksComposer}
           />
           {!encrypted && forcedTransport === 'mesh' && (
-            <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs leading-snug text-orange-50">
-              <strong>EINSATZMODUS KLARTEXT-LORA:</strong> mitlesbar und fälschbar durch Reichweite-Teilnehmer. Nur sehr
-              kurze Notfall-Texte.{' '}
-              <span className="tabular-nums">
-                {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS} Zeichen
-              </span>
+            <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
+              <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
+              Zeichen
               {attachmentBarProps.attachedBlobBase64 ||
               attachmentBarProps.attachedAudioBase64 ||
               attachmentBarProps.attachedTxtFile != null ||
               attachmentBarProps.attachedLora != null
-                ? ' · Anhänge bei Klartext-Funk nicht erlaubt (kein Bild/Sprachmemo/.txt/LoRa-Zweiteiler).'
+                ? ' · keine Anhänge'
                 : null}
             </div>
           )}

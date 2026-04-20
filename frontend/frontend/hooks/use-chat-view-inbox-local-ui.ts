@@ -249,20 +249,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerBlockedNorms,
   ])
 
+  /** Nur Gegenüber mit mindestens einer reinen Mailbox-/Online-Zeile (ohne Mesh-Anteil) — keine LoRa-only-Partner. */
   const inboxPartnerOptionsIota = useMemo(() => {
-    const byNorm = new Map<string, string>()
-    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
-    for (const a of uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messageTouchesInternetTransport)) {
-      byNorm.set(a.trim().toLowerCase(), a.trim())
-    }
-    const addrs = Array.from(byNorm.values())
-      .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
-      .filter((address) => {
-        const k = address.trim().toLowerCase()
-        const f = partnerTransportFlags.get(k)
-        if (f == null) return true
-        return f.iota === true
-      })
+    const addrs = uniqueCounterpartyAddressesWhen(displayMessages, myAddress, messagePureInternetInboxRow).filter(
+      (a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase())
+    )
     addrs.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
     return addrs.map((address) => {
       const label = contactDisplayLabel(contactDirectory, address)
@@ -272,14 +263,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           : address
       return { address, label: label || short }
     })
-  }, [
-    displayMessages,
-    myAddress,
-    contactDirectory,
-    inboxPartnerMemory,
-    partnerTransportFlags,
-    inboxPartnerBlockedNorms,
-  ])
+  }, [displayMessages, myAddress, contactDirectory, inboxPartnerBlockedNorms])
 
   const removeInboxPartnerFromQuickList = useCallback(
     (

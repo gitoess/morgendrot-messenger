@@ -20,7 +20,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { SendTransportChoicePort } from '@/frontend/features/messenger-ports'
-import { MessengerGuideHint } from '@/components/messenger-handbook-link'
 
 export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
@@ -127,21 +126,6 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             Unverschlüsselt
           </button>
         </div>
-        <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {encrypted ? (
-            <>
-              <span>Ende-zu-Ende mit Partner-Schlüssel (Vault am Node).</span>
-              <MessengerGuideHint ariaLabel="Hinweise Verschlüsselung" teaser="Mehr" />
-            </>
-          ) : forcedTransport === 'internet' ? (
-            'Klartext: sichtbar in der Chain (/send-plain).'
-          ) : (
-            <>
-              <span>funk = Klartext (LongFast). Verschlüsselung: „online“.</span>
-              <MessengerGuideHint ariaLabel="Hinweise Funk vs. online" teaser="Mehr" />
-            </>
-          )}
-        </span>
         {isPrivate && onTogglePartnerSetup ? (
           <button
             type="button"
@@ -188,10 +172,10 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               Mailbox
             </button>
           </div>
-          <span className="max-w-xl text-[11px] leading-relaxed text-muted-foreground">
+          <span className="sr-only">
             {messagingPersistenceMode === 'mailbox'
-              ? 'Speicherung in der Mailbox (wenn Backend/Move konfiguriert) — gleiche Quelle wie verschlüsselte Nachrichten.'
-              : 'Klassischer Event-Pfad (send_plaintext_message) — wie bisheriger Standard.'}
+              ? 'Klartext-Mailbox-Speicherung, wenn Backend konfiguriert.'
+              : 'Klartext-Event-Pfad send_plaintext_message.'}
           </span>
         </div>
       )}
@@ -240,9 +224,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             ) : null}
           </div>
           {apiStatus?.rpcSocksProxyActive || apiStatus?.rpcHttpProxyActive ? (
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
-              RPC-Proxy aktiv (SOCKS und/oder HTTP) — Tor/HTTP siehe Handbuch.
-            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400">RPC-Proxy aktiv (SOCKS/HTTP).</p>
           ) : null}
         </div>
       )}

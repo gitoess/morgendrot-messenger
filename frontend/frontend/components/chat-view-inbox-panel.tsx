@@ -121,8 +121,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
       {(props.role || '').trim().toLowerCase() === 'boss' ? (
         <details className="border-b border-border/80 bg-muted/15 px-3 py-2">
           <summary className="cursor-pointer text-xs font-medium text-foreground">
-            Boss: Einsatz-Profil / Kontakte (initialProfile) —{' '}
-            <span className="font-normal text-muted-foreground">nur Steuerung; ausklappen</span>
+            Boss: Einsatz-Profil / Kontakte
           </summary>
           <div className="mt-3 border-t border-border/60 pt-3">
             <ChatViewEinsatzProfilInline hideOuterCollapsible />

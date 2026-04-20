@@ -8,6 +8,8 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **UI:** Erklär-Hinweise, Popover-Hilfe, sichtbare Handbuch-/Guide-Links und lange Tooltips in Chat/Toolbar/Transport-Karte reduziert bzw. nur noch **`sr-only`** wo nötig; Posteingangs-Telefonbuch-Zeile entfernt (Kurzhinweis nur für Screenreader).
+- **IOTA/Mailbox-Chips:** nur noch Gegenüber mit **reinen Mailbox-/Online-Zeilen** (ohne Mesh), keine LoRa-only-Adressen mehr in dieser Zeile.
 - **Posteingang:** Filter **„Nur IOTA“** (reine Mailbox-/Online-Zeilen ohne Mesh-Anteil), gegenseitig exclusiv zu **„Nur LoRa/Mesh“** (`sessionStorage` **`morg.inbox.iotaTransportOnly.v1`**); **`messagePureInternetInboxRow`** in **`inbox-partner-filter.ts`** + Vitest.
 - **Posteingang-Kopf:** **Pakete**- und **Export**-Dropdowns (`.morg-pkg`, Einsatzbericht-/ZIP-Aktionen, Hilfe-Link); weniger Button-Leiste.
 - **Boss:** **Einsatz-Profil / Kontakte** aus dem Chat-Kopf entfernt — nur bei Rolle **Boss** im Posteingang unter ausklappbarem Block; **`ChatViewEinsatzProfilInline`** mit **`hideOuterCollapsible`**.

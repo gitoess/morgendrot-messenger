@@ -213,7 +213,6 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           ))}
           <button
             type="button"
-            title="Nur Zeilen mit Funk/Mesh (lokal archiviert). Schließt „Nur IOTA“ aus."
             onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
             className={cn(
               'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
@@ -226,7 +225,6 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           </button>
           <button
             type="button"
-            title="Nur Mailbox-/Online-Zeilen ohne Mesh-Anteil. Schließt „Nur LoRa/Mesh“ aus."
             onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
             className={cn(
               'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',

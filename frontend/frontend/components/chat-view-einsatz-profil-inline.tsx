@@ -121,13 +121,17 @@ export function ChatViewEinsatzProfilInline(p?: ChatViewEinsatzProfilInlineProps
           : 'space-y-3 border-t border-border/60 px-4 pb-4 pt-2'
       }
     >
-      <p className="text-sm text-muted-foreground">
-        JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
-        <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
-        <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
-        <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
-        <span className="font-mono text-xs">offlineBriefing</span>.
-      </p>
+      {hideOuterCollapsible ? (
+        <p className="sr-only">initialProfile oder jsonConfig einfügen; siehe docs/API-INITIAL-PROFILE.md</p>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          JSON aus dem Boss-Export: <span className="font-mono text-xs">initialProfile</span> oder gesamte{' '}
+          <span className="font-mono text-xs">jsonConfig</span>. Wird ins Backend{' '}
+          <span className="font-mono text-xs">.morgendrot-contact-labels.json</span> geschrieben —{' '}
+          <span className="font-mono text-xs">docs/API-INITIAL-PROFILE.md</span>. Optional:{' '}
+          <span className="font-mono text-xs">offlineBriefing</span>.
+        </p>
+      )}
       {offlineBriefingDisplay ? (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
           <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
