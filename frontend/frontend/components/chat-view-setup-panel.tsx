@@ -21,10 +21,15 @@ import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-swee
 
 export type ChatViewSetupPanelMeshtastic = {
   bleSupported: boolean
+  serialSupported: boolean
+  transportKind: 'bluetooth' | 'usb'
   connected: boolean
   connecting: boolean
   error: string | null
+  lastRxDebug?: string | null
   connect: () => Promise<void>
+  connectBluetooth: () => Promise<void>
+  connectUsb: () => Promise<void>
   disconnect: () => void
 }
 
@@ -266,13 +271,19 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           Adress-Fingerprint). Export/Import: Mesh-Metadaten inkl. <span className="font-mono">bleUuid</span>-Reserve.
         </p>
         <div className="mb-4 flex flex-wrap gap-2">
-          {!meshtastic.bleSupported ? (
+          {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              Web Bluetooth nicht verfügbar (Browser/OS).
+              Web Bluetooth/Serial nicht verfügbar (Browser/OS).
             </span>
           ) : meshtastic.connected ? (
             <>
               <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic verbunden</span>
+              <span className="text-[11px] text-muted-foreground">
+                Transport: {meshtastic.transportKind === 'usb' ? 'USB (Web Serial)' : 'Bluetooth (Web BT)'}
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                RX: {meshtastic.lastRxDebug ?? 'noch kein Paket gesehen'}
+              </span>
               <button
                 type="button"
                 onClick={() => meshtastic.disconnect()}
@@ -282,14 +293,28 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               </button>
             </>
           ) : (
-            <button
-              type="button"
-              disabled={meshtastic.connecting}
-              onClick={() => void meshtastic.connect()}
-              className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
-            >
-              {meshtastic.connecting ? 'Verbinde…' : 'Heltec (Web Bluetooth) verbinden'}
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={meshtastic.connecting || !meshtastic.bleSupported}
+                onClick={() => void meshtastic.connectBluetooth()}
+                className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              >
+                {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
+                  ? 'Verbinde…'
+                  : 'Bluetooth verbinden'}
+              </button>
+              <button
+                type="button"
+                disabled={meshtastic.connecting || !meshtastic.serialSupported}
+                onClick={() => void meshtastic.connectUsb()}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              >
+                {meshtastic.connecting && meshtastic.transportKind === 'usb'
+                  ? 'USB verbindet…'
+                  : 'USB verbinden'}
+              </button>
+            </>
           )}
         </div>
         {meshtastic.error && (

@@ -18,13 +18,14 @@
     "check:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx ./frontend"
   },
   "dependencies": {
-    "@morgendrot/shared": "file:../src/shared",
-    "@morgendrot/core": "file:../packages/morgendrot-core",
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/core": "^8.3.0",
     "@hookform/resolvers": "^3.9.1",
     "@meshtastic/core": "^2.6.7",
     "@meshtastic/transport-web-bluetooth": "^0.1.5",
+    "@meshtastic/transport-web-serial": "^0.2.5",
+    "@morgendrot/core": "file:../packages/morgendrot-core",
+    "@morgendrot/shared": "file:../src/shared",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
     "@radix-ui/react-aspect-ratio": "1.1.8",

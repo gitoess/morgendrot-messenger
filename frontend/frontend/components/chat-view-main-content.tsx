@@ -394,10 +394,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onConnect={handleConnect}
           meshtastic={{
             bleSupported: meshtastic.bleSupported,
+            serialSupported: meshtastic.serialSupported,
+            transportKind: meshtastic.transportKind,
             connected: meshtastic.connected,
             connecting: meshtastic.connecting,
             error: meshtastic.error,
+            lastRxDebug: meshtastic.lastRxDebug,
             connect: meshtastic.connect,
+            connectBluetooth: meshtastic.connectBluetooth,
+            connectUsb: meshtastic.connectUsb,
             disconnect: meshtastic.disconnect,
           }}
           directory={directory}

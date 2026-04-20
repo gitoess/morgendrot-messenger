@@ -61,6 +61,15 @@ export function filterInboxMessagesByPartnerAndDirection(
 ): Message[] {
   return messages.filter((m) => {
     const selfToSelf = isMessageSelfToSelf(m, myAddress)
+    const incomingMeshUnmapped =
+      (m.source === 'mesh' || m.transports?.includes('mesh')) &&
+      !isMessageOutgoing(m, myAddress) &&
+      typeof m.from === 'string' &&
+      m.from.startsWith('mesh:')
+    if (incomingMeshUnmapped) {
+      // Mesh-Eingang (ohne 0x-Mapping) immer anzeigen, sonst verschwindet er leicht durch Richtung/Partnerfilter.
+      return true
+    }
     if (direction === 'in' && isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (!partnerAddress) return true
