@@ -104,8 +104,9 @@ Empfangene Menge \(R \subseteq \{0,\ldots,N-1\}\) (Indices mit gültigem Frame).
 ### 3.2 NAK-Trigger
 
 - Empfang **DONE** für (`msgId`, `phase`), oder
-- Timeout \(T\) nach letztem Segment-Frame (Policy), oder
+- Timeout \(T\) nach dem **letzten neuen** Segment-Frame (Rebroadcast desselben `seg` **verlängert** \(T\) nicht — sonst NAK zu früh bei Duplikaten). **Referenz-Client:** \(T = 15\,\mathrm{s}\) (`MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT`) als Mesh-Mehrhop-Heuristik (typ. einige Sekunden pro Hop; kein formaler FP-Beweis).
 - Sprung in `seg` erkennbar fehlend (optional).
+- Nach \(K\) NAK-Runden ohne Vollständigkeit: **keine weiteren NAKs** für diese Session (**Freeze**); späte Segmente können trotzdem noch bis **ASSEMBLE** führen. **Referenz:** \(K=3\) (`MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT`).
 
 ### 3.3 NAK-Nachricht (kompakt)
 

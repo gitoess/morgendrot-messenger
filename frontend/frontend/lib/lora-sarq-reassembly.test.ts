@@ -28,9 +28,31 @@ describe('MorgSegV1ReassemblyBuffer', () => {
     expect(r.assembled && Array.from(r.assembled)).toEqual([9])
   })
 
-  it('suggestNakIfIncomplete', () => {
-    const b = new MorgSegV1ReassemblyBuffer()
+  it('emitIdleNakRound: volle Fehlmaske, nach maxRounds frozen', () => {
+    const b = new MorgSegV1ReassemblyBuffer({ maxNakRounds: 3 })
     b.ingest(seg('cccccccc', 'chroma', 0, 2, [7]))
-    expect(b.suggestNakIfIncomplete()).toMatch(/mask=00000002/)
+    expect(b.emitIdleNakRound()).toMatch(/mask=00000002/)
+    expect(b.emitIdleNakRound()).toMatch(/mask=00000002/)
+    expect(b.emitIdleNakRound()).toMatch(/mask=00000002/)
+    expect(b.emitIdleNakRound()).toBeNull()
+    expect(b.isSessionFrozen()).toBe(true)
+    expect(b.getNakRoundsSent()).toBe(3)
+  })
+
+  it('Duplikat-Segment: Gate „Neu?“, kein zweites Mal zählen', () => {
+    const b = new MorgSegV1ReassemblyBuffer()
+    const p0 = seg('dddddddd', 'luma', 0, 2, [1])
+    expect(b.ingest(p0)).toEqual({})
+    expect(b.ingest(p0)).toEqual({ duplicateSegment: true })
+    expect(b.getReceivedMaskLower32()).toBe(1)
+  })
+
+  it('nach Freeze können späte Segmente noch vervollständigen', () => {
+    const b = new MorgSegV1ReassemblyBuffer({ maxNakRounds: 1 })
+    b.ingest(seg('eeeeeeee', 'luma', 0, 2, [1]))
+    expect(b.emitIdleNakRound()).not.toBeNull()
+    expect(b.isSessionFrozen()).toBe(true)
+    const r = b.ingest(seg('eeeeeeee', 'luma', 1, 2, [2]))
+    expect(r.assembled && Array.from(r.assembled)).toEqual([1, 2])
   })
 })

@@ -2,30 +2,45 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
-import { MorgSegV1ReassemblyBuffer } from '@/frontend/lib/lora-sarq-reassembly'
+import {
+  MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT,
+  MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT,
+  MorgSegV1ReassemblyBuffer,
+} from '@/frontend/lib/lora-sarq-reassembly'
 
 export type UseMorgSegReassemblyOpts = {
-  /** Nach letztem gültigen `MORG_SEG_V1`-Frame: NAK auslösen, falls noch Lücken. */
-  idleTimeoutMs: number
+  /**
+   * Nach letztem **neuen** Segment (Gate „Neu?“): Idle, dann NAK. Default 15 s (Mesh-Mehrhop-Heuristik).
+   */
+  idleTimeoutMs?: number
+  maxNakRounds?: number
   onNakWire: (wire: string) => void
-  /** Optional: wenn alle Segmente da sind (Reihenfolge 0..n-1). */
   onAssembled?: (bytes: Uint8Array, meta: { msgId: string; phase: 'luma' | 'chroma' }) => void
+  /** Nach `maxNakRounds` NAKs ohne Vollständigkeit (Stufe 3). */
+  onSessionFrozen?: (meta: { msgId: string; phase: 'luma' | 'chroma'; n: number }) => void
 }
 
 export type IngestMorgSegWireResult = {
   parsed: ReturnType<typeof parseMorgSegV1Message>
   assembled?: Uint8Array
+  duplicateSegment?: true
 }
 
 /**
- * Reassembly + Idle-Timer: bei Timeout oder Sessionwechsel mit Lücken → `buildMorgNakV1Wire` über `onNakWire`.
+ * Reassembly + Idle-Timer: Stufe 2 (`emitIdleNakRound`), Stufe 3 (Freeze nach `maxNakRounds`),
+ * Timer nur bei neuen Segmenten (Duplikat-Rebroadcast resettet 15 s nicht).
  */
 export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
-  const buffer = useMemo(() => new MorgSegV1ReassemblyBuffer(), [])
+  const maxRounds = opts.maxNakRounds ?? MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT
+  const buffer = useMemo(() => new MorgSegV1ReassemblyBuffer({ maxNakRounds: maxRounds }), [maxRounds])
   const onNakRef = useRef(opts.onNakWire)
   const onAssembledRef = useRef(opts.onAssembled)
+  const onSessionFrozenRef = useRef(opts.onSessionFrozen)
+  const idleMsRef = useRef(opts.idleTimeoutMs ?? MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT)
   onNakRef.current = opts.onNakWire
   onAssembledRef.current = opts.onAssembled
+  onSessionFrozenRef.current = opts.onSessionFrozen
+  idleMsRef.current = opts.idleTimeoutMs ?? MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const clearIdleTimer = useCallback(() => {
@@ -35,16 +50,26 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
     }
   }, [])
 
-  const scheduleIdleTimer = useCallback(() => {
+  const armIdleTimer = useCallback(() => {
     clearIdleTimer()
-    const ms = opts.idleTimeoutMs
+    const ms = idleMsRef.current
     if (!Number.isFinite(ms) || ms <= 0) return
-    timerRef.current = setTimeout(() => {
+
+    const tick = () => {
       timerRef.current = null
-      const w = buffer.suggestNakIfIncomplete()
+      const w = buffer.emitIdleNakRound()
       if (w) onNakRef.current(w)
-    }, ms)
-  }, [buffer, clearIdleTimer, opts.idleTimeoutMs])
+      const meta = buffer.getActiveSession()
+      if (buffer.isSessionFrozen() && meta) {
+        onSessionFrozenRef.current?.({ msgId: meta.msgId, phase: meta.phase, n: meta.n })
+      }
+      if (buffer.needsIdleTimer()) {
+        timerRef.current = setTimeout(tick, idleMsRef.current)
+      }
+    }
+
+    timerRef.current = setTimeout(tick, ms)
+  }, [buffer, clearIdleTimer])
 
   useEffect(() => () => clearIdleTimer(), [clearIdleTimer])
 
@@ -56,16 +81,22 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
       const r = buffer.ingest(parsed)
       if (r.staleSessionNak) onNakRef.current(r.staleSessionNak)
 
+      if (r.duplicateSegment) {
+        return { parsed, duplicateSegment: true }
+      }
+
       if (r.assembled) {
         clearIdleTimer()
         onAssembledRef.current?.(r.assembled, { msgId: parsed.msgId, phase: parsed.phase })
         return { parsed, assembled: r.assembled }
       }
 
-      scheduleIdleTimer()
+      if (buffer.needsIdleTimer()) armIdleTimer()
+      else clearIdleTimer()
+
       return { parsed }
     },
-    [buffer, clearIdleTimer, scheduleIdleTimer]
+    [buffer, clearIdleTimer, armIdleTimer]
   )
 
   const reset = useCallback(() => {

@@ -1,10 +1,25 @@
 /**
- * Morgendrot S-ARQ — Reassembly-Puffer für `MORG_SEG_V1` (pro msgId+phase).
- * Segmentlängen können variieren; Speicherung pro Index, Zusammenbau bei Vollständigkeit.
+ * Morgendrot S-ARQ — Reassembly-Puffer für `MORG_SEG_V1` (pro msgId+phase+n).
+ *
+ * **„Binäre 3“ (Zustand):** (1) passiv sammeln → (2) NAK nach Idle → (3) nach `maxNakRounds`
+ * ohne Vollständigkeit: Session **eingefroren** (keine weiteren NAKs, kein Timer-Spam).
+ *
+ * **„Logische 4“ (pro Segment):** (1) **Gültig** = CRC ok (bereits in `parseMorgSegV1Message`) →
+ * (2) **Zugehörig** = gleiche Session (`msgId`+`phase`+`n`) → (3) **Neu** = Index noch nicht
+ * gespeichert (Duplikat-Rebroadcast ignorieren, kein Idle-Reset) → (4) **Vollständig** =
+ * alle Indizes 0..n-1 da → zusammenbauen, Session schließen.
+ *
+ * Segmentlängen variieren → Speicherung `Map<seg, Uint8Array>`, kein fixes `n×321`-Array.
  */
 
 import type { ParsedMorgSegV1 } from '@/frontend/lib/lora-sarq-parser'
 import { buildMorgNakV1Wire, nakMaskFromMissingIndices } from '@/frontend/lib/lora-sarq-wire'
+
+/** Mesh-Heuristik: ~2–5 s/Hop, bis ca. 3 Hops + Spielraum → weniger „NAK aus Luft“. */
+export const MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT = 15_000
+
+/** Stufe 3: maximale NAK-Runden pro Session (Airtime / Akku). */
+export const MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT = 3
 
 export type MorgSegV1SessionKey = `${string}:${'luma' | 'chroma'}`
 
@@ -17,14 +32,23 @@ export type MorgSegV1IngestResult = {
   assembled?: Uint8Array
   /** NAK für eine verworfene, noch unvollständige Session (z. B. Phasen-/MsgId-Wechsel). */
   staleSessionNak?: string
+  /** Gleicher Index war schon da (Gate „Neu?“) — Idle-Timer nicht anstoßen. */
+  duplicateSegment?: true
+}
+
+export type MorgSegV1ReassemblyBufferOpts = {
+  maxNakRounds?: number
 }
 
 type ActiveSession = {
   msgId: string
   phase: 'luma' | 'chroma'
   n: number
-  /** Segmentindex → Nutzlastbytes (CRC bereits im Parser geprüft). */
   segs: Map<number, Uint8Array>
+  /** Anzahl bereits gesendeter Idle-NAKs in dieser Session. */
+  nakRoundsSent: number
+  /** Nach `maxNakRounds` NAKs ohne Erfolg: keine weiteren NAKs / kein erneutes Idle für diese Session. */
+  frozen: boolean
 }
 
 function missingSegIndices(s: ActiveSession): number[] {
@@ -63,10 +87,27 @@ function nakWireForSession(s: ActiveSession): string | null {
   return buildMorgNakV1Wire({ msgId: s.msgId, phase: s.phase, mask })
 }
 
+function newSessionFromFirstSeg(parsed: ParsedMorgSegV1): ActiveSession {
+  const segs = new Map<number, Uint8Array>()
+  segs.set(parsed.seg, parsed.raw)
+  return {
+    msgId: parsed.msgId,
+    phase: parsed.phase,
+    n: parsed.n,
+    segs,
+    nakRoundsSent: 0,
+    frozen: false,
+  }
+}
+
 export class MorgSegV1ReassemblyBuffer {
   private session: ActiveSession | null = null
+  private readonly maxNakRounds: number
 
-  /** Verwirft den aktuellen Puffer (kein NAK). */
+  constructor(opts: MorgSegV1ReassemblyBufferOpts = {}) {
+    this.maxNakRounds = opts.maxNakRounds ?? MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT
+  }
+
   reset(): void {
     this.session = null
   }
@@ -77,19 +118,50 @@ export class MorgSegV1ReassemblyBuffer {
     return { msgId: s.msgId, phase: s.phase, n: s.n }
   }
 
-  /**
-   * Timeout-Handler: NAK für die aktuelle Session, wenn noch Lücken bestehen.
-   * Gibt `null`, wenn idle oder schon komplett.
-   */
-  suggestNakIfIncomplete(): string | null {
+  /** Empfangsbitmaske Bits `0..min(n-1,31)` (1 = Segment gespeichert). */
+  getReceivedMaskLower32(): number {
     const s = this.session
-    if (!s || isComplete(s)) return null
-    return nakWireForSession(s)
+    if (!s) return 0
+    let m = 0
+    for (const i of s.segs.keys()) {
+      if (i >= 0 && i <= 31) m |= 1 << i
+    }
+    return m >>> 0
+  }
+
+  isSessionFrozen(): boolean {
+    return this.session?.frozen ?? false
+  }
+
+  getNakRoundsSent(): number {
+    return this.session?.nakRoundsSent ?? 0
   }
 
   /**
-   * Verarbeitet ein geparstes Segment. Bei Sessionwechsel wird ggf. `staleSessionNak` gesetzt.
+   * Aktive Session existiert, ist unvollständig und nicht eingefroren → Idle-Timer sinnvoll.
    */
+  needsIdleTimer(): boolean {
+    const s = this.session
+    return s != null && !isComplete(s) && !s.frozen
+  }
+
+  /**
+   * Stufe 2 + 3: ein Idle-NAK bei Lücken, bis `maxNakRounds` Erzeugungen; danach **frozen** + `null`.
+   */
+  emitIdleNakRound(): string | null {
+    const s = this.session
+    if (!s || isComplete(s) || s.frozen) return null
+    if (s.nakRoundsSent >= this.maxNakRounds) {
+      s.frozen = true
+      return null
+    }
+    const wire = nakWireForSession(s)
+    if (!wire) return null
+    s.nakRoundsSent++
+    if (s.nakRoundsSent >= this.maxNakRounds) s.frozen = true
+    return wire
+  }
+
   ingest(parsed: ParsedMorgSegV1): MorgSegV1IngestResult {
     const cur = this.session
     const sameSession =
@@ -106,6 +178,17 @@ export class MorgSegV1ReassemblyBuffer {
     }
 
     if (cur != null && sameSession) {
+      if (cur.frozen) {
+        if (cur.segs.has(parsed.seg)) return { duplicateSegment: true }
+        cur.segs.set(parsed.seg, parsed.raw)
+        if (isComplete(cur)) {
+          const assembled = assembleOrdered(cur)
+          this.session = null
+          return { assembled }
+        }
+        return {}
+      }
+      if (cur.segs.has(parsed.seg)) return { duplicateSegment: true }
       cur.segs.set(parsed.seg, parsed.raw)
       if (isComplete(cur)) {
         const assembled = assembleOrdered(cur)
@@ -115,15 +198,7 @@ export class MorgSegV1ReassemblyBuffer {
       return {}
     }
 
-    // Neues Session-Objekt (erstes Segment dieser msgId/phase)
-    const segs = new Map<number, Uint8Array>()
-    segs.set(parsed.seg, parsed.raw)
-    this.session = {
-      msgId: parsed.msgId,
-      phase: parsed.phase,
-      n: parsed.n,
-      segs,
-    }
+    this.session = newSessionFromFirstSeg(parsed)
     const s = this.session
     if (isComplete(s)) {
       const assembled = assembleOrdered(s)
