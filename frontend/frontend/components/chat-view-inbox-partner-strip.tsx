@@ -3,6 +3,8 @@
 /**
  * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang), optional Nur LoRa/Mesh bzw. Nur IOTA.
  * Überlauf hinter „+n“-Menü; Klick setzt Filter und Empfängerfeld für den nächsten Versand.
+ * Wenn Nur-IOTA/Nur-Mesh in der Session aktiv ist, bleibt die Filterzeile sichtbar (auch ohne Wallet-Adresse),
+ * damit Funk-Zeilen nicht „verschwinden“, ohne dass man den Filter zurücksetzen kann.
  */
 
 import { useState } from 'react'
@@ -183,58 +185,88 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
   } = p
 
   const hasAnyPartners = partnerOptions.length > 0
-  if (!myAddressKnown && !hasAnyPartners) return null
+  /** Transport-Filter können in der Session hängen bleiben — Zeile muss sichtbar bleiben, sonst kein „Nur IOTA“ aus. */
+  const showTransportRow = myAddressKnown || meshTransportOnly || iotaTransportOnly
+
+  if (!showTransportRow && !hasAnyPartners) return null
+
+  const meshIotaToggleButtons = (
+    <>
+      <button
+        type="button"
+        onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
+        className={cn(
+          'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+          meshTransportOnly
+            ? 'border-sky-600 bg-sky-500/15 text-sky-900 dark:text-sky-100'
+            : 'border-border bg-background text-muted-foreground hover:bg-muted'
+        )}
+      >
+        Nur LoRa/Mesh
+      </button>
+      <button
+        type="button"
+        onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
+        className={cn(
+          'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+          iotaTransportOnly
+            ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
+            : 'border-border bg-background text-muted-foreground hover:bg-muted'
+        )}
+      >
+        Nur IOTA
+      </button>
+    </>
+  )
 
   return (
     <div className="space-y-2 border-b border-border/80 bg-muted/20 px-3 py-2">
-      {myAddressKnown ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
-          {(
-            [
-              ['all', 'Alle'],
-              ['in', 'Eingang'],
-              ['out', 'Ausgang'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => onDirectionChange(id)}
-              className={cn(
-                'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-                direction === id
-                  ? 'border-primary bg-primary/15 text-primary'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
-            className={cn(
-              'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-              meshTransportOnly
-                ? 'border-sky-600 bg-sky-500/15 text-sky-900 dark:text-sky-100'
-                : 'border-border bg-background text-muted-foreground hover:bg-muted'
+      {showTransportRow ? (
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {myAddressKnown ? (
+              <>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
+                {(
+                  [
+                    ['all', 'Alle'],
+                    ['in', 'Eingang'],
+                    ['out', 'Ausgang'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onDirectionChange(id)}
+                    className={cn(
+                      'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+                      direction === id
+                        ? 'border-primary bg-primary/15 text-primary'
+                        : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                Posteingang-Filter
+              </span>
             )}
-          >
-            Nur LoRa/Mesh
-          </button>
-          <button
-            type="button"
-            onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
-            className={cn(
-              'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-              iotaTransportOnly
-                ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
-                : 'border-border bg-background text-muted-foreground hover:bg-muted'
-            )}
-          >
-            Nur IOTA
-          </button>
+            {meshIotaToggleButtons}
+          </div>
+          {iotaTransportOnly ? (
+            <p className="text-xs text-amber-800 dark:text-amber-200" role="status">
+              „Nur IOTA“ ist aktiv: Funk- und Mesh-Zeilen werden im Posteingang ausgeblendet. Zum Anzeigen erneut auf
+              „Nur IOTA“ tippen (oder Sitzung ohne diesen Filter neu laden).
+            </p>
+          ) : null}
+          {meshTransportOnly ? (
+            <p className="text-xs text-sky-950/90 dark:text-sky-100/90" role="status">
+              „Nur LoRa/Mesh“ ist aktiv: reine Mailbox-/Online-Zeilen ohne Funk sind ausgeblendet.
+            </p>
+          ) : null}
         </div>
       ) : null}
       {hasAnyPartners ? (
