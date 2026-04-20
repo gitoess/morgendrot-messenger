@@ -38,27 +38,29 @@ export function buildMorgSegV1Wire(p: MorgSegV1HeaderDims & { raw: Uint8Array })
   return `[[MORG_SEG_V1:msgId=${p.msgId}|phase=${p.phase}|seg=${p.seg}|n=${p.n}|len=${b64.length}|${b64}|crc=${crcHex}]]`
 }
 
-/** NAK: Bit _i_ = 1 ⇒ Segmentindex _i_ fehlt (nachzusenden). Nur Indizes `< 16` in der Maske. */
+/** NAK: Bit _i_ = 1 ⇒ Segmentindex _i_ fehlt (nachzusenden). Maske 32 Bit (8 Hex-Ziffern). */
 export function buildMorgNakV1Wire(p: { msgId: string; phase: 'luma' | 'chroma'; mask: number }): string {
-  const m = p.mask & 0xffff
-  return `[[MORG_NAK_V1:msgId=${p.msgId}|phase=${p.phase}|mask=${m.toString(16).padStart(4, '0')}]]`
+  const m = p.mask >>> 0
+  return `[[MORG_NAK_V1:msgId=${p.msgId}|phase=${p.phase}|mask=${m.toString(16).padStart(8, '0')}]]`
 }
+
+export const MORG_NAK_V1_MASK_MAX_INDEX = 31
 
 export function nakMaskFromMissingIndices(missing: readonly number[]): number {
   let mask = 0
   for (const i of missing) {
-    if (!Number.isInteger(i) || i < 0 || i > 15) {
-      throw new RangeError(`NAK: Segmentindex muss 0..15 sein, war ${i}`)
+    if (!Number.isInteger(i) || i < 0 || i > MORG_NAK_V1_MASK_MAX_INDEX) {
+      throw new RangeError(`NAK: Segmentindex muss 0..${MORG_NAK_V1_MASK_MAX_INDEX} sein, war ${i}`)
     }
     mask |= 1 << i
   }
-  return mask & 0xffff
+  return mask >>> 0
 }
 
-/** Indizes _i_ mit Bit _i_ = 1 in `mask` (fehlende Segmente), nur _i_ < min(16, segmentCount). */
+/** Indizes _i_ mit Bit _i_ = 1 in `mask` (fehlende Segmente), nur _i_ < min(32, segmentCount). */
 export function missingIndicesFromNakMask(mask: number, segmentCount: number): number[] {
-  const m = mask & 0xffff
-  const cap = Math.min(16, Math.max(0, segmentCount))
+  const m = mask >>> 0
+  const cap = Math.min(32, Math.max(0, segmentCount))
   const out: number[] = []
   for (let i = 0; i < cap; i++) {
     if ((m >> i) & 1) out.push(i)

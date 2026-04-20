@@ -30,7 +30,7 @@ describe('NAK-Maske', () => {
 
   it('buildMorgNakV1Wire', () => {
     expect(buildMorgNakV1Wire({ msgId: 'cafebabe', phase: 'chroma', mask: 0x88 })).toBe(
-      '[[MORG_NAK_V1:msgId=cafebabe|phase=chroma|mask=0088]]'
+      '[[MORG_NAK_V1:msgId=cafebabe|phase=chroma|mask=00000088]]'
     )
   })
 })

@@ -109,13 +109,11 @@ Empfangene Menge \(R \subseteq \{0,\ldots,N-1\}\) (Indices mit gültigem Frame).
 
 ### 3.3 NAK-Nachricht (kompakt)
 
-Für \(N \le 16\): Bitmaske \(M = \sum_{i: b_i=0} 2^i\) als 4 Hex-Ziffern.
+Bitmaske \(M = \sum_{i: b_i=0} 2^i\) für fehlende Segmentindizes \(i\) (Bit \(i\) gesetzt = „Segment \(i\) fehlt“). Im Wire: **32 Bit** = **8 Hex-Ziffern** (Indizes \(0..31\)); fehlende \(i \ge 32\) sind in dieser Nachricht nicht kodierbar — ggf. zweite Runde / kürzeres \(N\) planen.
 
 ```text
-[[MORG_NAK_V1:msgId=<hex8>|phase=luma|mask=<hex4>]]
+[[MORG_NAK_V1:msgId=<hex8>|phase=luma|mask=<hex8>]]
 ```
-
-Für größeres \(N\): `mask` als hex \(\lceil N/4 \rceil\) Zeichen oder Base32 — in Spez festlegen.
 
 **Vorteil gegenüber `3,7`:** feste Länge, kein CSV-Parsing, keine Mehrdeutigkeit bei zweistelligen Indizes.
 
@@ -166,7 +164,7 @@ Parser-Reihenfolge in `ChatMessageBody`: zuerst V1 erkennen; wenn Teilstring `MO
 
 ### A.1 Referenz-Implementierung
 
-Siehe `frontend/frontend/lib/lora-sarq-wire.ts`: `crc16CcittFalse`, `buildMorgSegV1Wire`, `buildMorgNakV1Wire`, `nakMaskFromMissingIndices`, `missingIndicesFromNakMask`, `computeMaxMorgSegV1RawPayloadBytes`, Konstante `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES`.
+Siehe `frontend/frontend/lib/lora-sarq-wire.ts`: `crc16CcittFalse`, `buildMorgSegV1Wire`, `buildMorgNakV1Wire`, `nakMaskFromMissingIndices`, `missingIndicesFromNakMask`, `computeMaxMorgSegV1RawPayloadBytes`, Konstante `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES`. Parser/Reassembly: `lora-sarq-parser.ts`, `lora-sarq-reassembly.ts`, Hook `use-morg-seg-reassembly.ts`.
 
 Goldtest: ASCII `"123456789"` → CRC `0x29B1`.
 
