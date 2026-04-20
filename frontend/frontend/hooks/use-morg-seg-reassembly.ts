@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
 import {
   MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT,
@@ -14,7 +14,8 @@ export type UseMorgSegReassemblyOpts = {
    */
   idleTimeoutMs?: number
   maxNakRounds?: number
-  onNakWire: (wire: string) => void
+  /** Standard: no-op, wenn kein Funk-Rückkanal angebunden. */
+  onNakWire?: (wire: string) => void
   onAssembled?: (bytes: Uint8Array, meta: { msgId: string; phase: 'luma' | 'chroma' }) => void
   /** Nach `maxNakRounds` NAKs ohne Vollständigkeit (Stufe 3). */
   onSessionFrozen?: (meta: { msgId: string; phase: 'luma' | 'chroma'; n: number }) => void
@@ -30,14 +31,18 @@ export type IngestMorgSegWireResult = {
  * Reassembly + Idle-Timer: Stufe 2 (`emitIdleNakRound`), Stufe 3 (Freeze nach `maxNakRounds`),
  * Timer nur bei neuen Segmenten (Duplikat-Rebroadcast resettet 15 s nicht).
  */
+const noopNak = () => {}
+
 export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
   const maxRounds = opts.maxNakRounds ?? MORG_SEG_V1_REASSEMBLY_MAX_NAK_ROUNDS_DEFAULT
   const buffer = useMemo(() => new MorgSegV1ReassemblyBuffer({ maxNakRounds: maxRounds }), [maxRounds])
-  const onNakRef = useRef(opts.onNakWire)
+  const onNakRef = useRef(opts.onNakWire ?? noopNak)
   const onAssembledRef = useRef(opts.onAssembled)
   const onSessionFrozenRef = useRef(opts.onSessionFrozen)
   const idleMsRef = useRef(opts.idleTimeoutMs ?? MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT)
-  onNakRef.current = opts.onNakWire
+  const [uiTick, setUiTick] = useState(0)
+  const bumpUi = useCallback(() => setUiTick((x) => x + 1), [])
+  onNakRef.current = opts.onNakWire ?? noopNak
   onAssembledRef.current = opts.onAssembled
   onSessionFrozenRef.current = opts.onSessionFrozen
   idleMsRef.current = opts.idleTimeoutMs ?? MORG_SEG_V1_REASSEMBLY_IDLE_MS_DEFAULT
@@ -63,13 +68,14 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
       if (buffer.isSessionFrozen() && meta) {
         onSessionFrozenRef.current?.({ msgId: meta.msgId, phase: meta.phase, n: meta.n })
       }
+      bumpUi()
       if (buffer.needsIdleTimer()) {
         timerRef.current = setTimeout(tick, idleMsRef.current)
       }
     }
 
     timerRef.current = setTimeout(tick, ms)
-  }, [buffer, clearIdleTimer])
+  }, [buffer, clearIdleTimer, bumpUi])
 
   useEffect(() => () => clearIdleTimer(), [clearIdleTimer])
 
@@ -85,6 +91,8 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
         return { parsed, duplicateSegment: true }
       }
 
+      bumpUi()
+
       if (r.assembled) {
         clearIdleTimer()
         onAssembledRef.current?.(r.assembled, { msgId: parsed.msgId, phase: parsed.phase })
@@ -96,7 +104,7 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
 
       return { parsed }
     },
-    [buffer, clearIdleTimer, armIdleTimer]
+    [buffer, clearIdleTimer, armIdleTimer, bumpUi]
   )
 
   const reset = useCallback(() => {
@@ -104,5 +112,5 @@ export function useMorgSegReassembly(opts: UseMorgSegReassemblyOpts) {
     buffer.reset()
   }, [buffer, clearIdleTimer])
 
-  return { ingestWire, reset, buffer }
+  return { ingestWire, reset, buffer, uiTick }
 }

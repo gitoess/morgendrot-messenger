@@ -147,7 +147,7 @@ Zustände: `IDLE` → `HDR` (optional, falls msgId nur aus erstem SEG kommt) →
 - **V1** bleibt für kleine Bilder / Abwärtskompatibilität.
 - **S-ARQ** ist **opt-in** (Feature-Flag oder automatisch, wenn Roh-JPEG nach V1-Encode > eine Nachricht): Sender wählt `MORG_SEG_V1`-Strom statt monolithischem `MORG_LUMA_V1`.
 
-Parser-Reihenfolge in `ChatMessageBody`: zuerst V1 erkennen; wenn Teilstring `MORG_SEG_V1` für gleiche Session → S-ARQ-Pfad.
+Parser-Reihenfolge in `ChatMessageBody`: `MORG_SEG_V1` früh abfangen → `MorgSegV1ChatSink` (Fortschritt + optional JPEG), kein Roh-Wire in der Sprechblase. Inbox: `buildChatInboxRows` blendet Folge-Segmente derselben Session aus (**eine Leit-Zeile** pro `msgId`+`phase`+`n`+Absender).
 
 ---
 

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import { buildMorgNakV1Wire, buildMorgSegV1Wire, crc16CcittFalse } from '@/frontend/lib/lora-sarq-wire'
-import { parseMorgNakV1Message, parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
+import {
+  messageLooksLikeMorgSegV1Wire,
+  parseMorgNakV1Message,
+  parseMorgSegV1Message,
+} from '@/frontend/lib/lora-sarq-parser'
+
+describe('messageLooksLikeMorgSegV1Wire', () => {
+  it('erkennt Präfix nach Normalisierung', () => {
+    const w = buildMorgSegV1Wire({ msgId: '11111111', phase: 'luma', seg: 0, n: 1, raw: new Uint8Array([1]) })
+    expect(messageLooksLikeMorgSegV1Wire(`  ${w}  `)).toBe(true)
+    expect(messageLooksLikeMorgSegV1Wire('hello')).toBe(false)
+  })
+})
 
 describe('parseMorgSegV1Message', () => {
   it('roundtrip mit buildMorgSegV1Wire', () => {

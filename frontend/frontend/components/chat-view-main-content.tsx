@@ -26,6 +26,7 @@ import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
+import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
 
 export type ChatViewMainContentProps = ChatViewCoreState
 
@@ -217,6 +218,22 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [directory, myAddress, refreshContactDirectory, setStatus, setStatusMsg]
   )
 
+  const onSarqNakWire = useCallback(
+    async (wire: string) => {
+      if (!meshtastic.connected) return
+      const resolved = meshPlaintextToNodeEnabled
+        ? resolveMeshtasticPlaintextDestination(true, meshPlaintextNodeId)
+        : 'broadcast'
+      const dest = resolved === null ? 'broadcast' : resolved
+      try {
+        await meshtastic.sendMeshText(wire, dest)
+      } catch {
+        /* NAK optional; Chat bleibt bedienbar */
+      }
+    },
+    [meshtastic, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
+  )
+
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
     messageCount: messages.length,
@@ -277,6 +294,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setStatus,
     setStatusMsg,
     onAddSenderToContactBook: addInboxSenderToContactBook,
+    onSarqNakWire,
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {

@@ -7,6 +7,11 @@ import { crc16CcittFalse } from '@/frontend/lib/lora-sarq-wire'
 import { base64ToUint8Array } from '@/frontend/lib/emergency-binary-browser'
 
 export const MORG_SEG_V1_PREFIX = '[[MORG_SEG_V1:' as const
+
+/** Schneller Filter für Inbox/Chat (kein CRC-Decode). */
+export function messageLooksLikeMorgSegV1Wire(content: string): boolean {
+  return normalizeMessengerWireContent(content).startsWith(MORG_SEG_V1_PREFIX)
+}
 export const MORG_NAK_V1_PREFIX = '[[MORG_NAK_V1:' as const
 
 export type ParsedMorgSegV1 = {

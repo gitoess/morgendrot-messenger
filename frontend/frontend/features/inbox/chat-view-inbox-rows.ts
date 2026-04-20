@@ -1,13 +1,15 @@
 /**
  * Pure helpers for building the chat inbox row list (messages + slide sequences).
- * Keeps chat-view.tsx slightly smaller; logic unchanged.
+ * Keeps chat-view.tsx slightly smaller; ergänzt um S-ARQ-Segment-Kollaps.
  *
  * Not Meshtastic routing: this only shapes UI rows from already-merged `Message[]` (IOTA mailbox + mesh).
  * Meshtastic stays 1:1 on air; Morgendrot adds MORG_* correlation (e.g. hide chroma when luma exists).
  */
 import type { Message } from '@/frontend/lib/types'
 import type { CompletedSlideSequence } from '@/frontend/features/inbox/inbox-slideshow'
+import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
+import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
 
 export type MeshInboundEntry = {
   hint: string | null
@@ -29,6 +31,14 @@ export type ChatInboxRow =
       fromAddr?: string
     }
 
+/** Eine sichtbare Inbox-Zeile pro S-ARQ-Session (`MORG_SEG_V1`: Absender + msgId + phase + n). */
+export function morgSarqSegInboxGroupKey(m: Message): string | null {
+  const p = parseMorgSegV1Message(normalizeMessengerWireContent(m.content ?? ''))
+  if (!p) return null
+  const f = (m.from ?? '').trim().toLowerCase()
+  return `${f}:${p.msgId}:${p.phase}:${p.n}`
+}
+
 export function buildChatInboxRows(
   messages: Message[],
   slideSequences: CompletedSlideSequence[]
@@ -42,12 +52,27 @@ export function buildChatInboxRows(
     const p = parseLoraProgressiveMessage(m.content ?? '')
     if (p?.kind === 'luma') lumaKeys.add(`${m.from}:${p.msgId}`)
   }
+  const sarqLeaderByKey = new Map<string, Message>()
+  for (const m of messages) {
+    const k = morgSarqSegInboxGroupKey(m)
+    if (!k) continue
+    const prev = sarqLeaderByKey.get(k)
+    if (!prev || m.timestamp >= prev.timestamp) sarqLeaderByKey.set(k, m)
+  }
+  const hideSarqSeg = new Set<string>()
+  for (const m of messages) {
+    const k = morgSarqSegInboxGroupKey(m)
+    if (!k) continue
+    const leader = sarqLeaderByKey.get(k)
+    if (leader && m.id !== leader.id) hideSarqSeg.add(m.id)
+  }
   const rows: ChatInboxRow[] = []
   for (const s of slideSequences) {
     rows.push({ kind: 'slide', key: s.key, frames: s.framesBase64, sortTs: s.sortTs })
   }
   for (const m of messages) {
     if (hidden.has(m.id)) continue
+    if (hideSarqSeg.has(m.id)) continue
     const pl = parseLoraProgressiveMessage(m.content ?? '')
     if (pl?.kind === 'chroma' && lumaKeys.has(`${m.from}:${pl.msgId}`)) continue
     rows.push({ kind: 'msg', msg: m, sortTs: m.timestamp })

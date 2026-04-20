@@ -23,6 +23,8 @@ import {
   downloadDataUrlAsFile,
   LORA_CHROMA_WAIT_MS,
 } from '@/frontend/lib/lora-progressive-image-client'
+import { messageLooksLikeMorgSegV1Wire } from '@/frontend/lib/lora-sarq-parser'
+import { MorgSegV1ChatSink } from '@/frontend/components/morg-seg-v1-chat-sink'
 import { cn } from '@/lib/utils'
 
 const TXT_PREVIEW_CHARS = 480
@@ -437,12 +439,15 @@ export function ChatMessageBody({
   content,
   inboxMessages = [],
   selfMessage,
+  onSarqNakWire,
 }: {
   content: string
   /** Für LoRa Luma/Chroma-Zusammenführung (gleiche Inbox). */
   inboxMessages?: readonly Message[]
   /** Aktuelle Nachrichtenzeile (Absender, Zeitstempel). */
   selfMessage?: Message
+  /** Optional: S-ARQ NAK über Meshtastic (`MORG_NAK_V1`). */
+  onSarqNakWire?: (wire: string) => void | Promise<void>
 }) {
   const raw = String(content ?? '')
   /** Anzeige: einmal voll normalisiert. Parser bekommen `raw` und probieren mehrere Varianten (JSON-Hülle, Slice ab `[[`, …). */
@@ -454,6 +459,8 @@ export function ChatMessageBody({
   const parsedTxt = parsedImg || parsedFile || parsedAudio ? null : parseCompactTextMessage(raw)
   const parsedLora =
     parsedImg || parsedFile || parsedAudio || parsedTxt ? null : parseLoraProgressiveMessage(raw)
+
+  const looksSarqSeg = useMemo(() => messageLooksLikeMorgSegV1Wire(raw), [raw])
 
   const [imgUrl, setImgUrl] = useState<string | null>(null)
   const [imgIncomplete, setImgIncomplete] = useState(false)
@@ -508,6 +515,19 @@ export function ChatMessageBody({
     } catch {
       setCopied(false)
     }
+  }
+
+  if (looksSarqSeg && selfMessage) {
+    return (
+      <MorgSegV1ChatSink
+        raw={raw}
+        inboxMessages={inboxMessages}
+        selfMessage={selfMessage}
+        onNakWire={onSarqNakWire}
+        copyRaw={copyRaw}
+        copiedRaw={copied === 'raw'}
+      />
+    )
   }
 
   if (parsedImg) {
@@ -687,6 +707,8 @@ export function ChatMessageBody({
     raw.includes('MORG_CHROMA_V1:') ||
     wire.includes('[[MORG_LUMA_V1:') ||
     wire.includes('[[MORG_CHROMA_V1:')
+  const hasSarqSegMarker =
+    raw.includes('MORG_SEG_V1:') || wire.includes('[[MORG_SEG_V1:')
   return (
     <div className="space-y-2 rounded-lg border border-border/80 bg-muted/15 p-3">
       {hasLoraMarker ? (
@@ -710,11 +732,18 @@ export function ChatMessageBody({
           )}
         </p>
       ) : null}
-      {!hasCompactImgMarker && !hasLoraMarker && looksLikeWire ? (
+      {hasSarqSegMarker ? (
+        <p className="text-xs text-amber-700 dark:text-amber-300/90">
+          S-ARQ-Segment-Wire erkannt, aber nicht dekodierbar — Prüfung auf vollständiges <span className="font-mono">]]</span>
+          , CRC und Länge. Sonst erscheint die S-ARQ-Kachel nur auf der <strong>Leit-Zeile</strong> der Session im Posteingang.
+        </p>
+      ) : null}
+      {!hasCompactImgMarker && !hasLoraMarker && !hasSarqSegMarker && looksLikeWire ? (
         <p className="text-xs text-amber-700 dark:text-amber-300/90">
           Inhalt wirkt wie Roh-Wire oder Base64 – kein bekannter Marker (Bild/Text/Audio). Online-Bild:{' '}
           <span className="font-mono">[[MORG_COMPACT_IMG_V1:</span> … Funk LoRa:{' '}
-          <span className="font-mono">[[MORG_LUMA_V1:</span> / <span className="font-mono">[[MORG_CHROMA_V1:</span>.
+          <span className="font-mono">[[MORG_LUMA_V1:</span> / <span className="font-mono">[[MORG_CHROMA_V1:</span> / S-ARQ{' '}
+          <span className="font-mono">[[MORG_SEG_V1:</span>.
         </p>
       ) : null}
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{wire}</p>

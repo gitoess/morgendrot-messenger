@@ -7,7 +7,7 @@
  * Diese Komponente zeigt nur bereits zusammengeführte `Message`-Objekte – kein eigenes Mesh-Routing.
  *
  * **Morgendrot / Eigenlogik:** IOTA-Mailbox-Fetch und Merge mit lokalen Mesh-Nachrichten (`loadMessages` in der View),
- * MORG_*-Wire-Darstellung in `ChatMessageBody`, Slideshow aus `MORG_SLIDE_V1`, LoRa Luma/Chroma-Korrelation in
+ * MORG_*-Wire-Darstellung in `ChatMessageBody`, Slideshow aus `MORG_SLIDE_V1`, LoRa Luma/Chroma- und S-ARQ-Segment-Korrelation in
  * `buildChatInboxRows`, Export (.morg-pkg, JSON-Snapshot) in den Aktionen.
  *
  * Details zum Baukasten: `docs/MESHTASTIC-BUILDING-BLOCKS.md`
@@ -69,6 +69,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   inboxHasMore?: boolean
   /** Absender (0x…) ins Telefonbuch — POST /api/contact-label */
   onAddSenderToContactBook?: (address: string) => void | Promise<void>
+  /** S-ARQ: `MORG_NAK_V1`-Wire über Meshtastic Klartext (Broadcast oder konfigurierte Node-ID). */
+  onSarqNakWire?: (wire: string) => void | Promise<void>
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -94,6 +96,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     loadMoreInbox,
     inboxHasMore = false,
     onAddSenderToContactBook,
+    onSarqNakWire,
   } = p
 
   const loadErrorBanner = loadError ? (
@@ -366,7 +369,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <ChatMessageBody content={row.msg.content ?? ''} inboxMessages={messages} selfMessage={row.msg} />
+            <ChatMessageBody
+              content={row.msg.content ?? ''}
+              inboxMessages={messages}
+              selfMessage={row.msg}
+              onSarqNakWire={onSarqNakWire}
+            />
                 </>
               )
             })()}
