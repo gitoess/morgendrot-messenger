@@ -1,6 +1,6 @@
 # Morgendrot Selective-ARQ (S-ARQ) — Spezifikation (Entwurf v0)
 
-**Status:** Entwurf zur **kritischen Korrektur** eines StuartCAM-inspirierten Ansatzes an die **Ist-Grenzen** von Meshtastic-Text und dem bestehenden **LUMA/CHROMA**-Modell. **Noch nicht implementiert** — dient als normative Basis vor Code.
+**Status:** Normative Basis; **Wire-Helfer + CRC + Budget** implementiert in `frontend/frontend/lib/lora-sarq-wire.ts` (Vitest: `frontend/frontend/lib/lora-sarq-wire.test.ts`). Parser/Empfang/Senden in der Chat-UI folgt später.
 
 **Verwandt:** `src/morgendrot-image-transport-policy.ts`, `frontend/frontend/lib/lora-progressive-image-client.ts`, `docs/LORA-LUMA-CHROMA-UI-STATES.md`, Konstante `MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES` in `frontend/frontend/lib/compact-image-wire.ts`.
 
@@ -42,13 +42,7 @@ S_{\max} = \max\left\{ S \in \mathbb{N}_0 \;\middle|\; H + \left\lceil \frac{4S}
 
 wobei \(F\) Footer/Overhead (z. B. `crc=…`, `]]`) ist. Für reine ASCII-Payload gilt oft \(\mathrm{UTF8\text{-}Bytes} \approx \text{Zeichenzahl}\).
 
-**Beispiel** (nur Illustration, \(H+F \approx 72\)):
-
-\[
-S_{\max} \approx \left\lfloor \frac{3}{4}(500 - 72) \right\rfloor = 321 \text{ Rohbyte}
-\]
-
-Exakter Wert: **einmalig** mit eurem finalen Header-String messen (`TextEncoder.encode(wire).length`).
+**Ist-Wert (Default-Kopf):** Mit `DEFAULT_MORG_SEG_DIMS` (`msgId=deadbeef`, `phase=luma`, `seg=0`, `n=16`) liefert `computeMaxMorgSegV1RawPayloadBytes` / `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES` aktuell **321** Rohbyte pro Meshtastic-Nachricht bei \(L_{\max}=500\) (siehe Vitest in `lora-sarq-wire.test.ts`). Längere Dezimaldarstellungen in `seg`/`n` verkleinern \(S_{\max}\) geringfügig.
 
 ### 1.3 „Perfekt“ vs. JPEG-Realität
 
@@ -170,46 +164,11 @@ Parser-Reihenfolge in `ChatMessageBody`: zuerst V1 erkennen; wenn Teilstring `MO
 
 ## Anhang A — TypeScript-Skizzen (nicht eingebunden)
 
-### A.1 CRC16-CCITT-FALSE
+### A.1 Referenz-Implementierung
 
-```typescript
-/** CRC-16/CCITT-FALSE: poly 0x1021, init 0xFFFF, xorout 0, no reflect. */
-export function crc16CcittFalse(data: Uint8Array): number {
-  let crc = 0xffff
-  for (let i = 0; i < data.length; i++) {
-    crc ^= data[i]! << 8
-    for (let j = 0; j < 8; j++) {
-      crc = (crc & 0x8000) !== 0 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff
-    }
-  }
-  return crc & 0xffff
-}
-```
+Siehe `frontend/frontend/lib/lora-sarq-wire.ts`: `crc16CcittFalse`, `buildMorgSegV1Wire`, `buildMorgNakV1Wire`, `nakMaskFromMissingIndices`, `missingIndicesFromNakMask`, `computeMaxMorgSegV1RawPayloadBytes`, Konstante `MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES`.
 
-Gegen Referenzwerte testen, bevor Wire darauf baut.
-
-### A.2 NAK-Maske (N ≤ 16)
-
-```typescript
-export function nakMaskFromMissing(missing: Iterable<number>): number {
-  let m = 0
-  for (const i of missing) {
-    if (i < 0 || i > 15) throw new Error('nak: index out of 16-bit window')
-    m |= 1 << i
-  }
-  return m
-}
-
-export function missingFromNakMask(mask: number, n: number): number[] {
-  const out: number[] = []
-  for (let i = 0; i < n; i++) {
-    if (((mask >> i) & 1) === 0) out.push(i)
-  }
-  return out
-}
-```
-
-**Hinweis:** Für \(N > 16\) Maske erweitern oder mehrere NAK-Nachrichten pro Session definieren.
+Goldtest: ASCII `"123456789"` → CRC `0x29B1`.
 
 ---
 
