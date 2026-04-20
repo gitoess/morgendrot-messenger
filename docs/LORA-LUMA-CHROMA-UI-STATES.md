@@ -71,3 +71,7 @@ Senden eines LUMA/CHROMA-Strings als normale **Text**-Mesh-Nachricht (`TEXT_MESS
 
 - Gezieltes **Retry** nur CHROMA (Sender- oder Empfängerseite).
 - Parser-Rückgabe mit **Grund** (`truncated`, `bad_base64`, …) statt nur `null`, um F0-Texte zu schärfen ohne den kompletten Rohstring zu dominieren.
+
+## 6. Mehrsegment-Transport (Plan)
+
+Für große LUMA-/CHROMA-Bytes über viele Meshtastic-Texte: normativer Entwurf **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`** (Segment-Frames, CRC, NAK-Bitmask, \(L_{\max}=500\)‑Budget).
