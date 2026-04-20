@@ -12,9 +12,12 @@ export function isLoRaMeshTransport(t: ForcedTransport): boolean {
   return t === 'mesh'
 }
 
-/** LUMA+CHROMA im Composer nur: online+verschlüsselt+privat, oder Funk+Pfad4+Klartext+privat. */
+/**
+ * LUMA+CHROMA im Composer: online+verschlüsselt+privat, oder Funk+Pfad4+privat.
+ * Pfad 4 sendet über die Luft immer Klartext — der Schloss-Toggle darf trotzdem an sein (Mailbox/andere Pfade).
+ */
 export const CHAT_LORA_DUAL_IMAGE_POLICY_MSG =
-  'LoRa-Bild (LUMA+CHROMA): „online“ mit Verschlüsselung — oder „funk“ mit „LoRa + eigene Verankerung“ (Klartext, Pfad 4). Sonst Anhang entfernen.'
+  'LoRa-Bild (LUMA+CHROMA): „online“ mit Verschlüsselung — oder „funk“ mit aktivem „LoRa + eigene Verankerung“ (Pfad 4; Funk bleibt Klartext). Sonst Anhang entfernen.'
 
 export function isAttachedLoraDualComposerAllowed(p: {
   isPrivate: boolean
@@ -22,9 +25,10 @@ export function isAttachedLoraDualComposerAllowed(p: {
   forcedTransport: ForcedTransport
   meshSelfArchiveAfterLoRa: boolean
 }): boolean {
+  void p.encrypted /* Mesh+Pfad4: Luft Klartext; Schloss betrifft nur Online-/Mailbox-Pfade. */
   if (!p.isPrivate) return false
   if (p.forcedTransport === 'internet' && p.encrypted) return true
-  if (isLoRaMeshTransport(p.forcedTransport) && !p.encrypted && p.meshSelfArchiveAfterLoRa) return true
+  if (isLoRaMeshTransport(p.forcedTransport) && p.meshSelfArchiveAfterLoRa) return true
   return false
 }
 

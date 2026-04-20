@@ -104,16 +104,25 @@ describe('ingestCompactAttachmentPick', () => {
     if (!r.ok) expect(r.message).toBe(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
   })
 
-  it('Bild + mesh + Pfad 4 aber verschlüsselt: kein LoRa-Encode', async () => {
+  it('Bild + mesh + Pfad 4 mit Schloss an: LoRa-Encode wie Klartext-Luft (Pfad 4)', async () => {
+    loraProgressiveEncodeMock.mockResolvedValue({
+      ok: true,
+      messageId: 'a1b2c3d4',
+      lumaWire: '[[LUMA]]',
+      chromaWire: '[[CHROMA]]',
+      lumaJpegBytes: 11,
+      chromaJpegBytes: 22,
+    })
     const r = await ingestCompactAttachmentPick(tinyPngFile(), {
       ...baseCtx,
       forcedTransport: 'mesh',
       encrypted: true,
       meshSelfArchiveAfterLoRa: true,
     })
-    expect(loraProgressiveEncodeMock).not.toHaveBeenCalled()
-    expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.message).toBe(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
+    expect(loraProgressiveEncodeMock).toHaveBeenCalledTimes(1)
+    expect(compactImageEncodeMock).not.toHaveBeenCalled()
+    expect(r.ok).toBe(true)
+    if (r.ok) expect(r.attachedLora).toMatchObject({ lumaWire: '[[LUMA]]', chromaWire: '[[CHROMA]]' })
   })
 
   it('transportOverride mesh bei sonst internet: LoRa-Encoder', async () => {

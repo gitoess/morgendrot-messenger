@@ -61,9 +61,9 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     attachedLora
   )
 
-  /** Privater Chat + Pfad 4 + „funk“ + Klartext: IOTA-Kompakt-Blob automatisch in LUMA+CHROMA. */
+  /** Privater Chat + Pfad 4 + „funk“: IOTA-Kompakt-Blob automatisch in LUMA+CHROMA (Luft Klartext; Schloss egal). */
   useEffect(() => {
-    if (!isPrivate || encrypted || !meshSelfArchiveAfterLoRa || !isLoRaMeshTransport(forcedTransport)) return
+    if (!isPrivate || !meshSelfArchiveAfterLoRa || !isLoRaMeshTransport(forcedTransport)) return
     if (!attachedBlobBase64 || attachedLora != null) return
     let cancelled = false
     setCompactBusy(true)
@@ -122,16 +122,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
       cancelled = true
       setAttachmentPipelineHint(null)
     }
-  }, [
-    isPrivate,
-    encrypted,
-    meshSelfArchiveAfterLoRa,
-    forcedTransport,
-    attachedBlobBase64,
-    attachedLora,
-    setStatus,
-    setStatusMsg,
-  ])
+  }, [isPrivate, meshSelfArchiveAfterLoRa, forcedTransport, attachedBlobBase64, attachedLora, setStatus, setStatusMsg])
 
   useEffect(() => {
     return () => {
@@ -179,10 +170,10 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     setStatusMsg,
   ])
 
-  /** IOTA-Kompakt auf Funk nur mit Pfad 4 + Klartext; verschlüsselt+Funk oder ohne Pfad 4 → verwerfen. */
+  /** IOTA-Kompakt auf Funk nur mit Pfad 4; ohne Pfad 4 → verwerfen (Schloss egal bei Pfad 4). */
   useEffect(() => {
     if (!attachedBlobBase64 || !isPrivate || !isLoRaMeshTransport(forcedTransport)) return
-    if (!encrypted && meshSelfArchiveAfterLoRa) return
+    if (meshSelfArchiveAfterLoRa) return
     if (attachmentPolicyIdleTimerRef.current) {
       clearTimeout(attachmentPolicyIdleTimerRef.current)
       attachmentPolicyIdleTimerRef.current = null

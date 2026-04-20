@@ -194,7 +194,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<void> => {
-      if (!meshSelfArchiveAfterLoRa || encrypted || forcedTransport !== 'mesh') return
+      if (!meshSelfArchiveAfterLoRa || forcedTransport !== 'mesh') return
       throwIfCancelled()
       const selfAddr = myAddress.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(selfAddr)) {
@@ -230,7 +230,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
 
-    if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh') {
+    /** Ohne Pfad 4: verschlüsselter „Funk“-Modus + LUMA — nicht unterstützt (Pfad 4 = Klartext-Luft). */
+    if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh' && !path4Active) {
       applyValidationError(
         {
           ok: false,
