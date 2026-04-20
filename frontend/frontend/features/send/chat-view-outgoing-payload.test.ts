@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { wireUtf8ByteLength } from '@/frontend/lib/compact-image-wire'
 import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
@@ -17,6 +18,18 @@ describe('buildLoraMeshDualWireTexts', () => {
     const r = buildLoraMeshDualWireTexts('[[L]]', '[[C]]', 'Hallo')
     expect(r.lumaText).toBe('[[L]]\n\nHallo')
     expect(r.chromaText).toBe('[[C]]\n\nHallo')
+  })
+
+  it('Meshtastic-Budget: lange Caption wird gekürzt (LUMA und CHROMA ≤ Budget)', () => {
+    const luma = '[[MORG_LUMA_V1:msgId=aaaaaaaa|len=2|eH]]'
+    const chroma = '[[MORG_CHROMA_V1:msgId=aaaaaaaa|len=2|eH]]'
+    const longCap = 'x'.repeat(400)
+    const budget = 120
+    const r = buildLoraMeshDualWireTexts(luma, chroma, longCap, { meshtasticMaxUtf8PerMessage: budget })
+    expect(wireUtf8ByteLength(r.lumaText)).toBeLessThanOrEqual(budget)
+    expect(wireUtf8ByteLength(r.chromaText)).toBeLessThanOrEqual(budget)
+    expect(r.lumaText.startsWith(luma)).toBe(true)
+    expect(r.chromaText.startsWith(chroma)).toBe(true)
   })
 })
 

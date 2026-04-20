@@ -333,22 +333,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
         attachedLora.lumaWire,
         attachedLora.chromaWire,
-        message
+        message,
+        { meshtasticMaxUtf8PerMessage: MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES }
       )
       const v = validateLoraDualWireUtf8(lumaText, chromaText)
       if (!v.ok) {
         applyValidationError(v, setStatus, setStatusMsg)
         return
       }
-      if (
-        wireUtf8ByteLength(lumaText) > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES ||
-        wireUtf8ByteLength(chromaText) > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES
-      ) {
+      const luB = wireUtf8ByteLength(lumaText)
+      const chB = wireUtf8ByteLength(chromaText)
+      if (luB > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES || chB > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES) {
         applyValidationError(
           {
             ok: false,
-            message: `Pfad 4: pro Meshtastic-Nachricht max. ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} Byte UTF-8 (inkl. Unterschrift). Unterschrift kürzen oder Bild neu kodieren (kleiner).`,
-            idleMs: 9000,
+            message: `Pfad 4: Meshtastic-Text max. ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} B UTF-8 pro Nachricht (LUMA: ${luB} B, CHROMA: ${chB} B). Composer-Zeile leeren; andernfalls kleineres Motiv oder später S-ARQ-Segmentierung.`,
+            idleMs: 10_000,
           },
           setStatus,
           setStatusMsg

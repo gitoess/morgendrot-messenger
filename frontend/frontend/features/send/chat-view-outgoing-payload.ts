@@ -12,16 +12,64 @@ import {
   wrapMorgAudioV1Message,
 } from '@/frontend/lib/compact-image-wire'
 
-/** LUMA/CHROMA inkl. optionaler Bildunterschrift (Composer-Zeile). */
+/** Kürzt `s` so, dass UTF-8-Byte-Länge ≤ `maxBytes` (Graphem-orientiert via `Array.from`). */
+export function truncateUtf8ToMaxBytes(s: string, maxBytes: number): string {
+  if (maxBytes <= 0) return ''
+  const enc = new TextEncoder()
+  if (enc.encode(s).length <= maxBytes) return s
+  let out = ''
+  for (const ch of Array.from(s)) {
+    const next = out + ch
+    if (enc.encode(next).length > maxBytes) break
+    out = next
+  }
+  return out
+}
+
+export type BuildLoraMeshDualWireTextsOpts = {
+  /** z. B. Meshtastic TEXT_MESSAGE: Caption wird so gekürzt, dass LUMA- und CHROMA-Paket je ≤ Budget UTF-8 sind. */
+  meshtasticMaxUtf8PerMessage?: number
+}
+
+/**
+ * LUMA/CHROMA inkl. optionaler Bildunterschrift (Composer-Zeile).
+ * Ohne `meshtasticMaxUtf8PerMessage`: unverändert (IOTA/Mailbox kann länger sein).
+ * Mit Budget: gleiche Caption auf beiden Wires, aber UTF-8-gekürzt, damit Funk-Limits eingehalten werden.
+ */
 export function buildLoraMeshDualWireTexts(
   lumaWire: string,
   chromaWire: string,
-  composerPlainText: string
+  composerPlainText: string,
+  opts?: BuildLoraMeshDualWireTextsOpts
 ): { lumaText: string; chromaText: string } {
-  const cap = composerPlainText.trim() || undefined
-  const lumaText = cap ? `${lumaWire}\n\n${cap}` : lumaWire
-  const chromaText = cap ? `${chromaWire}\n\n${cap}` : chromaWire
-  return { lumaText, chromaText }
+  const capRaw = composerPlainText.trim()
+  const sep = '\n\n'
+  const budget = opts?.meshtasticMaxUtf8PerMessage
+
+  if (!capRaw) {
+    return { lumaText: lumaWire, chromaText: chromaWire }
+  }
+
+  if (budget == null) {
+    return {
+      lumaText: `${lumaWire}${sep}${capRaw}`,
+      chromaText: `${chromaWire}${sep}${capRaw}`,
+    }
+  }
+
+  const sepBytes = wireUtf8ByteLength(sep)
+  const lumaRoom = budget - wireUtf8ByteLength(lumaWire) - sepBytes
+  const chromaRoom = budget - wireUtf8ByteLength(chromaWire) - sepBytes
+  const room = Math.min(lumaRoom, chromaRoom)
+  if (room <= 0) {
+    return { lumaText: lumaWire, chromaText: chromaWire }
+  }
+
+  const capFit = truncateUtf8ToMaxBytes(capRaw, room)
+  return {
+    lumaText: `${lumaWire}${sep}${capFit}`,
+    chromaText: `${chromaWire}${sep}${capFit}`,
+  }
 }
 
 export type OutgoingAttachmentState = {
