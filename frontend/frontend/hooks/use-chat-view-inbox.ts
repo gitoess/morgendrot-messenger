@@ -55,6 +55,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
+      const applyMeshOnlyFallback = () => {
+        setMessages((prev) => {
+          const meshLocal = pickMeshRowsForInboxMerge(prev)
+          return mergeAllMessages(meshLocal)
+        })
+      }
       try {
         if (!useBossView) {
           const direct = await tryFetchDirectMailboxInboxViaIota({
@@ -134,8 +140,11 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
               (res as { message?: string }).message ||
               'Posteingang konnte nicht geladen werden.'
           )
+          // Offline/Backend down: lokale Mesh-Zeilen trotzdem sichtbar halten.
+          applyMeshOnlyFallback()
         } else {
           setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
+          applyMeshOnlyFallback()
         }
       } finally {
         setLoading(false)
