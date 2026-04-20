@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronDown, ChevronUp, FileText } from 'lucide-react'
+import { ChevronDown, ChevronUp, FileText, Square, Volume2 } from 'lucide-react'
 import {
   normalizeMessengerWireContent,
   parseCompactImageMessage,
@@ -95,6 +95,61 @@ function CollapsiblePlainText({
         </button>
       ) : null}
     </div>
+  )
+}
+
+function TextToSpeechButton({ text }: { text: string }) {
+  const [supported, setSupported] = useState(false)
+  const [speaking, setSpeaking] = useState(false)
+
+  useEffect(() => {
+    const ok =
+      typeof window !== 'undefined' &&
+      typeof window.speechSynthesis !== 'undefined' &&
+      typeof SpeechSynthesisUtterance !== 'undefined'
+    setSupported(ok)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined') {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
+
+  if (!supported || !text.trim()) return null
+
+  const onToggle = () => {
+    const synth = window.speechSynthesis
+    if (speaking || synth.speaking) {
+      synth.cancel()
+      setSpeaking(false)
+      return
+    }
+    const maxChars = 2400
+    const speakable = text.trim().slice(0, maxChars)
+    const utter = new SpeechSynthesisUtterance(speakable)
+    utter.lang = 'de-DE'
+    utter.rate = 1
+    utter.pitch = 1
+    utter.onend = () => setSpeaking(false)
+    utter.onerror = () => setSpeaking(false)
+    synth.cancel()
+    setSpeaking(true)
+    synth.speak(utter)
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
+      title={speaking ? 'Vorlesen stoppen' : 'Text vorlesen'}
+    >
+      {speaking ? <Square className="h-3.5 w-3.5" aria-hidden /> : <Volume2 className="h-3.5 w-3.5" aria-hidden />}
+      {speaking ? 'Stopp' : 'Vorlesen'}
+    </button>
   )
 }
 
@@ -493,6 +548,9 @@ export function ChatMessageBody({
 
   if (parsedFile) {
     const lines = parsedFile.text.split('\n').length
+    const speakText = parsedFile.caption?.trim()
+      ? `${parsedFile.text}\n\n${parsedFile.caption.trim()}`
+      : parsedFile.text
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -511,6 +569,7 @@ export function ChatMessageBody({
           >
             Datei speichern…
           </button>
+          <TextToSpeechButton text={speakText} />
         </div>
         {parsedFile.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedFile.caption}</p>
@@ -536,6 +595,9 @@ export function ChatMessageBody({
   }
 
   if (parsedTxt) {
+    const speakText = parsedTxt.caption?.trim()
+      ? `${parsedTxt.text}\n\n${parsedTxt.caption.trim()}`
+      : parsedTxt.text
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
         <div className="text-xs font-medium text-muted-foreground">Eingebetteter Text (MORG_TXT_V1)</div>
@@ -544,6 +606,7 @@ export function ChatMessageBody({
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedTxt.caption}</p>
         ) : null}
         <div className="flex flex-wrap gap-3 border-t border-border/60 pt-2">
+          <TextToSpeechButton text={speakText} />
           <button
             type="button"
             onClick={() => void copyRaw()}
@@ -627,13 +690,16 @@ export function ChatMessageBody({
         </p>
       ) : null}
       <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground">{wire}</p>
-      <button
-        type="button"
-        onClick={() => void copyRaw()}
-        className="text-xs font-medium text-primary hover:underline"
-      >
-        {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        {!looksLikeWire ? <TextToSpeechButton text={wire} /> : null}
+        <button
+          type="button"
+          onClick={() => void copyRaw()}
+          className="text-xs font-medium text-primary hover:underline"
+        >
+          {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
+        </button>
+      </div>
     </div>
   )
 }

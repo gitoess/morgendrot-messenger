@@ -101,12 +101,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     sosVoiceFollowsOnline,
     forcedTransport,
     onVoiceToggle,
-    onVoiceEmergencyToggle,
     voiceNormalBlockedStart,
-    voiceEmergencyBlockedStart,
     voiceBusy,
     voiceRecording,
-    sosVoiceAwaitingSend,
     ...attachmentBarProps
   } = p
 
@@ -168,7 +165,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       meshSelfArchiveAfterLoRa &&
       attachmentBarProps.attachedLora != null &&
       !attachmentBarProps.attachedBlobBase64 &&
-      !attachmentBarProps.attachedAudioBase64 &&
       attachmentBarProps.attachedTxtFile == null
     ) &&
     ([...message].length > MESH_PLAINTEXT_MAX_CHARS ||
@@ -194,9 +190,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !!attachmentBarProps.attachedBlobBase64 &&
     attachmentBarProps.attachedLora == null
 
-  const meshKlartextVoiceBlocked =
-    !encrypted && forcedTransport === 'mesh' && !!attachmentBarProps.attachedAudioBase64
-
   /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
   const meshKlartextRecipientOk =
     encrypted ||
@@ -211,25 +204,28 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
     meshPath4Blocked ||
-    meshIotaBlobAwaitingLora ||
-    meshKlartextVoiceBlocked
-
-  const sosSendMode =
-    sosVoiceAwaitingSend &&
-    attachmentBarProps.attachedAudioBase64 != null &&
-    loraOnlineFallbackOffer == null &&
-    isLoRaMeshTransport(forcedTransport)
+    meshIotaBlobAwaitingLora
 
   const canOfferSosText =
-    isPrivate &&
-    encrypted &&
     (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
     !attachmentBarProps.attachedBlobBase64 &&
     !attachmentBarProps.attachedAudioBase64 &&
     !attachmentBarProps.attachedTxtFile &&
     !attachmentBarProps.attachedLora &&
-    !sosSendMode &&
     loraOnlineFallbackOffer == null
+  const onlineConnected = !!apiStatus?.connected
+
+  const prepareSosDictation = () => {
+    const composer = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
+    composer?.focus()
+    composer?.click()
+    window.alert(
+      'Einsatzmodus SOS-Text: OS-Diktat jetzt manuell starten.\n\n' +
+        'Windows: Win+H manuell drücken\n' +
+        'Android: Mikrofon in der Tastaturleiste manuell tippen'
+    )
+  }
+
 
   const loraRetryDetails = useMemo(() => {
     const reason = (loraOnlineFallbackOffer?.reasonLabel || '').toLowerCase()
@@ -261,8 +257,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {!encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
-            <p className="text-[11px] font-medium text-foreground">
-              Schrittfolge: 1) Funkpfad wählen 2) Heltec verbinden 3) optional Node-ID setzen 4) Senden.
+            <p className="text-[11px] font-semibold text-foreground">
+              EINSATZMODUS: Funkpfad -&gt; Heltec verbinden -&gt; optional Node-ID -&gt; Senden.
             </p>
             <p className="text-xs font-medium text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -426,19 +422,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <p className="mb-2 text-xs font-medium text-red-100">
               <strong className="block text-red-50">SOS — Hilferuf (Text)</strong>
               <span className="mt-1 block font-normal leading-relaxed text-red-100/95">
-                Dein Composer-Text wird als Notfall-Nachricht verpackt (<span className="font-mono">MORG_EMERGENCY_V1</span>)
-                und wie gewohnt an den <strong>Chat-Empfänger</strong> gesendet — <strong>kein</strong> automatischer Anruf bei
-                112 oder „Rettungsdienst sieht mit“. Über <strong>Funk</strong> nutzt die App eine <strong>hohe Sendepriorität</strong>{' '}
-                (kurze Bursts ohne Pause zwischen kleinen Paketen), damit der Hilferuf vor großen Bild-/Routine-Daten rauskommt.
-                Empfänger sehen im Chat ein <strong className="text-red-50">[SOS]</strong>-Präfix. Details:{' '}
-                <span className="font-mono text-[10px]">docs/MESSENGER-SPRACHAUFNAHME.md</span> und{' '}
-                <span className="font-mono text-[10px]">docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md</span>.
+                Einsatzmodus: erst Text eingeben oder diktieren, dann SOS senden.
               </span>
             </p>
             <button
               type="button"
-              disabled={sending || apiStatus?.locked}
+              disabled={sending}
               onClick={() => {
+                if (!message.trim()) {
+                  prepareSosDictation()
+                  return
+                }
                 if (
                   !window.confirm(
                     'Echten Hilferuf (SOS) senden?\n\n' +
@@ -470,74 +464,42 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         >
           <label className="mb-1.5 block text-sm font-medium text-foreground">Deine Nachricht</label>
           <p className="mb-2 text-xs text-muted-foreground">
-            Sprachmemo (max. {voiceMaxSeconds}s) und SOS-Sprache (max. {voiceEmergencyMaxSeconds}s). Datei hier
+            Sprachmemo (max. {voiceMaxSeconds}s, nur Online/IOTA). Datei hier
             ablegen, <span className="text-foreground/90">Datei importieren</span> oder{' '}
             <span className="text-foreground/90">Von Kamera</span> (Handy: Kamera-App, PC: Webcam) – danach{' '}
             <span className="text-foreground/90">Senden</span>.
           </p>
-          <ChatViewVoiceRecord
-            slot="emergency"
-            activeKind={voiceActiveKind}
-            phase={voicePhase}
-            progress01={voiceProgress01}
-            maxSeconds={voiceEmergencyMaxSeconds}
-            emergencySosOnline={sosVoiceFollowsOnline}
-            onToggle={onVoiceEmergencyToggle}
-            blockedStart={voiceEmergencyBlockedStart}
-          />
-          <ChatViewVoiceRecord
-            slot="normal"
-            activeKind={voiceActiveKind}
-            phase={voicePhase}
-            progress01={voiceProgress01}
-            maxSeconds={voiceMaxSeconds}
-            normalIsOnline={forcedTransport === 'internet'}
-            onToggle={onVoiceToggle}
-            blockedStart={voiceNormalBlockedStart}
-          />
+          <div className="mb-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">EINSATZMODUS DIKTAT:</strong> Textfeld fokussieren und OS-Diktat nutzen.
+            <strong className="text-foreground"> Windows: Win+H</strong> |{' '}
+            <strong className="text-foreground">Android: Tastatur-Mikrofon</strong>.
+          </div>
+          {forcedTransport === 'internet' ? (
+            <ChatViewVoiceRecord
+              slot="normal"
+              activeKind={voiceActiveKind}
+              phase={voicePhase}
+              progress01={voiceProgress01}
+              maxSeconds={voiceMaxSeconds}
+              normalIsOnline={forcedTransport === 'internet'}
+              onToggle={onVoiceToggle}
+              blockedStart={voiceNormalBlockedStart}
+            />
+          ) : (
+            <div className="mb-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              Sprachmemo ist im Einsatzmodus aktuell <strong className="text-foreground">nur bei Online/IOTA</strong>{' '}
+              aktiv.
+            </div>
+          )}
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}
             pickDisabled={voiceLocksComposer}
           />
-          {sosSendMode ? (
-            <div className="rounded-xl border-2 border-orange-500/70 bg-orange-950/40 p-3">
-              <p id="sos-send-hint" className="mb-3 text-xs leading-relaxed text-orange-50/95">
-                <strong className="text-orange-100">SOS — Hilferuf (Sprache):</strong> Es liegt eine{' '}
-                <strong>kurze SOS-Sprachaufnahme</strong> (Opus-Anhang) bereit. Nach dem Senden wird sie wie ein Hilferuf mit{' '}
-                <span className="font-mono">MORG_EMERGENCY_V1</span> gekennzeichnet und über den <strong>aktuellen Transport</strong>{' '}
-                (hier typisch <strong>Funk/LoRa</strong>) mit <strong>hoher Priorität</strong> ausgespielt — Ziel ist dein
-                Chat-Partner bzw. das Mesh in Reichweite, <strong>nicht</strong> ein automatischer Rettungsdienst-Ruf. Technische
-                Grenzen (Kurzclip, Frames):{' '}
-                <span className="font-mono text-[10px]">docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md</span>.
-              </p>
-              <button
-                type="button"
-                disabled={sendDisabled}
-                aria-describedby="sos-send-hint"
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      'SOS-Sprachnachricht als Hilferuf senden?\n\n' +
-                        'Die Aufnahme wird als Notfall (MORG_EMERGENCY_V1) über den gewählten Weg (z. B. LoRa) gesendet — Ziel ist der Chat-Partner / Mesh, kein 112.\n\n' +
-                        'Nur nutzen, wenn wirklich Hilfe nötig ist.'
-                    )
-                  ) {
-                    return
-                  }
-                  void onSend({ emergencyWire: 'voice' })
-                }}
-                className="flex min-h-[3.75rem] w-full items-center justify-center gap-3 rounded-xl bg-orange-600 px-5 py-4 text-lg font-bold tracking-tight text-white shadow-lg transition-colors hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? <RefreshCw className="h-7 w-7 shrink-0 animate-spin" aria-hidden /> : <Send className="h-7 w-7 shrink-0" aria-hidden />}
-                {sending ? 'Wird gesendet…' : 'SOS jetzt über LoRa senden'}
-              </button>
-            </div>
-          ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs leading-snug text-orange-50">
-              <strong>Unverschlüsselte LoRa-Nachricht</strong> – kann von allen in Reichweite mitgehört und gefälscht
-              werden. Nur für extrem kurze Notfall-Texte geeignet.{' '}
+              <strong>EINSATZMODUS KLARTEXT-LORA:</strong> mitlesbar und fälschbar durch Reichweite-Teilnehmer. Nur sehr
+              kurze Notfall-Texte.{' '}
               <span className="tabular-nums">
                 {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS} Zeichen
               </span>
@@ -545,17 +507,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               attachmentBarProps.attachedAudioBase64 ||
               attachmentBarProps.attachedTxtFile != null ||
               attachmentBarProps.attachedLora != null
-                ? ' · Anhänge bei Klartext-Funk nicht erlaubt.'
+                ? ' · Anhänge bei Klartext-Funk nicht erlaubt (kein Bild/Sprachmemo/.txt/LoRa-Zweiteiler).'
                 : null}
             </div>
           )}
-          {meshKlartextVoiceBlocked ? (
-            <div className="mb-2 rounded-md border border-rose-600/50 bg-rose-950/30 px-3 py-2 text-xs leading-snug text-rose-50">
-              <strong>Sprachmemo + unverschlüsselter Funk:</strong> nicht unterstützt —{' '}
-              <strong className="text-foreground">Verschlüsselung einschalten</strong> (privater Chat) oder{' '}
-              <strong className="text-foreground">„online“</strong> wählen, dann Sprachmemo erneut aufnehmen.
-            </div>
-          ) : null}
           {meshIotaBlobAwaitingLora ? (
             <div className="mb-2 rounded-md border border-sky-600/45 bg-sky-950/25 px-3 py-2 text-xs leading-snug text-sky-950 dark:text-sky-50/95">
               <strong>LoRa-Bild:</strong> IOTA-Kompakt wird automatisch in <strong>LUMA+CHROMA</strong> umgewandelt —{' '}
@@ -681,8 +636,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         ) : null}
 
         <div className="flex items-center justify-between gap-3">
-          {!sosSendMode ? (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {forcedTransport === 'internet' && onlineConnected ? (
               <button
                 type="button"
                 onClick={() => void onSend()}
@@ -695,22 +650,43 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'Senden'}
+                {sending ? 'Wird gesendet…' : 'Online senden (IOTA)'}
               </button>
-              {sending ? (
-                <button
-                  type="button"
-                  onClick={onCancelSend}
-                  data-testid="chat-composer-cancel-send"
-                  className="rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted"
-                >
-                  Übertragung abbrechen
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <div className="min-w-[1px] flex-1" aria-hidden />
-          )}
+            ) : forcedTransport === 'internet' ? (
+              <button
+                type="button"
+                onClick={() => void onSend()}
+                disabled={sendDisabled}
+                data-testid="chat-composer-primary-send"
+                className="flex items-center gap-2 rounded-lg border border-border bg-muted px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
+                title={onlineConnected ? 'Online-Verbindung aktiv' : 'Online-Verbindung derzeit nicht bestätigt'}
+              >
+                <Send className="h-4 w-4" />
+                Online senden (IOTA)
+              </button>
+            ) : forcedTransport === 'mesh' ? (
+              <button
+                type="button"
+                onClick={() => void onSend()}
+                disabled={sendDisabled}
+                data-testid="chat-composer-primary-send"
+                className="flex items-center gap-2 rounded-lg border border-sky-500/50 bg-sky-500/10 px-6 py-2.5 text-sm font-medium text-sky-900 transition-colors hover:bg-sky-500/20 disabled:cursor-not-allowed disabled:opacity-50 dark:text-sky-100"
+              >
+                {sending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'LoRa senden'}
+              </button>
+            ) : null}
+            {sending ? (
+              <button
+                type="button"
+                onClick={onCancelSend}
+                data-testid="chat-composer-cancel-send"
+                className="rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted"
+              >
+                Übertragung abbrechen
+              </button>
+            ) : null}
+          </div>
 
           {status !== 'idle' && (
             <span

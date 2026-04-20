@@ -610,19 +610,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     if (isEmergencySend) {
-      if (!isPrivate || !encrypted) {
-        applyValidationError(
-          {
-            ok: false,
-            message:
-              'SOS (Hilferuf) ist nur im privaten Chat mit aktivierter Verschlüsselung verfügbar.',
-            idleMs: 8000,
-          },
-          setStatus,
-          setStatusMsg
-        )
-        return
-      }
       if (emergencyKind === 'voice' && !attachedAudioBase64) {
         applyValidationError(
           {
@@ -726,8 +713,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         applyValidationError(
           {
             ok: false,
-            message:
-              'Unverschlüsselter Funk: nur reiner Kurztext, keine Anhänge (kein Bild/Audio/Datei/LoRa-Zweiteiler).',
+            message: 'Unverschlüsselter Funk: erlaubt nur Kurztext (keine Anhänge wie Bild/Sprachmemo/.txt/LoRa-Zweiteiler).',
             idleMs: 9000,
           },
           setStatus,
@@ -739,13 +725,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     /** LongFast / TEXT_MESSAGE: harte Nutzlastgrenze — galt fälschlich nur privat; öffentlicher Funk braucht dieselbe Kappe. */
     if (!encrypted && forcedTransport === 'mesh') {
+      const plaintextMaxChars = MESH_PLAINTEXT_MAX_CHARS
       for (const snap of textSnaps) {
         const charCount = [...snap].length
-        if (charCount > MESH_PLAINTEXT_MAX_CHARS) {
+        if (charCount > plaintextMaxChars) {
           applyValidationError(
             {
               ok: false,
-              message: `Unverschlüsselter LoRa-Text maximal ${MESH_PLAINTEXT_MAX_CHARS} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder verschlüsselt senden (Mesh v2).`,
+              message: attachedAudioBase64
+                ? `Unverschlüsseltes LoRa-Sprachmemo passt nicht in einen Meshtastic-Text-Frame (${charCount} Zeichen, max. ${plaintextMaxChars}). Für Sprache aktuell: verschlüsselt+Funk (Mesh v2 Burst) oder online. Unverschlüsselte Sprache über LoRa braucht erst Chunking+ACK/Reassembly (Roadmap Ticket A).`
+                : `Unverschlüsselter LoRa-Text maximal ${plaintextMaxChars} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder verschlüsselt senden (Mesh v2).`,
               idleMs: 9000,
             },
             setStatus,
@@ -754,6 +743,20 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return
         }
       }
+    }
+
+    if (forcedTransport === 'mesh' && attachedAudioBase64) {
+      applyValidationError(
+        {
+          ok: false,
+          message:
+            'Sprachnachricht ist derzeit nur für Online/IOTA freigeschaltet. Für Funk bitte SOS-Text (Diktat) oder Kurztext senden.',
+          idleMs: 9000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      return
     }
 
     if (meshSelfArchiveAfterLoRa) {

@@ -82,6 +82,14 @@ async function ingestOpus(
   file: File,
   forcedTransport: ForcedTransport
 ): Promise<AttachmentIngestFailure | AttachmentIngestSuccess> {
+  if (isLoRaMeshTransport(forcedTransport)) {
+    return {
+      ok: false,
+      message:
+        'Sprachnachricht ist aktuell nur für Online/IOTA aktiv. Für Funk bitte SOS-Text (Diktat) oder Kurztext nutzen.',
+      idleMs: 7000,
+    }
+  }
   const buf = await file.arrayBuffer()
   const u8 = new Uint8Array(buf)
   const magic = String.fromCharCode(u8[0] ?? 0, u8[1] ?? 0, u8[2] ?? 0, u8[3] ?? 0)
