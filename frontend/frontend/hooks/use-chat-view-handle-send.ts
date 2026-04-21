@@ -600,7 +600,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
     const recipientTrimLower = recipient.trim().toLowerCase()
-    if (forcedTransport === 'internet' && !ADDR_64_LOWER.test(recipientTrimLower)) {
+    if (!encrypted && forcedTransport === 'internet' && !ADDR_64_LOWER.test(recipientTrimLower)) {
       applyValidationError(
         {
           ok: false,

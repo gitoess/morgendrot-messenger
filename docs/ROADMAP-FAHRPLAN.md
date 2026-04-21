@@ -216,6 +216,12 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **UI-Ergaenzung (Backlog):** unter dem Composer optionales Vorschau-Feld **„Verschluesselter Funk-Block“** (nur Kopie/Weiterleitung, nicht Klartext) und optionaler Proof-Anhang (`payloadHash`, `senderSig`, spaeter `txDigest`) fuer forensische Nachvollziehbarkeit.
 - **Utility-Backlog (neu):** **„Nachricht vom Tangle entschlüsseln“** als manuelle Funktion (Tx-/Digest-Eingabe, optional Explorer-Link-Lookup): Payload laden, mit lokalem ECDH-/Vault-Material entschlüsseln, Ergebnis/Fehler transparent anzeigen.
 - **Wichtig:** Erst nach abgeschlossenem Stage-2-/Feldtestpfad weiter ausbauen; zunächst Spez + Akzeptanzkriterien, dann Implementierung.
+- **Header-Modell (Zwiebel, Entwurf):**
+  - **Outer Header (Klartext/Public):** `version`, `messageType`, `priority`, ggf. minimale Routing-Hinweise (`networkId`, `relayMode`). Zweck: Transport/Filterung/Relay.
+  - **Inner Header (verschlüsselt/privat):** Identitäts- und Kontextdaten (`senderPubRef`, `createdAt`, `nonce`, optional `gpsTimestamp`) plus Payload.
+  - **Integritätshinweis (kritisch):** Outer-Felder dürfen nicht ungeschützt manipulierbar sein. Daher entweder (a) Outer-Header in einen signierten Gesamt-Hash einbeziehen oder (b) dedizierten `outerIntegrityTag` führen; innere Signatur allein schützt Outer-Metadaten nicht.
+  - **Produktregel:** Kein frei editierbarer Header im Standard-UI; nur feste Profile/Optionen, um Fehlkonfiguration und Interop-Brüche zu vermeiden.
+  - **Optional „Encrypted Event“ (Backlog):** möglich als separater, klar versionierter Wire-Typ mit demselben Outer/Inner-Modell; nicht still als `/send-plain`-Variante überladen.
 
 **Roadmap-Ticket (neu, 2026-04-21):** **Wanderer-Proof + Late-Anchor fuer abgelaufene Relay-Objekte**
 - **Sicherheitsannahme:** reine Handy-Uhr ist nicht beweiskraeftig (manipulierbar). Fuer belastbaren Nachweis werden mehrere Zeitquellen protokolliert (`userTimestamp`, optional `gpsTimestamp`) plus monotoner lokaler Zaehler.

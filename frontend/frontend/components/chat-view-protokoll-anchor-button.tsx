@@ -38,6 +38,7 @@ export function ChatViewProtokollAnchorButton(p: {
   const [rangeFrom, setRangeFrom] = useState('')
   const [rangeTo, setRangeTo] = useState('')
   const [ackFull, setAckFull] = useState(false)
+  const [dialogMsg, setDialogMsg] = useState<string>('')
 
   function buildScope(): ProtokollAnchorScope | { error: string } {
     if (scopeMode === 'all') return { kind: 'all' }
@@ -59,14 +60,17 @@ export function ChatViewProtokollAnchorButton(p: {
   }
 
   async function runAnchor() {
+    setDialogMsg('')
     const sc = buildScope()
     if ('error' in sc) {
+      setDialogMsg(sc.error)
       setStatus('error')
       setStatusMsg(sc.error)
       setTimeout(() => setStatus('idle'), 6000)
       return
     }
     if (variant === 'full' && !ackFull) {
+      setDialogMsg('Variante B: bitte die Checkbox bestätigen.')
       setStatus('error')
       setStatusMsg('Variante B: bitte die Checkbox bestätigen.')
       setTimeout(() => setStatus('idle'), 6000)
@@ -74,6 +78,7 @@ export function ChatViewProtokollAnchorButton(p: {
     }
     const rec = recipient.trim() || myAddress.trim()
     if (variant === 'hash' && !rec) {
+      setDialogMsg('Für Hash-Anker: Empfänger-Adresse setzen (oder eigene Adresse).')
       setStatus('error')
       setStatusMsg('Für Hash-Anker: Empfänger-Adresse setzen (oder eigene Adresse).')
       setTimeout(() => setStatus('idle'), 7000)
@@ -101,15 +106,20 @@ export function ChatViewProtokollAnchorButton(p: {
         setStatus('error')
         const baseErr = r.error || 'Verankern fehlgeschlagen.'
         if (/Vollbericht zu groß für eine Transaktion/i.test(baseErr)) {
+          setDialogMsg(
+            `${baseErr} Schrittfolge: (1) Variante A „Nur Hash“ nutzen, oder (2) Umfang auf Zeitraum/IDs reduzieren und erneut versuchen.`
+          )
           setStatusMsg(
             `${baseErr} Schrittfolge: (1) Variante A „Nur Hash“ nutzen, oder (2) Umfang auf Zeitraum/IDs reduzieren und erneut versuchen.`
           )
         } else {
+          setDialogMsg(baseErr)
           setStatusMsg(baseErr)
         }
         setTimeout(() => setStatus('idle'), 9000)
       }
     } catch (e) {
+      setDialogMsg(e instanceof Error ? e.message : String(e))
       setStatus('error')
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 8000)
@@ -267,6 +277,11 @@ export function ChatViewProtokollAnchorButton(p: {
                 <span className="font-mono">{recipient.trim() || myAddress || '(—)'}</span> – leer = eigene Adresse.
               </p>
             )}
+            {dialogMsg ? (
+              <p className="rounded-md border border-red-500/35 bg-red-500/10 px-2 py-1.5 text-xs text-red-900 dark:text-red-100">
+                {dialogMsg}
+              </p>
+            ) : null}
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
