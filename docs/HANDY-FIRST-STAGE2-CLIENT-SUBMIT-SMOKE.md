@@ -39,6 +39,8 @@
 4. [ ] Basis kurz **stoppen** (`npm start` beenden): mit aktivem Drain und gültigem RPC soll **Outbox-Drain** (bzw. verzögerter Spiegel) **Klartext** weiterhin über **Direkt-RPC** versuchen — nicht über `/api` (solange Modus Direkt und Drain an).
 5. [ ] Modus auf **Nur Morgendrot-API** stellen: erneuter Klartext-Versuch darf **nicht** still per RPC gehen — Nutzerhinweis / HTTP-Pfad, sobald Basis wieder da.
 6. [ ] **`npm run test:unit`** im Ordner **`frontend/`** ausgeführt (grün).
+7. [ ] **Verschlüsselt + online (gleicher Ablauf):** privater Chat, Handshake vorhanden, Transport **online**, Verschlüsselung **an**; erst mit Basis/Internet aus senden (erwartbar Fehler/Queue), dann wieder online und Retry/Drain prüfen.
+8. [ ] **Pfad 4 Recovery (Funk + eigene Verankerung):** LoRa-Klartext ging raus, Mailbox/IOTA wurde nach Netzrueckkehr automatisch oder per manuellem Refresh nachgezogen (Opt-in Queue: **`morgendrot.offlineMailboxQueue=1`**).
 
 ---
 

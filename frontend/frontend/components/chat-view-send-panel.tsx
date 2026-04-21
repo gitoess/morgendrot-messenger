@@ -65,6 +65,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onMeshPlaintextToNodeEnabledChange: (v: boolean) => void
   meshPlaintextNodeId: string
   onMeshPlaintextNodeIdChange: (v: string) => void
+  /** Manueller Status-/Drain-Impuls nach Netzwechsel, ohne kompletten Seitenreload. */
+  onManualRefresh?: () => void | Promise<void>
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -94,6 +96,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onMeshPlaintextToNodeEnabledChange,
     meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange,
+    onManualRefresh,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -432,6 +435,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               >
                 Letzte Meldung: {offlineMailboxQueueErrorHint}
               </span>
+            ) : null}
+            {onManualRefresh ? (
+              <button
+                type="button"
+                onClick={() => void onManualRefresh()}
+                className="inline-flex items-center gap-1 rounded-md border border-amber-700/40 bg-amber-100/70 px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/55"
+                title="Status neu holen und Warteschlangen sofort erneut anstoßen"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Aktualisieren
+              </button>
             ) : null}
           </div>
         ) : null}

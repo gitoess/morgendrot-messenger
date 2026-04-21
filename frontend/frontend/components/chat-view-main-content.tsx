@@ -351,6 +351,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     compactPreviewUrl,
     loraPreviewUrl,
     loraMeshProgressLine,
+    onManualRefresh: async () => {
+      await refreshApiStatus()
+      await loadMessages()
+    },
   } satisfies ChatViewSendPanelProps
 
   const transportCardProps = {
