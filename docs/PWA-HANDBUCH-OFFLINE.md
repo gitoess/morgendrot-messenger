@@ -31,6 +31,7 @@
 
 - **`npm start`** startet **nur** das Morgendrot-Backend (typisch **3342**) und den Streams-Mock — **ohne** Next.js. Es gibt **keine** Dev-Oberfläche auf **3341**.
 - **`npm run dev`** startet **3342** und **3341** parallel (Messenger/PWA im Browser: **http://127.0.0.1:3341**). Details: **`docs/DEV-START.md`**.
+- **Next vs. API-Port, Lite-UI, `UI_VARIANT`:** siehe **`docs/DASHBOARD-PORT-UND-OBERFLAECHE.md`** (in der PWA unter `/handbook` nach `npm run sync:handbook`).
 
 ## 5. Notfall ohne laufendes Morgendrot-Backend (Kurz)
 
@@ -44,8 +45,8 @@
 
 ## 6. Pflege
 
-- Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).
+- Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/VAULT-EINRICHTEN.md`**, **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).
 
 ---
 
-*Stand: Abgleich mit implementiertem SW und Next `public/handbook/`; § 4–5 ergänzt 2026-03-28.*
+*Stand: Abgleich mit implementiertem SW und Next `public/handbook/`; § 4–5 ergänzt 2026-03-28. § 6: Vault-Handbücher ergänzt 2026-04-21.*

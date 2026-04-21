@@ -8,6 +8,8 @@ import { HandbookMarkdown } from '@/components/handbook-markdown'
 const DOCS: { file: string; title: string }[] = [
   { file: 'API-EINSATZ-ROLE-TEMPLATES.md', title: 'API: Einsatz-Rollen-Templates' },
   { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
+  { file: 'DASHBOARD-ERSTE-SCHRITTE.md', title: 'Dashboard: Erste Schritte' },
+  { file: 'DASHBOARD-PORT-UND-OBERFLAECHE.md', title: 'Dashboard: Ports & Oberflächen' },
   { file: 'ONBOARDING-WALLET-UX-SPEC.md', title: 'Onboarding & Wallet (UX)' },
   { file: 'RECOVERY-PHRASE-BACKUP.md', title: 'Recovery Phrase / Backup' },
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },
@@ -17,6 +19,8 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md', title: 'Trägerbild: Einsatz & Organisation' },
   { file: 'ROLLENWECHSEL-TEAM-EINSATZ.md', title: 'Rollenwechsel im Team (Einsatz)' },
   { file: 'MESSENGER-CHAT-HANDBUCH.md', title: 'Messenger (Chat)' },
+  { file: 'VAULT-EINRICHTEN.md', title: 'Tresor einrichten' },
+  { file: 'VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md', title: 'Messenger vs. Tresor' },
 ]
 
 export function HandbookClient() {

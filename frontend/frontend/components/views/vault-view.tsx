@@ -16,6 +16,7 @@ import {
   Copy,
   Plus,
 } from 'lucide-react'
+import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
   vaultSave,
@@ -234,6 +235,27 @@ export function VaultView({ variant }: VaultViewProps) {
 
   return (
     <div className="space-y-6">
+      {variant === 'local-vault' ? (
+        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-muted-foreground">
+          <p className="font-semibold text-foreground">Tresor: wann gesperrt, wann offen?</p>
+          <ul className="mt-2 list-inside list-disc space-y-1.5 text-xs leading-relaxed">
+            <li>
+              <strong className="text-foreground">Gesperrt</strong> siehst du als Vollbild-Dialog beim Start oder nach{' '}
+              <strong className="text-foreground">„Tresor sperren“</strong> (unten auf dieser Seite): die{' '}
+              <strong>API-Sitzung</strong> hat dann keine Schlüssel mehr im Arbeitsspeicher.
+            </li>
+            <li>
+              <strong className="text-foreground">Entsperrt</strong> bist du, wenn dieser Dialog <strong>nicht</strong> sichtbar
+              ist und oben im Dashboard-Badge <strong>„Tresor: entsperrt“</strong> oder <strong>„Chat verbunden“</strong> steht
+              — dann laufen Signieren und Messenger-Funktionen, die einen freien Tresor brauchen.
+            </li>
+            <li>
+              Installierte <strong className="text-foreground">PWA</strong>: nach längerer Zeit im Hintergrund kann die App
+              automatisch sperren (wie ein erneutes Öffnen mit gesperrtem Tresor).
+            </li>
+          </ul>
+        </div>
+      ) : null}
       {/* Header */}
       <div className="flex items-center gap-3">
         <div
@@ -256,7 +278,7 @@ export function VaultView({ variant }: VaultViewProps) {
           </h2>
           <p className="text-sm text-muted-foreground">
             {variant === 'local-vault'
-              ? 'Messaging-Identität sichern — Passwörter/Zugänge im selben verschlüsselten Container (kein Chatverlauf hier)'
+              ? 'Verschlüsselte Datei für Keys, Notizen und Passwortmanager — nicht für den Nachrichtenverlauf'
               : 'Lösche alle sensiblen Daten sofort'}
           </p>
           {variant === 'local-vault' && (
@@ -315,16 +337,23 @@ export function VaultView({ variant }: VaultViewProps) {
                   <KeyRound className="h-5 w-5 text-violet-500" />
                   Passwortmanager
                 </h4>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  <strong className="text-foreground">Anlegen / bearbeiten:</strong> Einträge unten.{' '}
-                  <strong className="text-foreground">Speichern:</strong> zuerst „Übernehmen (Sitzung)“, dann „Passwortmanager in Tresor-Datei schreiben“ — damit landen die Daten im{' '}
-                  <strong className="text-foreground">selben</strong> verschlüsselten Container wie die Messaging-Keys (keine zweite Vault-Datei).
-                  Klartext nur im Backend-RAM bei entsperrtem Tresor. Nach dem Kopieren ggf. Zwischenablage leeren. „Auf Chain sichern“ (im Tab Tresor) sichert den gesamten Blob inkl. Passwortmanager mit.
+                <p className="text-xs text-muted-foreground">
+                  <span className="text-foreground font-medium">Übernehmen</span> = nur diese Sitzung.{' '}
+                  <span className="text-foreground font-medium">In Tresor-Datei schreiben</span> = in der Vault-Datei speichern
+                  (zusammen mit den Keys). Details:{' '}
+                  <Link
+                    href="/handbook?file=VAULT-EINRICHTEN.md"
+                    className="text-primary underline underline-offset-2 hover:text-primary/90"
+                  >
+                    Handbuch
+                  </Link>
+                  .
                 </p>
               </div>
               {hasKeys !== true ? (
                 <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200">
-                  Zuerst Wallet entsperren und <strong className="font-medium">Tresor öffnen</strong> (Tab „Tresor öffnen &amp; sichern“: „Daten laden“ oder App-Start mit Vault). Danach kannst du den Passwortmanager nutzen.
+                  Tresor auf der Startseite entsperren, dann hier <strong className="font-medium">Daten laden</strong> — erst
+                  danach Einträge bearbeiten.
                 </p>
               ) : (
                 <>
@@ -483,73 +512,39 @@ export function VaultView({ variant }: VaultViewProps) {
             </div>
           ) : (
             <>
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-3 text-xs text-muted-foreground leading-relaxed">
-            <strong className="text-foreground">Wichtig:</strong> Der <strong className="text-foreground">Chat- und Nachrichtenverlauf</strong> wird{' '}
-            <strong className="text-foreground">nicht</strong> in der Vault-Datei gespeichert — er kommt von der Chain und optional lokal aus{' '}
-            <span className="font-mono">.inbox.enc</span> (Cache). Hier sicherst du nur <strong className="text-foreground">Messaging-Keys</strong>,{' '}
-            optional Signer-Notizen und (im Tab Passwortmanager) Zugangsdaten im selben Blob. Doku:{' '}
-            <span className="font-mono">docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md</span> (im Repo).
-          </div>
-          <div className="rounded-xl border border-sky-500/25 bg-sky-500/5 p-4 text-xs text-muted-foreground leading-relaxed">
-            <p className="font-semibold text-foreground">Andere Vault-Datei = Tresor wechseln (kein Windows-Logout)</p>
-            <p className="mt-1.5">
-              <strong className="text-foreground">„Daten laden“</strong> ersetzt die <strong className="text-foreground">Tresor-Daten in dieser Backend-Sitzung</strong> (Messaging-Keys, Notizen, Passwortmanager) durch den Inhalt der Datei — vergleichbar mit einem <strong className="text-foreground">anderen Tresor-Nutzer</strong> für Chat/Handshake, <strong className="text-foreground">nicht</strong> mit einem zweiten PC-Benutzerkonto. Die Web-App bleibt entsperrt; du wirst <strong className="text-foreground">nicht</strong> automatisch zum Passwort-Dialog geschickt (außer du nutzt „Tresor sperren“).
-            </p>
-            <p className="mt-2">
-              <strong className="text-foreground">Passwort:</strong> Trage unten das <strong className="text-foreground">Passwort dieser Vault-Datei</strong> ein — es hat Vorrang vor dem Wallet-Passwort der Sitzung. Leer lassen nur, wenn Vault und App-Entsperren <strong className="text-foreground">dieselbe</strong> Passphrase nutzen.
-            </p>
-          </div>
-          <div className="rounded-xl border border-primary/25 bg-primary/5 p-4">
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Tresor: Ablauf in vier Schritten</h4>
-            <ol className="list-decimal space-y-1.5 pl-4 text-xs text-muted-foreground">
-              <li>
-                <span className="text-foreground font-medium">Wallet</span> oben in der App entsperren (Passwort für Signatur
-                / CLI-Keystore – nicht dasselbe wie der Tresor, kann aber identisch sein).
-              </li>
-              <li>
-                <span className="text-foreground font-medium">Tresor-Passwort</span> unten eintragen: wird zum Verschlüsseln
-                der Datei <span className="font-mono">.morgendrot-vault</span> und des Chain-Backups genutzt (PBKDF2 +
-                AES-GCM im Backend).
-              </li>
-              <li>
-                <span className="text-foreground font-medium">Öffnen:</span> „Daten laden“ (lokal) oder „Von Chain laden“
-                (braucht RPC, <span className="font-mono">VAULT_REGISTRY_ID</span>, <span className="font-mono">PACKAGE_ID</span>).
-              </li>
-              <li>
-                <span className="text-foreground font-medium">Sichern:</span> bei Änderungen „Lokal sichern“; optional
-                „Auf Chain sichern“ für geräteunabhängiges Backup.
-              </li>
-            </ol>
-          </div>
-
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-2 font-semibold text-foreground">Aktueller Zustand</h4>
-            <p className="text-sm text-muted-foreground">
-              {hasKeys === true
-                ? 'Sitzung aktiv: Messaging-Keys und Konfiguration liegen im Backend-RAM (ECDH, optional Streams-Anker). Du kannst chatten und signieren.'
-                : vaultStatus?.hasLocal
-                  ? 'Keine Keys im RAM. Auf der Platte liegt eine Vault-Datei – Tresor-Passwort eintragen und „Daten laden“ oder „Von Chain laden“.'
-                  : 'Noch keine Vault-Datei erkannt. Nach erstem Setup: „Lokal sichern“; oder Keys nur in der Sitzung bis zum Speichern.'}
-            </p>
-            <p className="mt-2 border-t border-border pt-2 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">On-Chain-Backup:</span>{' '}
-              {vaultStatus?.lastSavedToChainAt
-                ? `Kopie auf der Chain – zuletzt ${new Date(vaultStatus.lastSavedToChainAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}.`
-                : 'Kein gemeldeter Zeitstempel – unabhängig davon, ob eine lokale Datei existiert.'}
-            </p>
-            <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-              {vaultStatus?.lastSavedToChainAt ? (
-                <>
-                  <Cloud className="h-4 w-4 shrink-0 text-emerald-500" />
-                  <span>Chain-Backup vorhanden.</span>
-                </>
-              ) : (
-                <>
-                  <CloudOff className="h-4 w-4 shrink-0 text-amber-500" />
-                  <span>Chain-Backup nicht gemeldet.</span>
-                </>
-              )}
-            </div>
+            <h4 className="mb-3 font-semibold text-foreground">Aktueller Zustand</h4>
+            <dl className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-xs text-muted-foreground">Keys in dieser Sitzung</dt>
+                <dd className="mt-0.5 font-medium text-foreground">
+                  {hasKeys === true
+                    ? 'Geladen — Chat und Signatur möglich'
+                    : vaultStatus?.hasLocal
+                      ? 'Noch nicht geladen — „Daten laden“ oder „Von Chain laden“'
+                      : 'Keine Vault-Datei erkannt — nach Setup „Lokal sichern“'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Letztes Chain-Backup (gemeldet)</dt>
+                <dd className="mt-0.5 inline-flex items-center gap-2 font-medium text-foreground">
+                  {vaultStatus?.lastSavedToChainAt ? (
+                    <>
+                      <Cloud className="h-4 w-4 shrink-0 text-emerald-500" />
+                      {new Date(vaultStatus.lastSavedToChainAt).toLocaleString('de-DE', {
+                        dateStyle: 'short',
+                        timeStyle: 'short',
+                      })}
+                    </>
+                  ) : (
+                    <>
+                      <CloudOff className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      Kein Zeitstempel
+                    </>
+                  )}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
@@ -564,12 +559,16 @@ export function VaultView({ variant }: VaultViewProps) {
               </button>
             </div>
             <p className="mb-2 text-xs text-muted-foreground">
-              Alle Dateien, die wie <span className="font-mono">.morgendrot-vault*</span> heißen (ein Datei = ein
-              verschlüsselter Container für Messaging-Keys + optional Passwortmanager-Einträge + Notizen). Es gibt kein separates
-              „KeePass-Dateiformat“ – <strong className="text-foreground">Passwortmanager</strong> ist ein Bereich innerhalb
-              desselben Vault-Blobs. Standardpfad für „Daten laden“:{' '}
-              <span className="font-mono text-foreground">{vaultDefaultPath ?? '.morgendrot-vault'}</span>
-              . Anderen Pfad nur per CLI <span className="font-mono">/vault-load &lt;pw&gt; &lt;pfad&gt;</span>.
+              Dateien <span className="font-mono">.morgendrot-vault*</span> im Server-Verzeichnis. Standard für „Daten
+              laden“: <span className="font-mono text-foreground">{vaultDefaultPath ?? '.morgendrot-vault'}</span>. Anderer
+              Pfad: CLI <span className="font-mono">/vault-load</span> — siehe{' '}
+              <Link
+                href="/handbook?file=VAULT-EINRICHTEN.md"
+                className="text-primary underline underline-offset-2 hover:text-primary/90"
+              >
+                Handbuch
+              </Link>
+              .
             </p>
             {vaultPaths.length === 0 ? (
               <p className="text-xs text-muted-foreground">Keine Vault-Dateien im Arbeitsverzeichnis des Backends.</p>
@@ -599,9 +598,7 @@ export function VaultView({ variant }: VaultViewProps) {
               <h4 className="font-semibold text-foreground">Tresor-Passwort</h4>
             </div>
             <label className="mb-1.5 block text-sm text-muted-foreground">
-              Für Vault-Datei und Chain-Backup; beim <strong className="text-foreground">Laden</strong> hat dieses Feld{' '}
-              <strong className="text-foreground">Vorrang</strong> vor dem Wallet-Passwort der Sitzung (andere Datei =
-              anderes Passwort möglich)
+              Passwort dieser Vault-Datei (beim Laden zuerst; leer = wie Wallet-Entsperr-Passwort der Sitzung).
             </label>
             <input
               type="password"
@@ -611,33 +608,21 @@ export function VaultView({ variant }: VaultViewProps) {
               autoComplete="off"
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
             />
-            <ul className="mt-4 space-y-2 border-t border-border pt-3 text-xs text-muted-foreground">
-              <li>
-                <span className="font-medium text-foreground">Wann brauchst du es?</span> Beim{' '}
-                <strong className="text-foreground">Entschlüsseln</strong> (Laden von Platte/Chain) und beim{' '}
-                <strong className="text-foreground">neuen Verschlüsseln</strong> (Speichern). Beim <strong className="text-foreground">Laden</strong>: ausgefülltes Feld = dieses Passwort zuerst (andere Vault-Datei). Leer = Fallback auf{' '}
-                <strong className="text-foreground">Wallet-Passwort</strong> der Sitzung.
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Mehrere Vault-Dateien?</span> Jede Datei kann ein eigenes
-                Passwort haben. Gleiche App-Version = gleiches Dateiformat; Passwörter sind nicht untereinander
-                „kompatibel“, du musst pro Datei das richtige kennen.
-              </li>
-              <li>
-                <span className="font-medium text-foreground">Passwort vergessen?</span> Es gibt{' '}
-                <strong className="text-foreground">keine technische Wiederherstellung</strong> des Vault-Inhalts. Optionen:
-                separates IOTA-Seed-/Key-Backup (Wallet neu einrichten, Messaging-Keys neu), oder alte Vault-Datei +
-                richtiges Passwort, oder Chain-Backup + richtiges Passwort. Für Kunden: klare Anleitung, Passwort-Manager,
-                getrenntes Wallet-Backup.
-              </li>
-            </ul>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Passwort vergessen oder mehrere Dateien:{' '}
+              <Link
+                href="/handbook?file=VAULT-EINRICHTEN.md"
+                className="text-primary underline underline-offset-2 hover:text-primary/90"
+              >
+                Tresor einrichten (Handbuch)
+              </Link>
+              .
+            </p>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-1 font-semibold text-foreground">1. Tresor öffnen</h4>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Zwei Wege – beide brauchen das Tresor-Passwort (oder Fallback auf Wallet-Passwort, siehe oben).
-            </p>
+            <p className="mb-3 text-xs text-muted-foreground">Lokal oder von der Chain — Passwortfeld wie oben.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -647,9 +632,7 @@ export function VaultView({ variant }: VaultViewProps) {
               >
                 <Upload className="h-8 w-8 text-blue-400" />
                 <span className="font-semibold text-foreground">{processing ? 'Lade…' : 'Daten laden'}</span>
-                <span className="text-xs text-muted-foreground">
-                  Lokale Datei <span className="font-mono">.morgendrot-vault</span>
-                </span>
+                <span className="text-xs text-muted-foreground">Standard-Vault-Datei auf dem Server</span>
               </button>
               <button
                 type="button"
@@ -659,7 +642,7 @@ export function VaultView({ variant }: VaultViewProps) {
               >
                 <Cloud className="h-8 w-8 text-sky-400" />
                 <span className="font-semibold text-foreground">{processing ? 'Lade…' : 'Von Chain laden'}</span>
-                <span className="text-xs text-muted-foreground">Voraussetzungen: RPC, Registry, Package-ID, vorheriges On-Chain-Backup</span>
+                <span className="text-xs text-muted-foreground">Braucht vorheriges Chain-Backup und Konfiguration</span>
               </button>
             </div>
           </div>
@@ -667,10 +650,8 @@ export function VaultView({ variant }: VaultViewProps) {
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-2 font-semibold text-foreground">2. Notizen &amp; Freitext</h4>
             <p className="mb-2 text-xs text-muted-foreground">
-              Landen im gleichen verschlüsselten Vault wie die Keys (max.{' '}
-              {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen — verhindert zu große Blobs). Lange Tagebücher
-              lieber <strong className="text-foreground">außerhalb</strong> des Vaults ablegen. Strukturierte Zugangsdaten: Reiter{' '}
-              <strong className="text-foreground">Passwortmanager</strong> (pro Eintrag begrenzt).
+              Max. {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen — lange Texte lieber außerhalb. Für
+              Zugangsdaten: Tab Passwortmanager.
             </p>
             <textarea
               value={notes}
@@ -689,9 +670,7 @@ export function VaultView({ variant }: VaultViewProps) {
 
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-1 font-semibold text-foreground">3. Sichern &amp; Backup</h4>
-            <p className="mb-3 text-xs text-muted-foreground">
-              Nach Änderungen zuerst lokal sichern; Chain-Backup zusätzlich für anderen Rechner oder Verlust der Datei.
-            </p>
+            <p className="mb-3 text-xs text-muted-foreground">Nach Änderungen: zuerst lokal, optional zusätzlich Chain.</p>
             {signerKind === 'sdk' ? (
               <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
                 <input
@@ -704,11 +683,9 @@ export function VaultView({ variant }: VaultViewProps) {
                 <span>
                   <span className="font-medium text-foreground">Signer-Import mit speichern</span>
                   {' — '}
-                  dieselbe Mnemonic/Bech32 wie beim Entsperren verschlüsselt in Vault-Datei bzw. Chain-Blob (wie Lite-UI).
+                  Mnemonic/Bech32 wie beim Entsperren, verschlüsselt im Vault.
                   {hasKeys !== true ? (
-                    <span className="block pt-1 text-amber-700 dark:text-amber-300">
-                      Nur bei entsperrtem Tresor (Keys im RAM) möglich — zuerst laden oder Wallet entsperren.
-                    </span>
+                    <span className="block pt-1 text-amber-700 dark:text-amber-300">Nur mit geladenem Tresor möglich.</span>
                   ) : null}
                 </span>
               </label>
@@ -722,9 +699,7 @@ export function VaultView({ variant }: VaultViewProps) {
               >
                 <Download className="h-8 w-8 text-emerald-400" />
                 <span className="font-semibold text-foreground">{processing ? 'Speichere…' : 'Lokal sichern'}</span>
-                <span className="text-xs text-muted-foreground">
-                  Schreibt/aktualisiert die Vault-Datei (Standardpfad) — überschreibt dieselbe Datei, kein „Kopie“-Dialog
-                </span>
+                <span className="text-xs text-muted-foreground">Überschreibt die Standard-Vault-Datei</span>
               </button>
               <button
                 type="button"
@@ -736,25 +711,17 @@ export function VaultView({ variant }: VaultViewProps) {
                 <span className="font-semibold text-foreground">
                   {syncingOnchain ? 'Sichere…' : 'Auf Chain sichern'}
                 </span>
-                <span className="text-xs text-muted-foreground">Verschlüsselter Blob in der Registry (IOTA)</span>
+                <span className="text-xs text-muted-foreground">Verschlüsselter Blob auf der Chain</span>
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
             <h4 className="font-semibold text-foreground">4. Sitzung beenden &amp; lokale Spuren</h4>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Wenn du nicht „Tresor sperren“ nutzt:</strong> Keys und Wallet-Passwort
-              bleiben im Backend-Prozess im RAM, bis du sperrst, den Server beendest oder der Rechner neu startet. Die
-              verschlüsselte Vault-Datei auf der Festplatte ändert sich dabei nicht.
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Die Messenger-Web-UI hält die sichtbare Nachrichtenliste im Browser-RAM. Auf dem Rechner kann zusätzlich die
-              Datei <span className="font-mono">.morgendrot-vault.inbox.enc</span> liegen (nach Abruf entschlüsselbar).{' '}
-              <strong className="text-foreground">Lokale Spuren verwischen</strong> schreddert nur diesen Inbox-Cache.{' '}
-              <strong className="text-foreground">Tresor sperren</strong> entfernt zusätzlich Keys und Wallet-Passwort aus
-              dem Backend-RAM und schreddert den Inbox-Cache (wie <span className="font-mono">/vault-lock</span>) – zum
-              Weiterarbeiten danach Wallet entsperren und ggf. „Daten laden“.
+            <p className="text-xs text-muted-foreground">
+              <strong className="text-foreground">Spuren verwischen</strong> = lokalen Nachrichten-Cache (
+              <span className="font-mono">.inbox.enc</span>) schreddern. <strong className="text-foreground">Tresor sperren</strong>{' '}
+              = zusätzlich Keys und Wallet-Passwort aus dem Server-RAM entfernen und Cache schreddern.
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -780,13 +747,10 @@ export function VaultView({ variant }: VaultViewProps) {
           <div className="rounded-xl border border-border bg-card p-4">
             <h4 className="mb-2 font-semibold text-foreground">Was wird gesichert?</h4>
             <ul className="space-y-1 text-sm text-muted-foreground">
-              <li>ECDH-Schlüssel (Messaging) und Handshake-Informationen</li>
-              <li>Passwortmanager: Titel, Benutzername, Geheimtext, Notiz (im Vault-Payload)</li>
-              <li>Optionale Streams Anchor-ID und Konfiguration</li>
+              <li>Messaging-Keys und Handshake</li>
+              <li>Passwortmanager-Einträge</li>
+              <li>Optional: Streams-Anker und weitere Konfiguration</li>
             </ul>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Zuerst lokal sichern, dann bei Bedarf „Auf Chain sichern“ – so hast du ein Backup unabhängig vom Gerät.
-            </p>
           </div>
             </>
           )}

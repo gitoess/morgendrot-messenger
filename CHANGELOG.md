@@ -8,6 +8,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Messenger (PWA)
 
+- **Tresor & Einstellungen:** ausführliche Hilfetexte in **`vault-view.tsx`** und **`settings-view.tsx`** zugunsten kurzer Handbuch-Links (**`/handbook?file=VAULT-EINRICHTEN.md`**, **`VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`**, **`RECOVERY-PHRASE-BACKUP.md`**). PWA: **`scripts/sync-pwa-handbook.mjs`** und **`frontend/components/handbook-client.tsx`** erweitert; **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`** **`morgendrot-sw-14`**) in Parität mit der Sync-Liste. Doku: **`docs/PWA-HANDBUCH-OFFLINE.md`**, Protokoll **`docs/PWA-MANUAL-CHECKS.md`** (2026-04-21).
 - **UI:** Erklär-Hinweise, Popover-Hilfe, sichtbare Handbuch-/Guide-Links und lange Tooltips in Chat/Toolbar/Transport-Karte reduziert bzw. nur noch **`sr-only`** wo nötig; Posteingangs-Telefonbuch-Zeile entfernt (Kurzhinweis nur für Screenreader).
 - **IOTA/Mailbox-Chips:** nur noch Gegenüber mit **reinen Mailbox-/Online-Zeilen** (ohne Mesh), keine LoRa-only-Adressen mehr in dieser Zeile.
 - **Posteingang:** Filter **„Nur IOTA“** (reine Mailbox-/Online-Zeilen ohne Mesh-Anteil), gegenseitig exclusiv zu **„Nur LoRa/Mesh“** (`sessionStorage` **`morg.inbox.iotaTransportOnly.v1`**); **`messagePureInternetInboxRow`** in **`inbox-partner-filter.ts`** + Vitest.

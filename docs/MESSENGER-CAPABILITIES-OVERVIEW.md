@@ -47,7 +47,7 @@
 
 ### 2.6 Rollen & Modi
 
-- **Privater Chat** vs. **Pinnwand** (Broadcast-Kontext, eingeschränkte Sendepfad-Optionen).
+- **Nachrichten** (eine Kachel): Umschalter **Privat** vs. **Pinnwand** (Broadcast-Kontext); Posteingang-Filter **Alles / Verschlüsselt / Klartext** (heuristisch); Pinnwand-Karte mit **PACKAGE_ID**-Copy & Einbindungs-Hinweis.
 - **Boss-Ansicht** für Posteingang (Konfiguration).
 - **Sendepfad-Auswahl** (privat + verschlüsselt): **online (IOTA/Mailbox)** vs. **funk (nur Mesh)** vs. **adhoc** (Platzhalter).
 

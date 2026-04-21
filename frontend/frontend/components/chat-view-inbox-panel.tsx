@@ -14,6 +14,7 @@ import {
 } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
@@ -35,6 +36,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     setInboxMeshTransportOnly: (v: boolean) => void
     inboxIotaTransportOnly: boolean
     setInboxIotaTransportOnly: (v: boolean) => void
+    inboxWireFilter: InboxWireFilter
+    setInboxWireFilter: (f: InboxWireFilter) => void
     selectInboxPartnerForSend: (address: string) => void
     removeInboxPartnerFromQuickList: (
       address: string,
@@ -73,6 +76,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     setInboxMeshTransportOnly,
     inboxIotaTransportOnly,
     setInboxIotaTransportOnly,
+    inboxWireFilter,
+    setInboxWireFilter,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     onDismissMeshInboundBanner,
@@ -108,6 +113,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onMeshTransportOnlyChange={setInboxMeshTransportOnly}
         iotaTransportOnly={inboxIotaTransportOnly}
         onIotaTransportOnlyChange={setInboxIotaTransportOnly}
+        wireFilter={inboxWireFilter}
+        onWireFilterChange={setInboxWireFilter}
         onPartnerSelectForSend={selectInboxPartnerForSend}
         onRemoveInboxPartnerFromQuickList={(address, opts) => {
           removeInboxPartnerFromQuickList(address, {

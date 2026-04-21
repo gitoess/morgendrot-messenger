@@ -9,7 +9,7 @@
  *
  * VERSION erhöhen bei Änderungen an Caching (Clients holen neue sw.js).
  */
-const VERSION = 'morgendrot-sw-12'
+const VERSION = 'morgendrot-sw-14'
 const STATIC_CACHE = `next-static-${VERSION}`
 const HANDBOOK_CACHE = `handbook-${VERSION}`
 const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
@@ -17,6 +17,8 @@ const OFFLINE_SHELL_CACHE = `pwa-offline-${VERSION}`
 const HANDBOOK_URLS = [
   '/handbook/API-EINSATZ-ROLE-TEMPLATES.md',
   '/handbook/BOSS-ORIENTIERUNG.md',
+  '/handbook/DASHBOARD-ERSTE-SCHRITTE.md',
+  '/handbook/DASHBOARD-PORT-UND-OBERFLAECHE.md',
   '/handbook/ONBOARDING-WALLET-UX-SPEC.md',
   '/handbook/RECOVERY-PHRASE-BACKUP.md',
   '/handbook/PWA-HANDBUCH-OFFLINE.md',
@@ -26,6 +28,8 @@ const HANDBOOK_URLS = [
   '/handbook/VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md',
   '/handbook/ROLLENWECHSEL-TEAM-EINSATZ.md',
   '/handbook/MESSENGER-CHAT-HANDBUCH.md',
+  '/handbook/VAULT-EINRICHTEN.md',
+  '/handbook/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md',
 ]
 
 self.addEventListener('install', (event) => {

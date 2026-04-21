@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 
 export type InboxPartnerOption = { address: string; label: string }
 
@@ -160,6 +161,8 @@ export type ChatViewInboxPartnerStripProps = {
   /** Nur reine Mailbox-/IOTA-Zeilen (ohne Mesh-Anteil). */
   iotaTransportOnly: boolean
   onIotaTransportOnlyChange: (v: boolean) => void
+  wireFilter: InboxWireFilter
+  onWireFilterChange: (f: InboxWireFilter) => void
   /** Partner ausgewählt: Filter + Empfänger für Senden */
   onPartnerSelectForSend: (address: string) => void
   onRemoveInboxPartnerFromQuickList?: (
@@ -180,6 +183,8 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     onMeshTransportOnlyChange,
     iotaTransportOnly,
     onIotaTransportOnlyChange,
+    wireFilter,
+    onWireFilterChange,
     onPartnerSelectForSend,
     onRemoveInboxPartnerFromQuickList,
   } = p
@@ -187,8 +192,6 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
   const hasAnyPartners = partnerOptions.length > 0
   /** Transport-Filter können in der Session hängen bleiben — Zeile muss sichtbar bleiben, sonst kein „Nur IOTA“ aus. */
   const showTransportRow = myAddressKnown || meshTransportOnly || iotaTransportOnly
-
-  if (!showTransportRow && !hasAnyPartners) return null
 
   const meshIotaToggleButtons = (
     <>
@@ -221,6 +224,38 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
 
   return (
     <div className="space-y-2 border-b border-border/80 bg-muted/20 px-3 py-2">
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Posteingang (Inhalt)
+          </span>
+          {(
+            [
+              ['all', 'Alles'],
+              ['encrypted', 'Verschlüsselt'],
+              ['plaintext', 'Klartext'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => onWireFilterChange(id)}
+              className={cn(
+                'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+                wireFilter === id
+                  ? 'border-emerald-600 bg-emerald-500/15 text-emerald-950 dark:text-emerald-100'
+                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          „Klartext“: Einträge ohne Verschlüsselungs-Markierung (typisch Pinnwand/Funk). 1:1-Klartext kann
+          mit erscheinen — kein separater Server-Tag.
+        </p>
+      </div>
       {showTransportRow ? (
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">

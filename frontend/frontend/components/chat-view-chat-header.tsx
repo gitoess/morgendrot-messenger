@@ -18,6 +18,13 @@ import {
 } from '@/frontend/lib/direct-iota-plain-submit'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+
+/** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
+export type ChatViewVaultBannerActions = {
+  onLockSession: () => Promise<void>
+  onNavigateHomeWhenLocked: () => void
+}
 
 export type ChatViewChatHeaderProps = {
   isPrivate: boolean
@@ -41,6 +48,11 @@ export type ChatViewChatHeaderProps = {
     onForcedTransportChange: (t: ForcedTransport) => void
     onEncryptedChange?: (encrypted: boolean) => void
   }
+  /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
+  vaultBannerActions?: ChatViewVaultBannerActions
+  /** Eine Kachel „Nachrichten“: Umschalten Privat ↔ Pinnwand (ohne Dashboard zurück). */
+  channelMode?: MessengerChatChannel
+  onChannelModeChange?: (c: MessengerChatChannel) => void
   /** Direkt unter Puls-Einstellungen (z. B. Einsatz-Profil). */
   afterPulse?: ReactNode
 }
@@ -109,6 +121,72 @@ function formatHeartbeatIntervalMs(ms: number): string {
   return `${Math.round(ms / 1000)} s`
 }
 
+function TresorSessionBadge({
+  locked,
+  actions,
+}: {
+  locked: boolean
+  actions?: ChatViewVaultBannerActions
+}) {
+  const [busy, setBusy] = useState(false)
+  const shellClass = cn(
+    'inline-flex max-w-[min(100%,12rem)] items-center gap-1 truncate rounded-full border px-2 py-1 text-[11px]',
+    locked
+      ? 'border-amber-500/45 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+      : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100'
+  )
+  const passiveTitle = locked
+    ? 'Backend-Sitzung gesperrt — Keys nicht im RAM. Startseite: Tresor entsperren.'
+    : 'Backend-Sitzung entsperrt — Signieren/Mailbox möglich, solange die Basis erreichbar ist.'
+  const activeTitle = locked
+    ? 'Zur Startseite wechseln — dort Dialog „Tresor entsperren“ (Randfall: Sitzung gesperrt während du hier warst).'
+    : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis; danach Passwort erneut nötig.'
+
+  const icon = locked ? (
+    <Lock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+  ) : (
+    <Unlock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+  )
+  const label = <span className="truncate font-medium">{locked ? 'Tresor: gesperrt' : 'Tresor: entsperrt'}</span>
+
+  if (!actions) {
+    return (
+      <span className={shellClass} title={passiveTitle}>
+        {icon}
+        {label}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      className={cn(shellClass, 'cursor-pointer text-left transition-opacity hover:opacity-90', busy && 'opacity-70')}
+      disabled={busy}
+      title={activeTitle}
+      aria-label={locked ? 'Zur Startseite für Tresor entsperren' : 'API-Sitzung sperren'}
+      onClick={() => {
+        if (locked) {
+          actions.onNavigateHomeWhenLocked()
+          return
+        }
+        void (async () => {
+          if (busy) return
+          setBusy(true)
+          try {
+            await actions.onLockSession()
+          } finally {
+            setBusy(false)
+          }
+        })()
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
 /** Kompakte Zeile: Streams + Heartbeat-Konfig (kein Chat-Spam, nur Status). */
 function MessengerPulseStatusLine({ apiStatus }: { apiStatus: ApiStatus }) {
   const streams = apiStatus.streams
@@ -166,6 +244,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     role,
     deviceTimeTrustWarn = false,
     sendPath,
+    vaultBannerActions,
+    channelMode,
+    onChannelModeChange,
     afterPulse,
   } = p
 
@@ -188,6 +269,38 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
               <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
                 {isPrivate ? 'Privater Chat' : 'Pinnwand'}
               </h2>
+              {channelMode != null && onChannelModeChange ? (
+                <span
+                  className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5"
+                  role="group"
+                  aria-label="Kanal"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onChannelModeChange('private')}
+                    className={cn(
+                      'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                      channelMode === 'private'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    Privat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChannelModeChange('pinnwand')}
+                    className={cn(
+                      'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                      channelMode === 'pinnwand'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    Pinnwand
+                  </button>
+                </span>
+              ) : null}
               {role.trim() ? (
                 <span className="text-[11px] text-muted-foreground sm:text-xs">
                   Rolle{' '}
@@ -200,6 +313,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
           <WaldCheckIndicator tier={waldTier} />
+          {isPrivate && apiStatus ? (
+            <TresorSessionBadge locked={!!apiStatus.locked} actions={vaultBannerActions} />
+          ) : null}
           {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
           {isPrivate ? <IotaMailboxPathBadge /> : null}
         </div>
@@ -225,11 +341,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
       {isPrivate && apiStatus?.locked === true && (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          <strong className="font-semibold">Tresor gesperrt.</strong> Zum Senden/Empfangen auf der{' '}
-          <strong>Startseite</strong> den Dialog <strong>Wallet entsperren</strong> nutzen (oder nach manuellem Sperren
-          den Befehl <span className="font-mono text-xs">/vault-load</span> in der Lite-UI bzw. Konsole). Diese Oberfläche
-          hat <strong>keinen geführten Erststart</strong> (kein Seed-Assistent beim ersten Öffnen) — Einrichtung über
-          Konfiguration, Tresor und Partner verbinden.
+          <strong className="font-semibold">Tresor gesperrt (API-Sitzung).</strong> Normalerweise blockiert die
+          Startseite den Messenger mit dem Dialog <strong>Tresor entsperren</strong>, bis die Sitzung offen ist — ohne
+          entsperrten Tresor sind Signieren und zuverlässiges Senden/Empfangen nicht möglich. Dieser Hinweis gilt vor
+          allem, wenn die Sitzung <strong>während</strong> du im Chat warst gesperrt wurde (anderes Tab, manuelles
+          Sperren, PWA-Hintergrund) oder der Status kurz hinterherhinkt: <strong>Startseite</strong> (Badge „Tresor:
+          gesperrt“ antippen) und erneut entsperren; in der Lite-UI ggf.{' '}
+          <span className="font-mono text-xs">/vault-load</span>. Diese Oberfläche hat <strong>keinen geführten
+          Erststart</strong> — Einrichtung über Konfiguration, Tresor und Partner verbinden.
         </div>
       )}
 

@@ -15,6 +15,8 @@
 
 **Nachtrag 2026-04-20 (S-ARQ UX):** **`MORG_SEG_V1`** im Next-Posteingang: **Kollaps** auf eine Leit-Zeile pro Session (`buildChatInboxRows`), **kein Roh-Wire** in der Sprechblase — **`MorgSegV1ChatSink`** (Ghost-Raster, JPEG nach Luma-/Chroma-Reassembly, NAK über Klartext-Mesh wie Composer). Spez/Wire: **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`**; Parser/Reassembly: `lora-sarq-parser.ts`, `lora-sarq-reassembly.ts`, `use-morg-seg-reassembly.ts`.
 
+**Nachtrag 2026-04-21 (Recovery im Setup):** **Backlog § H.0 #4:** Nach erfolgreichem **Unlock** (bzw. geführtem Erststart) optional **denselben** Recovery-Flow wie **Einstellungen → Wallet & Backup**: Vault-Passwort → **`/vault-show-signer-import`** → gespeicherten **Signer-Import** anzeigen (`SIGNER=sdk`, Vault mit „Signer-Import mit speichern“). Ziel: Backup direkt nach Einrichtung; Doku **`docs/RECOVERY-PHRASE-BACKUP.md`**, Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**.
+
 **Nachtrag 2026-03-28 (Unlock / Tresor L2):** **Next** (`frontend/frontend/components/dashboard.tsx`) und **Lite-UI** (`ui/index.html`): Modus **„Tresor öffnen“** vs. **„Neu anlegen“**, bei `SIGNER=sdk` Mnemonic/Secret **erst bei Bedarf** (Schaltfläche) oder wenn **`POST /api/unlock`** mit **`code: SIGNER_IMPORT_REQUIRED`** antwortet (`src/api-server.ts`). **Next-Tresor:** Checkbox **„Signer-Import mit speichern“** wie Lite (`vault-view.tsx`, `vault-commands.ts`). **Tests:** `frontend/frontend/lib/api/unlock-response-parse.ts` + **`unlock-response-parse.test.ts`**.
 
 **Nachtrag 2026-04-28:** **Architektur-Pivot** — **Primärpfad** = Client-Signatur + **direkter IOTA-RPC-Upload** vom Handy (**local-first**, Offline-Queue); **Morgendrot-Node** nur noch **optional** (Relay, Sponsored Gas, Archiv, Komfort). Doku: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** (§ 6 neu, § 7 historisch), **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, Fahrplan **§ H.15**. Umsetzung **schrittweise**; **§ C.0b** (kein unkontrollierter Parallel-Bau zum Mesh-Kern).
@@ -216,6 +218,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **UI-Ergaenzung (Backlog):** unter dem Composer optionales Vorschau-Feld **„Verschluesselter Funk-Block“** (nur Kopie/Weiterleitung, nicht Klartext) und optionaler Proof-Anhang (`payloadHash`, `senderSig`, spaeter `txDigest`) fuer forensische Nachvollziehbarkeit.
 - **Utility-Backlog (neu):** **„Nachricht vom Tangle entschlüsseln“** als manuelle Funktion (Tx-/Digest-Eingabe, optional Explorer-Link-Lookup): Payload laden, mit lokalem ECDH-/Vault-Material entschlüsseln, Ergebnis/Fehler transparent anzeigen.
 - **Wichtig:** Erst nach abgeschlossenem Stage-2-/Feldtestpfad weiter ausbauen; zunächst Spez + Akzeptanzkriterien, dann Implementierung.
+- **Abgrenzung „Coins“:** Ziel von **LoRa → Relayer → Tangle** ist **signierte Daten/Submit-Pfade** (Nachrichten, Mailbox, Protokoll-/Relay-Nachweise, ggf. `MORG_TX_RELAY_V1`), **nicht** ein allgemeiner **Coin-Transfer an Dritte über den Messenger/Funk**. Werttransfers bleiben **Wallet / explizite, verstandene Flows** (siehe Handbuch-Warnung zu Auto-Execute). **R2 „sponsored“** meint **Gas-/Builder-Dienst** (Gebührenübernahme oder Finalisierung nach Policy), **kein** Produktziel „IOTA-Coins wie eine Chat-Nachricht über LoRa schicken“.
 - **Header-Modell (Zwiebel, Entwurf):**
   - **Outer Header (Klartext/Public):** `version`, `messageType`, `priority`, ggf. minimale Routing-Hinweise (`networkId`, `relayMode`). Zweck: Transport/Filterung/Relay.
   - **Inner Header (verschlüsselt/privat):** Identitäts- und Kontextdaten (`senderPubRef`, `createdAt`, `nonce`, optional `gpsTimestamp`) plus Payload.
@@ -250,6 +253,24 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
   - Unit: Replay-/Idempotenzschutz über `nonce` bleibt bei Late-Anchor erhalten.
   - UI-Test: korrekte Status-Badges (⏳ / 📜 / ✅📜) und Prompt-Flow.
   - Integrations-/Smoke-Test: Offline erstellen -> Expiry -> Reconnect -> Late-Anchor -> Log/Status sichtbar.
+
+**Roadmap-Fortsetzung (nach Single-Messenger-Stabilisierung, 2026-04-21):**
+- **Abgeschlossen (einmalig getestet):** Text-/Queue-/IOTA-Basisfluss, Pfad-4-Recovery, Outbox-Labeling, Queue-Einzellöschung, Online-Adress-Guard, Protokoll-Dialogführung bei Größenlimit.
+- **Nächster Block A (2-Client-Interop):**
+  - Zwei Messenger-Instanzen gegen denselben Fahrplan testen (Handshake/Connect, encrypted online end-to-end, Relayer-Verhalten).
+  - Akzeptanz: keine Doppel-TX, reproduzierbare Zustände in beiden Clients, klare Fehlertexte bei fehlender Gegenstelle.
+- **Nächster Block B (Utility „Nachricht vom Tangle entschlüsseln“):**
+  - UI-Dialog mit Tx/Digest-Eingabe + optionalem Explorer-Link.
+  - Akzeptanz: Trefferfall entschlüsselt korrekt, Missfall mit präziser Fehlursache (kein Schlüssel / falsches Format / nicht entschlüsselbar).
+- **Nächster Block C (Queue v2 Vorarbeit, noch ohne Implementierung):**
+  - Spez für Byte-Limit + Item-Limit + Expiry-aware Drain + IndexedDB-Migration ausarbeiten.
+  - Akzeptanz: klarer Migrationspfad, definierte Statusfelder und Testplan vor Code.
+
+**Nachtrag 2026-04-21 (Dashboard- & Messenger-UI, Aufräumen):**
+- **Erste Schritte:** Große Startkachel durch **schlanke Einrichtungszeile** (Handbuch-Deep-Links) ersetzt; **Ausblenden** + **Wieder einblenden** in **Einstellungen → Startseite** (`morgendrot.dashboardFirstStepsVisible`, Migration vom alten `morgendrot.hideFirstStepsCard`).
+- **Handbuch:** neue Artikel **`DASHBOARD-ERSTE-SCHRITTE.md`**, **`DASHBOARD-PORT-UND-OBERFLAECHE.md`** (Ports 3341/Next vs. API); Kurzfassung im Arbeitsbereich-Panel statt langer Infobox.
+- **MY_ADDRESS:** Popover auf dem Dashboard (lokal gemerkte Adressen + aktive vom Backend); Übernahme per **`POST /api/config`** (`setConfig`), sofern Rolle **Konfiguration ändern** darf.
+- **Messenger:** Chat-Kopfzeile mit **Tresor: entsperrt / gesperrt**-Badge ergänzt (neben Wald/Sendepfad).
 
 **Strategische Doku-/Git-Pushes (nach Merge oder sinnvoller Paketgrenze):** **`git push`**; **`CHANGELOG.md`** [Unreleased] (Messenger-Zeile); **`README.md`** (Next-Messenger-Absatz **Funk**); **`docs/TEST-RUN-LOGBOOK.md`** nach **`npm run test:unit`** / **`test:smoke`**; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei betriebsrelevanten UI-Pfaden; **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** oder **`docs/LORA-PC-FIRST-SMOKE.md`** nur wenn Funk-Smoke-Checkliste sich ändert; Export-Spiegel **`exports/Morgendrot-Messenger-verkauf/…`** nur bei bewusstem Bundle-Release (nicht bei jedem UI-Tweak).
 
@@ -451,8 +472,8 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 |---|--------|-------------------|---------|
 | 1 | **Lite / Messenger-Modus** | **Teilweise erledigt** | **`/api/status` → `uiVariant`**; bei `UI_VARIANT=messenger` erzwingt das Dashboard **Messenger-Kachelset** (Nachrichten + Tresor) für **alle Rollen außer `boss`**; **`boss`** kann **Volldashboard** wählen. **`workspace-projects-panel`**, „Erste Schritte“-Karte mit rollenabhängigem Lite-Text. Siehe **`docs/FRONTEND-KLEINER.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`** § 5 (volle rollen-basierte Workflows = Backlog). |
 | 2 | **„Wanderer“-Abgabe** | **Doku erledigt (2026-03)** | Kanon: **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Bundle bauen, Boss→Helfer, optional zwei Ordner). **`npm run bundle:standalone-smartphone`** → **`exports/morgendrot-standalone-smartphone/`**; technische Details **§ H.7**. |
-| 3 | **Kacheln nach Rolle** | **Teilweise (2026-03)** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar bei Volldashboard. **Neu:** rollenbezogene Hinweise im Panel **„Arbeitsbereich & Projekte“** + Kurzzeilen in Action Center / Radar — **`dashboard.tsx`**, **`workspace-projects-panel.tsx`**, Spec **`docs/UI-ROLLEN-WORKSPACES.md`** (Workflow-Tiefe = Backlog). |
-| 4 | **Unlock- & Secret-UX** | **L2 weiter (2026-03-28)** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**; **„Erste Schritte“** + **`GET /api/help`**. **Neu (2026-03-28):** Next + Lite **„Tresor öffnen / Neu anlegen“**, Mnemonic bei `SIGNER=sdk` **progressiv** + API-**`SIGNER_IMPORT_REQUIRED`**; Next-Tresor **Signer-Import mit speichern**; Vitest **`unlock-response-parse`**. **Neu (2026-03-28):** dritter Einstieg **Seed importieren** (Next + Lite); **H.7** Export-Assistent (ZIP) im Boss-Modus. **Offen:** geführter Wizard; optional **Mnemonic per Knopf erzeugen**. |
+| 3 | **Kacheln nach Rolle** | **Teilweise (2026-03)** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar bei Volldashboard. **Arbeitsbereich/Radar/Rollen-Kurztexte:** **`docs/UI-ROLLEN-WORKSPACES.md`** §5–§7 (Panel schlank); **`dashboard.tsx`**, **`workspace-projects-panel.tsx`**. Workflow-Tiefe = Backlog. |
+| 4 | **Unlock- & Secret-UX** | **L2 weiter (2026-03-28)** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**; **„Erste Schritte“** + **`GET /api/help`**. **Neu (2026-03-28):** Next + Lite **„Tresor öffnen / Neu anlegen“**, Mnemonic bei `SIGNER=sdk` **progressiv** + API-**`SIGNER_IMPORT_REQUIRED`**; Next-Tresor **Signer-Import mit speichern**; Vitest **`unlock-response-parse`**. **Neu (2026-03-28):** dritter Einstieg **Seed importieren** (Next + Lite); **H.7** Export-Assistent (ZIP) im Boss-Modus. **Offen:** geführter Wizard; optional **Mnemonic per Knopf erzeugen**. **Offen (2026-04-21):** **Recovery/Signer-Backup** optional **im Setup** direkt nach Unlock (Vault-Passwort → **`/vault-show-signer-import`**, gleicher Backend-Flow wie **Wallet & Backup**) — **`docs/RECOVERY-PHRASE-BACKUP.md`**. |
 | 5 | **PWA-Realität** | **Doku + Checks (2026-03)** | **`docs/PWA-MANUAL-CHECKS.md`** — manuelle Feldprüf + **Vorprüfung am Schreibtisch** (Build/Icons/Handbuch); **§ H.2**; optional Offline-Fallback-Seite Backlog. |
 
 **Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.

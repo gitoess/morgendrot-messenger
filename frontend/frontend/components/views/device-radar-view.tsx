@@ -10,8 +10,10 @@ type MonitorDevice = { device: string; lastSeen: number; status: 'online' | 'off
 
 /**
  * Geräte-Radar: Liste Worker/Geräte mit Status (`GET /api/monitor-status`).
- * Wird auf dem **Haupt-Dashboard** oben gerendert, wenn `dashboard.tsx` `showDeviceRadar` true ist
+ * Wird oben auf dem Next-Dashboard gerendert, wenn `dashboard.tsx` `showDeviceRadar` true ist
  * (Arbeitsbereich `morgendrot_workspace_tile_set` = **full**; im Messenger-Bundle typ. nur **Boss**).
+ * Im Arbeitsbereich **Messenger** (`messenger`) wird diese Sektion **nicht** angezeigt — Monitoring gehört zur
+ * **Hauptprojekt-/Volldashboard-Linie**, nicht zum schlanken Messenger-Fokus (`docs/UI-ROLLEN-WORKSPACES.md` §7.1).
  * Nicht zu verwechseln mit: Chat-**Boss-Übersicht** (`bossView`, Posteingang) oder `morgendrot_show_all_tiles`.
  */
 export function DeviceRadarView() {

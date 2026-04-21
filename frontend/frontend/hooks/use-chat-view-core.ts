@@ -81,6 +81,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     },
     [forcedTransport]
   )
+
+  /** Pinnwand: verschlüsselter Funk ist ohnehin gesperrt — Klartext konsistent setzen. */
+  useEffect(() => {
+    if (!isPrivate) setEncryptedInternal(false)
+  }, [isPrivate])
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
   const clearSosVoicePrompt = useCallback(() => setSosVoiceAwaitingSend(false), [])
@@ -180,6 +185,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setInboxMeshTransportOnly,
     inboxIotaTransportOnly,
     setInboxIotaTransportOnly,
+    inboxWireFilter,
+    setInboxWireFilter,
     inboxPartnerOptions,
     toggleProtokollMark,
     onHideInboxMessageLocal,
@@ -623,6 +630,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setInboxMeshTransportOnly,
     inboxIotaTransportOnly,
     setInboxIotaTransportOnly,
+    inboxWireFilter,
+    setInboxWireFilter,
     inboxPartnerOptions,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,

@@ -58,6 +58,7 @@ import {
     getEffectiveRpcUrlLabel,
     mintMessengerCreditsBatchForRecipients,
     getMessengerCreditsSnapshot,
+    getBalanceInMist,
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
     MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from './chain-access.js';
@@ -143,7 +144,23 @@ export type ApiStatus = {
     rpcSocksProxyActive?: boolean;
     /** RPC läuft über HTTP(S)-Proxy. */
     rpcHttpProxyActive?: boolean;
+    /** Nach Unlock: natives IOTA-Guthaben von MY_ADDRESS (MIST + Anzeige), per RPC. */
+    walletNativeIotaBalance?: { mist: string; displayIota: string } | null;
+    /** true: Adresse vorhanden, Saldo-Abfrage an RPC fehlgeschlagen. */
+    walletNativeIotaBalanceFetchFailed?: boolean;
 };
+
+/** Anzeige-Saldo für GET /api/status: MIST → lesbare IOTA-Zahl (de-DE). */
+function formatWalletNativeIotaForStatusUi(mist: bigint): string {
+    const asNum = Number(mist);
+    if (!Number.isFinite(asNum) || asNum < 0) return '0';
+    const iota = asNum / 1_000_000_000;
+    if (iota === 0) return '0';
+    if (iota >= 1_000_000) {
+        return `${(iota / 1_000_000).toLocaleString('de-DE', { maximumFractionDigits: 2 })} Mio`;
+    }
+    return iota.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
+}
 
 type GetStatusFn = () => Partial<ApiStatus>;
 export type CommandApiOptions = {
@@ -453,6 +470,22 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     messengerCreditsFetchFailed = true;
                 }
             }
+            let walletNativeIotaBalance: { mist: string; displayIota: string } | undefined;
+            let walletNativeIotaBalanceFetchFailed: boolean | undefined;
+            if (!_resolvePassword) {
+                const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                if (myAddr && /^0x[a-fA-F0-9]{64}$/i.test(myAddr)) {
+                    try {
+                        const mist = await getBalanceInMist(myAddr);
+                        walletNativeIotaBalance = {
+                            mist: mist.toString(),
+                            displayIota: formatWalletNativeIotaForStatusUi(mist),
+                        };
+                    } catch {
+                        walletNativeIotaBalanceFetchFailed = true;
+                    }
+                }
+            }
             const status: ApiStatus & {
                 locked?: boolean;
                 role?: string;
@@ -519,6 +552,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 messengerCreditsConfigured: !!credLooksValid,
                 ...(messengerCredits !== undefined && { messengerCredits }),
                 ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
+                ...(walletNativeIotaBalance !== undefined && { walletNativeIotaBalance }),
+                ...(walletNativeIotaBalanceFetchFailed && { walletNativeIotaBalanceFetchFailed: true }),
                 ...(configHints.length > 0 && { configHints }),
                 rpcUrlLabel: rpcUrlLabel(CFG.RPC_URL || ''),
                 rpcSocksProxyActive: Boolean((CFG.RPC_SOCKS_PROXY || '').trim()),

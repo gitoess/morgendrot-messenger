@@ -79,6 +79,9 @@ export type ApiStatus = {
   }
   /** Volle eigene IOTA-Adresse (Explorer) – nur vertrauenswürdiges UI; myAddress bleibt maskiert. */
   myAddressFull?: string
+  /** Nach Unlock: natives Wallet-Guthaben (MY_ADDRESS), vom Backend per RPC. */
+  walletNativeIotaBalance?: { mist: string; displayIota: string } | null
+  walletNativeIotaBalanceFetchFailed?: boolean
 }
 
 /** Erfolgreicher `fetchStatus` inkl. Referenz für Geräte-Uhr (HTTP `Date`, § H.6c). */

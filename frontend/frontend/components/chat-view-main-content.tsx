@@ -16,7 +16,9 @@ import {
 } from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
-import { ChatViewChatHeader } from '@/frontend/components/chat-view-chat-header'
+import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
+import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   ChatViewTransportCard,
   type ChatViewTransportCardProps,
@@ -28,7 +30,11 @@ import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
 
-export type ChatViewMainContentProps = ChatViewCoreState
+export type ChatViewMainContentProps = ChatViewCoreState & {
+  vaultBannerActions?: ChatViewVaultBannerActions
+  channelMode?: MessengerChatChannel
+  onChannelModeChange?: (c: MessengerChatChannel) => void
+}
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const {
@@ -186,6 +192,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     voiceEmergencyMaxSeconds,
     sosVoiceFollowsOnline,
     sosVoiceAwaitingSend,
+    vaultBannerActions,
+    channelMode,
+    onChannelModeChange,
+    inboxWireFilter,
+    setInboxWireFilter,
   } = c
 
   const addInboxSenderToContactBook = useCallback(
@@ -265,6 +276,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxMeshTransportOnly,
     inboxIotaTransportOnly,
     setInboxIotaTransportOnly,
+    inboxWireFilter,
+    setInboxWireFilter,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     inboxRows,
@@ -391,6 +404,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         meshBleConnected={meshtastic.connected}
         role={role}
         deviceTimeTrustWarn={deviceTimeTrustWarn}
+        vaultBannerActions={vaultBannerActions}
+        channelMode={channelMode}
+        onChannelModeChange={onChannelModeChange}
         sendPath={{
           visible: isPrivate || !encrypted,
           encrypted,
@@ -399,6 +415,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onEncryptedChange: setEncrypted,
         }}
       />
+
+      {!isPrivate ? <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} /> : null}
 
       {isPrivate ? (
         <ChatViewPackageIdBanner

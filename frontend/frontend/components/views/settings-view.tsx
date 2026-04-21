@@ -31,6 +31,11 @@ import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-te
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
 import {
+  notifyFirstStepsPrefChanged,
+  readFirstStepsVisible,
+  writeFirstStepsVisible,
+} from '@/frontend/lib/dashboard-first-steps-pref'
+import {
   getDirectIotaPathUiState,
   getIotaSubmitMode,
   setDirectMailboxDrainEnabled,
@@ -83,6 +88,8 @@ export function SettingsView({
   const refreshIotaPathUi = useCallback(() => {
     setIotaPathUi(getDirectIotaPathUiState())
   }, [])
+
+  const [firstStepsBarVisible, setFirstStepsBarVisible] = useState(true)
 
   const canManageEinsatzRoleTemplates =
     status?.role === 'boss' || status?.role === 'messenger'
@@ -172,6 +179,10 @@ export function SettingsView({
   }, [])
 
   useEffect(() => {
+    setFirstStepsBarVisible(readFirstStepsVisible())
+  }, [])
+
+  useEffect(() => {
     refreshIotaPathUi()
   }, [refreshIotaPathUi])
 
@@ -236,6 +247,27 @@ export function SettingsView({
         <div>
           <h2 className="text-xl font-bold text-foreground">Einstellungen</h2>
           <p className="text-sm text-muted-foreground">Netzwerk-Status und Konfiguration</p>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h4 className="font-semibold text-foreground">Startseite</h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Die schlanke Zeile <strong className="text-foreground">Einrichtung</strong> (Links zum Handbuch) nach dem
+              Ausblenden hier wieder aktivieren.
+            </p>
+          </div>
+          <Switch
+            checked={firstStepsBarVisible}
+            onCheckedChange={(on) => {
+              writeFirstStepsVisible(on)
+              setFirstStepsBarVisible(on)
+              notifyFirstStepsPrefChanged()
+            }}
+            aria-label="Einrichtungszeile auf dem Dashboard anzeigen"
+          />
         </div>
       </div>
 
@@ -495,16 +527,23 @@ export function SettingsView({
             <div className="min-w-0 space-y-1">
               <h4 className="font-semibold text-foreground">Wallet & Backup</h4>
               <p className="text-sm text-muted-foreground">
-                Wenn beim ersten Einrichten eine Mnemonic nur kurz sichtbar war: Ohne sicheres Backup sind bei
-                Geräteverlust <strong className="text-foreground">Identität und gebundene Berechtigungen</strong> (z. B.
-                Messenger-Credits auf der Chain) nicht wiederherstellbar — der Server speichert keinen Klartext-Key.
-                Hier kannst du den <strong className="text-foreground">in der Vault-Datei gespeicherten</strong>{' '}
-                Signer-Import erneut anzeigen, wenn du ihn beim Tresor-Speichern mit abgelegt hast (
-                <span className="font-mono text-xs">Signer-Import mit speichern</span> in der Lite-UI / Tresor).
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Technik und Risiken: <span className="font-mono">docs/RECOVERY-PHRASE-BACKUP.md</span>,{' '}
-                <span className="font-mono">docs/ONBOARDING-WALLET-UX-SPEC.md</span>.
+                Signer-Mnemonic aus der Vault nur anzeigen, wenn du sie beim Speichern mit abgelegt hast (
+                <span className="font-mono text-xs">Signer-Import mit speichern</span>). Ohne Backup geht bei Verlust der
+                Zugriff verloren — der Server hält keinen Klartext-Key. Hintergrund:{' '}
+                <Link
+                  href="/handbook?file=RECOVERY-PHRASE-BACKUP.md"
+                  className="text-primary underline underline-offset-2 hover:text-primary/90"
+                >
+                  Recovery / Backup
+                </Link>
+                ,{' '}
+                <Link
+                  href="/handbook?file=ONBOARDING-WALLET-UX-SPEC.md"
+                  className="text-primary underline underline-offset-2 hover:text-primary/90"
+                >
+                  Wallet-Onboarding
+                </Link>
+                .
               </p>
             </div>
           </div>
@@ -513,8 +552,8 @@ export function SettingsView({
             <>
               {!status.vaultHasLocal ? (
                 <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Keine lokale Vault-Datei am erwarteten Ort — zuerst Tresor „lokal sichern“ mit aktiviertem Signer-Import,
-                  oder Vault von der Chain laden.
+                  Keine lokale Vault-Datei — im Tresor <strong className="font-medium">lokal sichern</strong> (optional
+                  Signer-Import) oder von der Chain laden.
                 </p>
               ) : null}
               <div className="space-y-3">
@@ -578,10 +617,16 @@ export function SettingsView({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              <span className="font-mono">SIGNER={status.signer ?? '?'}</span>: Die Recovery-Phrase wird hier nur für{' '}
-              <span className="font-mono">sdk</span> aus der Morgendrot-Vault gelesen. Bei{' '}
-              <span className="font-mono">cli</span> nutzt du das Backup des IOTA-CLI-Keystores; bei{' '}
-              <span className="font-mono">remote</span> verwaltet der Boss die Signatur.
+              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — Vault-Mnemonic-Anzeige nur bei{' '}
+              <span className="font-mono">sdk</span>. Bei <span className="font-mono">cli</span> /{' '}
+              <span className="font-mono">remote</span>:{' '}
+              <Link
+                href="/handbook?file=RECOVERY-PHRASE-BACKUP.md"
+                className="text-primary underline underline-offset-2 hover:text-primary/90"
+              >
+                Handbuch
+              </Link>
+              .
             </p>
           )}
         </div>
@@ -643,30 +688,19 @@ export function SettingsView({
       {/* Lokales Vault-Passwort vergessen */}
       <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
         <h4 className="mb-2 font-semibold text-foreground">Lokales Vault-Passwort vergessen?</h4>
-        <p className="mb-2 text-sm text-muted-foreground">
-          Die Datei <span className="font-mono">.morgendrot-vault</span> (oder <span className="font-mono">VAULT_FILE</span>)
-          ist verschlüsselt – ohne Passwort ist der Inhalt nicht wiederherstellbar.
+        <p className="text-sm text-muted-foreground">
+          Die Vault-Datei (<span className="font-mono">.morgendrot-vault</span> /{' '}
+          <span className="font-mono">VAULT_FILE</span>) ist ohne das richtige Passwort nicht lesbar — es gibt keinen
+          technischen Reset. Neu anlegen, Chain-Backup und{' '}
+          <span className="font-mono">PACKAGE_ID</span>:{' '}
+          <Link
+            href="/handbook?file=VAULT-EINRICHTEN.md"
+            className="text-primary underline underline-offset-2 hover:text-primary/90"
+          >
+            Tresor einrichten (Handbuch)
+          </Link>
+          .
         </p>
-        <ul className="list-inside list-disc space-y-1 text-sm text-muted-foreground">
-          <li>
-            <span className="text-foreground">Neu anlegen:</span> alte Vault-Datei wegsichern/umbenennen, Wallet über
-            Mnemonic/Keystore wiederherstellen oder neu erzeugen, <span className="font-mono">MY_ADDRESS</span> in{' '}
-            <span className="font-mono">.env</span> anpassen.
-          </li>
-          <li>
-            <span className="text-foreground">PACKAGE_ID:</span> oft gleich lassen, wenn alle dasselbe Move-Paket nutzen;
-            sonst neues Paket deployen und überall die neue ID setzen.
-          </li>
-          <li>
-            Nach Handshake/Connect: <span className="font-mono">/vault-save</span> oder Tresor „lokal sichern“ – erzeugt
-            eine neue verschlüsselte Datei mit <strong>neuem</strong> Passwort deiner Wahl.
-          </li>
-          <li>
-            War der Tresor nur lokal und nie on-chain: Inhalt ist verloren. War er on-chain: mit <strong>bekanntem</strong>{' '}
-            Wallet-Passwort <span className="font-mono">/vault-load-from-chain</span> möglich – nicht mit einem
-            erfundenen Passwort.
-          </li>
-        </ul>
       </div>
 
       {/* Info */}

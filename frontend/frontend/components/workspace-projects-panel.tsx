@@ -1,9 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Layers, Copy, Check, Info } from 'lucide-react'
+import { Layers, Copy, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ApiStatus } from '@/frontend/lib/api'
 
 export type WorkspaceTileSet = 'full' | 'messenger'
 
@@ -31,83 +30,24 @@ const BUNDLE_CMD = 'npm run bundle:messenger'
 const BUNDLE_NOTE =
   'Erzeugt u. a. exports/Morgendrot-Messenger-standalone/ – Ordner kopieren, dort npm install && npm start.'
 
-function roleWorkspaceHint(
-  role: string | undefined,
-  tileSet: WorkspaceTileSet,
-  liteMessengerLocksTiles: boolean,
-  liteMessengerBossFullTiles: boolean
-): { title: string; body: string } | null {
-  const r = (role || '').toLowerCase()
-  if (r === 'boss' && liteMessengerBossFullTiles && tileSet === 'full') {
-    return {
-      title: 'Rollen-Workspace: Boss (Messenger-Bundle, Volldashboard)',
-      body:
-        'Kachelfläche ist absichtlich schlank: Nachrichten, Tresor & Notfall, Steuerung (z. B. Helfer/Boss-Modus) — kein Zugang- oder Überwachungs-Grid wie im Morgendrot-Hauptprojekt. Oben: Geräte-Radar. Spec: docs/UI-ROLLEN-WORKSPACES.md §6, docs/ROADMAP-FAHRPLAN.md §H.17.',
-    }
-  }
-  if (r === 'arbeiter' || r === 'lock') {
-    return {
-      title: 'Rollen-Workspace: Arbeiter / Lock',
-      body: liteMessengerLocksTiles
-        ? 'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Nachrichten & Tresor anzeigen“ erreichst du nur diese beiden Module (Lite-Messenger, keine weiteren Kacheln). Spec: docs/UI-ROLLEN-WORKSPACES.md.'
-        : 'Standard ist das Action Center (Heartbeat, Tickets, Keys). Über „Alle Funktionen (Kacheln)“ erreichst du Nachrichten, Tresor und weitere Module. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
-    }
-  }
-  if (r === 'kommandant' && liteMessengerLocksTiles) {
-    return {
-      title: 'Rollen-Workspace: Kommandant (Lite-Messenger)',
-      body:
-        'Im Messenger-Bundle ist Volldashboard nur für die Rolle Boss verfügbar. Du siehst Nachrichten und Tresor; Geräte-Radar und weitere Kacheln sind hier nicht freigeschaltet. Spec: docs/UI-ROLLEN-WORKSPACES.md.',
-    }
-  }
-  if (r === 'boss' || r === 'kommandant') {
-    const radar =
-      tileSet === 'full'
-        ? 'Oben: Geräte-Radar (Monitor-Status). Darunter Kacheln und Arbeitsbereich.'
-        : 'Geräte-Radar erscheint nur, wenn du auf „Volldashboard“ (intern: workspace full) schaltest — eigene Monitoring-Sektion, nicht die Chat-Boss-Übersicht.'
-    return {
-      title: 'Rollen-Workspace: Boss / Kommandant',
-      body: `${radar} Spec: docs/UI-ROLLEN-WORKSPACES.md.`,
-    }
-  }
-  return null
-}
-
 interface WorkspaceProjectsPanelProps {
-  apiStatus: (ApiStatus & { error?: string }) | null
   className?: string
   tileSet: WorkspaceTileSet
   onTileSetChange: (v: WorkspaceTileSet) => void
-  /** `GET /api/status` → `role` — für rollenbezogene Hinweise (H.0 #3). */
-  dashboardRole?: string
   /**
    * `true`: Lite-Messenger-Bundle (`uiVariant: 'messenger'`) und Nutzer ist nicht Boss – nur Nachrichten + Tresor;
    * Schalter „Volldashboard“ ist deaktiviert. Boss kann weiter auf Volldashboard wechseln.
    */
   liteUiEnforcedByBackend?: boolean
-  /** Boss im Messenger-Bundle mit Arbeitsbereich `full` — Kachel-Whitelist (H.17), für Hinweistext. */
-  liteMessengerBossFullTiles?: boolean
 }
 
 export function WorkspaceProjectsPanel({
-  apiStatus,
   className,
   tileSet,
   onTileSetChange,
-  dashboardRole,
   liteUiEnforcedByBackend = false,
-  liteMessengerBossFullTiles = false,
 }: WorkspaceProjectsPanelProps) {
   const [copied, setCopied] = useState<string | null>(null)
-  const apiPort = apiStatus?.apiListenPort
-  const uiVar = apiStatus?.uiVariant
-  const edition = apiStatus?.messengerEdition
-  const roleHint = roleWorkspaceHint(
-    dashboardRole,
-    tileSet,
-    liteUiEnforcedByBackend,
-    liteMessengerBossFullTiles
-  )
 
   const copy = (text: string, key: string) => {
     void navigator.clipboard.writeText(text)
@@ -126,24 +66,6 @@ export function WorkspaceProjectsPanel({
         <Layers className="h-4 w-4 text-primary" />
         Arbeitsbereich &amp; Projekte
       </div>
-
-      {roleHint ? (
-        <div className="mb-4 flex items-start gap-2 rounded-lg border border-violet-500/25 bg-violet-500/[0.07] p-3 text-xs leading-relaxed text-muted-foreground">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-violet-400" />
-          <div>
-            <div className="mb-1 font-medium text-foreground">{roleHint.title}</div>
-            <p>{roleHint.body}</p>
-          </div>
-        </div>
-      ) : null}
-
-      <p className="mb-2 text-[10px] leading-snug text-muted-foreground">
-        <strong className="text-foreground/90">Hinweis:</strong> <span className="font-mono">morgendrot_workspace_tile_set</span>{' '}
-        (<strong>Volldashboard</strong> = <span className="font-mono">full</span>) ist{' '}
-        <strong>nicht</strong> dasselbe wie <span className="font-mono">morgendrot_show_all_tiles</span> in den
-        Einstellungen (Arbeiter/Lock: „alle Kacheln“) und <strong>nicht</strong> die Chat-**Boss-Übersicht** (
-        <span className="font-mono">bossView</span>).
-      </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
         <button
@@ -184,38 +106,6 @@ export function WorkspaceProjectsPanel({
           Tresor). Volldashboard kann nur die Rolle <strong className="text-foreground/90">Boss</strong> wählen.
         </p>
       ) : null}
-
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Messenger-Projekt</strong> blendet dieselbe Kachel-Kombination ein
-        wie der exportierbare Standalone-Messenger (Chat + Tresor). Export selbst bleibt ein Repo-Befehl (siehe
-        unten) oder die Lite-UI auf dem API-Port.
-      </p>
-
-      <div className="mb-4 flex items-start gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 p-3 text-xs text-muted-foreground">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-400" />
-        <div className="space-y-2">
-          <p>
-            <span className="font-medium text-foreground">Port 3341</span> = diese{' '}
-            <span className="text-foreground">Next.js</span>-Oberfläche (React-Dashboard). Sie spricht per Proxy
-            mit dem Backend.
-          </p>
-          <p>
-            <span className="font-medium text-foreground">API-Port{apiPort != null ? ` ${apiPort}` : ''}</span> ={' '}
-            <span className="text-foreground">dasselbe Backend</span> mit der{' '}
-            <span className="text-foreground">Lite-UI</span> (<span className="font-mono">ui/index.html</span>) –
-            oft mehr Legacy-Boss-/Setup-Fläche als hier; mit <span className="font-mono">SERVE_LITE_UI_STATIC=false</span>{' '}
-            am API-Port abgeschaltet (nur Next). Kein separater „Standalone-Ordner“: der entsteht erst durch{' '}
-            <span className="font-mono">bundle:messenger</span>.
-          </p>
-          {uiVar != null && (
-            <p className="font-mono text-[11px] text-foreground/80">
-              Backend: UI_VARIANT={uiVar}
-              {edition ? ` · MESSENGER_EDITION=${edition}` : ''}
-              {apiStatus?.serveLiteUiStatic === false ? ' · SERVE_LITE_UI_STATIC=off' : ''}
-            </p>
-          )}
-        </div>
-      </div>
 
       <div className="rounded-lg border border-border bg-muted/30 p-3">
         <div className="mb-1 text-xs font-medium text-foreground">Standalone exportieren (Haupt-Repo)</div>

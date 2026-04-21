@@ -15,6 +15,8 @@ const destDir = path.join(root, 'frontend', 'public', 'handbook');
 const FILES = [
   'API-EINSATZ-ROLE-TEMPLATES.md',
   'BOSS-ORIENTIERUNG.md',
+  'DASHBOARD-ERSTE-SCHRITTE.md',
+  'DASHBOARD-PORT-UND-OBERFLAECHE.md',
   'ONBOARDING-WALLET-UX-SPEC.md',
   'RECOVERY-PHRASE-BACKUP.md',
   'PWA-HANDBUCH-OFFLINE.md',
@@ -24,6 +26,8 @@ const FILES = [
   'VAULT-TRAEGERBILD-EINSATZ-ORGANISATION.md',
   'ROLLENWECHSEL-TEAM-EINSATZ.md',
   'MESSENGER-CHAT-HANDBUCH.md',
+  'VAULT-EINRICHTEN.md',
+  'VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md',
 ];
 
 fs.mkdirSync(destDir, { recursive: true });

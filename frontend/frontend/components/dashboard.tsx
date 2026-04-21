@@ -28,6 +28,7 @@ import {
 
 // Views
 import { ChatView } from './views/chat-view'
+import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { LockView } from './views/lock-view'
 import { MonitorView } from './views/monitor-view'
 import { BossView } from './views/boss-view'
@@ -39,6 +40,13 @@ import { DeviceRadarView } from './views/device-radar-view'
 import { SetupOverlay } from '@/components/setup-overlay'
 import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
+import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
+import {
+  notifyFirstStepsPrefChanged,
+  readFirstStepsVisible,
+  writeFirstStepsVisible,
+} from '@/frontend/lib/dashboard-first-steps-pref'
+import { recordSeenMyAddress } from '@/frontend/lib/my-address-local-history'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
 import { filterFeaturesByMessengerWorkspaceTileSet } from '@/frontend/lib/dashboard-workspace-tile-visibility'
@@ -75,10 +83,7 @@ const features: Feature[] = [
     subtitle: 'Sicher kommunizieren',
     icon: <MessageSquare className="h-6 w-6" />,
     color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    variants: [
-      { id: 'private-chat', title: 'Privat', hint: 'Verschlüsselt mit Partner' },
-      { id: 'pinnwand', title: 'Pinnwand', hint: 'Sichtbar für alle' },
-    ],
+    variants: [{ id: 'private-chat', title: 'Nachrichten', hint: 'Privater Chat & Pinnwand — Umschalter in der Ansicht' }],
   },
   {
     id: 'lock',
@@ -165,7 +170,6 @@ function parseStoredActiveView(raw: string | null): ActiveView | null {
 }
 
 const FULL_TILES_STORAGE_KEY = 'morgendrot_show_all_tiles'
-const FIRST_STEPS_DISMISS_KEY = 'morgendrot.hideFirstStepsCard'
 
 function readShowAllTilesPref(): boolean {
   if (typeof window === 'undefined') return false
@@ -242,8 +246,8 @@ export function Dashboard() {
   const [apiSnapshot, setApiSnapshot] = useState<(ApiStatus & { error?: string }) | null>(null)
   /** Hinweis nach automatischem Import aus „Einsatz-Profil“ (localStorage-Warteschlange). */
   const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
-  /** Roadmap H.0 / ONBOARDING L2: „Erste Schritte“-Hinweis (per „Ausblenden“ dauerhaft aus). */
-  const [hideFirstStepsCard, setHideFirstStepsCard] = useState(false)
+  /** Schlanker Einrichtungs-Hinweis (localStorage, in Einstellungen wieder einblendbar). */
+  const [firstStepsVisible, setFirstStepsVisible] = useState(true)
 
   const prevLockedRef = useRef(false)
   /** Zuletzt von GET /api/status gemeldet — für Entsperr-Dialog beim Wechsel auf „locked“ ohne veraltetes apiSnapshot. */
@@ -281,27 +285,32 @@ export function Dashboard() {
   useEffect(() => {
     setShowAllTiles(readShowAllTilesPref())
     setWorkspaceTileSet(readWorkspaceTileSet())
-    try {
-      if (typeof window !== 'undefined' && window.localStorage.getItem(FIRST_STEPS_DISMISS_KEY) === '1') {
-        setHideFirstStepsCard(true)
-      }
-    } catch {
-      /* ignore */
+    setFirstStepsVisible(readFirstStepsVisible())
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setFirstStepsVisible(readFirstStepsVisible())
+    window.addEventListener('storage', sync)
+    window.addEventListener('morgendrot-dashboard-first-steps-changed', sync)
+    return () => {
+      window.removeEventListener('storage', sync)
+      window.removeEventListener('morgendrot-dashboard-first-steps-changed', sync)
     }
   }, [])
 
-  const dismissFirstStepsCard = () => {
-    try {
-      window.localStorage.setItem(FIRST_STEPS_DISMISS_KEY, '1')
-    } catch {
-      /* ignore */
-    }
-    setHideFirstStepsCard(true)
+  const dismissFirstStepsBar = () => {
+    writeFirstStepsVisible(false)
+    notifyFirstStepsPrefChanged()
+    setFirstStepsVisible(false)
   }
 
   /** GET /api/status: `uiVariant` spiegelt `UI_VARIANT` im Backend – Messenger-Bundle/Lite. */
   const liteMessengerFromApi = apiSnapshot?.backendRunning !== false && apiSnapshot?.uiVariant === 'messenger'
   const isBossRole = (role || '').toLowerCase() === 'boss'
+  /** Volle eigene Adresse vom Backend — für Wallet-Saldo u. ä. (maskierte `myAddress` zählt nicht). */
+  const hasValidMyAddressForBalance =
+    /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
+
   /** Lite-Messenger: nur Boss darf Arbeitsbereich „full“ + alle Kacheln; alle anderen nur Nachrichten + Tresor/Notfall. */
   const liteMessengerLocksTiles = liteMessengerFromApi && !isBossRole
   const effectiveWorkspaceTileSet: WorkspaceTileSet = liteMessengerLocksTiles ? 'messenger' : workspaceTileSet
@@ -338,7 +347,11 @@ export function Dashboard() {
       vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
       signerIsSdkRef.current = res.signer === 'sdk'
       setRole(res.role || '')
-      setMyAddress((res.myAddressFull || res.myAddress || '').trim())
+      const addrLine = (res.myAddressFull || res.myAddress || '').trim()
+      setMyAddress(addrLine)
+      if (res.myAddressFull && /^0x[a-fA-F0-9]{64}$/i.test(res.myAddressFull.trim())) {
+        recordSeenMyAddress(res.myAddressFull.trim())
+      }
     } else {
       setBackendReachable(false)
       setConnected(false)
@@ -557,6 +570,28 @@ export function Dashboard() {
     persistDashboardView(null)
   }
 
+  const chatVaultBannerActions: ChatViewVaultBannerActions = {
+    onLockSession: async () => {
+      if (
+        !window.confirm(
+          'API-Sitzung sperren? Schlüssel werden aus dem Arbeitsspeicher der Basis entfernt — danach den Tresor erneut mit Passwort entsperren.'
+        )
+      ) {
+        return
+      }
+      const r = await vaultLockCommand()
+      if (r.ok) {
+        await checkStatus()
+        setActiveView(null)
+        persistDashboardView(null)
+      }
+    },
+    onNavigateHomeWhenLocked: () => {
+      setActiveView(null)
+      persistDashboardView(null)
+    },
+  }
+
   const openHelp = async () => {
     setHelpOpen(true)
     setHelpLoading(true)
@@ -622,12 +657,20 @@ export function Dashboard() {
           onEscapeKeyDown={(e) => locked && e.preventDefault()}
         >
           <DialogHeader>
-            <DialogTitle>Wallet entsperren</DialogTitle>
+            <DialogTitle>Tresor entsperren</DialogTitle>
             <DialogDescription asChild className="text-left space-y-2">
               <div className="space-y-2">
+                <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-50">
+                  <strong className="font-semibold">Gesperrt</strong> = dieser Dialog blockiert die App. Die{' '}
+                  <strong>Morgendrot-API-Sitzung</strong> (Basis/Node) hat <strong>keine</strong> entschlüsselten Keys im RAM —
+                  kein Signieren, kein vollständiger Messenger-Schlüsselbund. Nach erfolgreichem Passwort: Dialog schließt, oben
+                  im Header steht <strong>„Tresor: entsperrt“</strong> (oder <strong>„Chat verbunden“</strong>, sobald ein
+                  Partner per /connect verbunden ist) — bis du „Tresor sperren“ wählst, die PWA lange im Hintergrund war
+                  oder die Sitzung sonst beendet wird.
+                </p>
                 <p>
                   Entsperrt die <strong>Backend-Sitzung</strong> zum Signieren. Das Passwort entschlüsselt den lokalen oder
-                  On-Chain-Vault, falls vorhanden — kein separates Web-Login.
+                  On-Chain-Tresor (Vault-Datei), falls vorhanden — <strong>kein</strong> separates Web-Login nur für die Oberfläche.
                 </p>
                 {signerKind === 'cli' ? (
                   <p>
@@ -868,7 +911,7 @@ export function Dashboard() {
 
             {unlockError ? <p className="text-sm text-destructive">{unlockError}</p> : null}
             <Button onClick={() => void handleUnlock()} disabled={unlockButtonDisabled} className="w-full">
-              {unlocking ? 'Wird entsperrt…' : 'Entsperren'}
+              {unlocking ? 'Tresor wird geöffnet…' : 'Tresor entsperren'}
             </Button>
           </div>
         </DialogContent>
@@ -930,7 +973,12 @@ export function Dashboard() {
           )}
           {activeView.type === 'config' && <ConfigView />}
           {activeView.type === 'chat' && activeView.variant && (
-            <ChatView variant={activeView.variant as 'private-chat' | 'pinnwand'} role={role} myAddress={myAddress} />
+            <ChatView
+              variant={activeView.variant as 'private-chat' | 'pinnwand'}
+              role={role}
+              myAddress={myAddress}
+              vaultBannerActions={chatVaultBannerActions}
+            />
           )}
           {activeView.type === 'lock' && activeView.variant && (
             <LockView variant={activeView.variant as 'smart-lock' | 'access-key-ticket' | 'payment-trigger'} />
@@ -984,6 +1032,11 @@ export function Dashboard() {
                   }
                 />
               </div>
+              {!locked && backendReachable ? (
+                <div className="mt-2">
+                  <DashboardMyAddressPicker apiSnapshot={apiSnapshot} onAfterSet={checkStatus} />
+                </div>
+              ) : null}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -1010,18 +1063,22 @@ export function Dashboard() {
               ) : locked ? (
                 <>
                   <Lock className="h-3.5 w-3.5" />
-                  Passwort?
+                  <span
+                    title="Tresor gesperrt: Backend-Sitzung ohne Keys im RAM. Passwort im Dialog eingeben — kein separater Web-Login."
+                  >
+                    Tresor gesperrt
+                  </span>
                 </>
               ) : connected ? (
                 <>
                   <Wifi className="h-3.5 w-3.5" />
-                  Chat verbunden
+                  <span title="Tresor entsperrt. Chat: Verbindung zu Partner (/connect) aktiv.">Chat verbunden</span>
                 </>
               ) : backendReachable ? (
                 <>
                   <Wifi className="h-3.5 w-3.5 text-emerald-500/80" />
-                  <span title="API läuft und Wallet ist frei. „Chat verbunden“ erst nach /connect mit Partner.">
-                    Bereit
+                  <span title="Tresor entsperrt · API erreichbar. „Chat verbunden“ erst nach Handshake/Connect mit Partner.">
+                    Tresor: entsperrt
                   </span>
                 </>
               ) : (
@@ -1083,76 +1140,62 @@ export function Dashboard() {
         {!locked && (
           <div className="mb-6 grid gap-4 sm:grid-cols-2">
             <DashboardPwaInstallCard />
-            <DashboardIotaTransferCard />
+            <DashboardIotaTransferCard
+              walletNativeIotaBalance={apiSnapshot?.walletNativeIotaBalance ?? undefined}
+              walletNativeIotaBalanceFetchFailed={apiSnapshot?.walletNativeIotaBalanceFetchFailed}
+              hasValidMyAddressForBalance={hasValidMyAddressForBalance}
+              onRefreshStatus={checkStatus}
+            />
           </div>
         )}
-        {!locked && !hideFirstStepsCard && (
+        {!locked && firstStepsVisible && (
           <div
-            className="mb-6 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.07] p-4 text-sm shadow-sm"
+            className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-xs text-muted-foreground"
             role="region"
-            aria-label="Erste Schritte"
+            aria-label="Einrichtung"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 space-y-2">
-                <h3 className="flex items-center gap-2 font-semibold text-foreground">
-                  <BookOpen className="h-4 w-4 shrink-0 text-emerald-400" />
-                  Erste Schritte
-                </h3>
-                <p className="text-muted-foreground">
-                  <strong className="text-foreground/90">Deine Adresse</strong>, Package-ID und RPC kommen typischerweise aus dem{' '}
-                  <strong className="text-foreground/90">Bundle der Basis</strong> (Server-<span className="font-mono text-xs">.env</span>) — nicht
-                  alles lässt sich hier in der App ändern. Das <strong className="text-foreground/90">Handbuch</strong> beschreibt Einrichtung und
-                  Lieferwege (Boss → Helfer); nach dem ersten Laden oft auch ohne Netz lesbar.
-                </p>
-                {liteMessengerFromApi ? (
-                  <p className="text-muted-foreground">
-                    <strong className="text-foreground/90">Lite messenger</strong> (<span className="font-mono text-xs">UI_VARIANT=messenger</span>
-                    ):{' '}
-                    {isBossRole ? (
-                      <>
-                        Als <strong className="text-foreground/90">Boss</strong> kannst du unter „Arbeitsbereich &amp; Projekte“{' '}
-                        <strong className="text-foreground/90">Volldashboard</strong> wählen (Arbeitsbereich <span className="font-mono text-xs">full</span>:{' '}
-                        <strong className="text-foreground/90">Nachrichten, Tresor, Steuerung</strong> +{' '}
-                        <strong className="text-foreground/90">Geräte-Radar</strong> — ohne Zugangs-/Überwachungs-Kacheln; im{' '}
-                        <span className="font-mono text-xs">UI_VARIANT=full</span>-Hauptprojekt weiterhin alle Module). Standard ist
-                        schlank wie beim Helfer, wenn du auf <strong className="text-foreground/90">Messenger-Projekt</strong> stellst.
-                      </>
-                    ) : (
-                      <>
-                        Für deine Rolle nur <strong className="text-foreground/90">Nachrichten</strong> und{' '}
-                        <strong className="text-foreground/90">Tresor</strong> (inkl. Notfall) — keine weiteren Kacheln, Einsatz schlank.
-                      </>
-                    )}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => void openHelp()}
-                    className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
-                  >
-                    Hilfe (Kurz + Befehle)
-                  </button>
-                  <Link
-                    href="/handbook"
-                    className="inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-emerald-100 transition-colors hover:bg-emerald-500/20"
-                  >
-                    Handbuch öffnen
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={openSettingsView}
-                    className="inline-flex items-center rounded-lg border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
-                  >
-                    Einstellungen (Wallet, Netzwerk, …)
-                  </button>
-                </div>
-              </div>
+            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
+              <BookOpen className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
+              Einrichtung
+            </span>
+            <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
+            <span className="max-w-prose">
+              Kurzüberblick &amp; Rollen:{' '}
+              <Link
+                href="/handbook?file=DASHBOARD-ERSTE-SCHRITTE.md"
+                className="font-medium text-emerald-200 underline-offset-2 hover:underline"
+              >
+                Handbuch „Erste Schritte“
+              </Link>
+              {' · '}
+              <Link
+                href="/handbook?file=DASHBOARD-PORT-UND-OBERFLAECHE.md"
+                className="font-medium text-emerald-200 underline-offset-2 hover:underline"
+              >
+                Ports &amp; Oberflächen
+              </Link>
+              . Wieder einblenden: <strong className="text-foreground/90">Einstellungen</strong>.
+            </span>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={dismissFirstStepsCard}
-                className="shrink-0 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Erste Schritte ausblenden"
+                onClick={() => void openHelp()}
+                className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
+              >
+                Hilfe
+              </button>
+              <button
+                type="button"
+                onClick={openSettingsView}
+                className="rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+              >
+                Einstellungen
+              </button>
+              <button
+                type="button"
+                onClick={dismissFirstStepsBar}
+                className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Einrichtungszeile ausblenden"
               >
                 Ausblenden
               </button>
@@ -1188,12 +1231,9 @@ export function Dashboard() {
 
         <WorkspaceProjectsPanel
           className="mb-8"
-          apiStatus={apiSnapshot}
           tileSet={effectiveWorkspaceTileSet}
           onTileSetChange={setWorkspaceTileSetPersist}
-          dashboardRole={role}
           liteUiEnforcedByBackend={liteMessengerLocksTiles}
-          liteMessengerBossFullTiles={liteMessengerFromApi && isBossRole && effectiveWorkspaceTileSet === 'full'}
         />
 
         {/* Kacheln: immer für Boss/Kommandant; für Arbeiter/Lock nur wenn showAllTiles */}
