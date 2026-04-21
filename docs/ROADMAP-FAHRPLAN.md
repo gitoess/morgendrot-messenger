@@ -215,6 +215,34 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **UI-Ergaenzung (Backlog):** unter dem Composer optionales Vorschau-Feld **„Verschluesselter Funk-Block“** (nur Kopie/Weiterleitung, nicht Klartext) und optionaler Proof-Anhang (`payloadHash`, `senderSig`, spaeter `txDigest`) fuer forensische Nachvollziehbarkeit.
 - **Wichtig:** Erst nach abgeschlossenem Stage-2-/Feldtestpfad weiter ausbauen; zunächst Spez + Akzeptanzkriterien, dann Implementierung.
 
+**Roadmap-Ticket (neu, 2026-04-21):** **Wanderer-Proof + Late-Anchor fuer abgelaufene Relay-Objekte**
+- **Sicherheitsannahme:** reine Handy-Uhr ist nicht beweiskraeftig (manipulierbar). Fuer belastbaren Nachweis werden mehrere Zeitquellen protokolliert (`userTimestamp`, optional `gpsTimestamp`) plus monotoner lokaler Zaehler.
+- **Statusmodell (Queue/Archiv):**
+  - `pending` = aktiv in Sendewarteschlange (Retry/Backoff).
+  - `expired_local_proof` = fuer Zielpfad abgelaufen, aber lokal signiert als Beleg konserviert (kein Hard-Delete).
+  - `anchored_late` = spaeter als Belegdokument on-chain verankert (heutiger Submit, alter signierter Inhalt als Payload).
+- **Late-Anchor-Logik:** bei Reconnect nicht alte ungültige Operation blind einreichen; stattdessen neuen Container erzeugen, der den alten signierten Envelope unverändert einschließt (forensischer Nachtrag).
+
+**Acceptance-Kriterien (verbindlich)**
+- **Statusmodell**
+  - Abgelaufene Einträge werden nicht gelöscht, sondern nach `expired_local_proof` verschoben.
+  - `pending` bleibt für Retry; nur `anchored_late` markiert abgeschlossenen spaeten Nachtrag.
+- **UI-Texte**
+  - `pending`: „Wartet auf Verbindung / erneuter Versuch.“
+  - `expired_local_proof`: „Nicht im Tangle verankert (Zeit abgelaufen), lokal signiert vorhanden.“
+  - `anchored_late`: „Verspätet verankert: urspruenglich signierter Inhalt als Beleg hinterlegt.“
+  - Bei Reconnect-Prompt: „Nachricht abgelaufen. Als verspätetes Logbuch-Dokument verankern?“
+- **Datenfelder**
+  - Pflicht je Proof-Eintrag: `status`, `createdAt`, `expiresAt`, `payloadHash`, `senderSig`, `monotonicSeq`.
+  - Zeitkontext: `userTimestamp` immer, `gpsTimestamp` optional; plus `timeIsTrusted`.
+  - Late-Anchor-Ergebnis: `lateAnchorTxDigest` (wenn erfolgreich) + `lateAnchoredAt`.
+- **Tests**
+  - Unit: Expiry-Übergang `pending -> expired_local_proof` ohne Datenverlust.
+  - Unit: Late-Anchor erzeugt neuen Container, der Original-Payload-Hash unverändert referenziert.
+  - Unit: Replay-/Idempotenzschutz über `nonce` bleibt bei Late-Anchor erhalten.
+  - UI-Test: korrekte Status-Badges (⏳ / 📜 / ✅📜) und Prompt-Flow.
+  - Integrations-/Smoke-Test: Offline erstellen -> Expiry -> Reconnect -> Late-Anchor -> Log/Status sichtbar.
+
 **Strategische Doku-/Git-Pushes (nach Merge oder sinnvoller Paketgrenze):** **`git push`**; **`CHANGELOG.md`** [Unreleased] (Messenger-Zeile); **`README.md`** (Next-Messenger-Absatz **Funk**); **`docs/TEST-RUN-LOGBOOK.md`** nach **`npm run test:unit`** / **`test:smoke`**; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** bei betriebsrelevanten UI-Pfaden; **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** oder **`docs/LORA-PC-FIRST-SMOKE.md`** nur wenn Funk-Smoke-Checkliste sich ändert; Export-Spiegel **`exports/Morgendrot-Messenger-verkauf/…`** nur bei bewusstem Bundle-Release (nicht bei jedem UI-Tweak).
 
 **Betriebsrhythmus (regelmäßig, strategisch merken):** Nach abgeschlossenen Paketen **`git push`** zum Remote (Branch-Tip nicht nur lokal); **Schreibtisch** in Batches: Root **`npm run test:smoke`**, **`cd frontend`** **`npm run test:unit`**, bei § **H.15**-Touch **`npm run test:h15-direct-submit`** (**`TESTING.md`** Zeile **5c**) — kurz **`docs/TEST-RUN-LOGBOOK.md`** ergänzen. **Handy-Feldtest** nur laut **`docs/HANDY-TEST-WINDOW.md`** / **`docs/PWA-MANUAL-CHECKS.md`**. **Mailbox:** PTB+Signatur im Browser + **Hybrid** (`mailbox-send-hybrid.ts`) für Composer, SOS, Spiegel, Mirror, Lora-Online, Protokoll-Anker — **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** Ergänzung. **Forensic-Attestation (Bild → Mailbox → Manifest → Direct-Anker, UI „Attestation wird verankert…“):** **`forensic-mailbox-attestation.ts`** + **`use-chat-view-handle-send`** (kompaktes Bild **oder** LUMA+CHROMA bei Transport **„online“**); Opt-out **`localStorage`** **`morgendrot.forensicImageMailboxAttestation`** = **`0`**. **LoRa → Tangle (historisch; Composer-UI entfernt 2026-04-20, vormals Stand 2026-03-28):** **`chat-view-send-panel`** — Radio **„Nur LoRa“** vs **„LoRa + Tangle“** (Delayed Mirror), **persistiert** (`morgendrot.delayMirrorToIota`); Marker für **LUMA/CHROMA** und Mesh-Anhänge (**`use-chat-view-handle-send`**); nach **Mirror-Drain** Attestation inkl. **`mtx`** (siehe Nachtrag oben). **Nächste Scheibe (Handy-first):** **§ H.2** Schreibtisch (**`check:pwa-desk` / `full`**) erledigt → **§ H.1a** + **L1–L5** am Gerät (**`PWA-MANUAL-CHECKS`**, **`HANDY-TEST-WINDOW`**); Mailbox-Spec und **§ H.6c**-Sync-Sicht bei Bedarf; Feldtest LoRa+Tangle am Referenzgerät. **§ H.15** Stufe **2** (Smoke **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**) **hinten anstellen** — nicht vor den Schreibtisch-Prioritäten erzwingen.
