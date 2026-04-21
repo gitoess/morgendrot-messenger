@@ -42,6 +42,8 @@
 7. [ ] **Verschlüsselt + online (gleicher Ablauf):** privater Chat, Handshake vorhanden, Transport **online**, Verschlüsselung **an**; erst mit Basis/Internet aus senden (erwartbar Fehler/Queue), dann wieder online und Retry/Drain prüfen.
 8. [ ] **Pfad 4 Recovery (Funk + eigene Verankerung):** LoRa-Klartext ging raus, Mailbox/IOTA wurde nach Netzrueckkehr automatisch oder per manuellem Refresh nachgezogen (Opt-in Queue: **`morgendrot.offlineMailboxQueue=1`**).
 
+**Status 2026-04-21 (Single-Messenger, Einmaltests):** Punkte 7/8 sowie die zugehörigen Stabilitätsprüfungen (Outbox-Transportlabel, Queue-Einzellöschung, Protokoll-Dialog bei „Vollbericht zu groß“, Online-Adress-Guard) wurden jeweils einmal erfolgreich durchlaufen; offene 2-Client-Interop-Tests bleiben separat im Fahrplan.
+
 ---
 
 ## 3. Nicht-Ziele dieses Protokolls

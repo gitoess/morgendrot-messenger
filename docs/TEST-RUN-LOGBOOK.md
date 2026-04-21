@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-04-21** | Handy-/Messenger-Manualtest, Einmaltest-Matrix (Single Messenger + 2 Heltecs) | Manuell je Funktion genau 1x: encrypted-online Send, Pfad-4 offline->online Recovery, Queue-Einzellöschung, Protokoll-Dialog „Vollbericht zu groß“ (Schrittführung), Outbox-Transportlabel mesh+online/mailbox | **OK** — alle geprüften Funktionen einmalig erfolgreich; Bilddatei-Funkpfad bleibt bewusst Backlog. |
 | **2026-04-21** | Handy-/Messenger-Manualtest, privater Chat (LoRa Pfad 4 + encrypted online) | Manuell: Pfad 4 Text ueber Funk gesendet, Internet/Basis kurz getrennt, nach Netzrueckkehr Mailbox/IOTA-Drain beobachtet; danach encrypted-Online im gleichen Recovery-Ablauf getestet | **OK** — LoRa-Sendung blieb funktionsfaehig; Mirror/Drain lief nach Reconnect; encrypted online im Anschluss erfolgreich. |
 | **2026-04-21** | Repo lokal (Windows), Stage-2-Vorprüfung vor Handy-Run (H.15) | Root: **`npm run test:smoke`** (36/36), **`npm run test:h15-direct-submit`** (1 Datei, 5 Tests); zusätzlich wegen Frontend-Änderungen **`npm run test:frontend-unit`** (71 Dateien, 406 Tests) | **OK** — Vorprüfung gemäß **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 5 erfüllt; manuelle Stage-2-Checks (§ 2, Puls/Signer/Basis stop-start) bleiben separat am Gerät/Browser. |
 | **2026-03-28** | Repo lokal (Windows), **§ H.1a** morg-pkg / Inbox-Partner / Workspace-Storage | **`cd frontend`**: **`npm run test:unit`** — **66** Dateien, **370** Tests | **OK**. |
