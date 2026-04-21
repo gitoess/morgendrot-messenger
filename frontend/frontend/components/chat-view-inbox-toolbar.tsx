@@ -100,7 +100,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         <span className="sr-only">Telefonbuch: Zeilenmenü bei eingehenden 0x-Absendern.</span>
         {messageCount > 0 && (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {inboxRowCount}
+            {messageCount}
           </span>
         )}
         {role === 'boss' && apiStatus?.uiVariant !== 'messenger' ? (

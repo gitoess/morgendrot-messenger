@@ -60,6 +60,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   offlineMailboxQueueBackoffCount?: number
   /** Kurztext der zuletzt gespeicherten Sendefehlermeldung (höchste `attempts`), nur lokal. */
   offlineMailboxQueueErrorHint?: string
+  offlineMailboxQueueItems?: { id: string; recipient: string; createdAt: number; attempts: number; lastError?: string }[]
+  onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
   /** Klartext-Funk: Ziel-Knoten (!hex) statt Broadcast. */
   meshPlaintextToNodeEnabled: boolean
   onMeshPlaintextToNodeEnabledChange: (v: boolean) => void
@@ -92,6 +94,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     offlineMailboxQueueUntrustedTimeCount = 0,
     offlineMailboxQueueBackoffCount = 0,
     offlineMailboxQueueErrorHint = '',
+    offlineMailboxQueueItems = [],
+    onRemoveOfflineMailboxQueueItems,
     meshPlaintextToNodeEnabled,
     onMeshPlaintextToNodeEnabledChange,
     meshPlaintextNodeId,
@@ -113,6 +117,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
   const [dropHover, setDropHover] = useState(false)
   const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
+  const [showQueueItems, setShowQueueItems] = useState(false)
+  const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([])
   const dragDepth = useRef(0)
 
   const voiceLocksComposer = voiceRecording || voiceBusy
@@ -446,6 +452,66 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 <RefreshCw className="h-3.5 w-3.5" />
                 Aktualisieren
               </button>
+            ) : null}
+            {offlineMailboxQueueItems.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowQueueItems((v) => !v)}
+                  className="inline-flex items-center gap-1 rounded-md border border-amber-700/40 bg-amber-100/70 px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/55"
+                >
+                  {showQueueItems ? 'Auswahl schließen' : 'Einträge auswählen'}
+                </button>
+                {showQueueItems ? (
+                  <div className="w-full rounded-md border border-amber-700/30 bg-amber-100/40 p-2 text-[11px] dark:bg-amber-900/30">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQueueIds(offlineMailboxQueueItems.map((q) => q.id))}
+                        className="rounded border border-amber-700/35 px-2 py-1"
+                      >
+                        Alle
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedQueueIds([])}
+                        className="rounded border border-amber-700/35 px-2 py-1"
+                      >
+                        Keine
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selectedQueueIds.length === 0 || !onRemoveOfflineMailboxQueueItems}
+                        onClick={() => {
+                          onRemoveOfflineMailboxQueueItems?.(selectedQueueIds)
+                          setSelectedQueueIds([])
+                        }}
+                        className="rounded border border-red-700/40 bg-red-100/70 px-2 py-1 font-medium text-red-900 disabled:opacity-50 dark:bg-red-900/35 dark:text-red-100"
+                      >
+                        Ausgewählte löschen
+                      </button>
+                    </div>
+                    <div className="max-h-40 space-y-1 overflow-auto">
+                      {offlineMailboxQueueItems.map((q) => (
+                        <label key={q.id} className="flex items-start gap-2 rounded border border-amber-700/20 px-2 py-1">
+                          <input
+                            type="checkbox"
+                            checked={selectedQueueIds.includes(q.id)}
+                            onChange={(e) =>
+                              setSelectedQueueIds((prev) =>
+                                e.target.checked ? [...prev, q.id] : prev.filter((id) => id !== q.id)
+                              )
+                            }
+                          />
+                          <span className="font-mono">
+                            {new Date(q.createdAt).toLocaleTimeString()} · {q.recipient.slice(0, 10)}… · tries:{q.attempts}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </>
             ) : null}
           </div>
         ) : null}

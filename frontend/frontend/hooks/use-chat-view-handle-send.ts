@@ -597,6 +597,20 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return
       }
     }
+    const recipientTrimLower = recipient.trim().toLowerCase()
+    if (forcedTransport === 'internet' && !ADDR_64_LOWER.test(recipientTrimLower)) {
+      applyValidationError(
+        {
+          ok: false,
+          message:
+            'Online/IOTA: Empfängeradresse muss 0x + 64 Hex sein (z. B. 0x1234…abcd). Erst danach wird gesendet oder gequeued.',
+          idleMs: 9000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      return
+    }
 
     const meshBlob = validateMeshDisallowsIotaCompactBlob(forcedTransport, attachedBlobBase64)
     if (!meshBlob.ok) {
@@ -758,15 +772,19 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       messageNonceU64: bigint
     ): Promise<QueueMailboxOutcome> => {
       if (!allowOfflineMailboxQueue) return 'skipped'
+      const recipientTrim = recipient.trim().toLowerCase()
+      if (!ADDR_64_LOWER.test(recipientTrim)) {
+        return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
+      }
       const en = await enqueueOfflineMailboxFailure({
         kind,
-        recipient,
+        recipient: recipientTrim,
         payload: wireForQueue,
         encrypted,
         timeIsTrusted: !deviceTimeTrustWarn,
         lastError: lastErr,
         senderAddress: myAddress,
-        threadId: stableOfflineMailboxThreadId(myAddress, recipient),
+        threadId: stableOfflineMailboxThreadId(myAddress, recipientTrim),
         messageNonceU64,
       })
       if (!en.ok) {
@@ -805,34 +823,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return { ok: false }
       }
 
-      /** Pfad 4 (MVP): nach LongFast-Klartext Mailbox-Kopie an eigene Adresse + optionale Forensic-Attestation. */
+      /** Pfad 4 (MVP): nach LongFast-Klartext nur eine Mailbox-Kopie (kein zusätzlicher Text-Attestation-TX). */
       const runPath4MailboxSelfArchive = async (airUtf8: string): Promise<string> => {
         if (!path4Active) return ''
         const n = BigInt(nextOfflineMailboxClientOutSeq())
         const marked = prependPath4SelfArchiveMarker(airUtf8)
         const wireForApi = prependMailboxOutNonceMarker(marked, n)
         const d = await dispatchPath4Mirror(wireForApi, n, 'text')
+        if (d.status === 'failed') return `__PATH4_FAILED__${d.note}`
         if (d.status !== 'anchored') return ` ${d.note}`
-        const baseOk = d.note
-        const txDig = d.txDigest
-        if (!isForensicImageMailboxAttestationEnabled()) {
-          return ` ${baseOk}${formatTxDigestStatusSuffix(txDig)}`
-        }
-        const selfAddr = myAddress.trim().toLowerCase()
-        const attested = await runForensicMailboxAttestationAfterSend({
-          recipient: selfAddr,
-          senderAddress: selfAddr,
-          primary: { payloadUtf8: wireForApi, messageNonceU64: n },
-          imageContentSha256Hex: null,
-          deviceTimeTrustWarn: !!deviceTimeTrustWarn,
-          baseSuccessMsg: baseOk,
-          setStatusMsg,
-          mailboxTxDigest: txDig,
-          silent: true,
-        })
-        return attested
-          ? ` ${baseOk} Attestation verankert.${formatTxDigestStatusSuffix(txDig)}`
-          : ` ${baseOk} Attestation ausstehend oder fehlgeschlagen.${formatTxDigestStatusSuffix(txDig)}`
+        return ` ${d.note}${formatTxDigestStatusSuffix(d.txDigest)}`
       }
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
@@ -903,6 +903,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             await meshtastic.sendMeshText(textSnap, dest)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+            if (path4Footnote.startsWith('__PATH4_FAILED__')) {
+              return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
+            }
             return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
             if (isUserCancelError(e)) throw e
@@ -936,6 +939,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 await meshtastic.sendMeshText(textSnap, dest)
                 recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
                 const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+                if (path4Footnote.startsWith('__PATH4_FAILED__')) {
+                  return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
+                }
                 return { ok: true, path4Footnote: path4Footnote || undefined }
               } catch (e) {
                 if (isUserCancelError(e)) throw e
@@ -960,6 +966,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             await meshtastic.sendMeshText(textSnap, dest)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
+            if (path4Footnote.startsWith('__PATH4_FAILED__')) {
+              return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
+            }
             return { ok: true, path4Footnote: path4Footnote || undefined }
           } catch (e) {
             if (isUserCancelError(e)) throw e

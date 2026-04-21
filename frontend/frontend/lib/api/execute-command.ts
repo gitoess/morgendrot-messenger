@@ -44,11 +44,12 @@ export async function executeCommand<T = unknown>(
     }
     const envelope = parseApiJsonEnvelope(fr.text)
     if (!envelope.ok) {
+      const bodySnippet = fr.text.replace(/\s+/g, ' ').trim().slice(0, 120)
       return {
         ok: false,
         error:
           envelope.error === 'invalid_json'
-            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            ? `Antwort vom Backend ist kein gültiges JSON.${bodySnippet ? ` Rohantwort: ${bodySnippet}` : ''}`
             : 'Unerwartetes Antwortformat (API).',
       } as ApiResponse<T>
     }

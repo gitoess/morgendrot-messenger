@@ -197,6 +197,11 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
           </span>
         </div>
       )}
+      {encrypted && forcedTransport === 'internet' && (
+        <p className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-950 dark:text-emerald-100/95">
+          <strong>Verschlüsselt auf IOTA:</strong> derzeit über <strong>Mailbox</strong> (Event-Pfad nur für Klartext).
+        </p>
+      )}
 
       {!isPrivate && !encrypted && (
         <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">

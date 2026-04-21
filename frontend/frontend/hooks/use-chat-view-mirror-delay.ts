@@ -26,6 +26,7 @@ import {
   drainOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
   loadOfflineMailboxQueue,
+  saveOfflineMailboxQueue,
   shouldDeferDrainAttempt,
 } from '@/frontend/lib/api/offline-queue'
 import { drainAttestationQueue, loadAttestationQueue } from '@/frontend/lib/attestation-queue'
@@ -59,12 +60,24 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const [offlineMailboxQueueUntrustedTimeCount, setOfflineMailboxQueueUntrustedTimeCount] = useState(0)
   const [offlineMailboxQueueBackoffCount, setOfflineMailboxQueueBackoffCount] = useState(0)
   const [offlineMailboxQueueErrorHint, setOfflineMailboxQueueErrorHint] = useState('')
+  const [offlineMailboxQueueItems, setOfflineMailboxQueueItems] = useState<
+    { id: string; recipient: string; createdAt: number; attempts: number; lastError?: string }[]
+  >([])
 
   const refreshOfflineMailboxQueueCount = useCallback(() => {
     try {
       const items = loadOfflineMailboxQueue()
       const now = Date.now()
       setOfflineMailboxQueuePending(items.length)
+      setOfflineMailboxQueueItems(
+        items.map((q) => ({
+          id: q.id,
+          recipient: q.recipient,
+          createdAt: q.createdAt,
+          attempts: q.attempts,
+          lastError: q.lastError,
+        }))
+      )
       setOfflineMailboxQueueUntrustedTimeCount(items.filter((q) => q.timeIsTrusted !== true).length)
       setOfflineMailboxQueueBackoffCount(items.filter((q) => shouldDeferDrainAttempt(q, now)).length)
       const withErr = items.filter((q) => q.lastError && q.lastError.trim())
@@ -227,6 +240,18 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     }
   }, [loadMessages, refreshOfflineMailboxQueueCount, setStatus, setStatusMsg])
 
+  const removeOfflineMailboxQueueItems = useCallback((ids: string[]) => {
+    if (ids.length === 0) return
+    try {
+      const drop = new Set(ids)
+      const keep = loadOfflineMailboxQueue().filter((q) => !drop.has(q.id))
+      saveOfflineMailboxQueue(keep)
+      refreshOfflineMailboxQueueCount()
+    } catch {
+      /* ignore */
+    }
+  }, [refreshOfflineMailboxQueueCount])
+
   const onDelayMirrorPlaintext = useCallback(
     async (body: string, fromAddress: string) => {
       const dedup = mirrorQueueDedupKey(fromAddress, body)
@@ -298,7 +323,9 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     offlineMailboxQueueUntrustedTimeCount,
     offlineMailboxQueueBackoffCount,
     offlineMailboxQueueErrorHint,
+    offlineMailboxQueueItems,
     refreshOfflineMailboxQueueCount,
+    removeOfflineMailboxQueueItems,
     runMirrorDrain,
     runOfflineMailboxDrain,
     onDelayMirrorPlaintext,
