@@ -87,7 +87,8 @@ function recordMeshOutgoingPlaintext(
   append: UseChatViewSendFlowParams['appendMeshMessage'],
   myAddress: string,
   text: string,
-  dest: number | 'broadcast'
+  dest: number | 'broadcast',
+  mirrorOnline = false
 ): void {
   const addr = myAddress.trim()
   if (!append || !addr) return
@@ -101,8 +102,8 @@ function recordMeshOutgoingPlaintext(
     content: text,
     timestamp: ts,
     encrypted: false,
-    source: 'mesh',
-    transports: ['mesh'],
+    source: mirrorOnline ? 'mailbox' : 'mesh',
+    transports: mirrorOnline ? ['mesh', 'internet'] : ['mesh'],
     dedupKey: `mesh-out-plain|${addr}|${text.slice(0, 80)}|${Math.floor(ts / 120_000)}`,
     meshMeta:
       dest === 'broadcast' ? { kind: 'text', fromNodeNum: 0 } : { kind: 'text', fromNodeNum: (dest as number) >>> 0 },
@@ -487,7 +488,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           appendMeshMessage,
           myAddress,
           `[LoRa-Bild Pfad4] LUMA+CHROMA${cap ? `: ${cap}` : ''}`,
-          dest
+          dest,
+          true
         )
         setMessage('')
         if (shouldLoadMessagesAfterSend()) {
@@ -901,7 +903,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           try {
             await meshtastic.sendMeshText(textSnap, dest)
-            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
+            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             if (path4Footnote.startsWith('__PATH4_FAILED__')) {
               return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
@@ -937,7 +939,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                   throw new Error(MESH_BT_NOT_CONNECTED_MSG)
                 }
                 await meshtastic.sendMeshText(textSnap, dest)
-                recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
+                recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
                 const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
                 if (path4Footnote.startsWith('__PATH4_FAILED__')) {
                   return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
@@ -964,7 +966,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           }
           try {
             await meshtastic.sendMeshText(textSnap, dest)
-            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest)
+            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             if (path4Footnote.startsWith('__PATH4_FAILED__')) {
               return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())

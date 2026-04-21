@@ -99,7 +99,14 @@ export function ChatViewProtokollAnchorButton(p: {
         setTimeout(() => setStatus('idle'), 7000)
       } else {
         setStatus('error')
-        setStatusMsg(r.error)
+        const baseErr = r.error || 'Verankern fehlgeschlagen.'
+        if (/Vollbericht zu groß für eine Transaktion/i.test(baseErr)) {
+          setStatusMsg(
+            `${baseErr} Schrittfolge: (1) Variante A „Nur Hash“ nutzen, oder (2) Umfang auf Zeitraum/IDs reduzieren und erneut versuchen.`
+          )
+        } else {
+          setStatusMsg(baseErr)
+        }
         setTimeout(() => setStatus('idle'), 9000)
       }
     } catch (e) {

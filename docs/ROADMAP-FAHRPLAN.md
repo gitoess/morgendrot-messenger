@@ -214,6 +214,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **Leitplanken:** TTL-Dilemma (Zeitfenster großzügig + Ablaufprüfung), Gas-Problem (R1 nur mit Sender-Gas; sonst R2), Datenmenge (S-ARQ-Chunking Pflicht).
 - **UI-Impuls (Backlog):** explizite Aktion **„An IOTA-Netzwerk weiterleiten“** mit Statuszuständen (`ready`, `needs sponsor`, `expired`, `invalid signature`, `submitted`).
 - **UI-Ergaenzung (Backlog):** unter dem Composer optionales Vorschau-Feld **„Verschluesselter Funk-Block“** (nur Kopie/Weiterleitung, nicht Klartext) und optionaler Proof-Anhang (`payloadHash`, `senderSig`, spaeter `txDigest`) fuer forensische Nachvollziehbarkeit.
+- **Utility-Backlog (neu):** **„Nachricht vom Tangle entschlüsseln“** als manuelle Funktion (Tx-/Digest-Eingabe, optional Explorer-Link-Lookup): Payload laden, mit lokalem ECDH-/Vault-Material entschlüsseln, Ergebnis/Fehler transparent anzeigen.
 - **Wichtig:** Erst nach abgeschlossenem Stage-2-/Feldtestpfad weiter ausbauen; zunächst Spez + Akzeptanzkriterien, dann Implementierung.
 
 **Roadmap-Ticket (neu, 2026-04-21):** **Wanderer-Proof + Late-Anchor fuer abgelaufene Relay-Objekte**
