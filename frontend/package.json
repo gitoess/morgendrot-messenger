@@ -21,6 +21,7 @@
     "@capacitor-mlkit/barcode-scanning": "^8.0.1",
     "@capacitor/core": "^8.3.0",
     "@hookform/resolvers": "^3.9.1",
+    "@iota/iota-sdk": "^1.12.0",
     "@meshtastic/core": "^2.6.7",
     "@meshtastic/transport-web-bluetooth": "^0.1.5",
     "@meshtastic/transport-web-serial": "^0.2.5",
