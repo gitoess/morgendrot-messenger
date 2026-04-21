@@ -77,7 +77,7 @@ function sanitizeMeshTextForDisplay(v: string): string {
 
 function parseMeshNodeNum(v: unknown): number | null {
   if (typeof v === 'number' && Number.isFinite(v) && v > 0) return v >>> 0
-  if (typeof v === 'bigint' && v > 0n) return Number(v & 0xffffffffn) >>> 0
+  if (typeof v === 'bigint' && v > BigInt(0)) return Number(v & BigInt(0xffffffff)) >>> 0
   if (typeof v === 'string') {
     const t = v.trim().toLowerCase()
     if (!t) return null
@@ -547,7 +547,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         throw new Error(mode === 'usb' ? 'Web-Serial-Transport nicht verfügbar.' : 'Web-Bluetooth-Transport nicht verfügbar.')
       }
       const transport = await transportFactory.create()
-      const mesh = new MeshDevice(transport)
+      const mesh = new MeshDevice(transport as ConstructorParameters<typeof MeshDevice>[0])
       await initializeMeshDevice(mesh)
       setDevice(mesh)
       setTransportKind(mode)

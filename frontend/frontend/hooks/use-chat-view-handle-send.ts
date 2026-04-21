@@ -49,6 +49,7 @@ import {
   parseMeshtasticNodeIdToNumber,
   resolveMeshtasticPlaintextDestination,
 } from '@/frontend/lib/meshtastic-node-id'
+import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 
@@ -123,6 +124,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     isPrivate,
     encrypted,
     forcedTransport,
+    partner,
     messagingPersistenceMode,
     apiStatus,
     recipient,
@@ -448,7 +450,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setSending(true)
       setStatus('idle')
       let userCancelledPath4 = false
-      const sendPath4ChunkWithRetry = async (label: 'LUMA' | 'CHROMA', payload: string, dest: number | undefined) => {
+      const sendPath4ChunkWithRetry = async (
+        label: 'LUMA' | 'CHROMA',
+        payload: string,
+        dest: number | 'broadcast'
+      ) => {
         const maxAttempts = 3
         let lastErr: unknown
         for (let i = 0; i < maxAttempts; i++) {
