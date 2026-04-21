@@ -11,7 +11,11 @@ import { cn } from '@/lib/utils'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { isLoRaMeshTransport, MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  CHAT_PATH4_SELF_ARCHIVE_HINT,
+  isLoRaMeshTransport,
+  MESH_PLAINTEXT_MAX_CHARS,
+} from '@/frontend/lib/chat-view-messenger-transport'
 import { parseMeshtasticNodeIdToNumber } from '@/frontend/lib/meshtastic-node-id'
 import type {
   AttachmentBarPort,
@@ -280,6 +284,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               />
               <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
             </label>
+            <p className="mt-2 text-[11px] leading-relaxed text-emerald-100/90">{CHAT_PATH4_SELF_ARCHIVE_HINT}</p>
           </div>
         )}
 

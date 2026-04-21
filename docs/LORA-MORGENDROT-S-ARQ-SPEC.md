@@ -149,6 +149,11 @@ Zustände: `IDLE` → `HDR` (optional, falls msgId nur aus erstem SEG kommt) →
 
 Parser-Reihenfolge in `ChatMessageBody`: `MORG_SEG_V1` früh abfangen → `MorgSegV1ChatSink` (Fortschritt + optional JPEG), kein Roh-Wire in der Sprechblase. Inbox: `buildChatInboxRows` blendet Folge-Segmente derselben Session aus (**eine Leit-Zeile** pro `msgId`+`phase`+`n`+Absender).
 
+**Sendepolicy (Messenger-UI, Stand 2026-04):**
+- **Verschlüsselt + LoRa (`funk`)** ist produktseitig deaktiviert.
+- **Verschlüsselt senden** läuft über **`online`** und braucht vorherigen **Handshake/Connect** zum Partner.
+- **Pfad 4** (`LoRa + eigene Verankerung`) sendet Funk **immer Klartext** und schreibt zusätzlich eine **Self-Mirror-Mailbox-Kopie** (später im Tangle sichtbar, sobald Basis/Internet verfügbar).
+
 ---
 
 ## 7. Implementierungs-Fahrplan (ohne Hype)

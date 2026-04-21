@@ -19,6 +19,18 @@ export function isLoRaMeshTransport(t: ForcedTransport): boolean {
 export const CHAT_LORA_DUAL_IMAGE_POLICY_MSG =
   'LoRa-Bild (LUMA+CHROMA): „online“ mit Verschlüsselung — oder „funk“ mit aktivem „LoRa + eigene Verankerung“ (Pfad 4; Funk bleibt Klartext). Sonst Anhang entfernen.'
 
+/** Pfad 4: Funk sofort (Klartext), danach eigene Mailbox + optionale Attestation/Verankerung. */
+export const CHAT_PATH4_SELF_ARCHIVE_HINT =
+  'Pfad 4: Funk geht sofort als Klartext raus. Zusätzlich wird eine eigene Mailbox-Kopie an deine Adresse geschrieben (später im Tangle sichtbar), sobald Basis/Internet verfügbar ist.'
+
+/** Verschlüsselte Peer-Nachrichten brauchen vorherigen Schlüsselkanal (`/handshake` + `/connect`). */
+export const CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG =
+  'Verschlüsselte Nachricht an andere Person: zuerst Handshake/Connect über Online-IOTA aufbauen. Ohne verbundenen Partner ist nur Klartext (Funk/Pfad 4) oder Versand an dich selbst sinnvoll.'
+
+/** Aktueller Produktzustand: verschlüsselter LoRa-Funk ist bewusst aus; Pfad 4 bleibt Klartext. */
+export const CHAT_ENCRYPTED_MESH_DISABLED_MSG =
+  'Verschlüsselter LoRa-Funk ist deaktiviert. Für Verschlüsselung: „online“ mit verbundenem Partner (Handshake/Connect). Für Einsatz-Protokoll: Pfad 4 nutzt Klartext-Funk + eigene Verankerung.'
+
 export function isAttachedLoraDualComposerAllowed(p: {
   isPrivate: boolean
   encrypted: boolean

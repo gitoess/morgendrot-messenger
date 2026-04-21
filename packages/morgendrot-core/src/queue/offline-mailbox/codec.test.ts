@@ -18,10 +18,12 @@ describe('normalizeOfflineMailboxItem', () => {
       createdAt: 1,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     })
     expect(n).not.toBeNull()
     expect(n?.timeIsTrusted).toBe(false)
     expect(n?.clientOutSeq).toBe(0)
+    expect(n?.priority).toBe(100)
   })
 
   it('setzt timeIsTrusted nur bei exakt true', () => {
@@ -37,6 +39,7 @@ describe('normalizeOfflineMailboxItem', () => {
       createdAt: 1,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     })
     expect(n?.timeIsTrusted).toBe(true)
     expect(n?.clientOutSeq).toBe(3)
@@ -55,6 +58,7 @@ describe('normalizeOfflineMailboxItem', () => {
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
+        priority: 100,
       } as unknown as Record<string, unknown>)
     ).toBeNull()
   })
@@ -76,6 +80,7 @@ describe('parseOfflineMailboxQueueFromJson', () => {
           createdAt: 10,
           attempts: 0,
           lastAttemptAt: 0,
+          priority: 100,
         },
       ])
     )
@@ -103,6 +108,7 @@ describe('serializeOfflineMailboxQueueToJson', () => {
       createdAt: i,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     }))
     const raw = serializeOfflineMailboxQueueToJson(many)
     const round = parseOfflineMailboxQueueFromJson(raw)

@@ -36,6 +36,7 @@ describe('createOfflineMailboxManager', () => {
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
+        priority: 100,
       },
     ])
     expect(mgr.load()).toHaveLength(1)
@@ -57,6 +58,7 @@ describe('createOfflineMailboxManager', () => {
     const items = mgr.load()
     expect(items[0]?.id).toBe('t-1')
     expect(items[0]?.createdAt).toBe(1_000)
+    expect(items[0]?.priority).toBe(100)
     expect(items[0]?.canonicalMsgRef).toMatch(/^[0-9a-f]{64}$/)
   })
 

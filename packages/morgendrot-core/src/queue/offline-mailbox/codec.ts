@@ -1,4 +1,5 @@
 import {
+  OFFLINE_MAILBOX_PRIORITY_DEFAULT,
   OFFLINE_MAILBOX_MAX_ITEMS,
   type OfflineMailboxQueueItem,
 } from './model'
@@ -32,6 +33,11 @@ export function normalizeOfflineMailboxItem(o: Record<string, unknown>): Offline
     typeof rawSeq === 'number' && Number.isFinite(rawSeq) && rawSeq >= 0 && Math.floor(rawSeq) === rawSeq
       ? rawSeq
       : 0
+  const rawPrio = o.priority
+  const priority =
+    typeof rawPrio === 'number' && Number.isFinite(rawPrio) && rawPrio >= 0
+      ? Math.floor(rawPrio)
+      : OFFLINE_MAILBOX_PRIORITY_DEFAULT
   return {
     id: o.id,
     kind: o.kind,
@@ -44,6 +50,7 @@ export function normalizeOfflineMailboxItem(o: Record<string, unknown>): Offline
     createdAt: o.createdAt,
     attempts: o.attempts,
     lastAttemptAt: o.lastAttemptAt,
+    priority,
     ...(typeof lastError === 'string' ? { lastError } : {}),
     ...(canonicalMsgRef !== undefined ? { canonicalMsgRef } : {}),
   }

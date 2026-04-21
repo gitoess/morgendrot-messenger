@@ -202,6 +202,8 @@ export async function enqueueOfflineMailboxFailure(opts: {
   senderAddress?: string
   threadId?: string
   messageNonceU64?: bigint
+  /** Drain-Priorität (kleiner = früher). Ohne Wert: Core-Default (aktuell 100). */
+  priority?: number
 }): Promise<EnqueueOfflineMailboxResult> {
   if (!isOfflineMailboxQueueEnabled()) {
     return { ok: true, queued: false }

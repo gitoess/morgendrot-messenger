@@ -22,6 +22,8 @@ import {
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import {
   CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
+  CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
+  CHAT_ENCRYPTED_MESH_DISABLED_MSG,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
 import { prependPath4SelfArchiveMarker } from '@/frontend/features/send/mesh-path4-self-archive'
@@ -41,6 +43,7 @@ import {
   sha256HexFromBase64Bytes,
 } from '@/frontend/lib/forensic-mailbox-attestation'
 import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
+import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import {
   formatMeshtasticNodeIdFromNum,
   parseMeshtasticNodeIdToNumber,
@@ -166,6 +169,30 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const meshPlaintextDest = (): number | 'broadcast' | null =>
       resolveMeshtasticPlaintextDestination(meshPlaintextToNodeEnabled, meshPlaintextNodeId)
 
+    const resolveEncryptedRecipientReady = (): { ok: true } | { ok: false; message: string } => {
+      const connected = (apiStatus?.connectedAddresses ?? []).map((a) => a.toLowerCase())
+      if (connected.length === 0) {
+        return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
+      }
+      if (connected.length === 1) return { ok: true }
+      const p = partner.trim().toLowerCase()
+      if (!p) {
+        return {
+          ok: false,
+          message:
+            'Mehrere verbundene Partner: im Feld „Partner (Handshake)“ die Zieladresse wählen, dann verschlüsselt senden.',
+        }
+      }
+      if (!connected.includes(p)) {
+        return {
+          ok: false,
+          message:
+            'Partner-Adresse ist nicht verbunden. Erst Handshake/Connect für diese Adresse durchführen oder Partnerfeld korrigieren.',
+        }
+      }
+      return { ok: true }
+    }
+
     const singleWireSuccessMsg = (): string => {
       if (!isPrivate) return 'Gesendet!'
       if (path4Active) {
@@ -193,28 +220,73 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return false
     }
 
-    const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<void> => {
-      if (!meshSelfArchiveAfterLoRa || forcedTransport !== 'mesh') return
-      throwIfCancelled()
+    type Path4MirrorKind = 'text' | 'image_luma' | 'image_chroma'
+    type Path4MirrorDispatch = {
+      status: 'anchored' | 'queued' | 'duplicate' | 'failed'
+      note: string
+      txDigest?: string
+    }
+    const dispatchPath4Mirror = async (
+      payload: string,
+      messageNonceU64: bigint,
+      kind: Path4MirrorKind,
+      loraMsgId?: string | null
+    ): Promise<Path4MirrorDispatch> => {
       const selfAddr = myAddress.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(selfAddr)) {
-        throw new Error('Eigen-Archiv: MY_ADDRESS ungültig (0x + 64 Hex).')
+        return { status: 'failed', note: 'Eigen-Archiv: MY_ADDRESS ungültig — keine Mailbox-Kopie.' }
       }
+      if (apiStatus?.locked) {
+        return { status: 'failed', note: 'Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.' }
+      }
+      const res = await sendPlaintextMailboxHybrid(selfAddr, payload, messageNonceU64, { messagingPersistenceMode })
+      if (res.ok) {
+        return {
+          status: 'anchored',
+          note: 'Eigen-Archiv: Klartext-Mailbox an dich gesendet.',
+          txDigest: res.txDigest,
+        }
+      }
+      const err = mailboxHybridErr(res)
+      if (!isOfflineMailboxQueueEnabled()) return { status: 'failed', note: `Eigen-Archiv (Mailbox): ${err}` }
+      const msgIdTag = loraMsgId ? `|msgId=${loraMsgId}` : ''
+      const priority =
+        kind === 'text' ? 20 : kind === 'image_luma' ? 50 : kind === 'image_chroma' ? 60 : 100
+      const en = await enqueueOfflineMailboxFailure({
+        kind: 'plain_send',
+        recipient: selfAddr,
+        payload,
+        encrypted: false,
+        timeIsTrusted: !deviceTimeTrustWarn,
+        lastError: `path4:${kind}${msgIdTag} ${err}`.trim(),
+        senderAddress: myAddress.trim(),
+        threadId: `${stableOfflineMailboxThreadId(myAddress.trim(), selfAddr)}|path4:${kind}${msgIdTag}`,
+        messageNonceU64,
+        priority,
+      })
+      onOfflineMailboxQueueChanged?.()
+      if (!en.ok) return { status: 'failed', note: `Eigen-Archiv (Queue): ${en.reason}` }
+      if (en.queued) return { status: 'queued', note: 'Eigen-Archiv: in Offline-Warteschlange (Opt-in).' }
+      return { status: 'duplicate', note: 'Eigen-Archiv: bereits in Offline-Warteschlange (Dedup).' }
+    }
+
+    const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<string> => {
+      if (!meshSelfArchiveAfterLoRa || forcedTransport !== 'mesh') return ''
+      throwIfCancelled()
+      const loraMsgId =
+        parseLoraProgressiveMessage(lumaText)?.msgId ?? parseLoraProgressiveMessage(chromaText)?.msgId ?? null
       const n1 = BigInt(nextOfflineMailboxClientOutSeq())
       const w1 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(lumaText), n1)
-      const r1 = await sendPlaintextMailboxHybrid(selfAddr, w1, n1, { messagingPersistenceMode })
-      if (!r1.ok) {
-        throw new Error(`Eigen-Archiv LUMA: ${mailboxHybridErr(r1)}`)
-      }
+      const d1 = await dispatchPath4Mirror(w1, n1, 'image_luma', loraMsgId)
+      if (d1.status !== 'anchored') return ` ${d1.note}`
       throwIfCancelled()
       const n2 = BigInt(nextOfflineMailboxClientOutSeq())
       const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
-      const r2 = await sendPlaintextMailboxHybrid(selfAddr, w2, n2, { messagingPersistenceMode })
-      if (!r2.ok) {
-        throw new Error(`Eigen-Archiv CHROMA: ${mailboxHybridErr(r2)}`)
-      }
-      const mbTx = (r2.ok === true ? r2.txDigest : undefined) ?? (r1.ok === true ? r1.txDigest : undefined)
+      const d2 = await dispatchPath4Mirror(w2, n2, 'image_chroma', loraMsgId)
+      if (d2.status !== 'anchored') return ` ${d2.note}`
+      const mbTx = d2.txDigest ?? d1.txDigest
       if (isForensicImageMailboxAttestationEnabled()) {
+        const selfAddr = myAddress.trim().toLowerCase()
         await runForensicMailboxAttestationAfterSend({
           recipient: selfAddr,
           senderAddress: selfAddr,
@@ -228,6 +300,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           silent: true,
         })
       }
+      return ` Eigen-Archiv verankert.${formatTxDigestStatusSuffix(mbTx)}`
     }
 
     /** Ohne Pfad 4: verschlüsselter „Funk“-Modus + LUMA — nicht unterstützt (Pfad 4 = Klartext-Luft). */
@@ -400,9 +473,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         await sendPath4ChunkWithRetry('LUMA', lumaText, dest)
         throwIfCancelled()
         await sendPath4ChunkWithRetry('CHROMA', chromaText, dest)
-        await runPath4SelfMirrorForLoraImage(lumaText, chromaText)
+        const mirrorNote = await runPath4SelfMirrorForLoraImage(lumaText, chromaText)
         setStatus('success')
-        setStatusMsg('Bild per LoRa gesendet – wird später selbst im Tangle verankert.')
+        setStatusMsg(`Bild per LoRa gesendet – wird selbst im Tangle verankert.${mirrorNote || ''}`)
         const cap = message.trim()
         recordMeshOutgoingPlaintext(
           appendMeshMessage,
@@ -729,43 +802,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       /** Pfad 4 (MVP): nach LongFast-Klartext Mailbox-Kopie an eigene Adresse + optionale Forensic-Attestation. */
       const runPath4MailboxSelfArchive = async (airUtf8: string): Promise<string> => {
         if (!path4Active) return ''
-        const selfAddr = myAddress.trim().toLowerCase()
-        if (!ADDR_64_LOWER.test(selfAddr)) {
-          return ' Eigen-Archiv: MY_ADDRESS ungültig — keine Mailbox-Kopie.'
-        }
-        if (apiStatus?.locked) {
-          return ' Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.'
-        }
         const n = BigInt(nextOfflineMailboxClientOutSeq())
         const marked = prependPath4SelfArchiveMarker(airUtf8)
         const wireForApi = prependMailboxOutNonceMarker(marked, n)
-        const res = await sendPlaintextMailboxHybrid(selfAddr, wireForApi, n, { messagingPersistenceMode })
-        if (!res.ok) {
-          const err = mailboxHybridErr(res)
-          if (allowOfflineMailboxQueue) {
-            const en = await enqueueOfflineMailboxFailure({
-              kind: 'plain_send',
-              recipient: selfAddr,
-              payload: wireForApi,
-              encrypted: false,
-              timeIsTrusted: !deviceTimeTrustWarn,
-              lastError: err,
-              senderAddress: myAddress.trim(),
-              threadId: stableOfflineMailboxThreadId(myAddress.trim(), selfAddr),
-              messageNonceU64: n,
-            })
-            onOfflineMailboxQueueChanged?.()
-            if (en.ok && en.queued) {
-              return ' Eigen-Archiv: Mailbox nicht erreichbar — Eintrag in Offline-Warteschlange (Opt-in).'
-            }
-          }
-          return ` Eigen-Archiv (Mailbox): ${err}`
-        }
-        const baseOk = 'Eigen-Archiv: Klartext-Mailbox an dich gesendet.'
-        const txDig = (res as { txDigest?: string }).txDigest
+        const d = await dispatchPath4Mirror(wireForApi, n, 'text')
+        if (d.status !== 'anchored') return ` ${d.note}`
+        const baseOk = d.note
+        const txDig = d.txDigest
         if (!isForensicImageMailboxAttestationEnabled()) {
           return ` ${baseOk}${formatTxDigestStatusSuffix(txDig)}`
         }
+        const selfAddr = myAddress.trim().toLowerCase()
         const attested = await runForensicMailboxAttestationAfterSend({
           recipient: selfAddr,
           senderAddress: selfAddr,
@@ -934,11 +981,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       if (forcedTransport === 'mesh') {
         return failSend(
-          'Verschlüsselter Funk ist deaktiviert. Wähle „online“ — oder Schloss aus für Klartext-LoRa (Meshtastic-Text / Pfad 4).'
+          CHAT_ENCRYPTED_MESH_DISABLED_MSG
         )
       }
 
       if (forcedTransport === 'internet') {
+        const encReady = resolveEncryptedRecipientReady()
+        if (!encReady.ok) return failSend(encReady.message)
         const existing = parseMailboxOutNonceMarker(textSnap)
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)

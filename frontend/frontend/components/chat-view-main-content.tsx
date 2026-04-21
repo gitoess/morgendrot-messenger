@@ -364,6 +364,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     ),
     isPrivate,
     apiStatus,
+    partner,
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,

@@ -1,4 +1,10 @@
-import { OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS, OFFLINE_QUEUE_ITEM_STATUS, type OfflineMailboxKind, type OfflineMailboxQueueItem } from './model'
+import {
+  OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS,
+  OFFLINE_MAILBOX_PRIORITY_DEFAULT,
+  OFFLINE_QUEUE_ITEM_STATUS,
+  type OfflineMailboxKind,
+  type OfflineMailboxQueueItem,
+} from './model'
 
 const CANONICAL_MSG_REF_HEX_RE = /^[0-9a-f]{64}$/
 
@@ -47,11 +53,14 @@ export function nextClientOutSeqFromItems(items: OfflineMailboxQueueItem[]): num
   return maxClientOutSeqIn(items) + 1
 }
 
-/** Sortierung für Drain: `clientOutSeq`, dann `createdAt`. */
+/** Sortierung für Drain: `priority` (kleiner zuerst), dann `createdAt`, dann `clientOutSeq`. */
 export function sortOfflineMailboxForDrain(items: OfflineMailboxQueueItem[]): OfflineMailboxQueueItem[] {
   return [...items].sort((a, b) => {
-    const d = a.clientOutSeq - b.clientOutSeq
-    return d !== 0 ? d : a.createdAt - b.createdAt
+    const p = (a.priority ?? OFFLINE_MAILBOX_PRIORITY_DEFAULT) - (b.priority ?? OFFLINE_MAILBOX_PRIORITY_DEFAULT)
+    if (p !== 0) return p
+    const c = a.createdAt - b.createdAt
+    if (c !== 0) return c
+    return a.clientOutSeq - b.clientOutSeq
   })
 }
 
@@ -87,6 +96,8 @@ export function tryEnqueueOfflineMailboxItem(params: {
   now: number
   /** § H.12 — 64 Hex (Kleinbuchstaben), z. B. von `computeCanonicalMsgRefV1`. */
   canonicalMsgRef: string
+  /** Kleinere Zahl = früherer Drain. */
+  priority?: number
 }): EnqueueOfflineMailboxPureResult {
   const { items, kind, recipient, payload, encrypted, timeIsTrusted, lastError, id, now, canonicalMsgRef } = params
   if (payload.length > OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS) {
@@ -99,6 +110,10 @@ export function tryEnqueueOfflineMailboxItem(params: {
   if (offlineMailboxEnqueueCollides(items, { kind, recipient, encrypted, payload, canonicalMsgRef: normRef })) {
     return { ok: true, queued: false, items }
   }
+  const priority =
+    typeof params.priority === 'number' && Number.isFinite(params.priority) && params.priority >= 0
+      ? Math.floor(params.priority)
+      : OFFLINE_MAILBOX_PRIORITY_DEFAULT
   const next: OfflineMailboxQueueItem = {
     id,
     kind,
@@ -111,6 +126,7 @@ export function tryEnqueueOfflineMailboxItem(params: {
     createdAt: now,
     attempts: 0,
     lastAttemptAt: 0,
+    priority,
     canonicalMsgRef: normRef,
     ...(lastError !== undefined ? { lastError } : {}),
   }

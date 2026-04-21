@@ -17,6 +17,7 @@ function plainItem(id: string, recipient: string, payload: string, seq: number):
     createdAt: seq,
     attempts: 0,
     lastAttemptAt: 0,
+    priority: 100,
   }
 }
 
@@ -33,6 +34,7 @@ function encItem(id: string, payload: string, seq: number): OfflineMailboxQueueI
     createdAt: seq,
     attempts: 0,
     lastAttemptAt: 0,
+    priority: 100,
   }
 }
 

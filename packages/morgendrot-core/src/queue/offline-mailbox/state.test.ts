@@ -39,6 +39,7 @@ describe('clientOutSeq', () => {
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
+        priority: 100,
       },
     ]
     expect(maxClientOutSeqIn(items)).toBe(7)
@@ -47,7 +48,7 @@ describe('clientOutSeq', () => {
 })
 
 describe('sortOfflineMailboxForDrain', () => {
-  it('sortiert nach clientOutSeq dann createdAt', () => {
+  it('sortiert nach priority dann createdAt', () => {
     const a: OfflineMailboxQueueItem = {
       id: '1',
       kind: 'plain_send',
@@ -60,14 +61,16 @@ describe('sortOfflineMailboxForDrain', () => {
       createdAt: 100,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
+      priority: 50,
     }
     const b: OfflineMailboxQueueItem = {
       ...a,
       id: '2',
-      clientOutSeq: 2,
+      priority: 20,
       createdAt: 50,
     }
-    const c: OfflineMailboxQueueItem = { ...a, id: '3', clientOutSeq: 1 }
+    const c: OfflineMailboxQueueItem = { ...a, id: '3', clientOutSeq: 1, priority: 20, createdAt: 25 }
     const sorted = sortOfflineMailboxForDrain([a, b, c])
     expect(sorted.map((x) => x.id)).toEqual(['3', '2', '1'])
   })
@@ -87,6 +90,7 @@ describe('backoffMsForDrainAttempt / shouldDeferDrainAttempt', () => {
       createdAt: 1,
       attempts: 1,
       lastAttemptAt: 1000,
+      priority: 100,
     }
     const wait = backoffMsForDrainAttempt(1)
     expect(shouldDeferDrainAttempt(item, 1000 + wait - 1)).toBe(true)
@@ -106,6 +110,8 @@ describe('backoffMsForDrainAttempt / shouldDeferDrainAttempt', () => {
       createdAt: 1,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
+      priority: 100,
     }
     expect(shouldDeferDrainAttempt(item, 999_999)).toBe(false)
   })
@@ -142,6 +148,7 @@ describe('tryEnqueueOfflineMailboxItem', () => {
     expect(r.items[0]?.timeIsTrusted).toBe(true)
     expect(r.items[0]?.clientOutSeq).toBe(1)
     expect(r.items[0]?.createdAt).toBe(42)
+    expect(r.items[0]?.priority).toBe(100)
     expect(r.items[0]?.canonicalMsgRef).toBe(canonicalMsgRef)
   })
 
@@ -195,6 +202,7 @@ describe('tryEnqueueOfflineMailboxItem', () => {
       createdAt: 0,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     }
     const canonicalMsgRef = await computeCanonicalMsgRefV1({
       senderAddress: '',

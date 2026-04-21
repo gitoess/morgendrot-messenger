@@ -60,6 +60,7 @@ export function createOfflineMailboxManager(deps: OfflineMailboxManagerDeps) {
     senderAddress?: string
     threadId?: string
     messageNonceU64?: bigint
+    priority?: number
   }): Promise<EnqueueOfflineMailboxFailureResult> {
     const canonicalMsgRef = await computeCanonicalMsgRefV1({
       senderAddress: opts.senderAddress,
@@ -80,6 +81,7 @@ export function createOfflineMailboxManager(deps: OfflineMailboxManagerDeps) {
       id: deps.ids.randomId(),
       now: deps.clock.now(),
       canonicalMsgRef,
+      priority: opts.priority,
     })
     if (!r.ok) {
       return { ok: false, queued: false, reason: r.reason }

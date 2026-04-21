@@ -33,7 +33,7 @@ jobs:
 
       - run: npm ci
 
-      - name: @morgendrot/core unit tests
+      - name: "@morgendrot/core unit tests"
         working-directory: packages/morgendrot-core
         run: npm ci && npm run test:unit
 

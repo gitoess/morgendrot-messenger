@@ -9,6 +9,9 @@ export const OFFLINE_MAILBOX_MAX_ITEMS = 60
 
 export const OFFLINE_MAILBOX_MAX_PAYLOAD_CHARS = 512_000
 
+/** Priorisierung für Drain: kleiner = früher. */
+export const OFFLINE_MAILBOX_PRIORITY_DEFAULT = 100
+
 /** Persistiert; `syncing` / `sent` sind für UI/Drain reserviert. */
 export const OFFLINE_QUEUE_ITEM_STATUS = {
   PENDING: 'pending',
@@ -39,6 +42,8 @@ export type OfflineMailboxQueueItem = {
   createdAt: number
   attempts: number
   lastAttemptAt: number
+  /** Drain-Priorität (kleiner = früher), Legacy/ohne Angabe: `OFFLINE_MAILBOX_PRIORITY_DEFAULT`. */
+  priority: number
   lastError?: string
   /**
    * § H.12 — `canonical_msg_ref` (64 Hex, Kleinbuchstaben), vgl. `computeCanonicalMsgRefV1`.

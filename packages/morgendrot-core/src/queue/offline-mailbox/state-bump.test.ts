@@ -16,6 +16,7 @@ describe('bumpOfflineMailboxItemAfterFailedSend', () => {
       createdAt: 1,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     }
     const b = bumpOfflineMailboxItemAfterFailedSend(item, new Error('boom'), 99)
     expect(b.attempts).toBe(1)

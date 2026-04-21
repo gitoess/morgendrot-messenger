@@ -9,6 +9,11 @@ import { useMemo, useState } from 'react'
 import { Handshake, Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
+  CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
+  CHAT_ENCRYPTED_MESH_DISABLED_MSG,
+  CHAT_PATH4_SELF_ARCHIVE_HINT,
+} from '@/frontend/lib/chat-view-messenger-transport'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -24,6 +29,8 @@ import type { SendTransportChoicePort } from '@/frontend/features/messenger-port
 export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
   apiStatus: ApiStatus | null
+  /** Aktuelles Partnerfeld aus Setup (0x…), für Inline-Hinweis bei mehreren verbundenen Partnern. */
+  partner?: string
   /** Web Bluetooth / Heltec – für Hinweise unter „funk“. */
   meshBleSupported?: boolean
   meshBleConnected?: boolean
@@ -44,6 +51,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     messagingPersistenceMode,
     onMessagingPersistenceModeChange,
     apiStatus,
+    partner = '',
     meshBleSupported = false,
     meshBleConnected = false,
     onOpenPartnerSetup,
@@ -70,6 +78,16 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       return 0
     }
   }, [apiStatus?.messengerCredits])
+
+  const connectedAddresses = useMemo(
+    () => (apiStatus?.connectedAddresses ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean),
+    [apiStatus?.connectedAddresses]
+  )
+  const selectedPartner = partner.trim().toLowerCase()
+  const requiresPartnerSelection =
+    isPrivate && encrypted && forcedTransport === 'internet' && connectedAddresses.length > 1
+  const selectedPartnerConnected =
+    selectedPartner.length > 0 && connectedAddresses.includes(selectedPartner)
 
   return (
     <>
@@ -197,6 +215,9 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
 
       {(isPrivate || !encrypted) && forcedTransport === 'mesh' && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+          <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
+            <strong>Policy:</strong> {CHAT_ENCRYPTED_MESH_DISABLED_MSG}
+          </p>
           <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-[11px] leading-relaxed text-foreground">
             {meshBleConnected ? (
               <p className="text-emerald-600 dark:text-emerald-400">
@@ -226,8 +247,29 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
           {apiStatus?.rpcSocksProxyActive || apiStatus?.rpcHttpProxyActive ? (
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400">RPC-Proxy aktiv (SOCKS/HTTP).</p>
           ) : null}
+          {isPrivate ? (
+            <p className="text-[11px] text-muted-foreground">{CHAT_PATH4_SELF_ARCHIVE_HINT}</p>
+          ) : null}
         </div>
       )}
+
+      {isPrivate && encrypted && forcedTransport === 'internet' ? (
+        <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-950 dark:text-emerald-100/95">
+          <strong>Verschlüsselt + online:</strong> {CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG}
+        </p>
+      ) : null}
+      {requiresPartnerSelection && !selectedPartner ? (
+        <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
+          Mehrere Partner verbunden. Bitte im Setup bei <strong>Partner (Handshake)</strong> die Zieladresse
+          auswählen, sonst wird verschlüsselt nicht gesendet.
+        </p>
+      ) : null}
+      {requiresPartnerSelection && selectedPartner && !selectedPartnerConnected ? (
+        <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
+          Gewählter Partner ist nicht verbunden. Erst <strong>/connect</strong> für diese Adresse durchführen oder
+          Partnerfeld korrigieren.
+        </p>
+      ) : null}
 
       {(isPrivate || !encrypted) && forcedTransport === 'adhoc' && (
         <div className="rounded-xl border border-border bg-card p-4">

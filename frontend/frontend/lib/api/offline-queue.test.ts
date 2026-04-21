@@ -127,6 +127,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       createdAt: i,
       attempts: 0,
       lastAttemptAt: 0,
+      priority: 100,
     }))
     saveOfflineMailboxQueue(many)
     expect(loadOfflineMailboxQueue()).toHaveLength(60)
@@ -144,6 +145,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
+        priority: 100,
       },
     ])
     const row = loadOfflineMailboxQueue()[0]
@@ -188,6 +190,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
+        priority: 100,
       },
     ])
     expect(nextOfflineMailboxClientOutSeq()).toBe(8)
