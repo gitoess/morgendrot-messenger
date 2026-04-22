@@ -21,8 +21,38 @@ import {
   meshtasticThrownErrorIsRetryable,
   throwIfMeshtasticRoutingFailed,
 } from '@/frontend/lib/meshtastic-routing-error'
+import { tryDecodeMeshtasticCompressedTextPayload } from '@/frontend/lib/mesh-meshtastic-compressed-text'
 
 const MESH_TEXT_RETRY_BACKOFF_MS = [600, 1800] as const
+
+function meshRxDebugEnabled(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.localStorage.getItem('morgendrot.meshRxDebug') === '1'
+  } catch {
+    return false
+  }
+}
+
+/** Nur wenn `localStorage['morgendrot.meshRxDebug']==='1'` — siehe Setup-Panel Hinweis. */
+function meshRxLog(...args: unknown[]): void {
+  if (!meshRxDebugEnabled()) return
+  // eslint-disable-next-line no-console -- absichtlich für Funk-Diagnose (F12)
+  console.info('[morgendrot mesh]', ...args)
+}
+
+function meshPacketRxTimeMs(o: Record<string, unknown>): number {
+  const r = o.rxTime ?? o.timestamp
+  if (r instanceof Date && !Number.isNaN(r.getTime())) return r.getTime()
+  if (typeof r === 'bigint') {
+    const n = Number(r)
+    return Number.isFinite(n) ? (n < 1e12 ? n * 1000 : n) : Date.now()
+  }
+  if (typeof r === 'number' && Number.isFinite(r)) {
+    return r < 1e12 ? Math.round(r * 1000) : r
+  }
+  return Date.now()
+}
 
 /** Wenn `sendText`/`sendPacket` nie resolved (häufig Broadcast/Web-BLE), hängt die UI — Nachricht kann trotzdem raus sein. */
 const MESH_SEND_STALL_MS = 25_000
@@ -207,6 +237,8 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lastRxDebug, setLastRxDebug] = useState<string | null>(null)
+  /** Welche `device.events.*`-Listener nach Verbindung wirklich gebunden sind (Setup-Panel). */
+  const [meshRxSubscriptions, setMeshRxSubscriptions] = useState<string | null>(null)
   const [transportKind, setTransportKind] = useState<MeshtasticTransportKind>('bluetooth')
   const deviceRef = useRef<MeshDevice | null>(null)
   /** Nach manueller Verbindung: Verbindung im Hintergrund erhalten/reconnecten. */
@@ -418,9 +450,13 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
       rxTime: Date
       data: unknown
     }) => {
+      meshRxLog('onMessagePacket', { from: pm.from, id: pm.id, dataType: typeof pm.data })
       noteRx('onMessagePacket', pm.from)
       const txt = decodeMeshTextPayload(pm.data)
-      if (txt == null) return
+      if (txt == null) {
+        meshRxLog('onMessagePacket: decodeMeshTextPayload → null')
+        return
+      }
       const cleaned = sanitizeMeshTextForDisplay(txt) || '[Mesh-Text empfangen]'
       appendTextPacket(pm.from, String(pm.id), pm.rxTime.getTime(), cleaned)
     }
@@ -428,21 +464,15 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     const handleMeshPacketTextOnly = (raw: unknown) => {
       if (!raw || typeof raw !== 'object') return
       const o = raw as Record<string, unknown>
-      const payloadVariant = o.payloadVariant as Record<string, unknown> | undefined
-      const decodedFromVariant =
-        payloadVariant?.case === 'decoded'
-          ? (payloadVariant.value as Record<string, unknown> | undefined)
-          : undefined
-      const decoded = (decodedFromVariant ?? o.decoded ?? o.data ?? o.payload) as Record<string, unknown> | undefined
-      const portRaw =
-        decoded?.portnum ??
-        decoded?.portNum ??
-        (decoded as Record<string, unknown> | undefined)?.portnumValue ??
-        o.portnum ??
-        o.portNum
+      const payloadVariant = o.payloadVariant as { case?: unknown; value?: unknown } | undefined
+      if (payloadVariant?.case !== 'decoded') return
+      const decoded = payloadVariant.value as Record<string, unknown> | undefined
+      if (!decoded || typeof decoded !== 'object') return
+
+      const portRaw = decoded.portnum ?? decoded.portNum ?? (decoded as { portnumValue?: unknown }).portnumValue
       const portStr = String(portRaw ?? '').toUpperCase()
       const portNum = typeof portRaw === 'number' ? portRaw : Number.parseInt(String(portRaw ?? ''), 10)
-      /** Port 1 = Klartext; Port 7 = TEXT_MESSAGE_COMPRESSED (LongFast u. a.) — ohne 7 bleibt `onMeshPacket` stumm. */
+      /** Port 1 = Klartext; Port 7 = komprimiert — Core ruft kein `onMessagePacket` für 7. */
       const isTextPort =
         portNum === 1 ||
         portNum === 7 ||
@@ -452,37 +482,50 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         portStr === '1' ||
         portStr === '7'
       if (!isTextPort) return
-      const from =
+
+      const fromNum =
         parseMeshNodeNum(o.from) ??
         parseMeshNodeNum(o.fromNum) ??
         parseMeshNodeNum(o.fromNodeNum) ??
-        parseMeshNodeNum((o.fromId as unknown) ?? (decoded?.from as unknown)) ??
-        0
-      const id = String(o.id ?? o.packetId ?? decoded?.id ?? '0')
-      const rxRaw = o.rxTime ?? o.timestamp ?? Date.now()
-      const rxMs =
-        rxRaw instanceof Date ? rxRaw.getTime() : typeof rxRaw === 'number' ? rxRaw : Date.now()
-      const text = decodeMeshTextPayload(
-        decoded?.text ??
-          decoded?.payload ??
-          (decoded as Record<string, unknown> | undefined)?.message ??
-          o.text ??
-          o.payload
-      )
-      if (!text || !Number.isFinite(from)) return
+        parseMeshNodeNum(o.fromId) ??
+        null
+      if (fromNum == null) {
+        meshRxLog('onMeshPacket: Absender (from) nicht ermittelt', { port: portNum })
+        return
+      }
+
+      const id = String(o.id ?? o.packetId ?? '0')
+      const rxMs = meshPacketRxTimeMs(o)
+
+      let text: string | null = null
+      if (portNum === 7) {
+        text = tryDecodeMeshtasticCompressedTextPayload(decoded.payload ?? decoded.data)
+        meshRxLog('onMeshPacket port 7', { from: fromNum, ok: !!text, rxMs })
+      } else {
+        text = decodeMeshTextPayload(decoded.text ?? decoded.payload ?? decoded.message)
+      }
+      if (!text) {
+        meshRxLog('onMeshPacket: kein Text', { port: portNum, from: fromNum })
+        return
+      }
       const cleaned = sanitizeMeshTextForDisplay(text) || '[Mesh-Text empfangen]'
-      appendTextPacket((from >>> 0) || 0, id, rxMs, cleaned)
+      if (!cleaned.trim()) return
+      appendTextPacket(fromNum >>> 0, id, rxMs, cleaned)
     }
 
     const eventsObj = (device as unknown as { events?: Record<string, unknown> }).events as
       | Record<string, unknown>
       | undefined
     const unsubs: Array<() => void> = []
+    const subscribed: string[] = []
     const subscribeEvent = (eventName: string, cb: (payload: unknown) => void) => {
       const ev = eventsObj?.[eventName] as
         | { subscribe?: (fn: (payload: unknown) => void) => () => void }
         | undefined
-      if (!ev || typeof ev.subscribe !== 'function') return
+      if (!ev || typeof ev.subscribe !== 'function') {
+        meshRxLog('subscribe skipped (kein Event)', eventName)
+        return
+      }
       try {
         const unsub = ev.subscribe((payload: unknown) => {
           if (payload && typeof payload === 'object') {
@@ -495,12 +538,24 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
               parseMeshNodeNum((p.packet as Record<string, unknown> | undefined)?.from) ??
               null
             noteRx(eventName, fromHint)
+            if (eventName === 'onMeshPacket') {
+              const pv = p.payloadVariant as { case?: unknown; value?: { portnum?: unknown } } | undefined
+              meshRxLog(eventName, {
+                fromHint,
+                pvCase: pv?.case,
+                portnum: pv && typeof pv.value === 'object' && pv.value ? (pv.value as { portnum?: unknown }).portnum : undefined,
+              })
+            } else {
+              meshRxLog(eventName, { fromHint })
+            }
           } else {
             noteRx(eventName, null)
+            meshRxLog(eventName, payload)
           }
           cb(payload)
         })
         if (typeof unsub === 'function') {
+          subscribed.push(eventName)
           unsubs.push(unsub)
         }
       } catch {
@@ -518,8 +573,11 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     subscribeEvent('onDeviceStatus', () => {})
     subscribeEvent('onTelemetryPacket', () => {})
 
+    setMeshRxSubscriptions(subscribed.length ? subscribed.join(', ') : '— keine Listener gebunden —')
+
     return () => {
       for (const unsub of unsubs) unsub()
+      setMeshRxSubscriptions(null)
     }
   }, [device])
 
@@ -679,6 +737,7 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
     connecting,
     error,
     lastRxDebug,
+    meshRxSubscriptions,
     device,
     connect,
     connectBluetooth,

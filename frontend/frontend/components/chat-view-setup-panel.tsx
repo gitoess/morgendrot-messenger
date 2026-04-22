@@ -35,6 +35,8 @@ export type ChatViewSetupPanelMeshtastic = {
   connecting: boolean
   error: string | null
   lastRxDebug?: string | null
+  /** z. B. `onMessagePacket, onMeshPacket` — wenn leer/fehlend, Events nicht am Transport. */
+  meshRxSubscriptions?: string | null
   connect: () => Promise<void>
   connectBluetooth: () => Promise<void>
   connectUsb: () => Promise<void>
@@ -371,6 +373,19 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               </span>
               <span className="text-[11px] text-muted-foreground">
                 RX: {meshtastic.lastRxDebug ?? 'noch kein Paket gesehen'}
+              </span>
+              {meshtastic.meshRxSubscriptions ? (
+                <span className="w-full text-[10px] leading-snug text-muted-foreground" title="Gebundene MeshDevice-Events">
+                  Events: {meshtastic.meshRxSubscriptions}
+                </span>
+              ) : null}
+              <span className="w-full text-[10px] leading-snug text-muted-foreground">
+                F12-Konsole:{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-[9px]">
+                  localStorage.setItem(&quot;morgendrot.meshRxDebug&quot;,&quot;1&quot;)
+                </code>{' '}
+                → Seite neu laden; dann erscheinen{' '}
+                <code className="rounded bg-muted px-1 py-0.5 text-[9px]">[morgendrot mesh]</code>-Zeilen bei RX.
               </span>
               <button
                 type="button"

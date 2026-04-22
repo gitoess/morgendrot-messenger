@@ -444,6 +444,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             connecting: meshtastic.connecting,
             error: meshtastic.error,
             lastRxDebug: meshtastic.lastRxDebug,
+            meshRxSubscriptions: meshtastic.meshRxSubscriptions,
             connect: meshtastic.connect,
             connectBluetooth: meshtastic.connectBluetooth,
             connectUsb: meshtastic.connectUsb,

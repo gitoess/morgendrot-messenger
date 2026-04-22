@@ -69,6 +69,7 @@
     "react-resizable-panels": "^2.1.9",
     "sonner": "^1.7.1",
     "tailwind-merge": "^3.3.1",
+    "unishox2.siara.cc": "^1.1.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
