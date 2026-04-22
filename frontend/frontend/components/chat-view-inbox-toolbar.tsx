@@ -238,7 +238,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         </button>
       </div>
     </div>
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/70 px-4 py-2 text-xs">
+    <div className="border-t border-border/70 px-4 py-2 text-xs">
+      <div className="flex flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={() => setInboxSelectMode((v) => !v)}
@@ -276,40 +277,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       >
         Partner
       </button>
-      {inboxSelectMode && (
-        <>
-          <button
-            type="button"
-            onClick={onSelectAllVisible}
-            className="rounded-md border border-border px-2 py-1 hover:bg-muted"
-          >
-            Alle anwählen
-          </button>
-          <button
-            type="button"
-            onClick={onClearInboxSelection}
-            className="rounded-md border border-border px-2 py-1 hover:bg-muted"
-          >
-            Keine
-          </button>
-          <button
-            type="button"
-            disabled={selectedInboxCount === 0}
-            onClick={onBulkHideSelected}
-            className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
-          >
-            Ausgewählte lokal ausblenden ({selectedInboxCount})
-          </button>
-          <button
-            type="button"
-            disabled={selectedInboxCount === 0 || apiStatus?.connected !== true}
-            onClick={onBulkPurgeSelected}
-            className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-destructive hover:bg-destructive/20 disabled:opacity-50"
-          >
-            Ausgewählte auf Chain löschen
-          </button>
-        </>
-      )}
       <button
         type="button"
         disabled={messageCount === 0 && !hasHiddenMessages}
@@ -319,6 +286,56 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}
       </button>
       <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
+      </div>
+      {inboxSelectMode ? (
+        <div className="mt-2 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/15 p-2.5">
+          <button
+            type="button"
+            onClick={onSelectAllVisible}
+            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+          >
+            Alle anwählen
+          </button>
+          <button
+            type="button"
+            onClick={onClearInboxSelection}
+            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+          >
+            Keine
+          </button>
+          <button
+            type="button"
+            disabled={selectedInboxCount === 0}
+            onClick={onBulkHideSelected}
+            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted disabled:opacity-50"
+          >
+            Ausgewählte lokal ausblenden ({selectedInboxCount})
+          </button>
+          <button
+            type="button"
+            disabled={selectedInboxCount === 0 || apiStatus?.connected !== true}
+            onClick={() => {
+              const count = selectedInboxCount
+              if (
+                !window.confirm(
+                  `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
+                    `- Anzahl: ${count}\n` +
+                    `- Wirkung auf Chain: Purge der ausgewählten Mailbox-Einträge (sofern purge-fähig, mit Storage-Rebate)\n` +
+                    `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
+                    `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
+                    `Das ist kein reines UI-Ausblenden. Fortfahren?`
+                )
+              ) {
+                return
+              }
+              onBulkPurgeSelected()
+            }}
+            className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
+          >
+            Ausgewählte auf Chain löschen
+          </button>
+        </div>
+      ) : null}
     </div>
     </div>
   )
