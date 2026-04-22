@@ -209,12 +209,9 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         </p>
       )}
 
-      {(isPrivate || !encrypted) && !encrypted && forcedTransport !== 'mesh' && (
-        <p className="rounded-md border border-orange-500/35 bg-orange-500/10 px-3 py-2 text-[11px] text-orange-950 dark:text-orange-100/95">
-          <strong>Klartext:</strong> mit <strong>online</strong> über IOTA (<span className="font-mono">/send-plain</span>). Für{' '}
-          <strong>funk</strong> Meshtastic-Klartext in der Kopfzeile wählen (kein 0x nötig bei Broadcast).
-        </p>
-      )}
+      {(isPrivate || !encrypted) && !encrypted && forcedTransport !== 'mesh' ? (
+        <span className="sr-only">Klartext-Online nutzt den IOTA-Pfad; Funk nutzt Meshtastic-Klartext.</span>
+      ) : null}
 
       {(isPrivate || !encrypted) && forcedTransport === 'mesh' && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-2">

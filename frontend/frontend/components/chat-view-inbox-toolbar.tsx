@@ -23,9 +23,6 @@ import {
 export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number
   inboxRowCount: number
-  role: string
-  bossView: boolean
-  onBossViewChange: (checked: boolean) => void
   morgPkgFileRef: RefObject<HTMLInputElement | null>
   morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
   onMorgPkgImportFile: (e: ChangeEvent<HTMLInputElement>) => void
@@ -58,9 +55,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const {
     messageCount,
     inboxRowCount,
-    role,
-    bossView,
-    onBossViewChange,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
     onMorgPkgImportFile,
@@ -106,17 +100,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         {inboxRowCount !== messageCount && (
           <span className="text-xs text-muted-foreground">{inboxRowCount} sichtbar</span>
         )}
-        {role === 'boss' && apiStatus?.uiVariant !== 'messenger' ? (
-          <label className="ml-2 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={bossView}
-              onChange={(e) => onBossViewChange(e.target.checked)}
-              className="rounded border-border"
-            />
-            Boss-Übersicht (Posteingang: an mich + an Kommandanten)
-          </label>
-        ) : null}
       </div>
       <div className="flex flex-wrap items-center justify-end gap-2">
         <input

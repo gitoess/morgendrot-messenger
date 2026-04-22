@@ -136,7 +136,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
 
   const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
 
-  const showIotaPartner = encrypted || forcedTransport === 'internet'
+  const showIotaPartner = encrypted
   const showLora = forcedTransport === 'mesh'
   const showAdhoc = forcedTransport === 'adhoc'
 
@@ -262,14 +262,6 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
             <div className="flex flex-wrap items-start gap-2.5">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700/80 dark:text-amber-400/85" aria-hidden />
               <div className="min-w-0 flex-1 space-y-1.5 text-xs leading-relaxed text-amber-950/90 dark:text-amber-50/90">
-                <p>
-                  <span className="font-medium text-amber-900 dark:text-amber-100">Handshake:</span> Partner-{' '}
-                  <span className="font-mono">0x</span>-Adresse verifizieren. Falscher Partner = falsches Schlüsselmaterial.
-                  Nach erfolgreichem Handshake kann der Partner im Rahmen der Mailbox mit dir kommunizieren — Tresor und
-                  operative Daten separat absichern. Bei Auto-Ausführung am Node sind u. a.{' '}
-                  <strong className="text-amber-950 dark:text-amber-50">Coin-Transfers</strong> und andere Befehle möglich
-                  — siehe Handbuch.
-                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <MessengerGuideHint
                     ariaLabel="Handshake Vertrauen und Risiken"
@@ -322,6 +314,11 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               </button>
             </div>
           </div>
+        </section>
+      ) : forcedTransport === 'internet' ? (
+        <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Online · unverschlüsselt:</strong> Für Klartext-IOTA brauchst du keinen
+          Handshake-Block. Bei Bedarf im Composer nur die 0x-Zieladresse setzen.
         </section>
       ) : (
         <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">

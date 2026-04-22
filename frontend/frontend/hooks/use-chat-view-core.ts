@@ -65,7 +65,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [statusMsg, setStatusMsg] = useState('')
   const [showSetup, setShowSetup] = useState(false)
   const [encrypted, setEncryptedInternal] = useState(true)
-  const [bossView, setBossView] = useState(false)
   const [forcedTransport, setForcedTransportInternal] = useState<ForcedTransport>('internet')
 
   /** Verschlüsselter Funk (Mesh v2 / PRIVATE_APP) ist produktseitig abgeschaltet — Funk = Klartext; Verschlüsselung nur Online/IOTA. */
@@ -116,8 +115,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxHasMore,
     appendMeshMessage,
   } = useChatViewInbox({
-    role,
-    bossView,
     refreshContactDirectory,
     packageId: inboxPackageFilter.trim() || undefined,
   })
@@ -127,13 +124,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const messagesForExport = useCallback(async () => {
     const fromApi = await fetchAllInboxMessagesForExport({
       packageId: inboxPackageFilter.trim() || undefined,
-      bossView,
+      bossView: false,
       role,
     })
     const meshOnly = messages.filter((m) => m.transports?.includes('mesh'))
     if (meshOnly.length === 0) return fromApi
     return mergeAllMessages([...fromApi, ...meshOnly])
-  }, [messages, inboxPackageFilter, bossView, role])
+  }, [messages, inboxPackageFilter, role])
 
   const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -235,13 +232,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
-
-  /** Messenger-Bundle: Chat-Boss-Übersicht ausgeblendet — Flag sicher aus (§ H.17). */
-  useEffect(() => {
-    if (apiStatus?.uiVariant !== 'messenger') return
-    if ((role || '').toLowerCase() !== 'boss') return
-    setBossView(false)
-  }, [apiStatus?.uiVariant, role])
 
   const {
     onExportEinsatzberichtJson,
@@ -508,8 +498,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     toggleShowSetup,
     encrypted,
     setEncrypted,
-    bossView,
-    setBossView,
     apiStatus,
     refreshApiStatus,
     basisUnreachable,

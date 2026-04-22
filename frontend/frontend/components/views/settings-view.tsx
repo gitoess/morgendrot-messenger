@@ -333,8 +333,7 @@ export function SettingsView({
 
       <p className="rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
         <strong className="text-foreground">PWA installieren</strong> und <strong className="text-foreground">IOTA überweisen</strong> liegen
-        auf dem <strong className="text-foreground">Haupt-Dashboard</strong> (Kachel-Ansicht).{' '}
-        <strong className="text-foreground">Einsatz-Profil / Kontakte</strong> im privaten Chat unter „Nachrichten“.
+        auf dem <strong className="text-foreground">Haupt-Dashboard</strong> (Kachel-Ansicht).
       </p>
 
       {canManageEinsatzRoleTemplates ? (

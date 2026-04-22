@@ -6,7 +6,6 @@
  */
 
 import type { ComponentProps } from 'react'
-import { ChatViewEinsatzProfilInline } from '@/frontend/components/chat-view-einsatz-profil-inline'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -123,16 +122,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           })
         }}
       />
-      {(props.role || '').trim().toLowerCase() === 'boss' ? (
-        <details className="border-b border-border/80 bg-muted/15 px-3 py-2">
-          <summary className="cursor-pointer text-xs font-medium text-foreground">
-            Boss: Einsatz-Profil / Kontakte
-          </summary>
-          <div className="mt-3 border-t border-border/60 pt-3">
-            <ChatViewEinsatzProfilInline hideOuterCollapsible />
-          </div>
-        </details>
-      ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
         <ChatViewInboxList
           loadError={loadError}

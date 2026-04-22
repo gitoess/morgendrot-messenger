@@ -18,8 +18,6 @@ import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/fr
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxParams = {
-  role: string
-  bossView: boolean
   refreshContactDirectory: () => void
   /** Optional: Posteingang für diese Package-ID (0x…); leer = Backend-Standard. */
   packageId?: string
@@ -28,7 +26,7 @@ export type UseChatViewInboxParams = {
 const PAGE_SIZE = 50
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
-  const { role, bossView, refreshContactDirectory, packageId } = p
+  const { refreshContactDirectory, packageId } = p
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -50,7 +48,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (mode === 'append') setLoadingMore(true)
       else setLoading(true)
       setLoadError(null)
-      const useBossView = role === 'boss' && bossView
+      const useBossView = false
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
@@ -151,7 +149,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         setLoadingMore(false)
       }
     },
-    [role, bossView, refreshContactDirectory, packageId]
+    [refreshContactDirectory, packageId]
   )
 
   const loadMoreInbox = useCallback(() => {
@@ -162,7 +160,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   useEffect(() => {
     mailboxOffsetRef.current = 0
     void loadMessages('reset')
-  }, [bossView, loadMessages])
+  }, [loadMessages])
 
   return {
     messages,

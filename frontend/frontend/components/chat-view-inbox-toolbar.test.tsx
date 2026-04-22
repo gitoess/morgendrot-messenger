@@ -7,9 +7,6 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
   return {
     messageCount: 0,
     inboxRowCount: 0,
-    role: 'worker',
-    bossView: false,
-    onBossViewChange: vi.fn(),
     morgPkgFileRef: createRef<HTMLInputElement>(),
     morgPkgDeviceFilesRef: createRef<HTMLInputElement>(),
     onMorgPkgImportFile: vi.fn(),
