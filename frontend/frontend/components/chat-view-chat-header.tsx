@@ -5,17 +5,11 @@
  */
 
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
-import { Lock, Unlock, Radio } from 'lucide-react'
+import { useState } from 'react'
+import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
-import { computeWaldConnectionTier, type WaldConnectionTier } from '@/frontend/lib/chat-wald-connection'
-import {
-  DIRECT_IOTA_UI_CHANGED,
-  getDirectIotaPathUiState,
-  type DirectIotaPathUiState,
-} from '@/frontend/lib/direct-iota-plain-submit'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -34,13 +28,13 @@ export type ChatViewChatHeaderProps = {
   onRefreshStatus?: () => void | Promise<void>
   /** GET /api/status zuletzt fehlgeschlagen (Basis „offline“). */
   basisUnreachable: boolean
-  /** Meshtastic Web-BT verbunden – Funkpfad für Wald-Blau. */
+  /** Meshtastic Web-BT verbunden (Status wird in der Transport-/Send-UI angezeigt). */
   meshBleConnected: boolean
   /** Aus /api/status / Chat-View (ROLE). */
   role: string
   /** Keine sichere Referenzzeit (HTTP-`Date` / GPS) — Fahrplan § H.6c. */
   deviceTimeTrustWarn?: boolean
-  /** Kompakter Sendepfad neben „Wald“ (online / funk / adhoc). */
+  /** Kompakter Sendepfad (online / funk / adhoc). */
   sendPath?: {
     visible: boolean
     encrypted: boolean
@@ -55,61 +49,6 @@ export type ChatViewChatHeaderProps = {
   onChannelModeChange?: (c: MessengerChatChannel) => void
   /** Direkt unter Puls-Einstellungen (z. B. Einsatz-Profil). */
   afterPulse?: ReactNode
-}
-
-function roleBadgeLabel(role: string): string {
-  const r = role.trim().toLowerCase()
-  if (r === 'boss') return 'Boss'
-  if (r === 'arbeiter') return 'Wanderer'
-  if (r === 'kommandant') return 'Kommandant'
-  if (r === 'lock') return 'Schloss'
-  if (r === 'monitor') return 'Monitor'
-  return role.trim() || '—'
-}
-
-/** IOTA-Mailbox: Direkt-RPC vs Relay — aktualisiert bei Puls/Einstellungen (`DIRECT_IOTA_UI_CHANGED`). */
-function IotaMailboxPathBadge() {
-  const [ui, setUi] = useState<DirectIotaPathUiState | null>(null)
-  useEffect(() => {
-    const tick = () => setUi(getDirectIotaPathUiState())
-    tick()
-    const on = () => tick()
-    window.addEventListener(DIRECT_IOTA_UI_CHANGED, on)
-    return () => window.removeEventListener(DIRECT_IOTA_UI_CHANGED, on)
-  }, [])
-  if (!ui) return null
-  const relay = ui.mode === 'relay'
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-[min(100%,14rem)] items-center gap-1.5 truncate rounded-full border px-2 py-1 text-[11px]',
-        relay
-          ? 'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100'
-          : 'border-sky-500/40 bg-sky-500/10 text-sky-950 dark:text-sky-100'
-      )}
-      title={ui.detail}
-    >
-      <Radio className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
-      <span className="truncate font-medium">{ui.headline}</span>
-    </span>
-  )
-}
-
-function WaldCheckIndicator({ tier }: { tier: WaldConnectionTier }) {
-  const meta = {
-    green: { dot: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]', label: 'Basis (API) erreichbar' },
-    blue: { dot: 'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.45)]', label: 'Basis offline – Funk (LoRa/Mesh) aktiv' },
-    red: { dot: 'bg-red-500', label: 'Keine Verbindung: weder Basis noch Funk' },
-  }[tier]
-  return (
-    <span
-      className="inline-flex max-w-[min(100%,11rem)] items-center gap-1.5 truncate rounded-full border border-border/60 bg-muted/40 px-2 py-1 text-[11px] text-muted-foreground"
-      title={meta.label}
-    >
-      <span className={cn('h-2 w-2 shrink-0 rounded-full', meta.dot)} aria-hidden />
-      <span className="hidden sm:inline">Wald</span>
-    </span>
-  )
 }
 
 function TresorSessionBadge({
@@ -183,9 +122,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     isPrivate,
     encrypted,
     apiStatus,
-    basisUnreachable,
-    meshBleConnected,
-    role,
     deviceTimeTrustWarn = false,
     sendPath,
     vaultBannerActions,
@@ -193,8 +129,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     onChannelModeChange,
     afterPulse,
   } = p
-
-  const waldTier = computeWaldConnectionTier(basisUnreachable, meshBleConnected)
 
   return (
     <>
@@ -245,23 +179,15 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   </button>
                 </span>
               ) : null}
-              {role.trim() ? (
-                <span className="text-[11px] text-muted-foreground sm:text-xs">
-                  Rolle{' '}
-                  <span className="font-medium text-foreground/90">{roleBadgeLabel(role)}</span>
-                </span>
-              ) : null}
             </div>
           </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
-          <WaldCheckIndicator tier={waldTier} />
           {isPrivate && apiStatus ? (
             <TresorSessionBadge locked={!!apiStatus.locked} actions={vaultBannerActions} />
           ) : null}
           {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
-          {isPrivate ? <IotaMailboxPathBadge /> : null}
         </div>
       </div>
 

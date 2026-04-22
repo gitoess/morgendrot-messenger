@@ -235,7 +235,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   }, [loraOnlineFallbackOffer?.reasonLabel])
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="rounded-xl border border-border bg-card p-5 md:p-6">
       <div className="space-y-4">
         {!encrypted && (
           <div>
@@ -303,7 +303,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           onDragOver={onComposerDragOver}
           onDrop={onComposerDrop}
           className={cn(
-            'touch-pan-y rounded-xl border border-transparent p-1 transition-colors',
+            'touch-pan-y rounded-xl border border-transparent p-2 transition-colors',
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
@@ -332,9 +332,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             value={message}
             onChange={(e) => onMessageChange(e.target.value)}
             placeholder={MESSAGE_PLACEHOLDER}
-            rows={3}
+            rows={6}
             className={cn(
-              'w-full resize-none rounded-lg border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
+              'min-h-[9.5rem] w-full resize-y rounded-lg border bg-input px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
               !encrypted &&
                 forcedTransport === 'mesh' &&
                 [...message].length > MESH_PLAINTEXT_MAX_CHARS

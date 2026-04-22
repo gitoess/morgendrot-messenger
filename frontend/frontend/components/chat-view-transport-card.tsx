@@ -197,11 +197,9 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
           </span>
         </div>
       )}
-      {encrypted && forcedTransport === 'internet' && (
-        <p className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-950 dark:text-emerald-100/95">
-          <strong>Verschlüsselt auf IOTA:</strong> derzeit über <strong>Mailbox</strong> (Event-Pfad nur für Klartext).
-        </p>
-      )}
+      {encrypted && forcedTransport === 'internet' ? (
+        <span className="sr-only">Verschlüsselte Online-Nachrichten laufen derzeit über den Mailbox-Pfad.</span>
+      ) : null}
 
       {!isPrivate && !encrypted && (
         <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">
@@ -259,9 +257,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       )}
 
       {isPrivate && encrypted && forcedTransport === 'internet' ? (
-        <p className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-950 dark:text-emerald-100/95">
-          <strong>Verschlüsselt + online:</strong> {CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG}
-        </p>
+        <span className="sr-only">{CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG}</span>
       ) : null}
       {requiresPartnerSelection && !selectedPartner ? (
         <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
