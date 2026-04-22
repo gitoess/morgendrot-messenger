@@ -218,7 +218,7 @@ export function ChatViewRelaySubmitButton() {
   }
 
   const markAnchored = async (it: TxRelayQueueItem) => {
-    const digest = window.prompt('TxDigest einfügen (0x...)')
+    const digest = window.prompt('Nachweis (txDigest) aus Submit-Antwort einfügen (0x...)')
     if (!digest) return
     markRelayQueueAnchored(it.id, digest.trim())
     const inv = {
@@ -263,12 +263,12 @@ export function ChatViewRelaySubmitButton() {
         }}
         className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
       >
-        R1 Rohdaten-Submit (Beta)
+        R1 Kurier-Paket (Beta)
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>R1 Rohdaten-Submit (manuelles Gas)</DialogTitle>
+            <DialogTitle>R1 Kurier-Paket (Offline {'->'} Relayer {'->'} Submit)</DialogTitle>
             <DialogDescription>
               Erstellen, transportieren und lokal protokollieren. `txDigest` entsteht erst nach echtem Submit an eine IOTA-RPC
               Node (durch Relayer oder dich selbst online).
@@ -279,7 +279,7 @@ export function ChatViewRelaySubmitButton() {
             Offline/Relay-Workflow mit manueller Bestätigung.
           </p>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">IOTA-Nachricht über LoRa vorbereiten (Envelope-Builder)</p>
+            <p className="text-xs font-medium text-foreground">Paket erzeugen (offline)</p>
             <div className="grid gap-2 md:grid-cols-2">
               <input
                 value={builderSender}
@@ -333,7 +333,7 @@ export function ChatViewRelaySubmitButton() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => void buildEnvelope()}>
                 <WandSparkles className="mr-2 h-3.5 w-3.5" />
-                MORG_TX_RELAY_V1 erzeugen
+                Paket erzeugen
               </Button>
               <Button
                 type="button"
@@ -356,7 +356,7 @@ export function ChatViewRelaySubmitButton() {
                 JSON kopieren
               </Button>
               <Button type="button" size="sm" onClick={() => void sendToLoraShortcut()}>
-                Zu LoRa senden
+                Paket teilen (LoRa/Copy)
               </Button>
             </div>
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
@@ -386,17 +386,18 @@ export function ChatViewRelaySubmitButton() {
             </div>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
+            <p className="text-xs font-medium text-foreground">Paket importieren (vom Funk/Relayer)</p>
             <textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               rows={6}
-              placeholder='Relay-Envelope JSON importieren (z. B. fremde Nachricht mit manueller Signatur)'
+              placeholder='Kurier-Paket JSON importieren (z. B. vom Relayer/Funkweg)'
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={onImport}>
                 <Upload className="mr-2 h-3.5 w-3.5" />
-                Envelope prüfen & übernehmen
+                Paket prüfen & übernehmen
               </Button>
             </div>
             {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
@@ -437,10 +438,15 @@ export function ChatViewRelaySubmitButton() {
                         Relayer-Submit protokollieren
                       </Button>
                       {it.status !== 'anchored' ? (
-                        <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
-                          <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
-                          Manuell anchored (TxDigest)
-                        </Button>
+                        <>
+                          <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
+                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                            Nachweis abrufen
+                          </Button>
+                          <span className="text-xs text-muted-foreground">
+                            Nach `Submit` liefert der Relayer den txDigest automatisch; hier nur in die lokale Liste übernehmen.
+                          </span>
+                        </>
                       ) : null}
                     </div>
                   ) : null}
