@@ -540,6 +540,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     directory,
     refreshContactDirectory,
     isMeshVerifiedForAddress,
+    /** Posteingang gesamt (geladen) vor lokalen UI-Filtern/Ausblenden; für Zähler/Badges. */
+    inboxTotalCount: messages.length,
     messages: displayMessages,
     setMessages,
     loading,

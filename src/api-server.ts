@@ -40,6 +40,7 @@ import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
 import {
     findPeerHandshake,
+    findPeerHandshakeFrom,
     isChainReachable,
     hasValidTicket,
     getOwnedTickets,
@@ -1372,14 +1373,18 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
-        if (url === '/api/find-peer-handshake' && req.method === 'GET') {
+        if (url.startsWith('/api/find-peer-handshake') && req.method === 'GET') {
             try {
                 const myAddr = CFG.MY_ADDRESS;
                 if (!myAddr) {
                     sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt' }, cors);
                     return;
                 }
-                const result = await findPeerHandshake(myAddr);
+                const u = new URL(req.url || '', 'http://localhost');
+                const peer = String(u.searchParams.get('peer') || '').trim();
+                const result = /^0x[a-fA-F0-9]{64}$/.test(peer)
+                    ? await findPeerHandshakeFrom(myAddr, peer)
+                    : await findPeerHandshake(myAddr);
                 if (!result) {
                     sendJson(res, 200, { ok: true, found: false, message: 'Kein Handshake gefunden' }, cors);
                     return;
@@ -1389,6 +1394,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     found: true,
                     sender: result.sender,
                     nonce: String(result.nonce),
+                    peerPubRawBase64: Buffer.from(result.pubKeyRaw).toString('base64'),
                 }, cors);
             } catch (e: any) {
                 sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);

@@ -87,6 +87,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     directory,
     refreshContactDirectory,
     isMeshVerifiedForAddress,
+    inboxTotalCount,
     messages,
     setMessages,
     loading,
@@ -249,7 +250,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
-    messageCount: messages.length,
+    messageCount: inboxTotalCount,
     inboxRowCount: inboxRows.length,
     role,
     bossView,

@@ -103,6 +103,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             {messageCount}
           </span>
         )}
+        {inboxRowCount !== messageCount && (
+          <span className="text-xs text-muted-foreground">{inboxRowCount} sichtbar</span>
+        )}
         {role === 'boss' && apiStatus?.uiVariant !== 'messenger' ? (
           <label className="ml-2 flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input

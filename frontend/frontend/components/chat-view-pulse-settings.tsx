@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { setHeartbeatEnabled, setHeartbeatInterval } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Slider } from '@/components/ui/slider'
@@ -51,31 +50,7 @@ import {
 
 const LS_STRICT_ONLINE = 'morgendrot.strictOnlineNoMeshFallback'
 const LS_LORA_TX = 'morgendrot.loraTxTier'
-
-/** Fallback wenn /api/status noch keine presetsMinutes hat (Server-Presets = Quelle der Wahrheit). */
-const FALLBACK_PRESETS_MIN = [1, 5, 15, 30, 60, 120, 240, 360, 720, 1440]
-
-function presetMs(minutes: number): number {
-  return minutes * 60_000
-}
-
-function formatPresetLabel(minutes: number): string {
-  if (minutes >= 60 && minutes % 60 === 0) {
-    const h = minutes / 60
-    return `${h} h`
-  }
-  return `${minutes} min`
-}
-
-function formatActiveInterval(ms: number): string {
-  if (!Number.isFinite(ms)) return '—'
-  const min = ms / 60_000
-  if (min >= 60 && Math.abs(min - Math.round(min)) < 1e-6) {
-    const r = Math.round(min)
-    if (r % 60 === 0) return `${r / 60} h`
-  }
-  return `${Math.round(ms / 60_000)} min`
-}
+const LS_EXPERT_TOOLS = 'morgendrot.dev.expertTools'
 
 /** Leerzeichen / Zero-Width entfernen; Kleinbuchstaben für 0x-Hex (Copy-Paste von Explorern). */
 function normalizeIotaHexInput(s: string): string {
@@ -93,17 +68,17 @@ type IdsOverride = { myAddress: string; packageId: string; streamsAnchorId: stri
 
 type ChatViewPulseSettingsProps = {
   apiStatus: ApiStatus
-  onApplied?: () => void | Promise<void>
 }
 
-export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSettingsProps) {
+export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps) {
   const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState<'interval' | 'enabled' | null>(null)
+  const [busy] = useState<'interval' | 'enabled' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+  const [expertOpen, setExpertOpen] = useState(false)
+  const [showExpertTools, setShowExpertTools] = useState(false)
   /** Letzter Fehler beim Öffnen: `/api/current-ids` (Netzwerk, Rewrite, Basis). */
   const [idsPanelErr, setIdsPanelErr] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  const [strictOnline, setStrictOnline] = useState(false)
   const [loraTier, setLoraTier] = useState(1)
   const [idsOverride, setIdsOverride] = useState<IdsOverride | null>(null)
   const [directRpcUrl, setDirectRpcUrl] = useState('')
@@ -124,15 +99,11 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const [ecdhPrivActive, setEcdhPrivActive] = useState(false)
   const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
 
-  const hb = apiStatus.heartbeat
   const streams = apiStatus.streams
-  const presetsMin = hb?.presetsMinutes?.length ? hb.presetsMinutes : FALLBACK_PRESETS_MIN
-  const presetsShort = presetsMin.filter((m) => m < 60)
-  const presetsLong = presetsMin.filter((m) => m >= 60)
 
   useEffect(() => {
     try {
-      setStrictOnline(typeof window !== 'undefined' && window.localStorage.getItem(LS_STRICT_ONLINE) === '1')
+      if (typeof window !== 'undefined') window.localStorage.setItem(LS_STRICT_ONLINE, '0')
       const t = parseInt(typeof window !== 'undefined' ? window.localStorage.getItem(LS_LORA_TX) || '1' : '1', 10)
       setLoraTier(t >= 0 && t <= 2 ? t : 1)
       setDirectRpcUrl(getConfiguredDirectIotaRpcUrl() || '')
@@ -140,6 +111,8 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
       setIotaSubmitModeState(getIotaSubmitMode())
       setSessionAddr(getDirectIotaSessionSignerAddress())
       setEcdhPrivActive(getDirectChatEcdhPrivateKey() != null)
+      const devExpert = typeof window !== 'undefined' && window.localStorage.getItem(LS_EXPERT_TOOLS) === '1'
+      setShowExpertTools(apiStatus.uiVariant !== 'messenger' || devExpert)
       const snap = loadDirectMailboxChainSnapshotFromLs()
       if (snap) {
         setTtlDaysStr(String(snap.ttlDays))
@@ -150,7 +123,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [apiStatus.uiVariant])
 
   useEffect(() => {
     if (!open) return
@@ -210,52 +183,6 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
     }
   }, [])
 
-  const applyInterval = async (minutes: number) => {
-    setMsg(null)
-    setBusy('interval')
-    try {
-      const r = await setHeartbeatInterval(presetMs(minutes))
-      if (r.ok === false) {
-        setMsg((r as { error?: string; message?: string }).error || (r as { message?: string }).message || 'Fehler')
-        return
-      }
-      setMsg(`Intervall: ${formatPresetLabel(minutes)}`)
-      await onApplied?.()
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const applyEnabled = async (enabled: boolean) => {
-    setMsg(null)
-    setBusy('enabled')
-    try {
-      const r = await setHeartbeatEnabled(enabled)
-      if (r.ok === false) {
-        setMsg((r as { error?: string; message?: string }).error || (r as { message?: string }).message || 'Fehler')
-        return
-      }
-      setMsg(enabled ? 'Puls aktiv' : 'Puls aus (Stille)')
-      await onApplied?.()
-    } finally {
-      setBusy(null)
-    }
-  }
-
-  const onStrictChange = (v: boolean) => {
-    setStrictOnline(v)
-    try {
-      window.localStorage.setItem(LS_STRICT_ONLINE, v ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
-    setMsg(
-      v
-        ? 'Strikt: Bei Transport „Online“ kein automatischer Wechsel auf LoRa, wenn IOTA/RPC fehlschlägt.'
-        : 'Standard: Online fehlgeschlagen → bei verbundenem Heltec automatisch Funk-Fallback.'
-    )
-  }
-
   const onIotaSubmitModeChange = (v: string) => {
     const m: IotaSubmitMode = v === 'relay' ? 'relay' : 'client'
     setIotaSubmitMode(m)
@@ -283,9 +210,6 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
   const addrFull = (apiStatus.myAddressFull?.trim() || idsOverride?.myAddress || '').trim()
   const pkgFull = (apiStatus.packageId?.trim() || idsOverride?.packageId || '').trim()
 
-  const intervalMatches = (m: number) =>
-    hb?.intervalMs != null && Math.abs(hb.intervalMs - presetMs(m)) < 2
-
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
@@ -293,7 +217,7 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
           type="button"
           className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/35"
         >
-          <span>IDs zum Kopieren · Puls · Funk (Vortrupp)</span>
+          <span>IDs zum Kopieren · Direkt-RPC · Funk</span>
           {open ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
         </button>
       </CollapsibleTrigger>
@@ -343,92 +267,17 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
         </div>
 
         <div className="space-y-2 border-t border-border/50 pt-3">
-          <p className="text-[11px] font-semibold text-foreground">Heartbeat-Intervall (nur Presets)</p>
-          {hb?.intervalMatchesPreset === false && (
-            <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-[11px] text-amber-950 dark:text-amber-100/90">
-              Aktuelles Intervall aus der Konfiguration ist <strong>kein</strong> Standard-Preset – bitte unten ein Preset wählen.
-            </p>
-          )}
-          {presetsShort.length > 0 && (
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Minuten</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {presetsShort.map((m) => (
-              <Button
-                key={`m-${m}`}
-                type="button"
-                size="sm"
-                variant={intervalMatches(m) ? 'default' : 'outline'}
-                className={cn('h-8 text-xs', intervalMatches(m) && 'ring-2 ring-primary/40')}
-                disabled={busy !== null}
-                onClick={() => void applyInterval(m)}
-              >
-                {formatPresetLabel(m)}
-              </Button>
-            ))}
-          </div>
-          {presetsLong.length > 0 && (
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Stunden (Akku schonen)</p>
-          )}
-          <div className="flex flex-wrap gap-2">
-            {presetsLong.map((m) => (
-              <Button
-                key={`h-${m}`}
-                type="button"
-                size="sm"
-                variant={intervalMatches(m) ? 'default' : 'outline'}
-                className={cn('h-8 text-xs', intervalMatches(m) && 'ring-2 ring-primary/40')}
-                disabled={busy !== null}
-                onClick={() => void applyInterval(m)}
-              >
-                {formatPresetLabel(m)}
-              </Button>
-            ))}
-          </div>
-          {hb?.intervalMs != null && (
-            <p className="text-[11px] text-muted-foreground">
-              Aktiv: <span className="font-mono text-foreground">{formatActiveInterval(hb.intervalMs)}</span> ({hb.intervalMs} ms)
-            </p>
-          )}
-        </div>
-
-        <div className="flex flex-col gap-2 border-t border-border/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-[11px] font-semibold text-foreground">Privacy: Puls stumm</p>
-            <p className="text-[11px] text-muted-foreground">Stoppt automatische Heartbeats (Basis sieht weniger Lebenszeichen).</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] text-muted-foreground">{hb?.enabled ? 'An' : 'Aus'}</span>
-            <Switch
-              checked={hb?.enabled === true}
-              disabled={busy !== null}
-              onCheckedChange={(v) => void applyEnabled(v)}
-              aria-label="Heartbeat aktivieren"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">Hybrid-Versand (Chat)</p>
           <div className="rounded-md border border-border/50 bg-muted/20 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
             <p className="mb-1.5 text-foreground/90">
-              Betrifft nur Nachrichten mit Transport <strong className="text-foreground">Online</strong> (IOTA/Mailbox), nicht den Heartbeat über Streams.
+              Betrifft nur Nachrichten mit Transport <strong className="text-foreground">Online</strong> (IOTA/Mailbox).
             </p>
             <ul className="list-inside list-disc space-y-1">
               <li>
-                <strong className="text-foreground">Aus (Standard):</strong> Schlägt Online fehl und Heltec ist verbunden, wird versucht, denselben Inhalt über{' '}
+                <strong className="text-foreground">Standard (aktiv):</strong> Schlägt Online fehl und Heltec ist verbunden, wird versucht, denselben Inhalt über{' '}
                 <strong className="text-foreground">LoRa/Mesh</strong> zu senden (Fallback).
               </li>
-              <li>
-                <strong className="text-foreground">Strikt ohne Funk-Fallback an:</strong> Bei Online-Fehler <strong className="text-foreground">kein</strong> automatischer Wechsel auf Funk – z. B. wenn Funkspuren vermieden werden sollen oder nur die Internet-Route erlaubt ist. Dann Fehler anzeigen oder Transport manuell auf „funk“ stellen.
-              </li>
             </ul>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <span className="text-[11px] text-muted-foreground">Strikt ohne Funk-Fallback bei „Online“</span>
-            <div className="flex items-center gap-2 shrink-0">
-              <Switch checked={strictOnline} onCheckedChange={onStrictChange} aria-label="Kein Funk-Fallback bei Online" />
-            </div>
           </div>
         </div>
 
@@ -756,139 +605,152 @@ export function ChatViewPulseSettings({ apiStatus, onApplied }: ChatViewPulseSet
             )}
           </div>
           <div className="space-y-2 border-t border-border/40 pt-3">
-            <p className="text-[11px] font-semibold text-foreground">Chat-ECDH (verschlüsselter Direkt-Drain / Warteschlange)</p>
             <p className="text-[10px] leading-relaxed text-muted-foreground">
-              P-256 wie `/send` auf der Basis: **Peer-Publickey** (raw 65 B, Base64) pro Empfänger in{' '}
-              <span className="font-mono">localStorage</span>; **Privatkey** nur als JWK im RAM (nicht persistieren). Wenn
-              beides gesetzt ist, kann die Mailbox-Warteschlange verschlüsselte Einträge per Fullnode drainen — ohne erneutes
-              `/api/command`.
+              Chat-ECDH-Peer-Pubs sollten normal über Handshake entstehen. Manuelle Schlüsselpflege und Funkleistung sind nur für Debug/Edge-Fälle.
             </p>
-            <div className="grid max-w-lg gap-2">
-              <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Empfänger (0x…)</Label>
-                <Input
-                  className="h-9 font-mono text-xs"
-                  value={ecdhPeerAddr}
-                  onChange={(e) => setEcdhPeerAddr(e.target.value)}
-                  spellCheck={false}
-                  placeholder="0x…"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Peer-Pub (Base64, raw 65 Byte)</Label>
-                <Input
-                  className="h-9 font-mono text-xs"
-                  value={ecdhPeerB64}
-                  onChange={(e) => setEcdhPeerB64(e.target.value)}
-                  spellCheck={false}
-                  placeholder="Aus Handshake / Node-Export"
-                />
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="h-8 text-xs"
-                disabled={busy !== null}
-                onClick={() => {
-                  const r = setDirectChatEcdhPeerPubBase64(ecdhPeerAddr, ecdhPeerB64)
-                  if (r.ok) {
-                    setMsg(ecdhPeerB64.trim() ? 'Peer-Pub gespeichert (localStorage).' : 'Peer-Pub für diese Adresse entfernt.')
-                  } else {
-                    setMsg(r.error)
-                  }
-                }}
-              >
-                Peer-Pub speichern
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                disabled={busy !== null}
-                onClick={() => {
-                  clearDirectChatEcdhPeerPubs()
-                  setEcdhPeerB64('')
-                  setMsg('Alle gespeicherten Peer-Pubs gelöscht.')
-                }}
-              >
-                Alle Peer-Pubs löschen
-              </Button>
-            </div>
-            <Label className="text-[11px] text-muted-foreground">ECDH-Privatkey (JWK JSON — nur RAM)</Label>
-            <textarea
-              className="min-h-[56px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[10px] text-foreground"
-              value={ecdhJwkInput}
-              onChange={(e) => setEcdhJwkInput(e.target.value)}
-              spellCheck={false}
-              autoComplete="off"
-              placeholder='{"kty":"EC","crv":"P-256",…}'
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                className="h-8 text-xs"
-                disabled={busy !== null}
-                onClick={() => {
-                  void (async () => {
-                    const r = await applyDirectChatEcdhPrivateJwk(ecdhJwkInput)
-                    if (r.ok) {
-                      const on = getDirectChatEcdhPrivateKey() != null
-                      setEcdhPrivActive(on)
-                      setEcdhJwkInput('')
-                      setMsg(on ? 'Chat-ECDH-Privatkey aktiv (nur RAM).' : 'Chat-ECDH-Privatkey entfernt.')
-                    } else {
-                      setEcdhPrivActive(false)
-                      setMsg(r.error)
-                    }
-                  })()
-                }}
-              >
-                ECDH-JWK anwenden
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 text-xs"
-                disabled={busy !== null}
-                onClick={() => {
-                  clearDirectChatEcdhPrivateKey()
-                  setEcdhPrivActive(false)
-                  setMsg('Chat-ECDH-Privatkey gelöscht.')
-                }}
-              >
-                ECDH löschen
-              </Button>
-            </div>
-            {ecdhPrivActive && (
-              <p className="text-[10px] text-emerald-700 dark:text-emerald-400">ECDH-Session aktiv.</p>
+            {showExpertTools ? (
+              <Collapsible open={expertOpen} onOpenChange={setExpertOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button type="button" size="sm" variant="outline" className="h-8 text-xs">
+                    {expertOpen ? 'Expertenoptionen ausblenden' : 'Expertenoptionen anzeigen'}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-3 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2.5">
+                <div className="space-y-2">
+                  <p className="text-[11px] font-semibold text-foreground">Chat-ECDH (manuell, nur Experten)</p>
+                  <div className="grid max-w-lg gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Empfänger (0x…)</Label>
+                      <Input
+                        className="h-9 font-mono text-xs"
+                        value={ecdhPeerAddr}
+                        onChange={(e) => setEcdhPeerAddr(e.target.value)}
+                        spellCheck={false}
+                        placeholder="0x…"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Peer-Pub (Base64, raw 65 Byte)</Label>
+                      <Input
+                        className="h-9 font-mono text-xs"
+                        value={ecdhPeerB64}
+                        onChange={(e) => setEcdhPeerB64(e.target.value)}
+                        spellCheck={false}
+                        placeholder="Aus Handshake / Node-Export"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        const r = setDirectChatEcdhPeerPubBase64(ecdhPeerAddr, ecdhPeerB64)
+                        if (r.ok) {
+                          setMsg(ecdhPeerB64.trim() ? 'Peer-Pub gespeichert (localStorage).' : 'Peer-Pub für diese Adresse entfernt.')
+                        } else {
+                          setMsg(r.error)
+                        }
+                      }}
+                    >
+                      Peer-Pub speichern
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        clearDirectChatEcdhPeerPubs()
+                        setEcdhPeerB64('')
+                        setMsg('Alle gespeicherten Peer-Pubs gelöscht.')
+                      }}
+                    >
+                      Alle Peer-Pubs löschen
+                    </Button>
+                  </div>
+                  <Label className="text-[11px] text-muted-foreground">ECDH-Privatkey (JWK JSON — nur RAM)</Label>
+                  <textarea
+                    className="min-h-[56px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[10px] text-foreground"
+                    value={ecdhJwkInput}
+                    onChange={(e) => setEcdhJwkInput(e.target.value)}
+                    spellCheck={false}
+                    autoComplete="off"
+                    placeholder='{"kty":"EC","crv":"P-256",…}'
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-8 text-xs"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        void (async () => {
+                          const r = await applyDirectChatEcdhPrivateJwk(ecdhJwkInput)
+                          if (r.ok) {
+                            const on = getDirectChatEcdhPrivateKey() != null
+                            setEcdhPrivActive(on)
+                            setEcdhJwkInput('')
+                            setMsg(on ? 'Chat-ECDH-Privatkey aktiv (nur RAM).' : 'Chat-ECDH-Privatkey entfernt.')
+                          } else {
+                            setEcdhPrivActive(false)
+                            setMsg(r.error)
+                          }
+                        })()
+                      }}
+                    >
+                      ECDH-JWK anwenden
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs"
+                      disabled={busy !== null}
+                      onClick={() => {
+                        clearDirectChatEcdhPrivateKey()
+                        setEcdhPrivActive(false)
+                        setMsg('Chat-ECDH-Privatkey gelöscht.')
+                      }}
+                    >
+                      ECDH löschen
+                    </Button>
+                  </div>
+                  {ecdhPrivActive && (
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">ECDH-Session aktiv.</p>
+                  )}
+                </div>
+                <div className="space-y-2 border-t border-border/40 pt-3">
+                  <p className="text-[11px] font-semibold text-foreground">LoRa Sendeleistung (nur Vorbereitung)</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Wird lokal gespeichert; Firmware/Gerät kann den Wert überschreiben. Standard bleibt „Normal“.
+                  </p>
+                  <Slider
+                    value={[loraTier]}
+                    onValueChange={onLoraTierChange}
+                    min={0}
+                    max={2}
+                    step={1}
+                    className="w-full max-w-md"
+                  />
+                  <div className="flex max-w-md justify-between font-mono text-[10px] text-muted-foreground">
+                    <span>Eco</span>
+                    <span>Normal</span>
+                    <span>Boost</span>
+                  </div>
+                </div>
+                </CollapsibleContent>
+              </Collapsible>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                Expertenoptionen sind im Messenger ausgeblendet.
+              </p>
             )}
-          </div>
-        </div>
-
-        <div className="space-y-2 border-t border-border/50 pt-3">
-          <p className="text-[11px] font-semibold text-foreground">LoRa Sendeleistung (Vorbereitung)</p>
-          <p className="text-[11px] text-muted-foreground">
-            Eco → Boost (z. B. bis 22 dBm je nach Firmware). Wert wird lokal gespeichert; Anbindung an Meshtastic/Radio folgt der Geräte-Software – nicht jedes Build setzt die Hardware hier um.
-          </p>
-          <Slider
-            value={[loraTier]}
-            onValueChange={onLoraTierChange}
-            min={0}
-            max={2}
-            step={1}
-            className="w-full max-w-md"
-          />
-          <div className="flex max-w-md justify-between font-mono text-[10px] text-muted-foreground">
-            <span>Eco</span>
-            <span>Normal</span>
-            <span>Boost</span>
           </div>
         </div>
 

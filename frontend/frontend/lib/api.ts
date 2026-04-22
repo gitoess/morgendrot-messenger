@@ -60,7 +60,7 @@ export { fetchInbox, fetchAllInboxMessagesForExport } from '@/frontend/lib/api/i
 
 export { fetchPackageIdHistory } from '@/frontend/lib/api/package-id-history'
 
-export { setPackageIdCommand, startHandshake, connect } from '@/frontend/lib/api/package-connect'
+export { setPackageIdCommand, startHandshake, connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
 
 export {
   createKey,

@@ -7,7 +7,8 @@
 
 import { useCallback, type MutableRefObject, type Dispatch, type SetStateAction } from 'react'
 import { toast } from 'sonner'
-import { startHandshake, connect } from '@/frontend/lib/api'
+import { startHandshake, connect, findPeerHandshake } from '@/frontend/lib/api'
+import { setDirectChatEcdhPeerPubBase64 } from '@/frontend/lib/direct-chat-ecdh-session'
 
 const PARTNER_SETUP_ANCHOR_ID = 'chat-partner-setup-panel'
 
@@ -68,8 +69,22 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
         typeof (res as { message?: unknown }).message === 'string'
           ? (res as { message: string }).message
           : 'Handshake gesendet.'
+      let extra = ''
+      const p = partner.trim().toLowerCase()
+      if (ADDR_64_HEX.test(p)) {
+        try {
+          const hs = await findPeerHandshake(p)
+          if (hs.ok && hs.found && hs.peerPubRawBase64) {
+            const saved = setDirectChatEcdhPeerPubBase64(p, hs.peerPubRawBase64)
+            if (saved.ok) extra = ' Peer-Pub automatisch aus Handshake übernommen.'
+          }
+        } catch {
+          /* optionaler Komfortpfad */
+        }
+      }
       setStatusMsg(
         `${base} Anschließend „Schnell verbinden“ — erst danach ist der Wallet-Chat (verschlüsselt über Online/IOTA; Funk bleibt Klartext/Pfad 4) bereit.`
+          + extra
       )
       setShowSetup(false)
     } else {

@@ -6,7 +6,7 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Activity, Lock, Unlock, Radio } from 'lucide-react'
+import { Lock, Unlock, Radio } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
@@ -112,15 +112,6 @@ function WaldCheckIndicator({ tier }: { tier: WaldConnectionTier }) {
   )
 }
 
-function formatHeartbeatIntervalMs(ms: number): string {
-  if (!Number.isFinite(ms) || ms < 1000) return '—'
-  if (ms >= 60_000) {
-    const m = Math.round(ms / 60_000)
-    return m >= 1 ? `${m} min` : `${Math.round(ms / 1000)} s`
-  }
-  return `${Math.round(ms / 1000)} s`
-}
-
 function TresorSessionBadge({
   locked,
   actions,
@@ -187,58 +178,11 @@ function TresorSessionBadge({
   )
 }
 
-/** Kompakte Zeile: Streams + Heartbeat-Konfig (kein Chat-Spam, nur Status). */
-function MessengerPulseStatusLine({ apiStatus }: { apiStatus: ApiStatus }) {
-  const streams = apiStatus.streams
-  const hb = apiStatus.heartbeat
-  const roleId = apiStatus.roleId
-  const canHeartbeatSend = typeof roleId === 'number' && (roleId & 2) !== 0
-
-  const streamsOk = streams?.active === true
-  const hbLabel =
-    hb == null ? '—' : hb.enabled ? `an (${formatHeartbeatIntervalMs(hb.intervalMs ?? 0)})` : 'aus'
-
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-      <span className="inline-flex items-center gap-1.5 font-medium text-foreground/90">
-        <Activity className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-        Puls an Basis
-      </span>
-      <span className="text-muted-foreground">
-        Streams:{' '}
-        {streamsOk ? (
-          <span className="text-emerald-600 dark:text-emerald-400">bereit</span>
-        ) : (
-          <span className="text-amber-700 dark:text-amber-300">Bridge oder Anchor fehlt</span>
-        )}
-        {streams?.anchorId ? (
-          <span className="ml-1 font-mono text-[10px] opacity-90" title={streams.anchorIdFull || streams.anchorId}>
-            ({streams.anchorId}…)
-          </span>
-        ) : null}
-      </span>
-      <span className="hidden sm:inline text-border">·</span>
-      <span>
-        Heartbeat: <span className="text-foreground/80">{hbLabel}</span>
-        {hb?.enabled && !hb?.streamsReady ? (
-          <span className="ml-1 text-amber-700 dark:text-amber-300"> (Streams unvollständig)</span>
-        ) : null}
-      </span>
-      {hb?.enabled && streamsOk && !canHeartbeatSend ? (
-        <span className="w-full text-[11px] text-amber-800/90 dark:text-amber-200/90 sm:w-auto sm:pl-0">
-          Hinweis: Heartbeat senden braucht S-Bit (ROLE_ID mit Send, z. B. 14).
-        </span>
-      ) : null}
-    </div>
-  )
-}
-
 export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
   const {
     isPrivate,
     encrypted,
     apiStatus,
-    onRefreshStatus,
     basisUnreachable,
     meshBleConnected,
     role,
@@ -321,11 +265,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
         </div>
       </div>
 
-      {isPrivate && apiStatus && <MessengerPulseStatusLine apiStatus={apiStatus} />}
-
-      {isPrivate && apiStatus && (
-        <ChatViewPulseSettings apiStatus={apiStatus} onApplied={onRefreshStatus} />
-      )}
+      {isPrivate && apiStatus && <ChatViewPulseSettings apiStatus={apiStatus} />}
 
       {afterPulse}
 
