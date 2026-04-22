@@ -28,6 +28,7 @@ Verknüpft: **`docs/LORA-PC-FIRST-SMOKE.md`** (Funk-Klartext zuerst am PC: Brows
 | **Mehrere Mesh-v2-Pakete pro Inhalt** | **Server/Client** splittet große Inhalte in **240-B-konforme** Bursts – **bevorzugt** gegenüber neuem Funkprotokoll. |
 | **Airtime-Rohdaten** | Meshtastic/Firmware loggt/telemeterisch – **Auslesen** und in UI **darstellen** (Schätzung + Hinweis „approx.“). |
 | **Delayed Upload MVP** | **MQTT oder serieller Gateway** + **kleines Skript / API** im Morgendrot-Node (Queue, Manifest, IOTA) – siehe LORA-Spec. |
+| **Komprimierter LongFast-Text (Port 7)** | Firmware/SDK: Meshtastic kann **TEXT_MESSAGE_COMPRESSED_APP** nutzen. Die JS-Referenz **`@meshtastic/core`** (2.6.x) dispatcht **`onMeshPacket`**, ruft für Port 7 aber kein **`onMessagePacket`** auf — die **PWA** entpackt Port 7 im **`onMeshPacket`**-Handler (Unishox2), siehe **`frontend/frontend/lib/mesh-meshtastic-compressed-text.ts`**. |
 
 ---
 

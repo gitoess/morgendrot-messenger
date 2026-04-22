@@ -12,6 +12,7 @@ Die **App-/Node-Pipeline** erzeugt **zwei Klartext-Wires** (Luma + Chroma); sie 
 | **Kein stiller Online-Fallback** | Schlägt Funk fehl oder kein Heltec → **nichts** gesendet; gelber Kasten mit **„Trotzdem über Online (IOTA) senden“** (explizite Bestätigung) oder **Abbrechen**. |
 | **Empfänger** | `MORG_LUMA_V1` sofort S/W + Hinweis/Timeout; `MORG_CHROMA_V1` → Fusion (`/api/lora-progressive-fuse` oder Canvas-Fallback). Siehe `frontend/…/chat-message-body.tsx`. |
 | **Manuelle UI-Tests** | `scripts/print-lora-wires-for-ui-test.ts`, Versand zweier Nachrichten über **Online-Pfad** (siehe unten). |
+| **LongFast komprimiert (Port 7)** | PWA: **`use-meshtastic-ble.ts`** + **`mesh-meshtastic-compressed-text.ts`** (Unishox2), weil **`@meshtastic/core`** dafür kein `onMessagePacket` feuert — siehe **`../docs/MESHTASTIC-BUILDING-BLOCKS.md`** und **`../docs/LORA-PC-FIRST-SMOKE.md`**. |
 
 **Code:** `frontend/frontend/components/views/chat-view.tsx`, `src/lora-progressive-image.ts`, `src/api-server.ts` (`/api/lora-progressive-encode`, **`/api/compact-blob-to-lora-wires`** IOTA-Kompakt → LUMA+CHROMA, `/api/lora-progressive-fuse`).
 

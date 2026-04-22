@@ -27,6 +27,12 @@ Wer im Ernstfall **Gegenstelle** ist (Team, Gateway vs. offizielle Rettung) und 
 - Antenne: richtige Polarisation/Länge, in Höhlen oft schlechte Ausbreitung — **[EU-Funk & Einsatzprofile](../docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md)**; weitere Konzepte in `docs/` allgemein.
 - Strom/Akku: je nach Einsatzdauer; **kein** wasserdichtes „aktives Relais im Siphon“ hier spezifiziert – nur Geräte-Rolle **Funk-Knoten / BT-Peripherie**.
 
+## Betrieb / wenn der Browser „nichts“ empfängt
+
+- **Symptom:** anderes Gerät oder das Heltec-Display zeigt Traffic, **Morgendrot** bleibt leer / **RX:** im Messenger-Setup bewegt sich nicht.  
+  **Erster Schritt:** Heltec **USB kurz trennen und wieder anstecken** (oder in der App **Trennen** → neu koppeln). Hängende **Web-Bluetooth-/GATT**-Zustände kommen vor und sind **nicht** immer ein reiner Software-Bug in der PWA.
+- **Diagnose in der PWA:** Im Panel **Heltec / Meshtastic** nach **„Events:“** schauen (z. B. `onMessagePacket`, `onMeshPacket` müssen gebunden sein). Für **F12-Konsole:** `localStorage.setItem("morgendrot.meshRxDebug","1")`, Seite neu laden → Zeilen **`[morgendrot mesh]`** bei eingehenden Paketen. Details im Changelog und in **`docs/LORA-PC-FIRST-SMOKE.md`**.
+
 ## Nächste Ausbaustufe
 
 - **Phase 2:** Chunking + Selective NACK, Relais-Smart-Buffer, Prioritäten, optional **Kabel-Hybrid / Siphon-Brücke** (RS485 oder differentieller Bus, Lackdraht-Szenario, LoRa↔Draht↔LoRa) + Standalone – [`../meshtastic/PHASE-2-FIRMWARE-SPEC.md`](../meshtastic/PHASE-2-FIRMWARE-SPEC.md) (**§7**).

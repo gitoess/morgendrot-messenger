@@ -45,6 +45,7 @@
 | TOO_LONG / zu groß | Text kürzen (&lt; 200 Zeichen Klartext); Bilder nur **verschlüsselt** über Mesh v2 oder **online** mit LoRa-Pipeline. |
 | NO_ROUTE | Ziel-Knoten an, gleicher Kanal, Reichweite; bei Broadcast zweites Gerät zum Hören nutzen. |
 | Verbindung „hängt“ | In Morgendrot **Trennen**, ggf. USB neu; Chromium neu starten. |
+| Anderes Gerät hört mit, **Browser-Posteingang** bleibt leer / **RX:** steht | Heltec **USB neu stecken** oder **Trennen** und Web Bluetooth erneut; im Setup **Events:** prüfen (`onMeshPacket`, `onMessagePacket`). Optional **`localStorage.setItem("morgendrot.meshRxDebug","1")`** + Reload → **`[morgendrot mesh]`** in F12. |
 
 ---
 
@@ -57,4 +58,5 @@ Erst wenn **am PC** ein Sendeversuch **ohne** Konfigurationsfehler durch ist (id
 ## 6. Code (Ist)
 
 - Klartext-Funk: **`device.sendText`** (LongFast) in **`use-meshtastic-ble.ts`** — mit **kurzen Retries** bei NO_ROUTE / MAX_RETRANSMIT / NO_RESPONSE.
+- **Empfang:** `onMessagePacket` (Klartext) + **`onMeshPacket`** mit Dekodierung **Port 1** und **Port 7** (`TEXT_MESSAGE_COMPRESSED_APP`, Unishox2 in **`mesh-meshtastic-compressed-text.ts`**), weil **`@meshtastic/core`** für Port 7 kein `onMessagePacket` auslöst.
 - Zeichenlimit **200** für **alle** unverschlüsselten Funk-Texte (privat + öffentlich): **`use-chat-view-handle-send.ts`** (`MESH_PLAINTEXT_MAX_CHARS`).
