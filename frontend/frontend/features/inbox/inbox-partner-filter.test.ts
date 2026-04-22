@@ -101,6 +101,21 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r).toHaveLength(1)
     expect(r[0]!.id).toBe('in')
   })
+
+  it('eingehende Funk/Mesh (0x) ignoriert Partner- und Richtungsfilter', () => {
+    const meshIn = m({
+      id: 'mx',
+      from: alice,
+      content: 'funk',
+      timestamp: 5,
+      source: 'mesh',
+      transports: ['mesh'],
+    })
+    const withWrongPartner = filterInboxMessagesByPartnerAndDirection([meshIn], me, bob, 'all')
+    expect(withWrongPartner.map((x) => x.id)).toEqual(['mx'])
+    const outOnly = filterInboxMessagesByPartnerAndDirection([meshIn], me, null, 'out')
+    expect(outOnly.map((x) => x.id)).toEqual(['mx'])
+  })
 })
 
 describe('messageTouchesMeshTransport / messageTouchesInternetTransport', () => {

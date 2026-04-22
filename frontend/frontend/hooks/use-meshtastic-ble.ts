@@ -442,11 +442,15 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         o.portNum
       const portStr = String(portRaw ?? '').toUpperCase()
       const portNum = typeof portRaw === 'number' ? portRaw : Number.parseInt(String(portRaw ?? ''), 10)
+      /** Port 1 = Klartext; Port 7 = TEXT_MESSAGE_COMPRESSED (LongFast u. a.) — ohne 7 bleibt `onMeshPacket` stumm. */
       const isTextPort =
         portNum === 1 ||
+        portNum === 7 ||
         portStr.includes('TEXT_MESSAGE_APP') ||
+        portStr.includes('TEXT_MESSAGE_COMPRESSED_APP') ||
         portStr === 'TEXT' ||
-        portStr === '1'
+        portStr === '1' ||
+        portStr === '7'
       if (!isTextPort) return
       const from =
         parseMeshNodeNum(o.from) ??
