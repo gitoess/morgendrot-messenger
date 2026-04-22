@@ -28,8 +28,20 @@ export function ChatViewProtokollAnchorButton(p: {
   apiConnected: boolean
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
+  triggerClassName?: string
+  triggerLabel?: string
 }) {
-  const { messageCount, messages, myAddress, recipient, apiConnected, setStatus, setStatusMsg } = p
+  const {
+    messageCount,
+    messages,
+    myAddress,
+    recipient,
+    apiConnected,
+    setStatus,
+    setStatusMsg,
+    triggerClassName,
+    triggerLabel = 'Protokoll auf Chain verankern',
+  } = p
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [variant, setVariant] = useState<'hash' | 'full'>('hash')
@@ -142,11 +154,14 @@ export function ChatViewProtokollAnchorButton(p: {
         type="button"
         disabled={anchorDisabled}
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+        className={cn(
+          'inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50',
+          triggerClassName
+        )}
         title={anchorTitle}
       >
         <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
-        Protokoll auf Chain verankern
+        {triggerLabel}
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

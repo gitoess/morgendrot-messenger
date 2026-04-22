@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-04-22** | Repo lokal (Windows), Inbox-Toolbar UX-Runde | Root: **`npm run test:frontend-unit`** nach Umbau „Protokoll auf Chain verankern“ in Export-Menü, Toggle-Filterleiste (Posteingang/Kanal/Partner), und Ausblenden/Wiedereinblenden-Button | **OK** — neue Inbox-Bedienlogik stabil; Suite bleibt grün (**75 Dateien / 420 Tests**). |
 | **2026-04-22** | Repo lokal (Windows), Messenger-Inbox entrümpeln (Boss-UI raus) | Root: **`npm run test:frontend-unit`** nach Entfernen von Boss-Übersicht-Toggle + eingebettetem Einsatz-Profil/Kontakte-Block im Posteingang | **OK** — Messenger-Inbox vereinfacht; Suite weiter grün (**75 Dateien / 420 Tests**). |
 | **2026-04-22** | Repo lokal (Windows), **§ H.0 #4** Recovery direkt nach Unlock | **`cd frontend`**: **`npx vitest run frontend/lib/unlock-recovery-flow.test.ts frontend/hooks/use-chat-view-connection-actions.test.ts`**, danach Root **`npm run test:frontend-unit`** | **OK** — Unlock-Recovery-Offer helper + Handshake-Autofill-Hook grün; Gesamtsuite **75 Dateien / 420 Tests**. |
 | **2026-04-22** | Repo lokal (Windows), IDs-/Direkt-RPC-Aufräumen + Handshake-Autofill | **`cd frontend`**: **`npx vitest run frontend/hooks/use-chat-view-connection-actions.test.ts`** (neu: Handshake->Peer-Pub-Autofill + Nicht-0x-Guard), danach Root **`npm run test:frontend-unit`** | **OK** — gezielte H.1a/H.1b-Scheibe grün; Gesamtsuite **74 Dateien / 417 Tests**. |

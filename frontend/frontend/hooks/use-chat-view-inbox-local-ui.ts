@@ -397,6 +397,14 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const onHideAllVisibleLocal = useCallback(() => {
     setHiddenInboxIds((prev) => {
+      if (prev.size > 0) {
+        try {
+          sessionStorage.removeItem('morg.inbox.hidden.ids')
+        } catch {
+          /* ignore */
+        }
+        return new Set()
+      }
       const n = new Set(prev)
       for (const m of filteredDisplayMessages) n.add(m.id)
       try {
@@ -464,6 +472,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     selectedInboxIds,
     displayMessages,
     filteredDisplayMessages,
+    hiddenInboxCount: hiddenInboxIds.size,
     inboxPartnerKey,
     setInboxPartnerKey,
     inboxDirectionFilter,

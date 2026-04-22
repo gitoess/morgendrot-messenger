@@ -44,11 +44,18 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   inboxSelectMode: boolean
   setInboxSelectMode: (v: boolean | ((p: boolean) => boolean)) => void
   selectedInboxCount: number
+  showWireControls: boolean
+  onToggleWireControls: () => void
+  showChannelControls: boolean
+  onToggleChannelControls: () => void
+  showPartnerControls: boolean
+  onTogglePartnerControls: () => void
   onSelectAllVisible: () => void
   onClearInboxSelection: () => void
   onBulkHideSelected: () => void
   onBulkPurgeSelected: () => void
-  onHideAllVisibleLocal: () => void
+  hasHiddenMessages: boolean
+  onToggleHideAllVisibleLocal: () => void
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -78,11 +85,18 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxCount,
+    showWireControls,
+    onToggleWireControls,
+    showChannelControls,
+    onToggleChannelControls,
+    showPartnerControls,
+    onTogglePartnerControls,
     onSelectAllVisible,
     onClearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
-    onHideAllVisibleLocal,
+    hasHiddenMessages,
+    onToggleHideAllVisibleLocal,
   } = p
 
   return (
@@ -185,6 +199,19 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               ZIP nur ★ ({protokollMarkedCount})
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            <div className="px-2 py-1">
+              <ChatViewProtokollAnchorButton
+                messageCount={messageCount}
+                messages={messages}
+                myAddress={myAddress}
+                recipient={recipient}
+                apiConnected={apiStatus?.connected === true && apiStatus?.locked !== true}
+                setStatus={setStatus}
+                setStatusMsg={setStatusMsg}
+                triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+                triggerLabel="Protokoll auf Chain verankern"
+              />
+            </div>
             <DropdownMenuItem asChild>
               <a
                 href="/einsatzbericht-decrypt.html"
@@ -200,20 +227,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <ChatViewProtokollAnchorButton
-          messageCount={messageCount}
-          messages={messages}
-          myAddress={myAddress}
-          recipient={recipient}
-          apiConnected={apiStatus?.connected === true && apiStatus?.locked !== true}
-          setStatus={setStatus}
-          setStatusMsg={setStatusMsg}
-        />
         <button
           type="button"
           onClick={onRefresh}
           disabled={loading}
-          className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
         >
           <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           Aktualisieren
@@ -227,6 +245,36 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         className="rounded-md border border-border bg-muted/40 px-2 py-1 font-medium text-foreground hover:bg-muted"
       >
         {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
+      </button>
+      <button
+        type="button"
+        onClick={onToggleWireControls}
+        className={cn(
+          'rounded-md border px-2 py-1 font-medium transition-colors',
+          showWireControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+        )}
+      >
+        Posteingang (Inhalt)
+      </button>
+      <button
+        type="button"
+        onClick={onToggleChannelControls}
+        className={cn(
+          'rounded-md border px-2 py-1 font-medium transition-colors',
+          showChannelControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+        )}
+      >
+        Kanal
+      </button>
+      <button
+        type="button"
+        onClick={onTogglePartnerControls}
+        className={cn(
+          'rounded-md border px-2 py-1 font-medium transition-colors',
+          showPartnerControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+        )}
+      >
+        Partner
       </button>
       {inboxSelectMode && (
         <>
@@ -264,11 +312,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       )}
       <button
         type="button"
-        disabled={messageCount === 0}
-        onClick={onHideAllVisibleLocal}
+        disabled={messageCount === 0 && !hasHiddenMessages}
+        onClick={onToggleHideAllVisibleLocal}
         className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
       >
-        Alle sichtbaren lokal ausblenden
+        {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}
       </button>
       <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
     </div>

@@ -165,6 +165,9 @@ export type ChatViewInboxPartnerStripProps = {
   onWireFilterChange: (f: InboxWireFilter) => void
   /** Partner ausgewählt: Filter + Empfänger für Senden */
   onPartnerSelectForSend: (address: string) => void
+  showWireSection?: boolean
+  showChannelSection?: boolean
+  showPartnerSection?: boolean
   onRemoveInboxPartnerFromQuickList?: (
     address: string,
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
@@ -186,6 +189,9 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     wireFilter,
     onWireFilterChange,
     onPartnerSelectForSend,
+    showWireSection = true,
+    showChannelSection = true,
+    showPartnerSection = true,
     onRemoveInboxPartnerFromQuickList,
   } = p
 
@@ -224,6 +230,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
 
   return (
     <div className="space-y-2 border-b border-border/80 bg-muted/20 px-3 py-2">
+      {showWireSection ? (
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
@@ -256,7 +263,8 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           mit erscheinen — kein separater Server-Tag.
         </p>
       </div>
-      {showTransportRow ? (
+      ) : null}
+      {showChannelSection && showTransportRow ? (
         <div className="space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             {myAddressKnown ? (
@@ -304,7 +312,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           ) : null}
         </div>
       ) : null}
-      {hasAnyPartners ? (
+      {showPartnerSection && hasAnyPartners ? (
         <PartnerChipSection
           title="Partner"
           stripTransport="all"

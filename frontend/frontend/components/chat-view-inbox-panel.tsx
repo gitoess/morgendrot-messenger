@@ -6,6 +6,7 @@
  */
 
 import type { ComponentProps } from 'react'
+import { useState } from 'react'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -26,6 +27,7 @@ type InboxToolbarRest = Omit<
 export type ChatViewInboxPanelProps = InboxFeedReadPort &
   InboxListRest &
   InboxToolbarRest & {
+    hiddenInboxCount: number
     inboxPartnerOptions: InboxPartnerOption[]
     inboxPartnerKey: string | null
     setInboxPartnerKey: (k: string | null) => void
@@ -45,6 +47,9 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
   }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
+  const [showWireControls, setShowWireControls] = useState(false)
+  const [showChannelControls, setShowChannelControls] = useState(false)
+  const [showPartnerControls, setShowPartnerControls] = useState(false)
   const {
     loadError,
     basisUnreachable,
@@ -61,6 +66,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxIds,
+    hiddenInboxCount,
     toggleInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
@@ -97,31 +103,43 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}
         selectedInboxCount={selectedInboxIds.size}
+        showWireControls={showWireControls}
+        onToggleWireControls={() => setShowWireControls((v) => !v)}
+        showChannelControls={showChannelControls}
+        onToggleChannelControls={() => setShowChannelControls((v) => !v)}
+        showPartnerControls={showPartnerControls}
+        onTogglePartnerControls={() => setShowPartnerControls((v) => !v)}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
-        onHideAllVisibleLocal={onHideAllVisibleLocal}
+        hasHiddenMessages={hiddenInboxCount > 0}
+        onToggleHideAllVisibleLocal={onHideAllVisibleLocal}
       />
-      <ChatViewInboxPartnerStrip
-        partnerOptions={inboxPartnerOptions}
-        myAddressKnown={myAddress.trim().length > 0}
-        partnerKey={inboxPartnerKey}
-        onPartnerKeyChange={setInboxPartnerKey}
-        direction={inboxDirectionFilter}
-        onDirectionChange={setInboxDirectionFilter}
-        meshTransportOnly={inboxMeshTransportOnly}
-        onMeshTransportOnlyChange={setInboxMeshTransportOnly}
-        iotaTransportOnly={inboxIotaTransportOnly}
-        onIotaTransportOnlyChange={setInboxIotaTransportOnly}
-        wireFilter={inboxWireFilter}
-        onWireFilterChange={setInboxWireFilter}
-        onPartnerSelectForSend={selectInboxPartnerForSend}
-        onRemoveInboxPartnerFromQuickList={(address, opts) => {
-          removeInboxPartnerFromQuickList(address, {
-            hideMatchingMessages: opts.hideMatchingMessages,
-            messageTransport: opts.messageTransport,
-          })
-        }}
-      />
+      {showWireControls || showChannelControls || showPartnerControls ? (
+        <ChatViewInboxPartnerStrip
+          partnerOptions={inboxPartnerOptions}
+          myAddressKnown={myAddress.trim().length > 0}
+          partnerKey={inboxPartnerKey}
+          onPartnerKeyChange={setInboxPartnerKey}
+          direction={inboxDirectionFilter}
+          onDirectionChange={setInboxDirectionFilter}
+          meshTransportOnly={inboxMeshTransportOnly}
+          onMeshTransportOnlyChange={setInboxMeshTransportOnly}
+          iotaTransportOnly={inboxIotaTransportOnly}
+          onIotaTransportOnlyChange={setInboxIotaTransportOnly}
+          wireFilter={inboxWireFilter}
+          onWireFilterChange={setInboxWireFilter}
+          onPartnerSelectForSend={selectInboxPartnerForSend}
+          showWireSection={showWireControls}
+          showChannelSection={showChannelControls}
+          showPartnerSection={showPartnerControls}
+          onRemoveInboxPartnerFromQuickList={(address, opts) => {
+            removeInboxPartnerFromQuickList(address, {
+              hideMatchingMessages: opts.hideMatchingMessages,
+              messageTransport: opts.messageTransport,
+            })
+          }}
+        />
+      ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
         <ChatViewInboxList
           loadError={loadError}
