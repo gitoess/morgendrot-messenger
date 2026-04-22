@@ -177,7 +177,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,18rem)] overflow-y-auto">
+          <DropdownMenuContent
+            forceMount
+            align="end"
+            className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,18rem)] overflow-y-auto"
+          >
             <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtJson()}>
               <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
               JSON (voll)

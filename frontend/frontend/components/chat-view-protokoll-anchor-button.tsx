@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/frontend/lib/einsatzprotokoll-anchor'
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
+import { registerProtokollAnchorDialogOpener, takeProtokollAnchorPrefillPayload } from '@/frontend/lib/messenger-imperative-dialogs'
 
 type ScopeMode = 'all' | 'ids' | 'range'
 
@@ -53,6 +54,25 @@ export function ChatViewProtokollAnchorButton(p: {
   const [rangeTo, setRangeTo] = useState('')
   const [ackFull, setAckFull] = useState(false)
   const [dialogMsg, setDialogMsg] = useState<string>('')
+
+  const openDialogWithOptionalPrefill = useCallback(() => {
+    const pf = takeProtokollAnchorPrefillPayload()
+    if (pf?.messageIds?.length) {
+      setVariant(pf.variant === 'full' ? 'full' : 'hash')
+      setScopeMode('ids')
+      setIdsText(pf.messageIds.join(', '))
+      setAckFull(false)
+      setDialogMsg('')
+    }
+    setOpen(true)
+  }, [])
+
+  useEffect(() => {
+    registerProtokollAnchorDialogOpener(() => {
+      openDialogWithOptionalPrefill()
+    })
+    return () => registerProtokollAnchorDialogOpener(null)
+  }, [openDialogWithOptionalPrefill])
 
   function buildScope(): ProtokollAnchorScope | { error: string } {
     if (scopeMode === 'all') return { kind: 'all' }
@@ -168,7 +188,7 @@ export function ChatViewProtokollAnchorButton(p: {
       <button
         type="button"
         disabled={anchorDisabled}
-        onClick={() => setOpen(true)}
+        onClick={openDialogWithOptionalPrefill}
         className={cn(
           'inline-flex items-center gap-1 rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-xs text-foreground transition-colors hover:bg-muted disabled:opacity-50',
           triggerClassName

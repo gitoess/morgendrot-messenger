@@ -18,9 +18,11 @@
 import {
   Download,
   Forward,
+  Link2,
   Lock,
   MessageCircle,
   MoreHorizontal,
+  Package,
   ShieldCheck,
   Star,
   Trash2,
@@ -43,6 +45,30 @@ import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
+import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
+
+function isRowMeshLike(msg: Message): boolean {
+  if (msg.source === 'mesh') return true
+  if (Array.isArray(msg.transports) && msg.transports.includes('mesh')) return true
+  return false
+}
+
+function as0xAddress(v: string | undefined): string | undefined {
+  const t = (v || '').trim()
+  return /^0x[a-fA-F0-9]{64}$/i.test(t) ? t : undefined
+}
+
+function buildR1CourierPrefillFromMessage(msg: Message, myAddress: string) {
+  const from = as0xAddress(msg.from)
+  const me = as0xAddress(myAddress)
+  const sender = from ?? me ?? ''
+  const recipient = as0xAddress(msg.recipient) ?? ''
+  return {
+    builderSender: sender,
+    builderRecipient: recipient,
+    builderPayload: (msg.content ?? '').trim(),
+  }
+}
 
 export type ChatViewInboxListProps = InboxFeedReadPort & {
   loadError: string | null
@@ -344,6 +370,28 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
                         <Forward className="mr-2 h-4 w-4" />
                         Weiterleiten (ohne Absenderadresse)
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                  {isRowMeshLike(row.msg) ? (
+                    <>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          openR1CourierDialogFromPrefill(buildR1CourierPrefillFromMessage(row.msg, myAddress))
+                        }}
+                        title="R1-Kurier: Text und 0x-Adressen aus dieser Funk-Zeile vorfüllen (Signatur und Paket erzeugen im Dialog)."
+                      >
+                        <Package className="mr-2 h-4 w-4 opacity-80" />
+                        Paket teilen
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => {
+                          openProtokollAnchorDialogFromPrefill({ messageIds: [row.msg.id], variant: 'hash' })
+                        }}
+                        title="Protokoll-Hash-Verankerung: nur diese Nachrichten-ID, Variante A (nur Hash)."
+                      >
+                        <Link2 className="mr-2 h-4 w-4 opacity-80" />
+                        Paket in den Tangle schreiben
                       </DropdownMenuItem>
                     </>
                   ) : null}

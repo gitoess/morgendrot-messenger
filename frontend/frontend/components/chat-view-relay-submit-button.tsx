@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ArrowUpCircle, CheckCircle2, Copy, Trash2, Upload, WandSparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
@@ -24,6 +24,7 @@ import {
 } from '@/frontend/lib/tx-relay-queue'
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
+import { registerR1CourierDialogOpener, takeR1CourierPrefillPayload } from '@/frontend/lib/messenger-imperative-dialogs'
 
 export function ChatViewRelaySubmitButton() {
   const [open, setOpen] = useState(false)
@@ -39,7 +40,6 @@ export function ChatViewRelaySubmitButton() {
   const [transportMode, setTransportMode] = useState<MessagingPersistenceMode>('event')
   const [showExpertTransport, setShowExpertTransport] = useState(false)
   const [showExpertQueueActions, setShowExpertQueueActions] = useState(false)
-  const [showSignerRam, setShowSignerRam] = useState(false)
   const [mnemoInput, setMnemoInput] = useState('')
   const [sessionSignerAddr, setSessionSignerAddr] = useState<string | null>(null)
 
@@ -48,7 +48,7 @@ export function ChatViewRelaySubmitButton() {
     return loadTxRelayQueue()
   }, [refreshTick])
 
-  const refresh = () => setRefreshTick((x) => x + 1)
+  const refresh = useCallback(() => setRefreshTick((x) => x + 1), [])
 
   const hexToBytes = (hex: string): Uint8Array => {
     const h = hex.trim().toLowerCase()
@@ -147,7 +147,7 @@ export function ChatViewRelaySubmitButton() {
     }
   }
 
-  const signDigestNow = async () => {
+  const signDigestMerged = async () => {
     setMsg(null)
     const sender = builderSender.trim().toLowerCase()
     if (!/^0x[a-fA-F0-9]{64}$/.test(sender)) {
@@ -159,15 +159,33 @@ export function ChatViewRelaySubmitButton() {
       setMsg('Bitte zuerst Nachricht/Payload eingeben.')
       return
     }
-    const signer = getDirectIotaSessionSigner() as unknown as {
+    let signer = getDirectIotaSessionSigner() as unknown as {
       signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
     } | null
-    const signerAddr = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
     if (!signer || typeof signer.signPersonalMessage !== 'function') {
-      setMsg('Kein Session-Signer im RAM. Unten „Signer aktivieren“ oder in Einstellungen → IDs / Direkt-RPC / Funk → Signer anwenden.')
-      setShowSignerRam(true)
-      return
+      const rawMn = mnemoInput.trim()
+      if (!rawMn) {
+        setMsg(
+          'Kein Session-Signer im RAM: Mnemonic/Secret unten eintragen und erneut „Digest signieren“ klicken (wird nur im RAM angewendet). Alternativ: Einstellungen → IDs / Direkt-RPC / Funk → Signer anwenden.'
+        )
+        return
+      }
+      const applied = applyDirectIotaMnemonicSession(mnemoInput)
+      if (!applied.ok) {
+        setMsg(applied.error)
+        return
+      }
+      setSessionSignerAddr(applied.address)
+      setMnemoInput('')
+      signer = getDirectIotaSessionSigner() as unknown as {
+        signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
+      } | null
+      if (!signer || typeof signer.signPersonalMessage !== 'function') {
+        setMsg('Signer konnte nicht geladen werden.')
+        return
+      }
     }
+    const signerAddr = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
     if (signerAddr && signerAddr !== sender) {
       setMsg('Signer-Adresse passt nicht zu sender. Bitte sender oder Session-Signer korrigieren.')
       return
@@ -182,11 +200,35 @@ export function ChatViewRelaySubmitButton() {
         return
       }
       setBuilderSenderSig(sig)
-      setMsg('Digest mit Session-Signer signiert. Beim Erzeugen wird senderSig genutzt.')
+      setMsg('Digest signiert. Beim Erzeugen wird senderSig genutzt.')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
     }
   }
+
+  const openR1Dialog = useCallback(() => {
+    const pf = takeR1CourierPrefillPayload()
+    if (pf) {
+      if (pf.builderSender?.trim()) setBuilderSender(pf.builderSender.trim())
+      if (pf.builderRecipient != null) setBuilderRecipient(String(pf.builderRecipient).trim())
+      if (pf.builderPayload != null) setBuilderPayload(String(pf.builderPayload))
+    }
+    void fetchStatus().then((s) => {
+      if ('network' in s && typeof s.network === 'string' && s.network.trim()) {
+        setBuilderNetworkId(s.network.trim())
+      }
+    })
+    setSessionSignerAddr(getDirectIotaSessionSignerAddress())
+    refresh()
+    setOpen(true)
+  }, [refresh])
+
+  useEffect(() => {
+    registerR1CourierDialogOpener(() => {
+      openR1Dialog()
+    })
+    return () => registerR1CourierDialogOpener(null)
+  }, [openR1Dialog])
 
   const onImport = () => {
     setMsg(null)
@@ -260,20 +302,7 @@ export function ChatViewRelaySubmitButton() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => {
-          void fetchStatus().then((s) => {
-            if ('network' in s && typeof s.network === 'string' && s.network.trim()) {
-              setBuilderNetworkId(s.network.trim())
-            }
-          })
-          setSessionSignerAddr(getDirectIotaSessionSignerAddress())
-          refresh()
-          setOpen(true)
-        }}
-        className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-      >
+      <button type="button" onClick={openR1Dialog} className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent">
         R1 Kurier-Paket (Beta)
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -322,76 +351,45 @@ export function ChatViewRelaySubmitButton() {
               placeholder="Nachricht / Payload (submit-ready blob, base64)"
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
-            <div className="flex flex-wrap items-center gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={() => void signDigestNow()}>
-                ✍️ Digest jetzt signieren
-              </Button>
-              <span className="text-xs text-muted-foreground">
-                {builderSenderSig ? `senderSig gesetzt (${builderSenderSig.slice(0, 12)}...)` : 'Noch keine Signatur gesetzt.'}
-              </span>
-            </div>
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
-              <button
-                type="button"
-                className="text-xs text-muted-foreground underline underline-offset-2"
-                onClick={() => setShowSignerRam((v) => !v)}
-              >
-                {showSignerRam ? 'Signer aktivieren ausblenden' : 'Signer aktivieren (nur RAM)'}
-              </button>
-              {showSignerRam ? (
-                <div className="mt-2 space-y-2">
-                  <p className="text-[11px] text-muted-foreground">
-                    Gleiche Session wie unter Einstellungen → IDs / Direkt-RPC / Funk. Wird nicht persistiert; Tab schließen = weg.
-                  </p>
-                  {sessionSignerAddr ? (
-                    <p className="font-mono text-[11px] text-foreground">
-                      Aktiver Signer: {sessionSignerAddr}
-                    </p>
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">Kein Session-Signer aktiv.</p>
-                  )}
-                  <textarea
-                    value={mnemoInput}
-                    onChange={(e) => setMnemoInput(e.target.value)}
-                    spellCheck={false}
-                    autoComplete="off"
-                    rows={2}
-                    placeholder="Mnemonic / Bech32-Secret / 64-Hex (32 Byte)"
-                    className="w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-[11px]"
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => {
-                        const r = applyDirectIotaMnemonicSession(mnemoInput)
-                        if (r.ok) {
-                          setSessionSignerAddr(r.address)
-                          setMnemoInput('')
-                          setMsg(`Signer aktiv: ${r.address.slice(0, 10)}…`)
-                        } else {
-                          setMsg(r.error)
-                        }
-                      }}
-                    >
-                      Signer anwenden
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        clearDirectIotaSessionSigner()
-                        setSessionSignerAddr(null)
-                        setMsg('Session-Signer gelöscht.')
-                      }}
-                    >
-                      Signer löschen
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
+              <p className="text-xs font-medium text-foreground">Session-Signer (nur RAM)</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Ein Klick auf „Digest signieren“ wendet das Feld unten bei Bedarf an und signiert danach. Gleiche Session wie unter Einstellungen → IDs / Direkt-RPC / Funk.
+              </p>
+              {sessionSignerAddr ? (
+                <p className="mt-1 font-mono text-[11px] text-foreground">Aktiver Signer: {sessionSignerAddr}</p>
+              ) : (
+                <p className="mt-1 text-[11px] text-muted-foreground">Kein Session-Signer aktiv.</p>
+              )}
+              <textarea
+                value={mnemoInput}
+                onChange={(e) => setMnemoInput(e.target.value)}
+                spellCheck={false}
+                autoComplete="off"
+                rows={2}
+                placeholder="Mnemonic / Bech32-Secret / 64-Hex (32 Byte) — nur wenn noch kein RAM-Signer"
+                className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-[11px]"
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Button type="button" size="sm" variant="default" onClick={() => void signDigestMerged()}>
+                  Digest signieren
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    clearDirectIotaSessionSigner()
+                    setSessionSignerAddr(null)
+                    setMsg('Session-Signer gelöscht.')
+                  }}
+                >
+                  Signer löschen
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {builderSenderSig ? `senderSig gesetzt (${builderSenderSig.slice(0, 12)}…)` : 'Noch keine Signatur.'}
+                </span>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => void buildEnvelope()}>
