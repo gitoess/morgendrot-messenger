@@ -62,7 +62,7 @@ export function buildAnchorHashWire(hex64: string, meta: { exportedAt: number; m
   return core + line
 }
 
-export type AnchorOnChainResult = { ok: true } | { ok: false; error: string }
+export type AnchorOnChainResult = { ok: true; txDigest?: string } | { ok: false; error: string }
 
 /** Variante A: Klartext auf Chain (Explorer). Variante B: vollständiges JSON verschlüsselt /send. */
 export async function anchorEinsatzprotokollOnIota(p: {
@@ -94,7 +94,7 @@ export async function anchorEinsatzprotokollOnIota(p: {
       wire,
       BigInt(nextOfflineMailboxClientOutSeq())
     )
-    return r.ok ? { ok: true } : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
+    return r.ok ? { ok: true, txDigest: r.txDigest } : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
   }
 
   const payload = buildEinsatzprotokollPayload(selected, { exportedByAddress: p.exportedByAddress })
@@ -107,5 +107,5 @@ export async function anchorEinsatzprotokollOnIota(p: {
     }
   }
   const r = await sendEncryptedMailboxHybrid(p.recipientForPlain.trim(), json)
-  return r.ok ? { ok: true } : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
+  return r.ok ? { ok: true, txDigest: r.txDigest } : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
 }

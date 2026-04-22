@@ -17,6 +17,8 @@ import {
   anchorEinsatzprotokollOnIota,
   type ProtokollAnchorScope,
 } from '@/frontend/lib/einsatzprotokoll-anchor'
+import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
+import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 
 type ScopeMode = 'all' | 'ids' | 'range'
 
@@ -106,6 +108,19 @@ export function ChatViewProtokollAnchorButton(p: {
         recipientForPlain: rec,
       })
       if (r.ok) {
+        if (r.txDigest) {
+          const inv = {
+            digest: r.txDigest,
+            type: variant === 'hash' ? 'protocol-hash' : 'protocol-full',
+            status: 'anchored',
+            encrypted: variant === 'full',
+          } as const
+          addTangleInventoryItem(inv)
+          void maybeAutoSaveDigestToVault({
+            ...inv,
+            timestamp: Date.now(),
+          })
+        }
         setOpen(false)
         setStatus('success')
         setStatusMsg(

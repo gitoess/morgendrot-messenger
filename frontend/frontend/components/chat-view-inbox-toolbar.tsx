@@ -11,6 +11,8 @@ import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, Refresh
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
+import { ChatViewTangleInventoryButton } from '@/frontend/components/chat-view-tangle-inventory-button'
+import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import {
   DropdownMenu,
@@ -171,7 +173,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
             >
               <Archive className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-              Export
+              Import/Export
               <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
             </button>
           </DropdownMenuTrigger>
@@ -211,6 +213,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
                 triggerLabel="Protokoll auf Chain verankern"
               />
+            </div>
+            <div className="px-2 py-1">
+              <ChatViewTangleInventoryButton />
+            </div>
+            <div className="px-2 py-1">
+              <ChatViewRelaySubmitButton />
             </div>
             <DropdownMenuItem asChild>
               <a

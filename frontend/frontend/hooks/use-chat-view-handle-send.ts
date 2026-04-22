@@ -43,6 +43,8 @@ import {
   sha256HexFromBase64Bytes,
 } from '@/frontend/lib/forensic-mailbox-attestation'
 import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
+import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
+import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import {
   formatMeshtasticNodeIdFromNum,
@@ -166,6 +168,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    const inventoryType = attachedBlobBase64 || attachedAudioBase64 || attachedLora ? 'image' : 'text'
     /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
     const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
 
@@ -834,6 +837,20 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const d = await dispatchPath4Mirror(wireForApi, n, 'text')
         if (d.status === 'failed') return `__PATH4_FAILED__${d.note}`
         if (d.status !== 'anchored') return ` ${d.note}`
+        if (d.txDigest) {
+          const inv = {
+            digest: d.txDigest,
+            type: 'text',
+            status: 'anchored',
+            nonce: n.toString(),
+            encrypted: false,
+          } as const
+          addTangleInventoryItem(inv)
+          void maybeAutoSaveDigestToVault({
+            ...inv,
+            timestamp: Date.now(),
+          })
+        }
         return ` ${d.note}${formatTxDigestStatusSuffix(d.txDigest)}`
       }
 
@@ -1108,6 +1125,20 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         })
       } else {
         setStatusMsg(successMsg + formatTxDigestStatusSuffix(lastOk?.mailboxCapture?.txDigest))
+      }
+      if (lastOk?.ok && lastOk.mailboxCapture?.txDigest) {
+        const inv = {
+          digest: lastOk.mailboxCapture.txDigest,
+          type: inventoryType,
+          status: 'anchored',
+          nonce: lastOk.mailboxCapture.messageNonceU64.toString(),
+          encrypted: lastOk.mailboxCapture.encrypted,
+        } as const
+        addTangleInventoryItem(inv)
+        void maybeAutoSaveDigestToVault({
+          ...inv,
+          timestamp: Date.now(),
+        })
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
