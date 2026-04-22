@@ -18,7 +18,6 @@ import {
 import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import type { Message } from '@/frontend/lib/types'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import {
   MessengerGuideHint,
   MessengerHandbookChatLink,
@@ -143,18 +142,13 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="text-lg font-semibold text-foreground">Verbindung & Postfach</h3>
-      <p className="mt-1 mb-4 text-xs text-muted-foreground">
-        Abschnitte folgen <strong className="text-foreground">Sendepfad</strong> und{' '}
-        <strong className="text-foreground">Verschlüsselung</strong> — IOTA/Mailbox getrennt von LoRa und Ad-hoc.
-      </p>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Partner verbinden</h3>
 
       {/* ——— IOTA · Postfach ——— */}
       <section className="mb-6 rounded-lg border border-border/80 bg-muted/10 p-3 sm:p-4" aria-labelledby="setup-iota-postfach">
         <h4 id="setup-iota-postfach" className="mb-2 text-sm font-semibold text-foreground">
           IOTA · Postfach · Package-ID (Mailbox / Deploy)
         </h4>
-        <ChatViewShadowSweep />
         <div className="mt-3 rounded-lg border border-border bg-muted/15 px-3 py-3">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <MessengerGuideHint

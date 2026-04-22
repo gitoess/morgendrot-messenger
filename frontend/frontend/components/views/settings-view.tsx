@@ -22,14 +22,18 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
   getStatus,
+  fetchStatus,
   revealVaultSignerImport,
   restartBackend,
   fetchEinsatzRoleTemplates,
   saveEinsatzRoleTemplates,
+  type ApiStatus,
 } from '@/frontend/lib/api'
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
+import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
+import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
 import {
   notifyFirstStepsPrefChanged,
   readFirstStepsVisible,
@@ -85,6 +89,7 @@ export function SettingsView({
   const [roleTemplatesMsg, setRoleTemplatesMsg] = useState('')
 
   const [iotaPathUi, setIotaPathUi] = useState<DirectIotaPathUiState | null>(null)
+  const [advancedIotaStatus, setAdvancedIotaStatus] = useState<ApiStatus | null>(null)
   const refreshIotaPathUi = useCallback(() => {
     setIotaPathUi(getDirectIotaPathUiState())
   }, [])
@@ -171,6 +176,9 @@ export function SettingsView({
     if (res.ok && res.data) {
       setStatus(res.data)
     }
+    const adv = await fetchStatus()
+    if ('pollClockHint' in adv) setAdvancedIotaStatus(adv)
+    else setAdvancedIotaStatus(null)
     setLoading(false)
   }
 
@@ -270,6 +278,16 @@ export function SettingsView({
           />
         </div>
       </div>
+
+      {advancedIotaStatus ? (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h4 className="mb-2 font-semibold text-foreground">Direkt-RPC · IDs · Funk</h4>
+          <p className="mb-3 text-sm text-muted-foreground">
+            Erweiterte IOTA-/Mailbox-Details, Ketten-IDs, Direkt-RPC und Expertenoptionen aus dem Chat hier zentral.
+          </p>
+          <ChatViewPulseSettings apiStatus={advancedIotaStatus} />
+        </div>
+      ) : null}
 
       <SettingsWalletSessionCard />
 
@@ -631,6 +649,8 @@ export function SettingsView({
           )}
         </div>
       )}
+
+      {status?.backendOnline ? <ChatViewShadowSweep /> : null}
 
       {canToggleFullTiles && onShowAllTilesChange && (
         <div className="rounded-xl border border-border bg-card p-4">

@@ -9,7 +9,6 @@ import { useState } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -190,8 +189,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
           {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
         </div>
       </div>
-
-      {isPrivate && apiStatus && <ChatViewPulseSettings apiStatus={apiStatus} />}
 
       {afterPulse}
 
