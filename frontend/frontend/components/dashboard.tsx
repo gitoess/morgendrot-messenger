@@ -17,7 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, type ApiStatus } from '@/frontend/lib/api'
+import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, revealVaultSignerImport, type ApiStatus } from '@/frontend/lib/api'
 import type { ProjectType, ProjectVariant } from '../lib/types'
 import {
   WorkspaceProjectsPanel,
@@ -50,6 +50,7 @@ import { recordSeenMyAddress } from '@/frontend/lib/my-address-local-history'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
 import { filterFeaturesByMessengerWorkspaceTileSet } from '@/frontend/lib/dashboard-workspace-tile-visibility'
+import { shouldOfferRecoveryAfterUnlock } from '@/frontend/lib/unlock-recovery-flow'
 import {
   Dialog,
   DialogContent,
@@ -238,6 +239,11 @@ export function Dashboard() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [helpText, setHelpText] = useState('')
   const [helpLoading, setHelpLoading] = useState(false)
+  const [postUnlockRecoveryOpen, setPostUnlockRecoveryOpen] = useState(false)
+  const [postUnlockRecoveryPw, setPostUnlockRecoveryPw] = useState('')
+  const [postUnlockRecoveryBusy, setPostUnlockRecoveryBusy] = useState(false)
+  const [postUnlockRecoveryErr, setPostUnlockRecoveryErr] = useState('')
+  const [postUnlockRecoverySigner, setPostUnlockRecoverySigner] = useState<string | null>(null)
   const [role, setRole] = useState<string>('')
   const [myAddress, setMyAddress] = useState<string>('')
   const [showAllTiles, setShowAllTiles] = useState(false)
@@ -267,6 +273,10 @@ export function Dashboard() {
       setPassword('')
       setPasswordConfirm('')
       setShowSignerImportOpen(false)
+      setPostUnlockRecoveryOpen(false)
+      setPostUnlockRecoveryPw('')
+      setPostUnlockRecoveryErr('')
+      setPostUnlockRecoverySigner(null)
       const hasVault = vaultHasLocalRef.current
       const sdk = signerIsSdkRef.current
       setUnlockMode(hasVault ? 'vault' : sdk ? 'create' : 'vault')
@@ -538,12 +548,39 @@ export function Dashboard() {
         if (s.locked) break
         setConnected(!!s.connected)
       }
+      const afterUnlock = await fetchStatus()
+      if ('pollClockHint' in afterUnlock && shouldOfferRecoveryAfterUnlock(afterUnlock)) {
+        setPostUnlockRecoveryOpen(true)
+        setPostUnlockRecoveryPw('')
+        setPostUnlockRecoveryErr('')
+        setPostUnlockRecoverySigner(null)
+      }
     } else {
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
       if (res.code === SIGNER_IMPORT_REQUIRED_CODE && apiSnapshot?.signer === 'sdk' && unlockMode === 'vault') {
         setUnlockMode('import')
         setShowSignerImportOpen(true)
       }
+    }
+  }
+
+  const handlePostUnlockRecoveryReveal = async () => {
+    setPostUnlockRecoveryErr('')
+    if (!postUnlockRecoveryPw.trim()) {
+      setPostUnlockRecoveryErr('Vault-Passwort eingeben.')
+      return
+    }
+    setPostUnlockRecoveryBusy(true)
+    try {
+      const res = await revealVaultSignerImport(postUnlockRecoveryPw.trim())
+      if (res.ok && res.signerImport) {
+        setPostUnlockRecoverySigner(res.signerImport)
+        setPostUnlockRecoveryPw('')
+      } else {
+        setPostUnlockRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
+      }
+    } finally {
+      setPostUnlockRecoveryBusy(false)
     }
   }
 
@@ -646,6 +683,78 @@ export function Dashboard() {
             ) : (
               helpText
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={postUnlockRecoveryOpen} onOpenChange={setPostUnlockRecoveryOpen}>
+        <DialogContent className="sm:max-w-md z-[210]">
+          <DialogHeader>
+            <DialogTitle>Recovery jetzt sichern? (optional)</DialogTitle>
+            <DialogDescription className="space-y-2 text-left">
+              <span>
+                Direkter Schritt nach dem Entsperren: denselben Recovery-Flow wie unter{' '}
+                <strong>Wallet &amp; Backup</strong> nutzen (<span className="font-mono text-xs">/vault-show-signer-import</span>).
+              </span>
+              <span className="block text-xs text-muted-foreground">
+                Nur bei <span className="font-mono">SIGNER=sdk</span> mit lokal gespeicherter Vault und bewusst
+                aktivierter Sicherung relevant.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="post-unlock-recovery-password">Vault-Passwort (erneut eingeben)</Label>
+              <Input
+                id="post-unlock-recovery-password"
+                type="password"
+                value={postUnlockRecoveryPw}
+                onChange={(e) => setPostUnlockRecoveryPw(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="off"
+              />
+            </div>
+            {postUnlockRecoveryErr ? <p className="text-sm text-destructive">{postUnlockRecoveryErr}</p> : null}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => void handlePostUnlockRecoveryReveal()}
+                disabled={postUnlockRecoveryBusy}
+                className="flex-1"
+              >
+                {postUnlockRecoveryBusy ? 'Lade…' : 'Recovery anzeigen'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPostUnlockRecoveryOpen(false)
+                  setPostUnlockRecoveryPw('')
+                  setPostUnlockRecoveryErr('')
+                }}
+              >
+                Später
+              </Button>
+            </div>
+            {postUnlockRecoverySigner ? (
+              <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
+                  Nur lokal sicher notieren. Nicht teilen, nicht in unsichere Cloud kopieren.
+                </p>
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
+                  {postUnlockRecoverySigner}
+                </pre>
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(postUnlockRecoverySigner)
+                  }}
+                  className="text-sm text-primary hover:underline"
+                >
+                  In Zwischenablage kopieren
+                </button>
+              </div>
+            ) : null}
           </div>
         </DialogContent>
       </Dialog>
