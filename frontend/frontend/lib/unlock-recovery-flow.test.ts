@@ -6,17 +6,13 @@ function makeStatus(overrides: Partial<ApiStatus> = {}): ApiStatus {
   return {
     connected: true,
     locked: false,
-    address: '0x' + '11'.repeat(32),
+    myAddress: '0x' + '11'.repeat(32),
     network: 'localnet',
     packageId: '0x' + '22'.repeat(32),
     role: 'messenger',
     connectedAddresses: [],
     signer: 'sdk',
-    vaultStatus: null,
-    vaultHasLocal: true,
-    chatConnected: false,
-    backendOnline: true,
-    appVersion: null,
+    vaultStatus: { hasLocal: true },
     uiVariant: 'full',
     ...overrides,
   }
@@ -28,7 +24,7 @@ describe('shouldOfferRecoveryAfterUnlock', () => {
   })
 
   it('returns false when vault is missing or signer is not sdk', () => {
-    expect(shouldOfferRecoveryAfterUnlock(makeStatus({ vaultHasLocal: false }))).toBe(false)
+    expect(shouldOfferRecoveryAfterUnlock(makeStatus({ vaultStatus: { hasLocal: false } }))).toBe(false)
     expect(shouldOfferRecoveryAfterUnlock(makeStatus({ signer: 'cli' }))).toBe(false)
   })
 

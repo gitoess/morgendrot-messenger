@@ -20,7 +20,16 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
   ComponentProps<typeof ChatViewInboxToolbar>,
-  'selectedInboxCount' | keyof InboxFeedReadPort
+  | 'selectedInboxCount'
+  | 'showWireControls'
+  | 'onToggleWireControls'
+  | 'showChannelControls'
+  | 'onToggleChannelControls'
+  | 'showPartnerControls'
+  | 'onTogglePartnerControls'
+  | 'hasHiddenMessages'
+  | 'onToggleHideAllVisibleLocal'
+  | keyof InboxFeedReadPort
 >
 
 /** `selectedInboxCount` wird aus `selectedInboxIds` im Panel abgeleitet. */
@@ -28,6 +37,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
   InboxListRest &
   InboxToolbarRest & {
     hiddenInboxCount: number
+    onToggleHideAllVisibleLocal: () => void
     inboxPartnerOptions: InboxPartnerOption[]
     inboxPartnerKey: string | null
     setInboxPartnerKey: (k: string | null) => void
@@ -62,7 +72,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
-    onHideAllVisibleLocal,
+    onToggleHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxIds,
@@ -112,7 +122,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
-        onToggleHideAllVisibleLocal={onHideAllVisibleLocal}
+        onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
       />
       {showWireControls || showChannelControls || showPartnerControls ? (
         <ChatViewInboxPartnerStrip

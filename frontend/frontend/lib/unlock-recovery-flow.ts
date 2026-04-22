@@ -8,5 +8,5 @@ export function shouldOfferRecoveryAfterUnlock(status: ApiStatus | null): boolea
   if (!status) return false
   if (status.locked) return false
   if (status.signer !== 'sdk') return false
-  return status.vaultHasLocal === true
+  return status.vaultStatus?.hasLocal === true
 }

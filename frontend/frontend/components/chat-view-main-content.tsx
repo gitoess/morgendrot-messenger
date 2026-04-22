@@ -292,7 +292,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
-    onHideAllVisibleLocal,
+    onToggleHideAllVisibleLocal: onHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxIds,

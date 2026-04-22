@@ -96,7 +96,7 @@ export function enqueueRelayEnvelope(envelope: TxRelayEnvelopeV1): TxRelayQueueI
 
 export function markRelayQueueAnchored(id: string, txDigest: string) {
   const items = loadTxRelayQueue()
-  const next = items.map((x) =>
+  const next: TxRelayQueueItem[] = items.map((x) =>
     x.id === id
       ? {
           ...x,
