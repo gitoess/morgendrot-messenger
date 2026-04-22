@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { ArrowUpCircle, CheckCircle2, Copy, Upload, WandSparkles } from 'lucide-react'
+import { ArrowUpCircle, CheckCircle2, Copy, Trash2, Upload, WandSparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { fetchStatus } from '@/frontend/lib/api/status'
@@ -12,6 +12,7 @@ import {
   enqueueRelayEnvelope,
   loadTxRelayQueue,
   markRelayQueueAnchored,
+  removeRelayQueueItem,
   updateRelayQueueReport,
   validateRelayEnvelope,
   type TxRelayQueueItem,
@@ -269,15 +270,8 @@ export function ChatViewRelaySubmitButton() {
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>R1 Kurier-Paket (Offline {'->'} Relayer {'->'} Submit)</DialogTitle>
-            <DialogDescription>
-              Erstellen, transportieren und lokal protokollieren. `txDigest` entsteht erst nach echtem Submit an eine IOTA-RPC
-              Node (durch Relayer oder dich selbst online).
-            </DialogDescription>
+            <DialogDescription>Kurier-Paket für den Offline/Relay-Workflow.</DialogDescription>
           </DialogHeader>
-          <p className="text-xs text-muted-foreground">
-            Fokus jetzt: R1 `submit_ready`. R2 sponsored bleibt bewusst später. Diese Ansicht dient dem kontrollierten
-            Offline/Relay-Workflow mit manueller Bestätigung.
-          </p>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
             <p className="text-xs font-medium text-foreground">Paket erzeugen (offline)</p>
             <div className="grid gap-2 md:grid-cols-2">
@@ -318,10 +312,6 @@ export function ChatViewRelaySubmitButton() {
               placeholder="Nachricht / Payload (submit-ready blob, base64)"
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
-            <p className="text-xs text-amber-700 dark:text-amber-300">
-              Digest wird im Builder berechnet. Eine echte `senderSig` entsteht nur mit dem privaten Schlüssel im
-              kanonischen Signing-Pfad. Externe/fremde Envelopes bitte unten über „prüfen & übernehmen“ importieren.
-            </p>
             <div className="flex flex-wrap items-center gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => void signDigestNow()}>
                 ✍️ Digest jetzt signieren
@@ -448,6 +438,20 @@ export function ChatViewRelaySubmitButton() {
                           </span>
                         </>
                       ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (!window.confirm('Diesen Eintrag aus der lokalen Relay-Warteliste löschen?')) return
+                          removeRelayQueueItem(it.id)
+                          refresh()
+                          setMsg('Eintrag aus der lokalen Warteliste gelöscht.')
+                        }}
+                      >
+                        <Trash2 className="mr-2 h-3.5 w-3.5" />
+                        Eintrag löschen
+                      </Button>
                     </div>
                   ) : null}
                 </div>

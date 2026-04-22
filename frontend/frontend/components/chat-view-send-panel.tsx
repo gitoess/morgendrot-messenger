@@ -215,12 +215,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
 
-  const prepareSosDictation = () => {
+  const prepareSttDictation = () => {
     const composer = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
     composer?.focus()
     composer?.click()
     window.alert(
-      'Einsatzmodus SOS-Text: OS-Diktat jetzt manuell starten.\n\n' +
+      'Sprach-zu-Text: OS-Diktat jetzt manuell starten.\n\n' +
         'Windows: Win+H manuell drücken\n' +
         'Android: Mikrofon in der Tastaturleiste manuell tippen'
     )
@@ -564,7 +564,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
                 onClick={() => {
                   if (!message.trim()) {
-                    prepareSosDictation()
+                    prepareSttDictation()
                     return
                   }
                   if (
@@ -582,6 +582,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 className="rounded-lg border-2 border-red-600/70 bg-red-600/95 px-3 py-2 text-xs font-bold tracking-tight text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 SOS — Hilferuf
+              </button>
+            ) : null}
+            {forcedTransport === 'internet' || forcedTransport === 'mesh' ? (
+              <button
+                type="button"
+                disabled={sending || voiceLocksComposer}
+                onClick={prepareSttDictation}
+                className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                title="Sprach-zu-Text ueber Betriebssystem-Diktat in das Nachrichtenfeld"
+              >
+                STT diktieren
               </button>
             ) : null}
             {forcedTransport === 'internet' ? (

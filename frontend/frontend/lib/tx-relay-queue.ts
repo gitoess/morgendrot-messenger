@@ -140,3 +140,9 @@ export function updateRelayQueueReport(
   )
   saveTxRelayQueue(next)
 }
+
+export function removeRelayQueueItem(id: string) {
+  const items = loadTxRelayQueue()
+  const next = items.filter((x) => x.id !== id)
+  saveTxRelayQueue(next)
+}
