@@ -538,12 +538,22 @@ export function parseVerifiedIotaNamePackageIds(raw: string | undefined): string
 }
 
 type SignerMode = 'cli' | 'sdk' | 'remote';
-type RuntimeConfig = { signer?: SignerMode; walletDerivationPath?: string };
+type RuntimeConfig = {
+    signer?: SignerMode;
+    walletDerivationPath?: string;
+    useMailbox?: boolean;
+    mailboxStorePlaintext?: boolean;
+    enablePlaintextChannel?: boolean;
+};
 
 const RUNTIME_CONFIG_PATH = path.resolve(process.cwd(), process.env.RUNTIME_CONFIG_FILE?.trim() || '.morgendrot-runtime-config.json');
 const RUNTIME_CONFIG_ALLOWED_SIGNERS: SignerMode[] = ['cli', 'sdk', 'remote'];
 let runtimeSignerSource: 'env' | 'runtime' = 'env';
 let runtimeWalletDerivationPathSource: 'env' | 'runtime' = 'env';
+let runtimeUseMailboxSource: 'env' | 'runtime' = 'env';
+let runtimeMailboxStorePlaintextSource: 'env' | 'runtime' = 'env';
+let runtimeEnablePlaintextChannelSource: 'env' | 'runtime' = 'env';
+let runtimeConfigKeysCache: string[] = [];
 
 function parseRuntimeSigner(raw: unknown): SignerMode | undefined {
     const v = String(raw ?? '').trim().toLowerCase();
@@ -551,16 +561,35 @@ function parseRuntimeSigner(raw: unknown): SignerMode | undefined {
     return undefined;
 }
 
+function parseRuntimeBool(raw: unknown): boolean | undefined {
+    const v = String(raw ?? '').trim().toLowerCase();
+    if (v === 'true' || v === '1' || v === 'yes') return true;
+    if (v === 'false' || v === '0' || v === 'no') return false;
+    return undefined;
+}
+
 function readRuntimeConfig(): RuntimeConfig {
     try {
         if (!fs.existsSync(RUNTIME_CONFIG_PATH)) return {};
         const raw = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
-        const parsed = JSON.parse(raw) as { signer?: unknown; walletDerivationPath?: unknown };
+        const parsed = JSON.parse(raw) as {
+            signer?: unknown;
+            walletDerivationPath?: unknown;
+            useMailbox?: unknown;
+            mailboxStorePlaintext?: unknown;
+            enablePlaintextChannel?: unknown;
+        };
         const signer = parseRuntimeSigner(parsed.signer);
         const walletDerivationPath = String(parsed.walletDerivationPath ?? '').trim();
+        const useMailbox = parseRuntimeBool(parsed.useMailbox);
+        const mailboxStorePlaintext = parseRuntimeBool(parsed.mailboxStorePlaintext);
+        const enablePlaintextChannel = parseRuntimeBool(parsed.enablePlaintextChannel);
         const out: RuntimeConfig = {};
         if (signer) out.signer = signer;
         if (walletDerivationPath) out.walletDerivationPath = walletDerivationPath;
+        if (useMailbox != null) out.useMailbox = useMailbox;
+        if (mailboxStorePlaintext != null) out.mailboxStorePlaintext = mailboxStorePlaintext;
+        if (enablePlaintextChannel != null) out.enablePlaintextChannel = enablePlaintextChannel;
         return out;
     } catch {
         return {};
@@ -572,6 +601,9 @@ function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; 
         const payload: RuntimeConfig = {};
         if (cfg.signer) payload.signer = cfg.signer;
         if (cfg.walletDerivationPath) payload.walletDerivationPath = cfg.walletDerivationPath;
+        if (cfg.useMailbox != null) payload.useMailbox = cfg.useMailbox;
+        if (cfg.mailboxStorePlaintext != null) payload.mailboxStorePlaintext = cfg.mailboxStorePlaintext;
+        if (cfg.enablePlaintextChannel != null) payload.enablePlaintextChannel = cfg.enablePlaintextChannel;
         fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
         return { ok: true, path: RUNTIME_CONFIG_PATH };
     } catch (e: any) {
@@ -581,24 +613,59 @@ function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; 
 
 function applyRuntimeConfigToCfg(): void {
     const runtime = readRuntimeConfig();
+    runtimeConfigKeysCache = [];
     if (runtime.signer) {
         CFG.SIGNER = runtime.signer;
         runtimeSignerSource = 'runtime';
+        runtimeConfigKeysCache.push('SIGNER');
     } else {
+        CFG.SIGNER = ((process.env.SIGNER || 'cli').trim().toLowerCase() as SignerMode) || 'cli';
         runtimeSignerSource = 'env';
     }
     if (runtime.walletDerivationPath) {
         CFG.WALLET_DERIVATION_PATH = runtime.walletDerivationPath;
         runtimeWalletDerivationPathSource = 'runtime';
+        runtimeConfigKeysCache.push('WALLET_DERIVATION_PATH');
     } else {
+        CFG.WALLET_DERIVATION_PATH = process.env.WALLET_DERIVATION_PATH?.trim() || '';
         runtimeWalletDerivationPathSource = 'env';
+    }
+    if (runtime.useMailbox != null) {
+        CFG.USE_MAILBOX = runtime.useMailbox;
+        runtimeUseMailboxSource = 'runtime';
+        runtimeConfigKeysCache.push('USE_MAILBOX');
+    } else {
+        CFG.USE_MAILBOX = envBool('USE_MAILBOX', Boolean(process.env.MAILBOX_ID));
+        runtimeUseMailboxSource = 'env';
+    }
+    if (runtime.mailboxStorePlaintext != null) {
+        CFG.MAILBOX_STORE_PLAINTEXT = runtime.mailboxStorePlaintext;
+        runtimeMailboxStorePlaintextSource = 'runtime';
+        runtimeConfigKeysCache.push('MAILBOX_STORE_PLAINTEXT');
+    } else {
+        CFG.MAILBOX_STORE_PLAINTEXT = envBool('MAILBOX_STORE_PLAINTEXT', false);
+        runtimeMailboxStorePlaintextSource = 'env';
+    }
+    if (runtime.enablePlaintextChannel != null) {
+        CFG.ENABLE_PLAINTEXT_CHANNEL = runtime.enablePlaintextChannel;
+        runtimeEnablePlaintextChannelSource = 'runtime';
+        runtimeConfigKeysCache.push('ENABLE_PLAINTEXT_CHANNEL');
+    } else {
+        CFG.ENABLE_PLAINTEXT_CHANNEL = envBool('ENABLE_PLAINTEXT_CHANNEL', false);
+        runtimeEnablePlaintextChannelSource = 'env';
     }
 }
 
 export function setRuntimeConfigKey(key: string, value: string): { ok: boolean; error?: string; path?: string; value?: string } {
     const k = String(key || '').trim().toUpperCase();
     const v = String(value ?? '').trim();
-    if (k !== 'SIGNER' && k !== 'WALLET_DERIVATION_PATH') {
+    if (
+        k !== 'SIGNER' &&
+        k !== 'WALLET_DERIVATION_PATH' &&
+        k !== 'USE_MAILBOX' &&
+        k !== 'MAILBOX_STORE_PLAINTEXT' &&
+        k !== 'ENABLE_PLAINTEXT_CHANNEL'
+    ) {
         return { ok: false, error: `Runtime key ${k || '(leer)'} wird noch nicht unterstützt.` };
     }
     const next = readRuntimeConfig();
@@ -608,16 +675,63 @@ export function setRuntimeConfigKey(key: string, value: string): { ok: boolean; 
         next.signer = signer;
     } else if (v) {
         next.walletDerivationPath = v;
-    } else {
+    } else if (k === 'WALLET_DERIVATION_PATH') {
         delete next.walletDerivationPath;
+    } else {
+        const boolValue = parseRuntimeBool(v);
+        if (boolValue == null) {
+            return { ok: false, error: `${k} muss true/false (oder 1/0, yes/no) sein.` };
+        }
+        if (k === 'USE_MAILBOX') next.useMailbox = boolValue;
+        if (k === 'MAILBOX_STORE_PLAINTEXT') next.mailboxStorePlaintext = boolValue;
+        if (k === 'ENABLE_PLAINTEXT_CHANNEL') next.enablePlaintextChannel = boolValue;
+    }
+    if (!v && k === 'USE_MAILBOX') {
+        delete next.useMailbox;
+    }
+    if (!v && k === 'MAILBOX_STORE_PLAINTEXT') {
+        delete next.mailboxStorePlaintext;
+    }
+    if (!v && k === 'ENABLE_PLAINTEXT_CHANNEL') {
+        delete next.enablePlaintextChannel;
     }
     const written = writeRuntimeConfig(next);
     if (!written.ok) return written;
     applyRuntimeConfigToCfg();
+    const currentValue =
+        k === 'SIGNER'
+            ? (CFG.SIGNER || '')
+            : k === 'WALLET_DERIVATION_PATH'
+              ? (CFG.WALLET_DERIVATION_PATH || '(default)')
+              : k === 'USE_MAILBOX'
+                ? String(CFG.USE_MAILBOX)
+                : k === 'MAILBOX_STORE_PLAINTEXT'
+                  ? String(CFG.MAILBOX_STORE_PLAINTEXT)
+                  : String(CFG.ENABLE_PLAINTEXT_CHANNEL);
     return {
         ok: true,
         path: written.path,
-        value: k === 'SIGNER' ? (CFG.SIGNER || '') : (CFG.WALLET_DERIVATION_PATH || '(default)'),
+        value: currentValue,
+    };
+}
+
+export function getRuntimeConfigKeys(): string[] {
+    return [...runtimeConfigKeysCache];
+}
+
+export function getRuntimeConfigSources(): {
+    signer: 'env' | 'runtime';
+    walletDerivationPath: 'env' | 'runtime';
+    useMailbox: 'env' | 'runtime';
+    mailboxStorePlaintext: 'env' | 'runtime';
+    enablePlaintextChannel: 'env' | 'runtime';
+} {
+    return {
+        signer: runtimeSignerSource,
+        walletDerivationPath: runtimeWalletDerivationPathSource,
+        useMailbox: runtimeUseMailboxSource,
+        mailboxStorePlaintext: runtimeMailboxStorePlaintextSource,
+        enablePlaintextChannel: runtimeEnablePlaintextChannelSource,
     };
 }
 

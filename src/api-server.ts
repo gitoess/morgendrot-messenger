@@ -38,6 +38,8 @@ import {
     buildStandaloneSmartphoneHandoffReadme,
     getSignerConfigSource,
     getWalletDerivationPathConfigSource,
+    getRuntimeConfigKeys,
+    getRuntimeConfigSources,
 } from './config.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
@@ -526,6 +528,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 loraProgressiveEncode?: boolean;
                 signerConfigSource?: 'env' | 'runtime';
                 walletDerivationPathConfigSource?: 'env' | 'runtime';
+                useMailboxConfigSource?: 'env' | 'runtime';
+                mailboxStorePlaintextConfigSource?: 'env' | 'runtime';
+                enablePlaintextChannelConfigSource?: 'env' | 'runtime';
+                runtimeConfigKeys?: string[];
             } = {
                 backendRunning: true,
                 locked: !!_resolvePassword,
@@ -571,6 +577,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 signer: CFG.SIGNER,
                 signerConfigSource: getSignerConfigSource(),
                 walletDerivationPathConfigSource: getWalletDerivationPathConfigSource(),
+                useMailboxConfigSource: getRuntimeConfigSources().useMailbox,
+                mailboxStorePlaintextConfigSource: getRuntimeConfigSources().mailboxStorePlaintext,
+                enablePlaintextChannelConfigSource: getRuntimeConfigSources().enablePlaintextChannel,
+                runtimeConfigKeys: getRuntimeConfigKeys(),
                 messengerCreditsConfigured: !!credLooksValid,
                 ...(messengerCredits !== undefined && { messengerCredits }),
                 ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
@@ -1184,7 +1194,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     }
                     const normalized = key.toUpperCase();
                     const result =
-                        normalized === 'SIGNER' || normalized === 'WALLET_DERIVATION_PATH'
+                        normalized === 'SIGNER' ||
+                        normalized === 'WALLET_DERIVATION_PATH' ||
+                        normalized === 'USE_MAILBOX' ||
+                        normalized === 'MAILBOX_STORE_PLAINTEXT' ||
+                        normalized === 'ENABLE_PLAINTEXT_CHANNEL'
                             ? setRuntimeConfigKey(normalized, value)
                             : setEnvKey(key, value);
                     sendJson(res, 200, result, cors);

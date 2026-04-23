@@ -58,6 +58,14 @@ export type ApiStatus = {
   signerConfigSource?: 'env' | 'runtime'
   /** Herkunft der aktiven Ableitungspfad-Konfiguration (env oder Runtime-Datei). */
   walletDerivationPathConfigSource?: 'env' | 'runtime'
+  /** Herkunft von USE_MAILBOX (env oder Runtime-Datei). */
+  useMailboxConfigSource?: 'env' | 'runtime'
+  /** Herkunft von MAILBOX_STORE_PLAINTEXT (env oder Runtime-Datei). */
+  mailboxStorePlaintextConfigSource?: 'env' | 'runtime'
+  /** Herkunft von ENABLE_PLAINTEXT_CHANNEL (env oder Runtime-Datei). */
+  enablePlaintextChannelConfigSource?: 'env' | 'runtime'
+  /** Aktive Runtime-Overrides (nur nicht-geheime Keys). */
+  runtimeConfigKeys?: string[]
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
   /** false: API-Port liefert keine statische ui/index.html. */
