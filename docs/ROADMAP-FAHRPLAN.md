@@ -1021,6 +1021,22 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Technik (Idee)** | PWA: `SpeechRecognition` / `speechSynthesis` wo verfügbar; native Schicht (**§ H.6f**) für zuverlässigeres STT/TTS; **kein** automatisches Senden ohne Nutzerbestätigung. |
 | **Priorität** | **Nach** stabiler Phase-A-Sendepfad und klarer **SOS-/Notfall-Doku**; **parallel** zu **§ H.16** möglich, **nicht** vor kritischem Mesh-Kern (**§ C.0b**) großflächig kreuzen. |
 
+### H.19 Forensic Capture (Bild-Beweis) — **Idee / Backlog**, nach R1-Robustheit
+
+**Status:** Diese Sektion ist bewusst als **Idee** dokumentiert (noch **kein** zugesagter Implementations-Sprint). Ziel: manipulationsärmere Bild-Beweise bei Online- und Offline-Einsatz, ohne LoRa unnötig zu überlasten.
+
+| Aspekt | Kurz |
+|--------|------|
+| **Ziel** | Nachweisbar machen: „dieses Bild wurde zu diesem Zeitpunkt an diesem Ort aufgenommen“ — mit praktikablem Aufwand im Feld. |
+| **Capture-Flow (Default)** | Eigener **Forensic-Button** (keine Galerie-Auswahl), Kameraaufnahme direkt in RAM, sofort **Original-Hash (SHA-256)**, Metadaten (**Zeit, GPS, Gerätekontext**), anschließend automatische Verkleinerung (z. B. 1280×720 / JPEG 70–80) und **Preview-Hash**. |
+| **Online-Fall** | Preview-Bild + Original-Hash + Preview-Hash + Metadaten + Signatur über IOTA; Attestation enthält **beide Hashes**; Chat zeigt Preview mit Badge „Forensic / Original-Hash verankert“. |
+| **Offline-Fall (Pfad 4)** | Nur kleiner LoRa-Anker (Hash(es) + Zeit/GPS + Signatur), Bilder lokal verschlüsselt puffern; bei Netzrückkehr automatischer Upload und Abgleich gegen den LoRa-Anker. |
+| **UX** | Fortschritt („X von Y Teilen“), nach Erfolg normale Bild-Nachricht + Forensic-Badge; bei Offline zusätzlich Hinweis „später im Tangle verankert“. |
+| **Stufenmodell Beweis** | **Stufe 1 (Default):** GPS + Systemzeit + Signatur + IOTA-Timestamp. **Stufe 2:** + robuste Zeitquelle/NTP-Konsistenz. **Stufe 3 (optional):** Galileo Raw Measurements. **Stufe 4 (optional):** volle OSNMA nur als High-Forensic-Modus (hoher Aufwand). |
+| **Nicht-Ziel (Default)** | Keine harte Pflicht auf OSNMA-Registrierungs-/Spezial-App-Prozesse im Einsatzstandard; zu hoher operativer Aufwand für Rettungs-/NGO-Alltag. |
+| **Abhängigkeiten** | **§ H.15** (Client-IOTA + Queue), **§ H.12** (Source-of-Truth / Offline-Abgleich), bestehende Bildpipeline (Kompakt/LoRa), Path-4-Mechanik. |
+| **Priorität** | **Nach** stabilem R1/Robustheitsdurchlauf; als klar abgegrenzte Scheibe planen (erst Hash-/Attestation-Pipeline, dann UX-Badge, danach optional High-Forensic). |
+
 ---
 
 *Bei Konflikt mit `PROJECT-FOCUS-AND-PRIORITIES.md` gewinnen die **Phasen A/B/C** dort; dieser Fahrplan priorisiert **Inhalt und Reihenfolge** innerhalb der Projektentscheidungen.*
