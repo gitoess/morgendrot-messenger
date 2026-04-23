@@ -39,7 +39,7 @@ export function ChatViewRelaySubmitButton() {
   const [builderSenderSig, setBuilderSenderSig] = useState('')
   const [transportMode, setTransportMode] = useState<MessagingPersistenceMode>('event')
   const [showExpertTransport, setShowExpertTransport] = useState(false)
-  const [showExpertQueueActions, setShowExpertQueueActions] = useState(false)
+  const [expertQueueItemId, setExpertQueueItemId] = useState<string | null>(null)
   const [mnemoInput, setMnemoInput] = useState('')
   const [sessionSignerAddr, setSessionSignerAddr] = useState<string | null>(null)
 
@@ -270,11 +270,27 @@ export function ChatViewRelaySubmitButton() {
   }
 
   const markAnchored = async (it: TxRelayQueueItem) => {
-    const digest = window.prompt('Nachweis (txDigest) aus Submit-Antwort einfügen (0x...)')
-    if (!digest) return
-    markRelayQueueAnchored(it.id, digest.trim())
+    const fromReport = (it.relayReport?.note || '').match(/0x[a-fA-F0-9]{64}/)?.[0]
+    let digest = (fromReport || it.txDigest || '').trim()
+    if (!digest) {
+      const asked = window.prompt('Nachweis (txDigest) einfügen (0x...)')
+      if (!asked) return
+      digest = asked.trim()
+    } else {
+      const ok = window.confirm(`Gefundenen txDigest verwenden?\n\n${digest}`)
+      if (!ok) {
+        const asked = window.prompt('Anderen txDigest einfügen (0x...)', digest)
+        if (!asked) return
+        digest = asked.trim()
+      }
+    }
+    if (!/^0x[a-fA-F0-9]{64}$/.test(digest)) {
+      setMsg('Ungültiger txDigest. Erwartet: 0x + 64 Hex.')
+      return
+    }
+    markRelayQueueAnchored(it.id, digest)
     const inv = {
-      digest: digest.trim(),
+      digest,
       type: 'text' as const,
       status: 'anchored' as const,
       timestamp: Date.now(),
@@ -285,19 +301,18 @@ export function ChatViewRelaySubmitButton() {
     setMsg('Als anchored markiert und Digest ins Inventory übernommen.')
   }
 
-  const updateReport = (it: TxRelayQueueItem) => {
-    const rpcStatusRaw = window.prompt('RPC-Status (submitted | reject | error):', it.relayReport?.rpcStatus ?? 'submitted')
-    if (!rpcStatusRaw) return
-    const rpcStatus = rpcStatusRaw.trim() as 'submitted' | 'reject' | 'error'
-    if (rpcStatus !== 'submitted' && rpcStatus !== 'reject' && rpcStatus !== 'error') {
-      setMsg('Ungültiger RPC-Status.')
-      return
-    }
-    const errorCode = window.prompt('Fehlercode (optional, z. B. ERR_RPC_SUBMIT_FAILED):', it.relayReport?.errorCode ?? '') ?? ''
-    const note = window.prompt('Notiz / RPC-Antwort (optional):', it.relayReport?.note ?? '') ?? ''
-    updateRelayQueueReport(it.id, { rpcStatus, errorCode: errorCode.trim() || undefined, note: note.trim() || undefined })
+  const updateReportSimple = (it: TxRelayQueueItem, rpcStatus: 'submitted' | 'reject' | 'error') => {
+    const needsDetail = rpcStatus === 'reject' || rpcStatus === 'error'
+    const note = needsDetail
+      ? (window.prompt('Kurzgrund (optional):', it.relayReport?.note ?? '') ?? '').trim()
+      : (it.relayReport?.note || '').trim()
+    updateRelayQueueReport(it.id, {
+      rpcStatus,
+      errorCode: rpcStatus === 'submitted' ? undefined : it.relayReport?.errorCode,
+      note: note || undefined,
+    })
     refresh()
-    setMsg('Relay-Protokoll aktualisiert.')
+    setMsg(`Relay-Protokoll: ${rpcStatus}.`)
   }
 
   return (
@@ -311,8 +326,16 @@ export function ChatViewRelaySubmitButton() {
             <DialogTitle>R1 Kurier-Paket (Offline {'->'} Relayer {'->'} Submit)</DialogTitle>
             <DialogDescription>Kurier-Paket für den Offline/Relay-Workflow.</DialogDescription>
           </DialogHeader>
+          <div className="rounded-lg border border-border/70 bg-muted/10 p-3 text-xs">
+            <p className="font-medium text-foreground">Ablauf</p>
+            <ol className="mt-1 list-decimal space-y-1 pl-4 text-muted-foreground">
+              <li>Paket erzeugen (und bei Bedarf Digest signieren).</li>
+              <li>Paket weiterleiten (LoRa/Copy oder Experten-Transport).</li>
+              <li>Nachweis setzen und in den Tangle uebernehmen.</li>
+            </ol>
+          </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Paket erzeugen (offline)</p>
+            <p className="text-xs font-medium text-foreground">Schritt 1: Paket erzeugen</p>
             <div className="grid gap-2 md:grid-cols-2">
               <input
                 value={builderSender}
@@ -357,9 +380,9 @@ export function ChatViewRelaySubmitButton() {
                 Ein Klick auf „Digest signieren“ wendet das Feld unten bei Bedarf an und signiert danach. Gleiche Session wie unter Einstellungen → IDs / Direkt-RPC / Funk.
               </p>
               {sessionSignerAddr ? (
-                <p className="mt-1 font-mono text-[11px] text-foreground">Aktiver Signer: {sessionSignerAddr}</p>
+                <p className="mt-1 font-mono text-[11px] text-emerald-600">Aktiver Signer: {sessionSignerAddr}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-muted-foreground">Kein Session-Signer aktiv.</p>
+                <p className="mt-1 text-[11px] text-amber-600">Kein Session-Signer aktiv.</p>
               )}
               <textarea
                 value={mnemoInput}
@@ -396,6 +419,14 @@ export function ChatViewRelaySubmitButton() {
                 <WandSparkles className="mr-2 h-3.5 w-3.5" />
                 Paket erzeugen
               </Button>
+            </div>
+          </div>
+          <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
+            <p className="text-xs font-medium text-foreground">Schritt 2: Paket weiterleiten</p>
+            <p className="text-[11px] text-muted-foreground">
+              Standard: Copy/LoRa. Optional (Experten): als Klartext-Envelope direkt per Event/Mailbox senden.
+            </p>
+            <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -447,7 +478,7 @@ export function ChatViewRelaySubmitButton() {
             </div>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Paket importieren (vom Funk/Relayer)</p>
+            <p className="text-xs font-medium text-foreground">Optional: Paket von Funk/Relayer uebernehmen</p>
             <textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
@@ -464,6 +495,7 @@ export function ChatViewRelaySubmitButton() {
             {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
           </div>
           <div className="space-y-2">
+            <p className="text-xs font-medium text-foreground">Schritt 3: Nachweis / Tangle</p>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">Noch keine Relay-Envelopes in der lokalen Warteliste.</p>
             ) : (
@@ -486,43 +518,49 @@ export function ChatViewRelaySubmitButton() {
                       {it.relayReport.note ? ` · ${it.relayReport.note}` : ''}
                     </p>
                   ) : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'submitted')}>
+                      Als submitted markieren
+                    </Button>
+                    {it.status !== 'anchored' ? (
+                      <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
+                        <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
+                        In Tangle uebernehmen
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (!window.confirm('Diesen Eintrag aus der lokalen Relay-Warteliste löschen?')) return
+                        removeRelayQueueItem(it.id)
+                        refresh()
+                        setMsg('Eintrag aus der lokalen Warteliste gelöscht.')
+                      }}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
+                      Eintrag löschen
+                    </Button>
+                  </div>
                   <button
                     type="button"
                     className="mt-2 text-xs text-muted-foreground underline underline-offset-2"
-                    onClick={() => setShowExpertQueueActions((v) => !v)}
+                    onClick={() => setExpertQueueItemId((cur) => (cur === it.id ? null : it.id))}
                   >
-                    {showExpertQueueActions ? 'Expertenaktionen ausblenden' : 'Expertenaktionen anzeigen'}
+                    {expertQueueItemId === it.id ? 'Expertenaktionen ausblenden' : 'Expertenaktionen anzeigen'}
                   </button>
-                  {showExpertQueueActions ? (
+                  {expertQueueItemId === it.id ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => updateReport(it)}>
-                        Relayer-Submit protokollieren
+                      <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'reject')}>
+                        Als reject markieren
                       </Button>
-                      {it.status !== 'anchored' ? (
-                        <>
-                          <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
-                            <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
-                            Nachweis abrufen
-                          </Button>
-                          <span className="text-xs text-muted-foreground">
-                            Nach `Submit` liefert der Relayer den txDigest automatisch; hier nur in die lokale Liste übernehmen.
-                          </span>
-                        </>
-                      ) : null}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          if (!window.confirm('Diesen Eintrag aus der lokalen Relay-Warteliste löschen?')) return
-                          removeRelayQueueItem(it.id)
-                          refresh()
-                          setMsg('Eintrag aus der lokalen Warteliste gelöscht.')
-                        }}
-                      >
-                        <Trash2 className="mr-2 h-3.5 w-3.5" />
-                        Eintrag löschen
+                      <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'error')}>
+                        Als error markieren
                       </Button>
+                      <span className="text-xs text-muted-foreground">
+                        Wenn in der Notiz ein 0x-Digest steht, wird er bei „In Tangle uebernehmen“ automatisch vorgeschlagen.
+                      </span>
                     </div>
                   ) : null}
                 </div>
