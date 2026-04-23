@@ -21,6 +21,7 @@ import { logger } from './logger.js';
 import { fetch as undiciFetch, ProxyAgent } from 'undici';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getSelfPaidMessengerTxCount, recordSelfPaidMessengerTxSuccess } from './messenger-gas-milestone.js';
+import { createSignerProvider, resolveSignerMode } from './signer/signer-provider.js';
 
 /**
  * Messenger-Nachricht als Klartext-String (UTF-8), vor AES-GCM. Muss mit Ciphertext-`vector<u8>` in eure PTB passen.
@@ -491,17 +492,6 @@ async function fetchRemoteSignature(signingAddress: string, base64Tx: string): P
     return sig.trim();
 }
 
-type IotaSignerMode = 'sdk' | 'cli' | 'remote';
-type SignerFactoryResult = { mode: IotaSignerMode };
-
-function resolveSignerFactoryMode(): SignerFactoryResult {
-    const raw = String(CFG.SIGNER || '').trim().toLowerCase();
-    if (raw === 'sdk' || raw === 'cli' || raw === 'remote') return { mode: raw };
-    throw new Error(
-        `Signer-Factory: ungültiger SIGNER-Modus "${raw || '(leer)'}". Erlaubt: sdk | cli | remote.`
-    );
-}
-
 async function signWithCli(
     normalizedB64: string,
     signAddress: string,
@@ -858,9 +848,9 @@ export async function signAndExecute(
     }
 
     const execOptions = { options: { showEffects: true as const } };
-    const signerFactory = resolveSignerFactoryMode();
+    const signerMode = resolveSignerMode(CFG.SIGNER);
 
-    if (signerFactory.mode === 'sdk') {
+    if (signerMode === 'sdk') {
         const signer = getSdkSigner();
         if (!signer) throw new Error('Signer-Factory (sdk): Kein Signer gesetzt. Bitte Mnemonic/Secret laden oder Session-Signer aktivieren.');
         const resp = await client.signAndExecuteTransaction({ transaction: txToSign, signer, ...execOptions });
@@ -890,22 +880,30 @@ export async function signAndExecute(
     }
 
     const normalizedB64 = normalizeTxBase64(base64Tx);
-    const useStdinForSign = signerFactory.mode === 'cli' && shouldPassIotaTxViaStdin(normalizedB64.length);
+    const useStdinForSign = signerMode === 'cli' && shouldPassIotaTxViaStdin(normalizedB64.length);
     if (useStdinForSign) logPrepareMode('stdin', normalizedB64.length);
     else logPrepareMode('inline', normalizedB64.length);
 
-    let signature: string;
-    if (signerFactory.mode === 'remote') {
-        signature = await fetchRemoteSignature(signAddress, base64Tx);
-    } else {
-        signature = await signWithCli(normalizedB64, signAddress, signPassword, useStdinForSign);
-    }
+    const signerProvider = createSignerProvider(
+        signerMode === 'remote'
+            ? {
+                mode: 'remote',
+                remoteSignBase64: async (txBytesBase64: string) =>
+                    fetchRemoteSignature(signAddress, txBytesBase64),
+            }
+            : {
+                mode: 'cli',
+                cliSignBase64: async (txBytesBase64: string) =>
+                    signWithCli(txBytesBase64, signAddress, signPassword, useStdinForSign),
+            }
+    );
+    const signature = (await signerProvider.sign(bytes)).signature;
 
     let digest: string | undefined;
     let status: string | undefined;
     let execJson: Record<string, unknown> | undefined;
 
-    if (signerFactory.mode === 'remote') {
+    if (signerMode === 'remote') {
         // Ohne CLI: Execute per SDK (Maschine braucht keine IOTA-CLI). showEffects für gasSummary (Storage Rebate).
         const resp = await client.executeTransactionBlock({
             transactionBlock: base64Tx,

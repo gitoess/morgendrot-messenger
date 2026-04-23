@@ -465,6 +465,52 @@ async function testChainAccessAmounts() {
     }
 }
 
+async function testSignerProviderFactory() {
+    console.log('\n--- signer-provider ---');
+    try {
+        const { resolveSignerMode, createSignerProvider } = await import('../src/signer/signer-provider.js');
+        assert(resolveSignerMode('sdk') === 'sdk', 'resolve sdk');
+        assert(resolveSignerMode('CLI') === 'cli', 'resolve cli case-insensitive');
+        assert(resolveSignerMode('remote') === 'remote', 'resolve remote');
+        assert.throws(() => resolveSignerMode('hsm'), /ungueltiger SIGNER-Modus/i);
+
+        let cliInput = '';
+        const cliProvider = createSignerProvider({
+            mode: 'cli',
+            cliSignBase64: async (txBase64: string) => {
+                cliInput = txBase64;
+                return 'sig-cli';
+            },
+        });
+        const cliOut = await cliProvider.sign(new Uint8Array([1, 2, 3]));
+        assert(cliOut.signature === 'sig-cli', 'cli signature pass-through');
+        assert(cliInput === Buffer.from([1, 2, 3]).toString('base64'), 'cli receives base64 payload');
+
+        let remoteInput = '';
+        const remoteProvider = createSignerProvider({
+            mode: 'remote',
+            remoteSignBase64: async (txBase64: string) => {
+                remoteInput = txBase64;
+                return 'sig-remote';
+            },
+        });
+        const remoteOut = await remoteProvider.sign(new Uint8Array([9, 8, 7]));
+        assert(remoteOut.signature === 'sig-remote', 'remote signature pass-through');
+        assert(remoteInput === Buffer.from([9, 8, 7]).toString('base64'), 'remote receives base64 payload');
+
+        assert.throws(() => createSignerProvider({ mode: 'cli' }), /Adapter fehlt/i, 'cli adapter required');
+        assert.throws(
+            () => createSignerProvider({ mode: 'remote' }),
+            /Adapter fehlt/i,
+            'remote adapter required'
+        );
+
+        ok('resolveSignerMode + createSignerProvider');
+    } catch (e) {
+        fail('signer-provider', e);
+    }
+}
+
 // --- Messenger-Gas-Milestone (State-Datei über MESSENGER_GAS_STATE_FILE, ohne chdir) ---
 async function testMessengerGasMilestone() {
     console.log('\n--- messenger-gas-milestone ---');
@@ -918,6 +964,7 @@ async function main() {
     await testReadCommandList();
     await testChainAccessValidation();
     await testChainAccessAmounts();
+    await testSignerProviderFactory();
     await testConfigDisplay();
     await testInitialProfileProvision();
     await testEinsatzRoleTemplates();
