@@ -470,11 +470,17 @@ async function fetchRemoteSignature(signingAddress: string, base64Tx: string): P
     if (!url) throw new Error('REMOTE_SIGNER_URL fehlt (SIGNER=remote).');
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (CFG.REMOTE_SIGNER_TOKEN) headers['Authorization'] = `Bearer ${CFG.REMOTE_SIGNER_TOKEN}`;
-    const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ address: signingAddress, txBytesBase64: base64Tx }),
-    });
+    let res: Response;
+    try {
+        res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ address: signingAddress, txBytesBase64: base64Tx }),
+        });
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Remote-Signer nicht erreichbar (${url}): ${msg}`);
+    }
     if (!res.ok) throw new Error(`Remote-Signer: ${res.status} ${res.statusText}`);
     const json = (await res.json()) as Record<string, unknown>;
     const sig =
@@ -483,6 +489,80 @@ async function fetchRemoteSignature(signingAddress: string, base64Tx: string): P
         ((json?.result as Record<string, unknown>)?.signature as string);
     if (!sig || typeof sig !== 'string') throw new Error('Remote-Signer: keine Signatur in Antwort.');
     return sig.trim();
+}
+
+type IotaSignerMode = 'sdk' | 'cli' | 'remote';
+type SignerFactoryResult = { mode: IotaSignerMode };
+
+function resolveSignerFactoryMode(): SignerFactoryResult {
+    const raw = String(CFG.SIGNER || '').trim().toLowerCase();
+    if (raw === 'sdk' || raw === 'cli' || raw === 'remote') return { mode: raw };
+    throw new Error(
+        `Signer-Factory: ungültiger SIGNER-Modus "${raw || '(leer)'}". Erlaubt: sdk | cli | remote.`
+    );
+}
+
+async function signWithCli(
+    normalizedB64: string,
+    signAddress: string,
+    signPassword: string | undefined,
+    useStdinForSign: boolean
+): Promise<string> {
+    let sig: string | undefined;
+
+    const runCliSignJson = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
+        const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
+        const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
+        const signJsonRes = await runIotaCli(
+            ['client', 'sign', '--json', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
+            stdinBody
+        );
+        const signJson = tryParseJson<Record<string, unknown>>(signJsonRes.stdout.trim());
+        sig =
+            pickString(signJson, ['iota_signature', 'iotaSignature', 'signature']) ||
+            pickString((signJson?.result as Record<string, unknown>) || {}, ['iota_signature', 'iotaSignature', 'signature']);
+    };
+
+    const runCliSignText = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
+        const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
+        const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
+        const signTextRes = await runIotaCli(
+            ['client', 'sign', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
+            stdinBody
+        );
+        const m =
+            signTextRes.stdout.match(/iota_signature\s*│\s*(.+?)\s*│/) ||
+            signTextRes.stdout.match(/iota_signature\s+(.+)\s*/);
+        sig = m?.[1]?.trim();
+    };
+
+    try {
+        await runCliSignJson();
+    } catch (signErr: unknown) {
+        if (isIotaVersionMismatch(signErr))
+            throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
+        if (!useStdinForSign && isEnametoolongSpawnError(signErr)) {
+            logger.info('morg.iota.sign: ENAMETOOLONG bei Inline-Spawn, wiederhole mit --data - + stdin.');
+            await runCliSignJson({ forceTxStdin: true });
+        } else {
+            throw signErr;
+        }
+    }
+    if (!sig) {
+        try {
+            await runCliSignText();
+        } catch (signErr2: unknown) {
+            if (isIotaVersionMismatch(signErr2))
+                throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
+            if (!useStdinForSign && isEnametoolongSpawnError(signErr2)) {
+                await runCliSignText({ forceTxStdin: true });
+            } else {
+                throw signErr2;
+            }
+        }
+    }
+    if (!sig) throw new Error('Signatur-Fehler (CLI).');
+    return sig;
 }
 
 /**
@@ -778,10 +858,11 @@ export async function signAndExecute(
     }
 
     const execOptions = { options: { showEffects: true as const } };
+    const signerFactory = resolveSignerFactoryMode();
 
-    if (CFG.SIGNER === 'sdk') {
+    if (signerFactory.mode === 'sdk') {
         const signer = getSdkSigner();
-        if (!signer) throw new Error('SIGNER=sdk: Kein Signer gesetzt (Mnemonic eingeben oder setSdkSigner aufrufen).');
+        if (!signer) throw new Error('Signer-Factory (sdk): Kein Signer gesetzt. Bitte Mnemonic/Secret laden oder Session-Signer aktivieren.');
         const resp = await client.signAndExecuteTransaction({ transaction: txToSign, signer, ...execOptions });
         const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string })?.effects;
         const createdObjectIds = parseCreatedObjectIds(effects);
@@ -809,74 +890,22 @@ export async function signAndExecute(
     }
 
     const normalizedB64 = normalizeTxBase64(base64Tx);
-    const useStdinForSign = CFG.SIGNER === 'cli' && shouldPassIotaTxViaStdin(normalizedB64.length);
+    const useStdinForSign = signerFactory.mode === 'cli' && shouldPassIotaTxViaStdin(normalizedB64.length);
     if (useStdinForSign) logPrepareMode('stdin', normalizedB64.length);
     else logPrepareMode('inline', normalizedB64.length);
 
     let signature: string;
-    if (CFG.SIGNER === 'remote' && CFG.REMOTE_SIGNER_URL) {
+    if (signerFactory.mode === 'remote') {
         signature = await fetchRemoteSignature(signAddress, base64Tx);
     } else {
-        let sig: string | undefined;
-
-        const runCliSignJson = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
-            const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
-            const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
-            const signJsonRes = await runIotaCli(
-                ['client', 'sign', '--json', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
-                stdinBody
-            );
-            const signJson = tryParseJson<Record<string, unknown>>(signJsonRes.stdout.trim());
-            sig =
-                pickString(signJson, ['iota_signature', 'iotaSignature', 'signature']) ||
-                pickString((signJson?.result as Record<string, unknown>) || {}, ['iota_signature', 'iotaSignature', 'signature']);
-        };
-
-        const runCliSignText = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
-            const txOnStdinPipe = opts?.forceTxStdin === true || useStdinForSign;
-            const stdinBody = buildIotaCliSignStdin(signPassword, normalizedB64, txOnStdinPipe);
-            const signTextRes = await runIotaCli(
-                ['client', 'sign', '--address', signAddress, '--data', txOnStdinPipe ? '-' : normalizedB64],
-                stdinBody
-            );
-            const m =
-                signTextRes.stdout.match(/iota_signature\s*│\s*(.+?)\s*│/) ||
-                signTextRes.stdout.match(/iota_signature\s+(.+)\s*/);
-            sig = m?.[1]?.trim();
-        };
-
-        try {
-            await runCliSignJson();
-        } catch (signErr: unknown) {
-            if (isIotaVersionMismatch(signErr)) throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
-            if (!useStdinForSign && isEnametoolongSpawnError(signErr)) {
-                logger.info('morg.iota.sign: ENAMETOOLONG bei Inline-Spawn, wiederhole mit --data - + stdin.');
-                await runCliSignJson({ forceTxStdin: true });
-            } else {
-                throw signErr;
-            }
-        }
-        if (!sig) {
-            try {
-                await runCliSignText();
-            } catch (signErr2: unknown) {
-                if (isIotaVersionMismatch(signErr2)) throw new Error('IOTA CLI und Node-Version stimmen nicht überein (Client/Server api version mismatch). Bitte IOTA CLI auf gleiche Version wie den RPC-Server aktualisieren.');
-                if (!useStdinForSign && isEnametoolongSpawnError(signErr2)) {
-                    await runCliSignText({ forceTxStdin: true });
-                } else {
-                    throw signErr2;
-                }
-            }
-        }
-        if (!sig) throw new Error('Signatur-Fehler (CLI).');
-        signature = sig;
+        signature = await signWithCli(normalizedB64, signAddress, signPassword, useStdinForSign);
     }
 
     let digest: string | undefined;
     let status: string | undefined;
     let execJson: Record<string, unknown> | undefined;
 
-    if (CFG.SIGNER === 'remote' && CFG.REMOTE_SIGNER_URL) {
+    if (signerFactory.mode === 'remote') {
         // Ohne CLI: Execute per SDK (Maschine braucht keine IOTA-CLI). showEffects für gasSummary (Storage Rebate).
         const resp = await client.executeTransactionBlock({
             transactionBlock: base64Tx,
