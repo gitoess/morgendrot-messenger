@@ -195,3 +195,71 @@ R1 gilt als testbereit fuer Stage-2-Handychecks, wenn:
 10. Logeintrag in `docs/TEST-RUN-LOGBOOK.md`.
 
 Stand: 2026-04-22.
+
+---
+
+## 12) Kompletter R1-Einmaldurchlauf (alle Funktionen, in Reihenfolge)
+
+Ziel: Ein Testlauf, in dem wirklich jede relevante R1-Funktion mindestens einmal benutzt wird.
+
+### A. Vorbereitung
+
+1. [ ] Messenger starten, R1-Dialog oeffnen.
+2. [ ] Gueltige Senderadresse, Empfaengeradresse und Test-Payload bereitlegen.
+3. [ ] Session-Signer im RAM anwenden (fuer Signaturtests).
+4. [ ] Optional: Vault-Autosave fuer Digests einschalten (wenn mitgeprueft werden soll).
+
+### B. Builder + Signatur + Export
+
+5. [ ] Ungueltige Senderadresse testen -> klare Fehlermeldung.
+6. [ ] Gueltige Senderadresse setzen.
+7. [ ] Leere Payload testen -> klare Fehlermeldung.
+8. [ ] Gueltige Payload setzen.
+9. [ ] `Digest jetzt signieren` ohne Signer testen (falls moeglich) -> klare Meldung.
+10. [ ] Mit aktivem Signer `Digest jetzt signieren` -> `senderSig` wird gesetzt.
+11. [ ] `Paket erzeugen` -> Envelope entsteht, `mode=submit_ready`.
+12. [ ] `JSON kopieren` pruefen.
+13. [ ] `Paket teilen (LoRa/Copy)` pruefen.
+14. [ ] Payload leicht aendern, erneut erzeugen -> `payloadHash` aendert sich.
+15. [ ] Erneut erzeugen ohne Payload-Aenderung -> `nonce` ist neu/eindeutig.
+
+### C. Import + Queue
+
+16. [ ] Ungueltiges JSON im Import testen -> Fehler.
+17. [ ] Envelope mit falscher `version` testen -> Fehler.
+18. [ ] Envelope mit `mode=sponsored` testen -> sauber abgelehnt.
+19. [ ] Gueltigen Envelope importieren -> Queue-Eintrag entsteht.
+20. [ ] Pruefen: Builder-Felder werden aus Import uebernommen.
+21. [ ] Platzhalter-Signatur (`UNSIGNED_PLACEHOLDER`) importieren -> `draft_unsigned`.
+
+### D. Expertenbereich + Relayer-Protokoll + Anchoring
+
+22. [ ] Expertenbereich einblenden.
+23. [ ] `Relayer-Submit protokollieren` mit ungueltigem Status testen -> Fehler.
+24. [ ] `Relayer-Submit protokollieren` mit `submitted` setzen.
+25. [ ] Optional `errorCode` + `note` setzen und Anzeige pruefen.
+26. [ ] `Nachweis abrufen` mit ungueltigem Digest testen -> keine stille Akzeptanz.
+27. [ ] `Nachweis abrufen` mit gueltigem Test-`txDigest` -> Status wird `anchored`.
+28. [ ] Pruefen: Digest erscheint im Tangle-Inventory.
+29. [ ] Falls aktiviert: Vault-Autosave fuer neuen Digest pruefen.
+
+### E. Experten-Transport Event/Mailbox
+
+30. [ ] Ohne gueltigen Empfaenger einen Experten-Transport ausloesen -> klare Fehlermeldung.
+31. [ ] Mit gueltigem Empfaenger + Envelope: `Event`-Transport testen.
+32. [ ] Mit gueltigem Empfaenger + Envelope: `Mailbox`-Transport testen.
+
+### F. Persistenz + Robustheit + Cleanup
+
+33. [ ] Dialog schliessen/neu oeffnen -> Queue noch da.
+34. [ ] Seite reloaden -> Queue noch da.
+35. [ ] `Eintrag loeschen` testen inkl. Abbruch und Bestaetigung.
+36. [ ] Sehr grosse Payload testen -> kontrolliertes Verhalten (kein Freeze).
+37. [ ] Ergebnis in `docs/TEST-RUN-LOGBOOK.md` eintragen.
+
+### G. Abschlusskriterium
+
+Der Lauf gilt als vollstaendig, wenn:
+- [ ] mindestens ein kompletter Happy-Path (Builder -> Signatur -> Import -> Queue -> Anchoring -> Inventory) durch ist,
+- [ ] mindestens ein Fehlerpfad dokumentiert ist (`draft_unsigned`, invalid status oder invalid digest),
+- [ ] Event- und Mailbox-Expertenpfad jeweils einmal getestet wurden.

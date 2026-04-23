@@ -128,19 +128,22 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
   const loadErrorBanner = loadError ? (
     (() => {
       const formatted = formatInboxLoadError(loadError)
+      const showOfflineDetail = formatted.headline === INBOX_BASIS_OFFLINE_HEADLINE
       return (
         <div className="p-6 pb-3">
           <div className="mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-5 text-center dark:bg-amber-950/25">
             <p className="text-base font-semibold text-amber-950 dark:text-amber-100">{formatted.headline}</p>
-            {formatted.headline === INBOX_BASIS_OFFLINE_HEADLINE ? (
+            {showOfflineDetail ? (
               <p className="mt-2 text-sm leading-snug text-amber-900/90 dark:text-amber-100/90">
                 Posteingang von der Basis nicht lesbar. Bereits empfangene Funk-Nachrichten erscheinen weiter unten, sobald
                 vorhanden. Technische Meldung:
               </p>
             ) : null}
-            <p className="mt-2 break-all text-sm text-muted-foreground">{formatted.detail}</p>
+            {showOfflineDetail ? (
+              <p className="mt-2 break-all text-sm text-muted-foreground">{formatted.detail}</p>
+            ) : null}
             <p className="mt-4 text-xs text-muted-foreground">
-              Prüfe: Backend läuft, MAILBOX_ID und PACKAGE_ID in .env, ggf. Tor/SOCKS. Danach „Aktualisieren“.
+              Wenn nicht alle Nachrichten sichtbar sind, bitte „Aktualisieren“.
             </p>
           </div>
         </div>
