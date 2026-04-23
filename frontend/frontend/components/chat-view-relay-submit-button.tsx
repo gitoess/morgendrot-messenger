@@ -211,9 +211,11 @@ export function ChatViewRelaySubmitButton() {
         if (!pw) return
         const r = await revealVaultSignerImport(pw)
         if (!r.ok || !r.signerImport?.trim()) {
-          const m = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+          const base = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+          const m = `${base} Bitte unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.`
           setMsg(m)
           setSignerHint(m)
+          setShowManualSignerInput(true)
           return
         }
         const applied = applyDirectIotaMnemonicSession(r.signerImport)
@@ -268,9 +270,11 @@ export function ChatViewRelaySubmitButton() {
     if (!pw) return
     const r = await revealVaultSignerImport(pw)
     if (!r.ok || !r.signerImport?.trim()) {
-      const m = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+      const base = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+      const m = `${base} Bitte unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.`
       setMsg(m)
       setSignerHint(m)
+      setShowManualSignerInput(true)
       return
     }
     const applied = applyDirectIotaMnemonicSession(r.signerImport)
