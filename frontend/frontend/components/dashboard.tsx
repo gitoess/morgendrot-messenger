@@ -214,7 +214,8 @@ function isPlausibleSdkImport(s: string): boolean {
   if (countSignerWords(t) >= 12) return true
   const hex = t.replace(/^0x/i, '').replace(/\s+/g, '')
   if (/^[a-fA-F0-9]{64}$/i.test(hex)) return true
-  if (!/\s/.test(t) && t.length >= 60 && /^[a-z]{2,10}1[02-9ac-hj-np-z]+$/i.test(t)) return true
+  // Bech32-Secret (z. B. iotaprivkey...): HRP bewusst großzügig akzeptieren, final validiert Backend.
+  if (!/\s/.test(t) && t.length >= 60 && /^[a-z]{2,30}1[02-9ac-hj-np-z]+$/i.test(t)) return true
   return false
 }
 
