@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { fetchStatus } from '@/frontend/lib/api/status'
 import { sendMessage } from '@/frontend/lib/api/chat-commands'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import { revealVaultSignerImport } from '@/frontend/lib/api/vault-signer-import'
 import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
@@ -44,6 +45,8 @@ export function ChatViewRelaySubmitButton() {
   const [mnemoInput, setMnemoInput] = useState('')
   const [showManualSignerInput, setShowManualSignerInput] = useState(false)
   const [sessionSignerAddr, setSessionSignerAddr] = useState<string | null>(null)
+  const [signerHint, setSignerHint] = useState<string | null>(null)
+  const [signerMode, setSignerMode] = useState<string>('unknown')
 
   const items = useMemo(() => {
     void refreshTick
@@ -156,6 +159,7 @@ export function ChatViewRelaySubmitButton() {
 
   const signDigestMerged = async () => {
     setMsg(null)
+    setSessionSignerAddr(getDirectIotaSessionSignerAddress())
     const sender = builderSender.trim().toLowerCase()
     if (!/^0x[a-fA-F0-9]{64}$/.test(sender)) {
       setMsg('Bitte zuerst eine gültige sender-Adresse setzen.')
@@ -169,32 +173,69 @@ export function ChatViewRelaySubmitButton() {
     let signer = getDirectIotaSessionSigner() as unknown as {
       signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
     } | null
+    if ((!signer || typeof signer.signPersonalMessage !== 'function') && signerMode === 'cli' && !mnemoInput.trim()) {
+      const m =
+        'SIGNER=cli aktiv: Automatischer Tresor-Import ist deaktiviert. Bitte „Anderen Signer verwenden“ öffnen oder als unsignierten Entwurf fortfahren.'
+      setMsg(m)
+      setSignerHint(m)
+      return
+    }
     if (!signer || typeof signer.signPersonalMessage !== 'function') {
       const rawMn = mnemoInput.trim()
-      if (!rawMn) {
-        setMsg(
-          'Kein Session-Signer im RAM. Standard: aktiven Signer nutzen. Optional unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.'
+      if (rawMn) {
+        const applied = applyDirectIotaMnemonicSession(mnemoInput)
+        if (!applied.ok) {
+          setMsg(applied.error)
+          setSignerHint(applied.error)
+          return
+        }
+        setSessionSignerAddr(applied.address)
+        setMnemoInput('')
+        setSignerHint(`Signer geladen: ${applied.address.slice(0, 10)}…`)
+        signer = getDirectIotaSessionSigner() as unknown as {
+          signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
+        } | null
+      } else {
+        const wantVault = window.confirm(
+          'Kein aktiver Signer in dieser Session.\n\nJetzt aus dem Tresor laden und danach direkt signieren?'
         )
-        return
+        if (!wantVault) {
+          const m =
+            'Kein aktiver Signer gefunden. Klicke „Signer aus Tresor laden“ oder nutze optional „Anderen Signer verwenden“.'
+          setMsg(m)
+          setSignerHint(m)
+          return
+        }
+        const pw = window.prompt('Vault-Passwort:')
+        if (!pw) return
+        const r = await revealVaultSignerImport(pw)
+        if (!r.ok || !r.signerImport?.trim()) {
+          const m = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+          setMsg(m)
+          setSignerHint(m)
+          return
+        }
+        const applied = applyDirectIotaMnemonicSession(r.signerImport)
+        if (!applied.ok) {
+          setMsg(applied.error)
+          setSignerHint(applied.error)
+          return
+        }
+        setSessionSignerAddr(applied.address)
+        setSignerHint(`Signer geladen: ${applied.address.slice(0, 10)}…`)
+        signer = getDirectIotaSessionSigner() as unknown as {
+          signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
+        } | null
       }
-      const applied = applyDirectIotaMnemonicSession(mnemoInput)
-      if (!applied.ok) {
-        setMsg(applied.error)
-        return
-      }
-      setSessionSignerAddr(applied.address)
-      setMnemoInput('')
-      signer = getDirectIotaSessionSigner() as unknown as {
-        signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
-      } | null
       if (!signer || typeof signer.signPersonalMessage !== 'function') {
         setMsg('Signer konnte nicht geladen werden.')
+        setSignerHint('Signer konnte nicht geladen werden.')
         return
       }
     }
     const signerAddr = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
     if (signerAddr && signerAddr !== sender) {
-      setMsg('Signer-Adresse passt nicht zu sender. Bitte sender oder Session-Signer korrigieren.')
+      setMsg(`Signer-Adresse passt nicht zum Sender.\nSigner: ${signerAddr}\nSender: ${sender}`)
       return
     }
     try {
@@ -214,6 +255,36 @@ export function ChatViewRelaySubmitButton() {
     }
   }
 
+  const loadSignerFromVault = async () => {
+    if (signerMode === 'cli') {
+      const m =
+        'Signer-Modus ist CLI. „Signer aus Tresor laden“ geht nur mit SIGNER=sdk. Bitte „Anderen Signer verwenden“ nutzen oder unsignierten Entwurf erlauben.'
+      setMsg(m)
+      setSignerHint(m)
+      return
+    }
+    const pw = window.prompt('Vault-Passwort eingeben, um den Signer in diese Session zu laden:')
+    if (!pw) return
+    const r = await revealVaultSignerImport(pw)
+    if (!r.ok || !r.signerImport?.trim()) {
+      const m = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+      setMsg(m)
+      setSignerHint(m)
+      return
+    }
+    const applied = applyDirectIotaMnemonicSession(r.signerImport)
+    if (!applied.ok) {
+      setMsg(applied.error)
+      setSignerHint(applied.error)
+      return
+    }
+    setSessionSignerAddr(applied.address)
+    setMnemoInput('')
+    const okMsg = `Signer geladen: ${applied.address.slice(0, 10)}…`
+    setMsg(okMsg)
+    setSignerHint(okMsg)
+  }
+
   const openR1Dialog = useCallback(() => {
     const pf = takeR1CourierPrefillPayload()
     if (pf) {
@@ -224,6 +295,11 @@ export function ChatViewRelaySubmitButton() {
     void fetchStatus().then((s) => {
       if ('network' in s && typeof s.network === 'string' && s.network.trim()) {
         setBuilderNetworkId(s.network.trim())
+      }
+      if ('signer' in s && typeof s.signer === 'string' && s.signer.trim()) {
+        setSignerMode(s.signer.trim().toLowerCase())
+      } else {
+        setSignerMode('unknown')
       }
     })
     setSessionSignerAddr(getDirectIotaSessionSignerAddress())
@@ -353,8 +429,9 @@ export function ChatViewRelaySubmitButton() {
             <p className="font-medium text-foreground">Ablauf</p>
             <ol className="mt-1 list-decimal space-y-1 pl-4 text-muted-foreground">
               <li>Paket erzeugen (und bei Bedarf Digest signieren).</li>
-              <li>Paket weiterleiten (LoRa/Copy oder Experten-Transport).</li>
-              <li>Nachweis setzen und in den Tangle uebernehmen.</li>
+              <li>Paket lokal übernehmen (Queue) und Relayer-Ergebnis setzen.</li>
+              <li>Nachweis in den Tangle übernehmen.</li>
+              <li>Paket optional weitergeben (LoRa/Copy/Export).</li>
             </ol>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
@@ -366,6 +443,22 @@ export function ChatViewRelaySubmitButton() {
                 placeholder="sender (0x...)"
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-mono"
               />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const addr = (getDirectIotaSessionSignerAddress() || '').trim()
+                  if (!addr) {
+                    setMsg('Kein aktiver Signer vorhanden.')
+                    return
+                  }
+                  setBuilderSender(addr)
+                  setMsg('Sender auf aktive Signer-Adresse gesetzt.')
+                }}
+              >
+                Sender = aktiver Signer
+              </Button>
               <input
                 value={builderRecipient}
                 onChange={(e) => setBuilderRecipient(e.target.value)}
@@ -399,9 +492,17 @@ export function ChatViewRelaySubmitButton() {
             />
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
               <p className="text-xs font-medium text-foreground">Session-Signer (nur RAM)</p>
+              <div className="mt-1 inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-[11px] text-foreground">
+                Signer-Modus: {signerMode === 'cli' ? 'Legacy CLI' : signerMode === 'sdk' ? 'SDK (empfohlen)' : 'unbekannt'}
+              </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Standard: aktiver Session-Signer wird automatisch genutzt. Nur falls für eine andere Adresse signiert werden soll, unten manuell eingeben.
               </p>
+              {signerMode === 'cli' ? (
+                <p className="mt-1 text-[11px] text-amber-600">
+                  Diese Instanz läuft mit SIGNER=cli. Tresor-Import für den Signer ist hier nicht verfügbar.
+                </p>
+              ) : null}
               {sessionSignerAddr ? (
                 <p className="mt-1 font-mono text-[11px] text-emerald-600">Aktiver Signer: {sessionSignerAddr}</p>
               ) : (
@@ -433,6 +534,15 @@ export function ChatViewRelaySubmitButton() {
                   type="button"
                   size="sm"
                   variant="outline"
+                  onClick={() => void loadSignerFromVault()}
+                  disabled={signerMode === 'cli'}
+                >
+                  Signer aus Tresor laden
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
                     clearDirectIotaSessionSigner()
                     setSessionSignerAddr(null)
@@ -453,6 +563,11 @@ export function ChatViewRelaySubmitButton() {
                   unsignierten Entwurf erlauben
                 </label>
               </div>
+              {signerHint ? (
+                <p className="mt-2 rounded-md border border-border/60 bg-background px-2 py-1.5 text-[11px] text-foreground">
+                  {signerHint}
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => void buildEnvelope()}>
@@ -472,11 +587,13 @@ export function ChatViewRelaySubmitButton() {
                 className="text-xs text-muted-foreground underline underline-offset-2"
                 onClick={() => setShowExpertTransport((v) => !v)}
               >
-                {showExpertTransport ? 'Experten-Transport ausblenden' : 'Experten-Transport anzeigen (Event/Mailbox)'}
+                {showExpertTransport
+                  ? 'Experten-Transport ausblenden'
+                  : 'Experten-Transport anzeigen (nur Debug: Envelope als Chat-Text)'}
               </button>
               {showExpertTransport ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-foreground">Alternativ als Klartext-Envelope direkt senden:</span>
+                  <span className="font-medium text-foreground">Nur Debug/Bypass: Envelope als Klartext-Chat senden:</span>
                   <select
                     value={transportMode}
                     onChange={(e) => setTransportMode((e.target.value as MessagingPersistenceMode) || 'event')}
@@ -535,7 +652,7 @@ export function ChatViewRelaySubmitButton() {
                   ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'submitted')}>
-                      Als submitted markieren
+                      Relayer: erfolgreich gesendet
                     </Button>
                     {it.status !== 'anchored' ? (
                       <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
