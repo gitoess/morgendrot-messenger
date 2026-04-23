@@ -54,6 +54,8 @@ export type ApiStatus = {
   loraProgressiveEncode?: boolean
   /** cli | sdk | remote – für Entsperr-Dialog (z. B. Mnemonic-Zusatzfeld). */
   signer?: string
+  /** Herkunft der aktiven Signer-Konfiguration (env oder Runtime-Datei). */
+  signerConfigSource?: 'env' | 'runtime'
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
   /** false: API-Port liefert keine statische ui/index.html. */

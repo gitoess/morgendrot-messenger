@@ -13,6 +13,7 @@ import {
     getConfigDisplay,
     getConnectAddresses,
     setEnvKey,
+    setRuntimeConfigKey,
     assignDeviceRoleInEnv,
     savePackageIdToFile,
     readPackageIdHistory,
@@ -35,6 +36,7 @@ import {
     resolveMessengerExportPackageId,
     buildStandaloneSmartphoneHandoffEnv,
     buildStandaloneSmartphoneHandoffReadme,
+    getSignerConfigSource,
 } from './config.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
@@ -521,6 +523,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 dashboardPort?: number;
                 compactImageEncode?: boolean;
                 loraProgressiveEncode?: boolean;
+                signerConfigSource?: 'env' | 'runtime';
             } = {
                 backendRunning: true,
                 locked: !!_resolvePassword,
@@ -564,6 +567,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 useMailbox: CFG.USE_MAILBOX,
                 mailboxConfigured,
                 signer: CFG.SIGNER,
+                signerConfigSource: getSignerConfigSource(),
                 messengerCreditsConfigured: !!credLooksValid,
                 ...(messengerCredits !== undefined && { messengerCredits }),
                 ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
@@ -1175,7 +1179,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 403, { ok: false, error: 'Hierarchie (ROLE, …) nur als Boss/Kommandant/Arbeiter änderbar. Für Test: .env um ALLOW_TEST_ROLE_OVERRIDE=true ergänzen, Backend neu starten.' }, cors);
                         return;
                     }
-                    const result = setEnvKey(key, value);
+                    const result = key.toUpperCase() === 'SIGNER'
+                        ? setRuntimeConfigKey('SIGNER', value)
+                        : setEnvKey(key, value);
                     sendJson(res, 200, result, cors);
                 } catch (e: any) {
                     sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);

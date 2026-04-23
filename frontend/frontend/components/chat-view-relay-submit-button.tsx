@@ -47,6 +47,7 @@ export function ChatViewRelaySubmitButton() {
   const [sessionSignerAddr, setSessionSignerAddr] = useState<string | null>(null)
   const [signerHint, setSignerHint] = useState<string | null>(null)
   const [signerMode, setSignerMode] = useState<string>('unknown')
+  const [signerConfigSource, setSignerConfigSource] = useState<'env' | 'runtime' | 'unknown'>('unknown')
 
   const items = useMemo(() => {
     void refreshTick
@@ -301,6 +302,11 @@ export function ChatViewRelaySubmitButton() {
       } else {
         setSignerMode('unknown')
       }
+      if ('signerConfigSource' in s && (s.signerConfigSource === 'env' || s.signerConfigSource === 'runtime')) {
+        setSignerConfigSource(s.signerConfigSource)
+      } else {
+        setSignerConfigSource('unknown')
+      }
     })
     setSessionSignerAddr(getDirectIotaSessionSignerAddress())
     refresh()
@@ -495,6 +501,9 @@ export function ChatViewRelaySubmitButton() {
               <div className="mt-1 inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-[11px] text-foreground">
                 Signer-Modus: {signerMode === 'cli' ? 'Legacy CLI' : signerMode === 'sdk' ? 'SDK (empfohlen)' : 'unbekannt'}
               </div>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Quelle: {signerConfigSource === 'runtime' ? 'Runtime-Konfig' : signerConfigSource === 'env' ? '.env' : 'unbekannt'}
+              </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
                 Standard: aktiver Session-Signer wird automatisch genutzt. Nur falls für eine andere Adresse signiert werden soll, unten manuell eingeben.
               </p>

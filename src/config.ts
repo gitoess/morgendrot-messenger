@@ -315,6 +315,9 @@ function applyEnvToCfg(key: string, value: string): void {
     const v = value.trim();
     const truthy = (x: string) => x === 'true' || x === '1' || x === 'yes';
     switch (key) {
+        case 'SIGNER':
+            if (v === 'sdk' || v === 'cli' || v === 'remote') CFG.SIGNER = v;
+            break;
         case 'MY_ADDRESS': CFG.MY_ADDRESS = v; break;
         case 'PARTNER_ADDRESS': CFG.PARTNER_ADDRESS = v; break;
         case 'PARTNER_ADDRESSES': CFG.PARTNER_ADDRESSES = v.split(',').map((s) => s.trim()).filter(Boolean); break;
@@ -532,6 +535,75 @@ export function parseVerifiedIotaNamePackageIds(raw: string | undefined): string
         .filter((s) => /^0x[a-fA-F0-9]{64}$/.test(s))
         .map((s) => s.toLowerCase());
     return [...new Set(ids)];
+}
+
+type SignerMode = 'cli' | 'sdk' | 'remote';
+type RuntimeConfig = { signer?: SignerMode };
+
+const RUNTIME_CONFIG_PATH = path.resolve(process.cwd(), process.env.RUNTIME_CONFIG_FILE?.trim() || '.morgendrot-runtime-config.json');
+const RUNTIME_CONFIG_ALLOWED_SIGNERS: SignerMode[] = ['cli', 'sdk', 'remote'];
+let runtimeSignerSource: 'env' | 'runtime' = 'env';
+
+function parseRuntimeSigner(raw: unknown): SignerMode | undefined {
+    const v = String(raw ?? '').trim().toLowerCase();
+    if ((RUNTIME_CONFIG_ALLOWED_SIGNERS as string[]).includes(v)) return v as SignerMode;
+    return undefined;
+}
+
+function readRuntimeConfig(): RuntimeConfig {
+    try {
+        if (!fs.existsSync(RUNTIME_CONFIG_PATH)) return {};
+        const raw = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
+        const parsed = JSON.parse(raw) as { signer?: unknown };
+        const signer = parseRuntimeSigner(parsed.signer);
+        return signer ? { signer } : {};
+    } catch {
+        return {};
+    }
+}
+
+function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; path?: string } {
+    try {
+        const payload: RuntimeConfig = {};
+        if (cfg.signer) payload.signer = cfg.signer;
+        fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
+        return { ok: true, path: RUNTIME_CONFIG_PATH };
+    } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+    }
+}
+
+function applyRuntimeConfigToCfg(): void {
+    const runtime = readRuntimeConfig();
+    if (runtime.signer) {
+        CFG.SIGNER = runtime.signer;
+        runtimeSignerSource = 'runtime';
+    } else {
+        runtimeSignerSource = 'env';
+    }
+}
+
+export function setRuntimeConfigKey(key: string, value: string): { ok: boolean; error?: string; path?: string; value?: string } {
+    const k = String(key || '').trim().toUpperCase();
+    const v = String(value ?? '').trim();
+    if (k !== 'SIGNER') {
+        return { ok: false, error: `Runtime key ${k || '(leer)'} wird noch nicht unterstützt.` };
+    }
+    const signer = parseRuntimeSigner(v);
+    if (!signer) {
+        return { ok: false, error: 'SIGNER muss einer von: cli | sdk | remote sein.' };
+    }
+    const next = readRuntimeConfig();
+    next.signer = signer;
+    const written = writeRuntimeConfig(next);
+    if (!written.ok) return written;
+    CFG.SIGNER = signer;
+    runtimeSignerSource = 'runtime';
+    return { ok: true, path: written.path, value: signer };
+}
+
+export function getSignerConfigSource(): 'env' | 'runtime' {
+    return runtimeSignerSource;
 }
 
 export const CFG = {
@@ -954,6 +1026,8 @@ export const CFG = {
     /** Bei true: Prompt (System + User) und Raw-Ollama-Response in die Logs (logger.info). Für Debug von Template-Müll. */
     AI_DEBUG_OLLAMA: envBool('AI_DEBUG_OLLAMA', false),
 };
+
+applyRuntimeConfigToCfg();
 
 /**
  * Einheitliche Bedingung: Messenger nutzt Mailbox-Move-Pfad (HsKey/MsgKey im Mailbox-Objekt) statt reinem Event-Pfad.
