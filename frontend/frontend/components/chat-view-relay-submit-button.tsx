@@ -399,7 +399,7 @@ export function ChatViewRelaySubmitButton() {
     if (rpcStatus === 'submitted') {
       const digestInput =
         window.prompt(
-          'txDigest (optional, wenn Relayer-Submit bereits eine TX ausgegeben hat):',
+          'Optional: txDigest einfügen, falls der Relayer ihn bereits geliefert hat (0x...).',
           it.txDigest || ''
         ) ?? ''
       const digest = digestInput.trim()
@@ -637,6 +637,10 @@ export function ChatViewRelaySubmitButton() {
           </div>
           <div className="space-y-2">
             <p className="text-xs font-medium text-foreground">Schritt 3: Nachweis / Tangle</p>
+            <p className="text-[11px] text-muted-foreground">
+              Erst „Relayer: erfolgreich gesendet“ setzen, wenn dein Paket den Relayer wirklich verlassen hat. Danach
+              bei vorhandener TX den Button „In Tangle uebernehmen“ nutzen.
+            </p>
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">Noch keine Relay-Envelopes in der lokalen Warteliste.</p>
             ) : (
@@ -654,7 +658,7 @@ export function ChatViewRelaySubmitButton() {
                   </p>
                   {it.relayReport ? (
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Relay: {it.relayReport.rpcStatus ?? '—'}
+                      Relayer-Status: {it.relayReport.rpcStatus ?? '—'}
                       {it.relayReport.errorCode ? ` · ${it.relayReport.errorCode}` : ''}
                       {it.relayReport.note ? ` · ${it.relayReport.note}` : ''}
                     </p>
@@ -694,13 +698,14 @@ export function ChatViewRelaySubmitButton() {
                   {expertQueueItemId === it.id ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'reject')}>
-                        Als reject markieren
+                        Relayer: abgelehnt (reject)
                       </Button>
                       <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'error')}>
-                        Als error markieren
+                        Relayer: Fehler (error)
                       </Button>
                       <span className="text-xs text-muted-foreground">
-                        Wenn in der Notiz ein 0x-Digest steht, wird er bei „In Tangle uebernehmen“ automatisch vorgeschlagen.
+                        Expertenmodus: nur nutzen, wenn der Relayer ein reject/error gemeldet hat. Wenn in der Notiz ein
+                        0x-Digest steht, wird er bei „In Tangle uebernehmen“ automatisch vorgeschlagen.
                       </span>
                     </div>
                   ) : null}
