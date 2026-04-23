@@ -1037,6 +1037,20 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Abhängigkeiten** | **§ H.15** (Client-IOTA + Queue), **§ H.12** (Source-of-Truth / Offline-Abgleich), bestehende Bildpipeline (Kompakt/LoRa), Path-4-Mechanik. |
 | **Priorität** | **Nach** stabilem R1/Robustheitsdurchlauf; als klar abgegrenzte Scheibe planen (erst Hash-/Attestation-Pipeline, dann UX-Badge, danach optional High-Forensic). |
 
+### H.20 Signer-Migration (`cli` -> `sdk`) + `.env`-Verschlankung (**Produkt / § H.15**)
+
+**Status:** Strategische Migrationslinie, um Handy-first/local-first ohne CLI-Reibung produktreif zu machen.
+
+| Aspekt | Kurz |
+|--------|------|
+| **Entscheidungsrichtung** | **Mittelfristig `SIGNER=sdk` als Produkt-Default** fuer neue Bundles/Neuinstallationen; `SIGNER=cli` bleibt zunaechst Legacy-/Expertenmodus. |
+| **Begruendung** | Client-seitige Signaturpfade werden konsistent, weniger Brueckenlogik/UX-Sackgassen, besserer Fit zu `@morgendrot/core` und § H.15 (Direct-IOTA vom Client). |
+| **`.env` Zielbild** | `.env` nicht abschaffen, sondern trennen: **Runtime-Konfig** fuer nutzernahe Modi/Flags, `.env`/Secret-Manager fuer Infra/Server-Parameter. |
+| **Prioritaet A (Runtime)** | `SIGNER`, ggf. `WALLET_DERIVATION_PATH`, Messenger-Betriebsmodi (Direct/Relay, Persistenz), Mailbox-Kontext im Nutzerfluss. |
+| **Zeitplan** | **Version X:** `sdk`-Default in neuen Bundles + CLI-Legacy-Hinweis. **X+1:** Runtime-Konfig fuer Prioritaet-A breit ausrollen. **X+2:** `cli` als deprecated markieren (weiterhin funktionsfaehig). |
+| **UI-Regel Legacy-CLI** | Nicht verfuegbare `sdk`-Funktionen klar deaktivieren/erklaeren (keine irrefuehrenden Fehlpfade), Experten-Alternative sichtbar aber getrennt. |
+| **Doku / Referenz** | **`docs/SIGNER-SDK-MIGRATION-NOTIZ.md`** (Prioritaeten, Zeitplan, Abnahmekriterien). |
+
 ---
 
 *Bei Konflikt mit `PROJECT-FOCUS-AND-PRIORITIES.md` gewinnen die **Phasen A/B/C** dort; dieser Fahrplan priorisiert **Inhalt und Reihenfolge** innerhalb der Projektentscheidungen.*
