@@ -87,3 +87,15 @@ Wenn `SIGNER=sdk`:
 - eindeutiges Verhalten bei `cli` (keine stillen Sackgassen)
 - Runtime-Konfig deckt Prioritaet-A-Parameter ab
 - keine Regression in `TESTING.md`-Ritual + H.15-Checks
+
+---
+
+## 6) Architekturregel Signer-Factory (schlank halten)
+
+Zur Vermeidung einer "Gott-Klasse" gilt fuer den Signer-Pfad:
+
+- **Ein Minimal-Interface** im Kern:
+  - `sign(data: Uint8Array): Promise<SignatureResult>`
+- Die Factory entscheidet nur den Modus (`sdk` / `cli` / `remote`) und liefert einen Provider zurueck.
+- Adapter-Details (CLI-Spawn, Remote-HTTP) bleiben getrennt und austauschbar.
+- Fehler muessen klar und operativ sein (ungueltiger Modus, Remote nicht erreichbar, SDK-Signer fehlt), damit UI-Dialogs den Zustand verstaendlich anzeigen koennen.
