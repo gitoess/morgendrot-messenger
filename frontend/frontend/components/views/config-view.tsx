@@ -6,20 +6,36 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { getConfig, setConfig } from '@/frontend/lib/api'
+import { fetchStatus, getConfig, setConfig } from '@/frontend/lib/api'
 
 export function ConfigView() {
   const [items, setItems] = useState<Array<{ key: string; value: string; envKey: string }>>([])
+  const [runtimeKeys, setRuntimeKeys] = useState<Set<string>>(new Set())
+  const [runtimeSourceMap, setRuntimeSourceMap] = useState<Record<string, 'env' | 'runtime'>>({})
   const [loading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
-    const res = await getConfig()
+    const [res, status] = await Promise.all([getConfig(), fetchStatus()])
     if (res.ok && res.config) {
       setItems(res.config)
     } else {
       setItems([])
+    }
+    if ('pollClockHint' in status) {
+      const nextKeys = new Set((status.runtimeConfigKeys ?? []).map((k) => String(k || '').trim().toUpperCase()))
+      setRuntimeKeys(nextKeys)
+      setRuntimeSourceMap({
+        SIGNER: status.signerConfigSource ?? 'env',
+        WALLET_DERIVATION_PATH: status.walletDerivationPathConfigSource ?? 'env',
+        USE_MAILBOX: status.useMailboxConfigSource ?? 'env',
+        MAILBOX_STORE_PLAINTEXT: status.mailboxStorePlaintextConfigSource ?? 'env',
+        ENABLE_PLAINTEXT_CHANNEL: status.enablePlaintextChannelConfigSource ?? 'env',
+      })
+    } else {
+      setRuntimeKeys(new Set())
+      setRuntimeSourceMap({})
     }
     setLoading(false)
   }
@@ -49,6 +65,10 @@ export function ConfigView() {
             <span className="font-mono">socks5://127.0.0.1:9050</span> – der laufende Backend-Prozess nutzt den Proxy
             sofort für alle IOTA-RPC-Calls (ohne Neustart).
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Hinweis: Einige Keys sind auf Runtime-Konfig umgestellt (z. B. `SIGNER`, `WALLET_DERIVATION_PATH`,
+            `USE_MAILBOX`, `MAILBOX_STORE_PLAINTEXT`, `ENABLE_PLAINTEXT_CHANNEL`).
+          </p>
         </div>
       </div>
 
@@ -75,6 +95,7 @@ export function ConfigView() {
                 key={item.envKey}
                 envKey={item.envKey}
                 value={item.value}
+                source={runtimeSourceMap[item.envKey] ?? (runtimeKeys.has(item.envKey) ? 'runtime' : 'env')}
                 saving={savingKey === item.envKey}
                 onSave={handleSet}
               />
@@ -94,6 +115,7 @@ function ConfigRow({
 }: {
   envKey: string
   value: string
+  source: 'env' | 'runtime'
   saving: boolean
   onSave: (key: string, value: string) => Promise<void>
 }) {
@@ -110,6 +132,15 @@ function ConfigRow({
       <Label className="min-w-[200px] font-mono text-sm text-muted-foreground">
         {envKey}
       </Label>
+      <span
+        className={`rounded border px-2 py-0.5 text-[11px] ${
+          source === 'runtime'
+            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700'
+            : 'border-border bg-muted text-muted-foreground'
+        }`}
+      >
+        {source === 'runtime' ? 'Runtime' : '.env'}
+      </span>
       {isBool ? (
         <>
           <Switch
