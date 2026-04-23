@@ -53,7 +53,22 @@
 
 ---
 
-## 4. Anhang: **Stufe 4** — Direkt vs. Morgendrot-Relay im Ritual
+## 4. Runtime-vs-.env Smoke (Admin-UI / Migration)
+
+**Ziel:** Sichtbar und reproduzierbar pruefen, dass Runtime-Overrides korrekt greifen und nach Neustart bestehen.
+
+| # | Check | Erwartung |
+|---|-------|-----------|
+| 1 | **Initial-Check:** App starten, **ConfigView** oeffnen, relevante Keys ansehen (`SIGNER`, `WALLET_DERIVATION_PATH`, `USE_MAILBOX`, `MAILBOX_STORE_PLAINTEXT`, `ENABLE_PLAINTEXT_CHANNEL`). | Ohne gesetzte Runtime-Overrides zeigen diese Keys Label **`.env`**. |
+| 2 | **Runtime-Override:** Einen Key in der UI setzen (empfohlen: `SIGNER=sdk` oder Bool-Flag wie `USE_MAILBOX=true`) und danach **Aktualisieren**. | Label wechselt auf **`Runtime`**; Wert bleibt in der Zeile sichtbar; `GET /api/status` liefert den Key in `runtimeConfigKeys`. |
+| 3 | **Persistenz-Check:** Backend neu starten (oder Seite + Backend neu laden), dann ConfigView erneut oeffnen. | Runtime-Wert bleibt erhalten (Datei **`.morgendrot-runtime-config.json`**), Label bleibt **`Runtime`**. |
+| 4 | **Rueckbau-Check:** Runtime-Key in der UI auf leer (bei String) oder Standard zuruecksetzen und erneut laden. | Label faellt auf **`.env`** zurueck, falls kein Runtime-Override mehr aktiv ist. |
+
+**Hinweis fuer Betrieb:** Diese Checks sind Pflicht nach Aenderungen am Runtime-Konfig-Pfad, damit Deploy-Defaults (`.env`) und Live-Overrides nicht verwechselt werden.
+
+---
+
+## 5. Anhang: **Stufe 4** — Direkt vs. Morgendrot-Relay im Ritual
 
 **Zielbild:** **Direkt** bleibt Default; **Relay** = nur **`/api`**, sobald die Basis da ist — siehe **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** Stufe **4**.
 
@@ -66,11 +81,11 @@
 
 ---
 
-## 5. Vor dem Feldtest (Stufe 2 — technische Vorprüfung)
+## 6. Vor dem Feldtest (Stufe 2 — technische Vorprüfung)
 
 - Root: **`npm run test:smoke`**; bei Änderungen unter **`frontend/frontend/`** zusätzlich **`npm run test:frontend-unit`**.
 - Schnell nur H.15-Direkt: **`npm run test:h15-direct-submit`**.
 
 ---
 
-*Stand: 2026-04-28 — Stufe 2; Anhang Stufe 4 + Feldtest-Vorprüfung 2026-04-28.*
+*Stand: 2026-04-28 — Stufe 2; Runtime-vs-.env Smoke + Anhang Stufe 4 + Feldtest-Vorpruefung 2026-04-28.*
