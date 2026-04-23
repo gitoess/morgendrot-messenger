@@ -335,7 +335,7 @@ export function ChatViewRelaySubmitButton() {
       return
     }
     if (v.envelope.mode !== 'submit_ready') {
-      setMsg('Aktuell nur R1 submit_ready aktiv. R2 sponsored ist bewusst Backlog.')
+      setMsg('Dieses Paketformat wird aktuell noch nicht unterstützt (nur R1-Standardpaket ist aktiv).')
       return
     }
     const item = enqueueRelayEnvelope(v.envelope)
@@ -356,7 +356,7 @@ export function ChatViewRelaySubmitButton() {
       return
     }
     refresh()
-    setMsg(`Paket übernommen (${item.status}).`)
+    setMsg(`Paket übernommen. Lokaler Status: ${item.status}.`)
   }
 
   const markAnchored = async (it: TxRelayQueueItem) => {
@@ -588,7 +588,7 @@ export function ChatViewRelaySubmitButton() {
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
             <p className="text-xs font-medium text-foreground">Schritt 2: Paket im lokalen Ablauf übernehmen</p>
             <p className="text-[11px] text-muted-foreground">
-              Hier landet das erzeugte/empfangene Paket in der lokalen R1-Warteliste.
+                Hier landet das erzeugte oder empfangene Paket in der lokalen R1-Warteliste.
             </p>
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
               <button
