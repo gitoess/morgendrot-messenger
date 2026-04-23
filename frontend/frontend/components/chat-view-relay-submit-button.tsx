@@ -37,10 +37,12 @@ export function ChatViewRelaySubmitButton() {
   const [builderTtlMinutes, setBuilderTtlMinutes] = useState('120')
   const [builderPayload, setBuilderPayload] = useState('')
   const [builderSenderSig, setBuilderSenderSig] = useState('')
+  const [allowUnsignedDraft, setAllowUnsignedDraft] = useState(false)
   const [transportMode, setTransportMode] = useState<MessagingPersistenceMode>('event')
   const [showExpertTransport, setShowExpertTransport] = useState(false)
   const [expertQueueItemId, setExpertQueueItemId] = useState<string | null>(null)
   const [mnemoInput, setMnemoInput] = useState('')
+  const [showManualSignerInput, setShowManualSignerInput] = useState(false)
   const [sessionSignerAddr, setSessionSignerAddr] = useState<string | null>(null)
 
   const items = useMemo(() => {
@@ -82,6 +84,11 @@ export function ChatViewRelaySubmitButton() {
       setMsg('Builder: payload fehlt.')
       return
     }
+    const senderSig = builderSenderSig.trim()
+    if (!senderSig && !allowUnsignedDraft) {
+      setMsg('Bitte zuerst „Digest signieren“ ausführen (oder Entwurf explizit als unsigniert erlauben).')
+      return
+    }
     const ttlMin = Math.min(1440, Math.max(1, Number.parseInt(builderTtlMinutes, 10) || 120))
     const createdAt = Date.now()
     const expiresAt = createdAt + ttlMin * 60_000
@@ -98,7 +105,7 @@ export function ChatViewRelaySubmitButton() {
       payloadEncoding: 'base64',
       payload,
       payloadHash,
-      senderSig: builderSenderSig.trim() || 'UNSIGNED_PLACEHOLDER',
+      senderSig: senderSig || 'UNSIGNED_PLACEHOLDER',
       recipient: recipient || undefined,
     }
     const asJson = JSON.stringify(envelope, null, 2)
@@ -166,7 +173,7 @@ export function ChatViewRelaySubmitButton() {
       const rawMn = mnemoInput.trim()
       if (!rawMn) {
         setMsg(
-          'Kein Session-Signer im RAM: Mnemonic/Secret unten eintragen und erneut „Digest signieren“ klicken (wird nur im RAM angewendet). Alternativ: Einstellungen → IDs / Direkt-RPC / Funk → Signer anwenden.'
+          'Kein Session-Signer im RAM. Standard: aktiven Signer nutzen. Optional unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.'
         )
         return
       }
@@ -200,6 +207,7 @@ export function ChatViewRelaySubmitButton() {
         return
       }
       setBuilderSenderSig(sig)
+      setAllowUnsignedDraft(false)
       setMsg('Digest signiert. Beim Erzeugen wird senderSig genutzt.')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
@@ -303,9 +311,24 @@ export function ChatViewRelaySubmitButton() {
 
   const updateReportSimple = (it: TxRelayQueueItem, rpcStatus: 'submitted' | 'reject' | 'error') => {
     const needsDetail = rpcStatus === 'reject' || rpcStatus === 'error'
-    const note = needsDetail
+    let note = needsDetail
       ? (window.prompt('Kurzgrund (optional):', it.relayReport?.note ?? '') ?? '').trim()
       : (it.relayReport?.note || '').trim()
+    if (rpcStatus === 'submitted') {
+      const digestInput =
+        window.prompt(
+          'txDigest (optional, wenn Relayer-Submit bereits eine TX ausgegeben hat):',
+          it.txDigest || ''
+        ) ?? ''
+      const digest = digestInput.trim()
+      if (digest) {
+        if (!/^0x[a-fA-F0-9]{64}$/.test(digest)) {
+          setMsg('Ungültiger txDigest. Erwartet: 0x + 64 Hex.')
+          return
+        }
+        note = note ? `${note}\n${digest}` : digest
+      }
+    }
     updateRelayQueueReport(it.id, {
       rpcStatus,
       errorCode: rpcStatus === 'submitted' ? undefined : it.relayReport?.errorCode,
@@ -377,22 +400,31 @@ export function ChatViewRelaySubmitButton() {
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
               <p className="text-xs font-medium text-foreground">Session-Signer (nur RAM)</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Ein Klick auf „Digest signieren“ wendet das Feld unten bei Bedarf an und signiert danach. Gleiche Session wie unter Einstellungen → IDs / Direkt-RPC / Funk.
+                Standard: aktiver Session-Signer wird automatisch genutzt. Nur falls für eine andere Adresse signiert werden soll, unten manuell eingeben.
               </p>
               {sessionSignerAddr ? (
                 <p className="mt-1 font-mono text-[11px] text-emerald-600">Aktiver Signer: {sessionSignerAddr}</p>
               ) : (
                 <p className="mt-1 text-[11px] text-amber-600">Kein Session-Signer aktiv.</p>
               )}
-              <textarea
-                value={mnemoInput}
-                onChange={(e) => setMnemoInput(e.target.value)}
-                spellCheck={false}
-                autoComplete="off"
-                rows={2}
-                placeholder="Mnemonic / Bech32-Secret / 64-Hex (32 Byte) — nur wenn noch kein RAM-Signer"
-                className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-[11px]"
-              />
+              <button
+                type="button"
+                className="mt-2 text-[11px] text-muted-foreground underline underline-offset-2"
+                onClick={() => setShowManualSignerInput((v) => !v)}
+              >
+                {showManualSignerInput ? 'Manuelle Signer-Eingabe ausblenden' : 'Anderen Signer verwenden (optional)'}
+              </button>
+              {showManualSignerInput ? (
+                <textarea
+                  value={mnemoInput}
+                  onChange={(e) => setMnemoInput(e.target.value)}
+                  spellCheck={false}
+                  autoComplete="off"
+                  rows={2}
+                  placeholder="Mnemonic / Bech32-Secret / 64-Hex (32 Byte)"
+                  className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-[11px]"
+                />
+              ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Button type="button" size="sm" variant="default" onClick={() => void signDigestMerged()}>
                   Digest signieren
@@ -412,6 +444,14 @@ export function ChatViewRelaySubmitButton() {
                 <span className="text-xs text-muted-foreground">
                   {builderSenderSig ? `senderSig gesetzt (${builderSenderSig.slice(0, 12)}…)` : 'Noch keine Signatur.'}
                 </span>
+                <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={allowUnsignedDraft}
+                    onChange={(e) => setAllowUnsignedDraft(e.target.checked)}
+                  />
+                  unsignierten Entwurf erlauben
+                </label>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -422,35 +462,10 @@ export function ChatViewRelaySubmitButton() {
             </div>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Schritt 2: Paket weiterleiten</p>
+            <p className="text-xs font-medium text-foreground">Schritt 2: Paket im lokalen Ablauf übernehmen</p>
             <p className="text-[11px] text-muted-foreground">
-              Standard: Copy/LoRa. Optional (Experten): als Klartext-Envelope direkt per Event/Mailbox senden.
+              Hier landet das erzeugte/empfangene Paket in der lokalen R1-Warteliste.
             </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  if (!rawText.trim()) {
-                    setMsg('Nichts zum Kopieren.')
-                    return
-                  }
-                  try {
-                    await navigator.clipboard.writeText(rawText)
-                    setMsg('Envelope JSON in Zwischenablage kopiert.')
-                  } catch {
-                    setMsg('Kopieren fehlgeschlagen.')
-                  }
-                }}
-              >
-                <Copy className="mr-2 h-3.5 w-3.5" />
-                JSON kopieren
-              </Button>
-              <Button type="button" size="sm" onClick={() => void sendToLoraShortcut()}>
-                Paket teilen (LoRa/Copy)
-              </Button>
-            </div>
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
               <button
                 type="button"
@@ -566,6 +581,37 @@ export function ChatViewRelaySubmitButton() {
                 </div>
               ))
             )}
+          </div>
+          <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
+            <p className="text-xs font-medium text-foreground">Schritt 4: Paket weitergeben (optional)</p>
+            <p className="text-[11px] text-muted-foreground">
+              Für LoRa, E-Mail, SD oder andere Übergabewege: fertig erzeugtes Paket einmal kopieren.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  if (!rawText.trim()) {
+                    setMsg('Bitte zuerst ein Paket erzeugen oder importieren.')
+                    return
+                  }
+                  try {
+                    await navigator.clipboard.writeText(rawText)
+                    setMsg('Paket für Weitergabe in Zwischenablage kopiert.')
+                  } catch {
+                    setMsg('Kopieren fehlgeschlagen.')
+                  }
+                }}
+              >
+                <Copy className="mr-2 h-3.5 w-3.5" />
+                Paket kopieren (Weitergabe)
+              </Button>
+              <Button type="button" size="sm" onClick={() => void sendToLoraShortcut()}>
+                LoRa-Weitergabe Hinweis
+              </Button>
+            </div>
           </div>
           <DialogFooter>
             <Button type="button" onClick={() => setOpen(false)}>
