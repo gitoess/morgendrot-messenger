@@ -110,6 +110,7 @@ export function ConfigView() {
 function ConfigRow({
   envKey,
   value,
+  source,
   saving,
   onSave,
 }: {

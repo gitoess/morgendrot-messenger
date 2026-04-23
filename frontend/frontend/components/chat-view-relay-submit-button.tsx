@@ -85,7 +85,7 @@ export function ChatViewRelaySubmitButton() {
     }
     const payload = builderPayload.trim()
     if (!payload) {
-      setMsg('Builder: payload fehlt.')
+      setMsg('Builder: Nachricht fehlt.')
       return
     }
     const senderSig = builderSenderSig.trim()
@@ -116,8 +116,8 @@ export function ChatViewRelaySubmitButton() {
     setRawText(asJson)
     setMsg(
       envelope.senderSig === 'UNSIGNED_PLACEHOLDER'
-        ? 'Envelope als Eigen-Entwurf erzeugt. Signatur folgt im echten Sendepfad (RAM-Vault/Signer).'
-        : 'Envelope erzeugt und in die Import-Box übernommen.'
+        ? 'Paket als Eigen-Entwurf erzeugt. Signatur folgt im echten Sendepfad (RAM-Vault/Signer).'
+        : 'Paket erzeugt und in die Import-Box übernommen.'
     )
   }
 
@@ -128,15 +128,15 @@ export function ChatViewRelaySubmitButton() {
       return
     }
     if (!rawText.trim()) {
-      setMsg('Bitte zuerst Envelope erzeugen.')
+      setMsg('Bitte zuerst ein Paket erzeugen.')
       return
     }
     const r = await sendMessage(rec, rawText, false, { messagingPersistenceMode: transportMode })
     if (r.ok) {
       setMsg(
         transportMode === 'mailbox'
-          ? 'Envelope als Klartext über Mailbox gesendet.'
-          : 'Envelope als Klartext-Event gesendet.'
+          ? 'Paket als Klartext über Mailbox gesendet.'
+          : 'Paket als Klartext-Event gesendet.'
       )
     } else {
       setMsg(r.error || r.message || 'Senden fehlgeschlagen.')
@@ -145,13 +145,13 @@ export function ChatViewRelaySubmitButton() {
 
   const sendToLoraShortcut = async () => {
     if (!rawText.trim()) {
-      setMsg('Bitte zuerst Envelope erzeugen.')
+      setMsg('Bitte zuerst ein Paket erzeugen.')
       return
     }
     try {
       await navigator.clipboard.writeText(rawText)
       setMsg(
-        'Envelope für LoRa vorbereitet: JSON ist in der Zwischenablage. Jetzt im normalen Chat „funk“ wählen und als Klartext senden.'
+        'Paket für LoRa vorbereitet: JSON ist in der Zwischenablage. Jetzt im normalen Chat „funk“ wählen und als Klartext senden.'
       )
     } catch {
       setMsg('Zwischenablage nicht verfügbar. JSON manuell kopieren und über Funk senden.')
@@ -168,7 +168,7 @@ export function ChatViewRelaySubmitButton() {
     }
     const payload = builderPayload.trim()
     if (!payload) {
-      setMsg('Bitte zuerst Nachricht/Payload eingeben.')
+      setMsg('Bitte zuerst eine Nachricht eingeben.')
       return
     }
     let signer = getDirectIotaSessionSigner() as unknown as {
@@ -352,11 +352,11 @@ export function ChatViewRelaySubmitButton() {
         statusOverride: 'draft_unsigned',
       })
       refresh()
-      setMsg('Envelope als Draft übernommen (ohne Signatur). Das ist im Auto-Modus erwartet.')
+      setMsg('Paket als Entwurf übernommen (ohne Signatur). Das ist im Auto-Modus erwartet.')
       return
     }
     refresh()
-    setMsg(`Envelope übernommen (${item.status}).`)
+    setMsg(`Paket übernommen (${item.status}).`)
   }
 
   const markAnchored = async (it: TxRelayQueueItem) => {
@@ -486,14 +486,14 @@ export function ChatViewRelaySubmitButton() {
                 </select>
               </label>
               <div className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs">
-                Sender-Signatur wird automatisch gesetzt (Digest-Signieren) oder aus importiertem Envelope übernommen.
+                Sender-Signatur wird automatisch gesetzt (Digest-Signieren) oder aus importiertem Paket übernommen.
               </div>
             </div>
             <textarea
               value={builderPayload}
               onChange={(e) => setBuilderPayload(e.target.value)}
               rows={3}
-              placeholder="Nachricht / Payload (submit-ready blob, base64)"
+              placeholder="Nachrichtentext (wird intern als submit-ready Datenblock gespeichert)"
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
@@ -598,11 +598,11 @@ export function ChatViewRelaySubmitButton() {
               >
                 {showExpertTransport
                   ? 'Experten-Transport ausblenden'
-                  : 'Experten-Transport anzeigen (nur Debug: Envelope als Chat-Text)'}
+                  : 'Experten-Transport anzeigen (nur Debug: Paket als Chat-Text)'}
               </button>
               {showExpertTransport ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-foreground">Nur Debug/Bypass: Envelope als Klartext-Chat senden:</span>
+                  <span className="font-medium text-foreground">Nur Debug/Bypass: Paket als Klartext-Chat senden:</span>
                   <select
                     value={transportMode}
                     onChange={(e) => setTransportMode((e.target.value as MessagingPersistenceMode) || 'event')}
@@ -612,7 +612,7 @@ export function ChatViewRelaySubmitButton() {
                     <option value="mailbox">Mailbox (persistenter)</option>
                   </select>
                   <Button type="button" size="sm" variant="outline" onClick={() => void sendEnvelopeAsText()}>
-                    Envelope als Text senden
+                    Paket als Text senden
                   </Button>
                 </div>
               ) : null}
@@ -642,7 +642,7 @@ export function ChatViewRelaySubmitButton() {
               bei vorhandener TX den Button „In Tangle uebernehmen“ nutzen.
             </p>
             {items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Noch keine Relay-Envelopes in der lokalen Warteliste.</p>
+              <p className="text-sm text-muted-foreground">Noch keine R1-Pakete in der lokalen Warteliste.</p>
             ) : (
               items.map((it) => (
                 <div key={it.id} className="rounded-lg border border-border/70 bg-muted/10 p-3">
