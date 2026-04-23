@@ -538,11 +538,12 @@ export function parseVerifiedIotaNamePackageIds(raw: string | undefined): string
 }
 
 type SignerMode = 'cli' | 'sdk' | 'remote';
-type RuntimeConfig = { signer?: SignerMode };
+type RuntimeConfig = { signer?: SignerMode; walletDerivationPath?: string };
 
 const RUNTIME_CONFIG_PATH = path.resolve(process.cwd(), process.env.RUNTIME_CONFIG_FILE?.trim() || '.morgendrot-runtime-config.json');
 const RUNTIME_CONFIG_ALLOWED_SIGNERS: SignerMode[] = ['cli', 'sdk', 'remote'];
 let runtimeSignerSource: 'env' | 'runtime' = 'env';
+let runtimeWalletDerivationPathSource: 'env' | 'runtime' = 'env';
 
 function parseRuntimeSigner(raw: unknown): SignerMode | undefined {
     const v = String(raw ?? '').trim().toLowerCase();
@@ -554,9 +555,13 @@ function readRuntimeConfig(): RuntimeConfig {
     try {
         if (!fs.existsSync(RUNTIME_CONFIG_PATH)) return {};
         const raw = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
-        const parsed = JSON.parse(raw) as { signer?: unknown };
+        const parsed = JSON.parse(raw) as { signer?: unknown; walletDerivationPath?: unknown };
         const signer = parseRuntimeSigner(parsed.signer);
-        return signer ? { signer } : {};
+        const walletDerivationPath = String(parsed.walletDerivationPath ?? '').trim();
+        const out: RuntimeConfig = {};
+        if (signer) out.signer = signer;
+        if (walletDerivationPath) out.walletDerivationPath = walletDerivationPath;
+        return out;
     } catch {
         return {};
     }
@@ -566,6 +571,7 @@ function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; 
     try {
         const payload: RuntimeConfig = {};
         if (cfg.signer) payload.signer = cfg.signer;
+        if (cfg.walletDerivationPath) payload.walletDerivationPath = cfg.walletDerivationPath;
         fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
         return { ok: true, path: RUNTIME_CONFIG_PATH };
     } catch (e: any) {
@@ -581,29 +587,46 @@ function applyRuntimeConfigToCfg(): void {
     } else {
         runtimeSignerSource = 'env';
     }
+    if (runtime.walletDerivationPath) {
+        CFG.WALLET_DERIVATION_PATH = runtime.walletDerivationPath;
+        runtimeWalletDerivationPathSource = 'runtime';
+    } else {
+        runtimeWalletDerivationPathSource = 'env';
+    }
 }
 
 export function setRuntimeConfigKey(key: string, value: string): { ok: boolean; error?: string; path?: string; value?: string } {
     const k = String(key || '').trim().toUpperCase();
     const v = String(value ?? '').trim();
-    if (k !== 'SIGNER') {
+    if (k !== 'SIGNER' && k !== 'WALLET_DERIVATION_PATH') {
         return { ok: false, error: `Runtime key ${k || '(leer)'} wird noch nicht unterstützt.` };
     }
-    const signer = parseRuntimeSigner(v);
-    if (!signer) {
-        return { ok: false, error: 'SIGNER muss einer von: cli | sdk | remote sein.' };
-    }
     const next = readRuntimeConfig();
-    next.signer = signer;
+    if (k === 'SIGNER') {
+        const signer = parseRuntimeSigner(v);
+        if (!signer) return { ok: false, error: 'SIGNER muss einer von: cli | sdk | remote sein.' };
+        next.signer = signer;
+    } else if (v) {
+        next.walletDerivationPath = v;
+    } else {
+        delete next.walletDerivationPath;
+    }
     const written = writeRuntimeConfig(next);
     if (!written.ok) return written;
-    CFG.SIGNER = signer;
-    runtimeSignerSource = 'runtime';
-    return { ok: true, path: written.path, value: signer };
+    applyRuntimeConfigToCfg();
+    return {
+        ok: true,
+        path: written.path,
+        value: k === 'SIGNER' ? (CFG.SIGNER || '') : (CFG.WALLET_DERIVATION_PATH || '(default)'),
+    };
 }
 
 export function getSignerConfigSource(): 'env' | 'runtime' {
     return runtimeSignerSource;
+}
+
+export function getWalletDerivationPathConfigSource(): 'env' | 'runtime' {
+    return runtimeWalletDerivationPathSource;
 }
 
 export const CFG = {

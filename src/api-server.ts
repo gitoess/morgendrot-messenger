@@ -37,6 +37,7 @@ import {
     buildStandaloneSmartphoneHandoffEnv,
     buildStandaloneSmartphoneHandoffReadme,
     getSignerConfigSource,
+    getWalletDerivationPathConfigSource,
 } from './config.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
@@ -524,6 +525,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 compactImageEncode?: boolean;
                 loraProgressiveEncode?: boolean;
                 signerConfigSource?: 'env' | 'runtime';
+                walletDerivationPathConfigSource?: 'env' | 'runtime';
             } = {
                 backendRunning: true,
                 locked: !!_resolvePassword,
@@ -568,6 +570,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 mailboxConfigured,
                 signer: CFG.SIGNER,
                 signerConfigSource: getSignerConfigSource(),
+                walletDerivationPathConfigSource: getWalletDerivationPathConfigSource(),
                 messengerCreditsConfigured: !!credLooksValid,
                 ...(messengerCredits !== undefined && { messengerCredits }),
                 ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
@@ -1179,9 +1182,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 403, { ok: false, error: 'Hierarchie (ROLE, …) nur als Boss/Kommandant/Arbeiter änderbar. Für Test: .env um ALLOW_TEST_ROLE_OVERRIDE=true ergänzen, Backend neu starten.' }, cors);
                         return;
                     }
-                    const result = key.toUpperCase() === 'SIGNER'
-                        ? setRuntimeConfigKey('SIGNER', value)
-                        : setEnvKey(key, value);
+                    const normalized = key.toUpperCase();
+                    const result =
+                        normalized === 'SIGNER' || normalized === 'WALLET_DERIVATION_PATH'
+                            ? setRuntimeConfigKey(normalized, value)
+                            : setEnvKey(key, value);
                     sendJson(res, 200, result, cors);
                 } catch (e: any) {
                     sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);

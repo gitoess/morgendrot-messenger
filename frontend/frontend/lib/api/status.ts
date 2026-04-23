@@ -56,6 +56,8 @@ export type ApiStatus = {
   signer?: string
   /** Herkunft der aktiven Signer-Konfiguration (env oder Runtime-Datei). */
   signerConfigSource?: 'env' | 'runtime'
+  /** Herkunft der aktiven Ableitungspfad-Konfiguration (env oder Runtime-Datei). */
+  walletDerivationPathConfigSource?: 'env' | 'runtime'
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
   /** false: API-Port liefert keine statische ui/index.html. */
