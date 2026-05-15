@@ -102,6 +102,18 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r[0]!.id).toBe('in')
   })
 
+  it('groupMemberAddresses: Union aller Mitglieder', () => {
+    const bobMsg = m({ id: 'bob', from: bob, recipient: me, content: 'b', timestamp: 4 })
+    const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing, bobMsg], me, null, 'all', {
+      groupMemberAddresses: [alice, bob],
+    })
+    expect(r.map((x) => x.id).sort()).toEqual(['bob', 'in', 'out'])
+    const onlyAlice = filterInboxMessagesByPartnerAndDirection([incoming, outgoing, bobMsg], me, null, 'all', {
+      groupMemberAddresses: [alice],
+    })
+    expect(onlyAlice.map((x) => x.id)).toEqual(['in'])
+  })
+
   it('eingehende Funk/Mesh (0x) ignoriert Partner- und Richtungsfilter', () => {
     const meshIn = m({
       id: 'mx',

@@ -58,7 +58,7 @@
 - [x] Kanal-Umschalter: **„1:1 Privat“** vs. **„Pinnwand (Brett)“** + Kurzbeschreibung.
 - [x] **Meine IOTA-Adresse** im Chat (kopieren) — Kontakt teilen, nicht Mailbox-ID.
 - [x] Einstellungen/Config: **`MAILBOX_ID`** nur read-only / Admin-Hinweis (Setup „Erweitert“, `mailboxIdMasked` in `/api/status`).
-- [ ] Handbuch-Verweis: `docs/BROADCAST-PINNWAND.md`, `docs/CHAT-GRUPPE-EINRICHTEN.md` (Pairwise ≠ Gruppenchat).
+- [x] Handbuch-Verweis: Pinnwand + Gruppe einrichten (Links im Chat-Header).
 
 ### Abnahme M1
 
@@ -80,11 +80,19 @@
 
 ### Technik (Stufen)
 
-| Stufe | Inhalt |
-|-------|--------|
-| **M2a** | `MessengerChatChannel` + `group`; lokale Gruppen-Definition; Inbox-Filter „alle Mitglieder“; Telefonbuch-Integration (**§ H.16**) |
-| **M2b** | Optional Streams-Anchor pro Gruppe (Live) + Mailbox für Archiv |
-| **M2c** | Move/Wire für Gruppen-E2EE (nur bei klarem Threat-Model) |
+| Stufe | Inhalt | Status |
+|-------|--------|--------|
+| **M2a** | `MessengerChatChannel` + `group`; lokale Gruppen-Definition; Inbox-Filter „alle Mitglieder“; Telefonbuch-Integration (**§ H.16**) | **in Arbeit** ✓ UI/Filter |
+| **M2b** | Optional Streams-Anchor pro Gruppe (Live) + Mailbox für Archiv | offen |
+| **M2c** | Move/Wire für Gruppen-E2EE (nur bei klarem Threat-Model) | offen |
+
+### M2a Checkliste
+
+- [x] Kanal-Umschalter **Gruppe** im Chat-Header
+- [x] `messenger-group-store.ts` (localStorage) + Gruppen-Panel
+- [x] Posteingang: Union-Filter `groupMemberAddresses` (`inbox-partner-filter.ts`)
+- [x] „Aus Telefonbuch“ für Mitgliederliste
+- [ ] Batch-Senden an alle Mitglieder (optional, v1 weiter Einzel-Empfänger)
 
 ### Nicht-Ziele M2
 

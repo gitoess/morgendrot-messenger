@@ -53,22 +53,43 @@ export function messageCounterpartyAddress(msg: Message, myAddress: string): str
 
 export type InboxDirectionFilter = 'all' | 'in' | 'out'
 
+export type InboxPartnerFilterOpts = {
+  /** M2: Union aller Gruppenmitglieder — `partnerAddress` wird ignoriert. */
+  groupMemberAddresses?: string[]
+}
+
 export function filterInboxMessagesByPartnerAndDirection(
   messages: Message[],
   myAddress: string,
   partnerAddress: string | null,
-  direction: InboxDirectionFilter
+  direction: InboxDirectionFilter,
+  opts?: InboxPartnerFilterOpts
 ): Message[] {
+  const groupNorms =
+    opts?.groupMemberAddresses && opts.groupMemberAddresses.length > 0
+      ? new Set(opts.groupMemberAddresses.map((a) => norm(a)))
+      : null
+
   return messages.filter((m) => {
     const selfToSelf = isMessageSelfToSelf(m, myAddress)
     /** Funk/Mesh-Eingang (Klartext `mesh:…` oder v2 mit 0x-Absender): nicht über Mailbox-Richtung/Partner wegfiltern. */
     const incomingMeshRadio =
       (m.source === 'mesh' || m.transports?.includes('mesh')) && !isMessageOutgoing(m, myAddress)
     if (incomingMeshRadio) {
+      if (groupNorms) {
+        const cpMesh = messageCounterpartyAddress(m, myAddress)
+        if (cpMesh && groupNorms.has(norm(cpMesh))) return true
+        return false
+      }
       return true
     }
     if (direction === 'in' && isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false
+    if (groupNorms) {
+      const cp = messageCounterpartyAddress(m, myAddress)
+      if (!cp) return false
+      return groupNorms.has(norm(cp))
+    }
     if (!partnerAddress) return true
     const cp = messageCounterpartyAddress(m, myAddress)
     if (!cp) return false

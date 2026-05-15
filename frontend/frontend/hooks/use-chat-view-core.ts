@@ -36,12 +36,17 @@ import {
 } from '@/frontend/lib/messaging-persistence-mode'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { toast } from 'sonner'
+import {
+  getActiveMessengerGroup,
+  type MessengerGroupDefinition,
+} from '@/frontend/lib/messenger-group-store'
+import { isDialogChannel, isGroupChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
 const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
 
 export type UseChatViewCoreParams = {
-  isPrivate: boolean
+  channelMode: MessengerChatChannel
   role: string
   myAddress: string
 }
@@ -55,7 +60,17 @@ export type UseChatViewCoreParams = {
  * Send-Flow-Parameter enthalten `ComposerDraftSendFlowPort`; Transport-Card/Panel nutzen `SendTransportChoicePort` bzw. Leseschnitt + `SendMeshMirrorDelayPort`; Anhang-Zeile: `AttachmentBarPort`; Sprachmemo-UI: `VoiceRecordSendPanelPort` (`features/voice`-Typen + `useChatViewVoiceRecord` + `sosVoiceAwaitingSend`).
  */
 export function useChatViewCore(p: UseChatViewCoreParams) {
-  const { isPrivate, role, myAddress } = p
+  const { channelMode, role, myAddress } = p
+  const isPrivate = isDialogChannel(channelMode)
+  const isGroup = isGroupChannel(channelMode)
+  const [groupsRevision, setGroupsRevision] = useState(0)
+  const activeGroup: MessengerGroupDefinition | null = useMemo(() => {
+    if (!isGroup) return null
+    void groupsRevision
+    return getActiveMessengerGroup()
+  }, [isGroup, groupsRevision])
+  const groupMemberFilter = isGroup && activeGroup ? activeGroup.memberAddresses : null
+  const refreshMessengerGroups = useCallback(() => setGroupsRevision((n) => n + 1), [])
 
   const [message, setMessage] = useState('')
   const [recipient, setRecipient] = useState('')
@@ -205,7 +220,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatusMsg,
     myAddress,
     contactDirectory: directory,
+    groupMemberFilter,
+    isGroupMode: isGroup,
   })
+
+  useEffect(() => {
+    if (isGroup) setInboxPartnerKey(null)
+  }, [isGroup, setInboxPartnerKey])
 
   const {
     mirrorQueuePending,
@@ -480,7 +501,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   )
 
   return {
+    channelMode,
     isPrivate,
+    isGroup,
+    activeGroup,
+    refreshMessengerGroups,
     role,
     myAddress,
     message,

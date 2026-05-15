@@ -27,6 +27,8 @@ import {
   type ChatViewTransportCardProps,
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
+import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
+import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
@@ -42,6 +44,10 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const {
     isPrivate,
+    isGroup,
+    activeGroup,
+    refreshMessengerGroups,
+    channelMode,
     role,
     myAddress,
     message,
@@ -450,9 +456,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         }}
       />
 
-      {isPrivate ? <ChatViewIdentityCard myAddressLine={myAddress} /> : null}
+      {channelMode === 'private' ? <ChatViewIdentityCard myAddressLine={myAddress} /> : null}
 
-      {!isPrivate ? <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} /> : null}
+      {isGroup ? (
+        <ChatViewGroupPanel contactDirectory={directory} onGroupsChanged={refreshMessengerGroups} />
+      ) : null}
+
+      {channelMode != null && isPinnwandChannel(channelMode) ? (
+        <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} />
+      ) : null}
 
       {isPrivate ? (
         <ChatViewPackageIdBanner

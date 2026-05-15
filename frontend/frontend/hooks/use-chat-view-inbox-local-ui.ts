@@ -39,11 +39,24 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setStatusMsg: (msg: string) => void
   myAddress: string
   contactDirectory: Record<string, ContactMeshEntryClient>
+  /** M2: Union-Filter für Gruppenmitglieder */
+  groupMemberFilter?: string[] | null
+  isGroupMode?: boolean
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
-  const { messages, setMessages, loadMessages, setSending, setStatus, setStatusMsg, myAddress, contactDirectory } =
-    p
+  const {
+    messages,
+    setMessages,
+    loadMessages,
+    setSending,
+    setStatus,
+    setStatusMsg,
+    myAddress,
+    contactDirectory,
+    groupMemberFilter = null,
+    isGroupMode = false,
+  } = p
 
   const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
   const [protokollMarkedIds, setProtokollMarkedIds] = useState<Set<string>>(() => new Set())
@@ -292,10 +305,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       filterInboxMessagesByPartnerAndDirection(
         displayMessages,
         myAddress,
-        inboxPartnerKey,
-        inboxDirectionFilter
+        isGroupMode ? null : inboxPartnerKey,
+        inboxDirectionFilter,
+        groupMemberFilter?.length ? { groupMemberAddresses: groupMemberFilter } : undefined
       ),
-    [displayMessages, myAddress, inboxPartnerKey, inboxDirectionFilter]
+    [displayMessages, myAddress, inboxPartnerKey, inboxDirectionFilter, groupMemberFilter, isGroupMode]
   )
 
   const wireFilteredMessages = useMemo(() => {

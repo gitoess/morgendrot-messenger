@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useChatViewCore } from '@/frontend/hooks/use-chat-view-core'
 import { ChatViewMainContent } from '@/frontend/components/chat-view-main-content'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
-import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import { isDialogChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 
 export type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 
@@ -26,8 +26,8 @@ export function ChatView({ variant, role = '', myAddress = '', vaultBannerAction
   useEffect(() => {
     setChannel(variant === 'pinnwand' ? 'pinnwand' : 'private')
   }, [variant])
-  const isPrivate = channel === 'private'
-  const core = useChatViewCore({ isPrivate, role, myAddress })
+  const isPrivate = isDialogChannel(channel)
+  const core = useChatViewCore({ channelMode: channel, role, myAddress })
   return (
     <ChatViewMainContent
       {...core}
