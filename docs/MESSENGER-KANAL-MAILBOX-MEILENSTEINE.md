@@ -83,7 +83,7 @@
 | Stufe | Inhalt | Status |
 |-------|--------|--------|
 | **M2a** | `MessengerChatChannel` + `group`; lokale Gruppen-Definition; Inbox-Filter „alle Mitglieder“; Telefonbuch-Integration (**§ H.16**) | **in Arbeit** ✓ UI/Filter |
-| **M2b** | Optional Streams-Anchor pro Gruppe (Live) + Mailbox für Archiv | offen |
+| **M2b** | Optional Streams-Anchor pro Gruppe (Live) + Mailbox für Archiv | **UI/API ✓** (2026-05-15) |
 | **M2c** | Move/Wire für Gruppen-E2EE (nur bei klarem Threat-Model) | offen |
 
 ### M2a Checkliste
@@ -107,11 +107,11 @@
 
 ### Ziel
 
-| Feature | Hinweis |
-|---------|---------|
-| **Moderation** | UI zeigt, wer schreiben darf (`BROADCAST_AUTHORIZED_SENDERS` / Rolle) |
-| **Pinning** | Wichtige Posts oben (zuerst **lokal** / `sessionStorage`, optional Move später) |
-| **Lesen für alle** | Filter Posteingang „Pinnwand“; Doku Einsatz |
+| Feature | Hinweis | Status |
+|---------|---------|--------|
+| **Moderation** | UI zeigt, wer schreiben darf (`BROADCAST_AUTHORIZED_SENDERS` / Rolle) | **✓** via `broadcastPinnwand` in `/api/status` + Kontext-Karte |
+| **Pinning** | Wichtige Posts oben (zuerst **lokal** / `sessionStorage`, optional Move später) | **✓** `pinnwand-pin-store.ts`, Menü im Posteingang |
+| **Lesen für alle** | Filter Posteingang „Pinnwand“; Doku Einsatz | **✓** Kanal + Klartext-Filter; Empfänger aus Status |
 
 **Bezug:** Kachel **`pinnwand-admin`** (Boss), `docs/BROADCAST-PINNWAND.md`.
 
@@ -135,9 +135,9 @@
 | Stufe | Inhalt | Status |
 |-------|--------|--------|
 | **M4a** | Kontakt-Speicherung: `mailboxObjectId` optional (API + Telefonbuch-Feld) | **Datenlage ✓** — Send nutzt es erst ab M4b |
-| **M4b** | Send-Routing: private Mailbox des Kontakts priorisieren; Chat-Hinweis „Sendet an private Mailbox“ | **nach M1** |
-| **M4c** | QR beim Kontakt hinzufügen: Wallet + Mailbox-ID | **nach M1** |
-| **M4d** | Eigene Private Mailbox erstellen (Move) + Profil-QR | **nach M1–M3** |
+| **M4b** | Send-Routing: private Mailbox des Kontakts priorisieren; Chat-Hinweis „Sendet an private Mailbox“ | **✓ Send/UI** (2026-05-15) |
+| **M4c** | QR beim Kontakt hinzufügen: Wallet + Mailbox-ID | **✓** (2026-05-15) |
+| **M4d** | Eigene Private Mailbox erstellen (Move) + Profil-QR | **Profil-QR ✓**; **Move „erstellen“ offen** |
 
 ### Move (Skizze, M4d)
 
@@ -166,6 +166,14 @@ public struct PrivateMailbox has key, store {
 - [x] `POST /api/contact-label` akzeptiert `mailboxObjectId` (leer = löschen)
 - [x] Telefonbuch: Feld „Alternative Mailbox-ID (optional)“
 - [x] Modultest `contact-labels mailboxObjectId` in `scripts/run-tests.ts` (`npm test`)
+
+### M4b–c Checkliste (2026-05-15)
+
+- [x] **M4b** Send: `mailboxObjectId` in API + `mailbox-object-id-scope` (Server) + Hybrid/Direct-IOTA + Composer-Hinweis
+- [x] **M4b** Telefonbuch speichert `mailboxObjectId` an API
+- [x] **M4c** Kontakt-QR v2 (`contact-qr.ts`) + Import (Text/Kamera) im Telefonbuch
+- [x] **M4d (interim)** Eigene Mailbox-ID lokal + Profil-QR (`my-private-mailbox-store`, Identity-Karte)
+- [ ] **M4d** Move `create_private_mailbox` + UI **„Private Mailbox erstellen“** (on-chain)
 
 ### Abhängigkeiten (M4b+)
 

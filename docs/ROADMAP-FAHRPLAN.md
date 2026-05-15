@@ -25,7 +25,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle (priorisiert):** **§ H.22 M1** — Shared Mailbox + Kanal-UX (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`, **`MESSAGING-MAILBOX-SSOT-SPEC`** Phase A). **Danach** **§ H.22 M2→M3→M4** (Gruppenchat, Pinnwand-Pinning, Private Mailbox optional). Parallel (ohne H.15-Stufe-2-Handy zuerst): **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.3n**, **§ H.0**-Feinschliff. **§ H.15 Stufe 2** (manuelles Smoke nach **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**) **bewusst nach hinten**, wenn Schreibtisch + diese Scheiben ritualstabil sind; dann **`docs/HANDY-TEST-WINDOW.md`**. Parallel wie **§ C.0b Stufe 1:** **§ H.0** + **§ H.1**; **§ I** nicht parallel zu Phase-A-Robustheit; **Phase B** erst nach C.0b **Stufe 3**-Voraussetzungen.
+**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commit 2026-05-15) — **offen:** **§ H.22 M4d** **Mailbox erstellen** (Move `create_private_mailbox`), Abnahme/UI-Durchgang. **Direkt danach (priorisiert):** **§ H.23 Verschlüsselung** — MVP-Architektur festlegen (**X25519 + XChaCha20-Poly1305** vs. **Double Ratchet**; Ratchet-Timing unklar). Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke (**`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**) nach UI-Test. Parallel wie **§ C.0b Stufe 1:** **§ H.0** + **§ H.1**; **Phase B** erst nach C.0b **Stufe 3**-Voraussetzungen.
 
 ### Ist das der „komplette“ Plan? Heltec, Firmware, …
 
@@ -1081,6 +1081,31 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Priorität:** **M1** (SSOT Phase A + Shared Mailbox ritualstabil) **vor** **M4b–d** (Send-Routing, QR, eigene Mailbox). **M4a** Kontakt-Speicher ist vorgezogen (API/Telefonbuch), wirkt erst mit **M4b**. **M2** nach M1; **M4d** bewusst hinten.
 
 **Verknüpfung:** **§ H.12** (Inbox/Queue), **§ H.15** (Hybrid-Send), **§ H.16** (Telefonbuch/QR für Kontakte), **`docs/CHAT-GRUPPE-EINRICHTEN.md`** (Pairwise — nicht mit M2 verwechseln).
+
+**Nachtrag 2026-05-15 (Umsetzung):** **M2b** Streams-Anchor pro Gruppe + `POST /api/streams-publish`; **M3** `broadcastPinnwand` in `/api/status`, Pinnwand-Karte, Empfänger-Vorbelegung, Posteingang-Anheften; **M4b–c** Kontakt-Mailbox-Routing (API + Direct-IOTA + Hinweis), QR-Import; **M4d** nur **lokal** (Mailbox-ID + Profil-QR) — **ohne** Move **„Mailbox erstellen“** (siehe **§ H.22 M4d** / **§ H.23**).
+
+### H.23 Verschlüsselung — MVP-Architektur (nächster Schwerpunkt)
+
+**Status:** **Backlog / Entscheidung offen** — **keine** klare MVP-Architektur dokumentiert und festgezogen.
+
+| Option | Kurz | Offene Fragen |
+|--------|------|----------------|
+| **A — Session Keys (v1+)** | **X25519** (oder P-256 wie heute) + **XChaCha20-Poly1305** (oder AES-GCM beibehalten); pro Dialog/Handshake abgeleitete Keys | Migration von bestehendem ECDH/`/handshake`; Forward Secrecy nur bei Key-Rotation |
+| **B — Double Ratchet** | Signal-ähnlich (X3DH + Double Ratchet) | **Timing** (wann Ratchet vs. statische Session?); Move/Wire; Offline/LoRa; Vault-Layout |
+
+**Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken.
+
+**Lieferreihenfolge (Vorschlag):** (1) **Architektur-Entscheid** + Threat-Model (1:1 MVP, Gruppe, Pinnwand ausgenommen). (2) **Spez** (Wire, Key-Storage, Rotation). (3) Implementierung **parallel** zu **§ H.22 M4d** Move, nicht Blocker für Klartext/Pinnwand.
+
+**Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
+
+### H.22 — „Mailbox erstellen“ (explizit)
+
+| Was | Roadmap-Stelle | Status |
+|-----|----------------|--------|
+| **Shared Mailbox** (`create_globals` → `MAILBOX_ID`) | Deploy/Admin, **M1** | **Ist** — ein Objekt pro Einsatz |
+| **Private Mailbox pro Nutzer** (`create_private_mailbox`) | **M4d** in **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** | **Geplant, nicht umgesetzt** — UI nur manuelle Object-ID + Profil-QR bis Move existiert |
+| **Pro-User-Shared-Mailbox-UI** im MVP | **Nicht** vorgesehen (Leitplanke **§ H.22**) | bewusst ausgeschlossen |
 
 ---
 
