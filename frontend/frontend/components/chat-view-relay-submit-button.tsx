@@ -41,6 +41,7 @@ export function ChatViewRelaySubmitButton() {
   const [allowUnsignedDraft, setAllowUnsignedDraft] = useState(false)
   const [transportMode, setTransportMode] = useState<MessagingPersistenceMode>('event')
   const [showExpertTransport, setShowExpertTransport] = useState(false)
+  const [showExpertForwarding, setShowExpertForwarding] = useState(false)
   const [expertQueueItemId, setExpertQueueItemId] = useState<string | null>(null)
   const [mnemoInput, setMnemoInput] = useState('')
   const [showManualSignerInput, setShowManualSignerInput] = useState(false)
@@ -48,6 +49,7 @@ export function ChatViewRelaySubmitButton() {
   const [signerHint, setSignerHint] = useState<string | null>(null)
   const [signerMode, setSignerMode] = useState<string>('unknown')
   const [signerConfigSource, setSignerConfigSource] = useState<'env' | 'runtime' | 'unknown'>('unknown')
+  const [knownAddressSuggestions, setKnownAddressSuggestions] = useState<string[]>([])
 
   const items = useMemo(() => {
     void refreshTick
@@ -114,11 +116,43 @@ export function ChatViewRelaySubmitButton() {
     }
     const asJson = JSON.stringify(envelope, null, 2)
     setRawText(asJson)
-    setMsg(
-      envelope.senderSig === 'UNSIGNED_PLACEHOLDER'
-        ? 'Paket als Eigen-Entwurf erzeugt. Signatur folgt im echten Sendepfad (RAM-Vault/Signer).'
-        : 'Paket erzeugt und in die Import-Box übernommen.'
-    )
+    const item = enqueueRelayEnvelope(envelope)
+    if ((envelope.senderSig || '').trim() === 'UNSIGNED_PLACEHOLDER') {
+      updateRelayQueueReport(item.id, {
+        rpcStatus: 'error',
+        errorCode: 'DRAFT_UNSIGNED',
+        note: 'Eigenentwurf ohne Signatur: für Transport/Review, Submit erst nach Signierung.',
+        statusOverride: 'draft_unsigned',
+      })
+      refresh()
+      setMsg('Paket erzeugt und automatisch als Entwurf in die lokale Warteliste übernommen.')
+      return
+    }
+    refresh()
+    setMsg('Paket erzeugt und automatisch in die lokale Warteliste übernommen.')
+  }
+
+  const markSubmittedByEnvelope = (rawEnvelopeJson: string, noteSuffix: string) => {
+    try {
+      const parsed = JSON.parse(rawEnvelopeJson)
+      const v = validateRelayEnvelope(parsed)
+      if (!v.ok) return
+      const target = loadTxRelayQueue().find(
+        (x) =>
+          x.envelope.nonce === v.envelope.nonce &&
+          x.envelope.sender.toLowerCase() === v.envelope.sender.toLowerCase()
+      )
+      if (!target) return
+      const prev = (target.relayReport?.note || '').trim()
+      const nextNote = prev ? `${prev}\n${noteSuffix}` : noteSuffix
+      updateRelayQueueReport(target.id, {
+        rpcStatus: 'submitted',
+        note: nextNote,
+      })
+      refresh()
+    } catch {
+      // ignore auto-mark errors for helper paths
+    }
   }
 
   const sendEnvelopeAsText = async () => {
@@ -133,6 +167,10 @@ export function ChatViewRelaySubmitButton() {
     }
     const r = await sendMessage(rec, rawText, false, { messagingPersistenceMode: transportMode })
     if (r.ok) {
+      markSubmittedByEnvelope(
+        rawText,
+        `Auto: weitergegeben über Experten-Transport (${transportMode === 'mailbox' ? 'Mailbox' : 'Event'}).`
+      )
       setMsg(
         transportMode === 'mailbox'
           ? 'Paket als Klartext über Mailbox gesendet.'
@@ -311,6 +349,16 @@ export function ChatViewRelaySubmitButton() {
       } else {
         setSignerConfigSource('unknown')
       }
+      const next = new Set<string>()
+      const own = 'myAddress' in s && typeof s.myAddress === 'string' ? s.myAddress.trim() : ''
+      if (/^0x[a-fA-F0-9]{64}$/.test(own)) next.add(own)
+      if ('connectedAddresses' in s && Array.isArray(s.connectedAddresses)) {
+        for (const a of s.connectedAddresses) {
+          const t = String(a || '').trim()
+          if (/^0x[a-fA-F0-9]{64}$/.test(t)) next.add(t)
+        }
+      }
+      setKnownAddressSuggestions(Array.from(next))
     })
     setSessionSignerAddr(getDirectIotaSessionSignerAddress())
     refresh()
@@ -450,6 +498,7 @@ export function ChatViewRelaySubmitButton() {
               <input
                 value={builderSender}
                 onChange={(e) => setBuilderSender(e.target.value)}
+                list="r1-known-addresses"
                 placeholder="sender (0x...)"
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-mono"
               />
@@ -472,9 +521,15 @@ export function ChatViewRelaySubmitButton() {
               <input
                 value={builderRecipient}
                 onChange={(e) => setBuilderRecipient(e.target.value)}
+                list="r1-known-addresses"
                 placeholder="Empfänger (optional 0x...)"
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-mono"
               />
+              <datalist id="r1-known-addresses">
+                {knownAddressSuggestions.map((addr) => (
+                  <option key={addr} value={addr} />
+                ))}
+              </datalist>
               <label className="rounded-md border border-border bg-background px-2 py-1.5 text-xs">
                 TTL (max 24h)
                 <select
@@ -634,7 +689,7 @@ export function ChatViewRelaySubmitButton() {
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={onImport}>
                 <Upload className="mr-2 h-3.5 w-3.5" />
-                Paket prüfen & übernehmen
+                Externes Paket prüfen & übernehmen
               </Button>
             </div>
             {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
@@ -743,10 +798,21 @@ export function ChatViewRelaySubmitButton() {
                 <Copy className="mr-2 h-3.5 w-3.5" />
                 Paket kopieren (Weitergabe)
               </Button>
-              <Button type="button" size="sm" onClick={() => void sendToLoraShortcut()}>
-                LoRa-Weitergabe Hinweis
-              </Button>
             </div>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline underline-offset-2"
+              onClick={() => setShowExpertForwarding((v) => !v)}
+            >
+              {showExpertForwarding ? 'Experten-Weitergabe ausblenden' : 'Experten-Weitergabe anzeigen'}
+            </button>
+            {showExpertForwarding ? (
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => void sendToLoraShortcut()}>
+                  LoRa-Weitergabe Hinweis
+                </Button>
+              </div>
+            ) : null}
           </div>
           <DialogFooter>
             <Button type="button" onClick={() => setOpen(false)}>

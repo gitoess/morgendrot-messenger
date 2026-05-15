@@ -214,6 +214,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !attachmentBarProps.attachedLora &&
     loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
+  const recipientSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const connected = Array.isArray(apiStatus?.connectedAddresses) ? apiStatus.connectedAddresses : []
+    for (const a of connected) {
+      const t = String(a || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    const own = String(apiStatus?.myAddress || '').trim()
+    if (/^0x[a-fA-F0-9]{64}$/.test(own)) set.add(own)
+    return Array.from(set)
+  }, [apiStatus?.connectedAddresses, apiStatus?.myAddress])
 
   const prepareSttDictation = () => {
     const composer = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
@@ -242,11 +253,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger-Adresse</label>
             <input
               type="text"
+              list="chat-recipient-addresses"
               value={recipient}
               onChange={(e) => onRecipientChange(e.target.value)}
               placeholder="0x..."
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            <datalist id="chat-recipient-addresses">
+              {recipientSuggestions.map((addr) => (
+                <option key={addr} value={addr} />
+              ))}
+            </datalist>
           </div>
         )}
 

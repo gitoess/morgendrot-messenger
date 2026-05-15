@@ -19,6 +19,7 @@ export type ChatViewPhonebookSectionProps = {
 type RowState = {
   label: string
   meshNodeId: string
+  mailboxObjectId: string
 }
 
 export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
@@ -44,6 +45,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           next[addr] = {
             label: e.label ?? '',
             meshNodeId: e.meshNodeId ?? '',
+            mailboxObjectId: e.mailboxObjectId ?? '',
           }
         }
       }
@@ -108,9 +110,10 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       </h4>
       <p className="mb-4 text-[11px] leading-relaxed text-muted-foreground">
         <strong className="text-foreground">Anzeigename</strong> und{' '}
-        <strong className="text-foreground">Meshtastic Node-ID</strong> (z. B. <span className="font-mono">!...</span> oder
-        Long Name aus der App) helfen in Posteingang und Mesh-Zuordnung. Die{' '}
-        <strong className="text-foreground">IOTA-Adresse</strong> ist der Schlüssel und bleibt unverändert.
+        <strong className="text-foreground">Meshtastic Node-ID</strong> (z. B. <span className="font-mono">!...</span>) helfen
+        in Posteingang und Mesh-Zuordnung. Die <strong className="text-foreground">IOTA-Adresse</strong> ist der Schlüssel.
+        Optional: <strong className="text-foreground">Alternative Mailbox</strong>, wenn der Kontakt eine eigene private
+        Mailbox hat — sonst nutzt das System die gemeinsame Einsatz-Mailbox (M4).
       </p>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
@@ -139,9 +142,15 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       ) : (
         <ul className="space-y-3">
           {sorted.map(([addr, entry]) => {
-            const st = draft[addr] ?? { label: entry.label ?? '', meshNodeId: entry.meshNodeId ?? '' }
+            const st = draft[addr] ?? {
+              label: entry.label ?? '',
+              meshNodeId: entry.meshNodeId ?? '',
+              mailboxObjectId: entry.mailboxObjectId ?? '',
+            }
             const dirty =
-              st.label !== (entry.label ?? '') || st.meshNodeId !== (entry.meshNodeId ?? '')
+              st.label !== (entry.label ?? '') ||
+              st.meshNodeId !== (entry.meshNodeId ?? '') ||
+              st.mailboxObjectId !== (entry.mailboxObjectId ?? '')
             return (
               <li
                 key={addr}
@@ -193,6 +202,27 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
                       className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-xs"
                     />
                   </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-medium text-muted-foreground">
+                    Alternative Mailbox (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={st.mailboxObjectId}
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        [addr]: { ...st, mailboxObjectId: e.target.value },
+                      }))
+                    }
+                    placeholder="Leer = gemeinsame Einsatz-Mailbox; sonst 0x… (64 Hex)"
+                    className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Nur ausfüllen, wenn der Kontakt eine <strong className="text-foreground">eigene Mailbox</strong>{' '}
+                    nutzt. Später: per QR beides auf einmal (M4c).
+                  </p>
                 </div>
                 <button
                   type="button"

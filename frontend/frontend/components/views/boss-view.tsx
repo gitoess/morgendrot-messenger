@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import {
   Crown,
   Users,
@@ -111,6 +111,20 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
   }, [handoffOpen])
 
   const { directory } = useContactDirectory()
+  const knownAddressSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const addIfAddress = (raw: unknown) => {
+      const t = String(raw || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    addIfAddress(apiSnapshot?.myAddress)
+    addIfAddress(apiSnapshot?.myAddressFull)
+    const connected = Array.isArray(apiSnapshot?.connectedAddresses) ? apiSnapshot.connectedAddresses : []
+    for (const a of connected) addIfAddress(a)
+    for (const addr of Object.keys(directory)) addIfAddress(addr)
+    for (const m of team) addIfAddress(m.address)
+    return Array.from(set)
+  }, [apiSnapshot?.connectedAddresses, apiSnapshot?.myAddress, apiSnapshot?.myAddressFull, directory, team])
 
   const decryptMeshWire = useCallback(async (senderAddress: string, fullWire: Uint8Array) => {
     const { uint8ArrayToBase64 } = await import('@/frontend/lib/emergency-binary-browser')
@@ -419,6 +433,7 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
                 <div>
                   <label className="mb-1 block text-xs text-muted-foreground">BOSS_ADDRESS (0x+64)</label>
                   <input
+                  list="boss-address-suggestions"
                     value={handoffBoss}
                     onChange={(e) => setHandoffBoss(e.target.value)}
                     placeholder="0x…"
@@ -492,6 +507,7 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
                 <label className="mb-1.5 block text-sm text-muted-foreground">Adresse</label>
                 <input
                   type="text"
+                  list="boss-address-suggestions"
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="0x..."
@@ -605,6 +621,11 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
           </p>
         </div>
       )}
+      <datalist id="boss-address-suggestions">
+        {knownAddressSuggestions.map((addr) => (
+          <option key={addr} value={addr} />
+        ))}
+      </datalist>
     </div>
   )
 }

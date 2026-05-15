@@ -1,22 +1,19 @@
 'use client'
 
 /**
- * „Partner verbinden“: Handshake, Schnell verbinden, Mesh/BLE, Kontakt-Export/Import, lokaler Inbox-Purge.
+ * „Kontakt & Verbindung“: Partner-Wallet (0x), optional Handshake, Mesh/BLE, Package-ID (Admin), lokaler Inbox-Purge.
  * Zustand und Handler für API-Aufrufe bleiben in der View; dieses Panel ist die Darstellung.
  */
 
-import type { Dispatch, SetStateAction } from 'react'
-import { AlertTriangle, QrCode, Radio, Trash2 } from 'lucide-react'
+import { AlertTriangle, QrCode, Radio } from 'lucide-react'
 import { toast } from 'sonner'
 import {
-  clearLocalHistory,
   exportContactMeshEncrypted,
   importContactMeshEncrypted,
   saveContactEntry,
   type ContactMeshEntryClient,
 } from '@/frontend/lib/api'
 import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
-import type { Message } from '@/frontend/lib/types'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   MessengerGuideHint,
@@ -72,12 +69,12 @@ export type ChatViewSetupPanelProps = {
   setMeshSyncBusy: (v: boolean) => void
   meshSyncMsg: string | null
   setMeshSyncMsg: (v: string | null) => void
-  localPurgeBusy: boolean
-  setLocalPurgeBusy: (v: boolean) => void
-  setMessages: Dispatch<SetStateAction<Message[]>>
   /** Boss: dezenter Hinweis zu Handshake/Vertrauen */
   role?: string
   activePackageId?: string
+  /** Aus GET /api/status — nur Anzeige, nicht editierbar. */
+  serverMailboxIdMasked?: string
+  mailboxConfigured?: boolean
   inboxPackageFilter: string
   onInboxPackageFilterChange: (v: string) => void
   packageIdSuggestions: string[]
@@ -85,6 +82,9 @@ export type ChatViewSetupPanelProps = {
   onApplyPackageIdBackend: (raw: string) => void | Promise<void>
   onApplyInboxPackageFilterOnly: () => void | Promise<void>
   packageIdBusy?: boolean
+  /** Composer-Empfänger (0x) — Senden nutzt dieses Feld, nicht `partner` allein. */
+  activeSendRecipient?: string
+  onApplyPartnerAsSendRecipient?: () => void
 }
 
 function shortPackageId(a: string) {
@@ -123,10 +123,9 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
-    localPurgeBusy,
-    setLocalPurgeBusy,
-    setMessages,
     activePackageId,
+    serverMailboxIdMasked,
+    mailboxConfigured,
     inboxPackageFilter,
     onInboxPackageFilterChange,
     packageIdSuggestions,
@@ -134,23 +133,175 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     onApplyPackageIdBackend,
     onApplyInboxPackageFilterOnly,
     packageIdBusy,
+    activeSendRecipient = '',
+    onApplyPartnerAsSendRecipient,
   } = p
 
   const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
+  const partnerTrim = partner.trim().toLowerCase()
+  const partnerValid = /^0x[a-f0-9]{64}$/.test(partnerTrim)
+  const sendRecipientTrim = activeSendRecipient.trim().toLowerCase()
+  const partnerMatchesSend =
+    partnerValid && sendRecipientTrim.length > 0 && partnerTrim === sendRecipientTrim
+  const knownPartnerAddresses = Object.keys(directory)
+    .map((a) => a.trim())
+    .filter((a) => /^0x[a-fA-F0-9]{64}$/.test(a))
 
-  const showIotaPartner = encrypted
+  const showIotaOnline = forcedTransport === 'internet'
   const showLora = forcedTransport === 'mesh'
   const showAdhoc = forcedTransport === 'adhoc'
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Partner verbinden</h3>
+      <h3 className="text-lg font-semibold text-foreground">Kontakt &amp; Verbindung</h3>
+      <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">
+        <strong className="text-foreground">Partner = Wallet-Adresse</strong> (<span className="font-mono">0x…</span>, 64
+        Hex). Das ist die Nummer, an die du sendest — <strong className="text-foreground">nicht</strong> die Move-Package-ID
+        und <strong className="text-foreground">nicht</strong> die Mailbox-ID des Servers.
+      </p>
 
-      {/* ——— IOTA · Postfach ——— */}
-      <section className="mb-6 rounded-lg border border-border/80 bg-muted/10 p-3 sm:p-4" aria-labelledby="setup-iota-postfach">
-        <h4 id="setup-iota-postfach" className="mb-2 text-sm font-semibold text-foreground">
-          IOTA · Postfach · Package-ID (Mailbox / Deploy)
+      {showIotaOnline ? (
+        <section className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15" aria-labelledby="setup-iota-partner">
+          <h4 id="setup-iota-partner" className="mb-2 text-sm font-semibold text-foreground">
+            Empfänger: Partner-Wallet (<span className="font-mono">0x…</span>)
+          </h4>
+          {!encrypted ? (
+            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+              <strong className="text-foreground">Klartext:</strong> Adresse eintragen und{' '}
+              <strong className="text-foreground">„Empfänger fürs Senden übernehmen“</strong> — Senden liest das Feld{' '}
+              <strong className="text-foreground">„Empfänger-Adresse“</strong> im Composer unten (nicht automatisch dieses
+              Feld). <strong className="text-foreground">Kein Handshake.</strong>
+            </p>
+          ) : (
+            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+              Verschlüsselt: zuerst Handshake mit der Partner-Wallet, dann senden.
+            </p>
+          )}
+          {encrypted ? (
+            <>
+              <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2.5 dark:bg-amber-950/25">
+                <div className="flex flex-wrap items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700/80 dark:text-amber-400/85" aria-hidden />
+                  <div className="min-w-0 flex-1 space-y-1.5 text-xs leading-relaxed text-amber-950/90 dark:text-amber-50/90">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <MessengerGuideHint
+                        ariaLabel="Handshake Vertrauen und Risiken"
+                        teaser="Risiken"
+                        anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+                      />
+                      <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <MessengerGuideHint
+                  ariaLabel="Hilfe Handshake und Schnell verbinden"
+                  teaser="Handshake & /connect"
+                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE}
+                />
+                <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE} />
+              </div>
+            </>
+          ) : null}
+          <div className={encrypted ? 'grid gap-4 sm:grid-cols-2' : 'space-y-3'}>
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
+              <input
+                type="text"
+                list="chat-partner-addresses"
+                value={partner}
+                onChange={(e) => onPartnerChange(e.target.value)}
+                placeholder="0x + 64 Zeichen Hex (IOTA-Wallet des Empfängers)"
+                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <datalist id="chat-partner-addresses">
+                {knownPartnerAddresses.map((addr) => (
+                  <option key={addr} value={addr} />
+                ))}
+              </datalist>
+              {encrypted ? (
+                <button
+                  type="button"
+                  onClick={onHandshake}
+                  disabled={!partner.trim() || sending}
+                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {sending ? 'Wird gestartet...' : 'Handshake starten'}
+                </button>
+              ) : onApplyPartnerAsSendRecipient ? (
+                <button
+                  type="button"
+                  onClick={onApplyPartnerAsSendRecipient}
+                  disabled={!partnerValid || sending}
+                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Empfänger fürs Senden übernehmen
+                </button>
+              ) : null}
+              {!encrypted && partnerMatchesSend ? (
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                  Aktiver Sende-Empfänger im Composer stimmt mit dieser Adresse überein.
+                </p>
+              ) : null}
+            </div>
+            {encrypted ? (
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-foreground">Schnell verbinden</label>
+                <p className="text-sm text-muted-foreground">Standard-Partner aus der Server-.env.</p>
+                <button
+                  type="button"
+                  onClick={onConnect}
+                  disabled={sending}
+                  className="w-full rounded-lg border border-border bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {sending ? 'Verbinde...' : 'Schnell verbinden'}
+                </button>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : !showLora && !showAdhoc ? (
+        <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          <strong className="text-foreground">Funk:</strong> Keine 0x im Composer nötig. Optional Ziel-Knoten{' '}
+          <span className="font-mono">!…</span> im Nachrichtenfeld.
+        </section>
+      ) : null}
+
+      <details className="mb-6 rounded-lg border border-border/60 bg-muted/10">
+        <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+          Erweitert: Move-Package-ID (Admin — falscher Posteingang / nach Deploy)
+        </summary>
+        <section className="border-t border-border/60 p-3 sm:p-4" aria-labelledby="setup-move-package">
+        <h4 id="setup-move-package" className="mb-2 text-xs font-semibold text-foreground">
+          Welche ID gehört wohin?
         </h4>
+        <ul className="mb-3 list-inside list-disc space-y-1 text-[11px] text-muted-foreground">
+          <li>
+            <strong className="text-foreground">Partner-Wallet</strong> = <span className="font-mono">0x…</span> (64 Hex) —
+            Abschnitt oben, nicht hier.
+          </li>
+          <li>
+            <strong className="text-foreground">Package-ID</strong> = Move-Vertrag auf der Chain.{' '}
+            <strong className="text-foreground">Als Sender: Feld leer lassen</strong> — der Server nutzt die ID aus dem
+            Deploy (siehe „Server-Vertrag“). Nur bei falschem Posteingang oder neuem Deployment hier ändern.
+          </li>
+          <li>
+            <strong className="text-foreground">Mailbox-ID</strong> = <span className="font-mono">MAILBOX_ID</span> in der
+            Server-.env — nur für den Betreiber/Deploy, nicht für normale Nutzer und nicht in dieser Maske.
+          </li>
+        </ul>
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          <strong className="text-foreground">Server-Postamt (MAILBOX_ID):</strong>{' '}
+          {mailboxConfigured && serverMailboxIdMasked ? (
+            <span className="font-mono text-foreground" title="Nur Admin — nicht mit Partner teilen">
+              {serverMailboxIdMasked}
+            </span>
+          ) : (
+            <span>nicht konfiguriert oder ungültig — Betreiber setzt <span className="font-mono">MAILBOX_ID</span> in der
+            Server-.env (geteiltes Objekt, ≠ Package-ID).</span>
+          )}
+        </p>
         <div className="mt-3 rounded-lg border border-border bg-muted/15 px-3 py-3">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <MessengerGuideHint
@@ -160,9 +311,16 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
             />
             <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_PACKAGE_ID} className="ml-auto shrink-0" />
           </div>
-          <p className="mb-2 font-mono text-[11px] text-muted-foreground">
-            Backend aktiv:{' '}
-            <span className="text-foreground">{activePackageId ? shortPackageId(activePackageId) : '—'}</span>
+          <p className="mb-1 text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Server-Vertrag (Package-ID):</strong>{' '}
+            <span className="font-mono text-foreground">
+              {activePackageId ? shortPackageId(activePackageId) : '— (nicht konfiguriert)'}
+            </span>
+            . Feld unten <strong className="text-foreground">leer lassen</strong>, solange der Posteingang stimmt.
+          </p>
+          <p className="mb-2 text-[11px] text-muted-foreground">
+            Nur Admin: anderes Deployment → andere Package-ID eintragen, dann „Als aktiv speichern“ oder „Posteingang neu
+            laden“.
           </p>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <input
@@ -170,7 +328,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               list="morg-package-id-datalist"
               value={inboxPackageFilter}
               onChange={(e) => onInboxPackageFilterChange(e.target.value)}
-              placeholder="0x… (64 Hex) einfügen"
+              placeholder="Leer lassen = Server-ID oben; sonst andere 0x… (64 Hex)"
               className="min-w-0 flex-1 rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
             />
             <datalist id="morg-package-id-datalist">
@@ -193,7 +351,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-accent"
                 title="Mailbox für diese ID laden, ohne lokale Datei zu ändern"
               >
-                Nur Postfach laden
+                Posteingang neu laden
               </button>
               <button
                 type="button"
@@ -206,130 +364,8 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           </div>
         </div>
 
-        <div className="mt-4 border-t border-border/60 pt-4">
-          <h5 className="mb-2 flex items-center gap-2 text-xs font-semibold text-foreground">
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-            Lokaler Postfach-Cache (dieses Gerät)
-          </h5>
-          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            Sichtbare Liste und optionaler Klartext-Cache auf dem Rechner — unabhängig von der Chain. Kontakte im
-            Telefonbuch bleiben.
-          </p>
-          <button
-            type="button"
-            disabled={localPurgeBusy}
-            onClick={async () => {
-              if (
-                !window.confirm(
-                  'Lokalen Klartext-Inbox-Cache auf dem Server/Rechner schreddern und löschen? Die sichtbare Liste wird geleert. On-Chain-Daten bleiben.'
-                )
-              ) {
-                return
-              }
-              setLocalPurgeBusy(true)
-              setMeshSyncMsg(null)
-              const r = await clearLocalHistory({ shred: true })
-              setLocalPurgeBusy(false)
-              if (r.ok) {
-                setMessages([])
-                setMeshSyncMsg('Lokaler Inbox-Cache geschreddert; Chat-Liste geleert. Kontakte unverändert.')
-                toast.success('Lokaler Inbox-Cache geschreddert; Liste geleert.')
-              } else {
-                const err = r.error || 'Lokales Löschen fehlgeschlagen'
-                setMeshSyncMsg(err)
-                toast.error(err)
-              }
-            }}
-            className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-300"
-          >
-            {localPurgeBusy ? 'Wird verwischt…' : 'Lokale Spuren verwischen (Inbox-Cache schreddern)'}
-          </button>
-        </div>
       </section>
-
-      {/* ——— IOTA · Partner ——— */}
-      {showIotaPartner ? (
-        <section className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15" aria-labelledby="setup-iota-partner">
-          <h4 id="setup-iota-partner" className="mb-2 text-sm font-semibold text-foreground">
-            IOTA · Partner (0x) — Handshake & Mailbox
-          </h4>
-          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            Für <strong className="text-foreground">Online/IOTA</strong> brauchst du eine gültige{' '}
-            <span className="font-mono">0x</span>-Adresse: oft <strong className="text-foreground">deine eigene</strong>{' '}
-            (Notizen an dich), oder ein <strong className="text-foreground">Wallet nach Handshake</strong>. Für
-            Klartext-IOTA sind auch andere Empfänger möglich — für <strong className="text-foreground">E2E</strong> immer
-            Adresse prüfen.
-          </p>
-          <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2.5 dark:bg-amber-950/25">
-            <div className="flex flex-wrap items-start gap-2.5">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700/80 dark:text-amber-400/85" aria-hidden />
-              <div className="min-w-0 flex-1 space-y-1.5 text-xs leading-relaxed text-amber-950/90 dark:text-amber-50/90">
-                <div className="flex flex-wrap items-center gap-2">
-                  <MessengerGuideHint
-                    ariaLabel="Handshake Vertrauen und Risiken"
-                    teaser="Risiken"
-                    anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
-                  />
-                  <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST} />
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <MessengerGuideHint
-              ariaLabel="Hilfe Handshake und Schnell verbinden"
-              teaser="Handshake & /connect"
-              anchor={MESSENGER_HB_ANCHOR_HANDSHAKE}
-            />
-            <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE} />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground">Partner-Adresse (0x)</label>
-              <input
-                type="text"
-                value={partner}
-                onChange={(e) => onPartnerChange(e.target.value)}
-                placeholder="0x… (64 Hex)"
-                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <button
-                type="button"
-                onClick={onHandshake}
-                disabled={!partner.trim() || sending}
-                className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? 'Wird gestartet...' : 'Handshake starten'}
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground">Schnell verbinden</label>
-              <p className="text-sm text-muted-foreground">Nutzt die Standard-Partner-Adresse aus der Konfiguration (.env).</p>
-              <button
-                type="button"
-                onClick={onConnect}
-                disabled={sending}
-                className="w-full rounded-lg border border-border bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? 'Verbinde...' : 'Schnell verbinden'}
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : forcedTransport === 'internet' ? (
-        <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">Online · unverschlüsselt:</strong> Für Klartext-IOTA brauchst du keinen
-          Handshake-Block. Bei Bedarf im Composer nur die 0x-Zieladresse setzen.
-        </section>
-      ) : (
-        <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">IOTA-Partner & Handshake</strong> sind nur für den Sendepfad{' '}
-          <span className="font-mono">online</span> (oder bei E2E) relevant. Im{' '}
-          <span className="font-mono">funk</span>-Klartext brauchst du im Composer <strong className="text-foreground">keine</strong>{' '}
-          0x-Empfängeradresse (Broadcast) — optional Ziel-Knoten <span className="font-mono">!…</span> im Nachrichtenfeld.
-        </section>
-      )}
+      </details>
 
       {/* ——— LoRa · Heltec ——— */}
       {showLora ? (

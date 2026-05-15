@@ -2,7 +2,7 @@
 
 **Zweck:** Architektur- und UX-Vorgabe für **persistente** Chat-/System-Nachrichten auf der **IOTA-Mailbox** (`MAILBOX_ID`, Shared Object), abgeglichen mit dem **Ist-Code**, inkl. **„Persistent“-Schalter** (Event vs. Mailbox-Anker).  
 **Stand:** 2026-04-16  
-**Verknüpft:** `docs/ROADMAP-FAHRPLAN.md` (**§ H.12**, **§ H.15**), `docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`, `docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`, `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`, `move-test/sources/messaging.move`, `src/chain-access.ts`, `src/messenger-nest/messenger-fetch.ts`, `src/messenger-nest/messenger-chain-wrap.ts`, `frontend/frontend/lib/mailbox-send-hybrid.ts`, `frontend/frontend/hooks/use-chat-view-handle-send.ts`
+**Verknüpft:** `docs/ROADMAP-FAHRPLAN.md` (**§ H.12**, **§ H.15**, **§ H.22** / **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** M1–M4), `docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`, `docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`, `docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`, `move-test/sources/messaging.move`, `src/chain-access.ts`, `src/messenger-nest/messenger-fetch.ts`, `src/messenger-nest/messenger-chain-wrap.ts`, `frontend/frontend/lib/mailbox-send-hybrid.ts`, `frontend/frontend/hooks/use-chat-view-handle-send.ts`
 
 ---
 

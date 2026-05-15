@@ -7,7 +7,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw } from 'lucide-react'
+import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -58,6 +58,8 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onBulkPurgeSelected: () => void
   hasHiddenMessages: boolean
   onToggleHideAllVisibleLocal: () => void
+  localPurgeBusy?: boolean
+  onClearLocalInboxCache?: () => void | Promise<void>
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -99,6 +101,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onBulkPurgeSelected,
     hasHiddenMessages,
     onToggleHideAllVisibleLocal,
+    localPurgeBusy = false,
+    onClearLocalInboxCache,
   } = p
 
   return (
@@ -193,6 +197,17 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
               Kurzbericht verschlüsselt
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {onClearLocalInboxCache ? (
+              <DropdownMenuItem
+                disabled={localPurgeBusy}
+                onSelect={() => void onClearLocalInboxCache()}
+                className="text-red-700 focus:text-red-700 dark:text-red-300"
+              >
+                <Trash2 className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                {localPurgeBusy ? 'Cache wird geleert…' : 'Lokalen Posteingangs-Cache leeren'}
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokoll()}>
               <Archive className="mr-2 h-4 w-4 opacity-80" aria-hidden />

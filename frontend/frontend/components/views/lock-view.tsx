@@ -70,6 +70,19 @@ export function LockView({ variant }: LockViewProps) {
 
   const [loadError, setLoadError] = useState<string | null>(null)
   const [chainStrip, setChainStrip] = useState<ApiStatus | null>(null)
+  const addressSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const addIfAddress = (raw: unknown) => {
+      const t = String(raw || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    addIfAddress(chainStrip?.myAddress)
+    const connectedUnknown = (chainStrip as { connectedAddresses?: unknown } | null)?.connectedAddresses
+    if (Array.isArray(connectedUnknown)) {
+      for (const item of connectedUnknown) addIfAddress(item)
+    }
+    return Array.from(set)
+  }, [chainStrip])
 
   const explorerBase = typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_EXPLORER_BASE
     ? process.env.NEXT_PUBLIC_EXPLORER_BASE.replace(/\/$/, '')
@@ -469,6 +482,7 @@ export function LockView({ variant }: LockViewProps) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Schloss-Adresse</label>
                   <input
                     type="text"
+                    list="lock-address-suggestions"
                     value={lockAddress}
                     onChange={(e) => setLockAddress(e.target.value)}
                     placeholder="0x..."
@@ -479,6 +493,7 @@ export function LockView({ variant }: LockViewProps) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger</label>
                   <input
                     type="text"
+                    list="lock-address-suggestions"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="0x..."
@@ -534,6 +549,7 @@ export function LockView({ variant }: LockViewProps) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Neuer Besitzer</label>
                   <input
                     type="text"
+                    list="lock-address-suggestions"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="0x..."
@@ -692,6 +708,7 @@ export function LockView({ variant }: LockViewProps) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger (0x…)</label>
                   <input
                     type="text"
+                    list="lock-address-suggestions"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="0x..."
@@ -858,6 +875,7 @@ export function LockView({ variant }: LockViewProps) {
                   <label className="mb-1.5 block text-sm font-medium text-foreground">Neuer Besitzer</label>
                   <input
                     type="text"
+                    list="lock-address-suggestions"
                     value={recipient}
                     onChange={(e) => setRecipient(e.target.value)}
                     placeholder="0x..."
@@ -941,6 +959,11 @@ export function LockView({ variant }: LockViewProps) {
           </div>
         </div>
       )}
+      <datalist id="lock-address-suggestions">
+        {addressSuggestions.map((addr) => (
+          <option key={addr} value={addr} />
+        ))}
+      </datalist>
     </div>
   )
 }

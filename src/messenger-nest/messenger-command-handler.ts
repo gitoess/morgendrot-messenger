@@ -1285,8 +1285,10 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
-                        const mp = String(opts?.messagingPersistenceMode ?? '').trim().toLowerCase();
-                        const forceLegacyPlaintext = mp !== 'mailbox';
+                        const { resolveForceLegacyPlaintext } = await import('../messaging-persistence-resolve.js');
+                        const forceLegacyPlaintext = resolveForceLegacyPlaintext({
+                            messagingPersistenceMode: opts?.messagingPersistenceMode,
+                        });
                         for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
                         return { ok: true, message: addrs.length > 1 ? `Klartext an ${addrs.length} Empfänger gesendet.` : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.` };
                     }

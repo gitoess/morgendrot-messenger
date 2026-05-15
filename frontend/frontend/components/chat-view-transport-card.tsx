@@ -34,7 +34,7 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   /** Web Bluetooth / Heltec – für Hinweise unter „funk“. */
   meshBleSupported?: boolean
   meshBleConnected?: boolean
-  /** Panel „Partner verbinden“ öffnen (Meshtastic koppeln steht dort). */
+  /** Panel „Kontakt & Verbindung“ öffnen (Meshtastic koppeln steht dort). */
   onOpenPartnerSetup?: () => void
   /** Detail-Panel ein-/aus (nebeneinander mit Verschlüsselung). */
   partnerSetupOpen?: boolean
@@ -156,7 +156,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             )}
           >
             <Handshake className="h-4 w-4 shrink-0" aria-hidden />
-            Partner verbinden
+            Kontakt &amp; Verbindung
           </button>
         ) : null}
       </div>
@@ -195,6 +195,12 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               ? 'Klartext-Mailbox-Speicherung, wenn Backend konfiguriert.'
               : 'Klartext-Event-Pfad send_plaintext_message.'}
           </span>
+          {messagingPersistenceMode === 'mailbox' && apiStatus?.mailboxConfigured === false ? (
+            <p className="w-full text-xs text-amber-700 dark:text-amber-300">
+              Mailbox-Modus gewählt, aber <span className="font-mono">MAILBOX_ID</span> fehlt oder ist ungültig — Senden
+              schlägt fehl. Betreiber: Server-.env; oder „Nur Event“ wählen.
+            </p>
+          ) : null}
         </div>
       )}
       {encrypted && forcedTransport === 'internet' ? (
@@ -225,7 +231,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               </p>
             ) : meshBleSupported ? (
               <p>
-                Heltec koppeln: <strong className="text-foreground">Partner verbinden</strong> öffnen, dort{' '}
+                Heltec koppeln: <strong className="text-foreground">Kontakt &amp; Verbindung</strong> öffnen, dort{' '}
                 <strong className="text-foreground">Web Bluetooth</strong> (Browser zeigt die Geräteliste).
               </p>
             ) : (
@@ -240,7 +246,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
                 onClick={onOpenPartnerSetup}
                 className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 sm:min-h-0 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-inherit sm:font-medium sm:text-primary sm:underline sm:underline-offset-2"
               >
-                Partner verbinden öffnen
+                Kontakt &amp; Verbindung öffnen
               </button>
             ) : null}
           </div>
@@ -273,7 +279,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-100/90">
             <strong>Ad-hoc BLE</strong> ist noch <strong>nicht implementiert</strong> (nur Platzhalter). Kontakt-<strong>bleUuid</strong> und
-            zukünftiges Advertising siehe Setup unter „Partner verbinden“. Bitte auf <strong>funk</strong> oder{' '}
+            zukünftiges Advertising siehe Setup unter „Kontakt &amp; Verbindung“. Bitte auf <strong>funk</strong> oder{' '}
             <strong>online</strong> wechseln zum Senden.
             {onOpenPartnerSetup ? (
               <button

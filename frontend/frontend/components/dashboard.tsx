@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import {
   MessageSquare,
@@ -17,7 +17,7 @@ import {
   BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, revealVaultSignerImport, type ApiStatus } from '@/frontend/lib/api'
+import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, type ApiStatus } from '@/frontend/lib/api'
 import type { ProjectType, ProjectVariant } from '../lib/types'
 import {
   WorkspaceProjectsPanel,
@@ -50,7 +50,6 @@ import { recordSeenMyAddress } from '@/frontend/lib/my-address-local-history'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
 import { filterFeaturesByMessengerWorkspaceTileSet } from '@/frontend/lib/dashboard-workspace-tile-visibility'
-import { shouldOfferRecoveryAfterUnlock } from '@/frontend/lib/unlock-recovery-flow'
 import {
   Dialog,
   DialogContent,
@@ -84,7 +83,13 @@ const features: Feature[] = [
     subtitle: 'Sicher kommunizieren',
     icon: <MessageSquare className="h-6 w-6" />,
     color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    variants: [{ id: 'private-chat', title: 'Nachrichten', hint: 'Privater Chat & Pinnwand — Umschalter in der Ansicht' }],
+    variants: [
+      {
+        id: 'private-chat',
+        title: 'Nachrichten',
+        hint: '1:1 Privat & Pinnwand (Brett) — Gruppenchat geplant (M2, Fahrplan § H.22)',
+      },
+    ],
   },
   {
     id: 'lock',
@@ -240,11 +245,6 @@ export function Dashboard() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [helpText, setHelpText] = useState('')
   const [helpLoading, setHelpLoading] = useState(false)
-  const [postUnlockRecoveryOpen, setPostUnlockRecoveryOpen] = useState(false)
-  const [postUnlockRecoveryPw, setPostUnlockRecoveryPw] = useState('')
-  const [postUnlockRecoveryBusy, setPostUnlockRecoveryBusy] = useState(false)
-  const [postUnlockRecoveryErr, setPostUnlockRecoveryErr] = useState('')
-  const [postUnlockRecoverySigner, setPostUnlockRecoverySigner] = useState<string | null>(null)
   const [role, setRole] = useState<string>('')
   const [myAddress, setMyAddress] = useState<string>('')
   const [showAllTiles, setShowAllTiles] = useState(false)
@@ -274,10 +274,6 @@ export function Dashboard() {
       setPassword('')
       setPasswordConfirm('')
       setShowSignerImportOpen(false)
-      setPostUnlockRecoveryOpen(false)
-      setPostUnlockRecoveryPw('')
-      setPostUnlockRecoveryErr('')
-      setPostUnlockRecoverySigner(null)
       const hasVault = vaultHasLocalRef.current
       const sdk = signerIsSdkRef.current
       setUnlockMode(hasVault ? 'vault' : sdk ? 'create' : 'vault')
@@ -321,6 +317,21 @@ export function Dashboard() {
   /** Volle eigene Adresse vom Backend — für Wallet-Saldo u. ä. (maskierte `myAddress` zählt nicht). */
   const hasValidMyAddressForBalance =
     /^0x[a-fA-F0-9]{64}$/i.test((apiSnapshot?.myAddressFull ?? '').trim()) === true
+
+  const dashboardTransferAddressSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const add = (v?: string) => {
+      const t = (v || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    add(apiSnapshot?.myAddress)
+    add(apiSnapshot?.myAddressFull)
+    const conn = apiSnapshot?.connectedAddresses
+    if (Array.isArray(conn)) {
+      for (const a of conn) add(a)
+    }
+    return Array.from(set)
+  }, [apiSnapshot?.myAddress, apiSnapshot?.myAddressFull, apiSnapshot?.connectedAddresses])
 
   /** Lite-Messenger: nur Boss darf Arbeitsbereich „full“ + alle Kacheln; alle anderen nur Nachrichten + Tresor/Notfall. */
   const liteMessengerLocksTiles = liteMessengerFromApi && !isBossRole
@@ -478,6 +489,8 @@ export function Dashboard() {
   const handleUnlock = async () => {
     setUnlockError('')
     const signer = apiSnapshot?.signer
+    /** Nach Lock kann `signer` im Status kurz fehlen — „Seed importieren“ ist immer SDK-Pfad. */
+    const sdkLike = signer === 'sdk' || (signer == null && unlockMode === 'import')
 
     if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
@@ -498,7 +511,7 @@ export function Dashboard() {
           return
         }
       }
-    } else if (signer === 'sdk' && unlockMode === 'import') {
+    } else if (sdkLike && unlockMode === 'import') {
       const t = signerImport.trim()
       if (!t || !isPlausibleSdkImport(t)) {
         setUnlockError(
@@ -506,7 +519,7 @@ export function Dashboard() {
         )
         return
       }
-    } else if (signer === 'sdk' && unlockMode === 'vault' && showSignerImportOpen) {
+    } else if (sdkLike && unlockMode === 'vault' && showSignerImportOpen) {
       const t = signerImport.trim()
       if (t && !isPlausibleSdkImport(t)) {
         setUnlockError(
@@ -523,6 +536,8 @@ export function Dashboard() {
       } else {
         sdkExtra = showSignerImportOpen ? signerImport.trim() || undefined : undefined
       }
+    } else if (signer == null && unlockMode === 'import') {
+      sdkExtra = signerImport.trim()
     }
 
     setUnlocking(true)
@@ -549,39 +564,18 @@ export function Dashboard() {
         if (s.locked) break
         setConnected(!!s.connected)
       }
-      const afterUnlock = await fetchStatus()
-      if ('pollClockHint' in afterUnlock && shouldOfferRecoveryAfterUnlock(afterUnlock)) {
-        setPostUnlockRecoveryOpen(true)
-        setPostUnlockRecoveryPw('')
-        setPostUnlockRecoveryErr('')
-        setPostUnlockRecoverySigner(null)
-      }
     } else {
-      setUnlockError(res.error || 'Entsperren fehlgeschlagen')
-      if (res.code === SIGNER_IMPORT_REQUIRED_CODE && apiSnapshot?.signer === 'sdk' && unlockMode === 'vault') {
+      if (res.code === SIGNER_IMPORT_REQUIRED_CODE) {
         setUnlockMode('import')
         setShowSignerImportOpen(true)
-      }
-    }
-  }
-
-  const handlePostUnlockRecoveryReveal = async () => {
-    setPostUnlockRecoveryErr('')
-    if (!postUnlockRecoveryPw.trim()) {
-      setPostUnlockRecoveryErr('Vault-Passwort eingeben.')
-      return
-    }
-    setPostUnlockRecoveryBusy(true)
-    try {
-      const res = await revealVaultSignerImport(postUnlockRecoveryPw.trim())
-      if (res.ok && res.signerImport) {
-        setPostUnlockRecoverySigner(res.signerImport)
-        setPostUnlockRecoveryPw('')
+        setUnlockError(
+          `${res.error || 'Signatur-Material fehlt.'}\n\n` +
+            '→ Es wurde auf „Seed importieren“ umgeschaltet: dort Passwort und Mnemonic/Secret eintragen, dann erneut „Tresor entsperren“.\n' +
+            'Alternativ: „Tresor öffnen“ und unten „Mnemonic oder Secret eingeben“.'
+        )
       } else {
-        setPostUnlockRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
+        setUnlockError(res.error || 'Entsperren fehlgeschlagen')
       }
-    } finally {
-      setPostUnlockRecoveryBusy(false)
     }
   }
 
@@ -646,6 +640,8 @@ export function Dashboard() {
         : 'internet'
 
   const signerKind = apiSnapshot?.signer
+  const importMnemonicRequired =
+    unlockMode === 'import' && (signerKind === 'sdk' || signerKind == null)
   const unlockButtonDisabled =
     unlocking ||
     !password.trim() ||
@@ -656,9 +652,7 @@ export function Dashboard() {
       (!signerImport.trim() ||
         !signerImportConfirm.trim() ||
         normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm))) ||
-    (unlockMode === 'import' &&
-      signerKind === 'sdk' &&
-      (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
+    (importMnemonicRequired && (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
     (unlockMode === 'vault' &&
       signerKind === 'sdk' &&
       showSignerImportOpen &&
@@ -688,77 +682,6 @@ export function Dashboard() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={postUnlockRecoveryOpen} onOpenChange={setPostUnlockRecoveryOpen}>
-        <DialogContent className="sm:max-w-md z-[210]">
-          <DialogHeader>
-            <DialogTitle>Recovery jetzt sichern? (optional)</DialogTitle>
-            <DialogDescription className="space-y-2 text-left">
-              <span>
-                Direkter Schritt nach dem Entsperren: denselben Recovery-Flow wie unter{' '}
-                <strong>Wallet &amp; Backup</strong> nutzen (<span className="font-mono text-xs">/vault-show-signer-import</span>).
-              </span>
-              <span className="block text-xs text-muted-foreground">
-                Nur bei <span className="font-mono">SIGNER=sdk</span> mit lokal gespeicherter Vault und bewusst
-                aktivierter Sicherung relevant.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-2">
-              <Label htmlFor="post-unlock-recovery-password">Vault-Passwort (erneut eingeben)</Label>
-              <Input
-                id="post-unlock-recovery-password"
-                type="password"
-                value={postUnlockRecoveryPw}
-                onChange={(e) => setPostUnlockRecoveryPw(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="off"
-              />
-            </div>
-            {postUnlockRecoveryErr ? <p className="text-sm text-destructive">{postUnlockRecoveryErr}</p> : null}
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                onClick={() => void handlePostUnlockRecoveryReveal()}
-                disabled={postUnlockRecoveryBusy}
-                className="flex-1"
-              >
-                {postUnlockRecoveryBusy ? 'Lade…' : 'Recovery anzeigen'}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setPostUnlockRecoveryOpen(false)
-                  setPostUnlockRecoveryPw('')
-                  setPostUnlockRecoveryErr('')
-                }}
-              >
-                Später
-              </Button>
-            </div>
-            {postUnlockRecoverySigner ? (
-              <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-                  Nur lokal sicher notieren. Nicht teilen, nicht in unsichere Cloud kopieren.
-                </p>
-                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
-                  {postUnlockRecoverySigner}
-                </pre>
-                <button
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard.writeText(postUnlockRecoverySigner)
-                  }}
-                  className="text-sm text-primary hover:underline"
-                >
-                  In Zwischenablage kopieren
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={locked} onOpenChange={() => {}}>
         <DialogContent
@@ -901,43 +824,52 @@ export function Dashboard() {
                   />
                 </div>
                 {signerKind === 'sdk' ? (
-                  showSignerImportOpen ? (
-                    <div className="space-y-2">
-                      <Label htmlFor="wallet-signer-import">Mnemonic / Bech32-Secret</Label>
-                      <Textarea
-                        id="wallet-signer-import"
-                        placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
-                        value={signerImport}
-                        onChange={(e) => setSignerImport(e.target.value)}
-                        className="min-h-[88px] font-mono text-xs"
-                        autoComplete="off"
-                      />
+                  <>
+                    {apiSnapshot?.vaultStatus?.hasLocal ? (
+                      <p className="rounded-md border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-[11px] leading-relaxed text-sky-950 dark:text-sky-50/95">
+                        Ohne zuvor im Tresor <strong className="text-foreground">„Signer-Import mit speichern“</strong> reicht
+                        das Passwort allein nicht: zusätzlich Mnemonic/Secret nötig — unten aufklappen oder Tab{' '}
+                        <strong className="text-foreground">Seed importieren</strong>.
+                      </p>
+                    ) : null}
+                    {showSignerImportOpen ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="wallet-signer-import">Mnemonic / Bech32-Secret</Label>
+                        <Textarea
+                          id="wallet-signer-import"
+                          placeholder="12–24 Wörter oder IOTA-Bech32-Secret …"
+                          value={signerImport}
+                          onChange={(e) => setSignerImport(e.target.value)}
+                          className="min-h-[88px] font-mono text-xs"
+                          autoComplete="off"
+                        />
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground underline hover:text-foreground"
+                          onClick={() => {
+                            setShowSignerImportOpen(false)
+                            setSignerImport('')
+                            setUnlockError('')
+                          }}
+                        >
+                          Mnemonic-Eingabe ausblenden
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         type="button"
-                        className="text-xs text-muted-foreground underline hover:text-foreground"
-                        onClick={() => {
-                          setShowSignerImportOpen(false)
-                          setSignerImport('')
-                          setUnlockError('')
-                        }}
+                        className="w-full rounded-lg border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/60"
+                        onClick={() => setShowSignerImportOpen(true)}
                       >
-                        Mnemonic-Eingabe ausblenden
+                        Mnemonic oder Secret eingeben (nur wenn im Tresor noch kein Signer-Import gespeichert ist)
                       </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="w-full rounded-lg border border-dashed border-border px-3 py-2 text-left text-xs text-muted-foreground hover:bg-muted/60"
-                      onClick={() => setShowSignerImportOpen(true)}
-                    >
-                      Mnemonic oder Secret eingeben (nur wenn im Tresor noch kein Signer-Import gespeichert ist)
-                    </button>
-                  )
+                    )}
+                  </>
                 ) : null}
               </>
             ) : null}
 
-            {unlockMode === 'import' && signerKind === 'sdk' ? (
+            {unlockMode === 'import' && importMnemonicRequired ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="wallet-password-import">Passwort (Wallet / Vault)</Label>
@@ -1019,7 +951,9 @@ export function Dashboard() {
               </>
             ) : null}
 
-            {unlockError ? <p className="text-sm text-destructive">{unlockError}</p> : null}
+            {unlockError ? (
+              <p className="whitespace-pre-wrap text-sm text-destructive">{unlockError}</p>
+            ) : null}
             <Button onClick={() => void handleUnlock()} disabled={unlockButtonDisabled} className="w-full">
               {unlocking ? 'Tresor wird geöffnet…' : 'Tresor entsperren'}
             </Button>
@@ -1255,6 +1189,7 @@ export function Dashboard() {
               walletNativeIotaBalanceFetchFailed={apiSnapshot?.walletNativeIotaBalanceFetchFailed}
               hasValidMyAddressForBalance={hasValidMyAddressForBalance}
               onRefreshStatus={checkStatus}
+              addressSuggestions={dashboardTransferAddressSuggestions}
             />
           </div>
         )}

@@ -17,6 +17,8 @@ export type DashboardIotaTransferCardProps = {
   hasValidMyAddressForBalance?: boolean
   /** Status erneut laden (Saldo aktualisieren). */
   onRefreshStatus?: () => void | Promise<void>
+  /** Vorschläge für Empfänger (z. B. eigene Adresse, verbundene Partner) — nur Auswahlhilfe. */
+  addressSuggestions?: string[]
 }
 
 export function DashboardIotaTransferCard({
@@ -24,6 +26,7 @@ export function DashboardIotaTransferCard({
   walletNativeIotaBalanceFetchFailed,
   hasValidMyAddressForBalance = false,
   onRefreshStatus,
+  addressSuggestions = [],
 }: DashboardIotaTransferCardProps) {
   const [transferTo, setTransferTo] = useState('')
   const [transferAmount, setTransferAmount] = useState('')
@@ -137,11 +140,17 @@ export function DashboardIotaTransferCard({
           <label className="mb-1 block text-xs text-muted-foreground">Empfänger</label>
           <input
             type="text"
+            list="dashboard-iota-transfer-recipients"
             value={transferTo}
             onChange={(e) => setTransferTo(e.target.value)}
             placeholder="0x..."
             className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
+          <datalist id="dashboard-iota-transfer-recipients">
+            {addressSuggestions.map((addr) => (
+              <option key={addr} value={addr} />
+            ))}
+          </datalist>
         </div>
         <div>
           <label className="mb-1 block text-xs text-muted-foreground">Betrag (IOTA)</label>

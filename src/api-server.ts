@@ -144,6 +144,7 @@ export type ApiStatus = {
     useMailbox?: boolean;
     /** MAILBOX_ID gesetzt und 0x+64Hex (sonst kann Mailbox-Modus nicht greifen). */
     mailboxConfigured?: boolean;
+    mailboxIdMasked?: string;
     /** cli | sdk | remote – UI zeigt ggf. Mnemonic-Feld beim Entsperren. */
     signer?: string;
     /** MESSENGER_CREDITS_OBJECT_ID syntaktisch gültig und ≠ PACKAGE_ID. */
@@ -597,6 +598,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 compactImageEncode: true,
                 loraProgressiveEncode: true,
                 ...(packageTrim ? { packageId: packageTrim } : {}),
+                ...(mailboxConfigured && mailboxIdTrim ? { mailboxIdMasked: mask(mailboxIdTrim) } : {}),
             };
             sendJson(res, 200, status, cors);
             return;
@@ -1376,11 +1378,13 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             meshNodeId: null,
                             meshPublicKeyHex: null,
                             bleUuid: null,
+                            mailboxObjectId: null,
                         });
                     } else if (
                         data.meshNodeId !== undefined ||
                         data.meshPublicKeyHex !== undefined ||
-                        data.bleUuid !== undefined
+                        data.bleUuid !== undefined ||
+                        data.mailboxObjectId !== undefined
                     ) {
                         saveContactMeshFields(address, {
                             ...(data.meshNodeId !== undefined && { meshNodeId: String(data.meshNodeId) }),
@@ -1388,6 +1392,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                 meshPublicKeyHex: String(data.meshPublicKeyHex),
                             }),
                             ...(data.bleUuid !== undefined && { bleUuid: String(data.bleUuid) }),
+                            ...(data.mailboxObjectId !== undefined && {
+                                mailboxObjectId: String(data.mailboxObjectId),
+                            }),
                         });
                     }
                     sendJson(res, 200, { ok: true, message: 'Kontakt gespeichert.' }, cors);

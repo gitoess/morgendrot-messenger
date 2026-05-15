@@ -10,6 +10,8 @@ export type ContactMeshEntryClient = {
   meshNodeId?: string
   meshPublicKeyHex?: string
   bleUuid?: string
+  /** M4a: optionale private/alternative Mailbox-Object-ID des Kontakts (0x + 64 Hex). */
+  mailboxObjectId?: string
 }
 
 /** POST /api/contact-labels/apply-initial-profile — gleiches Schema wie Server `InitialProfile`. */
@@ -70,6 +72,7 @@ export async function saveContactEntry(body: {
   bleUuid?: string
   meshNodeId?: string
   meshPublicKeyHex?: string
+  mailboxObjectId?: string
   clearMesh?: boolean
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {

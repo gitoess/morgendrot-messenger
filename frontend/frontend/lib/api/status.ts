@@ -36,6 +36,8 @@ export type ApiStatus = {
   plaintextMode?: boolean
   useMailbox?: boolean
   mailboxConfigured?: boolean
+  /** Maskierte Server-MAILBOX_ID (Admin/Betrieb — nicht Partner-Adresse). */
+  mailboxIdMasked?: string
   mailboxStorePlaintext?: boolean
   messengerEdition?: 'standalone' | 'sales'
   messengerCreditsConfigured?: boolean

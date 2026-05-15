@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, ChevronDown, ChevronUp, Copy } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
@@ -100,6 +100,52 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
   const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
 
   const streams = apiStatus.streams
+
+  const pulseHexChainSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const add = (v?: string) => {
+      const t = (v || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    add(apiStatus.packageId)
+    add(apiStatus.myAddress)
+    add(apiStatus.myAddressFull)
+    const conn = apiStatus.connectedAddresses
+    if (Array.isArray(conn)) {
+      for (const a of conn) add(a)
+    }
+    add(apiStatus.streams?.anchorIdFull)
+    add(apiStatus.streams?.anchorId)
+    add(idsOverride?.packageId)
+    add(idsOverride?.mailboxId)
+    add(idsOverride?.myAddress)
+    add(idsOverride?.streamsAnchorId)
+    return Array.from(set)
+  }, [
+    apiStatus.packageId,
+    apiStatus.myAddress,
+    apiStatus.myAddressFull,
+    apiStatus.connectedAddresses,
+    apiStatus.streams?.anchorId,
+    apiStatus.streams?.anchorIdFull,
+    idsOverride,
+  ])
+
+  const pulseWalletPeerSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    const add = (v?: string) => {
+      const t = (v || '').trim()
+      if (/^0x[a-fA-F0-9]{64}$/.test(t)) set.add(t)
+    }
+    add(apiStatus.myAddress)
+    add(apiStatus.myAddressFull)
+    add(idsOverride?.myAddress)
+    const conn = apiStatus.connectedAddresses
+    if (Array.isArray(conn)) {
+      for (const a of conn) add(a)
+    }
+    return Array.from(set)
+  }, [apiStatus.myAddress, apiStatus.myAddressFull, apiStatus.connectedAddresses, idsOverride?.myAddress])
 
   useEffect(() => {
     try {
@@ -440,6 +486,7 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
                 <Label className="text-[11px] text-muted-foreground">Package-ID</Label>
                 <Input
                   className="h-9 font-mono text-xs"
+                  list="pulse-hex-chain-suggestions"
                   value={chainPkg}
                   onChange={(e) => setChainPkg(e.target.value)}
                   spellCheck={false}
@@ -450,6 +497,7 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
                 <Label className="text-[11px] text-muted-foreground">Mailbox-ID</Label>
                 <Input
                   className="h-9 font-mono text-xs"
+                  list="pulse-hex-chain-suggestions"
                   value={chainMb}
                   onChange={(e) => setChainMb(e.target.value)}
                   spellCheck={false}
@@ -460,6 +508,7 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
                 <Label className="text-[11px] text-muted-foreground">Absender (IOTA-Adresse / Objekt)</Label>
                 <Input
                   className="h-9 font-mono text-xs"
+                  list="pulse-hex-chain-suggestions"
                   value={chainAddr}
                   onChange={(e) => setChainAddr(e.target.value)}
                   spellCheck={false}
@@ -623,6 +672,7 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
                       <Label className="text-[11px] text-muted-foreground">Empfänger (0x…)</Label>
                       <Input
                         className="h-9 font-mono text-xs"
+                        list="pulse-wallet-peer-suggestions"
                         value={ecdhPeerAddr}
                         onChange={(e) => setEcdhPeerAddr(e.target.value)}
                         spellCheck={false}

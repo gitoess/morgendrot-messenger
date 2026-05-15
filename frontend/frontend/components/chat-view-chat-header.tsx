@@ -144,7 +144,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
-                {isPrivate ? 'Privater Chat' : 'Pinnwand'}
+                {isPrivate ? '1:1 Privat' : 'Pinnwand (Brett)'}
               </h2>
               {channelMode != null && onChannelModeChange ? (
                 <span
@@ -162,7 +162,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    Privat
+                    1:1
                   </button>
                   <button
                     type="button"
@@ -174,11 +174,16 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    Pinnwand
+                    Brett
                   </button>
                 </span>
               ) : null}
             </div>
+            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+              {isPrivate
+                ? 'Verschlüsselter Dialog mit einer Partner-Adresse (0x…). Gruppenchat folgt in M2.'
+                : 'Schwarzes Brett: Klartext-Bekanntmachungen — kein Gruppenchat, keine 1:1-Verschlüsselung.'}
+            </p>
           </div>
         </div>
 

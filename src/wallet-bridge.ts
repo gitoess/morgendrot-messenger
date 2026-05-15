@@ -521,6 +521,7 @@ async function main() {
                     continue;
                 }
                 try {
+                    // CLI /send-plain: bewusst Legacy-Event-Pfad (schnell); UI/API nutzt messagingPersistenceMode.
                     for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext: true });
                     logger.info(
                         addrs.length > 1

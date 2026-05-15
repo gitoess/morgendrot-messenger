@@ -858,6 +858,86 @@ async function testApplyInitialProfileToContacts() {
     }
 }
 
+async function testMessagingPersistenceResolve() {
+    console.log('\n--- messaging-persistence-resolve (M1 Phase A) ---');
+    try {
+        const {
+            resolveForceLegacyPlaintext,
+            explainMailboxPlaintextUnavailable,
+        } = await import('../src/messaging-persistence-resolve.js');
+        assert(resolveForceLegacyPlaintext({}) === true, 'default event');
+        assert(resolveForceLegacyPlaintext({ messagingPersistenceMode: 'event' }) === true, 'event');
+        assert(resolveForceLegacyPlaintext({ messagingPersistenceMode: 'mailbox' }) === false, 'mailbox');
+        assert(resolveForceLegacyPlaintext({ forceLegacyPlaintext: false }) === false, 'explicit false');
+        const mb = '0x' + 'd'.repeat(64);
+        const pkg = '0x' + 'e'.repeat(64);
+        assert(
+            explainMailboxPlaintextUnavailable(
+                { useMailbox: true, mailboxId: mb, packageId: pkg, mailboxStorePlaintext: true },
+                true
+            ) === null,
+            'ok config'
+        );
+        assert(
+            explainMailboxPlaintextUnavailable(
+                { useMailbox: true, mailboxId: pkg, packageId: pkg, mailboxStorePlaintext: true },
+                true
+            )?.includes('PACKAGE_ID'),
+            'reject mailbox=package'
+        );
+        ok('resolveForceLegacyPlaintext + explainMailboxPlaintextUnavailable');
+    } catch (e) {
+        fail('messaging-persistence-resolve', e);
+    }
+}
+
+async function testVaultSignerImportRoundtrip() {
+    console.log('\n--- vault-local iotaSdkSignerImport (M1 unlock) ---');
+    const tmp = path.join(tmpdir(), '.morgendrot-vault-signer-' + Date.now());
+    try {
+        const { generateKeyPair } = await import('../src/crypto-layer.js');
+        const { saveVaultLocal, loadVaultContent } = await import('../src/vault-local.js');
+        const keys = await generateKeyPair(true);
+        const imp =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+        await saveVaultLocal(keys, 'vault-test-pwd', tmp, '', imp);
+        const content = await loadVaultContent('vault-test-pwd', tmp);
+        assert(content.iotaSdkSignerImport === imp, 'signer import roundtrip');
+        ok('vault iotaSdkSignerImport persist + load');
+    } catch (e) {
+        fail('vault-signer-import', e);
+    } finally {
+        try {
+            fs.unlinkSync(tmp);
+        } catch {}
+    }
+}
+
+async function testContactLabelsMailboxObjectId() {
+    console.log('\n--- contact-labels mailboxObjectId (M4a) ---');
+    try {
+        const tmp = path.join(tmpdir(), 'morgendrot-cl-mb-' + Date.now() + '.json');
+        process.env.CONTACT_LABELS_FILE = tmp;
+        const mb = '0x' + 'a'.repeat(64);
+        const wallet = '0x' + 'b'.repeat(64);
+        const { saveContactMeshFields, getContactMailboxObjectId, normalizeMailboxObjectId } = await import(
+            '../src/contact-labels.js'
+        );
+        assert(normalizeMailboxObjectId('0xshort') === null, 'reject short id');
+        saveContactMeshFields(wallet, { label: 'Anna', mailboxObjectId: mb });
+        assert(getContactMailboxObjectId(wallet) === mb, 'read mailbox');
+        saveContactMeshFields(wallet, { mailboxObjectId: '' });
+        assert(getContactMailboxObjectId(wallet) === undefined, 'cleared mailbox');
+        try {
+            fs.unlinkSync(tmp);
+        } catch {}
+        delete process.env.CONTACT_LABELS_FILE;
+        ok('mailboxObjectId persist + clear');
+    } catch (e) {
+        fail('contact-labels-mailboxObjectId', e);
+    }
+}
+
 async function testChatForwardText() {
     console.log('\n--- chat-forward-text (frontend) ---');
     try {
@@ -957,6 +1037,8 @@ async function main() {
     await testChatWaldConnection();
     await testChatForwardText();
     await testVaultLocal();
+    await testVaultSignerImportRoundtrip();
+    await testMessagingPersistenceResolve();
     await testVaultImagePipeline();
     await testReplayState();
     await testUtils();
@@ -969,6 +1051,7 @@ async function main() {
     await testInitialProfileProvision();
     await testEinsatzRoleTemplates();
     await testApplyInitialProfileToContacts();
+    await testContactLabelsMailboxObjectId();
     await testMessengerExportEnv();
     await testSetEnvKeyBlocklist();
     await testMessengerGasMilestone();

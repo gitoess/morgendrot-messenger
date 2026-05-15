@@ -59,8 +59,8 @@ export function ChatViewPinnwandContextCard(p: {
         nicht aus Sicherheitsgründen. Pro Nachricht gibt es <strong className="text-foreground/90">keine</strong> feste
         „Object-ID zum Teilen“; relevant sind Package, ggf. Mailbox-Konfiguration und erlaubte Sender (
         <span className="font-mono text-[11px]">BROADCAST_AUTHORIZED_SENDERS</span>). Doku:{' '}
-        <span className="font-mono text-[11px]">docs/CHAT-GRUPPE-EINRICHTEN.md</span>,{' '}
-        <span className="font-mono text-[11px]">docs/ENV-ERKLAERUNG.md</span>.
+        <span className="font-mono text-[11px]">docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md</span> (M1–M4),{' '}
+        <span className="font-mono text-[11px]">docs/BROADCAST-PINNWAND.md</span>.
       </p>
       <div className={cn('space-y-2 rounded-md border border-border/60 bg-background/50 p-2')}>
         <CopyLine label="PACKAGE_ID (Status / Posteingang)" value={pkg} />

@@ -18,6 +18,11 @@ export type ContactMeshEntry = {
     meshPublicKeyHex?: string;
     /** BLE-Geräte-UUID (BitChat-/Ad-hoc-Reserve), normalisiert klein + Bindestriche */
     bleUuid?: string;
+    /**
+     * Optionale IOTA-Object-ID einer privaten/alternativen Mailbox des Kontakts (0x + 64 Hex).
+     * M4a: Speicherort für Send-Routing (M4b); leer = Shared Mailbox des Servers.
+     */
+    mailboxObjectId?: string;
 };
 
 /** Adresse (lowercase 0x+64hex) → Eintrag */
@@ -30,6 +35,11 @@ function filePath(): string {
 function normalizeAddress(addr: string): string | null {
     const hex = (addr || '').trim().toLowerCase();
     return /^0x[a-f0-9]{64}$/.test(hex) ? hex : null;
+}
+
+/** IOTA-Object-ID (private Mailbox, Package, …): 0x + 64 Hex. */
+export function normalizeMailboxObjectId(id: string): string | null {
+    return normalizeAddress(id);
 }
 
 /** Normalisiert !deadbeef (Kleinbuchstaben hex). */
@@ -77,6 +87,8 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
             ? o.meshPublicKeyHex.trim().toLowerCase()
             : undefined;
     const bleUuid = typeof o.bleUuid === 'string' ? normalizeBleUuid(o.bleUuid) ?? undefined : undefined;
+    const mailboxObjectId =
+        typeof o.mailboxObjectId === 'string' ? normalizeMailboxObjectId(o.mailboxObjectId) ?? undefined : undefined;
     let roleTags: string[] | undefined;
     if (Array.isArray(o.roleTags)) {
         const tags = o.roleTags
@@ -85,13 +97,14 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
             .slice(0, 20);
         if (tags.length) roleTags = tags;
     }
-    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length) return null;
+    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length && !mailboxObjectId) return null;
     return {
         label: label || 'Partner',
         ...(roleTags ? { roleTags } : {}),
         ...(meshNodeId && { meshNodeId }),
         ...(meshPublicKeyHex && { meshPublicKeyHex }),
         ...(bleUuid && { bleUuid }),
+        ...(mailboxObjectId && { mailboxObjectId }),
     };
 }
 
@@ -137,7 +150,13 @@ export function saveContactLabel(address: string, label: string): void {
 
 export function saveContactMeshFields(
     address: string,
-    fields: { label?: string; meshNodeId?: string | null; meshPublicKeyHex?: string | null; bleUuid?: string | null }
+    fields: {
+        label?: string;
+        meshNodeId?: string | null;
+        meshPublicKeyHex?: string | null;
+        bleUuid?: string | null;
+        mailboxObjectId?: string | null;
+    }
 ): void {
     const hex = normalizeAddress(address);
     if (!hex) return;
@@ -165,8 +184,22 @@ export function saveContactMeshFields(
             if (u) next.bleUuid = u;
         }
     }
+    if (fields.mailboxObjectId !== undefined) {
+        if (fields.mailboxObjectId === null || fields.mailboxObjectId === '') delete next.mailboxObjectId;
+        else {
+            const m = normalizeMailboxObjectId(fields.mailboxObjectId);
+            if (m) next.mailboxObjectId = m;
+        }
+    }
     dir[hex] = next;
     writeDirectory(dir);
+}
+
+/** Optionale private/alternative Mailbox des Kontakts (M4 Send-Routing). */
+export function getContactMailboxObjectId(address: string): string | undefined {
+    const hex = normalizeAddress(address);
+    if (!hex) return undefined;
+    return loadContactDirectory()[hex]?.mailboxObjectId;
 }
 
 export function mergeContactDirectory(incoming: ContactDirectory): { merged: number } {

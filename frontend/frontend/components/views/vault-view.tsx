@@ -17,6 +17,7 @@ import {
   Plus,
 } from 'lucide-react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import {
   vaultSave,
@@ -116,8 +117,19 @@ export function VaultView({ variant }: VaultViewProps) {
 
   const handleSave = async () => {
     setProcessing(true)
-    const res = await vaultSave(password || undefined, notes)
-    showStatus(res.ok, res.ok ? 'Daten gesichert!' : res.error || 'Fehler beim Speichern')
+    const includeSigner =
+      includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true
+    const res = await vaultSave(password || undefined, notes, {
+      includeIotaMnemonic: includeSigner,
+    })
+    const okMsg = res.ok
+      ? includeSigner
+        ? 'Lokal gesichert — inkl. Signer-Import (nächstes Mal nur Vault-Passwort zum Entsperren).'
+        : 'Daten gesichert!'
+      : res.error || res.message || 'Fehler beim Speichern'
+    showStatus(res.ok, okMsg)
+    if (res.ok) toast.success(okMsg)
+    else if (!res.ok) toast.error(okMsg)
     if (res.ok) {
       refreshVaultStatus()
       void refreshVaultPaths()
@@ -130,10 +142,22 @@ export function VaultView({ variant }: VaultViewProps) {
     const res = await vaultLoad(password || undefined)
     if (res.ok && 'notes' in res && typeof (res as { notes?: string }).notes === 'string') setNotes((res as { notes: string }).notes)
     if (res.ok && Array.isArray(res.personalSecrets)) setSafeEntries(res.personalSecrets)
-    showStatus(res.ok, res.ok ? 'Daten wiederhergestellt!' : res.error || 'Fehler beim Laden')
     if (res.ok) {
+      const n = typeof res.notes === 'string' ? res.notes.trim() : ''
+      const ps = Array.isArray(res.personalSecrets) ? res.personalSecrets.length : 0
+      const unchangedHint =
+        n.length === 0 && ps === 0
+          ? ' (Keine Notizen/Safe-Einträge in der Datei — kann unverändert wirken, war aber erfolgreich.)'
+          : ''
+      const msg = `Tresor-Datei eingelesen.${unchangedHint}`
+      showStatus(true, msg)
+      toast.success(msg)
       refreshVaultStatus()
       void refreshVaultPaths()
+    } else {
+      const err = res.error || res.message || 'Fehler beim Laden'
+      showStatus(false, err)
+      toast.error(err)
     }
     setProcessing(false)
   }
@@ -143,10 +167,16 @@ export function VaultView({ variant }: VaultViewProps) {
     const res = await vaultLoadFromChain(password || undefined)
     if (res.ok && 'notes' in res && typeof (res as { notes?: string }).notes === 'string') setNotes((res as { notes: string }).notes)
     if (res.ok && Array.isArray(res.personalSecrets)) setSafeEntries(res.personalSecrets)
-    showStatus(res.ok, res.ok ? 'Tresor von Chain geladen!' : res.error || 'Von Chain laden fehlgeschlagen')
     if (res.ok) {
+      const msg = 'Tresor von Chain geladen.'
+      showStatus(true, msg)
+      toast.success(msg)
       refreshVaultStatus()
       void refreshVaultPaths()
+    } else {
+      const err = res.error || res.message || 'Von Chain laden fehlgeschlagen'
+      showStatus(false, err)
+      toast.error(err)
     }
     setProcessing(false)
   }
@@ -683,9 +713,12 @@ export function VaultView({ variant }: VaultViewProps) {
                 <span>
                   <span className="font-medium text-foreground">Signer-Import mit speichern</span>
                   {' — '}
-                  Mnemonic/Bech32 wie beim Entsperren, verschlüsselt im Vault.
+                  Mnemonic/Bech32 wie beim Entsperren, verschlüsselt im Vault. Erst danach funktioniert{' '}
+                  <span className="font-mono text-[11px]">/vault-show-signer-import</span> / „Recovery anzeigen“ aus der Datei.
                   {hasKeys !== true ? (
-                    <span className="block pt-1 text-amber-700 dark:text-amber-300">Nur mit geladenem Tresor möglich.</span>
+                    <span className="block pt-1 text-amber-700 dark:text-amber-300">
+                      Nur mit geladenem Tresor möglich — oben „Daten laden“ (oder Sitzung muss Keys im RAM haben).
+                    </span>
                   ) : null}
                 </span>
               </label>

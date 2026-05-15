@@ -1854,7 +1854,21 @@ export async function storePlaintextMessage(
     txb.setSender(senderAddress);
     // Nie Mailbox nutzen, wenn MAILBOX_ID = PACKAGE_ID (Chain-Fehler „move package passed“). /send-plain erzwingt Event-Pfad.
     const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
-    const useMailbox = !options?.forceLegacyPlaintext && useMailboxForPlaintext() && mailboxIdValid;
+    const wantsMailbox = options?.forceLegacyPlaintext === false;
+    const useMailbox = wantsMailbox && useMailboxForPlaintext() && mailboxIdValid;
+    if (wantsMailbox && !useMailbox) {
+        const { explainMailboxPlaintextUnavailable } = await import('./messaging-persistence-resolve.js');
+        const reason = explainMailboxPlaintextUnavailable(
+            {
+                useMailbox: isMessengerMailboxModeActive(),
+                mailboxId: CFG.MAILBOX_ID,
+                packageId: CFG.PACKAGE_ID,
+                mailboxStorePlaintext: mailboxStoresPlaintext(),
+            },
+            true
+        );
+        throw new Error(reason ?? 'Klartext-Mailbox nicht verfügbar — Server-Konfiguration prüfen (MAILBOX_ID, USE_MAILBOX).');
+    }
     const creditsId = messengerCreditsObjectIdForTx();
     const storePlain = mailboxStoresPlaintext();
     if (useMailbox && creditsId && storePlain) {

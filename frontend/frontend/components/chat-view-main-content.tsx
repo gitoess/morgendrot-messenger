@@ -5,6 +5,8 @@
  */
 
 import { useCallback } from 'react'
+import { toast } from 'sonner'
+import { clearLocalHistory } from '@/frontend/lib/api'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
   asComposerDraft,
@@ -18,6 +20,7 @@ import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
+import { ChatViewIdentityCard } from '@/frontend/components/chat-view-identity-card'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   ChatViewTransportCard,
@@ -247,6 +250,37 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [meshtastic, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
   )
 
+  const applyPartnerAsSendRecipient = useCallback(() => {
+    const a = partner.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(a)) {
+      toast.error('Gültige Empfänger-Wallet eingeben: 0x + 64 Hex.')
+      return
+    }
+    setRecipient(a)
+    selectInboxPartnerForSend(a)
+    toast.success('Empfänger übernommen — siehe „Empfänger-Adresse“ im Composer unten.')
+  }, [partner, setRecipient, selectInboxPartnerForSend])
+
+  const handleClearLocalInboxCache = useCallback(async () => {
+    if (
+      !window.confirm(
+        'Lokalen Klartext-Inbox-Cache auf dem Server/Rechner schreddern und löschen? Die sichtbare Liste wird geleert. On-Chain-Daten bleiben.'
+      )
+    ) {
+      return
+    }
+    setLocalPurgeBusy(true)
+    const r = await clearLocalHistory({ shred: true })
+    setLocalPurgeBusy(false)
+    if (r.ok) {
+      setMessages([])
+      toast.success('Lokaler Posteingangs-Cache geleert.')
+      void loadMessages('reset')
+    } else {
+      toast.error(r.error || 'Lokales Löschen fehlgeschlagen')
+    }
+  }, [loadMessages, setLocalPurgeBusy, setMessages])
+
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
     messageCount: inboxTotalCount,
@@ -308,6 +342,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setStatusMsg,
     onAddSenderToContactBook: addInboxSenderToContactBook,
     onSarqNakWire,
+    localPurgeBusy,
+    onClearLocalInboxCache: () => void handleClearLocalInboxCache(),
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {
@@ -414,6 +450,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         }}
       />
 
+      {isPrivate ? <ChatViewIdentityCard myAddressLine={myAddress} /> : null}
+
       {!isPrivate ? <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} /> : null}
 
       {isPrivate ? (
@@ -470,11 +508,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setMeshSyncBusy={setMeshSyncBusy}
           meshSyncMsg={meshSyncMsg}
           setMeshSyncMsg={setMeshSyncMsg}
-          localPurgeBusy={localPurgeBusy}
-          setLocalPurgeBusy={setLocalPurgeBusy}
-          setMessages={setMessages}
           role={role}
           activePackageId={apiStatus?.packageId}
+          serverMailboxIdMasked={apiStatus?.mailboxIdMasked}
+          mailboxConfigured={apiStatus?.mailboxConfigured}
           inboxPackageFilter={inboxPackageFilter}
           onInboxPackageFilterChange={setInboxPackageFilter}
           packageIdSuggestions={packageIdSuggestions}
@@ -482,6 +519,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onApplyPackageIdBackend={applyPackageIdBackend}
           onApplyInboxPackageFilterOnly={applyInboxPackageFilterOnly}
           packageIdBusy={packageIdBusy}
+          activeSendRecipient={recipient}
+          onApplyPartnerAsSendRecipient={applyPartnerAsSendRecipient}
         />
       )}
 
