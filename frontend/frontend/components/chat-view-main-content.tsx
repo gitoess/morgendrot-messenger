@@ -47,7 +47,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     isGroup,
     activeGroup,
     refreshMessengerGroups,
-    channelMode,
     role,
     myAddress,
     message,
