@@ -96,6 +96,13 @@ export type ApiStatus = {
   /** Nach Unlock: natives Wallet-Guthaben (MY_ADDRESS), vom Backend per RPC. */
   walletNativeIotaBalance?: { mist: string; displayIota: string } | null
   walletNativeIotaBalanceFetchFailed?: boolean
+  /** M3: Broadcast-Pinnwand aus Server-.env (ohne Geheimnisse). */
+  broadcastPinnwand?: {
+    enabled: boolean
+    address?: string
+    authorizedSenders?: string[]
+    myAddressAuthorized?: boolean
+  }
 }
 
 /** Erfolgreicher `fetchStatus` inkl. Referenz für Geräte-Uhr (HTTP `Date`, § H.6c). */

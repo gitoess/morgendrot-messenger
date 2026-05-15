@@ -56,6 +56,8 @@ export type TrySubmitEncryptedMailboxViaDirectIotaInput = {
   iv: Uint8Array
   tag: Uint8Array
   nonce: bigint
+  /** M4b: Kontakt-Mailbox statt Snapshot-Mailbox. */
+  mailboxObjectId?: string
 }
 
 /**
@@ -105,9 +107,14 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   }
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
+    const mbOverride = (opts.mailboxObjectId ?? '').trim()
+    const mailboxObjectId =
+      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) && mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
+        ? mbOverride
+        : snap.mailboxId
     const txb = buildStoreEncryptedMailboxTransaction({
       packageId: snap.packageId,
-      mailboxObjectId: snap.mailboxId,
+      mailboxObjectId,
       senderAddress: snap.senderAddress.trim(),
       recipientAddress: opts.recipient.trim(),
       ciphertext: opts.ciphertext,
@@ -135,6 +142,7 @@ export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {
   peerPubRaw: Uint8Array
   /** P-256 ECDH private key (Web Crypto), **nicht** der IOTA-Ed25519-Signer. */
   ecdhPrivateKey: CryptoKey
+  mailboxObjectId?: string
 }
 
 /**
@@ -167,6 +175,7 @@ export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(
       iv,
       tag,
       nonce,
+      mailboxObjectId: opts.mailboxObjectId,
     })
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }

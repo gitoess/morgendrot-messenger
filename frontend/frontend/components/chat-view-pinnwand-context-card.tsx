@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { Check, Copy, Share2 } from 'lucide-react'
+import { Check, Copy, Pin, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 
@@ -43,6 +43,9 @@ export function ChatViewPinnwandContextCard(p: {
 }) {
   const pkg = (p.apiStatus?.packageId ?? '').trim()
   const addr = (p.apiStatus?.myAddressFull ?? p.myAddressLine).trim()
+  const bp = p.apiStatus?.broadcastPinnwand
+  const broadcastAddr = (bp?.address ?? '').trim()
+  const broadcastOn = Boolean(bp?.enabled && broadcastAddr)
 
   return (
     <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 px-3 py-3 text-sm text-sky-950 dark:text-sky-100/95">
@@ -51,25 +54,35 @@ export function ChatViewPinnwandContextCard(p: {
         Pinnwand einbinden / teilen
       </div>
       <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground/90">Gemeinsam braucht ihr</strong> dieselbe Move-Instanz: vor allem{' '}
-        <span className="font-mono text-[11px]">PACKAGE_ID</span> (Posteingangs-Filter). Online-Klartext an die Pinnwand:
-        im Empfängerfeld die <strong className="text-foreground/90">Broadcast-Adresse</strong> aus der Basis-{' '}
-        <span className="font-mono text-[11px]">.env</span> (<span className="font-mono text-[11px]">BROADCAST_PINNWAND_ADDRESS</span>
-        ), sofern <span className="font-mono text-[11px]">ENABLE_BROADCAST_PINNWAND</span> aktiv ist — die App zeigt sie hier
-        nicht aus Sicherheitsgründen. Pro Nachricht gibt es <strong className="text-foreground/90">keine</strong> feste
-        „Object-ID zum Teilen“; relevant sind Package, ggf. Mailbox-Konfiguration und erlaubte Sender (
-        <span className="font-mono text-[11px]">BROADCAST_AUTHORIZED_SENDERS</span>). Doku:{' '}
-        <span className="font-mono text-[11px]">docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md</span> (M1–M4),{' '}
-        <span className="font-mono text-[11px]">docs/BROADCAST-PINNWAND.md</span>.
+        <strong className="text-foreground/90">Gemeinsam braucht ihr</strong> dieselbe Move-Instanz (
+        <span className="font-mono text-[11px]">PACKAGE_ID</span>). Online-Klartext an die Pinnwand: Empfängerfeld =
+        Broadcast-Adresse (wird unten aus <span className="font-mono text-[11px]">/api/status</span> übernommen, wenn
+        konfiguriert). Im Posteingang: Nachrichten mit <Pin className="inline h-3 w-3" aria-hidden /> anheften (lokal,
+        sessionStorage). Doku: <span className="font-mono text-[11px]">docs/BROADCAST-PINNWAND.md</span>.
       </p>
+      {broadcastOn ? (
+        <p className="mb-2 text-[11px] text-emerald-800 dark:text-emerald-200">
+          Broadcast aktiv
+          {bp?.myAddressAuthorized === false ? ' — deine Adresse ist nicht in BROADCAST_AUTHORIZED_SENDERS.' : '.'}
+        </p>
+      ) : (
+        <p className="mb-2 text-[11px] text-amber-800 dark:text-amber-200">
+          Keine Broadcast-Adresse vom Server — <span className="font-mono">ENABLE_BROADCAST_PINNWAND</span> und{' '}
+          <span className="font-mono">BROADCAST_PINNWAND_ADDRESS</span> in der Basis-.env prüfen.
+        </p>
+      )}
       <div className={cn('space-y-2 rounded-md border border-border/60 bg-background/50 p-2')}>
         <CopyLine label="PACKAGE_ID (Status / Posteingang)" value={pkg} />
+        <CopyLine label="Broadcast-Adresse (Empfänger Klartext)" value={broadcastAddr} />
         <CopyLine label="Eigene Adresse (MY_ADDRESS, für Abgleich)" value={addr} />
       </div>
       <p className="mt-2 text-[11px] text-muted-foreground">
-        Posteingang: Nutze den Filter <strong className="text-foreground/90">„Klartext“</strong>, um typische
-        Pinnwand-/Funk-Ketten grob von verschlüsseltem 1:1-Verkehr zu trennen (heuristisch, kein Server-Tag).
+        Posteingang: Filter <strong className="text-foreground/90">„Klartext“</strong> für Pinnwand-Ketten; Anheften über
+        das Menü ⋯ an der Nachricht.
       </p>
     </div>
   )
 }
+
+
+

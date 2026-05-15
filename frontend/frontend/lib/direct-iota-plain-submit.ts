@@ -159,6 +159,8 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   recipient: string
   payloadUtf8: string
   nonce: bigint
+  /** M4b: Kontakt-Mailbox statt Snapshot-Mailbox. */
+  mailboxObjectId?: string
 }): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
   if (isIotaRelayOnlyMode()) {
     return {
@@ -201,9 +203,14 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const plaintextUtf8 = new TextEncoder().encode(opts.payloadUtf8)
+    const mbOverride = (opts.mailboxObjectId ?? '').trim()
+    const mailboxObjectId =
+      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) && mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
+        ? mbOverride
+        : snap.mailboxId
     const txb = buildStorePlaintextMailboxTransaction({
       packageId: snap.packageId,
-      mailboxObjectId: snap.mailboxId,
+      mailboxObjectId,
       senderAddress: snap.senderAddress.trim(),
       recipientAddress: opts.recipient.trim(),
       plaintextUtf8,

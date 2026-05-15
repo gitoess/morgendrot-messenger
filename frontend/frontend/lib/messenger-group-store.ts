@@ -6,6 +6,8 @@ export type MessengerGroupDefinition = {
   id: string
   name: string
   memberAddresses: string[]
+  /** M2b: optionaler Streams-Anchor für Live-Hinweise (Archiv bleibt Mailbox). */
+  streamsAnchorId?: string
 }
 
 const LS_GROUPS = 'morgendrot.messenger.groups.v1'
@@ -36,8 +38,17 @@ function parseGroups(raw: string | null): MessengerGroupDefinition[] {
             .filter((m): m is string => !!m)
         ),
       ]
+      const streamsAnchorId =
+        typeof o.streamsAnchorId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(o.streamsAnchorId.trim())
+          ? o.streamsAnchorId.trim()
+          : undefined
       if (!id || memberAddresses.length === 0) continue
-      out.push({ id, name: name || `Gruppe (${memberAddresses.length})`, memberAddresses })
+      out.push({
+        id,
+        name: name || `Gruppe (${memberAddresses.length})`,
+        memberAddresses,
+        ...(streamsAnchorId ? { streamsAnchorId } : {}),
+      })
     }
     return out
   } catch {

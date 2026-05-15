@@ -162,6 +162,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
@@ -349,6 +351,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onSarqNakWire,
     localPurgeBusy,
     onClearLocalInboxCache: () => void handleClearLocalInboxCache(),
+    pinnedPinnwandIds,
+    onTogglePinnedPinnwand: togglePinnedPinnwand,
+    showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {
@@ -411,6 +416,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       await refreshApiStatus()
       await loadMessages()
     },
+    contactDirectory: directory,
   } satisfies ChatViewSendPanelProps
 
   const transportCardProps = {

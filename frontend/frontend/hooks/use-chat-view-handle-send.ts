@@ -37,6 +37,8 @@ import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
+import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
+import { publishStreamsAnchor } from '@/frontend/lib/api/streams'
 import {
   isForensicImageMailboxAttestationEnabled,
   runForensicMailboxAttestationAfterSend,
@@ -153,6 +155,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
     appendMeshMessage,
+    contactDirectory,
+    activeGroup,
+    isGroupChannel,
   } = p
   const cancelRequestedRef = useRef(false)
 
@@ -866,9 +871,24 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
           wireForApi = textSnap
         }
+        const mailboxObjectId = resolveContactMailboxObjectId(contactDirectory, recipient.trim())
+        const hybridOpts = {
+          ...(mailboxObjectId ? { mailboxObjectId } : {}),
+          ...(!enc ? { messagingPersistenceMode } : {}),
+        }
         const res = enc
-          ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
-          : await sendPlaintextMailboxHybrid(recipient.trim(), wireForApi, messageNonceU64)
+          ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi, hybridOpts)
+          : await sendPlaintextMailboxHybrid(recipient.trim(), wireForApi, messageNonceU64, hybridOpts)
+        if (res.ok && isGroupChannel && activeGroup?.streamsAnchorId) {
+          void publishStreamsAnchor(activeGroup.streamsAnchorId, {
+            type: 'group_message',
+            groupId: activeGroup.id,
+            from: myAddress.trim(),
+            to: recipient.trim(),
+            preview: textSnap.slice(0, 240),
+            ts: Date.now(),
+          })
+        }
         if (res.ok) {
           return {
             ok: true,

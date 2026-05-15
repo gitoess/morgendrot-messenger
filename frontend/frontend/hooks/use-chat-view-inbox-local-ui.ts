@@ -20,6 +20,11 @@ import {
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import {
+  readPinnedPinnwandIds,
+  sortMessagesPinnedFirst,
+  togglePinnedPinnwandId,
+} from '@/frontend/lib/pinnwand-pin-store'
 
 const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
 const INBOX_WIRE_FILTER_LS = 'morg.inbox.wireFilter.v1'
@@ -42,6 +47,8 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   /** M2: Union-Filter für Gruppenmitglieder */
   groupMemberFilter?: string[] | null
   isGroupMode?: boolean
+  /** M3: Anheften im Pinnwand-Kanal */
+  isPinnwandMode?: boolean
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
@@ -56,8 +63,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     contactDirectory,
     groupMemberFilter = null,
     isGroupMode = false,
+    isPinnwandMode = false,
   } = p
 
+  const [pinnedPinnwandIds, setPinnedPinnwandIds] = useState<Set<string>>(() => new Set())
   const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
   const [protokollMarkedIds, setProtokollMarkedIds] = useState<Set<string>>(() => new Set())
   const [inboxSelectMode, setInboxSelectMode] = useState(false)
@@ -70,10 +79,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (h) setHiddenInboxIds(new Set(JSON.parse(h) as string[]))
       const pr = sessionStorage.getItem('morg.protokoll.marked.ids')
       if (pr) setProtokollMarkedIds(new Set(JSON.parse(pr) as string[]))
+      if (isPinnwandMode) setPinnedPinnwandIds(readPinnedPinnwandIds())
     } catch {
       /* ignore */
     }
-  }, [])
+  }, [isPinnwandMode])
 
   const displayMessages = useMemo(
     () => messages.filter((m) => !hiddenInboxIds.has(m.id)),
@@ -327,6 +337,17 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     return wireFilteredMessages
   }, [wireFilteredMessages, inboxMeshTransportOnly, inboxIotaTransportOnly])
 
+  const sortedFilteredDisplayMessages = useMemo(() => {
+    if (!isPinnwandMode || pinnedPinnwandIds.size === 0) return filteredDisplayMessages
+    return sortMessagesPinnedFirst(filteredDisplayMessages, pinnedPinnwandIds)
+  }, [filteredDisplayMessages, isPinnwandMode, pinnedPinnwandIds])
+
+  const togglePinnedPinnwand = useCallback((id: string) => {
+    const nowPinned = togglePinnedPinnwandId(id)
+    setPinnedPinnwandIds(readPinnedPinnwandIds())
+    return nowPinned
+  }, [])
+
   const onHideInboxMessageLocal = useCallback((id: string) => {
     setHiddenInboxIds((prev) => {
       const n = new Set(prev)
@@ -404,8 +425,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [])
 
   const selectAllVisibleInbox = useCallback(() => {
-    setSelectedInboxIds(new Set(filteredDisplayMessages.map((m) => m.id)))
-  }, [filteredDisplayMessages])
+    setSelectedInboxIds(new Set(sortedFilteredDisplayMessages.map((m) => m.id)))
+  }, [sortedFilteredDisplayMessages])
 
   const clearInboxSelection = useCallback(() => setSelectedInboxIds(new Set()), [])
 
@@ -420,7 +441,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         return new Set()
       }
       const n = new Set(prev)
-      for (const m of filteredDisplayMessages) n.add(m.id)
+      for (const m of sortedFilteredDisplayMessages) n.add(m.id)
       try {
         sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
       } catch {
@@ -428,7 +449,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       return n
     })
-  }, [filteredDisplayMessages])
+  }, [sortedFilteredDisplayMessages])
 
   const onBulkHideSelected = useCallback(() => {
     setHiddenInboxIds((prev) => {
@@ -446,7 +467,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [selectedInboxIds])
 
   const onBulkPurgeSelected = useCallback(async () => {
-    const list = filteredDisplayMessages.filter(
+    const list = sortedFilteredDisplayMessages.filter(
       (m) => selectedInboxIds.has(m.id) && m.chainPurgeable && m.chainNonce
     )
     if (list.length === 0) {
@@ -477,15 +498,17 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setInboxSelectMode(false)
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [filteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
+  }, [sortedFilteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
 
   return {
     protokollMarkedIds,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxIds,
     displayMessages,
-    filteredDisplayMessages,
+    filteredDisplayMessages: sortedFilteredDisplayMessages,
     hiddenInboxCount: hiddenInboxIds.size,
     inboxPartnerKey,
     setInboxPartnerKey,

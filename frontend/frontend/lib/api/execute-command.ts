@@ -7,6 +7,8 @@ import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persiste
 export type ApiCommandPostBodyOpts = {
   morgPkg?: unknown
   messagingPersistenceMode?: MessagingPersistenceMode
+  /** M4b: Ziel-Mailbox-Object-ID (Kontakt-private Mailbox). */
+  mailboxObjectId?: string
 }
 
 /** POST-Body für `/api/command` — für Vitest und einheitliche Serialisierung. */
@@ -24,7 +26,13 @@ export function buildApiCommandPostBody(
 export async function executeCommand<T = unknown>(
   command: string,
   args: (string | number)[] = [],
-  opts?: { timeoutMs?: number; signal?: AbortSignal; morgPkg?: unknown; messagingPersistenceMode?: MessagingPersistenceMode }
+  opts?: {
+    timeoutMs?: number
+    signal?: AbortSignal
+    morgPkg?: unknown
+    messagingPersistenceMode?: MessagingPersistenceMode
+    mailboxObjectId?: string
+  }
 ): Promise<ApiResponse<T>> {
   try {
     const signal =
@@ -32,6 +40,7 @@ export async function executeCommand<T = unknown>(
     const body = buildApiCommandPostBody(command, args, {
       morgPkg: opts?.morgPkg,
       messagingPersistenceMode: opts?.messagingPersistenceMode,
+      mailboxObjectId: opts?.mailboxObjectId,
     })
     const fr = await fetchApiText(API_BASE, '/api/command', {
       method: 'POST',

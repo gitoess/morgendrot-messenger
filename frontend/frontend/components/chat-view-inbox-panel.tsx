@@ -82,6 +82,9 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onBulkPurgeSelected,
     toggleProtokollMark,
     protokollMarkedIds,
+    pinnedPinnwandIds,
+    onTogglePinnedPinnwand,
+    showPinnwandPinActions,
     inboxPartnerOptions,
     inboxPartnerKey,
     setInboxPartnerKey,
@@ -165,6 +168,9 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           onForwardMessage={onForwardMessage}
           toggleProtokollMark={toggleProtokollMark}
           protokollMarkedIds={protokollMarkedIds}
+          pinnedPinnwandIds={pinnedPinnwandIds}
+          onTogglePinnedPinnwand={onTogglePinnedPinnwand}
+          showPinnwandPinActions={showPinnwandPinActions}
           inboxSelectMode={inboxSelectMode}
           selectedInboxIds={selectedInboxIds}
           toggleInboxSelection={toggleInboxSelection}

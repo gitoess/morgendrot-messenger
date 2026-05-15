@@ -145,6 +145,13 @@ export type ApiStatus = {
     /** MAILBOX_ID gesetzt und 0x+64Hex (sonst kann Mailbox-Modus nicht greifen). */
     mailboxConfigured?: boolean;
     mailboxIdMasked?: string;
+    /** M3: Pinnwand-Konfiguration (ohne Geheimnisse außer freigegebener Broadcast-Adresse). */
+    broadcastPinnwand?: {
+        enabled: boolean;
+        address?: string;
+        authorizedSenders?: string[];
+        myAddressAuthorized?: boolean;
+    };
     /** cli | sdk | remote – UI zeigt ggf. Mnemonic-Feld beim Entsperren. */
     signer?: string;
     /** MESSENGER_CREDITS_OBJECT_ID syntaktisch gültig und ≠ PACKAGE_ID. */
@@ -190,6 +197,8 @@ export type CommandApiOptions = {
     morgPkg?: unknown;
     /** `/send-plain`: `mailbox` = optional Mailbox-Store; sonst/fehlend = Event-Pfad (Legacy). */
     messagingPersistenceMode?: 'event' | 'mailbox';
+    /** M4b: Ziel-Mailbox-Object-ID statt Server-MAILBOX_ID (0x+64 Hex). */
+    mailboxObjectId?: string;
 };
 type CommandHandlerFn = (cmd: string, args: string[], options?: CommandApiOptions) => Promise<{ ok: boolean; message?: string }>;
 type PurgeAfterLieferungFn = (purges: Array<{ sender: string; recipient: string; nonce: string | number }>) => Promise<{ ok: boolean; message?: string; count?: number }>;
@@ -599,6 +608,22 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 loraProgressiveEncode: true,
                 ...(packageTrim ? { packageId: packageTrim } : {}),
                 ...(mailboxConfigured && mailboxIdTrim ? { mailboxIdMasked: mask(mailboxIdTrim) } : {}),
+                ...(CFG.ENABLE_BROADCAST_PINNWAND
+                    ? {
+                          broadcastPinnwand: {
+                              enabled: true,
+                              address: (CFG.BROADCAST_PINNWAND_ADDRESS || '').trim() || undefined,
+                              authorizedSenders: (CFG.BROADCAST_AUTHORIZED_SENDERS || []).map((a) => a.trim()).filter(Boolean),
+                              myAddressAuthorized: (() => {
+                                  const me = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim().toLowerCase();
+                                  if (!me) return false;
+                                  const allowed = CFG.BROADCAST_AUTHORIZED_SENDERS || [];
+                                  if (allowed.length === 0) return true;
+                                  return allowed.some((s) => s.trim().toLowerCase() === me);
+                              })(),
+                          },
+                      }
+                    : { broadcastPinnwand: { enabled: false } }),
             };
             sendJson(res, 200, status, cors);
             return;
@@ -907,6 +932,40 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             }
             return;
         }
+        if (url === '/api/streams-publish' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    if (!_commandHandler) {
+                        sendJson(res, 400, { ok: false, error: 'Wallet entsperren, dann erneut versuchen.' }, cors);
+                        return;
+                    }
+                    const data = JSON.parse(body || '{}');
+                    const anchorId = String(data.anchorId ?? '').trim();
+                    const payload =
+                        typeof data.payload === 'string'
+                            ? data.payload
+                            : JSON.stringify(data.payload ?? {});
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(anchorId)) {
+                        sendJson(res, 400, { ok: false, error: 'anchorId: 0x + 64 Hex nötig.' }, cors);
+                        return;
+                    }
+                    const bridgeUrl = (CFG.STREAMS_BRIDGE_URL || '').trim().replace(/\/$/, '');
+                    if (!bridgeUrl.startsWith('http://') && !bridgeUrl.startsWith('https://')) {
+                        sendJson(res, 400, { ok: false, error: 'STREAMS_BRIDGE_URL fehlt oder ungültig.' }, cors);
+                        return;
+                    }
+                    const { getStreamsAdapter } = await import('./streams-adapter.js');
+                    await getStreamsAdapter().publish(anchorId, payload);
+                    sendJson(res, 200, { ok: true, message: 'An Streams-Anchor gesendet.' }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
         if (url === '/api/streams-anchor-history' && req.method === 'GET') {
             (async () => {
                 try {
@@ -3377,6 +3436,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     if (mp === 'mailbox' || mp === 'event') {
                         commandApiOptions.messagingPersistenceMode = mp as 'event' | 'mailbox';
                     }
+                    const mbOverride = String(data.mailboxObjectId ?? '').trim();
+                    if (mbOverride) commandApiOptions.mailboxObjectId = mbOverride;
                     const result = await _commandHandler(cmd, args, commandApiOptions);
                     if (cmd === '/vault-onchain' && result?.ok) lastVaultOnchainSuccessAt = Date.now();
                     if (cmd === '/vault-save' && result?.ok) lastVaultOnchainSuccessAt = undefined;

@@ -1286,11 +1286,20 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
                         const { resolveForceLegacyPlaintext } = await import('../messaging-persistence-resolve.js');
+                        const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
                         const forceLegacyPlaintext = resolveForceLegacyPlaintext({
                             messagingPersistenceMode: opts?.messagingPersistenceMode,
                         });
-                        for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
-                        return { ok: true, message: addrs.length > 1 ? `Klartext an ${addrs.length} Empfänger gesendet.` : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.` };
+                        return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
+                            for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
+                            return {
+                                ok: true,
+                                message:
+                                    addrs.length > 1
+                                        ? `Klartext an ${addrs.length} Empfänger gesendet.`
+                                        : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.`,
+                            };
+                        });
                     }
                     if (c === '/send') {
                         if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – Senden verweigert (ROLE_ID=' + CFG.ROLE_ID + '). Bei Hierarchie ROLE_ID z. B. 14 setzen.' };
@@ -1305,10 +1314,16 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                     `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
                             };
                         }
-                        for (const p of pm.values()) {
-                            await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey);
-                        }
-                        return { ok: true, message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.' };
+                        const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
+                        return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
+                            for (const p of pm.values()) {
+                                await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey);
+                            }
+                            return {
+                                ok: true,
+                                message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.',
+                            };
+                        });
                     }
                     /** Leichtgewicht: SOS-Erreichbarkeit Basis/Gateway protokollieren — **keine** Mailbox-Speicherung (kein Doppel-/send). */
                     if (c === '/sos-gateway-ack') {

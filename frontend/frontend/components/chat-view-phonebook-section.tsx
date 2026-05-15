@@ -5,9 +5,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { BookUser, Save } from 'lucide-react'
+import { BookUser, QrCode, Save } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { saveContactEntry } from '@/frontend/lib/api'
+import { buildContactQrPayload, parseContactQrPayload } from '@/frontend/lib/contact-qr'
+import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import { cn } from '@/lib/utils'
 
 export type ChatViewPhonebookSectionProps = {
@@ -35,6 +37,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   const [draft, setDraft] = useState<Record<string, RowState>>({})
   const [newAddr, setNewAddr] = useState('')
+  const [qrPaste, setQrPaste] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
 
   useEffect(() => {
@@ -59,15 +62,21 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       if (!row) return
       setBusy(address)
       try {
+        const mb = row.mailboxObjectId.trim()
         const r = await saveContactEntry({
           address: address.trim(),
           label: row.label.trim() || undefined,
           meshNodeId: row.meshNodeId.trim() || undefined,
+          ...(mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? { mailboxObjectId: mb } : {}),
         })
         if (r.ok) {
           setDraft((d) => ({
             ...d,
-            [address]: { label: row.label.trim(), meshNodeId: row.meshNodeId.trim() },
+            [address]: {
+              label: row.label.trim(),
+              meshNodeId: row.meshNodeId.trim(),
+              mailboxObjectId: row.mailboxObjectId.trim(),
+            },
           }))
           setStatusMsg(r.message || 'Kontakt gespeichert.')
           refreshContactDirectory()
@@ -80,6 +89,47 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     },
     [draft, refreshContactDirectory, setStatusMsg]
   )
+
+  const importFromQrText = useCallback(
+    async (raw: string) => {
+      const parsed = parseContactQrPayload(raw)
+      if (!parsed) {
+        setStatusMsg('QR/JSON ungültig — erwartet Kontakt v2 (mc) oder 0x-Adresse.')
+        return
+      }
+      setBusy('__qr__')
+      try {
+        const r = await saveContactEntry({
+          address: parsed.address,
+          label: parsed.displayName,
+          ...(parsed.mailboxObjectId ? { mailboxObjectId: parsed.mailboxObjectId } : {}),
+        })
+        if (r.ok) {
+          setQrPaste('')
+          setStatusMsg(
+            parsed.mailboxObjectId
+              ? 'Kontakt aus QR importiert (inkl. Mailbox-ID).'
+              : 'Kontakt aus QR importiert.'
+          )
+          refreshContactDirectory()
+        } else {
+          setStatusMsg(r.error || 'Import fehlgeschlagen.')
+        }
+      } finally {
+        setBusy(null)
+      }
+    },
+    [refreshContactDirectory, setStatusMsg]
+  )
+
+  const scanContactQr = useCallback(async () => {
+    const s = await scanMeshBundleQrWithCamera()
+    if ('error' in s) {
+      setStatusMsg(s.error)
+      return
+    }
+    await importFromQrText(s.bundleJson)
+  }, [importFromQrText, setStatusMsg])
 
   const addContact = useCallback(async () => {
     const a = newAddr.trim()
@@ -115,6 +165,37 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         Optional: <strong className="text-foreground">Alternative Mailbox</strong>, wenn der Kontakt eine eigene private
         Mailbox hat — sonst nutzt das System die gemeinsame Einsatz-Mailbox (M4).
       </p>
+
+      <div className="mb-3 space-y-2 rounded-lg border border-dashed border-border/80 bg-muted/10 p-3">
+        <p className="text-[11px] font-medium text-foreground">Kontakt per QR (M4c)</p>
+        <textarea
+          value={qrPaste}
+          onChange={(e) => setQrPaste(e.target.value)}
+          rows={2}
+          spellCheck={false}
+          placeholder='JSON aus QR einfügen oder „Kamera scannen“ (Capacitor-App)'
+          className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled={busy === '__qr__' || !qrPaste.trim()}
+            onClick={() => void importFromQrText(qrPaste)}
+            className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
+          >
+            <QrCode className="h-3.5 w-3.5" />
+            Aus Text importieren
+          </button>
+          <button
+            type="button"
+            disabled={busy === '__qr__'}
+            onClick={() => void scanContactQr()}
+            className="rounded-md border border-border px-2.5 py-1.5 text-xs hover:bg-accent disabled:opacity-50"
+          >
+            Kamera scannen
+          </button>
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end">
         <div className="min-w-0 flex-1 space-y-1">

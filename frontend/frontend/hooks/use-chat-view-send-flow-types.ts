@@ -7,6 +7,8 @@ import type { ForcedTransport, MeshtasticBleSendApi } from '@/frontend/lib/chat-
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import type { ComposerDraftSendFlowPort } from '@/frontend/features/messenger-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 
 /** Nach erfolgreichem Funk-Versand: lokale Echo-Zeile + `localStorage`-Archiv (siehe `mesh-local-archive`). */
 export type AppendMeshMessageFn = (msg: Message) => void
@@ -45,4 +47,7 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   /** Klartext-Funk: an feste Node-ID (!hex) statt Mesh-Broadcast. */
   meshPlaintextToNodeEnabled: boolean
   meshPlaintextNodeId: string
+  contactDirectory: Record<string, ContactMeshEntryClient>
+  activeGroup: MessengerGroupDefinition | null
+  isGroupChannel: boolean
 }

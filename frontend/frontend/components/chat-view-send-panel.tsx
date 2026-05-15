@@ -10,7 +10,8 @@ import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
-import type { ApiStatus } from '@/frontend/lib/api'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
   isLoRaMeshTransport,
@@ -69,6 +70,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onMeshPlaintextNodeIdChange: (v: string) => void
   /** Manueller Status-/Drain-Impuls nach Netzwechsel, ohne kompletten Seitenreload. */
   onManualRefresh?: () => void | Promise<void>
+  /** M4b: Kontaktverzeichnis für Mailbox-Routing-Hinweis */
+  contactDirectory?: Record<string, ContactMeshEntryClient>
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -101,6 +104,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange,
     onManualRefresh,
+    contactDirectory = {},
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -214,6 +218,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !attachmentBarProps.attachedLora &&
     loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
+  const routedMailboxId = useMemo(
+    () => resolveContactMailboxObjectId(contactDirectory, recipient.trim()),
+    [contactDirectory, recipient]
+  )
+
   const recipientSuggestions = useMemo(() => {
     const set = new Set<string>()
     const connected = Array.isArray(apiStatus?.connectedAddresses) ? apiStatus.connectedAddresses : []
@@ -264,6 +273,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 <option key={addr} value={addr} />
               ))}
             </datalist>
+            {routedMailboxId ? (
+              <p className="mt-1.5 text-[11px] text-violet-800 dark:text-violet-200">
+                Sendet an <strong className="font-mono text-[10px]">private Mailbox</strong> des Kontakts (
+                {routedMailboxId.slice(0, 10)}…{routedMailboxId.slice(-6)}), nicht die Einsatz-Mailbox.
+              </p>
+            ) : null}
           </div>
         )}
 

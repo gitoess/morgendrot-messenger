@@ -26,6 +26,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [membersText, setMembersText] = useState('')
+  const [streamsAnchorId, setStreamsAnchorId] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
 
   const reload = useCallback(() => {
@@ -60,16 +61,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       return
     }
     const id = activeId ?? createMessengerGroupId()
+    const anchor = streamsAnchorId.trim()
     upsertMessengerGroup({
       id,
       name: name.trim() || `Gruppe (${memberAddresses.length})`,
       memberAddresses,
+      ...(anchor && /^0x[a-fA-F0-9]{64}$/i.test(anchor) ? { streamsAnchorId: anchor } : {}),
     })
     writeActiveGroupId(id)
     setMsg('Gruppe gespeichert.')
     reload()
     onGroupsChanged?.()
-  }, [activeId, membersText, name, onGroupsChanged, reload])
+  }, [activeId, membersText, name, onGroupsChanged, reload, streamsAnchorId])
 
   const selectGroup = useCallback(
     (id: string) => {
@@ -85,6 +88,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     setActiveId(null)
     setName('')
     setMembersText(directoryAddrs.join('\n'))
+    setStreamsAnchorId('')
     setMsg('Neue Gruppe — Name und Mitglieder eintragen, dann speichern.')
   }, [directoryAddrs])
 
@@ -153,6 +157,17 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           value={membersText}
           onChange={(e) => setMembersText(e.target.value)}
           rows={4}
+          spellCheck={false}
+          className="w-full max-w-lg rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+        />
+        <label className="block text-[10px] font-medium text-muted-foreground">
+          Streams-Anchor (optional, M2b — Metadaten bei Gruppensendung)
+        </label>
+        <input
+          type="text"
+          value={streamsAnchorId}
+          onChange={(e) => setStreamsAnchorId(e.target.value)}
+          placeholder="0x… Anchor-Object-ID (64 Hex)"
           spellCheck={false}
           className="w-full max-w-lg rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
         />

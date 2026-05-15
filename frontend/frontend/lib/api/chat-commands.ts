@@ -5,16 +5,25 @@ export const sendMessage = (
   recipient: string,
   message: string,
   encrypted = true,
-  opts?: { messagingPersistenceMode?: MessagingPersistenceMode; timeoutMs?: number }
+  opts?: {
+    messagingPersistenceMode?: MessagingPersistenceMode
+    timeoutMs?: number
+    mailboxObjectId?: string
+  }
 ) =>
   executeCommand(encrypted ? '/send' : '/send-plain', encrypted ? [message] : [recipient, message], {
     timeoutMs: opts?.timeoutMs,
     messagingPersistenceMode: encrypted ? undefined : opts?.messagingPersistenceMode,
+    mailboxObjectId: opts?.mailboxObjectId,
   })
 
 /** Verschlüsseltes /send mit Timeout (Standard 120s – Chain/RPC kann langsam sein). */
-export function sendEncryptedMessageWithTimeout(message: string, timeoutMs = 120_000) {
-  return executeCommand('/send', [message], { timeoutMs })
+export function sendEncryptedMessageWithTimeout(
+  message: string,
+  timeoutMs = 120_000,
+  opts?: { mailboxObjectId?: string }
+) {
+  return executeCommand('/send', [message], { timeoutMs, mailboxObjectId: opts?.mailboxObjectId })
 }
 
 /** SOS: leichtes Gateway-ACK (Log), **ohne** vollen Mailbox-Speicher — optional vor `/send` im Retry. */

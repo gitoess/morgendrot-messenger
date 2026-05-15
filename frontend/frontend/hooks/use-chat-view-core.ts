@@ -40,7 +40,12 @@ import {
   getActiveMessengerGroup,
   type MessengerGroupDefinition,
 } from '@/frontend/lib/messenger-group-store'
-import { isDialogChannel, isGroupChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import {
+  isDialogChannel,
+  isGroupChannel,
+  isPinnwandChannel,
+  type MessengerChatChannel,
+} from '@/frontend/lib/messenger-chat-channel'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
 const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
@@ -100,6 +105,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   useEffect(() => {
     if (!isPrivate) setEncryptedInternal(false)
   }, [isPrivate])
+
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
   const clearSosVoicePrompt = useCallback(() => setSosVoiceAwaitingSend(false), [])
@@ -211,6 +217,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onBulkHideSelected,
     onBulkPurgeSelected,
     removeInboxPartnerFromQuickList,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
   } = useChatViewInboxLocalUi({
     messages,
     setMessages,
@@ -222,6 +230,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     contactDirectory: directory,
     groupMemberFilter,
     isGroupMode: isGroup,
+    isPinnwandMode: isPinnwandChannel(channelMode),
   })
 
   useEffect(() => {
@@ -254,6 +263,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
+
+  /** M3: Broadcast-Adresse aus /api/status ins Empfängerfeld (Pinnwand-Kanal). */
+  useEffect(() => {
+    if (!isPinnwandChannel(channelMode)) return
+    const addr = apiStatus?.broadcastPinnwand?.address?.trim() ?? ''
+    if (!addr || !/^0x[a-fA-F0-9]{64}$/i.test(addr)) return
+    setRecipient((prev) => (prev.trim() ? prev : addr))
+  }, [channelMode, apiStatus?.broadcastPinnwand?.address])
 
   const {
     onExportEinsatzberichtJson,
@@ -445,6 +462,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    contactDirectory: directory,
+    activeGroup,
+    isGroupChannel: isGroup,
   })
 
   const {
@@ -625,6 +645,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,

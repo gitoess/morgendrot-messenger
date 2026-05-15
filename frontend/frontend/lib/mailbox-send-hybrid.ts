@@ -40,18 +40,22 @@ export async function sendPlaintextMailboxHybrid(
   recipient: string,
   wireForApi: string,
   messageNonceU64: bigint,
-  opts?: { messagingPersistenceMode?: MessagingPersistenceMode }
+  opts?: { messagingPersistenceMode?: MessagingPersistenceMode; mailboxObjectId?: string }
 ): Promise<MailboxHybridSendResult> {
   if (canTryLivePlaintextDirectMailbox()) {
     const dr = await trySubmitPlaintextMailboxViaDirectIota({
       recipient: recipient.trim(),
       payloadUtf8: wireForApi,
       nonce: messageNonceU64,
+      mailboxObjectId: opts?.mailboxObjectId,
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
   }
   return fromApiResponse(
-    await sendMessage(recipient, wireForApi, false, { messagingPersistenceMode: opts?.messagingPersistenceMode })
+    await sendMessage(recipient, wireForApi, false, {
+      messagingPersistenceMode: opts?.messagingPersistenceMode,
+      mailboxObjectId: opts?.mailboxObjectId,
+    })
   )
 }
 
@@ -59,7 +63,7 @@ export async function sendPlaintextMailboxHybrid(
 export async function sendEncryptedMailboxHybrid(
   recipient: string,
   wireForApi: string,
-  opts?: { timeoutMs?: number }
+  opts?: { timeoutMs?: number; mailboxObjectId?: string }
 ): Promise<MailboxHybridSendResult> {
   const rTrim = recipient.trim()
   if (rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
@@ -70,9 +74,14 @@ export async function sendEncryptedMailboxHybrid(
         plaintextUtf8: wireForApi,
         peerPubRaw: mat.peerPubRaw,
         ecdhPrivateKey: mat.ecdhPrivateKey,
+        mailboxObjectId: opts?.mailboxObjectId,
       })
       if (er.ok) return { ok: true, txDigest: er.digest }
     }
   }
-  return fromApiResponse(await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000))
+  return fromApiResponse(
+    await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
+      mailboxObjectId: opts?.mailboxObjectId,
+    })
+  )
 }

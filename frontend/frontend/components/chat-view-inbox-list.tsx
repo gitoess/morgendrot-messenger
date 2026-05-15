@@ -24,6 +24,7 @@ import {
   MoreHorizontal,
   Package,
   ShieldCheck,
+  Pin,
   Star,
   Trash2,
   UserPlus,
@@ -85,6 +86,10 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onForwardMessage?: (msg: Message, includeSender: boolean) => void
   toggleProtokollMark: (id: string) => void
   protokollMarkedIds: Set<string>
+  /** M3 Pinnwand: lokal anheften */
+  pinnedPinnwandIds?: Set<string>
+  onTogglePinnedPinnwand?: (id: string) => void
+  showPinnwandPinActions?: boolean
   inboxSelectMode: boolean
   selectedInboxIds: Set<string>
   toggleInboxSelection: (id: string) => void
@@ -114,6 +119,9 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     onForwardMessage,
     toggleProtokollMark,
     protokollMarkedIds,
+    pinnedPinnwandIds = new Set(),
+    onTogglePinnedPinnwand,
+    showPinnwandPinActions = false,
     inboxSelectMode,
     selectedInboxIds,
     toggleInboxSelection,
@@ -239,7 +247,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             key={row.msg.id}
             className={cn(
               'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
-              protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]'
+              protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]',
+              pinnedPinnwandIds.has(row.msg.id) && 'border-l-4 border-l-sky-500 bg-sky-500/[0.06]'
             )}
           >
             {(() => {
@@ -303,6 +312,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       Protokoll
                     </span>
                   )}
+                  {pinnedPinnwandIds.has(row.msg.id) && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-900 dark:text-sky-100">
+                      <Pin className="h-3 w-3 text-sky-600 dark:text-sky-300" aria-hidden />
+                      Angeheftet
+                    </span>
+                  )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <time className="tabular-nums" dateTime={new Date(row.msg.timestamp).toISOString()}>
@@ -355,6 +370,17 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <UserPlus className="mr-2 h-4 w-4" />
                     Ins Telefonbuch
                   </DropdownMenuItem>
+                  {showPinnwandPinActions && onTogglePinnedPinnwand ? (
+                    <DropdownMenuItem onClick={() => onTogglePinnedPinnwand(row.msg.id)}>
+                      <Pin
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          pinnedPinnwandIds.has(row.msg.id) ? 'text-sky-600 dark:text-sky-300' : ''
+                        )}
+                      />
+                      {pinnedPinnwandIds.has(row.msg.id) ? 'Anheftung lösen' : 'An Pinnwand anheften'}
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => toggleProtokollMark(row.msg.id)}>
                     <Star
                       className={cn(
