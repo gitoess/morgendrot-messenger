@@ -11,7 +11,6 @@ import {
     savePackageIdToFile,
     setEnvKey,
     assignDeviceRoleInEnv,
-    ensurePackageIdInHistory,
     ensureStreamsAnchorIdInHistory,
 } from '../config.js';
 import { normalizeAddress } from '../utils.js';
@@ -45,13 +44,9 @@ import {
     transferCoins as chainTransferCoins,
     iotaToMist,
     createTicketsBatchPtb as chainCreateTicketsBatchPtb,
-    storePlaintextMessageBatch,
     sendPairingOffer,
     queryRecentPairingOffers,
-    MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
-    MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from '../chain-access.js';
-import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
 import {
     saveVaultLocal,
     loadVaultContent,
@@ -63,7 +58,6 @@ import {
     writeVaultAnchorId,
     loadVaultFromChainPayload,
     saveHandshakeCache,
-    purgeHandshakeCache,
     purgeInboxCache,
     type PersonalSecretEntry,
 } from '../vault-local.js';
@@ -83,8 +77,6 @@ import {
     fetchWithTimeout,
 } from './streams-bridge-client.js';
 import {
-    purgeHandshake,
-    purgeMessage,
     createVaultOnChain,
     createAccessKey,
     createAccessKeyAndSendPlain,
@@ -92,30 +84,16 @@ import {
     enableEmergencyPurgeKey,
     purgeKey,
     sendHandshake,
-    sendEncryptedMessage,
-    sendPlaintextOnly,
-    buildMeshPeerInnerBlob,
-    packMeshEmergencyV2Wire,
-    decryptMeshEmergencyV2Wire,
 } from './messenger-chain-wrap.js';
-import { fetchLastMessages, fetchPlaintextOnlyForRecipient, isRebasedStorageEnabled } from './messenger-fetch.js';
-import type { FetchedMessage } from './messenger-fetch.js';
 import { runConnectLogic, runConnectAcceptFirstIncoming, watchHandshakeUpdates } from './messenger-connect.js';
 import { listenForMessages } from './messenger-listener.js';
 import type { PeerState } from './peer-state.js';
 import { encryptPairingPayload, decryptPairingPayload, generatePairingNonce } from '../pairing-crypto.js';
 import { saveContactLabel } from '../contact-labels.js';
-import { buildMorgPkgV1, decryptMorgPkgV1, isMorgPkgV1Shape } from './morg-pkg-wire.js';
-import { splitMeshPlaintextForV2 } from '../mesh-v2-fragment.js';
-import { base64ToUint8, uint8ToBase64 } from '../shared/bytes-base64.js';
-import {
-    messengerGasPolicyOpts,
-    assertPairingGateNftOwned,
-    purgeHandshakeBidirectional,
-    purgeMessageBidirectional,
-    resolveCommandForceLegacyPlaintext,
-    resolveCommandForceLegacyEncrypted,
-} from './command-handler-shared.js';
+import { messengerGasPolicyOpts, assertPairingGateNftOwned } from './command-handler-shared.js';
+import { tryHandleMailboxCommand } from './commands/mailbox-commands.js';
+import { tryHandleSendCommand } from './commands/send-commands.js';
+import type { MessengerCommandContext } from './commands/command-types.js';
 
 export type MessengerCommandDeps = {
     getMyAddress: () => string;
@@ -183,6 +161,17 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         if (!veto.ok) return { ok: false, message: veto.reason ?? 'Veto.' };
                     }
                     const peerMap = sessionState.peerMap;
+                    const cmdCtx: MessengerCommandContext = {
+                        cmd: c,
+                        args: a,
+                        opts,
+                        myAddress: MY_ADDR,
+                        keys,
+                        peerMap,
+                        sessionState,
+                    };
+                    const mailboxEarly = await tryHandleMailboxCommand(cmdCtx);
+                    if (mailboxEarly) return mailboxEarly;
                     if (c === '/vault-save') {
                         const raw = [...a].map((x) => String(x ?? ''))
                         let includeIotaMnemonic = false
@@ -316,76 +305,6 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : 'Fehler: ' + msg,
                             };
                         }
-                    }
-                    if (c === '/purge-handshake') {
-                        if (!CFG.ENABLE_PURGE) return { ok: false, message: 'Purge deaktiviert.' };
-                        if (!isRebasedStorageEnabled()) return { ok: false, message: 'MAILBOX_ID nicht gesetzt.' };
-                        if (a.length >= 2 && /^0x[a-fA-F0-9]{64}$/.test(String(a[0]).trim()) && /^0x[a-fA-F0-9]{64}$/.test(String(a[1]).trim())) {
-                            await purgeHandshake(a[0].trim(), a[1].trim());
-                            return { ok: true, message: 'Handshake gepurged.' };
-                        }
-                        if (!peerMap?.size) return { ok: false, message: 'Befehl benötigt Chat-Verbindung oder 2 Argumente (recipient, sender).' };
-                        for (const p of peerMap.values()) await purgeHandshakeBidirectional(MY_ADDR, p.address);
-                        return { ok: true, message: `${peerMap.size} Handshake-Zeile(n) gepurged (je Richtung Empfänger/Sender automatisch probiert).` };
-                    }
-                    if (c === '/purge-msg' || c === '/purge-message') {
-                        if (!CFG.ENABLE_PURGE) return { ok: false, message: 'Purge deaktiviert.' };
-                        if (!a[0]) return { ok: false, message: 'Verwendung: /purge-msg <empfänger> <sender> <nonce> (UI) oder /purge-msg <nonce> [sender] mit Chat-Connect.' };
-                        if (!isRebasedStorageEnabled()) return { ok: false, message: 'MAILBOX_ID nicht gesetzt (Mailbox-Modus nötig zum Purgen von Nachrichten).' };
-                        const hex64 = /^0x[a-fA-F0-9]{64}$/;
-                        const parseNonce = (raw: string): bigint | null => {
-                            const t = String(raw ?? '').trim();
-                            if (!t) return null;
-                            try {
-                                const b = BigInt(t);
-                                return b < 0n ? null : b;
-                            } catch {
-                                return null;
-                            }
-                        };
-                        if (a.length >= 3 && hex64.test(String(a[0]).trim()) && hex64.test(String(a[1]).trim())) {
-                            const recipient = a[0].trim();
-                            const sender = a[1].trim();
-                            const nonceBn = parseNonce(String(a[2]));
-                            if (nonceBn === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
-                            await purgeMessage(recipient, sender, nonceBn);
-                            return { ok: true, message: 'Nachricht aus Mailbox gepurged.' };
-                        }
-                        if (!peerMap?.size) return { ok: false, message: 'Befehl benötigt Chat-Verbindung (/connect) oder 3 Argumente: Empfänger, Sender, Nonce (wie im Rebate-Tab).' };
-                        const nonceBnPeer = parseNonce(String(a[0]));
-                        const senderArg = a[1]?.trim();
-                        if (nonceBnPeer === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
-                        const toPurge: PeerState[] = senderArg ? [peerMap.get(senderArg) ?? [...peerMap.values()].find((p) => normalizeAddress(p.address) === normalizeAddress(senderArg))].filter((p): p is PeerState => !!p) : [...peerMap.values()];
-                        for (const p of toPurge) await purgeMessageBidirectional(MY_ADDR, p.address, nonceBnPeer);
-                        return { ok: true, message: 'Nachricht gepurged (Empfänger/Sender-Reihenfolge automatisch probiert).' };
-                    }
-                    if (c === '/purge-handshake-cache') {
-                        const vp = CFG.VAULT_FILE || '.morgendrot-vault';
-                        purgeHandshakeCache(vp);
-                        return { ok: true, message: 'Handshake-Cache geleert (lokal, immer purgable).' };
-                    }
-                    if (c === '/purge-local-inbox') {
-                        const vp = CFG.VAULT_FILE || '.morgendrot-vault';
-                        const shredInbox = a[0] === '1' || String(a[0] ?? '').toLowerCase() === 'shred';
-                        purgeInboxCache(vp, { shred: shredInbox });
-                        return {
-                            ok: true,
-                            message: shredInbox
-                                ? 'Lokale Inbox geschreddert und entfernt.'
-                                : 'Lokale Inbox geleert (Datei gelöscht).',
-                        };
-                    }
-                    if (c === '/clear-local-history') {
-                        const vp = CFG.VAULT_FILE || '.morgendrot-vault';
-                        const rawH = a[0] != null ? String(a[0]).trim().toLowerCase() : '';
-                        const shredH = rawH !== '0' && rawH !== 'false' && rawH !== 'no';
-                        purgeInboxCache(vp, { shred: shredH });
-                        return {
-                            ok: true,
-                            message: shredH
-                                ? 'clearLocalHistory: lokaler Inbox-Klartext-Cache (.inbox.enc) überschrieben und gelöscht.'
-                                : 'clearLocalHistory: lokale Inbox-Datei gelöscht (ohne Shred).',
-                        };
                     }
                     if (c === '/vault-onchain') {
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load.' };
@@ -918,147 +837,6 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         return { ok: true, message: `${assets.length} PhysicalAsset(s)`, assets };
                     }
-                    if (c === '/inbox') {
-                        c = '/fetch';
-                        if (a.length === 0) a = ['20'];
-                    }
-                    if (c === '/fetch') {
-                        if (!MY_ADDR?.trim()) return { ok: false, message: 'MY_ADDRESS fehlt. Bitte zuerst unter „1. Anfang & Verbindung“ setzen.' };
-                        const packageIdOverride = a[2] != null && /^0x[a-fA-F0-9]{64}$/.test(String(a[2]).trim()) ? String(a[2]).trim() : undefined;
-                        if (packageIdOverride) ensurePackageIdInHistory(packageIdOverride);
-                        const pkgId = packageIdOverride || String(CFG.PACKAGE_ID ?? '').trim();
-                        if (!pkgId) return { ok: false, message: 'PACKAGE_ID fehlt. Bitte /set-package-id ausführen, PACKAGE_ID in .env setzen oder als 3. Argument übergeben (z. B. /inbox 50 undefined 0x…).' };
-                        if (!/^0x[a-fA-F0-9]{64}$/.test(pkgId)) return { ok: false, message: 'PACKAGE_ID muss 0x gefolgt von 64 Hex-Zeichen sein (z. B. aus create_globals). Aktuell: ' + (pkgId.length > 20 ? pkgId.slice(0, 20) + '…' : pkgId) };
-                        const myAddrNorm = normalizeAddress(MY_ADDR);
-                        if (!/^0x[a-fa-f0-9]{64}$/.test(myAddrNorm)) return { ok: false, message: 'MY_ADDRESS muss 0x gefolgt von 64 Hex-Zeichen sein.' };
-                        const rawN = a[0] != null ? String(a[0]).trim() : '10';
-                        const n = Math.min(500, Math.max(1, parseInt(rawN, 10) || 10));
-                        if (Number.isNaN(n) || n < 1 || n > 500) return { ok: false, message: 'Anzahl muss zwischen 1 und 500 liegen (z. B. 50).' };
-                        const senderArg = a[1] != null && String(a[1]).trim().startsWith('0x') ? normalizeAddress(String(a[1]).trim()) : undefined;
-                        const bossView = a[3] != null && String(a[3]).trim().toLowerCase() === 'boss';
-                        const mergeLocalInbox =
-                            a[4] === '1' || String(a[4] ?? '').trim().toLowerCase() === 'true';
-                        const rawOff = a[5] != null ? String(a[5]).trim() : '0';
-                        const offset = Math.max(0, parseInt(rawOff, 10) || 0);
-                        if (isRebasedStorageEnabled() && (!CFG.MAILBOX_ID || !/^0x[a-fA-F0-9]{64}$/.test(CFG.MAILBOX_ID)))
-                            return { ok: false, message: 'MAILBOX_ID fehlt oder hat ungültiges Format (0x + 64 Hex). In .env setzen (aus create_globals-Event).' };
-                        try {
-                            const { isChainReachable } = await import('../chain-access.js');
-                            if (!(await isChainReachable())) return { ok: false, message: 'Kette nicht erreichbar. RPC_URL prüfen oder später erneut versuchen.' };
-                            const silent = (opts as { silentFetch?: boolean } | undefined)?.silentFetch === true;
-                            const fetchOpts: { silent?: boolean; packageId?: string; mergeLocalInbox?: boolean; offset?: number } = {};
-                            if (silent) fetchOpts.silent = true;
-                            if (packageIdOverride) fetchOpts.packageId = packageIdOverride;
-                            if (mergeLocalInbox) fetchOpts.mergeLocalInbox = true;
-                            // Posteingang: immer „standalone“ (kein Session-peerMap-Filter), sonst fehlen alle Threads,
-                            // deren Gegenüber nicht in /connect steht (z. B. nur Selbst-Peer → nur Self-to-Self sichtbar).
-                            const peerMapForFetch = null;
-                            let messages: FetchedMessage[];
-                            if (bossView && CFG.ROLE === 'boss' && CFG.KOMMANDANT_ADDRESSES.length > 0) {
-                                const need = Math.min(2000, offset + n);
-                                const bossMessages = await fetchLastMessages(
-                                    myAddrNorm,
-                                    peerMapForFetch,
-                                    keys?.privateKey ?? null,
-                                    need,
-                                    undefined,
-                                    senderArg,
-                                    { ...fetchOpts, offset: 0 }
-                                );
-                                // Echten Empfänger aus der Chain beibehalten (kein Überschreiben mit Boss-Adresse).
-                                const withRecipient: FetchedMessage[] = [...bossMessages];
-                                const perK = Math.max(5, Math.floor(need / (CFG.KOMMANDANT_ADDRESSES.length + 1)));
-                                const pkgId = packageIdOverride || String(CFG.PACKAGE_ID ?? '').trim();
-                                for (const kommandantAddr of CFG.KOMMANDANT_ADDRESSES) {
-                                    if (normalizeAddress(kommandantAddr) === normalizeAddress(myAddrNorm)) continue;
-                                    const kMessages = await fetchPlaintextOnlyForRecipient(kommandantAddr, perK, pkgId);
-                                    withRecipient.push(...kMessages);
-                                }
-                                withRecipient.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
-                                messages = withRecipient.slice(offset, offset + n);
-                            } else {
-                                fetchOpts.offset = offset;
-                                messages = await fetchLastMessages(
-                                    myAddrNorm,
-                                    peerMapForFetch,
-                                    keys?.privateKey ?? null,
-                                    n,
-                                    undefined,
-                                    senderArg,
-                                    fetchOpts
-                                );
-                            }
-                            if (messages.length === 0) return { ok: true, message: 'Keine neuen Nachrichten auf der Chain gefunden.', messages: [], data: [] };
-                            return { ok: true, message: senderArg ? `Letzte ${n} Nachrichten von ${senderArg.slice(0, 12)}… geladen.` : `${messages.length} Nachricht(en) geladen.`, messages, data: messages };
-                        } catch (e: any) {
-                            const msg = String(e?.message || e);
-                            if (msg.includes('invalid param')) return { ok: false, message: 'Ungültige Parameter (z. B. MAILBOX_ID oder PACKAGE_ID prüfen – 0x + 64 Hex). create_globals ausgeführt?' };
-                            if (msg.includes('MAILBOX') || msg.includes('getDynamicFields')) return { ok: false, message: 'Mailbox nicht erreichbar oder MAILBOX_ID fehlt. Ohne Mailbox: PACKAGE_ID und RPC_URL müssen stimmen.' };
-                            if (msg.includes('queryEvents') || msg.includes('package')) return { ok: false, message: 'Kette/Package-Fehler. PACKAGE_ID und RPC_URL prüfen.' };
-                            return { ok: false, message: msg || 'Nachrichten konnten nicht geladen werden.' };
-                        }
-                    }
-                    if (c === '/rpc-rotate') {
-                        const { resetRpcClient, isChainReachable, getActiveRpcUrl, getRpcCandidateCount } = await import('../chain-access.js');
-                        resetRpcClient('next');
-                        const reachable = await isChainReachable();
-                        return {
-                            ok: true,
-                            message: `RPC: ${getActiveRpcUrl()} (erreichbar: ${reachable ? 'ja' : 'nein'}).`,
-                            rpcUrl: getActiveRpcUrl(),
-                            reachable,
-                            rpcCandidateCount: getRpcCandidateCount(),
-                        };
-                    }
-                    if (c === '/resolve-iota-name' || c === '/iota-name-lookup') {
-                        const name = String(a[0] ?? '').trim();
-                        if (!name) {
-                            return {
-                                ok: false,
-                                message: 'Verwendung: /resolve-iota-name <name.iota> (Indexer JSON-RPC iotax_iotaNamesLookup).',
-                            };
-                        }
-                        const { iotaNamesLookup, registrationNftMatchesAllowedPackages } = await import('../iota-names-lookup.js');
-                        try {
-                            const rec = await iotaNamesLookup(CFG.RPC_URL, name);
-                            const lines: string[] = [
-                                `Name: ${name}`,
-                                `Ziel-Adresse: ${rec.targetAddress ?? '(nicht gesetzt)'}`,
-                                `Registrierungs-NFT: ${rec.nftId}`,
-                            ];
-                            if (rec.expirationTimestampMs != null) lines.push(`Ablauf (ms): ${rec.expirationTimestampMs}`);
-                            const allow = CFG.VERIFIED_IOTA_NAME_PACKAGE_IDS;
-                            let registrationNftVerified: boolean | undefined;
-                            let registrationNftType: string | undefined;
-                            if (allow.length > 0) {
-                                const v = await registrationNftMatchesAllowedPackages(getClient(), rec.nftId, allow);
-                                registrationNftVerified = v.matches;
-                                registrationNftType = v.objectType;
-                                lines.push(
-                                    v.matches
-                                        ? 'Allowlist: NFT-Typ passt zu einem der VERIFIED_IOTA_NAME_PACKAGE_IDS.'
-                                        : 'Allowlist: NFT-Typ passt NICHT – möglicher Spoofing-Name.'
-                                );
-                                if (v.objectType) lines.push(`On-Chain-Typ: ${v.objectType}`);
-                            } else {
-                                lines.push('VERIFIED_IOTA_NAME_PACKAGE_IDS leer – nur Lookup, kein Paket-Check.');
-                            }
-                            return {
-                                ok: true,
-                                message: lines.join('\n'),
-                                iotaName: {
-                                    name,
-                                    nftId: rec.nftId,
-                                    targetAddress: rec.targetAddress,
-                                    expirationTimestampMs: rec.expirationTimestampMs,
-                                    registrationNftVerified,
-                                    registrationNftType,
-                                },
-                            };
-                        } catch (e: unknown) {
-                            return { ok: false, message: String((e as Error)?.message ?? e) };
-                        }
-                    }
                     if (c === '/shadow-sweep') {
                         const sm =
                             String((opts as { shadowMnemonic?: string } | undefined)?.shadowMnemonic ?? '').trim() ||
@@ -1223,232 +1001,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             message: `Warte auf eingehenden Handshake (max. ${Math.round(timeoutMs / 1000)}s). Stelle sicher, dass der Partner /pairing-find ausgeführt hat.`,
                         };
                     }
-                    // Senden: /send-plain immer erlauben (kein ROLE_ID-Check). /send und /boss-command: bei Hierarchie S-Bit prüfen.
-                    const isHierarchyRole = ['boss', 'kommandant', 'arbeiter'].includes(CFG.ROLE);
-                    const canSend = !isHierarchyRole || hasRoleBit(ROLE_BITS.S);
-                    if (c === '/send-plain') {
-                        const addrsRaw = String(a[0] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-                        const addrs = addrsRaw.filter((addr) => /^0x[a-fA-F0-9]{64}$/.test(addr));
-                        const text = a.slice(1).join(' ').trim() || '(leer)';
-                        if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
-                            return {
-                                ok: false,
-                                message:
-                                    `Nachricht zu lang für die Chain (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8 pro Sendung, Move-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Kürzerer Text oder kleineres Bild neu kodieren.`,
-                            };
-                        }
-                        if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
-                        const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
-                        const forceLegacyPlaintext = resolveCommandForceLegacyPlaintext(opts);
-                        return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
-                            for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
-                            return {
-                                ok: true,
-                                message:
-                                    addrs.length > 1
-                                        ? `Klartext an ${addrs.length} Empfänger gesendet.`
-                                        : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.`,
-                            };
-                        });
-                    }
-                    if (c === '/send') {
-                        if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – Senden verweigert (ROLE_ID=' + CFG.ROLE_ID + '). Bei Hierarchie ROLE_ID z. B. 14 setzen.' };
-                        const pm = sessionState.peerMap;
-                        if (!pm?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
-                        const text = (a && a.length > 0) ? a.join(' ').trim() : '';
-                        if (!text) return { ok: false, message: 'Verwendung: /send <Text> (Nachricht eingeben).' };
-                        if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
-                            return {
-                                ok: false,
-                                message:
-                                    `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
-                            };
-                        }
-                        const forceLegacyEncrypted = resolveCommandForceLegacyEncrypted(opts);
-                        const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
-                        return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
-                            for (const p of pm.values()) {
-                                await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey, {
-                                    forceLegacyEncrypted,
-                                });
-                            }
-                            return {
-                                ok: true,
-                                message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.',
-                            };
-                        });
-                    }
-                    /** Leichtgewicht: SOS-Erreichbarkeit Basis/Gateway protokollieren — **keine** Mailbox-Speicherung (kein Doppel-/send). */
-                    if (c === '/sos-gateway-ack') {
-                        if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – SOS-Gateway-Ack verweigert.' };
-                        const pmAck = sessionState.peerMap;
-                        if (!pmAck?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
-                        const digest = String(a[0] ?? '')
-                            .trim()
-                            .toLowerCase();
-                        if (!/^[a-f0-9]{64}$/.test(digest)) {
-                            return {
-                                ok: false,
-                                message: 'Verwendung: /sos-gateway-ack <sha256-hex-64> (Digest der SOS-Nutzlast UTF-8).',
-                            };
-                        }
-                        logger.warn(`morg.sos.gateway_ack digest=${digest} peers=${pmAck.size}`);
-                        return { ok: true, message: 'SOS-Gateway-Ack protokolliert (keine Mailbox-Transaktion).' };
-                    }
-                    if (c === '/mesh-build-v2') {
-                        if (!canSend) {
-                            return {
-                                ok: false,
-                                message:
-                                    'S-Bit (Send) nicht gesetzt – Mesh-Build verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
-                            };
-                        }
-                        const pmMesh = sessionState.peerMap;
-                        if (!pmMesh?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
-                        const textMesh = (a && a.length > 0) ? a.join(' ').trim() : '';
-                        if (!textMesh) return { ok: false, message: 'Verwendung: /mesh-build-v2 <Text>' };
-                        if (new TextEncoder().encode(textMesh).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
-                            return {
-                                ok: false,
-                                message: `Mesh-Nutzlast zu lang (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8).`,
-                            };
-                        }
-                        try {
-                            assertMessengerMediaNetBlobWithinLimit(textMesh);
-                        } catch (e) {
-                            return { ok: false, message: (e as Error).message };
-                        }
-                        const myMesh = (MY_ADDR || '').trim().toLowerCase();
-                        if (!/^0x[a-f0-9]{64}$/.test(myMesh)) return { ok: false, message: 'MY_ADDRESS ungültig oder fehlt.' };
-                        const frags = splitMeshPlaintextForV2(textMesh);
-                        const wires: { recipient: string; wireBase64: string; meshNonce: number }[] = [];
-                        for (const p of pmMesh.values()) {
-                            for (const fragPlain of frags) {
-                                const meshNonce = Math.floor(Math.random() * 0x100000000) >>> 0;
-                                const inner = await buildMeshPeerInnerBlob(fragPlain, p.pubKeyRaw, keys!.privateKey);
-                                const built = await packMeshEmergencyV2Wire(myMesh, meshNonce, inner);
-                                if (!built.ok) return { ok: false, message: built.error };
-                                wires.push({
-                                    recipient: p.address,
-                                    wireBase64: uint8ToBase64(built.wire),
-                                    meshNonce,
-                                });
-                            }
-                        }
-                        return {
-                            ok: true,
-                            message: `Mesh-v2 bereit (${wires.length} Paket/e, PRIVATE_APP${frags.length > 1 ? `, ${frags.length} Textfragment/e` : ''}).`,
-                            wires,
-                        };
-                    }
-                    if (c === '/mesh-decrypt-v2') {
-                        const senderMesh = (a[0] ?? '').trim();
-                        const b64 = (a[1] ?? '').trim();
-                        if (!senderMesh || !b64) {
-                            return { ok: false, message: 'Verwendung: /mesh-decrypt-v2 <0xAbsender> <wireBase64>' };
-                        }
-                        const pmDec = sessionState.peerMap;
-                        if (!pmDec?.size) return { ok: false, message: 'Nicht verbunden (Peer-Keys nötig).' };
-                        const normS = normalizeAddress(senderMesh);
-                        const peerDec =
-                            [...pmDec.values()].find((p) => normalizeAddress(p.address) === normS) ??
-                            pmDec.get(senderMesh) ??
-                            pmDec.get(normS);
-                        if (!peerDec) {
-                            return { ok: false, message: 'Absender nicht in peerMap – Handshake/Connect prüfen.' };
-                        }
-                        const raw = base64ToUint8(b64);
-                        const plain = await decryptMeshEmergencyV2Wire(raw, peerDec.pubKeyRaw, keys!.privateKey);
-                        if (!plain) return { ok: false, message: 'Mesh-v2 Entschlüsselung fehlgeschlagen.' };
-                        return { ok: true, message: plain, text: plain };
-                    }
-                    if (c === '/morg-pkg-export') {
-                        if (!canSend) {
-                            return {
-                                ok: false,
-                                message:
-                                    'S-Bit (Send) nicht gesetzt – .morg-pkg-Export verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
-                            };
-                        }
-                        const pmEx = sessionState.peerMap;
-                        if (!pmEx?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
-                        const addrRaw = (a[0] ?? '').trim();
-                        const textEx = a.length > 1 ? a.slice(1).join(' ').trim() : '';
-                        if (!addrRaw || !textEx) {
-                            return { ok: false, message: 'Verwendung: /morg-pkg-export <0xEmpfänger> <Klartext…>' };
-                        }
-                        if (!/^0x[a-fA-F0-9]{64}$/i.test(addrRaw)) {
-                            return { ok: false, message: 'Empfänger: 0x + 64 Hex (Handshake-Partner).' };
-                        }
-                        const normR = normalizeAddress(addrRaw);
-                        const peerEx =
-                            [...pmEx.values()].find((p) => normalizeAddress(p.address) === normR) ??
-                            pmEx.get(addrRaw) ??
-                            pmEx.get(normR);
-                        if (!peerEx) {
-                            return {
-                                ok: false,
-                                message: 'Empfänger nicht in peerMap – nur für verbundene Partner nach Handshake.',
-                            };
-                        }
-                        try {
-                            const morgPkg = await buildMorgPkgV1({
-                                plaintext: textEx,
-                                sender: MY_ADDR,
-                                recipient: peerEx.address,
-                                recipientPubRaw: peerEx.pubKeyRaw,
-                                senderPrivKey: keys!.privateKey,
-                            });
-                            return {
-                                ok: true,
-                                message: 'ECDH-.morg-pkg erstellt (AES-GCM wie /send). Datei offline übergeben.',
-                                morgPkg,
-                            };
-                        } catch (e: any) {
-                            return { ok: false, message: String(e?.message || e) };
-                        }
-                    }
-                    if (c === '/morg-pkg-import') {
-                        const rawPkg = opts?.morgPkg;
-                        if (rawPkg == null || typeof rawPkg !== 'object') {
-                            return {
-                                ok: false,
-                                message:
-                                    'API-Body: Feld „morgPkg“ mit dem vollständigen JSON-Paket mitschicken (siehe UI „.morg-pkg importieren“).',
-                            };
-                        }
-                        const pmIm = sessionState.peerMap;
-                        if (!pmIm?.size) return { ok: false, message: 'Nicht verbunden (Absender-ECDH-Key aus Handshake nötig).' };
-                        if (!isMorgPkgV1Shape(rawPkg)) {
-                            return {
-                                ok: false,
-                                message:
-                                    'morgPkg ungültig: schema morgendrot.morgpkg.v1, version 1, Felder sender/recipient/ivB64/ciphertextB64.',
-                            };
-                        }
-                        const normFrom = normalizeAddress(rawPkg.sender);
-                        const peerIm =
-                            [...pmIm.values()].find((p) => normalizeAddress(p.address) === normFrom) ??
-                            pmIm.get(rawPkg.sender) ??
-                            pmIm.get(normFrom);
-                        if (!peerIm) {
-                            return {
-                                ok: false,
-                                message:
-                                    'Absender (pkg.sender) nicht in peerMap – vor dem Öffnen mit dem Absender Handshake/Connect ausführen.',
-                            };
-                        }
-                        try {
-                            const plain = await decryptMorgPkgV1(rawPkg, {
-                                myAddress: MY_ADDR,
-                                myPrivKey: keys!.privateKey,
-                                senderPubRaw: peerIm.pubKeyRaw,
-                            });
-                            return { ok: true, message: 'Paket entschlüsselt.', plaintext: plain, text: plain };
-                        } catch (e: any) {
-                            return { ok: false, message: String(e?.message || e) };
-                        }
-                    }
+                    const sendHandled = await tryHandleSendCommand(cmdCtx);
+                    if (sendHandled) return sendHandled;
                     if (c === '/set-package-id' && a[0]) {
                         const id = a[0].trim();
                         if (!id) return { ok: false, message: 'Package-ID eingeben' };
@@ -1504,33 +1058,6 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const rnorm = roleOnly === 'worker' ? 'arbeiter' : roleOnly;
                         const r = setEnvKey('ROLE', rnorm);
                         return r.ok ? { ok: true, message: 'Lokale ROLE in .env gesetzt.' } : { ok: false, message: r.error ?? 'Fehler' };
-                    }
-                    if (c === '/boss-command' && a[0] != null && a[1] != null) {
-                        if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – Senden verweigert (ROLE_ID=' + CFG.ROLE_ID + ').' };
-                        let targets: string[];
-                        try {
-                            targets = JSON.parse(String(a[0]));
-                        } catch {
-                            return { ok: false, message: 'Targets als JSON-Array (z. B. ["0x…"]).' };
-                        }
-                        const cmdText = String(a[1] ?? '').trim();
-                        if (!cmdText) return { ok: false, message: 'Befehlstext fehlt.' };
-                        const valid = (Array.isArray(targets) ? targets : []).filter((t): t is string => typeof t === 'string' && /^0x[a-fA-F0-9]{64}$/.test(String(t).trim()));
-                        if (valid.length === 0) return { ok: false, message: 'Keine gültigen Zieladressen.' };
-                        if (valid.length === 1) {
-                            await sendPlaintextOnly(valid[0].trim(), cmdText);
-                        } else {
-                            const nonce = BigInt(Date.now());
-                            await storePlaintextMessageBatch(
-                                valid,
-                                MY_ADDR,
-                                new TextEncoder().encode(cmdText),
-                                nonce,
-                                getWalletPassword(),
-                                messengerGasPolicyOpts()
-                            );
-                        }
-                        return { ok: true, message: `Befehl an ${valid.length} Ziel(e) gesendet` + (valid.length > 1 ? ' (PTB: 1 TX für alle).' : '.') };
                     }
                     if (c === '/help') {
                         const helpText = peerMap?.size ? HELP_CHAT : HELP_START;

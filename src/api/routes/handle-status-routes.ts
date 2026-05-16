@@ -1,0 +1,279 @@
+/**
+ * Status-/Meta-Routen: /api/status, /api/help, IDs, Presets, Chain-Erreichbarkeit.
+ */
+import type http from 'node:http';
+import {
+    CFG,
+    getConnectAddresses,
+    getHierarchyPermissions,
+    getRuntimeConfigKeys,
+    getRuntimeConfigSources,
+    getSignerConfigSource,
+    getWalletDerivationPathConfigSource,
+    type HierarchyPermissions,
+} from '../../config.js';
+import {
+    getBalanceInMist,
+    getMessengerCreditsSnapshot,
+    isChainReachable,
+} from '../../chain-access.js';
+import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from '../../wallet-bridge.js';
+import { vaultFileExists } from '../../vault-local.js';
+import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../../shared/heartbeat-presets.js';
+import { mask, rpcUrlLabel, formatWalletNativeIotaForStatusUi } from '../http-middleware.js';
+import type { ApiStatus } from '../../api-server.js';
+import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
+
+export async function handleStatusRoutes(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    url: string,
+    cors: Record<string, string>,
+    sendJson: SendJsonFn,
+    ctx: ApiRouteContext
+): Promise<boolean> {
+    if (url === '/api/status' && req.method === 'GET') {
+        const custom = { ...(ctx.getStatus?.() ?? {}), ...ctx.getSessionStatus() };
+        const perms = getHierarchyPermissions(CFG.ROLE);
+        const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
+        const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
+        const mailboxConfigured = Boolean(mailboxIdTrim && /^0x[a-fA-F0-9]{64}$/i.test(mailboxIdTrim));
+        const packageTrim = (CFG.PACKAGE_ID || '').trim();
+        const configHints: string[] = [];
+        if (CFG.MAILBOX_STORE_PLAINTEXT && !mailboxConfigured) {
+            configHints.push(
+                'MAILBOX_STORE_PLAINTEXT ist aktiv, aber MAILBOX_ID fehlt oder ist keine gültige Objekt-ID (0x + 64 Hex).'
+            );
+        }
+        if (mailboxIdTrim && packageTrim && mailboxIdTrim.toLowerCase() === packageTrim.toLowerCase()) {
+            configHints.push('MAILBOX_ID entspricht PACKAGE_ID — Mailbox-Aufrufe schlagen fehl („move package passed“).');
+        }
+        const credRaw = (CFG.MESSENGER_CREDITS_OBJECT_ID || '').trim();
+        if (credRaw && !/^0x[a-fA-F0-9]{64}$/i.test(credRaw)) {
+            configHints.push('MESSENGER_CREDITS_OBJECT_ID ist kein gültiges 0x+64-Hex-Format.');
+        }
+        if (credRaw && packageTrim && credRaw.toLowerCase() === packageTrim.toLowerCase()) {
+            configHints.push('MESSENGER_CREDITS_OBJECT_ID darf nicht die PACKAGE_ID sein.');
+        }
+        if (CFG.MAILBOX_STORE_PLAINTEXT && (!packageTrim || !/^0x[a-fA-F0-9]{64}$/i.test(packageTrim))) {
+            configHints.push(
+                'MAILBOX_STORE_PLAINTEXT: gültige PACKAGE_ID (0x+64 Hex) und deploytes Move mit store_plaintext_message_*_stored nötig.'
+            );
+        }
+        let messengerCredits: { balance: string; maxBalance: string } | null | undefined;
+        let messengerCreditsFetchFailed: boolean | undefined;
+        const credLooksValid =
+            credRaw && /^0x[a-fA-F0-9]{64}$/i.test(credRaw) && credRaw.toLowerCase() !== packageTrim.toLowerCase();
+        if (credLooksValid) {
+            try {
+                const snap = await getMessengerCreditsSnapshot();
+                if (snap) messengerCredits = { balance: snap.balance, maxBalance: snap.maxBalance };
+                else {
+                    messengerCredits = null;
+                    messengerCreditsFetchFailed = true;
+                }
+            } catch {
+                messengerCredits = null;
+                messengerCreditsFetchFailed = true;
+            }
+        }
+        let walletNativeIotaBalance: { mist: string; displayIota: string } | undefined;
+        let walletNativeIotaBalanceFetchFailed: boolean | undefined;
+        if (!ctx.getResolvePassword()) {
+            const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+            if (myAddr && /^0x[a-fA-F0-9]{64}$/i.test(myAddr)) {
+                try {
+                    const mist = await getBalanceInMist(myAddr);
+                    walletNativeIotaBalance = {
+                        mist: mist.toString(),
+                        displayIota: formatWalletNativeIotaForStatusUi(mist),
+                    };
+                } catch {
+                    walletNativeIotaBalanceFetchFailed = true;
+                }
+            }
+        }
+        const lastVaultOnchainSuccessAt = ctx.getLastVaultOnchainAt();
+        const status: ApiStatus & {
+            locked?: boolean;
+            role?: string;
+            roleId?: number;
+            permissions?: HierarchyPermissions;
+            streams?: { active: boolean; anchorId?: string; anchorIdFull?: string };
+            heartbeat?: {
+                enabled: boolean;
+                intervalMs: number;
+                streamsReady: boolean;
+                presetsMinutes?: number[];
+                intervalMatchesPreset?: boolean;
+            };
+            myAddressFull?: string;
+            serveLiteUiStatic?: boolean;
+            apiListenPort?: number;
+            dashboardPort?: number;
+            compactImageEncode?: boolean;
+            loraProgressiveEncode?: boolean;
+            signerConfigSource?: 'env' | 'runtime';
+            walletDerivationPathConfigSource?: 'env' | 'runtime';
+            useMailboxConfigSource?: 'env' | 'runtime';
+            mailboxStorePlaintextConfigSource?: 'env' | 'runtime';
+            enablePlaintextChannelConfigSource?: 'env' | 'runtime';
+            runtimeConfigKeys?: string[];
+        } = {
+            backendRunning: true,
+            locked: !!ctx.getResolvePassword(),
+            connected: custom.connected ?? false,
+            hasKeys: custom.hasKeys,
+            myAddress: custom.myAddress ?? (CFG.MY_ADDRESS ? mask(CFG.MY_ADDRESS) : undefined),
+            myAddressFull: (() => {
+                const raw = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                return raw || undefined;
+            })(),
+            partnerAddress: custom.partnerAddress ?? (CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS) : undefined),
+            partnerCount: custom.partnerCount,
+            connectedAddresses: custom.connectedAddresses,
+            plaintextMode: CFG.ENABLE_PLAINTEXT_CHANNEL,
+            mailboxStorePlaintext: CFG.MAILBOX_STORE_PLAINTEXT,
+            role: CFG.ROLE,
+            roleId: CFG.ROLE_ID,
+            permissions: perms,
+            streams: {
+                active: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
+                anchorId: CFG.STREAMS_ANCHOR_ID ? mask(CFG.STREAMS_ANCHOR_ID, 12) : undefined,
+                anchorIdFull: CFG.STREAMS_ANCHOR_ID || '',
+            },
+            heartbeat: {
+                enabled: CFG.ENABLE_HEARTBEAT,
+                intervalMs: CFG.HEARTBEAT_INTERVAL_MS,
+                streamsReady: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
+                presetsMinutes: HEARTBEAT_INTERVAL_PRESETS_MS.map((ms) => ms / 60_000),
+                intervalMatchesPreset: isAllowedHeartbeatIntervalMs(CFG.HEARTBEAT_INTERVAL_MS),
+            },
+            vaultStatus: {
+                hasLocal: vaultFileExists(vaultFileResolved),
+                ...(lastVaultOnchainSuccessAt != null && { lastSavedToChainAt: lastVaultOnchainSuccessAt }),
+            },
+            uiVariant: CFG.UI_VARIANT === 'messenger' ? 'messenger' : 'full',
+            serveLiteUiStatic: CFG.SERVE_LITE_UI_STATIC,
+            messengerEdition: CFG.MESSENGER_EDITION,
+            useMailbox: CFG.USE_MAILBOX,
+            mailboxConfigured,
+            signer: CFG.SIGNER,
+            signerConfigSource: getSignerConfigSource(),
+            walletDerivationPathConfigSource: getWalletDerivationPathConfigSource(),
+            useMailboxConfigSource: getRuntimeConfigSources().useMailbox,
+            mailboxStorePlaintextConfigSource: getRuntimeConfigSources().mailboxStorePlaintext,
+            enablePlaintextChannelConfigSource: getRuntimeConfigSources().enablePlaintextChannel,
+            runtimeConfigKeys: getRuntimeConfigKeys(),
+            messengerCreditsConfigured: !!credLooksValid,
+            ...(messengerCredits !== undefined && { messengerCredits }),
+            ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
+            ...(walletNativeIotaBalance !== undefined && { walletNativeIotaBalance }),
+            ...(walletNativeIotaBalanceFetchFailed && { walletNativeIotaBalanceFetchFailed: true }),
+            ...(configHints.length > 0 && { configHints }),
+            rpcUrlLabel: rpcUrlLabel(CFG.RPC_URL || ''),
+            rpcSocksProxyActive: Boolean((CFG.RPC_SOCKS_PROXY || '').trim()),
+            rpcHttpProxyActive: Boolean((CFG.RPC_HTTP_PROXY || '').trim()),
+            apiListenPort: ctx.getActualApiPort(),
+            dashboardPort: CFG.UI_PORT,
+            compactImageEncode: true,
+            loraProgressiveEncode: true,
+            ...(packageTrim ? { packageId: packageTrim } : {}),
+            ...(mailboxConfigured && mailboxIdTrim ? { mailboxIdMasked: mask(mailboxIdTrim) } : {}),
+            ...(CFG.ENABLE_BROADCAST_PINNWAND
+                ? {
+                      broadcastPinnwand: {
+                          enabled: true,
+                          address: (CFG.BROADCAST_PINNWAND_ADDRESS || '').trim() || undefined,
+                          authorizedSenders: (CFG.BROADCAST_AUTHORIZED_SENDERS || []).map((a) => a.trim()).filter(Boolean),
+                          myAddressAuthorized: (() => {
+                              const me = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim().toLowerCase();
+                              if (!me) return false;
+                              const allowed = CFG.BROADCAST_AUTHORIZED_SENDERS || [];
+                              if (allowed.length === 0) return true;
+                              return allowed.some((s) => s.trim().toLowerCase() === me);
+                          })(),
+                      },
+                  }
+                : { broadcastPinnwand: { enabled: false } }),
+        };
+        sendJson(res, 200, status, cors);
+        return true;
+    }
+
+    if (url === '/api/help' && req.method === 'GET') {
+        const session = ctx.getSessionStatus();
+        const helpText = HELP_UI_INTRO + (session.connected ? HELP_CHAT : HELP_START);
+        sendJson(res, 200, { ok: true, helpText }, cors);
+        return true;
+    }
+
+    if (url === '/api/current-ids' && req.method === 'GET') {
+        try {
+            sendJson(
+                res,
+                200,
+                {
+                    ok: true,
+                    myAddress: CFG.MY_ADDRESS || '',
+                    packageId: CFG.PACKAGE_ID || '',
+                    mailboxId: CFG.MAILBOX_ID || '',
+                    commandRegistryId: CFG.COMMAND_REGISTRY_ID || '',
+                    vaultRegistryId: CFG.VAULT_REGISTRY_ID || '',
+                    streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
+                    streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
+                },
+                cors
+            );
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url === '/api/messenger-presets' && req.method === 'GET') {
+        try {
+            const pkg = (CFG.LITE_PRESET_PACKAGE_ID || '').trim();
+            const rpcFallback = (CFG.LITE_PRESET_RPC_URL || CFG.RPC_URL || '').trim();
+            const hasLite = /^0x[a-fA-F0-9]{64}$/.test(pkg);
+            sendJson(
+                res,
+                200,
+                {
+                    ok: true,
+                    litePackageId: hasLite ? pkg : '',
+                    liteRpcUrl: rpcFallback,
+                    hasLitePackagePreset: hasLite,
+                    pairingFindMaxCandidates: CFG.PAIRING_FIND_MAX_CANDIDATES,
+                    pairingFindMaxDecryptAttempts: CFG.PAIRING_FIND_MAX_DECRYPT_ATTEMPTS,
+                },
+                cors
+            );
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url === '/api/connect-addresses' && req.method === 'GET') {
+        try {
+            const addresses = getConnectAddresses();
+            sendJson(res, 200, { ok: true, addresses }, cors);
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url === '/api/chain-reachable' && req.method === 'GET') {
+        try {
+            const reachable = await isChainReachable();
+            sendJson(res, 200, { ok: true, reachable }, cors);
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    return false;
+}
