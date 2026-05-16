@@ -5,16 +5,17 @@
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import {
+  FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES,
+  FLUENT_LORA_MAX_SEGMENTS_PER_PHASE,
+} from '@/frontend/lib/lora-image-morg-seg-v1-limits'
+import {
   MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES,
   buildMorgSegV1Wire,
   computeMaxMorgSegV1RawPayloadBytes,
   type MorgSegV1HeaderDims,
 } from '@/frontend/lib/lora-sarq-wire'
 
-/** Hard-Cap gesamt (Luma-JPEG + Chroma-JPEG Rohbytes). */
-export const FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES = 12_000
-
-export const FLUENT_LORA_MAX_SEGMENTS_PER_PHASE = 32
+export { FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES, FLUENT_LORA_MAX_SEGMENTS_PER_PHASE } from '@/frontend/lib/lora-image-morg-seg-v1-limits'
 
 const SECONDS_PER_SEGMENT_MIN = 1.2
 const SECONDS_PER_SEGMENT_MAX = 3.5

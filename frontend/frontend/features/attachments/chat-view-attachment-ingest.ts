@@ -23,7 +23,7 @@ import {
   type ForcedTransport,
 } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
-import { FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
+import { FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES } from '@/frontend/lib/lora-image-morg-seg-v1-limits'
 
 export const CHAT_ATTACHMENT_MAX_RAW_IMAGE_BYTES = 12 * 1024 * 1024
 

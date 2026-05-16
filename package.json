@@ -159,6 +159,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@morgendrot/core": "file:packages/morgendrot-core",
     "@iota/iota-sdk": "^1.11.0",
     "archiver": "^7.0.1",
     "dotenv": "^17.3.1",

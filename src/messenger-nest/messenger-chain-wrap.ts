@@ -29,7 +29,7 @@ import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
 import { plaintextStartsWithMorgEmergencyV1 } from '../shared/morg-emergency-v1-text.js';
-import { parseMailboxOutNonceMarker } from '../../packages/morgendrot-core/src/queue/offline-mailbox/mailbox-out-nonce-wire';
+import { parseMailboxOutNonceMarker } from '@morgendrot/core/queue/offline-mailbox';
 
 /** Optionen für Sponsored Transaction: sender = logischer Absender (z. B. Gast), Sponsor zahlt Gas. */
 export type SponsorOpts = { sponsorForSender?: string };

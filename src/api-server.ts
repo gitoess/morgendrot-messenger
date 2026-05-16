@@ -109,6 +109,18 @@ import { MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES } from './messenger-media-limits
 import { transcodeBrowserAudioToMessengerOpus } from './messenger-audio-opus-encode.js';
 import { consumeClaimTokenOnce } from './voucher-claim-state.js';
 import {
+    corsHeaders,
+    sendJson,
+    handleCorsPreflightIfOptions,
+    normalizeApiRequestPath,
+    mask,
+    rpcUrlLabel,
+    formatWalletNativeIotaForStatusUi,
+    markdownToHtml,
+    tryServeLiteUiGet,
+    sendUnmatchedRouteResponse,
+} from './api/http-middleware.js';
+import {
     resolveProvisionIdempotencyKey,
     provisionRequestFingerprint,
     tryProvisionIdempotentReplayOrConflict,
@@ -177,30 +189,9 @@ export type ApiStatus = {
     walletNativeIotaBalanceFetchFailed?: boolean;
 };
 
-/** Anzeige-Saldo für GET /api/status: MIST → lesbare IOTA-Zahl (de-DE). */
-function formatWalletNativeIotaForStatusUi(mist: bigint): string {
-    const asNum = Number(mist);
-    if (!Number.isFinite(asNum) || asNum < 0) return '0';
-    const iota = asNum / 1_000_000_000;
-    if (iota === 0) return '0';
-    if (iota >= 1_000_000) {
-        return `${(iota / 1_000_000).toLocaleString('de-DE', { maximumFractionDigits: 2 })} Mio`;
-    }
-    return iota.toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 6 });
-}
-
 type GetStatusFn = () => Partial<ApiStatus>;
-export type CommandApiOptions = {
-    sponsorForSender?: string;
-    silentFetch?: boolean;
-    shadowMnemonic?: string;
-    /** Body-Feld für /morg-pkg-import (vollständiges JSON-Objekt). */
-    morgPkg?: unknown;
-    /** `/send-plain`: `mailbox` = optional Mailbox-Store; sonst/fehlend = Event-Pfad (Legacy). */
-    messagingPersistenceMode?: 'event' | 'mailbox';
-    /** M4b: Ziel-Mailbox-Object-ID statt Server-MAILBOX_ID (0x+64 Hex). */
-    mailboxObjectId?: string;
-};
+export type { CommandApiOptions } from './messenger-nest/command-api-options.js';
+import type { CommandApiOptions } from './messenger-nest/command-api-options.js';
 type CommandHandlerFn = (cmd: string, args: string[], options?: CommandApiOptions) => Promise<{ ok: boolean; message?: string }>;
 type PurgeAfterLieferungFn = (purges: Array<{ sender: string; recipient: string; nonce: string | number }>) => Promise<{ ok: boolean; message?: string; count?: number }>;
 
@@ -270,23 +261,6 @@ function getRequiredPermissionForCommand(cmd: string): 'keyIssue' | 'revokeDown'
     return null;
 }
 
-function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function markdownToHtml(md: string): string {
-    return escapeHtml(md)
-        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-        .replace(/^\*\*(.+?)\*\*/gm, '<strong>$1</strong>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        .replace(/^```[\s\S]*?^```/gm, (m) => '<pre><code>' + m.replace(/^```\w*\n?|```$/g, '').trim() + '</code></pre>')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-        .replace(/^---$/gm, '<hr>')
-        .replace(/\n/g, '<br>\n');
-}
-
 export function setPurgeAfterLieferungHandler(handler: PurgeAfterLieferungFn | null): void {
     _purgeAfterLieferungHandler = handler;
 }
@@ -321,70 +295,6 @@ export function setSessionStatus(status: Partial<ApiStatus>): void {
     _sessionStatus = status;
 }
 
-function mask(s: string, showChars = 8): string {
-    if (!s) return '';
-    if (s.length <= showChars * 2) return s.slice(0, 4) + '…';
-    return s.slice(0, showChars) + '…' + s.slice(-4);
-}
-
-/** Kurzdarstellung von RPC_URL (Host + ggf. Pfad) für Status-UI — kein Geheimnis. */
-function rpcUrlLabel(url: string): string {
-    const u = (url || '').trim();
-    if (!u) return '';
-    try {
-        const p = new URL(u);
-        const path = p.pathname && p.pathname !== '/' ? p.pathname.replace(/\/$/, '') : '';
-        const pathShort = path.length > 40 ? `${path.slice(0, 37)}…` : path;
-        return pathShort ? `${p.host}${pathShort}` : p.host;
-    } catch {
-        return u.length > 48 ? `${u.slice(0, 45)}…` : u;
-    }
-}
-
-/** Browser-Origin z. B. vom Handy im WLAN (192.168.x.x) — für CORS, wenn die UI die API direkt anspricht. */
-function isPrivateLanOrigin(origin: string): boolean {
-    try {
-        const u = new URL(origin);
-        const h = u.hostname;
-        if (h === 'localhost' || h === '127.0.0.1') return true;
-        const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(h);
-        if (!m) return false;
-        const a = Number(m[1]);
-        const b = Number(m[2]);
-        const c = Number(m[3]);
-        const d = Number(m[4]);
-        if ([a, b, c, d].some((n) => n > 255)) return false;
-        if (a === 10) return true;
-        if (a === 172 && b >= 16 && b <= 31) return true;
-        if (a === 192 && b === 168) return true;
-        return false;
-    } catch {
-        return false;
-    }
-}
-
-function corsHeaders(req: http.IncomingMessage): Record<string, string> {
-    const origin = req.headers.origin;
-    const defaultOrigin = 'http://127.0.0.1:' + CFG.UI_PORT;
-    const isLocal =
-        !origin ||
-        origin === 'null' ||
-        origin === '' ||
-        /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ||
-        isPrivateLanOrigin(origin);
-    const allowOrigin = isLocal && origin ? origin : defaultOrigin;
-    return {
-        'Access-Control-Allow-Origin': allowOrigin,
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    };
-}
-
-function sendJson(res: http.ServerResponse, status: number, data: object, cors?: Record<string, string>) {
-    res.writeHead(status, { 'Content-Type': 'application/json', ...(cors || {}) });
-    res.end(JSON.stringify(data));
-}
-
 /** Tatsächlich gebundener API-Port (nach tryListen). Damit die UI den richtigen Port in index.html einsetzt. */
 let _actualApiPort: number = 0;
 export function getActualApiPort(): number {
@@ -396,14 +306,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
     const server = http.createServer(async (req, res) => {
         const cors = corsHeaders(req);
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204, cors);
-            res.end();
-            return;
-        }
+        if (handleCorsPreflightIfOptions(req, res, cors)) return;
 
-        const rawPath = req.url?.split('?')[0] || '/';
-        const url = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.replace(/\/+$/, '') : rawPath;
+        const url = normalizeApiRequestPath(req.url || '/');
 
         const shopHandled = await handleShopApi(req, res, url, cors, sendJson);
         if (shopHandled) return;
@@ -3479,48 +3384,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
-        // Lite-UI (Alpine + Tailwind): statisch aus ui/ ausliefern (abschaltbar: SERVE_LITE_UI_STATIC=false)
-        if (req.method === 'GET' && !url.startsWith('/api')) {
-            if (!CFG.SERVE_LITE_UI_STATIC) {
-                const nextHint = `http://127.0.0.1:${CFG.UI_PORT}/`;
-                if (url === '/' || url === '/index.html') {
-                    const body = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Morgendrot API</title></head><body style="font-family:system-ui,sans-serif;max-width:36rem;margin:2rem auto;padding:0 1rem"><p>Statische Lite-UI ist aus (<code>SERVE_LITE_UI_STATIC=false</code>).</p><p>Next-Dashboard: <a href="${nextHint}">${nextHint}</a></p><p>API: <a href="/api/status">/api/status</a></p></body></html>`;
-                    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', ...cors });
-                    res.end(body);
-                    return;
-                }
-                sendJson(
-                    res,
-                    404,
-                    {
-                        ok: false,
-                        error:
-                            'Lite-UI am API-Port aus (SERVE_LITE_UI_STATIC=false). Nur /api/* — Oberfläche unter UI_PORT (Next).',
-                    },
-                    cors
-                );
-                return;
-            }
-            const __dirname = path.dirname(fileURLToPath(import.meta.url));
-            const uiDir = path.resolve(__dirname, '..', 'ui');
-            const safePath = url === '/' || url === '/index.html' ? 'index.html' : url.replace(/^\//, '').replace(/\.\./g, '');
-            const filePath = path.join(uiDir, safePath === '' ? 'index.html' : safePath);
-            if (!filePath.startsWith(uiDir)) {
-                sendJson(res, 403, { ok: false, error: 'Forbidden' }, cors);
-                return;
-            }
-            try {
-                if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-                    const ct = filePath.endsWith('.html') ? 'text/html' : filePath.endsWith('.js') ? 'application/javascript' : filePath.endsWith('.css') ? 'text/css' : 'application/octet-stream';
-                    res.writeHead(200, { 'Content-Type': ct, ...cors });
-                    res.end(fs.readFileSync(filePath));
-                    return;
-                }
-            } catch (_) {}
-        }
+        if (tryServeLiteUiGet(req, res, url, cors)) return;
 
-        if (url === '/favicon.ico') { res.writeHead(204, cors); res.end(); return; }
-        sendJson(res, 404, { ok: false, error: 'Route nicht gefunden: ' + url }, cors);
+        sendUnmatchedRouteResponse(res, url, cors);
     });
 
     const maxAttempts = 5;

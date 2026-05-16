@@ -48,7 +48,6 @@ import {
     storePlaintextMessageBatch,
     sendPairingOffer,
     queryRecentPairingOffers,
-    addressOwnsObject,
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
     MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from '../chain-access.js';
@@ -70,6 +69,7 @@ import {
 } from '../vault-local.js';
 import { preFlightCheck } from './messenger-preflight.js';
 import { HELP_START, HELP_CHAT } from './messenger-help.js';
+import type { CommandApiOptions } from './command-api-options.js';
 import {
     getWalletPassword,
     getSessionIotaMnemonic,
@@ -108,61 +108,14 @@ import { saveContactLabel } from '../contact-labels.js';
 import { buildMorgPkgV1, decryptMorgPkgV1, isMorgPkgV1Shape } from './morg-pkg-wire.js';
 import { splitMeshPlaintextForV2 } from '../mesh-v2-fragment.js';
 import { base64ToUint8, uint8ToBase64 } from '../shared/bytes-base64.js';
-
-function messengerGasPolicyOpts() {
-    return CFG.MESSENGER_AUTO_SPONSOR ? ({ messengerGasPolicy: true as const } as const) : undefined;
-}
-
-/** Optional: nur mit Besitz von PAIRING_GATE_NFT_OBJECT_ID (privates Peering). */
-async function assertPairingGateNftOwned(myAddress: string): Promise<{ ok: false; message: string } | undefined> {
-    const gate = (CFG.PAIRING_GATE_NFT_OBJECT_ID || '').trim();
-    if (!gate) return undefined;
-    if (!/^0x[a-fA-F0-9]{64}$/i.test(gate)) {
-        return {
-            ok: false,
-            message:
-                'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt aber ungültig (erwartet: 0x + 64 Hex). Bitte .env korrigieren oder leeren – sonst kein klares Türsteher-Verhalten.',
-        };
-    }
-    const owns = await addressOwnsObject(getClient(), gate, myAddress);
-    if (owns) return undefined;
-    return {
-        ok: false,
-        message:
-            'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt: Deine Wallet muss dieses NFT (Türsteher) besitzen für /pairing-offer und /pairing-find.',
-    };
-}
-
-function moveMailboxEntryMissing(msg: string): boolean {
-    return /E_HS_MISSING|E_MSG_MISSING|HS_MISSING|MSG_MISSING|missing|not found|MoveAbort|does not exist|object not found|Move abort|No dynamic field|dynamic field/i.test(
-        msg
-    );
-}
-
-/** Move HsKey/MsgKey ist (recipient, sender) wie beim Speichern – je nachdem wer den Handshake zuerst gesendet hat, muss die andere Richtung probiert werden. */
-async function purgeHandshakeBidirectional(me: string, peer: string): Promise<void> {
-    const m = me.trim();
-    const p = peer.trim();
-    try {
-        await purgeHandshake(m, p);
-        return;
-    } catch (e) {
-        if (!moveMailboxEntryMissing(String((e as Error)?.message ?? e))) throw e;
-    }
-    await purgeHandshake(p, m);
-}
-
-async function purgeMessageBidirectional(me: string, peer: string, nonce: bigint): Promise<void> {
-    const m = me.trim();
-    const p = peer.trim();
-    try {
-        await purgeMessage(m, p, nonce);
-        return;
-    } catch (e) {
-        if (!moveMailboxEntryMissing(String((e as Error)?.message ?? e))) throw e;
-    }
-    await purgeMessage(p, m, nonce);
-}
+import {
+    messengerGasPolicyOpts,
+    assertPairingGateNftOwned,
+    purgeHandshakeBidirectional,
+    purgeMessageBidirectional,
+    resolveCommandForceLegacyPlaintext,
+    resolveCommandForceLegacyEncrypted,
+} from './command-handler-shared.js';
 
 export type MessengerCommandDeps = {
     getMyAddress: () => string;
@@ -182,7 +135,7 @@ export type MessengerCommandDeps = {
 export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
     const { vaultStateRef, sessionState, useVault, vaultPath, setSessionStatus } = deps;
 
-    return async (cmd: string, a: string[], opts?: Record<string, unknown>) => {
+    return async (cmd: string, a: string[], opts?: CommandApiOptions) => {
         const MY_ADDR = deps.getMyAddress();
                 try {
                     let c = String(cmd ?? '').trim().toLowerCase();
@@ -1285,11 +1238,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         if (addrs.length === 0) return { ok: false, message: 'Klartext: Empfängeradresse (0x + 64 Hex) angeben. Kein Handshake nötig – beliebige oder unbekannte Adresse möglich. Beispiel: /send-plain 0x… dein Text' };
-                        const { resolveForceLegacyPlaintext } = await import('../messaging-persistence-resolve.js');
                         const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
-                        const forceLegacyPlaintext = resolveForceLegacyPlaintext({
-                            messagingPersistenceMode: opts?.messagingPersistenceMode,
-                        });
+                        const forceLegacyPlaintext = resolveCommandForceLegacyPlaintext(opts);
                         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
                             for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
                             return {
@@ -1314,10 +1264,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                     `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
                             };
                         }
-                        const { resolveForceLegacyEncrypted } = await import('../messaging-persistence-resolve.js');
-                        const forceLegacyEncrypted = resolveForceLegacyEncrypted({
-                            messagingPersistenceMode: opts?.messagingPersistenceMode,
-                        });
+                        const forceLegacyEncrypted = resolveCommandForceLegacyEncrypted(opts);
                         const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
                         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
                             for (const p of pm.values()) {

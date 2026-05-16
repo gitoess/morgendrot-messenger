@@ -22,7 +22,7 @@ export function stableOfflineMailboxThreadId(addressA: string, addressB: string)
 }
 
 async function sha256(u8: Uint8Array): Promise<Uint8Array> {
-  const buf = await crypto.subtle.digest('SHA-256', u8)
+  const buf = await crypto.subtle.digest('SHA-256', new Uint8Array(u8))
   return new Uint8Array(buf)
 }
 
