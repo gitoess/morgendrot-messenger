@@ -145,6 +145,30 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   })
 
   const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
+  const meshInboundTextBufferRef = useRef<string[]>([])
+
+  const clearMeshInboundText = useCallback(() => {
+    meshInboundTextBufferRef.current = []
+  }, [])
+
+  const drainMeshInboundText = useCallback((): string[] => {
+    const out = meshInboundTextBufferRef.current
+    meshInboundTextBufferRef.current = []
+    return out
+  }, [])
+
+  const appendMeshMessageWithInboundCapture = useCallback(
+    (msg: Message) => {
+      if (msg.source === 'mesh' && typeof msg.content === 'string' && msg.content.includes('MORG_NAK_V1')) {
+        meshInboundTextBufferRef.current.push(msg.content)
+        if (meshInboundTextBufferRef.current.length > 64) {
+          meshInboundTextBufferRef.current.shift()
+        }
+      }
+      appendMeshMessage(msg)
+    },
+    [appendMeshMessage]
+  )
 
   const messagesForExport = useCallback(async () => {
     const fromApi = await fetchAllInboxMessagesForExport({
@@ -319,7 +343,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
 
   const meshtastic = useMeshtasticBle({
     contactDirectory: directory,
-    onMeshChatMessage: appendMeshMessage,
+    onMeshChatMessage: appendMeshMessageWithInboundCapture,
     decryptMeshV2Wire: decryptMeshWire,
     onDelayMirrorPlaintext,
     sendSosAckBurstRef,
@@ -466,6 +490,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    clearMeshInboundText,
+    drainMeshInboundText,
     contactDirectory: directory,
     activeGroup,
     isGroupChannel: isGroup,

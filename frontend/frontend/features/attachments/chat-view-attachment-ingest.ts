@@ -23,6 +23,7 @@ import {
   type ForcedTransport,
 } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
+import { FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
 
 export const CHAT_ATTACHMENT_MAX_RAW_IMAGE_BYTES = 12 * 1024 * 1024
 
@@ -206,12 +207,22 @@ async function ingestImage(
         idleMs: 6000,
       }
     }
+    const lumaB = enc.lumaJpegBytes ?? 0
+    const chromaB = enc.chromaJpegBytes ?? 0
+    const totalLoRa = lumaB + chromaB
+    if (totalLoRa > FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES) {
+      return {
+        ok: false,
+        message: `LoRa-Bild zu groß: ${Math.round(totalLoRa / 1024)} KB nach Kompression (max. ${Math.round(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 1024)} KB für „Flüchtig“). Kleineres Motiv wählen.`,
+        idleMs: 10_000,
+      }
+    }
     const lora: ChatAttachedLora = {
       lumaWire: enc.lumaWire,
       chromaWire: enc.chromaWire,
       messageId: enc.messageId ?? '',
-      lumaJpegBytes: enc.lumaJpegBytes ?? 0,
-      chromaJpegBytes: enc.chromaJpegBytes ?? 0,
+      lumaJpegBytes: lumaB,
+      chromaJpegBytes: chromaB,
     }
     return {
       ok: true,

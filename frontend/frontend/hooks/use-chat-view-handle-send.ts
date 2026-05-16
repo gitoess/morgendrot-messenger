@@ -48,6 +48,7 @@ import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
+import { sendLoraImageViaMorgSegV1 } from '@/frontend/features/send/lora-image-morg-seg-v1-send'
 import {
   formatMeshtasticNodeIdFromNum,
   parseMeshtasticNodeIdToNumber,
@@ -154,6 +155,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    clearMeshInboundText,
+    drainMeshInboundText,
     appendMeshMessage,
     contactDirectory,
     activeGroup,
@@ -414,37 +417,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     if (attachedLora && path4Active) {
-      const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
-        attachedLora.lumaWire,
-        attachedLora.chromaWire,
-        message,
-        { meshtasticMaxUtf8PerMessage: MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES }
-      )
-      const v = validateLoraDualWireUtf8(lumaText, chromaText)
-      if (!v.ok) {
-        applyValidationError(v, setStatus, setStatusMsg)
-        return
-      }
-      const luB = wireUtf8ByteLength(lumaText)
-      const chB = wireUtf8ByteLength(chromaText)
-      if (luB > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES || chB > MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES) {
-        applyValidationError(
-          {
-            ok: false,
-            message: `Pfad 4: Meshtastic-Text max. ${MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES} B UTF-8 pro Nachricht (LUMA: ${luB} B, CHROMA: ${chB} B). Composer-Zeile leeren; andernfalls kleineres Motiv oder später S-ARQ-Segmentierung.`,
-            idleMs: 10_000,
-          },
-          setStatus,
-          setStatusMsg
-        )
-        return
-      }
-      if (!meshtastic.connected) {
-        setStatus('error')
-        setStatusMsg('LoRa (Funk): Heltec/Web Bluetooth nicht verbunden – nichts gesendet.')
-        setTimeout(() => setStatus('idle'), 6000)
-        return
-      }
       const dest = meshPlaintextDest()
       if (dest === null) {
         setStatus('error')
@@ -459,43 +431,37 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setSending(true)
       setStatus('idle')
       let userCancelledPath4 = false
-      const sendPath4ChunkWithRetry = async (
-        label: 'LUMA' | 'CHROMA',
-        payload: string,
-        dest: number | 'broadcast'
-      ) => {
-        const maxAttempts = 3
-        let lastErr: unknown
-        for (let i = 0; i < maxAttempts; i++) {
-          try {
-            throwIfCancelled()
-            setStatusMsg(`Funk: ${label} (Klartext)…${i > 0 ? ` Retry ${i + 1}/${maxAttempts}` : ''}`)
-            await meshtastic.sendMeshText(payload, dest)
-            return
-          } catch (e) {
-            if (isUserCancelError(e)) throw e
-            lastErr = e
-            const raw = formatUnknownError(e)
-            const retryable = /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
-            if (!retryable || i + 1 >= maxAttempts) break
-            await new Promise((r) => setTimeout(r, 350 + i * 450))
-            throwIfCancelled()
-          }
-        }
-        throw lastErr instanceof Error ? lastErr : new Error(formatUnknownError(lastErr))
-      }
+      clearMeshInboundText?.()
+      const drainInbound = drainMeshInboundText ?? (() => [] as string[])
       try {
-        await sendPath4ChunkWithRetry('LUMA', lumaText, dest)
+        const segResult = await sendLoraImageViaMorgSegV1({
+          attached: attachedLora,
+          dest,
+          meshtastic,
+          throwIfCancelled,
+          onProgress: (line) => setMeshProgress?.(line),
+          onStatusMsg: setStatusMsg,
+          drainInboundMeshText: drainInbound,
+          sendMeshText: (text, d) => meshtastic.sendMeshText(text, d),
+        })
+        if (!segResult.ok) {
+          applyValidationError({ ok: false, message: segResult.error, idleMs: 10_000 }, setStatus, setStatusMsg)
+          return
+        }
         throwIfCancelled()
-        await sendPath4ChunkWithRetry('CHROMA', chromaText, dest)
-        const mirrorNote = await runPath4SelfMirrorForLoraImage(lumaText, chromaText)
+        const mirrorNote = await runPath4SelfMirrorForLoraImage(
+          attachedLora.lumaWire,
+          attachedLora.chromaWire
+        )
         setStatus('success')
-        setStatusMsg(`Bild per LoRa gesendet – wird selbst im Tangle verankert.${mirrorNote || ''}`)
+        setStatusMsg(
+          `Flüchtig (LoRa): Bild gesendet (${segResult.plan.totalSegments} Segmente).${mirrorNote || ''}`
+        )
         const cap = message.trim()
         recordMeshOutgoingPlaintext(
           appendMeshMessage,
           myAddress,
-          `[LoRa-Bild Pfad4] LUMA+CHROMA${cap ? `: ${cap}` : ''}`,
+          `[LoRa-Bild Flüchtig] ${segResult.plan.luma.n}+${segResult.plan.chroma.n} Segmente${cap ? `: ${cap}` : ''}`,
           dest,
           true
         )
@@ -513,7 +479,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setStatus('error')
           setStatusMsg(
             /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
-              ? 'LoRa (Funk) hat nicht geantwortet (NO_RESPONSE / error 8). Bitte „Fehlende Teile nochmal senden“ oder näher/stabiler verbinden.'
+              ? 'LoRa (Funk) hat nicht geantwortet (NO_RESPONSE / error 8). Bitte erneut senden oder näher/stabiler verbinden.'
               : raw
           )
         }
@@ -1208,6 +1174,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    clearMeshInboundText,
+    drainMeshInboundText,
   ])
 
   return { handleSend, cancelSend }

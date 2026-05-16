@@ -5,6 +5,11 @@ import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
 import type { AttachmentBarPort } from '@/frontend/features/messenger-ports'
 import { prefersFileCameraCapture } from '@/frontend/lib/device-detect'
+import {
+  formatFluentLoraPreSendWarning,
+  isFluentLoraImagePlan,
+  planFluentLoraImage,
+} from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
 import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-webcam-capture-dialog'
 
 export type ChatViewAttachmentBarProps = AttachmentBarPort
@@ -45,6 +50,15 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     attachedLora != null ||
     attachedTxtFile != null ||
     attachedAudioBase64 != null
+
+  const fluentLoraPlan =
+    attachedLora != null ? planFluentLoraImage(attachedLora) : null
+  const fluentLoraHint =
+    fluentLoraPlan && isFluentLoraImagePlan(fluentLoraPlan)
+      ? formatFluentLoraPreSendWarning(fluentLoraPlan)
+      : null
+  const fluentLoraError =
+    fluentLoraPlan && !isFluentLoraImagePlan(fluentLoraPlan) ? fluentLoraPlan.message : null
 
   return (
     <>
@@ -118,8 +132,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         )}
         {compactMeta && attachedLora && (
           <span className="text-xs text-muted-foreground">
-            LoRa: Luma {compactMeta.luma} B · Chroma {compactMeta.chroma} B · „Für LoRa senden“ = nur Funk (Heltec).
-            Online nur nach expliziter Bestätigung.
+            Flüchtig (LoRa): Luma {compactMeta.luma} B · Chroma {compactMeta.chroma} B · Pfad 4 + MORG_SEG_V1.
           </span>
         )}
         {compactMeta && attachedTxtFile != null && (
@@ -143,6 +156,15 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           </button>
         )}
       </div>
+      {fluentLoraError ? (
+        <p className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
+          {fluentLoraError}
+        </p>
+      ) : fluentLoraHint ? (
+        <p className="mb-2 rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-1.5 text-xs text-amber-950 dark:text-amber-100">
+          {fluentLoraHint}
+        </p>
+      ) : null}
       {compactPreviewUrl && (
         <div className="mb-2">
           <p className="mb-1 text-xs text-muted-foreground">Vorschau (Canvas color-Blend wie im Chat):</p>
@@ -156,8 +178,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
       {loraPreviewUrl && (
         <div className="mb-2">
           <p className="mb-1 text-xs text-muted-foreground">
-            LoRa Vorschau (Phase 1, S/W) – zweiter Teil = Chroma. „Für LoRa senden“ nutzt ausschließlich Funk; bei
-            Fehler kannst du Online gesondert bestätigen. Phase 2 = Chunking über Heltec.
+            Vorschau Flüchtig (LoRa): zuerst Luma (S/W), dann Chroma. Senden über Funk (Heltec) mit MORG_SEG_V1-Segmenten.
           </p>
           <img
             src={loraPreviewUrl}
@@ -167,13 +188,16 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         </div>
       )}
       {attachedLora != null && loraMeshProgressLine ? (
-        <p
-          className="mb-2 rounded-md border border-border bg-muted/30 px-2 py-1.5 text-xs font-medium tabular-nums text-foreground"
+        <div
+          className="mb-2 space-y-1.5 rounded-md border border-border bg-muted/30 px-2 py-1.5"
           role="status"
           aria-live="polite"
         >
-          Funk (LoRa-Zweiteiler): {loraMeshProgressLine}
-        </p>
+          <p className="text-xs font-medium tabular-nums text-foreground">Flüchtig (LoRa): {loraMeshProgressLine}</p>
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted" aria-hidden>
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary/80" />
+          </div>
+        </div>
       ) : null}
       {attachedTxtFile != null && !attachedBlobBase64 && (
         <div className="mb-2 max-h-28 overflow-auto rounded-md border border-border bg-muted/20 p-2">

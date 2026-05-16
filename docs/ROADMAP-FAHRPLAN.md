@@ -1125,7 +1125,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
 
-**Status:** **Produktpfad teilweise** — Empfang/Reassembly/NAK (**`MORG_SEG_V1`**, **`morg-seg-v1-chat-sink`**) **Ist**; **Versand** noch **zwei Monolithen** (LUMA+CHROMA je ≤500 B UTF-8, **`use-chat-view-handle-send.ts`**). **§ H.25a** = verbindliches Umsetzungspaket. **Referenz-Labor** unten = **kein** Ersatz für Meshtastic-First.
+**Status:** **§ H.25a (2026-05-15):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt). Empfang/Reassembly unverändert **`morg-seg-v1-chat-sink`**. **Referenz-Labor** unten = **kein** Ersatz für Meshtastic-First.
 
 #### H.25a Umsetzungspaket „Flüchtig (LoRa)“ — **priorisiert**
 
