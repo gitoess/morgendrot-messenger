@@ -10,6 +10,7 @@
  */
 
 import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
+import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem, OfflineMailboxTrySend } from '@morgendrot/core'
 import type { OfflineMailboxSendPort } from '@morgendrot/core'
 import {
@@ -73,14 +74,18 @@ export function isOfflineMailboxQueueEnabled(): boolean {
 function createChatCommandsSendPort(): OfflineMailboxSendPort {
   return {
     async sendEncrypted(payload: string) {
-      const r = await sendEncryptedMessageWithTimeout(payload)
+      const r = await sendEncryptedMessageWithTimeout(payload, 120_000, {
+        messagingPersistenceMode: readMessagingPersistenceModeFromStorage(),
+      })
       return {
         ok: r.ok === true,
         error: r.error ?? (r as { message?: string }).message,
       }
     },
     async sendPlain(recipient: string, payload: string) {
-      const r = await sendMessage(recipient, payload, false)
+      const r = await sendMessage(recipient, payload, false, {
+        messagingPersistenceMode: readMessagingPersistenceModeFromStorage(),
+      })
       return {
         ok: r.ok === true,
         error: r.error ?? (r as { message?: string }).message,

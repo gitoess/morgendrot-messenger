@@ -141,7 +141,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       if (apiStatus?.connected !== true) {
         setStatus('error')
         setStatusMsg(
-          '.morg-pkg import: Zuerst verbinden (Handshake + „Schnell verbinden“). Der Absender der Datei muss in der peerMap stehen, sonst kann das Backend nicht entschlüsseln.'
+          '.morg-pkg import: Zuerst Handshake und „Handshake annehmen“ oder „Mit Einsatz-Partner verbinden“. Der Absender der Datei muss in der peerMap stehen, sonst kann das Backend nicht entschlüsseln.'
         )
         setTimeout(() => setStatus('idle'), 10000)
         return

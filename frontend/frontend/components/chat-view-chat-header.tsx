@@ -12,7 +12,12 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import Link from 'next/link'
-import { isGroupChannel, isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import {
+  MessengerGuideHint,
+  MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
+} from '@/components/messenger-handbook-link'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -41,6 +46,8 @@ export type ChatViewChatHeaderProps = {
     forcedTransport: ForcedTransport
     onForcedTransportChange: (t: ForcedTransport) => void
     onEncryptedChange?: (encrypted: boolean) => void
+    /** 1:1: dezente Kontakt-ID unter online / funk / adhoc. */
+    myAddressLine?: string
   }
   /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -148,7 +155,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                 {channelMode === 'group'
                   ? 'Gruppenchat'
                   : channelMode === 'pinnwand'
-                    ? 'Pinnwand (Brett)'
+                    ? 'Pinnwand'
                     : '1:1 Privat'}
               </h2>
               {channelMode != null && onChannelModeChange ? (
@@ -191,39 +198,41 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         : 'text-muted-foreground hover:text-foreground'
                     )}
                   >
-                    Brett
+                    Pinnwand
                   </button>
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-              {channelMode === 'group'
-                ? 'Gemeinsamer Posteingang für alle Gruppenmitglieder (0x…). Senden weiter an eine Adresse im Composer (pairwise).'
-                : isPrivate
-                  ? 'Verschlüsselter Dialog mit einer Partner-Adresse (0x…).'
-                  : 'Schwarzes Brett: Klartext-Bekanntmachungen — kein Gruppenchat, keine 1:1-Verschlüsselung.'}
-            </p>
-            {channelMode != null && onChannelModeChange ? (
+            {channelMode === 'group' ? (
+              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
+                Gemeinsamer Posteingang für alle Gruppenmitglieder (0x…). Senden weiter an eine Adresse im Composer
+                (pairwise).
+              </p>
+            ) : null}
+            {channelMode != null && onChannelModeChange && isPinnwandChannel(channelMode) ? (
               <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
-                {isPinnwandChannel(channelMode) ? (
-                  <Link href="/handbook?file=BROADCAST-PINNWAND.md" className="text-primary underline-offset-2 hover:underline">
-                    Handbuch: Pinnwand
-                  </Link>
-                ) : null}
-                {isGroupChannel(channelMode) || channelMode === 'private' ? (
-                  <Link
-                    href="/handbook?file=CHAT-GRUPPE-EINRICHTEN.md"
-                    className="text-primary underline-offset-2 hover:underline"
-                  >
-                    Handbuch: Gruppe einrichten
-                  </Link>
-                ) : null}
+                <Link href="/handbook?file=BROADCAST-PINNWAND.md" className="text-primary underline-offset-2 hover:underline">
+                  Handbuch: Pinnwand
+                </Link>
               </p>
             ) : null}
           </div>
         </div>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
+          {isPrivate ? (
+            <span className="inline-flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+              <MessengerGuideHint
+                ariaLabel="Messenger Risiken und Vertrauen"
+                teaser="Risiken"
+                anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+              />
+              <MessengerHandbookChatLink
+                anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+                className="text-[10px] font-normal text-muted-foreground hover:text-foreground"
+              />
+            </span>
+          ) : null}
           {isPrivate && apiStatus ? (
             <TresorSessionBadge locked={!!apiStatus.locked} actions={vaultBannerActions} />
           ) : null}

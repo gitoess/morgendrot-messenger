@@ -12,6 +12,45 @@ export function resolveForceLegacyPlaintext(opts?: {
     return mp !== 'mailbox';
 }
 
+/** `true` → `send_encrypted_message` (Event); `false` → `store_encrypted_message*` (Mailbox). */
+export function resolveForceLegacyEncrypted(opts?: {
+    messagingPersistenceMode?: string | null;
+    forceLegacyEncrypted?: boolean;
+}): boolean {
+    if (opts?.forceLegacyEncrypted !== undefined) return opts.forceLegacyEncrypted;
+    const mp = String(opts?.messagingPersistenceMode ?? '').trim().toLowerCase();
+    if (mp === 'event') return true;
+    if (mp === 'mailbox') return false;
+    /** API/CLI ohne Modus: bisheriges Verhalten (Mailbox wenn konfiguriert). */
+    return false;
+}
+
+export type MailboxEncryptedConfigSnapshot = {
+    useMailbox?: boolean;
+    mailboxId?: string | null;
+    packageId?: string | null;
+};
+
+/** `null` = verschlüsselte Mailbox ist möglich; sonst menschenlesbarer Grund. */
+export function explainMailboxEncryptedUnavailable(
+    cfg: MailboxEncryptedConfigSnapshot,
+    wantsMailbox: boolean
+): string | null {
+    if (!wantsMailbox) return null;
+    const mailboxId = (cfg.mailboxId ?? '').trim();
+    const packageId = (cfg.packageId ?? '').trim();
+    if (!cfg.useMailbox) {
+        return 'Verschlüsselte Mailbox: USE_MAILBOX ist aus — Server-.env prüfen oder „Event“ wählen.';
+    }
+    if (!mailboxId || !/^0x[a-fA-F0-9]{64}$/i.test(mailboxId)) {
+        return 'Verschlüsselte Mailbox: MAILBOX_ID fehlt oder ist ungültig (0x + 64 Hex).';
+    }
+    if (packageId && mailboxId.toLowerCase() === packageId.toLowerCase()) {
+        return 'Verschlüsselte Mailbox: MAILBOX_ID darf nicht der PACKAGE_ID entsprechen.';
+    }
+    return null;
+}
+
 export type MailboxPlaintextConfigSnapshot = {
     useMailbox?: boolean;
     mailboxId?: string | null;

@@ -7,7 +7,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { Archive, BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -60,6 +60,9 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onToggleHideAllVisibleLocal: () => void
   localPurgeBusy?: boolean
   onClearLocalInboxCache?: () => void | Promise<void>
+  /** 1:1 / Gruppe: Telefonbuch-Panel öffnen */
+  onOpenPhonebook?: () => void
+  showPhonebookButton?: boolean
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -103,6 +106,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onToggleHideAllVisibleLocal,
     localPurgeBusy = false,
     onClearLocalInboxCache,
+    onOpenPhonebook,
+    showPhonebookButton = false,
   } = p
 
   return (
@@ -111,7 +116,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       <div className="flex flex-wrap items-center gap-2">
         <Inbox className="h-5 w-5 text-primary" />
         <h3 className="font-semibold text-foreground">Posteingang</h3>
-        <span className="sr-only">Telefonbuch: Zeilenmenü bei eingehenden 0x-Absendern.</span>
+        {showPhonebookButton && onOpenPhonebook ? (
+          <button
+            type="button"
+            onClick={onOpenPhonebook}
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
+          >
+            <BookUser className="h-4 w-4 shrink-0" aria-hidden />
+            Telefonbuch
+          </button>
+        ) : null}
         {messageCount > 0 && (
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
             {messageCount}

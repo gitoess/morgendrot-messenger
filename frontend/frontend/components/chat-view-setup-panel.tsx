@@ -5,7 +5,8 @@
  * Zustand und Handler für API-Aufrufe bleiben in der View; dieses Panel ist die Darstellung.
  */
 
-import { AlertTriangle, QrCode, Radio } from 'lucide-react'
+import { useMemo } from 'react'
+import { QrCode, Radio } from 'lucide-react'
 import { toast } from 'sonner'
 import {
   exportContactMeshEncrypted,
@@ -14,14 +15,12 @@ import {
   type ContactMeshEntryClient,
 } from '@/frontend/lib/api'
 import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   MessengerGuideHint,
   MessengerHandbookChatLink,
-  MESSENGER_HB_ANCHOR_HANDSHAKE,
-  MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
   MESSENGER_HB_ANCHOR_HELTEC_MESH,
-  MESSENGER_HB_ANCHOR_PACKAGE_ID,
 } from '@/components/messenger-handbook-link'
 
 export type ChatViewSetupPanelMeshtastic = {
@@ -85,6 +84,11 @@ export type ChatViewSetupPanelProps = {
   /** Composer-Empfänger (0x) — Senden nutzt dieses Feld, nicht `partner` allein. */
   activeSendRecipient?: string
   onApplyPartnerAsSendRecipient?: () => void
+  /** Gruppe: Handshake pro Mitglied (aktive Gruppe). */
+  isGroupMode?: boolean
+  groupMemberAddresses?: string[]
+  connectedAddresses?: string[]
+  onHandshakeForAddress?: (address: string) => void | Promise<void>
 }
 
 function shortPackageId(a: string) {
@@ -135,6 +139,10 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     packageIdBusy,
     activeSendRecipient = '',
     onApplyPartnerAsSendRecipient,
+    isGroupMode = false,
+    groupMemberAddresses = [],
+    connectedAddresses = [],
+    onHandshakeForAddress,
   } = p
 
   const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
@@ -146,6 +154,17 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
   const knownPartnerAddresses = Object.keys(directory)
     .map((a) => a.trim())
     .filter((a) => /^0x[a-fA-F0-9]{64}$/.test(a))
+  const connectedSet = useMemo(
+    () => new Set(connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
+    [connectedAddresses]
+  )
+  const groupMembers = useMemo(
+    () =>
+      groupMemberAddresses
+        .map((a) => a.trim().toLowerCase())
+        .filter((a) => /^0x[a-f0-9]{64}$/.test(a)),
+    [groupMemberAddresses]
+  )
 
   const showIotaOnline = forcedTransport === 'internet'
   const showLora = forcedTransport === 'mesh'
@@ -153,60 +172,21 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="text-lg font-semibold text-foreground">Kontakt &amp; Verbindung</h3>
-      <p className="mt-1 mb-4 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground">Partner = Wallet-Adresse</strong> (<span className="font-mono">0x…</span>, 64
-        Hex). Das ist die Nummer, an die du sendest — <strong className="text-foreground">nicht</strong> die Move-Package-ID
-        und <strong className="text-foreground">nicht</strong> die Mailbox-ID des Servers.
-      </p>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">
+        {showLora || showAdhoc ? 'Funk & Geräte' : 'Empfänger (Klartext)'}
+      </h3>
 
-      {showIotaOnline ? (
+      {showIotaOnline && !encrypted ? (
         <section className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15" aria-labelledby="setup-iota-partner">
           <h4 id="setup-iota-partner" className="mb-2 text-sm font-semibold text-foreground">
             Empfänger: Partner-Wallet (<span className="font-mono">0x…</span>)
           </h4>
-          {!encrypted ? (
-            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-              <strong className="text-foreground">Klartext:</strong> Adresse eintragen und{' '}
-              <strong className="text-foreground">„Empfänger fürs Senden übernehmen“</strong> — Senden liest das Feld{' '}
-              <strong className="text-foreground">„Empfänger-Adresse“</strong> im Composer unten (nicht automatisch dieses
-              Feld). <strong className="text-foreground">Kein Handshake.</strong>
-            </p>
-          ) : (
-            <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-              Verschlüsselt: zuerst Handshake mit der Partner-Wallet, dann senden.
-            </p>
-          )}
-          {encrypted ? (
-            <>
-              <div className="mb-4 rounded-lg border border-amber-500/20 bg-amber-500/[0.07] px-3 py-2.5 dark:bg-amber-950/25">
-                <div className="flex flex-wrap items-start gap-2.5">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700/80 dark:text-amber-400/85" aria-hidden />
-                  <div className="min-w-0 flex-1 space-y-1.5 text-xs leading-relaxed text-amber-950/90 dark:text-amber-50/90">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <MessengerGuideHint
-                        ariaLabel="Handshake Vertrauen und Risiken"
-                        teaser="Risiken"
-                        anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
-                      />
-                      <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST} />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <MessengerGuideHint
-                  ariaLabel="Hilfe Handshake und Schnell verbinden"
-                  teaser="Handshake & /connect"
-                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE}
-                />
-                <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HANDSHAKE} />
-              </div>
-            </>
-          ) : null}
-          <div className={encrypted ? 'grid gap-4 sm:grid-cols-2' : 'space-y-3'}>
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+            Adresse eintragen und <strong className="text-foreground">„Empfänger fürs Senden übernehmen“</strong> — kein
+            Handshake.
+          </p>
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
               <input
                 type="text"
                 list="chat-partner-addresses"
@@ -220,16 +200,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                   <option key={addr} value={addr} />
                 ))}
               </datalist>
-              {encrypted ? (
-                <button
-                  type="button"
-                  onClick={onHandshake}
-                  disabled={!partner.trim() || sending}
-                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {sending ? 'Wird gestartet...' : 'Handshake starten'}
-                </button>
-              ) : onApplyPartnerAsSendRecipient ? (
+              {onApplyPartnerAsSendRecipient ? (
                 <button
                   type="button"
                   onClick={onApplyPartnerAsSendRecipient}
@@ -239,26 +210,11 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                   Empfänger fürs Senden übernehmen
                 </button>
               ) : null}
-              {!encrypted && partnerMatchesSend ? (
+              {partnerMatchesSend ? (
                 <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                   Aktiver Sende-Empfänger im Composer stimmt mit dieser Adresse überein.
                 </p>
               ) : null}
-            </div>
-            {encrypted ? (
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-foreground">Schnell verbinden</label>
-                <p className="text-sm text-muted-foreground">Standard-Partner aus der Server-.env.</p>
-                <button
-                  type="button"
-                  onClick={onConnect}
-                  disabled={sending}
-                  className="w-full rounded-lg border border-border bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {sending ? 'Verbinde...' : 'Schnell verbinden'}
-                </button>
-              </div>
-            ) : null}
           </div>
         </section>
       ) : !showLora && !showAdhoc ? (
@@ -267,105 +223,6 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           <span className="font-mono">!…</span> im Nachrichtenfeld.
         </section>
       ) : null}
-
-      <details className="mb-6 rounded-lg border border-border/60 bg-muted/10">
-        <summary className="cursor-pointer px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">
-          Erweitert: Move-Package-ID (Admin — falscher Posteingang / nach Deploy)
-        </summary>
-        <section className="border-t border-border/60 p-3 sm:p-4" aria-labelledby="setup-move-package">
-        <h4 id="setup-move-package" className="mb-2 text-xs font-semibold text-foreground">
-          Welche ID gehört wohin?
-        </h4>
-        <ul className="mb-3 list-inside list-disc space-y-1 text-[11px] text-muted-foreground">
-          <li>
-            <strong className="text-foreground">Partner-Wallet</strong> = <span className="font-mono">0x…</span> (64 Hex) —
-            Abschnitt oben, nicht hier.
-          </li>
-          <li>
-            <strong className="text-foreground">Package-ID</strong> = Move-Vertrag auf der Chain.{' '}
-            <strong className="text-foreground">Als Sender: Feld leer lassen</strong> — der Server nutzt die ID aus dem
-            Deploy (siehe „Server-Vertrag“). Nur bei falschem Posteingang oder neuem Deployment hier ändern.
-          </li>
-          <li>
-            <strong className="text-foreground">Mailbox-ID</strong> = <span className="font-mono">MAILBOX_ID</span> in der
-            Server-.env — nur für den Betreiber/Deploy, nicht für normale Nutzer und nicht in dieser Maske.
-          </li>
-        </ul>
-        <p className="mb-3 text-[11px] text-muted-foreground">
-          <strong className="text-foreground">Server-Postamt (MAILBOX_ID):</strong>{' '}
-          {mailboxConfigured && serverMailboxIdMasked ? (
-            <span className="font-mono text-foreground" title="Nur Admin — nicht mit Partner teilen">
-              {serverMailboxIdMasked}
-            </span>
-          ) : (
-            <span>nicht konfiguriert oder ungültig — Betreiber setzt <span className="font-mono">MAILBOX_ID</span> in der
-            Server-.env (geteiltes Objekt, ≠ Package-ID).</span>
-          )}
-        </p>
-        <div className="mt-3 rounded-lg border border-border bg-muted/15 px-3 py-3">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <MessengerGuideHint
-              ariaLabel="Hilfe Package-ID und Posteingang"
-              teaser="Mehr"
-              anchor={MESSENGER_HB_ANCHOR_PACKAGE_ID}
-            />
-            <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_PACKAGE_ID} className="ml-auto shrink-0" />
-          </div>
-          <p className="mb-1 text-[11px] leading-relaxed text-muted-foreground">
-            <strong className="text-foreground">Server-Vertrag (Package-ID):</strong>{' '}
-            <span className="font-mono text-foreground">
-              {activePackageId ? shortPackageId(activePackageId) : '— (nicht konfiguriert)'}
-            </span>
-            . Feld unten <strong className="text-foreground">leer lassen</strong>, solange der Posteingang stimmt.
-          </p>
-          <p className="mb-2 text-[11px] text-muted-foreground">
-            Nur Admin: anderes Deployment → andere Package-ID eintragen, dann „Als aktiv speichern“ oder „Posteingang neu
-            laden“.
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <input
-              type="text"
-              list="morg-package-id-datalist"
-              value={inboxPackageFilter}
-              onChange={(e) => onInboxPackageFilterChange(e.target.value)}
-              placeholder="Leer lassen = Server-ID oben; sonst andere 0x… (64 Hex)"
-              className="min-w-0 flex-1 rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
-            />
-            <datalist id="morg-package-id-datalist">
-              {packageIdSuggestions.map((id) => (
-                <option key={id} value={id} />
-              ))}
-            </datalist>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!!packageIdBusy}
-                onClick={() => void onApplyPackageIdBackend(pkgInput)}
-                className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {packageIdBusy ? '…' : 'Als aktiv speichern'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void onApplyInboxPackageFilterOnly()}
-                className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-accent"
-                title="Mailbox für diese ID laden, ohne lokale Datei zu ändern"
-              >
-                Posteingang neu laden
-              </button>
-              <button
-                type="button"
-                onClick={() => void onRefreshPackageIdSuggestions()}
-                className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-accent"
-              >
-                Liste aktualisieren
-              </button>
-            </div>
-          </div>
-        </div>
-
-      </section>
-      </details>
 
       {/* ——— LoRa · Heltec ——— */}
       {showLora ? (

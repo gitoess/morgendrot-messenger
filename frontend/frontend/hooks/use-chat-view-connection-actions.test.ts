@@ -67,16 +67,16 @@ describe('useChatViewConnectionActions / handshake autofill', () => {
     expect(h.result.current.statusMsg).toContain('Peer-Pub automatisch aus Handshake übernommen')
   })
 
-  it('does not try autofill for non-address partner input', async () => {
-    startHandshakeMock.mockResolvedValue({ ok: true, message: 'Handshake gesendet.' })
+  it('rejects handshake when partner is not a 0x wallet', async () => {
     const h = setup('alice')
 
     await act(async () => {
       await h.result.current.actions.handleHandshake()
     })
 
+    expect(startHandshakeMock).not.toHaveBeenCalled()
     expect(findPeerHandshakeMock).not.toHaveBeenCalled()
     expect(setPeerPubMock).not.toHaveBeenCalled()
-    expect(h.result.current.status).toBe('success')
+    expect(h.result.current.status).toBe('idle')
   })
 })

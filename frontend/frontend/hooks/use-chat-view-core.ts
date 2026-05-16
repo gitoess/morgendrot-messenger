@@ -106,6 +106,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     if (!isPrivate) setEncryptedInternal(false)
   }, [isPrivate])
 
+  useEffect(() => {
+    if (!encrypted) setShowSetup(false)
+  }, [encrypted])
+
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
   const clearSosVoicePrompt = useCallback(() => setSosVoiceAwaitingSend(false), [])
@@ -469,7 +473,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
 
   const {
     handleHandshake,
-    handleConnect,
+    handleHandshakeForAddress,
+    handleConnectAcceptPartner,
+    handleConnectAcceptForAddress,
+    handleConnectDeployment,
     dismissLoraOnlineFallback,
     toggleShowSetup,
     openPartnerSetupPanel,
@@ -633,7 +640,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     handleSend,
     cancelSend,
     handleHandshake,
-    handleConnect,
+    handleHandshakeForAddress,
+    handleConnectAcceptPartner,
+    handleConnectAcceptForAddress,
+    handleConnectDeployment,
     dismissLoraOnlineFallback,
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,

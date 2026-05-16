@@ -1,12 +1,12 @@
 'use client'
 
 /**
- * Verschlüsselungs-Umschalter, Pinnwand-Hinweis, Sendepfad (IOTA vs. LoRa/Meshtastic).
- * Funk ist **Klartext** (LongFast / Pfad 4); Verschlüsselung nur über **online** (IOTA/Mailbox).
+ * Verschlüsselungs-Umschalter, Chain-Persistenz (Event/Mailbox, unabhängig von E2EE), Sendepfad (IOTA vs. Funk).
+ * Funk ist **Klartext** (LongFast / Pfad 4); Verschlüsselung nur über **online** (IOTA).
  */
 
 import { useMemo, useState } from 'react'
-import { Handshake, Lock, Unlock } from 'lucide-react'
+import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
@@ -25,9 +25,17 @@ import {
 } from '@/components/ui/alert-dialog'
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { SendTransportChoicePort } from '@/frontend/features/messenger-ports'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import { isGroupChannel } from '@/frontend/lib/messenger-chat-channel'
+import { ChatViewPrivateMailboxConfig } from '@/frontend/components/chat-view-private-mailbox-config'
+import {
+  ChatViewEncryptedPartnerPanel,
+  type ChatViewEncryptedPartnerPanelProps,
+} from '@/frontend/components/chat-view-encrypted-partner-panel'
 
 export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
+  isGroup?: boolean
   apiStatus: ApiStatus | null
   /** Aktuelles Partnerfeld aus Setup (0x…), für Inline-Hinweis bei mehreren verbundenen Partnern. */
   partner?: string
@@ -36,14 +44,17 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   meshBleConnected?: boolean
   /** Panel „Kontakt & Verbindung“ öffnen (Meshtastic koppeln steht dort). */
   onOpenPartnerSetup?: () => void
-  /** Detail-Panel ein-/aus (nebeneinander mit Verschlüsselung). */
-  partnerSetupOpen?: boolean
-  onTogglePartnerSetup?: () => void
+  channelMode?: MessengerChatChannel
+  /** 1:1: eigene Mailbox-Object-ID nur bei Persistent (Mailbox). */
+  myAddressLine?: string
+  /** Unter „Verschlüsselt“: Handshake senden / annehmen / Einsatz-Partner (online). */
+  encryptedPartner?: ChatViewEncryptedPartnerPanelProps
 }
 
 export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
   const {
     isPrivate,
+    isGroup = false,
     encrypted,
     onEncryptedChange,
     forcedTransport,
@@ -55,9 +66,13 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     meshBleSupported = false,
     meshBleConnected = false,
     onOpenPartnerSetup,
-    partnerSetupOpen = false,
-    onTogglePartnerSetup,
+    channelMode,
+    myAddressLine,
+    encryptedPartner,
   } = p
+
+  const showChainPersistence =
+    forcedTransport === 'internet' && channelMode != null && !isGroupChannel(channelMode)
 
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
 
@@ -109,9 +124,14 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-border bg-card p-4">
-        <span className="text-sm font-medium text-foreground">Verschlüsselung:</span>
-        <div className="flex rounded-lg border border-border bg-background p-1">
+      <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <p className="text-sm font-medium text-foreground">Verschlüsselung &amp; Partner</p>
+        <div
+          className={cn(
+            'flex w-full min-w-0 flex-wrap rounded-lg border border-border bg-background p-1',
+            encrypted && 'ring-1 ring-emerald-500/30'
+          )}
+        >
           <button
             type="button"
             disabled={forcedTransport === 'mesh'}
@@ -122,12 +142,12 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             }
             onClick={() => onEncryptedChange(true)}
             className={cn(
-              'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+              'flex flex-1 min-w-[7.5rem] items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               encrypted ? 'bg-emerald-500/20 text-emerald-400' : 'text-muted-foreground hover:text-foreground',
               forcedTransport === 'mesh' && 'cursor-not-allowed opacity-45 hover:text-muted-foreground'
             )}
           >
-            <Lock className="h-4 w-4" />
+            <Lock className="h-4 w-4 shrink-0" />
             Verschlüsselt
           </button>
           <button
@@ -136,34 +156,21 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               if (encrypted) setPlainWarnOpen(true)
             }}
             className={cn(
-              'flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors',
+              'flex flex-1 min-w-[7.5rem] items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
               !encrypted ? 'bg-amber-500/20 text-amber-400' : 'text-muted-foreground hover:text-foreground'
             )}
           >
-            <Unlock className="h-4 w-4" />
+            <Unlock className="h-4 w-4 shrink-0" />
             Unverschlüsselt
           </button>
         </div>
-        {isPrivate && onTogglePartnerSetup ? (
-          <button
-            type="button"
-            onClick={onTogglePartnerSetup}
-            className={cn(
-              'flex shrink-0 items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-              partnerSetupOpen
-                ? 'bg-primary text-primary-foreground'
-                : 'border border-border bg-muted/50 text-foreground hover:bg-muted'
-            )}
-          >
-            <Handshake className="h-4 w-4 shrink-0" aria-hidden />
-            Kontakt &amp; Verbindung
-          </button>
-        ) : null}
+        {encryptedPartner ? <ChatViewEncryptedPartnerPanel {...encryptedPartner} /> : null}
       </div>
 
-      {!encrypted && forcedTransport === 'internet' && (
-        <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-3">
-          <span className="text-sm font-medium text-foreground">Klartext auf IOTA:</span>
+      {showChainPersistence ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium text-foreground">Speicher auf der Chain</span>
           <div className="flex rounded-lg border border-border bg-background p-1">
             <button
               type="button"
@@ -175,7 +182,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              Nur Event
+              Flüchtig (Event)
             </button>
             <button
               type="button"
@@ -187,24 +194,20 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              Mailbox
+              Persistent (Mailbox)
             </button>
           </div>
-          <span className="sr-only">
-            {messagingPersistenceMode === 'mailbox'
-              ? 'Klartext-Mailbox-Speicherung, wenn Backend konfiguriert.'
-              : 'Klartext-Event-Pfad send_plaintext_message.'}
-          </span>
+          </div>
           {messagingPersistenceMode === 'mailbox' && apiStatus?.mailboxConfigured === false ? (
             <p className="w-full text-xs text-amber-700 dark:text-amber-300">
-              Mailbox-Modus gewählt, aber <span className="font-mono">MAILBOX_ID</span> fehlt oder ist ungültig — Senden
-              schlägt fehl. Betreiber: Server-.env; oder „Nur Event“ wählen.
+              Persistent gewählt, aber <span className="font-mono">MAILBOX_ID</span> fehlt auf dem Server — Betreiber
+              prüfen oder „Flüchtig (Event)“ wählen.
             </p>
           ) : null}
+          {messagingPersistenceMode === 'mailbox' && myAddressLine?.trim() ? (
+            <ChatViewPrivateMailboxConfig myAddressLine={myAddressLine} />
+          ) : null}
         </div>
-      )}
-      {encrypted && forcedTransport === 'internet' ? (
-        <span className="sr-only">Verschlüsselte Online-Nachrichten laufen derzeit über den Mailbox-Pfad.</span>
       ) : null}
 
       {!isPrivate && !encrypted && (
@@ -231,7 +234,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               </p>
             ) : meshBleSupported ? (
               <p>
-                Heltec koppeln: <strong className="text-foreground">Kontakt &amp; Verbindung</strong> öffnen, dort{' '}
+                Heltec koppeln: <strong className="text-foreground">Funk &amp; Geräte</strong> (Setup unten) öffnen, dort{' '}
                 <strong className="text-foreground">Web Bluetooth</strong> (Browser zeigt die Geräteliste).
               </p>
             ) : (
@@ -246,7 +249,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
                 onClick={onOpenPartnerSetup}
                 className="mt-2 flex min-h-[2.75rem] w-full items-center justify-center rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary hover:bg-primary/15 sm:min-h-0 sm:w-auto sm:justify-start sm:border-0 sm:bg-transparent sm:px-0 sm:py-0 sm:text-inherit sm:font-medium sm:text-primary sm:underline sm:underline-offset-2"
               >
-                Kontakt &amp; Verbindung öffnen
+                Funk &amp; Geräte öffnen
               </button>
             ) : null}
           </div>
@@ -264,7 +267,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       ) : null}
       {requiresPartnerSelection && !selectedPartner ? (
         <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
-          Mehrere Partner verbunden. Bitte im Setup bei <strong>Partner (Handshake)</strong> die Zieladresse
+          Mehrere Partner verbunden. Bitte unter <strong>Verschlüsselt</strong> die Zieladresse
           auswählen, sonst wird verschlüsselt nicht gesendet.
         </p>
       ) : null}

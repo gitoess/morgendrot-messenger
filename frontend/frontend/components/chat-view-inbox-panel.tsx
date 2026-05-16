@@ -16,6 +16,8 @@ import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-tool
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
+import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
+import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -54,6 +56,13 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
       address: string,
       opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' | 'all' }
     ) => void
+    onOpenPhonebook?: () => void
+    showPhonebookButton?: boolean
+    pendingHandshakeOffers?: PendingHandshakeOffer[]
+    pendingHandshakesLoading?: boolean
+    sending?: boolean
+    onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
+    onUseSenderAsPartnerFromInbox?: (sender: string) => void
   }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -99,6 +108,11 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     onDismissMeshInboundBanner,
+    pendingHandshakeOffers = [],
+    pendingHandshakesLoading = false,
+    sending = false,
+    onAcceptPendingHandshake,
+    onUseSenderAsPartnerFromInbox,
     loadingMore,
     loadMoreInbox,
     inboxHasMore,
@@ -154,6 +168,16 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         />
       ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
+        {onAcceptPendingHandshake ? (
+          <ChatViewInboxHandshakeRequests
+            offers={pendingHandshakeOffers}
+            loading={pendingHandshakesLoading}
+            sending={sending}
+            directory={contactDirectory}
+            onAccept={onAcceptPendingHandshake}
+            onUseAsPartner={onUseSenderAsPartnerFromInbox ?? (() => {})}
+          />
+        ) : null}
         <ChatViewInboxList
           loadError={loadError}
           basisUnreachable={basisUnreachable}

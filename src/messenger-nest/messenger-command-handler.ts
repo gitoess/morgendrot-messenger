@@ -1314,10 +1314,16 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                     `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
                             };
                         }
+                        const { resolveForceLegacyEncrypted } = await import('../messaging-persistence-resolve.js');
+                        const forceLegacyEncrypted = resolveForceLegacyEncrypted({
+                            messagingPersistenceMode: opts?.messagingPersistenceMode,
+                        });
                         const { runWithMailboxObjectIdOverride } = await import('../mailbox-object-id-scope.js');
                         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
                             for (const p of pm.values()) {
-                                await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey);
+                                await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey, {
+                                    forceLegacyEncrypted,
+                                });
                             }
                             return {
                                 ok: true,

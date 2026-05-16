@@ -87,7 +87,7 @@ const features: Feature[] = [
       {
         id: 'private-chat',
         title: 'Nachrichten',
-        hint: '1:1 Privat & Pinnwand (Brett) — Gruppenchat geplant (M2, Fahrplan § H.22)',
+        hint: '1:1 Privat & Pinnwand — Gruppenchat geplant (M2, Fahrplan § H.22)',
       },
     ],
   },

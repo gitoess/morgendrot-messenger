@@ -4,7 +4,7 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 import { clearLocalHistory } from '@/frontend/lib/api'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
@@ -20,7 +20,6 @@ import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
-import { ChatViewIdentityCard } from '@/frontend/components/chat-view-identity-card'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   ChatViewTransportCard,
@@ -28,12 +27,16 @@ import {
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
+import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
+import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
+import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -150,7 +153,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     handleSend,
     cancelSend,
     handleHandshake,
-    handleConnect,
+    handleHandshakeForAddress,
+    handleConnectAcceptPartner,
+    handleConnectAcceptForAddress,
+    handleConnectDeployment,
     dismissLoraOnlineFallback,
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,
@@ -209,8 +215,46 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxWireFilter,
   } = c
 
+  const [contactAliasDialog, setContactAliasDialog] = useState<{
+    address: string
+    defaultLabel: string
+  } | null>(null)
+  const [contactAliasBusy, setContactAliasBusy] = useState(false)
+  const [phonebookOpen, setPhonebookOpen] = useState(false)
+
+  const pendingHandshakeRefreshKey = `${messages.length}:${(apiStatus?.connectedAddresses ?? []).join('|')}:${loading ? 'l' : 'r'}`
+
+  const {
+    offers: pendingHandshakeOffers,
+    loading: pendingHandshakesLoading,
+    reload: reloadPendingHandshakes,
+  } = useChatViewPendingHandshakes({
+    enabled: (isPrivate || isGroup) && encrypted && forcedTransport === 'internet',
+    connectedAddresses: apiStatus?.connectedAddresses ?? [],
+    refreshToken: pendingHandshakeRefreshKey,
+  })
+
+  const handleAcceptHandshakeFromInbox = useCallback(
+    async (sender: string) => {
+      setPartner(sender.trim())
+      await handleConnectAcceptForAddress(sender)
+      window.setTimeout(() => void reloadPendingHandshakes(), 4000)
+    },
+    [setPartner, handleConnectAcceptForAddress, reloadPendingHandshakes]
+  )
+
+  const handleUseSenderAsPartnerFromInbox = useCallback(
+    (sender: string) => {
+      const t = sender.trim()
+      setPartner(t)
+      setRecipient(t)
+      toast.info('Partner-Adresse übernommen.')
+    },
+    [setPartner, setRecipient]
+  )
+
   const addInboxSenderToContactBook = useCallback(
-    async (address: string) => {
+    (address: string) => {
       const a = address.trim()
       if (!a.startsWith('0x') || a.length < 66) {
         setStatus('error')
@@ -225,20 +269,33 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         return
       }
       const suggest = contactDisplayLabel(directory, a) || `${a.slice(0, 10)}…${a.slice(-4)}`
-      const label = window.prompt('Name im Telefonbuch (leer = Kurzadresse im Chat)', suggest)
-      if (label === null) return
-      const r = await saveContactEntry({ address: a, label: label.trim() || undefined })
+      setContactAliasDialog({ address: a, defaultLabel: suggest })
+    },
+    [directory, myAddress, setStatus, setStatusMsg]
+  )
+
+  const saveContactAliasFromDialog = useCallback(
+    async (label: string) => {
+      if (!contactAliasDialog) return
+      setContactAliasBusy(true)
+      const r = await saveContactEntry({
+        address: contactAliasDialog.address,
+        label: label || undefined,
+      })
+      setContactAliasBusy(false)
       if (r.ok) {
         refreshContactDirectory()
+        recordContactLastContacted(contactAliasDialog.address)
         setStatus('success')
         setStatusMsg(r.message || 'Kontakt gespeichert.')
+        setContactAliasDialog(null)
       } else {
         setStatus('error')
         setStatusMsg(r.error || 'Kontakt speichern fehlgeschlagen.')
       }
       setTimeout(() => setStatus('idle'), 5000)
     },
-    [directory, myAddress, refreshContactDirectory, setStatus, setStatusMsg]
+    [contactAliasDialog, refreshContactDirectory, setStatus, setStatusMsg]
   )
 
   const onSarqNakWire = useCallback(
@@ -298,7 +355,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMorgPkgDeviceFiles,
     morgPkgDeviceBusy,
     apiStatus,
-    onRefresh: () => void loadMessages('reset'),
+    onRefresh: () => {
+      void loadMessages('reset')
+      void reloadPendingHandshakes()
+    },
+    pendingHandshakeOffers,
+    pendingHandshakesLoading,
+    sending,
+    onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
+    onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
     loading,
     loadingMore,
     loadMoreInbox,
@@ -354,6 +419,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pinnedPinnwandIds,
     onTogglePinnedPinnwand: togglePinnedPinnwand,
     showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
+    showPhonebookButton: isPrivate || isGroup,
+    onOpenPhonebook: () => setPhonebookOpen(true),
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {
@@ -419,6 +486,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     contactDirectory: directory,
   } satisfies ChatViewSendPanelProps
 
+  const showEncryptedPartnerPanel =
+    (isPrivate || isGroup) && encrypted && forcedTransport === 'internet'
+
+  const showPartnerSetupPanel =
+    (isPrivate || isGroup) &&
+    (showSetup ||
+      forcedTransport === 'mesh' ||
+      forcedTransport === 'adhoc' ||
+      (!encrypted && forcedTransport === 'internet'))
+
   const transportCardProps = {
     ...asSendTransportChoice(
       encrypted,
@@ -429,13 +506,30 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setMessagingPersistenceMode
     ),
     isPrivate,
+    isGroup,
     apiStatus,
     partner,
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,
-    partnerSetupOpen: showSetup,
-    onTogglePartnerSetup: toggleShowSetup,
+    channelMode,
+    myAddressLine: isPrivate ? myAddress : undefined,
+    encryptedPartner: showEncryptedPartnerPanel
+      ? {
+          partner,
+          onPartnerChange: setPartner,
+          sending,
+          onHandshake: handleHandshake,
+          onConnectAcceptPartner: handleConnectAcceptPartner,
+          onConnectDeployment: handleConnectDeployment,
+          onConnectAcceptForAddress: handleConnectAcceptForAddress,
+          directory,
+          isGroupMode: isGroup,
+          groupMemberAddresses: activeGroup?.memberAddresses ?? [],
+          connectedAddresses: apiStatus?.connectedAddresses ?? [],
+          onHandshakeForAddress: handleHandshakeForAddress,
+        }
+      : undefined,
   } satisfies ChatViewTransportCardProps
 
   return (
@@ -458,13 +552,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           forcedTransport,
           onForcedTransportChange: setForcedTransport,
           onEncryptedChange: setEncrypted,
+          myAddressLine: isPrivate ? myAddress : undefined,
         }}
       />
 
-      {channelMode === 'private' ? <ChatViewIdentityCard myAddressLine={myAddress} /> : null}
-
       {isGroup ? (
-        <ChatViewGroupPanel contactDirectory={directory} onGroupsChanged={refreshMessengerGroups} />
+        <ChatViewGroupPanel
+          contactDirectory={directory}
+          onGroupsChanged={refreshMessengerGroups}
+          onOpenPhonebook={() => setPhonebookOpen(true)}
+        />
       ) : null}
 
       {channelMode != null && isPinnwandChannel(channelMode) ? (
@@ -482,13 +579,17 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       <ChatViewTransportCard {...transportCardProps} />
 
-      {isPrivate && showSetup && (
+      {showPartnerSetupPanel ? (
         <ChatViewSetupPanel
           partner={partner}
           onPartnerChange={setPartner}
           sending={sending}
           onHandshake={handleHandshake}
-          onConnect={handleConnect}
+          onConnect={handleConnectDeployment}
+          isGroupMode={isGroup}
+          groupMemberAddresses={activeGroup?.memberAddresses ?? []}
+          connectedAddresses={apiStatus?.connectedAddresses ?? []}
+          onHandshakeForAddress={handleHandshakeForAddress}
           encrypted={encrypted}
           forcedTransport={forcedTransport}
           meshtastic={{
@@ -539,7 +640,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           activeSendRecipient={recipient}
           onApplyPartnerAsSendRecipient={applyPartnerAsSendRecipient}
         />
-      )}
+      ) : null}
+
+      <ContactAddAliasDialog
+        open={contactAliasDialog != null}
+        onOpenChange={(open) => {
+          if (!open) setContactAliasDialog(null)
+        }}
+        address={contactAliasDialog?.address ?? ''}
+        defaultLabel={contactAliasDialog?.defaultLabel ?? ''}
+        busy={contactAliasBusy}
+        onSave={saveContactAliasFromDialog}
+      />
 
       <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
         <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
@@ -549,6 +661,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       </section>
 
       <ChatViewInboxPanel {...inboxPanelProps} />
+
+      {(isPrivate || isGroup) ? (
+        <ChatViewPhonebookSheet
+          open={phonebookOpen}
+          onOpenChange={setPhonebookOpen}
+          directory={directory}
+          refreshContactDirectory={refreshContactDirectory}
+          connectedAddresses={apiStatus?.connectedAddresses ?? []}
+          setStatusMsg={(msg) => {
+            setStatus('success')
+            setStatusMsg(msg)
+            setTimeout(() => setStatus('idle'), 5000)
+          }}
+        />
+      ) : null}
     </div>
   )
 }

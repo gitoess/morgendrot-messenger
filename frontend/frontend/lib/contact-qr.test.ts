@@ -16,4 +16,11 @@ describe('contact-qr M4c', () => {
   it('plain 0x address', () => {
     expect(parseContactQrPayload(wallet)?.address.toLowerCase()).toBe(wallet.toLowerCase())
   })
+
+  it('omits m when mailbox equals wallet (common mistake)', () => {
+    const raw = buildContactQrPayload({ address: wallet, mailboxObjectId: wallet })
+    expect(raw).not.toContain('"m"')
+    const p = parseContactQrPayload(raw)
+    expect(p?.mailboxObjectId).toBeUndefined()
+  })
 })

@@ -59,14 +59,19 @@ export async function sendPlaintextMailboxHybrid(
   )
 }
 
-/** Verschlüsselte Mailbox: Direct zuerst, dann `/send`. */
+/** Verschlüsselter Online-Versand: bei Modus „mailbox“ Direct zuerst, dann `/send` (inkl. Event-Modus). */
 export async function sendEncryptedMailboxHybrid(
   recipient: string,
   wireForApi: string,
-  opts?: { timeoutMs?: number; mailboxObjectId?: string }
+  opts?: {
+    timeoutMs?: number
+    mailboxObjectId?: string
+    messagingPersistenceMode?: MessagingPersistenceMode
+  }
 ): Promise<MailboxHybridSendResult> {
   const rTrim = recipient.trim()
-  if (rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
+  const useMailboxStore = opts?.messagingPersistenceMode === 'mailbox'
+  if (useMailboxStore && rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
     const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
     if (mat) {
       const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
@@ -82,6 +87,7 @@ export async function sendEncryptedMailboxHybrid(
   return fromApiResponse(
     await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
       mailboxObjectId: opts?.mailboxObjectId,
+      messagingPersistenceMode: opts?.messagingPersistenceMode,
     })
   )
 }

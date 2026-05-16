@@ -350,13 +350,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const n1 = BigInt(nextOfflineMailboxClientOutSeq())
         const w1 = prependMailboxOutNonceMarker(lumaText, n1)
         setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
-        const r1 = await sendEncryptedMailboxHybrid(rTrim, w1)
+        const r1 = await sendEncryptedMailboxHybrid(rTrim, w1, { messagingPersistenceMode })
         if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA fehlgeschlagen.')
         throwIfCancelled()
         const n2 = BigInt(nextOfflineMailboxClientOutSeq())
         const w2 = prependMailboxOutNonceMarker(chromaText, n2)
         setStatusMsg('Online: CHROMA (IOTA/Mailbox)…')
-        const r2 = await sendEncryptedMailboxHybrid(rTrim, w2)
+        const r2 = await sendEncryptedMailboxHybrid(rTrim, w2, { messagingPersistenceMode })
         if (!r2.ok) throw new Error(r2.error || r2.message || 'CHROMA fehlgeschlagen.')
         const baseSuccess = 'Online (IOTA/Mailbox): LUMA + CHROMA gesendet.'
         setStatus('success')
@@ -874,7 +874,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const mailboxObjectId = resolveContactMailboxObjectId(contactDirectory, recipient.trim())
         const hybridOpts = {
           ...(mailboxObjectId ? { mailboxObjectId } : {}),
-          ...(!enc ? { messagingPersistenceMode } : {}),
+          messagingPersistenceMode,
         }
         const res = enc
           ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi, hybridOpts)
@@ -1046,7 +1046,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
         throwIfCancelled()
-        const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi)
+        const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi, { messagingPersistenceMode })
         if (res.ok) {
           return {
             ok: true,

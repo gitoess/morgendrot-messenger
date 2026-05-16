@@ -863,12 +863,17 @@ async function testMessagingPersistenceResolve() {
     try {
         const {
             resolveForceLegacyPlaintext,
+            resolveForceLegacyEncrypted,
             explainMailboxPlaintextUnavailable,
+            explainMailboxEncryptedUnavailable,
         } = await import('../src/messaging-persistence-resolve.js');
         assert(resolveForceLegacyPlaintext({}) === true, 'default event');
         assert(resolveForceLegacyPlaintext({ messagingPersistenceMode: 'event' }) === true, 'event');
         assert(resolveForceLegacyPlaintext({ messagingPersistenceMode: 'mailbox' }) === false, 'mailbox');
         assert(resolveForceLegacyPlaintext({ forceLegacyPlaintext: false }) === false, 'explicit false');
+        assert(resolveForceLegacyEncrypted({ messagingPersistenceMode: 'event' }) === true, 'enc event');
+        assert(resolveForceLegacyEncrypted({ messagingPersistenceMode: 'mailbox' }) === false, 'enc mailbox');
+        assert(resolveForceLegacyEncrypted({}) === false, 'enc legacy default mailbox');
         const mb = '0x' + 'd'.repeat(64);
         const pkg = '0x' + 'e'.repeat(64);
         assert(
@@ -885,7 +890,14 @@ async function testMessagingPersistenceResolve() {
             )?.includes('PACKAGE_ID'),
             'reject mailbox=package'
         );
-        ok('resolveForceLegacyPlaintext + explainMailboxPlaintextUnavailable');
+        assert(
+            explainMailboxEncryptedUnavailable(
+                { useMailbox: true, mailboxId: mb, packageId: pkg },
+                true
+            ) === null,
+            'enc ok config'
+        );
+        ok('messaging-persistence-resolve');
     } catch (e) {
         fail('messaging-persistence-resolve', e);
     }

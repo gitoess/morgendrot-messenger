@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Users } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { ContactPhonebookPickerDialog } from '@/frontend/components/contact-phonebook-picker-dialog'
 import {
   createMessengerGroupId,
   deleteMessengerGroup,
@@ -18,16 +19,18 @@ import {
 export type ChatViewGroupPanelProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
   onGroupsChanged?: () => void
+  onOpenPhonebook?: () => void
 }
 
 export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
-  const { contactDirectory, onGroupsChanged } = p
+  const { contactDirectory, onGroupsChanged, onOpenPhonebook } = p
   const [groups, setGroups] = useState<MessengerGroupDefinition[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [membersText, setMembersText] = useState('')
   const [streamsAnchorId, setStreamsAnchorId] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
+  const [phonebookPickerOpen, setPhonebookPickerOpen] = useState(false)
 
   const reload = useCallback(() => {
     setGroups(readMessengerGroups())
@@ -36,9 +39,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     if (active) {
       setName(active.name)
       setMembersText(active.memberAddresses.join('\n'))
+      setStreamsAnchorId(active.streamsAnchorId ?? '')
     } else {
       setName('')
       setMembersText('')
+      setStreamsAnchorId('')
     }
   }, [])
 
@@ -100,15 +105,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     onGroupsChanged?.()
   }, [activeId, onGroupsChanged, reload])
 
-  const addFromPhonebook = useCallback(() => {
-    if (directoryAddrs.length === 0) {
-      setMsg('Telefonbuch leer — zuerst Kontakte mit 0x-Adresse anlegen.')
-      return
-    }
-    const merged = parseGroupMemberInput([membersText, ...directoryAddrs].join('\n'))
-    setMembersText(merged.join('\n'))
-    setMsg(`${merged.length} Adresse(n) im Entwurf.`)
-  }, [directoryAddrs, membersText])
+  const applyPhonebookSelection = useCallback(
+    (picked: string[]) => {
+      const merged = parseGroupMemberInput([membersText, ...picked].join('\n'))
+      setMembersText(merged.join('\n'))
+      setMsg(`${picked.length} Kontakt(e) übernommen — „Gruppe speichern“ nicht vergessen.`)
+    },
+    [membersText]
+  )
+
+  const openPhonebook = useCallback(() => {
+    onOpenPhonebook?.()
+  }, [onOpenPhonebook])
 
   const active = getActiveMessengerGroup()
 
@@ -118,11 +126,6 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         <Users className="h-4 w-4 text-violet-400" aria-hidden />
         <h3 className="text-sm font-semibold text-foreground">Gruppenchat (M2)</h3>
       </div>
-      <p className="mb-3">
-        <strong className="text-foreground">Ein Posteingang</strong> für alle Mitglieder — Senden weiter an eine{' '}
-        <span className="font-mono">0x</span>-Adresse im Composer (pairwise v1). Nicht dasselbe wie die{' '}
-        <strong className="text-foreground">Pinnwand</strong>.
-      </p>
       {groups.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {groups.map((g) => (
@@ -182,8 +185,20 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           <button type="button" onClick={newGroup} className="rounded-md border border-border px-3 py-1.5 text-xs">
             Neue Gruppe
           </button>
-          <button type="button" onClick={addFromPhonebook} className="rounded-md border border-border px-3 py-1.5 text-xs">
-            Aus Telefonbuch
+          <button
+            type="button"
+            onClick={() => setPhonebookPickerOpen(true)}
+            className="rounded-md border border-border px-3 py-1.5 text-xs"
+          >
+            Aus Telefonbuch…
+          </button>
+          <button
+            type="button"
+            onClick={openPhonebook}
+            disabled={!onOpenPhonebook}
+            className="rounded-md border border-border px-3 py-1.5 text-xs disabled:opacity-50"
+          >
+            Telefonbuch öffnen
           </button>
           {activeId ? (
             <button
@@ -205,6 +220,15 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         )}
         {msg ? <p className="text-[10px] text-foreground">{msg}</p> : null}
       </div>
+      <ContactPhonebookPickerDialog
+        open={phonebookPickerOpen}
+        onOpenChange={setPhonebookPickerOpen}
+        directory={contactDirectory}
+        title="Mitglieder aus Telefonbuch"
+        description="Kontakte auswählen — sie werden der Mitgliederliste hinzugefügt (Duplikate werden ignoriert)."
+        confirmLabel="Zur Gruppe hinzufügen"
+        onConfirm={applyPhonebookSelection}
+      />
     </section>
   )
 }

@@ -24,7 +24,7 @@ export function buildContactQrPayload(input: {
   const n = (input.displayName ?? '').trim()
   if (n) o.n = n.slice(0, 64)
   const m = (input.mailboxObjectId ?? '').trim()
-  if (m && /^0x[a-fA-F0-9]{64}$/i.test(m)) o.m = m
+  if (m && /^0x[a-fA-F0-9]{64}$/i.test(m) && m.toLowerCase() !== a.toLowerCase()) o.m = m
   return JSON.stringify(o)
 }
 

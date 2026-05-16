@@ -56,22 +56,27 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
     setTimeout(run, 20000)
   }, [refreshApiStatus])
 
-  const handleHandshake = useCallback(async () => {
-    if (!partner.trim()) {
-      toast.error('Partner-Adresse fehlt — im Setup-Panel „Partner (0x…)“ eintragen (nicht nur „An:“ im Composer).')
-      return
-    }
-    setSending(true)
-    const res = await startHandshake(partner)
-    if (res.ok) {
-      setStatus('success')
-      const base =
-        typeof (res as { message?: unknown }).message === 'string'
-          ? (res as { message: string }).message
-          : 'Handshake gesendet.'
-      let extra = ''
-      const p = partner.trim().toLowerCase()
-      if (ADDR_64_HEX.test(p)) {
+  const runHandshakeForAddress = useCallback(
+    async (rawAddress: string, opts?: { closeSetup?: boolean }) => {
+      const addr = rawAddress.trim()
+      if (!addr) {
+        toast.error('Partner-Adresse fehlt — 0x-Wallet eintragen.')
+        return
+      }
+      if (!ADDR_64_HEX.test(addr)) {
+        toast.error('Gültige Empfänger-Wallet: 0x + 64 Hex.')
+        return
+      }
+      setSending(true)
+      const res = await startHandshake(addr)
+      if (res.ok) {
+        setStatus('success')
+        const base =
+          typeof (res as { message?: unknown }).message === 'string'
+            ? (res as { message: string }).message
+            : 'Handshake gesendet.'
+        let extra = ''
+        const p = addr.toLowerCase()
         try {
           const hs = await findPeerHandshake(p)
           if (hs.ok && hs.found && hs.peerPubRawBase64) {
@@ -79,44 +84,89 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
             if (saved.ok) extra = ' Peer-Pub automatisch aus Handshake übernommen.'
           }
         } catch {
-          /* optionaler Komfortpfad */
+          /* optional */
+        }
+        setStatusMsg(
+          `${base} Danach „Handshake annehmen“ (0x oben) oder „Mit Einsatz-Partner verbinden“ (.env) — erst bei „verbunden“ verschlüsselt senden.${extra}`
+        )
+        if (opts?.closeSetup !== false) setShowSetup(false)
+      } else {
+        setStatus('error')
+        setStatusMsg(res.error || 'Fehler')
+      }
+      setSending(false)
+      setTimeout(() => setStatus('idle'), 5000)
+    },
+    [setSending, setShowSetup, setStatus, setStatusMsg]
+  )
+
+  const handleHandshake = useCallback(async () => {
+    if (!partner.trim()) {
+      toast.error('Partner-Adresse fehlt — im Setup-Panel „Partner (0x…)“ eintragen (nicht nur „An:“ im Composer).')
+      return
+    }
+    await runHandshakeForAddress(partner)
+  }, [partner, runHandshakeForAddress])
+
+  const handleHandshakeForAddress = useCallback(
+    async (address: string) => {
+      await runHandshakeForAddress(address, { closeSetup: false })
+    },
+    [runHandshakeForAddress]
+  )
+
+  const runConnect = useCallback(
+    async (mode: 'partner' | 'deployment', explicitAddress?: string) => {
+      if (mode === 'partner') {
+        const addr = (explicitAddress ?? partner).trim()
+        if (!ADDR_64_HEX.test(addr)) {
+          toast.error('Gültige Partner-Wallet (0x + 64 Hex) eintragen — nur für „Handshake annehmen“.')
+          return
         }
       }
-      setStatusMsg(
-        `${base} Anschließend „Schnell verbinden“ — erst danach ist der Wallet-Chat (verschlüsselt über Online/IOTA; Funk bleibt Klartext/Pfad 4) bereit.`
-          + extra
-      )
-      setShowSetup(false)
-    } else {
-      setStatus('error')
-      setStatusMsg(res.error || 'Fehler')
-    }
-    setSending(false)
-    setTimeout(() => setStatus('idle'), 5000)
-  }, [partner, setSending, setShowSetup, setStatus, setStatusMsg])
+      setSending(true)
+      const res =
+        mode === 'partner'
+          ? await connect((explicitAddress ?? partner).trim().toLowerCase())
+          : await connect()
+      if (res.ok) {
+        setStatus('success')
+        const backendMsg =
+          typeof (res as { message?: unknown }).message === 'string'
+            ? (res as { message: string }).message
+            : 'Connect gestartet.'
+        const modeHint =
+          mode === 'partner'
+            ? 'Wartet auf Handshake der 0x-Adresse (Server-Mailbox oder Event), antwortet automatisch.'
+            : 'Nutzt PARTNER_ADDRESS / PARTNER_ADDRESSES aus der Server-.env (Einsatzleiter/Boss).'
+        setStatusMsg(
+          `${backendMsg} ${modeHint} peerMap braucht oft einige Sekunden — Status im Header prüfen; verschlüsselt senden erst bei „verbunden“.`
+        )
+        scheduleStatusRefresh()
+      } else {
+        setStatus('error')
+        setStatusMsg(res.error || 'Fehler')
+      }
+      setSending(false)
+      setTimeout(() => setStatus('idle'), 6000)
+    },
+    [partner, scheduleStatusRefresh, setSending, setStatus, setStatusMsg]
+  )
 
-  const handleConnect = useCallback(async () => {
-    setSending(true)
-    const raw = partner.trim()
-    const explicitAddr = ADDR_64_HEX.test(raw) ? raw.toLowerCase() : undefined
-    const res = await connect(explicitAddr)
-    if (res.ok) {
-      setStatus('success')
-      const backendMsg =
-        typeof (res as { message?: unknown }).message === 'string'
-          ? (res as { message: string }).message
-          : 'Connect gestartet.'
-      setStatusMsg(
-        `${backendMsg} Die eigentliche Verbindung (Schlüssel/peerMap) braucht oft einige Sekunden — Status im Header prüfen; verschlüsselt senden erst wenn dort „verbunden“.`
-      )
-      scheduleStatusRefresh()
-    } else {
-      setStatus('error')
-      setStatusMsg(res.error || 'Fehler')
-    }
-    setSending(false)
-    setTimeout(() => setStatus('idle'), 6000)
-  }, [partner, scheduleStatusRefresh, setSending, setStatus, setStatusMsg])
+  const handleConnectAcceptPartner = useCallback(async () => {
+    await runConnect('partner')
+  }, [runConnect])
+
+  const handleConnectAcceptForAddress = useCallback(
+    async (address: string) => {
+      await runConnect('partner', address)
+    },
+    [runConnect]
+  )
+
+  const handleConnectDeployment = useCallback(async () => {
+    await runConnect('deployment')
+  }, [runConnect])
 
   const dismissLoraOnlineFallback = useCallback(() => {
     setLoraOnlineFallbackOffer(null)
@@ -140,7 +190,10 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
 
   return {
     handleHandshake,
-    handleConnect,
+    handleHandshakeForAddress,
+    handleConnectAcceptPartner,
+    handleConnectAcceptForAddress,
+    handleConnectDeployment,
     dismissLoraOnlineFallback,
     toggleShowSetup,
     openPartnerSetupPanel,

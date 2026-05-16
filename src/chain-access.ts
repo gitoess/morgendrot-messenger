@@ -1747,15 +1747,37 @@ export async function storeEncryptedMessage(
     nonce: bigint,
     plaintext?: Uint8Array,
     walletPassword?: string,
-    signOptions?: SignAndExecuteOptions
+    options?: {
+        /** `true` (Default bei Modus „event“): `send_encrypted_message` — flüchtiges Event. */
+        forceLegacyEncrypted?: boolean;
+        signOptions?: SignAndExecuteOptions;
+    }
 ): Promise<{ digest?: string; status?: string }> {
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
     const txb = new Transaction();
     txb.setSender(senderAddress);
+    const signOptions = options?.signOptions;
+    const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
+    const wantsMailbox = options?.forceLegacyEncrypted === false;
+    const useMailbox = wantsMailbox && isMessengerMailboxModeActive() && mailboxIdValid;
+    if (wantsMailbox && !useMailbox) {
+        const { explainMailboxEncryptedUnavailable } = await import('./messaging-persistence-resolve.js');
+        const reason = explainMailboxEncryptedUnavailable(
+            {
+                useMailbox: isMessengerMailboxModeActive(),
+                mailboxId: CFG.MAILBOX_ID,
+                packageId: CFG.PACKAGE_ID,
+            },
+            true
+        );
+        throw new Error(
+            reason ?? 'Verschlüsselte Mailbox nicht verfügbar — MAILBOX_ID/USE_MAILBOX prüfen oder „Event“ wählen.'
+        );
+    }
     const creditsId = messengerCreditsObjectIdForTx();
-    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID && creditsId) {
+    if (useMailbox && creditsId) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message_with_credits`,
             arguments: [
@@ -1782,7 +1804,7 @@ export async function storeEncryptedMessage(
                 ],
             });
         }
-    } else if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
+    } else if (useMailbox) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message`,
             arguments: [
@@ -3545,6 +3567,98 @@ export async function findPeerHandshake(myAddress: string): Promise<{ pubKeyRaw:
         // ignore
     }
     return null;
+}
+
+export type IncomingHandshakeOffer = {
+    sender: string
+    nonce: string
+    source: 'mailbox' | 'event'
+}
+
+/** Eingehende Handshake-Angebote (Mailbox HsKey + EcdhInit-Events), pro Absender höchste Nonce. */
+export async function listIncomingHandshakeOffers(
+    myAddress: string,
+    opts?: { limit?: number }
+): Promise<IncomingHandshakeOffer[]> {
+    const limit = Math.min(50, Math.max(1, opts?.limit ?? 20))
+    const me = normalizeAddress(myAddress)
+    if (!me.startsWith('0x') || me.length !== 66) return []
+
+    const best = new Map<string, { sender: string; nonce: bigint; source: 'mailbox' | 'event' }>()
+
+    const upsert = (senderRaw: string, nonce: bigint, source: 'mailbox' | 'event') => {
+        const sen = String(senderRaw || '').trim()
+        if (!sen.startsWith('0x')) return
+        const sn = normalizeAddress(sen)
+        if (sn === me || !/^0x[a-f0-9]{64}$/.test(sn)) return
+        const prev = best.get(sn)
+        if (!prev || nonce > prev.nonce) {
+            best.set(sn, { sender: sen, nonce, source })
+        } else if (prev && nonce === prev.nonce && source === 'mailbox') {
+            best.set(sn, { sender: sen, nonce, source: 'mailbox' })
+        }
+    }
+
+    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
+        try {
+            const incomingSenders = new Set<string>()
+            let cursor: string | null = null
+            for (let pageNum = 0; pageNum < 8; pageNum++) {
+                const page = await getClient().getDynamicFields({
+                    parentId: CFG.MAILBOX_ID,
+                    limit: 500,
+                    ...(cursor ? { cursor } : {}),
+                } as Parameters<IotaClient['getDynamicFields']>[0])
+                const entries =
+                    (page as { data?: Array<{ name?: { type?: string; value?: Record<string, string> } }> })
+                        ?.data ?? []
+                for (const e of entries) {
+                    const typeStr = (e.name?.type as string) ?? ''
+                    if (!typeStr.includes('HsKey') && !typeStr.endsWith('::messaging::HsKey')) continue
+                    const val = e.name?.value
+                    const rec = normalizeAddress(String(val?.recipient ?? ''))
+                    const sen = String(val?.sender ?? '').trim()
+                    if (rec !== me || !sen.startsWith('0x')) continue
+                    incomingSenders.add(normalizeAddress(sen))
+                }
+                const hasNext = (page as { hasNextPage?: boolean })?.hasNextPage === true
+                const nextCursor = (page as { nextCursor?: string | null })?.nextCursor
+                if (!hasNext || !nextCursor) break
+                cursor = nextCursor
+            }
+            for (const sn of incomingSenders) {
+                const hs = await getHandshakeFromMailbox(myAddress, sn)
+                if (hs) upsert(hs.sender, hs.nonce ?? 0n, 'mailbox')
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    if (CFG.PACKAGE_ID) {
+        try {
+            const events = await queryMessagingEvents({ eventStruct: 'EcdhInit', limit: 200, order: 'descending' })
+            const rows = events.data as Array<{
+                type?: string
+                parsedJson?: { recipient?: string; sender?: string; nonce?: number | string }
+            }>
+            for (const e of rows) {
+                if (!e.type?.endsWith('::messaging::EcdhInit') || !e.parsedJson) continue
+                const rec = normalizeAddress(String(e.parsedJson.recipient ?? ''))
+                const sen = normalizeAddress(String(e.parsedJson.sender ?? ''))
+                if (rec !== me || !sen || sen === me) continue
+                const nonce = BigInt(e.parsedJson.nonce ?? 0)
+                upsert(sen, nonce, 'event')
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    return [...best.values()]
+        .sort((a, b) => (a.nonce > b.nonce ? -1 : a.nonce < b.nonce ? 1 : 0))
+        .slice(0, limit)
+        .map((o) => ({ sender: o.sender, nonce: String(o.nonce), source: o.source }))
 }
 
 /** Handshake von bestimmtem Peer suchen (recipient = myAddress, sender = peerAddress). */

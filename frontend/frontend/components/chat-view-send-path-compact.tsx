@@ -6,6 +6,7 @@
 
 import { cn } from '@/lib/utils'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 
 export type ChatViewSendPathCompactProps = {
   /** Pinnwand: nur wenn Klartext; privater Chat: immer. */
@@ -15,6 +16,8 @@ export type ChatViewSendPathCompactProps = {
   onForcedTransportChange: (t: ForcedTransport) => void
   /** Funk/Ad-hoc sind Klartext-Pfade: bei aktiver Verschlüsselung nach Bestätigung ausschalten. */
   onEncryptedChange?: (encrypted: boolean) => void
+  /** 1:1: dezente Kontakt-ID unter den Sendepfad-Buttons. */
+  myAddressLine?: string
 }
 
 const ONLINE = {
@@ -75,11 +78,12 @@ function selectCleartextTransport(
 }
 
 export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
-  const { visible, encrypted, forcedTransport, onForcedTransportChange, onEncryptedChange } = p
+  const { visible, encrypted, forcedTransport, onForcedTransportChange, onEncryptedChange, myAddressLine } = p
   if (!visible) return null
 
   return (
-    <div className="flex max-w-full flex-wrap items-center gap-1.5 rounded-lg border border-border/60 bg-muted/25 px-2 py-1">
+    <div className="flex max-w-full flex-col items-end gap-0 rounded-lg border border-border/60 bg-muted/25 px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
       <span className="hidden text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
         Sendepfad
       </span>
@@ -133,6 +137,8 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         </span>
         {ADHOC.short}
       </button>
+      </div>
+      {myAddressLine?.trim() ? <ChatViewMyWalletIdInline myAddressLine={myAddressLine} /> : null}
     </div>
   )
 }

@@ -67,11 +67,17 @@ function wireKindForLog(plaintext: string): string {
     return 'plain';
 }
 
+export type SendEncryptedMessageOptions = {
+    /** `true` → Chain-Event `send_encrypted_message`; `false` → `store_encrypted_message*`. */
+    forceLegacyEncrypted?: boolean;
+};
+
 export async function sendEncryptedMessage(
     recipient: string,
     message: string,
     peerPubRaw: Uint8Array,
-    myPrivKey: CryptoKey
+    myPrivKey: CryptoKey,
+    sendOpts?: SendEncryptedMessageOptions
 ) {
     const parsedNonce = parseMailboxOutNonceMarker(message);
     const bodyForE2ee = parsedNonce ? parsedNonce.rest : message;
@@ -110,7 +116,10 @@ export async function sendEncryptedMessage(
         nonce,
         CFG.ENABLE_PLAINTEXT_CHANNEL ? new TextEncoder().encode(bodyForE2ee) : undefined,
         getWalletPassword(),
-        messengerGasPolicyOpts()
+        {
+            forceLegacyEncrypted: sendOpts?.forceLegacyEncrypted,
+            signOptions: messengerGasPolicyOpts(),
+        }
     );
     if (result?.digest) logger.info(`TX ausgeführt: ${result.digest}${result.status ? ` (${result.status})` : ''}`);
     return result;

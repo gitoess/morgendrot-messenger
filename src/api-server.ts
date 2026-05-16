@@ -46,6 +46,7 @@ import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTem
 import {
     findPeerHandshake,
     findPeerHandshakeFrom,
+    listIncomingHandshakeOffers,
     isChainReachable,
     hasValidTicket,
     getOwnedTickets,
@@ -1489,6 +1490,21 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                 }, cors);
             } catch (e: any) {
                 sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/pending-handshakes' && req.method === 'GET') {
+            try {
+                const myAddr = CFG.MY_ADDRESS;
+                if (!myAddr) {
+                    sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt' }, cors);
+                    return;
+                }
+                const offers = await listIncomingHandshakeOffers(myAddr, { limit: 25 });
+                sendJson(res, 200, { ok: true, offers }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
             }
             return;
         }

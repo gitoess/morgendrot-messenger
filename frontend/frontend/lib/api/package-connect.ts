@@ -9,6 +9,26 @@ export const startHandshake = (partner: string) => executeCommand('/handshake', 
 export const connect = (address?: string) =>
   executeCommand('/connect', address ? [address] : [])
 
+export type PendingHandshakeOffer = {
+  sender: string
+  nonce: string
+  source: 'mailbox' | 'event'
+}
+
+export async function fetchPendingHandshakes(): Promise<{
+  ok: boolean
+  offers?: PendingHandshakeOffer[]
+  error?: string
+}> {
+  const r = await fetch('/api/pending-handshakes')
+  const j = (await r.json()) as { ok?: boolean; offers?: PendingHandshakeOffer[]; error?: string }
+  return {
+    ok: j.ok === true,
+    offers: Array.isArray(j.offers) ? j.offers : [],
+    error: typeof j.error === 'string' ? j.error : undefined,
+  }
+}
+
 export async function findPeerHandshake(peer?: string): Promise<{
   ok: boolean
   found?: boolean

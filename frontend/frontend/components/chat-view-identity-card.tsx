@@ -63,6 +63,16 @@ export function ChatViewIdentityCard(p: { myAddressLine: string; compact?: boole
     setTimeout(() => setMbSaved(false), 2000)
   }
 
+  const resetToDefaultMailbox = () => {
+    writeMyPrivateMailboxObjectId('')
+    setPrivateMb('')
+    setMbSaved(true)
+    setTimeout(() => setMbSaved(false), 2000)
+  }
+
+  const mailboxLooksLikeWallet =
+    privateMb.trim().length > 0 && privateMb.trim().toLowerCase() === full.toLowerCase()
+
   if (!valid) return null
 
   if (p.compact) {
@@ -93,10 +103,6 @@ export function ChatViewIdentityCard(p: { myAddressLine: string; compact?: boole
         <User className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
         Meine IOTA-Adresse (Kontakt-ID)
       </div>
-      <p className="text-xs text-muted-foreground">
-        Diese <span className="font-mono">0x…</span>-Adresse gibst du Partnern zum Anschreiben —{' '}
-        <strong className="text-foreground/90">nicht</strong> die technische Mailbox-ID des Einsatzes.
-      </p>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <code
           className={cn(
@@ -116,11 +122,7 @@ export function ChatViewIdentityCard(p: { myAddressLine: string; compact?: boole
       </div>
 
       <div className="border-t border-border/60 pt-3 space-y-2">
-        <p className="text-xs font-medium text-foreground">Eigene private Mailbox (M4d, optional)</p>
-        <p className="text-[11px] text-muted-foreground">
-          Nach Deploy der Move-Instanz Object-ID hier eintragen — landet im Profil-QR für Partner (
-          <span className="font-mono">m</span>-Feld). Leer = nur Wallet im QR.
-        </p>
+        <p className="text-xs font-medium text-foreground">Eigene private Mailbox (optional)</p>
         <input
           type="text"
           value={privateMb}
@@ -128,6 +130,11 @@ export function ChatViewIdentityCard(p: { myAddressLine: string; compact?: boole
           placeholder="0x… Mailbox-Object (64 Hex)"
           className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
         />
+        {mailboxLooksLikeWallet ? (
+          <p className="text-[11px] text-amber-800 dark:text-amber-200">
+            Die Mailbox-Object-ID darf nicht dieselbe 0x-Adresse wie deine Wallet sein.
+          </p>
+        ) : null}
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -135,6 +142,13 @@ export function ChatViewIdentityCard(p: { myAddressLine: string; compact?: boole
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
           >
             {mbSaved ? 'Gespeichert' : 'Mailbox-ID speichern'}
+          </button>
+          <button
+            type="button"
+            onClick={resetToDefaultMailbox}
+            className="rounded-md border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
+          >
+            Zur Morgendrot-Standard-Mailbox
           </button>
           {qr ? (
             <button
