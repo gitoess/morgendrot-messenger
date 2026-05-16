@@ -25,7 +25,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commit 2026-05-15) — **offen:** **§ H.22 M4d** **Mailbox erstellen** (Move `create_private_mailbox`), Abnahme/UI-Durchgang. **Direkt danach (priorisiert):** **§ H.23 Verschlüsselung** — MVP-Architektur festlegen (**X25519 + XChaCha20-Poly1305** vs. **Double Ratchet**; Ratchet-Timing unklar). Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke (**`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**) nach UI-Test. Parallel wie **§ C.0b Stufe 1:** **§ H.0** + **§ H.1**; **Phase B** erst nach C.0b **Stufe 3**-Voraussetzungen.
+**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commits 2026-05-15, `b914811`) — Telefonbuch-Sheet, Connect-Aufteilung (Handshake starten/annehmen/Einsatz-Partner), ausstehende Handshakes im Posteingang, Messenger-UX (Verschlüsselt eingebettet, Mailbox nur bei „Persistent“, Pinnwand-Label). **Offen:** **§ H.22 M4d** **Mailbox erstellen** (Move `create_private_mailbox`), Abnahme/UI-Durchgang. **Direkt danach (priorisiert):** **§ H.23 Verschlüsselung** — MVP-Architektur festlegen (**X25519 + XChaCha20-Poly1305** vs. **Double Ratchet**; Ratchet-Timing unklar). Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke (**`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`**) nach UI-Test. Parallel wie **§ C.0b Stufe 1:** **§ H.0** + **§ H.1**; **Phase B** erst nach C.0b **Stufe 3**-Voraussetzungen. **Backlog hinten:** **§ H.24** Package-abhängige UI.
 
 ### Ist das der „komplette“ Plan? Heltec, Firmware, …
 
@@ -82,7 +82,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 |---|--------|---------|---------------------------|
 | 1 | Stabilität Bild + Audio | — | Basis; bei Änderungen testen. |
 | 2 | Einsatzprotokoll / Export (ZIP) | Mittel | **Erledigt:** vollständiger Posteingang, ZIP, `.zip.enc.json`, Decrypt-Seite → **`docs/EINSATZBERICHT-EXPORT.md`**. |
-| 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** Setup-Panel (`chat-view-shadow-sweep.tsx`), POST `/api/shadow-sweep`. |
+| 3 | Shadow-Sweep in Next-UI | Mittel | **Erledigt:** UI **`frontend/frontend/components/chat-view-shadow-sweep.tsx`** (Einstellungen → **`settings-view.tsx`**, nur wenn Basis online); API **`POST /api/shadow-sweep`** (`src/api-server.ts` → **`src/shadow-sweep.ts`**); CLI **`/shadow-sweep`** (`messenger-command-handler.ts`). |
 | 4 | Code-Struktur `chat-view` + Send-Flow | Hoch | **Stand 2026-03:** Core-Logik in Hooks ausgelagert; **Kopplung** bleibt hoch → **§ H.1b** **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** (Feature-Ordner, Ports, `lib/api/`-Split unter **`frontend/frontend/lib/api/`**). **Neu:** ESLint send↔inbox, inbox↔attachments, madge **`check:circular`**, RTL Transport-Karte, CI **`frontend-checks`** — Details **§ H.1b** Absatz *Ist — Weitergang*. |
 | 5 | PWA-Grundlage (Manifest, SW) | Mittel–Hoch | **Umgesetzt:** `frontend/app/manifest.ts` (inkl. **192×192** / **512×512** PNG + maskable), `frontend/public/sw.js`, `PwaServiceWorkerRegister`; Favicons `icon-light/dark-32x32.png`, `apple-icon.png` aus **`icon.svg`** via **`npm run build:pwa-icons`**. **Hinweis:** „Offline“ = v. a. gecachte statische Assets; API weiter online. **Offen:** manuelle Installations-Checks, optional Offline-Fallback-Seite. |
 | 6 | Fehlerbehandlung / Status | Mittel | **Stand 2026-03:** Next-Messenger: Posteingang bei nicht erreichbarer Basis (Hinweis „Funk-Modus“), Partner-/Richtungsfilter, Eingang/Ausgang-Badges; Abgleich Package-ID Filter vs. `/api/status` → Banner „Jetzt updaten“ (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, Checks in **`TESTING.md`**). Laufend verfeinern. |
@@ -147,6 +147,10 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.16** | **Telefonbuch, QR (Ein/Aus), Boss-LAN-Onboarding** — Kontakte mit Klarnamen, QR-Fluss, Helfer installieren PWA ohne dauernd Boss-PC; **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**) |
 | **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6 |
 | **§ H.18** | **TTS / STT (Spracheingabe & Vorlesen)** — optional nach **§ H.0**/**H.2**: Freihand/Feld ohne Tippen, Barrierefreiheit; **Privacy** (Cloud vs. on-device), **Offline**, EU-Daten; technisch Browser-**Web Speech API** vs. native Hülle — **`docs/MESSENGER-SPRACHAUFNAHME.md`** |
+| **§ H.22** | **Messenger-Kanäle & Mailbox M1–M4** — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
+| **§ H.23** | **Verschlüsselung** — MVP-Architektur (Session Keys vs. Double Ratchet) |
+| **§ H.24** | **Package-abhängige UI** — Feature-Sichtbarkeit pro `PACKAGE_ID` / Deployment (Backlog) |
+| **§ H.25** | **Bilder über LoRa** — Produktpfad (Meshtastic) vs. Referenz-Labor (Roh-LoRa) |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
 
@@ -1106,6 +1110,65 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Shared Mailbox** (`create_globals` → `MAILBOX_ID`) | Deploy/Admin, **M1** | **Ist** — ein Objekt pro Einsatz |
 | **Private Mailbox pro Nutzer** (`create_private_mailbox`) | **M4d** in **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** | **Geplant, nicht umgesetzt** — UI nur manuelle Object-ID + Profil-QR bis Move existiert |
 | **Pro-User-Shared-Mailbox-UI** im MVP | **Nicht** vorgesehen (Leitplanke **§ H.22**) | bewusst ausgeschlossen |
+
+### H.24 Package-abhängige UI
+
+**Status:** **Backlog** — nach **§ H.22 M4d** / **§ H.23**-Grundentscheid oder in kleinen Scheiben parallel zu **§ H.0** / **§ H.2**, ohne Phase-B-Mesh-Refactor.
+
+| Aspekt | Kurz |
+|--------|------|
+| **Ziel** | Sichtbarkeit, Texte und optionale Kacheln/Flows abhängig von **`PACKAGE_ID`** / Deployment-Profil / **`GET /api/status`** — **ein** Messenger-Code, unterschiedliche **Einsatz-Oberflächen** pro Paket. |
+| **Ist heute** | Package-ID-**Banner** („Jetzt updaten“) und Filter-Abgleich (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, **§ A.6**); keine durchgängige **Feature-Matrix** pro Paket in der UI. |
+| **Nicht-Ziel** | Kein Fork pro Kunde; keine Secrets im Client — nur **erlaubte** Feature-Flags / Capability-Liste vom Server oder gebündelter Config. |
+| **Lieferung (Vorschlag)** | (1) Spez: Capability-Modell (`packageCapabilities` o. ä.) + SSOT in Doku. (2) UI-Ports: Kacheln, Setup, Transport, Telefonbuch, Boss-only-Teile. (3) Tests: Vitest für „Paket A zeigt X, Paket B nicht“. |
+| **Verknüpfung** | **§ H.0** (Lite vs. Voll), **§ H.17** (Dashboard-Kacheln), **§ H.7** (Standalone-Bundle `.env`), **`docs/UI-ROLLEN-WORKSPACES.md`**. |
+
+### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
+
+**Status:** **Produktpfad teilweise** (LUMA/CHROMA, Pfad 4, **`MORG_SEG_V1`**); **robustes Chunk+Bitmap-ACK** und Feld-Stabilität **offen** (**§ H.3**, Ticket A). **Referenz-Labor** unten = **kein** Ersatz für Meshtastic-First, nur Didaktik/Spike.
+
+#### Machbarkeitsprüfung (Anleitung ESP32-CAM + SX1276 + Serial/Python)
+
+| Punkt aus Video/Anleitung | Bewertung | Einordnung Morgendrot |
+|---------------------------|-----------|------------------------|
+| **ESP32-CAM + separates SX1276-Board „aufgesteckt“** | **Labor möglich**, **nicht** Produkt-Stack | Morgendrot nutzt **Meshtastic-Firmware** auf **Heltec/TTGO** (SX1262/127x), **kein** eigener CAM+LoRa-Sketch im Repo. |
+| **Empfänger Arduino Nano + USB + Python `image_file.py`** | **Außerhalb** der App | Messenger: **Handy/PC → Web-BT → Heltec** oder **MQTT-Gateway → Node**; kein COM-Port-Python-Pfad in Next. |
+| **~250 Byte Payload, sequentiell, 1 s Delay** | **Prinzip stimmt** (kleine Pakete), **Zahlen falsch** für uns | Meshtastic-Text **~237–512 B** effektiv je nach Framing; Morgendrot rechnet **~80–100 B Netto/Segment** (**`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`**, **`MESH_V2_MAX_BYTES ≈ 240`**). 250 B Rohdaten **pro Paket ohne** Meshtastic-Header ist am Limit und **ohne ACK** fragil. |
+| **500 B Bild → 18–40 Pakete, 20–60 s** | **Größenordnung plausibel** für **sehr kleine** Bilder | Unser Zielbild: **stark komprimiert** (LUMA/CHROMA-WebP/PNG), oft **deutlich mehr** Airtime; Dauer stark von **SF**, **Kanalbelegung**, **ACK/Retry** abhängig. |
+| **SF7 = schneller, kürzere Reichweite** | **Korrekt** | In Meshtastic/EU-Profil über **Region/Preset** — **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**. |
+| **Reichweite „mehrere km“** | **Möglich**, **nicht garantiert** | Gelände, Antenne, SF, Duty-Cycle; siehe **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**. |
+
+**Fazit:** Die Anleitung beschreibt ein **generisches Roh-LoRa-Foto-Experiment**. **Machbar** als **externes Labor** oder Inspiration für **Chunk/Reassembly** — **nicht** 1:1 übernehmbar. **Produktpfad** bleibt **§ H.3** + **Meshtastic-First** (**`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**).
+
+#### Produktpfad Morgendrot (Ist + Backlog)
+
+| Schicht | Ist | Offen / Backlog |
+|---------|-----|------------------|
+| **Hardware** | **Heltec** (o. ä.) mit **Meshtastic**, Antenne, Strom (USB/Batterie) | Kein ESP32-CAM-Pflichtgerät; Firmware **`meshtastic/`** nur bei Bedarf |
+| **Kopplung** | **Web Bluetooth** (Browser ↔ Heltec), optional serielles Gateway zum Node | USB am PC oft nur Strom/Flash — Funk läuft über **BLE** oder **MQTT-Bridge** |
+| **Bild kodieren** | Server/Client: **LUMA+CHROMA** (`prepareImageForLoRaRobust`, `MORG_COMPACT_IMG_V1`) | Stabilere UX, Limits, Retry (**Ticket A**, **§ H.3**) |
+| **Funk senden** | **Pfad 4** Klartext (LongFast); optional **„LoRa + eigene Verankerung“** (Self-Mirror Mailbox) | **Chunk + Bitmap-ACK** (**Roadmap-Ticket Schritt B**); **`MORG_SEG_V1`** für segmentierte Übertragung |
+| **Empfang** | Posteingang, **`use-morg-seg-reassembly.ts`**, progressive Anzeige | Vollständiges ACK-Protokoll + Smoke in **`TESTING.md`** |
+| **Verschlüsselt über Funk** | **Versand** Mesh-v2/E2E **abgeschaltet**; E2E nur **online** | Modus A/B-Trennung (**§ H.3** Nachtrag 2026-04-20) |
+
+#### Referenz-Labor (optional, nicht im MVP) — korrigierte Kurzanleitung
+
+*Nur für Verständnis „kleine Pakete → Bild“; Integration in Morgendrot erfordert **Gateway** oder **Meshtastic-Plugin**, nicht loses Python am Nano.*
+
+**Sender (Labor):**
+
+1. **ESP32-CAM** (JPEG erfassen) + **LoRa-Modul** (SX1276/1262) auf **einem** sauber verdrahteten Board oder Stack — **nicht** wackelig „aufgesteckt“ ohne Level/Reset-GND.
+2. Firmware: JPEG → **Chunks ≤ ~200 B Nutzlast** (Reserve für Header) → **Nummer + CRC** pro Chunk → Senden mit **Backoff** (nicht fix 1 s blind).
+3. **EU:** 868 MHz, **Duty-Cycle** beachten; SF/BW aus Profil wählen.
+
+**Empfänger (Labor):**
+
+1. Zweites LoRa-Modul + **USB-serieller MCU** (ESP32 oft besser als Nano wegen RAM für Bildpuffer).
+2. Host: Skript liest **Serial** (z. B. `COM3` / `/dev/ttyUSB0`), **Reassembly** nach `transferId` + Chunk-Index, **CRC prüfen**, dann JPEG speichern.
+
+**Abgleich mit Morgendrot-Zielbild:** Dieselbe **Idee** (INIT/CHUNK/ACK/DONE) steckt im Backlog **„Pfad-4 Bildtransfer Chunk + Bitmap-ACK“** und **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`** — Umsetzung **in der App** über **Meshtastic-Nachrichten**, nicht über separates `image_file.py`.
+
+**Priorität:** **Nach** Ticket A (Text/Queue/IOTA stabil) und **§ H.15 Stufe 2**-Smoke; **parallel** nur als **Forschungsnotiz**, kein Parallel-Hardware-Zweig ohne Meshtastic.
 
 ---
 
