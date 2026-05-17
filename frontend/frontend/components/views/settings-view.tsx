@@ -33,6 +33,7 @@ import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-te
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
+import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
 import {
   notifyFirstStepsPrefChanged,
@@ -650,6 +651,8 @@ export function SettingsView({
       )}
 
       {status?.backendOnline ? <ChatViewShadowSweep /> : null}
+
+      <SettingsTelegramIntegration backendOnline={status?.backendOnline ?? false} />
 
       {canToggleFullTiles && onShowAllTilesChange && (
         <div className="rounded-xl border border-border bg-card p-4">

@@ -11,6 +11,12 @@ export type TangleInventoryItem = {
   status: TangleInventoryStatus
   nonce?: string
   encrypted?: boolean
+  /** SHA-256 des gesamten Vollbericht-JSON bei mehrteiliger Verankerung */
+  chunkSha256?: string
+  /** SHA-256 des kanonischen Nachrichtenauszugs (Variante A Hash-Anker) */
+  anchorHashHex?: string
+  chunkPart?: number
+  chunkTotal?: number
 }
 
 const LS_KEY = 'morgendrot.tangleInventory.v1'

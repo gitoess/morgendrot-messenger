@@ -5,13 +5,18 @@
  */
 
 import type { Message } from '@/frontend/lib/types'
-import { nextOfflineMailboxClientOutSeq } from '@/frontend/lib/api/offline-queue'
+import { nextOfflineMailboxClientOutSeq, prependMailboxOutNonceMarker } from '@/frontend/lib/api/offline-queue'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
 import { buildEinsatzprotokollPayload } from '@/frontend/lib/einsatzprotokoll-export'
 import { MESSAGING_WIRE_UTF8_MAX } from '@/frontend/lib/compact-image-wire'
+import {
+  buildProtokollFullWireChunks,
+  MORG_PROTOKOLL_FULL_CHUNK_MARKER,
+} from '@/frontend/lib/einsatzprotokoll-anchor-chunks'
 
 export const MORG_PROTOKOLL_ANCHOR_PREFIX = '[[MORG_PROTOKOLL_ANCHOR_V1:'
 export const MORG_PROTOKOLL_ANCHOR_SUFFIX = ']]'
@@ -62,7 +67,24 @@ export function buildAnchorHashWire(hex64: string, meta: { exportedAt: number; m
   return core + line
 }
 
-export type AnchorOnChainResult = { ok: true; txDigest?: string } | { ok: false; error: string }
+export type AnchorOnChainRecord = {
+  digest?: string
+  nonce?: string
+  chunkPart?: number
+  chunkTotal?: number
+}
+
+export type AnchorOnChainResult =
+  | {
+      ok: true
+      txDigest?: string
+      txDigests?: string[]
+      chunksSent?: number
+      contentSha256?: string
+      anchorHashHex?: string
+      records?: AnchorOnChainRecord[]
+    }
+  | { ok: false; error: string; chunksSent?: number }
 
 /** Variante A: Klartext auf Chain (Explorer). Variante B: vollständiges JSON verschlüsselt /send. */
 export async function anchorEinsatzprotokollOnIota(p: {
@@ -72,7 +94,10 @@ export async function anchorEinsatzprotokollOnIota(p: {
   exportedByAddress?: string
   /** Für Hash-Variante: Empfänger der /send-plain-Transaktion (z. B. eigene 0x…). */
   recipientForPlain: string
+  messagingPersistenceMode?: MessagingPersistenceMode
+  onProgress?: (msg: string) => void
 }): Promise<AnchorOnChainResult> {
+  const persist = p.messagingPersistenceMode
   const selected = filterMessagesForAnchor(p.messages, p.scope)
   if (selected.length === 0) {
     return { ok: false, error: 'Keine Nachrichten für die gewählte Auswahl.' }
@@ -89,23 +114,90 @@ export async function anchorEinsatzprotokollOnIota(p: {
     if (u8.length > MESSAGING_WIRE_UTF8_MAX) {
       return { ok: false, error: `Anker-Wire zu lang (${u8.length} B UTF-8).` }
     }
-    const r = await sendPlaintextMailboxHybrid(
-      p.recipientForPlain.trim(),
-      wire,
-      BigInt(nextOfflineMailboxClientOutSeq())
-    )
-    return r.ok ? { ok: true, txDigest: r.txDigest } : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
+    const nonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
+    const wireOut = prependMailboxOutNonceMarker(wire, nonceU64)
+    const r = await sendPlaintextMailboxHybrid(p.recipientForPlain.trim(), wireOut, nonceU64, {
+      messagingPersistenceMode: persist,
+    })
+  const nonceStr = r.nonce ?? nonceU64.toString()
+    return r.ok
+      ? {
+          ok: true,
+          txDigest: r.txDigest,
+          anchorHashHex: hex,
+          records: [{ digest: r.txDigest, nonce: nonceStr }],
+        }
+      : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
+  }
+
+  const recipient = p.recipientForPlain.trim()
+  if (!recipient) {
+    return { ok: false, error: 'Für Vollbericht: Empfänger-Adresse setzen (oder eigene Adresse).' }
   }
 
   const payload = buildEinsatzprotokollPayload(selected, { exportedByAddress: p.exportedByAddress })
   const json = JSON.stringify(payload)
+  const contentSha256 = await sha256HexUtf8(json)
   const n = new TextEncoder().encode(json).length
-  if (n > MESSAGING_WIRE_UTF8_MAX) {
+
+  if (n <= MESSAGING_WIRE_UTF8_MAX) {
+    p.onProgress?.('Vollbericht: eine Transaktion…')
+    const nonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
+    const body = prependMailboxOutNonceMarker(json, nonceU64)
+    const r = await sendEncryptedMailboxHybrid(recipient, body, { messagingPersistenceMode: persist })
+    const nonceStr = r.nonce ?? nonceU64.toString()
+    return r.ok
+      ? {
+          ok: true,
+          txDigest: r.txDigest,
+          chunksSent: 1,
+          contentSha256,
+          records: [{ digest: r.txDigest, nonce: nonceStr }],
+        }
+      : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
+  }
+
+  let wires: string[]
+  try {
+    wires = buildProtokollFullWireChunks(json, contentSha256)
+  } catch (e) {
     return {
       ok: false,
-      error: `Vollbericht zu groß für eine Transaktion (${n} B UTF-8, max. ${MESSAGING_WIRE_UTF8_MAX}). Nur Hash-Variante oder weniger Nachrichten.`,
+      error: e instanceof Error ? e.message : String(e),
     }
   }
-  const r = await sendEncryptedMailboxHybrid(p.recipientForPlain.trim(), json)
-  return r.ok ? { ok: true, txDigest: r.txDigest } : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
+
+  p.onProgress?.(`Vollbericht: ${wires.length} Teile (${n} B)…`)
+  const txDigests: string[] = []
+  const records: AnchorOnChainRecord[] = []
+  for (let i = 0; i < wires.length; i++) {
+    p.onProgress?.(`Teil ${i + 1}/${wires.length} senden…`)
+    const nonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
+    const body = prependMailboxOutNonceMarker(wires[i]!, nonceU64)
+    const r = await sendEncryptedMailboxHybrid(recipient, body, { messagingPersistenceMode: persist })
+    if (!r.ok) {
+      return {
+        ok: false,
+        error: r.error || r.message || `Teil ${i + 1}/${wires.length}: /send fehlgeschlagen`,
+        chunksSent: txDigests.length,
+      }
+    }
+    if (r.txDigest) txDigests.push(r.txDigest)
+    records.push({
+      digest: r.txDigest,
+      nonce: r.nonce ?? nonceU64.toString(),
+      chunkPart: i + 1,
+      chunkTotal: wires.length,
+    })
+  }
+  return {
+    ok: true,
+    txDigest: txDigests[txDigests.length - 1],
+    txDigests,
+    chunksSent: wires.length,
+    contentSha256,
+    records,
+  }
 }
+
+export { MORG_PROTOKOLL_FULL_CHUNK_MARKER }

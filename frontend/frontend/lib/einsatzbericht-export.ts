@@ -53,9 +53,25 @@ export function buildEinsatzberichtPayload(
   }
 }
 
+/** Vollständiger Klartext (alle Nachrichten, ungekürzt). */
+export function buildEinsatzberichtFullText(payload: ReturnType<typeof buildEinsatzberichtPayload>): string {
+  const lines: string[] = [
+    `Morgendrot Nachrichtenverlauf (vollständig)`,
+    `Export: ${new Date(payload.meta.exportedAt).toLocaleString('de-DE')}`,
+    `Nachrichten: ${payload.messagesChronological.length}`,
+    '',
+  ]
+  for (const m of payload.messagesChronological) {
+    lines.push(`--- ${m.iso} | ${m.from} | ${m.transports.join(',')} | id=${m.id}`)
+    lines.push(m.content || '(leer)')
+    lines.push('')
+  }
+  return lines.join('\n')
+}
+
 export function buildEinsatzberichtSummaryText(payload: ReturnType<typeof buildEinsatzberichtPayload>): string {
   const lines: string[] = [
-    `Morgendrot Einsatzbericht (Kurzfassung)`,
+    `Morgendrot Nachrichtenverlauf (Text-Lesefassung)`,
     `Export: ${new Date(payload.meta.exportedAt).toLocaleString('de-DE')}`,
     `Nachrichten: ${payload.messagesChronological.length}`,
     '',
@@ -84,6 +100,21 @@ export function downloadEinsatzberichtJson(messages: Message[], meta: { exported
   URL.revokeObjectURL(url)
 }
 
+export function downloadEinsatzberichtFullTxt(messages: Message[], meta: { exportedByAddress?: string }): void {
+  const payload = buildEinsatzberichtPayload(messages, meta)
+  const txt = buildEinsatzberichtFullText(payload)
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `morgendrot-nachrichtenverlauf-voll-${payload.meta.exportedAt}.txt`
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 export function downloadEinsatzberichtSummaryTxt(messages: Message[], meta: { exportedByAddress?: string }): void {
   const payload = buildEinsatzberichtPayload(messages, meta)
   const txt = buildEinsatzberichtSummaryText(payload)
@@ -91,7 +122,7 @@ export function downloadEinsatzberichtSummaryTxt(messages: Message[], meta: { ex
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `morgendrot-einsatzbericht-kurz-${payload.meta.exportedAt}.txt`
+  a.download = `morgendrot-nachrichtenverlauf-kurz-${payload.meta.exportedAt}.txt`
   a.rel = 'noopener'
   document.body.appendChild(a)
   a.click()

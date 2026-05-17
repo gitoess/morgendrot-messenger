@@ -81,9 +81,6 @@ export type ChatViewSetupPanelProps = {
   onApplyPackageIdBackend: (raw: string) => void | Promise<void>
   onApplyInboxPackageFilterOnly: () => void | Promise<void>
   packageIdBusy?: boolean
-  /** Composer-Empfänger (0x) — Senden nutzt dieses Feld, nicht `partner` allein. */
-  activeSendRecipient?: string
-  onApplyPartnerAsSendRecipient?: () => void
   /** Gruppe: Handshake pro Mitglied (aktive Gruppe). */
   isGroupMode?: boolean
   groupMemberAddresses?: string[]
@@ -137,8 +134,6 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     onApplyPackageIdBackend,
     onApplyInboxPackageFilterOnly,
     packageIdBusy,
-    activeSendRecipient = '',
-    onApplyPartnerAsSendRecipient,
     isGroupMode = false,
     groupMemberAddresses = [],
     connectedAddresses = [],
@@ -146,14 +141,6 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
   } = p
 
   const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
-  const partnerTrim = partner.trim().toLowerCase()
-  const partnerValid = /^0x[a-f0-9]{64}$/.test(partnerTrim)
-  const sendRecipientTrim = activeSendRecipient.trim().toLowerCase()
-  const partnerMatchesSend =
-    partnerValid && sendRecipientTrim.length > 0 && partnerTrim === sendRecipientTrim
-  const knownPartnerAddresses = Object.keys(directory)
-    .map((a) => a.trim())
-    .filter((a) => /^0x[a-fA-F0-9]{64}$/.test(a))
   const connectedSet = useMemo(
     () => new Set(connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
     [connectedAddresses]
@@ -166,63 +153,14 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     [groupMemberAddresses]
   )
 
-  const showIotaOnline = forcedTransport === 'internet'
   const showLora = forcedTransport === 'mesh'
   const showAdhoc = forcedTransport === 'adhoc'
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
       <h3 className="mb-4 text-lg font-semibold text-foreground">
-        {showLora || showAdhoc ? 'Funk & Geräte' : 'Empfänger (Klartext)'}
+        {showLora || showAdhoc ? 'Funk & Geräte' : 'Kontakt & Verbindung'}
       </h3>
-
-      {showIotaOnline && !encrypted ? (
-        <section className="mb-6 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15" aria-labelledby="setup-iota-partner">
-          <h4 id="setup-iota-partner" className="mb-2 text-sm font-semibold text-foreground">
-            Empfänger: Partner-Wallet (<span className="font-mono">0x…</span>)
-          </h4>
-          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
-            Adresse eintragen und <strong className="text-foreground">„Empfänger fürs Senden übernehmen“</strong> — kein
-            Handshake.
-          </p>
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
-              <input
-                type="text"
-                list="chat-partner-addresses"
-                value={partner}
-                onChange={(e) => onPartnerChange(e.target.value)}
-                placeholder="0x + 64 Zeichen Hex (IOTA-Wallet des Empfängers)"
-                className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <datalist id="chat-partner-addresses">
-                {knownPartnerAddresses.map((addr) => (
-                  <option key={addr} value={addr} />
-                ))}
-              </datalist>
-              {onApplyPartnerAsSendRecipient ? (
-                <button
-                  type="button"
-                  onClick={onApplyPartnerAsSendRecipient}
-                  disabled={!partnerValid || sending}
-                  className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  Empfänger fürs Senden übernehmen
-                </button>
-              ) : null}
-              {partnerMatchesSend ? (
-                <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                  Aktiver Sende-Empfänger im Composer stimmt mit dieser Adresse überein.
-                </p>
-              ) : null}
-          </div>
-        </section>
-      ) : !showLora && !showAdhoc ? (
-        <section className="mb-6 rounded-lg border border-dashed border-border px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
-          <strong className="text-foreground">Funk:</strong> Keine 0x im Composer nötig. Optional Ziel-Knoten{' '}
-          <span className="font-mono">!…</span> im Nachrichtenfeld.
-        </section>
-      ) : null}
 
       {/* ——— LoRa · Heltec ——— */}
       {showLora ? (

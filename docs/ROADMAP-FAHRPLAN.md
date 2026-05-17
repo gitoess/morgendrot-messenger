@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-05-15** (§ **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-05-17** (§ **H.26** Telegram Runtime **Ist-Code**; Posteingang/Verankern/morg-pkg; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Nachtrag 2026-04-15:** Messenger-Realworld **`test:messages*`** — Abschnitt **`/vault-save`** nutzt Server-Sitzung nach UI-Unlock (kein `UNLOCK_PASSWORD_*` nötig); **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop gekennzeichnet; npm **`test:tickets-accesskey-realworld`** = Tickets/Keys (Alias zu **`test:realworld`**); Chain **`hasValidTicket`** / **`hasValidAccessKey`** mit **`normalizeAddress`** + Pagination, normalisierte IDs in **`getOwnedTickets`** / **`getOwnedAccessKeys`**; Ticket-Realworld-Skript Retries + ECONNREFUSED-Hinweis; **`npm run check:pwa-desk`** (**§ H.2** A+B). Siehe **`docs/CHAT-PROTOKOLL-2026-03-28.md`**.
@@ -151,6 +151,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.23** | **Verschlüsselung** — MVP-Architektur (Session Keys vs. Double Ratchet) |
 | **§ H.24** | **Package-abhängige UI** — Feature-Sichtbarkeit pro `PACKAGE_ID` / Deployment (Backlog) |
 | **§ H.25** | **Bilder über LoRa** — Produktpfad (Meshtastic) vs. Referenz-Labor (Roh-LoRa) |
+| **§ H.26** | **Telegram-Integration (Runtime)** — Alarme + optionale Kontakt-Benachrichtigung; **kein** `.env` für `TG_*` auf dem Gerät; **§ H.6e** / **§ H.20** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
 
@@ -1200,6 +1201,113 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Abgleich mit Morgendrot-Zielbild:** Dieselbe **Idee** (INIT/CHUNK/ACK/DONE) steckt im Backlog **„Pfad-4 Bildtransfer Chunk + Bitmap-ACK“** und **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`** — Umsetzung **in der App** über **Meshtastic-Nachrichten**, nicht über separates `image_file.py`.
 
 **Priorität (Labor-Hardware):** Referenz ESP32-CAM bleibt **Forschungsnotiz**; Produkt-Umsetzung = **§ H.25a** (Meshtastic).
+
+### H.26 Telegram-Integration — Runtime statt `TG_*` in `.env` (**Produkt / § H.6e / § H.16**)
+
+**Status:** **Teil umgesetzt** (2026-05-17). **Ist-Code:** Monitor-Alarme weiter **`MONITOR_ALARM_WEBHOOK_URL`** → **`scripts/telegram-webhook.ts`**; **neu:** Runtime **`src/integrations/telegram-runtime.ts`**, API **`/api/telegram-integration`**, UI **Einstellungen → Telegram**, Journal **`.morgendrot-telegram-journal.json`**, Posteingang-Merge — Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**. **Offen:** Kanal B (Kontakt-Hinweis nach jedem Send) vollständig; kein Chat-Vollspiegel auf Telegram.
+
+**Nachtrag 2026-05-17 (Posteingang / Chain / Export):** Event-Modus für Verankern/Senden ohne `USE_MAILBOX`; Vollbericht-Chunks; Tangle-Recovery per RPC **oder** `/inbox`; `.morg-pkg` über `commandPlaintext`; Status-Poll ohne Flackern; Syntaxfix **`mailbox-inbox-page-fetch.ts`** (Next-Dev 500).
+
+**Abgrenzung zur Roadmap (`.env`):**
+
+| Thema | Fahrplan-Aussage | Für Telegram |
+|--------|------------------|--------------|
+| **`.env` global abschaffen** | **Nein** (**§ H.6e**, **§ H.20**) | Server-Infra (RPC, `PACKAGE_ID`, Deploy) bleibt **`.env`** / Secret-Manager. |
+| **Nutzer-Secrets ohne `.env`** | **Ja** (Runtime) | Bot-Token & Chat-IDs über **UI → Runtime-Config** (`.morgendrot-runtime-config.json` / später Vault), nicht über `setEnvKey('TG_*')`. |
+| **Blocklist** | **`MONITOR_ALARM_WEBHOOK_URL`** darf nicht per API gesetzt werden | Telegram-Token **ebenfalls nicht** in die bestehende `.env`-API schreiben — eigener Integrations-Endpunkt mit klarer Policy. |
+
+**Zwei getrennte Kanäle (nicht vermischen):**
+
+| Kanal | Auslöser | Empfänger | Payload (Kurz) | Ist |
+|--------|----------|-----------|----------------|-----|
+| **A — Systemalarm** | Monitor (Offline, Sensor, Eskalation L1–L3) | **Eigene** Chat-ID (Admin) | `{ device, message, ts, level }` | **`telegram-webhook.ts`** + Monitor |
+| **B — Kontakt-Hinweis** | Optional nach Chat-Senden (kein Default-Doppelweg) | **`telegramChatId`** aus Telefonbuch | `{ target_chat_id, message_preview }` | **Geplant** |
+
+**Nicht-Ziele (explizit):**
+
+- **Kein** `bot_token` im JSON **pro Chat-Nachricht** (Missbrauch auf `localhost`, Logs, widerspricht Security-Policy).
+- **Kein** Ersatz für IOTA/Mailbox/LoRa-Forensik — Telegram ist **Zustell-Hinweis**, kein Chain-Beweis; Bot sieht **Klartext**.
+- **Kein** automatischer Parallel-Versand bei **jedem** Senden ohne Opt-in.
+- **Kein** direkter Browser-`fetch` zum Relay — nur **Haupt-API** (`/api/integrations/telegram`, `/api/…`).
+
+---
+
+#### Phase A — Monitor-Alarme (Runtime-UI, `.env`-Fallback)
+
+**Ziel:** Admin konfiguriert Telegram in der App; **kein** manuelles Editieren von `TG_*` in `.env` für Feldtests.
+
+| # | Lieferung | Details |
+|---|-----------|---------|
+| **A1** | **UI** Einstellungen → **Integrationen → Telegram** | Felder: Bot-Token (maskiert), **eigene** Chat-ID, Relay-Basis-URL (Default `http://127.0.0.1:8787`). Buttons: **„Test senden“**, **„Speichern“**. |
+| **A2** | **`POST /api/integrations/telegram`** | Schreibt **Runtime-Integrations-Objekt** (nicht `setEnvKey`); startet/health-checkt Relay-Prozess oder verbindet zu bestehendem Relay; Token **nie** in Client-Response zurückgeben. |
+| **A3** | **Relay** `POST /morgendrot-telegram/alarm` | Wie heute formatiert (`⚠️ Morgendrot Alarm L{n}` …); Token nur aus **geladener Integration** im Relay/Node-Prozess. Auth: **nur** `127.0.0.1` + optional Shared-Secret-Header. |
+| **A4** | **Monitor unverändert semantisch** | `MONITOR_ALARM_WEBHOOK_URL` zeigt weiter auf Relay; Wert kann aus Runtime beim Start gesetzt werden (Deploy-Fallback: `.env` bleibt möglich). |
+| **A5** | **Doku** | Kurz **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** (Onboarding: Bot `/start`, @userinfobot); Verweis in **`docs/SENSOR-ALARME-EINRICHTEN.md`**. |
+
+**Abnahme Phase A:**
+
+- Testalarm (Monitor oder `curl` an `/alarm`) landet in Telegram **ohne** `TG_*` in `.env`.
+- Neustart Node: Konfiguration aus **Runtime-Datei** wieder da (nicht „nur RAM“).
+- `setEnvKey('TG_BOT_TOKEN')` → **abgelehnt** oder ignoriert (wie Webhook-Blocklist).
+
+---
+
+#### Phase B — Kontakt-Benachrichtigung (nach **§ H.16** Telefonbuch)
+
+**Ziel:** Optionaler Kurz-Hinweis an einen Partner — **zusätzlich** zum Forensik-Pfad, nicht stattdessen.
+
+| # | Lieferung | Details |
+|---|-----------|---------|
+| **B1** | **Telefonbuch-Feld** `telegramChatId` | Analog `meshNodeId` / `bleUuid` in **`contact-labels.ts`** + API **`/api/contact-label`**. Validierung: numerische Chat-ID. |
+| **B2** | **Sende-Opt-in** | Composer oder Kontakt: „Telegram-Hinweis“ (Checkbox / Transport-Option); Default **aus**. |
+| **B3** | **Backend** nach erfolgreichem Forensik-Send | Nur wenn Opt-in + Integration aktiv + `telegramChatId` gesetzt → `POST /morgendrot-telegram/notify` (**ohne** `bot_token` im Body). |
+| **B4** | **UI-Hinweis** | „Telegram ist keine Forensik-Kopie auf der Chain.“ |
+
+**Abnahme Phase B:**
+
+- Partner mit ID erhält Vorschau-Text; Partner **ohne** ID: kein Fehler am IOTA-Send.
+- LoRa/Pfad-4-Send **ohne** Internet: IOTA/Mesh-Pfad unverändert; Telegram-Fehler **nicht blockierend**.
+
+---
+
+#### Architektur (Zielbild)
+
+```text
+[Einstellungen → Integrationen] ──POST──> [/api/integrations/telegram]
+                                              │
+                                              ▼
+                                    .morgendrot-runtime-config.json
+                                    (oder später Vault-Secret)
+                                              │
+[Monitor / optional Chat] ──POST──> [Relay :8787]
+         │                              ├─ /alarm   (Phase A)
+         │                              └─ /notify  (Phase B)
+         └─ Forensik-Pfad unverändert (IOTA / Mailbox / Mesh / LoRa)
+```
+
+**Relay-Implementierung:** **`fetch` → `api.telegram.org/bot…/sendMessage`** (wie **`scripts/telegram-webhook.ts`** heute) — **kein** `new TelegramBot()` pro Request.
+
+---
+
+#### Onboarding (Betrieb)
+
+1. Admin erstellt Bot bei **@BotFather**, trägt Token in **Integrationen** ein.
+2. Admin setzt **eigene Chat-ID** (Test-Button).
+3. Partner tippt beim Bot **Start**.
+4. Partner sendet ID (z. B. @userinfobot) → Admin trägt **`telegramChatId`** im Telefonbuch ein.
+5. Optional: „Test an Kontakt“ aus Einstellungen.
+
+---
+
+#### Priorität & Verknüpfung
+
+| Aspekt | Kurz |
+|--------|------|
+| **Priorität** | **Phase A** nach **§ H.2**-Stabilität / kleiner Scheibe parallel **§ H.16**; **Phase B** erst wenn Telefonbuch-Feld etabliert ist. |
+| **Verknüpfung** | **§ H.6e** (Runtime), **§ H.20** (`.env`-Verschlankung), **§ H.16** (Kontakte), **`docs/BROADCAST-PINNWAND.md`** (Pinnwand-Telegram-Idee **nicht** Teil von H.26). |
+| **Bestehendes Script** | **`scripts/telegram-webhook.ts`** bleibt Referenz; wird zu **konfigurierbarem Relay** mit zwei Routen erweitert oder von Node intern gestartet. |
+
+**Kritik-Check (aus Abstimmung 2026-05-15):** Vorschlag „Token bei jedem Senden mitschicken“ und „RAM-only“ werden **nicht** umgesetzt — siehe **Nicht-Ziele** oben.
 
 ---
 

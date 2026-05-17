@@ -2,42 +2,144 @@ import http from 'node:http';
 import { URL } from 'node:url';
 import dotenv from 'dotenv';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 /**
- * Kleiner Zwischen-Webhook: Morgendrot → Telegram.
+ * Kleiner Zwischen-Webhook: Morgendrot → Telegram (§ H.26).
  *
- * Erwartet POST JSON:
- * { device?: string; message?: string; ts?: number; level?: 1|2|3 }
- *
- * und schickt eine formatierte Nachricht an Telegram:
- * https://api.telegram.org/bot<TG_BOT_TOKEN>/sendMessage
- *
- * Konfiguration (Umgebungsvariablen):
- * - TG_BOT_TOKEN   – Bot-Token von @BotFather
- * - TG_CHAT_ID     – Chat-ID (User/Gruppe), die Nachrichten bekommen soll
- * - TG_WEBHOOK_PORT (optional) – Port für diesen Server (Standard 8787)
- *
- * MONITOR_ALARM_WEBHOOK_URL in Morgendrot zeigt auf:
- *   http://127.0.0.1:8787/morgendrot-telegram
+ * Kanal A — Alarm: POST /morgendrot-telegram/alarm (Legacy: /morgendrot-telegram)
+ * Kanal B — Kontakt: POST /morgendrot-telegram/notify
  */
 
-const PORT = Number(process.env.TG_WEBHOOK_PORT || 8787);
-const TOKEN = process.env.TG_BOT_TOKEN || '';
-const CHAT_ID = process.env.TG_CHAT_ID || '';
+import {
+    formatTelegramAlarmText,
+    formatTelegramNotifyText,
+    loadTelegramRelayCredentials,
+    sendTelegramMessage,
+    truncateTelegramMessagePreview,
+} from '../src/integrations/telegram-integration.js';
 
-if (!TOKEN || !CHAT_ID) {
-    console.error('Bitte TG_BOT_TOKEN und TG_CHAT_ID in der Umgebung setzen.');
+const PORT = Number(process.env.TG_WEBHOOK_PORT || 8787);
+
+function isLocalhostAddress(addr: string | undefined): boolean {
+    const a = (addr || '').replace(/^::ffff:/, '');
+    return a === '127.0.0.1' || a === '::1' || a === 'localhost';
+}
+
+function checkRelaySecret(req: http.IncomingMessage, expected: string): boolean {
+    if (!expected) return true;
+    const got = String(req.headers['x-morgendrot-relay-secret'] ?? '').trim();
+    return got === expected;
+}
+
+function rejectBotTokenInBody(body: string, res: http.ServerResponse): boolean {
+    if (body.includes('bot_token') || body.includes('"token"')) {
+        console.warn('Telegram-Relay: bot_token im Body abgelehnt.');
+        res.writeHead(400);
+        res.end('bot_token not allowed in body');
+        return true;
+    }
+    return false;
+}
+
+async function handleAlarmPost(
+    res: http.ServerResponse,
+    body: string,
+    creds: { token: string; chatId: string }
+): Promise<void> {
+    const payload = JSON.parse(body || '{}') as {
+        device?: string;
+        message?: string;
+        ts?: number;
+        level?: number;
+    };
+    const text = formatTelegramAlarmText(payload);
+    const target = creds.chatId;
+    if (!target) {
+        res.writeHead(503);
+        res.end('admin chat id missing');
+        return;
+    }
+    const result = await sendTelegramMessage(creds.token, target, text);
+    if (!result.ok) {
+        console.error('Telegram sendMessage fehlgeschlagen:', result.error);
+        res.writeHead(500);
+        res.end('telegram error');
+        return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+}
+
+async function handleNotifyPost(
+    res: http.ServerResponse,
+    body: string,
+    creds: { token: string }
+): Promise<void> {
+    const payload = JSON.parse(body || '{}') as {
+        target_chat_id?: string;
+        message_preview?: string;
+        sender_label?: string;
+    };
+    const target = String(payload.target_chat_id ?? '').trim();
+    if (!target) {
+        res.writeHead(400);
+        res.end('target_chat_id required');
+        return;
+    }
+    const preview = truncateTelegramMessagePreview(String(payload.message_preview ?? ''));
+    const senderLabel = String(payload.sender_label ?? 'Morgendrot').trim() || 'Morgendrot';
+    const text = formatTelegramNotifyText(senderLabel, preview);
+    const result = await sendTelegramMessage(creds.token, target, text);
+    if (!result.ok) {
+        console.error('Telegram notify fehlgeschlagen:', result.error);
+        res.writeHead(500);
+        res.end('telegram error');
+        return;
+    }
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ ok: true }));
+}
+
+const credsAtStart = loadTelegramRelayCredentials();
+if (!credsAtStart?.token) {
+    console.error(
+        'Bitte Telegram in Integrationen (Runtime) speichern oder TG_BOT_TOKEN in .env setzen.'
+    );
     process.exit(1);
 }
 
 const server = http.createServer((req, res) => {
     const url = new URL(req.url || '/', `http://${req.headers.host}`);
+    const isAlarmPath =
+        url.pathname === '/morgendrot-telegram' || url.pathname === '/morgendrot-telegram/alarm';
+    const isNotifyPath = url.pathname === '/morgendrot-telegram/notify';
 
-    if (req.method !== 'POST' || url.pathname !== '/morgendrot-telegram') {
+    if (req.method !== 'POST' || (!isAlarmPath && !isNotifyPath)) {
         res.writeHead(404);
         res.end('Not found');
+        return;
+    }
+
+    if (!isLocalhostAddress(req.socket?.remoteAddress)) {
+        res.writeHead(403);
+        res.end('forbidden');
+        return;
+    }
+
+    const creds = loadTelegramRelayCredentials();
+    if (!creds?.token) {
+        res.writeHead(503);
+        res.end('not configured');
+        return;
+    }
+
+    if (!checkRelaySecret(req, creds.relaySecret)) {
+        res.writeHead(401);
+        res.end('unauthorized');
         return;
     }
 
@@ -46,51 +148,21 @@ const server = http.createServer((req, res) => {
         body += chunk;
     });
 
-    req.on('end', async () => {
-        try {
-            const payload = JSON.parse(body || '{}') as {
-                device?: string;
-                message?: string;
-                ts?: number;
-                level?: number;
-            };
-
-            const device = payload.device || 'unbekanntes Gerät';
-            const msg = payload.message || 'Kein Text';
-            const level = payload.level ?? 1;
-            const ts = payload.ts ? new Date(payload.ts).toLocaleString('de-DE') : new Date().toLocaleString('de-DE');
-
-            const text =
-                `⚠️ Morgendrot Alarm L${level}\n` +
-                `Gerät: ${device}\n` +
-                `Zeit: ${ts}\n` +
-                `Meldung: ${msg}`;
-
-            const tgUrl = `https://api.telegram.org/bot${TOKEN}/sendMessage`;
-            const resp = await fetch(tgUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: CHAT_ID, text }),
-            });
-
-            if (!resp.ok) {
-                console.error('Telegram sendMessage fehlgeschlagen:', resp.status, await resp.text());
-                res.writeHead(500);
-                res.end('telegram error');
-                return;
-            }
-
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ ok: true }));
-        } catch (e: any) {
-            console.error('Fehler im Telegram-Webhook:', e?.message || e);
+    req.on('end', () => {
+        if (rejectBotTokenInBody(body, res)) return;
+        const run = isNotifyPath
+            ? handleNotifyPost(res, body, { token: creds.token })
+            : handleAlarmPost(res, body, creds);
+        void run.catch((e: unknown) => {
+            console.error('Fehler im Telegram-Webhook:', e instanceof Error ? e.message : e);
             res.writeHead(500);
             res.end('error');
-        }
+        });
     });
 });
 
-server.listen(PORT, () => {
-    console.log(`Morgendrot→Telegram Webhook läuft auf http://127.0.0.1:${PORT}/morgendrot-telegram`);
+server.listen(PORT, '127.0.0.1', () => {
+    console.log(
+        `Morgendrot→Telegram Relay: http://127.0.0.1:${PORT}/morgendrot-telegram/alarm | /notify`
+    );
 });
-

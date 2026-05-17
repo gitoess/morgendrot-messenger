@@ -12,6 +12,8 @@ export type ContactMeshEntryClient = {
   bleUuid?: string
   /** M4a: optionale private/alternative Mailbox-Object-ID des Kontakts (0x + 64 Hex). */
   mailboxObjectId?: string
+  /** Telegram Chat-ID des Kontakts (Hinweis nach Send, § H.26 B). */
+  telegramChatId?: string
 }
 
 /** POST /api/contact-labels/apply-initial-profile — gleiches Schema wie Server `InitialProfile`. */
@@ -54,10 +56,20 @@ export async function fetchContactDirectory(): Promise<{
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Kontakte nicht lesbar.' })
     if (!r.ok) return { ok: false, error: r.error }
     const b = r.body
+    const labels = b.labels as Record<string, string> | undefined
+    let directory = b.directory as Record<string, ContactMeshEntryClient> | undefined
+    if ((!directory || Object.keys(directory).length === 0) && labels && Object.keys(labels).length > 0) {
+      directory = {}
+      for (const [addr, label] of Object.entries(labels)) {
+        const a = addr.trim().toLowerCase()
+        if (!a) continue
+        directory[a] = { label: label || 'Partner' }
+      }
+    }
     return {
       ok: true,
-      labels: b.labels as Record<string, string> | undefined,
-      directory: b.directory as Record<string, ContactMeshEntryClient> | undefined,
+      labels,
+      directory,
       error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
@@ -73,6 +85,7 @@ export async function saveContactEntry(body: {
   meshNodeId?: string
   meshPublicKeyHex?: string
   mailboxObjectId?: string
+  telegramChatId?: string
   clearMesh?: boolean
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {

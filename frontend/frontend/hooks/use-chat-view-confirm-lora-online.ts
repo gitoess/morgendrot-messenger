@@ -39,7 +39,7 @@ export function useChatViewConfirmLoraOnline(p: UseChatViewSendFlowParams) {
         'Bewusst über Online (IOTA/Mailbox): LUMA und CHROMA als zwei Nachrichten gesendet – nicht über Funk.'
       )
       setMessage('')
-      setTimeout(() => void loadMessages(), 500)
+      setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
     } catch (e) {
       setStatus('error')
       setStatusMsg(e instanceof Error ? e.message : String(e))

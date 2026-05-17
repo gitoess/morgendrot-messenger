@@ -17,6 +17,7 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     loading: false,
     onExportEinsatzberichtJson: vi.fn(),
     onExportEinsatzberichtTxt: vi.fn(),
+    onExportEinsatzberichtTxtFull: vi.fn(),
     onExportEinsatzberichtEncrypted: vi.fn(),
     onExportEinsatzprotokoll: vi.fn(),
     onExportEinsatzprotokollPlainZip: vi.fn(),
@@ -42,24 +43,24 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     onToggleHideAllVisibleLocal: vi.fn(),
     messages: [],
     myAddress: '',
+    messagingPersistenceMode: 'event',
     ...overrides,
   }
 }
 
 describe('ChatViewInboxToolbar counter', () => {
-  it('shows total inbox count badge', () => {
+  it('does not show total count badge', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 12, inboxRowCount: 12 })} />)
-    expect(screen.getByText('12')).toBeInTheDocument()
+    expect(screen.queryByText(/^12$/)).toBeNull()
   })
 
   it('shows visible count hint when filtered rows differ', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 12, inboxRowCount: 4 })} />)
-    expect(screen.getByText('12')).toBeInTheDocument()
-    expect(screen.getByText('4 sichtbar')).toBeInTheDocument()
+    expect(screen.getByText(/4 von 12 sichtbar/)).toBeInTheDocument()
   })
 
-  it('hides visible hint when all rows are visible', () => {
+  it('hides visible count hint when all rows are visible', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 3, inboxRowCount: 3 })} />)
-    expect(screen.queryByText(/sichtbar$/i)).toBeNull()
+    expect(screen.queryByText(/\d+ von \d+ sichtbar/)).toBeNull()
   })
 })

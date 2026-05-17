@@ -281,7 +281,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         : (['internet'] as const)
                     ).map((t) => (
                       <span key={t} className="select-none text-sm" aria-hidden>
-                        {t === 'internet' ? '🌍' : t === 'mesh' ? '📡' : '📱'}
+                        {t === 'internet'
+                          ? '🌍'
+                          : t === 'mesh'
+                            ? '📡'
+                            : t === 'telegram'
+                              ? '✈️'
+                              : '📱'}
                       </span>
                     ))}
                   </span>

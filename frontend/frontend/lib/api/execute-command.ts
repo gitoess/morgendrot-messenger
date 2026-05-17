@@ -6,6 +6,8 @@ import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persiste
 
 export type ApiCommandPostBodyOpts = {
   morgPkg?: unknown
+  /** Großer Klartext für /morg-pkg-export (statt args[1]). */
+  commandPlaintext?: string
   messagingPersistenceMode?: MessagingPersistenceMode
   /** M4b: Ziel-Mailbox-Object-ID (Kontakt-private Mailbox). */
   mailboxObjectId?: string
@@ -19,6 +21,9 @@ export function buildApiCommandPostBody(
 ): Record<string, unknown> {
   const body: Record<string, unknown> = { cmd: command, args: args.map(String) }
   if (opts?.morgPkg != null && typeof opts.morgPkg === 'object') body.morgPkg = opts.morgPkg
+  if (typeof opts?.commandPlaintext === 'string' && opts.commandPlaintext.length > 0) {
+    body.commandPlaintext = opts.commandPlaintext
+  }
   if (opts?.messagingPersistenceMode != null) body.messagingPersistenceMode = opts.messagingPersistenceMode
   return body
 }
@@ -30,6 +35,7 @@ export async function executeCommand<T = unknown>(
     timeoutMs?: number
     signal?: AbortSignal
     morgPkg?: unknown
+    commandPlaintext?: string
     messagingPersistenceMode?: MessagingPersistenceMode
     mailboxObjectId?: string
   }
@@ -39,6 +45,7 @@ export async function executeCommand<T = unknown>(
       opts?.signal ?? (opts?.timeoutMs != null ? AbortSignal.timeout(opts.timeoutMs) : undefined)
     const body = buildApiCommandPostBody(command, args, {
       morgPkg: opts?.morgPkg,
+      commandPlaintext: opts?.commandPlaintext,
       messagingPersistenceMode: opts?.messagingPersistenceMode,
       mailboxObjectId: opts?.mailboxObjectId,
     })

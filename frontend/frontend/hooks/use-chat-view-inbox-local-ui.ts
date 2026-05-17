@@ -388,7 +388,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           setMessages((prev) => prev.filter((m) => m.id !== msg.id))
           setStatus('success')
           setStatusMsg('Nachricht auf der Chain gelöscht (Storage-Rebate).')
-          void loadMessages()
+          void loadMessages('reset', undefined, { silent: true })
         } else {
           setStatus('error')
           setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
@@ -491,7 +491,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       setStatus('success')
       setStatusMsg(`${list.length} Nachricht(en) auf der Chain gelöscht (Rebate).`)
-      void loadMessages()
+      void loadMessages('reset', undefined, { silent: true })
     } finally {
       setSending(false)
       setSelectedInboxIds(new Set())

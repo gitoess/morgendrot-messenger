@@ -142,6 +142,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   } = useChatViewInbox({
     refreshContactDirectory,
     packageId: inboxPackageFilter.trim() || undefined,
+    myAddress,
   })
 
   const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
@@ -303,6 +304,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
@@ -607,8 +609,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     directory,
     refreshContactDirectory,
     isMeshVerifiedForAddress,
-    /** Posteingang gesamt (geladen) vor lokalen UI-Filtern/Ausblenden; für Zähler/Badges. */
-    inboxTotalCount: messages.length,
+    /** Posteingang: Zähler = sichtbare Zeilen nach Partner/Richtung/Transport-Filtern. */
+    inboxTotalCount: filteredDisplayMessages.length,
     messages: displayMessages,
     setMessages,
     loading,
@@ -674,6 +676,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzberichtEncrypted,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,

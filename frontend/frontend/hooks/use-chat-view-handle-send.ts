@@ -57,6 +57,12 @@ import {
 import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
+import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
+import {
+  buildTelegramMessagePreview,
+  readTelegramNotifyOnSend,
+  resolveTelegramNotifyRecipientAddress,
+} from '@/frontend/lib/telegram-notify-pref'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -381,7 +387,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         setMessage('')
         if (shouldLoadMessagesAfterSend()) {
-          setTimeout(() => void loadMessages(), 500)
+          setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
         }
       } catch (e) {
         if (isUserCancelError(e)) {
@@ -467,7 +473,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         setMessage('')
         if (shouldLoadMessagesAfterSend()) {
-          setTimeout(() => void loadMessages(), 500)
+          setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
         }
       } catch (e) {
         if (isUserCancelError(e)) {
@@ -1094,6 +1100,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         lastOk.mailboxCapture?.encrypted === true
 
       setStatus('success')
+      const digestSuffix = formatTxDigestStatusSuffix(lastOk?.mailboxCapture?.txDigest)
+      let statusLine = successMsg + digestSuffix
       if (forensicGate && lastOk?.ok && lastOk.mailboxCapture) {
         const imgHash = await sha256HexFromBase64Bytes(attachedBlobBase64)
         await runForensicMailboxAttestationAfterSend({
@@ -1110,8 +1118,41 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           mailboxTxDigest: lastOk.mailboxCapture.txDigest,
         })
       } else {
-        setStatusMsg(successMsg + formatTxDigestStatusSuffix(lastOk?.mailboxCapture?.txDigest))
+        setStatusMsg(statusLine)
       }
+
+      if (readTelegramNotifyOnSend() && forcedTransport === 'internet' && isPrivate) {
+        const notifyAddr = recipient.trim().toLowerCase()
+        if (ADDR_64_LOWER.test(notifyAddr)) {
+          const contactEntry = contactDirectory[notifyAddr]
+          if (contactEntry?.telegramChatId?.trim()) {
+            const preview =
+              message.trim() ||
+              (attachedTxtFile
+                ? attachedTxtFile.text.slice(0, 200) || `[${attachedTxtFile.name}]`
+                : attachedBlobBase64
+                  ? '[Bild-Anhang]'
+                  : attachedAudioBase64
+                    ? '[Audio-Anhang]'
+                    : textSnaps[0]?.slice(0, 200) || 'Neue Morgendrot-Nachricht')
+            const myLabel =
+              contactDirectory[myAddress.trim().toLowerCase()]?.label ||
+              `${myAddress.trim().slice(0, 10)}…`
+            void notifyTelegramContact({
+              recipientAddress: notifyAddr,
+              messagePreview: preview,
+              senderLabel: myLabel,
+            }).then((r) => {
+              if (r.delivered) {
+                setStatusMsg(`${statusLine} · Telegram-Hinweis an Kontakt gesendet.`)
+              } else if (r.error) {
+                setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
+              }
+            })
+          }
+        }
+      }
+
       if (lastOk?.ok && lastOk.mailboxCapture?.txDigest) {
         const inv = {
           digest: lastOk.mailboxCapture.txDigest,
@@ -1128,7 +1169,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
-        setTimeout(() => loadMessages(), 500)
+        setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
       }
     } catch (e) {
       if (isUserCancelError(e)) {
@@ -1176,6 +1217,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     meshPlaintextNodeId,
     clearMeshInboundText,
     drainMeshInboundText,
+    contactDirectory,
+    partner,
   ])
 
   return { handleSend, cancelSend }

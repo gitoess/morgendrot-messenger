@@ -23,10 +23,17 @@ export type ContactMeshEntry = {
      * M4a: Speicherort für Send-Routing (M4b); leer = Shared Mailbox des Servers.
      */
     mailboxObjectId?: string;
+    /** Telegram Chat-ID für optionalen Kurz-Hinweis nach Forensik-Send (§ H.26 Phase B). */
+    telegramChatId?: string;
 };
 
-/** Adresse (lowercase 0x+64hex) → Eintrag */
+/**
+ * Verzeichnis-Schlüssel: IOTA-Wallet (0x+64hex) oder rein Telegram `tg:<chatId>`.
+ * Messenger/Chain nutzen weiterhin 0x; tg:-Keys sind für Kurz-Hinweise ohne bekannte Wallet.
+ */
 export type ContactDirectory = Record<string, ContactMeshEntry>;
+
+const TG_DIRECTORY_KEY = /^tg:-?\d{1,20}$/;
 
 function filePath(): string {
     return path.resolve(process.cwd(), process.env.CONTACT_LABELS_FILE || DEFAULT_FILE);
@@ -35,6 +42,27 @@ function filePath(): string {
 function normalizeAddress(addr: string): string | null {
     const hex = (addr || '').trim().toLowerCase();
     return /^0x[a-f0-9]{64}$/.test(hex) ? hex : null;
+}
+
+export function normalizeTelegramChatId(raw: string): string | null {
+    const t = (raw || '').trim();
+    return /^-?\d{1,20}$/.test(t) ? t : null;
+}
+
+/** Gültiger Schlüssel in `.morgendrot-contact-labels.json`. */
+export function normalizeDirectoryKey(addr: string): string | null {
+    const hex = normalizeAddress(addr);
+    if (hex) return hex;
+    const lower = (addr || '').trim().toLowerCase();
+    return TG_DIRECTORY_KEY.test(lower) ? lower : null;
+}
+
+/** Speicher-Schlüssel aus Adressfeld und/oder Telegram Chat-ID. */
+export function resolveContactStorageKey(addressRaw: string, telegramChatIdRaw?: string): string | null {
+    const fromAddr = normalizeDirectoryKey(addressRaw);
+    if (fromAddr) return fromAddr;
+    const tg = normalizeTelegramChatId(telegramChatIdRaw ?? '');
+    return tg ? `tg:${tg}` : null;
 }
 
 /** IOTA-Object-ID (private Mailbox, Package, …): 0x + 64 Hex. */
@@ -89,6 +117,10 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
     const bleUuid = typeof o.bleUuid === 'string' ? normalizeBleUuid(o.bleUuid) ?? undefined : undefined;
     const mailboxObjectId =
         typeof o.mailboxObjectId === 'string' ? normalizeMailboxObjectId(o.mailboxObjectId) ?? undefined : undefined;
+    const telegramChatId =
+        typeof o.telegramChatId === 'string' && /^-?\d{1,20}$/.test(o.telegramChatId.trim())
+            ? o.telegramChatId.trim()
+            : undefined;
     let roleTags: string[] | undefined;
     if (Array.isArray(o.roleTags)) {
         const tags = o.roleTags
@@ -97,7 +129,8 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
             .slice(0, 20);
         if (tags.length) roleTags = tags;
     }
-    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length && !mailboxObjectId) return null;
+    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length && !mailboxObjectId && !telegramChatId)
+        return null;
     return {
         label: label || 'Partner',
         ...(roleTags ? { roleTags } : {}),
@@ -105,6 +138,7 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
         ...(meshPublicKeyHex && { meshPublicKeyHex }),
         ...(bleUuid && { bleUuid }),
         ...(mailboxObjectId && { mailboxObjectId }),
+        ...(telegramChatId && { telegramChatId }),
     };
 }
 
@@ -116,7 +150,7 @@ export function loadContactDirectory(): ContactDirectory {
         if (typeof j !== 'object' || j === null || Array.isArray(j)) return {};
         const out: ContactDirectory = {};
         for (const [k, v] of Object.entries(j)) {
-            const addr = normalizeAddress(k);
+            const addr = normalizeDirectoryKey(k);
             if (!addr) continue;
             const e = parseEntry(v);
             if (e) out[addr] = e;
@@ -140,11 +174,11 @@ export function loadContactLabels(): Record<string, string> {
 }
 
 export function saveContactLabel(address: string, label: string): void {
-    const hex = normalizeAddress(address);
-    if (!hex) return;
+    const key = normalizeDirectoryKey(address);
+    if (!key) return;
     const dir = loadContactDirectory();
-    const prev = dir[hex] ?? { label: 'Partner' };
-    dir[hex] = { ...prev, label: (label || 'Partner').trim().slice(0, 64) || 'Partner' };
+    const prev = dir[key] ?? { label: 'Partner' };
+    dir[key] = { ...prev, label: (label || 'Partner').trim().slice(0, 64) || 'Partner' };
     writeDirectory(dir);
 }
 
@@ -156,12 +190,13 @@ export function saveContactMeshFields(
         meshPublicKeyHex?: string | null;
         bleUuid?: string | null;
         mailboxObjectId?: string | null;
+        telegramChatId?: string | null;
     }
 ): void {
-    const hex = normalizeAddress(address);
-    if (!hex) return;
+    const key = normalizeDirectoryKey(address);
+    if (!key) return;
     const dir = loadContactDirectory();
-    const prev = dir[hex] ?? { label: 'Partner' };
+    const prev = dir[key] ?? { label: 'Partner' };
     const next: ContactMeshEntry = { ...prev };
     if (fields.label !== undefined) next.label = fields.label.trim().slice(0, 64) || 'Partner';
     if (fields.meshNodeId !== undefined) {
@@ -191,7 +226,17 @@ export function saveContactMeshFields(
             if (m) next.mailboxObjectId = m;
         }
     }
-    dir[hex] = next;
+    if (fields.telegramChatId !== undefined) {
+        if (fields.telegramChatId === null || fields.telegramChatId === '') delete next.telegramChatId;
+        else {
+            const t = fields.telegramChatId.trim();
+            if (/^-?\d{1,20}$/.test(t)) next.telegramChatId = t;
+        }
+    }
+    if (key.startsWith('tg:') && !next.telegramChatId) {
+        next.telegramChatId = key.slice(3);
+    }
+    dir[key] = next;
     writeDirectory(dir);
 }
 
@@ -206,7 +251,7 @@ export function mergeContactDirectory(incoming: ContactDirectory): { merged: num
     const dir = loadContactDirectory();
     let merged = 0;
     for (const [k, v] of Object.entries(incoming)) {
-        const addr = normalizeAddress(k);
+        const addr = normalizeDirectoryKey(k);
         if (!addr || !v || typeof v !== 'object') continue;
         const parsed = parseEntry(v);
         if (!parsed) continue;
@@ -218,10 +263,17 @@ export function mergeContactDirectory(incoming: ContactDirectory): { merged: num
     return { merged };
 }
 
+export function getContactTelegramChatId(address: string): string | undefined {
+    const key = normalizeDirectoryKey(address);
+    if (!key) return undefined;
+    if (key.startsWith('tg:')) return key.slice(3);
+    return loadContactDirectory()[key]?.telegramChatId;
+}
+
 export function getContactLabel(address: string): string | undefined {
-    const hex = normalizeAddress(address);
-    if (!hex) return undefined;
-    return loadContactDirectory()[hex]?.label;
+    const key = normalizeDirectoryKey(address);
+    if (!key) return undefined;
+    return loadContactDirectory()[key]?.label;
 }
 
 /** Lookup für eingehende Funk-Nachrichten: Node-ID → Kontakt. */

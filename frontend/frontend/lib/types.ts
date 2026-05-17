@@ -21,11 +21,11 @@ export interface Message {
   encrypted?: boolean
   /** Bei Boss-Übersicht: an welche Adresse die Nachricht ging („An mich“ vs „An Kommandant“). */
   recipient?: string
-  /** Standard: Mailbox/IOTA; lokal vom Funk-Stick */
-  source?: 'mailbox' | 'mesh'
+  /** Standard: Mailbox/IOTA; lokal vom Funk-Stick; Telegram-Journal (§ H.26) */
+  source?: 'mailbox' | 'mesh' | 'telegram'
   meshMeta?: { kind: 'v2' | 'text'; fromNodeNum: number; nonce?: number; sosAckDigest?: string }
   /** Kanäle, über die derselbe Inhalt (dedupKey) angekommen ist */
-  transports?: ('internet' | 'mesh' | 'adhoc')[]
+  transports?: ('internet' | 'mesh' | 'adhoc' | 'telegram')[]
   /** Inhalt + Absender + Zeitfenster – für Zusammenführung IOTA+Funk */
   dedupKey?: string
   /** Mailbox-Nonce (String), nur bei chain-gespeicherten Nachrichten – für /purge-msg */

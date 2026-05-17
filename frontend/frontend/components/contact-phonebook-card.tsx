@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, type ReactNode } from 'react'
-import { Lock, MoreVertical, Radio, Star, Wifi } from 'lucide-react'
+import { Lock, MessageSquare, MoreVertical, Radio, Star, Wifi } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +29,8 @@ export type ContactPhonebookCardProps = {
   onShowQr: () => void
   onRemove: () => void
   onRecordContact: () => void
+  /** Kontakt ins Composer übernehmen (eigener Button, nicht Kartenklick). */
+  onSelectForMessenger?: () => void
 }
 
 function ReachBadge(p: {
@@ -70,6 +72,7 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
     onShowQr,
     onRemove,
     onRecordContact,
+    onSelectForMessenger,
   } = props
 
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -106,9 +109,6 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
       onMouseDown={startLongPress}
       onMouseUp={clearLongPress}
       onMouseLeave={clearLongPress}
-      onClick={() => {
-        onRecordContact()
-      }}
     >
       <div className="flex items-start gap-2">
         <button
@@ -151,9 +151,29 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-[12rem]">
-                <DropdownMenuItem onClick={onShowQr}>QR-Code anzeigen</DropdownMenuItem>
-                <DropdownMenuItem onClick={onEdit}>Bearbeiten / Mailbox</DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={onRemove}>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    onShowQr()
+                  }}
+                >
+                  QR-Code anzeigen
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    onEdit()
+                  }}
+                >
+                  Bearbeiten / Mailbox
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    onRemove()
+                  }}
+                >
                   Aus Telefonbuch entfernen
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -196,10 +216,30 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
               Meshtastic: <strong>{entry.meshNodeId.trim()}</strong>
             </p>
           ) : null}
+          {entry.telegramChatId?.trim() ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Telegram: <span className="font-mono text-foreground">{entry.telegramChatId.trim()}</span>
+            </p>
+          ) : null}
 
           <p className="mt-2 text-xs text-muted-foreground">
             Zuletzt: <span className="text-foreground/90">{formatContactLastSeen(lastSeen)}</span>
           </p>
+
+          {onSelectForMessenger ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRecordContact()
+                onSelectForMessenger()
+              }}
+              className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 text-sm font-medium text-primary hover:bg-primary/15"
+            >
+              <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
+              Im Messenger verwenden
+            </button>
+          ) : null}
         </div>
       </div>
     </article>

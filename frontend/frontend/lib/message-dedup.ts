@@ -46,3 +46,24 @@ export function mergeAllMessages(rows: Message[]): Message[] {
   }
   return acc.sort((a, b) => b.timestamp - a.timestamp)
 }
+
+/** Signatur für „Liste unverändert“ — vermeidet unnötige React-Updates. */
+export function inboxMessageListSignature(messages: Message[]): string {
+  return messages.map((m) => `${m.id}:${m.timestamp}`).join('|')
+}
+
+/** Journal-Zeilen mergen; gibt `prev` zurück wenn sich nichts ändert. */
+export function mergeJournalIntoInboxIfChanged(prev: Message[], incoming: Message[]): Message[] {
+  if (incoming.length === 0) return prev
+  const prevIds = new Set(prev.map((m) => m.id))
+  const prevDedup = new Set(prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
+  const novel = incoming.filter((m) => {
+    if (prevIds.has(m.id)) return false
+    if (m.dedupKey && prevDedup.has(m.dedupKey)) return false
+    return true
+  })
+  if (novel.length === 0) return prev
+  const next = mergeAllMessages([...prev, ...novel])
+  if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+  return next
+}

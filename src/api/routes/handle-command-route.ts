@@ -119,6 +119,9 @@ export function handleCommandRoute(
             if (data.morgPkg != null && typeof data.morgPkg === 'object') {
                 commandApiOptions.morgPkg = data.morgPkg;
             }
+            if (typeof data.commandPlaintext === 'string' && data.commandPlaintext.length > 0) {
+                commandApiOptions.commandPlaintext = data.commandPlaintext;
+            }
             const mp = String(data.messagingPersistenceMode ?? '').trim().toLowerCase();
             if (mp === 'mailbox' || mp === 'event') {
                 commandApiOptions.messagingPersistenceMode = mp as 'event' | 'mailbox';

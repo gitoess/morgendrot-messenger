@@ -21,8 +21,8 @@ export function resolveForceLegacyEncrypted(opts?: {
     const mp = String(opts?.messagingPersistenceMode ?? '').trim().toLowerCase();
     if (mp === 'event') return true;
     if (mp === 'mailbox') return false;
-    /** API/CLI ohne Modus: bisheriges Verhalten (Mailbox wenn konfiguriert). */
-    return false;
+    /** Ohne Modus: Event-Pfad (funktioniert ohne USE_MAILBOX). */
+    return true;
 }
 
 export type MailboxEncryptedConfigSnapshot = {

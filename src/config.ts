@@ -568,47 +568,59 @@ function parseRuntimeBool(raw: unknown): boolean | undefined {
     return undefined;
 }
 
-function readRuntimeConfig(): RuntimeConfig {
+/** Vollständige Runtime-Datei (inkl. integrations.*) — Merge beim Schreiben. */
+export function readRuntimeConfigRaw(): Record<string, unknown> {
     try {
         if (!fs.existsSync(RUNTIME_CONFIG_PATH)) return {};
         const raw = fs.readFileSync(RUNTIME_CONFIG_PATH, 'utf-8');
-        const parsed = JSON.parse(raw) as {
-            signer?: unknown;
-            walletDerivationPath?: unknown;
-            useMailbox?: unknown;
-            mailboxStorePlaintext?: unknown;
-            enablePlaintextChannel?: unknown;
-        };
-        const signer = parseRuntimeSigner(parsed.signer);
-        const walletDerivationPath = String(parsed.walletDerivationPath ?? '').trim();
-        const useMailbox = parseRuntimeBool(parsed.useMailbox);
-        const mailboxStorePlaintext = parseRuntimeBool(parsed.mailboxStorePlaintext);
-        const enablePlaintextChannel = parseRuntimeBool(parsed.enablePlaintextChannel);
-        const out: RuntimeConfig = {};
-        if (signer) out.signer = signer;
-        if (walletDerivationPath) out.walletDerivationPath = walletDerivationPath;
-        if (useMailbox != null) out.useMailbox = useMailbox;
-        if (mailboxStorePlaintext != null) out.mailboxStorePlaintext = mailboxStorePlaintext;
-        if (enablePlaintextChannel != null) out.enablePlaintextChannel = enablePlaintextChannel;
-        return out;
+        const parsed = JSON.parse(raw) as unknown;
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
     } catch {
         return {};
     }
 }
 
-function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; path?: string } {
+export function writeRuntimeConfigRaw(data: Record<string, unknown>): { ok: boolean; error?: string; path?: string } {
     try {
-        const payload: RuntimeConfig = {};
-        if (cfg.signer) payload.signer = cfg.signer;
-        if (cfg.walletDerivationPath) payload.walletDerivationPath = cfg.walletDerivationPath;
-        if (cfg.useMailbox != null) payload.useMailbox = cfg.useMailbox;
-        if (cfg.mailboxStorePlaintext != null) payload.mailboxStorePlaintext = cfg.mailboxStorePlaintext;
-        if (cfg.enablePlaintextChannel != null) payload.enablePlaintextChannel = cfg.enablePlaintextChannel;
-        fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(payload, null, 2) + '\n', 'utf-8');
+        fs.writeFileSync(RUNTIME_CONFIG_PATH, JSON.stringify(data, null, 2) + '\n', 'utf-8');
         return { ok: true, path: RUNTIME_CONFIG_PATH };
     } catch (e: any) {
         return { ok: false, error: String(e?.message || e) };
     }
+}
+
+function parseRuntimeConfigFromRaw(parsed: Record<string, unknown>): RuntimeConfig {
+    const signer = parseRuntimeSigner(parsed.signer);
+    const walletDerivationPath = String(parsed.walletDerivationPath ?? '').trim();
+    const useMailbox = parseRuntimeBool(parsed.useMailbox);
+    const mailboxStorePlaintext = parseRuntimeBool(parsed.mailboxStorePlaintext);
+    const enablePlaintextChannel = parseRuntimeBool(parsed.enablePlaintextChannel);
+    const out: RuntimeConfig = {};
+    if (signer) out.signer = signer;
+    if (walletDerivationPath) out.walletDerivationPath = walletDerivationPath;
+    if (useMailbox != null) out.useMailbox = useMailbox;
+    if (mailboxStorePlaintext != null) out.mailboxStorePlaintext = mailboxStorePlaintext;
+    if (enablePlaintextChannel != null) out.enablePlaintextChannel = enablePlaintextChannel;
+    return out;
+}
+
+function readRuntimeConfig(): RuntimeConfig {
+    return parseRuntimeConfigFromRaw(readRuntimeConfigRaw());
+}
+
+function writeRuntimeConfig(cfg: RuntimeConfig): { ok: boolean; error?: string; path?: string } {
+    const merged = { ...readRuntimeConfigRaw() };
+    if (cfg.signer) merged.signer = cfg.signer;
+    else delete merged.signer;
+    if (cfg.walletDerivationPath) merged.walletDerivationPath = cfg.walletDerivationPath;
+    else delete merged.walletDerivationPath;
+    if (cfg.useMailbox != null) merged.useMailbox = cfg.useMailbox;
+    else delete merged.useMailbox;
+    if (cfg.mailboxStorePlaintext != null) merged.mailboxStorePlaintext = cfg.mailboxStorePlaintext;
+    else delete merged.mailboxStorePlaintext;
+    if (cfg.enablePlaintextChannel != null) merged.enablePlaintextChannel = cfg.enablePlaintextChannel;
+    else delete merged.enablePlaintextChannel;
+    return writeRuntimeConfigRaw(merged);
 }
 
 function applyRuntimeConfigToCfg(): void {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, type ChangeEvent } from 'react'
+import { toast } from 'sonner'
 import { morgPkgExport, morgPkgImport, compactImageEncode } from '@/frontend/lib/api'
 import { downloadMorgPkgJson } from '@/frontend/lib/sneakernet-export'
 import {
@@ -27,6 +28,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
   const {
     apiStatus,
     partner,
+    recipient,
     myAddress,
     setMessages,
     setStatus,
@@ -90,35 +92,44 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       const { recipient: rec, error } = resolveMorgPkgRecipient()
       if (!rec) {
         showMorgPkgRecipientError(error, setStatus, setStatusMsg)
+        toast.error(error || 'Partner fehlt für .morg-pkg-Export.')
         return
       }
       setMorgPkgDeviceBusy(true)
-      setStatus('idle')
+      setStatus('success')
+      setStatusMsg(`Paket: ${list.length} Datei(en) werden verarbeitet…`)
+      toast.message('.morg-pkg-Export', { description: `${list.length} Datei(en) — bitte warten…` })
       try {
         const built = await buildMorgPkgBundleFromFiles(list, compactImageEncode)
         if (!built.ok) {
           setStatus('error')
           setStatusMsg(built.error)
+          toast.error(built.error)
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
+        setStatusMsg('Verschlüsselung auf dem Server (/morg-pkg-export)…')
         const r = await morgPkgExport(rec, built.plaintext)
         if (!r.ok || !r.morgPkg) {
+          const err = r.message || r.error || '.morg-pkg-Export fehlgeschlagen.'
           setStatus('error')
-          setStatusMsg(r.message || r.error || '.morg-pkg-Export fehlgeschlagen.')
+          setStatusMsg(err)
+          toast.error(err)
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
         const stem = `Fuer_${rec.slice(0, 10)}_bundle_${built.itemCount}files_${Date.now()}`
         downloadMorgPkgJson(r.morgPkg, stem)
+        const okMsg = `ECDH-.morg-pkg heruntergeladen (${built.itemCount} Datei(en)). Datei an Partner übergeben.`
         setStatus('success')
-        setStatusMsg(
-          `ECDH-.morg-pkg (${built.itemCount} Datei(en), schema morgendrot.morgpkg.bundle.v1 im Klartext vor Verschlüsselung).`
-        )
-        setTimeout(() => setStatus('idle'), 5000)
+        setStatusMsg(okMsg)
+        toast.success(okMsg)
+        setTimeout(() => setStatus('idle'), 6000)
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err)
         setStatus('error')
-        setStatusMsg(err instanceof Error ? err.message : String(err))
+        setStatusMsg(errMsg)
+        toast.error(errMsg)
         setTimeout(() => setStatus('idle'), 8000)
       } finally {
         setMorgPkgDeviceBusy(false)

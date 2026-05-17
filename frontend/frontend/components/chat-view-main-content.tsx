@@ -4,7 +4,7 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { clearLocalHistory } from '@/frontend/lib/api'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
@@ -31,8 +31,10 @@ import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phoneboo
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
-import { saveContactEntry } from '@/frontend/lib/api'
+import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
+import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
@@ -105,6 +107,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
+    appendMeshMessage,
     inboxRows,
     meshtastic,
     meshExportPw,
@@ -161,6 +164,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzberichtEncrypted,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
@@ -222,7 +226,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [contactAliasBusy, setContactAliasBusy] = useState(false)
   const [phonebookOpen, setPhonebookOpen] = useState(false)
 
-  const pendingHandshakeRefreshKey = `${messages.length}:${(apiStatus?.connectedAddresses ?? []).join('|')}:${loading ? 'l' : 'r'}`
+  useEffect(() => {
+    if (phonebookOpen) refreshContactDirectory()
+  }, [phonebookOpen, refreshContactDirectory])
+
+  const pendingHandshakeRefreshKey = `${(apiStatus?.connectedAddresses ?? []).join('|')}`
 
   const {
     offers: pendingHandshakeOffers,
@@ -314,6 +322,42 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [meshtastic, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
   )
 
+  const applyPhonebookContact = useCallback(
+    (storageKey: string, entry: ContactMeshEntryClient) => {
+      const applied = applyPhonebookContactToComposer(storageKey, entry, {
+        setPartner,
+        setRecipient,
+        setContactMeshNodeId,
+        setMeshPlaintextNodeId,
+        setMeshPlaintextToNodeEnabled,
+        setContactBleUuid,
+        selectInboxPartnerForSend,
+      })
+      recordContactLastContacted(applied.storageKey)
+      setPhonebookOpen(false)
+      const parts: string[] = []
+      if (applied.iotaAddress) parts.push('IOTA')
+      if (applied.telegramChatId) parts.push('Telegram')
+      if (applied.meshNodeId) parts.push('Meshtastic')
+      if (applied.mailboxObjectId) parts.push('Mailbox')
+      toast.success(
+        `${applied.label}: ${parts.length ? parts.join(', ') : 'Kontakt'} übernommen — Transport wählen und senden.`
+      )
+      requestAnimationFrame(() => {
+        document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    },
+    [
+      setPartner,
+      setRecipient,
+      setContactMeshNodeId,
+      setMeshPlaintextNodeId,
+      setMeshPlaintextToNodeEnabled,
+      setContactBleUuid,
+      selectInboxPartnerForSend,
+    ]
+  )
+
   const applyPartnerAsSendRecipient = useCallback(() => {
     const a = partner.trim().toLowerCase()
     if (!/^0x[a-f0-9]{64}$/.test(a)) {
@@ -357,6 +401,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     apiStatus,
     onRefresh: () => {
       void loadMessages('reset')
+      refreshContactDirectory()
       void reloadPendingHandshakes()
     },
     pendingHandshakeOffers,
@@ -389,6 +434,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     exportEcdhMorgPkgForMessage,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzberichtEncrypted,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
@@ -421,6 +467,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
     showPhonebookButton: isPrivate || isGroup,
     onOpenPhonebook: () => setPhonebookOpen(true),
+    onOpenPartnerSetup: openPartnerSetupPanel,
+    messagingPersistenceMode,
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {
@@ -484,6 +532,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       await loadMessages()
     },
     contactDirectory: directory,
+    partner,
+    onPartnerChange: setPartner,
+    myAddress,
+    onStatusFeedback: (msg, st = 'success') => {
+      setStatus(st)
+      setStatusMsg(msg)
+    },
+    onTelegramDelivered: ({ recipientKey, text }) => {
+      recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
+    },
   } satisfies ChatViewSendPanelProps
 
   const showEncryptedPartnerPanel =
@@ -491,10 +549,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const showPartnerSetupPanel =
     (isPrivate || isGroup) &&
-    (showSetup ||
-      forcedTransport === 'mesh' ||
-      forcedTransport === 'adhoc' ||
-      (!encrypted && forcedTransport === 'internet'))
+    (showSetup || forcedTransport === 'mesh' || forcedTransport === 'adhoc')
 
   const transportCardProps = {
     ...asSendTransportChoice(
@@ -637,8 +692,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onApplyPackageIdBackend={applyPackageIdBackend}
           onApplyInboxPackageFilterOnly={applyInboxPackageFilterOnly}
           packageIdBusy={packageIdBusy}
-          activeSendRecipient={recipient}
-          onApplyPartnerAsSendRecipient={applyPartnerAsSendRecipient}
         />
       ) : null}
 
@@ -669,6 +722,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           directory={directory}
           refreshContactDirectory={refreshContactDirectory}
           connectedAddresses={apiStatus?.connectedAddresses ?? []}
+          onSelectContact={applyPhonebookContact}
           setStatusMsg={(msg) => {
             setStatus('success')
             setStatusMsg(msg)

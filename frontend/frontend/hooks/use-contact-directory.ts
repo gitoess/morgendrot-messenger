@@ -19,6 +19,14 @@ export function useContactDirectory() {
     fetchContactDirectory().then((r) => {
       if (!alive) return
       if (r.ok && r.directory) setDirectory(r.directory)
+      else if (r.ok && r.labels) {
+        const built: Record<string, ContactMeshEntryClient> = {}
+        for (const [addr, label] of Object.entries(r.labels)) {
+          const a = addr.trim().toLowerCase()
+          if (a) built[a] = { label: label || 'Partner' }
+        }
+        setDirectory(built)
+      }
     })
     return () => {
       alive = false

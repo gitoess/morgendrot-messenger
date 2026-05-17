@@ -44,3 +44,15 @@ export function pickMeshRowsForInboxMerge(prev: Message[]): Message[] {
   const fromArch = loadMeshArchive().filter((m) => !ids.has(m.id))
   return [...fromPrev, ...fromArch]
 }
+
+function isTelegramInboxRow(m: Message): boolean {
+  return m.source === 'telegram' || Boolean(m.transports?.includes('telegram'))
+}
+
+/** Lokale Overlay-Zeilen (Mesh-Archiv + Telegram-Journal im State) beim Mailbox-Reload behalten. */
+export function pickLocalOverlayRowsForInboxMerge(prev: Message[]): Message[] {
+  const mesh = pickMeshRowsForInboxMerge(prev)
+  const meshIds = new Set(mesh.map((m) => m.id))
+  const telegram = prev.filter((m) => isTelegramInboxRow(m) && !meshIds.has(m.id))
+  return [...mesh, ...telegram]
+}

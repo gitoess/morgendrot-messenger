@@ -23,6 +23,7 @@ import {
     getContactByBleUuid,
     getContactLabel,
     applyInitialProfileToContacts,
+    resolveContactStorageKey,
 } from '../../contact-labels.js';
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
 
@@ -185,9 +186,20 @@ export async function handleContactRoutes(
         req.on('end', () => {
             try {
                 const data = JSON.parse(body || '{}');
-                const address = String(data.address ?? '').trim();
-                if (!/^0x[a-fA-F0-9]{64}$/.test(address)) {
-                    sendJson(res, 400, { ok: false, error: 'address muss 0x + 64 Hex sein.' }, cors);
+                const addressRaw = String(data.address ?? '').trim();
+                const telegramRaw =
+                    data.telegramChatId !== undefined ? String(data.telegramChatId) : undefined;
+                const address = resolveContactStorageKey(addressRaw, telegramRaw);
+                if (!address) {
+                    sendJson(
+                        res,
+                        400,
+                        {
+                            ok: false,
+                            error: 'IOTA-Adresse (0x + 64 Hex) oder gültige Telegram Chat-ID erforderlich.',
+                        },
+                        cors
+                    );
                     return;
                 }
                 const hasExplicitLabel = Object.prototype.hasOwnProperty.call(data, 'label');
@@ -201,12 +213,14 @@ export async function handleContactRoutes(
                         meshPublicKeyHex: null,
                         bleUuid: null,
                         mailboxObjectId: null,
+                        telegramChatId: null,
                     });
                 } else if (
                     data.meshNodeId !== undefined ||
                     data.meshPublicKeyHex !== undefined ||
                     data.bleUuid !== undefined ||
-                    data.mailboxObjectId !== undefined
+                    data.mailboxObjectId !== undefined ||
+                    data.telegramChatId !== undefined
                 ) {
                     saveContactMeshFields(address, {
                         ...(data.meshNodeId !== undefined && { meshNodeId: String(data.meshNodeId) }),
@@ -216,6 +230,9 @@ export async function handleContactRoutes(
                         ...(data.bleUuid !== undefined && { bleUuid: String(data.bleUuid) }),
                         ...(data.mailboxObjectId !== undefined && {
                             mailboxObjectId: String(data.mailboxObjectId),
+                        }),
+                        ...(data.telegramChatId !== undefined && {
+                            telegramChatId: String(data.telegramChatId),
                         }),
                     });
                 }

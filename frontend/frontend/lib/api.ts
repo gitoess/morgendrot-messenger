@@ -148,6 +148,15 @@ export {
 export type { EinsatzRoleTemplate } from '@/frontend/lib/api/einsatz-role-templates'
 export { fetchEinsatzRoleTemplates, saveEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'
 
+export type { TelegramIntegrationPublic } from '@/frontend/lib/api/telegram-integrations'
+export {
+  fetchTelegramIntegration,
+  saveTelegramIntegration,
+  testTelegramAlarm,
+} from '@/frontend/lib/api/telegram-integrations'
+
+export { notifyTelegramContact, testTelegramNotify } from '@/frontend/lib/api/telegram-notify'
+
 export {
   loadAttestationQueue,
   saveAttestationQueue,

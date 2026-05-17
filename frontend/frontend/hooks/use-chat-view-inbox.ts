@@ -11,22 +11,40 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInbox } from '@/frontend/lib/api'
 import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
-import { mergeAllMessages, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
-import { appendMeshToLocalArchive, pickMeshRowsForInboxMerge } from '@/frontend/lib/mesh-local-archive'
+import {
+  inboxMessageListSignature,
+  mergeAllMessages,
+  mergeJournalIntoInboxIfChanged,
+  mergeMessageByDedup,
+} from '@/frontend/lib/message-dedup'
+import {
+  appendMeshToLocalArchive,
+  pickLocalOverlayRowsForInboxMerge,
+} from '@/frontend/lib/mesh-local-archive'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
+import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
+import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxParams = {
   refreshContactDirectory: () => void
   /** Optional: Posteingang für diese Package-ID (0x…); leer = Backend-Standard. */
   packageId?: string
+  myAddress?: string
+}
+
+async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]> {
+  if (!myAddress.trim()) return []
+  const j = await fetchTelegramJournal({ limit: 300 })
+  if (!j.ok || !j.entries?.length) return []
+  return mapTelegramJournalToMessages(j.entries, myAddress)
 }
 
 const PAGE_SIZE = 50
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
-  const { refreshContactDirectory, packageId } = p
+  const { refreshContactDirectory, packageId, myAddress = '' } = p
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -44,20 +62,24 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   }, [])
 
   const loadMessages = useCallback(
-    async (mode: 'reset' | 'append' = 'reset', overridePackageId?: unknown) => {
-      if (mode === 'append') setLoadingMore(true)
-      else setLoading(true)
-      setLoadError(null)
+    async (
+      mode: 'reset' | 'append' = 'reset',
+      overridePackageId?: unknown,
+      opts?: { silent?: boolean }
+    ) => {
+      const silent = opts?.silent === true
+      if (!silent) {
+        if (mode === 'append') setLoadingMore(true)
+        else setLoading(true)
+        setLoadError(null)
+      }
       const useBossView = false
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
-      const applyMeshOnlyFallback = () => {
-        setMessages((prev) => {
-          const meshLocal = pickMeshRowsForInboxMerge(prev)
-          return mergeAllMessages(meshLocal)
-        })
+      const applyLocalOverlayFallback = () => {
+        setMessages((prev) => mergeAllMessages(pickLocalOverlayRowsForInboxMerge(prev)))
       }
       try {
         if (!useBossView) {
@@ -74,14 +96,15 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             const rpcMapped = mapRows(direct.rows as InboxApiRow[])
             const apiMapped =
               res.ok && rawApi != null ? mapRows(rawApi as InboxApiRow[]) : ([] as Message[])
-            if (!res.ok && direct.rows.length === 0) {
+            if (!silent && !res.ok && direct.rows.length === 0) {
               setLoadError(
                 (res as { error?: string; message?: string }).error ||
                   (res as { message?: string }).message ||
                   'Posteingang konnte nicht geladen werden.'
               )
             }
-            const mergedPage = mergeAllMessages([...apiMapped, ...rpcMapped])
+            const tgJournal = await loadTelegramJournalMessages(myAddress)
+            const mergedPage = mergeAllMessages([...apiMapped, ...rpcMapped, ...tgJournal])
             const rpcN = direct.rows.length
             const apiN = apiMapped.length
             const stride = Math.max(rpcN, apiN)
@@ -96,14 +119,23 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
               setInboxHasMore(stride >= PAGE_SIZE)
             }
             setMessages((prev) => {
-              const meshLocal = prev.filter((m) => m.transports?.includes('mesh'))
-              if (mode === 'reset') {
-                return mergeAllMessages([...mergedPage, ...meshLocal])
-              }
-              const prevMailbox = prev.filter((m) => !m.transports?.includes('mesh'))
-              return mergeAllMessages([...prevMailbox, ...mergedPage, ...meshLocal])
+              const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
+              const next =
+                mode === 'reset'
+                  ? mergeAllMessages([...mergedPage, ...localOverlay])
+                  : mergeAllMessages([
+                      ...prev.filter(
+                        (m) =>
+                          !m.transports?.includes('mesh') &&
+                          m.source !== 'telegram' &&
+                          !m.transports?.includes('telegram')
+                      ),
+                      ...mergedPage,
+                      ...localOverlay,
+                    ])
+              if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+              return next
             })
-            refreshContactDirectory()
             return
           }
         }
@@ -113,6 +145,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         const raw = pickInboxRawMessages(resLoose)
         if (res.ok && raw != null) {
           const mapped: Message[] = mapRows(raw as InboxApiRow[])
+          const tgJournal = await loadTelegramJournalMessages(myAddress)
           if (mode === 'reset') {
             mailboxOffsetRef.current = mapped.length
           } else {
@@ -124,33 +157,47 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             setInboxHasMore(mapped.length >= PAGE_SIZE)
           }
           setMessages((prev) => {
-            const meshLocal = pickMeshRowsForInboxMerge(prev)
-            if (mode === 'reset') {
-              return mergeAllMessages([...mapped, ...meshLocal])
-            }
-            const prevMailbox = prev.filter((m) => !m.transports?.includes('mesh'))
-            return mergeAllMessages([...prevMailbox, ...mapped, ...meshLocal])
+            const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
+            const next =
+              mode === 'reset'
+                ? mergeAllMessages([...mapped, ...tgJournal, ...localOverlay])
+                : mergeAllMessages([
+                    ...prev.filter(
+                      (m) =>
+                        !m.transports?.includes('mesh') &&
+                        m.source !== 'telegram' &&
+                        !m.transports?.includes('telegram')
+                    ),
+                    ...mapped,
+                    ...tgJournal,
+                    ...localOverlay,
+                  ])
+            if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+            return next
           })
-          refreshContactDirectory()
         } else if (!res.ok) {
-          setLoadError(
-            (res as { error?: string; message?: string }).error ||
-              (res as { message?: string }).message ||
-              'Posteingang konnte nicht geladen werden.'
-          )
-          // Offline/Backend down: lokale Mesh-Zeilen trotzdem sichtbar halten.
-          applyMeshOnlyFallback()
+          if (!silent) {
+            setLoadError(
+              (res as { error?: string; message?: string }).error ||
+                (res as { message?: string }).message ||
+                'Posteingang konnte nicht geladen werden.'
+            )
+          }
+          if (mode === 'append') applyLocalOverlayFallback()
         } else {
-          setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
-          applyMeshOnlyFallback()
+          if (!silent) setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
+          if (mode === 'append') applyLocalOverlayFallback()
         }
       } finally {
         setLoading(false)
         setLoadingMore(false)
       }
     },
-    [refreshContactDirectory, packageId]
+    [packageId, myAddress]
   )
+
+  const loadMessagesRef = useRef(loadMessages)
+  loadMessagesRef.current = loadMessages
 
   const loadMoreInbox = useCallback(() => {
     if (!inboxHasMore || loading || loadingMore) return
@@ -159,8 +206,21 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
 
   useEffect(() => {
     mailboxOffsetRef.current = 0
-    void loadMessages('reset')
-  }, [loadMessages])
+    void loadMessagesRef.current('reset')
+  }, [packageId, myAddress])
+
+  /** Telegram Long Polling: Journal periodisch in den Posteingang mergen (ohne Full-Inbox-Reload). */
+  useEffect(() => {
+    if (!myAddress.trim()) return
+    const refreshTg = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      const tg = await loadTelegramJournalMessages(myAddress)
+      if (tg.length === 0) return
+      setMessages((prev) => mergeJournalIntoInboxIfChanged(prev, tg))
+    }
+    const iv = window.setInterval(() => void refreshTg(), 30_000)
+    return () => window.clearInterval(iv)
+  }, [myAddress])
 
   return {
     messages,

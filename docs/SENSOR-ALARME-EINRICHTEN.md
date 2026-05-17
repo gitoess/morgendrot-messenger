@@ -92,6 +92,8 @@ Du musst nicht alles machen – nimm nur, was du brauchst.
 **Möglichkeiten:** Webhook zu Telegram-Bot, E-Mail-Service, Sirene usw.  
 Beispiel: https://maker.ifttt.com/trigger/alarm/with/key/dein-key → schickt dir eine Push-Nachricht.
 
+**Telegram (Morgendrot):** Lokales Relay `npm run telegram-webhook`, `MONITOR_ALARM_WEBHOOK_URL=http://127.0.0.1:8787/morgendrot-telegram` — Nachricht z. B. „Morgendrot Alarm L1“ mit Gerät, Zeit, Meldung. **Zielbild ohne `.env` für Bot-Token:** Einstellungen → Integrationen in der App — siehe **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** (**§ H.26**).
+
 **Setzen?** Sehr empfohlen – mach das an, wenn du wichtige Alarme willst.
 
 ---

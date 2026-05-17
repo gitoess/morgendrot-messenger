@@ -8,6 +8,7 @@ import { useCallback } from 'react'
 import {
   downloadEinsatzberichtJson,
   downloadEinsatzberichtSummaryTxt,
+  downloadEinsatzberichtFullTxt,
   buildEinsatzberichtPayload,
 } from '@/frontend/lib/einsatzbericht-export'
 import { encryptEinsatzberichtUtf8, downloadEinsatzberichtEncryptedJson } from '@/frontend/lib/einsatzbericht-crypto'
@@ -75,7 +76,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       }
       downloadEinsatzberichtJson(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Einsatzbericht (JSON) heruntergeladen – ${full.length} Nachricht(en), vollständiger Verlauf.`)
+      setStatusMsg(`Nachrichtenverlauf (JSON) – ${full.length} Nachricht(en), alle Felder.`)
       setTimeout(() => setStatus('idle'), 5000)
     } catch (e) {
       setStatus('error')
@@ -103,7 +104,35 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       }
       downloadEinsatzberichtSummaryTxt(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Kurzbericht (.txt) – ${full.length} Nachricht(en), vollständiger Verlauf.`)
+      setStatusMsg(`Nachrichtenverlauf (Text) – ${full.length} Nachricht(en), je ~200 Zeichen Vorschau.`)
+      setTimeout(() => setStatus('idle'), 5000)
+    } catch (e) {
+      setStatus('error')
+      setStatusMsg(e instanceof Error ? e.message : String(e))
+      setTimeout(() => setStatus('idle'), 6000)
+    }
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+
+  const onExportEinsatzberichtTxtFull = useCallback(async () => {
+    if (messagesLength === 0) {
+      setStatus('error')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
+      setTimeout(() => setStatus('idle'), 5000)
+      return
+    }
+    if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
+    try {
+      setStatusMsg('Lade vollständigen Posteingang für Export…')
+      const full = await messagesForExport()
+      if (full.length === 0) {
+        setStatus('error')
+        setStatusMsg('Keine Nachrichten von der API.')
+        setTimeout(() => setStatus('idle'), 5000)
+        return
+      }
+      downloadEinsatzberichtFullTxt(full, { exportedByAddress: myAddress })
+      setStatus('success')
+      setStatusMsg(`Nachrichtenverlauf (TXT vollständig) – ${full.length} Nachricht(en), ungekürzt.`)
       setTimeout(() => setStatus('idle'), 5000)
     } catch (e) {
       setStatus('error')
@@ -292,7 +321,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       downloadEinsatzberichtEncryptedJson(enc)
       setStatus('success')
       setStatusMsg(
-        `Verschlüsselter Kurzbericht (${full.length} Nachrichten). Öffnen: /einsatzbericht-decrypt.html + Passwort.`
+        `Verschlüsselter Vollbericht (${full.length} Nachrichten, kompletter Inhalt). Öffnen: /einsatzbericht-decrypt.html + Passwort.`
       )
       setTimeout(() => setStatus('idle'), 7000)
     } catch (e) {
@@ -305,6 +334,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
   return {
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,

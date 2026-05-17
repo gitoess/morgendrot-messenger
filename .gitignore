@@ -33,7 +33,9 @@ test-results/
 /.morgendrot-vault.inbox.enc
 /.morgendrot-vault.package-id
 /.morgendrot-vault.streams-anchor
+.morgendrot-runtime-config.json
 .morgendrot-contact-labels.json
+.morgendrot-telegram-journal.json
 .morgendrot-einsatz-templates.json
 .morgendrot-package-id-history
 .morgendrot-streams-anchor-history

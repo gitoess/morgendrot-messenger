@@ -114,6 +114,36 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(onlyAlice.map((x) => x.id)).toEqual(['in'])
   })
 
+  it('Telegram: Eingang/Ausgang und Partner tg:', () => {
+    const tgIn = m({
+      id: 'tg-in',
+      from: 'tg:99317902',
+      recipient: me,
+      content: 'hallo',
+      timestamp: 10,
+      source: 'telegram',
+      transports: ['telegram'],
+    })
+    const tgOut = m({
+      id: 'tg-out',
+      from: me,
+      recipient: 'tg:99317902',
+      content: 'antwort',
+      timestamp: 11,
+      source: 'telegram',
+      transports: ['telegram'],
+    })
+    expect(filterInboxMessagesByPartnerAndDirection([tgIn, tgOut], me, null, 'in').map((x) => x.id)).toEqual([
+      'tg-in',
+    ])
+    expect(filterInboxMessagesByPartnerAndDirection([tgIn, tgOut], me, null, 'out').map((x) => x.id)).toEqual([
+      'tg-out',
+    ])
+    expect(
+      filterInboxMessagesByPartnerAndDirection([tgIn, tgOut], me, 'tg:99317902', 'all').map((x) => x.id).sort()
+    ).toEqual(['tg-in', 'tg-out'])
+  })
+
   it('eingehende Funk/Mesh (0x) ignoriert Partner- und Richtungsfilter', () => {
     const meshIn = m({
       id: 'mx',

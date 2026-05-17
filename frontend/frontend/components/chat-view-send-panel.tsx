@@ -5,9 +5,24 @@
  * Sendelogik bleibt im Hook (`useChatViewSendFlow`); dieses Panel ist reine Orchestrierung der bestehenden UI-Blöcke.
  */
 
-import { useMemo, useRef, useState, type DragEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { cn } from '@/lib/utils'
+import { Switch } from '@/components/ui/switch'
+import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
+import {
+  resolveComposerIotaAddress,
+  resolveComposerIotaFieldValue,
+  resolveComposerTelegramChatId,
+} from '@/frontend/lib/composer-recipient-fields'
+import {
+  buildTelegramMessagePreview,
+  normalizeTelegramRecipientInput,
+  readTelegramNotifyOnSend,
+  resolveTelegramNotifyRecipientAddress,
+  writeTelegramNotifyOnSend,
+} from '@/frontend/lib/telegram-notify-pref'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
@@ -53,6 +68,12 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onCancelSend?: () => void
   status: 'idle' | 'success' | 'error'
   statusMsg: string
+  onStatusFeedback?: (msg: string, status?: 'idle' | 'success' | 'error') => void
+  partner?: string
+  onPartnerChange?: (v: string) => void
+  myAddress?: string
+  /** Nach erfolgreichem Nur-Telegram-Send: Zeile im Posteingang/Ausgang. */
+  onTelegramDelivered?: (payload: { recipientKey: string; text: string }) => void
   /** § H.3g 7a: Einträge in der lokalen Mailbox-Warteschlange (Opt-in). */
   offlineMailboxQueuePending?: number
   /** § H.6c: Einträge mit `timeIsTrusted === false` (Legacy ohne Feld zählt als unvertraut). */
@@ -93,6 +114,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onCancelSend,
     status,
     statusMsg,
+    onStatusFeedback,
+    partner = '',
+    onPartnerChange,
+    myAddress = '',
+    onTelegramDelivered,
     offlineMailboxQueuePending = 0,
     offlineMailboxQueueUntrustedTimeCount = 0,
     offlineMailboxQueueBackoffCount = 0,
@@ -120,6 +146,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   } = p
 
   const [dropHover, setDropHover] = useState(false)
+  const [telegramNotifyOnSend, setTelegramNotifyOnSend] = useState(false)
+  const [telegramOnlyBusy, setTelegramOnlyBusy] = useState(false)
+
+  useEffect(() => {
+    setTelegramNotifyOnSend(readTelegramNotifyOnSend())
+  }, [])
   const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
   const [showQueueItems, setShowQueueItems] = useState(false)
   const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([])
@@ -223,6 +255,93 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     [contactDirectory, recipient]
   )
 
+  const composerIota = useMemo(
+    () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
+    [recipient, partner, encrypted]
+  )
+
+  const composerIotaField = useMemo(
+    () => resolveComposerIotaFieldValue(recipient, partner ?? '', encrypted),
+    [recipient, partner, encrypted]
+  )
+
+  const composerTelegramId = useMemo(
+    () => resolveComposerTelegramChatId(recipient, contactDirectory, composerIota),
+    [recipient, contactDirectory, composerIota]
+  )
+
+  const notifyRecipientAddr = useMemo(() => {
+    const resolved = resolveTelegramNotifyRecipientAddress({
+      recipient,
+      partner,
+      encrypted,
+      connectedAddresses: apiStatus?.connectedAddresses,
+    })
+    if (resolved) return resolved
+    if (/^-?\d{1,20}$/.test(composerTelegramId)) return `tg:${composerTelegramId}`
+    return null
+  }, [recipient, partner, encrypted, apiStatus?.connectedAddresses, composerTelegramId])
+
+  const recipientHasTelegram = useMemo(() => {
+    if (!notifyRecipientAddr) return false
+    if (notifyRecipientAddr.startsWith('tg:')) return true
+    return Boolean(contactDirectory?.[notifyRecipientAddr]?.telegramChatId?.trim())
+  }, [contactDirectory, notifyRecipientAddr])
+
+  const telegramPreview = useMemo(
+    () =>
+      buildTelegramMessagePreview({
+        message,
+        attachedTxtFile: attachmentBarProps.attachedTxtFile,
+        attachedBlobBase64: attachmentBarProps.attachedBlobBase64,
+        attachedAudioBase64: attachmentBarProps.attachedAudioBase64,
+        hasLoraAttachment: attachmentBarProps.attachedLora != null,
+      }),
+    [
+      message,
+      attachmentBarProps.attachedTxtFile,
+      attachmentBarProps.attachedBlobBase64,
+      attachmentBarProps.attachedAudioBase64,
+      attachmentBarProps.attachedLora,
+    ]
+  )
+
+  const canSendTelegramOnly =
+    isPrivate &&
+    recipientHasTelegram &&
+    !telegramOnlyBusy &&
+    !sending &&
+    Boolean(telegramPreview.trim()) &&
+    !apiStatus?.locked
+
+  const handleTelegramOnly = async () => {
+    if (!notifyRecipientAddr || !onStatusFeedback) return
+    setTelegramOnlyBusy(true)
+    onStatusFeedback('Sende Telegram-Hinweis…', 'idle')
+    const myLabel =
+      contactDirectory[myAddress.trim().toLowerCase()]?.label ||
+      (myAddress.trim() ? `${myAddress.trim().slice(0, 10)}…` : 'Morgendrot')
+    const r = await notifyTelegramContact({
+      recipientAddress: notifyRecipientAddr,
+      messagePreview: telegramPreview,
+      senderLabel: myLabel,
+    })
+    if (r.delivered) {
+      onTelegramDelivered?.({
+        recipientKey: notifyRecipientAddr,
+        text: telegramPreview,
+      })
+      onMessageChange('')
+      attachmentBarProps.clearCompactAttachment()
+      onStatusFeedback('Telegram gesendet — siehe Ausgang im Posteingang.', 'success')
+    } else if (r.skipped) {
+      onStatusFeedback(`Telegram: ${r.skipped}`, 'error')
+    } else {
+      onStatusFeedback(r.error || 'Telegram-Hinweis fehlgeschlagen', 'error')
+    }
+    setTelegramOnlyBusy(false)
+  }
+
   const recipientSuggestions = useMemo(() => {
     const set = new Set<string>()
     const connected = Array.isArray(apiStatus?.connectedAddresses) ? apiStatus.connectedAddresses : []
@@ -232,8 +351,33 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     }
     const own = String(apiStatus?.myAddress || '').trim()
     if (/^0x[a-fA-F0-9]{64}$/.test(own)) set.add(own)
+    if (contactDirectory) {
+      for (const key of Object.keys(contactDirectory)) {
+        const k = key.trim().toLowerCase()
+        if (/^0x[a-f0-9]{64}$/.test(k) || /^tg:-?\d{1,20}$/.test(k)) set.add(k)
+      }
+    }
     return Array.from(set)
-  }, [apiStatus?.connectedAddresses, apiStatus?.myAddress])
+  }, [apiStatus?.connectedAddresses, apiStatus?.myAddress, contactDirectory])
+
+  const messageRef = useRef<HTMLTextAreaElement>(null)
+
+  const insertEmojiIntoMessage = (emoji: string) => {
+    const el = messageRef.current
+    if (!el) {
+      onMessageChange(message + emoji)
+      return
+    }
+    const start = el.selectionStart ?? message.length
+    const end = el.selectionEnd ?? message.length
+    const next = message.slice(0, start) + emoji + message.slice(end)
+    onMessageChange(next)
+    requestAnimationFrame(() => {
+      el.focus()
+      const pos = start + emoji.length
+      el.setSelectionRange(pos, pos)
+    })
+  }
 
   const prepareSttDictation = () => {
     const composer = document.getElementById('chat-composer-message') as HTMLTextAreaElement | null
@@ -257,17 +401,52 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 md:p-6">
       <div className="space-y-4">
-        {!encrypted && (
+        {(isPrivate || !encrypted) && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">Empfänger-Adresse</label>
-            <input
-              type="text"
-              list="chat-recipient-addresses"
-              value={recipient}
-              onChange={(e) => onRecipientChange(e.target.value)}
-              placeholder="0x..."
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+            <p className="mb-2 text-xs font-medium text-foreground">Empfänger (Telefonbuch oder manuell)</p>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  IOTA-Adresse (0x + 64 Hex)
+                </label>
+                <input
+                  type="text"
+                  list="chat-recipient-addresses"
+                  value={composerIotaField}
+                  onChange={(e) => {
+                    const v = e.target.value.trim().toLowerCase()
+                    onPartnerChange?.(v)
+                    const tgOnly = recipient.trim().toLowerCase().startsWith('tg:')
+                    if (!tgOnly || v) onRecipientChange(v)
+                  }}
+                  placeholder="0x… — Online / verschlüsselt"
+                  className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Telegram Chat-ID</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={composerTelegramId}
+                  onChange={(e) => {
+                    const raw = e.target.value.trim()
+                    if (raw === '') {
+                      if (recipient.trim().toLowerCase().startsWith('tg:')) {
+                        onRecipientChange(composerIota)
+                      }
+                      return
+                    }
+                    if (!/^-?\d{0,20}$/.test(raw)) return
+                    if (/^-?\d{1,20}$/.test(raw)) {
+                      onRecipientChange(normalizeTelegramRecipientInput(raw))
+                    }
+                  }}
+                  placeholder="Zahl von @userinfobot — für „Nur Telegram senden“"
+                  className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
             <datalist id="chat-recipient-addresses">
               {recipientSuggestions.map((addr) => (
                 <option key={addr} value={addr} />
@@ -281,6 +460,43 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) : null}
           </div>
         )}
+
+        {isPrivate ? (
+          <div className="space-y-2 rounded-lg border border-border/80 bg-muted/15 px-3 py-3">
+            <div className="min-w-0 text-xs">
+              <p className="font-medium text-foreground">Telegram an Kontakt</p>
+              <p className="mt-1 text-muted-foreground">
+                {recipientHasTelegram
+                  ? 'Ausgang erscheint im Posteingang (Filter „Ausgang“). Eingehende Telegram-Antworten nur mit Bot-Webhook (öffentliche URL → /api/integrations/telegram/webhook).'
+                  : 'Telefonbuch antippen oder Chat-ID oben eintragen.'}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={!canSendTelegramOnly || !onStatusFeedback}
+                onClick={() => void handleTelegramOnly()}
+                className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-600/90 disabled:opacity-50 dark:bg-sky-500"
+                title="Nur Telegram — ohne IOTA/Mailbox/LoRa"
+              >
+                {telegramOnlyBusy ? 'Sende…' : 'Nur Telegram senden'}
+              </button>
+            </div>
+            {forcedTransport === 'internet' ? (
+              <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
+                <span className="text-xs text-foreground">Zusätzlich nach Online-Send (IOTA)</span>
+                <Switch
+                  checked={telegramNotifyOnSend}
+                  onCheckedChange={(on) => {
+                    writeTelegramNotifyOnSend(on)
+                    setTelegramNotifyOnSend(on)
+                  }}
+                  aria-label="Telegram-Hinweis zusätzlich nach IOTA-Send"
+                />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {!encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
@@ -339,9 +555,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          <label htmlFor="chat-composer-message" className="mb-2 block text-sm font-medium text-foreground">
-            Nachricht
-          </label>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <label htmlFor="chat-composer-message" className="text-sm font-medium text-foreground">
+              Nachricht
+            </label>
+            {isPrivate ? (
+              <ChatComposerEmojiPicker onPick={insertEmojiIntoMessage} disabled={sending} />
+            ) : null}
+          </div>
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}
@@ -360,6 +581,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             </div>
           )}
           <textarea
+            ref={messageRef}
             id="chat-composer-message"
             value={message}
             onChange={(e) => onMessageChange(e.target.value)}
@@ -548,8 +770,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         ) : null}
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+        <div className="space-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {forcedTransport === 'internet' && onlineConnected ? (
               <button
                 type="button"
@@ -652,21 +874,28 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) : null}
           </div>
 
-          {status !== 'idle' && (
-            <span
-              className={cn(
-                'flex min-w-0 items-center gap-1.5 text-sm font-medium',
-                status === 'success' ? 'text-emerald-400' : 'text-red-400'
-              )}
-            >
-              {status === 'success' ? (
-                <Check className="h-4 w-4 shrink-0" />
-              ) : (
-                <AlertCircle className="h-4 w-4 shrink-0" />
-              )}
-              <span className="min-w-0 break-words">{statusMsg}</span>
-            </span>
-          )}
+          <div
+            className="min-h-[2.5rem] w-full text-sm leading-snug"
+            aria-live="polite"
+            aria-atomic="true"
+            data-testid="chat-composer-send-status"
+          >
+            {status !== 'idle' ? (
+              <p
+                className={cn(
+                  'flex items-start gap-1.5 font-medium',
+                  status === 'success' ? 'text-emerald-400' : 'text-red-400'
+                )}
+              >
+                {status === 'success' ? (
+                  <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                )}
+                <span className="min-w-0 break-words">{statusMsg}</span>
+              </p>
+            ) : null}
+          </div>
         </div>
       </div>
     </div>

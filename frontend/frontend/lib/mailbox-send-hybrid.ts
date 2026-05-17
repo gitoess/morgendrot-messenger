@@ -7,7 +7,10 @@
  */
 
 import type { ApiResponse } from '@/frontend/lib/types'
-import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import {
+  readMessagingPersistenceModeFromStorage,
+  type MessagingPersistenceMode,
+} from '@/frontend/lib/messaging-persistence-mode'
 import { sendEncryptedMessageWithTimeout, sendMessage } from '@/frontend/lib/api/chat-commands'
 import {
   canTryLivePlaintextDirectMailbox,
@@ -19,8 +22,12 @@ import {
 } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 
+function resolvePersistenceMode(opts?: { messagingPersistenceMode?: MessagingPersistenceMode }): MessagingPersistenceMode {
+  return opts?.messagingPersistenceMode ?? readMessagingPersistenceModeFromStorage()
+}
+
 export type MailboxHybridSendResult =
-  | { ok: true; txDigest?: string }
+  | { ok: true; txDigest?: string; nonce?: string }
   | { ok: false; error?: string; message?: string }
 
 function txDigestFromApi(res: ApiResponse): string | undefined {
@@ -30,8 +37,15 @@ function txDigestFromApi(res: ApiResponse): string | undefined {
   return undefined
 }
 
+function nonceFromApi(res: ApiResponse): string | undefined {
+  const n = (res as { nonce?: string | number }).nonce
+  if (typeof n === 'string' && n.trim()) return n.trim()
+  if (typeof n === 'number' && Number.isFinite(n)) return String(n)
+  return undefined
+}
+
 function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
-  if (res.ok === true) return { ok: true, txDigest: txDigestFromApi(res) }
+  if (res.ok === true) return { ok: true, txDigest: txDigestFromApi(res), nonce: nonceFromApi(res) }
   return { ok: false, error: res.error, message: res.message }
 }
 
@@ -51,9 +65,10 @@ export async function sendPlaintextMailboxHybrid(
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
   }
+  const mode = resolvePersistenceMode(opts)
   return fromApiResponse(
     await sendMessage(recipient, wireForApi, false, {
-      messagingPersistenceMode: opts?.messagingPersistenceMode,
+      messagingPersistenceMode: mode,
       mailboxObjectId: opts?.mailboxObjectId,
     })
   )
@@ -70,7 +85,8 @@ export async function sendEncryptedMailboxHybrid(
   }
 ): Promise<MailboxHybridSendResult> {
   const rTrim = recipient.trim()
-  const useMailboxStore = opts?.messagingPersistenceMode === 'mailbox'
+  const mode = resolvePersistenceMode(opts)
+  const useMailboxStore = mode === 'mailbox'
   if (useMailboxStore && rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
     const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
     if (mat) {
@@ -87,7 +103,7 @@ export async function sendEncryptedMailboxHybrid(
   return fromApiResponse(
     await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
       mailboxObjectId: opts?.mailboxObjectId,
-      messagingPersistenceMode: opts?.messagingPersistenceMode,
+      messagingPersistenceMode: mode,
     })
   )
 }

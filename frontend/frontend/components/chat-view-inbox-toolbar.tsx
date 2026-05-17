@@ -1,19 +1,18 @@
 'use client'
 
 /**
- * Posteingang: Kopfzeile (Zähler, Boss-Ansicht, .morg-pkg, Aktualisieren).
- * Reine Präsentation; kein Mesh-Routing. Meshtastic-First: Funk bleibt im Meshtastic-Stack/Firmware –
- * diese Leiste bedient IOTA-Mailbox-Refresh und Sneakernet/morg-pkg, ohne parallele „Funkprotokolle“ in der UI.
+ * Posteingang: Kopfzeile (Zähler, Pakete, Nachrichtenverlauf, Aktualisieren).
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { Archive, BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
 import { ChatViewTangleInventoryButton } from '@/frontend/components/chat-view-tangle-inventory-button'
 import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +34,7 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   loading: boolean
   onExportEinsatzberichtJson: () => void
   onExportEinsatzberichtTxt: () => void
+  onExportEinsatzberichtTxtFull: () => void
   onExportEinsatzberichtEncrypted: () => void | Promise<void>
   onExportEinsatzprotokoll: () => void | Promise<void>
   onExportEinsatzprotokollPlainZip: () => void | Promise<void>
@@ -60,9 +60,31 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onToggleHideAllVisibleLocal: () => void
   localPurgeBusy?: boolean
   onClearLocalInboxCache?: () => void | Promise<void>
-  /** 1:1 / Gruppe: Telefonbuch-Panel öffnen */
   onOpenPhonebook?: () => void
   showPhonebookButton?: boolean
+  onOpenPartnerSetup?: () => void
+  messagingPersistenceMode: MessagingPersistenceMode
+}
+
+function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
+  return apiStatus?.locked === true
+}
+
+function morgPkgImportTitle(apiStatus: ApiStatus | null): string {
+  if (apiStatus?.locked) return 'Tresor entsperren, um .morg-pkg zu öffnen.'
+  if (apiStatus?.connected !== true) {
+    return 'Import starten: Tresor offen. Zum Entschlüsseln brauchst du Handshake/Connect mit dem Absender der Datei.'
+  }
+  return 'Verschlüsseltes .morg-pkg vom Partner in den lokalen Posteingang importieren.'
+}
+
+function morgPkgDeviceTitle(apiStatus: ApiStatus | null, busy: boolean): string {
+  if (busy) return 'Paket wird erstellt…'
+  if (apiStatus?.locked) return 'Tresor entsperren.'
+  if (!apiStatus?.connectedAddresses?.length) {
+    return 'Zuerst Partner verbinden (Handshake) — Export verschlüsselt für verbundenen 0x-Partner.'
+  }
+  return 'Dateien vom Gerät zu einem verschlüsselten .morg-pkg bündeln (Sneakernet).'
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -79,6 +101,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     loading,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
+    onExportEinsatzberichtTxtFull,
     onExportEinsatzberichtEncrypted,
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
@@ -108,276 +131,316 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onClearLocalInboxCache,
     onOpenPhonebook,
     showPhonebookButton = false,
+    onOpenPartnerSetup,
+    messagingPersistenceMode,
   } = p
+
+  const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
+  const pkgDeviceDisabled =
+    morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
+  const vaultLocked = apiStatus?.locked === true
 
   return (
     <div className="border-b border-border">
-    <div className="flex flex-wrap items-center justify-between gap-2 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Inbox className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold text-foreground">Posteingang</h3>
-        {showPhonebookButton && onOpenPhonebook ? (
-          <button
-            type="button"
-            onClick={onOpenPhonebook}
-            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
-          >
-            <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-            Telefonbuch
-          </button>
-        ) : null}
-        {messageCount > 0 && (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-            {messageCount}
-          </span>
-        )}
-        {inboxRowCount !== messageCount && (
-          <span className="text-xs text-muted-foreground">{inboxRowCount} sichtbar</span>
-        )}
-      </div>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <input
-          ref={morgPkgFileRef}
-          type="file"
-          accept=".json,.morg-pkg,application/json"
-          className="hidden"
-          onChange={onMorgPkgImportFile}
-        />
-        <input
-          ref={morgPkgDeviceFilesRef}
-          type="file"
-          multiple
-          accept="image/*,.txt,text/plain,.opus,.ogg,audio/ogg,audio/opus,application/ogg"
-          className="hidden"
-          onChange={onMorgPkgDeviceFiles}
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+      <div className="flex flex-wrap items-center justify-between gap-2 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Inbox className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold text-foreground">Posteingang</h3>
+          {showPhonebookButton && onOpenPhonebook ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              onClick={onOpenPhonebook}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
             >
-              <Package className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-              Pakete
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+              <BookUser className="h-4 w-4 shrink-0" aria-hidden />
+              Telefonbuch
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[14rem]">
-            <DropdownMenuItem
-              disabled={apiStatus?.connected !== true || apiStatus?.locked}
-              onSelect={(e) => {
-                e.preventDefault()
-                morgPkgFileRef.current?.click()
-              }}
+          ) : null}
+          <a
+            href="/einsatzbericht-decrypt.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
+            title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) hier entpacken."
+          >
+            <KeyRound className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+            Entschlüsseln
+          </a>
+          {onClearLocalInboxCache ? (
+            <button
+              type="button"
+              disabled={localPurgeBusy}
+              onClick={() => void onClearLocalInboxCache()}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-200"
+              title="Nur lokaler Klartext-Cache auf diesem Gerät — Chain und Telefonbuch bleiben."
             >
-              .morg-pkg import
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              disabled={morgPkgDeviceBusy || apiStatus?.locked || apiStatus?.connected !== true}
-              onSelect={(e) => {
-                e.preventDefault()
-                morgPkgDeviceFilesRef.current?.click()
-              }}
-            >
-              {morgPkgDeviceBusy ? 'Gerät → .morg-pkg (läuft…)' : 'Gerät → .morg-pkg'}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+              {localPurgeBusy ? 'Leere…' : 'Cache leeren'}
+            </button>
+          ) : null}
+          {inboxRowCount !== messageCount && messageCount > 0 ? (
+            <span className="text-xs text-muted-foreground" title="Filter aktiv">
+              {inboxRowCount} von {messageCount} sichtbar
+            </span>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <input
+            ref={morgPkgFileRef}
+            type="file"
+            accept=".json,.morg-pkg,application/json"
+            className="hidden"
+            onChange={onMorgPkgImportFile}
+          />
+          <input
+            ref={morgPkgDeviceFilesRef}
+            type="file"
+            multiple
+            accept="image/*,.txt,text/plain,.opus,.ogg,audio/ogg,audio/opus,application/ogg"
+            className="hidden"
+            onChange={onMorgPkgDeviceFiles}
+          />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              <Archive className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-              Import/Export
-              <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            forceMount
-            align="end"
-            className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,18rem)] overflow-y-auto"
-          >
-            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtJson()}>
-              <FileDown className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-              JSON (voll)
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtTxt()}>
-              Kurzbericht .txt
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtEncrypted()}>
-              <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-              Kurzbericht verschlüsselt
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            {onClearLocalInboxCache ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <Package className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                Pakete
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[18rem]">
+              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+                <strong className="text-foreground">.morg-pkg</strong> = verschlüsseltes Sneakernet-Paket für einen
+                Partner (USB/Air-Gap), nicht lesbar wie JSON/TXT. <strong className="text-foreground">Import</strong>{' '}
+                öffnet eine .morg-pkg → Posteingang. <strong className="text-foreground">Export</strong> wählt Fotos/Text
+                auf diesem Gerät → lädt .morg-pkg herunter (kein Posteingang).
+              </p>
               <DropdownMenuItem
-                disabled={localPurgeBusy}
-                onSelect={() => void onClearLocalInboxCache()}
-                className="text-red-700 focus:text-red-700 dark:text-red-300"
+                disabled={pkgImportDisabled}
+                title={morgPkgImportTitle(apiStatus)}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  if (pkgImportDisabled) {
+                    setStatus('error')
+                    setStatusMsg(morgPkgImportTitle(apiStatus))
+                    setTimeout(() => setStatus('idle'), 7000)
+                    return
+                  }
+                  morgPkgFileRef.current?.click()
+                }}
               >
-                <Trash2 className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                {localPurgeBusy ? 'Cache wird geleert…' : 'Lokalen Posteingangs-Cache leeren'}
+                Import: .morg-pkg → Posteingang
               </DropdownMenuItem>
-            ) : null}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokoll()}>
-              <Archive className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-              Einsatzbericht (ZIP, verschlüsselt)
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokollPlainZip()}>
-              ZIP Klartext
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={protokollMarkedCount === 0} onSelect={() => void onExportEinsatzprotokollMarked()}>
-              ZIP nur ★ ({protokollMarkedCount})
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <div className="px-2 py-1">
-              <ChatViewProtokollAnchorButton
-                messageCount={messageCount}
-                messages={messages}
-                myAddress={myAddress}
-                recipient={recipient}
-                apiConnected={apiStatus?.connected === true && apiStatus?.locked !== true}
-                setStatus={setStatus}
-                setStatusMsg={setStatusMsg}
-                triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-                triggerLabel="Protokoll auf Chain verankern"
-              />
-            </div>
-            <div className="px-2 py-1">
-              <ChatViewTangleInventoryButton />
-            </div>
-            <div className="px-2 py-1">
-              <ChatViewRelaySubmitButton />
-            </div>
-            <DropdownMenuItem asChild>
-              <a
-                href="/einsatzbericht-decrypt.html"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex cursor-pointer items-center"
-                title="Hilfsseite: JSON + Passwort → echtes ZIP."
+              <DropdownMenuItem
+                disabled={pkgDeviceDisabled}
+                title={morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy)}
+                onSelect={(e) => {
+                  e.preventDefault()
+                  if (pkgDeviceDisabled) {
+                    setStatus('error')
+                    setStatusMsg(morgPkgDeviceTitle(apiStatus, morgPkgDeviceBusy))
+                    setTimeout(() => setStatus('idle'), 8000)
+                    return
+                  }
+                  setStatus('idle')
+                  setStatusMsg(
+                    'Dateiauswahl: Fotos/Text wählen — danach wird eine .morg-pkg-Datei heruntergeladen (nicht importiert).'
+                  )
+                  morgPkgDeviceFilesRef.current?.click()
+                }}
               >
-                <KeyRound className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                ZIP aus .json (Hilfe)
-              </a>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-        <button
-          type="button"
-          onClick={onRefresh}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-        >
-          <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-          Aktualisieren
-        </button>
-      </div>
-    </div>
-    <div className="border-t border-border/70 px-4 py-2 text-xs">
-      <div className="flex flex-wrap items-center gap-2">
-      <button
-        type="button"
-        onClick={() => setInboxSelectMode((v) => !v)}
-        className="rounded-md border border-border bg-muted/40 px-2 py-1 font-medium text-foreground hover:bg-muted"
-      >
-        {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
-      </button>
-      <button
-        type="button"
-        onClick={onToggleWireControls}
-        className={cn(
-          'rounded-md border px-2 py-1 font-medium transition-colors',
-          showWireControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-        )}
-      >
-        Posteingang (Inhalt)
-      </button>
-      <button
-        type="button"
-        onClick={onToggleChannelControls}
-        className={cn(
-          'rounded-md border px-2 py-1 font-medium transition-colors',
-          showChannelControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-        )}
-      >
-        Kanal
-      </button>
-      <button
-        type="button"
-        onClick={onTogglePartnerControls}
-        className={cn(
-          'rounded-md border px-2 py-1 font-medium transition-colors',
-          showPartnerControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
-        )}
-      >
-        Partner
-      </button>
-      <button
-        type="button"
-        disabled={messageCount === 0 && !hasHiddenMessages}
-        onClick={onToggleHideAllVisibleLocal}
-        className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
-      >
-        {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}
-      </button>
-      <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
-      </div>
-      {inboxSelectMode ? (
-        <div className="mt-2 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/15 p-2.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <FileDown className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                Nachrichtenverlauf
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto"
+            >
+              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
+                Vollständig: JSON, TXT vollständig, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
+                Nachricht.
+              </p>
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtJson()}>
+                Als JSON (vollständig, Klartext)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtTxtFull()}>
+                Als Text (vollständig, Klartext)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtTxt()}>
+                Als Text (kurz, ~200 Zeichen)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtEncrypted()}>
+                <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
+                Verschlüsselt (vollständig, Passwort-JSON)
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokoll()}>
+                ZIP + HTML (verschlüsselt)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokollPlainZip()}>
+                ZIP Klartext
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={protokollMarkedCount === 0} onSelect={() => void onExportEinsatzprotokollMarked()}>
+                ZIP nur markiert (★ {protokollMarkedCount})
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1">
+                <ChatViewProtokollAnchorButton
+                  messageCount={messageCount}
+                  messages={messages}
+                  myAddress={myAddress}
+                  recipient={recipient}
+                  vaultLocked={vaultLocked}
+                  messagingPersistenceMode={messagingPersistenceMode}
+                  setStatus={setStatus}
+                  setStatusMsg={setStatusMsg}
+                  onOpenPartnerSetup={onOpenPartnerSetup}
+                  triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+                  triggerLabel="Auf Chain verankern"
+                />
+              </div>
+              <div className="px-2 py-1.5">
+                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
+                  Verankerte TX: Digest, Nonce und Chunk-Hash speichern — zum Suchen und Wiederherstellen (nach jeder
+                  Verankerung werden die Werte angezeigt).
+                </p>
+                <ChatViewTangleInventoryButton />
+              </div>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1">
+                <ChatViewRelaySubmitButton />
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <button
             type="button"
-            onClick={onSelectAllVisible}
-            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+            onClick={onRefresh}
+            disabled={loading}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
+            title="Posteingang und Kontakte neu laden"
           >
-            Alle anwählen
-          </button>
-          <button
-            type="button"
-            onClick={onClearInboxSelection}
-            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
-          >
-            Keine
-          </button>
-          <button
-            type="button"
-            disabled={selectedInboxCount === 0}
-            onClick={onBulkHideSelected}
-            className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted disabled:opacity-50"
-          >
-            Ausgewählte lokal ausblenden ({selectedInboxCount})
-          </button>
-          <button
-            type="button"
-            disabled={selectedInboxCount === 0 || apiStatus?.connected !== true}
-            onClick={() => {
-              const count = selectedInboxCount
-              if (
-                !window.confirm(
-                  `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
-                    `- Anzahl: ${count}\n` +
-                    `- Wirkung auf Chain: Purge der ausgewählten Mailbox-Einträge (sofern purge-fähig, mit Storage-Rebate)\n` +
-                    `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
-                    `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
-                    `Das ist kein reines UI-Ausblenden. Fortfahren?`
-                )
-              ) {
-                return
-              }
-              onBulkPurgeSelected()
-            }}
-            className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
-          >
-            Ausgewählte auf Chain löschen
+            <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
+            Aktualisieren
           </button>
         </div>
-      ) : null}
-    </div>
+      </div>
+      <div className="border-t border-border/70 px-4 py-2 text-xs">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setInboxSelectMode((v) => !v)}
+            className="rounded-md border border-border bg-muted/40 px-2 py-1 font-medium text-foreground hover:bg-muted"
+          >
+            {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
+          </button>
+          <button
+            type="button"
+            onClick={onToggleWireControls}
+            className={cn(
+              'rounded-md border px-2 py-1 font-medium transition-colors',
+              showWireControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+            )}
+          >
+            Posteingang (Inhalt)
+          </button>
+          <button
+            type="button"
+            onClick={onToggleChannelControls}
+            className={cn(
+              'rounded-md border px-2 py-1 font-medium transition-colors',
+              showChannelControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+            )}
+          >
+            Kanal
+          </button>
+          <button
+            type="button"
+            onClick={onTogglePartnerControls}
+            className={cn(
+              'rounded-md border px-2 py-1 font-medium transition-colors',
+              showPartnerControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
+            )}
+          >
+            Partner
+          </button>
+          <button
+            type="button"
+            disabled={messageCount === 0 && !hasHiddenMessages}
+            onClick={onToggleHideAllVisibleLocal}
+            className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
+          >
+            {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}
+          </button>
+          <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
+        </div>
+        {inboxSelectMode ? (
+          <div className="mt-2 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/15 p-2.5">
+            <button
+              type="button"
+              onClick={onSelectAllVisible}
+              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+            >
+              Alle anwählen
+            </button>
+            <button
+              type="button"
+              onClick={onClearInboxSelection}
+              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
+            >
+              Keine
+            </button>
+            <button
+              type="button"
+              disabled={selectedInboxCount === 0}
+              onClick={onBulkHideSelected}
+              className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted disabled:opacity-50"
+            >
+              Ausgewählte lokal ausblenden ({selectedInboxCount})
+            </button>
+            <button
+              type="button"
+              disabled={selectedInboxCount === 0 || apiStatus?.connected !== true}
+              onClick={() => {
+                const count = selectedInboxCount
+                if (
+                  !window.confirm(
+                    `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
+                      `- Anzahl: ${count}\n` +
+                      `- Wirkung auf Chain: Purge der ausgewählten Mailbox-Einträge (sofern purge-fähig, mit Storage-Rebate)\n` +
+                      `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
+                      `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
+                      `Das ist kein reines UI-Ausblenden. Fortfahren?`
+                  )
+                ) {
+                  return
+                }
+                onBulkPurgeSelected()
+              }}
+              className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
+            >
+              Ausgewählte auf Chain löschen
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   )
 }

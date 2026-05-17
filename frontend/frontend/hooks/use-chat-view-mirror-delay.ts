@@ -162,7 +162,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         }
         setStatusMsg(msg)
         setTimeout(() => setStatus('idle'), 6000)
-        void loadMessages()
+        void loadMessages('reset', undefined, { silent: true })
       }
     } finally {
       mirrorDrainInFlightRef.current = false
@@ -210,7 +210,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
             : `Mailbox-Warteschlange: ${r.sent} Einträge übertragen.`
         )
         setTimeout(() => setStatus('idle'), 6000)
-        void loadMessages()
+        void loadMessages('reset', undefined, { silent: true })
       } else if (r.sent > 0 && r.failed > 0) {
         setStatus('error')
         setStatusMsg(
@@ -219,7 +219,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
             : `Mailbox-Warteschlange: ${r.sent} übertragen, ${r.failed} erneut fehlgeschlagen (Backoff).`
         )
         setTimeout(() => setStatus('idle'), 9000)
-        void loadMessages()
+        void loadMessages('reset', undefined, { silent: true })
       } else if (r.failed > 0) {
         setStatus('error')
         const items = loadOfflineMailboxQueue()
@@ -287,7 +287,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
             setStatusMsg(baseOk + formatTxDigestStatusSuffix(r.txDigest))
           }
           setTimeout(() => setStatus('idle'), 6000)
-          void loadMessages()
+          void loadMessages('reset', undefined, { silent: true })
         } else {
           const en = enqueueMirrorFailure({
             wireBody: body,

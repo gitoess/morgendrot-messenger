@@ -20,6 +20,7 @@ import {
   PHONEBOOK_FILTER_LABELS,
   type PhonebookFilterId,
 } from '@/frontend/lib/contact-phonebook-format'
+import { formatContactDirectoryKey, resolveContactStorageKey } from '@/frontend/lib/contact-storage-key'
 import {
   hideContactFromPhonebook,
   readContactFavorites,
@@ -35,6 +36,8 @@ export type ChatViewPhonebookSectionProps = {
   refreshContactDirectory: () => void
   setStatusMsg: (msg: string) => void
   connectedAddresses?: string[]
+  /** Kontakt ins Composer übernehmen und Telefonbuch schließen (Caller). */
+  onSelectContact?: (storageKey: string, entry: ContactMeshEntryClient) => void
   /** Im Sheet: kein eigener Seitentitel (steht in SheetHeader). */
   embedded?: boolean
 }
@@ -46,10 +49,17 @@ type ContactRow = {
 }
 
 export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
-  const { directory, refreshContactDirectory, setStatusMsg, connectedAddresses = [], embedded = false } = p
+  const {
+    directory,
+    refreshContactDirectory,
+    setStatusMsg,
+    connectedAddresses = [],
+    onSelectContact,
+    embedded = false,
+  } = p
 
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<PhonebookFilterId>('recent')
+  const [filter, setFilter] = useState<PhonebookFilterId>('all')
   const [metaTick, setMetaTick] = useState(0)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState(false)
@@ -69,6 +79,15 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   const bumpMeta = () => setMetaTick((n) => n + 1)
 
+  const visibleDirectoryCount = useMemo(() => {
+    let n = 0
+    for (const addr of Object.keys(directory)) {
+      const a = addr.trim().toLowerCase()
+      if (a && !hidden.has(a)) n++
+    }
+    return n
+  }, [directory, hidden])
+
   const rows: ContactRow[] = useMemo(() => {
     const q = search.trim().toLowerCase()
     const out: ContactRow[] = []
@@ -76,7 +95,8 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       const a = addr.trim().toLowerCase()
       if (hidden.has(a)) continue
       const displayName =
-        contactDisplayLabel(directory, addr) || `${maskWalletAddress(addr, 8, 6)}`
+        contactDisplayLabel(directory, addr) ||
+        (addr.startsWith('tg:') ? formatContactDirectoryKey(addr) : maskWalletAddress(addr, 8, 6))
       if (q) {
         const hay = `${displayName} ${addr} ${entry.meshNodeId ?? ''} ${entry.mailboxObjectId ?? ''}`.toLowerCase()
         if (!hay.includes(q)) continue
@@ -113,22 +133,23 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   const persistContact = useCallback(
     async (values: ContactPhonebookFormValues) => {
-      const addr = values.address.trim().toLowerCase()
-      if (!/^0x[a-f0-9]{64}$/.test(addr)) {
-        setStatusMsg('IOTA-Adresse: 0x + 64 Hex.')
+      const storageKey = resolveContactStorageKey(values.address, values.telegramChatId)
+      if (!storageKey) {
+        setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID nötig.')
         return
       }
       const mb = values.mailboxObjectId.trim()
       setBusy(true)
       try {
         const r = await saveContactEntry({
-          address: addr,
+          address: storageKey,
           label: values.label.trim() || undefined,
           meshNodeId: values.meshNodeId.trim() || undefined,
           ...(mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? { mailboxObjectId: mb } : {}),
+          telegramChatId: values.telegramChatId.trim(),
         })
         if (r.ok) {
-          recordContactLastContacted(addr)
+          recordContactLastContacted(storageKey)
           bumpMeta()
           refreshContactDirectory()
           setStatusMsg(r.message || 'Kontakt gespeichert.')
@@ -188,6 +209,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
               label: entry.label ?? '',
               meshNodeId: entry.meshNodeId ?? '',
               mailboxObjectId: entry.mailboxObjectId ?? '',
+              telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
             },
           })
         }
@@ -197,6 +219,13 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           recordContactLastContacted(address)
           bumpMeta()
         }}
+        onSelectForMessenger={
+          onSelectContact
+            ? () => {
+                onSelectContact(address, entry)
+              }
+            : undefined
+        }
       />
     )
   }
@@ -258,9 +287,22 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         ))}
       </div>
 
+      {visibleDirectoryCount > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {visibleDirectoryCount} {visibleDirectoryCount === 1 ? 'Kontakt' : 'Kontakte'} gespeichert
+          {rows.length !== visibleDirectoryCount
+            ? ` · ${rows.length} angezeigt (Filter „${PHONEBOOK_FILTER_LABELS[filter]}“)`
+            : ''}
+        </p>
+      ) : null}
+
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-8 text-center text-sm text-muted-foreground">
-          Keine Kontakte{search.trim() ? ' für diese Suche' : ''}. „Neuer Kontakt“ oder QR-Scan nutzen.
+          {visibleDirectoryCount > 0 && filter === 'recent'
+            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat „Zuletzt kontaktiert“. Filter „Alle“ wählen oder einen Kontakt öffnen/speichern.`
+            : visibleDirectoryCount > 0 && filter !== 'all'
+              ? `Keine Treffer für „${PHONEBOOK_FILTER_LABELS[filter]}“${search.trim() ? ' und diese Suche' : ''}. Filter „Alle“ probieren.`
+              : `Keine Kontakte${search.trim() ? ' für diese Suche' : ''}. „Neuer Kontakt“ oder QR-Scan nutzen.`}
         </p>
       ) : (
         <div className="space-y-6">

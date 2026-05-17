@@ -75,6 +75,20 @@ export function filterInboxMessagesByPartnerAndDirection(
     /** Funk/Mesh-Eingang (Klartext `mesh:…` oder v2 mit 0x-Absender): nicht über Mailbox-Richtung/Partner wegfiltern. */
     const incomingMeshRadio =
       (m.source === 'mesh' || m.transports?.includes('mesh')) && !isMessageOutgoing(m, myAddress)
+    const telegramRow = messageTouchesTelegramTransport(m)
+    if (telegramRow) {
+      if (direction === 'in' && isMessageOutgoing(m, myAddress) && !selfToSelf) return false
+      if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false
+      if (groupNorms) {
+        const cpTg = messageCounterpartyAddress(m, myAddress)
+        if (cpTg && groupNorms.has(norm(cpTg))) return true
+        return false
+      }
+      if (!partnerAddress) return true
+      const cpTg = messageCounterpartyAddress(m, myAddress)
+      if (!cpTg) return false
+      return norm(cpTg) === norm(partnerAddress)
+    }
     if (incomingMeshRadio) {
       if (groupNorms) {
         const cpMesh = messageCounterpartyAddress(m, myAddress)
@@ -117,8 +131,13 @@ export function messageTouchesMeshTransport(m: Message): boolean {
   return m.source === 'mesh' || (Array.isArray(m.transports) && m.transports.includes('mesh'))
 }
 
+export function messageTouchesTelegramTransport(m: Message): boolean {
+  return m.source === 'telegram' || (Array.isArray(m.transports) && m.transports.includes('telegram'))
+}
+
 /** Nachricht über Mailbox/IOTA (nicht reiner Mesh-only-Pfad). */
 export function messageTouchesInternetTransport(m: Message): boolean {
+  if (messageTouchesTelegramTransport(m)) return false
   if (Array.isArray(m.transports) && m.transports.includes('internet')) return true
   if (m.source === 'mesh') return false
   return true

@@ -122,6 +122,9 @@ import type { ApiRouteContext } from './api/routes/api-route-types.js';
 import { handleCommandRoute } from './api/routes/handle-command-route.js';
 import { handleContactRoutes } from './api/routes/handle-contact-routes.js';
 import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
+import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
+import { applyTelegramIntegrationToMonitorWebhook } from './integrations/telegram-integration.js';
+import { restartTelegramInbound } from './integrations/telegram-inbound-poll.js';
 import {
     resolveProvisionIdempotencyKey,
     provisionRequestFingerprint,
@@ -270,6 +273,8 @@ export function getActualApiPort(): number {
 }
 
 export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
+    applyTelegramIntegrationToMonitorWebhook();
+    restartTelegramInbound();
     const port = CFG.API_PORT;
 
     const routeCtx: ApiRouteContext = {
@@ -296,6 +301,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         if (await handleStatusRoutes(req, res, url, cors, sendJson, routeCtx)) return;
         if (await handleContactRoutes(req, res, url, cors, sendJson, routeCtx)) return;
+        if (await handleTelegramIntegrationRoutes(req, res, url, cors, sendJson)) return;
 
         /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
         if (url === '/api/voucher-claim' && req.method === 'POST') {

@@ -340,6 +340,27 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
+  it('zeigt Emoji-Popup im privaten Chat', () => {
+    render(<ChatViewSendPanel {...baseSendPanel({ isPrivate: true })} />)
+    expect(screen.getByTestId('chat-composer-emoji-trigger')).toBeInTheDocument()
+  })
+
+  it('fügt Emoji in die Nachricht ein', () => {
+    const onMessageChange = vi.fn()
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          isPrivate: true,
+          message: '',
+          onMessageChange,
+        })}
+      />
+    )
+    fireEvent.click(screen.getByTestId('chat-composer-emoji-trigger'))
+    fireEvent.click(screen.getByRole('option', { name: /Emoji 👍/ }))
+    expect(onMessageChange).toHaveBeenCalledWith('👍')
+  })
+
   it('deaktiviert Senden bei Klartext ohne Empfänger-Adresse', () => {
     const onSend = vi.fn()
     const { container } = render(

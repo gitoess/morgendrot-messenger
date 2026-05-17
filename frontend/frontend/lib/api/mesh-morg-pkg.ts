@@ -47,7 +47,8 @@ export async function morgPkgExport(
   recipient0x: string,
   plaintext: string
 ): Promise<{ ok: boolean; morgPkg?: Record<string, unknown>; message?: string; error?: string }> {
-  const r = await executeCommand('/morg-pkg-export', [recipient0x, plaintext], {
+  const r = await executeCommand('/morg-pkg-export', [recipient0x], {
+    commandPlaintext: plaintext,
     timeoutMs: MORG_PKG_COMMAND_TIMEOUT_MS,
   })
   const rec = r as { ok?: boolean; morgPkg?: Record<string, unknown>; message?: string; error?: string }

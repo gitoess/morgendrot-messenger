@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { QrCode } from 'lucide-react'
 import {
   Dialog,
@@ -18,6 +18,7 @@ export type ContactPhonebookFormValues = {
   label: string
   meshNodeId: string
   mailboxObjectId: string
+  telegramChatId: string
 }
 
 export type ContactPhonebookContactDialogProps = {
@@ -35,22 +36,30 @@ const empty: ContactPhonebookFormValues = {
   label: '',
   meshNodeId: '',
   mailboxObjectId: '',
+  telegramChatId: '',
 }
 
 export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogProps) {
   const { open, onOpenChange, mode, initial, busy = false, onSave, onScanImport } = p
   const [form, setForm] = useState<ContactPhonebookFormValues>(empty)
+  const openSnapshotRef = useRef<Partial<ContactPhonebookFormValues> | undefined>(undefined)
 
   useEffect(() => {
-    if (open) {
-      setForm({
-        address: initial?.address ?? '',
-        label: initial?.label ?? '',
-        meshNodeId: initial?.meshNodeId ?? '',
-        mailboxObjectId: initial?.mailboxObjectId ?? '',
-      })
+    if (!open) {
+      openSnapshotRef.current = undefined
+      return
     }
-  }, [open, initial?.address, initial?.label, initial?.meshNodeId, initial?.mailboxObjectId])
+    if (openSnapshotRef.current) return
+    const snapshot: ContactPhonebookFormValues = {
+      address: initial?.address ?? '',
+      label: initial?.label ?? '',
+      meshNodeId: initial?.meshNodeId ?? '',
+      mailboxObjectId: initial?.mailboxObjectId ?? '',
+      telegramChatId: initial?.telegramChatId ?? '',
+    }
+    openSnapshotRef.current = snapshot
+    setForm(snapshot)
+  }, [open, initial])
 
   const scanQr = async () => {
     const s = await scanMeshBundleQrWithCamera()
@@ -62,6 +71,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
       label: parsed.displayName ?? form.label,
       meshNodeId: form.meshNodeId,
       mailboxObjectId: parsed.mailboxObjectId ?? form.mailboxObjectId,
+      telegramChatId: form.telegramChatId,
     }
     setForm(next)
     if (onScanImport) await onScanImport(next)
@@ -73,7 +83,8 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
         <DialogHeader>
           <DialogTitle>{mode === 'create' ? 'Neuen Kontakt anlegen' : 'Kontakt bearbeiten'}</DialogTitle>
           <DialogDescription>
-            Name, IOTA-Adresse und optionale Erreichbarkeit. Private Mailbox nur, wenn der Kontakt eine eigene hat.
+            Mindestens IOTA-Adresse (0x…) oder Telegram Chat-ID. Ohne Wallet reicht Name + Chat-ID für Telegram-Hinweise;
+            Online-Send auf IOTA braucht später eine Adresse.
           </DialogDescription>
         </DialogHeader>
 
@@ -120,6 +131,18 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
               onChange={(e) => setForm((f) => ({ ...f, meshNodeId: e.target.value }))}
               placeholder="z. B. THW-47-B oder !a1b2c3d4"
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-muted-foreground">
+              Telegram Chat-ID {!form.address.trim() ? <span className="text-destructive">*</span> : '(optional)'}
+            </label>
+            <input
+              type="text"
+              value={form.telegramChatId}
+              onChange={(e) => setForm((f) => ({ ...f, telegramChatId: e.target.value }))}
+              placeholder="Zahl von @userinfobot — auch ohne IOTA-Adresse speicherbar"
+              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs"
             />
           </div>
           <div className="space-y-1.5">

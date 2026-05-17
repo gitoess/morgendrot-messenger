@@ -72,13 +72,24 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
         const { runWithMailboxObjectIdOverride } = await import('../../mailbox-object-id-scope.js');
         const forceLegacyPlaintext = resolveCommandForceLegacyPlaintext(opts);
         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
-            for (const addr of addrs) await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
+            const { parseMailboxOutNonceMarker } = await import('@morgendrot/core/queue/offline-mailbox');
+            let lastDigest: string | undefined;
+            let lastNonce: string | undefined;
+            for (const addr of addrs) {
+                const result = await sendPlaintextOnly(addr, text, { forceLegacyPlaintext });
+                if (result?.digest) lastDigest = result.digest;
+            }
+            const parsed = parseMailboxOutNonceMarker(text);
+            if (parsed) lastNonce = parsed.nonce.toString();
             return {
                 ok: true,
                 message:
                     addrs.length > 1
                         ? `Klartext an ${addrs.length} Empfänger gesendet.`
                         : `Klartext an ${addrs[0].slice(0, 12)}… gesendet.`,
+                digest: lastDigest,
+                txDigest: lastDigest,
+                nonce: lastNonce,
             };
         });
     }
@@ -104,14 +115,23 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
         const forceLegacyEncrypted = resolveCommandForceLegacyEncrypted(opts);
         const { runWithMailboxObjectIdOverride } = await import('../../mailbox-object-id-scope.js');
         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
+            const { parseMailboxOutNonceMarker } = await import('@morgendrot/core/queue/offline-mailbox');
+            let lastDigest: string | undefined;
+            let lastNonce: string | undefined;
             for (const p of pm.values()) {
-                await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey, {
+                const result = await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey, {
                     forceLegacyEncrypted,
                 });
+                if (result?.digest) lastDigest = result.digest;
             }
+            const parsed = parseMailboxOutNonceMarker(text);
+            if (parsed) lastNonce = parsed.nonce.toString();
             return {
                 ok: true,
                 message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.',
+                digest: lastDigest,
+                txDigest: lastDigest,
+                nonce: lastNonce,
             };
         });
     }
@@ -211,7 +231,9 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
         const pmEx = sessionState.peerMap;
         if (!pmEx?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const addrRaw = (a[0] ?? '').trim();
-        const textEx = a.length > 1 ? a.slice(1).join(' ').trim() : '';
+        const textEx =
+            (typeof opts?.commandPlaintext === 'string' ? opts.commandPlaintext.trim() : '') ||
+            (a.length > 1 ? a.slice(1).join(' ').trim() : '');
         if (!addrRaw || !textEx) {
             return { ok: false, message: 'Verwendung: /morg-pkg-export <0xEmpfänger> <Klartext…>' };
         }

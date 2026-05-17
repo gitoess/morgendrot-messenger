@@ -1,7 +1,8 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Database, ExternalLink, RefreshCw, Save, Trash2, Upload } from 'lucide-react'
+import { Database, ExternalLink, RefreshCw, Save, Search, Trash2, Upload } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { explorerTxUrlFromDigest } from '@/frontend/lib/iota-tx-explorer-hint'
@@ -12,7 +13,8 @@ import {
   loadTangleInventory,
   type TangleInventoryItem,
 } from '@/frontend/lib/tangle-inventory'
-import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
+import { fetchMailboxInboxPage } from '@/frontend/lib/mailbox-inbox-page-fetch'
+import { scanMailboxAndReassembleProtokollFull } from '@/frontend/lib/protokoll-chunk-mailbox-scan'
 import {
   importDigestsFromVault,
   isTangleInventoryAutoVaultSaveEnabled,
@@ -28,10 +30,20 @@ function typeLabel(t: TangleInventoryItem['type']): string {
   return 'Unbekannt'
 }
 
-export function ChatViewTangleInventoryButton() {
+export function ChatViewTangleInventoryButton(p?: {
+  triggerClassName?: string
+  triggerLabel?: string
+}) {
+  const triggerClassName =
+    p?.triggerClassName ??
+    'w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
+  const triggerLabel = p?.triggerLabel ?? 'Gespeicherte IOTA-Transaktionen'
   const [open, setOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [digestSearch, setDigestSearch] = useState('')
+  const [scanBusy, setScanBusy] = useState(false)
+  const [scanResult, setScanResult] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<'all' | TangleInventoryItem['type']>('all')
   const [filterStatus, setFilterStatus] = useState<'all' | TangleInventoryItem['status']>('all')
   const [filterRecovery, setFilterRecovery] = useState<'all' | 'found' | 'not-found'>('all')
@@ -48,9 +60,14 @@ export function ChatViewTangleInventoryButton() {
   }, [refreshTick])
 
   const items = useMemo(() => {
+    const q = digestSearch.trim().toLowerCase()
     return allItems.filter((it) => {
       if (filterType !== 'all' && it.type !== filterType) return false
       if (filterStatus !== 'all' && it.status !== filterStatus) return false
+      if (q) {
+        const hay = `${it.digest} ${it.nonce ?? ''} ${it.chunkSha256 ?? ''}`.toLowerCase()
+        if (!hay.includes(q)) return false
+      }
       if (filterRecovery !== 'all') {
         const res = resultById[it.id] ?? ''
         const found = res.length > 0 && !/nicht gefunden/i.test(res)
@@ -59,7 +76,7 @@ export function ChatViewTangleInventoryButton() {
       }
       return true
     })
-  }, [allItems, filterRecovery, filterStatus, filterType, resultById])
+  }, [allItems, digestSearch, filterRecovery, filterStatus, filterType, resultById])
 
   const refresh = () => setRefreshTick((x) => x + 1)
 
@@ -118,18 +135,20 @@ export function ChatViewTangleInventoryButton() {
           setAutoVaultSave(isTangleInventoryAutoVaultSaveEnabled())
           setOpen(true)
         }}
-        className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+        className={cn(triggerClassName)}
       >
-        Verankerungen (lokal)
+        {triggerLabel}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Tangle-Verankerungen (lokales Inventory)</DialogTitle>
+            <DialogTitle>Gespeicherte IOTA-Transaktionen (dieses Gerät)</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground">
-              Tresor-Anbindung: gleiche Vault-Datei wie Passwortmanager. So liegen alle Digests in einem gemeinsamen Tresor.
+              Merkt sich Transaction-Digests von Sendungen und Verankerungen <strong className="text-foreground">nur in diesem Browser</strong>{' '}
+              (localStorage). „Vom Tangle laden“ nutzt <strong className="text-foreground">Direkt-RPC</strong> oder — ohne RPC-URL — das Backend{' '}
+              <strong className="text-foreground">/inbox</strong>. Nonce aus der Verankerungs-Maske kopieren.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -258,6 +277,47 @@ export function ChatViewTangleInventoryButton() {
             </div>
             {uiMsg ? <p className="text-xs text-muted-foreground">{uiMsg}</p> : null}
           </div>
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={digestSearch}
+              onChange={(e) => setDigestSearch(e.target.value)}
+              placeholder="Digest / Nonce / Chunk-Hash suchen…"
+              className="min-w-[12rem] flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={scanBusy}
+              onClick={async () => {
+                setScanBusy(true)
+                setScanResult(null)
+                setUiMsg(null)
+                try {
+                  const r = await scanMailboxAndReassembleProtokollFull()
+                  if (!r.ok) {
+                    setScanResult(r.error)
+                    return
+                  }
+                  const preview = r.json.length > 4000 ? `${r.json.slice(0, 4000)}…` : r.json
+                  setScanResult(
+                    `Vollbericht zusammengesetzt (${r.partsFound}/${r.partsExpected} Teile, SHA-256 ${r.contentSha256.slice(0, 12)}…):\n${preview}`
+                  )
+                  setUiMsg('Protokoll-Chunks in der Mailbox gefunden und zusammengesetzt.')
+                } finally {
+                  setScanBusy(false)
+                }
+              }}
+            >
+              <Search className="mr-2 h-3.5 w-3.5" />
+              {scanBusy ? 'Suche…' : 'Protokoll-Chunks suchen'}
+            </Button>
+          </div>
+          {scanResult ? (
+            <pre className="max-h-40 overflow-auto rounded-md border border-border/70 bg-background/80 p-2 text-[10px] whitespace-pre-wrap">
+              {scanResult}
+            </pre>
+          ) : null}
           <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/10 p-2 md:grid-cols-3">
             <select
               value={filterType}
@@ -309,6 +369,11 @@ export function ChatViewTangleInventoryButton() {
                         Status: {it.status}
                         {it.encrypted != null ? ` · ${it.encrypted ? 'verschlüsselt' : 'Klartext'}` : ''}
                         {it.nonce ? ` · Nonce ${it.nonce}` : ''}
+                        {it.chunkPart && it.chunkTotal
+                          ? ` · Teil ${it.chunkPart}/${it.chunkTotal}`
+                          : ''}
+                        {it.chunkSha256 ? ` · Chunk-Hash ${it.chunkSha256.slice(0, 12)}…` : ''}
+                        {it.anchorHashHex ? ` · Bericht-Hash ${it.anchorHashHex.slice(0, 12)}…` : ''}
                       </p>
                     </div>
                     <a
@@ -337,7 +402,7 @@ export function ChatViewTangleInventoryButton() {
                       ) : (
                         <>
                           <Database className="mr-2 h-3.5 w-3.5" />
-                          Vom Tangle laden & entschlüsseln
+                          Nachricht laden (RPC oder /inbox)
                         </>
                       )}
                     </Button>

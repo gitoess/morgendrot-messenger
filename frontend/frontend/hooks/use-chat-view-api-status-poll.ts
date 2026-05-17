@@ -16,6 +16,7 @@ import {
   inferDeviceTimeTrust,
   shouldWarnUntrustedDeviceTime,
 } from '@/frontend/lib/device-time-trust'
+import { apiStatusPollSignature } from '@/frontend/lib/api-status-signature'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
@@ -101,6 +102,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   useEffect(() => {
     let alive = true
     const tick = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const s = await fetchStatus()
       if (!alive) return
       if (!('pollClockHint' in s)) {
