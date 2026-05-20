@@ -2,6 +2,8 @@
 
 Wenn du **noch keine** Package-ID hast (z. B. frisches Projekt oder neue Kette), musst du das Move-Package einmal bauen, auf die Kette publizieren und danach die **globale Konfiguration** (Vault, Mailbox, …) anlegen. Danach hast du die Package-ID und trägst sie in der App ein.
 
+**Vollständige Checkliste inkl. Manifest und Neustart:** **`docs/DEPLOY-CHECKLIST.md`**
+
 **Voraussetzung:** IOTA-CLI installiert (`iota` im Terminal verfügbar), Wallet/Keystore mit Adresse, RPC_URL in .env (z. B. Testnet).
 
 ---
