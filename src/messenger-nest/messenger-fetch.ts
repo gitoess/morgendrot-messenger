@@ -2,7 +2,7 @@
  * Kammer „Inbox/Fetch“: Nachrichten von Chain laden, entschlüsseln, mit lokalem Cache mergen.
  */
 import { logger } from '../logger.js';
-import { CFG, isMessengerMailboxModeActive } from '../config.js';
+import { CFG, isMessengerMailboxModeActive, readPackageIdHistory } from '../config.js';
 import {
     getClient,
     typeName,
@@ -53,6 +53,129 @@ export type FetchedMessage = {
     /** false: nur Event (Klartext oder Legacy) – kein Mailbox-Eintrag zum Purgen */
     chainPurgeable?: boolean;
 };
+
+const PACKAGE_ID_HEX = /^0x[a-fA-F0-9]{64}$/i;
+
+/** Events (verschlüsselt + Klartext) für ein Move-Paket — Posteingang-Union, unabhängig von USE_MAILBOX. */
+async function appendMessagingEventsForPackage(
+    packageId: string,
+    myAddress: string,
+    items: MsgItem[],
+    matchesPeer: (s: string) => boolean,
+    matchesCounterparty: (peerAddr: string | undefined) => boolean,
+    keySeen: Set<string>
+): Promise<void> {
+    const eventQuery = { MoveModule: { package: packageId, module: 'messaging' } };
+    let eventCursor: string | null = null;
+    const allEventData: any[] = [];
+    const maxEventPages = 5;
+    for (let p = 0; p < maxEventPages; p++) {
+        const events = await getClient().queryEvents({
+            query: eventQuery,
+            limit: 1000,
+            order: 'descending',
+            ...(eventCursor != null ? { cursor: eventCursor } : {}),
+        } as any);
+        const data = (events.data ?? []) as any[];
+        allEventData.push(...data);
+        const next = (events as any).nextCursor;
+        if (next == null || next === eventCursor) break;
+        eventCursor = next;
+    }
+    const data = allEventData;
+    const encIn = data.filter(
+        (e: any) =>
+            e.type?.endsWith('::messaging::EncryptedMessage') &&
+            normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
+            matchesPeer(e.parsedJson?.sender) &&
+            matchesCounterparty(e.parsedJson?.sender)
+    );
+    const encOut = data.filter(
+        (e: any) =>
+            e.type?.endsWith('::messaging::EncryptedMessage') &&
+            normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
+            matchesPeer(e.parsedJson?.recipient) &&
+            matchesCounterparty(e.parsedJson?.recipient)
+    );
+    for (const msg of [...encIn, ...encOut]) {
+        const d = msg.parsedJson as any;
+        const ivBytes = toEventBytes(d.iv);
+        const cipherBytes = toEventBytes(d.ciphertext);
+        const tagBytes = toEventBytes(d.tag);
+        const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
+        const tsMs =
+            typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
+        if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
+            const key = `${d.sender}:${d.recipient}:${d.nonce}`;
+            if (keySeen.has(key)) continue;
+            keySeen.add(key);
+            items.push({
+                nonce: BigInt(d.nonce ?? 0),
+                sender: d.sender,
+                recipient: d.recipient,
+                key,
+                isPlain: false,
+                iv: ivBytes,
+                cipher: cipherBytes,
+                tag: tagBytes,
+                tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
+                chainPurgeable: false,
+            });
+        }
+    }
+    const plainInEv = data.filter(
+        (e: any) =>
+            e.type?.endsWith('::messaging::PlaintextMessage') &&
+            normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
+            matchesPeer(e.parsedJson?.sender) &&
+            matchesCounterparty(e.parsedJson?.sender)
+    );
+    const plainOutEv2 = data.filter(
+        (e: any) =>
+            e.type?.endsWith('::messaging::PlaintextMessage') &&
+            normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
+            matchesPeer(e.parsedJson?.recipient) &&
+            matchesCounterparty(e.parsedJson?.recipient)
+    );
+    for (const msg of [...plainInEv, ...plainOutEv2]) {
+        const d = msg.parsedJson as any;
+        const key = `plain:${d.sender}:${d.recipient}:${d.nonce}`;
+        if (keySeen.has(key)) continue;
+        keySeen.add(key);
+        const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
+        const tsMs =
+            typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
+        items.push({
+            nonce: BigInt(d.nonce ?? 0),
+            sender: d.sender,
+            recipient: d.recipient,
+            key,
+            isPlain: true,
+            text: toEventBytes(d.text),
+            tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
+            chainPurgeable: false,
+        });
+    }
+}
+
+function packageIdsForInboxUnion(primaryPackageId: string): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    const add = (id: string) => {
+        const t = id.trim();
+        if (!PACKAGE_ID_HEX.test(t)) return;
+        const n = t.toLowerCase();
+        if (seen.has(n)) return;
+        seen.add(n);
+        out.push(t);
+    };
+    if (primaryPackageId) add(primaryPackageId);
+    const cfg = (CFG.PACKAGE_ID || '').trim();
+    if (cfg) add(cfg);
+    for (const h of readPackageIdHistory()) add(h);
+    const my = (CFG.MY_ADDRESS || '').trim().toLowerCase();
+    return out.filter((id) => id.toLowerCase() !== my);
+}
 
 /** Holt die letzten N Nachrichten von der Chain, entschlüsselt und zeigt sie an. */
 export async function fetchLastMessages(
@@ -237,149 +360,31 @@ export async function fetchLastMessages(
                 }
             }
         }
-        if (CFG.ENABLE_PLAINTEXT_CHANNEL && packageIdForQuery) {
-            const eventQuery = { MoveModule: { package: packageIdForQuery, module: 'messaging' } };
-            let plainCursor: string | null = null;
-            const maxPlainPages = 10;
-            const plainSeen = new Set<string>();
-            for (const it of items) {
-                if (it.isPlain && it.key) plainSeen.add(it.key);
-            }
-            for (let pg = 0; pg < maxPlainPages; pg++) {
-                const events = await getClient().queryEvents({
-                    query: eventQuery,
-                    limit: 500,
-                    order: 'descending',
-                    ...(plainCursor != null ? { cursor: plainCursor } : {}),
-                } as any);
-                const data = (events.data ?? []) as any[];
-                const plainIn = data.filter(
-                    (e: any) =>
-                        e.type?.endsWith('::messaging::PlaintextMessage') &&
-                        normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-                        matchesPeer(e.parsedJson?.sender) &&
-                        matchesCounterparty(e.parsedJson?.sender)
-                );
-                const plainOutEv = data.filter(
-                    (e: any) =>
-                        e.type?.endsWith('::messaging::PlaintextMessage') &&
-                        normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
-                        matchesPeer(e.parsedJson?.recipient) &&
-                        matchesCounterparty(e.parsedJson?.recipient)
-                );
-                for (const msg of [...plainIn, ...plainOutEv]) {
-                    const d = msg.parsedJson as any;
-                    const key = `plain:${d.sender}:${d.recipient}:${d.nonce}`;
-                    if (plainSeen.has(key)) continue;
-                    plainSeen.add(key);
-                    const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
-                    const tsMs =
-                        typeof tRaw === 'bigint'
-                            ? Number(tRaw)
-                            : typeof tRaw === 'number'
-                              ? tRaw
-                              : undefined;
-                    items.push({
-                        nonce: BigInt(d.nonce ?? 0),
-                        sender: d.sender,
-                        recipient: d.recipient,
-                        key,
-                        isPlain: true,
-                        text: toEventBytes(d.text),
-                        tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
-                        chainPurgeable: false,
-                    });
-                }
-                const next = (events as any).nextCursor;
-                if (next == null || next === plainCursor) break;
-                plainCursor = next;
-            }
+        const keySeen = new Set<string>();
+        for (const it of items) {
+            if (it.key) keySeen.add(it.key);
         }
-    } else if (packageIdForQuery) {
-        const eventQuery = { MoveModule: { package: packageIdForQuery, module: 'messaging' } };
-        let eventCursor: string | null = null;
-        const allEventData: any[] = [];
-        const maxEventPages = 5;
-        for (let p = 0; p < maxEventPages; p++) {
-            const events = await getClient().queryEvents({
-                query: eventQuery,
-                limit: 1000,
-                order: 'descending',
-                ...(eventCursor != null ? { cursor: eventCursor } : {}),
-            } as any);
-            const data = (events.data ?? []) as any[];
-            allEventData.push(...data);
-            const next = (events as any).nextCursor;
-            if (next == null || next === eventCursor) break;
-            eventCursor = next;
+        for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
+            await appendMessagingEventsForPackage(
+                pkg,
+                myAddress,
+                items,
+                matchesPeer,
+                matchesCounterparty,
+                keySeen
+            );
         }
-        const data = allEventData;
-        const encIn = data.filter(
-            (e: any) =>
-                e.type?.endsWith('::messaging::EncryptedMessage') &&
-                normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-                matchesPeer(e.parsedJson?.sender) &&
-                matchesCounterparty(e.parsedJson?.sender)
-        );
-        const encOut = data.filter(
-            (e: any) =>
-                e.type?.endsWith('::messaging::EncryptedMessage') &&
-                normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
-                matchesPeer(e.parsedJson?.recipient) &&
-                matchesCounterparty(e.parsedJson?.recipient)
-        );
-        for (const msg of [...encIn, ...encOut]) {
-            const d = msg.parsedJson as any;
-            const ivBytes = toEventBytes(d.iv);
-            const cipherBytes = toEventBytes(d.ciphertext);
-            const tagBytes = toEventBytes(d.tag);
-            const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
-            const tsMs =
-                typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
-            if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
-                items.push({
-                    nonce: BigInt(d.nonce ?? 0),
-                    sender: d.sender,
-                    recipient: d.recipient,
-                    key: `${d.sender}:${d.recipient}:${d.nonce}`,
-                    isPlain: false,
-                    iv: ivBytes,
-                    cipher: cipherBytes,
-                    tag: tagBytes,
-                    tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
-                    chainPurgeable: false,
-                });
-            }
-        }
-        const plainInEv = data.filter(
-            (e: any) =>
-                e.type?.endsWith('::messaging::PlaintextMessage') &&
-                normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-                matchesPeer(e.parsedJson?.sender) &&
-                matchesCounterparty(e.parsedJson?.sender)
-        );
-        const plainOutEv2 = data.filter(
-            (e: any) =>
-                e.type?.endsWith('::messaging::PlaintextMessage') &&
-                normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
-                matchesPeer(e.parsedJson?.recipient) &&
-                matchesCounterparty(e.parsedJson?.recipient)
-        );
-        for (const msg of [...plainInEv, ...plainOutEv2]) {
-            const d = msg.parsedJson as any;
-            const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
-            const tsMs =
-                typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
-            items.push({
-                nonce: BigInt(d.nonce ?? 0),
-                sender: d.sender,
-                recipient: d.recipient,
-                key: `plain:${d.sender}:${d.recipient}:${d.nonce}`,
-                isPlain: true,
-                text: toEventBytes(d.text),
-                tsMs: Number.isFinite(tsMs) ? tsMs : undefined,
-                chainPurgeable: false,
-            });
+    } else {
+        const keySeen = new Set<string>();
+        for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
+            await appendMessagingEventsForPackage(
+                pkg,
+                myAddress,
+                items,
+                matchesPeer,
+                matchesCounterparty,
+                keySeen
+            );
         }
     }
 
@@ -495,7 +500,7 @@ export async function fetchLastMessages(
                         recipient: isOutgoingMsg && m.recipient?.trim() ? m.recipient : myAddress,
                         nonce: String(m.nonce),
                         text: decrypted,
-                        ts: Date.now(),
+                        ts: m.tsMs > 0 ? m.tsMs : 0,
                         packageId: (CFG.PACKAGE_ID || '').trim() || undefined,
                     }).catch(() => {});
                 }

@@ -25,6 +25,8 @@ import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
+import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
+import { lookupMailboxIdForPackage } from '@/frontend/lib/package-profile-mailbox'
 import type { Message } from '@/frontend/lib/types'
 
 export type UseChatViewInboxParams = {
@@ -77,7 +79,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
+      const mailboxForFetch = pkg ? await lookupMailboxIdForPackage(pkg) : undefined
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
+      if (mode === 'reset') clearInboxBrowserViewFilters()
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickLocalOverlayRowsForInboxMerge(prev)))
       }
@@ -90,7 +94,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           })
           // Kette zuerst (Wahrheit); Basis `/inbox` nur ergänzend — gleiche Seite parallel.
           if (direct.ok) {
-            const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset)
+            const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset, false, mailboxForFetch)
             const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
             const rawApi = pickInboxRawMessages(resLoose)
             const rpcMapped = mapRows(direct.rows as InboxApiRow[])
@@ -105,42 +109,44 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             }
             const tgJournal = await loadTelegramJournalMessages(myAddress)
             const mergedPage = mergeAllMessages([...apiMapped, ...rpcMapped, ...tgJournal])
-            const rpcN = direct.rows.length
-            const apiN = apiMapped.length
-            const stride = Math.max(rpcN, apiN)
-            if (mode === 'reset') {
-              mailboxOffsetRef.current = offset + stride
-            } else {
-              mailboxOffsetRef.current += stride
+            if (mergedPage.length > 0) {
+              const rpcN = direct.rows.length
+              const apiN = apiMapped.length
+              const stride = Math.max(rpcN, apiN)
+              if (mode === 'reset') {
+                mailboxOffsetRef.current = offset + stride
+              } else {
+                mailboxOffsetRef.current += stride
+              }
+              if (mode === 'append' && stride === 0) {
+                setInboxHasMore(false)
+              } else {
+                setInboxHasMore(stride >= PAGE_SIZE)
+              }
+              setMessages((prev) => {
+                const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
+                const next =
+                  mode === 'reset'
+                    ? mergeAllMessages([...mergedPage, ...localOverlay])
+                    : mergeAllMessages([
+                        ...prev.filter(
+                          (m) =>
+                            !m.transports?.includes('mesh') &&
+                            m.source !== 'telegram' &&
+                            !m.transports?.includes('telegram')
+                          ),
+                        ...mergedPage,
+                        ...localOverlay,
+                      ])
+                if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+                return next
+              })
+              return
             }
-            if (mode === 'append' && stride === 0) {
-              setInboxHasMore(false)
-            } else {
-              setInboxHasMore(stride >= PAGE_SIZE)
-            }
-            setMessages((prev) => {
-              const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
-              const next =
-                mode === 'reset'
-                  ? mergeAllMessages([...mergedPage, ...localOverlay])
-                  : mergeAllMessages([
-                      ...prev.filter(
-                        (m) =>
-                          !m.transports?.includes('mesh') &&
-                          m.source !== 'telegram' &&
-                          !m.transports?.includes('telegram')
-                      ),
-                      ...mergedPage,
-                      ...localOverlay,
-                    ])
-              if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
-              return next
-            })
-            return
           }
         }
 
-        const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset)
+        const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset, false, mailboxForFetch)
         const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
         const raw = pickInboxRawMessages(resLoose)
         if (res.ok && raw != null) {

@@ -21,16 +21,19 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import {
+  clearInboxBrowserViewFilters,
+  IOTA_INBOX_ONLY_LS,
+  INBOX_HIDDEN_IDS_LS,
+  INBOX_PARTNER_MEMORY_BLOCKED_LS,
+  INBOX_PARTNER_MEMORY_LS,
+  INBOX_WIRE_FILTER_LS,
+  MESH_INBOX_ONLY_LS,
+} from '@/frontend/lib/inbox-browser-view-state'
+import {
   readPinnedPinnwandIds,
   sortMessagesPinnedFirst,
   togglePinnedPinnwandId,
 } from '@/frontend/lib/pinnwand-pin-store'
-
-const MESH_INBOX_ONLY_LS = 'morg.inbox.meshTransportOnly.v1'
-const INBOX_WIRE_FILTER_LS = 'morg.inbox.wireFilter.v1'
-const IOTA_INBOX_ONLY_LS = 'morg.inbox.iotaTransportOnly.v1'
-const INBOX_PARTNER_MEMORY_LS = 'morg.inbox.partnerMemory.v1'
-const INBOX_PARTNER_MEMORY_BLOCKED_LS = 'morg.inbox.partnerMemoryBlocked.v1'
 
 function messageHasMeshTransport(m: Message): boolean {
   return messageTouchesMeshTransport(m)
@@ -75,7 +78,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
-      const h = sessionStorage.getItem('morg.inbox.hidden.ids')
+      const h = sessionStorage.getItem(INBOX_HIDDEN_IDS_LS)
       if (h) setHiddenInboxIds(new Set(JSON.parse(h) as string[]))
       const pr = sessionStorage.getItem('morg.protokoll.marked.ids')
       if (pr) setProtokollMarkedIds(new Set(JSON.parse(pr) as string[]))
@@ -299,7 +302,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
             if (pred(m)) sett.add(m.id)
           }
           try {
-            sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...sett]))
+            sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...sett]))
           } catch {
             /* ignore */
           }
@@ -353,7 +356,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       const n = new Set(prev)
       n.add(id)
       try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
+        sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...n]))
       } catch {
         /* ignore */
       }
@@ -379,7 +382,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
             const n = new Set(prev)
             n.add(msg.id)
             try {
-              sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
+              sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...n]))
             } catch {
               /* ignore */
             }
@@ -434,7 +437,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setHiddenInboxIds((prev) => {
       if (prev.size > 0) {
         try {
-          sessionStorage.removeItem('morg.inbox.hidden.ids')
+          sessionStorage.removeItem(INBOX_HIDDEN_IDS_LS)
         } catch {
           /* ignore */
         }
@@ -443,7 +446,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       const n = new Set(prev)
       for (const m of sortedFilteredDisplayMessages) n.add(m.id)
       try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
+        sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...n]))
       } catch {
         /* ignore */
       }
@@ -456,7 +459,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       const n = new Set(prev)
       for (const id of selectedInboxIds) n.add(id)
       try {
-        sessionStorage.setItem('morg.inbox.hidden.ids', JSON.stringify([...n]))
+        sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...n]))
       } catch {
         /* ignore */
       }
@@ -500,6 +503,22 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     }
   }, [sortedFilteredDisplayMessages, selectedInboxIds, loadMessages, setMessages, setSending, setStatus, setStatusMsg])
 
+  const resetInboxViewFilters = useCallback(() => {
+    clearInboxBrowserViewFilters()
+    setHiddenInboxIds(new Set())
+    setInboxPartnerKey(null)
+    setInboxDirectionFilter('all')
+    setInboxMeshTransportOnly(false)
+    setInboxIotaTransportOnly(false)
+    setInboxWireFilterState('all')
+  }, [])
+
+  /** Nachrichten da, aber Filter/SessionStorage blendet alles aus → einmal Filter zurücksetzen. */
+  useEffect(() => {
+    if (messages.length === 0 || filteredDisplayMessages.length > 0) return
+    resetInboxViewFilters()
+  }, [messages.length, filteredDisplayMessages.length, resetInboxViewFilters])
+
   return {
     protokollMarkedIds,
     pinnedPinnwandIds,
@@ -531,5 +550,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onBulkHideSelected,
     onBulkPurgeSelected,
     removeInboxPartnerFromQuickList,
+    resetInboxViewFilters,
   }
 }

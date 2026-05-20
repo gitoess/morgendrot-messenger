@@ -19,17 +19,22 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
   const i = prev.findIndex((m) => m.dedupKey === key)
   if (i < 0) return [msg, ...prev]
   const cur = prev[i]!
-  const tr = new Set<'internet' | 'mesh' | 'adhoc'>([
+  const tr = new Set<'internet' | 'mesh' | 'adhoc' | 'telegram'>([
     ...(cur.transports ?? []),
     ...(msg.transports ?? []),
   ])
   const mc = msg.content ?? ''
   const cc = cur.content ?? ''
+  const sameChainNonce =
+    cur.chainNonce &&
+    msg.chainNonce &&
+    cur.chainNonce === msg.chainNonce &&
+    cur.from.trim().toLowerCase() === msg.from.trim().toLowerCase()
   const merged: Message = {
     ...cur,
     ...msg,
     id: cur.id,
-    timestamp: Math.max(cur.timestamp, msg.timestamp),
+    timestamp: sameChainNonce ? cur.timestamp : Math.max(cur.timestamp, msg.timestamp),
     transports: [...tr],
     /** Längeren Klartext bevorzugen (z. B. voller Wire vs. abgeschnittene Kopie). */
     content: mc.length >= cc.length ? mc : cc,

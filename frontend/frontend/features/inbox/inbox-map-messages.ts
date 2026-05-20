@@ -38,6 +38,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       return rawC.length >= rawT.length ? rawC : rawT
     })()
     const content = normalizeChatMessageContentForDisplay(contentRaw)
+    const nonceStr = m.nonce != null && String(m.nonce).length > 0 ? String(m.nonce) : ''
     const tsRaw = m.ts ?? m.timestamp
     let timestamp =
       typeof tsRaw === 'number' && !Number.isNaN(tsRaw)
@@ -46,12 +47,19 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
           ? Number(tsRaw)
           : 0
     if (!Number.isFinite(timestamp) || timestamp <= 0) {
-      const nn = Number(String(m.nonce ?? '').replace(/\D/g, '')) || Number(m.nonce)
+      const nn = Number(nonceStr.replace(/\D/g, '')) || Number(nonceStr)
       if (Number.isFinite(nn) && nn > 1_000_000_000_000) timestamp = nn
-      else timestamp = 1e15 - i
+      else if (Number.isFinite(nn) && nn > 0) timestamp = nn
+      else timestamp = 0
     }
+    const stableId =
+      m.id ??
+      (nonceStr && from ? `mailbox:${from.trim().toLowerCase()}:${nonceStr}` : `mailbox-row-${i}`)
+    const dedupKey = nonceStr
+      ? `mailbox|${from.trim().toLowerCase()}|${nonceStr}|${content.slice(0, 120)}`
+      : contentDedupKey(from, content, timestamp)
     return {
-      id: m.id ?? `${from}-${m.nonce ?? i}`,
+      id: stableId,
       from,
       content,
       timestamp,
@@ -59,7 +67,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       recipient: m.recipient,
       source: 'mailbox' as const,
       transports: ['internet'] as ('internet' | 'mesh' | 'adhoc')[],
-      dedupKey: contentDedupKey(from, content, timestamp),
+      dedupKey,
       chainNonce: m.nonce != null && String(m.nonce).length > 0 ? String(m.nonce) : undefined,
       chainPurgeable: m.chainPurgeable === true,
     }

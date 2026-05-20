@@ -102,6 +102,18 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r[0]!.id).toBe('in')
   })
 
+  it('Selbst-an-selbst bleibt sichtbar trotz Partner-Chip', () => {
+    const self = m({
+      id: 'self',
+      from: me,
+      recipient: me,
+      content: 'test',
+      timestamp: 1,
+    })
+    const r = filterInboxMessagesByPartnerAndDirection([self], me, alice, 'all')
+    expect(r).toHaveLength(1)
+  })
+
   it('groupMemberAddresses: Union aller Mitglieder', () => {
     const bobMsg = m({ id: 'bob', from: bob, recipient: me, content: 'b', timestamp: 4 })
     const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing, bobMsg], me, null, 'all', {

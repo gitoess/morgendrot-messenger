@@ -4,16 +4,24 @@ import { pickInboxRawMessages } from '@/frontend/lib/inbox-pick-raw-messages'
 import { executeCommand } from '@/frontend/lib/api/execute-command'
 
 /** limit, optional senderFilter (0x…), optional packageId, optional bossView, optional offset (ältere Seiten). */
+const INBOX_FETCH_TIMEOUT_MS = 45_000
+
 export const fetchInbox = (
   limit = 20,
   senderFilter?: string,
   packageId?: string,
   bossView?: boolean,
-  offset = 0
+  offset = 0,
+  mergeLocalInbox = false,
+  mailboxObjectId?: string
 ) =>
-  executeCommand<Message[]>('/inbox', bossView
-    ? [String(limit), senderFilter ?? '', packageId ?? '', 'boss', '', String(offset)]
-    : [String(limit), senderFilter ?? '', packageId ?? '', '', '', String(offset)])
+  executeCommand<Message[]>(
+    '/inbox',
+    bossView
+      ? [String(limit), senderFilter ?? '', packageId ?? '', 'boss', mergeLocalInbox ? 'true' : '', String(offset)]
+      : [String(limit), senderFilter ?? '', packageId ?? '', '', mergeLocalInbox ? 'true' : '', String(offset)],
+    { timeoutMs: INBOX_FETCH_TIMEOUT_MS, mailboxObjectId }
+  )
 
 /** Alle Posteingangs-Nachrichten (paginiert bis leer) – für Exporte, unabhängig von der aktuell geladenen UI-Seite. */
 export async function fetchAllInboxMessagesForExport(p: {

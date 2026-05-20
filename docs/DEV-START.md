@@ -1,5 +1,7 @@
 # Entwicklung starten
 
+**Git / „gestern ging es“:** Viele Änderungen landen nur im Working Tree ohne Commit — dann wirkt `git log` „alt“, obwohl täglich entwickelt wird. Rhythmus, Rollback, Messenger-Kernpfade: **`docs/ENTWICKLUNGS-RHYTHMUS-GIT.md`**.
+
 ## Wichtig: `npm start` ≠ Next auf Port 3341
 
 | Befehl | Port **3342** (API + Lite-UI `ui/`) | Port **3341** (Next.js Messenger / „Standalone“-Dev) |

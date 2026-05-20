@@ -1,5 +1,4 @@
 import { describe, it, expect } from 'vitest'
-import { contentDedupKey } from '@/frontend/lib/message-dedup'
 import { mapInboxApiRowsToMessages, type InboxApiRow } from './inbox-map-messages'
 
 describe('mapInboxApiRowsToMessages', () => {
@@ -29,7 +28,7 @@ describe('mapInboxApiRowsToMessages', () => {
     expect(m.transports).toEqual(['internet'])
     expect(m.chainNonce).toBe('n1')
     expect(m.chainPurgeable).toBe(true)
-    expect(m.dedupKey).toBe(contentDedupKey('0xs', 'hi', 1_700_000_000_000))
+    expect(m.dedupKey).toBe('mailbox|0xs|n1|hi')
   })
 
   it('nutzt from wenn sender fehlt', () => {

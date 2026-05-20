@@ -105,6 +105,33 @@ npm run dev
 
 **Nur PACKAGE_ID hot-setzen (ohne Neustart):** `POST /api/command` mit `/set-package-id` — **ersetzt nicht** `create_globals` und **nicht** Schritt 5 (Manifest).
 
+### Alte Nachrichten / Bilder nach neuem Deploy
+
+| Quelle | Wo liegt sie? | Warum UI nur wenige Zeilen zeigt |
+|--------|----------------|----------------------------------|
+| **Shared-Mailbox (IOTA)** | Im **Mailbox-Objekt** `MAILBOX_ID` von **diesem** `create_globals` | Neues Deploy = **neues** leeres Postamt; alte ~100 Zeilen hängen an der **alten** `MAILBOX_ID` |
+| **Package-ID im Posteingang-Filter** | Wechselt nur Events / Paket-Modul | **Scannt nicht** automatisch die alte Mailbox — dafür brauchst du die **alte** `MAILBOX_ID` |
+| **Mesh (Funk)** | `localStorage` (`morgendrot.meshLocalMessages.v1`) | Unabhängig von Mailbox; nur auf **diesem** Browser |
+| **Telegram** | `.morgendrot-telegram-journal.json` (Server) | Eigener Pfad — kann sichtbar sein, obwohl Mailbox fast leer ist |
+| **Bilder / Dateien** | In der **Nachricht** (`[[MORG_COMPACT_IMG_V1:…]]`, `.morg-pkg`, …) | Ohne Laden der **richtigen** Mailbox-Zeilen fehlen die Anhänge in der Liste |
+
+**Alte Mailbox wieder lesen (Boss):**
+
+1. Alte `MAILBOX_ID` aus alter `.env` / Explorer / Notizen (zum **alten** `PACKAGE_ID`-Deploy).
+2. Kurz in Server-`.env` eintragen **oder** Eintrag in `package-profiles.manifest.json` mit **Paar** `packageId` + `mailboxId` (siehe `docs/examples/…`).
+3. API neu starten, Posteingang laden (ggf. Package-ID aus Verlauf wählen).
+
+**Typische Mailbox-Fehler:** `MAILBOX_ID` = `PACKAGE_ID` („move package passed“), falsche/leere `MAILBOX_ID`, RPC-Timeout bei `getDynamicFields` — prüfe `GET /api/status` → `configHints`.
+
+**Pflege-Tabelle (empfohlen, lokal — nicht ins Git):**
+
+| Deploy-Datum | PACKAGE_ID | MAILBOX_ID | Notiz |
+|--------------|------------|------------|--------|
+| 2026-05-20 | `0xf817…e504` | `0xd140…b3a4` | siehe `docs/DEPLOY-MOVE-M4d.md` |
+| … | … | … | alte Zeilen vor neuem Deploy |
+
+Kopie der **alten** Zeile vor `.env`-Überschreiben — sonst fehlen Mailbox-Inhalte (Bilder/Dateien in DF), auch wenn Events über Package-Verlauf wieder kommen.
+
 ---
 
 ## 5. `package-profiles.manifest.json` aktualisieren
