@@ -25,6 +25,9 @@ export function buildApiCommandPostBody(
     body.commandPlaintext = opts.commandPlaintext
   }
   if (opts?.messagingPersistenceMode != null) body.messagingPersistenceMode = opts.messagingPersistenceMode
+  if (typeof opts?.mailboxObjectId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(opts.mailboxObjectId.trim())) {
+    body.mailboxObjectId = opts.mailboxObjectId.trim()
+  }
   return body
 }
 

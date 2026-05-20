@@ -8,11 +8,24 @@ export type DirectSignAndExecuteResult = {
 }
 
 function parseEffectsStatus(resp: unknown): string | undefined {
-  const e = (resp as { effects?: { status?: { type?: string } | string } })?.effects?.status
+  const e = (resp as { effects?: { status?: unknown } })?.effects?.status
   if (e == null) return undefined
-  if (typeof e === 'string') return e
-  if (typeof e === 'object' && e !== null && 'type' in e) return String((e as { type?: string }).type)
+  if (typeof e === 'string') return e.trim().toLowerCase()
+  if (typeof e === 'object' && e !== null) {
+    const o = e as Record<string, unknown>
+    if (typeof o.status === 'string') return o.status.trim().toLowerCase()
+    if (typeof o.type === 'string') return o.type.trim().toLowerCase()
+  }
   return undefined
+}
+
+/** Erfolg wenn Digest da und Status fehlt, success oder submitted (IOTA-SDK-Varianten). */
+export function isDirectChainExecutionSuccess(digest: string | undefined, status: string | undefined): boolean {
+  const d = (digest ?? '').trim()
+  if (!d) return false
+  const st = (status ?? '').trim().toLowerCase()
+  if (!st) return true
+  return st === 'success' || st === 'submitted'
 }
 
 export async function signAndExecuteTransactionWithSigner(opts: {
@@ -27,5 +40,5 @@ export async function signAndExecuteTransactionWithSigner(opts: {
   })
   const digest = (resp as { digest?: string })?.digest
   const status = parseEffectsStatus(resp)
-  return { digest, status }
+  return { digest, status: status || (digest ? 'success' : undefined) }
 }

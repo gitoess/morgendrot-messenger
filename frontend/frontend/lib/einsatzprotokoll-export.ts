@@ -19,7 +19,7 @@ export type EinsatzprotokollExportMeta = {
   note: string
 }
 
-function resolveTransportCodes(m: Message): ('internet' | 'mesh' | 'adhoc')[] {
+function resolveTransportCodes(m: Message): ('internet' | 'mesh' | 'adhoc' | 'telegram')[] {
   if (m.transports?.length) return [...m.transports]
   return m.source === 'mesh' ? ['mesh'] : ['internet']
 }
@@ -32,6 +32,8 @@ function labelForCode(t: string): string {
       return 'LoRa / Meshtastic'
     case 'adhoc':
       return 'Bluetooth / Ad-hoc'
+    case 'telegram':
+      return 'Telegram'
     default:
       return t
   }

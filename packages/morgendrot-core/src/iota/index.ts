@@ -26,7 +26,10 @@ export type {
   MailboxInboxRpcEncryptedPiece,
   FetchMailboxInboxRpcInput,
 } from './mailbox-inbox-mixed-rpc'
-export { signAndExecuteTransactionWithSigner } from './sign-and-execute'
+export {
+  signAndExecuteTransactionWithSigner,
+  isDirectChainExecutionSuccess,
+} from './sign-and-execute'
 export type { DirectSignAndExecuteResult } from './sign-and-execute'
 export { collectGasCoinRefs, attachGasPaymentForOwner } from './gas-payment'
 export type { GasCoinRef } from './gas-payment'

@@ -24,4 +24,9 @@ describe('buildApiCommandPostBody', () => {
     const b = buildApiCommandPostBody('/send-plain', ['0x' + 'd'.repeat(64), 'z'])
     expect('messagingPersistenceMode' in b).toBe(false)
   })
+  it('serialisiert mailboxObjectId für private Kontakt-Mailbox', () => {
+    const mb = '0x' + 'e'.repeat(64)
+    const b = buildApiCommandPostBody('/inbox', ['50'], { mailboxObjectId: mb })
+    expect(b.mailboxObjectId).toBe(mb)
+  })
 })

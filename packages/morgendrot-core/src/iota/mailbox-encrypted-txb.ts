@@ -16,6 +16,8 @@ export type BuildStoreEncryptedMailboxTxInput = {
   tag: Uint8Array
   nonce: bigint
   ttlDays: bigint
+  /** M4d: `store_encrypted_message_private` statt Shared-Mailbox. */
+  privateMailbox?: boolean
 }
 
 /**
@@ -52,10 +54,11 @@ export function buildStoreEncryptedMailboxTransaction(input: BuildStoreEncrypted
   if (tag.length !== 16) throw new Error('AES-GCM Tag muss 16 Byte haben.')
   if (ciphertext.length === 0) throw new Error('Ciphertext darf nicht leer sein.')
 
+  const storeFn = input.privateMailbox ? 'store_encrypted_message_private' : 'store_encrypted_message'
   const txb = new Transaction()
   txb.setSender(sender)
   txb.moveCall({
-    target: `${pkg}::messaging::store_encrypted_message`,
+    target: `${pkg}::messaging::${storeFn}`,
     arguments: [
       txb.object(mb),
       txb.pure.address(recipient),

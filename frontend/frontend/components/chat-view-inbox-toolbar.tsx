@@ -10,9 +10,13 @@ import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
 import { ChatViewTangleInventoryButton } from '@/frontend/components/chat-view-tangle-inventory-button'
-import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
+import {
+  ChatViewPendingSendsButton,
+  type OfflineMailboxQueueListItem,
+} from '@/frontend/components/chat-view-pending-sends-button'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +32,7 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
   onMorgPkgImportFile: (e: ChangeEvent<HTMLInputElement>) => void
   onMorgPkgDeviceFiles: (e: ChangeEvent<HTMLInputElement>) => void
+  onMorgPkgDeviceExportPick: () => void | Promise<void>
   morgPkgDeviceBusy: boolean
   apiStatus: ApiStatus | null
   onRefresh: () => void
@@ -64,6 +69,11 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   showPhonebookButton?: boolean
   onOpenPartnerSetup?: () => void
   messagingPersistenceMode: MessagingPersistenceMode
+  offlineMailboxQueuePending?: number
+  offlineMailboxQueueItems?: OfflineMailboxQueueListItem[]
+  offlineMailboxQueueErrorHint?: string
+  onOfflineMailboxQueueRefresh?: () => void | Promise<void>
+  onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -95,6 +105,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     morgPkgDeviceFilesRef,
     onMorgPkgImportFile,
     onMorgPkgDeviceFiles,
+    onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     apiStatus,
     onRefresh,
@@ -133,6 +144,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     showPhonebookButton = false,
     onOpenPartnerSetup,
     messagingPersistenceMode,
+    offlineMailboxQueuePending = 0,
+    offlineMailboxQueueItems = [],
+    offlineMailboxQueueErrorHint = '',
+    onOfflineMailboxQueueRefresh,
+    onRemoveOfflineMailboxQueueItems,
   } = p
 
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -189,7 +205,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             ref={morgPkgFileRef}
             type="file"
             accept=".json,.morg-pkg,application/json"
-            className="hidden"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
             onChange={onMorgPkgImportFile}
           />
           <input
@@ -197,7 +215,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             type="file"
             multiple
             accept="image/*,.txt,text/plain,.opus,.ogg,audio/ogg,audio/opus,application/ogg"
-            className="hidden"
+            className="sr-only"
+            tabIndex={-1}
+            aria-hidden
             onChange={onMorgPkgDeviceFiles}
           />
 
@@ -230,7 +250,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     setTimeout(() => setStatus('idle'), 7000)
                     return
                   }
-                  morgPkgFileRef.current?.click()
+                  triggerHiddenFileInput(morgPkgFileRef)
                 }}
               >
                 Import: .morg-pkg → Posteingang
@@ -246,11 +266,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     setTimeout(() => setStatus('idle'), 8000)
                     return
                   }
-                  setStatus('idle')
-                  setStatusMsg(
-                    'Dateiauswahl: Fotos/Text wählen — danach wird eine .morg-pkg-Datei heruntergeladen (nicht importiert).'
-                  )
-                  morgPkgDeviceFilesRef.current?.click()
+                  void onMorgPkgDeviceExportPick()
                 }}
               >
                 {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
@@ -316,16 +332,23 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   triggerLabel="Auf Chain verankern"
                 />
               </div>
-              <div className="px-2 py-1.5">
-                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
-                  Verankerte TX: Digest, Nonce und Chunk-Hash speichern — zum Suchen und Wiederherstellen (nach jeder
-                  Verankerung werden die Werte angezeigt).
-                </p>
-                <ChatViewTangleInventoryButton />
-              </div>
-              <DropdownMenuSeparator />
               <div className="px-2 py-1">
-                <ChatViewRelaySubmitButton />
+                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
+                  On-Chain: Digests, Nonce, Recovery. Tresor: optional Digest-Backup (nicht dieselbe Datei wie Keys).
+                </p>
+                <ChatViewTangleInventoryButton inventoryScope="anchored" />
+              </div>
+              <div className="px-2 py-1">
+                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
+                  Noch nicht verankert: Mailbox-Retry-Queue und Relay-Pakete (eigener Speicher).
+                </p>
+                <ChatViewPendingSendsButton
+                  offlineMailboxQueuePending={offlineMailboxQueuePending}
+                  offlineMailboxQueueItems={offlineMailboxQueueItems}
+                  offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+                  onManualRefresh={onOfflineMailboxQueueRefresh}
+                  onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+                />
               </div>
             </DropdownMenuContent>
           </DropdownMenu>

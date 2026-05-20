@@ -13,12 +13,12 @@ export function useChatViewPendingHandshakes(p: {
   const [offers, setOffers] = useState<PendingHandshakeOffer[]>([])
   const [loading, setLoading] = useState(false)
 
-  const reload = useCallback(async () => {
+  const reload = useCallback(async (opts?: { silent?: boolean }) => {
     if (!enabled) {
       setOffers([])
       return
     }
-    setLoading(true)
+    if (!opts?.silent) setLoading(true)
     try {
       const r = await fetchPendingHandshakes()
       if (r.ok && r.offers) {
@@ -34,7 +34,7 @@ export function useChatViewPendingHandshakes(p: {
   }, [enabled, connectedAddresses])
 
   useEffect(() => {
-    void reload()
+    void reload({ silent: true })
   }, [reload, refreshToken])
 
   return { offers, loading, reload }

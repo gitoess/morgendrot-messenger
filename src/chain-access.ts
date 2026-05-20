@@ -567,6 +567,54 @@ export type GasSummary = {
 };
 export type SignAndExecuteResult = { digest?: string; status?: string; createdObjectIds?: string[]; gasSummary?: GasSummary };
 
+export type ChainTxEvaluation = { ok: true; digest: string } | { ok: false; message: string };
+
+/** IOTA-SDK liefert `effects.status` oft als Objekt `{ status: 'success' }`, nicht als String. */
+export function normalizeChainTxEffectStatus(status: unknown): string {
+    if (status == null) return '';
+    if (typeof status === 'string') return status.trim().toLowerCase();
+    if (typeof status === 'object') {
+        const o = status as Record<string, unknown>;
+        if (typeof o.status === 'string') return o.status.trim().toLowerCase();
+        if (o.status != null && typeof o.status === 'object') {
+            const inner = (o.status as Record<string, unknown>).status;
+            if (typeof inner === 'string') return inner.trim().toLowerCase();
+        }
+    }
+    return '';
+}
+
+function effectStatusFromEffects(effects: unknown): string | undefined {
+    const n = normalizeChainTxEffectStatus((effects as { status?: unknown } | null | undefined)?.status);
+    return n || undefined;
+}
+
+/** Prüft Digest + Effects-Status — verhindert „ok“ ohne echte on-chain TX (Explorer leer). */
+export function evaluateChainTxResult(res: SignAndExecuteResult | undefined, label: string): ChainTxEvaluation {
+    const digest = String(res?.digest ?? '').trim();
+    const status = normalizeChainTxEffectStatus(res?.status);
+    if (status === 'failure') {
+        return {
+            ok: false,
+            message: `${label}: Transaktion fehlgeschlagen. Mailbox leer? Tresor/Owner korrekt? PACKAGE_ID zum Objekt passend?`,
+        };
+    }
+    if (!digest) {
+        return { ok: false, message: `${label}: keine TX-Digest — nichts on-chain ausgeführt.` };
+    }
+    if (status && status !== 'success' && status !== 'submitted') {
+        return { ok: false, message: `${label}: TX-Status „${status}“ — im Explorer (txblock) prüfen.` };
+    }
+    return { ok: true, digest };
+}
+
+export function explorerTxUrlFromDigest(digest: string): string {
+    const d = digest.trim();
+    const base = (process.env.EXPLORER_TX_BASE_URL || 'https://explorer.iota.org/txblock').replace(/\/$/, '');
+    const network = (CFG.RPC_URL || '').toLowerCase().includes('testnet') ? '?network=testnet' : '';
+    return `${base}/${encodeURIComponent(d)}${network}`;
+}
+
 function parseCreatedObjectIds(effects: { created?: Array<{ reference?: { objectId?: string } }> } | null | undefined): string[] {
     const created = effects?.created ?? [];
     return created.map((c) => c.reference?.objectId).filter((id): id is string => typeof id === 'string' && id.length > 0);
@@ -857,7 +905,7 @@ export async function signAndExecute(
         const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string })?.effects;
         const createdObjectIds = parseCreatedObjectIds(effects);
         const gasSummary = parseGasSummary(effects);
-        const status = effects?.status;
+        const status = effectStatusFromEffects(effects);
         const out = { digest: (resp as { digest?: string }).digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
         recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, out.digest);
         return out;
@@ -913,7 +961,7 @@ export async function signAndExecute(
         });
         digest = (resp as { digest?: string }).digest;
         const effects = (resp as { effects?: Record<string, unknown> & { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } })?.effects;
-        status = effects?.status as string | undefined;
+        status = effectStatusFromEffects(effects);
         const createdObjectIds = parseCreatedObjectIds(effects);
         const gasSummary = parseGasSummary(effects);
         const out = { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
@@ -929,7 +977,7 @@ export async function signAndExecute(
             });
             digest = (resp as { digest?: string }).digest;
             const effects = (resp as { effects?: Record<string, unknown> & { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } })?.effects;
-            status = effects?.status as string | undefined;
+            status = effectStatusFromEffects(effects);
             execJson = { digest, effects };
         } catch (_sdkExecuteErr: unknown) {
             const useStdinExec = shouldPassIotaTxViaStdin(normalizedB64.length);
@@ -1017,7 +1065,12 @@ export async function signAndExecuteWithSigner(
         const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string })?.effects;
         const createdObjectIds = parseCreatedObjectIds(effects);
         const gasSummary = parseGasSummary(effects);
-        return { digest: (resp as { digest?: string }).digest, status: effects?.status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
+        return {
+            digest: (resp as { digest?: string }).digest,
+            status: effectStatusFromEffects(effects),
+            createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined,
+            gasSummary,
+        };
     });
 }
 
@@ -1544,8 +1597,10 @@ export async function sendEcdhInit(
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
     const txb = new Transaction();
     txb.setSender(senderAddress);
+    const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
+    const privateMbHs = isPrivateMailboxObjectIdOverrideActive();
     const creditsId = messengerCreditsObjectIdForTx();
-    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID && creditsId) {
+    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID && creditsId && !privateMbHs) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_ecdh_init_with_credits`,
             arguments: [
@@ -1558,8 +1613,9 @@ export async function sendEcdhInit(
             ],
         });
     } else if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
+        const hsTarget = privateMbHs ? 'store_ecdh_init_private' : 'store_ecdh_init';
         txb.moveCall({
-            target: `${CFG.PACKAGE_ID}::messaging::store_ecdh_init`,
+            target: `${CFG.PACKAGE_ID}::messaging::${hsTarget}`,
             arguments: [
                 txb.object(CFG.MAILBOX_ID),
                 txb.pure.address(recipient),
@@ -1759,6 +1815,8 @@ export async function storeEncryptedMessage(
     const txb = new Transaction();
     txb.setSender(senderAddress);
     const signOptions = options?.signOptions;
+    const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
+    const privateMb = isPrivateMailboxObjectIdOverrideActive();
     const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
     const wantsMailbox = options?.forceLegacyEncrypted === false;
     const useMailbox = wantsMailbox && isMessengerMailboxModeActive() && mailboxIdValid;
@@ -1777,7 +1835,7 @@ export async function storeEncryptedMessage(
         );
     }
     const creditsId = messengerCreditsObjectIdForTx();
-    if (useMailbox && creditsId) {
+    if (useMailbox && creditsId && !privateMb) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message_with_credits`,
             arguments: [
@@ -1805,8 +1863,9 @@ export async function storeEncryptedMessage(
             });
         }
     } else if (useMailbox) {
+        const encStore = privateMb ? 'store_encrypted_message_private' : 'store_encrypted_message';
         txb.moveCall({
-            target: `${CFG.PACKAGE_ID}::messaging::store_encrypted_message`,
+            target: `${CFG.PACKAGE_ID}::messaging::${encStore}`,
             arguments: [
                 txb.object(CFG.MAILBOX_ID),
                 txb.pure.address(recipient),
@@ -1891,9 +1950,11 @@ export async function storePlaintextMessage(
         );
         throw new Error(reason ?? 'Klartext-Mailbox nicht verfügbar — Server-Konfiguration prüfen (MAILBOX_ID, USE_MAILBOX).');
     }
+    const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
+    const privateMbPlain = isPrivateMailboxObjectIdOverrideActive();
     const creditsId = messengerCreditsObjectIdForTx();
     const storePlain = mailboxStoresPlaintext();
-    if (useMailbox && creditsId && storePlain) {
+    if (useMailbox && creditsId && storePlain && !privateMbPlain) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits_stored`,
             arguments: [
@@ -1905,7 +1966,7 @@ export async function storePlaintextMessage(
                 txb.pure.u64(ttlDays),
             ],
         });
-    } else if (useMailbox && creditsId) {
+    } else if (useMailbox && creditsId && !privateMbPlain) {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits`,
             arguments: [
@@ -1918,8 +1979,9 @@ export async function storePlaintextMessage(
             ],
         });
     } else if (useMailbox && storePlain) {
+        const plainStore = privateMbPlain ? 'store_plaintext_message_stored_private' : 'store_plaintext_message_stored';
         txb.moveCall({
-            target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_stored`,
+            target: `${CFG.PACKAGE_ID}::messaging::${plainStore}`,
             arguments: [
                 txb.object(CFG.MAILBOX_ID!),
                 txb.pure.address(recipient),
@@ -2796,6 +2858,111 @@ export type OwnedPhysicalAssetItem = {
     creatorSignature?: string;
 };
 
+/** M4d: eigene PrivateMailbox on-chain (shared Object, `owner` = Sender). */
+export async function createPrivateMailbox(
+    signingAddress: string,
+    walletPassword?: string,
+    options?: SignAndExecuteOptions
+): Promise<SignAndExecuteResult> {
+    assertSafeAddress(signingAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const txb = new Transaction();
+    txb.setSender(signingAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::create_private_mailbox`,
+        arguments: [],
+    });
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, options);
+}
+
+/** M4d: Owner-Wallet einer PrivateMailbox on-chain (für Kontakt aus nur Object-ID). */
+export async function getPrivateMailboxOwnerFromChain(mailboxObjectId: string): Promise<{
+    owner: string;
+    mailboxObjectId: string;
+    isPrivateMailbox: boolean;
+}> {
+    const oid = mailboxObjectId.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(oid)) {
+        throw new Error('mailboxObjectId: 0x + 64 Hex.');
+    }
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const client = getClient();
+    const objRes = await client.getObject({
+        id: oid,
+        options: { showOwner: true, showType: true, showContent: true },
+    } as Parameters<IotaClient['getObject']>[0]);
+    const data = (objRes as { data?: { type?: string; owner?: unknown; content?: { fields?: Record<string, unknown> } } })
+        ?.data;
+    if (!data) throw new Error('Object nicht gefunden (Netzwerk / Object-ID).');
+    const typeStr = String(data.type ?? '');
+    const pkg = (CFG.PACKAGE_ID || '').trim().toLowerCase();
+    const isPrivateMailbox = Boolean(pkg && typeStr.toLowerCase().includes(`${pkg}::messaging::privatemailbox`));
+    if (!isPrivateMailbox) {
+        throw new Error('Object ist keine PrivateMailbox dieses Pakets (PACKAGE_ID prüfen).');
+    }
+    const ownerField = data.content?.fields?.owner;
+    const ownerRaw = ownerField != null ? String(ownerField).trim() : '';
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(ownerRaw)) {
+        throw new Error('Owner-Feld der PrivateMailbox nicht lesbar.');
+    }
+    return { owner: normalizeAddress(ownerRaw), mailboxObjectId: oid, isPrivateMailbox: true };
+}
+
+/** M4d: PrivateMailbox löschen (Rebate). Nur Owner; Objekt sollte leer sein (keine DF-Einträge). */
+export async function purgePrivateMailbox(
+    mailboxObjectId: string,
+    signingAddress: string,
+    walletPassword?: string,
+    options?: SignAndExecuteOptions
+): Promise<SignAndExecuteResult> {
+    if (!mailboxObjectId?.trim() || !/^0x[a-fA-F0-9]{64}$/i.test(mailboxObjectId.trim()))
+        throw new Error('Private-Mailbox-Object-ID fehlt (0x + 64 Hex).');
+    assertSafeAddress(signingAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const oid = mailboxObjectId.trim();
+    const client = getClient();
+    try {
+        const objRes = await client.getObject({
+            id: oid,
+            options: { showOwner: true, showType: true, showContent: true },
+        } as Parameters<IotaClient['getObject']>[0]);
+        const data = (objRes as { data?: { type?: string; owner?: unknown; content?: { fields?: Record<string, unknown> } } })
+            ?.data;
+        if (!data) throw new Error('Private Mailbox nicht gefunden (Object-ID prüfen).');
+        const typeStr = String(data.type ?? '');
+        const pkg = (CFG.PACKAGE_ID || '').trim().toLowerCase();
+        if (pkg && !typeStr.toLowerCase().includes(`${pkg}::messaging::privatemailbox`)) {
+            throw new Error(
+                'Object ist keine PrivateMailbox dieses Pakets — PACKAGE_ID in .env zum Objekt passend setzen (ggf. Redeploy).'
+            );
+        }
+        const ownerField = data.content?.fields?.owner;
+        if (ownerField != null) {
+            const onChainOwner = String(ownerField).trim();
+            if (normalizeAddress(onChainOwner) !== normalizeAddress(signingAddress)) {
+                throw new Error('Nur der Owner der PrivateMailbox kann Rebate ausführen (andere Wallet?).');
+            }
+        }
+        const owner = data.owner;
+        const isShared =
+            owner != null && typeof owner === 'object' && ('Shared' in owner || 'shared' in (owner as object));
+        if (!isShared) {
+            throw new Error('Private Mailbox ist kein Shared-Objekt — unerwarteter Zustand.');
+        }
+    } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (/not found|exist|404/i.test(msg)) throw new Error('Private Mailbox nicht gefunden (Object-ID / Netzwerk).');
+        throw e instanceof Error ? e : new Error(msg);
+    }
+    const txb = new Transaction();
+    txb.setSender(signingAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::purge_private_mailbox`,
+        arguments: [txb.object(oid)],
+    });
+    return signAndExecute(client, txb, signingAddress, walletPassword, options);
+}
+
 /** PhysicalAsset erstellen (name + metadata + optional Streams-Anchor-ID). Owner = Sender. Rebate bei purge_physical_asset. */
 export async function createPhysicalAsset(
     name: string,
@@ -3417,12 +3584,24 @@ export async function getHandshakeFromMailbox(recipient: string, sender: string)
 }
 
 export type MailboxHandshakeCandidate = { recipient: string; sender: string; objectId?: string; storageRebate?: string };
-export type MailboxMessageCandidate = { recipient: string; sender: string; nonce: string; objectId?: string; storageRebate?: string };
+export type MailboxMessageCandidate = {
+    recipient: string;
+    sender: string;
+    nonce: string;
+    objectId?: string;
+    storageRebate?: string;
+    /** Dynamic-Field-Typ für Purge-Zielwahl. */
+    wireKind?: 'encrypted' | 'plain';
+};
 
-/** Mailbox-Inhalte auflisten, die die angegebene Adresse rebaten kann (Handshakes + Nachrichten). */
-export async function getMailboxRebateCandidates(myAddress: string): Promise<{ handshakes: MailboxHandshakeCandidate[]; messages: MailboxMessageCandidate[] }> {
+/** Dynamic Fields unter einer Mailbox-Object-ID (Shared oder PrivateMailbox). */
+export async function getDynamicFieldRebateCandidates(
+    parentMailboxObjectId: string,
+    myAddress: string
+): Promise<{ handshakes: MailboxHandshakeCandidate[]; messages: MailboxMessageCandidate[] }> {
     const out = { handshakes: [] as MailboxHandshakeCandidate[], messages: [] as MailboxMessageCandidate[] };
-    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID || !myAddress) return out;
+    const parentId = (parentMailboxObjectId || '').trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(parentId) || !CFG.PACKAGE_ID || !myAddress) return out;
     const norm = (a: string) => (a || '').trim().toLowerCase();
     const me = norm(myAddress);
     try {
@@ -3432,7 +3611,7 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
         const pageLimit = 500;
         for (let pageNum = 0; pageNum < maxPages; pageNum++) {
             const page = await getClient().getDynamicFields({
-                parentId: CFG.MAILBOX_ID,
+                parentId,
                 limit: pageLimit,
                 ...(cursor ? { cursor } : {}),
             } as Parameters<IotaClient['getDynamicFields']>[0]);
@@ -3445,7 +3624,7 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
         }
         const entries = allEntries;
         const hsEntries: { recipient: string; sender: string; objectId: string }[] = [];
-        const msgEntries: { recipient: string; sender: string; nonce: string; objectId: string }[] = [];
+        const msgEntries: { recipient: string; sender: string; nonce: string; objectId: string; wireKind: 'encrypted' | 'plain' }[] = [];
         for (const e of entries) {
             const name = e?.name?.value as Record<string, string> | undefined;
             const typeStr = (e?.name?.type as string) ?? '';
@@ -3459,10 +3638,22 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
                 hsEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), objectId: objId });
             } else if (typeStr.includes('PlainMsgKey') || typeStr.endsWith('::messaging::PlainMsgKey')) {
                 const nonce = String(name?.nonce ?? '');
-                msgEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), nonce, objectId: objId });
+                msgEntries.push({
+                    recipient: String(name?.recipient ?? ''),
+                    sender: String(name?.sender ?? ''),
+                    nonce,
+                    objectId: objId,
+                    wireKind: 'plain',
+                });
             } else if (typeStr.includes('MsgKey') || typeStr.endsWith('::messaging::MsgKey')) {
                 const nonce = String(name?.nonce ?? '');
-                msgEntries.push({ recipient: String(name?.recipient ?? ''), sender: String(name?.sender ?? ''), nonce, objectId: objId });
+                msgEntries.push({
+                    recipient: String(name?.recipient ?? ''),
+                    sender: String(name?.sender ?? ''),
+                    nonce,
+                    objectId: objId,
+                    wireKind: 'encrypted',
+                });
             }
         }
         const allIds = [...hsEntries.map((h) => h.objectId), ...msgEntries.map((m) => m.objectId)];
@@ -3497,6 +3688,7 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
                 sender: m.sender,
                 nonce: m.nonce,
                 objectId: m.objectId,
+                wireKind: m.wireKind,
                 storageRebate: rebateById.get(m.objectId),
             });
         }
@@ -3504,6 +3696,125 @@ export async function getMailboxRebateCandidates(myAddress: string): Promise<{ h
         // ignore
     }
     return out;
+}
+
+/** Mailbox-Inhalte auflisten, die die angegebene Adresse rebaten kann (Handshakes + Nachrichten). */
+export async function getMailboxRebateCandidates(myAddress: string): Promise<{ handshakes: MailboxHandshakeCandidate[]; messages: MailboxMessageCandidate[] }> {
+    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID) {
+        return { handshakes: [], messages: [] };
+    }
+    return getDynamicFieldRebateCandidates(CFG.MAILBOX_ID, myAddress);
+}
+
+/** M4d: Inhalte einer PrivateMailbox (Dynamic Fields), die der Owner/sender/recipient purgen darf. */
+export async function getPrivateMailboxRebateCandidates(
+    mailboxObjectId: string,
+    myAddress: string
+): Promise<{ handshakes: MailboxHandshakeCandidate[]; messages: MailboxMessageCandidate[] }> {
+    return getDynamicFieldRebateCandidates(mailboxObjectId, myAddress);
+}
+
+const PRIVATE_MB_CLEANUP_MAX_OPS_PER_TX = 20;
+
+export type PrivateMailboxCleanupResult = {
+    digest?: string;
+    status?: string;
+    purgedHandshakes: number;
+    purgedMessages: number;
+    transactions: number;
+};
+
+/** M4d: Alle purgbaren Dynamic Fields in einer PrivateMailbox löschen (eine oder mehrere TX). */
+export async function cleanupPrivateMailbox(
+    mailboxObjectId: string,
+    signingAddress: string,
+    walletPassword?: string,
+    options?: SignAndExecuteOptions
+): Promise<PrivateMailboxCleanupResult> {
+    const oid = mailboxObjectId.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(oid)) throw new Error('Private-Mailbox-Object-ID fehlt (0x + 64 Hex).');
+    assertSafeAddress(signingAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const { handshakes, messages } = await getPrivateMailboxRebateCandidates(oid, signingAddress);
+    const ops: Array<{ kind: 'hs' | 'msg' | 'plain'; recipient: string; sender: string; nonce?: bigint }> = [];
+    for (const h of handshakes) {
+        ops.push({ kind: 'hs', recipient: h.recipient, sender: h.sender });
+    }
+    for (const m of messages) {
+        const nonceBn = BigInt(m.nonce || '0');
+        if (m.wireKind === 'plain') {
+            ops.push({ kind: 'plain', recipient: m.recipient, sender: m.sender, nonce: nonceBn });
+        } else {
+            ops.push({ kind: 'msg', recipient: m.recipient, sender: m.sender, nonce: nonceBn });
+        }
+    }
+    if (!ops.length) {
+        return { purgedHandshakes: 0, purgedMessages: 0, transactions: 0, status: 'success' };
+    }
+    const client = getClient();
+    let purgedHandshakes = 0;
+    let purgedMessages = 0;
+    let transactions = 0;
+    let lastDigest: string | undefined;
+    let lastStatus: string | undefined;
+    for (let off = 0; off < ops.length; off += PRIVATE_MB_CLEANUP_MAX_OPS_PER_TX) {
+        const chunk = ops.slice(off, off + PRIVATE_MB_CLEANUP_MAX_OPS_PER_TX);
+        const txb = new Transaction();
+        txb.setSender(signingAddress);
+        for (const op of chunk) {
+            if (op.kind === 'hs') {
+                txb.moveCall({
+                    target: `${CFG.PACKAGE_ID}::messaging::purge_handshake_private`,
+                    arguments: [txb.object(oid), txb.pure.address(op.recipient), txb.pure.address(op.sender)],
+                });
+                purgedHandshakes++;
+            } else if (op.kind === 'msg') {
+                txb.moveCall({
+                    target: `${CFG.PACKAGE_ID}::messaging::purge_message_private`,
+                    arguments: [
+                        txb.object(oid),
+                        txb.pure.address(op.recipient),
+                        txb.pure.address(op.sender),
+                        txb.pure.u64(op.nonce ?? 0n),
+                    ],
+                });
+                purgedMessages++;
+            } else {
+                txb.moveCall({
+                    target: `${CFG.PACKAGE_ID}::messaging::purge_plaintext_mail_entry_private`,
+                    arguments: [
+                        txb.object(oid),
+                        txb.pure.address(op.recipient),
+                        txb.pure.address(op.sender),
+                        txb.pure.u64(op.nonce ?? 0n),
+                    ],
+                });
+            }
+        }
+        try {
+            const res = await signAndExecute(client, txb, signingAddress, walletPassword, options);
+            transactions++;
+            lastDigest = res.digest;
+            lastStatus = res.status;
+            const check = evaluateChainTxResult(res, 'cleanup_private_mailbox');
+            if (!check.ok) throw new Error(check.message);
+        } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            if (/purge_handshake_private|purge_message_private|function not found|Could not resolve/i.test(msg)) {
+                throw new Error(
+                    'Aufräumen on-chain nicht im Paket — Redeploy mit purge_*_private (M4d). Bis dahin Einträge einzeln purgen.'
+                );
+            }
+            throw e instanceof Error ? e : new Error(msg);
+        }
+    }
+    return {
+        digest: lastDigest,
+        status: lastStatus,
+        purgedHandshakes,
+        purgedMessages,
+        transactions,
+    };
 }
 
 /** Ersten eingehenden Handshake in der Mailbox finden (recipient = ich), ohne Partneradresse zu kennen. */

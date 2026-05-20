@@ -8,6 +8,8 @@
 import { useMemo, useState } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Switch } from '@/components/ui/switch'
+import { setConfig } from '@/frontend/lib/api/dashboard-rest'
 import {
   CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
   CHAT_ENCRYPTED_MESH_DISABLED_MSG,
@@ -23,7 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import type { ApiStatus } from '@/frontend/lib/api'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { SendTransportChoicePort } from '@/frontend/features/messenger-ports'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import { isGroupChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -47,6 +49,11 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   channelMode?: MessengerChatChannel
   /** 1:1: eigene Mailbox-Object-ID nur bei Persistent (Mailbox). */
   myAddressLine?: string
+  contactDirectory?: Record<string, ContactMeshEntryClient>
+  onContactsChanged?: () => void
+  onMailboxStatus?: (msg: string, kind: 'success' | 'error') => void
+  /** Nach Runtime-Config-Änderung (Boss). */
+  onRefreshApiStatus?: () => void | Promise<void>
   /** Unter „Verschlüsselt“: Handshake senden / annehmen / Einsatz-Partner (online). */
   encryptedPartner?: ChatViewEncryptedPartnerPanelProps
 }
@@ -75,6 +82,13 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     forcedTransport === 'internet' && channelMode != null && !isGroupChannel(channelMode)
 
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
+  const [mailboxPlainBusy, setMailboxPlainBusy] = useState(false)
+
+  const canChangeServerConfig = apiStatus?.permissions?.configChange === true
+  const serverUseMailbox = apiStatus?.useMailbox === true
+  const serverStorePlainInMb = apiStatus?.mailboxStorePlaintext === true
+  const showMailboxPlaintextPolicy =
+    showChainPersistence && messagingPersistenceMode === 'mailbox' && !encrypted
 
   const plainWarningText =
     forcedTransport === 'internet'
@@ -204,8 +218,85 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               prüfen oder „Flüchtig (Event)“ wählen.
             </p>
           ) : null}
+          {showMailboxPlaintextPolicy ? (
+            <div className="w-full space-y-2 rounded-lg border border-border/80 bg-muted/20 px-3 py-2">
+              <p className="text-xs font-medium text-foreground">Server-Policy: Klartext in der Mailbox</p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Die UI-Option <strong className="text-foreground">„Persistent (Mailbox)“</strong> wählt nur den
+                Chain-Pfad. Ob Klartext dort gespeichert werden darf, steuert der Server (
+                <span className="font-mono text-[10px]">MAILBOX_STORE_PLAINTEXT</span> +{' '}
+                <span className="font-mono text-[10px]">USE_MAILBOX</span>) — nicht nur dein lokales localStorage.
+              </p>
+              <ul className="text-[11px] text-muted-foreground list-disc pl-4 space-y-0.5">
+                <li>
+                  <span className="font-mono">USE_MAILBOX</span>:{' '}
+                  <strong className="text-foreground">{serverUseMailbox ? 'an' : 'aus'}</strong>
+                  {apiStatus?.useMailboxConfigSource ? ` (${apiStatus.useMailboxConfigSource})` : ''}
+                </li>
+                <li>
+                  <span className="font-mono">MAILBOX_STORE_PLAINTEXT</span>:{' '}
+                  <strong className="text-foreground">{serverStorePlainInMb ? 'an' : 'aus'}</strong>
+                  {apiStatus?.mailboxStorePlaintextConfigSource
+                    ? ` (${apiStatus.mailboxStorePlaintextConfigSource})`
+                    : ''}
+                </li>
+              </ul>
+              {!serverUseMailbox || !serverStorePlainInMb ? (
+                <p className="text-[11px] text-amber-800 dark:text-amber-200">
+                  Klartext + Persistent schlägt fehl oder landet in der Warteschlange —{' '}
+                  <button
+                    type="button"
+                    className="underline font-medium"
+                    onClick={() => onMessagingPersistenceModeChange('event')}
+                  >
+                    Flüchtig (Event)
+                  </button>{' '}
+                  wählen oder Server-Flags aktivieren (Zeile in <span className="font-mono">.env</span> fehlt oft —
+                  siehe <span className="font-mono">.env.example</span>).
+                </p>
+              ) : null}
+              {canChangeServerConfig ? (
+                <label className="flex cursor-pointer items-center justify-between gap-3 pt-1">
+                  <span className="text-xs text-foreground">Klartext in Mailbox (Server, sofort)</span>
+                  <Switch
+                    checked={serverStorePlainInMb}
+                    disabled={mailboxPlainBusy || !serverUseMailbox}
+                    onCheckedChange={(on) => {
+                      void (async () => {
+                        setMailboxPlainBusy(true)
+                        const r = await setConfig('MAILBOX_STORE_PLAINTEXT', on ? 'true' : 'false')
+                        setMailboxPlainBusy(false)
+                        if (r.ok) {
+                          p.onMailboxStatus?.(
+                            `MAILBOX_STORE_PLAINTEXT=${on ? 'true' : 'false'} (Runtime, kein Neustart).`,
+                            'success'
+                          )
+                          await p.onRefreshApiStatus?.()
+                        } else {
+                          p.onMailboxStatus?.(r.error || r.message || 'Config fehlgeschlagen.', 'error')
+                        }
+                      })()
+                    }}
+                    aria-label="MAILBOX_STORE_PLAINTEXT auf dem Server umschalten"
+                  />
+                </label>
+              ) : (
+                <p className="text-[10px] text-muted-foreground">
+                  Nur Boss/Betreiber mit Config-Recht kann das hier umschalten — sonst in der Server-<span className="font-mono">.env</span> ergänzen:{' '}
+                  <span className="font-mono">MAILBOX_STORE_PLAINTEXT=true</span> und API neu starten (oder Boss nutzt
+                  Menü „.env anpassen“).
+                </p>
+              )}
+            </div>
+          ) : null}
           {messagingPersistenceMode === 'mailbox' && myAddressLine?.trim() ? (
-            <ChatViewPrivateMailboxConfig myAddressLine={myAddressLine} />
+            <ChatViewPrivateMailboxConfig
+              myAddressLine={myAddressLine}
+              serverMailboxId={apiStatus?.mailboxId}
+              contactDirectory={p.contactDirectory}
+              onContactsChanged={p.onContactsChanged}
+              onMailboxStatus={p.onMailboxStatus}
+            />
           ) : null}
         </div>
       ) : null}

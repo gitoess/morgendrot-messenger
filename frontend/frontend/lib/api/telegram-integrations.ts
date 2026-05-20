@@ -131,7 +131,7 @@ export async function saveTelegramIntegration(body: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    if (!fr.ok) return { ok: false, error: fr.error, ...parseTelegramPublic('{}', 500) }
+    if (!fr.ok) return { ...parseTelegramPublic('{}', 500), error: fr.error }
     return parseTelegramPublic(fr.text, fr.response.status)
   } catch (e) {
     return {
@@ -144,6 +144,8 @@ export async function saveTelegramIntegration(body: {
       relayBaseUrl: 'http://127.0.0.1:8787',
       relayReachable: false,
       monitorWebhookActive: false,
+      inboundMode: 'off',
+      inboundPollActive: false,
     }
   }
 }

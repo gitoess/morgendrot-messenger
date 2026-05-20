@@ -12,6 +12,8 @@ import {
 } from '@/components/ui/dialog'
 import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
+import { fetchResolvePrivateMailboxOwner } from '@/frontend/lib/fetch-resolve-private-mailbox-owner'
+import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
 
 export type ContactPhonebookFormValues = {
   address: string
@@ -42,7 +44,10 @@ const empty: ContactPhonebookFormValues = {
 export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogProps) {
   const { open, onOpenChange, mode, initial, busy = false, onSave, onScanImport } = p
   const [form, setForm] = useState<ContactPhonebookFormValues>(empty)
+  const [resolveOwnerBusy, setResolveOwnerBusy] = useState(false)
+  const [resolveOwnerHint, setResolveOwnerHint] = useState('')
   const openSnapshotRef = useRef<Partial<ContactPhonebookFormValues> | undefined>(undefined)
+  const myMailboxes = open ? readMyPrivateMailboxes() : []
 
   useEffect(() => {
     if (!open) {
@@ -146,14 +151,64 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             />
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Private Mailbox (optional)</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Private Mailbox des Kontakts (optional)
+            </label>
+            {myMailboxes.length > 0 ? (
+              <select
+                value={form.mailboxObjectId}
+                onChange={(e) => setForm((f) => ({ ...f, mailboxObjectId: e.target.value }))}
+                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-xs"
+              >
+                <option value="">— keine (Einsatz-Shared) —</option>
+                {myMailboxes.map((m) => (
+                  <option key={m.objectId} value={m.objectId}>
+                    {(m.label ? `${m.label} · ` : '') + m.objectId.slice(0, 10)}…{m.objectId.slice(-6)}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <input
               type="text"
               value={form.mailboxObjectId}
-              onChange={(e) => setForm((f) => ({ ...f, mailboxObjectId: e.target.value }))}
-              placeholder="0x… — nur bei eigener Mailbox des Kontakts"
+              onChange={(e) => {
+                setResolveOwnerHint('')
+                setForm((f) => ({ ...f, mailboxObjectId: e.target.value }))
+              }}
+              placeholder="0x… — private Mailbox des Kontakts (aus QR/Profil)"
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs"
             />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={resolveOwnerBusy || !/^0x[a-fA-F0-9]{64}$/i.test(form.mailboxObjectId.trim())}
+                onClick={() => {
+                  void (async () => {
+                    setResolveOwnerBusy(true)
+                    setResolveOwnerHint('')
+                    const r = await fetchResolvePrivateMailboxOwner(form.mailboxObjectId)
+                    setResolveOwnerBusy(false)
+                    if (!r.ok) {
+                      setResolveOwnerHint(r.error)
+                      return
+                    }
+                    setForm((f) => ({ ...f, address: r.owner }))
+                    setResolveOwnerHint(`Wallet des Mailbox-Owners aus der Chain übernommen (${r.owner.slice(0, 10)}…).`)
+                  })()
+                }}
+                className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] font-medium hover:bg-primary/15 disabled:opacity-50"
+              >
+                {resolveOwnerBusy ? 'Lade Owner…' : 'Wallet aus Chain (Owner)'}
+              </button>
+            </div>
+            {resolveOwnerHint ? (
+              <p className="text-[10px] text-muted-foreground">{resolveOwnerHint}</p>
+            ) : null}
+            <p className="text-[10px] text-muted-foreground">
+              Nur Mailbox-ID bekannt? Owner per Chain laden, dann speichern. Senden geht immer an die{' '}
+              <strong className="text-foreground">Wallet</strong>; die Mailbox-ID steuert nur das Postfach on-chain.
+              Pro Kontakt ist derzeit <strong className="text-foreground">eine</strong> alternative Mailbox-ID speicherbar.
+            </p>
           </div>
         </div>
 

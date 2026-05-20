@@ -45,7 +45,10 @@ function nonceFromApi(res: ApiResponse): string | undefined {
 }
 
 function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
-  if (res.ok === true) return { ok: true, txDigest: txDigestFromApi(res), nonce: nonceFromApi(res) }
+  const digest = txDigestFromApi(res)
+  if (res.ok === true || digest) {
+    return { ok: true, txDigest: digest, nonce: nonceFromApi(res) }
+  }
   return { ok: false, error: res.error, message: res.message }
 }
 

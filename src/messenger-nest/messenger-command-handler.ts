@@ -44,6 +44,7 @@ import {
     transferCoins as chainTransferCoins,
     iotaToMist,
     createTicketsBatchPtb as chainCreateTicketsBatchPtb,
+    publishPackageCli,
     sendPairingOffer,
     queryRecentPairingOffers,
 } from '../chain-access.js';
@@ -1007,8 +1008,35 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const id = a[0].trim();
                         if (!id) return { ok: false, message: 'Package-ID eingeben' };
                         (CFG as { PACKAGE_ID: string }).PACKAGE_ID = id;
+                        process.env.PACKAGE_ID = id;
                         savePackageIdToFile(id);
                         return { ok: true, message: `PACKAGE_ID gesetzt und in .morgendrot-package-id gespeichert.`, packageId: id };
+                    }
+                    if (c === '/publish-package') {
+                        const rawDir = (a[0] ?? 'move-test').trim() || 'move-test';
+                        if (/[\\/]/.test(rawDir) || rawDir.includes('..')) {
+                            return { ok: false, message: 'Nur Ordnername angeben (z. B. move-test), kein Pfad.' };
+                        }
+                        try {
+                            const packageId = await publishPackageCli(rawDir);
+                            (CFG as { PACKAGE_ID: string }).PACKAGE_ID = packageId;
+                            process.env.PACKAGE_ID = packageId;
+                            savePackageIdToFile(packageId);
+                            const envResult = setEnvKey('PACKAGE_ID', packageId);
+                            const envNote = envResult.ok
+                                ? 'PACKAGE_ID in .env gespeichert.'
+                                : `.env nicht aktualisiert (${envResult.error || 'Schreibfehler'}).`;
+                            return {
+                                ok: true,
+                                message:
+                                    `Move-Paket publiziert (${rawDir}). ${envNote} Enthält u. a. create_private_mailbox (M4d). ` +
+                                    'Bei neuem Package: create_globals ausführen und MAILBOX_ID in .env setzen, dann /create-private-mailbox.',
+                                packageId,
+                                objectId: packageId,
+                            };
+                        } catch (e: unknown) {
+                            return { ok: false, message: e instanceof Error ? e.message : String(e) };
+                        }
                     }
                     if (c === '/transfer-coins') {
                         let toAddr = (a[0] ?? '').trim();

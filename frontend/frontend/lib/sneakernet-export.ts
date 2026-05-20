@@ -45,13 +45,24 @@ export function downloadMorgPkgJson(pkg: Record<string, unknown>, filenameStem: 
   const json = JSON.stringify(pkg, null, 2)
   const blob = new Blob([json], { type: 'application/json;charset=utf-8' })
   const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  const safe = filenameStem.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120) || 'morg-pkg'
-  a.download = `${safe}.morg-pkg.json`
-  a.rel = 'noopener'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    const safe = filenameStem.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 120) || 'morg-pkg'
+    a.download = `${safe}.morg-pkg.json`
+    a.rel = 'noopener'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
+}
+
+/** Nach async-Export: erneuter Klick durch Nutzer (Toast), falls der Browser den Auto-Download blockiert. */
+export function createMorgPkgDownloadAction(
+  pkg: Record<string, unknown>,
+  filenameStem: string
+): () => void {
+  return () => downloadMorgPkgJson(pkg, filenameStem)
 }

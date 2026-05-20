@@ -162,6 +162,8 @@ export type ApiStatus = {
     useMailbox?: boolean;
     /** MAILBOX_ID gesetzt und 0x+64Hex (sonst kann Mailbox-Modus nicht greifen). */
     mailboxConfigured?: boolean;
+    /** Volle Server-MAILBOX_ID (Einsatz-Postfach), wenn konfiguriert. */
+    mailboxId?: string;
     mailboxIdMasked?: string;
     /** M3: Pinnwand-Konfiguration (ohne Geheimnisse außer freigegebener Broadcast-Adresse). */
     broadcastPinnwand?: {

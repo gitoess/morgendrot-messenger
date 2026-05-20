@@ -246,6 +246,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onBulkHideSelected,
     onBulkPurgeSelected,
     removeInboxPartnerFromQuickList,
+    resetInboxViewFilters,
     pinnedPinnwandIds,
     togglePinnedPinnwand,
   } = useChatViewInboxLocalUi({
@@ -471,6 +472,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     message,
     setMessage,
     apiStatus,
+    refreshApiStatus,
     attachedLora,
     attachedBlobBase64,
     attachedTxtFile,
@@ -713,6 +715,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxPartnerOptions,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
+    resetInboxViewFilters,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,

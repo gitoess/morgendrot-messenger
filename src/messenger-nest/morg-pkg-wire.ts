@@ -9,6 +9,22 @@ import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limit
 
 export const MORG_PKG_SCHEMA = 'morgendrot.morgpkg.v1' as const;
 
+/**
+ * Sneakernet/.morg-pkg: Klartext vor AES-GCM — **nicht** dasselbe Limit wie eine einzelne Chain-TX (~16 KiB).
+ * Default 512 KiB; optional `MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES` (16_000 … 4_194_304).
+ */
+function parseMorgPkgPlaintextMaxBytes(): number {
+    const raw = process.env.MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES?.trim() ?? '';
+    const n = parseInt(raw, 10);
+    const DEFAULT = 524_288;
+    const MIN = MESSAGING_MAX_PLAINTEXT_UTF8_BYTES;
+    const MAX = 4_194_304;
+    if (Number.isFinite(n) && n >= MIN && n <= MAX) return n;
+    return DEFAULT;
+}
+
+export const MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES = parseMorgPkgPlaintextMaxBytes();
+
 export type MorgPkgV1 = {
     schema: typeof MORG_PKG_SCHEMA;
     version: 1;
@@ -19,11 +35,11 @@ export type MorgPkgV1 = {
     ciphertextB64: string;
 };
 
-function assertPlaintextLimits(plaintext: string): void {
+function assertMorgPkgPlaintextLimits(plaintext: string): void {
     const n = new TextEncoder().encode(plaintext).length;
-    if (n > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+    if (n > MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES) {
         throw new Error(
-            `Nachricht zu lang (${n} B UTF-8, max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}; Move reines Arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B).`
+            `Sneakernet-Paket zu groß (${n} B UTF-8, max. ${MORG_PKG_MAX_PLAINTEXT_UTF8_BYTES} für .morg-pkg). Weniger/kleinere Dateien oder mehrere Pakete. Online-/send-Limit bleibt ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} B (Move Arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B).`
         );
     }
     assertMessengerMediaNetBlobWithinLimit(plaintext);
@@ -36,7 +52,7 @@ export async function buildMorgPkgV1(params: {
     recipientPubRaw: Uint8Array;
     senderPrivKey: CryptoKey;
 }): Promise<MorgPkgV1> {
-    assertPlaintextLimits(params.plaintext);
+    assertMorgPkgPlaintextLimits(params.plaintext);
     const sharedSecret = await deriveSharedSecret(params.senderPrivKey, params.recipientPubRaw);
     const aesKey = await deriveAesGcmKey(sharedSecret);
     const encrypted = await encryptMessage(aesKey, params.plaintext);

@@ -40,7 +40,11 @@ import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-
 import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
 export type UseChatViewMirrorDelayParams = {
-  loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: string) => Promise<void>
+  loadMessages: (
+    mode?: 'reset' | 'append',
+    packageIdOverride?: unknown,
+    opts?: { silent?: boolean }
+  ) => Promise<void>
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
   /** Privater Chat: Peer-Adresse für Direct-Mailbox vor `/send` (Hybrid). */

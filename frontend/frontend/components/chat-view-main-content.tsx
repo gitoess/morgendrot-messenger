@@ -199,6 +199,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxPartnerOptions,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
+    resetInboxViewFilters,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -372,22 +373,26 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const handleClearLocalInboxCache = useCallback(async () => {
     if (
       !window.confirm(
-        'Lokalen Klartext-Inbox-Cache auf dem Server/Rechner schreddern und löschen? Die sichtbare Liste wird geleert. On-Chain-Daten bleiben.'
+        'Lokalen Klartext-Inbox-Cache auf dem Server/Rechner schreddern und löschen? Browser-Filter (ausgeblendet, nur LoRa/IOTA) werden zurückgesetzt. On-Chain-Daten bleiben.'
       )
     ) {
       return
     }
     setLocalPurgeBusy(true)
+    resetInboxViewFilters()
+    setMessages([])
     const r = await clearLocalHistory({ shred: true })
     setLocalPurgeBusy(false)
     if (r.ok) {
-      setMessages([])
-      toast.success('Lokaler Posteingangs-Cache geleert.')
-      void loadMessages('reset')
+      toast.success('Cache und Anzeige-Filter zurückgesetzt — Posteingang wird neu geladen.')
     } else {
-      toast.error(r.error || 'Lokales Löschen fehlgeschlagen')
+      toast.warning(
+        (r.error || 'Server-Cache nicht erreichbar') +
+          ' — Browser-Filter wurden trotzdem zurückgesetzt. On-Chain bleibt unverändert.'
+      )
     }
-  }, [loadMessages, setLocalPurgeBusy, setMessages])
+    void loadMessages('reset')
+  }, [loadMessages, resetInboxViewFilters, setLocalPurgeBusy, setMessages])
 
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
@@ -402,7 +407,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onRefresh: () => {
       void loadMessages('reset')
       refreshContactDirectory()
-      void reloadPendingHandshakes()
     },
     pendingHandshakeOffers,
     pendingHandshakesLoading,

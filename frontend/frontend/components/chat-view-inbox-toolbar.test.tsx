@@ -11,6 +11,7 @@ function makeProps(overrides: Partial<ChatViewInboxToolbarProps> = {}): ChatView
     morgPkgDeviceFilesRef: createRef<HTMLInputElement>(),
     onMorgPkgImportFile: vi.fn(),
     onMorgPkgDeviceFiles: vi.fn(),
+    onMorgPkgDeviceExportPick: vi.fn(),
     morgPkgDeviceBusy: false,
     apiStatus: { connected: true, locked: false, connectedAddresses: [] },
     onRefresh: vi.fn(),

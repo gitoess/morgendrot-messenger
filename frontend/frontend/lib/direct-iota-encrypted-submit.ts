@@ -9,6 +9,7 @@ import {
   attachGasPaymentForOwner,
   buildStoreEncryptedMailboxTransaction,
   createDirectIotaClient,
+  isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
 } from '@morgendrot/core/iota'
 import { parseMailboxOutNonceMarker } from '@morgendrot/core'
@@ -108,10 +109,9 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const mbOverride = (opts.mailboxObjectId ?? '').trim()
-    const mailboxObjectId =
+    const usePrivateMb =
       /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) && mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
-        ? mbOverride
-        : snap.mailboxId
+    const mailboxObjectId = usePrivateMb ? mbOverride : snap.mailboxId
     const txb = buildStoreEncryptedMailboxTransaction({
       packageId: snap.packageId,
       mailboxObjectId,
@@ -122,14 +122,17 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
       tag: opts.tag,
       nonce: opts.nonce,
       ttlDays: snap.ttlDays,
+      privateMailbox: usePrivateMb,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
-    const st = (out.status || '').toLowerCase()
-    if (st && st !== 'success') {
-      return { ok: false, error: `Chain-Status: ${out.status || '?'}` }
+    if (isDirectChainExecutionSuccess(out.digest, out.status)) {
+      return { ok: true, digest: out.digest }
     }
-    return { ok: true, digest: out.digest }
+    return {
+      ok: false,
+      error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }

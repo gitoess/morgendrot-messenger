@@ -26,7 +26,9 @@ import {
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
+import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
   isLoRaMeshTransport,
@@ -254,6 +256,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     () => resolveContactMailboxObjectId(contactDirectory, recipient.trim()),
     [contactDirectory, recipient]
   )
+  const persistenceMode = readMessagingPersistenceModeFromStorage()
 
   const composerIota = useMemo(
     () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
@@ -454,8 +457,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             </datalist>
             {routedMailboxId ? (
               <p className="mt-1.5 text-[11px] text-violet-800 dark:text-violet-200">
-                Sendet an <strong className="font-mono text-[10px]">private Mailbox</strong> des Kontakts (
-                {routedMailboxId.slice(0, 10)}…{routedMailboxId.slice(-6)}), nicht die Einsatz-Mailbox.
+                Empfänger-Wallet:{' '}
+                <strong className="font-mono text-[10px]">{maskWalletAddress(recipient.trim(), 10, 6)}</strong> — Speicher
+                in <strong>privater Mailbox</strong> des Kontakts ({routedMailboxId.slice(0, 10)}…
+                {routedMailboxId.slice(-6)}), nicht im Einsatz-Postamt.
+              </p>
+            ) : persistenceMode === 'mailbox' ? (
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Empfänger = <strong className="text-foreground">Wallet 0x</strong> (Telefonbuch). Ohne private
+                Mailbox-ID im Kontakt gilt die <strong className="text-foreground">Shared-Mailbox</strong> des Servers.
               </p>
             ) : null}
           </div>

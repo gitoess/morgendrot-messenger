@@ -5,6 +5,25 @@
  * Override: **`NEXT_PUBLIC_IOTA_TX_EXPLORER_BASE`** (ohne trailing slash), z. B. `https://explorer.iota.org/txblock`.
  */
 
+function explorerNetworkQuery(): string {
+  const net = (
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IOTA_EXPLORER_NETWORK) ||
+    ''
+  )
+    .trim()
+    .toLowerCase()
+  if (net === 'testnet' || net === 'devnet' || net === 'mainnet') {
+    return `?network=${net}`
+  }
+  const rpc = (
+    (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_IOTA_RPC_URL) ||
+    ''
+  ).toLowerCase()
+  if (rpc.includes('testnet')) return '?network=testnet'
+  if (rpc.includes('devnet')) return '?network=devnet'
+  return ''
+}
+
 export function explorerTxUrlFromDigest(digest: string): string {
   const d = digest.trim()
   const base =
@@ -13,7 +32,7 @@ export function explorerTxUrlFromDigest(digest: string): string {
       process.env.NEXT_PUBLIC_IOTA_TX_EXPLORER_BASE.trim()) ||
     'https://explorer.iota.org/txblock'
   const b = base.replace(/\/$/, '')
-  return `${b}/${encodeURIComponent(d)}`
+  return `${b}/${encodeURIComponent(d)}${explorerNetworkQuery()}`
 }
 
 /** Anhängsel für Statuszeilen (kurz, mit URL). */

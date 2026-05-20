@@ -119,15 +119,16 @@ export async function anchorEinsatzprotokollOnIota(p: {
     const r = await sendPlaintextMailboxHybrid(p.recipientForPlain.trim(), wireOut, nonceU64, {
       messagingPersistenceMode: persist,
     })
-  const nonceStr = r.nonce ?? nonceU64.toString()
-    return r.ok
-      ? {
-          ok: true,
-          txDigest: r.txDigest,
-          anchorHashHex: hex,
-          records: [{ digest: r.txDigest, nonce: nonceStr }],
-        }
-      : { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
+    if (!r.ok) {
+      return { ok: false, error: r.error || r.message || 'send-plain fehlgeschlagen' }
+    }
+    const nonceStr = r.nonce ?? nonceU64.toString()
+    return {
+      ok: true,
+      txDigest: r.txDigest,
+      anchorHashHex: hex,
+      records: [{ digest: r.txDigest, nonce: nonceStr }],
+    }
   }
 
   const recipient = p.recipientForPlain.trim()
@@ -145,16 +146,17 @@ export async function anchorEinsatzprotokollOnIota(p: {
     const nonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
     const body = prependMailboxOutNonceMarker(json, nonceU64)
     const r = await sendEncryptedMailboxHybrid(recipient, body, { messagingPersistenceMode: persist })
+    if (!r.ok) {
+      return { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
+    }
     const nonceStr = r.nonce ?? nonceU64.toString()
-    return r.ok
-      ? {
-          ok: true,
-          txDigest: r.txDigest,
-          chunksSent: 1,
-          contentSha256,
-          records: [{ digest: r.txDigest, nonce: nonceStr }],
-        }
-      : { ok: false, error: r.error || r.message || '/send fehlgeschlagen' }
+    return {
+      ok: true,
+      txDigest: r.txDigest,
+      chunksSent: 1,
+      contentSha256,
+      records: [{ digest: r.txDigest, nonce: nonceStr }],
+    }
   }
 
   let wires: string[]

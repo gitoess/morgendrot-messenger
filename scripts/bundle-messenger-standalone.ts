@@ -123,6 +123,23 @@ async function buildBundle(edition: MessengerEdition) {
     copyDir(path.join(REPO, 'ui'), path.join(OUT, 'ui'));
     copyDir(path.join(REPO, 'move-test'), path.join(OUT, 'move-test'));
 
+    const profileManifestSrc = path.join(REPO, 'frontend', 'public', 'templates', 'package-profiles.manifest.json');
+    if (fs.existsSync(profileManifestSrc)) {
+        const manifestText = fs.readFileSync(profileManifestSrc, 'utf8');
+        fs.writeFileSync(path.join(OUT, 'package-profiles.manifest.json'), manifestText, 'utf8');
+        const configDir = path.join(OUT, 'config');
+        fs.mkdirSync(configDir, { recursive: true });
+        fs.writeFileSync(path.join(configDir, 'package-profiles.manifest.json'), manifestText, 'utf8');
+        const examplesDir = path.join(OUT, 'docs', 'examples');
+        fs.mkdirSync(examplesDir, { recursive: true });
+        const exampleSrc = path.join(REPO, 'docs', 'examples', 'package-profiles.manifest.json');
+        if (fs.existsSync(exampleSrc)) {
+            fs.copyFileSync(exampleSrc, path.join(examplesDir, 'package-profiles.manifest.json'));
+        }
+    } else {
+        console.warn('Warnung: package-profiles.manifest.json Vorlage fehlt —', profileManifestSrc);
+    }
+
     fs.copyFileSync(path.join(REPO, 'tsconfig.json'), path.join(OUT, 'tsconfig.json'));
 
     const scriptsDir = path.join(OUT, 'scripts');

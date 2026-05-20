@@ -60,6 +60,16 @@ export async function handleStatusRoutes(
                 'MAILBOX_STORE_PLAINTEXT: gültige PACKAGE_ID (0x+64 Hex) und deploytes Move mit store_plaintext_message_*_stored nötig.'
             );
         }
+        if (CFG.USE_MAILBOX && mailboxConfigured && !CFG.MAILBOX_STORE_PLAINTEXT) {
+            configHints.push(
+                'Klartext in der Mailbox: MAILBOX_STORE_PLAINTEXT ist aus — in .env auf true, in der Messenger-Transport-Card (Boss) oder unter „.env anpassen“ aktivieren; sonst „Flüchtig (Event)“ für Klartext wählen.'
+            );
+        }
+        if (!CFG.USE_MAILBOX && mailboxConfigured) {
+            configHints.push(
+                'USE_MAILBOX ist aus — Persistent (Mailbox) für Klartext/Verschlüsselt scheitert. USE_MAILBOX=true setzen oder in der UI „Flüchtig (Event)“ wählen.'
+            );
+        }
         let messengerCredits: { balance: string; maxBalance: string } | null | undefined;
         let messengerCreditsFetchFailed: boolean | undefined;
         const credLooksValid =
@@ -179,7 +189,9 @@ export async function handleStatusRoutes(
             compactImageEncode: true,
             loraProgressiveEncode: true,
             ...(packageTrim ? { packageId: packageTrim } : {}),
-            ...(mailboxConfigured && mailboxIdTrim ? { mailboxIdMasked: mask(mailboxIdTrim) } : {}),
+            ...(mailboxConfigured && mailboxIdTrim
+                ? { mailboxId: mailboxIdTrim, mailboxIdMasked: mask(mailboxIdTrim) }
+                : {}),
             ...(CFG.ENABLE_BROADCAST_PINNWAND
                 ? {
                       broadcastPinnwand: {

@@ -18,7 +18,8 @@ export type ChatViewInboxHandshakeRequestsProps = {
 export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequestsProps) {
   const { offers, loading = false, sending = false, directory, onAccept, onUseAsPartner } = p
 
-  if (!loading && offers.length === 0) return null
+  /** Nur bei echten Angeboten — kein „Suche Handshakes“ beim Posteingang-Aktualisieren. */
+  if (offers.length === 0) return null
 
   return (
     <div className="border-b border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5 dark:bg-emerald-950/20">
@@ -27,9 +28,6 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
         Handshake-Anfragen
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden /> : null}
       </div>
-      {offers.length === 0 && loading ? (
-        <p className="text-[11px] text-muted-foreground">Suche eingehende Handshakes…</p>
-      ) : null}
       <ul className="space-y-2">
         {offers.map((o) => {
           const addr = o.sender.trim().toLowerCase()

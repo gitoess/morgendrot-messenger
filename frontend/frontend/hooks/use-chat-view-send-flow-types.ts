@@ -21,19 +21,27 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   partner: string
   myAddress: string
   apiStatus: ApiStatus | null
+  /** Nach Auto-/connect: connectedAddresses aktualisieren. */
+  refreshApiStatus?: () => void | Promise<void>
   attachedLora: ChatAttachedLora | null
   attachedBlobBase64: string | null
   attachedTxtFile: { name: string; text: string } | null
   attachedAudioBase64: string | null
   clearCompactAttachment: () => void
   meshtastic: MeshtasticBleSendApi
-  loadMessages: () => void | Promise<void>
+  loadMessages: (
+    mode?: 'reset' | 'append',
+    overridePackageId?: unknown,
+    opts?: { silent?: boolean }
+  ) => void | Promise<void>
   setMessages: Dispatch<SetStateAction<Message[]>>
   appendMeshMessage: AppendMeshMessageFn
   setSending: (v: boolean) => void
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
   setMorgPkgDeviceBusy: (v: boolean) => void
+  morgPkgDeviceBusy: boolean
+  morgPkgDeviceFilesRef: MutableRefObject<HTMLInputElement | null>
   setLoraOnlineFallbackOffer: (v: { reasonLabel: string } | null) => void
   loraOnlineOfferPayloadRef: MutableRefObject<{ lumaText: string; chromaText: string } | null>
   /** § H.6c: gleiche Quelle wie Export-Gate — `true` = Gerätezeit nicht „high“-vertrauenswürdig. */

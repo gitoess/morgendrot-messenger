@@ -10,9 +10,11 @@ import {
   addManyTangleInventoryItems,
   addTangleInventoryItem,
   clearTangleInventory,
+  countTangleInventory,
   loadTangleInventory,
   type TangleInventoryItem,
 } from '@/frontend/lib/tangle-inventory'
+import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { fetchMailboxInboxPage } from '@/frontend/lib/mailbox-inbox-page-fetch'
 import { scanMailboxAndReassembleProtokollFull } from '@/frontend/lib/protokoll-chunk-mailbox-scan'
 import {
@@ -30,22 +32,39 @@ function typeLabel(t: TangleInventoryItem['type']): string {
   return 'Unbekannt'
 }
 
+export type TangleInventoryScope = 'anchored' | 'all'
+
 export function ChatViewTangleInventoryButton(p?: {
   triggerClassName?: string
   triggerLabel?: string
+  /** `anchored` = nur On-Chain-Digests (Standard unter Nachrichtenverlauf). */
+  inventoryScope?: TangleInventoryScope
 }) {
+  const inventoryScope = p?.inventoryScope ?? 'anchored'
   const triggerClassName =
     p?.triggerClassName ??
     'w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
-  const triggerLabel = p?.triggerLabel ?? 'Gespeicherte IOTA-Transaktionen'
   const [open, setOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
+  const anchoredCount = useMemo(() => {
+    void refreshTick
+    return countTangleInventory({ status: 'anchored' })
+  }, [refreshTick])
+  const defaultTriggerLabel =
+    inventoryScope === 'anchored'
+      ? anchoredCount > 0
+        ? `Verankerte IOTA-Transaktionen (${anchoredCount})`
+        : 'Verankerte IOTA-Transaktionen'
+      : 'Gespeicherte IOTA-Transaktionen (alle)'
+  const triggerLabel = p?.triggerLabel ?? defaultTriggerLabel
   const [busyId, setBusyId] = useState<string | null>(null)
   const [digestSearch, setDigestSearch] = useState('')
   const [scanBusy, setScanBusy] = useState(false)
   const [scanResult, setScanResult] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<'all' | TangleInventoryItem['type']>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | TangleInventoryItem['status']>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | TangleInventoryItem['status']>(
+    inventoryScope === 'anchored' ? 'anchored' : 'all'
+  )
   const [filterRecovery, setFilterRecovery] = useState<'all' | 'found' | 'not-found'>('all')
   const [manualDigest, setManualDigest] = useState('')
   const [manualType, setManualType] = useState<TangleInventoryItem['type']>('unknown')
@@ -133,6 +152,7 @@ export function ChatViewTangleInventoryButton(p?: {
         onClick={() => {
           refresh()
           setAutoVaultSave(isTangleInventoryAutoVaultSaveEnabled())
+          if (inventoryScope === 'anchored') setFilterStatus('anchored')
           setOpen(true)
         }}
         className={cn(triggerClassName)}
@@ -142,13 +162,25 @@ export function ChatViewTangleInventoryButton(p?: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Gespeicherte IOTA-Transaktionen (dieses Gerät)</DialogTitle>
+            <DialogTitle>
+              {inventoryScope === 'anchored'
+                ? 'Verankerte IOTA-Transaktionen (dieses Gerät)'
+                : 'Gespeicherte IOTA-Transaktionen (dieses Gerät)'}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
             <p className="text-xs text-muted-foreground">
-              Merkt sich Transaction-Digests von Sendungen und Verankerungen <strong className="text-foreground">nur in diesem Browser</strong>{' '}
-              (localStorage). „Vom Tangle laden“ nutzt <strong className="text-foreground">Direkt-RPC</strong> oder — ohne RPC-URL — das Backend{' '}
-              <strong className="text-foreground">/inbox</strong>. Nonce aus der Verankerungs-Maske kopieren.
+              {inventoryScope === 'anchored' ? (
+                <>
+                  <strong className="text-foreground">On-Chain bestätigte</strong> Digests (Sendung, Verankerung, Relay nach
+                  „verankert“). Ablage: <strong className="text-foreground">localStorage</strong> — optional Kopie in den Tresor (Checkbox oder
+                  pro Zeile).
+                </>
+              ) : (
+                <>Alle Digest-Einträge in localStorage (inkl. manuell / fehlgeschlagen).</>
+              )}{' '}
+              „Nachricht laden“: Direkt-RPC oder <strong className="text-foreground">/inbox</strong>. Noch nicht verankert: Menü{' '}
+              <strong className="text-foreground">Wartende Sendungen</strong>.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -168,9 +200,9 @@ export function ChatViewTangleInventoryButton(p?: {
                 }}
               >
                 <Upload className="mr-2 h-3.5 w-3.5" />
-                Aus Tresor laden
+                Aus Tresor laden (Digests)
               </Button>
-              <label className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1 text-xs">
+              <label className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1 text-xs" title="Betrifft nur Digest-Einträge, nicht Messaging-Keys">
                 <input
                   type="checkbox"
                   checked={autoVaultSave}

@@ -2,6 +2,7 @@
  * POST /api/command — Delegation an Messenger-Command-Handler.
  */
 import type http from 'node:http';
+import { explorerTxUrlFromDigest } from '../../chain-access.js';
 import { CFG, getHierarchyPermissions } from '../../config.js';
 import type { CommandApiOptions } from '../../messenger-nest/command-api-options.js';
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
@@ -144,6 +145,13 @@ export function handleCommandRoute(
                 const explorerBase = (process.env.EXPLORER_BASE_URL || 'https://explorer.iota.org/object').replace(/\/$/, '');
                 const network = (CFG.RPC_URL || '').toLowerCase().includes('testnet') ? '?network=testnet' : '';
                 outRec.explorerLink = `${explorerBase}/${oid}${network}`;
+            }
+            const txDig =
+                (typeof outRec?.digest === 'string' && outRec.digest.trim()) ||
+                (typeof outRec?.txDigest === 'string' && outRec.txDigest.trim()) ||
+                '';
+            if (outRec && txDig && !outRec.explorerTxLink) {
+                outRec.explorerTxLink = explorerTxUrlFromDigest(txDig);
             }
             sendJson(res, 200, outRec ?? out, cors);
         } catch (e: unknown) {

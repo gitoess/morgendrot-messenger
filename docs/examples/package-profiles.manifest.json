@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "Morgendrot Einsatzprofile — Testnet-Referenz (Repo 2026-05-20)",
+    "description": "Konkretes Beispiel nach deploy:move-package + create_globals. Dient H.24b (Profil-Registry) und Handoff-ZIPs.",
+    "network": "testnet",
+    "deployDoc": "docs/DEPLOY-MOVE-M4d.md",
+    "specDoc": "docs/PACKAGE-PROFILE-WECHSEL-SPEC.md",
+    "rpcUrlDefault": "https://api.testnet.iota.cafe",
+    "notes": [
+      "PACKAGE_ID / MAILBOX_ID / Registry-IDs stammen aus docs/DEPLOY-MOVE-M4d.md (Letzter Deploy).",
+      "Lab-Hinweis: Alle drei Profile nutzen dieselbe Chain-Konstellation, weil im Repo nur ein Testnet-Deploy dokumentiert ist.",
+      "Produktion: Katastrophenschutz und Feuerwehr = jeweils eigene Installation (eigene .env, apiBaseUrl), eigene create_globals-IDs.",
+      "Arbeiter wählen nur aus bundled + readOnly; neue Profile legt Boss/Config manuell an (Hybrid, § 7.6).",
+      "Keys mit Unterstrich (_*) sind Kommentare für Menschen — Loader H.24b ignoriert sie."
+    ]
+  },
+  "profiles": [
+    {
+      "id": "katastrophenschutz",
+      "label": "Katastrophenschutz",
+      "description": "Übergreifende Leitstelle / Großschadenslage. Ein Tap — kein PACKAGE_ID tippen.",
+      "color": "#b45309",
+      "icon": "shield",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "0xf817237417674b9eb033cafe4dc035ce17099d85b3f1ca57027f13741377e504",
+      "mailboxId": "0xd14006bd17e926e1eec865d3da8e2d8460858de303618479cfdace4959dbb3a4",
+      "vaultRegistryId": "0x51d36b6fdb24c5f0584f402cab392bdf8cc5e2d2dcfff96205cb3d9f3adf153b",
+      "commandRegistryId": "0x84e0e508ddc4101587303df2fb5501d28a4623cc2b0b9cc159a804aeb7ba93c4",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3342",
+      "createGlobalsTxDigest": "AdpvqeCyf1C7bY8EJb2Wm3wSw8btGXXLb62LE5gbMSPR",
+      "_labNote": "Testnet-Lab: Chain-IDs = Training-Deploy; Produktion = eigene KS-Installation + eigene IDs"
+    },
+    {
+      "id": "feuerwehr-standard",
+      "label": "Feuerwehr Standard",
+      "description": "Lokaler Feuerwehr-Posten. In Produktion: zweite Installation (z. B. API_PORT 3343).",
+      "color": "#dc2626",
+      "icon": "flame",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "0xf817237417674b9eb033cafe4dc035ce17099d85b3f1ca57027f13741377e504",
+      "mailboxId": "0xd14006bd17e926e1eec865d3da8e2d8460858de303618479cfdace4959dbb3a4",
+      "vaultRegistryId": "0x51d36b6fdb24c5f0584f402cab392bdf8cc5e2d2dcfff96205cb3d9f3adf153b",
+      "commandRegistryId": "0x84e0e508ddc4101587303df2fb5501d28a4623cc2b0b9cc159a804aeb7ba93c4",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3343",
+      "_labNote": "apiBaseUrl zeigt Muster „zweiter Posten“; Chain-IDs im Lab identisch mit KS bis zweites create_globals läuft"
+    },
+    {
+      "id": "training",
+      "label": "Training",
+      "description": "Übung Testnet — Referenz-Deploy dieses Repos (M4d inkl. purge_private_mailbox).",
+      "color": "#2563eb",
+      "icon": "graduation-cap",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "0xf817237417674b9eb033cafe4dc035ce17099d85b3f1ca57027f13741377e504",
+      "mailboxId": "0xd14006bd17e926e1eec865d3da8e2d8460858de303618479cfdace4959dbb3a4",
+      "vaultRegistryId": "0x51d36b6fdb24c5f0584f402cab392bdf8cc5e2d2dcfff96205cb3d9f3adf153b",
+      "commandRegistryId": "0x84e0e508ddc4101587303df2fb5501d28a4623cc2b0b9cc159a804aeb7ba93c4",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3342",
+      "createGlobalsTxDigest": "AdpvqeCyf1C7bY8EJb2Wm3wSw8btGXXLb62LE5gbMSPR",
+      "_labNote": "Primäres Lab-Profil — .env des Servers sollte zu diesen IDs passen"
+    }
+  ]
+}

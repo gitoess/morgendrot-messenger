@@ -29,6 +29,11 @@ export function resolveComposerIotaAddress(
   return ''
 }
 
+/** Ziel-0x für verschlüsselten Mailbox-/Online-Versand (Composer oder Partner-Setup). */
+export function resolveEncryptedMailboxRecipient(recipient: string, partner: string): string {
+  return resolveComposerIotaAddress(recipient, partner, true)
+}
+
 /** Telegram Chat-ID (Ziffern) aus recipient tg:-Key oder Telefonbuch. */
 export function resolveComposerTelegramChatId(
   recipient: string,

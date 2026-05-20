@@ -1,6 +1,7 @@
 import { toAppError } from '@/frontend/lib/app-error'
 
-const NETWORKISH = /failed to fetch|network|load failed|Connection refused|aborted|AbortError/i
+const NETWORKISH =
+  /failed to fetch|network|load failed|Connection refused|aborted|AbortError|message channel closed|asynchronous response/i
 
 /** Erster Satz der Netzwerk-Hinweismeldung — für Abgleich in Inbox/UI (§ H.2). */
 const FETCH_NETWORK_OFFLINE_FIRST_CLAUSE = 'Backend nicht erreichbar oder abgebrochen' as const

@@ -179,6 +179,7 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                 message: 'MAILBOX_ID fehlt oder hat ungültiges Format (0x + 64 Hex). In .env setzen (aus create_globals-Event).',
             };
         }
+        const doFetch = async (): Promise<CommandHandlerResult> => {
         try {
             const { isChainReachable } = await import('../../chain-access.js');
             if (!(await isChainReachable())) {
@@ -254,6 +255,13 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
             }
             return { ok: false, message: msg || 'Nachrichten konnten nicht geladen werden.' };
         }
+        };
+        const mbOverride = String(opts?.mailboxObjectId ?? '').trim();
+        if (/^0x[a-fA-F0-9]{64}$/i.test(mbOverride)) {
+            const { runWithMailboxObjectIdOverride } = await import('../../mailbox-object-id-scope.js');
+            return runWithMailboxObjectIdOverride(mbOverride, doFetch);
+        }
+        return doFetch();
     }
 
     if (c === '/rpc-rotate') {

@@ -364,8 +364,8 @@ module messaging::messaging { // Named address via Move.toml
         expires_at_ms: u64,
     }
 
-    fun store_ecdh_init_impl(
-        mailbox: &mut Mailbox,
+    fun store_ecdh_init_on_uid(
+        mailbox_uid: &mut UID,
         recipient: address,
         pub_key: vector<u8>,
         nonce: u64,
@@ -376,9 +376,8 @@ module messaging::messaging { // Named address via Move.toml
         let now = tx_context::epoch_timestamp_ms(ctx);
         let key = HsKey { recipient, sender };
 
-        // overwrite: remove old handshake object if present
-        if (dof::exists_<HsKey>(&mailbox.id, key)) {
-            let old = dof::remove<HsKey, Handshake>(&mut mailbox.id, key);
+        if (dof::exists_<HsKey>(mailbox_uid, key)) {
+            let old = dof::remove<HsKey, Handshake>(mailbox_uid, key);
             let Handshake {
                 id,
                 sender: _,
@@ -401,8 +400,19 @@ module messaging::messaging { // Named address via Move.toml
             expires_at_ms: now + ttl_days * 86400000,
         };
 
-        dof::add<HsKey, Handshake>(&mut mailbox.id, key, hs);
+        dof::add<HsKey, Handshake>(mailbox_uid, key, hs);
         event::emit(HandshakeStored { sender, recipient, nonce, expires_at_ms: now + ttl_days * 86400000 });
+    }
+
+    fun store_ecdh_init_impl(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        pub_key: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_ecdh_init_on_uid(&mut mailbox.id, recipient, pub_key, nonce, ttl_days, ctx);
     }
 
     public entry fun store_ecdh_init(
@@ -416,17 +426,20 @@ module messaging::messaging { // Named address via Move.toml
         store_ecdh_init_impl(mailbox, recipient, pub_key, nonce, ttl_days, ctx);
     }
 
-    /// Manual purge: sender or recipient can purge anytime.
-    /// Auto purge: anyone can purge after expiry.
-    public entry fun purge_handshake(mailbox: &mut Mailbox, recipient: address, sender: address, ctx: &mut TxContext) {
+    fun purge_handshake_on_uid(
+        mailbox_uid: &mut UID,
+        recipient: address,
+        sender: address,
+        ctx: &mut TxContext,
+    ) {
         let by = tx_context::sender(ctx);
         let key = HsKey { recipient, sender };
-        assert!(dof::exists_<HsKey>(&mailbox.id, key), E_HS_MISSING);
-        let hsref = dof::borrow<HsKey, Handshake>(&mailbox.id, key);
+        assert!(dof::exists_<HsKey>(mailbox_uid, key), E_HS_MISSING);
+        let hsref = dof::borrow<HsKey, Handshake>(mailbox_uid, key);
         let now = tx_context::epoch_timestamp_ms(ctx);
         let allowed = by == hsref.sender || by == hsref.recipient || now >= hsref.expires_at_ms;
         assert!(allowed, E_NOT_OWNER);
-        let hs = dof::remove<HsKey, Handshake>(&mut mailbox.id, key);
+        let hs = dof::remove<HsKey, Handshake>(mailbox_uid, key);
         let Handshake {
             id,
             sender: _,
@@ -439,8 +452,14 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
-    fun store_encrypted_message_impl(
-        mailbox: &mut Mailbox,
+    /// Manual purge: sender or recipient can purge anytime.
+    /// Auto purge: anyone can purge after expiry.
+    public entry fun purge_handshake(mailbox: &mut Mailbox, recipient: address, sender: address, ctx: &mut TxContext) {
+        purge_handshake_on_uid(&mut mailbox.id, recipient, sender, ctx);
+    }
+
+    fun store_encrypted_message_on_uid(
+        mailbox_uid: &mut UID,
         recipient: address,
         ciphertext: vector<u8>,
         iv: vector<u8>,
@@ -453,9 +472,8 @@ module messaging::messaging { // Named address via Move.toml
         let now = tx_context::epoch_timestamp_ms(ctx);
         let key = MsgKey { recipient, sender, nonce };
 
-        // idempotency / avoid collisions: if the same key exists, delete and replace
-        if (dof::exists_<MsgKey>(&mailbox.id, key)) {
-            let old = dof::remove<MsgKey, Message>(&mut mailbox.id, key);
+        if (dof::exists_<MsgKey>(mailbox_uid, key)) {
+            let old = dof::remove<MsgKey, Message>(mailbox_uid, key);
             let Message {
                 id,
                 sender: _,
@@ -482,8 +500,30 @@ module messaging::messaging { // Named address via Move.toml
             expires_at_ms: now + ttl_days * 86400000,
         };
 
-        dof::add<MsgKey, Message>(&mut mailbox.id, key, msg);
+        dof::add<MsgKey, Message>(mailbox_uid, key, msg);
         event::emit(MessageStored { sender, recipient, nonce, expires_at_ms: now + ttl_days * 86400000 });
+    }
+
+    fun store_encrypted_message_impl(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_encrypted_message_on_uid(
+            &mut mailbox.id,
+            recipient,
+            ciphertext,
+            iv,
+            tag,
+            nonce,
+            ttl_days,
+            ctx,
+        );
     }
 
     public entry fun store_encrypted_message(
@@ -713,8 +753,8 @@ module messaging::messaging { // Named address via Move.toml
         event::emit(PlaintextMessage { sender, recipient, text, nonce });
     }
 
-    fun store_plaintext_to_mailbox_stored_impl(
-        mailbox: &mut Mailbox,
+    fun store_plaintext_to_mailbox_stored_on_uid(
+        mailbox_uid: &mut UID,
         recipient: address,
         text: vector<u8>,
         nonce: u64,
@@ -725,8 +765,8 @@ module messaging::messaging { // Named address via Move.toml
         let now = tx_context::epoch_timestamp_ms(ctx);
         let exp = now + ttl_days * 86400000;
         let key = PlainMsgKey { recipient, sender, nonce };
-        if (dof::exists_<PlainMsgKey>(&mailbox.id, key)) {
-            let old = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key);
+        if (dof::exists_<PlainMsgKey>(mailbox_uid, key)) {
+            let old = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key);
             let PlaintextMailboxEntry {
                 id,
                 sender: _,
@@ -748,7 +788,18 @@ module messaging::messaging { // Named address via Move.toml
             expires_at_ms: exp,
         };
         event::emit(PlaintextMailboxStored { sender, recipient, nonce, expires_at_ms: exp });
-        dof::add<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key, entry);
+        dof::add<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key, entry);
+    }
+
+    fun store_plaintext_to_mailbox_stored_impl(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_plaintext_to_mailbox_stored_on_uid(&mut mailbox.id, recipient, text, nonce, ttl_days, ctx);
     }
 
     /// Klartext in Mailbox speichern (purgebar) + PlaintextMessage-Event (Kompatibilität mit Fetch/UI).
@@ -807,10 +858,8 @@ module messaging::messaging { // Named address via Move.toml
         store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
     }
 
-    /// Manual purge: sender or recipient can purge anytime.
-    /// Auto purge: anyone can purge after expiry.
-    public entry fun purge_message(
-        mailbox: &mut Mailbox,
+    fun purge_message_on_uid(
+        mailbox_uid: &mut UID,
         recipient: address,
         sender: address,
         nonce: u64,
@@ -818,12 +867,12 @@ module messaging::messaging { // Named address via Move.toml
     ) {
         let by = tx_context::sender(ctx);
         let key = MsgKey { recipient, sender, nonce };
-        assert!(dof::exists_<MsgKey>(&mailbox.id, key), E_MSG_MISSING);
-        let mref = dof::borrow<MsgKey, Message>(&mailbox.id, key);
+        assert!(dof::exists_<MsgKey>(mailbox_uid, key), E_MSG_MISSING);
+        let mref = dof::borrow<MsgKey, Message>(mailbox_uid, key);
         let now = tx_context::epoch_timestamp_ms(ctx);
         let allowed = by == mref.sender || by == mref.recipient || now >= mref.expires_at_ms;
         assert!(allowed, E_NOT_OWNER);
-        let m = dof::remove<MsgKey, Message>(&mut mailbox.id, key);
+        let m = dof::remove<MsgKey, Message>(mailbox_uid, key);
         let Message {
             id,
             sender: _,
@@ -838,11 +887,22 @@ module messaging::messaging { // Named address via Move.toml
         object::delete(id);
     }
 
+    /// Manual purge: sender or recipient can purge anytime.
+    /// Auto purge: anyone can purge after expiry.
+    public entry fun purge_message(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_message_on_uid(&mut mailbox.id, recipient, sender, nonce, ctx);
+    }
+
     const E_PLAIN_MSG_MISSING: u64 = 43;
 
-    /// Purge gespeicherten Klartext (gleiche Rechte wie purge_message).
-    public entry fun purge_plaintext_mail_entry(
-        mailbox: &mut Mailbox,
+    fun purge_plaintext_mail_entry_on_uid(
+        mailbox_uid: &mut UID,
         recipient: address,
         sender: address,
         nonce: u64,
@@ -850,12 +910,12 @@ module messaging::messaging { // Named address via Move.toml
     ) {
         let by = tx_context::sender(ctx);
         let key = PlainMsgKey { recipient, sender, nonce };
-        assert!(dof::exists_<PlainMsgKey>(&mailbox.id, key), E_PLAIN_MSG_MISSING);
-        let pref = dof::borrow<PlainMsgKey, PlaintextMailboxEntry>(&mailbox.id, key);
+        assert!(dof::exists_<PlainMsgKey>(mailbox_uid, key), E_PLAIN_MSG_MISSING);
+        let pref = dof::borrow<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key);
         let now = tx_context::epoch_timestamp_ms(ctx);
         let allowed = by == pref.sender || by == pref.recipient || now >= pref.expires_at_ms;
         assert!(allowed, E_NOT_OWNER);
-        let p = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(&mut mailbox.id, key);
+        let p = dof::remove<PlainMsgKey, PlaintextMailboxEntry>(mailbox_uid, key);
         let PlaintextMailboxEntry {
             id,
             sender: _,
@@ -866,6 +926,17 @@ module messaging::messaging { // Named address via Move.toml
             expires_at_ms: _,
         } = p;
         object::delete(id);
+    }
+
+    /// Purge gespeicherten Klartext (gleiche Rechte wie purge_message).
+    public entry fun purge_plaintext_mail_entry(
+        mailbox: &mut Mailbox,
+        recipient: address,
+        sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_plaintext_mail_entry_on_uid(&mut mailbox.id, recipient, sender, nonce, ctx);
     }
 
     /// ----------------------------------------------------------------
@@ -1212,6 +1283,132 @@ module messaging::messaging { // Named address via Move.toml
         } else {
             purge_expired_tickets_loop(registry, now, by, i + 1);
         }
+    }
+
+    /// ----------------------------------------------------------------
+    /// PrivateMailbox (M4d) – pro Nutzer, shared für eingehende Nachrichten an `owner`
+    /// ----------------------------------------------------------------
+    const E_PRIVATE_MB_RECIPIENT: u64 = 44;
+
+    struct PrivateMailbox has key {
+        id: UID,
+        owner: address,
+    }
+
+    struct PrivateMailboxCreated has copy, drop {
+        mailbox_id: ID,
+        owner: address,
+    }
+
+    struct PrivateMailboxPurged has copy, drop {
+        mailbox_id: ID,
+        owner: address,
+    }
+
+    /// Erzeugt eine private Mailbox (shared). Object-ID in Profil-QR / Telefonbuch (M4b).
+    public entry fun create_private_mailbox(ctx: &mut TxContext) {
+        let owner = tx_context::sender(ctx);
+        let mb = PrivateMailbox {
+            id: object::new(ctx),
+            owner,
+        };
+        event::emit(PrivateMailboxCreated {
+            mailbox_id: object::id(&mb),
+            owner,
+        });
+        transfer::share_object(mb);
+    }
+
+    /// Owner löscht leere PrivateMailbox (Storage-Rebate). Shared-Objekt per PTB (mutable) übergeben.
+    /// Bei Dynamic Fields zuerst Einträge in der Mailbox purgen.
+    public entry fun purge_private_mailbox(mailbox: PrivateMailbox, ctx: &mut TxContext) {
+        let owner = tx_context::sender(ctx);
+        assert!(owner == mailbox.owner, E_NOT_OWNER);
+        let mailbox_id = object::id(&mailbox);
+        event::emit(PrivateMailboxPurged { mailbox_id, owner });
+        let PrivateMailbox { id, owner: _ } = mailbox;
+        object::delete(id);
+    }
+
+    fun assert_private_mb_recipient(mailbox: &PrivateMailbox, recipient: address) {
+        assert!(recipient == mailbox.owner, E_PRIVATE_MB_RECIPIENT);
+    }
+
+    public entry fun store_ecdh_init_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        pub_key: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert_private_mb_recipient(mailbox, recipient);
+        store_ecdh_init_on_uid(&mut mailbox.id, recipient, pub_key, nonce, ttl_days, ctx);
+    }
+
+    public entry fun store_encrypted_message_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert_private_mb_recipient(mailbox, recipient);
+        store_encrypted_message_on_uid(
+            &mut mailbox.id,
+            recipient,
+            ciphertext,
+            iv,
+            tag,
+            nonce,
+            ttl_days,
+            ctx,
+        );
+    }
+
+    public entry fun store_plaintext_message_stored_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        assert_private_mb_recipient(mailbox, recipient);
+        store_plaintext_to_mailbox_stored_on_uid(&mut mailbox.id, recipient, text, nonce, ttl_days, ctx);
+        store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
+    }
+
+    public entry fun purge_handshake_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        sender: address,
+        ctx: &mut TxContext,
+    ) {
+        purge_handshake_on_uid(&mut mailbox.id, recipient, sender, ctx);
+    }
+
+    public entry fun purge_message_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_message_on_uid(&mut mailbox.id, recipient, sender, nonce, ctx);
+    }
+
+    public entry fun purge_plaintext_mail_entry_private(
+        mailbox: &mut PrivateMailbox,
+        recipient: address,
+        sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_plaintext_mail_entry_on_uid(&mut mailbox.id, recipient, sender, nonce, ctx);
     }
 
     /// ----------------------------------------------------------------

@@ -363,6 +363,59 @@ export async function handleContactRoutes(
         return true;
     }
 
+    if (url === '/api/resolve-private-mailbox-owner' && req.method === 'GET') {
+        try {
+            const u = new URL(req.url || '', 'http://localhost');
+            const mailboxObjectId =
+                u.searchParams.get('mailboxObjectId')?.trim() || u.searchParams.get('objectId')?.trim() || '';
+            if (!/^0x[a-fA-F0-9]{64}$/i.test(mailboxObjectId)) {
+                sendJson(res, 400, { ok: false, error: 'mailboxObjectId (0x + 64 Hex) fehlt' }, cors);
+                return true;
+            }
+            const { getPrivateMailboxOwnerFromChain } = await import('../../chain-access.js');
+            const r = await getPrivateMailboxOwnerFromChain(mailboxObjectId);
+            sendJson(res, 200, { ok: true, ...r }, cors);
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url === '/api/private-mailbox-contents' && req.method === 'GET') {
+        try {
+            const u = new URL(req.url || '', 'http://localhost');
+            const mailboxObjectId = u.searchParams.get('mailboxObjectId')?.trim() || u.searchParams.get('objectId')?.trim() || '';
+            const owner = u.searchParams.get('owner')?.trim() || CFG.MY_ADDRESS;
+            if (!/^0x[a-fA-F0-9]{64}$/i.test(mailboxObjectId)) {
+                sendJson(res, 400, { ok: false, error: 'mailboxObjectId (0x + 64 Hex) fehlt' }, cors);
+                return true;
+            }
+            if (!owner || !/^0x[a-fA-F0-9]{64}$/i.test(owner)) {
+                sendJson(res, 400, { ok: false, error: 'owner als Query oder MY_ADDRESS nötig' }, cors);
+                return true;
+            }
+            const { getPrivateMailboxRebateCandidates } = await import('../../chain-access.js');
+            const { handshakes, messages } = await getPrivateMailboxRebateCandidates(mailboxObjectId, owner);
+            sendJson(
+                res,
+                200,
+                {
+                    ok: true,
+                    mailboxObjectId,
+                    owner,
+                    handshakeCount: handshakes.length,
+                    messageCount: messages.length,
+                    handshakes,
+                    messages,
+                },
+                cors
+            );
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
     if (url === '/api/rebate-candidates' && req.method === 'GET') {
         try {
             const u = new URL(req.url || '', 'http://localhost');

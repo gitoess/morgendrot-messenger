@@ -73,6 +73,11 @@ export function openR1CourierDialogFromPrefill(payload: R1CourierPrefillPayload)
   r1Open?.()
 }
 
+/** Relay-/Kurier-Dialog (`ChatViewRelaySubmitButton`) von überall öffnen. */
+export function openRelaySubmitDialog() {
+  r1Open?.()
+}
+
 export function openProtokollAnchorDialogFromPrefill(payload: ProtokollAnchorPrefillPayload) {
   stashSessionJson(PROTO_PREFILL_KEY, payload)
   protokollOpen?.()

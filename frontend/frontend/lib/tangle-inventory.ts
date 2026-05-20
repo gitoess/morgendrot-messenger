@@ -64,7 +64,9 @@ export function addTangleInventoryItem(item: Omit<TangleInventoryItem, 'id' | 't
   saveTangleInventory([next, ...deduped])
 }
 
-export function addManyTangleInventoryItems(items: Array<Omit<TangleInventoryItem, 'id'>>) {
+export function addManyTangleInventoryItems(
+  items: Array<Omit<TangleInventoryItem, 'id' | 'timestamp'> & { timestamp?: number }>
+) {
   if (!Array.isArray(items) || items.length === 0) return
   let next = loadTangleInventory()
   for (const item of items) {
@@ -82,6 +84,14 @@ export function addManyTangleInventoryItems(items: Array<Omit<TangleInventoryIte
     next = [incoming, ...next.filter((x) => !(x.digest === incoming.digest && (x.nonce ?? '') === (incoming.nonce ?? '')))]
   }
   saveTangleInventory(next)
+}
+
+export function countTangleInventory(filter?: {
+  status?: TangleInventoryStatus | 'all'
+}): number {
+  const items = loadTangleInventory()
+  if (!filter?.status || filter.status === 'all') return items.length
+  return items.filter((x) => x.status === filter.status).length
 }
 
 export function clearTangleInventory() {

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "meta": {
+    "title": "Morgendrot Einsatzprofile (Vorlage)",
+    "description": "Startpunkt für bundled Standard-Profile. Nach deploy:move-package und create_globals IDs eintragen, dann ins Messenger-Bundle übernehmen (npm run bundle:messenger).",
+    "specDoc": "docs/PACKAGE-PROFILE-WECHSEL-SPEC.md",
+    "exampleDoc": "docs/examples/package-profiles.manifest.json",
+    "notes": [
+      "Ersetze alle REPLACE_*-Platzhalter durch echte 0x-IDs aus dem GlobalsCreated-Event.",
+      "Produktion: Feuerwehr und Katastrophenschutz = getrennte Installationen (eigene .env, eigener API_PORT), nicht nur andere IDs in einem Server.",
+      "Felder _* sind Dokumentation; zukünftiger Loader ignoriert Schlüssel, die mit _ beginnen."
+    ]
+  },
+  "profiles": [
+    {
+      "id": "katastrophenschutz",
+      "label": "Katastrophenschutz",
+      "description": "Großschadenslage, übergreifende Leitstelle. Schnellauswahl ohne 0x tippen.",
+      "color": "#b45309",
+      "icon": "shield",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "REPLACE_PACKAGE_ID",
+      "mailboxId": "REPLACE_MAILBOX_ID",
+      "vaultRegistryId": "REPLACE_VAULT_REGISTRY_ID",
+      "commandRegistryId": "REPLACE_COMMAND_REGISTRY_ID",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3342",
+      "_fillAfter": "npm run deploy:move-package → create_globals → Werte aus DEPLOY-MOVE-M4d.md / .env"
+    },
+    {
+      "id": "feuerwehr-standard",
+      "label": "Feuerwehr Standard",
+      "description": "Dienst-Alltag, lokaler Posten. Eigene Installation empfohlen (z. B. Port 3343).",
+      "color": "#dc2626",
+      "icon": "flame",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "REPLACE_PACKAGE_ID",
+      "mailboxId": "REPLACE_MAILBOX_ID",
+      "vaultRegistryId": "REPLACE_VAULT_REGISTRY_ID",
+      "commandRegistryId": "REPLACE_COMMAND_REGISTRY_ID",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3343",
+      "_fillAfter": "Zweiter Ordner/Kopie des Bundles mit eigener .env und create_globals"
+    },
+    {
+      "id": "training",
+      "label": "Training",
+      "description": "Übung und Testnet — read-only für Helfer ohne Config-Rolle.",
+      "color": "#2563eb",
+      "icon": "graduation-cap",
+      "bundled": true,
+      "readOnly": true,
+      "packageId": "REPLACE_PACKAGE_ID",
+      "mailboxId": "REPLACE_MAILBOX_ID",
+      "vaultRegistryId": "REPLACE_VAULT_REGISTRY_ID",
+      "commandRegistryId": "REPLACE_COMMAND_REGISTRY_ID",
+      "rpcUrl": "https://api.testnet.iota.cafe",
+      "apiBaseUrl": "http://127.0.0.1:3342",
+      "_fillAfter": "Lab-Deploy; kann dieselben IDs wie Katastrophenschutz haben, wenn nur eine Test-Installation existiert"
+    }
+  ]
+}

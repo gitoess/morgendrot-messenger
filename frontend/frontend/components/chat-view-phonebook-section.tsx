@@ -29,12 +29,15 @@ import {
   recordContactLastContacted,
   toggleContactFavorite,
 } from '@/frontend/lib/contact-phonebook-meta-store'
+import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 import { cn } from '@/lib/utils'
 
 export type ChatViewPhonebookSectionProps = {
   directory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
   setStatusMsg: (msg: string) => void
+  myAddressLine?: string
+  serverMailboxId?: string
   connectedAddresses?: string[]
   /** Kontakt ins Composer übernehmen und Telefonbuch schließen (Caller). */
   onSelectContact?: (storageKey: string, entry: ContactMeshEntryClient) => void
@@ -154,6 +157,14 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           refreshContactDirectory()
           setStatusMsg(r.message || 'Kontakt gespeichert.')
           setDialog(null)
+          if (onSelectContact && storageKey.startsWith('0x')) {
+            onSelectContact(storageKey, {
+              label: values.label.trim() || undefined,
+              meshNodeId: values.meshNodeId.trim() || undefined,
+              mailboxObjectId: mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? mb : undefined,
+              telegramChatId: values.telegramChatId.trim() || undefined,
+            })
+          }
           return
         }
         setStatusMsg(r.error || 'Speichern fehlgeschlagen.')
@@ -231,9 +242,39 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
   }
 
   const filterIds: PhonebookFilterId[] = ['all', 'lora', 'online', 'mailbox', 'recent']
+  const myAddr = (p.myAddressLine || '').trim()
+  const showMailboxes = /^0x[a-fA-F0-9]{64}$/i.test(myAddr)
 
   return (
     <div className="space-y-4">
+      {showMailboxes ? (
+        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
+          <p className="text-sm font-semibold text-foreground mb-2">Meine Mailboxen</p>
+          <p className="text-[11px] text-muted-foreground mb-2">
+            Erstellte private Mailboxen hier verwalten und Kontakten zuordnen (Feld „Private Mailbox“).
+          </p>
+          <ChatViewMyMailboxesPanel
+            myAddressLine={myAddr}
+            serverMailboxIdHint={p.serverMailboxId}
+            contactDirectory={directory}
+            onContactsChanged={refreshContactDirectory}
+            onOpenCreateContact={(mailboxObjectId) =>
+              setDialog({ mode: 'create', initial: { mailboxObjectId } })
+            }
+            onApplySendRecipient={
+              onSelectContact
+                ? (walletAddress) => {
+                    const key = walletAddress.trim().toLowerCase()
+                    const entry = directory[key]
+                    if (entry) onSelectContact(key, entry)
+                  }
+                : undefined
+            }
+            onStatus={(msg, kind) => setStatusMsg(kind === 'error' ? `⚠ ${msg}` : msg)}
+          />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {embedded ? (
           <p className="text-xs leading-relaxed text-muted-foreground sm:max-w-[55%]">

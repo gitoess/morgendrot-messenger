@@ -4,13 +4,13 @@
  */
 import {
   MEDIA_IOTA_AUDIO_RAW_MAX_BYTES,
-  MESSAGING_WIRE_UTF8_MAX,
   morgAudioWirePassesLimits,
   wireUtf8ByteLength,
   wrapCompactImageMessage,
   wrapFileTxtMessage,
   wrapMorgAudioV1Message,
 } from '@/frontend/lib/compact-image-wire'
+import { MESSAGING_ONLINE_WIRE_UTF8_MAX, MORG_PKG_BUNDLE_MAX_UTF8_BYTES } from '@/frontend/lib/morg-pkg-limits'
 
 export const MORG_PKG_BUNDLE_SCHEMA = 'morgendrot.morgpkg.bundle.v1' as const
 
@@ -136,10 +136,11 @@ export async function buildMorgPkgBundleFromFiles(
   }
   const plaintext = serializeMorgPkgBundle(bundle)
   const n = wireUtf8ByteLength(plaintext)
-  if (n > MESSAGING_WIRE_UTF8_MAX) {
+  if (n > MORG_PKG_BUNDLE_MAX_UTF8_BYTES) {
+    const mb = Math.round(MORG_PKG_BUNDLE_MAX_UTF8_BYTES / 1024)
     return {
       ok: false,
-      error: `Paket zu groß (${n} B UTF-8, max. ${MESSAGING_WIRE_UTF8_MAX}). Weniger oder kleinere Dateien.`,
+      error: `Sneakernet-Paket zu groß (${n} B UTF-8, max. ${mb} KiB / ${MORG_PKG_BUNDLE_MAX_UTF8_BYTES} B). Weniger Dateien oder kleinere Bilder. Hinweis: Einzelversand über IOTA bleibt bei ~${MESSAGING_ONLINE_WIRE_UTF8_MAX} B pro Nachricht.`,
     }
   }
   return { ok: true, plaintext, itemCount: items.length }

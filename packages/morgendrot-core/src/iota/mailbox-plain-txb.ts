@@ -11,6 +11,10 @@ export type BuildStorePlaintextMailboxTxInput = {
   plaintextUtf8: Uint8Array
   nonce: bigint
   ttlDays: bigint
+  /** M4d: `store_plaintext_message_stored_private` statt Shared-Mailbox. */
+  privateMailbox?: boolean
+  /** Persistent (DF) statt nur Event — Shared: `store_plaintext_message_stored`. */
+  stored?: boolean
 }
 
 /**
@@ -33,10 +37,17 @@ export function buildStorePlaintextMailboxTransaction(input: BuildStorePlaintext
   if (pkg.toLowerCase() === mb.toLowerCase()) {
     throw new Error('MAILBOX_ID darf nicht gleich PACKAGE_ID sein (Move verbietet Package als Objekt).')
   }
+  const storeFn = input.privateMailbox
+    ? input.stored
+      ? 'store_plaintext_message_stored_private'
+      : 'store_plaintext_message'
+    : input.stored
+      ? 'store_plaintext_message_stored'
+      : 'store_plaintext_message'
   const txb = new Transaction()
   txb.setSender(sender)
   txb.moveCall({
-    target: `${pkg}::messaging::store_plaintext_message`,
+    target: `${pkg}::messaging::${storeFn}`,
     arguments: [
       txb.object(mb),
       txb.pure.address(recipient),

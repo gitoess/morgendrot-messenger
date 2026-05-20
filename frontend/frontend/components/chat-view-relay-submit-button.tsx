@@ -27,7 +27,8 @@ import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 import { registerR1CourierDialogOpener, takeR1CourierPrefillPayload } from '@/frontend/lib/messenger-imperative-dialogs'
 
-export function ChatViewRelaySubmitButton() {
+export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
+  const hideMenuTrigger = p?.hideMenuTrigger === true
   const [open, setOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
   const [rawText, setRawText] = useState('')
@@ -474,9 +475,15 @@ export function ChatViewRelaySubmitButton() {
 
   return (
     <>
-      <button type="button" onClick={openR1Dialog} className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent">
-        R1 Kurier-Paket (Beta)
-      </button>
+      {hideMenuTrigger ? null : (
+        <button
+          type="button"
+          onClick={openR1Dialog}
+          className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+        >
+          R1 Kurier-Paket (Beta)
+        </button>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>

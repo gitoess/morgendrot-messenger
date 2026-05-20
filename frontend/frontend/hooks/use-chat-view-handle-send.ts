@@ -37,7 +37,13 @@ import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
-import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
+import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
+import { connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
+import {
+  getDirectChatEcdhMaterialForRecipient,
+  setDirectChatEcdhPeerPubBase64,
+} from '@/frontend/lib/direct-chat-ecdh-session'
 import { publishStreamsAnchor } from '@/frontend/lib/api/streams'
 import {
   isForensicImageMailboxAttestationEnabled,
@@ -139,6 +145,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     partner,
     messagingPersistenceMode,
     apiStatus,
+    refreshApiStatus,
     recipient,
     myAddress,
     message,
@@ -189,28 +196,67 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const meshPlaintextDest = (): number | 'broadcast' | null =>
       resolveMeshtasticPlaintextDestination(meshPlaintextToNodeEnabled, meshPlaintextNodeId)
 
-    const resolveEncryptedRecipientReady = (): { ok: true } | { ok: false; message: string } => {
+    /** Verschlüsselt: Session (/connect), Direkt-ECDH oder Handshake auf Chain → Auto-Connect. */
+    const ensureEncryptedPeerReady = async (
+      targetRaw: string
+    ): Promise<{ ok: true } | { ok: false; message: string }> => {
+      const target = targetRaw.trim().toLowerCase()
+      if (!ADDR_64_LOWER.test(target)) {
+        return { ok: false, message: 'Empfänger: gültige 0x-Adresse (64 Hex) für verschlüsselten Versand.' }
+      }
+      if (apiStatus?.locked) {
+        return { ok: false, message: 'Wallet ist gesperrt — zuerst entsperren.' }
+      }
       const connected = (apiStatus?.connectedAddresses ?? []).map((a) => a.toLowerCase())
-      if (connected.length === 0) {
-        return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
+      if (connected.includes(target)) return { ok: true }
+      if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
+      if (canTryLiveEncryptedDirectMailbox(target)) return { ok: true }
+      if (connected.length === 1 && connected[0] === target) return { ok: true }
+      const partnerNorm = partner.trim().toLowerCase()
+      if (connected.length > 1) {
+        if (!partnerNorm) {
+          return {
+            ok: false,
+            message:
+              'Mehrere verbundene Partner: im Feld „Partner (Handshake)“ die Zieladresse wählen, dann verschlüsselt senden.',
+          }
+        }
+        if (!connected.includes(partnerNorm)) {
+          return {
+            ok: false,
+            message:
+              'Partner-Adresse ist nicht verbunden. Erst Handshake/Connect für diese Adresse durchführen oder Partnerfeld korrigieren.',
+          }
+        }
+        return { ok: true }
       }
-      if (connected.length === 1) return { ok: true }
-      const p = partner.trim().toLowerCase()
-      if (!p) {
-        return {
-          ok: false,
-          message:
-            'Mehrere verbundene Partner: im Feld „Partner (Handshake)“ die Zieladresse wählen, dann verschlüsselt senden.',
+      try {
+        const hs = await findPeerHandshake(target)
+        if (hs.ok && hs.found && hs.peerPubRawBase64) {
+          setDirectChatEcdhPeerPubBase64(target, hs.peerPubRawBase64)
+          if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
+          const cr = await connect(target)
+          if (cr.ok) {
+            await refreshApiStatus?.()
+            return { ok: true }
+          }
+        }
+      } catch {
+        /* optional */
+      }
+      const deployPartner = (apiStatus?.partnerAddress || partner || '').trim().toLowerCase()
+      if (ADDR_64_LOWER.test(deployPartner)) {
+        try {
+          const cr2 = await connect(deployPartner)
+          if (cr2.ok) {
+            await refreshApiStatus?.()
+            return { ok: true }
+          }
+        } catch {
+          /* optional */
         }
       }
-      if (!connected.includes(p)) {
-        return {
-          ok: false,
-          message:
-            'Partner-Adresse ist nicht verbunden. Erst Handshake/Connect für diese Adresse durchführen oder Partnerfeld korrigieren.',
-        }
-      }
-      return { ok: true }
+      return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
     }
 
     const singleWireSuccessMsg = (): string => {
@@ -355,7 +401,15 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setStatus('idle')
       let userCancelledLoraIota = false
       try {
-        const rTrim = recipient.trim()
+        const rTrim = resolveEncryptedMailboxRecipient(recipient, partner)
+        if (!rTrim) {
+          setStatus('error')
+          setStatusMsg(
+            'Verschlüsselt (LoRa→Online): 0x-Empfänger im Composer oder Partner (0x…) im Setup eintragen.'
+          )
+          setSending(false)
+          return
+        }
         const n1 = BigInt(nextOfflineMailboxClientOutSeq())
         const w1 = prependMailboxOutNonceMarker(lumaText, n1)
         setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
@@ -754,7 +808,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       messageNonceU64: bigint
     ): Promise<QueueMailboxOutcome> => {
       if (!allowOfflineMailboxQueue) return 'skipped'
-      const recipientTrim = recipient.trim().toLowerCase()
+      const recipientTrim = encrypted ? encryptedMailboxRecipient : recipient.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(recipientTrim)) {
         return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
       }
@@ -833,6 +887,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
         throwIfCancelled()
+        if (enc && isPrivate) {
+          const ready = await ensureEncryptedPeerReady(encryptedMailboxRecipient)
+          if (!ready.ok) return failSend(ready.message)
+        }
         let wireForApi: string
         let messageNonceU64: bigint
         if (enc) {
@@ -843,14 +901,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
           wireForApi = textSnap
         }
-        const mailboxObjectId = resolveContactMailboxObjectId(contactDirectory, recipient.trim())
-        const hybridOpts = {
-          ...(mailboxObjectId ? { mailboxObjectId } : {}),
-          messagingPersistenceMode,
-        }
+        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : recipient.trim()
+        /** Posteingang liest die Server-MAILBOX_ID — Kontakt-private Mailbox macht Sends unsichtbar. */
+        const hybridOpts = { messagingPersistenceMode }
         const res = enc
-          ? await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi, hybridOpts)
-          : await sendPlaintextMailboxHybrid(recipient.trim(), wireForApi, messageNonceU64, hybridOpts)
+          ? await sendEncryptedMailboxHybrid(sendTo, wireForApi, hybridOpts)
+          : await sendPlaintextMailboxHybrid(sendTo, wireForApi, messageNonceU64, hybridOpts)
         if (res.ok && isGroupChannel && activeGroup?.streamsAnchorId) {
           void publishStreamsAnchor(activeGroup.streamsAnchorId, {
             type: 'group_message',
@@ -1012,13 +1068,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (forcedTransport === 'internet') {
-        const encReady = resolveEncryptedRecipientReady()
+        const encReady = await ensureEncryptedPeerReady(encryptedMailboxRecipient)
         if (!encReady.ok) return failSend(encReady.message)
         const existing = parseMailboxOutNonceMarker(textSnap)
         const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
         const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
         throwIfCancelled()
-        const res = await sendEncryptedMailboxHybrid(recipient.trim(), wireForApi, { messagingPersistenceMode })
+        const hybridOpts = { messagingPersistenceMode }
+        const res = await sendEncryptedMailboxHybrid(encryptedMailboxRecipient, wireForApi, hybridOpts)
         if (res.ok) {
           return {
             ok: true,
@@ -1169,7 +1226,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
-        setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
+        setTimeout(() => void loadMessages('reset'), 800)
       }
     } catch (e) {
       if (isUserCancelError(e)) {
@@ -1193,6 +1250,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     attachedLora,
     attachedTxtFile,
     apiStatus,
+    refreshApiStatus,
     clearCompactAttachment,
     meshSelfArchiveAfterLoRa,
     encrypted,

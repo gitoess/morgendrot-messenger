@@ -17,6 +17,10 @@ import {
   shouldWarnUntrustedDeviceTime,
 } from '@/frontend/lib/device-time-trust'
 import { apiStatusPollSignature } from '@/frontend/lib/api-status-signature'
+import {
+  applyDirectMailboxChainSnapshotFromNetworkIds,
+  syncDirectMailboxFlagsFromApiStatus,
+} from '@/frontend/lib/direct-iota-chain-context'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
@@ -60,14 +64,22 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     if (typeof navigator === 'undefined' || !navigator.geolocation) return
     if (gpsProbeStartedRef.current) return
     gpsProbeStartedRef.current = true
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const ts = pos.timestamp
-        if (Number.isFinite(ts) && ts > 1_600_000_000_000) setHasTrustedGpsUtcFix(true)
-      },
-      () => {},
-      { enableHighAccuracy: false, timeout: 12_000, maximumAge: 0 }
-    )
+    void (async () => {
+      try {
+        const perm = await navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+        if (perm?.state === 'denied') return
+      } catch {
+        /* Permissions API optional */
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const ts = pos.timestamp
+          if (Number.isFinite(ts) && ts > 1_600_000_000_000) setHasTrustedGpsUtcFix(true)
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 }
+      )
+    })()
   }, [probeGeolocationForDeviceTime])
 
   useEffect(() => {
@@ -85,6 +97,13 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     const { pollClockHint: hint, ...rest } = s
     setPollClockHint(hint)
     setApiStatus(rest)
+    syncDirectMailboxFlagsFromApiStatus(rest)
+    const mb = (rest.mailboxId || '').trim()
+    const pkg = (rest.packageId || '').trim()
+    const addr = (rest.myAddressFull || rest.myAddress || '').trim()
+    if (mb && pkg && addr) {
+      applyDirectMailboxChainSnapshotFromNetworkIds({ packageId: pkg, mailboxId: mb, myAddress: addr })
+    }
   }, [])
 
   const refreshApiStatus = useCallback(async () => {

@@ -17,6 +17,11 @@ export const HELP_START = `
 /connect [Adresse]       Auf Handshake warten, dann Chat starten. Ohne Adresse: PARTNER_ADDRESS/KOMMANDANT_ADDRESSES aus .env.
 /send-plain <Adresse> <Text>  Klartext senden (kein Handshake nötig, z.B. an sich selbst). Im Explorer sichtbar.
 /set-package-id <id>     Package-ID setzen und in .morgendrot-package-id speichieren.
+/publish-package [move-test]   Move-Paket publizieren (IOTA-CLI); PACKAGE_ID in .env/.morgendrot-package-id. Enthält create_private_mailbox (M4d).
+/create-private-mailbox   Eigene PrivateMailbox on-chain erstellen (M4d); Object-ID lokal für Profil-QR.
+/purge-private-mailbox <0x…>   Eigene PrivateMailbox löschen (Rebate). Nur Owner; leer oder Einträge vorher purgen.
+/cleanup-private-mailbox <0x…>  PrivateMailbox leeren (Handshakes + Nachrichten on-chain purgen).
+/private-mailbox-contents <0x…>  Zählt Dynamic Fields (Handshakes/Nachrichten) vor Aufräumen/Rebate.
 /shadow-sweep <Wort1> …   Schatten-Mnemonic (12+ Wörter): alles nach dem Befehl = Phrase. Oder API shadowMnemonic. Erzeugt Main-Wallet + sweep; Secret Key nur einmal in der Antwort.
 /rpc-rotate              Nächsten Eintrag aus RPC_URL + RPC_URLS nutzen (öffentliche Rotation).
 /resolve-iota-name <name.iota>   Indexer: Ziel-Adresse + Registrierungs-NFT-ID (iotax_iotaNamesLookup). Mit VERIFIED_IOTA_NAME_PACKAGE_IDS optional NFT-Paket prüfen.
@@ -61,6 +66,10 @@ hole letzten <n>         Wie /fetch – natürliche Eingabe (z.B. hole letzten 1
 /transfer-asset-key-package <assetId> <keyId> <newOwner>  Asset + Key in einer Transaktion übertragen (z. B. Verkauf Pumpe).
 /purge-asset <objectId>  PhysicalAsset löschen (Rebate). Nur Besitzer.
 /list-assets [owner]     PhysicalAssets auflisten (name, metadata, objectId, nfcUid).
+/create-private-mailbox   Eigene PrivateMailbox on-chain erstellen (M4d); Object-ID lokal für Profil-QR.
+/purge-private-mailbox <0x…>   Eigene PrivateMailbox löschen (Rebate). Nur Owner; leer oder Einträge vorher purgen.
+/cleanup-private-mailbox <0x…>  PrivateMailbox leeren (Handshakes + Nachrichten on-chain purgen).
+/private-mailbox-contents <0x…>  Zählt Dynamic Fields (Handshakes/Nachrichten) vor Aufräumen/Rebate.
 /pairing-offer <Geheimnis> [Name] [Sek]   Geheimnis-Peering (nach Move-Upgrade). Wie in HELP_START.
 /pairing-find <Geheimnis>
 /pairing-wait
