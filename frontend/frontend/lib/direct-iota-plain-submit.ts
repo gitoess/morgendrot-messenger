@@ -217,7 +217,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
       nonce: opts.nonce,
       ttlDays: snap.ttlDays,
       privateMailbox: usePrivateMb,
-      stored: snap.mailboxStorePlaintext === true,
+      stored: snap.flags.mailboxStorePlaintext === true,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })

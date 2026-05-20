@@ -7,6 +7,8 @@ export const INBOX_HIDDEN_IDS_LS = 'morg.inbox.hidden.ids'
 export const INBOX_PARTNER_MEMORY_LS = 'morg.inbox.partnerMemory.v1'
 export const INBOX_PARTNER_MEMORY_BLOCKED_LS = 'morg.inbox.partnerMemoryBlocked.v1'
 
+export const INBOX_FILTERS_CLEARED_EVENT = 'morg:inbox-filters-cleared'
+
 /** Setzt Browser-Filter zurück (nach „Cache leeren“ oder wenn der Posteingang leer wirkt). */
 export function clearInboxBrowserViewFilters(): void {
   if (typeof window === 'undefined') return
@@ -20,6 +22,7 @@ export function clearInboxBrowserViewFilters(): void {
     ]) {
       sessionStorage.removeItem(k)
     }
+    window.dispatchEvent(new CustomEvent(INBOX_FILTERS_CLEARED_EVENT))
   } catch {
     /* ignore */
   }

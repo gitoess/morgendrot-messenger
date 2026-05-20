@@ -26,7 +26,7 @@ export async function purgePrivateMailboxOnChain(objectId: string): Promise<Purg
     return { ok: false, error: 'Ungültige Object-ID (0x + 64 Hex).' }
   }
   const r = await executeCommand('/purge-private-mailbox', [id], { timeoutMs: 120_000 })
-  const body = r as Record<string, unknown>
+  const body = r as unknown as Record<string, unknown>
 
   if (!parseCommandOk(body)) {
     const err =

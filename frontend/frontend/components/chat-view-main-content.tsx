@@ -152,6 +152,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     exportEcdhMorgPkgForMessage,
     onMorgPkgDeviceFiles,
     onMorgPkgImportFile,
+    onMorgPkgDeviceExportPick,
     confirmLoraSendViaOnline,
     handleSend,
     cancelSend,
@@ -402,6 +403,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     morgPkgDeviceFilesRef,
     onMorgPkgImportFile,
     onMorgPkgDeviceFiles,
+    onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     apiStatus,
     onRefresh: () => {

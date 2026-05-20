@@ -9,7 +9,7 @@ const WALLET = '0x' + 'b'.repeat(64)
 
 describe('contact-mailbox-routing', () => {
   it('resolveContactMailboxObjectId liest mailboxObjectId vom Empfänger', () => {
-    const dir = { [WALLET]: { mailboxObjectId: MB } }
+    const dir = { [WALLET]: { label: 'Test', mailboxObjectId: MB } }
     expect(resolveContactMailboxObjectId(dir, WALLET)).toBe(MB)
   })
 

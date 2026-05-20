@@ -2,6 +2,21 @@ import type { Message } from './types'
 
 const DEFAULT_WINDOW_MS = 120_000
 
+function isEncryptedPlaceholderContent(s: string): boolean {
+  return s.trimStart().startsWith('[Verschlüsselt]')
+}
+
+/** Beim Dedup-Merge: echte Entschlüsselung vor Platzhalter, längerer Klartext sonst. */
+export function pickMergedInboxContent(a: string, b: string): string {
+  const aa = a ?? ''
+  const bb = b ?? ''
+  const aPh = isEncryptedPlaceholderContent(aa)
+  const bPh = isEncryptedPlaceholderContent(bb)
+  if (aPh && !bPh) return bb
+  if (bPh && !aPh) return aa
+  return bb.length >= aa.length ? bb : aa
+}
+
 /** Gleicher Klartext vom gleichen Absender im Zeitfenster → eine Zeile, mehrere Transport-Icons. */
 export function contentDedupKey(
   sender: string,
@@ -36,9 +51,8 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
     id: cur.id,
     timestamp: sameChainNonce ? cur.timestamp : Math.max(cur.timestamp, msg.timestamp),
     transports: [...tr],
-    /** Längeren Klartext bevorzugen (z. B. voller Wire vs. abgeschnittene Kopie). */
-    content: mc.length >= cc.length ? mc : cc,
-    encrypted: msg.encrypted ?? cur.encrypted,
+    content: pickMergedInboxContent(cc, mc),
+    encrypted: Boolean(msg.encrypted || cur.encrypted),
   }
   const rest = prev.filter((_, j) => j !== i)
   return [merged, ...rest]

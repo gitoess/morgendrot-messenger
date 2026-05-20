@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import {
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
@@ -176,6 +176,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     isGroupChannel,
   } = p
   const cancelRequestedRef = useRef(false)
+  /** Hook-Ebene: immer definiert (kein ReferenceError in älteren/minifizierten Bundles). */
+  const encryptedMailboxRecipient = useMemo(
+    () => resolveEncryptedMailboxRecipient(recipient, partner),
+    [recipient, partner]
+  )
 
   const cancelSend = useCallback(() => {
     cancelRequestedRef.current = true
@@ -192,6 +197,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     const inventoryType = attachedBlobBase64 || attachedAudioBase64 || attachedLora ? 'image' : 'text'
     /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
     const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
+
+    if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+      setStatus('error')
+      setStatusMsg(
+        'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
+      )
+      return
+    }
 
     const meshPlaintextDest = (): number | 'broadcast' | null =>
       resolveMeshtasticPlaintextDestination(meshPlaintextToNodeEnabled, meshPlaintextNodeId)
@@ -1277,6 +1290,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     drainMeshInboundText,
     contactDirectory,
     partner,
+    encryptedMailboxRecipient,
   ])
 
   return { handleSend, cancelSend }

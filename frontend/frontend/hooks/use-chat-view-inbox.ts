@@ -4,8 +4,8 @@
  * Posteingang: Mailbox-Fetch (IOTA/Backend), Merge mit lokalen Mesh-Zeilen, Dedup.
  * Standard: 50 Nachrichten pro Seite; „Weitere laden“ holt ältere Chunks (offset).
  *
- * **RPC vor API (§6.B.4):** Wenn der Direkt-Fullnode-Pfad möglich ist, kommt die Kette zuerst;
- * `/inbox` ergänzt (Archive, Index-Verzug). Gleiche `dedupKey` → Eintrag von der Chain gewinnt.
+ * **RPC + API (§6.B.4):** Direkt-Fullnode und `/inbox` parallel; gleiche `dedupKey` → API gewinnt
+ * (Backend-Entschlüsselung mit Wallet), RPC-Platzhalter `[Verschlüsselt]…` wird verworfen.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -81,7 +81,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const mailboxForFetch = pkg ? await lookupMailboxIdForPackage(pkg) : undefined
       const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
-      if (mode === 'reset') clearInboxBrowserViewFilters()
+      if (mode === 'reset') {
+        clearInboxBrowserViewFilters()
+      }
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickLocalOverlayRowsForInboxMerge(prev)))
       }
@@ -108,7 +110,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
               )
             }
             const tgJournal = await loadTelegramJournalMessages(myAddress)
-            const mergedPage = mergeAllMessages([...apiMapped, ...rpcMapped, ...tgJournal])
+            const mergedPage = mergeAllMessages([...rpcMapped, ...apiMapped, ...tgJournal])
             if (mergedPage.length > 0) {
               const rpcN = direct.rows.length
               const apiN = apiMapped.length

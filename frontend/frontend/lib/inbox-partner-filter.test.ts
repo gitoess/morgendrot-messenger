@@ -108,14 +108,14 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r.map((m) => m.id).sort()).toEqual(['o', 's'])
   })
 
-  it('partner filter', () => {
+  it('partner filter inkl. PEER, Selbst-an-selbst bleibt sichtbar', () => {
     const r = filterInboxMessagesByPartnerAndDirection(list, ME, PEER, 'all')
-    expect(r.map((m) => m.id).sort()).toEqual(['i', 'o'])
+    expect(r.map((m) => m.id).sort()).toEqual(['i', 'o', 's'])
   })
 
-  it('partner PEER2 schließt b aus', () => {
+  it('partner PEER2: nur Selbst-an-selbst, keine PEER-Nachrichten', () => {
     const r = filterInboxMessagesByPartnerAndDirection(list, ME, PEER2, 'all')
-    expect(r).toEqual([])
+    expect(r.map((m) => m.id)).toEqual(['s'])
   })
 })
 

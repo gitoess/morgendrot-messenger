@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { contentDedupKey, mergeMessageByDedup, mergeAllMessages } from './message-dedup'
+import {
+  contentDedupKey,
+  mergeMessageByDedup,
+  mergeAllMessages,
+  pickMergedInboxContent,
+} from './message-dedup'
 import type { Message } from './types'
 
 function msg(p: Partial<Message> & Pick<Message, 'id' | 'timestamp'>): Message {
@@ -52,6 +57,14 @@ describe('mergeMessageByDedup', () => {
     expect(r[0]!.content).toBe('längerer text')
     expect(r[0]!.transports?.sort()).toEqual(['internet', 'mesh'].sort())
     expect(r[0]!.id).toBe('x')
+  })
+})
+
+describe('pickMergedInboxContent', () => {
+  it('wählt echten Text statt Platzhalter', () => {
+    expect(
+      pickMergedInboxContent('[Verschlüsselt] x', 'Hallo')
+    ).toBe('Hallo')
   })
 })
 

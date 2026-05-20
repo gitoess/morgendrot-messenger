@@ -22,6 +22,7 @@ import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import {
   clearInboxBrowserViewFilters,
+  INBOX_FILTERS_CLEARED_EVENT,
   IOTA_INBOX_ONLY_LS,
   INBOX_HIDDEN_IDS_LS,
   INBOX_PARTNER_MEMORY_BLOCKED_LS,
@@ -41,7 +42,11 @@ function messageHasMeshTransport(m: Message): boolean {
 
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
-  loadMessages: (mode?: 'reset' | 'append', packageIdOverride?: unknown) => Promise<void>
+  loadMessages: (
+    mode?: 'reset' | 'append',
+    packageIdOverride?: unknown,
+    opts?: { silent?: boolean }
+  ) => Promise<void>
   setSending: (v: boolean) => void
   setStatus: (s: 'idle' | 'success' | 'error') => void
   setStatusMsg: (msg: string) => void
@@ -107,8 +112,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     try {
       const meshOnly = sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1'
       const iotaOnly = sessionStorage.getItem(IOTA_INBOX_ONLY_LS) === '1'
-      const wf = sessionStorage.getItem(INBOX_WIRE_FILTER_LS)
-      if (wf === 'encrypted' || wf === 'plaintext') setInboxWireFilterState(wf)
+      /** Wire-Filter (nur Klartext/nur verschlüsselt) nicht aus alter Session — blendet sonst Mailbox/Event aus. */
       setInboxMeshTransportOnly(meshOnly)
       setInboxIotaTransportOnly(iotaOnly && !meshOnly)
       if (meshOnly && iotaOnly) {
@@ -148,6 +152,21 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     } catch {
       /* ignore */
     }
+  }, [])
+
+  /** Posteingang-Reload leert sessionStorage — React-Filter (z. B. „nur Klartext“) sonst weiter aktiv. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onCleared = () => {
+      setHiddenInboxIds(new Set())
+      setInboxPartnerKey(null)
+      setInboxDirectionFilter('all')
+      setInboxMeshTransportOnly(false)
+      setInboxIotaTransportOnly(false)
+      setInboxWireFilterState('all')
+    }
+    window.addEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
+    return () => window.removeEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
   }, [])
 
   useEffect(() => {

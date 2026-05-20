@@ -79,6 +79,8 @@ export type ApiStatus = {
   rpcHttpProxyActive?: boolean
   /** Nach /connect: verbundene Partner-Adressen (Handshake). */
   connectedAddresses?: string[]
+  /** Konfigurierter Einsatz-Partner (maskiert wie myAddress). */
+  partnerAddress?: string
   partnerCount?: number
   /** Streams-Kanal für Heartbeat/Puls (GET /api/status). */
   streams?: { active: boolean; anchorId?: string; anchorIdFull?: string }

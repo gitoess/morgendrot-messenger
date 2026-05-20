@@ -159,7 +159,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           setDialog(null)
           if (onSelectContact && storageKey.startsWith('0x')) {
             onSelectContact(storageKey, {
-              label: values.label.trim() || undefined,
+              label: values.label.trim() || storageKey.slice(0, 12),
               meshNodeId: values.meshNodeId.trim() || undefined,
               mailboxObjectId: mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? mb : undefined,
               telegramChatId: values.telegramChatId.trim() || undefined,

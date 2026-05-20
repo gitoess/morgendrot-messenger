@@ -31,6 +31,14 @@ describe('mapInboxApiRowsToMessages', () => {
     expect(m.dedupKey).toBe('mailbox|0xs|n1|hi')
   })
 
+  it('trennt Event- und Mailbox-Zeilen per chainPurgeable (id/dedupKey)', () => {
+    const out = mapInboxApiRowsToMessages([
+      { sender: '0xs', text: 'ev', nonce: '42', chainPurgeable: false, isPlain: true },
+      { sender: '0xs', text: 'mb', nonce: '42', chainPurgeable: true, isPlain: true },
+    ])
+    expect(out.map((m) => m.id).sort()).toEqual(['event:0xs:42', 'mailbox:0xs:42'].sort())
+  })
+
   it('nutzt from wenn sender fehlt', () => {
     const out = mapInboxApiRowsToMessages([{ from: '0xf', text: 'a', timestamp: 100 }])
     expect(out[0]!.from).toBe('0xf')

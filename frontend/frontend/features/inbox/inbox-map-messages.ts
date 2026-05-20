@@ -52,11 +52,14 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       else if (Number.isFinite(nn) && nn > 0) timestamp = nn
       else timestamp = 0
     }
+    const chainChannel = m.chainPurgeable === false ? 'event' : 'mailbox'
     const stableId =
       m.id ??
-      (nonceStr && from ? `mailbox:${from.trim().toLowerCase()}:${nonceStr}` : `mailbox-row-${i}`)
+      (nonceStr && from
+        ? `${chainChannel}:${from.trim().toLowerCase()}:${nonceStr}`
+        : `${chainChannel}-row-${i}`)
     const dedupKey = nonceStr
-      ? `mailbox|${from.trim().toLowerCase()}|${nonceStr}|${content.slice(0, 120)}`
+      ? `${chainChannel}|${from.trim().toLowerCase()}|${nonceStr}|${content.slice(0, 120)}`
       : contentDedupKey(from, content, timestamp)
     return {
       id: stableId,

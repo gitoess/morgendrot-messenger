@@ -19,7 +19,7 @@ export async function cleanupPrivateMailboxOnChain(objectId: string): Promise<Cl
     return { ok: false, error: 'Ungültige Object-ID (0x + 64 Hex).' }
   }
   const r = await executeCommand('/cleanup-private-mailbox', [id], { timeoutMs: 180_000 })
-  const body = r as Record<string, unknown>
+  const body = r as unknown as Record<string, unknown>
   if (body.ok !== true) {
     const err =
       (typeof body.error === 'string' && body.error) ||
