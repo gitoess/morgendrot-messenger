@@ -42,7 +42,7 @@ Die Richtung **getrennte Kontexte statt Merge** ist **richtig** (siehe auch Abgl
 
 **Ist:** Kein vollständiges **In-App-Multi-Account-Produkt** mit einem Tap „Dienst ↔ Privat“ ist als Standardpfad beschrieben; eher **manuelle** oder **deploymentspezifische** Trennung (zwei Installationen, zwei Profile, oder klare Checklisten).
 
-**Offen / Roadmap:** Einheitliche **Profil-UI** (Label, Farbe, Pflicht-Bestätigung vor dem Senden im Dienstprofil) wäre eine **Produktentscheidung** — nicht nur Technik.
+**Offen / Roadmap:** Einheitliche **Profil-UI** (Label, Farbe, Pflicht-Bestätigung vor dem Senden im Dienstprofil) wäre eine **Produktentscheidung** — nicht nur Technik. Für **mehrere `PACKAGE_ID`s / Organisationen** (Feuerwehr vs. Katastrophenschutz): **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**, Roadmap **§ H.24b** (Wechsel ≠ Chat-Raum). **Betrieb:** weiter **eine Installation pro Einsatz** (zwei Ordner/Starter) — „Einsatz wechseln“ in der App = Client-Registry, kein Ersatz für getrennte Deployments.
 
 ---
 

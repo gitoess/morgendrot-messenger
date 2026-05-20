@@ -25,7 +25,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commits 2026-05-15, `b914811`). **Offen:** **§ H.22 M4d** Move `create_private_mailbox`. **Neu priorisiert (§ H.25a):** **LoRa-Bild „Flüchtig“** — `sendLoraImageViaMorgSegV1`, Sender-NAK-Loop, Hard-Cap **12 KB**, Vorschau/ETA — **vor** großem **§ H.23**-Ratchet-Bau. **Danach:** **§ H.23** Verschlüsselungs-MVP. Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke nach Schreibtisch-Scheibe. **Backlog:** **§ H.24** Package-abhängige UI.
+**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commits 2026-05-15, `b914811`). **Offen:** **§ H.22 M4d** Move `create_private_mailbox` — **✓ umgesetzt + deployt 2026-05-20** (Testnet `0x014ef8…a1c7`). **Neu priorisiert (§ H.25a):** **LoRa-Bild „Flüchtig“** — `sendLoraImageViaMorgSegV1`, Sender-NAK-Loop, Hard-Cap **12 KB**, Vorschau/ETA — **vor** großem **§ H.23**-Ratchet-Bau. **Danach:** **§ H.23** Verschlüsselungs-MVP. Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke nach Schreibtisch-Scheibe. **Backlog:** **§ H.24** Package-Profile & package-abhängige UI (**§ H.24b** Wechsel ≠ Chat-Raum — **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**).
 
 ### Ist das der „komplette“ Plan? Heltec, Firmware, …
 
@@ -149,7 +149,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.18** | **TTS / STT (Spracheingabe & Vorlesen)** — optional nach **§ H.0**/**H.2**: Freihand/Feld ohne Tippen, Barrierefreiheit; **Privacy** (Cloud vs. on-device), **Offline**, EU-Daten; technisch Browser-**Web Speech API** vs. native Hülle — **`docs/MESSENGER-SPRACHAUFNAHME.md`** |
 | **§ H.22** | **Messenger-Kanäle & Mailbox M1–M4** — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
 | **§ H.23** | **Verschlüsselung** — MVP-Architektur (Session Keys vs. Double Ratchet) |
-| **§ H.24** | **Package-abhängige UI** — Feature-Sichtbarkeit pro `PACKAGE_ID` / Deployment (Backlog) |
+| **§ H.24** | **Package-Profile & UI** — Wechsel zwischen Einsatzumgebungen (**§ H.24b**), Capabilities pro Paket (**§ H.24a**); Backlog |
 | **§ H.25** | **Bilder über LoRa** — Produktpfad (Meshtastic) vs. Referenz-Labor (Roh-LoRa) |
 | **§ H.26** | **Telegram-Integration (Runtime)** — Alarme + optionale Kontakt-Benachrichtigung; **kein** `.env` für `TG_*` auf dem Gerät; **§ H.6e** / **§ H.20** |
 
@@ -1109,20 +1109,55 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | Was | Roadmap-Stelle | Status |
 |-----|----------------|--------|
 | **Shared Mailbox** (`create_globals` → `MAILBOX_ID`) | Deploy/Admin, **M1** | **Ist** — ein Objekt pro Einsatz |
-| **Private Mailbox pro Nutzer** (`create_private_mailbox`) | **M4d** in **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** | **Geplant, nicht umgesetzt** — UI nur manuelle Object-ID + Profil-QR bis Move existiert |
+| **Private Mailbox pro Nutzer** (`create_private_mailbox`) | **M4d** in **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** | **✓ Move + UI + `/create-private-mailbox`** (2026-05-20); Testnet-Paket live |
 | **Pro-User-Shared-Mailbox-UI** im MVP | **Nicht** vorgesehen (Leitplanke **§ H.22**) | bewusst ausgeschlossen |
 
-### H.24 Package-abhängige UI
+### H.24 Package-Profile & package-abhängige UI
 
-**Status:** **Backlog** — nach **§ H.22 M4d** / **§ H.23**-Grundentscheid oder in kleinen Scheiben parallel zu **§ H.0** / **§ H.2**, ohne Phase-B-Mesh-Refactor.
+**Status:** **Backlog** — **später umsetzen** (nach **§ H.22 M4d**-Stabilisierung, **§ H.23**-Grundentscheid; kleine Scheiben parallel zu **§ H.0** / **§ H.2** möglich).  
+**SSOT Wechsel-Logik:** **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**.
+
+#### H.24b — PACKAGE wechseln = Einsatzprofil (nicht Chat-Raum) — **priorisiert innerhalb H.24**
+
+**Kernentscheid:** `PACKAGE_ID` beschreibt **Organisation / Deploy / Chain-Vertrag**, nicht einen Gesprächsraum. Wechsel = Wechsel der **Einsatzumgebung** (analog mehrere Signal-Accounts), **nicht** Partner- oder Kanalwahl.
+
+| Szenario | Wechsel? | Empfehlung |
+|----------|----------|------------|
+| Feuerwehr → Katastrophenschutz (andere Org) | Ja | Sinnvoll — andere `MAILBOX_ID`, Rechte, Admins |
+| Täglich zwischen Einheiten | Nein | Schlecht — fehleranfällig; lieber festes Profil oder getrennte Installation |
+| Großschadenslage | Ein **gemeinsames** Package | Alle unter einem Katastrophenschutz-`PACKAGE_ID` |
+
+**Zielbild (später):**
+
+1. **Mehrere Package-Profile** speichern (Label, `PACKAGE_ID`, zugehörige `MAILBOX_ID` / Registry-IDs, optional Farbe).
+2. **Aktives Profil** steuert Server-Config, Shared-Mailbox-Zeile, erlaubte Features.
+3. **Wechsel-Warnung** (Pflicht): z. B. *„Du wechselst zu ‚Katastrophenschutz‘ — private Mailboxes der Feuerwehr sind hier nicht verfügbar.“*
+4. **Pro Profil getrennt (Client):** private Mailboxes (M4d), Telefonbuch/`mailboxObjectId`, Handshake-Status, relevante Einstellungen — **kein** stilles Mischen (Namespace oder Snapshot).
+5. **Nicht v1:** Migration von On-Chain-Objekten zwischen Packages; kein „Inbox-Merge“ über zwei Packages.
+
+**Ist heute (Workaround):** `/set-package-id`, globale `.env`, zwei Arbeitsordner (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** § 5); Mailbox-UI ohne Profil-Trennung.
+
+**Produktentscheidungen (2026-05-20):**
+
+| Thema | Entscheidung |
+|--------|--------------|
+| **Berechtigung** | Profile anlegen/aktivieren: **Boss/Admin** + User mit **`permissions.configChange`** (Config-Rolle) |
+| **Daten** | **Mittel:** Telefonbuch global; private Mailboxes, Handshakes, aktive Mailbox **pro Profil** |
+| **UX** | **Große Warnung** + prominenter Button **„Einsatz wechseln“** (nicht nur `/set-package-id`) |
+| **Betrieb** | **Eine Installation pro Einsatz** (feste `.env`) — **kein** Multi-Package-Hot-Swap im selben Node |
+| **Bundle** | **Hybrid:** Standard-Profile (**Katastrophenschutz**, **Feuerwehr Standard**, **Training**) im Manifest + manuell (Config) |
+
+**Lieferpaket:** P0 Modell → P1a Bundle-Manifest → P1b Client-Registry + `API_BASE` → P1c Server-Doku (kein Hot-Swap) → P2 UI → P3 Namespaces → P4 Capabilities. Details: **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`** § 6–7.7.
+
+#### H.24a — Capabilities & Oberfläche pro Package
 
 | Aspekt | Kurz |
 |--------|------|
-| **Ziel** | Sichtbarkeit, Texte und optionale Kacheln/Flows abhängig von **`PACKAGE_ID`** / Deployment-Profil / **`GET /api/status`** — **ein** Messenger-Code, unterschiedliche **Einsatz-Oberflächen** pro Paket. |
-| **Ist heute** | Package-ID-**Banner** („Jetzt updaten“) und Filter-Abgleich (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**, **§ A.6**); keine durchgängige **Feature-Matrix** pro Paket in der UI. |
-| **Nicht-Ziel** | Kein Fork pro Kunde; keine Secrets im Client — nur **erlaubte** Feature-Flags / Capability-Liste vom Server oder gebündelter Config. |
-| **Lieferung (Vorschlag)** | (1) Spez: Capability-Modell (`packageCapabilities` o. ä.) + SSOT in Doku. (2) UI-Ports: Kacheln, Setup, Transport, Telefonbuch, Boss-only-Teile. (3) Tests: Vitest für „Paket A zeigt X, Paket B nicht“. |
-| **Verknüpfung** | **§ H.0** (Lite vs. Voll), **§ H.17** (Dashboard-Kacheln), **§ H.7** (Standalone-Bundle `.env`), **`docs/UI-ROLLEN-WORKSPACES.md`**. |
+| **Ziel** | Sichtbarkeit, Texte und Kacheln abhängig vom **aktiven** Profil / **`GET /api/status`** — ein Messenger-Code, unterschiedliche **Einsatz-Oberflächen**. |
+| **Ist heute** | Package-ID-**Banner** (**`docs/MESSENGER-PACKAGE-ID-BANNER.md`**); keine Feature-Matrix pro Paket. |
+| **Nicht-Ziel** | Kein Fork pro Kunde; kein PACKAGE-Wechsel als „neuer Chat“. |
+| **Lieferung** | Capability-Modell (`packageCapabilities`); UI-Ports (Setup, Transport, Telefonbuch, Boss); Vitest pro Profil-Mock. |
+| **Verknüpfung** | **§ H.0**, **§ H.17**, **§ H.7**, **`docs/UI-ROLLEN-WORKSPACES.md`**, **H.24b**. |
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
 

@@ -3,7 +3,7 @@
 **Zweck:** Kanonische Produkt- und Engineering-Reihenfolge für **Shared Mailbox**, **drei Kommunikationskanäle** (1:1, Gruppe, Pinnwand) und optionale **Private Mailbox**.  
 **Stand:** 2026-05-15  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.22**  
-**Technik Mailbox (Ist):** **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, Move `move-test/sources/messaging.move`, `MAILBOX_ID` = **ein** Shared Object pro Deployment (`create_globals`).
+**Technik Mailbox (Ist):** **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **`docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`** (Begriffe für Nutzer), Move `move-test/sources/messaging.move`, `MAILBOX_ID` = **ein** Shared Object pro Deployment (`create_globals`). **Später:** mehrere Package-Profile — **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`** (§ **H.24b**).
 
 ---
 
@@ -137,7 +137,7 @@
 | **M4a** | Kontakt-Speicherung: `mailboxObjectId` optional (API + Telefonbuch-Feld) | **Datenlage ✓** — Send nutzt es erst ab M4b |
 | **M4b** | Send-Routing: private Mailbox des Kontakts priorisieren; Chat-Hinweis „Sendet an private Mailbox“ | **✓ Send/UI** (2026-05-15) |
 | **M4c** | QR beim Kontakt hinzufügen: Wallet + Mailbox-ID | **✓** (2026-05-15) |
-| **M4d** | Eigene Private Mailbox erstellen (Move) + Profil-QR | **Profil-QR ✓**; **Move „erstellen“ offen** |
+| **M4d** | Eigene Private Mailbox erstellen (Move) + Profil-QR | **✓** Move + UI (2026-05-20); Redeploy Paket nötig |
 
 ### Move (Skizze, M4d)
 
@@ -173,7 +173,7 @@ public struct PrivateMailbox has key, store {
 - [x] **M4b** Telefonbuch speichert `mailboxObjectId` an API
 - [x] **M4c** Kontakt-QR v2 (`contact-qr.ts`) + Import (Text/Kamera) im Telefonbuch
 - [x] **M4d (interim)** Eigene Mailbox-ID lokal + Profil-QR (`my-private-mailbox-store`, Identity-Karte)
-- [ ] **M4d** Move `create_private_mailbox` + UI **„Private Mailbox erstellen“** (on-chain)
+- [x] **M4d** Move `create_private_mailbox` + UI **„Eigene private Mailbox erstellen“** (`/create-private-mailbox`, Puls/Identität); Paket live (Testnet `0x014ef8…a1c7`, 2026-05-20)
 
 ### Abhängigkeiten (M4b+)
 
