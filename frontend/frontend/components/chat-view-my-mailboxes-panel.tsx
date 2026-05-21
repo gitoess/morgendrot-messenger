@@ -10,6 +10,7 @@ import { fetchDeploymentMailboxId } from '@/frontend/lib/fetch-deployment-mailbo
 import { ChatViewPrivateMailboxDeleteDialog } from '@/frontend/components/chat-view-private-mailbox-delete-dialog'
 import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
+import { ChatViewSendPathOverview } from '@/frontend/components/chat-view-send-path-overview'
 import {
   clearActiveSendMailbox,
   readActiveSendMailbox,
@@ -275,10 +276,12 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
   return (
     <div className="space-y-3">
+      <ChatViewSendPathOverview defaultOpen={false} />
       <p className="text-[10px] text-muted-foreground leading-snug">
-        <strong className="text-foreground">Server-Shared</strong> (.env) wird immer mitgelesen.
-        <strong className="text-foreground"> Team</strong> und <strong className="text-foreground">Privat</strong>:
-        eine davon <strong className="text-foreground">aktiv</strong> für Senden und Posteingang-Fokus.
+        <strong className="text-foreground">Kanäle</strong> (1:1 / Gruppe / Pinnwand) wählst du im Chat-Kopf — unabhängig von den
+        Mailboxen unten. <strong className="text-foreground">Server-Shared</strong> (.env) wird immer mitgelesen.{' '}
+        <strong className="text-foreground">Team</strong> oder <strong className="text-foreground">Privat</strong>: höchstens eine
+        davon <strong className="text-foreground">aktiv</strong> für Senden + zusätzlicher Posteingang-Fokus.
       </p>
 
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5">
