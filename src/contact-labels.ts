@@ -20,9 +20,14 @@ export type ContactMeshEntry = {
     bleUuid?: string;
     /**
      * Optionale IOTA-Object-ID einer privaten/alternativen Mailbox des Kontakts (0x + 64 Hex).
-     * M4a: Speicherort für Send-Routing (M4b); leer = Shared Mailbox des Servers.
+     * Legacy-Alias für `mailboxPrivateId` (M4e).
      */
     mailboxObjectId?: string;
+    /** M4e: Ziel-Mailboxen des Kontakts (je 0x + 64 Hex). */
+    mailboxSharedId?: string;
+    mailboxPrivateId?: string;
+    mailboxTeamId?: string;
+    mailboxBufferId?: string;
     /** Telegram Chat-ID für optionalen Kurz-Hinweis nach Forensik-Send (§ H.26 Phase B). */
     telegramChatId?: string;
 };
@@ -117,6 +122,16 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
     const bleUuid = typeof o.bleUuid === 'string' ? normalizeBleUuid(o.bleUuid) ?? undefined : undefined;
     const mailboxObjectId =
         typeof o.mailboxObjectId === 'string' ? normalizeMailboxObjectId(o.mailboxObjectId) ?? undefined : undefined;
+    const mailboxPrivateId =
+        typeof o.mailboxPrivateId === 'string'
+            ? normalizeMailboxObjectId(o.mailboxPrivateId) ?? undefined
+            : mailboxObjectId;
+    const mailboxSharedId =
+        typeof o.mailboxSharedId === 'string' ? normalizeMailboxObjectId(o.mailboxSharedId) ?? undefined : undefined;
+    const mailboxTeamId =
+        typeof o.mailboxTeamId === 'string' ? normalizeMailboxObjectId(o.mailboxTeamId) ?? undefined : undefined;
+    const mailboxBufferId =
+        typeof o.mailboxBufferId === 'string' ? normalizeMailboxObjectId(o.mailboxBufferId) ?? undefined : undefined;
     const telegramChatId =
         typeof o.telegramChatId === 'string' && /^-?\d{1,20}$/.test(o.telegramChatId.trim())
             ? o.telegramChatId.trim()
@@ -129,15 +144,31 @@ function parseEntry(raw: unknown): ContactMeshEntry | null {
             .slice(0, 20);
         if (tags.length) roleTags = tags;
     }
-    if (!label && !meshNodeId && !meshPublicKeyHex && !bleUuid && !roleTags?.length && !mailboxObjectId && !telegramChatId)
+    if (
+        !label &&
+        !meshNodeId &&
+        !meshPublicKeyHex &&
+        !bleUuid &&
+        !roleTags?.length &&
+        !mailboxObjectId &&
+        !mailboxPrivateId &&
+        !mailboxSharedId &&
+        !mailboxTeamId &&
+        !mailboxBufferId &&
+        !telegramChatId
+    )
         return null;
+    const priv = mailboxPrivateId ?? mailboxObjectId;
     return {
         label: label || 'Partner',
         ...(roleTags ? { roleTags } : {}),
         ...(meshNodeId && { meshNodeId }),
         ...(meshPublicKeyHex && { meshPublicKeyHex }),
         ...(bleUuid && { bleUuid }),
-        ...(mailboxObjectId && { mailboxObjectId }),
+        ...(priv && { mailboxObjectId: priv, mailboxPrivateId: priv }),
+        ...(mailboxSharedId && { mailboxSharedId }),
+        ...(mailboxTeamId && { mailboxTeamId }),
+        ...(mailboxBufferId && { mailboxBufferId }),
         ...(telegramChatId && { telegramChatId }),
     };
 }
@@ -190,6 +221,10 @@ export function saveContactMeshFields(
         meshPublicKeyHex?: string | null;
         bleUuid?: string | null;
         mailboxObjectId?: string | null;
+        mailboxSharedId?: string | null;
+        mailboxPrivateId?: string | null;
+        mailboxTeamId?: string | null;
+        mailboxBufferId?: string | null;
         telegramChatId?: string | null;
     }
 ): void {
@@ -219,13 +254,37 @@ export function saveContactMeshFields(
             if (u) next.bleUuid = u;
         }
     }
+    const applyMbSlot = (
+        key: 'mailboxSharedId' | 'mailboxPrivateId' | 'mailboxTeamId' | 'mailboxBufferId',
+        raw: string | null | undefined
+    ) => {
+        if (raw === undefined) return;
+        if (raw === null || raw === '') {
+            delete next[key];
+            if (key === 'mailboxPrivateId') delete next.mailboxObjectId;
+            return;
+        }
+        const m = normalizeMailboxObjectId(raw);
+        if (!m) return;
+        next[key] = m;
+        if (key === 'mailboxPrivateId') next.mailboxObjectId = m;
+    };
     if (fields.mailboxObjectId !== undefined) {
-        if (fields.mailboxObjectId === null || fields.mailboxObjectId === '') delete next.mailboxObjectId;
-        else {
+        if (fields.mailboxObjectId === null || fields.mailboxObjectId === '') {
+            delete next.mailboxObjectId;
+            delete next.mailboxPrivateId;
+        } else {
             const m = normalizeMailboxObjectId(fields.mailboxObjectId);
-            if (m) next.mailboxObjectId = m;
+            if (m) {
+                next.mailboxObjectId = m;
+                next.mailboxPrivateId = m;
+            }
         }
     }
+    applyMbSlot('mailboxSharedId', fields.mailboxSharedId);
+    applyMbSlot('mailboxPrivateId', fields.mailboxPrivateId);
+    applyMbSlot('mailboxTeamId', fields.mailboxTeamId);
+    applyMbSlot('mailboxBufferId', fields.mailboxBufferId);
     if (fields.telegramChatId !== undefined) {
         if (fields.telegramChatId === null || fields.telegramChatId === '') delete next.telegramChatId;
         else {
@@ -244,7 +303,8 @@ export function saveContactMeshFields(
 export function getContactMailboxObjectId(address: string): string | undefined {
     const hex = normalizeAddress(address);
     if (!hex) return undefined;
-    return loadContactDirectory()[hex]?.mailboxObjectId;
+    const e = loadContactDirectory()[hex];
+    return e?.mailboxPrivateId ?? e?.mailboxObjectId;
 }
 
 export function mergeContactDirectory(incoming: ContactDirectory): { merged: number } {

@@ -10,8 +10,12 @@ export type ContactMeshEntryClient = {
   meshNodeId?: string
   meshPublicKeyHex?: string
   bleUuid?: string
-  /** M4a: optionale private/alternative Mailbox-Object-ID des Kontakts (0x + 64 Hex). */
+  /** Legacy / Alias für `mailboxPrivateId` (M4e). */
   mailboxObjectId?: string
+  mailboxSharedId?: string
+  mailboxPrivateId?: string
+  mailboxTeamId?: string
+  mailboxBufferId?: string
   /** Telegram Chat-ID des Kontakts (Hinweis nach Send, § H.26 B). */
   telegramChatId?: string
 }
@@ -85,6 +89,10 @@ export async function saveContactEntry(body: {
   meshNodeId?: string
   meshPublicKeyHex?: string
   mailboxObjectId?: string
+  mailboxSharedId?: string
+  mailboxPrivateId?: string
+  mailboxTeamId?: string
+  mailboxBufferId?: string
   telegramChatId?: string
   clearMesh?: boolean
 }): Promise<{ ok: boolean; message?: string; error?: string }> {

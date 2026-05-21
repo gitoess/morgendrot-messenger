@@ -14,12 +14,33 @@ import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
 import { fetchResolvePrivateMailboxOwner } from '@/frontend/lib/fetch-resolve-private-mailbox-owner'
 import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
+import {
+  contactFormWalletFromStorageKey,
+  isIotaWalletAddress,
+  isTelegramDirectoryKey,
+} from '@/frontend/lib/contact-storage-key'
+import {
+  CONTACT_MAILBOX_SLOT_IDS,
+  CONTACT_MAILBOX_SLOT_LABELS,
+  type ContactMailboxSlotId,
+  slotsFromEntry,
+} from '@/frontend/lib/contact-mailbox-slots'
+
+const MAILBOX_FORM_KEY: Record<ContactMailboxSlotId, keyof ContactPhonebookFormValues> = {
+  shared: 'mailboxSharedId',
+  private: 'mailboxPrivateId',
+  team: 'mailboxTeamId',
+  buffer: 'mailboxBufferId',
+}
 
 export type ContactPhonebookFormValues = {
   address: string
   label: string
   meshNodeId: string
-  mailboxObjectId: string
+  mailboxSharedId: string
+  mailboxPrivateId: string
+  mailboxTeamId: string
+  mailboxBufferId: string
   telegramChatId: string
 }
 
@@ -28,6 +49,8 @@ export type ContactPhonebookContactDialogProps = {
   onOpenChange: (open: boolean) => void
   mode: 'create' | 'edit'
   initial?: Partial<ContactPhonebookFormValues>
+  /** Verzeichnis-Schlüssel beim Bearbeiten (0x… oder tg:…); für Wallet-Sperre und Schlüsselwechsel. */
+  editStorageKey?: string
   busy?: boolean
   onSave: (values: ContactPhonebookFormValues) => void | Promise<void>
   onScanImport?: (values: ContactPhonebookFormValues) => void | Promise<void>
@@ -37,17 +60,23 @@ const empty: ContactPhonebookFormValues = {
   address: '',
   label: '',
   meshNodeId: '',
-  mailboxObjectId: '',
+  mailboxSharedId: '',
+  mailboxPrivateId: '',
+  mailboxTeamId: '',
+  mailboxBufferId: '',
   telegramChatId: '',
 }
 
 export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogProps) {
-  const { open, onOpenChange, mode, initial, busy = false, onSave, onScanImport } = p
+  const { open, onOpenChange, mode, initial, editStorageKey = '', busy = false, onSave, onScanImport } = p
   const [form, setForm] = useState<ContactPhonebookFormValues>(empty)
   const [resolveOwnerBusy, setResolveOwnerBusy] = useState(false)
   const [resolveOwnerHint, setResolveOwnerHint] = useState('')
   const openSnapshotRef = useRef<Partial<ContactPhonebookFormValues> | undefined>(undefined)
   const myMailboxes = open ? readMyPrivateMailboxes() : []
+  const editKey = editStorageKey.trim().toLowerCase()
+  const walletLocked = mode === 'edit' && isIotaWalletAddress(editKey)
+  const telegramOnlyEdit = mode === 'edit' && isTelegramDirectoryKey(editKey)
 
   useEffect(() => {
     if (!open) {
@@ -55,16 +84,20 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
       return
     }
     if (openSnapshotRef.current) return
+    const rawAddr = (initial?.address ?? editKey).trim().toLowerCase()
+    const slotInit = slotsFromEntry(initial)
     const snapshot: ContactPhonebookFormValues = {
-      address: initial?.address ?? '',
+      address: contactFormWalletFromStorageKey(rawAddr),
       label: initial?.label ?? '',
       meshNodeId: initial?.meshNodeId ?? '',
-      mailboxObjectId: initial?.mailboxObjectId ?? '',
-      telegramChatId: initial?.telegramChatId ?? '',
+      ...slotInit,
+      telegramChatId:
+        initial?.telegramChatId ??
+        (rawAddr.startsWith('tg:') ? rawAddr.slice(3) : ''),
     }
     openSnapshotRef.current = snapshot
     setForm(snapshot)
-  }, [open, initial])
+  }, [open, initial, editKey])
 
   const scanQr = async () => {
     const s = await scanMeshBundleQrWithCamera()
@@ -72,11 +105,13 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
     const parsed = parseContactQrPayload(s.bundleJson)
     if (!parsed) return
     const next: ContactPhonebookFormValues = {
+      ...form,
       address: parsed.address,
       label: parsed.displayName ?? form.label,
-      meshNodeId: form.meshNodeId,
-      mailboxObjectId: parsed.mailboxObjectId ?? form.mailboxObjectId,
-      telegramChatId: form.telegramChatId,
+      mailboxPrivateId: parsed.mailboxPrivateId ?? parsed.mailboxObjectId ?? form.mailboxPrivateId,
+      mailboxSharedId: parsed.mailboxSharedId ?? form.mailboxSharedId,
+      mailboxTeamId: parsed.mailboxTeamId ?? form.mailboxTeamId,
+      mailboxBufferId: parsed.mailboxBufferId ?? form.mailboxBufferId,
     }
     setForm(next)
     if (onScanImport) await onScanImport(next)
@@ -117,16 +152,30 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              IOTA-Adresse (0x…) <span className="text-destructive">*</span>
+              IOTA-Adresse (0x…){' '}
+              {!form.address.trim() && !telegramOnlyEdit ? (
+                <span className="text-muted-foreground">(optional bei Telegram)</span>
+              ) : !telegramOnlyEdit ? (
+                <span className="text-destructive">*</span>
+              ) : null}
             </label>
             <input
               type="text"
               value={form.address}
               onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-              readOnly={mode === 'edit'}
+              readOnly={walletLocked}
               placeholder="0x + 64 Hex"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs disabled:opacity-70"
+              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs read-only:opacity-70"
             />
+            {walletLocked ? (
+              <p className="text-[10px] text-muted-foreground">
+                Wallet-Schlüssel ist fest. Andere Adresse = neuen Kontakt anlegen.
+              </p>
+            ) : telegramOnlyEdit ? (
+              <p className="text-[10px] text-muted-foreground">
+                Nur-Telegram-Kontakt: hier optional IOTA-Wallet ergänzen (neuer Verzeichnis-Eintrag).
+              </p>
+            ) : null}
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">Meshtastic Node ID (optional)</label>
@@ -150,64 +199,69 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs"
             />
           </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">
-              Private Mailbox des Kontakts (optional)
-            </label>
-            {myMailboxes.length > 0 ? (
-              <select
-                value={form.mailboxObjectId}
-                onChange={(e) => setForm((f) => ({ ...f, mailboxObjectId: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-xs"
-              >
-                <option value="">— keine (Einsatz-Shared) —</option>
-                {myMailboxes.map((m) => (
-                  <option key={m.objectId} value={m.objectId}>
-                    {(m.label ? `${m.label} · ` : '') + m.objectId.slice(0, 10)}…{m.objectId.slice(-6)}
-                  </option>
-                ))}
-              </select>
-            ) : null}
-            <input
-              type="text"
-              value={form.mailboxObjectId}
-              onChange={(e) => {
-                setResolveOwnerHint('')
-                setForm((f) => ({ ...f, mailboxObjectId: e.target.value }))
-              }}
-              placeholder="0x… — private Mailbox des Kontakts (aus QR/Profil)"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs"
-            />
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Ziel-Mailboxen des Kontakts (optional, M4e)</p>
+            {CONTACT_MAILBOX_SLOT_IDS.map((slotId) => (
+              <div key={slotId} className="space-y-1">
+                <label className="text-[10px] font-medium text-muted-foreground">
+                  {CONTACT_MAILBOX_SLOT_LABELS[slotId]}
+                </label>
+                {slotId === 'private' && myMailboxes.length > 0 ? (
+                  <select
+                    value={form.mailboxPrivateId}
+                    onChange={(e) => setForm((f) => ({ ...f, mailboxPrivateId: e.target.value }))}
+                    className="mb-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-xs"
+                  >
+                    <option value="">— manuell / QR —</option>
+                    {myMailboxes.map((m) => (
+                      <option key={m.objectId} value={m.objectId}>
+                        {(m.label ? `${m.label} · ` : '') + m.objectId.slice(0, 10)}…{m.objectId.slice(-6)}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
+                <input
+                  type="text"
+                  value={form[MAILBOX_FORM_KEY[slotId]] as string}
+                  onChange={(e) => {
+                    setResolveOwnerHint('')
+                    const key = MAILBOX_FORM_KEY[slotId]
+                    setForm((f) => ({ ...f, [key]: e.target.value }))
+                  }}
+                  placeholder="0x + 64 Hex"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-[11px]"
+                />
+              </div>
+            ))}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                disabled={resolveOwnerBusy || !/^0x[a-fA-F0-9]{64}$/i.test(form.mailboxObjectId.trim())}
+                disabled={resolveOwnerBusy || !/^0x[a-fA-F0-9]{64}$/i.test(form.mailboxPrivateId.trim())}
                 onClick={() => {
                   void (async () => {
                     setResolveOwnerBusy(true)
                     setResolveOwnerHint('')
-                    const r = await fetchResolvePrivateMailboxOwner(form.mailboxObjectId)
+                    const r = await fetchResolvePrivateMailboxOwner(form.mailboxPrivateId)
                     setResolveOwnerBusy(false)
                     if (!r.ok) {
                       setResolveOwnerHint(r.error)
                       return
                     }
                     setForm((f) => ({ ...f, address: r.owner }))
-                    setResolveOwnerHint(`Wallet des Mailbox-Owners aus der Chain übernommen (${r.owner.slice(0, 10)}…).`)
+                    setResolveOwnerHint(`Wallet des Mailbox-Owners übernommen (${r.owner.slice(0, 10)}…).`)
                   })()
                 }}
                 className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] font-medium hover:bg-primary/15 disabled:opacity-50"
               >
-                {resolveOwnerBusy ? 'Lade Owner…' : 'Wallet aus Chain (Owner)'}
+                {resolveOwnerBusy ? 'Lade Owner…' : 'Wallet aus Chain (Privat-Mailbox)'}
               </button>
             </div>
             {resolveOwnerHint ? (
               <p className="text-[10px] text-muted-foreground">{resolveOwnerHint}</p>
             ) : null}
             <p className="text-[10px] text-muted-foreground">
-              Nur Mailbox-ID bekannt? Owner per Chain laden, dann speichern. Senden geht immer an die{' '}
-              <strong className="text-foreground">Wallet</strong>; die Mailbox-ID steuert nur das Postfach on-chain.
-              Pro Kontakt ist derzeit <strong className="text-foreground">eine</strong> alternative Mailbox-ID speicherbar.
+              Beim Senden wählst du im Composer das Ziel-Postfach. Nachrichten gehen weiter an die{' '}
+              <strong className="text-foreground">Wallet</strong>; die Object-ID ist das on-chain Postfach.
             </p>
           </div>
         </div>

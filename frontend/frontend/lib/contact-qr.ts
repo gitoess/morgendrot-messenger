@@ -8,13 +8,21 @@ export type MorgendrotContactQrV2 = {
   k: 'mc'
   a: string
   n?: string
+  /** Private Mailbox (legacy). */
   m?: string
+  /** M4e: Shared / Team / Puffer */
+  ms?: string
+  mt?: string
+  mb?: string
 }
 
 export function buildContactQrPayload(input: {
   address: string
   displayName?: string
   mailboxObjectId?: string
+  mailboxSharedId?: string
+  mailboxTeamId?: string
+  mailboxBufferId?: string
 }): string {
   const a = input.address.trim()
   if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) {
@@ -25,6 +33,12 @@ export function buildContactQrPayload(input: {
   if (n) o.n = n.slice(0, 64)
   const m = (input.mailboxObjectId ?? '').trim()
   if (m && /^0x[a-fA-F0-9]{64}$/i.test(m) && m.toLowerCase() !== a.toLowerCase()) o.m = m
+  const ms = (input.mailboxSharedId ?? '').trim()
+  if (ms && /^0x[a-fA-F0-9]{64}$/i.test(ms)) o.ms = ms
+  const mt = (input.mailboxTeamId ?? '').trim()
+  if (mt && /^0x[a-fA-F0-9]{64}$/i.test(mt)) o.mt = mt
+  const mb = (input.mailboxBufferId ?? '').trim()
+  if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) o.mb = mb
   return JSON.stringify(o)
 }
 
@@ -32,6 +46,10 @@ export function parseContactQrPayload(raw: string): {
   address: string
   displayName?: string
   mailboxObjectId?: string
+  mailboxPrivateId?: string
+  mailboxSharedId?: string
+  mailboxTeamId?: string
+  mailboxBufferId?: string
 } | null {
   const t = raw.trim()
   if (!t) return null
@@ -49,18 +67,19 @@ export function parseContactQrPayload(raw: string): {
           : typeof j.displayName === 'string'
             ? j.displayName
             : undefined
-      const mailboxObjectId =
-        typeof j.m === 'string'
-          ? j.m
-          : typeof j.mailboxObjectId === 'string'
-            ? j.mailboxObjectId
-            : undefined
+      const pickMb = (v: unknown) =>
+        typeof v === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(v.trim()) ? v.trim().toLowerCase() : undefined
+      const mailboxObjectId = pickMb(j.m) ?? pickMb(j.mailboxObjectId)
+      const mailboxSharedId = pickMb(j.ms) ?? pickMb(j.mailboxSharedId)
+      const mailboxTeamId = pickMb(j.mt) ?? pickMb(j.mailboxTeamId)
+      const mailboxBufferId = pickMb(j.mb) ?? pickMb(j.mailboxBufferId)
       return {
         address: addr,
         ...(displayName?.trim() ? { displayName: displayName.trim().slice(0, 64) } : {}),
-        ...(mailboxObjectId?.trim() && /^0x[a-fA-F0-9]{64}$/i.test(mailboxObjectId.trim())
-          ? { mailboxObjectId: mailboxObjectId.trim() }
-          : {}),
+        ...(mailboxObjectId ? { mailboxObjectId, mailboxPrivateId: mailboxObjectId } : {}),
+        ...(mailboxSharedId ? { mailboxSharedId } : {}),
+        ...(mailboxTeamId ? { mailboxTeamId } : {}),
+        ...(mailboxBufferId ? { mailboxBufferId } : {}),
       }
     }
   } catch {

@@ -2,7 +2,7 @@
 
 **Zweck:** Missverständnisse beseitigen, die oft aus „Shared vs. Private“ und „Handshake“ entstehen.  
 **Stand:** 2026-05-20  
-**Technik:** `docs/MESSAGING-MAILBOX-SSOT-SPEC.md`, `docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`, Move `messaging.move`
+**Technik:** `docs/MESSAGING-MAILBOX-SSOT-SPEC.md`, `docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`, **`docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`**, Move `messaging.move`
 
 ---
 
@@ -142,6 +142,8 @@ Roadmap: **§ H.24b** in **`docs/ROADMAP-FAHRPLAN.md`**, Spez: **`docs/PACKAGE-P
 | Mehrere Shared Mailboxes pro Nutzer | **Nein** (bewusst ausgeschlossen, § H.22) — ein `MAILBOX_ID` pro Server/Einsatz |
 | „Shared beitreten“ per ID | **Nicht nötig** — Shared = Server-Konfiguration; „beitreten“ = anderen **Server/Bundle** nutzen |
 | Handshake-Status pro Kontakt | In Verbindungs-/Chat-UI (peerMap), nicht pro Mailbox |
+| Vier Ziel-Mailboxen pro Kontakt (Shared/Privat/Team/Puffer) | **Ist (M4e):** Telefonbuch + Send-Dropdown — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
+| Eingehende Handshake-Anfrage sichtbar | **Teilweise:** Posteingang + Toast + Badge — **`docs/HANDSHAKE-ANFRAGEN-UX.md`**, **§ H.27** |
 
 ---
 

@@ -20,6 +20,16 @@ export function isIotaWalletAddress(key: string): boolean {
   return HEX_64.test(key.trim().toLowerCase())
 }
 
+export function isTelegramDirectoryKey(key: string): boolean {
+  return TG_KEY.test(key.trim().toLowerCase())
+}
+
+/** Wallet-Feld im Telefonbuch: tg:-Schlüssel gehört nur ins Telegram-Feld. */
+export function contactFormWalletFromStorageKey(storageKey: string): string {
+  const k = storageKey.trim().toLowerCase()
+  return isIotaWalletAddress(k) ? k : ''
+}
+
 export function formatContactDirectoryKey(key: string): string {
   const k = key.trim().toLowerCase()
   if (k.startsWith('tg:')) return `Telegram ${k.slice(3)}`

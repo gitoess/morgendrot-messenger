@@ -18,8 +18,8 @@ describe('resolveOutboundMailboxObjectId', () => {
   })
 
   it('bevorzugt Kontakt-private Mailbox', () => {
-    const dir = { [WALLET.toLowerCase()]: { mailboxObjectId: CONTACT_MB } }
-    expect(resolveOutboundMailboxObjectId(dir, WALLET)).toBe(CONTACT_MB)
+    const dir = { [WALLET.toLowerCase()]: { label: 'T', mailboxPrivateId: CONTACT_MB } }
+    expect(resolveOutboundMailboxObjectId(dir, WALLET, 'private')).toBe(CONTACT_MB)
   })
 
   it('nutzt eigene aktive private Mailbox ohne Kontakt-Mapping', () => {

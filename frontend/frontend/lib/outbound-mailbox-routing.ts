@@ -1,20 +1,62 @@
 /**
- * Ziel-Mailbox für Send: Kontakt-private Mailbox > eigene aktive private > Server-Shared (.env).
+ * Ziel-Mailbox für Send: Kontakt-Slot (gewählt) > Kontakt-Default > eigene aktive > Server-Shared.
  */
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import {
+  type ContactSendMailboxTarget,
+  defaultContactSendSlot,
+  readContactSendMailboxTarget,
+  resolveContactMailboxSlotObjectId,
+} from '@/frontend/lib/contact-mailbox-slots'
 import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import { readCachedServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 
+function isValidMb(id: string): boolean {
+  return /^0x[a-fA-F0-9]{64}$/i.test(id.trim())
+}
+
 export function resolveOutboundMailboxObjectId(
   directory: Record<string, ContactMeshEntryClient>,
-  recipientAddress: string
+  recipientAddress: string,
+  targetOverride?: ContactSendMailboxTarget
 ): string | undefined {
-  const contactMb = resolveContactMailboxObjectId(directory, recipientAddress.trim())
+  const to = recipientAddress.trim().toLowerCase()
+  const entry = /^0x[a-f0-9]{64}$/.test(to) ? directory[to] : undefined
+
+  const target =
+    targetOverride ??
+    (to.startsWith('0x') ? readContactSendMailboxTarget(to) : undefined) ??
+    (entry ? defaultContactSendSlot(entry) : 'own')
+
+  if (target === 'shared' || target === 'private' || target === 'team' || target === 'buffer') {
+    const fromSlot = resolveContactMailboxSlotObjectId(entry, target)
+    if (fromSlot) return fromSlot
+    if (target === 'shared') {
+      const serverMb = readCachedServerMailboxObjectId().trim()
+      if (isValidMb(serverMb)) return serverMb
+    }
+  }
+
+  if (target === 'server') {
+    const serverMb = readCachedServerMailboxObjectId().trim()
+    if (isValidMb(serverMb)) return serverMb
+    return undefined
+  }
+
+  if (target === 'own') {
+    const activeMb = readActiveSendMailboxObjectId().trim()
+    if (isValidMb(activeMb)) return activeMb
+    const serverMb = readCachedServerMailboxObjectId().trim()
+    if (isValidMb(serverMb)) return serverMb
+    return undefined
+  }
+
+  const contactMb = resolveContactMailboxObjectId(directory, to)
   if (contactMb) return contactMb
   const activeMb = readActiveSendMailboxObjectId().trim()
-  if (/^0x[a-fA-F0-9]{64}$/i.test(activeMb)) return activeMb
+  if (isValidMb(activeMb)) return activeMb
   const serverMb = readCachedServerMailboxObjectId().trim()
-  if (/^0x[a-fA-F0-9]{64}$/i.test(serverMb)) return serverMb
+  if (isValidMb(serverMb)) return serverMb
   return undefined
 }

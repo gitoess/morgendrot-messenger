@@ -21,6 +21,7 @@ import {
   type PhonebookFilterId,
 } from '@/frontend/lib/contact-phonebook-format'
 import { formatContactDirectoryKey, resolveContactStorageKey } from '@/frontend/lib/contact-storage-key'
+import { contactHasAnyMailboxSlot, slotsToSavePayload } from '@/frontend/lib/contact-mailbox-slots'
 import {
   hideContactFromPhonebook,
   readContactFavorites,
@@ -66,9 +67,11 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
   const [metaTick, setMetaTick] = useState(0)
   const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const [busy, setBusy] = useState(false)
-  const [dialog, setDialog] = useState<{ mode: 'create' | 'edit'; initial?: Partial<ContactPhonebookFormValues> } | null>(
-    null
-  )
+  const [dialog, setDialog] = useState<{
+    mode: 'create' | 'edit'
+    initial?: Partial<ContactPhonebookFormValues>
+    editStorageKey?: string
+  } | null>(null)
   const [qrAddress, setQrAddress] = useState<string | null>(null)
 
   const connectedSet = useMemo(
@@ -101,12 +104,12 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         contactDisplayLabel(directory, addr) ||
         (addr.startsWith('tg:') ? formatContactDirectoryKey(addr) : maskWalletAddress(addr, 8, 6))
       if (q) {
-        const hay = `${displayName} ${addr} ${entry.meshNodeId ?? ''} ${entry.mailboxObjectId ?? ''}`.toLowerCase()
+        const hay = `${displayName} ${addr} ${entry.meshNodeId ?? ''} ${entry.mailboxObjectId ?? ''} ${entry.mailboxSharedId ?? ''} ${entry.mailboxPrivateId ?? ''} ${entry.mailboxTeamId ?? ''} ${entry.mailboxBufferId ?? ''}`.toLowerCase()
         if (!hay.includes(q)) continue
       }
       const hasLora = Boolean(entry.meshNodeId?.trim())
       const isOnline = connectedSet.has(a)
-      const hasMb = Boolean(entry.mailboxObjectId?.trim())
+      const hasMb = contactHasAnyMailboxSlot(entry)
       if (filter === 'lora' && !hasLora) continue
       if (filter === 'online' && !isOnline) continue
       if (filter === 'mailbox' && !hasMb) continue
@@ -141,17 +144,25 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID nötig.')
         return
       }
-      const mb = values.mailboxObjectId.trim()
+      const previousKey = (dialog?.editStorageKey ?? '').trim().toLowerCase()
       setBusy(true)
       try {
         const r = await saveContactEntry({
           address: storageKey,
           label: values.label.trim() || undefined,
           meshNodeId: values.meshNodeId.trim() || undefined,
-          ...(mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? { mailboxObjectId: mb } : {}),
+          mailboxSharedId: values.mailboxSharedId.trim(),
+          mailboxPrivateId: values.mailboxPrivateId.trim(),
+          mailboxTeamId: values.mailboxTeamId.trim(),
+          mailboxBufferId: values.mailboxBufferId.trim(),
+          mailboxObjectId: values.mailboxPrivateId.trim(),
           telegramChatId: values.telegramChatId.trim(),
         })
         if (r.ok) {
+          if (previousKey && previousKey !== storageKey) {
+            hideContactFromPhonebook(previousKey)
+            await saveContactEntry({ address: previousKey, clearMesh: true, label: 'Partner' })
+          }
           recordContactLastContacted(storageKey)
           bumpMeta()
           refreshContactDirectory()
@@ -161,7 +172,12 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             onSelectContact(storageKey, {
               label: values.label.trim() || storageKey.slice(0, 12),
               meshNodeId: values.meshNodeId.trim() || undefined,
-              mailboxObjectId: mb && /^0x[a-fA-F0-9]{64}$/i.test(mb) ? mb : undefined,
+              ...slotsToSavePayload({
+                mailboxSharedId: values.mailboxSharedId,
+                mailboxPrivateId: values.mailboxPrivateId,
+                mailboxTeamId: values.mailboxTeamId,
+                mailboxBufferId: values.mailboxBufferId,
+              }),
               telegramChatId: values.telegramChatId.trim() || undefined,
             })
           }
@@ -172,7 +188,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         setBusy(false)
       }
     },
-    [refreshContactDirectory, setStatusMsg]
+    [dialog?.editStorageKey, refreshContactDirectory, setStatusMsg, onSelectContact]
   )
 
   const removeContact = useCallback(
@@ -193,7 +209,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     const { address, entry, displayName } = row
     const hasLora = Boolean(entry.meshNodeId?.trim())
     const isOnline = connectedSet.has(address)
-    const hasMb = Boolean(entry.mailboxObjectId?.trim())
+    const hasMb = contactHasAnyMailboxSlot(entry)
     return (
       <ContactPhonebookCard
         key={address}
@@ -215,11 +231,11 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         onEdit={() =>
           setDialog({
             mode: 'edit',
+            editStorageKey: address,
             initial: {
-              address,
               label: entry.label ?? '',
               meshNodeId: entry.meshNodeId ?? '',
-              mailboxObjectId: entry.mailboxObjectId ?? '',
+              ...entry,
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
             },
           })
@@ -249,7 +265,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     <div className="space-y-4">
       {showMailboxes ? (
         <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p className="text-sm font-semibold text-foreground mb-2">Meine Mailboxen</p>
+          <p id="morg-my-mailboxes" className="text-sm font-semibold text-foreground mb-2 scroll-mt-4">
+            Meine Mailboxen
+          </p>
           <p className="text-[11px] text-muted-foreground mb-2">
             Erstellte private Mailboxen hier verwalten und Kontakten zuordnen (Feld „Private Mailbox“).
           </p>
@@ -259,7 +277,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             contactDirectory={directory}
             onContactsChanged={refreshContactDirectory}
             onOpenCreateContact={(mailboxObjectId) =>
-              setDialog({ mode: 'create', initial: { mailboxObjectId } })
+              setDialog({ mode: 'create', initial: { mailboxPrivateId: mailboxObjectId } })
             }
             onApplySendRecipient={
               onSelectContact
@@ -373,6 +391,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         }}
         mode={dialog?.mode ?? 'create'}
         initial={dialog?.initial}
+        editStorageKey={dialog?.editStorageKey}
         busy={busy}
         onSave={persistContact}
       />

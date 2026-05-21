@@ -213,6 +213,10 @@ export async function handleContactRoutes(
                         meshPublicKeyHex: null,
                         bleUuid: null,
                         mailboxObjectId: null,
+                        mailboxSharedId: null,
+                        mailboxPrivateId: null,
+                        mailboxTeamId: null,
+                        mailboxBufferId: null,
                         telegramChatId: null,
                     });
                 } else if (
@@ -220,6 +224,10 @@ export async function handleContactRoutes(
                     data.meshPublicKeyHex !== undefined ||
                     data.bleUuid !== undefined ||
                     data.mailboxObjectId !== undefined ||
+                    data.mailboxSharedId !== undefined ||
+                    data.mailboxPrivateId !== undefined ||
+                    data.mailboxTeamId !== undefined ||
+                    data.mailboxBufferId !== undefined ||
                     data.telegramChatId !== undefined
                 ) {
                     saveContactMeshFields(address, {
@@ -230,6 +238,18 @@ export async function handleContactRoutes(
                         ...(data.bleUuid !== undefined && { bleUuid: String(data.bleUuid) }),
                         ...(data.mailboxObjectId !== undefined && {
                             mailboxObjectId: String(data.mailboxObjectId),
+                        }),
+                        ...(data.mailboxSharedId !== undefined && {
+                            mailboxSharedId: String(data.mailboxSharedId),
+                        }),
+                        ...(data.mailboxPrivateId !== undefined && {
+                            mailboxPrivateId: String(data.mailboxPrivateId),
+                        }),
+                        ...(data.mailboxTeamId !== undefined && {
+                            mailboxTeamId: String(data.mailboxTeamId),
+                        }),
+                        ...(data.mailboxBufferId !== undefined && {
+                            mailboxBufferId: String(data.mailboxBufferId),
                         }),
                         ...(data.telegramChatId !== undefined && {
                             telegramChatId: String(data.telegramChatId),

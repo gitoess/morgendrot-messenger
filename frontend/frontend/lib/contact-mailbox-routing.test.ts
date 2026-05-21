@@ -8,8 +8,8 @@ const MB = '0x' + 'a'.repeat(64)
 const WALLET = '0x' + 'b'.repeat(64)
 
 describe('contact-mailbox-routing', () => {
-  it('resolveContactMailboxObjectId liest mailboxObjectId vom Empfänger', () => {
-    const dir = { [WALLET]: { label: 'Test', mailboxObjectId: MB } }
+  it('resolveContactMailboxObjectId liest private Slot / Legacy', () => {
+    const dir = { [WALLET]: { label: 'Test', mailboxPrivateId: MB } }
     expect(resolveContactMailboxObjectId(dir, WALLET)).toBe(MB)
   })
 
