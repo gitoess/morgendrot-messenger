@@ -61,6 +61,8 @@ export interface DeviceStatus {
 export interface ApiResponse<T = unknown> {
   ok: boolean
   data?: T
+  /** `/inbox`: weitere Zeilen auf der Chain (Pagination). */
+  hasMore?: boolean
   /** Viele /api/command-Antworten liefern Text hier statt in `error`. */
   message?: string
   error?: string

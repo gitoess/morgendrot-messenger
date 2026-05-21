@@ -11,6 +11,10 @@ export type ApiCommandPostBodyOpts = {
   messagingPersistenceMode?: MessagingPersistenceMode
   /** M4b: Ziel-Mailbox-Object-ID (Kontakt-private Mailbox). */
   mailboxObjectId?: string
+  /** `/inbox`: kein „Letzte N geladen“ im Server-Log (Auto-Poll). */
+  silentFetch?: boolean
+  /** `/inbox`: nur Mailbox-Dynamic-Fields (Events vom ersten Union-Fetch). */
+  mailboxKeysOnly?: boolean
 }
 
 /** POST-Body für `/api/command` — für Vitest und einheitliche Serialisierung. */
@@ -28,6 +32,8 @@ export function buildApiCommandPostBody(
   if (typeof opts?.mailboxObjectId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(opts.mailboxObjectId.trim())) {
     body.mailboxObjectId = opts.mailboxObjectId.trim()
   }
+  if (opts?.silentFetch === true) body.silentFetch = true
+  if (opts?.mailboxKeysOnly === true) body.mailboxKeysOnly = true
   return body
 }
 
@@ -41,6 +47,8 @@ export async function executeCommand<T = unknown>(
     commandPlaintext?: string
     messagingPersistenceMode?: MessagingPersistenceMode
     mailboxObjectId?: string
+    silentFetch?: boolean
+    mailboxKeysOnly?: boolean
   }
 ): Promise<ApiResponse<T>> {
   try {
@@ -51,6 +59,8 @@ export async function executeCommand<T = unknown>(
       commandPlaintext: opts?.commandPlaintext,
       messagingPersistenceMode: opts?.messagingPersistenceMode,
       mailboxObjectId: opts?.mailboxObjectId,
+      silentFetch: opts?.silentFetch,
+      mailboxKeysOnly: opts?.mailboxKeysOnly,
     })
     const fr = await fetchApiText(API_BASE, '/api/command', {
       method: 'POST',

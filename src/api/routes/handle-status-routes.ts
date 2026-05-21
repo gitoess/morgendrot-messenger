@@ -6,10 +6,12 @@ import {
     CFG,
     getConnectAddresses,
     getHierarchyPermissions,
+    getInboxUnionIdsForStatus,
     getRuntimeConfigKeys,
     getRuntimeConfigSources,
     getSignerConfigSource,
     getWalletDerivationPathConfigSource,
+    refreshIdentityCfgFromDotenv,
     type HierarchyPermissions,
 } from '../../config.js';
 import {
@@ -33,10 +35,12 @@ export async function handleStatusRoutes(
     ctx: ApiRouteContext
 ): Promise<boolean> {
     if (url === '/api/status' && req.method === 'GET') {
+        const envRefresh = refreshIdentityCfgFromDotenv();
         const custom = { ...(ctx.getStatus?.() ?? {}), ...ctx.getSessionStatus() };
         const perms = getHierarchyPermissions(CFG.ROLE);
         const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
         const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
+        const inboxUnion = getInboxUnionIdsForStatus();
         const mailboxConfigured = Boolean(mailboxIdTrim && /^0x[a-fA-F0-9]{64}$/i.test(mailboxIdTrim));
         const packageTrim = (CFG.PACKAGE_ID || '').trim();
         const configHints: string[] = [];
@@ -47,6 +51,21 @@ export async function handleStatusRoutes(
         }
         if (mailboxIdTrim && packageTrim && mailboxIdTrim.toLowerCase() === packageTrim.toLowerCase()) {
             configHints.push('MAILBOX_ID entspricht PACKAGE_ID — Mailbox-Aufrufe schlagen fehl („move package passed“).');
+        }
+        if (envRefresh.mailboxIdChanged) {
+            configHints.push(
+                'MAILBOX_ID wurde aus .env nachgeladen (ohne Neustart). Posteingang einmal „Aktualisieren“.'
+            );
+        }
+        if (inboxUnion.mailboxIds.length > 1) {
+            configHints.push(
+                `Posteingang-Mailbox-Union: ${inboxUnion.mailboxIds.length} IDs (aktiv + .morgendrot-mailbox-id-history).`
+            );
+        }
+        if (inboxUnion.packageIds.length > 1) {
+            configHints.push(
+                `Posteingang-Event-Union: ${inboxUnion.packageIds.length} Package-IDs (.env + package-id-history).`
+            );
         }
         const credRaw = (CFG.MESSENGER_CREDITS_OBJECT_ID || '').trim();
         if (credRaw && !/^0x[a-fA-F0-9]{64}$/i.test(credRaw)) {
@@ -192,6 +211,8 @@ export async function handleStatusRoutes(
             ...(mailboxConfigured && mailboxIdTrim
                 ? { mailboxId: mailboxIdTrim, mailboxIdMasked: mask(mailboxIdTrim) }
                 : {}),
+            inboxUnionPackageIds: inboxUnion.packageIds,
+            inboxUnionMailboxIds: inboxUnion.mailboxIds,
             ...(CFG.ENABLE_BROADCAST_PINNWAND
                 ? {
                       broadcastPinnwand: {

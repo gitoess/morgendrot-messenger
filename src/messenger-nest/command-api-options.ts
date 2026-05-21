@@ -14,4 +14,6 @@ export type CommandApiOptions = {
     messagingPersistenceMode?: 'event' | 'mailbox';
     /** M4b: Ziel-Mailbox-Object-ID statt Server-MAILBOX_ID (0x+64 Hex). */
     mailboxObjectId?: string;
+    /** `/inbox`: nur MsgKey/PlainMsgKey — keine Event-Union (zweiter Fetch in Posteingang-Merge). */
+    mailboxKeysOnly?: boolean;
 };

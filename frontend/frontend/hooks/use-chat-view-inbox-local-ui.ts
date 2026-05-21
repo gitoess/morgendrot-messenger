@@ -43,7 +43,7 @@ function messageHasMeshTransport(m: Message): boolean {
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
   loadMessages: (
-    mode?: 'reset' | 'append',
+    mode?: 'reset' | 'append' | 'poll',
     packageIdOverride?: unknown,
     opts?: { silent?: boolean }
   ) => Promise<void>
@@ -110,17 +110,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
-      const meshOnly = sessionStorage.getItem(MESH_INBOX_ONLY_LS) === '1'
-      const iotaOnly = sessionStorage.getItem(IOTA_INBOX_ONLY_LS) === '1'
-      /** Wire-Filter (nur Klartext/nur verschlüsselt) nicht aus alter Session — blendet sonst Mailbox/Event aus. */
-      setInboxMeshTransportOnly(meshOnly)
-      setInboxIotaTransportOnly(iotaOnly && !meshOnly)
-      if (meshOnly && iotaOnly) {
-        try {
-          sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
-        } catch {
-          /* ignore */
-        }
+      /** Transport-Filter (Nur Funk/Nur IOTA) nicht aus alter Session — blendet Mailbox/verschlüsselt aus. */
+      setInboxMeshTransportOnly(false)
+      setInboxIotaTransportOnly(false)
+      try {
+        sessionStorage.setItem(MESH_INBOX_ONLY_LS, '0')
+        sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
+        const rawWire = sessionStorage.getItem(INBOX_WIRE_FILTER_LS)
+        const wire: InboxWireFilter =
+          rawWire === 'encrypted' || rawWire === 'plaintext' || rawWire === 'all' ? rawWire : 'all'
+        setInboxWireFilterState(wire)
+      } catch {
+        setInboxWireFilterState('all')
       }
       let blockedNorms = new Set<string>()
       const rawBlocked = window.localStorage.getItem(INBOX_PARTNER_MEMORY_BLOCKED_LS)
@@ -453,6 +454,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const clearInboxSelection = useCallback(() => setSelectedInboxIds(new Set()), [])
 
   const onHideAllVisibleLocal = useCallback(() => {
+    const visible = filteredDisplayMessages
     setHiddenInboxIds((prev) => {
       if (prev.size > 0) {
         try {
@@ -460,18 +462,30 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         } catch {
           /* ignore */
         }
+        setStatus('success')
+        setStatusMsg('Ausgeblendete Nachrichten wieder eingeblendet (nur dieser Browser).')
+        setTimeout(() => setStatus('idle'), 4000)
         return new Set()
       }
+      if (visible.length === 0) {
+        setStatus('error')
+        setStatusMsg('Keine sichtbaren Zeilen — Filter „Alles“ / Partner prüfen.')
+        setTimeout(() => setStatus('idle'), 5000)
+        return prev
+      }
       const n = new Set(prev)
-      for (const m of sortedFilteredDisplayMessages) n.add(m.id)
+      for (const m of visible) n.add(m.id)
       try {
         sessionStorage.setItem(INBOX_HIDDEN_IDS_LS, JSON.stringify([...n]))
       } catch {
         /* ignore */
       }
+      setStatus('success')
+      setStatusMsg(`${visible.length} Zeile(n) lokal ausgeblendet (Chain unverändert).`)
+      setTimeout(() => setStatus('idle'), 4000)
       return n
     })
-  }, [sortedFilteredDisplayMessages])
+  }, [filteredDisplayMessages, setStatus, setStatusMsg])
 
   const onBulkHideSelected = useCallback(() => {
     setHiddenInboxIds((prev) => {
@@ -532,11 +546,58 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxWireFilterState('all')
   }, [])
 
-  /** Nachrichten da, aber Filter/SessionStorage blendet alles aus → einmal Filter zurücksetzen. */
+  /** Geladen vs. sichtbar — Hinweis wenn Mailbox/verschlüsselt im State, aber Filter versteckt. */
+  const inboxVisibilityHint = useMemo(() => {
+    if (messages.length === 0) return null
+    const encLoaded = messages.filter((m) => m.encrypted === true).length
+    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
+    const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
+    const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
+    if (encLoaded > 0 && encVisible === 0) {
+      if (inboxWireFilter === 'plaintext') {
+        return `${encLoaded} verschlüsselt geladen — unter „Klartext“ werden sie ausgeblendet. „Alles“ oder „Verschlüsselt“ wählen.`
+      }
+      return `${encLoaded} verschlüsselt geladen, aber keiner sichtbar — Filter „Alle / Alles“ oder „Verschlüsselt“ wählen.`
+    }
+    const plainLoaded = messages.filter((m) => m.encrypted !== true).length
+    const plainVisible = filteredDisplayMessages.filter((m) => m.encrypted !== true).length
+    if (plainLoaded > 0 && plainVisible === 0 && inboxWireFilter === 'encrypted') {
+      return `${plainLoaded} Klartext-Zeilen geladen — unter „Verschlüsselt“ ausgeblendet. „Alles“ oder „Klartext“ wählen.`
+    }
+    if (mbLoaded > 0 && mbVisible === 0) {
+      return `${mbLoaded} Mailbox-Zeilen geladen, aber keine sichtbar — nicht „Nur Funk“ aktivieren.`
+    }
+    if (filteredDisplayMessages.length === 0 && messages.length > 0) {
+      return `${messages.length} Nachrichten geladen, Anzeige leer — Partner-/Transport-Filter zurücksetzen.`
+    }
+    return null
+  }, [messages, filteredDisplayMessages, inboxWireFilter])
+
+  /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
   useEffect(() => {
-    if (messages.length === 0 || filteredDisplayMessages.length > 0) return
-    resetInboxViewFilters()
-  }, [messages.length, filteredDisplayMessages.length, resetInboxViewFilters])
+    if (messages.length === 0) return
+    if (inboxWireFilter !== 'all') return
+    const encLoaded = messages.filter((m) => m.encrypted === true).length
+    const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
+    const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
+    const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
+    const transportFilterBlocksMailbox =
+      (inboxMeshTransportOnly || inboxIotaTransportOnly) && mbLoaded > 0 && mbVisible === 0
+    if (
+      filteredDisplayMessages.length === 0 ||
+      (encLoaded > 0 && encVisible === 0) ||
+      transportFilterBlocksMailbox
+    ) {
+      resetInboxViewFilters()
+    }
+  }, [
+    messages,
+    filteredDisplayMessages,
+    resetInboxViewFilters,
+    inboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+    inboxWireFilter,
+  ])
 
   return {
     protokollMarkedIds,
@@ -570,5 +631,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     onBulkPurgeSelected,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
+    inboxVisibilityHint,
   }
 }

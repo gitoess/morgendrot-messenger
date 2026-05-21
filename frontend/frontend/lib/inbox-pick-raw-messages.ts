@@ -4,6 +4,10 @@
  */
 
 /** API liefert oft `data` und `messages` identisch; niemals leeres `data` gegen volles `messages` tauschen. */
+export function pickInboxHasMore(res: { hasMore?: unknown }): boolean {
+  return res.hasMore === true
+}
+
 export function pickInboxRawMessages(res: { data?: unknown; messages?: unknown }): unknown[] | undefined {
   const d = res.data
   const m = res.messages

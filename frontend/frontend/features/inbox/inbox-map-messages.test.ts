@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import { mapInboxApiRowsToMessages, type InboxApiRow } from './inbox-map-messages'
 
 describe('mapInboxApiRowsToMessages', () => {
@@ -28,15 +29,52 @@ describe('mapInboxApiRowsToMessages', () => {
     expect(m.transports).toEqual(['internet'])
     expect(m.chainNonce).toBe('n1')
     expect(m.chainPurgeable).toBe(true)
-    expect(m.dedupKey).toBe('mailbox|0xs|n1|hi')
+    expect(m.dedupKey).toBe('chain|0xs|0xr|n1|1700000000000')
   })
 
-  it('trennt Event- und Mailbox-Zeilen per chainPurgeable (id/dedupKey)', () => {
+  it('dedupliziert Event- und Mailbox-Zeile mit gleicher Nonce/Zeit', () => {
+    const out = mergeAllMessages(
+      mapInboxApiRowsToMessages([
+        { sender: '0xs', text: 'ev', nonce: '42', chainPurgeable: false, isPlain: true },
+        { sender: '0xs', text: 'mb', nonce: '42', chainPurgeable: true, isPlain: true },
+      ])
+    )
+    expect(out).toHaveLength(1)
+  })
+
+  it('behält zwei verschlüsselte Events mit nonce=1 und unterschiedlichem inboxKey', () => {
+    const out = mergeAllMessages(
+      mapInboxApiRowsToMessages([
+        {
+          sender: '0xs',
+          text: 'a',
+          nonce: '1',
+          isPlain: false,
+          chainPurgeable: false,
+          inboxKey: 'evid:aaa',
+        },
+        {
+          sender: '0xs',
+          text: 'b',
+          nonce: '1',
+          isPlain: false,
+          chainPurgeable: false,
+          inboxKey: 'evid:bbb',
+        },
+      ])
+    )
+    expect(out).toHaveLength(2)
+  })
+
+  it('trennt gleiche Nonce bei unterschiedlichem Zeitstempel (Event-Dedup-Fix)', () => {
+    const ts1 = 1_779_280_908_187
+    const ts2 = 1_779_280_530_329
     const out = mapInboxApiRowsToMessages([
-      { sender: '0xs', text: 'ev', nonce: '42', chainPurgeable: false, isPlain: true },
-      { sender: '0xs', text: 'mb', nonce: '42', chainPurgeable: true, isPlain: true },
+      { sender: '0xs', text: 'ffg', nonce: '1', ts: ts1, isPlain: false, chainPurgeable: false },
+      { sender: '0xs', text: 'neu', nonce: '1', ts: ts2, isPlain: false, chainPurgeable: false },
     ])
-    expect(out.map((m) => m.id).sort()).toEqual(['event:0xs:42', 'mailbox:0xs:42'].sort())
+    expect(out).toHaveLength(2)
+    expect(out.map((m) => m.content).sort()).toEqual(['ffg', 'neu'])
   })
 
   it('nutzt from wenn sender fehlt', () => {
@@ -64,5 +102,14 @@ describe('mapInboxApiRowsToMessages', () => {
     const big = 1_700_000_000_001
     const out = mapInboxApiRowsToMessages([{ from: '0xf', text: 'x', nonce: String(big) }])
     expect(out[0]!.timestamp).toBe(big)
+  })
+
+  it('nutzt nonce=1 nicht als Zeitstempel (sonst Sortierung 1970)', () => {
+    const out = mapInboxApiRowsToMessages([
+      { from: '0xf', text: 'enc', nonce: '1', isPlain: false },
+      { from: '0xf', text: 'neu', timestamp: 1_779_000_000_000, isPlain: true },
+    ])
+    expect(out.find((m) => m.chainNonce === '1')!.timestamp).toBe(0)
+    expect(out[0]!.content).toBe('neu')
   })
 })

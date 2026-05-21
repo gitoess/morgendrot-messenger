@@ -13,14 +13,16 @@ export const fetchInbox = (
   bossView?: boolean,
   offset = 0,
   mergeLocalInbox = false,
-  mailboxObjectId?: string
+  mailboxObjectId?: string,
+  silentFetch?: boolean,
+  mailboxKeysOnly?: boolean
 ) =>
   executeCommand<Message[]>(
     '/inbox',
     bossView
       ? [String(limit), senderFilter ?? '', packageId ?? '', 'boss', mergeLocalInbox ? 'true' : '', String(offset)]
       : [String(limit), senderFilter ?? '', packageId ?? '', '', mergeLocalInbox ? 'true' : '', String(offset)],
-    { timeoutMs: INBOX_FETCH_TIMEOUT_MS, mailboxObjectId }
+    { timeoutMs: INBOX_FETCH_TIMEOUT_MS, mailboxObjectId, silentFetch, mailboxKeysOnly }
   )
 
 /** Alle Posteingangs-Nachrichten (paginiert bis leer) – für Exporte, unabhängig von der aktuell geladenen UI-Seite. */

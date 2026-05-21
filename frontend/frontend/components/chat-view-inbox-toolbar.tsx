@@ -5,7 +5,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Mailbox, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -64,9 +64,11 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   hasHiddenMessages: boolean
   onToggleHideAllVisibleLocal: () => void
   localPurgeBusy?: boolean
-  onClearLocalInboxCache?: () => void | Promise<void>
   onOpenPhonebook?: () => void
   showPhonebookButton?: boolean
+  /** Meine Mailboxen (Shared/Privat) ein-/ausklappen. */
+  mailboxesPanelOpen?: boolean
+  onToggleMailboxesPanel?: () => void
   onOpenPartnerSetup?: () => void
   messagingPersistenceMode: MessagingPersistenceMode
   offlineMailboxQueuePending?: number
@@ -139,8 +141,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     hasHiddenMessages,
     onToggleHideAllVisibleLocal,
     localPurgeBusy = false,
-    onClearLocalInboxCache,
     onOpenPhonebook,
+    mailboxesPanelOpen = false,
+    onToggleMailboxesPanel,
     showPhonebookButton = false,
     onOpenPartnerSetup,
     messagingPersistenceMode,
@@ -162,6 +165,23 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Posteingang</h3>
+          {onToggleMailboxesPanel ? (
+            <button
+              type="button"
+              onClick={onToggleMailboxesPanel}
+              className={cn(
+                'inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium',
+                mailboxesPanelOpen
+                  ? 'border-violet-500/50 bg-violet-500/20 text-violet-950 dark:text-violet-100'
+                  : 'border-violet-500/40 bg-violet-500/10 text-violet-900 hover:bg-violet-500/15 dark:text-violet-100'
+              )}
+              title="Shared- und private Mailbox — aktiv wählen, dann Posteingang aktualisieren"
+              aria-expanded={mailboxesPanelOpen}
+            >
+              <Mailbox className="h-4 w-4 shrink-0" aria-hidden />
+              Meine Mailboxen
+            </button>
+          ) : null}
           {showPhonebookButton && onOpenPhonebook ? (
             <button
               type="button"
@@ -182,18 +202,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <KeyRound className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
             Entschlüsseln
           </a>
-          {onClearLocalInboxCache ? (
-            <button
-              type="button"
-              disabled={localPurgeBusy}
-              onClick={() => void onClearLocalInboxCache()}
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-800 hover:bg-red-500/15 disabled:opacity-50 dark:text-red-200"
-              title="Nur lokaler Klartext-Cache auf diesem Gerät — Chain und Telefonbuch bleiben."
-            >
-              <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
-              {localPurgeBusy ? 'Leere…' : 'Cache leeren'}
-            </button>
-          ) : null}
           {inboxRowCount !== messageCount && messageCount > 0 ? (
             <span className="text-xs text-muted-foreground" title="Filter aktiv">
               {inboxRowCount} von {messageCount} sichtbar
@@ -406,8 +414,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           </button>
           <button
             type="button"
-            disabled={messageCount === 0 && !hasHiddenMessages}
+            disabled={inboxRowCount === 0 && !hasHiddenMessages}
             onClick={onToggleHideAllVisibleLocal}
+            title="Nur in diesem Browser (sessionStorage) — Chain bleibt unverändert"
             className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
           >
             {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}

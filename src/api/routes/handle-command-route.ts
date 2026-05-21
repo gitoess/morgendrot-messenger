@@ -129,6 +129,7 @@ export function handleCommandRoute(
             }
             const mbOverride = String(data.mailboxObjectId ?? '').trim();
             if (mbOverride) commandApiOptions.mailboxObjectId = mbOverride;
+            if (data.mailboxKeysOnly === true) commandApiOptions.mailboxKeysOnly = true;
             const result = await commandHandler(cmd, args, commandApiOptions);
             if (cmd === '/vault-onchain' && result?.ok) ctx.setLastVaultOnchainAt(Date.now());
             if (cmd === '/vault-save' && result?.ok) ctx.setLastVaultOnchainAt(undefined);

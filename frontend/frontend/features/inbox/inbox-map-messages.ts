@@ -3,6 +3,10 @@
  */
 
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
+
+function isEncryptedPlaceholderContent(s: string): boolean {
+  return s.trimStart().startsWith('[Verschlüsselt]')
+}
 import type { Message } from '@/frontend/lib/types'
 import { normalizeChatMessageContentForDisplay } from '@/frontend/lib/chat-message-display-normalize'
 import { pickInboxRawMessages as pickInboxRawMessagesImpl } from '@/frontend/lib/inbox-pick-raw-messages'
@@ -19,6 +23,8 @@ export type InboxApiRow = {
   nonce?: string
   ts?: number | string
   chainPurgeable?: boolean
+  /** Backend Dedup (evid:… / mb:…) — trennt gleiche nonce=1. */
+  inboxKey?: string
 }
 
 /** Re-Export: Implementierung in `lib/inbox-pick-raw-messages.ts` (**§ H.1b** — reine Inbox-Helfer unter `lib/`). */
@@ -48,25 +54,32 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
           : 0
     if (!Number.isFinite(timestamp) || timestamp <= 0) {
       const nn = Number(nonceStr.replace(/\D/g, '')) || Number(nonceStr)
-      if (Number.isFinite(nn) && nn > 1_000_000_000_000) timestamp = nn
-      else if (Number.isFinite(nn) && nn > 0) timestamp = nn
+      /** Nur ms-artige Nonce (Offline-Queue) — kleine nonce=1 wäre sonst Jahr 1970 und sortiert falsch. */
+      if (Number.isFinite(nn) && nn >= 1_000_000_000_000) timestamp = nn
       else timestamp = 0
     }
     const chainChannel = m.chainPurgeable === false ? 'event' : 'mailbox'
+    const recipientNorm = (m.recipient ?? '').trim().toLowerCase()
+    const inboxKey = typeof m.inboxKey === 'string' ? m.inboxKey.trim() : ''
     const stableId =
       m.id ??
-      (nonceStr && from
-        ? `${chainChannel}:${from.trim().toLowerCase()}:${nonceStr}`
-        : `${chainChannel}-row-${i}`)
-    const dedupKey = nonceStr
-      ? `${chainChannel}|${from.trim().toLowerCase()}|${nonceStr}|${content.slice(0, 120)}`
-      : contentDedupKey(from, content, timestamp)
+      (inboxKey ||
+        (nonceStr && from
+          ? `${chainChannel}:${from.trim().toLowerCase()}:${nonceStr}:${timestamp}`
+          : `${chainChannel}-row-${i}`))
+    const dedupKey =
+      inboxKey ||
+      (nonceStr
+        ? `chain|${from.trim().toLowerCase()}|${recipientNorm}|${nonceStr}|${timestamp}`
+        : contentDedupKey(from, content, timestamp))
     return {
       id: stableId,
       from,
       content,
       timestamp,
-      encrypted: m.isPlain === false,
+      encrypted:
+        m.isPlain === false ||
+        (m.isPlain !== true && isEncryptedPlaceholderContent(content)),
       recipient: m.recipient,
       source: 'mailbox' as const,
       transports: ['internet'] as ('internet' | 'mesh' | 'adhoc')[],

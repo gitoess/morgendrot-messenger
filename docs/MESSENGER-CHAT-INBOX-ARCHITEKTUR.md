@@ -44,7 +44,7 @@ Frontend
 
 **Datei:** `src/messenger-nest/messenger-fetch.ts` — `fetchLastMessages`.
 
-- **Union (IOTA):** Bei `USE_MAILBOX=true` werden **Mailbox** (`MAILBOX_ID`) **und** Chain-**Events** geladen — für **aktuelle** `PACKAGE_ID`, optional überschriebenes Paket, plus alle IDs aus `.morgendrot-package-id-history` (dedupliziert). Mesh/Telegram kommen im Frontend dazu.
+- **Union (IOTA):** Bei `USE_MAILBOX=true` werden **Mailbox** (`MAILBOX_ID` + `.morgendrot-mailbox-id-history`) **und** Chain-**Events** geladen — für **aktuelle** `PACKAGE_ID` plus `.morgendrot-package-id-history` (dedupliziert). Mesh/Telegram kommen im Frontend dazu. Diagnose: `node scripts/probe-inbox-diagnose.mjs`; `/api/status` zeigt `inboxUnionMailboxIds` / `inboxUnionPackageIds`.
 - **Eingehend:** Mailbox-Einträge / Events, bei denen **Empfänger = MY_ADDRESS** (bzw. Key-Feld `recipient` = ich).
 - **Private Mailbox (M4d):** Posteingang durchsucht das **aktive** Mailbox-Objekt — in „Meine Mailboxen“ **private Mailbox aktiv** setzen, dann Posteingang neu laden (nicht nur die Shared-`MAILBOX_ID` des Servers).
 - **Ausgehend:** Einträge / Events, bei denen **Absender = MY_ADDRESS** (gesendete Nachrichten an einen Partner).

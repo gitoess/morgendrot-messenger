@@ -1,16 +1,18 @@
 'use client'
 
 /**
- * Posteingang: Mailbox-Fetch (IOTA/Backend), Merge mit lokalen Mesh-Zeilen, Dedup.
+ * Posteingang: Shared-Mailbox + alle eigenen privaten Mailboxen (M4d), Merge mit Mesh, Dedup.
  * Standard: 50 Nachrichten pro Seite; „Weitere laden“ holt ältere Chunks (offset).
- *
- * **RPC + API (§6.B.4):** Direkt-Fullnode und `/inbox` parallel; gleiche `dedupKey` → API gewinnt
- * (Backend-Entschlüsselung mit Wallet), RPC-Platzhalter `[Verschlüsselt]…` wird verworfen.
+ * Erster Load / „Aktualisieren“: 200 Zeilen — verschlüsselte liegen oft älter als Klartext-Tests.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchInbox } from '@/frontend/lib/api'
-import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
+import { fetchInboxFromAllOwnedMailboxes } from '@/frontend/lib/inbox-multi-mailbox-fetch'
+import {
+  ACTIVE_MAILBOX_CHANGED_EVENT,
+  readActiveMailboxSelection,
+  readCachedServerMailboxObjectId,
+} from '@/frontend/lib/my-private-mailbox-store'
 import {
   inboxMessageListSignature,
   mergeAllMessages,
@@ -21,13 +23,12 @@ import {
   appendMeshToLocalArchive,
   pickLocalOverlayRowsForInboxMerge,
 } from '@/frontend/lib/mesh-local-archive'
-import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
-import { mapInboxApiRowsToMessages as mapRows, pickInboxRawMessages } from '@/frontend/features/inbox/inbox-map-messages'
+import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
-import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
-import { lookupMailboxIdForPackage } from '@/frontend/lib/package-profile-mailbox'
 import type { Message } from '@/frontend/lib/types'
+
+export type InboxLoadMode = 'reset' | 'append' | 'poll'
 
 export type UseChatViewInboxParams = {
   refreshContactDirectory: () => void
@@ -44,6 +45,10 @@ async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]
 }
 
 const PAGE_SIZE = 50
+/** Erster Load / Aktualisieren: verschlüsselte liegen oft älter als Klartext-Event-Tests. */
+const RESET_PAGE_SIZE = 300
+/** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
+const POLL_PAGE_SIZE = 80
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
   const { refreshContactDirectory, packageId, myAddress = '' } = p
@@ -53,8 +58,23 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [inboxHasMore, setInboxHasMore] = useState(true)
   const mailboxOffsetRef = useRef(0)
+  /** Nach „Cache leeren“: kein Auto-Poll bis „Aktualisieren“ (voller Reload). */
+  const awaitingManualRefreshRef = useRef(false)
+  /** Erhöht bei clearInboxRam — verworfene async Loads (Poll/Telegram) landen nicht mehr im State. */
+  const inboxLoadEpochRef = useRef(0)
+  const inboxLoadInFlightRef = useRef(false)
+
+  const clearInboxRam = useCallback(() => {
+    awaitingManualRefreshRef.current = true
+    inboxLoadEpochRef.current += 1
+    mailboxOffsetRef.current = 0
+    setInboxHasMore(true)
+    setLoadError(null)
+    setMessages([])
+  }, [])
 
   const appendMeshMessage = useCallback((msg: Message) => {
+    if (awaitingManualRefreshRef.current) return
     appendMeshToLocalArchive(msg)
     setMessages((prev) => {
       if (prev.some((m) => m.id === msg.id)) return prev
@@ -65,110 +85,70 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
 
   const loadMessages = useCallback(
     async (
-      mode: 'reset' | 'append' = 'reset',
+      mode: InboxLoadMode = 'reset',
       overridePackageId?: unknown,
       opts?: { silent?: boolean }
     ) => {
-      const silent = opts?.silent === true
+      if (awaitingManualRefreshRef.current && mode !== 'reset') return
+      const silent = opts?.silent === true || mode === 'poll'
+      if (inboxLoadInFlightRef.current && (mode === 'poll' || silent)) return
+      const loadEpoch = inboxLoadEpochRef.current
+      inboxLoadInFlightRef.current = true
       if (!silent) {
         if (mode === 'append') setLoadingMore(true)
         else setLoading(true)
         setLoadError(null)
       }
-      const useBossView = false
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
-      const mailboxForFetch = pkg ? await lookupMailboxIdForPackage(pkg) : undefined
-      const offset = mode === 'reset' ? 0 : mailboxOffsetRef.current
+      /** Shared-Posteingang: immer Backend-MAILBOX_ID — kein Manifest-Override (sonst leer/falsch). */
+      const pageSize =
+        mode === 'reset' ? RESET_PAGE_SIZE : mode === 'poll' ? POLL_PAGE_SIZE : PAGE_SIZE
+      const offset = mode === 'append' ? mailboxOffsetRef.current : 0
       if (mode === 'reset') {
+        awaitingManualRefreshRef.current = false
         clearInboxBrowserViewFilters()
       }
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickLocalOverlayRowsForInboxMerge(prev)))
       }
       try {
-        if (!useBossView) {
-          const direct = await tryFetchDirectMailboxInboxViaIota({
-            limit: PAGE_SIZE,
-            offset,
-            packageIdOverride: pkg,
-          })
-          // Kette zuerst (Wahrheit); Basis `/inbox` nur ergänzend — gleiche Seite parallel.
-          if (direct.ok) {
-            const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset, false, mailboxForFetch)
-            const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
-            const rawApi = pickInboxRawMessages(resLoose)
-            const rpcMapped = mapRows(direct.rows as InboxApiRow[])
-            const apiMapped =
-              res.ok && rawApi != null ? mapRows(rawApi as InboxApiRow[]) : ([] as Message[])
-            if (!silent && !res.ok && direct.rows.length === 0) {
-              setLoadError(
-                (res as { error?: string; message?: string }).error ||
-                  (res as { message?: string }).message ||
-                  'Posteingang konnte nicht geladen werden.'
+        const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
+          if (loadEpoch !== inboxLoadEpochRef.current) return
+          if (awaitingManualRefreshRef.current && mode !== 'reset') return
+          if (mode === 'poll') {
+            setMessages((prev) => {
+              const prevIds = new Set(prev.map((m) => m.id))
+              const prevDedup = new Set(prev.map((m) => m.dedupKey).filter((k): k is string => Boolean(k)))
+              const novel = mapped.filter(
+                (m) => !prevIds.has(m.id) && (!m.dedupKey || !prevDedup.has(m.dedupKey))
               )
-            }
-            const tgJournal = await loadTelegramJournalMessages(myAddress)
-            const mergedPage = mergeAllMessages([...rpcMapped, ...apiMapped, ...tgJournal])
-            if (mergedPage.length > 0) {
-              const rpcN = direct.rows.length
-              const apiN = apiMapped.length
-              const stride = Math.max(rpcN, apiN)
-              if (mode === 'reset') {
-                mailboxOffsetRef.current = offset + stride
-              } else {
-                mailboxOffsetRef.current += stride
-              }
-              if (mode === 'append' && stride === 0) {
-                setInboxHasMore(false)
-              } else {
-                setInboxHasMore(stride >= PAGE_SIZE)
-              }
-              setMessages((prev) => {
-                const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
-                const next =
-                  mode === 'reset'
-                    ? mergeAllMessages([...mergedPage, ...localOverlay])
-                    : mergeAllMessages([
-                        ...prev.filter(
-                          (m) =>
-                            !m.transports?.includes('mesh') &&
-                            m.source !== 'telegram' &&
-                            !m.transports?.includes('telegram')
-                          ),
-                        ...mergedPage,
-                        ...localOverlay,
-                      ])
-                if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
-                return next
-              })
-              return
-            }
+              if (novel.length === 0) return prev
+              const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
+              const next = mergeAllMessages([...prev, ...novel, ...localOverlay])
+              if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+              return next
+            })
+            return
           }
-        }
-
-        const res = await fetchInbox(PAGE_SIZE, undefined, pkg, useBossView, offset, false, mailboxForFetch)
-        const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean }
-        const raw = pickInboxRawMessages(resLoose)
-        if (res.ok && raw != null) {
-          const mapped: Message[] = mapRows(raw as InboxApiRow[])
-          const tgJournal = await loadTelegramJournalMessages(myAddress)
           if (mode === 'reset') {
-            mailboxOffsetRef.current = mapped.length
+            mailboxOffsetRef.current = stride
           } else {
-            mailboxOffsetRef.current += mapped.length
+            mailboxOffsetRef.current += stride
           }
-          if (mode === 'append' && mapped.length === 0) {
+          if (mode === 'append' && stride === 0) {
             setInboxHasMore(false)
-          } else {
-            setInboxHasMore(mapped.length >= PAGE_SIZE)
+          } else if (mode !== 'poll') {
+            setInboxHasMore(
+              chainHasMore || stride >= pageSize || (mode === 'reset' && mapped.length >= pageSize)
+            )
           }
           setMessages((prev) => {
             const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
             const next =
               mode === 'reset'
-                ? mergeAllMessages([...mapped, ...tgJournal, ...localOverlay])
+                ? mergeAllMessages([...mapped, ...localOverlay])
                 : mergeAllMessages([
                     ...prev.filter(
                       (m) =>
@@ -177,18 +157,47 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
                         !m.transports?.includes('telegram')
                     ),
                     ...mapped,
-                    ...tgJournal,
                     ...localOverlay,
                   ])
             if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
             return next
           })
+        }
+
+        /** Shared + alle eigenen privaten Mailboxen (M4d); sonst fehlen verschlüsselte Sendungen aus privater Mailbox. */
+        const mergeLocal = false
+        const serverMb = readCachedServerMailboxObjectId().trim()
+        const sel = readActiveMailboxSelection()
+        const pollAlso: string[] = []
+        if (mode === 'poll' && sel.kind === 'private') pollAlso.push(sel.objectId)
+        if (
+          mode === 'poll' &&
+          /^0x[a-fA-F0-9]{64}$/i.test(serverMb) &&
+          !pollAlso.some((x) => x.toLowerCase() === serverMb.toLowerCase())
+        ) {
+          pollAlso.push(serverMb)
+        }
+        const res = await fetchInboxFromAllOwnedMailboxes({
+          limit: pageSize,
+          offset,
+          packageId: pkg,
+          mergeLocalInbox: mergeLocal,
+          includePrivateMailboxes: true,
+          alsoMailboxIds: pollAlso.length ? pollAlso : undefined,
+          silent,
+        })
+        const raw = res.ok ? res.messages : null
+        const mappedLength = res.stride
+        if (loadEpoch !== inboxLoadEpochRef.current) return
+        if (res.ok && raw != null) {
+          const mapped: Message[] = raw
+          const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
+          const page = mergeAllMessages([...mapped, ...tgJournal])
+          applyMappedToState(page, mappedLength, res.hasMore === true)
         } else if (!res.ok) {
           if (!silent) {
             setLoadError(
-              (res as { error?: string; message?: string }).error ||
-                (res as { message?: string }).message ||
-                'Posteingang konnte nicht geladen werden.'
+              res.error || 'Posteingang konnte nicht geladen werden.'
             )
           }
           if (mode === 'append') applyLocalOverlayFallback()
@@ -197,6 +206,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           if (mode === 'append') applyLocalOverlayFallback()
         }
       } finally {
+        inboxLoadInFlightRef.current = false
         setLoading(false)
         setLoadingMore(false)
       }
@@ -217,10 +227,21 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     void loadMessagesRef.current('reset')
   }, [packageId, myAddress])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onMailboxChanged = () => {
+      mailboxOffsetRef.current = 0
+      void loadMessagesRef.current('reset')
+    }
+    window.addEventListener(ACTIVE_MAILBOX_CHANGED_EVENT, onMailboxChanged)
+    return () => window.removeEventListener(ACTIVE_MAILBOX_CHANGED_EVENT, onMailboxChanged)
+  }, [])
+
   /** Telegram Long Polling: Journal periodisch in den Posteingang mergen (ohne Full-Inbox-Reload). */
   useEffect(() => {
     if (!myAddress.trim()) return
     const refreshTg = async () => {
+      if (awaitingManualRefreshRef.current) return
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const tg = await loadTelegramJournalMessages(myAddress)
       if (tg.length === 0) return
@@ -240,5 +261,6 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     loadMoreInbox,
     inboxHasMore,
     appendMeshMessage,
+    clearInboxRam,
   }
 }

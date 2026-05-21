@@ -4,7 +4,32 @@ import path from 'path';
 import { randomBytes } from 'node:crypto';
 import { normalizeAddress } from './utils.js';
 import type { InitialProfile } from './initial-profile-provision.js';
-dotenv.config();
+
+const ENV_FILE_PATH = path.resolve(process.cwd(), '.env');
+/** dotenv 17 loggt sonst bei jedem `config()` Werbezeilen ins Terminal. */
+const DOTENV_OPTS = { path: ENV_FILE_PATH, quiet: true as const };
+let envFileMtimeMs = 0;
+
+dotenv.config(DOTENV_OPTS);
+try {
+    envFileMtimeMs = fs.statSync(ENV_FILE_PATH).mtimeMs;
+} catch {
+    envFileMtimeMs = 0;
+}
+
+/** .env nur bei geänderter Datei neu einlesen (nicht bei jedem GET /api/status). */
+function reloadEnvFileIfChanged(): boolean {
+    let mtime = 0;
+    try {
+        mtime = fs.statSync(ENV_FILE_PATH).mtimeMs;
+    } catch {
+        return false;
+    }
+    if (mtime === envFileMtimeMs && envFileMtimeMs > 0) return false;
+    envFileMtimeMs = mtime;
+    dotenv.config({ ...DOTENV_OPTS, override: true });
+    return true;
+}
 
 const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/;
 
@@ -29,6 +54,9 @@ export function parseDeviceRolesFromEnv(raw?: string): Record<string, string> {
 
 const PACKAGE_ID_FILE = process.env.PACKAGE_ID_FILE || '.morgendrot-package-id';
 const PACKAGE_ID_HISTORY_FILE = process.env.PACKAGE_ID_HISTORY_FILE || '.morgendrot-package-id-history';
+const MAILBOX_ID_HISTORY_FILE = process.env.MAILBOX_ID_HISTORY_FILE || '.morgendrot-mailbox-id-history';
+const MAILBOX_ID_REGEX = /^0x[a-fA-F0-9]{64}$/;
+const MAX_MAILBOX_ID_HISTORY = 12;
 const PACKAGE_ID_HINTS_FILE = process.env.PACKAGE_ID_HINTS_FILE || '.morgendrot-package-hints.json';
 const STREAMS_ANCHOR_HISTORY_FILE = process.env.STREAMS_ANCHOR_HISTORY_FILE || '.morgendrot-streams-anchor-history';
 const PARTNER_ADDRESS_FILE = process.env.PARTNER_ADDRESS_FILE || '.morgendrot-partner';
@@ -63,7 +91,13 @@ export function readPackageIdHistory(): string[] {
     try {
         const p = path.resolve(process.cwd(), PACKAGE_ID_HISTORY_FILE);
         if (!fs.existsSync(p)) return [];
-        const lines = fs.readFileSync(p, 'utf-8').split(/\r?\n/).map((s) => s.trim()).filter((s) => PACKAGE_ID_REGEX.test(s));
+        const my = (process.env.MY_ADDRESS || CFG.MY_ADDRESS || '').trim().toLowerCase();
+        const lines = fs
+            .readFileSync(p, 'utf-8')
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter((s) => PACKAGE_ID_REGEX.test(s))
+            .filter((s) => s.toLowerCase() !== my);
         return [...new Set(lines)].slice(-MAX_PACKAGE_ID_HISTORY);
     } catch {}
     return [];
@@ -88,6 +122,120 @@ function appendPackageIdToHistory(id: string): void {
 export function ensurePackageIdInHistory(id: string): void {
     appendPackageIdToHistory(id);
 }
+
+/** Frühere Shared-Mailbox-IDs (eine pro Zeile) — Inbox liest Dynamic Fields aus allen (Union). */
+export function readMailboxIdHistory(): string[] {
+    try {
+        const p = path.resolve(process.cwd(), MAILBOX_ID_HISTORY_FILE);
+        if (!fs.existsSync(p)) return [];
+        const my = (process.env.MY_ADDRESS || CFG.MY_ADDRESS || '').trim().toLowerCase();
+        const pkg = (process.env.PACKAGE_ID || CFG.PACKAGE_ID || '').trim().toLowerCase();
+        const lines = fs
+            .readFileSync(p, 'utf-8')
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter((s) => MAILBOX_ID_REGEX.test(s))
+            .filter((s) => s.toLowerCase() !== my && s.toLowerCase() !== pkg);
+        return [...new Set(lines)].slice(-MAX_MAILBOX_ID_HISTORY);
+    } catch {}
+    return [];
+}
+
+export function ensureMailboxIdInHistory(id: string): void {
+    const t = (id || '').trim();
+    if (!MAILBOX_ID_REGEX.test(t)) return;
+    const current = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
+    if (current && t.toLowerCase() === current.toLowerCase()) return;
+    try {
+        const p = path.resolve(process.cwd(), MAILBOX_ID_HISTORY_FILE);
+        const existing = readMailboxIdHistory();
+        const n = t.toLowerCase();
+        if (existing.some((e) => e.toLowerCase() === n)) return;
+        const lines = [...existing, t].slice(-MAX_MAILBOX_ID_HISTORY);
+        fs.writeFileSync(p, lines.join('\n') + '\n', 'utf-8');
+    } catch {}
+}
+
+const PACKAGE_ID_HISTORY_BLOCKLIST = new Set(
+    [
+        '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+        '0x0000000000000000000000000000000000000000000000000000000000000001',
+    ].map((s) => s.toLowerCase())
+);
+
+/** Entfernt Wallet-Adressen und Test-Platzhalter aus der Package-History-Datei. */
+export function sanitizePackageIdHistoryFile(): number {
+    try {
+        const p = path.resolve(process.cwd(), PACKAGE_ID_HISTORY_FILE);
+        if (!fs.existsSync(p)) return 0;
+        const before = fs
+            .readFileSync(p, 'utf-8')
+            .split(/\r?\n/)
+            .map((s) => s.trim())
+            .filter(Boolean);
+        const my = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim().toLowerCase();
+        const kept = before.filter(
+            (s) =>
+                PACKAGE_ID_REGEX.test(s) &&
+                s.toLowerCase() !== my &&
+                !PACKAGE_ID_HISTORY_BLOCKLIST.has(s.toLowerCase())
+        );
+        const unique = [...new Set(kept)].slice(-MAX_PACKAGE_ID_HISTORY);
+        if (unique.join('\n') === before.filter((s) => PACKAGE_ID_REGEX.test(s)).join('\n')) return 0;
+        fs.writeFileSync(p, unique.length ? unique.join('\n') + '\n' : '', 'utf-8');
+        return before.length - unique.length;
+    } catch {
+        return 0;
+    }
+}
+
+/** Aktualisiert PACKAGE_ID / MAILBOX_ID / MY_ADDRESS in CFG (process.env; .env nur bei Dateiänderung). */
+export function refreshIdentityCfgFromDotenv(): { mailboxIdChanged: boolean; packageIdChanged: boolean } {
+    reloadEnvFileIfChanged();
+    const prevMb = (CFG.MAILBOX_ID || '').trim();
+    const prevPkg = (CFG.PACKAGE_ID || '').trim();
+    const mb = (process.env.MAILBOX_ID || '').trim();
+    const pkg = (process.env.PACKAGE_ID || '').trim() || readPackageIdFromFile();
+    const me = (process.env.MY_ADDRESS || '').trim();
+    if (mb && MAILBOX_ID_REGEX.test(mb)) (CFG as { MAILBOX_ID: string }).MAILBOX_ID = mb;
+    if (pkg && PACKAGE_ID_REGEX.test(pkg)) (CFG as { PACKAGE_ID: string }).PACKAGE_ID = pkg;
+    if (me && ADDR_64_HEX.test(me)) (CFG as { MY_ADDRESS: string }).MY_ADDRESS = me;
+    return {
+        mailboxIdChanged: prevMb.toLowerCase() !== (CFG.MAILBOX_ID || '').trim().toLowerCase(),
+        packageIdChanged: prevPkg.toLowerCase() !== (CFG.PACKAGE_ID || '').trim().toLowerCase(),
+    };
+}
+
+/** Welche IDs der Posteingang-Union tatsächlich scannt (Diagnose /api/status). */
+export function getInboxUnionIdsForStatus(): { packageIds: string[]; mailboxIds: string[] } {
+    const pkgSeen = new Set<string>();
+    const pkgOut: string[] = [];
+    const addPkg = (id: string) => {
+        const t = id.trim();
+        if (!PACKAGE_ID_REGEX.test(t)) return;
+        const n = t.toLowerCase();
+        if (pkgSeen.has(n)) return;
+        pkgSeen.add(n);
+        pkgOut.push(t);
+    };
+    addPkg(CFG.PACKAGE_ID || '');
+    for (const h of readPackageIdHistory()) addPkg(h);
+
+    const mbSeen = new Set<string>();
+    const mbOut: string[] = [];
+    const addMb = (id: string) => {
+        const t = id.trim();
+        if (!MAILBOX_ID_REGEX.test(t)) return;
+        const n = t.toLowerCase();
+        if (mbSeen.has(n)) return;
+        mbSeen.add(n);
+        mbOut.push(t);
+    };
+    addMb(CFG.MAILBOX_ID || '');
+    for (const h of readMailboxIdHistory()) addMb(h);
+    return { packageIds: pkgOut, mailboxIds: mbOut };
+}
+
 function normalizeId(id: string): string {
     return (id || '').trim().toLowerCase();
 }

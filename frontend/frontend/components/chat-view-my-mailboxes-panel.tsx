@@ -58,6 +58,8 @@ export type ChatViewMyMailboxesPanelProps = {
   /** Wallet-0x des Kontakts ins Sende-Composer übernehmen (Empfänger — nicht die Mailbox-Object-ID). */
   onApplySendRecipient?: (walletAddress: string) => void
   onStatus?: (msg: string, kind: 'success' | 'error') => void
+  /** Nach „Aktiv setzen“ — z. B. Posteingang neu laden. */
+  onMailboxActivated?: () => void
 }
 
 export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
@@ -173,6 +175,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
         : `Aktiv: private Mailbox ${maskMid(row.entry.objectId)}`,
       'success'
     )
+    p.onMailboxActivated?.()
   }
 
   const applySendRecipient = (walletAddress: string) => {
@@ -243,6 +246,12 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
   return (
     <div className="space-y-2">
+      <p className="text-[10px] text-muted-foreground leading-snug">
+        <strong className="text-foreground">Shared (.env)</strong> = ältere MsgKey-Nachrichten auf der Server-Mailbox.
+        <strong className="text-foreground"> Private aktiv</strong> = neue Sends landen in der privaten Mailbox (oft leer auf der Chain).
+        Selbst-Send an die eigene Wallet ist erlaubt.
+      </p>
+
       {activeObjectId ? (
         <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-2">
           <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Aktiv</p>
@@ -341,7 +350,27 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                   <button
                     type="button"
                     disabled={!walletValid}
-                    onClick={() => setDeleteDialogId(row.entry.objectId)}
+                    onClick={() => {
+                      const id = row.entry.objectId
+                      const label = row.entry.label || maskMid(id)
+                      if (
+                        !window.confirm(
+                          `Private Mailbox „${label}“ wirklich löschen?\n\n` +
+                            `Object-ID: ${maskMid(id)}\n\n` +
+                            'Die Nachrichten und Handshakes in dieser Mailbox auf der Chain werden mit dem Rebate entfernt (nach Aufräumen). Das kann nicht rückgängig gemacht werden.'
+                        )
+                      ) {
+                        return
+                      }
+                      if (
+                        !window.confirm(
+                          'Letzte Bestätigung: Mailbox on-chain löschen und aus der lokalen Liste entfernen?'
+                        )
+                      ) {
+                        return
+                      }
+                      setDeleteDialogId(id)
+                    }}
                     className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive hover:bg-destructive/15 disabled:opacity-50"
                   >
                     Private Mailbox löschen

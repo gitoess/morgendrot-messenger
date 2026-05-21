@@ -12,10 +12,34 @@ export type MyPrivateMailboxEntry = {
 
 export const ACTIVE_SERVER_MAILBOX = '__server__'
 
+/** Browser-Event: aktive Mailbox gewechselt → Posteingang neu laden. */
+export const ACTIVE_MAILBOX_CHANGED_EVENT = 'morg:active-mailbox-changed'
+
+function notifyActiveMailboxChanged(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.dispatchEvent(new CustomEvent(ACTIVE_MAILBOX_CHANGED_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
+
 const LS_LIST = 'morgendrot.myPrivateMailboxes.v2'
 const LS_ARCHIVE = 'morgendrot.myPrivateMailboxes.archive.v1'
 const LS_ACTIVE = 'morgendrot.activePrivateMailboxObjectId.v2'
 const LS_LEGACY = 'morgendrot.myPrivateMailboxObjectId.v1'
+
+/** Letzte Server-MAILBOX_ID aus GET /api/status (Send + Posteingang-Union). */
+let cachedServerMailboxObjectId = ''
+
+export function cacheServerMailboxObjectId(id: string): void {
+  const t = id.trim()
+  cachedServerMailboxObjectId = isValidObjectId(t) ? t : ''
+}
+
+export function readCachedServerMailboxObjectId(): string {
+  return cachedServerMailboxObjectId
+}
 
 function isValidObjectId(id: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/i.test(id.trim())
@@ -125,13 +149,17 @@ export function readMyPrivateMailboxObjectId(): string {
 
 export function setActiveServerMailbox(): void {
   writeActiveRaw(ACTIVE_SERVER_MAILBOX)
+  notifyActiveMailboxChanged()
 }
 
 export function setActivePrivateMailboxObjectId(id: string): void {
   const t = id.trim()
   if (t && !isValidObjectId(t)) return
   if (!t) setActiveServerMailbox()
-  else writeActiveRaw(t)
+  else {
+    writeActiveRaw(t)
+    notifyActiveMailboxChanged()
+  }
 }
 
 export function addMyPrivateMailbox(entry: MyPrivateMailboxEntry): void {

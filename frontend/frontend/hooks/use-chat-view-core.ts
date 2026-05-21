@@ -139,6 +139,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loadMoreInbox,
     inboxHasMore,
     appendMeshMessage,
+    clearInboxRam,
   } = useChatViewInbox({
     refreshContactDirectory,
     packageId: inboxPackageFilter.trim() || undefined,
@@ -247,6 +248,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onBulkPurgeSelected,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
+    inboxVisibilityHint,
     pinnedPinnwandIds,
     togglePinnedPinnwand,
   } = useChatViewInboxLocalUi({
@@ -290,9 +292,16 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     useChatViewApiStatusPoll({
       runMirrorDrain,
       runOfflineMailboxDrain,
+      pollInbox: () => loadMessages('poll', undefined, { silent: true }),
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
+
+  /** Falsche Package-ID im Posteingang-Feld → leeren (Backend-.env), sonst leerer/falscher /inbox. */
+  useEffect(() => {
+    if (!packageIdMismatch) return
+    setInboxPackageFilter((prev) => (prev.trim() ? '' : prev))
+  }, [packageIdMismatch, setInboxPackageFilter])
 
   /** M3: Broadcast-Adresse aus /api/status ins Empfängerfeld (Pinnwand-Kanal). */
   useEffect(() => {
@@ -625,6 +634,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loadMoreInbox,
     inboxHasMore,
     appendMeshMessage,
+    clearInboxRam,
     slideSequences,
     inboxRows,
     meshtastic,
@@ -721,6 +731,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
+    inboxVisibilityHint,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,

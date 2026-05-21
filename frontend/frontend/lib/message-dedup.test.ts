@@ -4,6 +4,7 @@ import {
   mergeMessageByDedup,
   mergeAllMessages,
   pickMergedInboxContent,
+  inboxMessageListSignature,
 } from './message-dedup'
 import type { Message } from './types'
 
@@ -37,6 +38,15 @@ describe('mergeMessageByDedup', () => {
     expect(r[1]!.id).toBe('1')
   })
 
+  it('ohne dedupKey: gleiche id wird nicht doppelt eingefügt (Mesh-RX)', () => {
+    const id = 'mesh-txt-1-42-1000'
+    const a = msg({ id, timestamp: 1000, content: 'Hallo' })
+    const b = msg({ id, timestamp: 1000, content: 'Hallo' })
+    const r = mergeMessageByDedup([a], b)
+    expect(r).toHaveLength(1)
+    expect(r[0]!.id).toBe(id)
+  })
+
   it('merged transports und längeren content', () => {
     const cur = msg({
       id: 'x',
@@ -65,6 +75,14 @@ describe('pickMergedInboxContent', () => {
     expect(
       pickMergedInboxContent('[Verschlüsselt] x', 'Hallo')
     ).toBe('Hallo')
+  })
+})
+
+describe('inboxMessageListSignature', () => {
+  it('ändert sich bei Entschlüsselung (gleiche id/timestamp)', () => {
+    const base = msg({ id: 'mailbox:0xab:1', timestamp: 100, encrypted: true, content: '[Verschlüsselt] x' })
+    const decrypted = msg({ ...base, content: 'Hallo Welt', encrypted: true })
+    expect(inboxMessageListSignature([base])).not.toBe(inboxMessageListSignature([decrypted]))
   })
 })
 

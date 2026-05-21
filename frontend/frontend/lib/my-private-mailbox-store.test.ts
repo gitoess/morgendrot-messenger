@@ -3,9 +3,11 @@ import {
   ACTIVE_SERVER_MAILBOX,
   addMyPrivateMailbox,
   archiveMyPrivateMailbox,
+  cacheServerMailboxObjectId,
   forgetMyPrivateMailbox,
   readActiveMailboxSelection,
   readArchivedMyPrivateMailboxes,
+  readCachedServerMailboxObjectId,
   readMyPrivateMailboxes,
   restoreMyPrivateMailbox,
   setActiveServerMailbox,
@@ -21,6 +23,14 @@ describe('my-private-mailbox-store', () => {
 
   it('defaults to server mailbox active', () => {
     expect(readActiveMailboxSelection()).toEqual({ kind: 'server' })
+  })
+
+  it('caches server mailbox id from status', () => {
+    const SERVER = '0x' + 'cc'.repeat(32)
+    cacheServerMailboxObjectId(SERVER)
+    expect(readCachedServerMailboxObjectId()).toBe(SERVER)
+    cacheServerMailboxObjectId('invalid')
+    expect(readCachedServerMailboxObjectId()).toBe('')
   })
 
   it('archives and restores private mailbox', () => {

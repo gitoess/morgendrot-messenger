@@ -18,6 +18,8 @@ import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
 import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -63,6 +65,15 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     sending?: boolean
     onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
     onUseSenderAsPartnerFromInbox?: (sender: string) => void
+    /** Hinweis wenn Mailbox/verschlüsselt geladen, aber Filter versteckt. */
+    inboxVisibilityHint?: string | null
+    mailboxesPanelOpen?: boolean
+    onToggleMailboxesPanel?: () => void
+    apiStatus?: ApiStatus | null
+    contactDirectory?: Record<string, ContactMeshEntryClient>
+    onContactsChanged?: () => void
+    onMailboxPanelStatus?: (msg: string, kind: 'success' | 'error') => void
+    onApplySendRecipient?: (walletAddress: string) => void
   }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -75,7 +86,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     messages,
     inboxRows,
     myAddress,
-    contactDirectory,
+    contactDirectory = {},
     isMeshVerifiedForAddress,
     exportEcdhMorgPkgForMessage,
     onHideInboxMessageLocal,
@@ -113,6 +124,13 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
+    inboxVisibilityHint = null,
+    mailboxesPanelOpen = false,
+    onToggleMailboxesPanel,
+    apiStatus = null,
+    onContactsChanged,
+    onMailboxPanelStatus,
+    onApplySendRecipient,
     loadingMore,
     loadMoreInbox,
     inboxHasMore,
@@ -140,7 +158,28 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
+        mailboxesPanelOpen={mailboxesPanelOpen}
+        onToggleMailboxesPanel={onToggleMailboxesPanel}
       />
+      {mailboxesPanelOpen && myAddress.trim() && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) ? (
+        <div className="border-b border-violet-500/25 bg-violet-500/[0.06] px-4 py-3 dark:bg-violet-950/15">
+          <p className="mb-2 text-sm font-semibold text-foreground">Meine Mailboxen</p>
+          <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
+            <strong className="text-foreground">Aktiv setzen</strong>, dann unten im Posteingang{' '}
+            <strong className="text-foreground">Aktualisieren</strong> — lädt Shared + alle privaten Mailboxen.
+            Verschlüsselt braucht Handshake zum Partner (Schloss oben).
+          </p>
+          <ChatViewMyMailboxesPanel
+            myAddressLine={myAddress.trim()}
+            serverMailboxIdHint={apiStatus?.mailboxId}
+            contactDirectory={contactDirectory}
+            onContactsChanged={onContactsChanged}
+            onApplySendRecipient={onApplySendRecipient}
+            onStatus={onMailboxPanelStatus}
+            onMailboxActivated={toolbarProps.onRefresh}
+          />
+        </div>
+      ) : null}
       {showWireControls || showChannelControls || showPartnerControls ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
@@ -204,6 +243,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           inboxHasMore={inboxHasMore}
           onAddSenderToContactBook={onAddSenderToContactBook}
           onSarqNakWire={onSarqNakWire}
+          inboxVisibilityHint={inboxVisibilityHint}
         />
       </div>
     </div>

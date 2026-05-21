@@ -30,8 +30,8 @@ export function ChatViewPrivateMailboxCreateButton(p: {
         p.onObjectId(r.objectId, { digest: r.digest })
         p.onStatus?.(
           r.digest
-            ? `Private Mailbox on-chain (${r.objectId.slice(0, 10)}…). Digest: ${r.digest.slice(0, 12)}…`
-            : `Private Mailbox on-chain: ${r.objectId.slice(0, 10)}…`,
+            ? `Private Mailbox erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`
+            : `Private Mailbox erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`,
           'success'
         )
       } else {

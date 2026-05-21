@@ -186,15 +186,23 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                 return { ok: false, message: 'Kette nicht erreichbar. RPC_URL prüfen oder später erneut versuchen.' };
             }
             const silent = opts?.silentFetch === true;
-            const fetchOpts: { silent?: boolean; packageId?: string; mergeLocalInbox?: boolean; offset?: number } = {};
+            const fetchOpts: {
+                silent?: boolean;
+                packageId?: string;
+                mergeLocalInbox?: boolean;
+                offset?: number;
+                skipMessagingEvents?: boolean;
+            } = {};
             if (silent) fetchOpts.silent = true;
+            if (opts?.mailboxKeysOnly === true) fetchOpts.skipMessagingEvents = true;
             if (packageIdOverride) fetchOpts.packageId = packageIdOverride;
             if (mergeLocalInbox) fetchOpts.mergeLocalInbox = true;
             const peerMapForFetch = null;
             let messages: FetchedMessage[];
+            let inboxHasMore = false;
             if (bossView && CFG.ROLE === 'boss' && CFG.KOMMANDANT_ADDRESSES.length > 0) {
                 const need = Math.min(2000, offset + n);
-                const bossMessages = await fetchLastMessages(
+                const bossFetched = await fetchLastMessages(
                     myAddrNorm,
                     peerMapForFetch,
                     keys?.privateKey ?? null,
@@ -203,6 +211,7 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                     senderArg,
                     { ...fetchOpts, offset: 0 }
                 );
+                const bossMessages = bossFetched.messages;
                 const withRecipient: FetchedMessage[] = [...bossMessages];
                 const perK = Math.max(5, Math.floor(need / (CFG.KOMMANDANT_ADDRESSES.length + 1)));
                 const pkgIdBoss = packageIdOverride || String(CFG.PACKAGE_ID ?? '').trim();
@@ -212,10 +221,11 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                     withRecipient.push(...kMessages);
                 }
                 withRecipient.sort((x, y) => (y.ts ?? 0) - (x.ts ?? 0));
+                inboxHasMore = withRecipient.length > offset + n;
                 messages = withRecipient.slice(offset, offset + n);
             } else {
                 fetchOpts.offset = offset;
-                messages = await fetchLastMessages(
+                const fetched = await fetchLastMessages(
                     myAddrNorm,
                     peerMapForFetch,
                     keys?.privateKey ?? null,
@@ -224,9 +234,17 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                     senderArg,
                     fetchOpts
                 );
+                messages = fetched.messages;
+                inboxHasMore = fetched.hasMore;
             }
             if (messages.length === 0) {
-                return { ok: true, message: 'Keine neuen Nachrichten auf der Chain gefunden.', messages: [], data: [] };
+                return {
+                    ok: true,
+                    message: 'Keine neuen Nachrichten auf der Chain gefunden.',
+                    messages: [],
+                    data: [],
+                    hasMore: false,
+                };
             }
             return {
                 ok: true,
@@ -235,6 +253,7 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                     : `${messages.length} Nachricht(en) geladen.`,
                 messages,
                 data: messages,
+                hasMore: inboxHasMore,
             };
         } catch (e: unknown) {
             const msg = String((e as Error)?.message ?? e);

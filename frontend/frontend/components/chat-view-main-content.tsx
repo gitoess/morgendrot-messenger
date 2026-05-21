@@ -6,7 +6,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { clearLocalHistory } from '@/frontend/lib/api'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
   asComposerDraft,
@@ -108,6 +107,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loadMoreInbox,
     inboxHasMore,
     appendMeshMessage,
+    clearInboxRam,
     inboxRows,
     meshtastic,
     meshExportPw,
@@ -201,6 +201,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
+    inboxVisibilityHint,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -227,6 +228,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } | null>(null)
   const [contactAliasBusy, setContactAliasBusy] = useState(false)
   const [phonebookOpen, setPhonebookOpen] = useState(false)
+  const [mailboxesPanelOpen, setMailboxesPanelOpen] = useState(false)
 
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
@@ -371,30 +373,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     toast.success('Empfänger übernommen — siehe „Empfänger-Adresse“ im Composer unten.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
-  const handleClearLocalInboxCache = useCallback(async () => {
-    if (
-      !window.confirm(
-        'Lokalen Klartext-Inbox-Cache auf dem Server/Rechner schreddern und löschen? Browser-Filter (ausgeblendet, nur LoRa/IOTA) werden zurückgesetzt. On-Chain-Daten bleiben.'
-      )
-    ) {
-      return
-    }
-    setLocalPurgeBusy(true)
-    resetInboxViewFilters()
-    setMessages([])
-    const r = await clearLocalHistory({ shred: true })
-    setLocalPurgeBusy(false)
-    if (r.ok) {
-      toast.success('Cache und Anzeige-Filter zurückgesetzt — Posteingang wird neu geladen.')
-    } else {
-      toast.warning(
-        (r.error || 'Server-Cache nicht erreichbar') +
-          ' — Browser-Filter wurden trotzdem zurückgesetzt. On-Chain bleibt unverändert.'
-      )
-    }
-    void loadMessages('reset')
-  }, [loadMessages, resetInboxViewFilters, setLocalPurgeBusy, setMessages])
-
   const inboxPanelProps = {
     ...asInboxFeedRead(messages, myAddress),
     messageCount: inboxTotalCount,
@@ -421,6 +399,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxHasMore,
     loadError,
     basisUnreachable,
+    inboxVisibilityHint,
     inboxPartnerOptions,
     inboxPartnerKey,
     setInboxPartnerKey,
@@ -467,11 +446,23 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onAddSenderToContactBook: addInboxSenderToContactBook,
     onSarqNakWire,
     localPurgeBusy,
-    onClearLocalInboxCache: () => void handleClearLocalInboxCache(),
     pinnedPinnwandIds,
     onTogglePinnedPinnwand: togglePinnedPinnwand,
     showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
     showPhonebookButton: isPrivate || isGroup,
+    mailboxesPanelOpen,
+    onToggleMailboxesPanel: () => setMailboxesPanelOpen((v) => !v),
+    apiStatus,
+    contactDirectory: directory,
+    onContactsChanged: refreshContactDirectory,
+    onMailboxPanelStatus: (msg, kind) => {
+      if (kind === 'success') toast.success(msg)
+      else toast.error(msg)
+    },
+    onApplySendRecipient: (addr) => {
+      setRecipient(addr)
+      selectInboxPartnerForSend(addr)
+    },
     onOpenPhonebook: () => setPhonebookOpen(true),
     onOpenPartnerSetup: openPartnerSetupPanel,
     messagingPersistenceMode,
@@ -535,7 +526,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loraMeshProgressLine,
     onManualRefresh: async () => {
       await refreshApiStatus()
-      await loadMessages()
+      await loadMessages('reset')
     },
     contactDirectory: directory,
     partner,
@@ -575,6 +566,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenPartnerSetup: openPartnerSetupPanel,
     channelMode,
     myAddressLine: isPrivate ? myAddress : undefined,
+    contactDirectory: directory,
+    onContactsChanged: refreshContactDirectory,
+    onRefreshApiStatus: refreshApiStatus,
+    onMailboxStatus: (msg: string, kind: 'success' | 'error') => {
+      setStatus(kind)
+      setStatusMsg(msg)
+      if (kind === 'success') toast.success(msg)
+      else toast.error(msg)
+    },
     encryptedPartner: showEncryptedPartnerPanel
       ? {
           partner,

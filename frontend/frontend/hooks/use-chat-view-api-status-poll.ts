@@ -21,11 +21,14 @@ import {
   applyDirectMailboxChainSnapshotFromNetworkIds,
   syncDirectMailboxFlagsFromApiStatus,
 } from '@/frontend/lib/direct-iota-chain-context'
+import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
   /** § H.3g Paket 7 (Vorbereitung): fehlgeschlagene `/send`-Versuche nachziehen. */
   runOfflineMailboxDrain?: () => Promise<void>
+  /** Posteingang: nur neue Zeilen (kein Full-Reset). */
+  pollInbox?: () => void | Promise<void>
   /** Standard 12 s */
   pollIntervalMs?: number
   /**
@@ -44,6 +47,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const {
     runMirrorDrain,
     runOfflineMailboxDrain,
+    pollInbox,
     pollIntervalMs = 12000,
     localPackageId,
     probeGeolocationForDeviceTime = true,
@@ -99,6 +103,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     setApiStatus(rest)
     syncDirectMailboxFlagsFromApiStatus(rest)
     const mb = (rest.mailboxId || '').trim()
+    if (mb) cacheServerMailboxObjectId(mb)
     const pkg = (rest.packageId || '').trim()
     const addr = (rest.myAddressFull || rest.myAddress || '').trim()
     if (mb && pkg && addr) {
@@ -142,6 +147,18 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       clearInterval(id)
     }
   }, [runMirrorDrain, runOfflineMailboxDrain, pollIntervalMs, applyStatusOk])
+
+  /** Posteingang getrennt (nicht jeden Status-Tick) — schont API/RPC und Terminal. */
+  useEffect(() => {
+    if (!pollInbox) return
+    const inboxPollMs = Math.max(pollIntervalMs, 45_000)
+    const pollTick = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
+      void pollInbox()
+    }
+    const id = setInterval(pollTick, inboxPollMs)
+    return () => clearInterval(id)
+  }, [pollInbox, pollIntervalMs])
 
   /** Jeder Render: `Date.now()` gegen `okAtMs` — kein `useMemo`, sonst veraltet die Warnung nach 15 min ohne Re-Render. */
   const navOnline = typeof navigator !== 'undefined' && navigator.onLine

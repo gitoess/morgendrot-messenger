@@ -102,6 +102,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onAddSenderToContactBook?: (address: string) => void | Promise<void>
   /** S-ARQ: `MORG_NAK_V1`-Wire über Meshtastic Klartext (Broadcast oder konfigurierte Node-ID). */
   onSarqNakWire?: (wire: string) => void | Promise<void>
+  /** Filter versteckt geladene Mailbox/verschlüsselte Zeilen. */
+  inboxVisibilityHint?: string | null
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -131,7 +133,16 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     inboxHasMore = false,
     onAddSenderToContactBook,
     onSarqNakWire,
+    inboxVisibilityHint = null,
   } = p
+
+  const visibilityHintBanner = inboxVisibilityHint ? (
+    <div className="p-3 pb-0">
+      <div className="rounded-lg border border-sky-500/35 bg-sky-500/[0.08] px-3 py-2 text-sm text-sky-950 dark:text-sky-100">
+        {inboxVisibilityHint}
+      </div>
+    </div>
+  ) : null
 
   const loadErrorBanner = loadError ? (
     (() => {
@@ -161,6 +172,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
 
   if (inboxRows.length === 0) {
     if (loadErrorBanner) return loadErrorBanner
+    if (visibilityHintBanner) return visibilityHintBanner
     if (basisUnreachable) {
       return (
         <div className="p-6">
@@ -186,6 +198,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
   return (
     <>
     {loadErrorBanner}
+    {visibilityHintBanner}
     <ul className="space-y-3 p-3">
       {inboxRows.map((row) =>
         row.kind === 'meshInbound' ? (
@@ -310,6 +323,11 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                       <Lock className="h-3 w-3" aria-hidden />
                       Verschlüsselt
+                    </span>
+                  )}
+                  {row.msg.chainPurgeable && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300">
+                      Mailbox
                     </span>
                   )}
                   {protokollMarkedIds.has(row.msg.id) && (
@@ -465,7 +483,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
         )
       )}
     </ul>
-      {loadMoreInbox && inboxHasMore ? (
+      {loadMoreInbox && (inboxHasMore || messages.length >= 50) ? (
         <div className="border-t border-border/70 p-3 flex justify-center">
           <button
             type="button"

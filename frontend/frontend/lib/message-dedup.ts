@@ -30,7 +30,21 @@ export function contentDedupKey(
 
 export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
   const key = msg.dedupKey
-  if (!key) return [msg, ...prev]
+  if (!key) {
+    const byId = prev.findIndex((m) => m.id === msg.id)
+    if (byId >= 0) {
+      const cur = prev[byId]!
+      const merged: Message = {
+        ...cur,
+        ...msg,
+        id: cur.id,
+        content: pickMergedInboxContent(cur.content ?? '', msg.content ?? ''),
+      }
+      const rest = prev.filter((_, j) => j !== byId)
+      return [merged, ...rest]
+    }
+    return [msg, ...prev]
+  }
   const i = prev.findIndex((m) => m.dedupKey === key)
   if (i < 0) return [msg, ...prev]
   const cur = prev[i]!
@@ -66,9 +80,16 @@ export function mergeAllMessages(rows: Message[]): Message[] {
   return acc.sort((a, b) => b.timestamp - a.timestamp)
 }
 
+/** Einzelzeile für Signatur — Inhalt/verschlüsselt müssen rein, sonst bleibt Platzhalter-Stand nach API-Merge. */
+function inboxMessageSigPart(m: Message): string {
+  const c = m.content ?? ''
+  const ph = isEncryptedPlaceholderContent(c) ? 'ph' : 'tx'
+  return `${m.id}:${m.timestamp}:${m.encrypted ? 1 : 0}:${ph}:${c.length}`
+}
+
 /** Signatur für „Liste unverändert“ — vermeidet unnötige React-Updates. */
 export function inboxMessageListSignature(messages: Message[]): string {
-  return messages.map((m) => `${m.id}:${m.timestamp}`).join('|')
+  return messages.map(inboxMessageSigPart).join('|')
 }
 
 /** Journal-Zeilen mergen; gibt `prev` zurück wenn sich nichts ändert. */
