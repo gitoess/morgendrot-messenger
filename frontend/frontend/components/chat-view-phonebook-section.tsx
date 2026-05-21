@@ -233,9 +233,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             mode: 'edit',
             editStorageKey: address,
             initial: {
+              ...entry,
               label: entry.label ?? '',
               meshNodeId: entry.meshNodeId ?? '',
-              ...entry,
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
             },
           })

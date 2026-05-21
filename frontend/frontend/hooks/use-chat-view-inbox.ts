@@ -137,7 +137,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           }
           if (mode === 'append' && stride === 0) {
             setInboxHasMore(false)
-          } else if (mode !== 'poll') {
+          } else {
             setInboxHasMore(
               chainHasMore || stride >= pageSize || (mode === 'reset' && mapped.length >= pageSize)
             )

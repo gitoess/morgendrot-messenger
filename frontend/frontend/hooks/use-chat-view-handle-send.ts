@@ -1058,7 +1058,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             okCount++
             if (part.mailboxCapture) lastCapture = part.mailboxCapture
           } else {
-            failures.push(part.error)
+            failures.push('error' in part ? part.error : 'Senden fehlgeschlagen.')
           }
         }
         if (okCount > 0) {

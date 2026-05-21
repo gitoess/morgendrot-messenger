@@ -30,7 +30,7 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   clearCompactAttachment: () => void
   meshtastic: MeshtasticBleSendApi
   loadMessages: (
-    mode?: 'reset' | 'append',
+    mode?: 'reset' | 'append' | 'poll',
     overridePackageId?: unknown,
     opts?: { silent?: boolean }
   ) => void | Promise<void>

@@ -471,8 +471,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     showPhonebookButton: isPrivate || isGroup,
     mailboxesPanelOpen,
     onToggleMailboxesPanel: () => setMailboxesPanelOpen((v) => !v),
-    apiStatus,
-    contactDirectory: directory,
     onContactsChanged: refreshContactDirectory,
     onMailboxPanelStatus: (msg, kind) => {
       if (kind === 'success') toast.success(msg)

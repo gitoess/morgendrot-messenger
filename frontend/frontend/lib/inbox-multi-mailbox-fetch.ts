@@ -89,7 +89,14 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       mailboxObjectId,
       p.silent === true
     )
-    const resLoose = res as { data?: unknown; messages?: unknown; ok?: boolean; error?: string; message?: string }
+    const resLoose = res as {
+      data?: unknown
+      messages?: unknown
+      ok?: boolean
+      error?: string
+      message?: string
+      hasMore?: unknown
+    }
     const raw = pickInboxRawMessages(resLoose)
     const resHasMore = pickInboxHasMore(resLoose)
     if (res.ok && raw != null) {

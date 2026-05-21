@@ -65,6 +65,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     sending?: boolean
     onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
     onUseSenderAsPartnerFromInbox?: (sender: string) => void
+    onRejectPendingHandshake?: (sender: string, nonce: string) => void
+    pendingHandshakeCount?: number
     /** Hinweis wenn Mailbox/verschlüsselt geladen, aber Filter versteckt. */
     inboxVisibilityHint?: string | null
     mailboxesPanelOpen?: boolean
@@ -124,6 +126,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
+    onRejectPendingHandshake,
+    pendingHandshakeCount = 0,
     inboxVisibilityHint = null,
     mailboxesPanelOpen = false,
     onToggleMailboxesPanel,
@@ -160,6 +164,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
         mailboxesPanelOpen={mailboxesPanelOpen}
         onToggleMailboxesPanel={onToggleMailboxesPanel}
+        apiStatus={apiStatus}
+        pendingHandshakeCount={pendingHandshakeCount}
       />
       {mailboxesPanelOpen && myAddress.trim() && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) ? (
         <div className="border-b border-violet-500/25 bg-violet-500/[0.06] px-4 py-3 dark:bg-violet-950/15">
@@ -215,6 +221,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             directory={contactDirectory}
             onAccept={onAcceptPendingHandshake}
             onUseAsPartner={onUseSenderAsPartnerFromInbox ?? (() => {})}
+            onReject={onRejectPendingHandshake}
           />
         ) : null}
         <ChatViewInboxList

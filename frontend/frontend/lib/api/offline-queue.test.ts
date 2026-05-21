@@ -5,6 +5,7 @@ import {
   enqueueOfflineMailboxFailure,
   loadOfflineMailboxQueue,
   nextOfflineMailboxClientOutSeq,
+  nextChainMessageNonceU64,
   saveOfflineMailboxQueue,
 } from '@/frontend/lib/api/offline-queue'
 
@@ -194,5 +195,12 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       },
     ])
     expect(nextOfflineMailboxClientOutSeq()).toBe(8)
+  })
+
+  it('nextChainMessageNonceU64 nutzt mindestens Date.now() (nicht immer 1)', () => {
+    saveOfflineMailboxQueue([])
+    const n = nextChainMessageNonceU64()
+    expect(n).toBeGreaterThanOrEqual(BigInt(Date.now() - 50))
+    expect(n).toBeGreaterThan(BigInt(1))
   })
 })
