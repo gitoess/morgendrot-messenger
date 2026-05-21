@@ -18,6 +18,7 @@ export const HELP_START = `
 /send-plain <Adresse> <Text>  Klartext senden (kein Handshake nötig, z.B. an sich selbst). Im Explorer sichtbar.
 /set-package-id <id>     Package-ID setzen und in .morgendrot-package-id speichieren.
 /publish-package [move-test]   Move-Paket publizieren (IOTA-CLI); PACKAGE_ID in .env/.morgendrot-package-id. Enthält create_private_mailbox (M4d).
+/create-team-mailbox      Team-Shared-Mailbox on-chain (THW, Feuerwehr, Stab, …); Object-ID teilen/beitreten.
 /create-private-mailbox   Eigene PrivateMailbox on-chain erstellen (M4d); Object-ID lokal für Profil-QR.
 /purge-private-mailbox <0x…>   Eigene PrivateMailbox löschen (Rebate). Nur Owner; leer oder Einträge vorher purgen.
 /cleanup-private-mailbox <0x…>  PrivateMailbox leeren (Handshakes + Nachrichten on-chain purgen).
@@ -66,6 +67,7 @@ hole letzten <n>         Wie /fetch – natürliche Eingabe (z.B. hole letzten 1
 /transfer-asset-key-package <assetId> <keyId> <newOwner>  Asset + Key in einer Transaktion übertragen (z. B. Verkauf Pumpe).
 /purge-asset <objectId>  PhysicalAsset löschen (Rebate). Nur Besitzer.
 /list-assets [owner]     PhysicalAssets auflisten (name, metadata, objectId, nfcUid).
+/create-team-mailbox      Team-Shared-Mailbox on-chain (THW, Feuerwehr, Stab, …); Object-ID teilen/beitreten.
 /create-private-mailbox   Eigene PrivateMailbox on-chain erstellen (M4d); Object-ID lokal für Profil-QR.
 /purge-private-mailbox <0x…>   Eigene PrivateMailbox löschen (Rebate). Nur Owner; leer oder Einträge vorher purgen.
 /cleanup-private-mailbox <0x…>  PrivateMailbox leeren (Handshakes + Nachrichten on-chain purgen).

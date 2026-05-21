@@ -46,7 +46,7 @@ Frontend
 
 - **Union (IOTA):** Bei `USE_MAILBOX=true` werden **Mailbox** (`MAILBOX_ID` + `.morgendrot-mailbox-id-history`) **und** Chain-**Events** geladen — für **aktuelle** `PACKAGE_ID` plus `.morgendrot-package-id-history` (dedupliziert). Mesh/Telegram kommen im Frontend dazu. Diagnose: `node scripts/probe-inbox-diagnose.mjs`; `/api/status` zeigt `inboxUnionMailboxIds` / `inboxUnionPackageIds`.
 - **Eingehend:** Mailbox-Einträge / Events, bei denen **Empfänger = MY_ADDRESS** (bzw. Key-Feld `recipient` = ich).
-- **Private Mailbox (M4d):** Posteingang durchsucht das **aktive** Mailbox-Objekt — in „Meine Mailboxen“ **private Mailbox aktiv** setzen, dann Posteingang neu laden (nicht nur die Shared-`MAILBOX_ID` des Servers).
+- **Posteingang:** **Server-Shared** (`.env`, immer) **plus** die **aktive** Team- oder Private-Mailbox. Umschalten unter „Meine Mailboxen“. Siehe **`docs/TEAM-MAILBOXES.md`**.
 - **Ausgehend:** Einträge / Events, bei denen **Absender = MY_ADDRESS** (gesendete Nachrichten an einen Partner).
 - **Entschlüsselung:** Bei eingehenden Nachrichten ist der ECDH-Partner der **Absender**; bei ausgehenden der **Empfänger** (Nachricht wurde mit dem Schlüssel des Gegenübers verschlüsselt).
 - **Optional:** Merge mit lokalem Klartext-Cache `.inbox.enc` (Vault), wenn `mergeLocalInbox` gesetzt ist.

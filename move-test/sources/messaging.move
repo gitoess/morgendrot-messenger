@@ -100,6 +100,22 @@ module messaging::messaging { // Named address via Move.toml
         by: address,
     }
 
+    struct TeamMailboxCreated has copy, drop {
+        mailbox_id: ID,
+        by: address,
+    }
+
+    /// Zusätzliches Shared-Postfach (THW, Feuerwehr, Stab, …) — gleiche `Mailbox`-Struct wie Server-Einsatz.
+    public entry fun create_team_mailbox(ctx: &mut TxContext) {
+        let by = tx_context::sender(ctx);
+        let mb = Mailbox { id: object::new(ctx) };
+        event::emit(TeamMailboxCreated {
+            mailbox_id: object::id(&mb),
+            by,
+        });
+        transfer::share_object(mb);
+    }
+
     /// Create the shared objects once (store their IDs off-chain).
     public entry fun create_globals(ctx: &mut TxContext) {
         let by = tx_context::sender(ctx);

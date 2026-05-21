@@ -1,6 +1,5 @@
 /**
- * Posteingang über alle eigenen Mailbox-Objekte: Shared (Server) + private Mailboxes (M4d).
- * Ohne Union fehlen verschlüsselte Zeilen, wenn Send in privater Mailbox landet, Fetch aber nur MAILBOX_ID liest.
+ * Posteingang: Shared (Server, immer) + optional die für Senden aktive private Mailbox (M4d).
  */
 import { fetchInbox } from '@/frontend/lib/api/inbox'
 import {
@@ -10,7 +9,7 @@ import {
 } from '@/frontend/features/inbox/inbox-map-messages'
 import { pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
-import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
+import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import type { Message } from '@/frontend/lib/types'
 
 export type FetchInboxUnionResult = {
@@ -23,24 +22,16 @@ export type FetchInboxUnionResult = {
   hasMore: boolean
 }
 
-function uniquePrivateMailboxIds(): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const e of readMyPrivateMailboxes()) {
-    const id = e.objectId.trim()
-    const k = id.toLowerCase()
-    if (!/^0x[a-fA-F0-9]{64}$/i.test(id) || seen.has(k)) continue
-    seen.add(k)
-    out.push(id)
-  }
-  return out
+/** Aktive Team- oder Private-Mailbox (Send + Posteingang-Fokus). */
+function activeSendMailboxIdForInbox(): string {
+  return readActiveSendMailboxObjectId()
 }
 
 function isMailboxId(id: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/i.test(id.trim())
 }
 
-/** Shared + jede eigene private Mailbox; Events deduplizieren sich per mergeAllMessages. */
+/** Shared + aktive private Mailbox; Events deduplizieren sich per mergeAllMessages. */
 export async function fetchInboxFromAllOwnedMailboxes(p: {
   limit: number
   offset: number
@@ -55,29 +46,24 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
   /** Kein INFO-Log „Letzte N geladen“ auf dem API-Server. */
   silent?: boolean
 }): Promise<FetchInboxUnionResult> {
-  const privateIds = p.includePrivateMailboxes !== false ? uniquePrivateMailboxIds() : []
-  const extra: string[] = []
-  const extraSeen = new Set<string>()
-  for (const raw of p.alsoMailboxIds ?? []) {
+  const mergedIds: string[] = []
+  const seen = new Set<string>()
+  const pushId = (raw: string) => {
     const id = raw.trim()
     const k = id.toLowerCase()
-    if (!isMailboxId(id) || extraSeen.has(k)) continue
-    extraSeen.add(k)
-    extra.push(id)
+    if (!isMailboxId(id) || seen.has(k)) return
+    seen.add(k)
+    mergedIds.push(id)
   }
-  const mergedPrivate = [...privateIds]
-  const privSeen = new Set(privateIds.map((id) => id.toLowerCase()))
-  for (const id of extra) {
-    const k = id.toLowerCase()
-    if (privSeen.has(k)) continue
-    privSeen.add(k)
-    mergedPrivate.push(id)
+  if (p.includePrivateMailboxes !== false) {
+    pushId(activeSendMailboxIdForInbox())
   }
-  /** Erster Fetch ohne mailboxObjectId → Backend-Union (alle MsgKeys + Events). Explizite Server-ID würde Override setzen und Union kappen. */
+  for (const raw of p.alsoMailboxIds ?? []) pushId(raw)
+  /** Erster Fetch ohne mailboxObjectId → Backend-Union (alle MsgKeys + Events). */
   const fetchSeen = new Set<string>()
   const sources: (string | undefined)[] = [undefined]
   fetchSeen.add('__server__')
-  for (const id of mergedPrivate) {
+  for (const id of mergedIds) {
     const k = id.toLowerCase()
     if (fetchSeen.has(k)) continue
     fetchSeen.add(k)

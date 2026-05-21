@@ -86,13 +86,19 @@ import {
     purgeKey,
     sendHandshake,
 } from './messenger-chain-wrap.js';
-import { runConnectLogic, runConnectAcceptFirstIncoming, watchHandshakeUpdates } from './messenger-connect.js';
+import {
+    runConnectLogic,
+    runConnectAcceptFirstIncoming,
+    watchHandshakeUpdates,
+    tryRestoreHandshakeSessionFromVault,
+} from './messenger-connect.js';
 import { listenForMessages } from './messenger-listener.js';
 import type { PeerState } from './peer-state.js';
 import { encryptPairingPayload, decryptPairingPayload, generatePairingNonce } from '../pairing-crypto.js';
 import { saveContactLabel } from '../contact-labels.js';
 import { messengerGasPolicyOpts, assertPairingGateNftOwned } from './command-handler-shared.js';
 import { tryHandleMailboxCommand } from './commands/mailbox-commands.js';
+import { tryHandleMailboxLifecycleCommand } from './commands/mailbox-lifecycle-commands.js';
 import { tryHandleSendCommand } from './commands/send-commands.js';
 import type { MessengerCommandContext } from './commands/command-types.js';
 
@@ -121,6 +127,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     if (c && !c.startsWith('/')) c = '/' + c;
                     if (c === '/vault-lock') {
                         vaultStateRef.current = null;
+                        sessionState.peerMap = null;
+                        sessionState.connecting = false;
                         clearSessionIotaMnemonic();
                         clearWalletPassword();
                         const vpLock = CFG.VAULT_FILE || '.morgendrot-vault';
@@ -141,7 +149,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -171,6 +179,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         peerMap,
                         sessionState,
                     };
+                    const lifecycleEarly = await tryHandleMailboxLifecycleCommand(cmdCtx);
+                    if (lifecycleEarly) return lifecycleEarly;
                     const mailboxEarly = await tryHandleMailboxCommand(cmdCtx);
                     if (mailboxEarly) return mailboxEarly;
                     if (c === '/vault-save') {
@@ -244,9 +254,22 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 process.env.STREAMS_ANCHOR_ID = restoredAnchor;
                                 ensureStreamsAnchorIdInHistory(restoredAnchor);
                             }
+                            const n = await tryRestoreHandshakeSessionFromVault(
+                                loadPath,
+                                pw,
+                                MY_ADDR,
+                                content.keys.privateKey,
+                                sessionState,
+                                setSessionStatus
+                            );
+                            const hsRestoreNote =
+                                n > 0 ? ` Handshake-Cache: ${n} Partner (Status „verbunden“).` : '';
                             return {
                                 ok: true,
-                                message: 'Vault geladen.' + (restoredAnchor ? ' Streams Anchor-ID wiederhergestellt.' : ''),
+                                message:
+                                    'Vault geladen.' +
+                                    (restoredAnchor ? ' Streams Anchor-ID wiederhergestellt.' : '') +
+                                    hsRestoreNote,
                                 notes: content.notes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
@@ -385,9 +408,20 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
                                 applySdkSignerFromImport(content.iotaSdkSignerImport!);
                             }
+                            const vaultPathChain = CFG.VAULT_FILE || '.morgendrot-vault';
+                            const nChain = await tryRestoreHandshakeSessionFromVault(
+                                vaultPathChain,
+                                pw,
+                                MY_ADDR,
+                                content.keys.privateKey,
+                                sessionState,
+                                setSessionStatus
+                            );
+                            const hsRestoreChainNote =
+                                nChain > 0 ? ` Handshake-Cache: ${nChain} Partner (Status „verbunden“).` : '';
                             return {
                                 ok: true,
-                                message: 'Vault von Chain geladen.',
+                                message: 'Vault von Chain geladen.' + hsRestoreChainNote,
                                 notes: content.notes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };

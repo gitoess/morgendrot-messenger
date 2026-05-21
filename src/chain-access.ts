@@ -2858,6 +2858,23 @@ export type OwnedPhysicalAssetItem = {
     creatorSignature?: string;
 };
 
+/** Team-Shared-Mailbox on-chain (`Mailbox`, nicht PrivateMailbox). */
+export async function createTeamMailbox(
+    signingAddress: string,
+    walletPassword?: string,
+    options?: SignAndExecuteOptions
+): Promise<SignAndExecuteResult> {
+    assertSafeAddress(signingAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const txb = new Transaction();
+    txb.setSender(signingAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::create_team_mailbox`,
+        arguments: [],
+    });
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, options);
+}
+
 /** M4d: eigene PrivateMailbox on-chain (shared Object, `owner` = Sender). */
 export async function createPrivateMailbox(
     signingAddress: string,

@@ -1,27 +1,42 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, Copy, Loader2, QrCode, RotateCcw, Trash2, UserPlus } from 'lucide-react'
+import { Check, Copy, QrCode, RotateCcw, Trash2, UserPlus, UserRoundPlus } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { buildContactQrPayload } from '@/frontend/lib/contact-qr'
 import { findContactAddressByMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
 import { fetchDeploymentMailboxId } from '@/frontend/lib/fetch-deployment-mailbox-id'
 import { ChatViewPrivateMailboxDeleteDialog } from '@/frontend/components/chat-view-private-mailbox-delete-dialog'
+import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
+import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
+import {
+  clearActiveSendMailbox,
+  readActiveSendMailbox,
+  setActivePrivateMailboxObjectId,
+  setActiveTeamMailboxObjectId,
+  type ActiveSendMailbox,
+} from '@/frontend/lib/my-mailbox-active'
 import {
   addMyPrivateMailbox,
   archiveMyPrivateMailbox,
   forgetMyPrivateMailbox,
-  readActiveMailboxSelection,
   readArchivedMyPrivateMailboxes,
   readMyPrivateMailboxes,
   restoreMyPrivateMailbox,
-  setActivePrivateMailboxObjectId,
-  setActiveServerMailbox,
   updateMyPrivateMailboxLabel,
   type MyPrivateMailboxEntry,
 } from '@/frontend/lib/my-private-mailbox-store'
-import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
+import {
+  archiveMyTeamMailbox,
+  forgetMyTeamMailbox,
+  joinMyTeamMailbox,
+  readArchivedMyTeamMailboxes,
+  readMyTeamMailboxes,
+  restoreMyTeamMailbox,
+  updateMyTeamMailboxLabel,
+  type MyTeamMailboxEntry,
+} from '@/frontend/lib/my-team-mailbox-store'
 
 function maskMid(id: string): string {
   const t = id.trim()
@@ -29,36 +44,44 @@ function maskMid(id: string): string {
   return `${t.slice(0, 10)}…${t.slice(-8)}`
 }
 
-function TypeBadge(p: { kind: 'shared' | 'private' }) {
+function TypeBadge(p: { kind: 'server' | 'team' | 'private' }) {
+  const cls =
+    p.kind === 'server'
+      ? 'bg-sky-500/20 text-sky-900 dark:text-sky-100'
+      : p.kind === 'team'
+        ? 'bg-amber-500/25 text-amber-950 dark:text-amber-100'
+        : 'bg-violet-500/20 text-violet-950 dark:text-violet-100'
+  const label = p.kind === 'server' ? 'Server' : p.kind === 'team' ? 'Team' : 'Privat'
   return (
-    <span
-      className={
-        p.kind === 'shared'
-          ? 'rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-sky-500/20 text-sky-900 dark:text-sky-100'
-          : 'rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide bg-violet-500/20 text-violet-950 dark:text-violet-100'
-      }
-    >
-      {p.kind === 'shared' ? 'Shared' : 'Privat'}
-    </span>
+    <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>
   )
 }
 
-type MailboxRow =
-  | { kind: 'server'; objectId: string }
-  | { kind: 'private'; entry: MyPrivateMailboxEntry }
+function MailboxIdRow(p: { objectId: string; copiedId: string | null; onCopy: (id: string) => void }) {
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      <code className="font-mono text-[10px] break-all" title={p.objectId}>
+        {p.objectId}
+      </code>
+      <button
+        type="button"
+        onClick={() => p.onCopy(p.objectId)}
+        className="rounded border border-border px-1 py-0.5 text-[10px] hover:bg-accent"
+      >
+        {p.copiedId === p.objectId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      </button>
+    </div>
+  )
+}
 
 export type ChatViewMyMailboxesPanelProps = {
   myAddressLine: string
-  /** Optional: aus Status; Panel lädt sonst /api/current-ids */
   serverMailboxIdHint?: string
   contactDirectory?: Record<string, ContactMeshEntryClient>
   onContactsChanged?: () => void
-  /** Telefonbuch: „Neuer Kontakt“ mit vorausgefüllter Mailbox-ID */
   onOpenCreateContact?: (mailboxObjectId: string) => void
-  /** Wallet-0x des Kontakts ins Sende-Composer übernehmen (Empfänger — nicht die Mailbox-Object-ID). */
   onApplySendRecipient?: (walletAddress: string) => void
   onStatus?: (msg: string, kind: 'success' | 'error') => void
-  /** Nach „Aktiv setzen“ — z. B. Posteingang neu laden. */
   onMailboxActivated?: () => void
 }
 
@@ -67,9 +90,11 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
   const walletValid = /^0x[a-fA-F0-9]{64}$/i.test(full)
 
   const [serverId, setServerId] = useState((p.serverMailboxIdHint ?? '').trim())
-  const [list, setList] = useState<MyPrivateMailboxEntry[]>([])
-  const [archived, setArchived] = useState<MyPrivateMailboxEntry[]>([])
-  const [selection, setSelection] = useState(readActiveMailboxSelection())
+  const [privateList, setPrivateList] = useState<MyPrivateMailboxEntry[]>([])
+  const [teamList, setTeamList] = useState<MyTeamMailboxEntry[]>([])
+  const [privateArchived, setPrivateArchived] = useState<MyPrivateMailboxEntry[]>([])
+  const [teamArchived, setTeamArchived] = useState<MyTeamMailboxEntry[]>([])
+  const [active, setActive] = useState<ActiveSendMailbox>(readActiveSendMailbox())
   const [qrCopied, setQrCopied] = useState(false)
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
@@ -78,9 +103,11 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
   const [assignBusy, setAssignBusy] = useState(false)
 
   const reload = useCallback(() => {
-    setList(readMyPrivateMailboxes())
-    setArchived(readArchivedMyPrivateMailboxes())
-    setSelection(readActiveMailboxSelection())
+    setPrivateList(readMyPrivateMailboxes())
+    setTeamList(readMyTeamMailboxes())
+    setPrivateArchived(readArchivedMyPrivateMailboxes())
+    setTeamArchived(readArchivedMyTeamMailboxes())
+    setActive(readActiveSendMailbox())
   }, [])
 
   useEffect(() => {
@@ -105,93 +132,53 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
   const serverAvailable = /^0x[a-fA-F0-9]{64}$/i.test(serverId)
 
-  const activeObjectId =
-    selection.kind === 'server' && serverAvailable
-      ? serverId
-      : selection.kind === 'private'
-        ? selection.objectId
-        : ''
-
-  const rows: MailboxRow[] = []
-  rows.push({ kind: 'server', objectId: serverAvailable ? serverId : '' })
-  for (const entry of list) rows.push({ kind: 'private', entry })
-
-  const contactOptions = Object.entries(p.contactDirectory ?? {})
-    .map(([addr, entry]) => ({
-      addr: addr.trim(),
-      label: (entry.label || '').trim() || maskMid(addr),
-    }))
-    .filter((c) => c.addr.length > 0)
-    .sort((a, b) => a.label.localeCompare(b.label, 'de'))
-
-  const isRowActive = (row: MailboxRow): boolean => {
-    if (row.kind === 'server') return selection.kind === 'server' && serverAvailable
-    return selection.kind === 'private' && selection.objectId.toLowerCase() === row.entry.objectId.toLowerCase()
-  }
+  const isActive = (kind: 'team' | 'private', objectId: string): boolean =>
+    active.kind === kind && active.objectId.toLowerCase() === objectId.trim().toLowerCase()
 
   const profileQr = useCallback(() => {
     if (!walletValid) return ''
     try {
-      return buildContactQrPayload({
-        address: full,
-        mailboxObjectId: selection.kind === 'private' ? selection.objectId : undefined,
-      })
+      const mb =
+        active.kind === 'private' || active.kind === 'team' ? active.objectId : undefined
+      return buildContactQrPayload({ address: full, mailboxObjectId: mb })
     } catch {
       return ''
     }
-  }, [full, selection, walletValid])
+  }, [full, active, walletValid])
 
   const copyId = (id: string) => {
-    if (!id) return
     void navigator.clipboard.writeText(id).then(() => {
       setCopiedId(id)
       setTimeout(() => setCopiedId(null), 2000)
     })
   }
 
-  const copyQr = () => {
-    const raw = profileQr()
-    if (!raw) return
-    void navigator.clipboard.writeText(raw).then(() => {
-      setQrCopied(true)
-      setTimeout(() => setQrCopied(false), 2000)
-    })
-  }
-
-  const activateRow = (row: MailboxRow) => {
-    if (row.kind === 'server') {
-      if (!serverAvailable) {
-        p.onStatus?.('MAILBOX_ID in Server-.env fehlt — nach create_globals eintragen und API neu starten.', 'error')
-        return
-      }
-      setActiveServerMailbox()
-    } else {
-      setActivePrivateMailboxObjectId(row.entry.objectId)
-    }
+  const activate = (kind: 'team' | 'private', objectId: string) => {
+    if (kind === 'team') setActiveTeamMailboxObjectId(objectId)
+    else setActivePrivateMailboxObjectId(objectId)
     reload()
-    p.onStatus?.(
-      row.kind === 'server'
-        ? 'Aktiv: Morgendrot Shared-Mailbox (Einsatz).'
-        : `Aktiv: private Mailbox ${maskMid(row.entry.objectId)}`,
-      'success'
-    )
+    p.onStatus?.(`Aktiv: ${kind === 'team' ? 'Team' : 'Private'}-Mailbox ${maskMid(objectId)}.`, 'success')
     p.onMailboxActivated?.()
   }
 
-  const applySendRecipient = (walletAddress: string) => {
-    const addr = walletAddress.trim().toLowerCase()
-    if (!/^0x[a-fA-F0-9]{64}$/i.test(addr)) {
-      p.onStatus?.('Gültige Kontakt-Wallet (0x + 64 Hex) nötig — nicht die Mailbox-Object-ID.', 'error')
-      return
-    }
-    p.onApplySendRecipient?.(addr)
-    p.onStatus?.(`Empfänger ${maskMid(addr)} im Composer übernommen.`, 'success')
+  const deactivateSendFocus = () => {
+    clearActiveSendMailbox()
+    reload()
+    p.onStatus?.('Senden + Posteingang-Fokus: nur Server-Shared (.env).', 'success')
+    p.onMailboxActivated?.()
   }
 
-  const syncAssignContactFromMailbox = (mailboxObjectId: string) => {
-    const dir = p.contactDirectory ?? {}
-    const found = findContactAddressByMailboxObjectId(dir, mailboxObjectId)
-    if (found) setAssignContact(found)
+  const joinTeam = () => {
+    const raw = window.prompt('Team-Mailbox Object-ID (0x + 64 Hex) oder aus QR einfügen:')?.trim()
+    if (!raw || !/^0x[a-fA-F0-9]{64}$/i.test(raw)) {
+      if (raw) p.onStatus?.('Ungültige Object-ID.', 'error')
+      return
+    }
+    const label = window.prompt('Anzeigename (optional):', 'Team Einsatz')?.trim()
+    joinMyTeamMailbox(raw, label || undefined)
+    reload()
+    p.onStatus?.(`Team-Mailbox ${maskMid(raw)} beigetreten.`, 'success')
+    p.onMailboxActivated?.()
   }
 
   const assignToContact = async () => {
@@ -210,7 +197,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
       }
       p.onContactsChanged?.()
       p.onApplySendRecipient?.(addr.trim().toLowerCase())
-      p.onStatus?.(`Mailbox ${maskMid(mb)} zugeordnet — Empfänger ${maskMid(addr)} im Composer.`, 'success')
+      p.onStatus?.(`Mailbox ${maskMid(mb)} zugeordnet.`, 'success')
     } finally {
       setAssignBusy(false)
     }
@@ -230,117 +217,178 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
         return
       }
       p.onContactsChanged?.()
-      p.onStatus?.('Private Mailbox in Telefonbuch unter deiner Adresse gespeichert.', 'success')
+      p.onStatus?.('Mailbox in Telefonbuch (Ich) gespeichert.', 'success')
     } finally {
       setAssignBusy(false)
     }
   }
 
-  const onMailboxDeleted = (objectId: string) => {
-    forgetMyPrivateMailbox(objectId)
-    if (assignMbId.toLowerCase() === objectId.toLowerCase()) setAssignMbId('')
-    reload()
+  const renderMailboxCard = (
+    kind: 'team' | 'private',
+    entry: { objectId: string; label?: string },
+    actions: React.ReactNode
+  ) => {
+    const activeRow = isActive(kind, entry.objectId)
+    return (
+      <li
+        key={entry.objectId}
+        className={`rounded-md border px-2 py-2 text-[11px] ${
+          activeRow ? 'border-emerald-500/45 bg-emerald-500/10' : 'border-border bg-background/40'
+        }`}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => (activeRow ? deactivateSendFocus() : activate(kind, entry.objectId))}
+            className={`rounded px-2 py-0.5 text-[10px] font-medium ${
+              activeRow ? 'bg-emerald-600 text-white' : 'border border-border hover:bg-accent'
+            }`}
+          >
+            {activeRow ? '● Aktiv' : 'Aktiv setzen'}
+          </button>
+          <TypeBadge kind={kind} />
+          <span className="font-medium text-foreground">{entry.label || (kind === 'team' ? 'Team-Mailbox' : 'Private Mailbox')}</span>
+          <input
+            type="text"
+            defaultValue={entry.label ?? ''}
+            placeholder="Label"
+            onBlur={(e) => {
+              if (kind === 'team') updateMyTeamMailboxLabel(entry.objectId, e.target.value)
+              else updateMyPrivateMailboxLabel(entry.objectId, e.target.value)
+              reload()
+            }}
+            className="min-w-[4rem] flex-1 rounded border border-border bg-input px-1.5 py-0.5 text-[10px]"
+          />
+        </div>
+        <MailboxIdRow objectId={entry.objectId} copiedId={copiedId} onCopy={copyId} />
+        <div className="mt-2 flex flex-wrap gap-2">{actions}</div>
+      </li>
+    )
   }
 
-  const qr = profileQr()
+  const activeLabel =
+    active.kind === 'team'
+      ? `Team · ${maskMid(active.objectId)}`
+      : active.kind === 'private'
+        ? `Privat · ${maskMid(active.objectId)}`
+        : 'Server-Shared (Standard)'
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <p className="text-[10px] text-muted-foreground leading-snug">
-        <strong className="text-foreground">Shared (.env)</strong> = ältere MsgKey-Nachrichten auf der Server-Mailbox.
-        <strong className="text-foreground"> Private aktiv</strong> = neue Sends landen in der privaten Mailbox (oft leer auf der Chain).
-        Selbst-Send an die eigene Wallet ist erlaubt.
+        <strong className="text-foreground">Server-Shared</strong> (.env) wird immer mitgelesen.
+        <strong className="text-foreground"> Team</strong> und <strong className="text-foreground">Privat</strong>:
+        eine davon <strong className="text-foreground">aktiv</strong> für Senden und Posteingang-Fokus.
       </p>
 
-      {activeObjectId ? (
-        <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2.5 py-2">
-          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Aktiv</p>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <TypeBadge kind={selection.kind === 'server' ? 'shared' : 'private'} />
-            <span className="text-[11px] font-medium text-foreground">
-              {selection.kind === 'server' ? 'Morgendrot · Einsatz (Shared)' : 'Eigene private Mailbox'}
-            </span>
-            <code className="font-mono text-[10px] break-all text-foreground" title={activeObjectId}>
-              {activeObjectId}
-            </code>
+      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5">
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Aktiv für Senden + Posteingang</p>
+        <p className="mt-1 text-sm font-medium text-foreground">{activeLabel}</p>
+        {active.kind !== 'none' ? (
+          <button type="button" onClick={deactivateSendFocus} className="mt-2 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent">
+            Nur Server-Shared
+          </button>
+        ) : null}
+      </div>
+
+      <section className="rounded-lg border border-sky-500/35 bg-sky-500/8 px-3 py-2.5 space-y-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <TypeBadge kind="server" />
+          <span className="text-[11px] font-semibold text-foreground">Server · Einsatz (Shared)</span>
+          <span className="rounded bg-sky-600/25 px-1.5 py-0.5 text-[9px] font-semibold text-sky-950 dark:text-sky-100">
+            Immer an
+          </span>
+        </div>
+        {serverAvailable ? (
+          <MailboxIdRow objectId={serverId} copiedId={copiedId} onCopy={copyId} />
+        ) : (
+          <p className="text-[10px] text-amber-800 dark:text-amber-200">MAILBOX_ID in Server-.env fehlt — nach create_globals setzen.</p>
+        )}
+        <p className="text-[10px] text-muted-foreground">Nur Setup/.env — nicht umschaltbar.</p>
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-[11px] font-semibold text-foreground">Team-Mailboxes</h4>
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => copyId(activeObjectId)}
-              className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-accent"
+              onClick={joinTeam}
+              className="inline-flex items-center gap-1 rounded-md border border-amber-500/45 bg-amber-500/10 px-2 py-1 text-[10px] font-medium hover:bg-amber-500/15"
             >
-              {copiedId === activeObjectId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              <UserRoundPlus className="h-3 w-3" />
+              Beitreten (ID/QR)
             </button>
+            <ChatViewTeamMailboxCreateButton
+              walletValid={walletValid}
+              onObjectId={(id) => {
+                reload()
+                setAssignMbId(id)
+              }}
+              onStatus={p.onStatus}
+            />
           </div>
         </div>
-      ) : null}
-
-      <ul className="space-y-1.5">
-        {rows.map((row) => {
-          const active = isRowActive(row)
-          const objectId = row.kind === 'server' ? row.objectId : row.entry.objectId
-          const isServer = row.kind === 'server'
-          const title = isServer ? 'Morgendrot · Einsatz (Shared)' : row.entry.label || 'Private Mailbox'
-
-          return (
-            <li
-              key={isServer ? 'server' : row.entry.objectId}
-              className={`rounded-md border px-2 py-2 text-[11px] ${
-                active ? 'border-emerald-500/45 bg-emerald-500/10' : 'border-border bg-background/40'
-              }`}
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isServer && !serverAvailable}
-                  onClick={() => activateRow(row)}
-                  className={`rounded px-2 py-0.5 text-[10px] font-medium ${
-                    active ? 'bg-emerald-600 text-white' : 'border border-border hover:bg-accent'
-                  } disabled:opacity-50`}
-                >
-                  {active ? '● Aktiv' : 'Aktiv setzen'}
-                </button>
-                <TypeBadge kind={isServer ? 'shared' : 'private'} />
-                <span className="font-medium text-foreground">{title}</span>
-                {!isServer ? (
-                  <input
-                    type="text"
-                    defaultValue={row.entry.label ?? ''}
-                    placeholder="Label"
-                    onBlur={(e) => {
-                      updateMyPrivateMailboxLabel(row.entry.objectId, e.target.value)
-                      reload()
-                    }}
-                    className="min-w-[4rem] flex-1 rounded border border-border bg-input px-1.5 py-0.5 text-[10px]"
-                  />
-                ) : null}
-              </div>
-              {isServer && !serverAvailable ? (
-                <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">
-                  Keine gültige MAILBOX_ID vom Server — in .env nach create_globals setzen, API neu starten. (Nicht PACKAGE_ID.)
-                </p>
-              ) : objectId ? (
-                <div className="mt-1 flex flex-wrap items-center gap-2">
-                  <code className="font-mono text-[10px] break-all" title={objectId}>
-                    {objectId}
-                  </code>
+        {teamList.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground">Noch keine Team-Mailbox — erstellen oder ID eintragen.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {teamList.map((entry) =>
+              renderMailboxCard('team', entry, (
+                <>
                   <button
                     type="button"
-                    onClick={() => copyId(objectId)}
-                    className="rounded border border-border px-1 py-0.5 text-[10px] hover:bg-accent"
-                  >
-                    Kopieren
-                  </button>
-                </div>
-              ) : null}
-              {!isServer ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    title="Nur aus dieser Liste — on-chain bleibt"
                     onClick={() => {
-                      archiveMyPrivateMailbox(row.entry.objectId)
+                      archiveMyTeamMailbox(entry.objectId)
                       reload()
-                      p.onStatus?.('In „Entfernt“ — Wiederherstellen möglich.', 'success')
+                      p.onStatus?.('Aus Liste entfernt (on-chain bleibt).', 'success')
+                    }}
+                    className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Aus Liste
+                  </button>
+                  <button
+                    type="button"
+                    disabled={assignBusy || !walletValid}
+                    onClick={() => void saveToOwnPhonebook(entry.objectId)}
+                    className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
+                  >
+                    <UserPlus className="h-3 w-3" />
+                    Ins Telefonbuch
+                  </button>
+                </>
+              ))
+            )}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="text-[11px] font-semibold text-foreground">Private Mailboxes</h4>
+          <ChatViewPrivateMailboxCreateButton
+            walletValid={walletValid}
+            onObjectId={(id) => {
+              reload()
+              setAssignMbId(id)
+            }}
+            onStatus={p.onStatus}
+          />
+        </div>
+        {privateList.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground">Noch keine private Mailbox.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {privateList.map((entry) =>
+              renderMailboxCard('private', entry, (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      archiveMyPrivateMailbox(entry.objectId)
+                      reload()
+                      p.onStatus?.('In „Entfernt“.', 'success')
                     }}
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
@@ -351,142 +399,95 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     type="button"
                     disabled={!walletValid}
                     onClick={() => {
-                      const id = row.entry.objectId
-                      const label = row.entry.label || maskMid(id)
                       if (
                         !window.confirm(
-                          `Private Mailbox „${label}“ wirklich löschen?\n\n` +
-                            `Object-ID: ${maskMid(id)}\n\n` +
-                            'Die Nachrichten und Handshakes in dieser Mailbox auf der Chain werden mit dem Rebate entfernt (nach Aufräumen). Das kann nicht rückgängig gemacht werden.'
-                        )
+                          `Private Mailbox „${entry.label || maskMid(entry.objectId)}“ on-chain löschen?\n\nNachrichten und Handshakes werden entfernt.`
+                        ) ||
+                        !window.confirm('Letzte Bestätigung?')
                       ) {
                         return
                       }
-                      if (
-                        !window.confirm(
-                          'Letzte Bestätigung: Mailbox on-chain löschen und aus der lokalen Liste entfernen?'
-                        )
-                      ) {
-                        return
-                      }
-                      setDeleteDialogId(id)
+                      setDeleteDialogId(entry.objectId)
                     }}
-                    className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive hover:bg-destructive/15 disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive"
                   >
-                    Private Mailbox löschen
+                    On-chain löschen
                   </button>
                   <button
                     type="button"
                     disabled={assignBusy || !walletValid}
-                    onClick={() => void saveToOwnPhonebook(row.entry.objectId)}
+                    onClick={() => void saveToOwnPhonebook(entry.objectId)}
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <UserPlus className="h-3 w-3" />
-                    Ins Telefonbuch (Ich)
+                    Ins Telefonbuch
                   </button>
-                  {p.onOpenCreateContact ? (
-                    <button
-                      type="button"
-                      onClick={() => p.onOpenCreateContact?.(row.entry.objectId)}
-                      className="inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium hover:bg-primary/15"
-                    >
-                      <UserPlus className="h-3 w-3" />
-                      Neuer Kontakt
-                    </button>
-                  ) : null}
-                </div>
-              ) : null}
-            </li>
-          )
-        })}
-      </ul>
-
-      {archived.length > 0 ? (
-        <div className="rounded-md border border-dashed border-border/80 px-2 py-2">
-          <p className="text-[10px] font-medium text-muted-foreground mb-1.5">Entfernt ({archived.length})</p>
-          <ul className="space-y-1">
-            {archived.map((e) => (
-              <li key={e.objectId} className="flex flex-wrap items-center gap-2 text-[10px]">
-                <code className="font-mono" title={e.objectId}>
-                  {maskMid(e.objectId)}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => {
-                    restoreMyPrivateMailbox(e.objectId)
-                    reload()
-                    p.onStatus?.('Wiederhergestellt.', 'success')
-                  }}
-                  className="inline-flex items-center gap-0.5 rounded border border-border px-1.5 py-0.5 hover:bg-accent"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Wiederherstellen
-                </button>
-              </li>
-            ))}
+                </>
+              ))
+            )}
           </ul>
-        </div>
-      ) : null}
+        )}
+      </section>
 
-      {list.length > 0 ? (
-        <div className="rounded-md border border-border/70 bg-muted/15 px-2 py-2 space-y-1.5">
-          <p className="text-[10px] font-medium text-foreground">Mailbox einem Kontakt zuordnen</p>
-          {contactOptions.length === 0 ? (
-            <p className="text-[10px] text-muted-foreground">
-              Noch kein Kontakt — oben „Neuer Kontakt“ im Telefonbuch oder „Neuer Kontakt“ an der Mailbox.
-            </p>
-          ) : null}
+      {(teamArchived.length > 0 || privateArchived.length > 0) && (
+        <div className="rounded-md border border-dashed border-border/80 px-2 py-2 text-[10px]">
+          <p className="font-medium text-muted-foreground mb-1">Entfernt</p>
+          {teamArchived.map((e) => (
+            <div key={e.objectId} className="flex flex-wrap gap-2 py-0.5">
+              <code>{maskMid(e.objectId)}</code>
+              <button type="button" onClick={() => { restoreMyTeamMailbox(e.objectId); reload() }} className="underline">
+                Team wiederherstellen
+              </button>
+            </div>
+          ))}
+          {privateArchived.map((e) => (
+            <div key={e.objectId} className="flex flex-wrap gap-2 py-0.5">
+              <code>{maskMid(e.objectId)}</code>
+              <button type="button" onClick={() => { restoreMyPrivateMailbox(e.objectId); reload() }} className="underline">
+                Privat wiederherstellen
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {(privateList.length > 0 || teamList.length > 0) && (
+        <div className="rounded-md border border-border/70 bg-muted/15 px-2 py-2 space-y-1.5 text-[10px]">
+          <p className="font-medium">Mailbox einem Kontakt zuordnen</p>
           <div className="flex flex-wrap gap-2">
             <select
               value={assignMbId}
-              onChange={(e) => setAssignMbId(e.target.value)}
-              className="min-w-[8rem] flex-1 rounded border border-border bg-input px-2 py-1 text-[10px]"
+              onChange={(e) => {
+                setAssignMbId(e.target.value)
+                const dir = p.contactDirectory ?? {}
+                const found = findContactAddressByMailboxObjectId(dir, e.target.value)
+                if (found) setAssignContact(found)
+              }}
+              className="min-w-[8rem] flex-1 rounded border border-border bg-input px-2 py-1"
             >
-              <option value="">Private Mailbox…</option>
-              {list.map((e) => (
-                <option key={e.objectId} value={e.objectId}>
-                  {(e.label || maskMid(e.objectId)).slice(0, 40)}
+              <option value="">Mailbox…</option>
+              {teamList.map((e) => (
+                <option key={`t-${e.objectId}`} value={e.objectId}>
+                  Team: {(e.label || maskMid(e.objectId)).slice(0, 36)}
                 </option>
               ))}
-            </select>
-            <select
-              value={assignContact}
-              onChange={(e) => setAssignContact(e.target.value)}
-              disabled={contactOptions.length === 0}
-              className="min-w-[8rem] flex-1 rounded border border-border bg-input px-2 py-1 text-[10px] disabled:opacity-50"
-            >
-              <option value="">Kontakt…</option>
-              {contactOptions.map((c) => (
-                <option key={c.addr} value={c.addr}>
-                  {c.label}
+              {privateList.map((e) => (
+                <option key={`p-${e.objectId}`} value={e.objectId}>
+                  Privat: {(e.label || maskMid(e.objectId)).slice(0, 36)}
                 </option>
               ))}
             </select>
             <button
               type="button"
-              disabled={assignBusy || contactOptions.length === 0}
+              disabled={assignBusy}
               onClick={() => void assignToContact()}
-              className="rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50"
             >
-              Speichern + Empfänger
-            </button>
-            <button
-              type="button"
-              disabled={!/^0x[a-fA-F0-9]{64}$/i.test(assignContact.trim())}
-              onClick={() => applySendRecipient(assignContact)}
-              className="rounded-md border border-border px-2 py-1 text-[10px] font-medium hover:bg-accent disabled:opacity-50"
-              title="Nur die Wallet des Kontakts ins Sendefeld — die Mailbox-Object-ID kommt aus dem Telefonbuch"
-            >
-              Als Empfänger
+              Speichern
             </button>
           </div>
-          <p className="text-[10px] text-muted-foreground">
-            Private Mailbox wählen → wenn im Telefonbuch genau ein Kontakt diese ID hat, wird er vorausgewählt.
-            Senden geht an die <strong className="text-foreground">Wallet 0x</strong>; die Object-ID ist das Ziel-Postfach
-            (pro Kontakt derzeit <strong className="text-foreground">eine</strong> ID — mehrere Mailboxen = Roadmap).
-          </p>
         </div>
-      ) : null}
+      )}
 
       {deleteDialogId ? (
         <ChatViewPrivateMailboxDeleteDialog
@@ -498,38 +499,34 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
           myAddress={full}
           walletValid={walletValid}
           onDone={() => {
-            if (deleteDialogId) onMailboxDeleted(deleteDialogId)
+            if (deleteDialogId) {
+              forgetMyPrivateMailbox(deleteDialogId)
+              if (assignMbId.toLowerCase() === deleteDialogId.toLowerCase()) setAssignMbId('')
+              reload()
+            }
             setDeleteDialogId(null)
           }}
           onStatus={p.onStatus}
         />
       ) : null}
 
-      <div className="flex flex-wrap gap-2">
-        <ChatViewPrivateMailboxCreateButton
-          walletValid={walletValid}
-          onObjectId={(id, meta) => {
-            addMyPrivateMailbox({
-              objectId: id,
-              ...(meta?.digest ? { digest: meta.digest } : {}),
-              createdAtMs: Date.now(),
+      {profileQr() ? (
+        <button
+          type="button"
+          onClick={() => {
+            const raw = profileQr()
+            if (!raw) return
+            void navigator.clipboard.writeText(raw).then(() => {
+              setQrCopied(true)
+              setTimeout(() => setQrCopied(false), 2000)
             })
-            reload()
-            setAssignMbId(id)
-            p.onStatus?.(`Erstellt: ${maskMid(id)} — „Ins Telefonbuch (Ich)“ oder Kontakt zuordnen.`, 'success')
           }}
-        />
-        {qr ? (
-          <button
-            type="button"
-            onClick={copyQr}
-            className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent"
-          >
-            <QrCode className="h-3.5 w-3.5" />
-            {qrCopied ? 'QR kopiert' : 'Profil-QR'}
-          </button>
-        ) : null}
-      </div>
+          className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent"
+        >
+          <QrCode className="h-3.5 w-3.5" />
+          {qrCopied ? 'Profil-QR kopiert' : 'Profil-QR (aktive Mailbox)'}
+        </button>
+      ) : null}
     </div>
   )
 }

@@ -10,8 +10,6 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInboxFromAllOwnedMailboxes } from '@/frontend/lib/inbox-multi-mailbox-fetch'
 import {
   ACTIVE_MAILBOX_CHANGED_EVENT,
-  readActiveMailboxSelection,
-  readCachedServerMailboxObjectId,
 } from '@/frontend/lib/my-private-mailbox-store'
 import {
   inboxMessageListSignature,
@@ -164,26 +162,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           })
         }
 
-        /** Shared + alle eigenen privaten Mailboxen (M4d); sonst fehlen verschlüsselte Sendungen aus privater Mailbox. */
+        /** Shared (immer) + aktive private Mailbox (M4d), falls gesetzt. */
         const mergeLocal = false
-        const serverMb = readCachedServerMailboxObjectId().trim()
-        const sel = readActiveMailboxSelection()
-        const pollAlso: string[] = []
-        if (mode === 'poll' && sel.kind === 'private') pollAlso.push(sel.objectId)
-        if (
-          mode === 'poll' &&
-          /^0x[a-fA-F0-9]{64}$/i.test(serverMb) &&
-          !pollAlso.some((x) => x.toLowerCase() === serverMb.toLowerCase())
-        ) {
-          pollAlso.push(serverMb)
-        }
         const res = await fetchInboxFromAllOwnedMailboxes({
           limit: pageSize,
           offset,
           packageId: pkg,
           mergeLocalInbox: mergeLocal,
           includePrivateMailboxes: true,
-          alsoMailboxIds: pollAlso.length ? pollAlso : undefined,
           silent,
         })
         const raw = res.ok ? res.messages : null

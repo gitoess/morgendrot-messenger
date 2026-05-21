@@ -1,6 +1,16 @@
 /**
- * M4d: private Mailbox-Object-IDs lokal (Profil-QR, mehrere Mailboxes, eine aktiv, Archiv).
+ * M4d: private Mailbox-Object-IDs lokal (Profil-QR, mehrere Mailboxes, Archiv).
+ * Aktiv-Zustand: @/frontend/lib/my-mailbox-active
  */
+
+import {
+  ACTIVE_SERVER_MAILBOX,
+  ACTIVE_MAILBOX_CHANGED_EVENT,
+  clearActiveSendMailbox,
+  readActiveSendMailbox,
+  setActivePrivateMailboxObjectId as persistActivePrivateMailbox,
+  type ActiveSendMailbox,
+} from '@/frontend/lib/my-mailbox-active'
 
 export type MyPrivateMailboxEntry = {
   objectId: string
@@ -10,51 +20,28 @@ export type MyPrivateMailboxEntry = {
   removedAtMs?: number
 }
 
-export const ACTIVE_SERVER_MAILBOX = '__server__'
+export { ACTIVE_SERVER_MAILBOX, ACTIVE_MAILBOX_CHANGED_EVENT }
+export { readActiveSendMailbox, readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
+export type { ActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 
-/** Browser-Event: aktive Mailbox gewechselt → Posteingang neu laden. */
-export const ACTIVE_MAILBOX_CHANGED_EVENT = 'morg:active-mailbox-changed'
-
-function notifyActiveMailboxChanged(): void {
-  if (typeof window === 'undefined') return
-  try {
-    window.dispatchEvent(new CustomEvent(ACTIVE_MAILBOX_CHANGED_EVENT))
-  } catch {
-    /* ignore */
-  }
-}
-
-const LS_LIST = 'morgendrot.myPrivateMailboxes.v2'
-const LS_ARCHIVE = 'morgendrot.myPrivateMailboxes.archive.v1'
-const LS_ACTIVE = 'morgendrot.activePrivateMailboxObjectId.v2'
-const LS_LEGACY = 'morgendrot.myPrivateMailboxObjectId.v1'
-
-/** Letzte Server-MAILBOX_ID aus GET /api/status (Send + Posteingang-Union). */
+/** Letzte Server-MAILBOX_ID aus GET /api/status (Send-Fallback). */
 let cachedServerMailboxObjectId = ''
 
 export function cacheServerMailboxObjectId(id: string): void {
   const t = id.trim()
-  cachedServerMailboxObjectId = isValidObjectId(t) ? t : ''
+  cachedServerMailboxObjectId = /^0x[a-fA-F0-9]{64}$/i.test(t) ? t : ''
 }
 
 export function readCachedServerMailboxObjectId(): string {
   return cachedServerMailboxObjectId
 }
 
+const LS_LIST = 'morgendrot.myPrivateMailboxes.v2'
+const LS_ARCHIVE = 'morgendrot.myPrivateMailboxes.archive.v1'
+const LS_LEGACY = 'morgendrot.myPrivateMailboxObjectId.v1'
+
 function isValidObjectId(id: string): boolean {
   return /^0x[a-fA-F0-9]{64}$/i.test(id.trim())
-}
-
-function readActiveRaw(): string {
-  if (typeof window === 'undefined') return ''
-  return (window.localStorage.getItem(LS_ACTIVE) ?? '').trim()
-}
-
-function writeActiveRaw(id: string): void {
-  if (typeof window === 'undefined') return
-  const t = id.trim()
-  if (!t) window.localStorage.removeItem(LS_ACTIVE)
-  else window.localStorage.setItem(LS_ACTIVE, t)
 }
 
 function parseEntries(raw: string | null): MyPrivateMailboxEntry[] {
@@ -104,7 +91,7 @@ function migrateLegacyIfNeeded(): MyPrivateMailboxEntry[] {
   if (!legacy || !isValidObjectId(legacy)) return []
   const entry: MyPrivateMailboxEntry = { objectId: legacy, createdAtMs: Date.now() }
   writeListRaw([entry])
-  writeActiveRaw(legacy)
+  persistActivePrivateMailbox(legacy)
   window.localStorage.removeItem(LS_LEGACY)
   return [entry]
 }
@@ -129,17 +116,15 @@ export function readArchivedMyPrivateMailboxes(): MyPrivateMailboxEntry[] {
   return readArchiveRaw()
 }
 
-export type ActiveMailboxSelection = { kind: 'server' } | { kind: 'private'; objectId: string }
+/** @deprecated → readActiveSendMailbox */
+export type ActiveMailboxSelection = ActiveSendMailbox
 
-export function readActiveMailboxSelection(): ActiveMailboxSelection {
-  const active = readActiveRaw()
-  if (active === ACTIVE_SERVER_MAILBOX) return { kind: 'server' }
-  if (isValidObjectId(active)) return { kind: 'private', objectId: active }
-  return { kind: 'server' }
+export function readActiveMailboxSelection(): ActiveSendMailbox {
+  return readActiveSendMailbox()
 }
 
 export function readActivePrivateMailboxObjectId(): string {
-  const sel = readActiveMailboxSelection()
+  const sel = readActiveSendMailbox()
   return sel.kind === 'private' ? sel.objectId : ''
 }
 
@@ -147,19 +132,22 @@ export function readMyPrivateMailboxObjectId(): string {
   return readActivePrivateMailboxObjectId()
 }
 
+export function clearActivePrivateMailbox(): void {
+  clearActiveSendMailbox()
+}
+
 export function setActiveServerMailbox(): void {
-  writeActiveRaw(ACTIVE_SERVER_MAILBOX)
-  notifyActiveMailboxChanged()
+  clearActiveSendMailbox()
 }
 
 export function setActivePrivateMailboxObjectId(id: string): void {
   const t = id.trim()
-  if (t && !isValidObjectId(t)) return
-  if (!t) setActiveServerMailbox()
-  else {
-    writeActiveRaw(t)
-    notifyActiveMailboxChanged()
+  if (!t) {
+    clearActiveSendMailbox()
+    return
   }
+  if (!isValidObjectId(t)) return
+  persistActivePrivateMailbox(t)
 }
 
 export function addMyPrivateMailbox(entry: MyPrivateMailboxEntry): void {
@@ -175,10 +163,9 @@ export function addMyPrivateMailbox(entry: MyPrivateMailboxEntry): void {
     ...(entry.digest?.trim() ? { digest: entry.digest.trim() } : {}),
   })
   writeListRaw(list)
-  writeActiveRaw(objectId)
+  persistActivePrivateMailbox(objectId)
 }
 
-/** Aus Liste entfernen → Archiv (Wiederherstellen möglich). Chain-Objekt bleibt. */
 export function archiveMyPrivateMailbox(objectId: string): void {
   const t = objectId.trim().toLowerCase()
   if (!t) return
@@ -189,8 +176,8 @@ export function archiveMyPrivateMailbox(objectId: string): void {
   const arch = readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== t)
   arch.unshift({ ...entry, removedAtMs: Date.now() })
   writeArchiveRaw(arch)
-  const sel = readActiveMailboxSelection()
-  if (sel.kind === 'private' && sel.objectId.toLowerCase() === t) setActiveServerMailbox()
+  const sel = readActiveSendMailbox()
+  if (sel.kind === 'private' && sel.objectId.toLowerCase() === t) clearActiveSendMailbox()
 }
 
 export function restoreMyPrivateMailbox(objectId: string): void {
@@ -204,17 +191,15 @@ export function restoreMyPrivateMailbox(objectId: string): void {
   addMyPrivateMailbox(rest)
 }
 
-/** Nach erfolgreichem Rebate: aus Liste und Archiv entfernen. */
 export function forgetMyPrivateMailbox(objectId: string): void {
   const t = objectId.trim().toLowerCase()
   if (!t) return
   writeListRaw(readListRaw().filter((e) => e.objectId.toLowerCase() !== t))
   writeArchiveRaw(readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== t))
-  const sel = readActiveMailboxSelection()
-  if (sel.kind === 'private' && sel.objectId.toLowerCase() === t) setActiveServerMailbox()
+  const sel = readActiveSendMailbox()
+  if (sel.kind === 'private' && sel.objectId.toLowerCase() === t) clearActiveSendMailbox()
 }
 
-/** @deprecated → archiveMyPrivateMailbox */
 export function removeMyPrivateMailbox(objectId: string): void {
   archiveMyPrivateMailbox(objectId)
 }
@@ -241,7 +226,7 @@ export function updateMyPrivateMailboxLabel(objectId: string, label: string): vo
 export function writeMyPrivateMailboxObjectId(id: string): void {
   const t = id.trim()
   if (!t) {
-    setActiveServerMailbox()
+    clearActiveSendMailbox()
     return
   }
   if (!isValidObjectId(t)) return

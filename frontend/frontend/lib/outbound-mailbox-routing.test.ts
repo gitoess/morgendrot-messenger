@@ -5,8 +5,10 @@ const CONTACT_MB = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 const PRIVATE_MB = '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd'
 const WALLET = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
 
+vi.mock('@/frontend/lib/my-mailbox-active', () => ({
+  readActiveSendMailboxObjectId: () => PRIVATE_MB,
+}))
 vi.mock('@/frontend/lib/my-private-mailbox-store', () => ({
-  readActiveMailboxSelection: () => ({ kind: 'private' as const, objectId: PRIVATE_MB }),
   readCachedServerMailboxObjectId: () => '',
 }))
 

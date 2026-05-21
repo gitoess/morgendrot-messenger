@@ -175,7 +175,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   ? 'border-violet-500/50 bg-violet-500/20 text-violet-950 dark:text-violet-100'
                   : 'border-violet-500/40 bg-violet-500/10 text-violet-900 hover:bg-violet-500/15 dark:text-violet-100'
               )}
-              title="Shared- und private Mailbox — aktiv wählen, dann Posteingang aktualisieren"
+              title="Server-Shared immer an; Team oder Privat aktiv setzen, dann Posteingang aktualisieren"
               aria-expanded={mailboxesPanelOpen}
             >
               <Mailbox className="h-4 w-4 shrink-0" aria-hidden />
