@@ -2,13 +2,19 @@
 
 **Stand:** 2026-05 — UI + `create_team_mailbox` (Move), lokale Liste im Browser.
 
-## Typen
+## Typen (gehört zu Ebene „Ziel-Mailbox“, nicht zum Kanal)
+
+Kanäle **1:1 / Gruppe / Pinnwand** sind oben im Chat wählbar — siehe **`docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`**.
 
 | Typ | On-chain | UI | Posteingang | Senden (Persistent) |
 |-----|----------|-----|-------------|---------------------|
-| **Server-Shared** | `Mailbox` aus `.env` `MAILBOX_ID` | Immer sichtbar, nicht umschaltbar | Immer | Fallback wenn nichts aktiv |
-| **Team** | `Mailbox` via `create_team_mailbox` | Liste + Beitreten (ID/QR) | Mit **aktiver** Team-ID | Wenn Team aktiv |
-| **Privat** | `PrivateMailbox` | wie M4d | Mit **aktiver** Privat-ID | Wenn Privat aktiv |
+| **Server-Shared** | `Mailbox` aus `.env` `MAILBOX_ID` | Immer sichtbar, nicht umschaltbar | **Immer** | Fallback wenn nichts aktiv |
+| **Team** | `Mailbox` via `create_team_mailbox` | Liste + Beitreten (ID/QR) | Nur wenn **aktiv** | Wenn Team aktiv |
+| **Privat** | `PrivateMailbox` | wie M4d | Nur wenn **aktiv** | Wenn Privat aktiv |
+
+**Hinweis:** Team-Zugang = wer die Object-ID kennt (kein On-Chain-Mitgliederverzeichnis).
+
+**Gruppenchat (M2a):** Mailbox an alle Mitglieder = **N× pairwise** (kein Gruppenraum) — `group-mailbox-pairwise-send.ts`. **1× Fee** für Gruppen: Backlog **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
 
 ## Befehle (API)
 

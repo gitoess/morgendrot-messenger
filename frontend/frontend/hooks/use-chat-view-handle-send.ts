@@ -5,6 +5,7 @@ import {
   enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
   stableOfflineMailboxThreadId,
+  nextChainMessageNonceU64,
   nextOfflineMailboxClientOutSeq,
   parseMailboxOutNonceMarker,
   prependMailboxOutNonceMarker,
@@ -42,6 +43,8 @@ import { connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
 import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
 import {
   getDirectChatEcdhMaterialForRecipient,
+  getDirectChatEcdhPrivateKey,
+  hasDirectChatEcdhPeerPubForRecipient,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { publishStreamsAnchor } from '@/frontend/lib/api/streams'
@@ -69,6 +72,11 @@ import {
   readTelegramNotifyOnSend,
   resolveTelegramNotifyRecipientAddress,
 } from '@/frontend/lib/telegram-notify-pref'
+import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
+import {
+  readGroupMailboxSendAll,
+  resolveGroupMailboxSendTargets,
+} from '@/frontend/lib/group-mailbox-pairwise-send'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -198,11 +206,36 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
     const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
 
+    const groupMailboxSendAll =
+      isGroupChannel &&
+      Boolean(activeGroup) &&
+      messagingPersistenceMode === 'mailbox' &&
+      forcedTransport === 'internet' &&
+      readGroupMailboxSendAll()
+
+    const groupMailboxTargetsEarly =
+      isGroupChannel && activeGroup
+        ? resolveGroupMailboxSendTargets({
+            activeGroup,
+            myAddress,
+            composerRecipient: encrypted ? encryptedMailboxRecipient : recipient.trim(),
+            sendAllMembers: groupMailboxSendAll,
+          })
+        : []
+
     if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+      if (!(groupMailboxSendAll && groupMailboxTargetsEarly.length > 0)) {
+        setStatus('error')
+        setStatusMsg(
+          'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen — oder „An alle Mitglieder“ mit gespeicherter Gruppe.'
+        )
+        return
+      }
+    }
+
+    if (groupMailboxSendAll && groupMailboxTargetsEarly.length === 0) {
       setStatus('error')
-      setStatusMsg(
-        'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
-      )
+      setStatusMsg('Gruppe: mindestens ein anderes Mitglied (0x…) in der Gruppenliste speichern.')
       return
     }
 
@@ -253,14 +286,26 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             await refreshApiStatus?.()
             return { ok: true }
           }
+          if (hasDirectChatEcdhPeerPubForRecipient(target) && !getDirectChatEcdhPrivateKey()) {
+            return {
+              ok: false,
+              message:
+                'Handshake gefunden, aber Chat-ECDH-Privatkey fehlt im Browser. In den Puls-Einstellungen den P-256-ECDH-JWK setzen oder „Handshake annehmen“ (Connect) für diese 0x-Adresse.',
+            }
+          }
+          return {
+            ok: false,
+            message:
+              'Handshake auf der Chain gefunden — bitte „Handshake annehmen“ (Connect) für genau diese 0x-Adresse, bis der Status „verbunden“ zeigt. Nur Handshake senden reicht nicht.',
+          }
         }
       } catch {
         /* optional */
       }
-      const deployPartner = (apiStatus?.partnerAddress || partner || '').trim().toLowerCase()
-      if (ADDR_64_LOWER.test(deployPartner)) {
+      const partnerForConnect = partner.trim().toLowerCase()
+      if (ADDR_64_LOWER.test(partnerForConnect) && partnerForConnect !== target) {
         try {
-          const cr2 = await connect(deployPartner)
+          const cr2 = await connect(partnerForConnect)
           if (cr2.ok) {
             await refreshApiStatus?.()
             return { ok: true }
@@ -273,6 +318,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     const singleWireSuccessMsg = (): string => {
+      if (isGroupChannel && groupMailboxSendAll && groupMailboxTargetsEarly.length > 1) {
+        return `An ${groupMailboxTargetsEarly.length} Gruppenmitglieder gesendet (pairwise Mailbox, ${groupMailboxTargetsEarly.length}× Chain).`
+      }
       if (!isPrivate) return 'Gesendet!'
       if (path4Active) {
         return 'Klartext über LoRa gesendet; anschließend eigene Tangle-Kopie (Mailbox an dich).'
@@ -299,6 +347,44 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return false
     }
 
+    /** Nach Mailbox-Send: voller Reload (200 Zeilen), damit verschlüsselte/MsgKey nicht hinter Event-Klartext fehlen. */
+    const scheduleInboxReloadAfterSend = () => {
+      setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 1200)
+    }
+
+    const mailboxOptsFor = (to: string) => {
+      const mb = resolveOutboundMailboxObjectId(contactDirectory, to)
+      return {
+        messagingPersistenceMode,
+        ...(mb ? { mailboxObjectId: mb } : {}),
+      }
+    }
+
+    const groupMailboxTargetsForSend = (): string[] => {
+      if (!isGroupChannel || !activeGroup || messagingPersistenceMode !== 'mailbox') return []
+      if (forcedTransport !== 'internet') return []
+      return resolveGroupMailboxSendTargets({
+        activeGroup,
+        myAddress,
+        composerRecipient: encrypted && isPrivate ? encryptedMailboxRecipient : recipient.trim(),
+        sendAllMembers: readGroupMailboxSendAll(),
+      })
+    }
+
+    const publishGroupStreamsAfterSend = (textSnap: string, toAddr: string, multicast: boolean) => {
+      if (!isGroupChannel || !activeGroup?.streamsAnchorId) return
+      void publishStreamsAnchor(activeGroup.streamsAnchorId, {
+        type: 'group_message',
+        groupId: activeGroup.id,
+        from: myAddress.trim(),
+        to: multicast ? `@group:${activeGroup.id}` : toAddr,
+        preview: multicast
+          ? `${textSnap.slice(0, 180)} [${groupMailboxTargetsForSend().length}× pairwise]`
+          : textSnap.slice(0, 240),
+        ts: Date.now(),
+      })
+    }
+
     type Path4MirrorKind = 'text' | 'image_luma' | 'image_chroma'
     type Path4MirrorDispatch = {
       status: 'anchored' | 'queued' | 'duplicate' | 'failed'
@@ -318,7 +404,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (apiStatus?.locked) {
         return { status: 'failed', note: 'Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.' }
       }
-      const res = await sendPlaintextMailboxHybrid(selfAddr, payload, messageNonceU64, { messagingPersistenceMode })
+      const res = await sendPlaintextMailboxHybrid(selfAddr, payload, messageNonceU64, mailboxOptsFor(selfAddr))
       if (res.ok) {
         return {
           status: 'anchored',
@@ -354,12 +440,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       throwIfCancelled()
       const loraMsgId =
         parseLoraProgressiveMessage(lumaText)?.msgId ?? parseLoraProgressiveMessage(chromaText)?.msgId ?? null
-      const n1 = BigInt(nextOfflineMailboxClientOutSeq())
+      const n1 = nextChainMessageNonceU64()
       const w1 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(lumaText), n1)
       const d1 = await dispatchPath4Mirror(w1, n1, 'image_luma', loraMsgId)
       if (d1.status !== 'anchored') return ` ${d1.note}`
       throwIfCancelled()
-      const n2 = BigInt(nextOfflineMailboxClientOutSeq())
+      const n2 = n1 + 1n
       const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
       const d2 = await dispatchPath4Mirror(w2, n2, 'image_chroma', loraMsgId)
       if (d2.status !== 'anchored') return ` ${d2.note}`
@@ -423,16 +509,16 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setSending(false)
           return
         }
-        const n1 = BigInt(nextOfflineMailboxClientOutSeq())
+        const n1 = nextChainMessageNonceU64()
         const w1 = prependMailboxOutNonceMarker(lumaText, n1)
         setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
-        const r1 = await sendEncryptedMailboxHybrid(rTrim, w1, { messagingPersistenceMode })
+        const r1 = await sendEncryptedMailboxHybrid(rTrim, w1, mailboxOptsFor(rTrim))
         if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA fehlgeschlagen.')
         throwIfCancelled()
-        const n2 = BigInt(nextOfflineMailboxClientOutSeq())
+        const n2 = n1 + 1n
         const w2 = prependMailboxOutNonceMarker(chromaText, n2)
         setStatusMsg('Online: CHROMA (IOTA/Mailbox)…')
-        const r2 = await sendEncryptedMailboxHybrid(rTrim, w2, { messagingPersistenceMode })
+        const r2 = await sendEncryptedMailboxHybrid(rTrim, w2, mailboxOptsFor(rTrim))
         if (!r2.ok) throw new Error(r2.error || r2.message || 'CHROMA fehlgeschlagen.')
         const baseSuccess = 'Online (IOTA/Mailbox): LUMA + CHROMA gesendet.'
         setStatus('success')
@@ -454,7 +540,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         setMessage('')
         if (shouldLoadMessagesAfterSend()) {
-          setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
+          scheduleInboxReloadAfterSend()
         }
       } catch (e) {
         if (isUserCancelError(e)) {
@@ -540,7 +626,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         setMessage('')
         if (shouldLoadMessagesAfterSend()) {
-          setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 500)
+          scheduleInboxReloadAfterSend()
         }
       } catch (e) {
         if (isUserCancelError(e)) {
@@ -875,7 +961,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       /** Pfad 4 (MVP): nach LongFast-Klartext nur eine Mailbox-Kopie (kein zusätzlicher Text-Attestation-TX). */
       const runPath4MailboxSelfArchive = async (airUtf8: string): Promise<string> => {
         if (!path4Active) return ''
-        const n = BigInt(nextOfflineMailboxClientOutSeq())
+        const n = nextChainMessageNonceU64()
         const marked = prependPath4SelfArchiveMarker(airUtf8)
         const wireForApi = prependMailboxOutNonceMarker(marked, n)
         const d = await dispatchPath4Mirror(wireForApi, n, 'text')
@@ -898,39 +984,36 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return ` ${d.note}${formatTxDigestStatusSuffix(d.txDigest)}`
       }
 
-      const tryMailbox = async (enc: boolean): Promise<PartOk> => {
+      const payloadWithoutOutNonce = (snap: string) => parseMailboxOutNonceMarker(snap)?.rest ?? snap
+
+      type MailboxPartResult = PartOk | { ok: false; error: string }
+
+      const sendMailboxSingle = async (
+        sendTo: string,
+        enc: boolean,
+        textSnap: string,
+        opts?: { suppressStatus?: boolean }
+      ): Promise<MailboxPartResult> => {
+        const failPart = (msg: string): { ok: false; error: string } => {
+          if (!opts?.suppressStatus) failSend(msg)
+          return { ok: false, error: msg }
+        }
         throwIfCancelled()
-        if (enc && isPrivate) {
-          const ready = await ensureEncryptedPeerReady(encryptedMailboxRecipient)
-          if (!ready.ok) return failSend(ready.message)
-        }
-        let wireForApi: string
-        let messageNonceU64: bigint
+        const target = sendTo.trim().toLowerCase()
+        if (!ADDR_64_LOWER.test(target)) return failPart('Ungültige Empfänger-Wallet (0x + 64 Hex).')
         if (enc) {
-          const existing = parseMailboxOutNonceMarker(textSnap)
-          messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
-          wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
-        } else {
-          messageNonceU64 = BigInt(nextOfflineMailboxClientOutSeq())
-          wireForApi = textSnap
+          const ready = await ensureEncryptedPeerReady(target)
+          if (!ready.ok) return failPart(ready.message)
         }
-        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : recipient.trim()
-        /** Posteingang liest die Server-MAILBOX_ID — Kontakt-private Mailbox macht Sends unsichtbar. */
-        const hybridOpts = { messagingPersistenceMode }
+        const body = payloadWithoutOutNonce(textSnap)
+        const messageNonceU64 = nextChainMessageNonceU64()
+        const wireForApi = enc ? prependMailboxOutNonceMarker(body, messageNonceU64) : body
+        const hybridOpts = mailboxOptsFor(target)
         const res = enc
-          ? await sendEncryptedMailboxHybrid(sendTo, wireForApi, hybridOpts)
-          : await sendPlaintextMailboxHybrid(sendTo, wireForApi, messageNonceU64, hybridOpts)
-        if (res.ok && isGroupChannel && activeGroup?.streamsAnchorId) {
-          void publishStreamsAnchor(activeGroup.streamsAnchorId, {
-            type: 'group_message',
-            groupId: activeGroup.id,
-            from: myAddress.trim(),
-            to: recipient.trim(),
-            preview: textSnap.slice(0, 240),
-            ts: Date.now(),
-          })
-        }
+          ? await sendEncryptedMailboxHybrid(target, wireForApi, hybridOpts)
+          : await sendPlaintextMailboxHybrid(target, wireForApi, messageNonceU64, hybridOpts)
         if (res.ok) {
+          publishGroupStreamsAfterSend(textSnap, target, false)
           return {
             ok: true,
             mailboxCapture: {
@@ -950,19 +1033,59 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           messageNonceU64
         )
         if (qm === 'queued') {
-          return failSend(
+          return failPart(
             `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
           )
         }
         if (qm === 'duplicate') {
-          return failSend(
+          return failPart(
             `${errText} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
           )
         }
         if (typeof qm === 'object' && 'reject' in qm) {
-          return failSend(`Warteschlange: ${qm.reject}`)
+          return failPart(`Warteschlange: ${qm.reject}`)
         }
-        return failSend(errText)
+        return failPart(`${target.slice(0, 10)}…: ${errText}`)
+      }
+
+      const sendMailboxPairwiseGroup = async (targets: string[], enc: boolean, textSnap: string): Promise<PartOk> => {
+        let okCount = 0
+        const failures: string[] = []
+        let lastCapture: MailboxSendCapture | undefined
+        for (const sendTo of targets) {
+          const part = await sendMailboxSingle(sendTo, enc, textSnap, { suppressStatus: true })
+          if (part.ok) {
+            okCount++
+            if (part.mailboxCapture) lastCapture = part.mailboxCapture
+          } else {
+            failures.push(part.error)
+          }
+        }
+        if (okCount > 0) {
+          publishGroupStreamsAfterSend(textSnap, targets[0] ?? '', true)
+        }
+        if (okCount === 0) {
+          return failSend(
+            failures[0] ??
+              'An kein Gruppenmitglied gesendet — Handshake/Connect pro 0x prüfen (verschlüsselt) oder Klartext wählen.'
+          )
+        }
+        if (failures.length > 0) {
+          return failSend(
+            `Gruppe: ${okCount}/${targets.length} Mitglieder OK (pairwise Mailbox). Erster Fehler: ${failures[0]}`
+          )
+        }
+        return { ok: true, mailboxCapture: lastCapture }
+      }
+
+      const tryMailbox = async (enc: boolean): Promise<PartOk> => {
+        const targets = groupMailboxTargetsForSend()
+        const multicast = targets.length > 1 || (targets.length === 1 && readGroupMailboxSendAll() && isGroupChannel)
+        if (multicast && targets.length > 0) {
+          return sendMailboxPairwiseGroup(targets, enc, textSnap)
+        }
+        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : recipient.trim()
+        return sendMailboxSingle(sendTo, enc, textSnap)
       }
 
       if (!isPrivate) {
@@ -1081,49 +1204,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (forcedTransport === 'internet') {
-        const encReady = await ensureEncryptedPeerReady(encryptedMailboxRecipient)
-        if (!encReady.ok) return failSend(encReady.message)
-        const existing = parseMailboxOutNonceMarker(textSnap)
-        const messageNonceU64 = existing?.nonce ?? BigInt(nextOfflineMailboxClientOutSeq())
-        const wireForApi = existing ? textSnap : prependMailboxOutNonceMarker(textSnap, messageNonceU64)
-        throwIfCancelled()
-        const hybridOpts = { messagingPersistenceMode }
-        const res = await sendEncryptedMailboxHybrid(encryptedMailboxRecipient, wireForApi, hybridOpts)
-        if (res.ok) {
-          return {
-            ok: true,
-            mailboxCapture: {
-              payloadUtf8: wireForApi,
-              messageNonceU64,
-              encrypted: true,
-              txDigest: res.txDigest,
-            },
-          }
-        }
-        const onlineErr = mailboxHybridErr(res) || 'Online-Versand fehlgeschlagen.'
-        const qmOnline = await queueMailboxIfAllowed('encrypted_send', wireForApi, true, onlineErr, messageNonceU64)
-        if (qmOnline === 'queued') {
-          return failSend(
-            readStrictOnlineNoMeshFallback() && meshtastic.connected
-              ? `${onlineErr} „Strikt ohne Funk-Fallback“ — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder Transport auf „funk“ stellen.`
-              : `${onlineErr} Kein Funk (Heltec) verbunden — zwischengespeichert; bei Basis erneut versuchen (Opt-in) oder „funk“ wählen.`
-          )
-        }
-        if (qmOnline === 'duplicate') {
-          return failSend(
-            `${onlineErr} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
-          )
-        }
-        if (typeof qmOnline === 'object' && 'reject' in qmOnline) {
-          return failSend(`Warteschlange: ${qmOnline.reject}`)
-        }
-        setStatus('error')
-        setStatusMsg(
-          readStrictOnlineNoMeshFallback() && meshtastic.connected
-            ? `${onlineErr} „Strikt ohne Funk-Fallback“ aktiv – nur Online oder Transport auf „funk“ stellen.`
-            : `${onlineErr} Kein Funk (Heltec) verbunden – „funk“ wählen und koppeln oder Online-Fehler beheben (Wallet, Connect, RPC).`
-        )
-        return { ok: false }
+        return tryMailbox(true)
       }
 
       setStatus('error')
@@ -1239,7 +1320,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
-        setTimeout(() => void loadMessages('reset'), 800)
+        scheduleInboxReloadAfterSend()
       }
     } catch (e) {
       if (isUserCancelError(e)) {

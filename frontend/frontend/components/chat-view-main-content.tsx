@@ -38,6 +38,10 @@ import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-met
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
 import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import {
+  groupMailboxTargetCount,
+  readGroupMailboxSendAll,
+} from '@/frontend/lib/group-mailbox-pairwise-send'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -234,16 +238,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
 
-  const pendingHandshakeRefreshKey = `${(apiStatus?.connectedAddresses ?? []).join('|')}`
+  const pendingHandshakeRefreshKey = `${(apiStatus?.connectedAddresses ?? []).join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
   const {
     offers: pendingHandshakeOffers,
     loading: pendingHandshakesLoading,
     reload: reloadPendingHandshakes,
+    dismissOffer: dismissPendingHandshake,
   } = useChatViewPendingHandshakes({
-    enabled: (isPrivate || isGroup) && encrypted && forcedTransport === 'internet',
+    enabled: /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()),
     connectedAddresses: apiStatus?.connectedAddresses ?? [],
     refreshToken: pendingHandshakeRefreshKey,
+    contactDirectory: directory,
+    vaultLocked: apiStatus?.locked === true,
   })
 
   const handleAcceptHandshakeFromInbox = useCallback(
@@ -253,6 +260,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       window.setTimeout(() => void reloadPendingHandshakes(), 4000)
     },
     [setPartner, handleConnectAcceptForAddress, reloadPendingHandshakes]
+  )
+
+  const handleRejectHandshakeFromInbox = useCallback(
+    (sender: string, nonce: string) => {
+      dismissPendingHandshake(sender, nonce)
+      const label = contactDisplayLabel(directory, sender.trim().toLowerCase()) || sender.slice(0, 12)
+      toast.info(`Handshake von ${label} abgelehnt (lokal ausgeblendet).`)
+    },
+    [dismissPendingHandshake, directory]
   )
 
   const handleUseSenderAsPartnerFromInbox = useCallback(
@@ -387,12 +403,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onRefresh: () => {
       void loadMessages('reset')
       refreshContactDirectory()
+      void reloadPendingHandshakes()
     },
     pendingHandshakeOffers,
     pendingHandshakesLoading,
+    pendingHandshakeCount: pendingHandshakeOffers.length,
     sending,
     onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
     onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
+    onRejectPendingHandshake: handleRejectHandshakeFromInbox,
     loading,
     loadingMore,
     loadMoreInbox,
@@ -529,6 +548,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       await loadMessages('reset')
     },
     contactDirectory: directory,
+    isGroupChannel: isGroup,
+    groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
+    groupMemberCount: isGroup && activeGroup ? groupMailboxTargetCount(activeGroup, myAddress) : 0,
     partner,
     onPartnerChange: setPartner,
     myAddress,
@@ -620,6 +642,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       {isGroup ? (
         <ChatViewGroupPanel
           contactDirectory={directory}
+          myAddressLine={myAddress}
           onGroupsChanged={refreshMessengerGroups}
           onOpenPhonebook={() => setPhonebookOpen(true)}
         />

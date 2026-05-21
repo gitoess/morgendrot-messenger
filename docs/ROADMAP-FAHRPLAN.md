@@ -152,6 +152,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.24** | **Package-Profile & UI** — Wechsel zwischen Einsatzumgebungen (**§ H.24b**), Capabilities pro Paket (**§ H.24a**); Backlog |
 | **§ H.25** | **Bilder über LoRa** — Produktpfad (Meshtastic) vs. Referenz-Labor (Roh-LoRa) |
 | **§ H.26** | **Telegram-Integration (Runtime)** — Alarme + optionale Kontakt-Benachrichtigung; **kein** `.env` für `TG_*` auf dem Gerät; **§ H.6e** / **§ H.20** |
+| **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling; Push/Purge Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
+| **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
 
@@ -1079,7 +1081,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **M1 (jetzt)** | **Shared Mailbox** sauber + Kanal-Klarheit | **Ist:** ein `Mailbox`-Shared-Object pro Deployment (`MAILBOX_ID`); DF `MsgKey` / `HsKey` / `PlainMsgKey`; **`MESSAGING-MAILBOX-SSOT-SPEC`** Phase A | **Ist (Teil):** Kanal **1:1** vs. **Pinnwand (Brett)**; Karte **Meine IOTA-Adresse**; Tresor-Save inkl. Signer-Import; **offen:** Phase-A-Ritual, Config-Hinweis `MAILBOX_ID` |
 | **M2** | **Gruppenchat** eigener Kanal | **v1 ohne neues Objekt:** Union-Fetch / Gruppen-State; **v2** optional Streams-Anchor oder Gruppen-E2EE | Tab **Gruppe** (nicht N×1:1 tarnen); Mitgliederliste; **§ H.12** SSOT |
 | **M3** | **Pinnwand** Einsatz | **Ist:** `BROADCAST_PINNWAND_*`, Klartext | Pinning; Moderation sichtbar; Boss **`pinnwand-admin`** |
-| **M4** | **Private Mailbox** (Erweitert) | **Neu:** `PrivateMailbox` + Owner; **nicht** Standard | **M4a:** Telefonbuch `mailboxObjectId`; **M4b–d:** Send-Routing, Kontakt-QR, eigene Mailbox |
+| **M4** | **Private Mailbox** (Erweitert) | **Neu:** `PrivateMailbox` + Owner; **nicht** Standard | **M4a:** Telefonbuch `mailboxObjectId`; **M4b–d:** Send-Routing, Kontakt-QR, eigene Mailbox; **M4e (Backlog):** vier Slots + Send-Auswahl — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 **Kritische Leitplanken:** Partner = **`0x`-Adresse**, nicht `MAILBOX_ID`. **Pinnwand ≠ Gruppenchat** (heute: Pairwise-Gruppe in Doku ≠ Produkt-Gruppenraum). **Private Mailbox** erst nach M1-Abschluss — kein paralleles `create_mailbox`-Pro-User-UI im MVP.
 
@@ -1089,16 +1091,20 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Nachtrag 2026-05-15 (Umsetzung):** **M2b** Streams-Anchor pro Gruppe + `POST /api/streams-publish`; **M3** `broadcastPinnwand` in `/api/status`, Pinnwand-Karte, Empfänger-Vorbelegung, Posteingang-Anheften; **M4b–c** Kontakt-Mailbox-Routing (API + Direct-IOTA + Hinweis), QR-Import; **M4d** nur **lokal** (Mailbox-ID + Profil-QR) — **ohne** Move **„Mailbox erstellen“** (siehe **§ H.22 M4d** / **§ H.23**).
 
+**Nachtrag 2026-05-20 (M4e):** Vier Ziel-Mailbox-Felder pro Kontakt (`mailboxSharedId`, `mailboxPrivateId`, `mailboxTeamId`, `mailboxBufferId`; Legacy `mailboxObjectId` → privat); Composer-Dropdown **Ziel-Postfach** + `localStorage` `morgendrot.contactSendMailboxSlot.v1`; QR v2 optional `ms`/`mt`/`mb`. Doku **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`**.
+
+**Nachtrag 2026-05-20 (M2a pairwise Mailbox-Send):** Gruppenkanal + **Persistent (Mailbox)** + **online** → optional **alle Mitglieder** (`morgendrot.groupMailboxSendAll.v1`, Default an): `sendMailboxPairwiseGroup` in **`use-chat-view-handle-send.ts`**, UI **`chat-view-group-panel.tsx`**. 1× Fee-Backlog: **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
+
 ### H.23 Verschlüsselung — MVP-Architektur (nächster Schwerpunkt)
 
-**Status:** **Backlog / Entscheidung offen** — **keine** klare MVP-Architektur dokumentiert und festgezogen.
+**Status:** **Backlog / Entscheidung offen** — **keine** klare MVP-Architektur dokumentiert und festgezogen. **Zwischenstand Persistenz (v1, vor Ratchet):** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`** — Chain-Handshake + Vault-`.handshakes` + Session-Restore nach Entsperren; **kein** Double Ratchet.
 
 | Option | Kurz | Offene Fragen |
 |--------|------|----------------|
 | **A — Session Keys (v1+)** | **X25519** (oder P-256 wie heute) + **XChaCha20-Poly1305** (oder AES-GCM beibehalten); pro Dialog/Handshake abgeleitete Keys | Migration von bestehendem ECDH/`/handshake`; Forward Secrecy nur bei Key-Rotation |
 | **B — Double Ratchet** | Signal-ähnlich (X3DH + Double Ratchet) | **Timing** (wann Ratchet vs. statische Session?); Move/Wire; Offline/LoRa; Vault-Layout |
 
-**Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken.
+**Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
 **Lieferreihenfolge (Vorschlag):** (1) **Architektur-Entscheid** + Threat-Model (1:1 MVP, Gruppe, Pinnwand ausgenommen). (2) **Spez** (Wire, Key-Storage, Rotation). (3) Implementierung **parallel** zu **§ H.22 M4d** Move, nicht Blocker für Klartext/Pinnwand.
 
@@ -1236,6 +1242,20 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Abgleich mit Morgendrot-Zielbild:** Dieselbe **Idee** (INIT/CHUNK/ACK/DONE) steckt im Backlog **„Pfad-4 Bildtransfer Chunk + Bitmap-ACK“** und **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`** — Umsetzung **in der App** über **Meshtastic-Nachrichten**, nicht über separates `image_file.py`.
 
 **Priorität (Labor-Hardware):** Referenz ESP32-CAM bleibt **Forschungsnotiz**; Produkt-Umsetzung = **§ H.25a** (Meshtastic).
+
+### H.27 Handshake-Anfragen — sichtbar bis Entscheidung (**Produkt / § H.0 / § H.16**)
+
+**Status:** **Teil umgesetzt** (2026-05-20). **Ist:** `GET /api/pending-handshakes`; Posteingang-Banner; **Badge** am Posteingang-Titel; **Toast** bei neuer Anfrage; **Ablehnen** (lokal `morgendrot.dismissedHandshakeOffers.v1`); Polling **~45 s** bei gesetztem `MY_ADDRESS` + offenem Tresor — **nicht** mehr an Verschlüsselt/Internet gebunden. **Doku:** **`docs/HANDSHAKE-ANFRAGEN-UX.md`**.
+
+| # | Lieferung | Status |
+|---|-----------|--------|
+| 1 | Polling + Posteingang-Liste Annehmen/Ablehnen | **Ist** |
+| 2 | Toast + Badge | **Ist** |
+| 3 | Push (PWA/Android § H.6f) | Backlog |
+| 4 | Ablehnen + on-chain `/purge-handshake` | Backlog |
+| 5 | Eigene Inbox-Zeile „Handshake-Anfrage von …“ | Backlog |
+
+**Verknüpfung:** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, **§ H.23** (Ratchet später).
 
 ### H.26 Telegram-Integration — Runtime statt `TG_*` in `.env` (**Produkt / § H.6e / § H.16**)
 

@@ -15,15 +15,21 @@ import {
   writeActiveGroupId,
   type MessengerGroupDefinition,
 } from '@/frontend/lib/messenger-group-store'
+import {
+  groupMailboxTargetCount,
+  readGroupMailboxSendAll,
+  writeGroupMailboxSendAll,
+} from '@/frontend/lib/group-mailbox-pairwise-send'
 
 export type ChatViewGroupPanelProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
+  myAddressLine?: string
   onGroupsChanged?: () => void
   onOpenPhonebook?: () => void
 }
 
 export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
-  const { contactDirectory, onGroupsChanged, onOpenPhonebook } = p
+  const { contactDirectory, myAddressLine = '', onGroupsChanged, onOpenPhonebook } = p
   const [groups, setGroups] = useState<MessengerGroupDefinition[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -31,6 +37,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const [streamsAnchorId, setStreamsAnchorId] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [phonebookPickerOpen, setPhonebookPickerOpen] = useState(false)
+  const [sendAllMembers, setSendAllMembers] = useState(() => readGroupMailboxSendAll())
 
   const reload = useCallback(() => {
     setGroups(readMessengerGroups())
@@ -211,10 +218,31 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           ) : null}
         </div>
         {active ? (
-          <p className="text-[10px] text-muted-foreground">
-            Aktiv: <strong className="text-foreground">{active.name}</strong> — Posteingang zeigt Nachrichten mit{' '}
-            {active.memberAddresses.length} Mitgliedern.
-          </p>
+          <>
+            <p className="text-[10px] text-muted-foreground">
+              Aktiv: <strong className="text-foreground">{active.name}</strong> — Posteingang zeigt Nachrichten mit{' '}
+              {active.memberAddresses.length} Mitgliedern.
+            </p>
+            <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-md border border-border/80 bg-muted/20 px-2.5 py-2">
+              <input
+                type="checkbox"
+                checked={sendAllMembers}
+                onChange={(e) => {
+                  const v = e.target.checked
+                  setSendAllMembers(v)
+                  writeGroupMailboxSendAll(v)
+                }}
+                className="mt-0.5"
+              />
+              <span className="text-[10px] leading-snug text-muted-foreground">
+                <strong className="text-foreground">Mailbox an alle Mitglieder</strong> (online + Persistent): je
+                Mitglied eine pairwise Chain-Nachricht (
+                {groupMailboxTargetCount(active, myAddressLine)}× Fee, kein gemeinsamer Gruppenraum). Aus: nur die 0x im
+                Composer
+                unten.
+              </span>
+            </label>
+          </>
         ) : (
           <p className="text-[10px] text-amber-700 dark:text-amber-300">Keine aktive Gruppe — speichern oder aus Liste wählen.</p>
         )}

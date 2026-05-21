@@ -27,7 +27,8 @@ import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachmen
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
-import { resolveContactMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
+import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
+import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
@@ -95,6 +96,10 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onManualRefresh?: () => void | Promise<void>
   /** M4b: Kontaktverzeichnis für Mailbox-Routing-Hinweis */
   contactDirectory?: Record<string, ContactMeshEntryClient>
+  /** Gruppenkanal: Hinweis zu pairwise Mailbox-Multicast */
+  isGroupChannel?: boolean
+  groupMailboxSendAll?: boolean
+  groupMemberCount?: number
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -133,6 +138,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onMeshPlaintextNodeIdChange,
     onManualRefresh,
     contactDirectory = {},
+    isGroupChannel = false,
+    groupMailboxSendAll = false,
+    groupMemberCount = 0,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -252,15 +260,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !attachmentBarProps.attachedLora &&
     loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
-  const routedMailboxId = useMemo(
-    () => resolveContactMailboxObjectId(contactDirectory, recipient.trim()),
-    [contactDirectory, recipient]
-  )
   const persistenceMode = readMessagingPersistenceModeFromStorage()
 
   const composerIota = useMemo(
     () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
     [recipient, partner, encrypted]
+  )
+
+  const routedMailboxId = useMemo(
+    () => resolveOutboundMailboxObjectId(contactDirectory, composerIota || recipient.trim()),
+    [contactDirectory, recipient, composerIota]
   )
 
   const composerIotaField = useMemo(
@@ -455,17 +464,45 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 <option key={addr} value={addr} />
               ))}
             </datalist>
-            {routedMailboxId ? (
+            {isGroupChannel && persistenceMode === 'mailbox' ? (
+              <p className="mt-2 text-[10px] text-muted-foreground">
+                {groupMailboxSendAll ? (
+                  <>
+                    Gruppe + Persistent: Senden geht{' '}
+                    <strong className="text-foreground">pairwise</strong> an{' '}
+                    {groupMemberCount > 0 ? `${groupMemberCount} Mitglieder` : 'alle gespeicherten Mitglieder'} (
+                    {groupMemberCount}× Chain-Fee). Umschalter im Gruppen-Panel.
+                  </>
+                ) : (
+                  <>
+                    Gruppe: nur die <strong className="text-foreground">0x im Composer</strong> (ein Mitglied). „An alle“
+                    im Gruppen-Panel aktivieren.
+                  </>
+                )}
+              </p>
+            ) : null}
+            {/^0x[a-fA-F0-9]{64}$/i.test(composerIota) && !groupMailboxSendAll ? (
+              <ChatViewContactSendMailboxSelect
+                className="mt-2"
+                recipientWallet={composerIota}
+                contactDirectory={contactDirectory}
+                serverMailboxId={apiStatus?.mailboxId}
+              />
+            ) : null}
+            {routedMailboxId && persistenceMode === 'mailbox' ? (
               <p className="mt-1.5 text-[11px] text-violet-800 dark:text-violet-200">
-                Empfänger-Wallet:{' '}
-                <strong className="font-mono text-[10px]">{maskWalletAddress(recipient.trim(), 10, 6)}</strong> — Speicher
-                in <strong>privater Mailbox</strong> des Kontakts ({routedMailboxId.slice(0, 10)}…
-                {routedMailboxId.slice(-6)}), nicht im Einsatz-Postamt.
+                On-chain Postfach:{' '}
+                <span className="font-mono text-[10px]">
+                  {routedMailboxId.slice(0, 10)}…{routedMailboxId.slice(-6)}
+                </span>
+                {' '}
+                (Empfänger-Wallet{' '}
+                <strong className="font-mono">{maskWalletAddress(composerIota || recipient.trim(), 10, 6)}</strong>)
               </p>
             ) : persistenceMode === 'mailbox' ? (
               <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Empfänger = <strong className="text-foreground">Wallet 0x</strong> (Telefonbuch). Ohne private
-                Mailbox-ID im Kontakt gilt die <strong className="text-foreground">Shared-Mailbox</strong> des Servers.
+                Empfänger = <strong className="text-foreground">Wallet 0x</strong>. Ziel-Postfach wählbar, sobald im
+                Telefonbuch Mailbox-IDs hinterlegt sind.
               </p>
             ) : null}
           </div>
