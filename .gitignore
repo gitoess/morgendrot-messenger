@@ -66,6 +66,9 @@ tools/ffmpeg/bin/*.dll
 exports/**/.env
 exports/**/config.json
 exports/**/template*.json
+# Move-Build-Artefakte (reproduzierbar per `sui move build`)
+move-test/build/
+
 # Move-Build-Artefakte in Export-Bäumen (groß, reproduzierbar per build)
 exports/**/move-test/build/
 
