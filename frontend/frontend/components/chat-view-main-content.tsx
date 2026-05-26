@@ -33,6 +33,7 @@ import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
+import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
@@ -750,6 +751,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           refreshContactDirectory={refreshContactDirectory}
           connectedAddresses={apiStatus?.connectedAddresses ?? []}
           onSelectContact={applyPhonebookContact}
+          teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
           setStatusMsg={(msg) => {
             setStatus('success')
             setStatusMsg(msg)

@@ -3,7 +3,7 @@
 **Zweck:** Ein **kanonisches Zielbild** für zwei Produktlinien im **gleichen** Messenger-Code — **Consumer** (Privatpersonen, Prepper, Freiwillige) und **Einsatz** (Feuerwehr, THW, Polizei, Hilfsorganisation) mit Hierarchie **Boss → Kommandant → Arbeiter**.
 
 **Stand:** 2026-05-21  
-**Status:** **Spezifikation / Zielbild** — Teile sind im Code schon da (`ROLE`, `permissions`, Team-Mailbox), Teile sind **Backlog** (siehe § 8).
+**Status:** **Spezifikation + Schritt 2 (Teil)** — `deploymentProfile`, `teamManage`, Team-Gate und UI-Gates in Code; Mitgliederverwaltung Team weiter Phase 2.
 
 **Verwandt:** **`docs/ARCHITECTURE-ROLES-AND-HUB.md`**, **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`**, **`docs/UI-ROLLEN-WORKSPACES.md`**, **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`**, **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**, **`docs/TEAM-MAILBOXES.md`**, **`docs/DEV-START.md`**, Roadmap **§ H.3g**, **§ H.17**, **§ H.24**.
 
@@ -119,10 +119,10 @@ Relevante Felder (Ist + Zielbild):
 | Feld | Bedeutung |
 |------|-----------|
 | **`role`** | Grobe Geräteklasse: `boss`, `kommandant`, `arbeiter`, `messenger`, … |
-| **`permissions`** | Aus **`getHierarchyPermissions(role)`** in **`src/config.ts`**: u. a. `commandDown`, `keyIssue`, `revokeDown`, `statusReadDown`, `statusReadUp`, **`configChange`**, `hierarchyChange` |
+| **`permissions`** | Aus **`getHierarchyPermissions(role)`** in **`src/config.ts`**: u. a. `commandDown`, `keyIssue`, `revokeDown`, `statusReadDown`, `statusReadUp`, **`configChange`**, `hierarchyChange`, **`teamManage`** |
 | **`roleId`** | **`ROLE_ID`** 0–63 (Feinrechte Bits) |
 | **`uiVariant`** | `messenger` vs. volles Dashboard — **`docs/UI-ROLLEN-WORKSPACES.md`** § 5–6 |
-| **`deploymentProfile`** | **Zielbild (Backlog § H.24):** `consumer` \| `einsatz` — steuert, ob Einsatz-Admin-UI überhaupt angeboten wird |
+| **`deploymentProfile`** | `consumer` \| `einsatz` — steuert Einsatz-Admin-UI (`CFG.DEPLOYMENT_PROFILE`, **`GET /api/status`**) |
 | **`locked`** | Tresor gesperrt → On-Chain-Signatur blockiert; **kein** Ersatz für Rollenprüfung |
 
 **Nicht** für Boss-Erkennung:
@@ -311,18 +311,15 @@ Boss **100 %** = Messenger **plus** Werkstatt — nicht nur extra Tabs im Chat
 
 | Thema | Zielbild (dieses Dokument) | Ist (2026-05) |
 |-------|---------------------------|---------------|
-| **`ROLE=messenger` + `configChange`** | Consumer: **kein** Admin | **`getHierarchyPermissions`:** `messenger` → **`configChange: true`** — widerspricht Consumer-Ziel |
-| **Kommandant + Team erstellen** | ✅ | UI/API: **`/create-team-mailbox`** **ohne** Rollen-Gate |
-| **`deploymentProfile` in `/api/status`** | `consumer` \| `einsatz` | **Backlog** § H.24 |
-| **`permissions.teamManage`** | Kommandant | **Nicht** implementiert — nur feste Hierarchie-Flags |
+| **`ROLE=messenger` + `configChange`** | Consumer: **kein** Admin | **`getHierarchyPermissions`:** bei **`deploymentProfile=consumer`** → **`configChange: false`** |
+| **Kommandant + Team erstellen** | ✅ | **`/create-team-mailbox`** + UI: **`permissions.teamManage`** (Boss/Kommandant) |
+| **`deploymentProfile` in `/api/status`** | `consumer` \| `einsatz` | **`CFG.DEPLOYMENT_PROFILE`** + Heuristik (`ROLE`, `UI_VARIANT`, `MESSENGER_EDITION`) |
+| **`permissions.teamManage`** | Kommandant + Boss | **Implementiert** in `getHierarchyPermissions` + `canCreateTeamMailbox` |
 | **Mitgliederverwaltung Team** | Phase 2 | Nur lokales Beitreten per ID |
 
-**Geplante Code-Schritte** (Roadmap, keine Pflicht-Reihenfolge):
+**Erledigt (Schritt 2):** `deploymentProfile` in Status; Consumer ohne Admin-Flags; `teamManage`-Gate API + UI; Einsatz-Vorlagen nur `einsatz` + Boss/Kommandant.
 
-1. **`deploymentProfile`** in Status + Consumer-Bundle setzen.
-2. **`getHierarchyPermissions`:** Consumer/`messenger`-Deploy → `configChange: false`; Kommandant → `teamManage: true` (neues Flag).
-3. **Gate** `/create-team-mailbox` → `role ∈ {kommandant, boss}`.
-4. UI: Admin-Panels nur bei `deploymentProfile=einsatz` **und** passenden `permissions`.
+**Offen:** Consumer-Bundle explizit `DEPLOYMENT_PROFILE=consumer` in Export-Skripten; weitere Admin-UI-Gates (Boss-Werkstatt, Runtime); Phase-2-Team-Mitgliederverwaltung.
 
 ---
 

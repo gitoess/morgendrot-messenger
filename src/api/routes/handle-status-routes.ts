@@ -12,6 +12,7 @@ import {
     getSignerConfigSource,
     getWalletDerivationPathConfigSource,
     refreshIdentityCfgFromDotenv,
+    resolveDeploymentProfile,
     type HierarchyPermissions,
 } from '../../config.js';
 import {
@@ -166,6 +167,7 @@ export async function handleStatusRoutes(
             role: CFG.ROLE,
             roleId: CFG.ROLE_ID,
             permissions: perms,
+            deploymentProfile: CFG.DEPLOYMENT_PROFILE ?? resolveDeploymentProfile(CFG.ROLE),
             streams: {
                 active: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
                 anchorId: CFG.STREAMS_ANCHOR_ID ? mask(CFG.STREAMS_ANCHOR_ID, 12) : undefined,

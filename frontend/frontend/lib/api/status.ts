@@ -13,6 +13,7 @@ export type HierarchyPermissions = {
   statusReadUp?: boolean
   configChange?: boolean
   hierarchyChange?: boolean
+  teamManage?: boolean
 }
 
 /** Tresor-Status aus GET /api/status (Punkt 5 Marktreife: Listen-Ansicht + Sync-Status). */
@@ -24,6 +25,8 @@ export type VaultStatus = {
 /** Backend-Status (GET /api/status): backendRunning, locked, connected, role, roleId, vaultStatus, … */
 export type ApiStatus = {
   backendRunning?: boolean
+  /** Frontend: aus getStatus() zusätzlich zu backendRunning. */
+  backendOnline?: boolean
   locked?: boolean
   connected?: boolean
   hasKeys?: boolean
@@ -39,6 +42,9 @@ export type ApiStatus = {
   /** Server-MAILBOX_ID (Einsatz-Postfach), wenn konfiguriert. */
   mailboxId?: string
   mailboxIdMasked?: string
+  /** Posteingang-Union (Events / MsgKey) — Diagnose nach Package-/Mailbox-Wechsel. */
+  inboxUnionPackageIds?: string[]
+  inboxUnionMailboxIds?: string[]
   mailboxStorePlaintext?: boolean
   messengerEdition?: 'standalone' | 'sales'
   messengerCreditsConfigured?: boolean
@@ -71,6 +77,8 @@ export type ApiStatus = {
   runtimeConfigKeys?: string[]
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
+  /** consumer = Privat/Prepper; einsatz = Organisation mit Stab (GET /api/status). */
+  deploymentProfile?: 'consumer' | 'einsatz'
   /** false: API-Port liefert keine statische ui/index.html. */
   serveLiteUiStatic?: boolean
   /** Backend nutzt SOCKS5 für IOTA-RPC (z. B. Tor). */

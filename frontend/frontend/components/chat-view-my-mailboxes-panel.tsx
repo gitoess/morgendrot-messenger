@@ -84,6 +84,8 @@ export type ChatViewMyMailboxesPanelProps = {
   onApplySendRecipient?: (walletAddress: string) => void
   onStatus?: (msg: string, kind: 'success' | 'error') => void
   onMailboxActivated?: () => void
+  /** false = Team-Mailbox erstellen ausblenden (Citizen / Arbeiter). Default: ausgeblendet. */
+  teamMailboxCreateAllowed?: boolean
 }
 
 export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
@@ -322,18 +324,24 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
               <UserRoundPlus className="h-3 w-3" />
               Beitreten (ID/QR)
             </button>
-            <ChatViewTeamMailboxCreateButton
-              walletValid={walletValid}
-              onObjectId={(id) => {
-                reload()
-                setAssignMbId(id)
-              }}
-              onStatus={p.onStatus}
-            />
+            {p.teamMailboxCreateAllowed ? (
+              <ChatViewTeamMailboxCreateButton
+                walletValid={walletValid}
+                onObjectId={(id) => {
+                  reload()
+                  setAssignMbId(id)
+                }}
+                onStatus={p.onStatus}
+              />
+            ) : null}
           </div>
         </div>
         {teamList.length === 0 ? (
-          <p className="text-[10px] text-muted-foreground">Noch keine Team-Mailbox — erstellen oder ID eintragen.</p>
+          <p className="text-[10px] text-muted-foreground">
+            {p.teamMailboxCreateAllowed
+              ? 'Noch keine Team-Mailbox — erstellen oder ID eintragen.'
+              : 'Noch keine Team-Mailbox — per ID/QR beitreten, wenn die Leitung eine teilt.'}
+          </p>
         ) : (
           <ul className="space-y-1.5">
             {teamList.map((entry) =>

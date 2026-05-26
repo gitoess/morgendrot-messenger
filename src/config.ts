@@ -903,6 +903,8 @@ export function getWalletDerivationPathConfigSource(): 'env' | 'runtime' {
     return runtimeWalletDerivationPathSource;
 }
 
+export type DeploymentProfile = 'consumer' | 'einsatz';
+
 export const CFG = {
     // --- Netzwerk ---
     RPC_URL: process.env.RPC_URL || 'https://api.testnet.iota.cafe',
@@ -1254,6 +1256,18 @@ export const CFG = {
         const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
         return v === 'messenger' ? 'messenger' : 'full';
     })(),
+    /** consumer = Privat/Prepper; einsatz = Organisation mit Stab. Env: DEPLOYMENT_PROFILE oder abgeleitet aus ROLE/UI. */
+    DEPLOYMENT_PROFILE: ((): DeploymentProfile => {
+        const explicit = (process.env.DEPLOYMENT_PROFILE || '').trim().toLowerCase();
+        if (explicit === 'consumer' || explicit === 'einsatz') return explicit;
+        const r = (process.env.ROLE || 'messenger').trim().toLowerCase();
+        if (r === 'boss' || r === 'kommandant' || r === 'arbeiter') return 'einsatz';
+        const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
+        if (edition === 'sales') return 'consumer';
+        const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
+        if (v === 'messenger') return 'consumer';
+        return 'einsatz';
+    })(),
     /** Geheimnis-Peering: max. Wartezeit (ms) für /pairing-wait. Default 120000, min 15000. */
     PAIRING_WAIT_TIMEOUT_MS: Math.max(15_000, envInt('PAIRING_WAIT_TIMEOUT_MS', 120_000)),
     /** Max. PairingOffer-Kandidaten pro /pairing-find (RPC-Pagination). 10–2000, Default 250. */
@@ -1354,7 +1368,20 @@ export function getEffectiveAuthorizedSenders(): string[] {
     return [];
 }
 
-/** Rechte-Matrix Ameisen: Boss ⊇ Kommandant ⊇ Arbeiter. Nur bei ROLE boss/kommandant/arbeiter; sonst alle true (keine Filterung). */
+/** Produktmodus: explizites DEPLOYMENT_PROFILE oder Heuristik aus ROLE / UI_VARIANT / Edition. */
+export function resolveDeploymentProfile(role?: string): DeploymentProfile {
+    const explicit = (process.env.DEPLOYMENT_PROFILE || '').trim().toLowerCase();
+    if (explicit === 'consumer' || explicit === 'einsatz') return explicit;
+    const r = String(role ?? CFG.ROLE ?? 'messenger').trim().toLowerCase();
+    if (r === 'boss' || r === 'kommandant' || r === 'arbeiter') return 'einsatz';
+    const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
+    if (edition === 'sales') return 'consumer';
+    const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
+    if (v === 'messenger') return 'consumer';
+    return 'einsatz';
+}
+
+/** Rechte-Matrix Ameisen: Boss ⊇ Kommandant ⊇ Arbeiter. Consumer ohne Hierarchie-Rolle: keine Admin-Rechte. */
 export type HierarchyPermissions = {
     commandDown: boolean;   // Befehl senden (Boss→K/A, K→A)
     keyIssue: boolean;     // Schlüssel ausstellen (nur Boss)
@@ -1363,6 +1390,7 @@ export type HierarchyPermissions = {
     statusReadUp: boolean;   // Status von oben lesen (K→Boss, A→Boss+K)
     configChange: boolean;  // Konfig ändern (nur Boss)
     hierarchyChange: boolean; // Hierarchie ändern (nur Boss)
+    teamManage: boolean; // Team-Mailbox erstellen (Boss + Kommandant)
 };
 
 const HIERARCHY_KEYS = new Set(['ROLE', 'ROLE_ID', 'BOSS_ADDRESS', 'KOMMANDANT_ADDRESSES', 'WORKER_ADDRESSES', 'DEVICE_ROLES']);
@@ -1389,16 +1417,64 @@ export function getHierarchyPermissions(role: string): HierarchyPermissions {
     const cfg = on(CFG.ENABLE_CONFIG_CHANGE);
     const hier = on(CFG.ENABLE_HIERARCHY_CHANGE);
     if (r !== 'boss' && r !== 'kommandant' && r !== 'arbeiter') {
-        return { commandDown: true, keyIssue: true, revokeDown: true, statusReadDown: true, statusReadUp: true, configChange: true, hierarchyChange: true };
+        if (resolveDeploymentProfile(r) === 'consumer') {
+            return {
+                commandDown: false,
+                keyIssue: false,
+                revokeDown: false,
+                statusReadDown: false,
+                statusReadUp: false,
+                configChange: false,
+                hierarchyChange: false,
+                teamManage: false,
+            };
+        }
+        return {
+            commandDown: true,
+            keyIssue: true,
+            revokeDown: true,
+            statusReadDown: true,
+            statusReadUp: true,
+            configChange: true,
+            hierarchyChange: true,
+            teamManage: false,
+        };
     }
     if (r === 'boss') {
-        return { commandDown: cmd, keyIssue: key, revokeDown: rev, statusReadDown: down, statusReadUp: true, configChange: cfg, hierarchyChange: hier };
+        return {
+            commandDown: cmd,
+            keyIssue: key,
+            revokeDown: rev,
+            statusReadDown: down,
+            statusReadUp: true,
+            configChange: cfg,
+            hierarchyChange: hier,
+            teamManage: true,
+        };
     }
     if (r === 'kommandant') {
-        return { commandDown: cmd, keyIssue: false, revokeDown: rev, statusReadDown: down, statusReadUp: up, configChange: false, hierarchyChange: false };
+        return {
+            commandDown: cmd,
+            keyIssue: false,
+            revokeDown: rev,
+            statusReadDown: down,
+            statusReadUp: up,
+            configChange: false,
+            hierarchyChange: false,
+            teamManage: true,
+        };
     }
     // arbeiter: nur Status von oben lesen
-    return { commandDown: false, keyIssue: false, revokeDown: false, statusReadDown: false, statusReadUp: up, configChange: false, hierarchyChange: false };
+    return {
+        commandDown: false,
+        keyIssue: false,
+        revokeDown: false,
+        statusReadDown: false,
+        statusReadUp: up,
+        configChange: false,
+        hierarchyChange: false,
+        teamManage: false,
+    };
 }
 
 /** Maskiert sensible Werte für Anzeige (Token/Passwort nie im Klartext). */
@@ -1567,6 +1643,7 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'ENABLE_UI', value: String(CFG.ENABLE_UI), envKey: 'ENABLE_UI' },
         { key: 'MESSENGER_EDITION', value: CFG.MESSENGER_EDITION, envKey: 'MESSENGER_EDITION' },
         { key: 'UI_VARIANT', value: CFG.UI_VARIANT, envKey: 'UI_VARIANT' },
+        { key: 'DEPLOYMENT_PROFILE', value: CFG.DEPLOYMENT_PROFILE, envKey: 'DEPLOYMENT_PROFILE' },
         { key: 'SERVE_LITE_UI_STATIC', value: String(CFG.SERVE_LITE_UI_STATIC), envKey: 'SERVE_LITE_UI_STATIC' },
         { key: 'PAIRING_WAIT_TIMEOUT_MS', value: String(CFG.PAIRING_WAIT_TIMEOUT_MS), envKey: 'PAIRING_WAIT_TIMEOUT_MS' },
         { key: 'PAIRING_FIND_MAX_CANDIDATES', value: String(CFG.PAIRING_FIND_MAX_CANDIDATES), envKey: 'PAIRING_FIND_MAX_CANDIDATES' },

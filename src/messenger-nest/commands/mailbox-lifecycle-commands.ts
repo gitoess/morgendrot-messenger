@@ -1,7 +1,7 @@
 /**
  * Mailbox-Lebenszyklus: private/team erstellen, private aufräumen/löschen.
  */
-import { CFG } from '../../config.js';
+import { CFG, getHierarchyPermissions } from '../../config.js';
 import {
     cleanupPrivateMailbox,
     createPrivateMailbox,
@@ -62,6 +62,12 @@ export async function tryHandleMailboxLifecycleCommand(
     }
 
     if (c === '/create-team-mailbox') {
+        if (!getHierarchyPermissions(CFG.ROLE).teamManage) {
+            return {
+                ok: false,
+                message: 'Team-Mailbox erstellen nur für Kommandant oder Boss (Einsatz-Rolle).',
+            };
+        }
         if (!CFG.PACKAGE_ID) return { ok: false, message: 'PACKAGE_ID fehlt.' };
         try {
             const res = await createTeamMailbox(MY_ADDR, pw, sponsorOpts);

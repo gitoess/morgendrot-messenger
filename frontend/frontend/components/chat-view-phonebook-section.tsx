@@ -44,6 +44,7 @@ export type ChatViewPhonebookSectionProps = {
   onSelectContact?: (storageKey: string, entry: ContactMeshEntryClient) => void
   /** Im Sheet: kein eigener Seitentitel (steht in SheetHeader). */
   embedded?: boolean
+  teamMailboxCreateAllowed?: boolean
 }
 
 type ContactRow = {
@@ -289,6 +290,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
                 : undefined
             }
             onStatus={(msg, kind) => setStatusMsg(kind === 'error' ? `⚠ ${msg}` : msg)}
+            teamMailboxCreateAllowed={p.teamMailboxCreateAllowed}
           />
         </div>
       ) : null}

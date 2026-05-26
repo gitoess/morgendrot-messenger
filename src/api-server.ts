@@ -154,6 +154,12 @@ export type ApiStatus = {
     };
     /** Lite-UI: full oder messenger (nur Nachrichten-Fluss). */
     uiVariant?: 'full' | 'messenger';
+    /** consumer = Privat/Prepper; einsatz = Organisation mit Stab. */
+    deploymentProfile?: 'consumer' | 'einsatz';
+    /** Geräteklasse aus CFG.ROLE. */
+    role?: string;
+    roleId?: number;
+    permissions?: import('./config.js').HierarchyPermissions;
     /** standalone = klassischer Messenger; sales = Kunden-Bundle (Schatten-Seed / Sweep). */
     messengerEdition?: 'standalone' | 'sales';
     /** MAILBOX_STORE_PLAINTEXT: Klartext zusätzlich in Mailbox speichern (purgebar). */
@@ -165,6 +171,10 @@ export type ApiStatus = {
     /** Volle Server-MAILBOX_ID (Einsatz-Postfach), wenn konfiguriert. */
     mailboxId?: string;
     mailboxIdMasked?: string;
+    /** Posteingang-Union: alle Package-IDs (Events), die /inbox scannt. */
+    inboxUnionPackageIds?: string[];
+    /** Posteingang-Union: alle Mailbox-IDs (MsgKey), die /inbox scannt. */
+    inboxUnionMailboxIds?: string[];
     /** M3: Pinnwand-Konfiguration (ohne Geheimnisse außer freigegebener Broadcast-Adresse). */
     broadcastPinnwand?: {
         enabled: boolean;

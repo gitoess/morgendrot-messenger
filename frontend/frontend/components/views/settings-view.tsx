@@ -29,6 +29,10 @@ import {
   saveEinsatzRoleTemplates,
   type ApiStatus,
 } from '@/frontend/lib/api'
+import {
+  canEditEinsatzRoleTemplates,
+  canViewEinsatzRoleTemplatesSection,
+} from '@/frontend/lib/messenger-role-capabilities'
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
@@ -97,8 +101,11 @@ export function SettingsView({
 
   const [firstStepsBarVisible, setFirstStepsBarVisible] = useState(true)
 
-  const canManageEinsatzRoleTemplates =
-    status?.role === 'boss' || status?.role === 'messenger'
+  const roleCapsStatus: ApiStatus | null = advancedIotaStatus
+    ? { ...advancedIotaStatus, backendOnline: status?.backendOnline }
+    : null
+  const showEinsatzRoleTemplates = canViewEinsatzRoleTemplatesSection(roleCapsStatus)
+  const canSaveEinsatzRoleTemplates = canEditEinsatzRoleTemplates(roleCapsStatus)
 
   const loadRoleTemplates = async () => {
     setRoleTemplatesMsg('')
@@ -123,6 +130,10 @@ export function SettingsView({
     setRoleTemplatesMsg('')
     if (!status?.backendOnline) {
       setRoleTemplatesMsg('Backend offline.')
+      return
+    }
+    if (!canSaveEinsatzRoleTemplates) {
+      setRoleTemplatesMsg('Speichern nur für Boss (configChange).')
       return
     }
     let parsed: unknown
@@ -156,8 +167,7 @@ export function SettingsView({
   }
 
   useEffect(() => {
-    const r = status?.role
-    if (!status?.backendOnline || (r !== 'boss' && r !== 'messenger')) return
+    if (!showEinsatzRoleTemplates || !status?.backendOnline) return
     let cancelled = false
     void (async () => {
       const res = await fetchEinsatzRoleTemplates()
@@ -169,7 +179,7 @@ export function SettingsView({
     return () => {
       cancelled = true
     }
-  }, [status?.role, status?.backendOnline])
+  }, [showEinsatzRoleTemplates, status?.backendOnline])
 
   const loadStatus = async () => {
     setLoading(true)
@@ -337,7 +347,7 @@ export function SettingsView({
         auf dem <strong className="text-foreground">Haupt-Dashboard</strong> (Kachel-Ansicht).
       </p>
 
-      {canManageEinsatzRoleTemplates ? (
+      {showEinsatzRoleTemplates ? (
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-violet-300">
@@ -350,6 +360,12 @@ export function SettingsView({
                   <strong className="text-foreground">Wozu?</strong> Vorgefertigte <strong>Rollen-Labels und Kurztexte</strong>, die
                   der Boss beim Anlegen oder Zuweisen von Geräten/Workern nutzen kann (kein Chat-Inhalt). Landet in{' '}
                   <span className="font-mono text-xs">.morgendrot-einsatz-templates.json</span> am Backend (API wie Lite-Provisioning).
+                  {!canSaveEinsatzRoleTemplates ? (
+                    <>
+                      {' '}
+                      <strong className="text-foreground">Kommandant:</strong> nur Lesen — Speichern nur Boss.
+                    </>
+                  ) : null}{' '}
                   Spezifikation:{' '}
                   <Link
                     href="/handbook/API-EINSATZ-ROLE-TEMPLATES.md"
@@ -369,7 +385,8 @@ export function SettingsView({
                 onChange={(e) => setRoleTemplatesJson(e.target.value)}
                 className="min-h-[160px] font-mono text-xs"
                 spellCheck={false}
-                disabled={roleTemplatesBusy || !status?.backendOnline}
+                disabled={roleTemplatesBusy || !status?.backendOnline || !canSaveEinsatzRoleTemplates}
+                readOnly={!canSaveEinsatzRoleTemplates}
               />
               <div className="flex flex-wrap gap-2">
                 <button
@@ -380,14 +397,16 @@ export function SettingsView({
                 >
                   Vom Backend laden
                 </button>
-                <button
-                  type="button"
-                  disabled={roleTemplatesBusy || !status?.backendOnline}
-                  onClick={() => void saveRoleTemplates()}
-                  className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {roleTemplatesBusy ? '…' : 'Speichern'}
-                </button>
+                {canSaveEinsatzRoleTemplates ? (
+                  <button
+                    type="button"
+                    disabled={roleTemplatesBusy || !status?.backendOnline}
+                    onClick={() => void saveRoleTemplates()}
+                    className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {roleTemplatesBusy ? '…' : 'Speichern'}
+                  </button>
+                ) : null}
               </div>
               {roleTemplatesMsg ? (
                 <p className="text-xs text-muted-foreground" role="status">

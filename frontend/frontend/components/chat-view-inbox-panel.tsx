@@ -20,6 +20,7 @@ import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-
 import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
+import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -183,6 +184,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             onApplySendRecipient={onApplySendRecipient}
             onStatus={onMailboxPanelStatus}
             onMailboxActivated={toolbarProps.onRefresh}
+            teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
           />
         </div>
       ) : null}
