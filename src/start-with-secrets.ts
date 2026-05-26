@@ -12,7 +12,7 @@ import './install-webcrypto-node.js';
 import dotenv from 'dotenv';
 import { loadEncryptedEnvIfConfigured } from './load-secrets.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Verhindern, dass ein einzelner Fehler (z. B. in /list-tickets) den ganzen Server beendet
 process.on('unhandledRejection', (reason, promise) => {
@@ -29,7 +29,7 @@ const loaded = await loadEncryptedEnvIfConfigured();
 if (loaded) {
     console.log('Verschlüsselte Env-Variablen geladen.');
     // .env erneut laden, damit UI-Änderungen (Setzen) die verschlüsselten Werte übersteuern
-    dotenv.config({ override: true });
+    dotenv.config({ override: true, quiet: true });
 }
 // App starten (wallet-bridge lädt config, das nun process.env inkl. .env-Overrides sieht)
 await import('./wallet-bridge.js');

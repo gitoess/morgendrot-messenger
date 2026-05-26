@@ -421,10 +421,12 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
         recentOutgoingTextPacketIdsRef.current.delete(outgoingId)
         return
       }
+      const ts = normalizeMeshRxTimestamp(rxMs)
+      /** onMessagePacket + onMeshPacket feuern oft für dasselbe Paket — ein Emit pro (from, id, ts). */
+      if (markSeen(`mesh:emit:${fromNum}:${packetId}:${ts}`, ts)) return
       // Manche Firmware/Bridges können packetId wiederverwenden; deshalb Content einbeziehen,
       // damit neue Texte nicht fälschlich als Duplikat verworfen werden.
       const dedup = `txt:${fromNum}:${packetId}:${body}`
-      const ts = normalizeMeshRxTimestamp(rxMs)
       if (markSeen(dedup, ts)) return
       const fromMesh = formatMeshtasticNodeIdFromNum(fromNum)
       // Für eingehende Mesh-Textzeilen keine aggressive Cross-Source-Dedup erzwingen.

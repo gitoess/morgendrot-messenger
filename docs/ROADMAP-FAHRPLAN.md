@@ -25,7 +25,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M2a–M4b/c (UI)** weitgehend umgesetzt (Commits 2026-05-15, `b914811`). **Offen:** **§ H.22 M4d** Move `create_private_mailbox` — **✓ umgesetzt + deployt 2026-05-20** (Testnet `0x014ef8…a1c7`). **Neu priorisiert (§ H.25a):** **LoRa-Bild „Flüchtig“** — `sendLoraImageViaMorgSegV1`, Sender-NAK-Loop, Hard-Cap **12 KB**, Vorschau/ETA — **vor** großem **§ H.23**-Ratchet-Bau. **Danach:** **§ H.23** Verschlüsselungs-MVP. Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.1a**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke nach Schreibtisch-Scheibe. **Backlog:** **§ H.24** Package-Profile & package-abhängige UI (**§ H.24b** Wechsel ≠ Chat-Raum — **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**).
+**Nächste konkrete Schritte:** Zuerst **§ C.0b** (Tabelle **Stufe 0–1**) **und** die **„nächsten drei“** am Schreibtisch. **Mailbox/Kanäle:** **§ H.22 M4d** **✓ 2026-05-20**. **Rollen (Consumer/Einsatz):** **`deploymentProfile` + `teamManage` + Team-Gate** **✓ 2026-05-21** (`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md` §8). **§ H.27** Handshake-Anfragen (Toast, Badge, Ablehnen) **✓ 2026-05-21**. **Priorisiert:** **§ H.25a** LoRa-Bild „Flüchtig“ — Abnahme/Lücken (Vitest + Feld). **Danach:** **§ H.23** Verschlüsselungs-MVP. Parallel: **§ H.2** / **`check:pwa-desk`**, **§ H.0**; **§ H.15 Stufe 2** Handy-Smoke zuletzt. **Backlog:** **§ H.24** Package-Profile (**§ H.24b**).
 
 ### Ist das der „komplette“ Plan? Heltec, Firmware, …
 
@@ -1245,7 +1245,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.27 Handshake-Anfragen — sichtbar bis Entscheidung (**Produkt / § H.0 / § H.16**)
 
-**Status:** **Teil umgesetzt** (2026-05-20). **Ist:** `GET /api/pending-handshakes`; Posteingang-Banner; **Badge** am Posteingang-Titel; **Toast** bei neuer Anfrage; **Ablehnen** (lokal `morgendrot.dismissedHandshakeOffers.v1`); Polling **~45 s** bei gesetztem `MY_ADDRESS` + offenem Tresor — **nicht** mehr an Verschlüsselt/Internet gebunden. **Doku:** **`docs/HANDSHAKE-ANFRAGEN-UX.md`**.
+**Status:** **Ist (2026-05-21).** `GET /api/pending-handshakes`; Posteingang-Banner; **Badge** am Posteingang-Titel; **Toast** bei neuer Anfrage; **Ablehnen** (lokal `morgendrot.dismissedHandshakeOffers.v1`); Polling **~45 s** bei gesetztem `MY_ADDRESS` + offenem Tresor — **nicht** an Verschlüsselt/Internet gebunden; **Handshake-Cache** beim Entsperren/API-Start. **Doku:** **`docs/HANDSHAKE-ANFRAGEN-UX.md`**, **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**.
 
 | # | Lieferung | Status |
 |---|-----------|--------|

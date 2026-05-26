@@ -8,14 +8,14 @@ import './install-webcrypto-node.js';
 import dotenv from 'dotenv';
 import { loadEncryptedEnvIfConfigured } from './load-secrets.js';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 if (process.env.ENABLE_UI === undefined || process.env.ENABLE_UI === '') {
     process.env.ENABLE_UI = 'false';
 }
 const loaded = await loadEncryptedEnvIfConfigured();
 if (loaded) {
     console.log('Verschlüsselte Env-Variablen geladen.');
-    dotenv.config({ override: true });
+    dotenv.config({ override: true, quiet: true });
 }
 if (process.env.ENABLE_UI === undefined || process.env.ENABLE_UI === '') {
     process.env.ENABLE_UI = 'false';

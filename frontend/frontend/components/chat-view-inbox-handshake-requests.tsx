@@ -13,10 +13,11 @@ export type ChatViewInboxHandshakeRequestsProps = {
   directory: Record<string, ContactMeshEntryClient>
   onAccept: (sender: string) => void
   onUseAsPartner: (sender: string) => void
+  onReject?: (sender: string, nonce: string) => void
 }
 
 export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequestsProps) {
-  const { offers, loading = false, sending = false, directory, onAccept, onUseAsPartner } = p
+  const { offers, loading = false, sending = false, directory, onAccept, onUseAsPartner, onReject } = p
 
   /** Nur bei echten Angeboten — kein „Suche Handshakes“ beim Posteingang-Aktualisieren. */
   if (offers.length === 0) return null
@@ -62,13 +63,23 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
               >
                 {sending ? '…' : 'Annehmen'}
               </button>
+              {onReject ? (
+                <button
+                  type="button"
+                  disabled={sending}
+                  onClick={() => onReject(o.sender, o.nonce)}
+                  className="rounded-md border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  Ablehnen
+                </button>
+              ) : null}
             </li>
           )
         })}
       </ul>
       <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-        „Annehmen“ = Handshake der Absender-Adresse verbinden (wie „Handshake annehmen“ oben). Noch nicht verbundene Partner
-        erscheinen hier.
+        „Annehmen“ = Handshake verbinden (wie „Handshake annehmen“). „Ablehnen“ blendet die Anfrage hier aus (bleibt on-chain
+        bis Purge). Toast + Badge erscheinen bei neuen Anfragen, auch außerhalb des Verschlüsselt-Schalters.
       </p>
     </div>
   )

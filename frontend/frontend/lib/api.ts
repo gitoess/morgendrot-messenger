@@ -44,6 +44,7 @@ export {
   drainOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
   nextOfflineMailboxClientOutSeq,
+  nextChainMessageNonceU64,
   offlineMailboxDedupKey,
   computeCanonicalMsgRefV1,
   stableOfflineMailboxThreadId,

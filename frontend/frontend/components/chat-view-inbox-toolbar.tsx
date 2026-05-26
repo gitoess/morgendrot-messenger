@@ -76,6 +76,8 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   offlineMailboxQueueErrorHint?: string
   onOfflineMailboxQueueRefresh?: () => void | Promise<void>
   onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
+  /** Offene Handshake-Anfragen (nicht verbunden, nicht abgelehnt). */
+  pendingHandshakeCount?: number
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -152,6 +154,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     offlineMailboxQueueErrorHint = '',
     onOfflineMailboxQueueRefresh,
     onRemoveOfflineMailboxQueueItems,
+    pendingHandshakeCount = 0,
   } = p
 
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -165,6 +168,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Posteingang</h3>
+          {pendingHandshakeCount > 0 ? (
+            <span
+              className="inline-flex min-h-6 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
+              title={`${pendingHandshakeCount} Handshake-Anfrage(n) — unten im Posteingang`}
+            >
+              <KeyRound className="h-3.5 w-3.5" aria-hidden />
+              {pendingHandshakeCount}
+            </span>
+          ) : null}
           {onToggleMailboxesPanel ? (
             <button
               type="button"

@@ -14,6 +14,8 @@ import {
     savePartnerToFile,
     ensureStreamsAnchorIdInHistory,
     seedStreamsAnchorHistoryFromKnownFiles,
+    sanitizePackageIdHistoryFile,
+    refreshIdentityCfgFromDotenv,
 } from './config.js';
 import { readPasswordMasked } from './read-password.js';
 import { getClient, getVaultFromChain } from './chain-access.js';
@@ -93,6 +95,12 @@ function logCommandResultForTerminal(r: Record<string, unknown>) {
 }
 
 async function main() {
+    const pkgHistRemoved = sanitizePackageIdHistoryFile();
+    if (pkgHistRemoved > 0) {
+        console.log(`\x1b[33mPackage-ID-History: ${pkgHistRemoved} ungültige Zeile(n) entfernt (.morgendrot-package-id-history).\x1b[0m`);
+    }
+    refreshIdentityCfgFromDotenv();
+
     const display = getConfigDisplay();
     const keyLen = Math.max(...display.map((d) => d.key.length), 12);
     console.log('\n\x1b[36m── Morgendrot Konfiguration (.env) ──\x1b[0m');
@@ -376,7 +384,19 @@ async function main() {
             setVaultPersonalSecretsBridge,
         } = await import('./api-server.js');
         const { appendAuditEvent } = await import('./audit-log.js');
+        const { tryRestoreHandshakeSessionFromVault } = await import('./messenger-nest/messenger-connect.js');
         setSessionStatus({ connected: false, hasKeys: true, connectedAddresses: [] });
+        if (vaultStateRef.current?.keys && walletPassword) {
+            const n = await tryRestoreHandshakeSessionFromVault(
+                vaultPath,
+                walletPassword,
+                getMyAddress(),
+                vaultStateRef.current.keys.privateKey,
+                sessionState,
+                setSessionStatus
+            );
+            if (n > 0) logger.info(`API-Start: ${n} Partner aus Handshake-Cache (§ H.23-Ratchet: später eigenes State-Layout).`);
+        }
         if (isRebasedStorageEnabled() && CFG.ENABLE_PURGE) {
             setPurgeAfterLieferungHandler(async (purges) => {
                 let count = 0;

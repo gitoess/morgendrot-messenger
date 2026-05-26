@@ -23,7 +23,9 @@ export async function listenForMessages(
     const seenKeys = new Set<string>();
     if (CFG.FETCH_LAST_ON_START > 0) {
         try {
-            await fetchLastMessages(myAddress, peerMap, myPrivKey, CFG.FETCH_LAST_ON_START, seenKeys);
+            await fetchLastMessages(myAddress, peerMap, myPrivKey, CFG.FETCH_LAST_ON_START, seenKeys).then(
+                (r) => r.messages
+            );
         } catch (e: any) {
             logger.warn('Fetch letzte Nachrichten beim Start fehlgeschlagen: ' + (e?.message || e));
         }
@@ -44,9 +46,13 @@ export async function listenForMessages(
             if (isRebasedStorageEnabled()) {
                 const page = await getClient().getDynamicFields({ parentId: CFG.MAILBOX_ID, limit: 200 } as any);
                 const entries = (page as any)?.data ?? [];
-                const msgEntries = entries.filter(
-                    (e: any) => e?.name?.type === typeName('MsgKey') && e?.name?.value?.recipient === myAddress
-                );
+                const msgEntries = entries.filter((e: any) => {
+                    const t = String(e?.name?.type ?? '');
+                    return (
+                        (t === typeName('MsgKey') || t.endsWith('::messaging::MsgKey')) &&
+                        e?.name?.value?.recipient === myAddress
+                    );
+                });
 
                 const ids = msgEntries.map((e: any) => e.objectId).filter(Boolean);
                 if (ids.length) {

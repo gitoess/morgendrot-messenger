@@ -87,7 +87,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
           /* optional */
         }
         setStatusMsg(
-          `${base} Danach „Handshake annehmen“ (0x oben) oder „Mit Einsatz-Partner verbinden“ (.env) — erst bei „verbunden“ verschlüsselt senden.${extra}`
+          `${base} Handshake bleibt on-chain (§ H.23: Double Ratchet später). Nach Entsperren: Partner aus Vault-Cache — einmalig Connect nur wenn Status nicht „verbunden“. Siehe docs/HANDSHAKE-PERSISTENZ-UND-H23.md.${extra}`
         )
         if (opts?.closeSetup !== false) setShowSetup(false)
       } else {
@@ -140,7 +140,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
             ? 'Wartet auf Handshake der 0x-Adresse (Server-Mailbox oder Event), antwortet automatisch.'
             : 'Nutzt PARTNER_ADDRESS / PARTNER_ADDRESSES aus der Server-.env (Einsatzleiter/Boss).'
         setStatusMsg(
-          `${backendMsg} ${modeHint} peerMap braucht oft einige Sekunden — Status im Header prüfen; verschlüsselt senden erst bei „verbunden“.`
+          `${backendMsg} ${modeHint} Nach erneutem API-Neustart: einmal Connect — danach bleibt der Handshake im Tresor-Cache (wird beim Entsperren wiederhergestellt).`
         )
         scheduleStatusRefresh()
       } else {

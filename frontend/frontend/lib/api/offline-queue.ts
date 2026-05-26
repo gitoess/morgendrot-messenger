@@ -192,6 +192,12 @@ export function nextOfflineMailboxClientOutSeq(): number {
   return getMailboxManager().nextClientOutSeq()
 }
 
+/** Eindeutige Chain-Nonce (ms) — nicht `nextOfflineMailboxClientOutSeq()` (startet bei leerer Queue immer bei 1). */
+export function nextChainMessageNonceU64(): bigint {
+  const seq = nextOfflineMailboxClientOutSeq()
+  return BigInt(Math.max(Date.now(), seq))
+}
+
 /**
  * Speichert einen fehlgeschlagenen Mailbox-Versuch — nur wenn **Opt-in** aktiv und Nutzlast klein genug.
  */

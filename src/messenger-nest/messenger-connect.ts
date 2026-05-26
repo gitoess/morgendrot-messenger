@@ -12,6 +12,68 @@ import {
 import { normalizeAddress } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { sendHandshake } from './messenger-chain-wrap.js';
+import { loadHandshakeCache } from '../vault-local.js';
+import { listenForMessages } from './messenger-listener.js';
+
+/** Nach /vault-load: gespeicherte Partner aus `.handshakes`-Cache — kein erneutes /connect nötig. */
+export async function restorePeerMapFromHandshakeCache(
+    vaultPath: string,
+    password: string
+): Promise<Map<string, PeerState>> {
+    const cached = await loadHandshakeCache(vaultPath, password);
+    const pm = new Map<string, PeerState>();
+    for (const [addr, e] of cached) {
+        const n = normalizeAddress(addr);
+        pm.set(n, {
+            address: addr,
+            pubKeyRaw: e.pubKeyRaw,
+            handshakeNonce: e.handshakeNonce,
+        });
+    }
+    return pm;
+}
+
+export function applyRestoredPeerMapToSession(
+    pm: Map<string, PeerState>,
+    myAddress: string,
+    privateKey: CryptoKey,
+    sessionState: { peerMap: Map<string, PeerState> | null; connecting: boolean },
+    setSessionStatus: (s: Record<string, unknown>) => void
+): void {
+    if (pm.size === 0 || sessionState.peerMap?.size) return;
+    sessionState.peerMap = pm;
+    setSessionStatus({
+        connected: true,
+        partnerCount: pm.size,
+        connectedAddresses: Array.from(pm.keys()),
+    });
+    if (CFG.ENABLE_LISTENER) {
+        const firstPeer = pm.values().next().value;
+        if (pm.size === 1 && firstPeer) watchHandshakeUpdates(myAddress, firstPeer);
+        listenForMessages(myAddress, pm, privateKey);
+    }
+    logger.info(`Handshake-Cache: ${pm.size} Partner wiederhergestellt (ohne erneutes /connect).`);
+}
+
+/** Nach Vault-Entsperren / API-Start: `.handshakes` → peerMap (v1; § H.23 Double Ratchet später separates State-Layout). */
+export async function tryRestoreHandshakeSessionFromVault(
+    vaultPath: string,
+    password: string,
+    myAddress: string,
+    privateKey: CryptoKey | undefined,
+    sessionState: { peerMap: Map<string, PeerState> | null; connecting: boolean },
+    setSessionStatus: (s: Record<string, unknown>) => void
+): Promise<number> {
+    if (!privateKey || !password.trim() || !vaultPath.trim()) return 0;
+    try {
+        const pm = await restorePeerMapFromHandshakeCache(vaultPath, password);
+        if (pm.size === 0) return 0;
+        applyRestoredPeerMapToSession(pm, myAddress, privateKey, sessionState, setSessionStatus);
+        return pm.size;
+    } catch {
+        return 0;
+    }
+}
 
 export async function watchHandshakeUpdates(myAddress: string, peer: PeerState) {
     while (true) {
