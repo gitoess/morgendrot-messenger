@@ -2,7 +2,9 @@
 
 **Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Mirror-/Drain-Hintergrund (Composer-**Delayed-Mirror**-UI entfernt 2026-04-20), LUMA+CHROMA **nur online mit Verschlüsselung** oder **Funk mit Pfad 4 (Klartext)** (Fahrplan Nachtrag 2026-04-20), Einsatzprotokoll-Anker, **Attestation-Manifest-Anker** (`attestation-manifest-anchor.ts` → Klartext an eigene Adresse, **ohne** Mailbox-Offline-Outbox).
 
-**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-03-28** — Funk **LoRa + Tangle**, Mirror-Drain → Forensic-Attestation **`mtx`**; ergänzt **§ H.15** nicht, verknüpft nur den Messenger-Kontext).
+**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-05-21** — Rollen **`deploymentProfile`**, **§ H.27** Handshake-Badge; **§ H.25a** LoRa-Bild Code-Ist, Feldtest offen).
+
+**Nachtrag 2026-05-21 (Schreibtisch vor Feldtest):** Nach **`deploymentProfile`/Team-Gate** und **Handshake-UX** (Badge/Toast) zusätzlich prüfen: Posteingang zeigt Handshake-Banner bei offener Anfrage; **Team-Mailbox erstellen** nur bei Einsatz-Kommandant/Boss sichtbar.
 
 ---
 
@@ -88,4 +90,4 @@
 
 ---
 
-*Stand: 2026-04-28 — Stufe 2; Runtime-vs-.env Smoke + Anhang Stufe 4 + Feldtest-Vorpruefung 2026-04-28.*
+*Stand: 2026-05-21 — Stufe 2; Nachtrag Rollen/Handshake vor Feldtest; Runtime-vs-.env Smoke + Anhang Stufe 4.*

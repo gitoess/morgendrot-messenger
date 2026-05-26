@@ -1167,7 +1167,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
 
-**Status:** **§ H.25a (2026-05-15):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt). Empfang/Reassembly unverändert **`morg-seg-v1-chat-sink`**. **Referenz-Labor** unten = **kein** Ersatz für Meshtastic-First.
+**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün. **Offen:** Feldtest zwei Heltecs (**§ H.25a #9**, **`TESTING.md`** Funk-Abschnitt).
 
 #### H.25a Umsetzungspaket „Flüchtig (LoRa)“ — **priorisiert**
 
