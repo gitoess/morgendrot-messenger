@@ -145,7 +145,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.14** | Hardening V3 (PWA-Speicher, Wipe, …) |
 | **§ H.15** | **Handy-first / Client-IOTA / optionaler Node** — **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** |
 | **§ H.16** | **Telefonbuch, QR (Ein/Aus), Boss-LAN-Onboarding** — Kontakte mit Klarnamen, QR-Fluss, Helfer installieren PWA ohne dauernd Boss-PC; **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**) |
-| **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6 |
+| **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6; **Rollen Zielbild Consumer/Einsatz:** **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`** |
 | **§ H.18** | **TTS / STT (Spracheingabe & Vorlesen)** — optional nach **§ H.0**/**H.2**: Freihand/Feld ohne Tippen, Barrierefreiheit; **Privacy** (Cloud vs. on-device), **Offline**, EU-Daten; technisch Browser-**Web Speech API** vs. native Hülle — **`docs/MESSENGER-SPRACHAUFNAHME.md`** |
 | **§ H.22** | **Messenger-Kanäle & Mailbox M1–M4** — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
 | **§ H.23** | **Verschlüsselung** — MVP-Architektur (Session Keys vs. Double Ratchet) |

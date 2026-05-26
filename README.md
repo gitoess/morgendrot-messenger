@@ -184,7 +184,7 @@ Sicherer Messenger und M2M-Lock auf IOTA Rebased: ECDH P-256, AES-GCM, Vault (lo
 | **Ameisen (Kommandant)** | `ROLE=kommandant`, `BOSS_ADDRESS`, `WORKER_ADDRESSES` | Empfängt von Boss, sendet an Arbeiter. |
 | **Ameisen (Arbeiter)** | `ROLE=arbeiter`, `BOSS_ADDRESS`, `KOMMANDANT_ADDRESSES` | Lock-Modus; akzeptiert nur von Boss + Kommandanten (AUTHORIZED_SENDERS abgeleitet). |
 
-**Rollen-Verwirrung?** `ROLE` (messenger / arbeiter / **lock** …) vs. `ROLE_ID` 0–63 (6 Rechte-Bits), Profil-Slots `profiles/id-00`…, Einsatz-Vorlagen: **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`**. Kurz: **Tür/Schloss = `ROLE=lock`**, nicht dasselbe wie „Helfer“-Chat (`messenger`).
+**Rollen-Verwirrung?** `ROLE` (messenger / arbeiter / **lock** …) vs. `ROLE_ID` 0–63 (6 Rechte-Bits), Profil-Slots `profiles/id-00`…, Einsatz-Vorlagen: **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`**. **Consumer vs. Einsatz (Citizen/Arbeiter/Kommandant/Boss):** **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`**. Kurz: **Tür/Schloss = `ROLE=lock`**, nicht dasselbe wie „Helfer“-Chat (`messenger`).
 
 **Sicherheit:** Pinnwand erfordert `BROADCAST_AUTHORIZED_SENDERS` (nicht leer). Replay-Schutz (Nonce) und AccessKey-Prüfung gelten unverändert. Keine neuen Krypto-Primitive. Details: **`docs/SECURITY-MODES.md`**.
 
