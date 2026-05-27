@@ -2,7 +2,7 @@
  * Wendet ein Rollen-Overlay auf `.env` an (nur ROLE, DEPLOYMENT_PROFILE, UI_VARIANT, …).
  * Secrets (Wallet, RPC, PACKAGE_ID) bleiben in der bestehenden `.env`.
  *
- * Usage: node scripts/activate-role-env.mjs consumer|arbeiter|kommandant|boss
+ * Usage: node scripts/activate-role-env.mjs consumer|wanderer|arbeiter|kommandant|boss
  */
 import fs from 'fs';
 import path from 'path';
@@ -13,6 +13,7 @@ const root = path.join(__dirname, '..');
 
 const ROLES = {
   consumer: 'env/roles/consumer.env',
+  wanderer: 'env/roles/consumer.env',
   arbeiter: 'env/roles/arbeiter.env',
   kommandant: 'env/roles/kommandant.env',
   boss: 'env/roles/boss.env',

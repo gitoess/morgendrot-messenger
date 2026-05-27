@@ -4,7 +4,7 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
@@ -18,6 +18,7 @@ import {
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
+import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
 import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
@@ -33,21 +34,35 @@ import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
-import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
+import {
+  canCreateTeamMailbox,
+  getMessengerUiCapabilities,
+} from '@/frontend/lib/messenger-role-capabilities'
+import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
-import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import {
+  useChatViewPendingHandshakes,
+  type PendingHandshakesPollState,
+} from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import {
   groupMailboxTargetCount,
   readGroupMailboxSendAll,
 } from '@/frontend/lib/group-mailbox-pairwise-send'
+import {
+  tryPurgeHandshakeOfferOnChain,
+  type HandshakeOfferSource,
+} from '@/frontend/lib/handshake-offer-delete'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
+  pendingHandshakes?: PendingHandshakesPollState
+  onOpenEinsatzleitung?: () => void
+  phonebookNavRequest?: number
 }
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
@@ -65,6 +80,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     partner,
     setPartner,
     sending,
+    setSending,
     status,
     statusMsg,
     setStatus,
@@ -223,6 +239,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     vaultBannerActions,
     channelMode,
     onChannelModeChange,
+    pendingHandshakes,
+    onOpenEinsatzleitung,
+    phonebookNavRequest,
     inboxWireFilter,
     setInboxWireFilter,
   } = c
@@ -239,20 +258,38 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
 
+  useEffect(() => {
+    if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
+  }, [phonebookNavRequest])
+
   const pendingHandshakeRefreshKey = `${(apiStatus?.connectedAddresses ?? []).join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
-  const {
-    offers: pendingHandshakeOffers,
-    loading: pendingHandshakesLoading,
-    reload: reloadPendingHandshakes,
-    dismissOffer: dismissPendingHandshake,
-  } = useChatViewPendingHandshakes({
-    enabled: /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()),
+  const internalPendingHandshakes = useChatViewPendingHandshakes({
+    enabled: !c.pendingHandshakes && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()),
     connectedAddresses: apiStatus?.connectedAddresses ?? [],
     refreshToken: pendingHandshakeRefreshKey,
     contactDirectory: directory,
     vaultLocked: apiStatus?.locked === true,
   })
+
+  const {
+    offers: pendingHandshakeOffers,
+    outgoingOffers: outgoingHandshakeOffers,
+    loading: pendingHandshakesLoading,
+    reload: reloadPendingHandshakes,
+    dismissOffer: dismissPendingHandshake,
+    dismissOutgoingOffer: dismissOutgoingPendingHandshake,
+  } = c.pendingHandshakes ?? internalPendingHandshakes
+
+  const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
+
+  const handleResendOutgoingHandshake = useCallback(
+    async (recipient: string) => {
+      await handleHandshakeForAddress(recipient)
+      window.setTimeout(() => void reloadPendingHandshakes(), 3000)
+    },
+    [handleHandshakeForAddress, reloadPendingHandshakes]
+  )
 
   const handleAcceptHandshakeFromInbox = useCallback(
     async (sender: string) => {
@@ -263,13 +300,80 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [setPartner, handleConnectAcceptForAddress, reloadPendingHandshakes]
   )
 
-  const handleRejectHandshakeFromInbox = useCallback(
-    (sender: string, nonce: string) => {
-      dismissPendingHandshake(sender, nonce)
-      const label = contactDisplayLabel(directory, sender.trim().toLowerCase()) || sender.slice(0, 12)
-      toast.info(`Handshake von ${label} abgelehnt (lokal ausgeblendet).`)
+  const purgeAndDismissHandshake = useCallback(
+    async (p: {
+      recipient: string
+      sender: string
+      source: HandshakeOfferSource
+      dismissLocal: () => void
+      label: string
+    }) => {
+      setSending(true)
+      try {
+        const purge = await tryPurgeHandshakeOfferOnChain({
+          recipient: p.recipient,
+          sender: p.sender,
+          source: p.source,
+          apiStatus,
+        })
+        p.dismissLocal()
+        if (purge.ok && purge.onChain) {
+          toast.success(`Handshake mit ${p.label} gelöscht (on-chain + lokal).`)
+        } else if (purge.ok && !purge.onChain) {
+          const hint =
+            purge.reason === 'event-only'
+              ? 'Nur lokal ausgeblendet — Event-only (kein Mailbox-Purge möglich).'
+              : 'Nur lokal ausgeblendet — Purge/Mailbox nicht verfügbar.'
+          toast.info(hint)
+        } else {
+          toast.warning(`Lokal ausgeblendet. On-chain-Purge fehlgeschlagen: ${purge.error}`)
+        }
+        window.setTimeout(() => void reloadPendingHandshakes(), 2500)
+      } finally {
+        setSending(false)
+      }
     },
-    [dismissPendingHandshake, directory]
+    [apiStatus, reloadPendingHandshakes, setSending]
+  )
+
+  const handleDeleteIncomingHandshake = useCallback(
+    async (sender: string, nonce: string, source: HandshakeOfferSource) => {
+      const me = myAddress.trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
+        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
+        return
+      }
+      const label =
+        contactDisplayLabel(directory, sender.trim().toLowerCase()) || sender.slice(0, 12)
+      await purgeAndDismissHandshake({
+        recipient: me,
+        sender: sender.trim(),
+        source,
+        dismissLocal: () => dismissPendingHandshake(sender, nonce),
+        label,
+      })
+    },
+    [myAddress, directory, purgeAndDismissHandshake, dismissPendingHandshake]
+  )
+
+  const handleDeleteOutgoingHandshake = useCallback(
+    async (recipient: string, nonce: string, source: HandshakeOfferSource) => {
+      const me = myAddress.trim()
+      if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
+        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
+        return
+      }
+      const label =
+        contactDisplayLabel(directory, recipient.trim().toLowerCase()) || recipient.slice(0, 12)
+      await purgeAndDismissHandshake({
+        recipient: recipient.trim(),
+        sender: me,
+        source,
+        dismissLocal: () => dismissOutgoingPendingHandshake(recipient, nonce),
+        label,
+      })
+    },
+    [myAddress, directory, purgeAndDismissHandshake, dismissOutgoingPendingHandshake]
   )
 
   const handleUseSenderAsPartnerFromInbox = useCallback(
@@ -379,6 +483,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     ]
   )
 
+  const uiCaps = useMemo(() => getMessengerUiCapabilities(apiStatus), [apiStatus])
+
+  useEffect(() => {
+    if (!uiCaps.showInboxIotaFilter && inboxIotaTransportOnly) {
+      setInboxIotaTransportOnly(false)
+    }
+  }, [uiCaps.showInboxIotaFilter, inboxIotaTransportOnly, setInboxIotaTransportOnly])
+
+  useEffect(() => {
+    if (!uiCaps.showAdhocTransport && forcedTransport === 'adhoc') {
+      setForcedTransport('mesh')
+      setEncrypted(false)
+    }
+  }, [uiCaps.showAdhocTransport, forcedTransport, setForcedTransport, setEncrypted])
+
   const applyPartnerAsSendRecipient = useCallback(() => {
     const a = partner.trim().toLowerCase()
     if (!/^0x[a-f0-9]{64}$/.test(a)) {
@@ -407,12 +526,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       void reloadPendingHandshakes()
     },
     pendingHandshakeOffers,
+    outgoingHandshakeOffers,
     pendingHandshakesLoading,
-    pendingHandshakeCount: pendingHandshakeOffers.length,
+    pendingHandshakeCount,
     sending,
     onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
     onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
-    onRejectPendingHandshake: handleRejectHandshakeFromInbox,
+    onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
+    onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
+    onResendOutgoingHandshake: handleResendOutgoingHandshake,
     loading,
     loadingMore,
     loadMoreInbox,
@@ -483,7 +605,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     },
     onOpenPhonebook: () => setPhonebookOpen(true),
     onOpenPartnerSetup: openPartnerSetupPanel,
+    onOpenEinsatzleitung,
     messagingPersistenceMode,
+    showInboxIotaFilter: uiCaps.showInboxIotaFilter,
+    showIotaExpertInboxActions: uiCaps.expertTools,
   } satisfies ChatViewInboxPanelProps
 
   const sendPanelProps = {
@@ -560,6 +685,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onTelegramDelivered: ({ recipientKey, text }) => {
       recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
     },
+    showPath4Checkbox: uiCaps.expertTools,
   } satisfies ChatViewSendPanelProps
 
   const showEncryptedPartnerPanel =
@@ -612,6 +738,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onHandshakeForAddress: handleHandshakeForAddress,
         }
       : undefined,
+    showSendPathOverview: uiCaps.expertTools,
   } satisfies ChatViewTransportCardProps
 
   return (
@@ -635,8 +762,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onForcedTransportChange: setForcedTransport,
           onEncryptedChange: setEncrypted,
           myAddressLine: isPrivate ? myAddress : undefined,
+          showAdhocTransport: uiCaps.showAdhocTransport,
         }}
       />
+
+      {uiCaps.showProminentOfflineQueueBanner ? (
+        <ChatViewOfflineQueueStrip
+          pending={offlineMailboxQueuePending}
+          errorHint={offlineMailboxQueueErrorHint}
+          onManualRefresh={refreshApiStatus}
+          alwaysVisible
+        />
+      ) : null}
 
       {isGroup ? (
         <ChatViewGroupPanel
@@ -651,7 +788,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} />
       ) : null}
 
-      {isPrivate ? (
+      {isPrivate && uiCaps.showPackageIdBanner ? (
         <ChatViewPackageIdBanner
           visible={packageIdMismatch && !!apiStatus?.packageId?.trim()}
           serverPackageId={apiStatus?.packageId?.trim() ?? ''}
@@ -759,6 +896,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           }}
         />
       ) : null}
+
+      {uiCaps.expertTools ? <ChatViewRelaySubmitButton hideMenuTrigger /> : null}
     </div>
   )
 }

@@ -4,6 +4,7 @@ import {
   addMyPrivateMailbox,
   archiveMyPrivateMailbox,
   cacheServerMailboxObjectId,
+  backfillPrivateMailboxLabels,
   forgetMyPrivateMailbox,
   readActiveMailboxSelection,
   readActivePrivateMailboxObjectId,
@@ -12,6 +13,7 @@ import {
   readMyPrivateMailboxes,
   restoreMyPrivateMailbox,
   setActiveServerMailbox,
+  suggestNextPrivateMailboxLabel,
 } from '@/frontend/lib/my-private-mailbox-store'
 import { readActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 
@@ -70,5 +72,23 @@ describe('my-private-mailbox-store', () => {
     expect(readMyPrivateMailboxes()).toHaveLength(0)
     expect(readArchivedMyPrivateMailboxes()).toHaveLength(0)
     expect(readActiveMailboxSelection()).toEqual({ kind: 'none' })
+  })
+
+  it('assigns Private #N label when none given', () => {
+    addMyPrivateMailbox({ objectId: ID_A })
+    addMyPrivateMailbox({ objectId: ID_B })
+    expect(readMyPrivateMailboxes()[0]?.label).toBe('Private #2')
+    expect(readMyPrivateMailboxes()[1]?.label).toBe('Private #1')
+    expect(suggestNextPrivateMailboxLabel()).toBe('Private #3')
+  })
+
+  it('backfills labels for legacy entries without label', () => {
+    localStorage.setItem(
+      'morgendrot.myPrivateMailboxes.v2',
+      JSON.stringify([{ objectId: ID_A }, { objectId: ID_B }])
+    )
+    expect(backfillPrivateMailboxLabels()).toBe(true)
+    const labels = readMyPrivateMailboxes().map((e) => e.label).sort()
+    expect(labels).toEqual(['Private #1', 'Private #2'])
   })
 })

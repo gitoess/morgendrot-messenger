@@ -1,9 +1,10 @@
-export type ProjectType = 'chat' | 'lock' | 'monitor' | 'boss' | 'vault'
+export type ProjectType = 'chat' | 'lock' | 'monitor' | 'boss' | 'vault' | 'einsatzleitung'
 
 export type ChatVariant = 'private-chat' | 'pinnwand'
 export type LockVariant = 'smart-lock' | 'access-key-ticket' | 'payment-trigger'
 export type MonitorVariant = 'sensor-central' | 'device-monitor' | 'heartbeat-sender'
 export type BossVariant = 'boss-signer' | 'pinnwand-admin'
+export type EinsatzleitungVariant = 'einsatzleitung-hub'
 export type VaultVariant = 'local-vault' | 'emergency-purge'
 
 export type ProjectVariant =
@@ -11,6 +12,7 @@ export type ProjectVariant =
   | LockVariant
   | MonitorVariant
   | BossVariant
+  | EinsatzleitungVariant
   | VaultVariant
 
 export interface Message {

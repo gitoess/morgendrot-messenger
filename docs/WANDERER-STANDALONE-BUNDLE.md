@@ -21,9 +21,7 @@ npm run bundle:standalone-smartphone
 ## 2. Boss → Medium → Helfer (Kurzablauf)
 
 1. Bundle bauen (oder archivierte Kopie verwenden).
-2. Pro Einsatz/Kunde die **`.env`** im Bundle-Root anpassen (**keine** Seeds auf SD/USB): u. a. `PACKAGE_ID`, `RPC_URL`, `BOSS_ADDRESS` / Partner — siehe **`docs/BOSS-ORIENTIERUNG.md`** (Lieferwege). **Alternativ (Boss, Next):** **Steuerung → Boss-Modus → Export-Assistent** lädt eine **ZIP** mit vorgefüllter öffentlicher Handoff-`.env` und Kurz-README (**`POST /api/standalone-smartphone-handoff-zip`**, Fahrplan **§ H.7**); Datei ins Bundle-Root legen und in **`.env`** umbenennen (siehe `README-HANDOFF.txt` in der ZIP).
-3. Auf dem Gerät: `npm install` (Root + ggf. `frontend/`), dann **`npm run dev`** oder produktionsnaher Start laut **`docs/DEV-START.md`**. **Hinweis (Zielbild 2026-04):** Langfristig **kein Pflicht-Node** — siehe **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**; bis zur Umsetzung kann der Bundle-Start weiterhin **Node + Next** meinen.
-4. **Seed / Vault-Passwort nur auf dem Gerät** eingeben — nie auf das Medium schreiben.
+2. Auf dem Gerät: `npm install` … **Handoff:** Boss-**ZIP** (~3 KB) → **Einstellungen → Handoff importieren** (oder manuell `.env` aus ZIP, **`docs/HANDOFF-IMPORT-UX.md`**). **Boss-Export** auch unter **Einstellungen** (Rolle Boss). Dann `npm run dev` / Produktionsstart.
 
 Vollständigere Tabelle: **`docs/ROADMAP-FAHRPLAN.md` § H.7**.
 

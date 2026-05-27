@@ -29,6 +29,8 @@ cd c:\Users\damast\Desktop\morgendrot
 # 1) Bauen + publizieren → PACKAGE_ID in .env + .morgendrot-package-id
 npm run deploy:move-package
 
+**Enthält u. a.:** `create_private_mailbox`, `create_team_mailbox`, `create_globals`, Rebate-Purge.
+
 # 2) Shared-Objekte anlegen (einmal pro neuer PACKAGE_ID)
 # <PACKAGE_ID> = Ausgabe von Schritt 1
 iota client call --package <PACKAGE_ID> --module messaging --function create_globals --gas-budget 50000000 --json

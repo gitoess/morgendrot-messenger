@@ -10,6 +10,33 @@ const LS_DONE_FP = 'morgendrot.initialProfileAppliedFingerprint'
 /** Anzeige der Boss-Notiz (`offlineBriefing`) in den Einstellungen */
 export const LS_OFFLINE_BRIEFING_DISPLAY = 'morgendrot.offlineBriefingDisplay'
 
+/** Kurz-Zusammenfassung für die Boss-Import-UI (ohne volles JSON anzeigen). */
+export type InitialProfileSummary = {
+  contactCount: number
+  contactPreview: string[]
+  deploymentChannelTag?: string
+  hasOfflineBriefing: boolean
+}
+
+export function summarizeInitialProfile(profile: Record<string, unknown>): InitialProfileSummary {
+  const contacts = Array.isArray(profile.contacts) ? profile.contacts : []
+  const contactPreview = contacts.slice(0, 6).map((c) => {
+    if (!c || typeof c !== 'object' || Array.isArray(c)) return 'Unbenannt'
+    const x = c as Record<string, unknown>
+    const name = String(x.name ?? x.label ?? '').trim() || 'Unbenannt'
+    const addr = String(x.address ?? '').trim()
+    if (/^0x[a-fA-F0-9]{64}$/i.test(addr)) return `${name} · ${addr.slice(0, 10)}…`
+    return name
+  })
+  const ch = profile.deploymentChannelTag
+  return {
+    contactCount: contacts.length,
+    contactPreview,
+    deploymentChannelTag: typeof ch === 'string' && ch.trim() ? ch.trim() : undefined,
+    hasOfflineBriefing: typeof profile.offlineBriefing === 'string' && profile.offlineBriefing.trim().length > 0,
+  }
+}
+
 /** Speichert optionale Einsatz-Notiz lokal (Klartext, Browser-Storage). */
 export function persistOfflineBriefingFromProfile(profile: Record<string, unknown>): void {
   if (typeof window === 'undefined') return

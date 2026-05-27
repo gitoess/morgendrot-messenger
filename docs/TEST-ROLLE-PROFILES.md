@@ -15,7 +15,7 @@
 
 Overlays liegen unter **`env/roles/`** (committbar, **keine** Geheimnisse):
 
-- `env/roles/consumer.env`
+- `env/roles/consumer.env` (auch **`npm run env:role:wanderer`** — gleiches Overlay)
 - `env/roles/arbeiter.env`
 - `env/roles/kommandant.env`
 - `env/roles/boss.env`
@@ -27,6 +27,7 @@ Overlays liegen unter **`env/roles/`** (committbar, **keine** Geheimnisse):
 ```powershell
 # Overlay auf bestehende .env anwenden
 npm run env:role:consumer
+npm run env:role:wanderer
 npm run env:role:arbeiter
 npm run env:role:kommandant
 npm run env:role:boss
@@ -45,10 +46,72 @@ npm run dev:role:kommandant
 
 | Profil | Erwartung (Kurz) |
 |--------|------------------|
-| **consumer** | `deploymentProfile=consumer`, kein Team erstellen |
-| **arbeiter** | `einsatz`, kein Team erstellen |
+| **consumer** / **wanderer** | `deploymentProfile=consumer`, `SIMPLE_MODE=true`, `TRANSPORT_PROFILE=mesh-first`, kein Team erstellen |
+| **arbeiter** | `einsatz`, `UI_VARIANT=messenger`, Simple Mode, kein Team erstellen, **keine** Einsatz-Vorlagen |
 | **kommandant** | `einsatz`, Team erstellen, Vorlagen nur lesen |
 | **boss** | `einsatz`, Team + Vorlagen speichern |
+
+---
+
+## Feldtest-Protokoll (Schreibtisch 2026-05-21)
+
+| Check | Consumer | Arbeiter | Kommandant |
+|-------|----------|----------|------------|
+| Team-Mailbox **erstellen** unsichtbar | ✅ | ✅ | ✅ sichtbar |
+| Team-Mailbox **erstellen** funktioniert | N/A | N/A | ⚠️ war „Transaktion fehlgeschlagen“ (Fix: Object-ID aus TX-Event) |
+| Private Mailbox erstellen + aktiv | ✅ | ✅ | ✅ |
+| Private Mailbox **Private #N** Label | ✅ (ab Fix) | ✅ (ab Fix) | ✅ Backfill für alte Einträge |
+| Team-Mailbox **beitreten** (ID/QR) | Später | Später | **Beitreten (ID/QR)** in Meine Mailboxen — kein separates Profil-QR |
+| Team-Mitglieder per QR/Profil einladen | — | — | ID kopieren / QR nach Beitritt teilen (kein dediziertes „Einladen“-UI) |
+| Sendepfad Event vs. Persistent (aktive MB) | Später | Später | Später |
+| Gruppe: **„Mailbox an alle Mitglieder“** | Checkbox sichtbar | ✅ Checkbox | ✅ Checkbox (Gruppenchat später) |
+| Einsatz-Vorlagen Einstellungen | N/A | ✅ **nicht sichtbar** | **Einstellungen** → Lesen (Speichern nur Boss) |
+| Handshake empfangen (2. Wallet) | Später | — | — |
+| Handshake Annehmen/Ablehnen | — | — | ✅ |
+| Private + Team aktiv setzen / wechseln | — | — | ✅ Privat; Team nach erfolgreichem Erstellen unter **Team-Mailboxes** |
+
+### Boss — Checkliste (Wo genau?)
+
+**Grundregel:** Boss = alles was Kommandant hat **plus** Schreib-/Verwaltungsrechte (`configChange`, `hierarchyChange`, `keyIssue`, …). Gleiche PWA (`UI_VARIANT=full`), mehr Buttons die speichern/dürfen.
+
+| Was | Kommandant | Boss | Wo in der PWA |
+|-----|------------|------|----------------|
+| Team-Mailbox erstellen | ✅ | ✅ | Nachrichten → Posteingang → **Meine Mailboxen** → Team-Mailboxes |
+| Team-Mailbox beitreten (ID/QR) | ✅ | ✅ | dort: **Beitreten (ID/QR)** |
+| Team on-chain löschen / Rebate | ❌ | ❌ | **Nicht implementiert** — Shared-Object bleibt on-chain; nur **Aus Liste** (lokal) |
+| Private Mailbox on-chain löschen | ✅ | ✅ | Private Mailboxes → **On-chain löschen** |
+| Einsatz-Rollen-Vorlagen lesen | ✅ | ✅ | Dashboard → **Einstellungen** → Karte *Einsatz-Rollen-Vorlagen* |
+| Einsatz-Rollen-Vorlagen **speichern** | ❌ | ✅ | dort: Button **Speichern** (JSON → `.morgendrot-einsatz-templates.json`) |
+| `.env` / Runtime-Config ändern | ❌ | ✅ | Einstellungen → **.env anpassen** (nur Boss: POST `/api/config`) |
+| Hierarchie-Keys (ROLE, BOSS_ADDRESS, …) | ❌ | ✅ | `.env anpassen` (Boss + `hierarchyChange`) |
+| **Steuerung / Boss-Modus** | ❌ | ✅ | Dashboard-Kachel **Steuerung** → *Boss-Modus* (Rollen setzen, Befehle, Mesh) |
+| **Export-Assistent** (Handoff-ZIP ~3 KB) | ❌ | ✅ | **Einstellungen** oder Steuerung → Boss-Modus → **Export-Assistent** |
+| **Handoff importieren** (ZIP) | ✅ | ✅ | **Einstellungen → Handoff importieren** — **`docs/HANDOFF-IMPORT-UX.md`** |
+| **Pinnwand-Admin** | ❌ | ✅ | Steuerung → *Admin* |
+| Geräte-Radar | ✅ (full) | ✅ | Dashboard unter den Kacheln (Arbeitsbereich **full**) |
+| Nachrichtenverlauf / Forensik-Export | ✅ | ✅ | Nachrichten → Posteingang → **Nachrichtenverlauf** (JSON, TXT, verschlüsselt, ZIP-Protokoll) |
+| Chain-Verankerung / Tangle-Inventar | ✅ | ✅ | Nachrichtenverlauf-Menü → *Auf Chain verankern*, *Tangle-Inventar* |
+| Telefonbuch / Kontakte | ✅ | ✅ | Posteingang → **Telefonbuch** |
+| **Einsatz-Profil importieren** (`initialProfile`) | ✅ (Lesen) | ✅ | Dashboard → **Einsatzleitung** (Krone) oder Posteingang → JSON import |
+| **Einsatzleitung-Tab** (zentral) | ✅ | ✅ | Dashboard-Kachel **Einsatzleitung** oder Schnellbutton oben |
+| Geräte provisionieren (API) | ❌ | ✅ | `POST /api/provision-device` oder Lite-UI `ui/` |
+| Volle Dashboard-Kacheln (Schloss, Monitor, …) | ✅ | ✅ | Dashboard „Was möchtest du tun?“ |
+
+**Team-Mailbox Fehler (Boss + Kommandant):** Wenn Explorer **`Function Not Found`** → **`npm run deploy:move-package`**, **`create_globals`**, Backend neu starten. **Ist 2026-05-21:** `PACKAGE_ID` `0xcf409a0387de039a707d1916afeb16f17a22969a0735e8cfeeaaf5b5fa3d811f`.
+
+---
+
+### Kommandant — Hinweise (Meine Mailboxen)
+
+- **Team-Mailbox** erscheint im Abschnitt **Team-Mailboxes** (amber Badge „Team“), oberhalb der privaten Liste — nicht bei Server-Shared (.env).
+- **Mitglieder einladen:** Nach Erstellen Object-ID kopieren oder **Beitreten (ID/QR)** auf dem Gerät des Mitglieds; kein separates „Profil einladen“-Button.
+- **Einsatz-Vorlagen:** **Einstellungen** (Dashboard-Kachel) → Karte **Einsatz-Rollen-Vorlagen** — Kommandant nur **Lesen** + „Vom Backend laden“.
+
+---
+
+### Gruppenchat: welches Häkchen?
+
+Gemeint ist die Checkbox **„Mailbox an alle Mitglieder“** im Panel **Gruppe** (Chat-Kanal „Gruppe“). Es gibt **kein** separates Label „an alle Mitglieder“. Mit Häkchen: beim Senden N× pairwise Mailbox (online + Persistent) an jedes Gruppenmitglied; ohne Häkchen nur die 0x-Adresse im Composer. Für **Arbeiter/Kommandant/Boss** gleich — **Consumer** ggf. später einschränken (Roadmap § Spätere Tests #6).
 
 ---
 
@@ -76,6 +139,27 @@ npm run dev
 
 ---
 
+## Simple Mode & UI-Gates (Arbeiter / Wanderer / Consumer)
+
+Nach **`npm run dev:role:arbeiter`** (oder **`dev:role:wanderer`**) + Tresor offen — detailliert auch **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 6.
+
+| Check | Arbeiter | Wanderer (consumer) |
+|-------|----------|---------------------|
+| `GET /api/status` | `simpleMode`, `transportProfile: mesh-first`, `iotaTransportUiEnabled: false` | gleich |
+| Dashboard | Kacheln **Nachrichten** + **Tresor** (kein Action Center) | gleich |
+| Sendepfad | **funk** + **online**, kein **adhoc** | gleich |
+| Posteingang | kein „Nur IOTA“; kein Expert-Menü Verankern/Relay | gleich |
+| Offline-Queue | Streifen unter Kopfzeile + Button „Wartende Sendungen (N)“ wenn pending | gleich (Opt-in `morgendrot.offlineMailboxQueue=1`) |
+| Einsatzleitung-Tab | ❌ | ❌ |
+| Handoff Preset (Boss-Export) | **Arbeiter** / **Helfer** | **Wanderer** (kein Team-Mailbox-Multi) |
+| Handoff README: Meshtastic-PSK + optional IOTA-Archiv | Boss-Export-Assistent | — |
+
+**Block 2 (Feldtest, 3–5 Tage):** siehe **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** § Block 2 — Handoff importieren, 2. Wallet, Team beitreten, PWA L1–L5.
+
+**Vitest (Schreibtisch):** `messenger-role-capabilities`, `handoff-export-presets`, `chat-view-offline-queue-strip`, `chat-view-inbox-toolbar` (Simple-Mode-Zweig).
+
+---
+
 ## Checkliste pro Profil (Mailbox / Gruppe)
 
 Nach Wechsel + Neustart kurz prüfen:
@@ -89,4 +173,15 @@ Protokoll: **`docs/TEST-RUN-LOGBOOK.md`**.
 
 ---
 
-*Stand: 2026-05-21*
+## Spätere Tests (Backlog)
+
+| Test | Rolle | Status |
+|------|-------|--------|
+| Einsatzleitung-Tab: Import JSON → Telefonbuch | Boss, Kommandant | offen |
+| Einsatzleitung: Handoff-ZIP (Export-Assistent / Schnell-Handoff) | Boss | offen |
+| Einsatzleitung: Forensik-Export (JSON/TXT/ZIP) | Boss, Kommandant | offen |
+| Posteingang-Shortcut „Einsatzleitung“ → Tab | Boss, Kommandant | offen |
+
+---
+
+*Stand: 2026-05-20 — Simple-Mode-Gates, `env:role:wanderer`, Offline-Queue UI.*

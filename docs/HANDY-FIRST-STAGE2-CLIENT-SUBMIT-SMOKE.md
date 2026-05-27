@@ -1,10 +1,12 @@
 # H.15 Stufe 2 — Kontrollierter Client-Submit (Smoke / Feldprotokoll)
 
-**Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Mirror-/Drain-Hintergrund (Composer-**Delayed-Mirror**-UI entfernt 2026-04-20), LUMA+CHROMA **nur online mit Verschlüsselung** oder **Funk mit Pfad 4 (Klartext)** (Fahrplan Nachtrag 2026-04-20), Einsatzprotokoll-Anker, **Attestation-Manifest-Anker** (`attestation-manifest-anchor.ts` → Klartext an eigene Adresse, **ohne** Mailbox-Offline-Outbox).
+**Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ergänzt **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** (Online-IOTA; LoRa→Tangle = Delayed Upload / Pfad 4, nicht volle TX über Funk). — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Mirror-/Drain-Hintergrund (Composer-**Delayed-Mirror**-UI entfernt 2026-04-20), LUMA+CHROMA **nur online mit Verschlüsselung** oder **Funk mit Pfad 4 (Klartext)** (Fahrplan Nachtrag 2026-04-20), Einsatzprotokoll-Anker, **Attestation-Manifest-Anker** (`attestation-manifest-anchor.ts` → Klartext an eigene Adresse, **ohne** Mailbox-Offline-Outbox).
 
 **Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-05-21** — Rollen **`deploymentProfile`**, **§ H.27** Handshake-Badge; **§ H.25a** LoRa-Bild Code-Ist, Feldtest offen).
 
-**Nachtrag 2026-05-21 (Schreibtisch vor Feldtest):** Nach **`deploymentProfile`/Team-Gate** und **Handshake-UX** (Badge/Toast) zusätzlich prüfen: Posteingang zeigt Handshake-Banner bei offener Anfrage; **Team-Mailbox erstellen** nur bei Einsatz-Kommandant/Boss sichtbar.
+**Nachtrag 2026-05-21 (Move-Deploy + Rollen):** Nach **`npm run deploy:move-package`** und **`create_globals`** neue **`PACKAGE_ID`** in `.env` — **`create_team_mailbox`** on-chain verfügbar. Backend neu starten. Rollen-Retest: Team-Mailbox erstellen (Kommandant/Boss), Handshake-Badge.
+
+**Nachtrag 2026-05-21 (Schreibtisch vor Feldtest):** Nach **`deploymentProfile`/Team-Gate** und **Handshake-UX** (Badge/Toast) zusätzlich prüfen: Posteingang zeigt Handshake-Banner bei offener Anfrage; **Team-Mailbox erstellen** nur bei Einsatz-Kommandant/Boss sichtbar; Boss: **Einsatz-Profil** unter Posteingang (ausklappbar).
 
 ---
 
@@ -83,11 +85,28 @@
 
 ---
 
-## 6. Vor dem Feldtest (Stufe 2 — technische Vorprüfung)
+## 6. Simple Mode & UI-Gates (Helfer / `UI_VARIANT=messenger`)
+
+**Zweck:** Stufe **2** prüft **Direkt-IOTA im Browser** — unabhängig von Funk. Für **Einsatz-Helfer** (`ROLE=arbeiter`, Handoff mit `SIMPLE_MODE=true`, `TRANSPORT_PROFILE=mesh-first`, `UI_VARIANT=messenger`) zusätzlich kurz prüfen, dass die **UI-Gates** greifen (**`getMessengerUiCapabilities`**, **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**). Schreibtisch: **`npm run dev:role:arbeiter`** — Protokoll auch in **`docs/TEST-ROLLE-PROFILES.md`** (Abschnitt *Simple Mode & UI-Gates*).
+
+| # | Check | Erwartung |
+|---|--------|-----------|
+| 1 | Dashboard-Start (Tresor offen) | **Kein** Action Center (Tickets/Keys/Heartbeat). Kacheln **Nachrichten** + **Tresor** sichtbar — nicht nur Link „Nachrichten & Tresor“. |
+| 2 | `GET /api/status` | `simpleMode: true`, `uiMode: simple`, `transportProfile: mesh-first`, `iotaTransportUiEnabled: false`. |
+| 3 | Chat-Kopf Sendepfad | **funk** + **online**; **kein** **adhoc** (adhoc = künftiges BLE-Direct, ≠ Web-BT zum Heltec). Default: **funk**. |
+| 4 | Chat Simple | Kein Package-ID-Banner; Posteingang **ohne** Filter „Nur IOTA“; Menü Nachrichtenverlauf **ohne** Verankern/Tangle/Relay-Blöcke. |
+| 5 | Einstellungen | Kein Block **„Direkt-RPC · IDs · Funk“** (Pulse-Expert) — optional **IOTA auf diesem Gerät** bleibt. |
+| 6 | IOTA-Sendeweg (wenn testbar) | Boss/Kommandant oder temporär `iota-anchored`: Stufe **2** § 2 wie bisher; Helfer nutzt Feld primär **Funk** + optional **Pfad 4** (§ 2 Punkt 8). |
+
+**Nicht-Ziel:** Delayed LoRa→IOTA-MVP — **Phase B** Backlog (**`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**). Pfad **4** (eigene Mailbox nach Funk) bleibt separater Smoke-Punkt § 2.8.
+
+---
+
+## 7. Vor dem Feldtest (Stufe 2 — technische Vorprüfung)
 
 - Root: **`npm run test:smoke`**; bei Änderungen unter **`frontend/frontend/`** zusätzlich **`npm run test:frontend-unit`**.
 - Schnell nur H.15-Direkt: **`npm run test:h15-direct-submit`**.
 
 ---
 
-*Stand: 2026-05-21 — Stufe 2; Nachtrag Rollen/Handshake vor Feldtest; Runtime-vs-.env Smoke + Anhang Stufe 4.*
+*Stand: 2026-05-20 — Stufe 2; § 6 Simple-Mode-Gates; Runtime-vs-.env; Anhang Stufe 4. Phase B Delayed Upload = Backlog.*

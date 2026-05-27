@@ -8,6 +8,7 @@ import {
     findPeerHandshake,
     findPeerHandshakeFrom,
     listIncomingHandshakeOffers,
+    listOutgoingHandshakeOffers,
     hasValidTicket,
     getOwnedTickets,
     getOwnedAccessKeys,
@@ -300,13 +301,25 @@ export async function handleContactRoutes(
 
     if (url === '/api/pending-handshakes' && req.method === 'GET') {
         try {
-            const myAddr = CFG.MY_ADDRESS;
-            if (!myAddr) {
-                sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt' }, cors);
+            const u = new URL(req.url || '', 'http://localhost');
+            const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+            if (!myAddr || !/^0x[a-fA-F0-9]{64}$/i.test(myAddr)) {
+                sendJson(res, 400, { ok: false, error: 'MY_ADDRESS nicht gesetzt oder ungültig' }, cors);
                 return true;
             }
-            const offers = await listIncomingHandshakeOffers(myAddr, { limit: 25 });
-            sendJson(res, 200, { ok: true, offers }, cors);
+            const extraMailboxIds = (u.searchParams.get('mailboxIds') ?? '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter((s) => /^0x[a-fA-F0-9]{64}$/i.test(s));
+            const offers = await listIncomingHandshakeOffers(myAddr, {
+                limit: 25,
+                ...(extraMailboxIds.length ? { extraMailboxIds } : {}),
+            });
+            const outgoingOffers = await listOutgoingHandshakeOffers(myAddr, {
+                limit: 25,
+                ...(extraMailboxIds.length ? { extraMailboxIds } : {}),
+            });
+            sendJson(res, 200, { ok: true, offers, outgoingOffers }, cors);
         } catch (e: unknown) {
             sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
         }

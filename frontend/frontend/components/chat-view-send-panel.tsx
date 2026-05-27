@@ -32,6 +32,7 @@ import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-vie
 import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
+  CHAT_SIMPLE_LORA_ARCHIV_HINT,
   isLoRaMeshTransport,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
@@ -100,6 +101,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   isGroupChannel?: boolean
   groupMailboxSendAll?: boolean
   groupMemberCount?: number
+  /** Expert: Pfad-4-Checkbox; Simple Mode: nur Hinweistext. */
+  showPath4Checkbox?: boolean
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -141,6 +144,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     isGroupChannel = false,
     groupMailboxSendAll = false,
     groupMemberCount = 0,
+    showPath4Checkbox = true,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -576,21 +580,27 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         )}
 
-        {forcedTransport === 'mesh' && isPrivate && (
-          <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
-            <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
-              <input
-                type="checkbox"
-                checked={meshSelfArchiveAfterLoRa}
-                onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
-                data-testid="mesh-path4-self-archive"
-                className="mt-0.5 border-border"
-              />
-              <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
-            </label>
-            <p className="mt-2 text-[11px] leading-relaxed text-emerald-100/90">{CHAT_PATH4_SELF_ARCHIVE_HINT}</p>
-          </div>
-        )}
+        {forcedTransport === 'mesh' && isPrivate ? (
+          showPath4Checkbox ? (
+            <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
+              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={meshSelfArchiveAfterLoRa}
+                  onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                  data-testid="mesh-path4-self-archive"
+                  className="mt-0.5 border-border"
+                />
+                <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
+              </label>
+              <p className="mt-2 text-[11px] leading-relaxed text-emerald-100/90">{CHAT_PATH4_SELF_ARCHIVE_HINT}</p>
+            </div>
+          ) : (
+            <p className="rounded-lg border border-emerald-600/30 bg-emerald-950/10 px-3 py-2 text-[11px] leading-relaxed text-emerald-100/90">
+              {CHAT_SIMPLE_LORA_ARCHIV_HINT}
+            </p>
+          )
+        ) : null}
 
         <div
           onDragEnter={onComposerDragEnter}

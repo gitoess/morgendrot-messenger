@@ -277,9 +277,6 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             serverMailboxIdHint={p.serverMailboxId}
             contactDirectory={directory}
             onContactsChanged={refreshContactDirectory}
-            onOpenCreateContact={(mailboxObjectId) =>
-              setDialog({ mode: 'create', initial: { mailboxPrivateId: mailboxObjectId } })
-            }
             onApplySendRecipient={
               onSelectContact
                 ? (walletAddress) => {

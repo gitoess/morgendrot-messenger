@@ -13,6 +13,11 @@ import {
     getWalletDerivationPathConfigSource,
     refreshIdentityCfgFromDotenv,
     resolveDeploymentProfile,
+    resolveSimpleMode,
+    resolveTransportProfile,
+    resolveUiMode,
+    resolveHandoffLabel,
+    isIotaTransportUiEnabled,
     type HierarchyPermissions,
 } from '../../config.js';
 import {
@@ -168,6 +173,10 @@ export async function handleStatusRoutes(
             roleId: CFG.ROLE_ID,
             permissions: perms,
             deploymentProfile: CFG.DEPLOYMENT_PROFILE ?? resolveDeploymentProfile(CFG.ROLE),
+            transportProfile: CFG.TRANSPORT_PROFILE ?? resolveTransportProfile(CFG.ROLE),
+            simpleMode: CFG.SIMPLE_MODE ?? resolveSimpleMode(CFG.ROLE),
+            uiMode: resolveUiMode(CFG.ROLE),
+            iotaTransportUiEnabled: isIotaTransportUiEnabled(CFG.TRANSPORT_PROFILE),
             streams: {
                 active: !!(CFG.STREAMS_BRIDGE_URL && CFG.STREAMS_ANCHOR_ID),
                 anchorId: CFG.STREAMS_ANCHOR_ID ? mask(CFG.STREAMS_ANCHOR_ID, 12) : undefined,
@@ -210,6 +219,7 @@ export async function handleStatusRoutes(
             compactImageEncode: true,
             loraProgressiveEncode: true,
             ...(packageTrim ? { packageId: packageTrim } : {}),
+            ...(CFG.HANDOFF_LABEL?.trim() ? { handoffLabel: CFG.HANDOFF_LABEL.trim() } : {}),
             ...(mailboxConfigured && mailboxIdTrim
                 ? { mailboxId: mailboxIdTrim, mailboxIdMasked: mask(mailboxIdTrim) }
                 : {}),
@@ -257,6 +267,7 @@ export async function handleStatusRoutes(
                     vaultRegistryId: CFG.VAULT_REGISTRY_ID || '',
                     streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
                     streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
+                    rpcUrl: (CFG.RPC_URL || '').trim(),
                 },
                 cors
             );

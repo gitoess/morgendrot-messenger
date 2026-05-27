@@ -101,6 +101,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     [forcedTransport]
   )
 
+  /** Einmal: bei `TRANSPORT_PROFILE=mesh-first` Default-Sendeweg „funk“ (§ TRANSPORT-AND-IOTA-LAYERS). */
+  const meshFirstTransportDefaultApplied = useRef(false)
+
   /** Pinnwand: verschlüsselter Funk ist ohnehin gesperrt — Klartext konsistent setzen. */
   useEffect(() => {
     if (!isPrivate) setEncryptedInternal(false)
@@ -310,6 +313,15 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     if (!addr || !/^0x[a-fA-F0-9]{64}$/i.test(addr)) return
     setRecipient((prev) => (prev.trim() ? prev : addr))
   }, [channelMode, apiStatus?.broadcastPinnwand?.address])
+
+  useEffect(() => {
+    if (meshFirstTransportDefaultApplied.current || !apiStatus?.transportProfile) return
+    meshFirstTransportDefaultApplied.current = true
+    if (apiStatus.transportProfile === 'mesh-first') {
+      setForcedTransportInternal('mesh')
+      setEncryptedInternal(false)
+    }
+  }, [apiStatus?.transportProfile])
 
   const {
     onExportEinsatzberichtJson,
@@ -584,6 +596,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     partner,
     setPartner,
     sending,
+    setSending,
     status,
     statusMsg,
     setStatus,

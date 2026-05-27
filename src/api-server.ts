@@ -41,6 +41,7 @@ import {
     getRuntimeConfigKeys,
     getRuntimeConfigSources,
 } from './config.js';
+import { applyHandoffEnvImport, previewHandoffEnvImport } from './handoff-env-import.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
 import {
@@ -156,6 +157,14 @@ export type ApiStatus = {
     uiVariant?: 'full' | 'messenger';
     /** consumer = Privat/Prepper; einsatz = Organisation mit Stab. */
     deploymentProfile?: 'consumer' | 'einsatz';
+    /** mesh-first = Einsatz-Default; iota-* = optionaler Notar (§ H.0-SIMPLE). */
+    transportProfile?: 'mesh-first' | 'iota-anchored' | 'iota-full';
+    /** Serverseitig erzwungener Simple Mode. */
+    simpleMode?: boolean;
+    /** simple | expert — abgeleitet aus SIMPLE_MODE. */
+    uiMode?: 'simple' | 'expert';
+    /** IOTA-UI (Banner, Relay) sichtbar. */
+    iotaTransportUiEnabled?: boolean;
     /** Geräteklasse aus CFG.ROLE. */
     role?: string;
     roleId?: number;
@@ -506,6 +515,58 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        /** Helfer: Handoff-ZIP-Inhalt (.env) prüfen oder in lokale .env mergen — nur öffentliche Keys. */
+        if (url === '/api/apply-handoff-env' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { envText?: string; dryRun?: boolean };
+                    const envText = String(data.envText ?? '');
+                    if (!envText.trim()) {
+                        sendJson(res, 400, { ok: false, error: 'envText fehlt' }, cors);
+                        return;
+                    }
+                    if (envText.length > 256_000) {
+                        sendJson(res, 400, { ok: false, error: 'envText zu groß' }, cors);
+                        return;
+                    }
+                    const dryRun = data.dryRun !== false;
+                    if (dryRun) {
+                        const preview = previewHandoffEnvImport(envText);
+                        sendJson(
+                            res,
+                            preview.ok ? 200 : 400,
+                            {
+                                ok: preview.ok,
+                                summary: preview.summary,
+                                errors: preview.errors,
+                            },
+                            cors
+                        );
+                        return;
+                    }
+                    const applied = applyHandoffEnvImport(envText);
+                    sendJson(
+                        res,
+                        applied.ok ? 200 : 400,
+                        {
+                            ok: applied.ok,
+                            applied: applied.applied,
+                            errors: applied.errors,
+                            requiresRestart: applied.requiresRestart,
+                            requiresPageReload: applied.requiresPageReload,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
 
         if (url === '/api/reference-gas-price' && req.method === 'GET') {
             try {
@@ -1978,10 +2039,33 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     const mailboxIdField = Object.prototype.hasOwnProperty.call(data, 'mailboxId')
                         ? String(data.mailboxId ?? '').trim()
                         : String(CFG.MAILBOX_ID || '').trim();
+                    const teamMailboxIds = String(data.teamMailboxIds ?? '').trim();
                     const commandRegistryId = String(data.commandRegistryId ?? '').trim();
                     const vaultRegistryId = String(data.vaultRegistryId ?? '').trim();
                     const nextPublicDirectIotaRpcUrl = String(data.nextPublicDirectIotaRpcUrl ?? '').trim();
                     const handoffLabel = String(data.handoffLabel ?? data.label ?? '').trim();
+                    const helperRoleRaw = String(data.helperRole ?? '').trim().toLowerCase();
+                    const helperRole =
+                        helperRoleRaw === 'arbeiter' || helperRoleRaw === 'kommandant' ? helperRoleRaw : 'messenger';
+                    const roleIdParsed = parseInt(String(data.roleId ?? ''), 10);
+                    const roleId = Number.isFinite(roleIdParsed) ? roleIdParsed : undefined;
+                    const deploymentProfile = String(data.deploymentProfile ?? '').trim() || undefined;
+                    const uiVariantRaw = String(data.uiVariant ?? '').trim().toLowerCase();
+                    const uiVariant = uiVariantRaw === 'messenger' ? 'messenger' : uiVariantRaw === 'full' ? 'full' : undefined;
+                    const transportProfileRaw = String(data.transportProfile ?? '').trim().toLowerCase();
+                    const transportProfile =
+                        transportProfileRaw === 'iota-anchored' || transportProfileRaw === 'iota-full'
+                            ? transportProfileRaw
+                            : transportProfileRaw === 'mesh-first'
+                              ? 'mesh-first'
+                              : undefined;
+                    const simpleModeRaw = data.simpleMode;
+                    const simpleMode =
+                        simpleModeRaw === true || simpleModeRaw === 'true' || simpleModeRaw === 1 || simpleModeRaw === '1'
+                            ? true
+                            : simpleModeRaw === false || simpleModeRaw === 'false' || simpleModeRaw === 0 || simpleModeRaw === '0'
+                              ? false
+                              : undefined;
                     let envContent: string;
                     try {
                         envContent = buildStandaloneSmartphoneHandoffEnv({
@@ -1990,9 +2074,17 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             bossAddress,
                             partnerAddresses: partnerAddresses || undefined,
                             mailboxId: mailboxIdField || undefined,
+                            teamMailboxIds: teamMailboxIds || undefined,
                             commandRegistryId: commandRegistryId || undefined,
                             vaultRegistryId: vaultRegistryId || undefined,
                             nextPublicDirectIotaRpcUrl: nextPublicDirectIotaRpcUrl || undefined,
+                            helperRole,
+                            roleId,
+                            deploymentProfile,
+                            uiVariant,
+                            transportProfile,
+                            simpleMode,
+                            handoffLabel: handoffLabel || undefined,
                         });
                     } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : String(e);
@@ -2000,16 +2092,38 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     const createdAtIso = new Date().toISOString();
+                    const readmeExtra = String(data.readmeExtra ?? '').trim() || undefined;
                     const readme = buildStandaloneSmartphoneHandoffReadme({
                         handoffLabel,
                         createdAtIso,
                         packageId: pkgRes.packageId,
                         rpcUrl,
                         bossAddress: normalizeAddress(bossAddress),
+                        helperRole,
+                        teamMailboxIds: teamMailboxIds || undefined,
+                        readmeExtra,
                     });
                     const slug =
                         (handoffLabel || 'handoff').replace(/[^\wäöüÄÖÜß.-]/gi, '_').slice(0, 48) || 'handoff';
                     const day = createdAtIso.slice(0, 10).replace(/-/g, '');
+                    const format = String(data.format || '').trim().toLowerCase();
+                    if (format === 'parts') {
+                        sendJson(
+                            res,
+                            200,
+                            {
+                                ok: true,
+                                envContent,
+                                readme,
+                                handoffLabel: handoffLabel || undefined,
+                                createdAtIso,
+                                packageId: pkgRes.packageId,
+                                filenameBase: `morgendrot-standalone-handoff-${slug}-${day}`,
+                            },
+                            cors
+                        );
+                        return;
+                    }
                     const archive = archiver('zip', { zlib: { level: 9 } });
                     res.writeHead(200, {
                         ...cors,

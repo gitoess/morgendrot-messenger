@@ -12,9 +12,70 @@ export type StandaloneSmartphoneHandoffZipBody = {
   partnerAddresses?: string
   /** Leerer String erlaubt (keine MAILBOX_ID im Export); weglassen = Server nutzt Boss-.env. */
   mailboxId?: string
+  /** Komma-getrennte Team-Mailbox-IDs (zusätzlich zur primären MAILBOX_ID). */
+  teamMailboxIds?: string
   commandRegistryId?: string
   vaultRegistryId?: string
   nextPublicDirectIotaRpcUrl?: string
+  helperRole?: 'messenger' | 'arbeiter' | 'kommandant'
+  roleId?: number
+  deploymentProfile?: string
+  uiVariant?: 'full' | 'messenger'
+  transportProfile?: 'mesh-first' | 'iota-anchored' | 'iota-full'
+  simpleMode?: boolean
+  /** README-HANDOFF.txt: Block LoRa-PSK + IOTA-Archiv (Boss-Export). */
+  includeIotaArchivReadme?: boolean
+  readmeExtra?: string
+  /** `parts` = JSON mit envContent/readme (Client baut ggf. verschlüsseltes ZIP). */
+  format?: 'zip' | 'parts'
+}
+
+export type StandaloneSmartphoneHandoffPartsOk = {
+  ok: true
+  envContent: string
+  readme: string
+  handoffLabel?: string
+  createdAtIso: string
+  packageId: string
+  filenameBase: string
+}
+
+export type StandaloneSmartphoneHandoffPartsResult =
+  | StandaloneSmartphoneHandoffPartsOk
+  | { ok: false; error: string }
+
+/** POST /api/standalone-smartphone-handoff-zip → Teile (für Client-Verschlüsselung). */
+export async function fetchStandaloneSmartphoneHandoffParts(
+  body: StandaloneSmartphoneHandoffZipBody
+): Promise<StandaloneSmartphoneHandoffPartsResult> {
+  try {
+    const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...body, format: 'parts' }),
+    })
+    const j = (await res.json()) as { ok?: boolean; error?: string; message?: string } & Partial<
+      StandaloneSmartphoneHandoffParts
+    >
+    if (!res.ok || !j.ok) {
+      return { ok: false, error: j.error || j.message || `HTTP ${res.status}` }
+    }
+    if (!j.envContent?.trim()) {
+      return { ok: false, error: 'Leere Handoff-.env vom Server.' }
+    }
+    return {
+      ok: true,
+      envContent: j.envContent,
+      readme: j.readme ?? '',
+      handoffLabel: j.handoffLabel,
+      createdAtIso: j.createdAtIso || new Date().toISOString(),
+      packageId: j.packageId || '',
+      filenameBase: j.filenameBase || 'morgendrot-standalone-handoff',
+    }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    return { ok: false, error: msg }
+  }
 }
 
 /** POST /api/standalone-smartphone-handoff-zip → Browser-Download (ZIP). */
@@ -25,7 +86,7 @@ export async function downloadStandaloneSmartphoneHandoffZip(
     const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, format: 'zip' }),
     })
     const ct = (res.headers.get('content-type') || '').toLowerCase()
     if (!res.ok) {

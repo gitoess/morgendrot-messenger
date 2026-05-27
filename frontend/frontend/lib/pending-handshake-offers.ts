@@ -1,5 +1,10 @@
-import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
-import { handshakeOfferFingerprint, readDismissedHandshakeFingerprints } from '@/frontend/lib/dismissed-handshake-offers'
+import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import {
+  handshakeOfferFingerprint,
+  outgoingHandshakeOfferFingerprint,
+  readDismissedHandshakeFingerprints,
+  readDismissedOutgoingHandshakeFingerprints,
+} from '@/frontend/lib/dismissed-handshake-offers'
 
 export function filterPendingHandshakesNotConnected(
   offers: PendingHandshakeOffer[],
@@ -12,6 +17,17 @@ export function filterPendingHandshakesNotConnected(
   })
 }
 
+export function filterOutgoingHandshakesNotConnected(
+  offers: OutgoingHandshakeOffer[],
+  connectedAddresses: string[]
+): OutgoingHandshakeOffer[] {
+  const connected = new Set(connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean))
+  return offers.filter((o) => {
+    const r = o.recipient.trim().toLowerCase()
+    return /^0x[a-f0-9]{64}$/.test(r) && !connected.has(r)
+  })
+}
+
 export function filterVisiblePendingHandshakes(
   offers: PendingHandshakeOffer[],
   connectedAddresses: string[],
@@ -20,6 +36,18 @@ export function filterVisiblePendingHandshakes(
   const dismissedSet = dismissed ?? readDismissedHandshakeFingerprints()
   return filterPendingHandshakesNotConnected(offers, connectedAddresses).filter((o) => {
     const fp = handshakeOfferFingerprint(o.sender, o.nonce)
+    return !dismissedSet.has(fp)
+  })
+}
+
+export function filterVisibleOutgoingHandshakes(
+  offers: OutgoingHandshakeOffer[],
+  connectedAddresses: string[],
+  dismissed?: Set<string>
+): OutgoingHandshakeOffer[] {
+  const dismissedSet = dismissed ?? readDismissedOutgoingHandshakeFingerprints()
+  return filterOutgoingHandshakesNotConnected(offers, connectedAddresses).filter((o) => {
+    const fp = outgoingHandshakeOfferFingerprint(o.recipient, o.nonce)
     return !dismissedSet.has(fp)
   })
 }

@@ -150,15 +150,34 @@ export function setActivePrivateMailboxObjectId(id: string): void {
   persistActivePrivateMailbox(t)
 }
 
+export function suggestNextPrivateMailboxLabel(
+  list: MyPrivateMailboxEntry[] = readListRaw(),
+  archive: MyPrivateMailboxEntry[] = readArchiveRaw()
+): string {
+  const used = new Set<number>()
+  const scan = (entries: MyPrivateMailboxEntry[]) => {
+    for (const e of entries) {
+      const m = (e.label ?? '').trim().match(/^Private\s*#(\d+)$/i)
+      if (m) used.add(Number.parseInt(m[1]!, 10))
+    }
+  }
+  scan(list)
+  scan(archive)
+  let n = 1
+  while (used.has(n)) n++
+  return `Private #${n}`
+}
+
 export function addMyPrivateMailbox(entry: MyPrivateMailboxEntry): void {
   const objectId = entry.objectId.trim()
   if (!isValidObjectId(objectId)) return
   const archive = readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
   writeArchiveRaw(archive)
   const list = readListRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
+  const label = entry.label?.trim() || suggestNextPrivateMailboxLabel(list, archive)
   list.unshift({
     objectId,
-    ...(entry.label?.trim() ? { label: entry.label.trim() } : {}),
+    label,
     ...(entry.createdAtMs ? { createdAtMs: entry.createdAtMs } : { createdAtMs: Date.now() }),
     ...(entry.digest?.trim() ? { digest: entry.digest.trim() } : {}),
   })
@@ -231,4 +250,26 @@ export function writeMyPrivateMailboxObjectId(id: string): void {
   }
   if (!isValidObjectId(t)) return
   addMyPrivateMailbox({ objectId: t })
+}
+
+/** Bestehende Einträge ohne Label → `Private #1`, `#2`, … (einmalig beim Panel-Laden). */
+export function backfillPrivateMailboxLabels(): boolean {
+  let changed = false
+  const fill = (entries: MyPrivateMailboxEntry[], other: MyPrivateMailboxEntry[]) => {
+    const out = [...entries]
+    for (let i = 0; i < out.length; i++) {
+      if ((out[i]!.label ?? '').trim()) continue
+      changed = true
+      out[i] = { ...out[i]!, label: suggestNextPrivateMailboxLabel(out, other) }
+    }
+    return out
+  }
+  const arch = readArchiveRaw()
+  const list = fill(readListRaw(), arch)
+  const arch2 = fill(arch, list)
+  if (changed) {
+    writeListRaw(list)
+    writeArchiveRaw(arch2)
+  }
+  return changed
 }

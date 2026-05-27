@@ -18,6 +18,8 @@ export type ChatViewSendPathCompactProps = {
   onEncryptedChange?: (encrypted: boolean) => void
   /** 1:1: dezente Kontakt-ID unter den Sendepfad-Buttons. */
   myAddressLine?: string
+  /** Simple Mode: Ad-hoc ausblenden. */
+  showAdhocTransport?: boolean
 }
 
 const ONLINE = {
@@ -78,7 +80,15 @@ function selectCleartextTransport(
 }
 
 export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
-  const { visible, encrypted, forcedTransport, onForcedTransportChange, onEncryptedChange, myAddressLine } = p
+  const {
+    visible,
+    encrypted,
+    forcedTransport,
+    onForcedTransportChange,
+    onEncryptedChange,
+    myAddressLine,
+    showAdhocTransport = true,
+  } = p
   if (!visible) return null
 
   return (
@@ -120,23 +130,27 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         </span>
         {FUNK.short}
       </button>
-      <span className="hidden h-4 w-px bg-border/80 sm:inline" aria-hidden />
-      <button
-        type="button"
-        title={ADHOC.title}
-        onClick={() => selectCleartextTransport(encrypted, ADHOC.id, onEncryptedChange, onForcedTransportChange)}
-        className={cn(
-          'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
-          forcedTransport === ADHOC.id
-            ? 'border-amber-600/45 bg-amber-500/12 text-foreground'
-            : 'border-transparent bg-background/80 text-muted-foreground hover:bg-muted'
-        )}
-      >
-        <span className="mr-0.5" aria-hidden>
-          {ADHOC.icon}
-        </span>
-        {ADHOC.short}
-      </button>
+      {showAdhocTransport ? (
+        <>
+          <span className="hidden h-4 w-px bg-border/80 sm:inline" aria-hidden />
+          <button
+            type="button"
+            title={ADHOC.title}
+            onClick={() => selectCleartextTransport(encrypted, ADHOC.id, onEncryptedChange, onForcedTransportChange)}
+            className={cn(
+              'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+              forcedTransport === ADHOC.id
+                ? 'border-amber-600/45 bg-amber-500/12 text-foreground'
+                : 'border-transparent bg-background/80 text-muted-foreground hover:bg-muted'
+            )}
+          >
+            <span className="mr-0.5" aria-hidden>
+              {ADHOC.icon}
+            </span>
+            {ADHOC.short}
+          </button>
+        </>
+      ) : null}
       </div>
       {myAddressLine?.trim() ? <ChatViewMyWalletIdInline myAddressLine={myAddressLine} /> : null}
     </div>

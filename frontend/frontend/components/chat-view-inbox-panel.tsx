@@ -17,10 +17,13 @@ import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partn
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
-import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
+import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
-import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
+import { ChatViewEinsatzProfilImportDialog } from '@/frontend/components/chat-view-einsatz-profil-import-dialog'
+import { canAccessEinsatzleitung, canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
+import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -62,11 +65,22 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onOpenPhonebook?: () => void
     showPhonebookButton?: boolean
     pendingHandshakeOffers?: PendingHandshakeOffer[]
+    outgoingHandshakeOffers?: OutgoingHandshakeOffer[]
     pendingHandshakesLoading?: boolean
     sending?: boolean
     onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
     onUseSenderAsPartnerFromInbox?: (sender: string) => void
-    onRejectPendingHandshake?: (sender: string, nonce: string) => void
+    onDeleteIncomingHandshake?: (
+      sender: string,
+      nonce: string,
+      source: HandshakeOfferSource
+    ) => void | Promise<void>
+    onDeleteOutgoingHandshake?: (
+      recipient: string,
+      nonce: string,
+      source: HandshakeOfferSource
+    ) => void | Promise<void>
+    onResendOutgoingHandshake?: (recipient: string) => void | Promise<void>
     pendingHandshakeCount?: number
     /** Hinweis wenn Mailbox/verschlüsselt geladen, aber Filter versteckt. */
     inboxVisibilityHint?: string | null
@@ -77,12 +91,17 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onContactsChanged?: () => void
     onMailboxPanelStatus?: (msg: string, kind: 'success' | 'error') => void
     onApplySendRecipient?: (walletAddress: string) => void
+    /** Boss/Kommandant: Einsatzleitung-Tab im Dashboard. */
+    onOpenEinsatzleitung?: () => void
+    showInboxIotaFilter?: boolean
+    showIotaExpertInboxActions?: boolean
   }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   const [showWireControls, setShowWireControls] = useState(false)
   const [showChannelControls, setShowChannelControls] = useState(false)
   const [showPartnerControls, setShowPartnerControls] = useState(false)
+  const [bossImportOpen, setBossImportOpen] = useState(false)
   const {
     loadError,
     basisUnreachable,
@@ -123,11 +142,14 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     removeInboxPartnerFromQuickList,
     onDismissMeshInboundBanner,
     pendingHandshakeOffers = [],
+    outgoingHandshakeOffers = [],
     pendingHandshakesLoading = false,
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
-    onRejectPendingHandshake,
+    onDeleteIncomingHandshake,
+    onDeleteOutgoingHandshake,
+    onResendOutgoingHandshake,
     pendingHandshakeCount = 0,
     inboxVisibilityHint = null,
     mailboxesPanelOpen = false,
@@ -141,8 +163,14 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     inboxHasMore,
     onAddSenderToContactBook,
     onSarqNakWire,
+    onOpenEinsatzleitung,
+    showInboxIotaFilter = true,
+    showIotaExpertInboxActions = true,
     ...toolbarProps
   } = props
+
+  const roleLine = (apiStatus?.role || '').trim()
+  const showEinsatzleitungActions = canAccessEinsatzleitung(roleLine)
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -167,6 +195,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onToggleMailboxesPanel={onToggleMailboxesPanel}
         apiStatus={apiStatus}
         pendingHandshakeCount={pendingHandshakeCount}
+        isBossRole={showEinsatzleitungActions}
+        onOpenBossEinsatzleitung={onOpenEinsatzleitung}
+        onOpenBossJsonImport={() => setBossImportOpen(true)}
+        showIotaExpertInboxActions={showIotaExpertInboxActions}
       />
       {mailboxesPanelOpen && myAddress.trim() && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) ? (
         <div className="border-b border-violet-500/25 bg-violet-500/[0.06] px-4 py-3 dark:bg-violet-950/15">
@@ -188,6 +220,13 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           />
         </div>
       ) : null}
+      {showEinsatzleitungActions ? (
+        <ChatViewEinsatzProfilImportDialog
+          open={bossImportOpen}
+          onOpenChange={setBossImportOpen}
+          onContactsApplied={onContactsChanged}
+        />
+      ) : null}
       {showWireControls || showChannelControls || showPartnerControls ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
@@ -200,6 +239,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           onMeshTransportOnlyChange={setInboxMeshTransportOnly}
           iotaTransportOnly={inboxIotaTransportOnly}
           onIotaTransportOnlyChange={setInboxIotaTransportOnly}
+          showInboxIotaFilter={showInboxIotaFilter}
           wireFilter={inboxWireFilter}
           onWireFilterChange={setInboxWireFilter}
           onPartnerSelectForSend={selectInboxPartnerForSend}
@@ -223,7 +263,18 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             directory={contactDirectory}
             onAccept={onAcceptPendingHandshake}
             onUseAsPartner={onUseSenderAsPartnerFromInbox ?? (() => {})}
-            onReject={onRejectPendingHandshake}
+            onDelete={onDeleteIncomingHandshake}
+          />
+        ) : null}
+        {onUseSenderAsPartnerFromInbox ? (
+          <ChatViewInboxOutgoingHandshakeRequests
+            offers={outgoingHandshakeOffers}
+            loading={pendingHandshakesLoading}
+            sending={sending}
+            directory={contactDirectory}
+            onUseAsPartner={onUseSenderAsPartnerFromInbox}
+            onResend={onResendOutgoingHandshake}
+            onDelete={onDeleteOutgoingHandshake}
           />
         ) : null}
         <ChatViewInboxList

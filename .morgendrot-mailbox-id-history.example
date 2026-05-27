@@ -1,0 +1,4 @@
+# Frühere Shared-Mailbox-Object-IDs (eine pro Zeile, 0x + 64 Hex).
+# Kopie nach .morgendrot-mailbox-id-history — zusätzlich zu MAILBOX_ID in .env.
+# Beispiel: zweite/leere Mailbox aus create_globals, während Nachrichten in der ersten liegen.
+# 0x6ee1a62391eab5f5ce28ed801e6df731987fd3b972c5abc19033e108b2a22dc7

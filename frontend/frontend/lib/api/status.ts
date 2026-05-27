@@ -77,8 +77,18 @@ export type ApiStatus = {
   runtimeConfigKeys?: string[]
   /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
   uiVariant?: 'full' | 'messenger'
+  /** Boss-Handoff-Bezeichnung (HANDOFF_LABEL / Einsatz-Profil). */
+  handoffLabel?: string
   /** consumer = Privat/Prepper; einsatz = Organisation mit Stab (GET /api/status). */
   deploymentProfile?: 'consumer' | 'einsatz'
+  /** mesh-first = Funk-Default in UI; IOTA-Backend bleibt (docs/TRANSPORT-AND-IOTA-LAYERS.md). */
+  transportProfile?: 'mesh-first' | 'iota-anchored' | 'iota-full'
+  /** Serverseitig erzwungener Simple Mode (Helfer/Wanderer). */
+  simpleMode?: boolean
+  /** simple | expert — abgeleitet aus SIMPLE_MODE. */
+  uiMode?: 'simple' | 'expert'
+  /** IOTA-UI (Banner, Relay, Filter) erlaubt. */
+  iotaTransportUiEnabled?: boolean
   /** false: API-Port liefert keine statische ui/index.html. */
   serveLiteUiStatic?: boolean
   /** Backend nutzt SOCKS5 für IOTA-RPC (z. B. Tor). */

@@ -8,6 +8,11 @@ import {
     createTeamMailbox,
     purgePrivateMailbox,
     getPrivateMailboxRebateCandidates,
+    getClient,
+    normalizeChainTxEffectStatus,
+    explorerTxUrlFromDigest,
+    parseMailboxCreatedIdsFromDigest,
+    parseTxFailureReasonFromDigest,
 } from '../../chain-access.js';
 import { getWalletPassword } from '../messenger-session-password.js';
 import type { CommandHandlerResult, MessengerCommandContext } from './command-types.js';
@@ -20,15 +25,61 @@ const LIFECYCLE_COMMANDS = new Set([
     '/private-mailbox-contents',
 ]);
 
-function commandResultFromTx(
+async function enrichCreatedMailboxIds(
+    res: { status?: string; createdObjectIds?: string[]; digest?: string; gasSummary?: unknown } | undefined
+): Promise<{ status?: string; createdObjectIds?: string[]; digest?: string; gasSummary?: unknown } | undefined> {
+    if (!res) return res;
+    if (res.createdObjectIds?.length) return res;
+    const digest = res.digest?.trim();
+    if (!digest) return res;
+    const fromChain = await parseMailboxCreatedIdsFromDigest(getClient(), digest);
+    if (!fromChain.length) return res;
+    return { ...res, createdObjectIds: fromChain };
+}
+
+async function commandResultFromTx(
     res: { status?: string; createdObjectIds?: string[]; digest?: string; gasSummary?: unknown } | undefined,
-    okMessage: string
-): CommandHandlerResult {
-    if (res?.status === 'failure') return { ok: false, message: 'Transaktion fehlgeschlagen.' };
-    const out: CommandHandlerResult = { ok: true, message: okMessage };
-    if (res?.createdObjectIds?.length) out.createdObjectIds = res.createdObjectIds;
-    if (res?.createdObjectIds?.[0]) out.objectId = res.createdObjectIds[0];
-    if (res?.digest) out.digest = res.digest;
+    okMessage: string,
+    opts?: { moveFunctionHint?: string }
+): Promise<CommandHandlerResult> {
+    const status = normalizeChainTxEffectStatus(res?.status);
+    const digest = res?.digest?.trim();
+    const hasObjects = (res?.createdObjectIds?.length ?? 0) > 0;
+
+    if (hasObjects) {
+        const out: CommandHandlerResult = { ok: true, message: okMessage };
+        if (res?.createdObjectIds?.length) out.createdObjectIds = res.createdObjectIds;
+        if (res?.createdObjectIds?.[0]) out.objectId = res.createdObjectIds[0];
+        if (digest) out.digest = digest;
+        if (res?.gasSummary) out.gasSummary = res.gasSummary as CommandHandlerResult['gasSummary'];
+        return out;
+    }
+
+    if (status === 'failure') {
+        let message = 'Transaktion fehlgeschlagen.';
+        if (digest) {
+            const reason = await parseTxFailureReasonFromDigest(getClient(), digest);
+            if (reason && /function not found/i.test(reason)) {
+                const fn = opts?.moveFunctionHint ?? 'Move-Funktion';
+                message = `${fn} im Paket nicht gefunden — Move deployen (npm run deploy:move-package) und PACKAGE_ID in .env setzen. Explorer: ${explorerTxUrlFromDigest(digest)}`;
+            } else if (reason) {
+                message = `Transaktion fehlgeschlagen: ${reason} — Explorer: ${explorerTxUrlFromDigest(digest)}`;
+            } else {
+                message = `Transaktion fehlgeschlagen — im Explorer prüfen: ${explorerTxUrlFromDigest(digest)}`;
+            }
+        }
+        const out: CommandHandlerResult = { ok: false, message };
+        if (digest) out.digest = digest;
+        return out;
+    }
+
+    const out: CommandHandlerResult = {
+        ok: true,
+        message: digest
+            ? `${okMessage} Object-ID nicht automatisch gelesen — Explorer: ${explorerTxUrlFromDigest(digest)}`
+            : okMessage,
+    };
+    if (digest) out.digest = digest;
     if (res?.gasSummary) out.gasSummary = res.gasSummary as CommandHandlerResult['gasSummary'];
     return out;
 }
@@ -47,7 +98,9 @@ export async function tryHandleMailboxLifecycleCommand(
         if (!CFG.PACKAGE_ID) return { ok: false, message: 'PACKAGE_ID fehlt.' };
         try {
             const res = await createPrivateMailbox(MY_ADDR, pw, sponsorOpts);
-            return commandResultFromTx(res, 'Private Mailbox on-chain erstellt.');
+            return await commandResultFromTx(await enrichCreatedMailboxIds(res), 'Private Mailbox on-chain erstellt.', {
+                moveFunctionHint: 'create_private_mailbox',
+            });
         } catch (e) {
             const msg = (e as Error)?.message || String(e);
             if (/create_private_mailbox|function not found|Could not resolve/i.test(msg)) {
@@ -71,7 +124,9 @@ export async function tryHandleMailboxLifecycleCommand(
         if (!CFG.PACKAGE_ID) return { ok: false, message: 'PACKAGE_ID fehlt.' };
         try {
             const res = await createTeamMailbox(MY_ADDR, pw, sponsorOpts);
-            return commandResultFromTx(res, 'Team-Mailbox (Shared) on-chain erstellt.');
+            return await commandResultFromTx(await enrichCreatedMailboxIds(res), 'Team-Mailbox (Shared) on-chain erstellt.', {
+                moveFunctionHint: 'create_team_mailbox',
+            });
         } catch (e) {
             const msg = (e as Error)?.message || String(e);
             if (/create_team_mailbox|function not found|Could not resolve/i.test(msg)) {
@@ -123,7 +178,9 @@ export async function tryHandleMailboxLifecycleCommand(
     if (c === '/purge-private-mailbox') {
         try {
             const res = await purgePrivateMailbox(mbId, MY_ADDR, pw, sponsorOpts);
-            return commandResultFromTx(res, 'Private Mailbox on-chain gelöscht (Rebate).');
+            return await commandResultFromTx(res, 'Private Mailbox on-chain gelöscht (Rebate).', {
+                moveFunctionHint: 'purge_private_mailbox',
+            });
         } catch (e) {
             return { ok: false, message: (e as Error)?.message || String(e) };
         }

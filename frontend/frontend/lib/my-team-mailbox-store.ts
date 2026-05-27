@@ -82,15 +82,34 @@ export function readArchivedMyTeamMailboxes(): MyTeamMailboxEntry[] {
   return readArchiveRaw()
 }
 
+export function suggestNextTeamMailboxLabel(
+  list: MyTeamMailboxEntry[] = readListRaw(),
+  archive: MyTeamMailboxEntry[] = readArchiveRaw()
+): string {
+  const used = new Set<number>()
+  const scan = (entries: MyTeamMailboxEntry[]) => {
+    for (const e of entries) {
+      const m = (e.label ?? '').trim().match(/^Team\s*#(\d+)$/i)
+      if (m) used.add(Number.parseInt(m[1]!, 10))
+    }
+  }
+  scan(list)
+  scan(archive)
+  let n = 1
+  while (used.has(n)) n++
+  return `Team #${n}`
+}
+
 export function addMyTeamMailbox(entry: MyTeamMailboxEntry): void {
   const objectId = entry.objectId.trim()
   if (!isValidObjectId(objectId)) return
   const archive = readArchiveRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
   writeArchiveRaw(archive)
   const list = readListRaw().filter((e) => e.objectId.toLowerCase() !== objectId.toLowerCase())
+  const label = entry.label?.trim() || suggestNextTeamMailboxLabel(list, archive)
   list.unshift({
     objectId,
-    ...(entry.label?.trim() ? { label: entry.label.trim() } : {}),
+    label,
     joinedAtMs: entry.joinedAtMs ?? Date.now(),
     ...(entry.digest?.trim() ? { digest: entry.digest.trim() } : {}),
   })
@@ -153,4 +172,26 @@ export function updateMyTeamMailboxLabel(objectId: string, label: string): void 
   }
   writeListRaw(patch(readListRaw()))
   writeArchiveRaw(patch(readArchiveRaw()))
+}
+
+/** Bestehende Einträge ohne Label → `Team #1`, `#2`, … (einmalig beim Panel-Laden). */
+export function backfillTeamMailboxLabels(): boolean {
+  let changed = false
+  const fill = (entries: MyTeamMailboxEntry[], other: MyTeamMailboxEntry[]) => {
+    const out = [...entries]
+    for (let i = 0; i < out.length; i++) {
+      if ((out[i]!.label ?? '').trim()) continue
+      changed = true
+      out[i] = { ...out[i]!, label: suggestNextTeamMailboxLabel(out, other) }
+    }
+    return out
+  }
+  const arch = readArchiveRaw()
+  const list = fill(readListRaw(), arch)
+  const arch2 = fill(arch, list)
+  if (changed) {
+    writeListRaw(list)
+    writeArchiveRaw(arch2)
+  }
+  return changed
 }

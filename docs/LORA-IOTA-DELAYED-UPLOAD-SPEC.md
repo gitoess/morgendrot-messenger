@@ -1,6 +1,6 @@
 # LoRa → IOTA: Delayed Upload & Chain-of-Custody – Architektur-Spec
 
-**Status:** Entwurf zur Priorisierung (kein implementierter Code in diesem Dokument).  
+**Status:** **Phase B — verbindlich geplant** (Entwurf; kein vollständiges End-to-End-Produkt in diesem Dokument). **Bleibt** trotz Funk-Default im Helfer-UI — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**.  
 **Ziele:** Lückenloser **späterer Upload** von über LoRa empfangenen Nachrichten nach **IOTA**, sobald ein Knoten **Internet** hat; **E2E-Verschlüsselung unverändert**; **nachvollziehbare Hop-Kette**; UI: **Transportpfad + IOTA-Anchor-Status**.
 
 **Verwandt:** **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** (was 1:1 aus Meshtastic kommt), **`docs/LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`** (Frequenz-/Hardware-Rahmen, Einsatzprofile), **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`** (**§ H.3m** — warum **keine** volle IOTA-TX über LoRa; Gateway-Brücke), **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§ H.3n** — SOS / `MORG_EMERGENCY_V1`, priorisierte Basis-Queue), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Offline vs. Online, **kein** CRDT-Mythos; Dedup, Mehrgeräte), **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`docs/DRONE-RELAY-STRATEGY.md`**, **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**, **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** (nur bei Bedarf), Mesh v2 **`MESH_V2_MAX_BYTES = 240`**.

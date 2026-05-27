@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   extractInitialProfileFromPaste,
   fingerprintInitialProfile,
+  summarizeInitialProfile,
   queueInitialProfileForNextApply,
   clearPendingInitialProfile,
   LS_OFFLINE_BRIEFING_DISPLAY,
@@ -55,6 +56,22 @@ describe('fingerprintInitialProfile', () => {
       ],
     }
     expect(fingerprintInitialProfile(a)).toBe(fingerprintInitialProfile(b))
+  })
+})
+
+describe('summarizeInitialProfile', () => {
+  it('zählt Kontakte und Kanal', () => {
+    const s = summarizeInitialProfile({
+      version: 1,
+      deploymentChannelTag: 'Sektor-Nord',
+      contacts: [
+        { name: 'Anna', address: '0x' + 'a'.repeat(64) },
+        { name: 'Bob', address: '0x' + 'b'.repeat(64) },
+      ],
+    })
+    expect(s.contactCount).toBe(2)
+    expect(s.deploymentChannelTag).toBe('Sektor-Nord')
+    expect(s.contactPreview[0]).toContain('Anna')
   })
 })
 

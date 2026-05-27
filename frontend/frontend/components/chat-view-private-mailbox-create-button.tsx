@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Loader2, Sparkles } from 'lucide-react'
 import { createPrivateMailboxOnChain } from '@/frontend/lib/create-private-mailbox-on-chain'
-import { addMyPrivateMailbox } from '@/frontend/lib/my-private-mailbox-store'
+import { addMyPrivateMailbox, readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
 
 export function ChatViewPrivateMailboxCreateButton(p: {
   walletValid: boolean
@@ -27,11 +27,10 @@ export function ChatViewPrivateMailboxCreateButton(p: {
           createdAtMs: Date.now(),
           ...(r.digest ? { digest: r.digest } : {}),
         })
+        const label = readMyPrivateMailboxes().find((e) => e.objectId === r.objectId)?.label || 'Private Mailbox'
         p.onObjectId(r.objectId, { digest: r.digest })
         p.onStatus?.(
-          r.digest
-            ? `Private Mailbox erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`
-            : `Private Mailbox erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`,
+          `„${label}“ erstellt und aktiv (${r.objectId.slice(0, 10)}…). Posteingang „Aktualisieren“, dann Empfänger/Handshake.`,
           'success'
         )
       } else {

@@ -1,50 +1,59 @@
 # Telegram-Integration — Zielbild (Spez)
 
-**Status:** Spezifikation (Umsetzung **§ H.26** in `docs/ROADMAP-FAHRPLAN.md`).  
-**Stand:** 2026-05-15  
+**Status:** Spezifikation + **Ist-Code** (**§ H.26** in **`docs/ROADMAP-FAHRPLAN.md`**).  
+**Stand:** **2026-05-20** (Phase **B2 Long Polling** dokumentiert; Phase A + B2 **teilweise umgesetzt**).
 
-**Zweck:** Telegram als **Zustellkanal** für (A) **Systemalarme** und optional (B) **Kurz-Hinweise an Kontakte** — konfigurierbar über die **App (Runtime)**, ohne dass Endnutzer `TG_*` in `.env` editieren müssen.
+**Zweck:** Telegram als **Zustellkanal** für (A) **Systemalarme**, (B2) **Eingang von Partnern per Long Polling** und (B3, geplant) **Kurz-Hinweise nach Send** — konfigurierbar über **Runtime**, ohne `TG_*` in `.env` auf dem Feldgerät.
 
-**Verwandt:** `scripts/telegram-webhook.ts` (Ist), `src/monitoring.ts` (Alarm-Webhook), **§ H.6e** / **§ H.20** (`.env` vs. Runtime), **§ H.16** (Telefonbuch).
+**Strategie-Kontext:** Telegram ist **optionaler Zustellkanal** (**§ H.0-SIMPLE**). **IOTA** bleibt Archiv/Forensik (**`docs/TRANSPORT-AND-IOTA-LAYERS.md`**); Telegram ersetzt weder LoRa noch Tangle.
+
+**Verwandt:** `scripts/telegram-webhook.ts`, `src/integrations/telegram-integration.ts`, `src/integrations/telegram-inbound-poll.ts`, **§ H.6e** / **§ H.20**, **§ H.16** (Telefonbuch).
 
 ---
 
 ## 1. Einordnung
 
-### 1.1 Was Telegram bei Morgendrot ist — und was nicht
+### 1.1 Was Telegram ist — und was nicht
 
-| | Telegram | IOTA / Mailbox / LoRa |
-|---|----------|------------------------|
-| **Zweck** | Push-Benachrichtigung an Menschen | Forensik / Nachweis / Funk |
-| **Inhalt** | Klartext (Bot-API) | Verschlüsselt oder Pfad-4-Klartext mit eigener Semantik |
-| **Empfänger** | Telegram-Chat-ID | Wallet-Adresse (`0x…`) |
-| **Offline-Funk** | Meist **ohne** Internet nutzlos | LoRa/Mesh kann ohne Telegram laufen |
+| | Telegram | LoRa / Mesh | IOTA (optionaler Notar) |
+|---|----------|-------------|-------------------------|
+| **Zweck** | Push + optionaler Rückkanal (Internet) | Einsatz-Chat ohne Internet | Verankerung / Forensik |
+| **Inhalt** | Klartext (Bot-API) | Funk-Payloads | Chain/Mailbox |
+| **Offline-Funk** | Meist nutzlos ohne Internet | **Primär** im Einsatz-Default | Nur wenn Boss aktiviert |
+| **Simple Mode** | **Ausgeblendet** (Default Helfer) | **Sichtbar** | **Ausgeblendet** (`mesh-first`) |
 
-**Telegram ist kein Ersatz** für Chain-Speicherung. In der UI muss das klar sein: *„Telegram-Hinweis — keine Forensik-Kopie auf der Chain.“*
+**UI-Pflicht:** *„Telegram-Hinweis — keine Forensik-Kopie auf der Chain.“*
 
-### 1.2 `.env` vs. Runtime (Roadmap-konform)
+### 1.2 `.env` vs. Runtime
 
 | Schicht | Konfiguration | Beispiele |
 |---------|---------------|-----------|
 | **Server / Deploy** | `.env`, Secret-Manager | `RPC_URL`, `PACKAGE_ID`, `MONITOR_DEVICES` |
-| **Nutzer / Admin (Gerät)** | **Runtime** (UI → persistiert) | Bot-Token, eigene Chat-ID, Relay-URL |
+| **Admin (Runtime)** | UI → `.morgendrot-runtime-config.json` | Bot-Token, Admin-Chat-ID, `inboundMode` |
 
-**`.env` wird nicht global abgeschaffen** (**§ H.6e**, **§ H.20**). Für Telegram gilt: **`TG_BOT_TOKEN` / `TG_CHAT_ID` in `.env`** sind **Legacy-Fallback** für Deploy/Skripte; **Ziel** = Einstellungen in der App.
-
-**Sicherheit:** `MONITOR_ALARM_WEBHOOK_URL` steht auf der **SETENV-Blocklist** — Telegram-Secrets dürfen **nicht** über `POST /api/config` / `setEnvKey` gesetzt werden. Eigener Endpunkt: **`POST /api/integrations/telegram`**.
+**Ziel:** Endnutzer editieren **kein** `TG_*` in `.env`. Telegram-Secrets **nicht** über `setEnvKey` — eigener Endpunkt **`POST /api/integrations/telegram`**.
 
 ---
 
-## 2. Zwei Kanäle
+## 2. Kanäle und Phasen
 
-### Kanal A — Systemalarm (Monitor)
+| Phase | Kanal | Richtung | Status |
+|-------|-------|----------|--------|
+| **A** | Systemalarm (Monitor) | Server → Admin-Chat | **Ist** (Relay + Webhook-URL) |
+| **B1** | Telefonbuch `telegramChatId` | Metadaten | **Teil-Ist** |
+| **B2** | **Long Polling Eingang** | Partner → Morgendrot | **Ist** |
+| **B3** | Notify nach Forensik-Send | Morgendrot → Partner | **Geplant** |
+
+---
+
+## 3. Kanal A — Systemalarm (Monitor)
 
 | Aspekt | Wert |
 |--------|------|
-| **Auslöser** | `src/monitoring.ts` → `triggerAlarm()` (Offline, Sensor-Grenzen, Eskalation L2/L3) |
-| **Empfänger** | **Admin-eigene** Chat-ID (`adminTelegramChatId` in Integrationen) |
-| **Transport** | `POST` an Relay **`/morgendrot-telegram/alarm`** (oder Legacy-Pfad, siehe Migration) |
-| **Ist** | `MONITOR_ALARM_WEBHOOK_URL` → `scripts/telegram-webhook.ts` |
+| **Auslöser** | `src/monitoring.ts` → `triggerAlarm()` |
+| **Empfänger** | `adminChatId` in Runtime-Integration |
+| **Transport** | `POST` Relay **`/morgendrot-telegram/alarm`** |
+| **Ist** | `MONITOR_ALARM_WEBHOOK_URL` → Relay |
 
 **JSON (Monitor → Relay):**
 
@@ -57,328 +66,259 @@
 }
 ```
 
-**Telegram-Text (Relay formatiert, wie Ist):**
+---
+
+## 4. Phase B2 — Long Polling Eingang (Kern dieser Spez)
+
+### 4.1 Problem
+
+**Webhook** braucht öffentliche HTTPS-URL (Tunnel, VPS, Reverse-Proxy) — unpassend für **Boss-PC im Feld**, **Simple Mode** und **Mesh-First** (Internet optional).
+
+**Lösung:** Der Morgendrot-Node **pollt** `api.telegram.org` per **`getUpdates`** (Long Polling). **Keine** eingehende Firewall-Regel nötig.
+
+### 4.2 Modi (`inboundMode`)
+
+| Wert | Verhalten |
+|------|-----------|
+| `off` | Kein Eingang (nur Kanal A ausgehend) |
+| **`longPoll`** | **Default für Feld** — Hintergrund-Loop in Node |
+| `webhook` | `POST /api/integrations/telegram/webhook` (nur mit erreichbarer URL) |
+
+Runtime-Feld: `integrations.telegram.inboundMode` in **`.morgendrot-runtime-config.json`**.
+
+### 4.3 Ablauf (Ist-Code)
+
+**Dateien:** `src/integrations/telegram-inbound-poll.ts`, `src/integrations/telegram-inbound.ts`, `src/integrations/telegram-journal.ts`.
 
 ```text
-⚠️ Morgendrot Alarm L1
-Gerät: TEST-DEVICE
-Zeit: 10.3.2026, 11:21:01
-Meldung: Testalarm von Morgendrot
+[Node-Start / Save Integration]
+        │
+        ▼
+restartTelegramInbound()
+        │
+        ├─ inboundMode !== longPoll → Poll aus
+        │
+        └─ longPoll + botToken gesetzt
+                │
+                ▼
+        deleteWebhook (drop_pending=false)
+                │
+                ▼
+        Schleife:
+          getUpdates(offset, timeout=25s, allowed_updates=[message])
+                │
+                ▼
+        ingestTelegramInboundUpdate(update)
+                │
+                ├─ Chat-ID in Telefonbuch-Allowlist? → Journal + Posteingang
+                └─ sonst → verwerfen (Log)
+                │
+                ▼
+        lastUpdateId persistieren (Runtime-Config)
 ```
 
-(`level` 2/3 → `L2` / `L3`; `ts` optional, sonst Server-Zeit `de-DE`.)
+**Parameter (Ist):**
 
-### Kanal B — Kontakt-Hinweis (optional, Phase B)
+| Parameter | Wert |
+|-----------|------|
+| `GET_UPDATES_TIMEOUT_SEC` | 25 |
+| `ERROR_BACKOFF_MS` | 5000 |
+| `allowed_updates` | `["message"]` |
+| Offset-Speicher | `integrations.telegram.lastUpdateId` |
+
+### 4.4 Allowlist (Sicherheit)
+
+Eingehende Nachrichten werden **nur** verarbeitet, wenn `chat.id` in **`getPhonebookTelegramChatIds()`**:
+
+- Feld **`telegramChatId`** am Kontakt (`contact-labels.ts`)
+- Kontakt-Schlüssel **`tg:<chatId>`**
+
+Unbekannte Chat-IDs: **kein** Journal, **kein** Posteingang — nur optional Debug-Log.
+
+### 4.5 Webhook vs. Long Poll
+
+Beim Wechsel auf **`longPoll`** ruft der Node **`deleteWebhook`** auf (einmal pro Token), damit Telegram nicht parallel Webhook + Poll bedient.
+
+Bei **`webhook`:** Long-Poll-Loop **stoppt** (`stopTelegramInboundPoll`).
+
+### 4.6 UI / API
+
+| Endpunkt | Zweck |
+|----------|--------|
+| `GET /api/integrations/telegram` | `inboundMode`, `inboundPollActive` (öffentlich) |
+| `POST /api/integrations/telegram` | `inboundMode` setzen → `restartTelegramInbound()` |
+| `POST /api/integrations/telegram/webhook` | Nur Modus `webhook` — Body = Telegram-Update |
+| `GET /api/integrations/telegram/journal` | Journal-Einträge (Admin) |
+
+**Einstellungen → Telegram:** Modus **Long Polling (empfohlen, kein Tunnel)** vs. Webhook.
+
+### 4.7 Posteingang
+
+Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingang (Journal → UI). **Kein** Ersatz für Mesh- oder Mailbox-Zeilen — **zusätzlicher** Kanal für Partner mit Internet.
+
+### 4.8 Abnahme Phase B2
+
+- [ ] Integration: Token + `inboundMode=longPoll` → Status `inboundPollActive: true`
+- [ ] Partner-Chat-ID im Telefonbuch → Text an Bot → Journal + Posteingang
+- [ ] Unbekannte Chat-ID → keine Zeile
+- [ ] Node-Neustart → Offset fortgesetzt, keine Doppel-Zeilen
+- [ ] Wechsel `longPoll` → `webhook` → Poll stoppt
+- [ ] **Simple Mode (Helfer):** Telegram-Einstellungen **nicht** sichtbar (**§ H.0-SIMPLE**)
+
+### 4.9 Grenzen (ehrlich)
+
+| Thema | Grenze |
+|-------|--------|
+| **Latenz** | Bis ~25 s + Netz (Long-Poll-Timeout) |
+| **Batterie (Handy als Server)** | Poll läuft auf **Node/PC**, nicht PWA im Browser |
+| **E2EE** | Telegram sieht **Klartext** — keine Signal-Behauptung |
+| **Offline-Funk** | LoRa unverändert; Telegram parallel nur mit Internet |
+| **Gruppen-Chats** | Nur explizit erlaubte Chat-IDs — kein Gruppen-Broadcast |
+
+---
+
+## 5. Phase B3 — Notify nach Send (geplant)
 
 | Aspekt | Wert |
 |--------|------|
-| **Auslöser** | Erfolgreicher **Forensik-Send** (IOTA/Mailbox/Mesh online) **und** Nutzer-Opt-in |
-| **Empfänger** | `telegramChatId` aus **Telefonbuch**-Eintrag (**§ H.16**) |
-| **Transport** | Backend → Relay **`/morgendrot-telegram/notify`** |
-| **Inhalt** | Kurz-Vorschau (z. B. erste 200 Zeichen), **kein** Medien-Blob |
+| **Auslöser** | Erfolgreicher Forensik-Send **und** Nutzer-Opt-in |
+| **Empfänger** | `telegramChatId` aus Telefonbuch |
+| **Transport** | Relay **`/morgendrot-telegram/notify`** |
+| **Fehler** | **Nicht blockierend** für IOTA/Mesh-Send |
 
-**JSON (Backend → Relay, kein Token im Body):**
+**JSON (Backend → Relay):**
 
 ```json
 {
   "target_chat_id": "987654321",
-  "message_preview": "Neue Morgendrot-Nachricht von 0xabc…",
+  "message_preview": "Neue Morgendrot-Nachricht …",
   "sender_label": "Partner B"
 }
 ```
 
-**Telegram-Text (Vorschlag):**
-
-```text
-📩 Morgendrot
-Von: Partner B
-Neue Morgendrot-Nachricht von 0xabc…
-```
-
-**Fehler bei Telegram:** **nicht blockierend** — Forensik-Send gilt als erfolgreich, UI zeigt Hinweis „Telegram nicht zugestellt“.
+Composer-Checkbox **„Telegram-Hinweis“** — Default **aus**.
 
 ---
 
-## 3. Architektur
+## 6. Architektur (Gesamt)
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│  Next-UI (Einstellungen → Integrationen → Telegram)               │
-│  Telefonbuch (telegramChatId pro Kontakt, Phase B)                │
+│  Next-UI — Integrationen → Telegram (Expert / Boss)            │
+│  Telefonbuch: telegramChatId (B1)                               │
 └────────────────────────────┬────────────────────────────────────┘
-                             │ HTTPS (Session / entsperrt)
+                             │ HTTPS
                              ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │  Morgendrot API (api-server)                                     │
-│  POST /api/integrations/telegram  — speichern, testen           │
-│  (optional) POST …/telegram/test-alarm | …/test-notify         │
+│  /api/integrations/telegram  — save, test, inboundMode          │
+│  /api/integrations/telegram/webhook  — optional (Modus webhook) │
 └────────────┬───────────────────────────────┬────────────────────┘
              │                               │
-             │ schreibt                      │ bei Alarm / Notify
              ▼                               ▼
 ┌────────────────────────┐    ┌──────────────────────────────────┐
-│ .morgendrot-runtime-   │    │ Telegram-Relay (localhost)        │
-│ config.json            │    │  POST /morgendrot-telegram/alarm  │
-│  integrations: {       │    │  POST /morgendrot-telegram/notify │
-│    telegram: { … }     │    │  Token nur aus geladener Config   │
-│  }                     │    └──────────────┬───────────────────┘
-└────────────────────────┘                   │
-                                               │ HTTPS
-                                               ▼
-                                    api.telegram.org/bot…/sendMessage
+│ .morgendrot-runtime-   │    │ telegram-inbound-poll.ts (B2)     │
+│ config.json            │    │  loop: getUpdates → ingest        │
+└────────────────────────┘    └──────────────┬───────────────────┘
+                                             │
+┌────────────────────────┐                 │
+│ Relay :8787            │◄── Monitor ─────┤
+│  /alarm  (A)           │                 │
+│  /notify (B3)          │                 ▼
+└───────────┬────────────┘       api.telegram.org
+            └──────────────────► sendMessage / getUpdates
 ```
 
 **Regeln:**
 
-1. **Browser** spricht **nur** die Morgendrot-API an — **nie** direkt `127.0.0.1:8787` (CORS, Token-Leak).
-2. **Relay** akzeptiert nur **localhost** (+ optional Header `X-Morgendrot-Relay-Secret`).
-3. **Bot-Token** verlässt den Server nur Richtung **Telegram-API**, nie in API-Responses an die UI (nach Speichern: maskiert `123456:ABC…****`).
+1. Browser **nur** Morgendrot-API — **nie** direkt Relay oder `api.telegram.org`.
+2. **Bot-Token** nie in API-Response (nur maskiert).
+3. **Kein** `bot_token` im Notify-Body.
 
 ---
 
-## 4. Runtime-Konfiguration (Spez)
-
-**Datei:** `.morgendrot-runtime-config.json` (bestehendes Muster, erweitert) — Pfad über `RUNTIME_CONFIG_FILE` überschreibbar.
-
-**Vorschlag Schema:**
+## 7. Runtime-Konfiguration (Schema)
 
 ```json
 {
-  "signer": "sdk",
   "integrations": {
     "telegram": {
       "enabled": true,
-      "botToken": "<secret — nur serverseitig, in API maskiert>",
+      "botToken": "<secret>",
       "adminChatId": "1156058618",
       "relayBaseUrl": "http://127.0.0.1:8787",
-      "relaySecret": "<optional, random, für Relay-Auth>"
+      "relaySecret": "<optional>",
+      "inboundMode": "longPoll",
+      "lastUpdateId": 123456789
     }
   }
 }
 ```
 
-| Feld | Pflicht | Beschreibung |
-|------|---------|--------------|
-| `enabled` | nein | Master-Schalter; Default `false` bis Token gesetzt |
-| `botToken` | Phase A | Von @BotFather; min. Länge / Format `digits:alphanumeric` |
-| `adminChatId` | Phase A | Numerische Chat-ID für Alarme + „Test an mich“ |
-| `relayBaseUrl` | nein | Default `http://127.0.0.1:8787` |
-| `relaySecret` | nein | Wenn gesetzt: Header bei internen Relay-POSTs |
-
-**Persistenz:** Schreiben bei **Speichern** in UI — **nicht** nur RAM (Neustart muss Config laden).
-
-**Später:** Token in Vault / OS-Keychain (RN) — gleiche API-Oberfläche.
+| Feld | Phase | Beschreibung |
+|------|-------|--------------|
+| `enabled` | A | Master-Schalter |
+| `botToken` | A | @BotFather |
+| `adminChatId` | A | Alarme + Test |
+| `inboundMode` | **B2** | `off` \| `longPoll` \| `webhook` |
+| `lastUpdateId` | **B2** | Persistierter Poll-Offset (serverseitig) |
 
 ---
 
-## 5. API (Haupt-Server)
+## 8. Onboarding
 
-### 5.1 `GET /api/integrations/telegram`
+### 8.1 Admin
 
-**Antwort (kein Klartext-Token):**
+1. Bot bei **@BotFather** → Token in **Integrationen**.
+2. **`inboundMode`:** **Long Polling** (Feld ohne Tunnel).
+3. Eigene Chat-ID → **Test an mich**.
+4. Relay starten (`npm run telegram-webhook` o. Ä.) für Kanal A.
 
-```json
-{
-  "ok": true,
-  "enabled": true,
-  "botTokenConfigured": true,
-  "botTokenMasked": "123456789:AAH…xxxx",
-  "adminChatId": "1156058618",
-  "relayBaseUrl": "http://127.0.0.1:8787",
-  "relayReachable": true
-}
-```
-
-### 5.2 `POST /api/integrations/telegram`
-
-**Body:**
-
-```json
-{
-  "enabled": true,
-  "botToken": "123456789:AAH…",
-  "adminChatId": "1156058618",
-  "relayBaseUrl": "http://127.0.0.1:8787"
-}
-```
-
-- `botToken` weglassen = unverändert lassen (Update nur Chat-ID).
-- Validierung: Chat-ID numerisch (ggf. führendes `-` für Gruppen).
-- Nach Save: optional **Relay-Health** (`GET` oder Test-POST).
-
-### 5.3 `POST /api/integrations/telegram/test-alarm`
-
-Sendet Test-Payload Kanal A an Admin-Chat-ID (ohne Monitor).
-
-### 5.4 `POST /api/integrations/telegram/test-notify` (Phase B)
-
-Body: `{ "target_chat_id": "…" }` — Test Kanal B.
-
-### 5.5 Kontakt-API (Phase B, Erweiterung)
-
-Bestehend: `POST /api/contact-label` — zusätzliche Felder:
-
-```json
-{
-  "address": "0x…",
-  "label": "Partner B",
-  "telegramChatId": "987654321"
-}
-```
-
-`null` / leer = Feld löschen (analog `meshNodeId`).
-
----
-
-## 6. Relay (Telegram-Brücke)
-
-**Basis:** Evolution von `scripts/telegram-webhook.ts`.
-
-### 6.1 Endpunkte
-
-| Methode | Pfad | Body | Antwort |
-|---------|------|------|---------|
-| POST | `/morgendrot-telegram/alarm` | Kanal-A-JSON | `{ "ok": true }` |
-| POST | `/morgendrot-telegram/notify` | Kanal-B-JSON | `{ "ok": true }` |
-
-**Legacy (Übergang):** `POST /morgendrot-telegram` ohne Suffix = **alias** für `/alarm` (Monitor-Ist).
-
-### 6.2 Implementierung
-
-- **`fetch`** zu `https://api.telegram.org/bot${token}/sendMessage` — **kein** `node-telegram-bot-api` pro Request.
-- Token aus **von Node geladener Integration** (beim Start `readRuntimeConfig()` + `applyIntegrations()`), Fallback `.env` `TG_BOT_TOKEN` / `TG_CHAT_ID` nur für Alarm-Kanal.
-- **Kein** `bot_token` im Request-Body akzeptieren (400 + Log-Warnung).
-
-### 6.3 Auth
-
-- Request-IP: `127.0.0.1` / `::1` / `::ffff:127.0.0.1`.
-- Optional: Header `X-Morgendrot-Relay-Secret` muss `integrations.telegram.relaySecret` entsprechen.
-
-### 6.4 Betrieb
-
-| Modus | Beschreibung |
-|-------|----------------|
-| **Manuell** | `npm run telegram-webhook` (wie heute) |
-| **Optional später** | Node startet Relay-Child oder bindet Handler intern |
-
-Bei UI-Save: `MONITOR_ALARM_WEBHOOK_URL` im laufenden Prozess auf `{relayBaseUrl}/morgendrot-telegram/alarm` setzen (nur intern, nicht über Blocklist-API).
-
----
-
-## 7. UI (Next)
-
-### 7.1 Einstellungen → Integrationen → Telegram (Phase A)
-
-- Bot-Token (Passwort-Feld, Autocomplete off)
-- Eigene Chat-ID + Link-Hilfe „@userinfobot“
-- Relay-URL (Default vorausgefüllt)
-- Schalter „Telegram-Alarme aktiv“
-- Buttons: **Speichern**, **Test an mich**
-
-**Hilfetext:** Bot bei @BotFather anlegen; für Alarme reicht **deine** ID — Partner-IDs kommen ins Telefonbuch (Phase B).
-
-### 7.2 Telefonbuch / Kontakt (Phase B)
-
-- Feld **Telegram Chat-ID** (optional)
-- Im Composer: Checkbox **„Zusätzlich Telegram-Hinweis“** (Default aus)
-
-### 7.3 Sende-Flow (Phase B)
-
-```text
-[Nutzer: Senden]
-  → Forensik-Pfad (unverändert, await)
-  → wenn telegramNotify && contact.telegramChatId:
-        fire-and-forget POST intern → Relay /notify
-        (Fehler nur Toast, kein Rollback)
-```
-
----
-
-## 8. Onboarding (Betrieb)
-
-### 8.1 Admin (einmalig)
-
-1. Bei **@BotFather** `/newbot` → Token kopieren.
-2. In Morgendrot **Integrationen** eintragen → **Speichern**.
-3. In Telegram den Bot öffnen → **Start** tippen (sonst darf Bot nicht schreiben).
-4. **@userinfobot** (oder ähnlich) → eigene **Chat-ID** kopieren → in Integrationen eintragen.
-5. **Test an mich** — Nachricht wie Kanal A muss ankommen.
-6. `npm run telegram-webhook` starten (oder Relay durch Node), `ENABLE_MONITOR=true`, `MONITOR_ALARM_WEBHOOK_URL=http://127.0.0.1:8787/morgendrot-telegram/alarm`.
-
-### 8.2 Partner (für Kanal B)
+### 8.2 Partner (Eingang B2)
 
 1. Partner: Bot **Start**.
-2. Partner: ID an Admin schicken (z. B. via @userinfobot).
-3. Admin: ID im **Telefonbuch** beim `0x…`-Kontakt speichern.
-4. Optional: **Test an Kontakt** aus Integrationen.
+2. Chat-ID an Admin (z. B. @userinfobot).
+3. Admin: ID im **Telefonbuch** (`telegramChatId` oder Kontakt `tg:…`).
+4. Partner schreibt Bot → Zeile im Posteingang (wenn Poll läuft).
 
 ---
 
-## 9. Sicherheit & Missbrauch
+## 9. Sicherheit
 
 | Risiko | Maßnahme |
 |--------|----------|
-| Token in Browser-LocalStorage | Token **nur** serverseitig in Runtime-Datei; UI sendet einmalig beim Save |
-| Offenes Relay auf LAN | Nur localhost + Secret; keine Bindung an `0.0.0.0` |
-| `bot_token` pro Request | **Verboten** — ein Bot pro Installation |
-| Telegram sieht Inhalt | UI-Warnung; keine E2E-Behauptung |
-| Logs | Token in Logs **maskieren** (nur Prefix) |
+| Token in Browser | Nur serverseitig in Runtime-Datei |
+| Offenes Relay | localhost + optional `relaySecret` |
+| Spam an Bot | **Allowlist** nur Telefonbuch-Chat-IDs |
+| Telegram ≠ Forensik | UI-Warnung; **§ H.0-SIMPLE** — kein Pflichtkanal |
 
 ---
 
-## 10. Abnahme (Checklisten)
+## 10. Explizit nicht in Scope
 
-### Phase A
-
-- [ ] Integrationen speichern ohne `.env`-`TG_*`
-- [ ] Neustart Node: Alarm-Test funktioniert
-- [ ] Monitor-Offline-Alarm löst Telegram aus
-- [ ] `curl` Test an `/alarm` (siehe unten)
-- [ ] `setEnvKey('TG_BOT_TOKEN')` abgelehnt
-- [ ] API gibt Token nicht zurück (nur maskiert)
-
-### Phase B
-
-- [ ] Kontakt mit `telegramChatId` + Opt-in → Notify
-- [ ] Kontakt ohne ID → IOTA ok, kein Notify
-- [ ] LoRa-Send ohne Internet → IOTA/Mesh ok
-
-### Manueller Test (Relay)
-
-```bash
-# Relay muss laufen (npm run telegram-webhook — nach Umsetzung: /alarm)
-curl -s -X POST http://127.0.0.1:8787/morgendrot-telegram/alarm \
-  -H "Content-Type: application/json" \
-  -d "{\"device\":\"TEST-DEVICE\",\"message\":\"Testalarm von Morgendrot\",\"level\":1}"
-```
+- Vollständiger Chat-Mirror (alle Sends automatisch)
+- Telegram als **einziger** Kanal ohne LoRa
+- Pinnwand → Telegram (**`docs/BROADCAST-PINNWAND.md`** — separates Backlog)
+- Bot-Kommandos / Inline-Menüs in Morgendrot
+- **Pflicht** in Simple Mode / Einsatz-Default
 
 ---
 
-## 11. Explizit nicht in Scope (H.26)
+## 11. Migrationspfad
 
-- Pinnwand → Telegram (siehe `docs/BROADCAST-PINNWAND.md` Backlog)
-- Vollständiger Chat-Mirror (alle Nachrichten automatisch)
-- Telegram als **einziger** Kanal ohne IOTA
-- Gruppen-/Kanal-Broadcast ohne Kontakt-ID
-- `node-telegram-bot-api` Long-Polling / Bot-Kommandos in Morgendrot
-
----
-
-## 12. Migrationspfad vom Ist
-
-| Ist | Ziel |
-|-----|------|
-| `TG_*` in `.env` | Fallback; UI-Runtime überschreibt beim Start |
-| Ein Endpoint `/morgendrot-telegram` | + `/alarm`, + `/notify`; Legacy-Alias |
-| Separates `npm run telegram-webhook` | Bleibt; liest Runtime **oder** `.env` |
-| Keine UI | Integrationen-Panel Phase A |
+| Ist (2026-05) | Ziel |
+|---------------|------|
+| `TG_*` in `.env` | Legacy-Fallback Deploy |
+| Nur `/alarm` | + Long Poll **B2** + `/notify` **B3** |
+| Webhook-only-Doku | **Long Poll** als Feld-Default in Spez |
 
 ---
 
-## 13. Verweise
+## 12. Verweise
 
-- Fahrplan: **§ H.26** in `docs/ROADMAP-FAHRPLAN.md`
-- Sensor-Alarme (Betrieb): `docs/SENSOR-ALARME-EINRICHTEN.md` § 5 (Webhook)
-- Konfiguration allgemein: **§ H.6e**, `docs/ROADMAP-FAHRPLAN.md`
-- Ist-Code Relay: `scripts/telegram-webhook.ts`
-- Monitor: `src/monitoring.ts` (`triggerAlarm`)
+- Fahrplan: **§ H.26** in **`docs/ROADMAP-FAHRPLAN.md`**
+- Strategie: **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **§ H.0-SIMPLE**
+- Code Poll: **`src/integrations/telegram-inbound-poll.ts`**
+- Code Ingest: **`src/integrations/telegram-inbound.ts`**
+- Monitor: **`src/monitoring.ts`**
+- Relay-Ist: **`scripts/telegram-webhook.ts`**

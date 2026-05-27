@@ -1,0 +1,374 @@
+'use client'
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { FileUp, Lock, Package, RefreshCw } from 'lucide-react'
+import { applyHandoffEnvImport, previewHandoffEnvImport, type HandoffImportSummary } from '@/frontend/lib/api/handoff-env-import'
+import {
+  consumePendingHandoffZipFromInbox,
+  HANDOFF_PENDING_INBOX_EVENT,
+} from '@/frontend/lib/handoff-pending-inbox'
+import {
+  decryptHandoffPending,
+  extractHandoffFromZipBytesAuto,
+  extractHandoffFromZipFile,
+  type HandoffEncryptedPending,
+} from '@/frontend/lib/handoff-zip-import'
+import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
+import { restartBackend } from '@/frontend/lib/api/backend-restart'
+import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
+import { waitForBackend } from '@/frontend/lib/wait-for-backend'
+
+export function HandoffImportPanel() {
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState(false)
+  const [envText, setEnvText] = useState<string | null>(null)
+  const [fileLabel, setFileLabel] = useState('')
+  const [summary, setSummary] = useState<HandoffImportSummary | null>(null)
+  const [errors, setErrors] = useState<string[]>([])
+  const [statusMsg, setStatusMsg] = useState('')
+  const [applied, setApplied] = useState(false)
+  const [reloading, setReloading] = useState(false)
+  const [hardRestartBusy, setHardRestartBusy] = useState(false)
+  const [pendingEncrypted, setPendingEncrypted] = useState<HandoffEncryptedPending | null>(null)
+  const [handoffPassword, setHandoffPassword] = useState('')
+
+  const reset = () => {
+    setEnvText(null)
+    setFileLabel('')
+    setSummary(null)
+    setErrors([])
+    setStatusMsg('')
+    setApplied(false)
+    setPendingEncrypted(null)
+    setHandoffPassword('')
+  }
+
+  const applyExtractedEnv = useCallback(async (text: string, label: string) => {
+    setEnvText(text)
+    setFileLabel(label)
+    const preview = await previewHandoffEnvImport(text)
+    if (preview.summary) setSummary(preview.summary)
+    if (preview.errors?.length) setErrors(preview.errors)
+    else if (preview.error) setErrors([preview.error])
+    else setErrors([])
+    if (!preview.ok) {
+      setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
+    } else {
+      setStatusMsg('')
+    }
+  }, [])
+
+  const processZipBytes = useCallback(
+    async (data: Uint8Array, label: string, password?: string) => {
+      const extracted = await extractHandoffFromZipBytesAuto(data, password)
+      if ('needsPassword' in extracted && extracted.needsPassword) {
+        setEnvText(null)
+        setPendingEncrypted(extracted.pending)
+        setFileLabel(`${label} (passwortgeschützt)`)
+        setStatusMsg('Diese ZIP ist verschlüsselt — Handoff-Passwort vom Boss eingeben.')
+        return
+      }
+      if (!extracted.ok) {
+        setErrors([extracted.error])
+        setEnvText(null)
+        return
+      }
+      await applyExtractedEnv(
+        extracted.envText,
+        `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (entschlüsselt)' : ''}`
+      )
+    },
+    [applyExtractedEnv]
+  )
+
+  const loadZip = useCallback(
+    async (file: File) => {
+      setBusy(true)
+      setStatusMsg('')
+      setApplied(false)
+      setErrors([])
+      setSummary(null)
+      setPendingEncrypted(null)
+      setHandoffPassword('')
+      try {
+        const buf = await file.arrayBuffer()
+        await processZipBytes(new Uint8Array(buf), file.name)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [processZipBytes]
+  )
+
+  const loadPendingFromInbox = useCallback(async () => {
+    const pending = consumePendingHandoffZipFromInbox()
+    if (!pending) return
+    setBusy(true)
+    setErrors([])
+    try {
+      const label = pending.meta.label?.trim()
+        ? `Posteingang: ${pending.meta.label}`
+        : 'Posteingang (Boss-Handoff)'
+      await processZipBytes(pending.zipBytes, label)
+      setStatusMsg('Handoff aus Posteingang geladen — bei Schutz Passwort eingeben, dann Vorschau prüfen.')
+    } finally {
+      setBusy(false)
+    }
+  }, [processZipBytes])
+
+  useEffect(() => {
+    void loadPendingFromInbox()
+    const onPending = () => void loadPendingFromInbox()
+    window.addEventListener(HANDOFF_PENDING_INBOX_EVENT, onPending)
+    return () => window.removeEventListener(HANDOFF_PENDING_INBOX_EVENT, onPending)
+  }, [loadPendingFromInbox])
+
+  const onDecrypt = async () => {
+    if (!pendingEncrypted) return
+    if (!handoffPassword.trim()) {
+      setErrors(['Bitte das Handoff-Passwort eingeben.'])
+      return
+    }
+    setBusy(true)
+    setErrors([])
+    try {
+      const extracted = await decryptHandoffPending(pendingEncrypted, handoffPassword)
+      if (!extracted.ok) {
+        setErrors([extracted.error])
+        return
+      }
+      setPendingEncrypted(null)
+      setHandoffPassword('')
+      await applyExtractedEnv(extracted.envText, `handoff.morg.enc → ${extracted.envFileName}`)
+      setStatusMsg('Entschlüsselt — Vorschau prüfen und Import bestätigen.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onPickFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0]
+    e.target.value = ''
+    if (f) void loadZip(f)
+  }
+
+  const onApply = async () => {
+    if (!envText?.trim()) return
+    setBusy(true)
+    setStatusMsg('')
+    setErrors([])
+    try {
+      const r = await applyHandoffEnvImport(envText)
+      if (r.summary) setSummary(r.summary)
+      if (r.errors?.length) {
+        setErrors(r.errors)
+        setStatusMsg(r.error || 'Import teilweise fehlgeschlagen.')
+        return
+      }
+      if (!r.ok) {
+        setErrors([r.error || 'Import fehlgeschlagen'])
+        return
+      }
+      setApplied(true)
+      if (r.summary) recordHandoffProfileImport(envText, r.summary)
+      setStatusMsg(
+        r.applied?.length
+          ? `${r.applied.length} Einstellung(en) gespeichert — die Basis hat die Werte bereits übernommen. Seite neu laden, dann Tresor entsperren.`
+          : 'Import OK — Seite neu laden, dann Tresor entsperren.'
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const onReloadPage = () => {
+    setReloading(true)
+    window.location.reload()
+  }
+
+  /** Nur Fallback: unter npm run dev beendet /api/restart oft den API-Prozess ohne Neustart durch concurrently. */
+  const onHardRestart = async () => {
+    setHardRestartBusy(true)
+    setStatusMsg('Backend-Neustart … bitte warten (kann bis zu 90 s dauern).')
+    try {
+      await restartBackend()
+    } catch {
+      /* Verbindung bricht erwartbar ab */
+    }
+    const ok = await waitForBackend({ maxMs: 90_000, intervalMs: 1500 })
+    if (ok) {
+      window.location.reload()
+      return
+    }
+    setStatusMsg(
+      'Backend antwortet noch nicht. Terminal prüfen: npm run start:secrets — danach Seite manuell neu laden.'
+    )
+    setHardRestartBusy(false)
+  }
+
+  return (
+    <div className="rounded-xl border border-purple-500/30 bg-card p-4">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
+          <Package className="h-5 w-5" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <div>
+            <h4 className="font-semibold text-foreground">Handoff importieren</h4>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
+              Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>. Danach{' '}
+              <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
+            </p>
+          </div>
+
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".zip,application/zip"
+            className="hidden"
+            onChange={onPickFile}
+          />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => triggerHiddenFileInput(fileRef)}
+              className="inline-flex items-center gap-2 rounded-lg border border-purple-400/45 bg-purple-500/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-purple-500/20 disabled:opacity-50"
+            >
+              <FileUp className="h-4 w-4" aria-hidden />
+              {busy ? 'Lese ZIP…' : 'Handoff-ZIP wählen'}
+            </button>
+            {envText || pendingEncrypted ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={reset}
+                className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
+              >
+                Zurücksetzen
+              </button>
+            ) : null}
+          </div>
+
+          {fileLabel ? (
+            <p className="text-xs text-muted-foreground">
+              Datei: <span className="font-mono text-foreground">{fileLabel}</span>
+            </p>
+          ) : null}
+
+          {pendingEncrypted ? (
+            <div className="rounded-lg border border-amber-600/40 bg-amber-950/25 px-3 py-3 space-y-2">
+              <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Lock className="h-4 w-4 text-amber-400" aria-hidden />
+                Passwortgeschützter Handoff
+              </p>
+              <label className="block text-xs text-muted-foreground">Handoff-Passwort (vom Boss)</label>
+              <input
+                type="password"
+                autoComplete="current-password"
+                value={handoffPassword}
+                onChange={(e) => setHandoffPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void onDecrypt()
+                }}
+                className="w-full max-w-sm rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onDecrypt()}
+                className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600/90 disabled:opacity-50"
+              >
+                {busy ? 'Entschlüssele…' : 'Entschlüsseln & Vorschau'}
+              </button>
+            </div>
+          ) : null}
+
+          {errors.length > 0 ? (
+            <ul className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              {errors.map((e) => (
+                <li key={e}>{e}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          {summary ? (
+            <div className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs leading-relaxed">
+              <p className="font-semibold text-foreground">Vorschau</p>
+              <ul className="mt-2 space-y-1 text-muted-foreground">
+                {summary.handoffLabel ? (
+                  <li>
+                    Bezeichnung: <strong className="text-foreground">{summary.handoffLabel}</strong>
+                  </li>
+                ) : null}
+                {summary.role ? (
+                  <li>
+                    Rolle: <span className="font-mono">{summary.role}</span>
+                    {summary.deploymentProfile ? ` · ${summary.deploymentProfile}` : ''}
+                  </li>
+                ) : null}
+                {summary.transportProfile ? (
+                  <li>
+                    Transport: <span className="font-mono">{summary.transportProfile}</span>
+                    {summary.simpleMode != null ? ` · Simple: ${summary.simpleMode}` : ''}
+                    {summary.uiVariant ? ` · UI: ${summary.uiVariant}` : ''}
+                  </li>
+                ) : null}
+                {summary.teamMailboxIds ? (
+                  <li>Team-Mailboxes: {summary.teamMailboxIds.split(',').length} ID(s)</li>
+                ) : null}
+                {summary.mailboxId ? <li>Primäre Mailbox: {summary.mailboxId}</li> : null}
+                {summary.partnerPreview ? <li>Partner: {summary.partnerPreview}</li> : null}
+                <li className="pt-1 text-amber-900/90 dark:text-amber-100/90">{summary.pskHint}</li>
+                <li className="text-[10px]">
+                  {summary.keysToApply} von {summary.keysInFile} Keys werden übernommen
+                  {summary.skippedKeys.length ? ` (${summary.skippedKeys.length} übersprungen)` : ''}.
+                </li>
+              </ul>
+            </div>
+          ) : null}
+
+          {envText && !applied && errors.length === 0 && summary ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void onApply()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+            >
+              {busy ? 'Speichere…' : 'Import bestätigen'}
+            </button>
+          ) : null}
+
+          {applied ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={reloading || hardRestartBusy}
+                onClick={onReloadPage}
+                className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-foreground hover:bg-emerald-500/25 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-4 w-4 ${reloading ? 'animate-spin' : ''}`} aria-hidden />
+                Seite neu laden
+              </button>
+              <button
+                type="button"
+                disabled={reloading || hardRestartBusy}
+                onClick={() => void onHardRestart()}
+                className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                {hardRestartBusy ? 'Warte auf Backend…' : 'Backend hart neu starten (nur wenn nötig)'}
+              </button>
+            </div>
+          ) : null}
+
+          {statusMsg ? (
+            <p className="text-sm text-muted-foreground" role="status">
+              {statusMsg}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  )
+}

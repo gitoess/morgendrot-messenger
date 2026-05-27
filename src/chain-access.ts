@@ -6,7 +6,7 @@
  * z. B. Batches (mehrere AccessKeys/Tickets), kombinierte Moves, Klartext an mehrere Empfänger in einer TX.
  * Typischer verschlüsselter Chat `/send` bleibt bewusst oft „eine Nachricht → eine Ausführung“, ist aber nicht „ohne PTB“ im SDK-Sinne.
  */
-import { CFG, isMessengerMailboxModeActive } from './config.js';
+import { CFG, getInboxUnionIdsForStatus, isMessengerMailboxModeActive } from './config.js';
 import { coerceParsedJsonByteVector, normalizeAddress } from './utils.js';
 import { IotaClient, IotaHTTPTransport, getFullnodeUrl } from '@iota/iota-sdk/client';
 import type { Signer } from '@iota/iota-sdk/cryptography';
@@ -615,9 +615,92 @@ export function explorerTxUrlFromDigest(digest: string): string {
     return `${base}/${encodeURIComponent(d)}${network}`;
 }
 
-function parseCreatedObjectIds(effects: { created?: Array<{ reference?: { objectId?: string } }> } | null | undefined): string[] {
+function parseObjectIdHex(idRaw: unknown): string | null {
+    const id = typeof idRaw === 'string' ? idRaw.trim() : '';
+    return /^0x[a-fA-F0-9]{64}$/i.test(id) ? id : null;
+}
+
+function parseCreatedObjectIdsFromObjectChanges(changes: unknown): string[] {
+    if (!Array.isArray(changes)) return [];
+    const ids: string[] = [];
+    for (const ch of changes) {
+        if (!ch || typeof ch !== 'object') continue;
+        const o = ch as Record<string, unknown>;
+        const type = String(o.type ?? '').toLowerCase();
+        if (type !== 'created' && type !== 'published') continue;
+        const id =
+            parseObjectIdHex(o.objectId) ??
+            parseObjectIdHex((o.objectRef as Record<string, unknown> | undefined)?.objectId);
+        if (id) ids.push(id);
+    }
+    return ids;
+}
+
+function parseCreatedObjectIds(
+    effects: { created?: Array<{ reference?: { objectId?: string } }> } | null | undefined,
+    objectChanges?: unknown
+): string[] {
     const created = effects?.created ?? [];
-    return created.map((c) => c.reference?.objectId).filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const fromEffects = created
+        .map((c) => c.reference?.objectId)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const fromChanges = parseCreatedObjectIdsFromObjectChanges(objectChanges);
+    return [...new Set([...fromEffects, ...fromChanges])];
+}
+
+/** Liest Mailbox-Object-IDs aus TX-Events (`TeamMailboxCreated` / `PrivateMailboxCreated`) und ObjectChanges. */
+export async function parseMailboxCreatedIdsFromDigest(client: IotaClient, digest: string): Promise<string[]> {
+    const d = digest.trim();
+    if (!d) return [];
+    const ids = new Set<string>();
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    for (let attempt = 0; attempt < 4; attempt++) {
+        if (attempt > 0) await sleep(900);
+        try {
+            const res = await client.getTransactionBlock({
+                digest: d,
+                options: { showEvents: true, showObjectChanges: true, showEffects: true },
+            } as Parameters<IotaClient['getTransactionBlock']>[0]);
+            const effects = (res as { effects?: { created?: Array<{ reference?: { objectId?: string } }> } }).effects;
+            const objectChanges =
+                (res as { objectChanges?: unknown }).objectChanges ??
+                (res as { transactionBlock?: { objectChanges?: unknown } }).transactionBlock?.objectChanges;
+            for (const id of parseCreatedObjectIds(effects, objectChanges)) ids.add(id);
+            const ev =
+                (res as { events?: Array<{ type?: string; parsedJson?: Record<string, unknown> }> }).events ??
+                (res as { transactionBlock?: { events?: Array<{ type?: string; parsedJson?: Record<string, unknown> }> } })
+                    .transactionBlock?.events ??
+                [];
+            for (const event of ev ?? []) {
+                const t = String(event.type || '');
+                if (!/::messaging::(Team|Private)MailboxCreated$/i.test(t)) continue;
+                const pj = event.parsedJson;
+                const id = parseObjectIdHex((pj as { mailbox_id?: unknown })?.mailbox_id);
+                if (id) ids.add(id);
+            }
+            if (ids.size > 0) break;
+        } catch {
+            // retry
+        }
+    }
+    return [...ids];
+}
+
+/** On-chain-Fehlertext aus effects.status.error (z. B. „Function Not Found“). */
+export async function parseTxFailureReasonFromDigest(client: IotaClient, digest: string): Promise<string | null> {
+    const d = digest.trim();
+    if (!d) return null;
+    try {
+        const res = await client.getTransactionBlock({
+            digest: d,
+            options: { showEffects: true },
+        } as Parameters<IotaClient['getTransactionBlock']>[0]);
+        const status = (res as { effects?: { status?: { error?: string; status?: string } } }).effects?.status;
+        const err = status && typeof status === 'object' ? String((status as { error?: unknown }).error ?? '').trim() : '';
+        return err || null;
+    } catch {
+        return null;
+    }
 }
 
 function parseGasSummary(effects: { gasUsed?: Record<string, unknown> } | null | undefined): GasSummary | undefined {
@@ -895,15 +978,18 @@ export async function signAndExecute(
         txToSign.setGasPayment(coins);
     }
 
-    const execOptions = { options: { showEffects: true as const } };
+    const execOptions = {
+        options: { showEffects: true as const, showObjectChanges: true as const, showEvents: true as const },
+    };
     const signerMode = resolveSignerMode(CFG.SIGNER);
 
     if (signerMode === 'sdk') {
         const signer = getSdkSigner();
         if (!signer) throw new Error('Signer-Factory (sdk): Kein Signer gesetzt. Bitte Mnemonic/Secret laden oder Session-Signer aktivieren.');
         const resp = await client.signAndExecuteTransaction({ transaction: txToSign, signer, ...execOptions });
-        const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string })?.effects;
-        const createdObjectIds = parseCreatedObjectIds(effects);
+        const effects = (resp as { effects?: { status?: string; created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> }; digest?: string; objectChanges?: unknown })?.effects;
+        const objectChanges = (resp as { objectChanges?: unknown }).objectChanges;
+        const createdObjectIds = parseCreatedObjectIds(effects, objectChanges);
         const gasSummary = parseGasSummary(effects);
         const status = effectStatusFromEffects(effects);
         const out = { digest: (resp as { digest?: string }).digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
@@ -961,8 +1047,9 @@ export async function signAndExecute(
         });
         digest = (resp as { digest?: string }).digest;
         const effects = (resp as { effects?: Record<string, unknown> & { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } })?.effects;
+        const objectChanges = (resp as { objectChanges?: unknown }).objectChanges;
         status = effectStatusFromEffects(effects);
-        const createdObjectIds = parseCreatedObjectIds(effects);
+        const createdObjectIds = parseCreatedObjectIds(effects, objectChanges);
         const gasSummary = parseGasSummary(effects);
         const out = { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
         recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, digest);
@@ -973,12 +1060,13 @@ export async function signAndExecute(
                 transactionBlock: base64Tx,
                 signature,
                 ...execOptions,
-                options: { showEffects: true, ...(execOptions?.options as object) },
+                options: { showEffects: true, showObjectChanges: true, showEvents: true, ...(execOptions?.options as object) },
             });
             digest = (resp as { digest?: string }).digest;
             const effects = (resp as { effects?: Record<string, unknown> & { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } })?.effects;
+            const objectChanges = (resp as { objectChanges?: unknown }).objectChanges;
             status = effectStatusFromEffects(effects);
-            execJson = { digest, effects };
+            execJson = { digest, effects, objectChanges };
         } catch (_sdkExecuteErr: unknown) {
             const useStdinExec = shouldPassIotaTxViaStdin(normalizedB64.length);
             const runExecCli = async (opts?: { forceTxStdin?: boolean }): Promise<void> => {
@@ -1000,9 +1088,7 @@ export async function signAndExecute(
                     pickString(execJson, ['digest', 'transactionDigest', 'txDigest']) ||
                     pickString((execJson?.result as Record<string, unknown>) || {}, ['digest', 'transactionDigest', 'txDigest']) ||
                     pickString((execJson?.effects as Record<string, unknown>) || {}, ['transactionDigest', 'digest']);
-                status =
-                    pickString((execJson?.effects as Record<string, unknown>)?.status as Record<string, unknown>, ['status']) ||
-                    pickString((execJson?.effects as Record<string, unknown>) || {}, ['status']);
+                status = effectStatusFromEffects(execJson?.effects);
             };
             try {
                 await runExecCli();
@@ -1028,7 +1114,10 @@ export async function signAndExecute(
     }
 
     const effects = execJson?.effects as { created?: Array<{ reference?: { objectId?: string } }>; gasUsed?: Record<string, unknown> } | undefined;
-    const createdObjectIds = parseCreatedObjectIds(effects);
+    const objectChanges =
+        execJson?.objectChanges ??
+        (execJson?.result as { objectChanges?: unknown } | undefined)?.objectChanges;
+    const createdObjectIds = parseCreatedObjectIds(effects, objectChanges);
     const gasSummary = parseGasSummary(effects);
     const out = { digest, status, createdObjectIds: createdObjectIds.length ? createdObjectIds : undefined, gasSummary };
     recordMessengerSelfPaidMilestoneIfNeeded(trackMessengerMilestone, useSponsor, signingAddress, status, digest);
@@ -3579,12 +3668,17 @@ export async function updateVaultOnChain(
     return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
-/** Handshake aus Mailbox lesen (Discovery). */
-export async function getHandshakeFromMailbox(recipient: string, sender: string): Promise<{ sender: string; pubKeyRaw: Uint8Array; nonce: bigint } | null> {
-    if (!isMessengerMailboxModeActive() || !CFG.MAILBOX_ID || !CFG.PACKAGE_ID) return null;
+/** Handshake aus Mailbox lesen (Discovery). Optional `parentMailboxObjectId` (Default: Server-`MAILBOX_ID`). */
+export async function getHandshakeFromMailbox(
+    recipient: string,
+    sender: string,
+    parentMailboxObjectId?: string
+): Promise<{ sender: string; pubKeyRaw: Uint8Array; nonce: bigint } | null> {
+    const parentId = (parentMailboxObjectId || CFG.MAILBOX_ID || '').trim();
+    if (!isMessengerMailboxModeActive() || !parentId || !CFG.PACKAGE_ID) return null;
     try {
         const resp = await getClient().getDynamicFieldObject({
-            parentObjectId: CFG.MAILBOX_ID,
+            parentObjectId: parentId,
             name: { type: typeName('HsKey'), value: { recipient, sender } },
             options: { showContent: true },
         } as Parameters<IotaClient['getDynamicFieldObject']>[0]);
@@ -3903,10 +3997,72 @@ export type IncomingHandshakeOffer = {
     source: 'mailbox' | 'event'
 }
 
+export type OutgoingHandshakeOffer = {
+    recipient: string
+    nonce: string
+    source: 'mailbox' | 'event'
+}
+
+async function collectIncomingHsSenderNormsFromMailbox(parentId: string, me: string): Promise<Set<string>> {
+    const incomingSenders = new Set<string>()
+    let cursor: string | null = null
+    for (let pageNum = 0; pageNum < 8; pageNum++) {
+        const page = await getClient().getDynamicFields({
+            parentId,
+            limit: 500,
+            ...(cursor ? { cursor } : {}),
+        } as Parameters<IotaClient['getDynamicFields']>[0])
+        const entries =
+            (page as { data?: Array<{ name?: { type?: string; value?: Record<string, string> } }> })?.data ?? []
+        for (const e of entries) {
+            const typeStr = (e.name?.type as string) ?? ''
+            if (!typeStr.includes('HsKey') && !typeStr.endsWith('::messaging::HsKey')) continue
+            const val = e.name?.value
+            const rec = normalizeAddress(String(val?.recipient ?? ''))
+            const sen = String(val?.sender ?? '').trim()
+            if (rec !== me || !sen.startsWith('0x')) continue
+            incomingSenders.add(normalizeAddress(sen))
+        }
+        const hasNext = (page as { hasNextPage?: boolean })?.hasNextPage === true
+        const nextCursor = (page as { nextCursor?: string | null })?.nextCursor
+        if (!hasNext || !nextCursor) break
+        cursor = nextCursor
+    }
+    return incomingSenders
+}
+
+async function collectOutgoingHsRecipientNormsFromMailbox(parentId: string, me: string): Promise<Set<string>> {
+    const outgoingRecipients = new Set<string>()
+    let cursor: string | null = null
+    for (let pageNum = 0; pageNum < 8; pageNum++) {
+        const page = await getClient().getDynamicFields({
+            parentId,
+            limit: 500,
+            ...(cursor ? { cursor } : {}),
+        } as Parameters<IotaClient['getDynamicFields']>[0])
+        const entries =
+            (page as { data?: Array<{ name?: { type?: string; value?: Record<string, string> } }> })?.data ?? []
+        for (const e of entries) {
+            const typeStr = (e.name?.type as string) ?? ''
+            if (!typeStr.includes('HsKey') && !typeStr.endsWith('::messaging::HsKey')) continue
+            const val = e.name?.value
+            const rec = String(val?.recipient ?? '').trim()
+            const sen = normalizeAddress(String(val?.sender ?? ''))
+            if (sen !== me || !rec.startsWith('0x')) continue
+            outgoingRecipients.add(normalizeAddress(rec))
+        }
+        const hasNext = (page as { hasNextPage?: boolean })?.hasNextPage === true
+        const nextCursor = (page as { nextCursor?: string | null })?.nextCursor
+        if (!hasNext || !nextCursor) break
+        cursor = nextCursor
+    }
+    return outgoingRecipients
+}
+
 /** Eingehende Handshake-Angebote (Mailbox HsKey + EcdhInit-Events), pro Absender höchste Nonce. */
 export async function listIncomingHandshakeOffers(
     myAddress: string,
-    opts?: { limit?: number }
+    opts?: { limit?: number; extraMailboxIds?: string[] }
 ): Promise<IncomingHandshakeOffer[]> {
     const limit = Math.min(50, Math.max(1, opts?.limit ?? 20))
     const me = normalizeAddress(myAddress)
@@ -3927,39 +4083,29 @@ export async function listIncomingHandshakeOffers(
         }
     }
 
-    if (isMessengerMailboxModeActive() && CFG.MAILBOX_ID) {
-        try {
-            const incomingSenders = new Set<string>()
-            let cursor: string | null = null
-            for (let pageNum = 0; pageNum < 8; pageNum++) {
-                const page = await getClient().getDynamicFields({
-                    parentId: CFG.MAILBOX_ID,
-                    limit: 500,
-                    ...(cursor ? { cursor } : {}),
-                } as Parameters<IotaClient['getDynamicFields']>[0])
-                const entries =
-                    (page as { data?: Array<{ name?: { type?: string; value?: Record<string, string> } }> })
-                        ?.data ?? []
-                for (const e of entries) {
-                    const typeStr = (e.name?.type as string) ?? ''
-                    if (!typeStr.includes('HsKey') && !typeStr.endsWith('::messaging::HsKey')) continue
-                    const val = e.name?.value
-                    const rec = normalizeAddress(String(val?.recipient ?? ''))
-                    const sen = String(val?.sender ?? '').trim()
-                    if (rec !== me || !sen.startsWith('0x')) continue
-                    incomingSenders.add(normalizeAddress(sen))
+    if (isMessengerMailboxModeActive()) {
+        const mbSeen = new Set<string>()
+        const mailboxIds: string[] = []
+        const addMb = (raw: string) => {
+            const id = raw.trim()
+            const n = id.toLowerCase()
+            if (!/^0x[a-fA-F0-9]{64}$/.test(id) || mbSeen.has(n)) return
+            mbSeen.add(n)
+            mailboxIds.push(id)
+        }
+        for (const id of getInboxUnionIdsForStatus().mailboxIds) addMb(id)
+        for (const id of opts?.extraMailboxIds ?? []) addMb(id)
+
+        for (const parentId of mailboxIds) {
+            try {
+                const incomingSenders = await collectIncomingHsSenderNormsFromMailbox(parentId, me)
+                for (const sn of incomingSenders) {
+                    const hs = await getHandshakeFromMailbox(myAddress, sn, parentId)
+                    if (hs) upsert(hs.sender, hs.nonce ?? 0n, 'mailbox')
                 }
-                const hasNext = (page as { hasNextPage?: boolean })?.hasNextPage === true
-                const nextCursor = (page as { nextCursor?: string | null })?.nextCursor
-                if (!hasNext || !nextCursor) break
-                cursor = nextCursor
+            } catch {
+                // ignore
             }
-            for (const sn of incomingSenders) {
-                const hs = await getHandshakeFromMailbox(myAddress, sn)
-                if (hs) upsert(hs.sender, hs.nonce ?? 0n, 'mailbox')
-            }
-        } catch {
-            // ignore
         }
     }
 
@@ -3987,6 +4133,82 @@ export async function listIncomingHandshakeOffers(
         .sort((a, b) => (a.nonce > b.nonce ? -1 : a.nonce < b.nonce ? 1 : 0))
         .slice(0, limit)
         .map((o) => ({ sender: o.sender, nonce: String(o.nonce), source: o.source }))
+}
+
+/** Gesendete Handshake-Angebote (HsKey/EcdhInit mit sender = ich), pro Empfänger höchste Nonce. */
+export async function listOutgoingHandshakeOffers(
+    myAddress: string,
+    opts?: { limit?: number; extraMailboxIds?: string[] }
+): Promise<OutgoingHandshakeOffer[]> {
+    const limit = Math.min(50, Math.max(1, opts?.limit ?? 20))
+    const me = normalizeAddress(myAddress)
+    if (!me.startsWith('0x') || me.length !== 66) return []
+
+    const best = new Map<string, { recipient: string; nonce: bigint; source: 'mailbox' | 'event' }>()
+
+    const upsert = (recipientRaw: string, nonce: bigint, source: 'mailbox' | 'event') => {
+        const recRaw = String(recipientRaw || '').trim()
+        if (!recRaw.startsWith('0x')) return
+        const rn = normalizeAddress(recRaw)
+        if (rn === me || !/^0x[a-f0-9]{64}$/.test(rn)) return
+        const prev = best.get(rn)
+        if (!prev || nonce > prev.nonce) {
+            best.set(rn, { recipient: recRaw, nonce, source })
+        } else if (prev && nonce === prev.nonce && source === 'mailbox') {
+            best.set(rn, { recipient: recRaw, nonce, source: 'mailbox' })
+        }
+    }
+
+    if (isMessengerMailboxModeActive()) {
+        const mbSeen = new Set<string>()
+        const mailboxIds: string[] = []
+        const addMb = (raw: string) => {
+            const id = raw.trim()
+            const n = id.toLowerCase()
+            if (!/^0x[a-fA-F0-9]{64}$/.test(id) || mbSeen.has(n)) return
+            mbSeen.add(n)
+            mailboxIds.push(id)
+        }
+        for (const id of getInboxUnionIdsForStatus().mailboxIds) addMb(id)
+        for (const id of opts?.extraMailboxIds ?? []) addMb(id)
+
+        for (const parentId of mailboxIds) {
+            try {
+                const outgoingRecipients = await collectOutgoingHsRecipientNormsFromMailbox(parentId, me)
+                for (const rn of outgoingRecipients) {
+                    const hs = await getHandshakeFromMailbox(rn, myAddress, parentId)
+                    if (hs) upsert(rn, hs.nonce ?? 0n, 'mailbox')
+                }
+            } catch {
+                // ignore
+            }
+        }
+    }
+
+    if (CFG.PACKAGE_ID) {
+        try {
+            const events = await queryMessagingEvents({ eventStruct: 'EcdhInit', limit: 200, order: 'descending' })
+            const rows = events.data as Array<{
+                type?: string
+                parsedJson?: { recipient?: string; sender?: string; nonce?: number | string }
+            }>
+            for (const e of rows) {
+                if (!e.type?.endsWith('::messaging::EcdhInit') || !e.parsedJson) continue
+                const rec = normalizeAddress(String(e.parsedJson.recipient ?? ''))
+                const sen = normalizeAddress(String(e.parsedJson.sender ?? ''))
+                if (sen !== me || !rec || rec === me) continue
+                const nonce = BigInt(e.parsedJson.nonce ?? 0)
+                upsert(rec, nonce, 'event')
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    return [...best.values()]
+        .sort((a, b) => (a.nonce > b.nonce ? -1 : a.nonce < b.nonce ? 1 : 0))
+        .slice(0, limit)
+        .map((o) => ({ recipient: o.recipient, nonce: String(o.nonce), source: o.source }))
 }
 
 /** Handshake von bestimmtem Peer suchen (recipient = myAddress, sender = peerAddress). */

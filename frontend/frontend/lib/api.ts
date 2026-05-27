@@ -67,7 +67,9 @@ export {
   connect,
   findPeerHandshake,
   fetchPendingHandshakes,
+  fetchHandshakeOffers,
   type PendingHandshakeOffer,
+  type OutgoingHandshakeOffer,
 } from '@/frontend/lib/api/package-connect'
 
 export {
@@ -129,6 +131,12 @@ export {
   type StandaloneSmartphoneHandoffZipBody,
   type StandaloneHandoffPackageSource,
 } from '@/frontend/lib/api/standalone-smartphone-handoff'
+
+export {
+  applyHandoffEnvImport,
+  previewHandoffEnvImport,
+  type HandoffImportSummary,
+} from '@/frontend/lib/api/handoff-env-import'
 
 export { fetchHelp } from '@/frontend/lib/api/help'
 export { restartBackend } from '@/frontend/lib/api/backend-restart'

@@ -31,11 +31,16 @@ import {
 } from '@/frontend/lib/api'
 import {
   canEditEinsatzRoleTemplates,
+  canUseMessengerExpertTools,
   canViewEinsatzRoleTemplatesSection,
 } from '@/frontend/lib/messenger-role-capabilities'
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import Link from 'next/link'
 import { SettingsWalletSessionCard } from '@/frontend/components/views/settings-wallet-session-card'
+import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
+import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
+import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
+import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
@@ -101,11 +106,24 @@ export function SettingsView({
 
   const [firstStepsBarVisible, setFirstStepsBarVisible] = useState(true)
 
+  const { directory: contactDirectory } = useContactDirectory()
+  const isBossRole =
+    (advancedIotaStatus?.role || status?.role || '').trim().toLowerCase() === 'boss'
+
   const roleCapsStatus: ApiStatus | null = advancedIotaStatus
-    ? { ...advancedIotaStatus, backendOnline: status?.backendOnline }
-    : null
+    ? { ...advancedIotaStatus, backendOnline: status?.backendOnline ?? advancedIotaStatus.backendRunning }
+    : status?.backendOnline && (status.role === 'boss' || status.role === 'kommandant')
+      ? {
+          backendRunning: true,
+          backendOnline: status.backendOnline,
+          role: status.role,
+          deploymentProfile: 'einsatz',
+          permissions: status.role === 'boss' ? { configChange: true, teamManage: true } : { teamManage: true },
+        }
+      : null
   const showEinsatzRoleTemplates = canViewEinsatzRoleTemplatesSection(roleCapsStatus)
   const canSaveEinsatzRoleTemplates = canEditEinsatzRoleTemplates(roleCapsStatus)
+  const showAdvancedIotaPulse = advancedIotaStatus && canUseMessengerExpertTools(advancedIotaStatus)
 
   const loadRoleTemplates = async () => {
     setRoleTemplatesMsg('')
@@ -290,13 +308,33 @@ export function SettingsView({
         </div>
       </div>
 
-      {advancedIotaStatus ? (
+      <ActiveProfilePanel status={advancedIotaStatus} />
+
+      {isBossRole ? (
+        <BossHandoffExportPanel
+          apiSnapshot={advancedIotaStatus}
+          contactDirectory={contactDirectory}
+          embedded
+        />
+      ) : (
+        <HandoffImportPanel />
+      )}
+
+      {isBossRole ? (
+        <p className="text-xs text-muted-foreground px-1">
+          Gleicher Export-Assistent auch unter Dashboard →{' '}
+          <span className="text-foreground">Einsatzleitung</span> oder{' '}
+          <span className="text-foreground">Boss-Modus</span>.
+        </p>
+      ) : null}
+
+      {showAdvancedIotaPulse ? (
         <div className="rounded-xl border border-border bg-card p-4">
           <h4 className="mb-2 font-semibold text-foreground">Direkt-RPC · IDs · Funk</h4>
           <p className="mb-3 text-sm text-muted-foreground">
             Erweiterte IOTA-/Mailbox-Details, Ketten-IDs, Direkt-RPC und Expertenoptionen aus dem Chat hier zentral.
           </p>
-          <ChatViewPulseSettings apiStatus={advancedIotaStatus} />
+          <ChatViewPulseSettings apiStatus={advancedIotaStatus!} allowDevExpertTools={false} />
         </div>
       ) : null}
 

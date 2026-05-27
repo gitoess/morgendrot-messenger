@@ -49,7 +49,8 @@
 - **`docs/API-EINSATZ-ROLE-TEMPLATES.md`** — Boss-Vorlagen-Liste.
 - **`docs/UI-BEFEHLE-CHECKLISTE.md`** — welche API hat welchen Button.
 - **`docs/ROADMAP-FAHRPLAN.md`** — § **H.3g** (Einsatzleitung / Pakete), **§ H.7** (Standalone-Smartphone / Handoff-ZIP).
-- **`docs/WANDERER-STANDALONE-BUNDLE.md`** — „Wanderer“-Abgabe; **Next Boss-Modus → Export-Assistent** + **`POST /api/standalone-smartphone-handoff-zip`** (öffentliche `.env` in ZIP, ohne Secrets).
+- **`docs/WANDERER-STANDALONE-BUNDLE.md`** — „Wanderer“-Abgabe; Bundle + Handoff-ZIP (~3 KB).
+- **Handoff:** **`docs/HANDOFF-IMPORT-UX.md`** · **`docs/HANDOFF-PROFILE-UX.md`** · **`docs/HANDOFF-ZIP-ENCRYPTION.md`** — Export **Einstellungen** oder **Einsatzleitung → Export-Assistent**, Import **Einstellungen → Handoff importieren**; API **`POST /api/standalone-smartphone-handoff-zip`** (öffentliche `.env`, ohne Secrets).
 
 ## 6. Messenger-PWA: Handbuch offline & Einsatz-Notiz
 

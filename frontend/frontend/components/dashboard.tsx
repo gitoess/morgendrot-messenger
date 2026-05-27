@@ -32,7 +32,9 @@ import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view
 import { LockView } from './views/lock-view'
 import { MonitorView } from './views/monitor-view'
 import { BossView } from './views/boss-view'
+import { EinsatzleitungView } from './views/einsatzleitung-view'
 import { VaultView } from './views/vault-view'
+import { MessengerBottomNav, type MessengerBottomNavTab } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { ConfigView } from './views/config-view'
 import { WorkerActionCenterView } from './views/worker-action-center-view'
@@ -49,7 +51,13 @@ import {
 import { recordSeenMyAddress } from '@/frontend/lib/my-address-local-history'
 import { MeshStatus, type MeshPathMode } from './mesh-status'
 import { tryApplyPendingInitialProfileFromStorage } from '../lib/initial-profile-import'
-import { filterFeaturesByMessengerWorkspaceTileSet } from '@/frontend/lib/dashboard-workspace-tile-visibility'
+import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
+import { DeploymentProfileBackdrop } from '@/frontend/components/deployment-profile-backdrop'
+import {
+  filterFeaturesByMessengerWorkspaceTileSet,
+  shouldShowWorkerActionCenter,
+} from '@/frontend/lib/dashboard-workspace-tile-visibility'
+import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
 import {
   Dialog,
   DialogContent,
@@ -62,6 +70,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
+import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 
 interface Feature {
   id: ProjectType
@@ -88,6 +98,20 @@ const features: Feature[] = [
         id: 'private-chat',
         title: 'Nachrichten',
         hint: '1:1 Privat & Pinnwand — Gruppenchat geplant (M2, Fahrplan § H.22)',
+      },
+    ],
+  },
+  {
+    id: 'einsatzleitung',
+    title: 'Einsatzleitung',
+    subtitle: 'Team, Kontakte, Export',
+    icon: <Crown className="h-6 w-6" />,
+    color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    variants: [
+      {
+        id: 'einsatzleitung-hub',
+        title: 'Einsatzleitung',
+        hint: 'Team-Mailbox, Import/Export, Forensik',
       },
     ],
   },
@@ -145,6 +169,7 @@ interface ActiveView {
 }
 
 const ACTIVE_VIEW_SESSION_KEY = 'morgendrot.dashboard.activeView'
+const EMPTY_CONNECTED_ADDRESSES: string[] = []
 
 function isPwaStandaloneDisplay(): boolean {
   if (typeof window === 'undefined') return false
@@ -255,6 +280,9 @@ export function Dashboard() {
   const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
   /** Schlanker Einrichtungs-Hinweis (localStorage, in Einstellungen wieder einblendbar). */
   const [firstStepsVisible, setFirstStepsVisible] = useState(true)
+  const [phonebookNavRequest, setPhonebookNavRequest] = useState(0)
+  const [einsatzKontakteScrollRequest, setEinsatzKontakteScrollRequest] = useState(0)
+  const [messengerNavHighlight, setMessengerNavHighlight] = useState<MessengerBottomNavTab>('messages')
 
   const prevLockedRef = useRef(false)
   /** Zuletzt von GET /api/status gemeldet — für Entsperr-Dialog beim Wechsel auf „locked“ ohne veraltetes apiSnapshot. */
@@ -377,17 +405,36 @@ export function Dashboard() {
     } else {
       setBackendReachable(false)
       setConnected(false)
-      setLocked(false)
-      vaultHasLocalRef.current = false
-      signerIsSdkRef.current = false
+      // locked nicht zurücksetzen — nach kurzer Basis-Störung soll der Entsperr-Dialog wieder erscheinen
     }
   }, [])
 
   useEffect(() => {
     void checkStatus()
-    const interval = setInterval(() => void checkStatus(), 10000)
-    return () => clearInterval(interval)
-  }, [checkStatus])
+    const ms = backendReachable === false ? 3_000 : 10_000
+    const interval = window.setInterval(() => void checkStatus(), ms)
+    return () => window.clearInterval(interval)
+  }, [checkStatus, backendReachable])
+
+  const { directory: contactDirectory, refresh: refreshContactDirectory } = useContactDirectory()
+
+  const connectedAddressesForHandshake = useMemo(() => {
+    const conn = apiSnapshot?.connectedAddresses
+    return Array.isArray(conn) ? conn : EMPTY_CONNECTED_ADDRESSES
+  }, [apiSnapshot?.connectedAddresses])
+
+  const pendingHandshakeRefreshKey = `${connectedAddressesForHandshake.join('|')}|${locked ? 'locked' : 'open'}`
+
+  const pendingHandshakes = useChatViewPendingHandshakes({
+    enabled: !locked && backendReachable === true && hasValidMyAddressForBalance,
+    connectedAddresses: connectedAddressesForHandshake,
+    refreshToken: pendingHandshakeRefreshKey,
+    contactDirectory,
+    vaultLocked: locked || apiSnapshot?.locked === true,
+  })
+
+  const pendingHandshakeCount =
+    pendingHandshakes.offers.length + pendingHandshakes.outgoingOffers.length
 
   /**
    * Installierte PWA: nach **längerem** Hintergrund Tresor sperren (`/vault-lock`) — Passwort beim erneuten Öffnen.
@@ -448,6 +495,26 @@ export function Dashboard() {
 
   const openConfigView = () => {
     const v: ActiveView = { type: 'config' }
+    setActiveView(v)
+    persistDashboardView(v)
+  }
+
+  const openEinsatzleitungView = () => {
+    const v: ActiveView = { type: 'einsatzleitung', variant: 'einsatzleitung-hub' }
+    setActiveView(v)
+    persistDashboardView(v)
+    setMessengerNavHighlight('einsatzleitung')
+  }
+
+  const openMessengerChatView = () => {
+    const v: ActiveView = { type: 'chat', variant: 'private-chat' }
+    setActiveView(v)
+    persistDashboardView(v)
+    setMessengerNavHighlight('messages')
+  }
+
+  const openBossModeView = () => {
+    const v: ActiveView = { type: 'boss', variant: 'boss-signer' }
     setActiveView(v)
     persistDashboardView(v)
   }
@@ -583,7 +650,19 @@ export function Dashboard() {
     const next: ActiveView = { type: feature.id, variant }
     setActiveView(next)
     persistDashboardView(next)
+    if (feature.id === 'chat') setMessengerNavHighlight('messages')
+    if (feature.id === 'einsatzleitung') setMessengerNavHighlight('einsatzleitung')
   }
+
+  const showMessengerBottomNav =
+    activeView != null && (activeView.type === 'chat' || activeView.type === 'einsatzleitung')
+
+  const messengerBottomNavActive: MessengerBottomNavTab =
+    messengerNavHighlight === 'phonebook'
+      ? 'phonebook'
+      : activeView?.type === 'einsatzleitung'
+        ? 'einsatzleitung'
+        : 'messages'
 
   const setWorkspaceTileSetPersist = (v: WorkspaceTileSet) => {
     if (liteMessengerFromApi && v === 'full' && !isBossRole) return
@@ -595,7 +674,24 @@ export function Dashboard() {
     workspaceTileSet: effectiveWorkspaceTileSet,
     liteMessengerFromApi,
     isBossRole,
+    role,
   })
+
+  const showWorkerActionCenter = shouldShowWorkerActionCenter({
+    role: role || '',
+    showAllTiles,
+    liteMessengerFromApi,
+  })
+
+  /** Messenger-Arbeiter: Kachel-Start statt verstecktem Link (localStorage konnte Action Center erzwingen). */
+  useEffect(() => {
+    if (!liteMessengerFromApi) return
+    const r = (role || '').trim().toLowerCase()
+    if (r !== 'arbeiter' && r !== 'lock') return
+    if (showAllTiles) return
+    setShowAllTiles(true)
+    writeShowAllTilesPref(true)
+  }, [liteMessengerFromApi, role, showAllTiles])
 
   const handleBack = () => {
     setActiveView(null)
@@ -984,13 +1080,15 @@ export function Dashboard() {
                 ? 'Einstellungen'
                 : activeView.type === 'config'
                   ? '.env anpassen'
-                  : features.find((f) => f.id === activeView.type)?.title}
+                  : activeView.type === 'einsatzleitung'
+                    ? 'Einsatzleitung'
+                    : features.find((f) => f.id === activeView.type)?.title}
             </span>
           </div>
         </header>
 
         {/* View Content */}
-        <main className="mx-auto max-w-5xl p-4">
+        <main className={cn('mx-auto max-w-5xl p-4', showMessengerBottomNav && 'pb-24')}>
           {initialProfileBanner ? (
             <div
               className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
@@ -1022,6 +1120,17 @@ export function Dashboard() {
               role={role}
               myAddress={myAddress}
               vaultBannerActions={chatVaultBannerActions}
+              pendingHandshakes={pendingHandshakes}
+              onOpenEinsatzleitung={canAccessEinsatzleitung(role) ? openEinsatzleitungView : undefined}
+              phonebookNavRequest={phonebookNavRequest}
+            />
+          )}
+          {activeView.type === 'einsatzleitung' && (
+            <EinsatzleitungView
+              apiSnapshot={apiSnapshot && !('error' in apiSnapshot && apiSnapshot.error) ? apiSnapshot : null}
+              contactDirectory={contactDirectory}
+              refreshContactDirectory={refreshContactDirectory}
+              scrollToKontakteRequest={einsatzKontakteScrollRequest}
             />
           )}
           {activeView.type === 'lock' && activeView.variant && (
@@ -1040,18 +1149,39 @@ export function Dashboard() {
             <VaultView variant={activeView.variant as 'local-vault' | 'emergency-purge'} />
           )}
         </main>
+        {showMessengerBottomNav ? (
+          <MessengerBottomNav
+            active={messengerBottomNavActive}
+            showEinsatzleitung={canAccessEinsatzleitung(role)}
+            onMessages={openMessengerChatView}
+            onEinsatzleitung={canAccessEinsatzleitung(role) ? openEinsatzleitungView : undefined}
+            onPhonebook={() => {
+              setMessengerNavHighlight('phonebook')
+              if (activeView?.type === 'einsatzleitung') {
+                setEinsatzKontakteScrollRequest((n) => n + 1)
+                return
+              }
+              if (activeView?.type !== 'chat') openMessengerChatView()
+              setPhonebookNavRequest((n) => n + 1)
+            }}
+          />
+        ) : null}
       </div>
       ) : (
-    <div className="min-h-screen bg-background">
+    <DeploymentProfileBackdrop status={apiSnapshot}>
+    <div className="min-h-screen bg-background/80">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card/90 backdrop-blur-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary font-bold text-primary-foreground">
               M
             </div>
             <div>
-              <h1 className="text-lg font-bold text-foreground">Morgendrot</h1>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-bold text-foreground">Morgendrot</h1>
+                <ActiveProfileBadge status={apiSnapshot} compact />
+              </div>
               <p className="text-xs text-muted-foreground">
                 {networkInfo || 'IOTA Rebased'}
                 {role ? (
@@ -1247,8 +1377,8 @@ export function Dashboard() {
             </div>
           </div>
         )}
-        {/* Arbeiter/Lock: Action Center statt Kacheln */}
-        {(role === 'arbeiter' || role === 'lock') && !showAllTiles && (
+        {/* Arbeiter/Lock Volldashboard: Action Center. Messenger (`UI_VARIANT=messenger`): direkt Kacheln. */}
+        {showWorkerActionCenter ? (
           <>
             <div className="mb-6">
               <WorkerActionCenterView />
@@ -1259,13 +1389,11 @@ export function Dashboard() {
                 onClick={() => setShowAllTilesPersist(true)}
                 className="text-sm text-muted-foreground underline hover:text-foreground"
               >
-                {liteMessengerLocksTiles
-                  ? 'Nachrichten & Tresor anzeigen'
-                  : 'Alle Funktionen (Kacheln) anzeigen'}
+                Alle Funktionen (Kacheln) anzeigen
               </button>
             </div>
           </>
-        )}
+        ) : null}
 
         {/* Geräte-Radar: nur bei Arbeitsbereich full — siehe showDeviceRadar (Messenger: nur Boss). */}
         {showDeviceRadar ? (
@@ -1282,9 +1410,9 @@ export function Dashboard() {
         />
 
         {/* Kacheln: immer für Boss/Kommandant; für Arbeiter/Lock nur wenn showAllTiles */}
-        {((role !== 'arbeiter' && role !== 'lock') || showAllTiles) && (
+        {((role !== 'arbeiter' && role !== 'lock') || showAllTiles || liteMessengerFromApi) && (
           <>
-            {showAllTiles && (role === 'arbeiter' || role === 'lock') && (
+            {showWorkerActionCenter && showAllTiles && (role === 'arbeiter' || role === 'lock') && (
               <div className="mb-4 flex justify-center">
                 <button
                   type="button"
@@ -1296,6 +1424,26 @@ export function Dashboard() {
               </div>
             )}
             {/* Welcome */}
+            {canAccessEinsatzleitung(role) ? (
+              <div className="mb-6">
+                <button
+                  type="button"
+                  onClick={openEinsatzleitungView}
+                  className="flex w-full items-center gap-4 rounded-2xl border border-amber-500/40 bg-gradient-to-r from-amber-500/15 to-amber-600/5 p-4 text-left transition-colors hover:border-amber-500/60 hover:from-amber-500/20"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/20 text-amber-600">
+                    <Crown className="h-6 w-6" aria-hidden />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">Einsatzleitung</p>
+                    <p className="text-sm text-muted-foreground">
+                      Team-Mailbox, Kontakte, Helfer-Handoff (Boss), Forensik
+                    </p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              </div>
+            ) : null}
             <div className="mb-8 text-center">
               <h2 className="text-2xl font-bold text-foreground">Was möchtest du tun?</h2>
               <p className="mt-1 text-muted-foreground">Wähle eine Funktion, um loszulegen</p>
@@ -1321,7 +1469,17 @@ export function Dashboard() {
                   {feature.icon}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-foreground">{feature.title}</h3>
+                  <h3 className="flex items-center gap-2 font-semibold text-foreground">
+                    {feature.title}
+                    {feature.id === 'chat' && pendingHandshakeCount > 0 ? (
+                      <span
+                        className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
+                        title={`${pendingHandshakeCount} Handshake-Anfrage(n) — in Nachrichten → Posteingang`}
+                      >
+                        {pendingHandshakeCount}
+                      </span>
+                    ) : null}
+                  </h3>
                   <p className="text-sm text-muted-foreground">{feature.subtitle}</p>
                 </div>
               </div>
@@ -1358,6 +1516,7 @@ export function Dashboard() {
         )}
       </main>
     </div>
+    </DeploymentProfileBackdrop>
       )}
     </>
   )

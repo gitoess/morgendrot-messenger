@@ -8,6 +8,7 @@
 import { useCallback, type MutableRefObject, type Dispatch, type SetStateAction } from 'react'
 import { toast } from 'sonner'
 import { startHandshake, connect, findPeerHandshake } from '@/frontend/lib/api'
+import { notifyHandshakeOffersRefresh } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { setDirectChatEcdhPeerPubBase64 } from '@/frontend/lib/direct-chat-ecdh-session'
 
 const PARTNER_SETUP_ANCHOR_ID = 'chat-partner-setup-panel'
@@ -90,6 +91,8 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
           `${base} Handshake bleibt on-chain (§ H.23: Double Ratchet später). Nach Entsperren: Partner aus Vault-Cache — einmalig Connect nur wenn Status nicht „verbunden“. Siehe docs/HANDSHAKE-PERSISTENZ-UND-H23.md.${extra}`
         )
         if (opts?.closeSetup !== false) setShowSetup(false)
+        notifyHandshakeOffersRefresh()
+        window.setTimeout(() => notifyHandshakeOffersRefresh(), 4000)
       } else {
         setStatus('error')
         setStatusMsg(res.error || 'Fehler')

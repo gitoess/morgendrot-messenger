@@ -24,7 +24,12 @@ export async function createTeamMailboxOnChain(): Promise<CreateTeamMailboxOnCha
   }
 
   if (body.ok !== true) {
-    return { ok: false, error: body.error || body.message || r.error || r.message || 'Team-Mailbox konnte nicht erstellt werden.' }
+    return {
+      ok: false,
+      error: body.error || body.message || r.error || r.message || 'Team-Mailbox konnte nicht erstellt werden.',
+      digest: body.digest || body.txDigest || r.txDigest,
+      message: body.message || r.message,
+    }
   }
 
   const objectId =

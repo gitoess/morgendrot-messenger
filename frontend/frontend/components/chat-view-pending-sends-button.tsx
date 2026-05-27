@@ -32,7 +32,10 @@ export function ChatViewPendingSendsButton(p: {
   offlineMailboxQueueErrorHint?: string
   onManualRefresh?: () => void | Promise<void>
   onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
+  /** R1/Relay-Abschnitt — Simple Mode aus. */
+  showRelayManage?: boolean
 }) {
+  const showRelayManage = p.showRelayManage !== false
   const triggerClassName =
     p.triggerClassName ??
     'w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
@@ -159,6 +162,7 @@ export function ChatViewPendingSendsButton(p: {
             </div>
           </section>
 
+          {showRelayManage ? (
           <section className="space-y-2 rounded-lg border border-border/70 bg-muted/15 p-3">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <Package className="h-4 w-4 shrink-0" aria-hidden />
@@ -203,6 +207,7 @@ export function ChatViewPendingSendsButton(p: {
               Relay-Pakete verwalten…
             </Button>
           </section>
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={refresh}>

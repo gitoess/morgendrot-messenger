@@ -53,6 +53,8 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   onRefreshApiStatus?: () => void | Promise<void>
   /** Unter „Verschlüsselt“: Handshake senden / annehmen / Einsatz-Partner (online). */
   encryptedPartner?: ChatViewEncryptedPartnerPanelProps
+  /** Sendepfad-Matrix (Expert) — Simple Mode aus. */
+  showSendPathOverview?: boolean
 }
 
 export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
@@ -73,6 +75,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     channelMode,
     myAddressLine,
     encryptedPartner,
+    showSendPathOverview = true,
   } = p
 
   const showChainPersistence =
@@ -224,7 +227,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         </div>
       ) : null}
 
-      <ChatViewSendPathOverview compact />
+      {showSendPathOverview ? <ChatViewSendPathOverview compact /> : null}
 
       {!isPrivate && !encrypted && (
         <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">

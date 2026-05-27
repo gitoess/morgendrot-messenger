@@ -10,4 +10,4 @@
 
 ## Fahrplan / Doku
 
-- [ ] Bei inhaltlichem Scope: **`docs/ROADMAP-FAHRPLAN.md`** oder betroffene Spec angepasst (falls nötig)
+- [ ] Bei inhaltlichem Scope: **`docs/ROADMAP-FAHRPLAN.md`** oder betroffene Spec (z. B. **§ H.0-SIMPLE**, **`docs/POSITIONING.md`**)

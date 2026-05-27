@@ -5,7 +5,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Mailbox, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { BookUser, ChevronDown, Crown, FileDown, FileJson, Inbox, KeyRound, Lock, Mailbox, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -78,6 +78,12 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
   /** Offene Handshake-Anfragen (nicht verbunden, nicht abgelehnt). */
   pendingHandshakeCount?: number
+  /** Boss: kompakte Aktionen in der Posteingang-Kopfzeile. */
+  isBossRole?: boolean
+  onOpenBossEinsatzleitung?: () => void
+  onOpenBossJsonImport?: () => void
+  /** Verankern / Tangle-Inventar / Relay — nur Expert + iota-Transport. */
+  showIotaExpertInboxActions?: boolean
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -155,6 +161,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onOfflineMailboxQueueRefresh,
     onRemoveOfflineMailboxQueueItems,
     pendingHandshakeCount = 0,
+    isBossRole = false,
+    onOpenBossEinsatzleitung,
+    onOpenBossJsonImport,
+    showIotaExpertInboxActions = true,
   } = p
 
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -168,14 +178,47 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Posteingang</h3>
+          {isBossRole && onOpenBossEinsatzleitung ? (
+            <button
+              type="button"
+              onClick={onOpenBossEinsatzleitung}
+              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-amber-500/45 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-500/25 dark:text-amber-100"
+              title="Boss / Einsatzleitung — Import, Export, Team"
+            >
+              <Crown className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Einsatzleitung
+            </button>
+          ) : null}
+          {isBossRole && onOpenBossJsonImport ? (
+            <button
+              type="button"
+              onClick={onOpenBossJsonImport}
+              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
+              title="Kontaktliste (initialProfile) ins Telefonbuch importieren"
+            >
+              <FileJson className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+              JSON import
+            </button>
+          ) : null}
           {pendingHandshakeCount > 0 ? (
             <span
               className="inline-flex min-h-6 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
-              title={`${pendingHandshakeCount} Handshake-Anfrage(n) — unten im Posteingang`}
+              title={`${pendingHandshakeCount} ausstehende Handshake-Anfrage(n) — unten im Posteingang`}
             >
               <KeyRound className="h-3.5 w-3.5" aria-hidden />
               {pendingHandshakeCount}
             </span>
+          ) : null}
+          {!showIotaExpertInboxActions && offlineMailboxQueuePending > 0 ? (
+            <ChatViewPendingSendsButton
+              offlineMailboxQueuePending={offlineMailboxQueuePending}
+              offlineMailboxQueueItems={offlineMailboxQueueItems}
+              offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+              onManualRefresh={onOfflineMailboxQueueRefresh}
+              onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+              showRelayManage={false}
+              triggerClassName="inline-flex min-h-8 items-center gap-1 rounded-md border border-amber-600/45 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-500/25 dark:text-amber-100"
+            />
           ) : null}
           {onToggleMailboxesPanel ? (
             <button
@@ -336,40 +379,45 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               <DropdownMenuItem disabled={protokollMarkedCount === 0} onSelect={() => void onExportEinsatzprotokollMarked()}>
                 ZIP nur markiert (★ {protokollMarkedCount})
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1">
-                <ChatViewProtokollAnchorButton
-                  messageCount={messageCount}
-                  messages={messages}
-                  myAddress={myAddress}
-                  recipient={recipient}
-                  vaultLocked={vaultLocked}
-                  messagingPersistenceMode={messagingPersistenceMode}
-                  setStatus={setStatus}
-                  setStatusMsg={setStatusMsg}
-                  onOpenPartnerSetup={onOpenPartnerSetup}
-                  triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-                  triggerLabel="Auf Chain verankern"
-                />
-              </div>
-              <div className="px-2 py-1">
-                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
-                  On-Chain: Digests, Nonce, Recovery. Tresor: optional Digest-Backup (nicht dieselbe Datei wie Keys).
-                </p>
-                <ChatViewTangleInventoryButton inventoryScope="anchored" />
-              </div>
-              <div className="px-2 py-1">
-                <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
-                  Noch nicht verankert: Mailbox-Retry-Queue und Relay-Pakete (eigener Speicher).
-                </p>
-                <ChatViewPendingSendsButton
-                  offlineMailboxQueuePending={offlineMailboxQueuePending}
-                  offlineMailboxQueueItems={offlineMailboxQueueItems}
-                  offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
-                  onManualRefresh={onOfflineMailboxQueueRefresh}
-                  onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
-                />
-              </div>
+              {showIotaExpertInboxActions ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <div className="px-2 py-1">
+                    <ChatViewProtokollAnchorButton
+                      messageCount={messageCount}
+                      messages={messages}
+                      myAddress={myAddress}
+                      recipient={recipient}
+                      vaultLocked={vaultLocked}
+                      messagingPersistenceMode={messagingPersistenceMode}
+                      setStatus={setStatus}
+                      setStatusMsg={setStatusMsg}
+                      onOpenPartnerSetup={onOpenPartnerSetup}
+                      triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
+                      triggerLabel="Auf Chain verankern"
+                    />
+                  </div>
+                  <div className="px-2 py-1">
+                    <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
+                      On-Chain: Digests, Nonce, Recovery. Tresor: optional Digest-Backup (nicht dieselbe Datei wie Keys).
+                    </p>
+                    <ChatViewTangleInventoryButton inventoryScope="anchored" />
+                  </div>
+                  <div className="px-2 py-1">
+                    <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
+                      Noch nicht verankert: Mailbox-Retry-Queue und Relay-Pakete (eigener Speicher).
+                    </p>
+                    <ChatViewPendingSendsButton
+                      offlineMailboxQueuePending={offlineMailboxQueuePending}
+                      offlineMailboxQueueItems={offlineMailboxQueueItems}
+                      offlineMailboxQueueErrorHint={offlineMailboxQueueErrorHint}
+                      onManualRefresh={onOfflineMailboxQueueRefresh}
+                      onRemoveOfflineMailboxQueueItems={onRemoveOfflineMailboxQueueItems}
+                      showRelayManage={showIotaExpertInboxActions}
+                    />
+                  </div>
+                </>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
 

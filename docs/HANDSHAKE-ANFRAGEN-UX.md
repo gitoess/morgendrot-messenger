@@ -1,7 +1,7 @@
 # Handshake-Anfragen — UX (Ist)
 
-**Stand:** 2026-05-20  
-**Code:** `GET /api/pending-handshakes`, `frontend/frontend/hooks/use-chat-view-pending-handshakes.ts`, `chat-view-inbox-handshake-requests.tsx`
+**Stand:** 2026-05-21  
+**Code:** `GET /api/pending-handshakes` (+ optional `?mailboxIds=`), `use-chat-view-pending-handshakes.ts` (Dashboard + Chat), `chat-view-inbox-handshake-requests.tsx`, `pending-handshake-mailbox-ids.ts`
 
 ---
 
@@ -9,12 +9,12 @@
 
 | Element | Beschreibung |
 |---------|----------------|
-| **Erkennung** | Backend listet eingehende `HsKey`/Events für `MY_ADDRESS` (`listIncomingHandshakeOffers`). |
-| **Polling** | Alle **~45 s**, sobald `MY_ADDRESS` gesetzt und Tresor **nicht** gesperrt — **unabhängig** von Verschlüsselt/Internet/Kanal. |
-| **Anzeige** | Grüner Block **oben im Posteingang** mit Annehmen / Als Partner / **Ablehnen**. |
-| **Badge** | Am Posteingang-Titel: Anzahl offener Anfragen. |
-| **Toast** | Bei **neuer** Anfrage (pro `sender:nonce` einmal pro Browser-Session). |
-| **Ablehnen** | Lokal in `localStorage` (`morgendrot.dismissedHandshakeOffers.v1`) — Eintrag bleibt on-chain bis `/purge-handshake`. |
+| **Erkennung** | Backend: `listIncomingHandshakeOffers` + **`listOutgoingHandshakeOffers`** — Mailbox-Union + Client-`mailboxIds` + **EcdhInit**-Events. Gesendet = `sender = MY_ADDRESS`, noch nicht verbunden. |
+| **Polling** | Alle **~45 s** auf **Dashboard-Ebene** (Toast/Badge auch ohne geöffneten Chat/Posteingang), sobald `MY_ADDRESS` gesetzt und Tresor **nicht** gesperrt — **unabhängig** von Verschlüsselt/Internet/Kanal. |
+| **Anzeige** | **Eingehend:** grüner Block oben im Posteingang (Annehmen/Ablehnen). **Gesendet:** blauer Block „Ausstehende Anfragen (gesendet)“ — Warte auf Partner. |
+| **Badge** | Am Posteingang-Titel **und** an der Dashboard-Kachel **„Nachrichten“** (eingehend + gesendet, ohne bereits verbundene). |
+| **Toast** | Bei **neuer** Anfrage ab **erstem** erfolgreichen Poll (pro `sender:nonce` einmal pro Browser-Session). |
+| **Löschen** | **Löschen** im Posteingang: lokal ausblenden; bei **Mailbox**-Eintrag zusätzlich `/purge-handshake` on-chain (ENABLE_PURGE + MAILBOX_ID). Event-only nur lokal. Eingehend + gesendet. |
 | **Annehmen** | Wie „Handshake annehmen“ → Partner setzen + Connect. |
 
 ---

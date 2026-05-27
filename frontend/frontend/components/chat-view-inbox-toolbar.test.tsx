@@ -65,3 +65,29 @@ describe('ChatViewInboxToolbar counter', () => {
     expect(screen.queryByText(/\d+ von \d+ sichtbar/)).toBeNull()
   })
 })
+
+describe('ChatViewInboxToolbar Simple Mode', () => {
+  it('zeigt Wartende Sendungen ohne Expert-Menü wenn Queue pending', () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          showIotaExpertInboxActions: false,
+          offlineMailboxQueuePending: 2,
+        })}
+      />
+    )
+    expect(screen.getByRole('button', { name: /Wartende Sendungen \(2\)/i })).toBeInTheDocument()
+  })
+
+  it('blendet Wartende Sendungen aus wenn pending=0 und kein Expert-Menü', () => {
+    render(
+      <ChatViewInboxToolbar
+        {...makeProps({
+          showIotaExpertInboxActions: false,
+          offlineMailboxQueuePending: 0,
+        })}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /Wartende Sendungen/i })).not.toBeInTheDocument()
+  })
+})

@@ -172,6 +172,8 @@ export type ChatViewInboxPartnerStripProps = {
     address: string,
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
+  /** Simple Mode / mesh-first: „Nur IOTA“ ausblenden. */
+  showInboxIotaFilter?: boolean
 }
 
 export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
@@ -193,11 +195,13 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     showChannelSection = true,
     showPartnerSection = true,
     onRemoveInboxPartnerFromQuickList,
+    showInboxIotaFilter = true,
   } = p
 
   const hasAnyPartners = partnerOptions.length > 0
-  /** Transport-Filter können in der Session hängen bleiben — Zeile muss sichtbar bleiben, sonst kein „Nur IOTA“ aus. */
-  const showTransportRow = myAddressKnown || meshTransportOnly || iotaTransportOnly
+  /** Transport-Filter können in der Session hängen bleiben — Zeile sichtbar wenn Filter aktiv. */
+  const showTransportRow =
+    myAddressKnown || meshTransportOnly || (showInboxIotaFilter && iotaTransportOnly)
 
   const meshIotaToggleButtons = (
     <>
@@ -213,18 +217,20 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
       >
         Nur LoRa/Mesh
       </button>
-      <button
-        type="button"
-        onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
-        className={cn(
-          'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-          iotaTransportOnly
-            ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
-            : 'border-border bg-background text-muted-foreground hover:bg-muted'
-        )}
-      >
-        Nur IOTA
-      </button>
+      {showInboxIotaFilter ? (
+        <button
+          type="button"
+          onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
+          className={cn(
+            'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+            iotaTransportOnly
+              ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
+              : 'border-border bg-background text-muted-foreground hover:bg-muted'
+          )}
+        >
+          Nur IOTA
+        </button>
+      ) : null}
     </>
   )
 
@@ -299,7 +305,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             )}
             {meshIotaToggleButtons}
           </div>
-          {iotaTransportOnly ? (
+          {showInboxIotaFilter && iotaTransportOnly ? (
             <p className="text-xs text-amber-800 dark:text-amber-200" role="status">
               „Nur IOTA“ ist aktiv: Funk- und Mesh-Zeilen werden im Posteingang ausgeblendet. Zum Anzeigen erneut auf
               „Nur IOTA“ tippen (oder Sitzung ohne diesen Filter neu laden).

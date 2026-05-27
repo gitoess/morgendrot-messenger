@@ -293,6 +293,60 @@ async function testUtils() {
 }
 
 // --- Config display (no secrets in output) ---
+async function testProductProfile() {
+    console.log('\n--- product-profile (§ H.0-SIMPLE) ---');
+    const {
+        resolveDeploymentProfile,
+        resolveTransportProfile,
+        resolveSimpleMode,
+        resolveUiMode,
+        isIotaTransportUiEnabled,
+    } = await import('../src/config.js');
+
+    const savedRole = process.env.ROLE;
+    const savedTp = process.env.TRANSPORT_PROFILE;
+    const savedSm = process.env.SIMPLE_MODE;
+    const savedDp = process.env.DEPLOYMENT_PROFILE;
+
+    try {
+        delete process.env.TRANSPORT_PROFILE;
+        delete process.env.SIMPLE_MODE;
+        delete process.env.DEPLOYMENT_PROFILE;
+
+        process.env.ROLE = 'arbeiter';
+        assert.strictEqual(resolveTransportProfile('arbeiter'), 'mesh-first');
+        assert.strictEqual(resolveSimpleMode('arbeiter'), true);
+        assert.strictEqual(resolveUiMode('arbeiter'), 'simple');
+        assert.strictEqual(isIotaTransportUiEnabled('mesh-first'), false);
+
+        process.env.ROLE = 'boss';
+        assert.strictEqual(resolveTransportProfile('boss'), 'iota-full');
+        assert.strictEqual(resolveSimpleMode('boss'), false);
+        assert.strictEqual(isIotaTransportUiEnabled('iota-full'), true);
+
+        process.env.TRANSPORT_PROFILE = 'mesh-first';
+        assert.strictEqual(resolveTransportProfile('boss'), 'mesh-first');
+
+        process.env.ROLE = 'messenger';
+        process.env.DEPLOYMENT_PROFILE = 'consumer';
+        assert.strictEqual(resolveDeploymentProfile('messenger'), 'consumer');
+        assert.strictEqual(resolveSimpleMode('messenger'), true);
+
+        ok('resolveTransportProfile / SIMPLE_MODE / uiMode');
+    } catch (e) {
+        fail('product-profile', e);
+    } finally {
+        if (savedRole !== undefined) process.env.ROLE = savedRole;
+        else delete process.env.ROLE;
+        if (savedTp !== undefined) process.env.TRANSPORT_PROFILE = savedTp;
+        else delete process.env.TRANSPORT_PROFILE;
+        if (savedSm !== undefined) process.env.SIMPLE_MODE = savedSm;
+        else delete process.env.SIMPLE_MODE;
+        if (savedDp !== undefined) process.env.DEPLOYMENT_PROFILE = savedDp;
+        else delete process.env.DEPLOYMENT_PROFILE;
+    }
+}
+
 async function testConfigDisplay() {
     console.log('\n--- config (getConfigDisplay) ---');
     const { getConfigDisplay } = await import('../src/config.js');
@@ -312,6 +366,9 @@ async function testConfigDisplay() {
             'MESSENGER_CREDITS_OBJECT_ID',
             'VERIFIED_IOTA_NAME_PACKAGE_IDS',
             'MESSENGER_GAS_STATE_FILE',
+            'TRANSPORT_PROFILE',
+            'SIMPLE_MODE',
+            'UI_MODE',
         ];
         for (const k of newKeys) {
             assert(rows.some((r: { key: string }) => r.key === k), `getConfigDisplay has ${k}`);
@@ -1060,6 +1117,7 @@ async function main() {
     await testChainAccessAmounts();
     await testSignerProviderFactory();
     await testConfigDisplay();
+    await testProductProfile();
     await testInitialProfileProvision();
     await testEinsatzRoleTemplates();
     await testApplyInitialProfileToContacts();

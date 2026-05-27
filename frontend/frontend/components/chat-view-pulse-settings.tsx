@@ -68,9 +68,11 @@ type IdsOverride = { myAddress: string; packageId: string; streamsAnchorId: stri
 
 type ChatViewPulseSettingsProps = {
   apiStatus: ApiStatus
+  /** Simple Mode: kein localStorage-Expert-Bypass. */
+  allowDevExpertTools?: boolean
 }
 
-export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps) {
+export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }: ChatViewPulseSettingsProps) {
   const [open, setOpen] = useState(false)
   const [busy] = useState<'interval' | 'enabled' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -157,7 +159,10 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
       setIotaSubmitModeState(getIotaSubmitMode())
       setSessionAddr(getDirectIotaSessionSignerAddress())
       setEcdhPrivActive(getDirectChatEcdhPrivateKey() != null)
-      const devExpert = typeof window !== 'undefined' && window.localStorage.getItem(LS_EXPERT_TOOLS) === '1'
+      const devExpert =
+        allowDevExpertTools &&
+        typeof window !== 'undefined' &&
+        window.localStorage.getItem(LS_EXPERT_TOOLS) === '1'
       setShowExpertTools(apiStatus.uiVariant !== 'messenger' || devExpert)
       const snap = loadDirectMailboxChainSnapshotFromLs()
       if (snap) {
@@ -169,7 +174,7 @@ export function ChatViewPulseSettings({ apiStatus }: ChatViewPulseSettingsProps)
     } catch {
       /* ignore */
     }
-  }, [apiStatus.uiVariant])
+  }, [apiStatus.uiVariant, allowDevExpertTools])
 
   useEffect(() => {
     if (!open) return

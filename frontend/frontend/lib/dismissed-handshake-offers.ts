@@ -60,3 +60,58 @@ export function clearDismissedHandshakeForSender(sender: string): void {
   if (!/^0x[a-f0-9]{64}$/.test(s)) return
   writeAll(readAll().filter((r) => r.sender !== s))
 }
+
+/** Lokal ausgeblendete gesendete Handshake-Anfragen. */
+
+const LS_OUTGOING_KEY = 'morgendrot.dismissedOutgoingHandshakeOffers.v1'
+
+function readOutgoingAll(): DismissedHandshakeRecord[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(LS_OUTGOING_KEY)
+    if (!raw) return []
+    const j = JSON.parse(raw) as unknown
+    if (!Array.isArray(j)) return []
+    const out: DismissedHandshakeRecord[] = []
+    for (const row of j) {
+      if (!row || typeof row !== 'object') continue
+      const o = row as Record<string, unknown>
+      const sender = typeof o.sender === 'string' ? o.sender.trim().toLowerCase() : ''
+      const nonce = typeof o.nonce === 'string' ? o.nonce.trim() : ''
+      const dismissedAt = typeof o.dismissedAt === 'number' ? o.dismissedAt : 0
+      if (!/^0x[a-f0-9]{64}$/.test(sender) || !nonce) continue
+      out.push({ sender, nonce, dismissedAt })
+    }
+    return out
+  } catch {
+    return []
+  }
+}
+
+function writeOutgoingAll(rows: DismissedHandshakeRecord[]): void {
+  if (typeof window === 'undefined') return
+  window.localStorage.setItem(LS_OUTGOING_KEY, JSON.stringify(rows.slice(-200)))
+}
+
+/** `sender`-Feld = Empfänger-Adresse (recipient). */
+export function outgoingHandshakeOfferFingerprint(recipient: string, nonce: string): string {
+  return `${recipient.trim().toLowerCase()}:${nonce.trim()}`
+}
+
+export function readDismissedOutgoingHandshakeFingerprints(): Set<string> {
+  return new Set(
+    readOutgoingAll().map((r) => outgoingHandshakeOfferFingerprint(r.sender, r.nonce))
+  )
+}
+
+export function dismissOutgoingHandshakeOffer(recipient: string, nonce: string): void {
+  const recipientNorm = recipient.trim().toLowerCase()
+  const nonceNorm = nonce.trim()
+  if (!/^0x[a-f0-9]{64}$/.test(recipientNorm) || !nonceNorm) return
+  const fp = outgoingHandshakeOfferFingerprint(recipientNorm, nonceNorm)
+  const rows = readOutgoingAll().filter(
+    (r) => outgoingHandshakeOfferFingerprint(r.sender, r.nonce) !== fp
+  )
+  rows.push({ sender: recipientNorm, nonce: nonceNorm, dismissedAt: Date.now() })
+  writeOutgoingAll(rows)
+}

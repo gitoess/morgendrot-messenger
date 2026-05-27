@@ -200,6 +200,8 @@ export function refreshIdentityCfgFromDotenv(): { mailboxIdChanged: boolean; pac
     if (mb && MAILBOX_ID_REGEX.test(mb)) (CFG as { MAILBOX_ID: string }).MAILBOX_ID = mb;
     if (pkg && PACKAGE_ID_REGEX.test(pkg)) (CFG as { PACKAGE_ID: string }).PACKAGE_ID = pkg;
     if (me && ADDR_64_HEX.test(me)) (CFG as { MY_ADDRESS: string }).MY_ADDRESS = me;
+    const handoff = (process.env.HANDOFF_LABEL || '').trim() || resolveHandoffLabel();
+    (CFG as { HANDOFF_LABEL: string }).HANDOFF_LABEL = handoff;
     return {
         mailboxIdChanged: prevMb.toLowerCase() !== (CFG.MAILBOX_ID || '').trim().toLowerCase(),
         packageIdChanged: prevPkg.toLowerCase() !== (CFG.PACKAGE_ID || '').trim().toLowerCase(),
@@ -547,6 +549,27 @@ function applyEnvToCfg(key: string, value: string): void {
             (CFG as { UI_VARIANT: 'full' | 'messenger' }).UI_VARIANT = lo === 'messenger' ? 'messenger' : 'full';
             break;
         }
+        case 'DEPLOYMENT_PROFILE': {
+            const lo = v.toLowerCase();
+            (CFG as { DEPLOYMENT_PROFILE: DeploymentProfile }).DEPLOYMENT_PROFILE =
+                lo === 'consumer' ? 'consumer' : lo === 'einsatz' ? 'einsatz' : CFG.DEPLOYMENT_PROFILE;
+            break;
+        }
+        case 'TRANSPORT_PROFILE': {
+            const lo = v.toLowerCase();
+            const tp =
+                lo === 'mesh-first' || lo === 'iota-anchored' || lo === 'iota-full'
+                    ? (lo as TransportProfile)
+                    : CFG.TRANSPORT_PROFILE;
+            (CFG as { TRANSPORT_PROFILE: TransportProfile }).TRANSPORT_PROFILE = tp;
+            break;
+        }
+        case 'SIMPLE_MODE':
+            (CFG as { SIMPLE_MODE: boolean }).SIMPLE_MODE = truthy(v);
+            break;
+        case 'HANDOFF_LABEL':
+            (CFG as { HANDOFF_LABEL: string }).HANDOFF_LABEL = v;
+            break;
         case 'PAIRING_WAIT_TIMEOUT_MS':
             (CFG as { PAIRING_WAIT_TIMEOUT_MS: number }).PAIRING_WAIT_TIMEOUT_MS = Math.max(15_000, parseInt(v, 10) || 120_000);
             break;
@@ -904,6 +927,73 @@ export function getWalletDerivationPathConfigSource(): 'env' | 'runtime' {
 }
 
 export type DeploymentProfile = 'consumer' | 'einsatz';
+
+/** Transport-Schicht: Mesh-First = Einsatz-Default ohne IOTA-Pflicht-UI (§ H.0-SIMPLE). */
+export type TransportProfile = 'mesh-first' | 'iota-anchored' | 'iota-full';
+
+/** UI-Modus abgeleitet aus SIMPLE_MODE — nicht mit UI_VARIANT verwechseln. */
+export type UiMode = 'simple' | 'expert';
+
+/** Produktmodus: explizites DEPLOYMENT_PROFILE oder Heuristik aus ROLE / UI_VARIANT / Edition. */
+export function resolveDeploymentProfile(role?: string): DeploymentProfile {
+    const explicit = (process.env.DEPLOYMENT_PROFILE || '').trim().toLowerCase();
+    if (explicit === 'consumer' || explicit === 'einsatz') return explicit;
+    const r = String(role ?? process.env.ROLE ?? 'messenger').trim().toLowerCase();
+    if (r === 'boss' || r === 'kommandant' || r === 'arbeiter') return 'einsatz';
+    const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
+    if (edition === 'sales') return 'consumer';
+    const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
+    if (v === 'messenger') return 'consumer';
+    return 'einsatz';
+}
+
+export function resolveTransportProfile(role?: string): TransportProfile {
+    const explicit = (process.env.TRANSPORT_PROFILE || '').trim().toLowerCase();
+    if (explicit === 'mesh-first' || explicit === 'iota-anchored' || explicit === 'iota-full') return explicit;
+    const r = String(role ?? process.env.ROLE ?? 'messenger').trim().toLowerCase();
+    if (r === 'boss') return 'iota-full';
+    if (r === 'kommandant') return 'iota-anchored';
+    if (r === 'arbeiter') return 'mesh-first';
+    if (resolveDeploymentProfile(r) === 'consumer') return 'mesh-first';
+    return 'mesh-first';
+}
+
+export function resolveSimpleMode(role?: string): boolean {
+    const raw = (process.env.SIMPLE_MODE || '').trim().toLowerCase();
+    if (raw === 'true' || raw === '1' || raw === 'yes' || raw === 'on') return true;
+    if (raw === 'false' || raw === '0' || raw === 'no' || raw === 'off') return false;
+    const r = String(role ?? process.env.ROLE ?? 'messenger').trim().toLowerCase();
+    if (r === 'boss' || r === 'kommandant') return false;
+    if (r === 'arbeiter') return true;
+    if (resolveDeploymentProfile(r) === 'consumer') return true;
+    return true;
+}
+
+export function resolveUiMode(role?: string): UiMode {
+    return resolveSimpleMode(role) ? 'simple' : 'expert';
+}
+
+/** IOTA-spezifische UI (Package-Banner, Relay, IOTA-Filter) nur bei Chain-Transport sichtbar. */
+export function isIotaTransportUiEnabled(transportProfile?: TransportProfile): boolean {
+    const tp = transportProfile ?? resolveTransportProfile();
+    return tp === 'iota-anchored' || tp === 'iota-full';
+}
+
+/** Boss-Handoff-Bezeichnung (HANDOFF_LABEL= oder Kommentar # Einsatz-Bezeichnung:). */
+export function resolveHandoffLabel(): string {
+    const fromEnv = (process.env.HANDOFF_LABEL || '').trim();
+    if (fromEnv) return fromEnv;
+    try {
+        const content = fs.readFileSync(ENV_FILE_PATH, 'utf-8');
+        for (const line of content.split(/\r?\n/)) {
+            const m = /^#\s*Einsatz-Bezeichnung:\s*(.+)$/i.exec(line.trim());
+            if (m?.[1]?.trim()) return m[1].trim();
+        }
+    } catch {
+        /* keine .env */
+    }
+    return '';
+}
 
 export const CFG = {
     // --- Netzwerk ---
@@ -1268,6 +1358,12 @@ export const CFG = {
         if (v === 'messenger') return 'consumer';
         return 'einsatz';
     })(),
+    /** mesh-first = Einsatz-Default; iota-* = optionaler Notar (§ H.0-SIMPLE). Env: TRANSPORT_PROFILE. */
+    TRANSPORT_PROFILE: resolveTransportProfile(),
+    /** Erzwingt Simple-UI für Helfer/Wanderer. Env: SIMPLE_MODE=true|false. */
+    SIMPLE_MODE: resolveSimpleMode(),
+    /** Anzeige-Label aus Boss-Handoff (HANDOFF_LABEL oder Kommentar). */
+    HANDOFF_LABEL: resolveHandoffLabel(),
     /** Geheimnis-Peering: max. Wartezeit (ms) für /pairing-wait. Default 120000, min 15000. */
     PAIRING_WAIT_TIMEOUT_MS: Math.max(15_000, envInt('PAIRING_WAIT_TIMEOUT_MS', 120_000)),
     /** Max. PairingOffer-Kandidaten pro /pairing-find (RPC-Pagination). 10–2000, Default 250. */
@@ -1366,19 +1462,6 @@ export function getEffectiveAuthorizedSenders(): string[] {
         return [CFG.BOSS_ADDRESS, ...CFG.KOMMANDANT_ADDRESSES].filter(Boolean);
     }
     return [];
-}
-
-/** Produktmodus: explizites DEPLOYMENT_PROFILE oder Heuristik aus ROLE / UI_VARIANT / Edition. */
-export function resolveDeploymentProfile(role?: string): DeploymentProfile {
-    const explicit = (process.env.DEPLOYMENT_PROFILE || '').trim().toLowerCase();
-    if (explicit === 'consumer' || explicit === 'einsatz') return explicit;
-    const r = String(role ?? CFG.ROLE ?? 'messenger').trim().toLowerCase();
-    if (r === 'boss' || r === 'kommandant' || r === 'arbeiter') return 'einsatz';
-    const edition = (process.env.MESSENGER_EDITION || 'standalone').trim().toLowerCase();
-    if (edition === 'sales') return 'consumer';
-    const v = (process.env.UI_VARIANT || 'full').trim().toLowerCase();
-    if (v === 'messenger') return 'consumer';
-    return 'einsatz';
 }
 
 /** Rechte-Matrix Ameisen: Boss ⊇ Kommandant ⊇ Arbeiter. Consumer ohne Hierarchie-Rolle: keine Admin-Rechte. */
@@ -1644,6 +1727,9 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'MESSENGER_EDITION', value: CFG.MESSENGER_EDITION, envKey: 'MESSENGER_EDITION' },
         { key: 'UI_VARIANT', value: CFG.UI_VARIANT, envKey: 'UI_VARIANT' },
         { key: 'DEPLOYMENT_PROFILE', value: CFG.DEPLOYMENT_PROFILE, envKey: 'DEPLOYMENT_PROFILE' },
+        { key: 'TRANSPORT_PROFILE', value: CFG.TRANSPORT_PROFILE, envKey: 'TRANSPORT_PROFILE' },
+        { key: 'SIMPLE_MODE', value: String(CFG.SIMPLE_MODE), envKey: 'SIMPLE_MODE' },
+        { key: 'UI_MODE', value: resolveUiMode(CFG.ROLE), envKey: '(abgeleitet)' },
         { key: 'SERVE_LITE_UI_STATIC', value: String(CFG.SERVE_LITE_UI_STATIC), envKey: 'SERVE_LITE_UI_STATIC' },
         { key: 'PAIRING_WAIT_TIMEOUT_MS', value: String(CFG.PAIRING_WAIT_TIMEOUT_MS), envKey: 'PAIRING_WAIT_TIMEOUT_MS' },
         { key: 'PAIRING_FIND_MAX_CANDIDATES', value: String(CFG.PAIRING_FIND_MAX_CANDIDATES), envKey: 'PAIRING_FIND_MAX_CANDIDATES' },
@@ -1993,9 +2079,33 @@ export interface StandaloneSmartphoneHandoffParams {
     /** Komma/Leerzeichen/Semikolon-getrennte 0x-Adressen. */
     partnerAddresses?: string;
     mailboxId?: string;
+    /** Weitere Team-Mailbox-IDs (Komma); erste ID = primäre MAILBOX_ID wenn mailboxId leer. */
+    teamMailboxIds?: string;
     commandRegistryId?: string;
     vaultRegistryId?: string;
     nextPublicDirectIotaRpcUrl?: string;
+    helperRole?: 'messenger' | 'arbeiter' | 'kommandant';
+    roleId?: number;
+    deploymentProfile?: string;
+    uiVariant?: 'full' | 'messenger';
+    transportProfile?: TransportProfile;
+    simpleMode?: boolean;
+    handoffLabel?: string;
+}
+
+function parseHandoffObjectIdList(raw: string | undefined): string[] {
+    if (!raw?.trim()) return [];
+    const parts = raw.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of parts) {
+        const a = normalizeAddress(p);
+        if (!ADDR_64_HEX.test(a)) continue;
+        if (seen.has(a)) continue;
+        seen.add(a);
+        out.push(a);
+    }
+    return out;
 }
 
 function parseHandoffAddressList(raw: string | undefined, bossNorm: string): string[] {
@@ -2024,8 +2134,26 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
     const boss = normalizeAddress(String(p.bossAddress || '').trim());
     if (!ADDR_64_HEX.test(boss)) throw new Error('BOSS_ADDRESS muss 0x + 64 Hex sein.');
     const rpc = String(p.rpcUrl || '').trim() || 'https://api.testnet.iota.cafe';
+    const teamMbList = parseHandoffObjectIdList(p.teamMailboxIds);
     const mbRaw = String(p.mailboxId || '').trim();
-    const mb = mbRaw && ADDR_64_HEX.test(normalizeAddress(mbRaw)) ? normalizeAddress(mbRaw) : '';
+    let mb = mbRaw && ADDR_64_HEX.test(normalizeAddress(mbRaw)) ? normalizeAddress(mbRaw) : '';
+    if (!mb && teamMbList.length) mb = teamMbList[0]!;
+    const helperRoleRaw = String(p.helperRole || 'messenger').trim().toLowerCase();
+    const helperRole =
+        helperRoleRaw === 'arbeiter' || helperRoleRaw === 'kommandant' ? helperRoleRaw : 'messenger';
+    const roleId =
+        p.roleId != null && Number.isFinite(p.roleId)
+            ? Math.max(0, Math.min(63, Math.floor(Number(p.roleId))))
+            : 14;
+    const deploymentProfile = String(p.deploymentProfile || 'einsatz').trim() || 'einsatz';
+    const uiVariant = String(p.uiVariant || 'full').trim().toLowerCase() === 'messenger' ? 'messenger' : 'full';
+    const transportProfileRaw = String(p.transportProfile || 'mesh-first').trim().toLowerCase();
+    const transportProfile: TransportProfile =
+        transportProfileRaw === 'iota-anchored' || transportProfileRaw === 'iota-full'
+            ? transportProfileRaw
+            : 'mesh-first';
+    const simpleMode = p.simpleMode !== undefined ? Boolean(p.simpleMode) : resolveSimpleMode(helperRole);
+    const handoffLabel = String(p.handoffLabel || '').trim();
     const crRaw = String(p.commandRegistryId || '').trim();
     const cr = crRaw && ADDR_64_HEX.test(normalizeAddress(crRaw)) ? normalizeAddress(crRaw) : '';
     const vrRaw = String(p.vaultRegistryId || '').trim();
@@ -2050,11 +2178,28 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
     } else {
         lines.push('# MAILBOX_ID=', '# USE_MAILBOX=true');
     }
+    if (teamMbList.length > 1) {
+        lines.push(`TEAM_MAILBOX_IDS=${teamMbList.join(',')}`);
+    } else {
+        lines.push('# TEAM_MAILBOX_IDS=');
+    }
     if (cr) lines.push(`COMMAND_REGISTRY_ID=${cr}`);
     else lines.push('# COMMAND_REGISTRY_ID=');
     if (vr) lines.push(`VAULT_REGISTRY_ID=${vr}`);
     else lines.push('# VAULT_REGISTRY_ID=');
-    lines.push('', '# --- Identität Helfer-Gerät (leer bis Tresor/Wallet auf dem Telefon) ---', 'MY_ADDRESS=', 'ROLE=messenger', 'ROLE_ID=14', '', `BOSS_ADDRESS=${boss}`, '');
+    if (handoffLabel) {
+        lines.push(`HANDOFF_LABEL=${handoffLabel}`, `# Einsatz-Bezeichnung: ${handoffLabel}`);
+    }
+    lines.push(
+        '',
+        '# --- Identität Helfer-Gerät (leer bis Tresor/Wallet auf dem Telefon) ---',
+        'MY_ADDRESS=',
+        `ROLE=${helperRole}`,
+        `ROLE_ID=${roleId}`,
+        '',
+        `BOSS_ADDRESS=${boss}`,
+        ''
+    );
     if (partners.length === 1) {
         lines.push(`PARTNER_ADDRESS=${partners[0]}`, '# PARTNER_ADDRESSES=');
     } else if (partners.length > 1) {
@@ -2072,7 +2217,10 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         '# PWA / Next + API — wie bundle-standalone-smartphone Overrides',
         '# =============================================================================',
         'ENABLE_UI=true',
-        'UI_VARIANT=full',
+        `UI_VARIANT=${uiVariant}`,
+        `DEPLOYMENT_PROFILE=${deploymentProfile}`,
+        `TRANSPORT_PROFILE=${transportProfile}`,
+        `SIMPLE_MODE=${simpleMode ? 'true' : 'false'}`,
         'API_PORT=3342',
         'API_KILL_PREVIOUS_INSTANCE=true',
         'SIGNER=sdk',
@@ -2082,6 +2230,14 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         'ENABLE_PLAINTEXT_CHANNEL=false',
         ''
     );
+    if (transportProfile === 'mesh-first') {
+        lines.push(
+            '# --- LoRa / Meshtastic (§ TRANSPORT-AND-IOTA-LAYERS) ---',
+            '# Verschlüsselung: Kanal-PSK in der Meshtastic-App — nicht Morgendrot-Mesh-v2.',
+            '# IOTA-Archiv: optional Pfad 4 (eigene Mailbox nach Netz); Delayed Upload = Phase B.',
+            ''
+        );
+    }
     if (direct) {
         lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${direct}`, '');
     }
@@ -2094,6 +2250,10 @@ export function buildStandaloneSmartphoneHandoffReadme(p: {
     packageId: string;
     rpcUrl: string;
     bossAddress: string;
+    helperRole?: string;
+    teamMailboxIds?: string;
+    /** Zusätzlicher Block (z. B. LoRa-PSK + IOTA-Archiv). */
+    readmeExtra?: string;
 }): string {
     const label = (p.handoffLabel || '').trim() || '(ohne Bezeichnung)';
     return [
@@ -2123,10 +2283,15 @@ export function buildStandaloneSmartphoneHandoffReadme(p: {
         `  PACKAGE_ID=${p.packageId}`,
         `  RPC_URL=${p.rpcUrl}`,
         `  BOSS_ADDRESS=${p.bossAddress}`,
+        p.helperRole ? `  ROLE=${p.helperRole}` : '',
+        p.teamMailboxIds ? `  TEAM_MAILBOX_IDS=${p.teamMailboxIds}` : '',
         '',
         'Kanonische Doku: docs/WANDERER-STANDALONE-BUNDLE.md und docs/ROADMAP-FAHRPLAN.md § H.7.',
         '',
-    ].join('\n');
+        p.readmeExtra ? ['---', '', p.readmeExtra.trim(), ''].join('\n') : '',
+    ]
+        .filter(Boolean)
+        .join('\n');
 }
 
 export function buildDeviceJson(p: DeviceProvisionParams): Record<string, unknown> {

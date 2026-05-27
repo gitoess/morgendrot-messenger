@@ -1,10 +1,15 @@
 import { executeCommand } from '@/frontend/lib/api/execute-command'
+import { API_BASE } from '@/frontend/lib/api/api-base'
+import { readClientMailboxIdsForHandshakeScan } from '@/frontend/lib/pending-handshake-mailbox-ids'
 
 /** Package-ID in `.morgendrot-package-id` schreiben (wie Terminal `/set-package-id`). */
 export const setPackageIdCommand = (packageId0x: string) =>
   executeCommand('/set-package-id', [packageId0x.trim()])
 
 export const startHandshake = (partner: string) => executeCommand('/handshake', [partner])
+
+export const purgeHandshakeOnChainCommand = (recipient: string, sender: string) =>
+  executeCommand('/purge-handshake', [recipient.trim(), sender.trim()])
 
 export const connect = (address?: string) =>
   executeCommand('/connect', address ? [address] : [])
@@ -15,18 +20,40 @@ export type PendingHandshakeOffer = {
   source: 'mailbox' | 'event'
 }
 
-export async function fetchPendingHandshakes(): Promise<{
+export type OutgoingHandshakeOffer = {
+  recipient: string
+  nonce: string
+  source: 'mailbox' | 'event'
+}
+
+export type HandshakeOffersFetchResult = {
   ok: boolean
   offers?: PendingHandshakeOffer[]
+  outgoingOffers?: OutgoingHandshakeOffer[]
   error?: string
-}> {
-  const r = await fetch('/api/pending-handshakes')
-  const j = (await r.json()) as { ok?: boolean; offers?: PendingHandshakeOffer[]; error?: string }
+}
+
+export async function fetchHandshakeOffers(): Promise<HandshakeOffersFetchResult> {
+  const ids = readClientMailboxIdsForHandshakeScan()
+  const q = ids.length ? `?mailboxIds=${encodeURIComponent(ids.join(','))}` : ''
+  const r = await fetch(`${API_BASE}/api/pending-handshakes${q}`)
+  const j = (await r.json()) as {
+    ok?: boolean
+    offers?: PendingHandshakeOffer[]
+    outgoingOffers?: OutgoingHandshakeOffer[]
+    error?: string
+  }
   return {
     ok: j.ok === true,
     offers: Array.isArray(j.offers) ? j.offers : [],
+    outgoingOffers: Array.isArray(j.outgoingOffers) ? j.outgoingOffers : [],
     error: typeof j.error === 'string' ? j.error : undefined,
   }
+}
+
+/** @deprecated Alias — nutzt `fetchHandshakeOffers`. */
+export async function fetchPendingHandshakes(): Promise<HandshakeOffersFetchResult> {
+  return fetchHandshakeOffers()
 }
 
 export async function findPeerHandshake(peer?: string): Promise<{

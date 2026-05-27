@@ -3,13 +3,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, QrCode, RotateCcw, Trash2, UserPlus, UserRoundPlus } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { saveContactEntry } from '@/frontend/lib/api'
 import { buildContactQrPayload } from '@/frontend/lib/contact-qr'
-import { findContactAddressByMailboxObjectId } from '@/frontend/lib/contact-mailbox-routing'
 import { fetchDeploymentMailboxId } from '@/frontend/lib/fetch-deployment-mailbox-id'
 import { ChatViewPrivateMailboxDeleteDialog } from '@/frontend/components/chat-view-private-mailbox-delete-dialog'
 import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
+import { ContactMailboxPhonebookDialog } from '@/frontend/components/contact-mailbox-phonebook-dialog'
 import { ChatViewSendPathOverview } from '@/frontend/components/chat-view-send-path-overview'
 import {
   clearActiveSendMailbox,
@@ -21,6 +20,7 @@ import {
 import {
   addMyPrivateMailbox,
   archiveMyPrivateMailbox,
+  backfillPrivateMailboxLabels,
   forgetMyPrivateMailbox,
   readArchivedMyPrivateMailboxes,
   readMyPrivateMailboxes,
@@ -30,6 +30,7 @@ import {
 } from '@/frontend/lib/my-private-mailbox-store'
 import {
   archiveMyTeamMailbox,
+  backfillTeamMailboxLabels,
   forgetMyTeamMailbox,
   joinMyTeamMailbox,
   readArchivedMyTeamMailboxes,
@@ -80,7 +81,6 @@ export type ChatViewMyMailboxesPanelProps = {
   serverMailboxIdHint?: string
   contactDirectory?: Record<string, ContactMeshEntryClient>
   onContactsChanged?: () => void
-  onOpenCreateContact?: (mailboxObjectId: string) => void
   onApplySendRecipient?: (walletAddress: string) => void
   onStatus?: (msg: string, kind: 'success' | 'error') => void
   onMailboxActivated?: () => void
@@ -102,10 +102,16 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
   const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [assignMbId, setAssignMbId] = useState('')
-  const [assignContact, setAssignContact] = useState('')
-  const [assignBusy, setAssignBusy] = useState(false)
+  const [highlightTeamId, setHighlightTeamId] = useState('')
+  const [phonebookAssign, setPhonebookAssign] = useState<{
+    objectId: string
+    kind: 'private' | 'team'
+    label?: string
+  } | null>(null)
 
   const reload = useCallback(() => {
+    backfillPrivateMailboxLabels()
+    backfillTeamMailboxLabels()
     setPrivateList(readMyPrivateMailboxes())
     setTeamList(readMyTeamMailboxes())
     setPrivateArchived(readArchivedMyPrivateMailboxes())
@@ -184,59 +190,46 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
     p.onMailboxActivated?.()
   }
 
-  const assignToContact = async () => {
-    const addr = assignContact.trim()
-    const mb = assignMbId.trim()
-    if (!addr || !/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
-      p.onStatus?.('Kontakt und Mailbox-ID wählen.', 'error')
-      return
-    }
-    setAssignBusy(true)
-    try {
-      const r = await saveContactEntry({ address: addr, mailboxObjectId: mb })
-      if (!r.ok) {
-        p.onStatus?.(r.error || 'Speichern fehlgeschlagen.', 'error')
-        return
-      }
-      p.onContactsChanged?.()
-      p.onApplySendRecipient?.(addr.trim().toLowerCase())
-      p.onStatus?.(`Mailbox ${maskMid(mb)} zugeordnet.`, 'success')
-    } finally {
-      setAssignBusy(false)
-    }
+  const openPhonebookAssign = (objectId: string, kind: 'private' | 'team', label?: string) => {
+    setPhonebookAssign({ objectId, kind, label })
   }
 
-  const saveToOwnPhonebook = async (mailboxObjectId: string) => {
-    if (!walletValid) return
-    setAssignBusy(true)
-    try {
-      const r = await saveContactEntry({
-        address: full,
-        label: 'Ich (Profil)',
-        mailboxObjectId: mailboxObjectId.trim(),
-      })
-      if (!r.ok) {
-        p.onStatus?.(r.error || 'Profil-Kontakt fehlgeschlagen.', 'error')
-        return
-      }
-      p.onContactsChanged?.()
-      p.onStatus?.('Mailbox in Telefonbuch (Ich) gespeichert.', 'success')
-    } finally {
-      setAssignBusy(false)
+  const assignToContact = () => {
+    const mb = assignMbId.trim()
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+      p.onStatus?.('Zuerst eine Mailbox wählen.', 'error')
+      return
     }
+    const kind = teamList.some((e) => e.objectId.toLowerCase() === mb.toLowerCase()) ? 'team' : 'private'
+    const entry =
+      kind === 'team'
+        ? teamList.find((e) => e.objectId.toLowerCase() === mb.toLowerCase())
+        : privateList.find((e) => e.objectId.toLowerCase() === mb.toLowerCase())
+    openPhonebookAssign(mb, kind, entry?.label)
+  }
+
+  const saveToOwnPhonebook = (mailboxObjectId: string, kind: 'private' | 'team', label?: string) => {
+    if (!walletValid) return
+    openPhonebookAssign(mailboxObjectId, kind, label)
   }
 
   const renderMailboxCard = (
     kind: 'team' | 'private',
     entry: { objectId: string; label?: string },
-    actions: React.ReactNode
+    actions: React.ReactNode,
+    opts?: { highlight?: boolean }
   ) => {
     const activeRow = isActive(kind, entry.objectId)
+    const highlighted = opts?.highlight === true
     return (
       <li
         key={entry.objectId}
         className={`rounded-md border px-2 py-2 text-[11px] ${
-          activeRow ? 'border-emerald-500/45 bg-emerald-500/10' : 'border-border bg-background/40'
+          highlighted
+            ? 'border-amber-500/60 bg-amber-500/15 ring-1 ring-amber-500/40'
+            : activeRow
+              ? 'border-emerald-500/45 bg-emerald-500/10'
+              : 'border-border bg-background/40'
         }`}
       >
         <div className="flex flex-wrap items-center gap-2">
@@ -330,12 +323,20 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                 onObjectId={(id) => {
                   reload()
                   setAssignMbId(id)
+                  setHighlightTeamId(id)
+                  window.setTimeout(() => setHighlightTeamId(''), 12_000)
                 }}
                 onStatus={p.onStatus}
               />
             ) : null}
           </div>
         </div>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Neue Team-Mailbox erscheint <strong className="text-foreground">hier in der Liste</strong>, nicht als Zeile im
+          Nachrichten-Posteingang. Posteingang zeigt erst Inhalte, wenn jemand an diese Mailbox sendet.{' '}
+          <strong className="text-foreground">On-chain löschen</strong> gibt es für Shared-Team-Mailboxen nicht — nur{' '}
+          <strong className="text-foreground">Entfernen (lokal)</strong>.
+        </p>
         {teamList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">
             {p.teamMailboxCreateAllowed
@@ -345,31 +346,43 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
         ) : (
           <ul className="space-y-1.5">
             {teamList.map((entry) =>
-              renderMailboxCard('team', entry, (
+              renderMailboxCard(
+                'team',
+                entry,
+                (
                 <>
                   <button
                     type="button"
                     onClick={() => {
+                      if (
+                        !window.confirm(
+                          `Team-Mailbox „${entry.label || maskMid(entry.objectId)}“ aus der lokalen Liste entfernen?\n\nOn-chain bleibt das Shared-Postfach bestehen.`
+                        )
+                      ) {
+                        return
+                      }
                       archiveMyTeamMailbox(entry.objectId)
                       reload()
-                      p.onStatus?.('Aus Liste entfernt (on-chain bleibt).', 'success')
+                      p.onStatus?.('Team-Mailbox lokal entfernt (on-chain unverändert).', 'success')
                     }}
-                    className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
+                    className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive hover:bg-destructive/15"
                   >
                     <Trash2 className="h-3 w-3" />
-                    Aus Liste
+                    Entfernen (lokal)
                   </button>
                   <button
                     type="button"
-                    disabled={assignBusy || !walletValid}
-                    onClick={() => void saveToOwnPhonebook(entry.objectId)}
+                    disabled={!walletValid}
+                    onClick={() => saveToOwnPhonebook(entry.objectId, 'team', entry.label)}
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <UserPlus className="h-3 w-3" />
                     Ins Telefonbuch
                   </button>
                 </>
-              ))
+              ),
+                { highlight: highlightTeamId.toLowerCase() === entry.objectId.toLowerCase() }
+              )
             )}
           </ul>
         )}
@@ -426,8 +439,8 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                   </button>
                   <button
                     type="button"
-                    disabled={assignBusy || !walletValid}
-                    onClick={() => void saveToOwnPhonebook(entry.objectId)}
+                    disabled={!walletValid}
+                    onClick={() => saveToOwnPhonebook(entry.objectId, 'private', entry.label)}
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <UserPlus className="h-3 w-3" />
@@ -465,15 +478,11 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
       {(privateList.length > 0 || teamList.length > 0) && (
         <div className="rounded-md border border-border/70 bg-muted/15 px-2 py-2 space-y-1.5 text-[10px]">
           <p className="font-medium">Mailbox einem Kontakt zuordnen</p>
+          <p className="text-muted-foreground">Mailbox wählen → Speichern öffnet die Telefonbuch-Zuordnung (bestehender oder neuer Kontakt).</p>
           <div className="flex flex-wrap gap-2">
             <select
               value={assignMbId}
-              onChange={(e) => {
-                setAssignMbId(e.target.value)
-                const dir = p.contactDirectory ?? {}
-                const found = findContactAddressByMailboxObjectId(dir, e.target.value)
-                if (found) setAssignContact(found)
-              }}
+              onChange={(e) => setAssignMbId(e.target.value)}
               className="min-w-[8rem] flex-1 rounded border border-border bg-input px-2 py-1"
             >
               <option value="">Mailbox…</option>
@@ -490,15 +499,33 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             </select>
             <button
               type="button"
-              disabled={assignBusy}
-              onClick={() => void assignToContact()}
+              disabled={!assignMbId.trim()}
+              onClick={() => assignToContact()}
               className="rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50"
             >
-              Speichern
+              Zuordnen…
             </button>
           </div>
         </div>
       )}
+
+      {phonebookAssign ? (
+        <ContactMailboxPhonebookDialog
+          open={Boolean(phonebookAssign)}
+          onOpenChange={(open) => {
+            if (!open) setPhonebookAssign(null)
+          }}
+          mailboxObjectId={phonebookAssign.objectId}
+          mailboxKind={phonebookAssign.kind}
+          mailboxLabel={phonebookAssign.label}
+          directory={p.contactDirectory ?? {}}
+          onSaved={() => {
+            p.onContactsChanged?.()
+            p.onStatus?.('Mailbox im Telefonbuch gespeichert.', 'success')
+            setPhonebookAssign(null)
+          }}
+        />
+      ) : null}
 
       {deleteDialogId ? (
         <ChatViewPrivateMailboxDeleteDialog

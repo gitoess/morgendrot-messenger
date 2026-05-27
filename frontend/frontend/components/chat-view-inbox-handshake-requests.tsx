@@ -6,6 +6,8 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 
+import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
+
 export type ChatViewInboxHandshakeRequestsProps = {
   offers: PendingHandshakeOffer[]
   loading?: boolean
@@ -13,11 +15,11 @@ export type ChatViewInboxHandshakeRequestsProps = {
   directory: Record<string, ContactMeshEntryClient>
   onAccept: (sender: string) => void
   onUseAsPartner: (sender: string) => void
-  onReject?: (sender: string, nonce: string) => void
+  onDelete?: (sender: string, nonce: string, source: HandshakeOfferSource) => void | Promise<void>
 }
 
 export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequestsProps) {
-  const { offers, loading = false, sending = false, directory, onAccept, onUseAsPartner, onReject } = p
+  const { offers, loading = false, sending = false, directory, onAccept, onUseAsPartner, onDelete } = p
 
   /** Nur bei echten Angeboten — kein „Suche Handshakes“ beim Posteingang-Aktualisieren. */
   if (offers.length === 0) return null
@@ -26,7 +28,7 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
     <div className="border-b border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5 dark:bg-emerald-950/20">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
         <KeyRound className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-        Handshake-Anfragen
+        Handshake-Anfragen (eingehend)
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden /> : null}
       </div>
       <ul className="space-y-2">
@@ -63,14 +65,14 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
               >
                 {sending ? '…' : 'Annehmen'}
               </button>
-              {onReject ? (
+              {onDelete ? (
                 <button
                   type="button"
                   disabled={sending}
-                  onClick={() => onReject(o.sender, o.nonce)}
+                  onClick={() => void onDelete(o.sender, o.nonce, o.source)}
                   className="rounded-md border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
                 >
-                  Ablehnen
+                  {sending ? '…' : 'Löschen'}
                 </button>
               ) : null}
             </li>
@@ -78,8 +80,9 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
         })}
       </ul>
       <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-        „Annehmen“ = Handshake verbinden (wie „Handshake annehmen“). „Ablehnen“ blendet die Anfrage hier aus (bleibt on-chain
-        bis Purge). Toast + Badge erscheinen bei neuen Anfragen, auch außerhalb des Verschlüsselt-Schalters.
+        „Annehmen“ = Handshake verbinden. „Löschen“ = lokal ausblenden; bei Mailbox-Einträgen zusätzlich{' '}
+        <code className="text-[10px]">/purge-handshake</code> on-chain (wenn Purge + MAILBOX_ID aktiv).
+        Event-only-Anfragen nur lokal ausblendbar.
       </p>
     </div>
   )

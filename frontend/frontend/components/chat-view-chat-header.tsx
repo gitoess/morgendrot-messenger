@@ -18,6 +18,7 @@ import {
   MessengerHandbookChatLink,
   MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
 } from '@/components/messenger-handbook-link'
+import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -48,6 +49,7 @@ export type ChatViewChatHeaderProps = {
     onEncryptedChange?: (encrypted: boolean) => void
     /** 1:1: dezente Kontakt-ID unter online / funk / adhoc. */
     myAddressLine?: string
+    showAdhocTransport?: boolean
   }
   /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -158,6 +160,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                     ? 'Pinnwand'
                     : '1:1 Privat'}
               </h2>
+              <ActiveProfileBadge status={apiStatus} compact />
               {channelMode != null && onChannelModeChange ? (
                 <span
                   className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5"

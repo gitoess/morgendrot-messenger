@@ -1,95 +1,232 @@
 # Ausrichtung, Prioritäten und Reihenfolge (Morgendrot Messenger)
 
-**Zweck:** Ein gemeinsames Bild für Mensch und KI – **gegen Feature-Creep** und **falsche Parallelität**.  
-**Stand:** lebendes Dokument (Abgleich **2026-04-28**; **Handy-first / Client-IOTA** — **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, Fahrplan **§ H.15**; zuvor **§ H.1b** / **§ H.2**); bei Abweichung im Code lieber **dieses Dokument** oder den Code anpassen. **Merge-Ritual (Messenger/Frontend):** **`TESTING.md`** § *Qualitätsritual vor Merge* + CI **`frontend-checks`**.
+**Zweck:** Ein gemeinsames Bild für Mensch und KI — **gegen Feature-Creep** und **falsche Parallelität**.  
+**Stand:** **2026-05-20** — **Strategie:** IOTA **bleibt gekoppelt** (Boss-Deploy, Mailbox, E2EE online, Pfad 4, Outbox) — im Feld aber **nicht immer sichtbar** (`mesh-first`, `SIMPLE_MODE`). **Default-Transport = LoRa**; **Delayed LoRa → IOTA** = Phase B. Simple Mode = **weniger UI**, nicht ohne Chain. Kanonisch: **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**.  
+**Merge-Ritual (Messenger/Frontend):** **`TESTING.md`** § *Qualitätsritual vor Merge* + CI **`frontend-checks`**.
 
-**Produkt-Architektur (ab 2026-04-28):** **Handy-first** — Messenger **primär** auf dem Smartphone; **local-first**; **Client-Signatur** und **direkter IOTA-RPC-Upload** als **Primärpfad**; **Morgendrot-Node** / **`/api`** **optional** (Relay, Sponsored Gas, Archiv, Boss-Werkstatt). Volltext: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, Umsetzungsstufen: **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, Fahrplan **§ H.15**.
-
-**Operative Umsetzung („Punkt 1“ — Reihenfolge einhalten):** Kanonische **Ausführungsreihenfolge** (Stabilität, Queue vor Doppelarbeit): **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**. Konkrete Pakete (**H.0** Produkt/UX, **H.1** Phase A technisch, **H.1a** Baseline/Vitest/AppError — **`docs/PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **H.1b** Messenger-UI-Modularität — **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **H.2** PWA/Status, **H.15** Client-IOTA/optionaler Node, **H.6f** Android Foreground Service + minimale Sync-Ehrlichkeit — **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`** (native Hülle, nicht PWA), **H.8** Randthemen nur Doku, **H.10** Sicherheit/Vertrauen — **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**, **H.10b** Seed-Custody — **`docs/BOSS-WORKER-SEED-CUSTODY.md`**) stehen dort (**§ C.1**, **§ H**). Dieses Dokument definiert die **Leitplanke** **Phase A → B → C**; der Fahrplan füllt **Womit** und **Priorität** innerhalb von A — **ohne** Phasen zu sprengen.
+**Kanonische Umsetzung:** **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b**, **§ H.0**, **§ H.0-SIMPLE** — dieses Dokument definiert die **Leitplanke**; der Fahrplan füllt **Womit** und **Priorität**.
 
 ---
 
-## 1. Gesamtausrichtung (unverändert gültig)
+## 0. Produktversprechen (2026-05 — verbindlich)
 
-| Pfad | Rolle |
-|------|--------|
-| **IOTA Rebased** | **Primärpfad**, wenn Infrastruktur da ist: persistente Ablage und Messaging (Mailbox/Events). **Nicht** „Alltags-Chat“, sondern **Einsatz-/Kernpfad** im Krisen-Setup. |
-| **LoRa (Heltec / Meshtastic)** | **Starker Notfall- und Offline-Fallback**, wenn kein zuverlässiger Internetweg da ist. |
+| | |
+|---|---|
+| **Kernziel** | **Boss-geführtes Einsatz-Messenger-System** für trainierte Teams (Feuerwehr, THW, Bergrettung, kleine taktische Einheiten). |
+| **Sekundär (Privat/Solo)** | Wanderer, Prepper, Familien — **eigener Modus**, kein Boss-Handoff; siehe **`docs/HANDOFF-UND-MODUS-ZIELBILD.md`**. |
+| **Maßstab** | **Unter 20 Sekunden** vom Handoff zum funktionierenden Helfer-Gerät (Export-Assistent, Presets, Autofill). |
+| **Nicht-Ziel** | Kein universeller Ersatz für **Signal**, **ATAK** oder **Meshtastic-Frontends** in deren Kerndisziplin. |
 
-**Meshtastic:** **Baukasten** – möglichst **Standard-Firmware und -Ökosystem** (Routing, Store-and-Forward, MQTT, Module); **kein** großes eigenes Funkprotokoll / Fork, **wenn** es sich vermeiden lässt (**`docs/MESHTASTIC-BUILDING-BLOCKS.md`**).
+**Metapher für Endnutzer (Simple Mode):** **„Team-Postfach + persönlicher Chat“** — nicht „Chain + Package-ID + Relay + Expert“.
 
-**Gerät:** **Eine** Basis (Heltec + Meshtastic + Morgendrot-Anbindung); **keine** getrennten Gerätetypen in der Software – nur **Ausbaustufen** (z. B. mit/ohne Host/Display, Relais „abgespeckt“).
+**Satz für Planer:** *IOTA gekoppelt, aber nicht immer sichtbar* — Boss trägt Chain/RPC/Mailbox; Helfer startet mit **Funk**; Archiv (Pfad 4 / später Delayed Upload) läuft nebenher oder nach Netz.
 
-**Strom:** **Brownout-Schutz** und **sauberes Power-Management** sind **kritisch** (Hardware + Software) – mit Hardware-Specs und Host-Politik abstimmen.
+---
 
-**Einsatzorte** (Drohne, Ballon, Wand, …) = **dieselbe Software**, andere Montage – siehe **`docs/DRONE-RELAY-STRATEGY.md`**.
+## 1. Transport- und Produkt-Schichten (architektonische Wahrheit)
 
-**Internet / Basis-Gateway:** Der **CM4 hat keinen SIM-Slot**; an der **Basis-Station** (fest, z. B. Höhleneingang/Lager) kann ein **LTE/4G HAT + SIM + Antenne** den **Uplink** liefern; **WiFi** als Backup. **SIM nur an der Basis** – **Vortrupp/Relais ohne SIM**, nur LoRa (und ggf. `.morg-pkg`). Detail und Rollen (Basis vs. Heltec-Vortrupp): **`hardware/README.md`** („Internet an der Basis“).
+**Kanonisch:** **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** (vier Transportmodi, Delayed Upload, Offline-TX, Verschlüsselung pro Kanal).
 
-**Meshtastic-First (für alle weiteren Vorschläge):** Möglichst **Standard-Meshtastic** (Firmware + Client/Ökosystem); **nur gezielte, minimale Erweiterungen** (z. B. eigene PortNum, Airtime-/Prioritäts-Hooks, Custody-Metadaten). **Kein** großes eigenes Chunk-Protokoll und **kein** Routing-Neuaufbau, **wenn** es sich vermeiden lässt. Übersicht **1:1 vs. Eigenlogik:** **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**. **Gilt auch für Refactorings** (UI, Skripte, API): keine parallelen Funk- oder Chunk-Pfade einführen, wenn Meshtastic/Module/MQTT dieselbe Rolle tragen können.
+### 1.1 Zustellung vs. IOTA-Plattform
 
-Verknüpfte Doku: **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Offline/Online, Idempotenz, **§ H.12**), **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`** (Kern vs. Transport-/Funk-Adapter, Auto-Modus mit Override, Interop realistisch eingrenzen), **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** (Sicherheits-/Vertrauens-Roadmap, **§ H.10** — parallel zu A/B/C), **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`hardware/README.md`**. **Macro-/Gateway-Epic** (Steuerung über IOTA + lokale Ausführung am Gerät): **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** (Wald↔Netz, Opcodes 0x40–0xB0), **`docs/ROADMAP-FAHRPLAN.md`** (C.1, E) – **erst nach Phase B**, siehe Phase-C-Tabelle.
+| Schicht | Rolle | Helfer-UI (Simple) |
+|---------|--------|---------------------|
+| **LoRa / Meshtastic** | **Default-Zustellung** im Feld (Klartext oder Kanal-PSK) | Sichtbar: Funk, Offline-Queue |
+| **IOTA / Chain** | **Plattform** (immer im Deploy) — Mailbox, E2EE online, Pfad 4, Outbox; **Delayed Upload** Phase B | UI-Expert ausgeblendet; Funktion bleibt (Pfad 4, Drain, Boss-Handoff) |
+| **Team-Mailbox** | On-chain (**`create_team_mailbox`**) — Boss/Kommandant | Multi-Select nur Expert |
+| **Handoff / Provisioning** | Boss bereitet PACKAGE_ID, RPC, Mailbox vor | Preset **mesh-first** = Funk-Default, **nicht** ohne IOTA-Backend |
+| **Telegram** | Optional Zustell/Alarm (**§ H.26**) | Ausgeblendet im Simple Mode |
+
+**Wichtig:** **„Mesh-first“** = **zuerst Funk im Composer**, nicht **„Produkt ohne IOTA“**. Nachrichten können **LoRa → Queue/Gateway → Tangle** (**`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**); **keine** volle signierte TX im LoRa-Frame (**§ H.3m**).
+
+### 1.2 Env-Profile (Zielbild — schrittweise im Code)
+
+Drei unabhängige Achsen (Handoff-Assistent und `env/roles/*` setzen sie):
+
+| Variable | Werte | Bedeutung |
+|----------|-------|-----------|
+| **`DEPLOYMENT_PROFILE`** | `einsatz` \| `consumer` | Organisation vs. privat/Wanderer |
+| **`TRANSPORT_PROFILE`** | `mesh-first` \| `iota-anchored` \| `iota-full` | **mesh-first** = Funk-Default in UI; IOTA-Expert-UI nur bei `iota-*` (Chain bleibt aktiv) |
+| **`UI_VARIANT`** | `full` \| `messenger` | Volldashboard vs. schlanke Messenger-Oberfläche |
+| **`SIMPLE_MODE`** | `true` \| `false` | **Erzwingt** UI-Gates serverseitig — **kein** versteckter Expert-Pfad per `localStorage` allein |
+
+**Einsatz-Default (Minimal-Pfad):**
+
+```env
+DEPLOYMENT_PROFILE=einsatz
+TRANSPORT_PROFILE=mesh-first
+UI_VARIANT=messenger
+SIMPLE_MODE=true
+ROLE=messenger   # oder arbeiter — je Handoff-Preset
+```
+
+**Boss/Kommandant (Expert):**
+
+```env
+DEPLOYMENT_PROFILE=einsatz
+TRANSPORT_PROFILE=iota-anchored
+UI_VARIANT=full
+SIMPLE_MODE=false
+```
+
+**Privat / Solo (Wanderer, Prepper — kein Einsatz-Boss):**
+
+```env
+DEPLOYMENT_PROFILE=consumer
+TRANSPORT_PROFILE=mesh-first
+UI_VARIANT=messenger
+SIMPLE_MODE=true
+# Selbst konfiguriert — nicht über Export-Assistent der Einsatzleitung
+```
+
+Kanonisch: **`docs/HANDOFF-UND-MODUS-ZIELBILD.md`**
+
+**Implementierungsstand (2026-05-20):** `DEPLOYMENT_PROFILE`, `UI_VARIANT`, **`TRANSPORT_PROFILE`**, **`SIMPLE_MODE`** + **`GET /api/status`** = **Ist**. Frontend: **`messenger-role-capabilities.ts`**, Handoff-Presets + PSK-Hinweis, Chat-Gates, Offline-Banner, Pfad-4-Hinweis (Simple). **§ H.0-SIMPLE** = **weitgehend erledigt** (Fahrplan).
+
+### 1.3 Abgrenzung zu § H.15 (Handy-first / Client-IOTA)
+
+**§ H.15** bleibt gültig für **Teams, die IOTA aktivieren:** Client-Signatur, direkter RPC-Upload, optionaler Node als Relay.
+
+**Neu (2026-05):** Handy-first = **Client signiert/puffert lokal**, Upload wenn Netz da (**§ H.15**). **UI:** Helfer startet mit **Funk**; IOTA läuft weiter (Boss-`.env`, Pfad 4, Outbox, geplant Delayed Upload).
+
+Doku: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**.
+
+---
+
+## 2. Rollen und Simple Mode
+
+| Rolle | Modus | Sichtbar (Kern) | Ausgeblendet / Expert-only |
+|-------|-------|-----------------|----------------------------|
+| **Boss** | Expert (Default) | Einsatzleitung, Handoff, Vorlagen, Forensik | — |
+| **Kommandant** | Expert | Team-Mailboxen, Team-Status, Kontakte | Boss-Modus-Kachel |
+| **Arbeiter / Helfer** | **Simple (Pflicht)** | Chat, Funk, Team-Postfach, Offline-Queue | Package-ID, Relay, R1/R2, Pulse-IDs |
+| **Wanderer** | **Simple (strikt)** | Chat, Funk, Notfall, Seed-Backup | Team-Mailbox multi, Chain, Einsatzleitung |
+
+**Regel:** In `SIMPLE_MODE=true` darf **kein** Expert-Menü über Dev-Flags (`morgendrot.dev.expertTools`) erreichbar sein — Gates über **`GET /api/status`** → `uiMode`, `transportProfile`, Capabilities (**§ H.0-SIMPLE**).
+
+---
+
+## 3. Meshtastic-First (unverändert technisch)
+
+**Meshtastic:** Baukasten — Standard-Firmware und -Ökosystem; **kein** großes eigenes Funkprotokoll, wenn vermeidbar (**`docs/MESHTASTIC-BUILDING-BLOCKS.md`**).
+
+**Gerät:** Eine Basis (Heltec + Meshtastic + Morgendrot-Anbindung); Ausbaustufen (mit/ohne Host, Relais).
+
+**Internet / Basis-Gateway:** CM4/LTE an der Basis; Vortrupp nur LoRa — **`hardware/README.md`**.
+
+Verknüpfte Doku: **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**.
 
 ### Frequenz-Strategie (868 / 433 / BOS)
 
-| Stufe | Hardware-Aufwand | Rechtlicher Status | Taktischer Nutzen |
-|--------|------------------|--------------------|-------------------|
-| **868 MHz** | Null (Standard) | ISM (u. a. 1 % Duty Cycle je nach Region/Regeln) | Schneller Start, gute globale Verfügbarkeit und Community-Support |
-| **433 MHz** | Gering (Modultausch + passende Antenne) | ISM (bessere Penetration, teilweise günstigeres Duty-Cycle-Regime je Region) | Stabilerer Link in feuchtem Fels, Höhlen und verwinkelten Umgebungen – **primärer mittelfristiger Optimierungsweg** |
-| **BOS (380–400 MHz)** | Hoch (Spezialmodul, angepasste Filter) | **Sondergenehmigung erforderlich** | Maximale Priorität und Airtime (kein normales ISM-Duty-Cycle-Limit) – **nur** für behördliche Einsätze |
-
-**Für alle weiteren Vorschläge und Planungen:** **868 MHz** = Standard für Tests und Entwicklung; **433 MHz** = mittelfristiges Ziel für Einsatzrealität (Höhlen, Berge, feuchtes Gelände); **BOS** = langfristig, nur mit klarer behördlicher und Hardware-Roadmap. Detail und Tabellen-Spiegel: **`hardware/README.md`** (Abschnitt „Frequenz-Strategie“).
+| Stufe | Hardware | Recht | Nutzen |
+|-------|----------|-------|--------|
+| **868 MHz** | Standard | ISM | Schneller Start |
+| **433 MHz** | Modul+Antenne | ISM | Höhle/Berg — mittelfristiges Ziel |
+| **BOS** | Spezial | Genehmigung | Nur behördliche Einsätze |
 
 ---
 
-## 2. Reihenfolge der Arbeit (verbindlich)
+## 4. Reihenfolge der Arbeit (verbindlich)
 
-### Phase A – jetzt: Code-Qualität & Stabilität
+### Phase A — Simple Mode & Runtime (**weitgehend erledigt**)
 
-**Hinweis Reihenfolge:** Produkt-/Einsatz-UX (Messenger schlank, Entsperren, Rollen-Kacheln, Standalone-Abgabe) kann **vorgezogen** werden – siehe **`docs/ROADMAP-FAHRPLAN.md` § H.0** – ohne die technische Phase-A-Liste unten zu ersetzen.
+**Keine neuen Move-Publishes** in dieser Tranche.
 
-- **Dokumentierte Randthemen** (verhindern Erwartungsdruck auf neuen Code): Rollenwechsel im Team (**`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**), Dienst/Mainnet vs. privat/Testnet und **zwei Installationen** (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, Fahrplan **`docs/ROADMAP-FAHRPLAN.md` § H.8**). Das sind **Betriebs- und Organisationsantworten**, **kein** zusätzlicher Pflichtumfang für Phase A (kein In-App-Testnet/Mainnet-Schalter vor expliziter Priorität).
+| # | Inhalt | Status |
+|---|--------|--------|
+| 1 | P0-Doku (`TRANSPORT-AND-IOTA-LAYERS`, dieses Dokument, § H.0-SIMPLE) | **Ist** |
+| 2 | Config + Status-API | **Ist** |
+| 3 | UI-Gates + Handoff (PSK-Hinweis, Presets) | **Ist** |
+| 4 | Chat-Feinschliff (funk-Default, Offline-Banner, Pfad-4-Hinweis) | **Ist** |
 
-- **`chat-view.tsx`** (und nahe liegende Chat-Teile) **schrittweise** zerlegen; Zielbild: **deutlich unter ~1000 Zeilen** für die View, Logik in **Hooks** / **Hilfsmodulen** (z. B. **`use-chat-view-send-flow.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-inbox.ts`** (Mailbox-Fetch + Mesh-Merge), **`chat-view-attachment-bar.tsx`**, **`chat-view-send-panel.tsx`**, **`chat-view-setup-panel.tsx`**, **`chat-view-chat-header.tsx`**, **`chat-view-transport-card.tsx`**, **`chat-view-inbox-list.tsx`**, **`chat-view-inbox-toolbar.tsx`**, **`chat-view-inbox-panel.tsx`**). In **`chat-view-inbox-list.tsx`** ist kurz dokumentiert, welche Inbox-Teile **Meshtastic-nah** (Anzeige bereits zusammengeführter Nachrichten) vs. **Morgendrot** (MORG_*-Darstellung, Exporte) sind. **Prüfer-Übersicht** Messenger-Fähigkeiten: **`docs/MESSENGER-CAPABILITIES-OVERVIEW.md`**.
-- **Modularität (Grenzen, nicht nur Dateianzahl):** verbindlicher Plan **§ H.1b** im Fahrplan und **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`** — Feature-Ordner, weiche Dateibudgets, `lib/api/`-Split, Ports zwischen Send/Inbox/Attachments; **kein** 3-Tage-Big-Bang; optional Paket nur mit zweitem Consumer.
-- **Kein** großflächiges Löschen in **`exports/Morgendrot-Messenger-*`** – Quelle bleibt **`src/`** (siehe **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**).
-- Änderungen in **kleinen, reviewbaren** Schritten mit **`tsc`/Tests** nach jedem Schritt.
+### Block 2 — Feldtest (**als Nächstes**, 3–5 Tage)
 
-### Phase B – danach: Kern LoRa + IOTA (MVP)
+**Schritt-für-Schritt:** **`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`** (Boss ZIP → Arbeiter import → Chat-Checks).
 
-- **Zuverlässiges** Senden/Empfangen über den bestehenden Pfad (Mesh v2, Web-BT).
-- **Delayed LoRa → IOTA Upload (MVP):** lokale Queue, Upload bei Internet, **Gateway-Custody** (Morgendrot-Device-Key) + **Hop-Metadaten** wie in Spec – **ohne** volle Relais-Kette pro Hop.
+```powershell
+npm run env:role:boss    # Handoff-ZIP, dann Backend neu starten
+npm run env:role:arbeiter # Handoff importieren, Chat prüfen
+```
 
-### Phase C – später (bewusst zurückgestellt)
+| Flow | Notiz |
+|------|--------|
+| Boss → Handoff-ZIP | Export-Assistent, PSK, optional README Archiv |
+| Arbeiter → import | **Einstellungen → Handoff importieren** (ZIP ~3 KB) — **`docs/HANDOFF-IMPORT-UX.md`** |
+| Profil-Badge / Theme | **`docs/HANDOFF-PROFILE-UX.md`** |
+| ZIP verschlüsseln (`handoff.morg.enc`) | **Ist** — Export-Assistent Checkbox; IOTA optional Backlog |
+| Chat Simple | funk-Default, Offline-Streifen, Pfad-4-Hinweis, kein Expert |
+| Handshake 2. Wallet | Spätere Tests #1 |
+| Team beitreten | #3 |
+| PWA L1–L5 | **`docs/PWA-MANUAL-CHECKS.md`** |
+
+**Keine** parallelen großen Refactors; **keine** neuen Expert-Features.
+
+### Block 3 — Phase B (**erst danach**)
+
+Delayed LoRa → IOTA (Pfad 4 ausbauen), Meshtastic-Stabilität + SOS, Heltec/Firmware — **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**.
+
+Produkt-/Einsatz-UX kann **§ A**-Feinarbeit überholen, wenn Abgabe drängt.
+
+### Phase B — danach: Mesh-Kern + LoRa→IOTA-Brücke
+
+- Zuverlässiges Senden/Empfangen (Web-BT, Klartext, S-ARQ).
+- **Delayed LoRa → IOTA** (**`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**) — **bleibt Kern**; Gateway/MQTT + Queue.
+- Optional **`MORG_TX_RELAY_V1`** — signierte Submit-Artefakte **nutzlastarm** über Funk.
+- **Telegram Phase B2** Long Polling (Ist-Code) — Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**.
+
+### Phase C — später (bewusst zurückgestellt)
 
 | Thema | Hinweis |
 |-------|---------|
-| **Volle Chain-of-Custody (pro Hop)** | **Optional** – nur wenn Gateway-MVP nicht reicht; **`meshtastic/PHASE-2-FIRMWARE-SPEC.md`** als Referenz, **Meshtastic-First** beachten. |
-| **Airtime-Budget-UI** | Wichtig für Einsatz, aber **nach** stabiler Basis – **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md` §9.7**. |
-| **Protokoll & Nachweis** (manuell) | Spec fertig; **Implementierung** nicht vor **Phase B** priorisieren, wenn Ressourcen knapp. |
-| **Dual-Band 433+868** | Primär **Basis/Relais**-Hardware; Software nur **bandbewusst**, kein Sprint-Thema. Einordnung 868 vs. 433 vs. BOS: **Frequenz-Strategie** oben und **`hardware/README.md`**. |
-| **Gehäuse / IP68 / Kamera** | Hardware; parallel zur Software planen, aber **nicht** die Code-Roadmap sprengen. |
-| **IOTA-Makros → LoRa → Handy/Heltec** (Gateway, **Macro-Interpreter** auf dem Phone, optionale OTA-**Anstöße**) | **Nach** stabiler **Phase B** (Kern LoRa + IOTA MVP) – nicht parallel dazu als zweites Großprojekt. Detaillierte Ideen, Szenarien und Kritik: **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**; Priorisierung im **Fahrplan** **`docs/ROADMAP-FAHRPLAN.md`** (Abschnitt **E**). **Meshtastic-First:** Befehle möglichst als **kurze IDs** abbilden, vorhandene Firmware-/Client-APIs nutzen, kein eigenes vollständiges Funk-Steuerprotokoll neben Meshtastic. |
-| **„Zentralserver“ / globales blindes Relay / DID-Register / Anonymitäts-Stufen** | **Nicht** als fertiges Produkt vor **Phase B** verkaufen; kritische Einordnung und Reihenfolge: **`docs/ROADMAP-FAHRPLAN.md` § I**. Umsetzung nur **phasenweise** (B = Delayed Upload; C = Gateway/Makros; DID/Twin separat laut **`PROTOCOL-CHANNELS-TX-VS-STREAMS.md`**). |
+| Volle Chain-of-Custody pro Hop | Optional nach Gateway-MVP |
+| IOTA-Makros → LoRa | **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** — nach Phase B |
+| ATAK/CoT | Backlog **§ H.9** — kein Kernversprechen |
+| Zentralserver / globales Relay | **§ I** — nicht vor Phase B verkaufen |
 
 ---
 
-## 3. Warnsignal Feature-Creep
+## 5. Sicherheit (§ H.23 — keine Halbheiten)
 
-Gleichzeitig offen zu halten: **IOTA-Verankerung**, **Delayed Upload + Custody**, **Airtime**, **Drohnen**, **Dual-Band**, **Gehäuse** – **überfordert** Lieferfähigkeit und Tests.  
+| Option | Entscheidung |
+|--------|--------------|
+| **A — Status quo** | ECDH + AES-GCM, **transport-strong, kein Forward Secrecy** — mit **sichtbarer Stufen-Kennzeichnung** im Chat |
+| **B — Double Ratchet** | Nur **1:1 Direct-Chat**, nicht über LoRa/Chain — **Go/No-Go** bis **2026-Q3** (Fahrplan **§ H.23**) |
 
-**Regel:** Neue Ideen **in die Spec schreiben** ist ok; **implementieren** nur gemäß **Phase A → B → C** oben.
-
-**Ergänzung:** Doku zu **Profiltrennung** (Testnet/Mainnet, zwei Ordner) oder **Rollen** erweitert **nicht** automatisch den Implementierungsumfang — siehe **§ H.8** im Fahrplan. **In-App**-Multi-Netz oder Profilwahl erst nach **expliziter** Priorität und ohne Parallelbau zu Phase B.
-
----
-
-## 4. Kurz-IST (nur zur Orientierung)
-
-- **`chat-view.tsx`:** nur noch Verdrahtung (Variante → **`use-chat-view-core`** → **`ChatViewMainContent`**); Größenordnung **&lt; ~50 Zeilen**.
-- **Anhänge / Senden:** Ingest unter **`features/attachments/`** (Re-Export **`lib/chat-view-attachment-ingest.ts`**); Send-Pfad unter **`features/send/`** (u. a. Outgoing-Payload, Send-Utils, `.txt`-Split; dünne Re-Exports unter **`lib/chat-view-*.ts`**); **`use-chat-view-attachment-previews.ts`**, **`use-chat-view-attachments.ts`**, **`use-chat-view-send-flow.ts`** bleiben Hooks/Fassaden.
-- **Bundle:** `npm run bundle:messenger` spiegelt **`src/`** – nicht manuell im Export pflegen.
+**Bis zur Entscheidung:** Keine Marketing-Formulierung „Signal-Niveau“. Siehe **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, **`SECURITY-RATING.md`**.
 
 ---
 
-*Dieses Dokument präzisiert die Nutzer-Entscheidung: **Code-Qualität und Kern-LoRa/IOTA-MVP vor breiter Feature-Fläche**.*
+## 6. Warnsignal Feature-Creep
+
+**Regel:** Neue Ideen in **Spec schreiben** ist ok; **implementieren** nur gemäß **Phase A → B → C** und entlang des **Einsatz-Default-Pfads**.
+
+**Explizit zurückgestellt:** Paralleler Ausbau IOTA + LoRa + Telegram + Discord + ATAK als **gleichwertige** Nutzerpfade.
+
+**Produkt schneiden:** Der **Default-Einsatz-Pfad** (Mesh + Team-Postfach + Handoff) hat **Vorrang** vor vollem Hybrid in der UI.
+
+---
+
+## 7. Kurz-IST (Orientierung)
+
+- **`chat-view.tsx`:** Verdrahtung → **`use-chat-view-core`** → **`ChatViewMainContent`**.
+- **Rollen-Feldtest:** `npm run dev:role:*`, **`docs/TEST-ROLLE-PROFILES.md`**.
+- **Export-Assistent:** **`BossHandoffExportPanel`**, Presets **`frontend/frontend/lib/handoff-export-presets.ts`**.
+- **Bundle:** Quelle **`src/`** / `frontend/` — nicht manuell in **`exports/`** pflegen.
+
+---
+
+## 8. Verweise
+
+| Thema | Dokument |
+|-------|----------|
+| Transport, Delayed Upload, Offline-TX | **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** |
+| Simple Mode, Wanderer, Einsatz-Default | **`docs/ROADMAP-FAHRPLAN.md` § H.0-SIMPLE** |
+| Fahrplan, H.15, H.23, H.26 | **`docs/ROADMAP-FAHRPLAN.md`** |
+| Wanderer-Abgabe | **`docs/WANDERER-STANDALONE-BUNDLE.md`** |
+| Rollen-Workspaces | **`docs/UI-ROLLEN-WORKSPACES.md`** |
+| Telegram Long Polling | **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md` § Phase B2** |
+| Test-Rollen | **`docs/TEST-ROLLE-PROFILES.md`** |
+
+---
+
+*Leitplanke 2026-05: **IOTA-gekoppelt**, **Funk-Default im Feld**, **Delayed LoRa → Tangle bleibt**, **Simple Mode** = UI — kein universelles Konkurrenz-Produkt.*

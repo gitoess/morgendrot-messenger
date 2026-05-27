@@ -49,7 +49,7 @@
 
 - **Nachrichten** (eine Kachel): Umschalter **Privat** vs. **Pinnwand** (Broadcast-Kontext); Posteingang-Filter **Alles / Verschlüsselt / Klartext** (heuristisch); Pinnwand-Karte mit **PACKAGE_ID**-Copy & Einbindungs-Hinweis.
 - **Boss-Ansicht** für Posteingang (Konfiguration).
-- **Sendepfad-Auswahl** (privat + verschlüsselt): **online (IOTA/Mailbox)** vs. **funk (nur Mesh)** vs. **adhoc** (Platzhalter).
+- **Sendepfad-Auswahl** (privat + Klartext): **online** (IOTA/Mailbox) vs. **funk** (Meshtastic, oft per **Web-BT** zum Heltec → LoRa) vs. **adhoc** (Platzhalter **BLE Handy↔Handy**, nicht Web-BT). In **Simple Mode** (`SIMPLE_MODE`, Helfer) ist **adhoc** ausgeblendet — Fahrplan **§ H.0-SIMPLE** Phase 4.
 
 ### 2.7 Sonstiges (UI)
 

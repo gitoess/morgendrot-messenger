@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import { createTeamMailboxOnChain } from '@/frontend/lib/create-team-mailbox-on-chain'
-import { addMyTeamMailbox } from '@/frontend/lib/my-team-mailbox-store'
+import { addMyTeamMailbox, suggestNextTeamMailboxLabel } from '@/frontend/lib/my-team-mailbox-store'
 
 export function ChatViewTeamMailboxCreateButton(p: {
   walletValid: boolean
@@ -16,13 +16,13 @@ export function ChatViewTeamMailboxCreateButton(p: {
     if (!p.walletValid || busy) return
     const label =
       typeof window !== 'undefined'
-        ? window.prompt('Name der Team-Mailbox (z. B. THW Einsatz 2026):', 'Team Einsatz')?.trim()
+        ? window.prompt('Name der Team-Mailbox (z. B. THW Einsatz 2026):', suggestNextTeamMailboxLabel())?.trim()
         : ''
     setBusy(true)
     try {
       const r = await createTeamMailboxOnChain()
       if (!r.ok) {
-        p.onStatus?.(r.error || 'Erstellung fehlgeschlagen.', 'error')
+        p.onStatus?.(r.error || r.message || 'Erstellung fehlgeschlagen.', 'error')
         return
       }
       if (r.objectId) {
@@ -33,9 +33,7 @@ export function ChatViewTeamMailboxCreateButton(p: {
         })
         p.onObjectId(r.objectId, { digest: r.digest, label: label || undefined })
         p.onStatus?.(
-          r.digest
-            ? `Team-Mailbox erstellt (${r.objectId.slice(0, 10)}…) — ID per QR teilen.`
-            : `Team-Mailbox erstellt (${r.objectId.slice(0, 10)}…).`,
+          `Team-Mailbox «${label || 'Team'}» erstellt — siehe Abschnitt «Team-Mailboxes» oben (Badge Team). Der Posteingang bleibt leer, bis jemand dorthin sendet; ID zum Teilen kopieren.`,
           'success'
         )
       } else {

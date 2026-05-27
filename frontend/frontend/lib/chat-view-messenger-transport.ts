@@ -23,6 +23,10 @@ export const CHAT_LORA_DUAL_IMAGE_POLICY_MSG =
 export const CHAT_PATH4_SELF_ARCHIVE_HINT =
   'Pfad 4: Funk geht sofort als Klartext raus. Zusätzlich wird eine eigene Mailbox-Kopie an deine Adresse geschrieben (später im Tangle sichtbar), sobald Basis/Internet verfügbar ist.'
 
+/** Simple Mode: Pfad-4-Checkbox aus — kurzer Hinweis beim Funk-Senden. */
+export const CHAT_SIMPLE_LORA_ARCHIV_HINT =
+  'Funk-Nachricht geht sofort raus (Meshtastic, ggf. Kanal-PSK). Kopie auf IOTA wird später verankert, sobald Netz/Basis da ist (Pfad 4 — Boss stellt Mailbox vor).'
+
 /** Verschlüsselte Peer-Nachrichten brauchen vorherigen Schlüsselkanal (`/handshake` + `/connect`). */
 export const CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG =
   'Verschlüsselte Nachricht an andere Person: zuerst Handshake/Connect über Online-IOTA aufbauen. Ohne verbundenen Partner ist nur Klartext (Funk/Pfad 4) oder Versand an dich selbst sinnvoll.'

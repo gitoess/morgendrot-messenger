@@ -1,83 +1,42 @@
 import { describe, expect, it } from 'vitest'
 import {
-  canCreateTeamMailbox,
-  canEditEinsatzRoleTemplates,
-  canViewEinsatzRoleTemplatesSection,
-} from '@/frontend/lib/messenger-role-capabilities'
+  canUseMessengerExpertTools,
+  getMessengerUiCapabilities,
+  isIotaTransportUiVisible,
+  isSimpleUiMode,
+} from './messenger-role-capabilities'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 
-const base: ApiStatus = {
-  backendRunning: true,
-  backendOnline: true,
-  role: 'messenger',
-  deploymentProfile: 'consumer',
-  permissions: { teamManage: true, configChange: true },
-}
-
-describe('canCreateTeamMailbox', () => {
-  it('denies consumer even when permissions.teamManage is true', () => {
-    expect(canCreateTeamMailbox(base)).toBe(false)
+describe('messenger-role-capabilities product profile', () => {
+  it('isSimpleUiMode aus status.simpleMode', () => {
+    expect(isSimpleUiMode({ simpleMode: true } as ApiStatus)).toBe(true)
+    expect(isSimpleUiMode({ simpleMode: false, uiMode: 'expert' } as ApiStatus)).toBe(false)
   })
 
-  it('allows einsatz kommandant with teamManage', () => {
-    expect(
-      canCreateTeamMailbox({
-        ...base,
-        deploymentProfile: 'einsatz',
-        role: 'kommandant',
-        permissions: { teamManage: true },
-      })
-    ).toBe(true)
+  it('isIotaTransportUiVisible nur bei iota-*', () => {
+    expect(isIotaTransportUiVisible({ transportProfile: 'mesh-first' } as ApiStatus)).toBe(false)
+    expect(isIotaTransportUiVisible({ transportProfile: 'iota-anchored' } as ApiStatus)).toBe(true)
   })
 
-  it('denies einsatz arbeiter without teamManage', () => {
+  it('canUseMessengerExpertTools false in Simple Mode', () => {
     expect(
-      canCreateTeamMailbox({
-        ...base,
-        deploymentProfile: 'einsatz',
-        role: 'arbeiter',
-        permissions: { teamManage: false },
-      })
+      canUseMessengerExpertTools({ simpleMode: true, transportProfile: 'iota-full' } as ApiStatus)
     ).toBe(false)
-  })
-})
-
-describe('canViewEinsatzRoleTemplatesSection', () => {
-  it('hidden for consumer', () => {
-    expect(canViewEinsatzRoleTemplatesSection({ ...base, role: 'boss' })).toBe(false)
-  })
-
-  it('visible for einsatz kommandant', () => {
     expect(
-      canViewEinsatzRoleTemplatesSection({
-        ...base,
-        deploymentProfile: 'einsatz',
-        role: 'kommandant',
-      })
+      canUseMessengerExpertTools({ simpleMode: false, transportProfile: 'iota-full' } as ApiStatus)
     ).toBe(true)
   })
-})
 
-describe('canEditEinsatzRoleTemplates', () => {
-  it('kommandant can view section but not save', () => {
-    expect(
-      canEditEinsatzRoleTemplates({
-        ...base,
-        deploymentProfile: 'einsatz',
-        role: 'kommandant',
-        permissions: { configChange: false, teamManage: true },
-      })
-    ).toBe(false)
-  })
-
-  it('boss with configChange can save', () => {
-    expect(
-      canEditEinsatzRoleTemplates({
-        ...base,
-        deploymentProfile: 'einsatz',
-        role: 'boss',
-        permissions: { configChange: true, teamManage: true },
-      })
-    ).toBe(true)
+  it('getMessengerUiCapabilities: mesh-first Helfer ohne IOTA-UI', () => {
+    const caps = getMessengerUiCapabilities({
+      simpleMode: true,
+      transportProfile: 'mesh-first',
+      iotaTransportUiEnabled: false,
+    } as ApiStatus)
+    expect(caps.expertTools).toBe(false)
+    expect(caps.showInboxIotaFilter).toBe(false)
+    expect(caps.showPackageIdBanner).toBe(false)
+    expect(caps.showAdhocTransport).toBe(false)
+    expect(caps.showProminentOfflineQueueBanner).toBe(true)
   })
 })

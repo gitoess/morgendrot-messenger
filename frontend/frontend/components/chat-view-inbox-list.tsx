@@ -18,6 +18,7 @@
 import {
   Download,
   Forward,
+  Inbox,
   Link2,
   Lock,
   MessageCircle,
@@ -31,6 +32,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ChatMessageBody } from '@/frontend/components/chat-message-body'
+import { parseHandoffZipWire } from '@/frontend/lib/handoff-iota-wire'
+import { queueHandoffZipFromInbox } from '@/frontend/lib/handoff-pending-inbox'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -459,6 +462,19 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <Trash2 className="mr-2 h-4 w-4" />
                     Auf Chain löschen (Rebate)
                   </DropdownMenuItem>
+                  {parseHandoffZipWire(row.msg.content ?? '') ? (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        const parsed = parseHandoffZipWire(row.msg.content ?? '')
+                        if (!parsed) return
+                        queueHandoffZipFromInbox(parsed.zipBytes, parsed.meta)
+                      }}
+                      title="Handoff-ZIP in Einstellungen → Handoff importieren übernehmen"
+                    >
+                      <Inbox className="mr-2 h-4 w-4" />
+                      Handoff importieren
+                    </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem onClick={() => void exportEcdhMorgPkgForMessage(row.msg)}>
                     <Lock className="mr-2 h-4 w-4" />
                     ECDH .morg-pkg speichern
