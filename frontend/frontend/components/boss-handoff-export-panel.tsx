@@ -300,8 +300,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
     const last = readHandoffLastPresetId()
     if (last) applyPreset(last)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- einmaliges Seed
-  }, [p.apiSnapshot, p.contactDirectory])
+  }, [p.apiSnapshot, p.contactDirectory, applyPreset])
 
   useEffect(() => {
     let cancelled = false

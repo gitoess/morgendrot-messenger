@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { ListOrdered } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea'
@@ -37,7 +37,7 @@ export function EinsatzRoleTemplatesPanel(p: EinsatzRoleTemplatesPanelProps) {
     })()
   }, [])
 
-  const loadRoleTemplates = async () => {
+  const loadRoleTemplates = useCallback(async () => {
     setMsg('')
     if (!backendOnline) {
       setMsg('Backend offline.')
@@ -55,7 +55,7 @@ export function EinsatzRoleTemplatesPanel(p: EinsatzRoleTemplatesPanelProps) {
     } finally {
       setBusy(false)
     }
-  }
+  }, [backendOnline])
 
   const saveRoleTemplates = async () => {
     setMsg('')
@@ -100,8 +100,7 @@ export function EinsatzRoleTemplatesPanel(p: EinsatzRoleTemplatesPanelProps) {
   useEffect(() => {
     if (!visible || !backendOnline) return
     void loadRoleTemplates()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- einmal beim Mount
-  }, [visible, backendOnline])
+  }, [visible, backendOnline, loadRoleTemplates])
 
   if (!visible) return null
 
