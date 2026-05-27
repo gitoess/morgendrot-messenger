@@ -102,5 +102,6 @@ Boss kann **ohne** alles neu zu erfinden anpassen:
 |-------|--------|
 | **A (Ist)** | 3 Karten + ROLE_ID-Bit-Checkboxen + Feineinstellung ROLE/Simple + Vorlagen-Dropdown |
 | **B (Ist)** | „Als Vorlage speichern“ im Export-Assistenten (`handoff-export-to-template.ts`) |
-| **C** | Vorlagen-Felder: Standard-Partner, omitTeamMailboxes, transport |
+| **B2 (Ist)** | Capabilities-Matrix + Medic-Funker (`handoff-capabilities-matrix-picker.tsx`) |
+| **C** | Vorlagen-Felder inkl. gespeicherte `capabilitiesOverride` |
 | **D** | Solo-Wizard getrennt (Privat) — **`HANDOFF-UND-MODUS-ZIELBILD.md`** |

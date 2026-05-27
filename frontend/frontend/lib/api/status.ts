@@ -3,6 +3,7 @@ import { parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
 import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib/api/unlock-response-parse'
 import { API_BASE } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
+import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 /** Rechte aus getHierarchyPermissions (nur bei role boss/kommandant/arbeiter). */
 export type HierarchyPermissions = {
@@ -34,6 +35,8 @@ export type ApiStatus = {
   myAddress?: string
   role?: string
   roleId?: number
+  /** Feature-Matrix (Runtime/Handoff) — feingranulare Transport-/UI-Rechte. */
+  capabilities?: MessengerCapabilitiesMatrix
   permissions?: HierarchyPermissions
   vaultStatus?: VaultStatus
   plaintextMode?: boolean

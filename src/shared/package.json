@@ -9,6 +9,7 @@
     "./einsatz-role-templates": "./einsatz-role-templates.ts",
     "./device-time-trust": "./device-time-trust.ts",
     "./bytes-base64": "./bytes-base64.ts",
-    "./morgendrot-crypto": "./morgendrot-crypto.ts"
+    "./morgendrot-crypto": "./morgendrot-crypto.ts",
+    "./messenger-capabilities-matrix": "./messenger-capabilities-matrix.ts"
   }
 }

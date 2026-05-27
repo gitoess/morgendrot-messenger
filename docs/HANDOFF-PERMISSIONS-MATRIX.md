@@ -216,3 +216,11 @@ Keine Rohzahl-Eingabe — vermeidet Tippfehler und falsche Bit-Semantik.
 | Was fehlt im Code? | UI-Gates für Export/Gruppe; Vorlagen mit vollem Handoff-Snapshot |
 
 **Bit-Checkboxen (Ist):** Export-Assistent → Feineinstellung → `HandoffRoleIdBitPicker` — kanonische Bits wie Lite-UI, keine Rohzahl.
+
+---
+
+## 7. Evolution: Capabilities-Matrix (Phase 1)
+
+Das **S-Bit-Problem** (ein Schalter für LoRa + Telegram + IOTA) lösen wir mit **`messengerCapabilities`** in `.morgendrot-runtime-config.json` — **ohne** ROLE_ID-Semantik zu ändern.
+
+Siehe **`docs/CAPABILITIES-MATRIX-ZIELBILD.md`** · Code: `src/shared/messenger-capabilities-matrix.ts` · Status-API: `capabilities` in `GET /api/status`.

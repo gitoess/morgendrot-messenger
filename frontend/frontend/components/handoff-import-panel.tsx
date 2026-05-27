@@ -31,6 +31,7 @@ export function HandoffImportPanel() {
   const [hardRestartBusy, setHardRestartBusy] = useState(false)
   const [pendingEncrypted, setPendingEncrypted] = useState<HandoffEncryptedPending | null>(null)
   const [handoffPassword, setHandoffPassword] = useState('')
+  const [runtimeConfigText, setRuntimeConfigText] = useState<string | null>(null)
 
   const reset = () => {
     setEnvText(null)
@@ -41,10 +42,12 @@ export function HandoffImportPanel() {
     setApplied(false)
     setPendingEncrypted(null)
     setHandoffPassword('')
+    setRuntimeConfigText(null)
   }
 
-  const applyExtractedEnv = useCallback(async (text: string, label: string) => {
+  const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string) => {
     setEnvText(text)
+    setRuntimeConfigText(runtimeJson?.trim() || null)
     setFileLabel(label)
     const preview = await previewHandoffEnvImport(text)
     if (preview.summary) setSummary(preview.summary)
@@ -75,7 +78,8 @@ export function HandoffImportPanel() {
       }
       await applyExtractedEnv(
         extracted.envText,
-        `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (entschlüsselt)' : ''}`
+        `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (entschlüsselt)' : ''}`,
+        extracted.runtimeConfigText
       )
     },
     [applyExtractedEnv]
@@ -158,7 +162,7 @@ export function HandoffImportPanel() {
     setStatusMsg('')
     setErrors([])
     try {
-      const r = await applyHandoffEnvImport(envText)
+      const r = await applyHandoffEnvImport(envText, runtimeConfigText ?? undefined)
       if (r.summary) setSummary(r.summary)
       if (r.errors?.length) {
         setErrors(r.errors)

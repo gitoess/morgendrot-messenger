@@ -1,4 +1,5 @@
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 export type StandaloneHandoffPackageSource = 'boss' | 'custom' | 'history'
 
@@ -23,6 +24,8 @@ export type StandaloneSmartphoneHandoffZipBody = {
   uiVariant?: 'full' | 'messenger'
   transportProfile?: 'mesh-first' | 'iota-anchored' | 'iota-full'
   simpleMode?: boolean
+  /** Feingranulare Rechte → `.morgendrot-runtime-config.json` (Phase 2). */
+  capabilitiesOverride?: MessengerCapabilitiesOverride
   /** README-HANDOFF.txt: Block LoRa-PSK + IOTA-Archiv (Boss-Export). */
   includeIotaArchivReadme?: boolean
   readmeExtra?: string
@@ -33,6 +36,8 @@ export type StandaloneSmartphoneHandoffZipBody = {
 export type StandaloneSmartphoneHandoffPartsOk = {
   ok: true
   envContent: string
+  /** `.morgendrot-runtime-config.json` — messengerCapabilities (öffentlich). */
+  runtimeConfigContent?: string
   readme: string
   handoffLabel?: string
   createdAtIso: string
@@ -66,6 +71,7 @@ export async function fetchStandaloneSmartphoneHandoffParts(
     return {
       ok: true,
       envContent: j.envContent,
+      runtimeConfigContent: typeof j.runtimeConfigContent === 'string' ? j.runtimeConfigContent : undefined,
       readme: j.readme ?? '',
       handoffLabel: j.handoffLabel,
       createdAtIso: j.createdAtIso || new Date().toISOString(),

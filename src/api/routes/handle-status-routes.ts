@@ -18,6 +18,7 @@ import {
     resolveUiMode,
     resolveHandoffLabel,
     isIotaTransportUiEnabled,
+    readRuntimeConfigRaw,
     type HierarchyPermissions,
 } from '../../config.js';
 import {
@@ -28,6 +29,10 @@ import {
 import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from '../../wallet-bridge.js';
 import { vaultFileExists } from '../../vault-local.js';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../../shared/heartbeat-presets.js';
+import {
+    readCapabilitiesOverrideFromRuntimeRaw,
+    resolveMessengerCapabilities,
+} from '../../shared/messenger-capabilities-matrix.js';
 import { mask, rpcUrlLabel, formatWalletNativeIotaForStatusUi } from '../http-middleware.js';
 import type { ApiStatus } from '../../api-server.js';
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
@@ -44,6 +49,13 @@ export async function handleStatusRoutes(
         const envRefresh = refreshIdentityCfgFromDotenv();
         const custom = { ...(ctx.getStatus?.() ?? {}), ...ctx.getSessionStatus() };
         const perms = getHierarchyPermissions(CFG.ROLE);
+        const capabilities = resolveMessengerCapabilities({
+            roleId: CFG.ROLE_ID,
+            simpleMode: CFG.SIMPLE_MODE ?? resolveSimpleMode(CFG.ROLE),
+            transportProfile: CFG.TRANSPORT_PROFILE ?? resolveTransportProfile(CFG.ROLE),
+            hierarchyRole: CFG.ROLE,
+            override: readCapabilitiesOverrideFromRuntimeRaw(readRuntimeConfigRaw()),
+        });
         const vaultFileResolved = (CFG.VAULT_FILE || '').trim() || '.morgendrot-vault';
         const mailboxIdTrim = (CFG.MAILBOX_ID || '').trim();
         const inboxUnion = getInboxUnionIdsForStatus();
@@ -171,6 +183,7 @@ export async function handleStatusRoutes(
             mailboxStorePlaintext: CFG.MAILBOX_STORE_PLAINTEXT,
             role: CFG.ROLE,
             roleId: CFG.ROLE_ID,
+            capabilities,
             permissions: perms,
             deploymentProfile: CFG.DEPLOYMENT_PROFILE ?? resolveDeploymentProfile(CFG.ROLE),
             transportProfile: CFG.TRANSPORT_PROFILE ?? resolveTransportProfile(CFG.ROLE),

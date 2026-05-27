@@ -3,6 +3,8 @@ import {
   type StandaloneSmartphoneHandoffZipBody,
 } from '@/frontend/lib/api/standalone-smartphone-handoff'
 import { buildHandoffZipBytes } from '@/frontend/lib/handoff-zip-build'
+
+export const HANDOFF_RUNTIME_CONFIG_FILENAME = '.morgendrot-runtime-config.json'
 import {
   encryptHandoffEnvUtf8,
   HANDOFF_CRYPTO_JSON_FILENAME,
@@ -37,10 +39,14 @@ export async function buildHandoffZipPayload(
     }
   }
 
-  const zipBytes = buildHandoffZipBytes({
+  const zipEntries: Record<string, string | Uint8Array> = {
     'morgendrot-standalone-handoff.env': parts.envContent,
     'README-HANDOFF.txt': parts.readme || '',
-  })
+  }
+  if (parts.runtimeConfigContent?.trim()) {
+    zipEntries[HANDOFF_RUNTIME_CONFIG_FILENAME] = parts.runtimeConfigContent
+  }
+  const zipBytes = buildHandoffZipBytes(zipEntries)
   return {
     ok: true,
     zipBytes,

@@ -36,12 +36,19 @@ import {
     resolveMessengerExportPackageId,
     buildStandaloneSmartphoneHandoffEnv,
     buildStandaloneSmartphoneHandoffReadme,
+    resolveSimpleMode,
+    resolveTransportProfile,
     getSignerConfigSource,
     getWalletDerivationPathConfigSource,
     getRuntimeConfigKeys,
     getRuntimeConfigSources,
 } from './config.js';
 import { applyHandoffEnvImport, previewHandoffEnvImport } from './handoff-env-import.js';
+import { applyHandoffRuntimeConfigJson, HANDOFF_RUNTIME_CONFIG_FILENAME } from './handoff-runtime-import.js';
+import {
+    buildHandoffRuntimeConfigPayload,
+    parseMessengerCapabilitiesOverride,
+} from './shared/messenger-capabilities-matrix.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
 import {
@@ -523,8 +530,13 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             });
             req.on('end', () => {
                 try {
-                    const data = JSON.parse(body || '{}') as { envText?: string; dryRun?: boolean };
+                    const data = JSON.parse(body || '{}') as {
+                        envText?: string
+                        runtimeConfigJson?: string
+                        dryRun?: boolean
+                    };
                     const envText = String(data.envText ?? '');
+                    const runtimeConfigJson = String(data.runtimeConfigJson ?? '').trim();
                     if (!envText.trim()) {
                         sendJson(res, 400, { ok: false, error: 'envText fehlt' }, cors);
                         return;
@@ -549,13 +561,28 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     const applied = applyHandoffEnvImport(envText);
+                    let runtimeApplied = false;
+                    let runtimeError: string | undefined;
+                    if (applied.ok && runtimeConfigJson) {
+                        const tp = CFG.TRANSPORT_PROFILE ?? resolveTransportProfile(CFG.ROLE);
+                        const rr = applyHandoffRuntimeConfigJson(runtimeConfigJson, {
+                            roleId: CFG.ROLE_ID,
+                            simpleMode: CFG.SIMPLE_MODE ?? resolveSimpleMode(CFG.ROLE),
+                            transportProfile: tp,
+                            hierarchyRole: CFG.ROLE,
+                        });
+                        runtimeApplied = rr.ok;
+                        runtimeError = rr.error;
+                    }
                     sendJson(
                         res,
-                        applied.ok ? 200 : 400,
+                        applied.ok && !runtimeError ? 200 : 400,
                         {
-                            ok: applied.ok,
+                            ok: applied.ok && !runtimeError,
                             applied: applied.applied,
                             errors: applied.errors,
+                            runtimeApplied,
+                            runtimeError,
                             requiresRestart: applied.requiresRestart,
                             requiresPageReload: applied.requiresPageReload,
                         },
@@ -2067,6 +2094,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                               ? false
                               : undefined;
                     let envContent: string;
+                    let runtimeConfigContent: string;
                     try {
                         envContent = buildStandaloneSmartphoneHandoffEnv({
                             rpcUrl,
@@ -2086,6 +2114,21 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             simpleMode,
                             handoffLabel: handoffLabel || undefined,
                         });
+                        const resolvedRoleId =
+                            roleId != null && Number.isFinite(roleId) ? roleId : 14;
+                        const capOverride = parseMessengerCapabilitiesOverride(data.capabilitiesOverride);
+                        runtimeConfigContent =
+                            JSON.stringify(
+                                buildHandoffRuntimeConfigPayload({
+                                    roleId: resolvedRoleId,
+                                    simpleMode,
+                                    transportProfile: transportProfile ?? 'mesh-first',
+                                    hierarchyRole: helperRole,
+                                    override: capOverride ?? undefined,
+                                }),
+                                null,
+                                2
+                            ) + '\n';
                     } catch (e: unknown) {
                         const msg = e instanceof Error ? e.message : String(e);
                         sendJson(res, 400, { ok: false, error: msg }, cors);
@@ -2114,6 +2157,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             {
                                 ok: true,
                                 envContent,
+                                runtimeConfigContent,
                                 readme,
                                 handoffLabel: handoffLabel || undefined,
                                 createdAtIso,
@@ -2134,6 +2178,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     archive.append(envContent + (envContent.endsWith('\n') ? '' : '\n'), {
                         name: 'morgendrot-standalone-handoff.env',
                     });
+                    archive.append(runtimeConfigContent, { name: HANDOFF_RUNTIME_CONFIG_FILENAME });
                     archive.append(Buffer.from(readme, 'utf8'), { name: 'README-HANDOFF.txt' });
                     archive.finalize();
                     archive.on('error', (err: Error) => {

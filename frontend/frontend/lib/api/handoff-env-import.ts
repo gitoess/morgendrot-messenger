@@ -30,7 +30,11 @@ type HandoffImportResponse = {
   requiresPageReload?: boolean
 }
 
-async function postHandoffEnv(body: { envText: string; dryRun: boolean }): Promise<HandoffImportResponse & { ok: boolean }> {
+async function postHandoffEnv(body: {
+  envText: string
+  runtimeConfigJson?: string
+  dryRun: boolean
+}): Promise<HandoffImportResponse & { ok: boolean }> {
   const fr = await fetchApiText(API_BASE, '/api/apply-handoff-env', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,6 +53,10 @@ export async function previewHandoffEnvImport(envText: string) {
   return postHandoffEnv({ envText, dryRun: true })
 }
 
-export async function applyHandoffEnvImport(envText: string) {
-  return postHandoffEnv({ envText, dryRun: false })
+export async function applyHandoffEnvImport(envText: string, runtimeConfigJson?: string) {
+  return postHandoffEnv({
+    envText,
+    runtimeConfigJson: runtimeConfigJson?.trim() || undefined,
+    dryRun: false,
+  })
 }

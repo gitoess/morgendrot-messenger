@@ -34,7 +34,13 @@ import {
   resolveHandoffExportParams,
   type HandoffExportTuning,
 } from '@/frontend/lib/handoff-export-params'
+import { HandoffCapabilitiesMatrixPicker } from '@/frontend/components/handoff-capabilities-matrix-picker'
 import { HandoffRoleIdBitPicker } from '@/frontend/components/handoff-role-id-bit-picker'
+import {
+  resolveHandoffExportCapabilities,
+} from '@/frontend/lib/handoff-export-capabilities'
+import type { HandoffCapabilityPreset } from '@/frontend/lib/handoff-capability-presets'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 import {
   getHandoffPreset,
   HANDOFF_EINSATZ_PRESETS,
@@ -105,6 +111,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [templateSaveLabel, setTemplateSaveLabel] = useState('')
   const [templateSaveId, setTemplateSaveId] = useState('')
   const [templateSaveBusy, setTemplateSaveBusy] = useState(false)
+  const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
 
   const labelEdited = useRef(false)
   const canSaveTemplates = canEditEinsatzRoleTemplates(p.apiSnapshot)
@@ -124,6 +131,21 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const resolvedParams = useMemo(
     () => resolveHandoffExportParams(presetId, exportTuning),
     [presetId, exportTuning]
+  )
+
+  const capabilityContext = useMemo(
+    () => ({
+      roleId: resolvedParams.roleId,
+      simpleMode: resolvedParams.simpleMode,
+      transportProfile: resolvedParams.transportProfile,
+      helperRole: resolvedParams.helperRole,
+    }),
+    [resolvedParams]
+  )
+
+  const resolvedCapabilities = useMemo(
+    () => resolveHandoffExportCapabilities(capabilityContext, capabilitiesOverride),
+    [capabilityContext, capabilitiesOverride]
   )
 
   const usesTeamMb = handoffPresetUsesTeamMailboxes(presetId, resolvedParams.omitTeamMailboxes)
@@ -172,8 +194,21 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       setTuningRoleId(null)
       setTuningHelperRole('')
       setTuningSimpleMode('preset')
+      setCapabilitiesOverride(null)
     }
   }, [])
+
+  const applyCapabilityPreset = useCallback(
+    (capPreset: HandoffCapabilityPreset) => {
+      if (capPreset.apply.roleId != null) {
+        const base = getHandoffPreset(presetId).roleId
+        setTuningRoleId(capPreset.apply.roleId === base ? null : capPreset.apply.roleId)
+      }
+      setCapabilitiesOverride(capPreset.apply.override)
+      setStatusMsg(`Profil „${capPreset.label}" — ${capPreset.hint}`)
+    },
+    [presetId]
+  )
 
   const openSaveTemplateForm = useCallback(() => {
     const label = suggestHandoffTemplateLabel({
@@ -380,6 +415,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
         uiVariant: resolved.uiVariant,
         transportProfile: resolved.transportProfile,
         simpleMode: resolved.simpleMode,
+        capabilitiesOverride: capabilitiesOverride ?? undefined,
         includeIotaArchivReadme: !protectWithPassword && includeIotaArchivReadme && meshFirst,
         readmeExtra:
           !protectWithPassword && includeIotaArchivReadme && meshFirst
@@ -402,6 +438,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       includeIotaArchivReadme,
       protectWithPassword,
       exportTuning,
+      capabilitiesOverride,
     ]
   )
 
@@ -648,6 +685,14 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   onTuningRoleIdChange={setTuningRoleId}
                 />
               </div>
+              <div className="sm:col-span-2">
+                <HandoffCapabilitiesMatrixPicker
+                  effective={resolvedCapabilities}
+                  capabilitiesOverride={capabilitiesOverride}
+                  onCapabilitiesOverrideChange={setCapabilitiesOverride}
+                  onApplyCapabilityPreset={applyCapabilityPreset}
+                />
+              </div>
               <div>
                 <label className="mb-1 block text-muted-foreground">ROLE (Hierarchie)</label>
                 <select
@@ -686,8 +731,14 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
               </div>
             </div>
             <p className="mt-2 text-[10px] text-muted-foreground">
-              Exportiert u. a. ROLE={resolvedParams.helperRole}, ROLE_ID={resolvedParams.roleId}, SIMPLE_MODE=
-              {String(resolvedParams.simpleMode)}
+              Exportiert ROLE={resolvedParams.helperRole}, ROLE_ID={resolvedParams.roleId}, SIMPLE_MODE=
+              {String(resolvedParams.simpleMode)} · Capabilities: LoRa{' '}
+              {resolvedCapabilities.transport.lora.read ? 'L' : '−'}
+              {resolvedCapabilities.transport.lora.write ? 'S' : ''} · Telegram{' '}
+              {resolvedCapabilities.transport.telegram.read ? 'L' : '−'}
+              {resolvedCapabilities.transport.telegram.write ? 'S' : ''} · IOTA{' '}
+              {resolvedCapabilities.transport.iota.read ? 'L' : '−'}
+              {resolvedCapabilities.transport.iota.write ? 'S' : ''}
             </p>
           </details>
 

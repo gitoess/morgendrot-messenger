@@ -25,11 +25,14 @@ export type HandoffEncryptedPending = {
   readmeText?: string
 }
 
+export const HANDOFF_RUNTIME_CONFIG_FILENAME = '.morgendrot-runtime-config.json'
+
 export type HandoffZipExtract =
   | {
       ok: true
       envText: string
       envFileName: string
+      runtimeConfigText?: string
       readmeText?: string
       encrypted: boolean
     }
@@ -115,7 +118,11 @@ export function extractHandoffFromZipBytes(data: Uint8Array): HandoffZipExtract 
   }
   const readmePath = Object.keys(files).find((p) => /readme-handoff\.txt$/i.test(p))
   const readmeText = readmePath ? strFromU8(files[readmePath]!) : undefined
-  return { ok: true, envText, envFileName: envEntry.name, readmeText, encrypted: false }
+  const runtimePath = Object.keys(files).find((p) =>
+    p.toLowerCase().endsWith(HANDOFF_RUNTIME_CONFIG_FILENAME.toLowerCase())
+  )
+  const runtimeConfigText = runtimePath ? strFromU8(files[runtimePath]!) : undefined
+  return { ok: true, envText, envFileName: envEntry.name, runtimeConfigText, readmeText, encrypted: false }
 }
 
 /** ZIP-Rohbytes → Klartext-.env (inkl. optional Passwort bei verschlüsseltem Paket). */
