@@ -7,6 +7,7 @@ Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, A
 **Einstieg (empfohlene Lese-Reihenfolge für neue Entwickler):**
 
 0. **`docs/POSITIONING.md`** — GitHub/Außenwirkung, Einzeiler, was wir sind / nicht sind  
+0a. **`docs/EINFUEHRUNG-MORGENDROT-LAIEN.md`** — Einführung für Neulinge (3 Ebenen, Rollen, Handoff — laienverständlich, abgeglichen)  
 0b. **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** — LoRa / IOTA / Telegram, Delayed Upload, Offline-TX (kanonisch)  
 0c. **Zwei Modi:** **`docs/HANDOFF-UND-MODUS-ZIELBILD.md`** · Rechte-Matrix **`docs/HANDOFF-PERMISSIONS-MATRIX.md`** · Hybrid-Export **`docs/HANDOFF-EXPORT-HYBRID.md`** · Import **`docs/HANDOFF-IMPORT-UX.md`**  
 1. **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** — Prioritäten, Simple Mode, Phasen A→B→C  

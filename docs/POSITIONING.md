@@ -34,6 +34,7 @@ Empfohlene GitHub-Topics:
 
 | Ziel | Dokument |
 |------|----------|
+| Einführung (ohne Fachjargon) | **`docs/EINFUEHRUNG-MORGENDROT-LAIEN.md`** |
 | Transport & IOTA-Schichten | **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** |
 | Strategie & Prioritäten | **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** |
 | Fahrplan & Simple Mode | **`docs/ROADMAP-FAHRPLAN.md` § H.0-SIMPLE** |
