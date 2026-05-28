@@ -349,9 +349,8 @@ export function SettingsView({
             <div>
               <h4 className="font-semibold text-foreground">IOTA auf diesem Gerät</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                <strong className="text-foreground">Handy-first:</strong> Signatur und PTB im Browser über die
-                konfigurierte Fullnode — Morgendrot-API nur noch optionaler Relay. RPC, Drain und Session-Signer:{' '}
-                <strong className="text-foreground">Chat → Puls</strong>.
+                <strong className="text-foreground">Handy-first:</strong> Signatur und PTB laufen direkt im Browser
+                über die konfigurierte Fullnode. Die Morgendrot-API ist dabei optionaler Relay/Fallback.
               </p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

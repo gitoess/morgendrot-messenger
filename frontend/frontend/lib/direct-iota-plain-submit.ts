@@ -71,7 +71,7 @@ export function getDirectIotaPathUiState(): DirectIotaPathUiState {
     return {
       mode: 'relay',
       headline: 'Über Morgendrot-Relay',
-      detail: 'Mailbox nutzt /api, wenn die Basis erreichbar ist. Direkt-RPC im Chat → Puls ist aus.',
+      detail: 'Mailbox nutzt /api, wenn die Basis erreichbar ist. Direkt-RPC ist in Einstellungen deaktiviert.',
     }
   }
   const rpc = getConfiguredDirectIotaRpcUrl()
@@ -82,14 +82,14 @@ export function getDirectIotaPathUiState(): DirectIotaPathUiState {
     return {
       mode: 'client',
       headline: 'Direkt gewählt',
-      detail: 'RPC-URL fehlt — unter Chat → Puls (Direkt-RPC) eintragen.',
+      detail: 'RPC-URL fehlt — in Einstellungen unter „Direkt-RPC · IDs · Funk“ eintragen.',
     }
   }
   if (!drain) {
     return {
       mode: 'client',
       headline: 'Direkt-RPC konfiguriert',
-      detail: 'Direkt-Mailbox-Drain ist aus — in Chat → Puls aktivieren, damit PTB + Signatur im Browser laufen.',
+      detail: 'Direkt-Mailbox-Drain ist aus — in Einstellungen aktivieren, damit PTB + Signatur im Browser laufen.',
     }
   }
   if (!addr || !snap) {
@@ -97,15 +97,15 @@ export function getDirectIotaPathUiState(): DirectIotaPathUiState {
       return {
         mode: 'client',
         headline: 'Direkt-RPC vorbereitet',
-        detail: 'Session-Signer (Mnemonic) und Ketten-IDs in Chat → Puls setzen.',
+        detail: 'Session-Signer (Mnemonic) und Ketten-IDs in Einstellungen setzen.',
       }
     }
     return {
       mode: 'client',
       headline: 'Direkt-RPC vorbereitet',
       detail: !addr
-        ? 'Session-Signer in Chat → Puls — nur RAM.'
-        : 'Ketten-IDs (Package / Mailbox / Absender) in Chat → Puls speichern.',
+        ? 'Session-Signer in Einstellungen setzen (nur RAM).'
+        : 'Ketten-IDs (Package / Mailbox / Absender) in Einstellungen speichern.',
     }
   }
   return {
