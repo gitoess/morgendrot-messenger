@@ -45,7 +45,7 @@
 
 ## 6. Pflege
 
-- Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/VAULT-EINRICHTEN.md`**, **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).
+- Nach inhaltlichen Änderungen an `docs/BOSS-ORIENTIERUNG.md`, **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/WAS-IST-MORGENDROT-MESSENGER.md`**, **`docs/VAULT-EINRICHTEN.md`**, **`docs/VAULT-BEGRIFFE-MESSAGEN-vs-TRESOR.md`** oder dieser Datei: **`npm run sync:handbook`** im Repo-Root (oder vor `next build` ausgeführt), dann Commit von `frontend/public/handbook/*` und **`frontend/public/sw.js`** (**`HANDBOOK_URLS`** + **`VERSION`**, siehe **`docs/PWA-MANUAL-CHECKS.md`** **D**).
 
 ---
 
