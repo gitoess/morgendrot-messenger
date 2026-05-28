@@ -138,6 +138,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loading,
     loadingMore,
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
@@ -291,11 +293,15 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     mailboxRecipient: recipient,
     senderAddress: myAddress,
   })
-  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn } =
+  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn, statusCacheAgeMinutes } =
     useChatViewApiStatusPoll({
       runMirrorDrain,
       runOfflineMailboxDrain,
       pollInbox: () => loadMessages('poll', undefined, { silent: true }),
+      onReconnectNow: () => {
+        void loadMessages('poll', undefined, { silent: true })
+        refreshContactDirectory()
+      },
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
@@ -609,6 +615,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     apiStatus,
     refreshApiStatus,
     basisUnreachable,
+    statusCacheAgeMinutes,
     packageIdMismatch,
     deviceTimeTrustWarn,
     syncCanonicalPackageIdFromServer,
@@ -643,6 +650,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loading,
     loadingMore,
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,

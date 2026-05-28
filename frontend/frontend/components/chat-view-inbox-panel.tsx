@@ -16,7 +16,6 @@ import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-tool
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
-import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
@@ -104,6 +103,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   const [bossImportOpen, setBossImportOpen] = useState(false)
   const {
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     basisUnreachable,
     messages,
     inboxRows,
@@ -147,7 +148,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
-    onDeleteIncomingHandshake,
     onDeleteOutgoingHandshake,
     onResendOutgoingHandshake,
     pendingHandshakeCount = 0,
@@ -255,17 +255,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         />
       ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
-        {onAcceptPendingHandshake ? (
-          <ChatViewInboxHandshakeRequests
-            offers={pendingHandshakeOffers}
-            loading={pendingHandshakesLoading}
-            sending={sending}
-            directory={contactDirectory}
-            onAccept={onAcceptPendingHandshake}
-            onUseAsPartner={onUseSenderAsPartnerFromInbox ?? (() => {})}
-            onDelete={onDeleteIncomingHandshake}
-          />
-        ) : null}
         {onUseSenderAsPartnerFromInbox ? (
           <ChatViewInboxOutgoingHandshakeRequests
             offers={outgoingHandshakeOffers}
@@ -279,6 +268,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         ) : null}
         <ChatViewInboxList
           loadError={loadError}
+        inboxFromCache={inboxFromCache}
+        inboxCacheAgeMinutes={inboxCacheAgeMinutes}
           basisUnreachable={basisUnreachable}
           messages={messages}
           inboxRows={inboxRows}
@@ -304,6 +295,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           onAddSenderToContactBook={onAddSenderToContactBook}
           onSarqNakWire={onSarqNakWire}
           inboxVisibilityHint={inboxVisibilityHint}
+          pendingHandshakeOffers={pendingHandshakeOffers}
+          onAcceptPendingHandshake={onAcceptPendingHandshake}
+          onUseSenderAsPartnerFromInbox={onUseSenderAsPartnerFromInbox}
+          sending={sending}
         />
       </div>
     </div>

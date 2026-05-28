@@ -72,6 +72,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
+import { OfflineStatusCard } from '@/frontend/components/offline-status-card'
 
 interface Feature {
   id: ProjectType
@@ -435,6 +437,11 @@ export function Dashboard() {
 
   const pendingHandshakeCount =
     pendingHandshakes.offers.length + pendingHandshakes.outgoingOffers.length
+
+  const offlineStatus = useOfflineStatus({
+    apiSnapshot,
+    backendReachable,
+  })
 
   /**
    * Installierte PWA: nach **längerem** Hintergrund Tresor sperren (`/vault-lock`) — Passwort beim erneuten Öffnen.
@@ -1311,6 +1318,13 @@ export function Dashboard() {
             </button>
           </div>
         ) : null}
+        <OfflineStatusCard
+          status={offlineStatus}
+          onTestConnection={checkStatus}
+          onResync={() => {
+            void checkStatus()
+          }}
+        />
         {!locked && (
           <div className="mb-6 grid gap-4 sm:grid-cols-2">
             <DashboardPwaInstallCard />

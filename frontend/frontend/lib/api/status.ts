@@ -3,6 +3,7 @@ import { parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
 import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib/api/unlock-response-parse'
 import { API_BASE } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
+import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 /** Rechte aus getHierarchyPermissions (nur bei role boss/kommandant/arbeiter). */
@@ -28,6 +29,10 @@ export type ApiStatus = {
   backendRunning?: boolean
   /** Frontend: aus getStatus() zusätzlich zu backendRunning. */
   backendOnline?: boolean
+  /** Frontend-Fallback: letzter bekannter Status aus lokalem Cache. */
+  fromCache?: boolean
+  /** Zeitpunkt des letzten erfolgreichen Live-Status (Epoch ms) bei Cache-Fallback. */
+  cacheSavedAtMs?: number
   locked?: boolean
   connected?: boolean
   hasKeys?: boolean
@@ -143,6 +148,50 @@ function parseResponseDateMs(res: Response): number | null {
 
 /** Ohne Timeout hängt `fetch` bei totem LAN-Host (Dev-Server aus) oft sehr lange — Handy zeigt erst spät „Basis offline“. */
 const STATUS_FETCH_TIMEOUT_MS = 10_000
+const STATUS_CACHE_KEY = 'morgendrot.apiStatus.lastOk.v1'
+
+type CachedStatusEnvelope = {
+  savedAtMs: number
+  status: ApiStatus
+}
+
+function cacheStatusSnapshot(status: ApiStatus): void {
+  if (typeof window === 'undefined') return
+  try {
+    const envelope: CachedStatusEnvelope = { savedAtMs: Date.now(), status }
+    window.localStorage.setItem(STATUS_CACHE_KEY, JSON.stringify(envelope))
+  } catch {
+    // Speicher voll / gesperrt: kein Hard-Fail fuer den Status-Poll.
+  }
+}
+
+function readCachedStatusSnapshot():
+  | { status: ApiStatus; pollClockHint: StatusPollClockHint }
+  | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(STATUS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<CachedStatusEnvelope>
+    const status = (parsed.status ?? null) as ApiStatus | null
+    const savedAtMs = Number(parsed.savedAtMs ?? 0)
+    if (!status || !Number.isFinite(savedAtMs) || savedAtMs <= 0) return null
+    const ageMs = Date.now() - savedAtMs
+    if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > OFFLINE_CACHE_TTL_MS) return null
+    return {
+      status: {
+        ...status,
+        fromCache: true,
+        backendOnline: false,
+        backendRunning: false,
+        cacheSavedAtMs: savedAtMs,
+      },
+      pollClockHint: { okAtMs: savedAtMs, httpDateUtcMs: null },
+    }
+  } catch {
+    return null
+  }
+}
 
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   try {
@@ -150,6 +199,11 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
       signal: AbortSignal.timeout(STATUS_FETCH_TIMEOUT_MS),
     })
     if (!fr.ok) {
+      const cached = readCachedStatusSnapshot()
+      if (cached) {
+        console.info('[status] Live-Request fehlgeschlagen, nutze Cache-Fallback.', { error: fr.error })
+        return { ...cached.status, pollClockHint: cached.pollClockHint, error: fr.error }
+      }
       return {
         backendRunning: false,
         connected: false,
@@ -158,6 +212,15 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
     }
     const p = parseJsonObjectRecord(fr.text)
     if (!p.ok) {
+      const cached = readCachedStatusSnapshot()
+      if (cached) {
+        const err =
+          p.error === 'invalid_json'
+            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            : 'Unerwartetes Antwortformat (API).'
+        console.info('[status] Ungültige Live-Antwort, nutze Cache-Fallback.', { error: err })
+        return { ...cached.status, pollClockHint: cached.pollClockHint, error: err }
+      }
       return {
         backendRunning: false,
         connected: false,
@@ -172,8 +235,22 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
       okAtMs: Date.now(),
       httpDateUtcMs: parseResponseDateMs(fr.response),
     }
-    return { ...data, backendRunning: data.backendRunning !== false, pollClockHint }
+    const liveStatus: ApiStatus = {
+      ...data,
+      backendRunning: data.backendRunning !== false,
+      backendOnline: true,
+      fromCache: false,
+    }
+    cacheStatusSnapshot(liveStatus)
+    return { ...liveStatus, pollClockHint }
   } catch (error) {
+    const cached = readCachedStatusSnapshot()
+    if (cached) {
+      console.info('[status] Ausnahme beim Live-Request, nutze Cache-Fallback.', {
+        error: formatFetchFailureMessage(error),
+      })
+      return { ...cached.status, pollClockHint: cached.pollClockHint, error: formatFetchFailureMessage(error) }
+    }
     return {
       backendRunning: false,
       connected: false,

@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInboxFromAllOwnedMailboxes } from '@/frontend/lib/inbox-multi-mailbox-fetch'
+import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import {
   ACTIVE_MAILBOX_CHANGED_EVENT,
 } from '@/frontend/lib/my-private-mailbox-store'
@@ -24,6 +25,7 @@ import {
 import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
+import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
@@ -47,6 +49,54 @@ const PAGE_SIZE = 50
 const RESET_PAGE_SIZE = 300
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
+const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'
+
+type InboxCacheEnvelope = {
+  savedAtMs: number
+  messageCount: number
+  unreadCountEstimate: number
+  messages: Message[]
+}
+
+function inboxCacheKey(packageId?: string, activeMailboxId?: string): string {
+  const pkg = (packageId || '__default__').trim().toLowerCase() || '__default__'
+  const mb = (activeMailboxId || '__server__').trim().toLowerCase() || '__server__'
+  return `${INBOX_CACHE_KEY_PREFIX}${pkg}:${mb}`
+}
+
+function writeInboxCache(key: string, messages: Message[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    const unreadCountEstimate = 0
+    const payload: InboxCacheEnvelope = {
+      savedAtMs: Date.now(),
+      messageCount: messages.length,
+      unreadCountEstimate,
+      messages,
+    }
+    window.localStorage.setItem(key, JSON.stringify(payload))
+  } catch {
+    // Cache ist best-effort; kein UI-Abbruch bei Storage-Problemen.
+  }
+}
+
+function readInboxCache(key: string): { messages: Message[]; cacheAgeMinutes: number; savedAtMs: number } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<InboxCacheEnvelope>
+    const savedAtMs = Number(parsed.savedAtMs ?? 0)
+    const ageMs = Date.now() - savedAtMs
+    if (!Number.isFinite(savedAtMs) || savedAtMs <= 0) return null
+    if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > OFFLINE_CACHE_TTL_MS) return null
+    const messages = Array.isArray(parsed.messages) ? (parsed.messages as Message[]) : []
+    const cacheAgeMinutes = Math.floor(ageMs / 60_000)
+    return { messages, cacheAgeMinutes, savedAtMs }
+  } catch {
+    return null
+  }
+}
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
   const { refreshContactDirectory, packageId, myAddress = '' } = p
@@ -54,6 +104,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [inboxFromCache, setInboxFromCache] = useState(false)
+  const [inboxCacheAgeMinutes, setInboxCacheAgeMinutes] = useState<number | null>(null)
   const [inboxHasMore, setInboxHasMore] = useState(true)
   const mailboxOffsetRef = useRef(0)
   /** Nach „Cache leeren“: kein Auto-Poll bis „Aktualisieren“ (voller Reload). */
@@ -68,6 +120,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     mailboxOffsetRef.current = 0
     setInboxHasMore(true)
     setLoadError(null)
+    setInboxFromCache(false)
+    setInboxCacheAgeMinutes(null)
     setMessages([])
   }, [])
 
@@ -100,6 +154,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
+      const cacheKey = inboxCacheKey(pkg, readActiveSendMailboxObjectId())
       /** Shared-Posteingang: immer Backend-MAILBOX_ID — kein Manifest-Override (sonst leer/falsch). */
       const pageSize =
         mode === 'reset' ? RESET_PAGE_SIZE : mode === 'poll' ? POLL_PAGE_SIZE : PAGE_SIZE
@@ -179,8 +234,25 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           const mapped: Message[] = raw
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
           const page = mergeAllMessages([...mapped, ...tgJournal])
+          writeInboxCache(cacheKey, page)
+          setInboxFromCache(false)
+          setInboxCacheAgeMinutes(null)
           applyMappedToState(page, mappedLength, res.hasMore === true)
         } else if (!res.ok) {
+          const cached = readInboxCache(cacheKey)
+          if (cached && mode !== 'append') {
+            if (!silent) {
+              setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
+            }
+            console.info('[inbox] Live-Fetch fehlgeschlagen, nutze Cache-Fallback.', {
+              error: res.error,
+              ageMinutes: cached.cacheAgeMinutes,
+            })
+            setInboxFromCache(true)
+            setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
+            applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
+            return
+          }
           if (!silent) {
             setLoadError(
               res.error || 'Posteingang konnte nicht geladen werden.'
@@ -188,6 +260,19 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           }
           if (mode === 'append') applyLocalOverlayFallback()
         } else {
+          const cached = readInboxCache(cacheKey)
+          if (cached && mode !== 'append') {
+            if (!silent) {
+              setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
+            }
+            console.info('[inbox] Live-Fetch ohne gueltige Liste, nutze Cache-Fallback.', {
+              ageMinutes: cached.cacheAgeMinutes,
+            })
+            setInboxFromCache(true)
+            setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
+            applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
+            return
+          }
           if (!silent) setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
           if (mode === 'append') applyLocalOverlayFallback()
         }
@@ -243,6 +328,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     loading,
     loadingMore,
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,

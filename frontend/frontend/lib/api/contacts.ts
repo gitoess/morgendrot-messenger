@@ -1,6 +1,7 @@
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { parseOkEnvelopePassthrough } from '@/frontend/lib/api-simple-ok-envelope'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 
 /** Kontakt mit optionalem Meshtastic-Mapping (GET /api/contact-labels → directory). */
 export type ContactMeshEntryClient = {
@@ -18,6 +19,56 @@ export type ContactMeshEntryClient = {
   mailboxBufferId?: string
   /** Telegram Chat-ID des Kontakts (Hinweis nach Send, § H.26 B). */
   telegramChatId?: string
+}
+
+const CONTACT_DIRECTORY_CACHE_KEY = 'morgendrot.contacts.directory.v1'
+
+type CachedContactDirectoryEnvelope = {
+  savedAtMs: number
+  labels?: Record<string, string>
+  directory?: Record<string, ContactMeshEntryClient>
+}
+
+function cacheContactDirectorySnapshot(payload: {
+  labels?: Record<string, string>
+  directory?: Record<string, ContactMeshEntryClient>
+}): void {
+  if (typeof window === 'undefined') return
+  try {
+    const envelope: CachedContactDirectoryEnvelope = {
+      savedAtMs: Date.now(),
+      labels: payload.labels,
+      directory: payload.directory,
+    }
+    window.localStorage.setItem(CONTACT_DIRECTORY_CACHE_KEY, JSON.stringify(envelope))
+  } catch {
+    // Kein Hard-Fail bei gesperrtem oder vollem Speicher.
+  }
+}
+
+function readCachedContactDirectorySnapshot():
+  | {
+      labels?: Record<string, string>
+      directory?: Record<string, ContactMeshEntryClient>
+      cacheAgeMs: number
+    }
+  | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(CONTACT_DIRECTORY_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<CachedContactDirectoryEnvelope>
+    const savedAtMs = Number(parsed.savedAtMs ?? 0)
+    if (!Number.isFinite(savedAtMs) || savedAtMs <= 0) return null
+    const ageMs = Date.now() - savedAtMs
+    if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > OFFLINE_CACHE_TTL_MS) return null
+    const labels = parsed.labels as Record<string, string> | undefined
+    const directory = parsed.directory as Record<string, ContactMeshEntryClient> | undefined
+    if ((!labels || Object.keys(labels).length === 0) && (!directory || Object.keys(directory).length === 0)) return null
+    return { labels, directory, cacheAgeMs: ageMs }
+  } catch {
+    return null
+  }
 }
 
 /** POST /api/contact-labels/apply-initial-profile — gleiches Schema wie Server `InitialProfile`. */
@@ -52,11 +103,27 @@ export async function fetchContactDirectory(): Promise<{
   ok: boolean
   labels?: Record<string, string>
   directory?: Record<string, ContactMeshEntryClient>
+  fromCache?: boolean
+  cacheAgeMs?: number
   error?: string
 }> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/contact-labels')
-    if (!fr.ok) return { ok: false, error: fr.error }
+    if (!fr.ok) {
+      const cached = readCachedContactDirectorySnapshot()
+      if (cached) {
+        console.info('[contacts] Live-Request fehlgeschlagen, nutze Cache-Fallback.', { error: fr.error })
+        return {
+          ok: true,
+          labels: cached.labels,
+          directory: cached.directory,
+          fromCache: true,
+          cacheAgeMs: cached.cacheAgeMs,
+          error: fr.error,
+        }
+      }
+      return { ok: false, error: fr.error }
+    }
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Kontakte nicht lesbar.' })
     if (!r.ok) return { ok: false, error: r.error }
     const b = r.body
@@ -70,13 +137,29 @@ export async function fetchContactDirectory(): Promise<{
         directory[a] = { label: label || 'Partner' }
       }
     }
+    cacheContactDirectorySnapshot({ labels, directory })
     return {
       ok: true,
       labels,
       directory,
+      fromCache: false,
+      cacheAgeMs: 0,
       error: typeof b.error === 'string' ? b.error : undefined,
     }
   } catch (error) {
+    const cached = readCachedContactDirectorySnapshot()
+    if (cached) {
+      const msg = formatFetchFailureMessage(error)
+      console.info('[contacts] Ausnahme beim Live-Request, nutze Cache-Fallback.', { error: msg })
+      return {
+        ok: true,
+        labels: cached.labels,
+        directory: cached.directory,
+        fromCache: true,
+        cacheAgeMs: cached.cacheAgeMs,
+        error: msg,
+      }
+    }
     return { ok: false, error: formatFetchFailureMessage(error) }
   }
 }

@@ -14,9 +14,19 @@ import {
   type HandoffEncryptedPending,
 } from '@/frontend/lib/handoff-zip-import'
 import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
+import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-preview'
+import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { restartBackend } from '@/frontend/lib/api/backend-restart'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import { waitForBackend } from '@/frontend/lib/wait-for-backend'
+
+type HandoffDraftSnapshot = {
+  savedAtMs: number
+  envText: string
+  runtimeConfigText: string | null
+}
+
+const HANDOFF_DRAFT_KEY = 'morgendrot.handoffImportDraft.v1'
 
 export function HandoffImportPanel() {
   const fileRef = useRef<HTMLInputElement>(null)
@@ -32,6 +42,10 @@ export function HandoffImportPanel() {
   const [pendingEncrypted, setPendingEncrypted] = useState<HandoffEncryptedPending | null>(null)
   const [handoffPassword, setHandoffPassword] = useState('')
   const [runtimeConfigText, setRuntimeConfigText] = useState<string | null>(null)
+  const [draft, setDraft] = useState<HandoffDraftSnapshot | null>(null)
+  const [stage, setStage] = useState<
+    'idle' | 'reading' | 'decrypting' | 'previewing' | 'ready' | 'applying' | 'applied'
+  >('idle')
 
   const reset = () => {
     setEnvText(null)
@@ -43,23 +57,96 @@ export function HandoffImportPanel() {
     setPendingEncrypted(null)
     setHandoffPassword('')
     setRuntimeConfigText(null)
+    setStage('idle')
   }
 
-  const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string) => {
-    setEnvText(text)
-    setRuntimeConfigText(runtimeJson?.trim() || null)
-    setFileLabel(label)
-    const preview = await previewHandoffEnvImport(text)
-    if (preview.summary) setSummary(preview.summary)
-    if (preview.errors?.length) setErrors(preview.errors)
-    else if (preview.error) setErrors([preview.error])
-    else setErrors([])
-    if (!preview.ok) {
-      setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
-    } else {
-      setStatusMsg('')
+  const loadDraftFromStorage = useCallback(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const raw = window.localStorage.getItem(HANDOFF_DRAFT_KEY)
+      if (!raw) {
+        setDraft(null)
+        return
+      }
+      const parsed = JSON.parse(raw) as Partial<HandoffDraftSnapshot>
+      const savedAtMs = Number(parsed.savedAtMs ?? 0)
+      const envText = typeof parsed.envText === 'string' ? parsed.envText : ''
+      const runtimeConfigText = typeof parsed.runtimeConfigText === 'string' ? parsed.runtimeConfigText : null
+      const ageMs = Date.now() - savedAtMs
+      if (
+        !Number.isFinite(savedAtMs) ||
+        savedAtMs <= 0 ||
+        !Number.isFinite(ageMs) ||
+        ageMs < 0 ||
+        ageMs > HANDOFF_DRAFT_TTL_MS ||
+        !envText.trim()
+      ) {
+        try {
+          window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+        } catch {
+          // ignore
+        }
+        setDraft(null)
+        return
+      }
+      setDraft({ savedAtMs, envText, runtimeConfigText })
+    } catch {
+      setDraft(null)
     }
   }, [])
+
+  const persistDraft = useCallback((env: string, runtimeJson?: string | null) => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        HANDOFF_DRAFT_KEY,
+        JSON.stringify({
+          savedAtMs: Date.now(),
+          envText: env,
+          runtimeConfigText: runtimeJson?.trim() || null,
+        })
+      )
+      loadDraftFromStorage()
+    } catch {
+      // Entwurf ist optional.
+    }
+  }, [loadDraftFromStorage])
+
+  const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string) => {
+    setStage('previewing')
+    setEnvText(text)
+    setRuntimeConfigText(runtimeJson?.trim() || null)
+    persistDraft(text, runtimeJson)
+    setFileLabel(label)
+    const local = previewHandoffEnvImportLocal(text, null)
+    let remoteError = ''
+    try {
+      const preview = await previewHandoffEnvImport(text)
+      if (preview.summary) setSummary(preview.summary)
+      else setSummary(local.summary)
+      if (preview.errors?.length) setErrors(preview.errors)
+      else if (preview.error) {
+        remoteError = preview.error
+        setErrors(local.errors)
+      } else setErrors([])
+      if (!preview.ok && !remoteError) {
+        setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
+        setStage('idle')
+      } else {
+        if (remoteError) {
+          setStatusMsg('Offline-Vorschau aktiv (lokal validiert). Endgültiges Anwenden benötigt erreichbare Basis.')
+        } else {
+          setStatusMsg('')
+        }
+        setStage('ready')
+      }
+    } catch {
+      setSummary(local.summary)
+      setErrors(local.errors)
+      setStatusMsg('Offline-Vorschau aktiv (lokal validiert). Endgültiges Anwenden benötigt erreichbare Basis.')
+      setStage(local.ok ? 'ready' : 'idle')
+    }
+  }, [persistDraft])
 
   const processZipBytes = useCallback(
     async (data: Uint8Array, label: string, password?: string) => {
@@ -88,6 +175,7 @@ export function HandoffImportPanel() {
   const loadZip = useCallback(
     async (file: File) => {
       setBusy(true)
+      setStage('reading')
       setStatusMsg('')
       setApplied(false)
       setErrors([])
@@ -99,6 +187,7 @@ export function HandoffImportPanel() {
         await processZipBytes(new Uint8Array(buf), file.name)
       } finally {
         setBusy(false)
+        setStage((prev) => (prev === 'reading' ? 'idle' : prev))
       }
     },
     [processZipBytes]
@@ -108,6 +197,7 @@ export function HandoffImportPanel() {
     const pending = consumePendingHandoffZipFromInbox()
     if (!pending) return
     setBusy(true)
+    setStage('decrypting')
     setErrors([])
     try {
       const label = pending.meta.label?.trim()
@@ -119,6 +209,10 @@ export function HandoffImportPanel() {
       setBusy(false)
     }
   }, [processZipBytes])
+
+  useEffect(() => {
+    loadDraftFromStorage()
+  }, [loadDraftFromStorage])
 
   useEffect(() => {
     void loadPendingFromInbox()
@@ -147,6 +241,7 @@ export function HandoffImportPanel() {
       setStatusMsg('Entschlüsselt — Vorschau prüfen und Import bestätigen.')
     } finally {
       setBusy(false)
+      setStage((prev) => (prev === 'decrypting' ? 'idle' : prev))
     }
   }
 
@@ -158,6 +253,7 @@ export function HandoffImportPanel() {
 
   const onApply = async () => {
     if (!envText?.trim()) return
+    setStage('applying')
     setBusy(true)
     setStatusMsg('')
     setErrors([])
@@ -171,9 +267,19 @@ export function HandoffImportPanel() {
       }
       if (!r.ok) {
         setErrors([r.error || 'Import fehlgeschlagen'])
+        setStage('ready')
         return
       }
       setApplied(true)
+      setStage('applied')
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+        } catch {
+          // ignore
+        }
+      }
+      setDraft(null)
       if (r.summary) recordHandoffProfileImport(envText, r.summary)
       setStatusMsg(
         r.applied?.length
@@ -255,10 +361,69 @@ export function HandoffImportPanel() {
             ) : null}
           </div>
 
+          {stage !== 'idle' ? (
+            <p className="text-xs text-muted-foreground" role="status">
+              {stage === 'reading'
+                ? 'Fortschritt: ZIP wird gelesen...'
+                : stage === 'decrypting'
+                  ? 'Fortschritt: ZIP wird entschlüsselt...'
+                  : stage === 'previewing'
+                    ? 'Fortschritt: Vorschau/Validierung...'
+                    : stage === 'applying'
+                      ? 'Fortschritt: Werte werden angewendet...'
+                      : stage === 'ready'
+                        ? 'Vorschau bereit.'
+                        : 'Import abgeschlossen. App/Seite neu starten.'}
+            </p>
+          ) : null}
+
           {fileLabel ? (
             <p className="text-xs text-muted-foreground">
               Datei: <span className="font-mono text-foreground">{fileLabel}</span>
             </p>
+          ) : null}
+
+          {draft && !envText ? (
+            <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-950 dark:text-sky-100">
+              <p>
+                Entwurf gefunden ({new Date(draft.savedAtMs).toLocaleString('de-DE')}).
+              </p>
+              <p className="mt-1 text-[11px] text-sky-900/90 dark:text-sky-100/90">
+                Hinweis: Der Draft hilft nur fuer Vorschau/Validierung. Das endgueltige Anwenden schreibt weiterhin ueber
+                die Basis-API.
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() =>
+                    void applyExtractedEnv(
+                      draft.envText,
+                      `Lokaler Entwurf (${new Date(draft.savedAtMs).toLocaleString('de-DE')})`,
+                      draft.runtimeConfigText || undefined
+                    )
+                  }
+                  className="rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-sky-950 hover:bg-sky-500/25 dark:text-sky-100"
+                >
+                  Draft wiederherstellen
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    try {
+                      window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+                    } catch {
+                      // ignore
+                    }
+                    setDraft(null)
+                  }}
+                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+                >
+                  Draft verwerfen
+                </button>
+              </div>
+            </div>
           ) : null}
 
           {pendingEncrypted ? (
@@ -363,6 +528,9 @@ export function HandoffImportPanel() {
               >
                 {hardRestartBusy ? 'Warte auf Backend…' : 'Backend hart neu starten (nur wenn nötig)'}
               </button>
+              <p className="w-full text-xs text-amber-900/90 dark:text-amber-100/90">
+                Hinweis: Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.
+              </p>
             </div>
           ) : null}
 

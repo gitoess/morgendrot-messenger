@@ -41,6 +41,8 @@ export type UseChatViewApiStatusPollParams = {
    * Browser zeigt ggf. Nutzerdialog; bei Verweigerung bleibt der Pfad ohne GPS.
    */
   probeGeolocationForDeviceTime?: boolean
+  /** Sofort-Aktionen bei Reconnect (offline/cache -> online). */
+  onReconnectNow?: () => void | Promise<void>
 }
 
 export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
@@ -51,6 +53,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     pollIntervalMs = 12000,
     localPackageId,
     probeGeolocationForDeviceTime = true,
+    onReconnectNow,
   } = p
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
   /** Letzter erfolgreicher Status-Poll (HTTP `Date`, § H.6c). */
@@ -93,9 +96,10 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     }
     if (hadBasisUnreachable.current) {
       toast.success('Basis wieder erreichbar')
+      void onReconnectNow?.()
       hadBasisUnreachable.current = false
     }
-  }, [basisUnreachable])
+  }, [basisUnreachable, onReconnectNow])
 
   const applyStatusOk = useCallback((s: ApiStatusFetchOk) => {
     const { pollClockHint: hint, ...rest } = s
@@ -119,7 +123,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       setPollClockHint(null)
       return
     }
-    setBasisUnreachable(false)
+    setBasisUnreachable(s.backendOnline === false)
     applyStatusOk(s)
   }, [applyStatusOk])
 
@@ -135,10 +139,12 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
         setPollClockHint(null)
         return
       }
-      setBasisUnreachable(false)
+      setBasisUnreachable(s.backendOnline === false)
       applyStatusOk(s)
-      await runMirrorDrain()
-      await runOfflineMailboxDrain?.()
+      if (s.backendOnline !== false) {
+        await runMirrorDrain()
+        await runOfflineMailboxDrain?.()
+      }
     }
     void tick()
     const id = setInterval(() => void tick(), pollIntervalMs)
@@ -176,5 +182,13 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     [localPackageId, apiStatus?.packageId, basisUnreachable]
   )
 
-  return { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn }
+  const statusCacheAgeMinutes = useMemo(() => {
+    const savedAt = Number(apiStatus?.cacheSavedAtMs ?? 0)
+    if (!Number.isFinite(savedAt) || savedAt <= 0) return null
+    const ageMs = Date.now() - savedAt
+    if (!Number.isFinite(ageMs) || ageMs < 0) return null
+    return Math.floor(ageMs / 60_000)
+  }, [apiStatus?.cacheSavedAtMs])
+
+  return { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn, statusCacheAgeMinutes }
 }

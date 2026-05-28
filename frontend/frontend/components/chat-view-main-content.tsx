@@ -47,6 +47,7 @@ import {
   useChatViewPendingHandshakes,
   type PendingHandshakesPollState,
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import {
   groupMailboxTargetCount,
   readGroupMailboxSendAll,
@@ -92,6 +93,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     apiStatus,
     refreshApiStatus,
     basisUnreachable,
+    statusCacheAgeMinutes,
     packageIdMismatch,
     deviceTimeTrustWarn,
     offlineMailboxQueuePending,
@@ -124,6 +126,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loading,
     loadingMore,
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
@@ -484,6 +488,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   )
 
   const uiCaps = useMemo(() => getMessengerUiCapabilities(apiStatus), [apiStatus])
+  const offlineStatus = useOfflineStatus({
+    apiSnapshot: apiStatus,
+    backendReachable: basisUnreachable ? false : true,
+  })
 
   useEffect(() => {
     if (!uiCaps.showInboxIotaFilter && inboxIotaTransportOnly) {
@@ -521,6 +529,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     morgPkgDeviceBusy,
     apiStatus,
     onRefresh: () => {
+      if (basisUnreachable || inboxFromCache) {
+        setStatus('error')
+        setStatusMsg(
+          inboxFromCache
+            ? `Offline - zeige letzte bekannte Nachrichten (vor ${Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min.).`
+            : 'Offline - Basis derzeit nicht erreichbar. Zeige lokale/letzte bekannte Daten.'
+        )
+      }
       void loadMessages('reset')
       refreshContactDirectory()
       void reloadPendingHandshakes()
@@ -540,6 +556,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loadMoreInbox,
     inboxHasMore,
     loadError,
+    inboxFromCache,
+    inboxCacheAgeMinutes,
     basisUnreachable,
     inboxVisibilityHint,
     inboxPartnerOptions,
@@ -749,6 +767,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         apiStatus={apiStatus}
         onRefreshStatus={refreshApiStatus}
         basisUnreachable={basisUnreachable}
+        statusCacheAgeMinutes={statusCacheAgeMinutes}
+        offlineStatus={offlineStatus}
         meshBleConnected={meshtastic.connected}
         role={role}
         deviceTimeTrustWarn={deviceTimeTrustWarn}

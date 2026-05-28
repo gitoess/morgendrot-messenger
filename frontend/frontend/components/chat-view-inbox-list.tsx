@@ -45,6 +45,7 @@ import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-row
 import { downloadSneakernetPackage } from '@/frontend/lib/sneakernet-export'
 import type { Message } from '@/frontend/lib/types'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
@@ -76,6 +77,10 @@ function buildR1CourierPrefillFromMessage(msg: Message, myAddress: string) {
 
 export type ChatViewInboxListProps = InboxFeedReadPort & {
   loadError: string | null
+  /** true: Inbox wird aktuell aus lokalem Cache angezeigt (Live-Fetch fehlgeschlagen). */
+  inboxFromCache?: boolean
+  /** Alter des Cache-Snapshots in Minuten. */
+  inboxCacheAgeMinutes?: number | null
   /** GET /api/status derzeit nicht erreichbar (zusätzlicher Hinweis bei leerem Posteingang). */
   basisUnreachable?: boolean
   inboxRows: ChatInboxRow[]
@@ -107,11 +112,18 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onSarqNakWire?: (wire: string) => void | Promise<void>
   /** Filter versteckt geladene Mailbox/verschlüsselte Zeilen. */
   inboxVisibilityHint?: string | null
+  /** H.27: optionale Inbox-Zeile für eingehende Handshake-Anfragen. */
+  pendingHandshakeOffers?: PendingHandshakeOffer[]
+  onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
+  onUseSenderAsPartnerFromInbox?: (sender: string) => void
+  sending?: boolean
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
   const {
     loadError,
+    inboxFromCache = false,
+    inboxCacheAgeMinutes = null,
     basisUnreachable = false,
     messages,
     inboxRows,
@@ -137,6 +149,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     onAddSenderToContactBook,
     onSarqNakWire,
     inboxVisibilityHint = null,
+    pendingHandshakeOffers = [],
+    onAcceptPendingHandshake,
+    onUseSenderAsPartnerFromInbox,
+    sending = false,
   } = p
 
   const visibilityHintBanner = inboxVisibilityHint ? (
@@ -173,7 +189,24 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     })()
   ) : null
 
+  const cacheModeBanner =
+    inboxFromCache === true ? (
+      <div className="p-3 pb-0">
+        <div className="mx-auto max-w-3xl rounded-xl border border-amber-500/45 bg-amber-500/[0.08] px-4 py-3 text-amber-950 dark:text-amber-100">
+          <p className="text-sm font-semibold">
+            Offline - zeige letzte bekannte Nachrichten (vor {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL
+            30 Min.)
+          </p>
+          <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
+            Live-Aktualisierung ist derzeit nicht möglich. Jetzt kannst du mit Funk (LoRa) weiterarbeiten; Online-Inhalte
+            folgen automatisch, sobald die Basis wieder erreichbar ist.
+          </p>
+        </div>
+      </div>
+    ) : null
+
   if (inboxRows.length === 0) {
+    if (cacheModeBanner) return cacheModeBanner
     if (loadErrorBanner) return loadErrorBanner
     if (visibilityHintBanner) return visibilityHintBanner
     if (basisUnreachable) {
@@ -200,9 +233,64 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
 
   return (
     <>
+    {cacheModeBanner}
     {loadErrorBanner}
     {visibilityHintBanner}
     <ul className="space-y-3 p-3">
+      {pendingHandshakeOffers.length > 0 && onAcceptPendingHandshake ? (
+        <li className="rounded-xl border border-emerald-500/35 bg-emerald-500/[0.06] p-4 shadow-sm">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              Handshake-Anfragen (eingehend)
+            </p>
+            <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:text-emerald-200">
+              {pendingHandshakeOffers.length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pendingHandshakeOffers.slice(0, 3).map((o) => {
+              const addr = o.sender.trim().toLowerCase()
+              const fromLabel = contactDisplayLabel(contactDirectory, addr)
+              return (
+                <div
+                  key={`inline-hs-${addr}:${o.nonce}`}
+                  className="flex flex-wrap items-center gap-2 rounded-md border border-border/80 bg-background/70 px-2.5 py-2"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground">{fromLabel || 'Unbekannter Kontakt'}</p>
+                    <p className="font-mono text-[10px] text-muted-foreground">
+                      {addr.slice(0, 8)}…{addr.slice(-4)} · {o.source === 'mailbox' ? 'Mailbox' : 'Event'}
+                    </p>
+                  </div>
+                  {onUseSenderAsPartnerFromInbox ? (
+                    <button
+                      type="button"
+                      disabled={sending}
+                      onClick={() => onUseSenderAsPartnerFromInbox(o.sender)}
+                      className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-muted disabled:opacity-50"
+                    >
+                      Als Partner
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => void onAcceptPendingHandshake(o.sender)}
+                    className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {sending ? '…' : 'Annehmen'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          {pendingHandshakeOffers.length > 3 ? (
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              +{pendingHandshakeOffers.length - 3} weitere Anfrage(n) im Posteingang.
+            </p>
+          ) : null}
+        </li>
+      ) : null}
       {inboxRows.map((row) =>
         row.kind === 'meshInbound' ? (
           <li

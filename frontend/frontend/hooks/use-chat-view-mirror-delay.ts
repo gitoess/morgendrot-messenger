@@ -27,6 +27,7 @@ import {
   getOfflineMailboxQueueCount,
   loadOfflineMailboxQueue,
   saveOfflineMailboxQueue,
+  backoffMsForDrainAttempt,
   shouldDeferDrainAttempt,
 } from '@/frontend/lib/api/offline-queue'
 import { drainAttestationQueue, loadAttestationQueue } from '@/frontend/lib/attestation-queue'
@@ -65,7 +66,16 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
   const [offlineMailboxQueueBackoffCount, setOfflineMailboxQueueBackoffCount] = useState(0)
   const [offlineMailboxQueueErrorHint, setOfflineMailboxQueueErrorHint] = useState('')
   const [offlineMailboxQueueItems, setOfflineMailboxQueueItems] = useState<
-    { id: string; recipient: string; createdAt: number; attempts: number; lastError?: string }[]
+    {
+      id: string
+      recipient: string
+      createdAt: number
+      attempts: number
+      lastAttemptAt?: number
+      deferUntilMs?: number
+      statusLabel?: 'queued' | 'backoff' | 'retrying'
+      lastError?: string
+    }[]
   >([])
 
   const refreshOfflineMailboxQueueCount = useCallback(() => {
@@ -74,13 +84,20 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
       const now = Date.now()
       setOfflineMailboxQueuePending(items.length)
       setOfflineMailboxQueueItems(
-        items.map((q) => ({
-          id: q.id,
-          recipient: q.recipient,
-          createdAt: q.createdAt,
-          attempts: q.attempts,
-          lastError: q.lastError,
-        }))
+        items.map((q) => {
+          const defer = shouldDeferDrainAttempt(q, now)
+          const waitMs = defer ? backoffMsForDrainAttempt(q.attempts) : 0
+          return {
+            id: q.id,
+            recipient: q.recipient,
+            createdAt: q.createdAt,
+            attempts: q.attempts,
+            lastAttemptAt: q.lastAttemptAt,
+            deferUntilMs: defer ? q.lastAttemptAt + waitMs : undefined,
+            statusLabel: defer ? 'backoff' : q.attempts > 0 ? 'retrying' : 'queued',
+            lastError: q.lastError,
+          }
+        })
       )
       setOfflineMailboxQueueUntrustedTimeCount(items.filter((q) => q.timeIsTrusted !== true).length)
       setOfflineMailboxQueueBackoffCount(items.filter((q) => shouldDeferDrainAttempt(q, now)).length)

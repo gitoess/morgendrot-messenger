@@ -19,6 +19,7 @@ import {
   MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
 } from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
+import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -34,6 +35,8 @@ export type ChatViewChatHeaderProps = {
   onRefreshStatus?: () => void | Promise<void>
   /** GET /api/status zuletzt fehlgeschlagen (Basis „offline“). */
   basisUnreachable: boolean
+  /** Bei Cache-Fallback: Alter des letzten Live-Status in Minuten. */
+  statusCacheAgeMinutes?: number | null
   /** Meshtastic Web-BT verbunden (Status wird in der Transport-/Send-UI angezeigt). */
   meshBleConnected: boolean
   /** Aus /api/status / Chat-View (ROLE). */
@@ -58,6 +61,8 @@ export type ChatViewChatHeaderProps = {
   onChannelModeChange?: (c: MessengerChatChannel) => void
   /** Direkt unter Puls-Einstellungen (z. B. Einsatz-Profil). */
   afterPulse?: ReactNode
+  /** Kompakter Gesamtstatus (optional, z. B. aus use-offline-status). */
+  offlineStatus?: OfflineStatusSnapshot
 }
 
 function TresorSessionBadge({
@@ -131,12 +136,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     isPrivate,
     encrypted,
     apiStatus,
+    statusCacheAgeMinutes,
     deviceTimeTrustWarn = false,
     sendPath,
     vaultBannerActions,
     channelMode,
     onChannelModeChange,
     afterPulse,
+    offlineStatus,
   } = p
 
   return (
@@ -244,6 +251,29 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
       </div>
 
       {afterPulse}
+
+      {isPrivate && offlineStatus && (offlineStatus.mode !== 'online' || offlineStatus.queuePending > 0) ? (
+        <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+          <p>
+            <strong className="font-semibold">Offline-Status:</strong>{' '}
+            {offlineStatus.mode === 'cache' ? 'Cache-Modus' : offlineStatus.mode === 'offline' ? 'Offline' : 'Online'} ·
+            Queue: {offlineStatus.queuePending}
+          </p>
+          <p className="mt-0.5 text-amber-900/90 dark:text-amber-100/90">
+            {offlineStatus.lastSuccessfulSyncMinutes == null
+              ? 'Letzte Synchronisation unbekannt.'
+              : `Letzte Synchronisation vor ${Math.max(0, offlineStatus.lastSuccessfulSyncMinutes)} Min.`}
+          </p>
+        </div>
+      ) : null}
+
+      {isPrivate && apiStatus?.fromCache === true ? (
+        <div className="rounded-lg border border-amber-500/45 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+          <strong className="font-semibold">Offline (Cache-Modus):</strong> Letzter Live-Status vor{' '}
+          <strong>{Math.max(0, Number(statusCacheAgeMinutes ?? 0))} Min.</strong> (TTL 30 Min.). Anzeigen koennen
+          veraltet sein.
+        </div>
+      ) : null}
 
       {isPrivate && deviceTimeTrustWarn && (
         <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sm text-sky-950 dark:text-sky-100">

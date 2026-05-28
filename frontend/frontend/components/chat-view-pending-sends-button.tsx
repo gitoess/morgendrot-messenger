@@ -14,6 +14,9 @@ export type OfflineMailboxQueueListItem = {
   recipient: string
   createdAt: number
   attempts: number
+  lastAttemptAt?: number
+  deferUntilMs?: number
+  statusLabel?: 'queued' | 'backoff' | 'retrying'
   lastError?: string
 }
 
@@ -126,6 +129,19 @@ export function ChatViewPendingSendsButton(p: {
                         <span className="font-mono text-[10px] text-muted-foreground">{q.recipient.slice(0, 14)}…</span>
                         <br />
                         {new Date(q.createdAt).toLocaleString('de-DE')} · Versuche {q.attempts}
+                        {q.statusLabel === 'backoff' ? ' · Backoff aktiv' : q.statusLabel === 'retrying' ? ' · Retry läuft' : ' · Wartet'}
+                        {typeof q.deferUntilMs === 'number' && q.deferUntilMs > Date.now() ? (
+                          <>
+                            <br />
+                            Nächster Versuch: {new Date(q.deferUntilMs).toLocaleTimeString('de-DE')}
+                          </>
+                        ) : null}
+                        {typeof q.lastAttemptAt === 'number' && q.lastAttemptAt > 0 ? (
+                          <>
+                            <br />
+                            Letzter Versuch: {new Date(q.lastAttemptAt).toLocaleTimeString('de-DE')}
+                          </>
+                        ) : null}
                         {q.lastError ? (
                           <>
                             <br />
