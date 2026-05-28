@@ -112,6 +112,42 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 1. **`npx tsc --noEmit`** im Ordner **`frontend/`** nach Mesh-Änderungen.
 2. Spike **Web Serial Android** (**`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** § 5) **parallel** möglich — **blockiert** Mesh-MVP nicht.
 
+### H.25a Feldtest — 2 Heltecs (Pfad 4 Bild, Pass/Fail)
+
+**Ziel:** Offenen Fahrplanpunkt **§ H.25a Feldtest** reproduzierbar abhaken: ein Bild im Modus **Funk + Pfad 4** wird zwischen zwei Heltecs robust übertragen und die spätere Verankerung bleibt konsistent.
+
+**Setup (Pflicht):**
+
+1. Zwei Heltecs mit gleicher Region/Kanal/PSK, Antenne montiert, stabile Stromversorgung.
+2. Zwei Endgeräte (A=Sender, B=Empfänger), beide Messenger offen, Transport **funk**.
+3. Auf A: **„LoRa + eigene Verankerung“** aktiv, privater Chat, Tresor entsperrt.
+4. Testbild so wählen, dass der LoRa-Pfad aktiv bleibt (Hard-Cap greift im UI; kein Online-IOTA-Bildpfad).
+
+**Durchlauf (ein Lauf = ein Bild):**
+
+1. A sendet ein kleines Bild (Flüchtig/LoRa-Pfad), B bleibt im Chat sichtbar.
+2. A beobachtet Phase/Progress bis Abschluss oder Fehler.
+3. B prüft Anzeige/Reassembly im Posteingang.
+4. Optional: Netz/Basis kurz trennen und wieder herstellen, dann prüfen, ob Pfad-4-Mailbox-Spiegel nachgezogen wird.
+
+**Pass/Fail-Kriterien (mindestens 3/3 Pass für „grün“):**
+
+- [ ] **P1 Sendeabschluss A:** UI zeigt erfolgreichen Abschluss des LoRa-Bildtransfers (keine Endlosschleife, kein stiller Hänger).
+- [ ] **P2 Empfang B:** Bild erscheint zusammengesetzt (kein dauerhafter Roh-Wire/Fragment-Zustand).
+- [ ] **P3 Robustheit:** Bei absichtlichem kurzen Funkverlust erfolgt nachvollziehbarer Retry/Fehlerhinweis; bei stabilem Funk kein unnötiger Abbruch.
+- [ ] **P4 Pfad-4-Konsistenz (wenn getestet):** Nach Netzrückkehr wird die eigene Mailbox-Kopie verankert oder klar als wartend/fehlgeschlagen ausgewiesen (kein stilles Schlucken).
+
+**Abbruchkriterien (sofort als Fail notieren):**
+
+- App friert während Transfer ein oder bleibt >2 min ohne Fortschrittsänderung.
+- Empfänger zeigt nur Rohsegmente ohne Reassembly, obwohl Sender „erfolgreich“ meldet.
+- Nach Retry keine verständliche Fehlermeldung im UI.
+
+**Dokumentation im Lauf-Log (`docs/TEST-RUN-LOGBOOK.md`):**
+
+- Datum, Hardware (2 Heltecs), Umgebung (Ort/Distanz grob), Ergebnis **Pass/Fail** pro P1–P4.
+- Bei Fail: letzte Statusmeldung + Phase (Luma/Chroma) + ob NAK/Retry sichtbar war.
+
 **Posteingang: Richtung & Identität** — technische Referenz **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**, UI-Ort **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`**:
 
 - [ ] **Alle / Eingang / Ausgang:** Gesendete Nachrichten erscheinen unter **Ausgang** und **Alle**; empfangene unter **Eingang** und **Alle** (nach Reload/Aktualisieren).

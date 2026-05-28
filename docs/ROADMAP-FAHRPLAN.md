@@ -27,7 +27,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-05-20):** **P0-Doku** **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** + **§ H.0-SIMPLE** (IOTA gekoppelt, Funk-Default). **Keine neuen Move-Publishes** — **TypeScript-Runtime stabilisieren:** (1) `TRANSPORT_PROFILE` + `SIMPLE_MODE` in Config/Status-API, (2) `SimpleModeCapabilities` + Chat-Gates, (3) Handoff-Presets (Helfer = simple + mesh-first), (4) **§ H.1a** Vitest-Scheiben. **Move/Mailbox (Ist):** **`create_team_mailbox`** **✓ 2026-05-21**. **Parallel:** Rollen-Feldtest (**§ Spätere Tests**), **§ H.26** Telegram **Phase B2** Long Polling (Ist-Code, Spez), **§ H.23** Entscheidung Ratchet vs. Stufen-Kennzeichnung. **Zuletzt:** **§ H.15 Stufe 2** Handy-Smoke. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix.
+**Nächste konkrete Schritte (2026-05-20):** **P0-Doku** **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** + **§ H.0-SIMPLE** (IOTA gekoppelt, Funk-Default). **Keine neuen Move-Publishes** — **TypeScript-Runtime stabilisieren:** (1) `TRANSPORT_PROFILE` + `SIMPLE_MODE` in Config/Status-API, (2) `SimpleModeCapabilities` + Chat-Gates, (3) Handoff-Presets (Helfer = simple + mesh-first), (4) **§ H.1a** Vitest-Scheiben. **Move/Mailbox (Ist):** **`create_team_mailbox`** **✓ 2026-05-21**. **Parallel:** Rollen-Feldtest (**§ Spätere Tests**), **§ H.26** Telegram **Phase B2** Long Polling (Ist-Code, Spez), **§ H.23** Entscheidung Ratchet vs. Stufen-Kennzeichnung. **Zuletzt:** **§ H.15 Stufe 2** Handy-Smoke. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix **explizit nach hinten** (erst nach stabiler Phase B + den offenen H.24/H.25/H.15-Feldthemen).
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 
@@ -174,8 +174,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.24** | **Package-Profile & UI** — Wechsel zwischen Einsatzumgebungen (**§ H.24b**), Capabilities pro Paket (**§ H.24a**); Backlog |
 | **§ H.25** | **Bilder über LoRa** — Produktpfad (Meshtastic) vs. Referenz-Labor (Roh-LoRa) |
 | **§ H.26** | **Telegram-Integration (Runtime)** — Alarme + optionale Kontakt-Benachrichtigung; **kein** `.env` für `TG_*` auf dem Gerät; **§ H.6e** / **§ H.20** |
-| **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling; Push/Purge Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
-| **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); Backlog — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
+| **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling, Inbox-Zeile; Push-Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
+| **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); **sehr spätes Backlog** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss) — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
 | **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -243,9 +243,39 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 
 **Nachtrag 2026-04-21 (Pfad 4 Queue-Operationalisierung):** Core-Queue kann jetzt **Priorität pro Eintrag** (`priority`) mit Legacy-Fallback `100`; Drain sortiert nach **`priority -> createdAt -> clientOutSeq`**. Pfad‑4-Self‑Mirror nutzt einen einheitlichen Dispatcher (Text/Bild) mit Queue-Fallback und setzt Prioritäten: **Text=20**, **LUMA=50**, **CHROMA=60**. Für Bild-Mirror wird die LoRa-`msgId` in Queue-Metadaten (`threadId`/`lastError`-Tag) mitgeführt, damit spätere Verankerung eindeutig zum gesehenen Funkbild zugeordnet bleibt. **Handshake/Connect bleiben Echtzeit-Kommandos** (derzeit nicht Teil der Offline-Mailbox-Queue).
 
+**Nachtrag 2026-05-28 (Pfad 4 Forensik — kritische Einordnung):** „**Erst LoRa, dann Queue/Chain**“ verbessert den Manipulationsschutz **deutlich**, aber nicht „automatisch dramatisch“. Der LoRa-Pfad liefert eine **zweite Spur** (Empfänger-/Basis-Journale), die lokale Queue-Manipulation **aufdeckbar** macht; er ist jedoch **kein** selbsttätiger Betrugsdetektor. Für belastbare Nachweise braucht es weiterhin **Abgleich** (Funk-Logs vs. Mailbox/Tangle), klare **Source-of-Truth-Regeln** (**§ H.12**) und erfolgreiche Archivierung. **Grenzen (Ist):** Pfad 4 sendet über Luft als **Klartext/Kanal-PSK** (kein Peer-E2E), Mesh-Empfang ist nicht garantiert, Team-PSK trennt nicht pro Person, und ohne erfolgreichen Drain gibt es keinen dauerhaften Chain-Beleg. **Status zu „Bild-Hash vorab über LoRa“:** als Forensic-Zielbild notiert (**§ H.19**, Offline-Hash-Anker + späterer Upload), aber noch kein durchgängiger Produktpfad.
+
 **Nachtrag 2026-04-21 (CI-Stabilisierung Frontend):** `Frontend checks` auf `main` um **Typecheck-Fehler** bereinigt (`use-chat-view-handle-send.ts`, `use-meshtastic-ble.ts`): fehlende SOS-Retry-Imports/`partner`-Bindung ergänzt, Pfad‑4-Retry-Zieltyp auf `number | 'broadcast'` angehoben, BigInt-Literale für ES-Ziel ersetzt und dynamischer Transport für `MeshDevice` typisiert. Lokal erfolgreich gegen die Pipeline gespiegelt: `@morgendrot/core test:unit`, `frontend lint`, `frontend check:circular`, `frontend tsc --noEmit`, `frontend test:unit`.
 
 **Nächster Roadmap-Schritt (direkt umsetzbar):** Feld-/Smoke-Fokus statt neuer Feature-Breite: (1) **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** als aktuelle Stage-2-Checkliste durchlaufen, (2) Ergebnis in **`docs/TEST-RUN-LOGBOOK.md`** protokollieren, (3) nur bei reproduzierbaren Funklücken den offenen Block **„Pfad-4 Bildtransfer Chunk + Bitmap-ACK“** starten.
+
+**Nachtrag 2026-05-28 (Zielbild „Echte Offline-APK“ — kritisch mit Fahrplan abgeglichen):**
+- **Zielbild (präzisiert):** „Offline-APK“ bedeutet **ohne externen Begleitserver** (kein dauernder PC/VPS-Zwang). Internet-abhängige Aktionen bleiben internetabhängig (z. B. IOTA-Submit, optionale Integrationen).
+- **Kernfähigkeiten lokal:** Chat + lokale Queue + LoRa, Handoff-Import, Kontakte/Einstellungen, lokale Gruppen-/Rechte-Interpretation; bei Internet: IOTA direkt senden/verankern.
+- **Reihenfolge bleibt fahrplan-konform:** zuerst **H.15 Stufe 2** (Geräte-Smoke) und offene Feldthemen (**H.25a**), dann breite APK-Härtung; **keine** Full-APK-Scheinfertigmeldung vor reproduzierbaren Gerätetests.
+- **Phase 1 (jetzt, sehr hoch):** lokale Persistenz + API-Fassade mit Offline-Fallback in **kleinen vertikalen Scheiben** (Status, Kontakte, Inbox, Sendepfad), kein Big-Bang „alle `/api/*` auf einmal“. Queue-Statusmodell mit **H.12 Source-of-Truth** synchron halten.
+- **Phase 2 (hoch):** Client-seitiger Direkt-IOTA-Pfad produktfest (Signieren/Submit, klare Offline→Online-Übergänge, robuste Fehlermeldungen).
+- **Phase 3 (mittel):** Android/Capacitor-Härtung (Build, Berechtigungen, BLE/Bluetooth, Background-Verhalten) gemäß **H.6f**.
+- **Phase 4 (später):** Resilienz/Security/Sync-Konflikte (Idempotenz, Konfliktregeln, Recovery/Wipe-Härtung) in Verbindung mit **H.12/H.14**.
+- **Offen/Leitplanke:** PWA bleibt funktional wichtig, ersetzt aber nicht automatisch native Background-Fähigkeiten; deshalb APK-Track als eigener Arbeitsstrang, nicht nur „PWA + Wrapper“.
+
+**Nachtrag 2026-05-28 (Phase-1 Offline-Scheiben — Ist, ohne Architekturbruch):**
+- **Status-Fallback (Ist):** `GET /api/status` nutzt lokalen Cache mit **TTL 30 min**; bei Ausfall klare Kennzeichnung **`fromCache`** + Banner „Offline (Cache-Modus)“ inkl. Alter in Minuten.
+- **Kontakte-Fallback (Ist):** `GET /api/contact-labels` nutzt lokalen Cache mit **TTL 30 min**; bei Ausfall werden letzte bekannte Kontaktdaten angezeigt, inkl. Fallback-Logging.
+- **Inbox-Fallback (Ist):** Inbox-Union nutzt lokalen Snapshot pro Kontext (**Package + aktive Mailbox**) mit **TTL 30 min**; klare Offline-Hinweise statt stiller Leerlisten, Reconnect schreibt Live-Stand zurück.
+- **Queue-Transparenz (Ist):** UI zeigt wartende Sends mit Zuständen **queued / retrying / backoff** und Zeitfenster für nächsten Versuch; keine zweite Queue-Implementierung neben Core.
+- **Handoff-Import (Ist, teil-lokal):** ZIP-Parsing/Entschlüsselung lokal; lokale Vorschau-Validierung als Fallback bei API-Ausfall; Draft-Wiederaufnahme aus LocalStorage mit **TTL 24 h**; Apply bleibt bewusst über `/api/apply-handoff-env`.
+
+**Nachtrag 2026-05-28 (Offline-Übersicht im UI — Ist):**
+- **Neue Statuskarte (Dashboard):** zentrale Komponente **`OfflineStatusCard`** mit Aggregation aus **`useOfflineStatus`** (Modus online/offline/cache, letzte Sync-Minuten, Queue-Stand, eingeschränkte Funktionen, Aktionen „Verbindung testen“/„Neu synchronisieren“).
+- **Chat-Kopf (kompakt):** optionaler Kurzstatus eingebunden (Modus + Queue + letzte erfolgreiche Sync), damit Offline-Lage nicht nur im Dashboard sichtbar ist.
+- **TTL zentralisiert:** gemeinsame Konstanten in **`frontend/frontend/lib/offline-cache-ttl.ts`** (`OFFLINE_CACHE_TTL_MS`, `HANDOFF_DRAFT_TTL_MS`) statt verteilter Magic-Numbers.
+- **Reconnect-Feinschliff (Ist):** bei Wechsel **offline/cache -> online** wird sofort ein leiser Posteingangs-Refresh plus Kontakt-Refresh ausgelöst (kein Warten auf das nächste Poll-Intervall).
+
+**Nächste kleine Scheiben (vor neuer Groß-Funktion):**
+1. **Reconnect-Feinschliff:** Bei Wechsel `offline/cache -> online` gezielt einen sofortigen Inbox-/Kontakt-Refresh auslösen (nicht erst auf nächstes Poll-Intervall warten).
+2. **Offline-Status in Einstellungen:** dieselbe Karte in „Einstellungen“ anzeigen (Wiederverwendung, kein zweites Modell).
+3. **Capacitor-Spike (Readiness-Check):** einmaliger Build-Test als Machbarkeitsprobe (APK-Basis, keine Feature-Migration), Ergebnis nur als Entscheidungsnotiz dokumentieren.
 
 **Nachtrag 2026-03-28 (Stabilität/UX, laufend):** Meshtastic-Echo-Dedup weiter gehärtet (Packet-ID + normalisierter Text, weniger doppelte LoRa-Zeilen), **sticky reconnect** nach einmaligem Verbinden (stille Wiederverbindung statt manuell pro Nachricht), Senden mit **„Übertragung abbrechen“** (Hook-Cancel), Posteingang-Partner als persistente Memory-Liste (**einmalig, dedupliziert**), sowie Pfad‑4-Bild-Guard gegen Meshtastic-Textgrenze (~512B) mit klarer UI-Meldung statt später Laufzeitwarnung.
 
@@ -1286,7 +1316,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
 
-**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün (Schreibtisch **2026-05-21**). **Offen:** Feldtest zwei Heltecs (**§ Spätere Tests #7**, **`TESTING.md`** Funk-Abschnitt).
+**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün (Schreibtisch **2026-05-21**). **Schreibtisch-Nachzug 2026-05-28:** Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5) grün, Logbuch aktualisiert. **Feldtest-Protokoll konkretisiert (2026-05-28):** **`TESTING.md`** Abschnitt **„H.25a Feldtest — 2 Heltecs (Pfad 4 Bild, Pass/Fail)“**. **Offen:** Durchführung und Log-Eintrag mit Pass/Fail.
 
 #### H.25a Umsetzungspaket „Flüchtig (LoRa)“ — **priorisiert**
 
@@ -1366,6 +1396,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Status:** **Ist (2026-05-21), Fix 2026-05-21.** `GET /api/pending-handshakes` (+ optional `?mailboxIds=` für lokale Private/Team-Mailboxes); Posteingang-Banner; **Badge** am Posteingang-Titel **und** Dashboard-Kachel „Nachrichten“; **Toast** bei neuer Anfrage **ab erstem Poll** (auch ohne geöffneten Posteingang); **Dashboard-Polling** (~45 s) bei gesetztem `MY_ADDRESS` + offenem Tresor; Backend scannt **Mailbox-Union** (`.env` + History) + **EcdhInit**-Events; **Ablehnen** (lokal `morgendrot.dismissedHandshakeOffers.v1`); **Handshake-Cache** beim Entsperren/API-Start. **Doku:** **`docs/HANDSHAKE-ANFRAGEN-UX.md`**, **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**.
 
+**Nächste Scheibe A (2026-05-28, ohne Push):** Backlog-Punkt **„Eigene Inbox-Zeile Handshake-Anfrage“** als kleine UI-Scheibe planen (unterhalb der normalen Nachrichtenzeilen, keine neue API): vorhandene Pending-Daten wiederverwenden, Klick führt zu „Als Partner/Annehmen“, dedup gegen den Banner-Block; Abnahme = kein doppelter Eintrag, Badge/Toast unverändert.
+
 | # | Lieferung | Status |
 |---|-----------|--------|
 | 1 | Polling + Posteingang-Liste Annehmen/Ablehnen (eingehend) | **Ist** |
@@ -1373,13 +1405,15 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | 2 | Toast + Badge (eingehend; gesendet im Badge mitgezählt) | **Ist** |
 | 3 | Push (PWA/Android § H.6f) | Backlog |
 | 4 | Ablehnen/Löschen + on-chain `/purge-handshake` | **Ist 2026-05-21** (Posteingang „Löschen“) |
-| 5 | Eigene Inbox-Zeile „Handshake-Anfrage von …“ | Backlog |
+| 5 | Eigene Inbox-Zeile „Handshake-Anfrage von …“ | **Ist 2026-05-28** |
 
 **Verknüpfung:** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, **§ H.23** (Ratchet später).
 
 ### H.26 Telegram-Integration — Runtime statt `TG_*` in `.env` (**Produkt / § H.6e / § H.16**)
 
 **Status:** **Teil umgesetzt** (2026-05-17, **B2 Long Polling 2026-05-20**). **Ist-Code:** Monitor-Alarme → **`scripts/telegram-webhook.ts`** / Relay; Runtime **`src/integrations/telegram-integration.ts`**, API **`/api/integrations/telegram`**, UI **Einstellungen → Telegram**, Journal **`.morgendrot-telegram-journal.json`**, Posteingang-Merge; **Eingang:** **`src/integrations/telegram-inbound-poll.ts`** (Long Polling, **Phase B2**). Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**. **Offen:** Phase B3 Sende-Opt-in (Notify nach Forensik-Send); kein Chat-Vollspiegel.
+
+**Nächste Scheibe B (2026-05-28, ohne Push):** B3 als nicht-blockierenden Hinweisspfad ausführen: Telegram-Notify nur bei explizitem Opt-in und vorhandener `telegramChatId`; Fehler dürfen den IOTA-/LoRa-Send nicht abbrechen; Abnahme über einen positiven und einen negativen Kontaktfall dokumentieren.
 
 **Nachtrag 2026-05-17 (Posteingang / Chain / Export):** Event-Modus für Verankern/Senden ohne `USE_MAILBOX`; Vollbericht-Chunks; Tangle-Recovery per RPC **oder** `/inbox`; `.morg-pkg` über `commandPlaintext`; Status-Poll ohne Flackern; Syntaxfix **`mailbox-inbox-page-fetch.ts`** (Next-Dev 500).
 
@@ -1435,7 +1469,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |-------|--------|--------|
 | **B1** | Telefonbuch-Feld `telegramChatId` | **Teil-Ist** (`contact-labels.ts`, `tg:`-Schlüssel) |
 | **B2** | **Long Polling Eingang** — ohne öffentliche URL | **Ist** (`telegram-inbound-poll.ts`) — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md` § 4** |
-| **B3** | Sende-Opt-in → Notify nach Forensik-Send | **Geplant** |
+| **B3** | Sende-Opt-in → Notify nach Send (nicht blockierend) | **Ist (Opt-in)** |
 
 ##### Phase B2 — Long Polling (Ist)
 
@@ -1446,15 +1480,15 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Abnahme B2:** Nachricht an Bot von bekannter Chat-ID → Journal + Posteingang; unbekannte ID → verworfen; Neustart setzt Offset fort.
 
-##### Phase B3 — Kontakt-Hinweis (optional Send)
+##### Phase B3 — Kontakt-Hinweis (optional Send, Ist)
 
 | # | Lieferung | Details |
 |---|-----------|---------|
-| **B3a** | **Sende-Opt-in** | Composer: „Telegram-Hinweis“ (Default **aus**) |
-| **B3b** | **Backend** nach Forensik-Send | Opt-in + `telegramChatId` → Relay **`/notify`** |
-| **B3c** | **UI-Hinweis** | „Keine Forensik-Kopie auf der Chain.“ |
+| **B3a** | **Sende-Opt-in** | Composer: „Telegram-Hinweis“ (Default **aus**) — `morgendrot.telegramNotifyOnSend` |
+| **B3b** | **Backend-Aufruf** | Opt-in + `telegramChatId`/`tg:`-Ziel → API **`/api/integrations/telegram/notify`** |
+| **B3c** | **Nicht-blockierend** | Telegram-Fehler ändern nur den Hinweistext; IOTA-/LoRa-Send bleibt erfolgreich |
 
-**Abnahme Phase B3:**
+**Abnahme Phase B3 (Ist):**
 
 - Partner mit ID erhält Vorschau-Text; Partner **ohne** ID: kein Fehler am IOTA-Send.
 - LoRa/Pfad-4-Send **ohne** Internet: IOTA/Mesh-Pfad unverändert; Telegram-Fehler **nicht blockierend**.
@@ -1536,6 +1570,23 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Priorität:** **Nach** **§ H.26** Phase B stabil und **§ H.2**-Schreibtisch grün; **parallel möglich** zu **§ H.24** Package-Profile — **kein** Blocker für Rollen-Feldtest oder **§ H.25a**.
 
 **Verknüpfung:** **§ H.6e** (Runtime), **§ H.16** (Telefonbuch-Felder), **`docs/SENSOR-ALARME-EINRICHTEN.md`**, **`docs/BROADCAST-PINNWAND.md`** (Pinnwand ≠ Bot-Spiegel).
+
+---
+
+### H.29 Telegram-Secret-Migration (`TG_BOT_TOKEN`) — **ganz am Schluss**
+
+**Status:** **Backlog ganz hinten** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss).
+
+**Ziel:** Legacy-Telegram-Secrets aus `.env` entfernen und vollständig auf Runtime-Integration umstellen.
+
+| Schritt | Ergebnis |
+|--------|----------|
+| 1 | Runtime-Integration in Einstellungen ist für Betrieb ausreichend (Token/Test/Notify). |
+| 2 | `.env` enthält kein produktives `TG_BOT_TOKEN` mehr (nur leer/Kommentar). |
+| 3 | Deploy-/Ops-Doku nennt Runtime als Standard, `.env` nur Fallback/Migration. |
+| 4 | Token-Rotation dokumentiert (Leak-/Incident-fest). |
+
+**Nicht-Ziel:** Telegram abschalten; nur Secret-Ablage aus `.env` herausziehen.
 
 ---
 

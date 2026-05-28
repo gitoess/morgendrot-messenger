@@ -17,7 +17,7 @@
 - **Schreibtisch (ohne Browser, 2026-03-28):** Root **`npm run test:smoke`** (36 Modulgruppen) + **`test:h15-direct-submit`** dokumentiert in **`docs/TEST-RUN-LOGBOOK.md`** — ersetzt **nicht** § 2 (Testnet / Puls / Basis aus).
 - **Nach grünem PWA-Schreibtisch-Check** (`npm run check:pwa-desk:full`, Fahrplan **§ H.2**): laut **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b** als Nächstes **§ H.1a** und am Gerät **L1–L5** — **§ 2** dieses Dokuments **danach**, wenn **`docs/HANDY-TEST-WINDOW.md`** passt.
 
-**Letzter automatisierter Lauf (Merge-Ritual):** **2026-03-28** — vollständiges **`TESTING.md`** *Qualitätsritual vor Merge* (Root-`tsc` mit bekannter TS6059, Frontend-`tsc`/`lint`/`check:circular`/`test:unit`, **`test:core`**, **`test:h15-direct-submit`**, **`validate:ui`**, **`test:smoke`**) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. § 2 weiter **manuell** abhaken.
+**Letzter automatisierter Lauf (Schreibtisch):** **2026-05-28** — Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5 Tests) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. Das vollständige Merge-Ritual aus **`TESTING.md`** bleibt für größere PRs weiterhin Pflicht; § 2 weiter **manuell** abhaken.
 
 ---
 
@@ -106,6 +106,15 @@
 
 - Root: **`npm run test:smoke`**; bei Änderungen unter **`frontend/frontend/`** zusätzlich **`npm run test:frontend-unit`**.
 - Schnell nur H.15-Direkt: **`npm run test:h15-direct-submit`**.
+
+---
+
+## 8. Offline-Stand (Nachtrag 2026-05-28)
+
+- **Status/Kontakte/Posteingang:** Bei Ausfall der Basis werden zuletzt bekannte Daten aus lokalem Cache genutzt (TTL aktuell **30 Min.**). UI kennzeichnet den Cache-Modus sichtbar.
+- **Inbox-Hinweis im Offline-Fall:** Nutzer sieht klar, dass Live-Refresh nicht moeglich ist und jetzt primär **LoRa/Funk** weiter nutzbar bleibt.
+- **Queue-Status:** Wartende Sends zeigen differenziert **queued / retrying / backoff** inkl. Zeit fuer den naechsten Versuch.
+- **Handoff-Import:** ZIP-Parsing/Entschluesselung + lokale Vorschau funktionieren auch ohne Basis; das **endgueltige Anwenden** bleibt an erreichbare Basis-API gebunden.
 
 ---
 
