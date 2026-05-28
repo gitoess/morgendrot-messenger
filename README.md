@@ -8,6 +8,7 @@ Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, A
 
 0. **`docs/POSITIONING.md`** — GitHub/Außenwirkung, Einzeiler, was wir sind / nicht sind  
 0a. **`docs/EINFUEHRUNG-MORGENDROT-LAIEN.md`** — Einführung für Neulinge (3 Ebenen, Rollen, Handoff — laienverständlich, abgeglichen)  
+0a1. **`docs/WAS-IST-MORGENDROT-MESSENGER.md`** — kompakte Produkt-Erklärung („Was ist es, wie funktioniert es im Einsatz?“)  
 0b. **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** — LoRa / IOTA / Telegram, Delayed Upload, Offline-TX (kanonisch)  
 0c. **Zwei Modi:** **`docs/HANDOFF-UND-MODUS-ZIELBILD.md`** · Rechte-Matrix **`docs/HANDOFF-PERMISSIONS-MATRIX.md`** · Hybrid-Export **`docs/HANDOFF-EXPORT-HYBRID.md`** · Import **`docs/HANDOFF-IMPORT-UX.md`**  
 1. **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** — Prioritäten, Simple Mode, Phasen A→B→C  
@@ -327,7 +328,6 @@ REPLAY_STATE_FILE=.morgendrot-replay-state
 # OPEN_URL=https://smartlock.local/open
 # Optional – Streams als letzte Meile: OPEN_STREAMS_ENABLED=true, STREAMS_ANCHOR_ID=…, STREAMS_BRIDGE_URL=http://localhost:9342 (LoRa-Bridge: npm run lora-bridge; siehe lora-bridge/README.md).
 # Optional – Zahlungs-Trigger (z. B. Ladesäule): PAYMENT_TRIGGER_ENABLED=true, PAYMENT_TRIGGER_MIN_IOTA=0.001, PAYMENT_TRIGGER_STATE_FILE=.morgendrot-payment-state
-# Factory I/O (Demos, nicht Messenger-Kern): env.factory-io.example, docs/FACTORY-IO-INTEGRATION.md
 ```
 
 ---

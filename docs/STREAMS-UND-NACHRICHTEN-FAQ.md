@@ -10,7 +10,7 @@ Das sind **Streams-Nachrichten** (IOTA Streams L0.5), die du beim Klick auf **�
 
 **Kurz:** Das ist der **Beweis**, dass Streams-Publish und Fetch funktionieren – die beiden Einträge sind die Test-Nachrichten aus dem Seed-Skript.
 
-### Lange JSON-Nachrichten (z. B. Factory I/O)
+### Lange JSON-Nachrichten
 
 Unter **Streams → Nachrichten im Kanal** ist die Liste nur eine **Kurzvorschau**. Den **kompletten Inhalt** (alle Tags, `signals`, …) siehst du, wenn du bei der Nachricht **„Vollständiger Inhalt (JSON)“** aufklappst – dort wird das JSON **formatiert** (Zeilenumbrüche) in einem scrollbaren Bereich angezeigt.
 

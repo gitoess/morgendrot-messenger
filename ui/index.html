@@ -1492,21 +1492,6 @@
               <button @click="setConfig('STREAMS_TOPIC', streams.topic)" class="rounded-lg bg-slate-600 px-3 py-2 text-sm hover:bg-slate-500 shrink-0">Setzen</button>
             </div>
           </div>
-          <div x-show="streams.factoryIoEnabled" class="rounded-lg border border-cyan-900/50 bg-cyan-950/20 p-3">
-            <label class="block text-xs text-cyan-300/90 mb-1">4. Factory I/O Feeder (optional, nicht Messenger-Kern)</label>
-            <p class="text-xs text-slate-500 mb-2">Nur sichtbar, wenn <code class="bg-slate-800 px-1 rounded">ENABLE_FACTORY_IO=true</code> in der <code class="bg-slate-800 px-1 rounded">.env</code> steht (siehe <code class="bg-slate-800 px-1 rounded">env.factory-io.example</code>). Wenn du <code class="bg-slate-800 px-1 rounded">npm run factory-io-feeder</code> nutzt: <strong>Poll-Intervall</strong> (wie oft Tags in die Streams-Bridge geschrieben werden). Ohne Env-Variable liest der Feeder diese Werte vom laufenden Backend (nach „Setzen“ ohne Feeder-Neustart). <strong>Env <code class="bg-slate-800 px-1">FACTORY_IO_POLL_MS</code> überschreibt</strong> die UI, falls gesetzt.</p>
-            <div class="flex flex-wrap gap-2 items-end mb-2">
-              <div class="flex-1 min-w-[140px]">
-                <span class="block text-xs text-slate-500 mb-1">Poll alle (ms)</span>
-                <input type="number" min="500" max="86400000" x-model="streams.factoryIoPollMs" placeholder="10000" class="w-full rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white" title="Min. 500 ms, z. B. 10000 = 10 s, 30000 = 30 s" />
-              </div>
-              <button type="button" @click="setConfig('FACTORY_IO_POLL_MS', String(streams.factoryIoPollMs || '10000'))" class="rounded-lg bg-cyan-700 px-3 py-2 text-sm text-white hover:bg-cyan-600 shrink-0">Setzen</button>
-            </div>
-            <div class="flex gap-2 flex-wrap">
-              <input type="text" x-model="streams.factoryIoUrl" placeholder="http://127.0.0.1:7410 (Factory I/O Web-API)" class="flex-1 min-w-[200px] rounded-lg border border-slate-600 bg-slate-700 px-3 py-2 text-sm text-white font-mono" />
-              <button type="button" @click="setConfig('FACTORY_IO_URL', streams.factoryIoUrl)" class="rounded-lg bg-slate-600 px-3 py-2 text-sm hover:bg-slate-500 shrink-0">Setzen</button>
-            </div>
-          </div>
         </div>
       </div>
       <!-- Kanal erstellen: typischerweise Boss (ein Kanal pro Team); Kommandant/Arbeiter abonnieren mit Anchor-ID vom Boss -->
@@ -5652,11 +5637,6 @@
             const anchor = v('STREAMS_ANCHOR_ID');
             if (anchor && anchor !== '(leer)') this.streams.anchorId = anchor;
             this.streams.topic = v('STREAMS_TOPIC');
-            this.streams.factoryIoEnabled = v('ENABLE_FACTORY_IO') === 'true';
-            const fiUrl = v('FACTORY_IO_URL');
-            if (fiUrl && fiUrl !== '(leer)') this.streams.factoryIoUrl = fiUrl;
-            const fiPoll = v('FACTORY_IO_POLL_MS');
-            if (fiPoll && fiPoll !== '(leer)' && /^\d+$/.test(fiPoll)) this.streams.factoryIoPollMs = fiPoll;
             this.streams.listenEnabled = v('STREAMS_LISTEN_ENABLED') === 'true';
             this.streams.openStreamsEnabled = v('OPEN_STREAMS_ENABLED') === 'true';
             this.streams.auditEnabled = v('AUDIT_STREAMS_ENABLED') === 'true';
