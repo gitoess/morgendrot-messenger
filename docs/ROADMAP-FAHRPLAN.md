@@ -323,8 +323,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **Nachrichten-Purge** clientseitig: **`purge-message-hybrid`** / **`buildPurgeMailboxMessageTransaction`** (Posteingang „Auf Chain löschen“).
 - **Puls-Hinweis:** Offline-Karte zeigt **konkrete** offene Direkt-Schritte (nicht nur „4 offen“).
 
-**Nächste kleine Scheiben (Code / Abnahme, Stand 2026-06-02):**
-1. **§ H.15 Stufe 2 / Smoke** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f** am Gerät (zwei Profile/APKs); Ergebnis **`docs/TEST-RUN-LOGBOOK.md`**.
+**Nächste kleine Scheiben (Abnahme, Stand 2026-06-02):**
+1. **Standalone-Smoke (Pflicht)** — **`docs/STANDALONE-SMOKE-CHECKLIST.md`** (4b–4f, 2 APKs, ohne laufende Basis); eine Zeile **`docs/TEST-RUN-LOGBOOK.md`**; Gate Feintuning vs. nächste Phase laut Checkliste. Langform: **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 10.
 2. **§ H.25a Feldtest** (2 Heltecs, **`TESTING.md`**) — Vitest Schreibtisch grün; Abnahme offen.
 3. **§ H.6f Abnahme** — FG-Service am Referenz-APK prüfen (mit Smoke 4b–4f bündelbar).
 4. Backlog **IMG_CHUNK/ACK** nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht.

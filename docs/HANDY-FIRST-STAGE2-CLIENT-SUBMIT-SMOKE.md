@@ -144,6 +144,8 @@ Ziel: reproduzierbar pruefen, dass der Wechsel **offline/cache -> online** sicht
 
 ## 10. Android-APK Basislauf (Capacitor, reproduzierbar)
 
+**Standalone nur (4b–4f, ohne Pflicht-Node):** Kurz-Checkliste **`docs/STANDALONE-SMOKE-CHECKLIST.md`** — Reihenfolge, 2-Geräte-Gate, Logbook, Entscheidung Feintuning vs. nächste Phase. **Nicht** Basis-URL setzen, wenn ihr echtes Standalone testet.
+
 Ziel: denselben APK-Basislauf lokal wiederholen, ohne implizite IDE-Schritte.
 
 1. [ ] **Build:** `cd frontend` und `npm run apk:debug:build` (oder einzeln `build:capacitor-web` → `cap:sync:android` → `gradlew assembleDebug`).

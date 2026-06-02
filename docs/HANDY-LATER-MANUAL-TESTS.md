@@ -45,11 +45,13 @@
 
 ---
 
-## E — Peering-QR (§ H.16, Standalone)
+## E — Standalone 4b–4f (Variante B, **ohne** laufende Basis)
 
-- [ ] A: Puls → **Mein Peering-QR** (mit ECDH-JWK im Puls); B scannt → Partner-Adresse + Peer-Pub
-- [ ] Optional: Boss-QR mit `u`/`p` → B bestätigt Netzwerk-Import → Direkt-RPC ohne Handoff-ZIP
-- [ ] Composer: Handshake-Hinweis → **Peering-QR scannen** → danach Handshake senden / annehmen (4e)
+**Kanonisch:** **`docs/STANDALONE-SMOKE-CHECKLIST.md`** (fokussiert, mit Entscheidungs-Gate). Die Punkte unten sind Kurzfassung — bei Widerspruch gilt die Standalone-Checkliste.
+
+- [ ] **4b–4d** ein Gerät: Handoff lokal, Puls vollständig, Klartext + verschlüsselt + Posteingang RPC
+- [ ] **4e–4f** zwei Geräte: Handshake/Connect Direkt-RPC; Peering-QR
+- [ ] Logbook + Gate (Feintuning vs. nächste Phase)
 
 ## F — Optional / Backlog (nur wenn Zeit)
 

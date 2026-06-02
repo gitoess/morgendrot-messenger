@@ -30,7 +30,7 @@ npm run bundle:standalone-smartphone
 1. **APK:** `cd frontend && npm run apk:debug:build` → installieren (siehe **`docs/HANDY-LATER-MANUAL-TESTS.md`** § B).
 2. **Handoff** auf dem Handy: ZIP → **„Lokal vormerken (ohne Basis)“** (RPC + Ketten-IDs) — optional später Basis-Apply, wenn ein Server erreichbar ist.
 3. **Peering-QR** (Boss zeigt, Helfer scannt) oder Puls → Partner-Adresse + ECDH-Pub; danach Handshake/Connect/Senden per **Direkt-RPC** (kein Pflicht-`/api/handshake`).
-4. **Erwartung:** Node optional für den privaten Online-Chat; Funk (LoRa/Mesh) unverändert lokal. Smoke: **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f**.
+4. **Erwartung:** Node optional für den privaten Online-Chat; Funk (LoRa/Mesh) unverändert lokal. Smoke: **`docs/STANDALONE-SMOKE-CHECKLIST.md`** (4b–4f); Langform **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 10.
 
 Vollständigere Tabelle: **`docs/ROADMAP-FAHRPLAN.md` § H.7**.
 

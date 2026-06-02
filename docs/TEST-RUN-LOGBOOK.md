@@ -4,6 +4,8 @@
 
 **Regel:** Nach größeren Messenger-/Core-Änderungen oder vor **Messenger-Handy-Feldtest** eine Zeile ergänzen — idealerweise **`test:messages*`** getrennt von Ticket-Läufen (**`test:tickets-accesskey-realworld`** / Alias **`test:realworld`**), weil letztere **eine andere Kachel** sind und **nicht** zum Messenger-Smoke gehören.
 
+**Standalone-Abnahme (Variante B):** Eine Runde **`docs/STANDALONE-SMOKE-CHECKLIST.md`** → **eine** Tabellenzeile unten mit **PASS/FAIL** und Commit der APK; Detail-Tabelle optional in der Checkliste selbst.
+
 ---
 
 ## Einträge
