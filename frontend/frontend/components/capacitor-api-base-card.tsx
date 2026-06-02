@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_OVERRIDE_KEY, getApiBase } from '@/frontend/lib/api/api-base'
 import { getNativeLoopbackApiBaseWarning } from '@/frontend/lib/api-base-native-hints'
+import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { shouldShowCapacitorApiBaseSettings } from '@/frontend/lib/capacitor-platform'
+import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { isAutarkyModeEnabled } from '@/frontend/lib/autarky-status-line'
 import { fetchStatus } from '@/frontend/lib/api/status'
 import { applyInstallQrApiBase, parseInstallQrPayload } from '@/frontend/lib/install-qr'
 import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
@@ -44,6 +48,34 @@ export function CapacitorApiBaseCard() {
 
   const loopbackWarn = getNativeLoopbackApiBaseWarning()
 
+  const applyFromBossQr = async () => {
+    setTestMsg(null)
+    try {
+      const raw = await scanMeshBundleQrWithCamera()
+      if (!raw?.trim()) {
+        setTestMsg('QR-Scan abgebrochen oder leer.')
+        return
+      }
+      const parsed = parseInstallQrPayload(raw)
+      if (!parsed?.apiBaseUrl) {
+        setTestMsg('QR enthält keine API-Basis-URL.')
+        return
+      }
+      const r = applyInstallQrApiBase(parsed.apiBaseUrl)
+      if (!r.ok) {
+        setTestMsg(r.error)
+        return
+      }
+      const normalized = parsed.apiBaseUrl.trim().replace(/\/$/, '')
+      setDraft(normalized)
+      setSaved(normalized)
+      setTestMsg(`Basis-URL aus QR: ${normalized}`)
+      window.dispatchEvent(new CustomEvent('morgendrot.apiBaseChanged'))
+    } catch (e) {
+      setTestMsg(e instanceof Error ? e.message : String(e))
+    }
+  }
+
   const testConnection = async () => {
     setTesting(true)
     setTestMsg(null)
@@ -55,7 +87,15 @@ export function CapacitorApiBaseCard() {
     }
     const base = getApiBase()
     if (!base) {
-      setTestMsg('Zuerst URL speichern.')
+      if (isStandaloneDeviceMode() && getConfiguredDirectIotaRpcUrl()) {
+        const res = await fetchStatus()
+        if (res.fromLocalHandoff || res.fromCache) {
+          setTestMsg('Standalone aktiv — keine Basis-URL nötig (Direkt-RPC + lokales Handoff).')
+          setTesting(false)
+          return
+        }
+      }
+      setTestMsg('Zuerst URL speichern — oder Handoff importieren für Standalone.')
       setTesting(false)
       return
     }
@@ -81,6 +121,16 @@ export function CapacitorApiBaseCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <h4 className="font-semibold text-foreground">Basis-URL (APK / Gerät)</h4>
+      {isStandaloneDeviceMode() && getConfiguredDirectIotaRpcUrl() ? (
+        <p className="mt-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-xs text-foreground">
+          <strong>Standalone-Modus:</strong> Handoff + Direkt-RPC reichen für IOTA und Chat-Kern — diese URL ist{' '}
+          <strong>optional</strong> (Relay, Telegram, ffmpeg-Sprachmemo, serverseitiger Handoff-Apply).
+          {isAutarkyModeEnabled() ? ' Autarkie-Modus ist aktiv.' : ''}
+          {getDirectChainIdsReadiness().ready
+            ? ' Ketten-IDs lokal vollständig.'
+            : ' Ketten-IDs oder Signer in Puls ergänzen.'}
+        </p>
+      ) : null}
       <p className="mt-1 text-sm text-muted-foreground">
         <strong className="text-foreground">Nicht</strong> <span className="font-mono text-xs">127.0.0.1</span> — das
         ist auf dem Handy das Gerät selbst. Trage die <strong>LAN-IPv4 deines PCs</strong> ein (am PC:{' '}
@@ -158,8 +208,10 @@ export function CapacitorApiBaseCard() {
         </p>
       ) : null}
       <p className="mt-2 text-[11px] text-muted-foreground">
-        Aktiv: <span className="font-mono">{getApiBase() || '(nicht gesetzt)'}</span>
-        {saved ? '' : ' — ohne URL sind API-Aufrufe in der APK nicht erreichbar.'}
+        Aktiv: <span className="font-mono">{getApiBase() || '(nicht gesetzt — Standalone ohne Relay)'}</span>
+        {saved || (isStandaloneDeviceMode() && getConfiguredDirectIotaRpcUrl())
+          ? ''
+          : ' — ohne URL und ohne Handoff/Direkt-RPC sind API-Funktionen nicht erreichbar.'}
       </p>
     </div>
   )

@@ -22,6 +22,10 @@ import {
 } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
+import {
+  prepareEncryptedDirectMailboxSend,
+  shouldSkipMessengerApiRelayFallback,
+} from '@/frontend/lib/direct-iota-encrypted-send-prep'
 
 function resolvePersistenceMode(opts?: { messagingPersistenceMode?: MessagingPersistenceMode }): MessagingPersistenceMode {
   return opts?.messagingPersistenceMode ?? readMessagingPersistenceModeFromStorage()
@@ -84,6 +88,9 @@ export async function sendPlaintextMailboxHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
+    if (shouldSkipMessengerApiRelayFallback()) {
+      return { ok: false, error: directErr }
+    }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid
@@ -103,18 +110,33 @@ export async function sendEncryptedMailboxHybrid(
   const mode = resolvePersistenceMode(opts)
   const useMailboxStore = mode === 'mailbox'
   let directErr: string | undefined
-  if (useMailboxStore && rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
-    const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
-    if (mat) {
-      const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
-        recipient: rTrim,
-        plaintextUtf8: wireForApi,
-        peerPubRaw: mat.peerPubRaw,
-        ecdhPrivateKey: mat.ecdhPrivateKey,
-        mailboxObjectId: opts?.mailboxObjectId,
-      })
-      if (er.ok) return { ok: true, txDigest: er.digest }
-      directErr = er.error
+  if (useMailboxStore && rTrim) {
+    const prep = await prepareEncryptedDirectMailboxSend(rTrim)
+    if (prep.ok) {
+      const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
+      if (mat) {
+        const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
+          recipient: rTrim,
+          plaintextUtf8: wireForApi,
+          peerPubRaw: mat.peerPubRaw,
+          ecdhPrivateKey: mat.ecdhPrivateKey,
+          mailboxObjectId: opts?.mailboxObjectId,
+        })
+        if (er.ok) return { ok: true, txDigest: er.digest }
+        directErr = er.error
+      }
+    } else {
+      directErr = prep.error
+    }
+  }
+  if (shouldSkipMessengerApiRelayFallback()) {
+    return {
+      ok: false,
+      error:
+        directErr ??
+        (useMailboxStore
+          ? 'Verschlüsselter Direkt-Send nicht möglich.'
+          : 'Standalone ohne Basis: Persistenz „Mailbox“ in der Transport-Karte wählen (verschlüsselter Direkt-Pfad).'),
     }
   }
   const apiRes = await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
@@ -124,6 +146,9 @@ export async function sendEncryptedMailboxHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
+    if (shouldSkipMessengerApiRelayFallback()) {
+      return { ok: false, error: directErr }
+    }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid

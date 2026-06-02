@@ -8,6 +8,8 @@
 import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
 
 const LS_PEER_PUB = 'morgendrot.directChatEcdh.peerPubB64ByRecipient.v1'
+/** P-256-ECDH-Privatkey als JWK (Gerät) — für Standalone-APK nach Puls „JWK anwenden“. */
+const LS_PRIVATE_JWK = 'morgendrot.directChatEcdh.privateJwk.v1'
 
 const P256_RAW_PUB_LEN = 65
 
@@ -58,12 +60,45 @@ export function getDirectChatEcdhPrivateKey(): CryptoKey | null {
 /**
  * Importiert einen P-256-ECDH-Privatkey aus JWK (Web Crypto), **nur RAM**.
  */
+function persistPrivateJwkJson(jwkJson: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LS_PRIVATE_JWK, jwkJson)
+  } catch {
+    /* ignore */
+  }
+}
+
+export function clearPersistedDirectChatEcdhPrivateJwk(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(LS_PRIVATE_JWK)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Letzten JWK aus Puls wiederherstellen (Standalone / nach App-Neustart). */
+export async function restoreDirectChatEcdhPrivateFromLocalStorage(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  if (typeof window === 'undefined') return { ok: false, error: 'Kein Browser.' }
+  try {
+    const raw = window.localStorage.getItem(LS_PRIVATE_JWK)?.trim() ?? ''
+    if (!raw) return { ok: false, error: 'Kein gespeicherter Chat-ECDH-JWK.' }
+    return applyDirectChatEcdhPrivateJwk(raw)
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 export async function applyDirectChatEcdhPrivateJwk(
   jwkJson: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const raw = String(jwkJson || '').trim()
   if (!raw) {
     ecdhPrivateKey = null
+    clearPersistedDirectChatEcdhPrivateJwk()
     return { ok: true }
   }
   let jwk: JsonWebKey
@@ -85,6 +120,7 @@ export async function applyDirectChatEcdhPrivateJwk(
       false,
       ['deriveBits', 'deriveKey']
     )
+    persistPrivateJwkJson(raw)
     return { ok: true }
   } catch (e) {
     ecdhPrivateKey = null

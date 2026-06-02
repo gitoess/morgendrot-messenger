@@ -9,6 +9,7 @@ import {
 } from '@/frontend/features/inbox/inbox-map-messages'
 import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import type { Message } from '@/frontend/lib/types'
@@ -102,6 +103,8 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       continue
     }
     if (isServer) lastError = direct.error || lastError
+
+    if (shouldSkipMessengerApiRelayFallback()) continue
 
     const res = await fetchInbox(
       p.limit,

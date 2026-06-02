@@ -39,21 +39,44 @@ import { OfflineStatusCard } from '@/frontend/components/offline-status-card'
 import { enableOfflineMailboxQueue } from '@/frontend/lib/api/offline-queue'
 import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
+import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
   const [hoveredFeature, setHoveredFeature] = useState<ProjectType | null>(null)
   const s = useDashboardSession({ restoreFeatures: messengerFeatures })
 
+  return (
+    <>
+      <CapacitorStandaloneBootstrap />
+      <MessengerDashboardBody
+        hoveredFeature={hoveredFeature}
+        setHoveredFeature={setHoveredFeature}
+        s={s}
+        visibleFeatures={filterFeaturesByMessengerWorkspaceTileSet(messengerFeatures, {
+          workspaceTileSet: 'messenger',
+          liteMessengerFromApi: true,
+          isBossRole: s.isBossRole,
+          role: s.role,
+        })}
+      />
+    </>
+  )
+}
+
+function MessengerDashboardBody({
+  hoveredFeature,
+  setHoveredFeature,
+  s,
+  visibleFeatures,
+}: {
+  hoveredFeature: ProjectType | null
+  setHoveredFeature: (v: ProjectType | null) => void
+  s: ReturnType<typeof useDashboardSession>
+  visibleFeatures: ReturnType<typeof filterFeaturesByMessengerWorkspaceTileSet>
+}) {
   const liteMessengerFromApi = true
   const isEinsatzLeadHome = canAccessEinsatzleitung(s.role)
-
-  const visibleFeatures = filterFeaturesByMessengerWorkspaceTileSet(messengerFeatures, {
-    workspaceTileSet: 'messenger',
-    liteMessengerFromApi,
-    isBossRole: s.isBossRole,
-    role: s.role,
-  })
 
   useEffect(() => {
     if (!liteMessengerFromApi) return

@@ -1,5 +1,6 @@
 import type { ApiStatus } from '@/frontend/lib/api'
-import { connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
 import {
   getDirectChatEcdhMaterialForRecipient,
   hasDirectChatEcdhPeerPubForRecipient,
@@ -32,7 +33,7 @@ export async function ensureHandoffEncryptedPeerReady(
     if (hs.ok && hs.found && hs.peerPubRawBase64) {
       setDirectChatEcdhPeerPubBase64(target, hs.peerPubRawBase64)
       if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
-      const cr = await connect(target)
+      const cr = await connectPartnerHybrid(target)
       if (cr.ok) {
         await refreshApiStatus?.()
         return { ok: true }

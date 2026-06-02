@@ -10,6 +10,7 @@ import {
   tryFindPeerHandshakeViaDirectIota,
 } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { readClientMailboxIdsForHandshakeScan } from '@/frontend/lib/pending-handshake-mailbox-ids'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 
 /** Package-ID in `.morgendrot-package-id` schreiben (wie Terminal `/set-package-id`). */
 export const setPackageIdCommand = (packageId0x: string) =>
@@ -53,6 +54,30 @@ export async function fetchHandshakeOffers(): Promise<HandshakeOffersFetchResult
     const outgoingOffers = Array.isArray(direct.outgoingOffers) ? direct.outgoingOffers : []
     cacheHandshakeOffers(offers, outgoingOffers)
     return { ok: true, offers, outgoingOffers, fromCache: false, liveSource: 'rpc' }
+  }
+
+  if (shouldSkipMessengerApiRelayFallback()) {
+    const cached = readCachedHandshakeOffers()
+    if (cached) {
+      return {
+        ok: true,
+        offers: cached.offers,
+        outgoingOffers: cached.outgoingOffers,
+        fromCache: true,
+        cacheAgeMinutes: cached.ageMinutes,
+        liveSource: 'cache',
+        error: direct?.error,
+      }
+    }
+    return {
+      ok: false,
+      offers: [],
+      outgoingOffers: [],
+      error:
+        direct?.error ||
+        'Standalone: Handshake-Angebote nur per Direkt-RPC (Handoff, Fullnode-URL, Ketten-IDs).',
+      liveSource: 'rpc',
+    }
   }
 
   const ids = readClientMailboxIdsForHandshakeScan()
@@ -131,6 +156,14 @@ export async function findPeerHandshake(peer?: string): Promise<{
     if (direct?.ok) {
       if (direct.found) return direct
       if (canFetchHandshakesViaDirectIota()) return direct
+    }
+    if (shouldSkipMessengerApiRelayFallback()) {
+      return (
+        direct ?? {
+          ok: false,
+          error: 'Standalone: Peer-Handshake nur per Direkt-RPC.',
+        }
+      )
     }
   }
 

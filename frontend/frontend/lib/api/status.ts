@@ -1,9 +1,10 @@
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { parseJsonObjectRecord } from '@/frontend/lib/api-response-guard'
 import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib/api/unlock-response-parse'
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { API_BASE, getApiBase } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import { readStandaloneDeviceStatusFallback } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
@@ -223,8 +224,15 @@ function readLocalHandoffStatusFallback():
 }
 
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
+  const apiBase = getApiBase()
+  if (!apiBase.trim()) {
+    const standalone = readStandaloneDeviceStatusFallback()
+    if (standalone) {
+      return { ...standalone.status, pollClockHint: standalone.pollClockHint }
+    }
+  }
   try {
-    const fr = await fetchApiText(API_BASE, '/api/status', {
+    const fr = await fetchApiText(apiBase || API_BASE, '/api/status', {
       signal: AbortSignal.timeout(STATUS_FETCH_TIMEOUT_MS),
     })
     if (!fr.ok) {

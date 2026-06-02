@@ -5,8 +5,13 @@ vi.mock('@/frontend/lib/direct-iota-plain-submit', () => ({
   trySubmitPlaintextMailboxViaDirectIota: vi.fn(),
 }))
 
+vi.mock('@/frontend/lib/direct-iota-encrypted-send-prep', () => ({
+  prepareEncryptedDirectMailboxSend: vi.fn(),
+  shouldSkipMessengerApiRelayFallback: vi.fn(() => false),
+}))
+
 vi.mock('@/frontend/lib/direct-iota-encrypted-submit', () => ({
-  canTryLiveEncryptedDirectMailbox: vi.fn(() => false),
+  getDirectChatEcdhMaterialForRecipient: vi.fn(),
   trySubmitEncryptedMailboxViaDirectIotaFromPlaintext: vi.fn(),
 }))
 

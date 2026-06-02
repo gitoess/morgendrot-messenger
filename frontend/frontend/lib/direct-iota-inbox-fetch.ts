@@ -21,7 +21,12 @@ import {
   getDirectChainIdsReadiness,
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
-import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
+import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import {
+  getDirectChatEcdhMaterialForRecipient,
+  getDirectChatEcdhPrivateKey,
+} from '@/frontend/lib/direct-chat-ecdh-session'
+import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
@@ -32,6 +37,21 @@ export type TryFetchDirectMailboxInboxViaIotaOpts = {
   packageIdOverride?: string
   /** M4b: private Kontakt-Mailbox statt Snapshot-Shared-Mailbox. */
   mailboxObjectId?: string
+}
+
+function canIncludePlaintextInDirectInbox(): boolean {
+  if (canUseDirectPlaintextMailboxDrain()) return true
+  return isStandaloneDeviceMode() && Boolean(getDirectMailboxChainSnapshot())
+}
+
+/** Lesen/Entschlüsseln auch ohne Drain-Flags, wenn Standalone + Chat-ECDH lokal. */
+function canIncludeEncryptedInDirectInbox(): boolean {
+  if (canUseDirectEncryptedMailboxDrain()) return true
+  return (
+    isStandaloneDeviceMode() &&
+    Boolean(getDirectMailboxChainSnapshot()) &&
+    Boolean(getDirectChatEcdhPrivateKey())
+  )
 }
 
 export async function tryFetchDirectMailboxInboxViaIota(
@@ -55,9 +75,8 @@ export async function tryFetchDirectMailboxInboxViaIota(
           : 'Keine Ketten-IDs (Snapshot).',
     }
   }
-  const includePlain = canUseDirectPlaintextMailboxDrain()
-  /** Entkopplung: Lesen/Entschlüsseln soll auch ohne aktiven Drain-Schalter möglich sein. */
-  const includeEnc = canUseDirectEncryptedMailboxDrain()
+  const includePlain = canIncludePlaintextInDirectInbox()
+  const includeEnc = canIncludeEncryptedInDirectInbox()
   if (!includePlain && !includeEnc) {
     return {
       ok: false,
@@ -103,7 +122,11 @@ export async function tryFetchDirectMailboxInboxViaIota(
         continue
       }
       const peerAddr = normalizeMailboxAddress(r.sender) === myNorm ? r.recipient : r.sender
-      const mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
+      let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
+      if (!mat && getDirectChatEcdhPrivateKey()) {
+        await ensureDirectChatPeerPubForRecipient(peerAddr)
+        mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
+      }
       if (!mat) {
         apiRows.push({
           sender: r.sender,

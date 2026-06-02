@@ -2,6 +2,8 @@ import type { Message } from '../types'
 import { mapInboxApiRowsToMessages, type InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
 import { pickInboxRawMessages } from '@/frontend/lib/inbox-pick-raw-messages'
 import { executeCommand } from '@/frontend/lib/api/execute-command'
+import { fetchMailboxInboxPage } from '@/frontend/lib/mailbox-inbox-page-fetch'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 
 /** limit, optional senderFilter (0x…), optional packageId, optional bossView, optional offset (ältere Seiten). */
 const INBOX_FETCH_TIMEOUT_MS = 45_000
@@ -37,6 +39,18 @@ export async function fetchAllInboxMessagesForExport(p: {
   let offset = 0
   const all: InboxApiRow[] = []
   for (;;) {
+    if (shouldSkipMessengerApiRelayFallback() && !useBoss) {
+      const page = await fetchMailboxInboxPage({
+        limit: pageSize,
+        offset,
+        packageId: p.packageId,
+      })
+      if (!page.ok || page.rows.length === 0) break
+      all.push(...page.rows)
+      if (page.rows.length < pageSize) break
+      offset += page.rows.length
+      continue
+    }
     const res = await fetchInbox(pageSize, undefined, p.packageId, useBoss, offset)
     const raw = pickInboxRawMessages(res as { data?: unknown; messages?: unknown })
     if (!res.ok || raw == null || raw.length === 0) break

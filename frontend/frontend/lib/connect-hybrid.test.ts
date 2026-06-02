@@ -13,6 +13,13 @@ vi.mock('@/frontend/lib/api/package-connect', () => ({
   connect: (...args: unknown[]) => connectApiMock(...args),
 }))
 
+const shouldSkipMessengerApiRelayFallback = vi.fn(() => false)
+vi.mock('@/frontend/lib/messenger-standalone-relay', () => ({
+  canUseMessengerApiRelay: (opts?: { backendReachable?: boolean }) =>
+    !shouldSkipMessengerApiRelayFallback() && opts?.backendReachable !== false,
+  shouldSkipMessengerApiRelayFallback: () => shouldSkipMessengerApiRelayFallback(),
+}))
+
 describe('connect-hybrid', () => {
   const ADDR = '0x' + 'aa'.repeat(32)
 
@@ -40,5 +47,13 @@ describe('connect-hybrid', () => {
     const r = await connectPartnerHybrid(ADDR, { backendReachable: true })
     expect(r.ok).toBe(true)
     expect(r.path).toBe('api')
+  })
+
+  it('Standalone: kein /connect-API-Fallback', async () => {
+    shouldSkipMessengerApiRelayFallback.mockReturnValue(true)
+    tryConnectMock.mockResolvedValue({ ok: false, error: 'nicht gefunden' })
+    const r = await connectPartnerHybrid(ADDR, { backendReachable: true })
+    expect(r.ok).toBe(false)
+    expect(connectApiMock).not.toHaveBeenCalled()
   })
 })

@@ -40,7 +40,8 @@ import {
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
-import { connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
 import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
@@ -303,7 +304,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (hs.ok && hs.found && hs.peerPubRawBase64) {
           setDirectChatEcdhPeerPubBase64(target, hs.peerPubRawBase64)
           if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
-          const cr = await connect(target)
+          const cr = await connectPartnerHybrid(target)
           if (cr.ok) {
             await refreshApiStatus?.()
             return { ok: true }
@@ -327,7 +328,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const partnerForConnect = partner.trim().toLowerCase()
       if (ADDR_64_LOWER.test(partnerForConnect) && partnerForConnect !== target) {
         try {
-          const cr2 = await connect(partnerForConnect)
+          const cr2 = await connectPartnerHybrid(partnerForConnect)
           if (cr2.ok) {
             await refreshApiStatus?.()
             return { ok: true }

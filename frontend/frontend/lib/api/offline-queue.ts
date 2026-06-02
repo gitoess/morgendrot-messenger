@@ -33,6 +33,7 @@ import {
   isIotaRelayOnlyMode,
   trySubmitPlaintextMailboxViaDirectIota,
 } from '@/frontend/lib/direct-iota-plain-submit'
+import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
 import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
@@ -149,6 +150,7 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
       return { ok: false as const, error: mergeDirectThenRelayErrors(r.error, httpR.error) }
     }
     if (canAttemptDirectEncryptedMailbox(item)) {
+      await ensureDirectChatPeerPubForRecipient(item.recipient)
       const mat = getDirectChatEcdhMaterialForRecipient(item.recipient)
       if (mat) {
         const r = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({

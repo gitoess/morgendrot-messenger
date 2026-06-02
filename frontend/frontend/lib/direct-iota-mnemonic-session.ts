@@ -11,6 +11,7 @@ import {
   encryptHandoffEnvUtf8,
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
+import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
 
 let sessionSigner: Signer | null = null
 let sessionAddress: string | null = null
@@ -157,6 +158,9 @@ export function applyDirectIotaMnemonicSession(
     let addr = String(keypair.toIotaAddress() || '').trim()
     if (addr && !/^0x/i.test(addr)) addr = '0x' + addr
     sessionAddress = addr
+    if (addr) {
+      persistDirectChainFieldIds({ senderAddress: addr })
+    }
     return { ok: true, address: addr }
   } catch (e) {
     clearDirectIotaSessionSigner()

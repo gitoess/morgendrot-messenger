@@ -9,6 +9,9 @@ import {
 } from '@morgendrot/core/iota'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
+  getDirectChatEcdhPrivateKey,
+} from '@/frontend/lib/direct-chat-ecdh-session'
+import {
   canUseDirectPlaintextMailboxDrain,
   getDirectChainIdsReadiness,
   getDirectMailboxChainSnapshot,
@@ -148,6 +151,7 @@ export function getAutarkyChecklistItems(): AutarkyChecklistItem[] {
         : `Ketten-IDs fehlen: ${idsMissing.join(', ')}`,
       ok: idsOk,
     },
+    { label: 'Chat-ECDH-Privatkey (JWK) aktiv', ok: !!getDirectChatEcdhPrivateKey() },
   ]
 }
 
@@ -170,6 +174,9 @@ export function listDirectIotaSetupGaps(): string[] {
     gaps.push(
       'Basis einmal verbinden für /api/status-Flags (Mailbox-Klartext ohne Credits) — oder „Optimistische Flags“ im Puls'
     )
+  }
+  if (!getDirectChatEcdhPrivateKey()) {
+    gaps.push('Chat-ECDH-JWK in Puls anwenden (für verschlüsselten Direkt-Send)')
   }
   return gaps
 }

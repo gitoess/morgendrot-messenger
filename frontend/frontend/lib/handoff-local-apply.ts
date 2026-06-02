@@ -22,7 +22,14 @@ function parseEnv(text: string): Record<string, string> {
   const out: Record<string, string> = {}
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim()
-    if (!line || line.startsWith('#')) continue
+    if (!line) continue
+    if (line.startsWith('#')) {
+      const labelMatch = /^#\s*Einsatz-Bezeichnung:\s*(.+)$/i.exec(line)
+      if (labelMatch?.[1]?.trim() && !out.HANDOFF_LABEL) {
+        out.HANDOFF_LABEL = labelMatch[1].trim()
+      }
+      continue
+    }
     const i = line.indexOf('=')
     if (i < 1) continue
     const k = line.slice(0, i).trim()

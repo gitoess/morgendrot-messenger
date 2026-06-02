@@ -2,6 +2,7 @@
 
 import { connect } from '@/frontend/lib/api/package-connect'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
+import { canUseMessengerApiRelay } from '@/frontend/lib/messenger-standalone-relay'
 import {
   canTryDirectConnectPeer,
   tryConnectAcceptFirstIncomingViaDirectIota,
@@ -22,7 +23,7 @@ export async function connectPartnerHybrid(
   opts?: { backendReachable?: boolean }
 ): Promise<ConnectHybridResult> {
   const addr = partner.trim()
-  const backendReachable = opts?.backendReachable !== false
+  const allowApiRelay = canUseMessengerApiRelay(opts)
 
   if (canTryDirectConnectPeer()) {
     const direct = await tryConnectPeerViaDirectIota(addr, { pollAttempts: 4, replyHandshake: true })
@@ -36,7 +37,7 @@ export async function connectPartnerHybrid(
         message: `Verbunden (Direkt-RPC, ${direct.source}). Peer-Pub lokal.${replyNote}`,
       }
     }
-    if (!backendReachable) {
+    if (!allowApiRelay) {
       return { ok: false, path: 'direct', error: direct.error }
     }
     const api = await connect(addr)
@@ -53,7 +54,7 @@ export async function connectPartnerHybrid(
     }
   }
 
-  if (!backendReachable) {
+  if (!allowApiRelay) {
     return {
       ok: false,
       error:
@@ -76,7 +77,7 @@ export async function connectPartnerHybrid(
 export async function connectDeploymentHybrid(opts?: {
   backendReachable?: boolean
 }): Promise<ConnectHybridResult> {
-  if (opts?.backendReachable === false) {
+  if (!canUseMessengerApiRelay(opts)) {
     return { ok: false, error: 'Einsatz-Partner-Connect braucht eine erreichbare Morgendrot-Basis.' }
   }
   const api = await connect()
@@ -94,7 +95,7 @@ export async function connectDeploymentHybrid(opts?: {
 export async function connectAcceptFirstIncomingHybrid(opts?: {
   backendReachable?: boolean
 }): Promise<ConnectHybridResult> {
-  const backendReachable = opts?.backendReachable !== false
+  const allowApiRelay = canUseMessengerApiRelay(opts)
 
   if (canTryDirectConnectPeer()) {
     const direct = await tryConnectAcceptFirstIncomingViaDirectIota({ pollAttempts: 8 })
@@ -107,12 +108,12 @@ export async function connectAcceptFirstIncomingHybrid(opts?: {
         message: `Eingehender Handshake angenommen (${direct.source}, Direkt-RPC).`,
       }
     }
-    if (!backendReachable) {
+    if (!allowApiRelay) {
       return { ok: false, path: 'direct', error: direct.error }
     }
   }
 
-  if (!backendReachable) {
+  if (!allowApiRelay) {
     return { ok: false, error: 'Connect braucht Basis oder Direkt-RPC.' }
   }
 

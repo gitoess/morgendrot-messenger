@@ -21,11 +21,8 @@ import {
 import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
 import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-preview'
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
-import {
-  buildLocalHandoffAppliedSnapshot,
-  clearLocalHandoffAppliedSnapshot,
-  saveLocalHandoffAppliedSnapshot,
-} from '@/frontend/lib/handoff-local-apply'
+import { applyHandoffEnvToLocalDevice } from '@/frontend/lib/handoff-device-bootstrap'
+import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { restartBackend } from '@/frontend/lib/api/backend-restart'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import { waitForBackend } from '@/frontend/lib/wait-for-backend'
@@ -341,11 +338,10 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
 
   const onApplyLocalOnly = () => {
     if (!envText?.trim()) return
-    const snapshot = buildLocalHandoffAppliedSnapshot(envText)
-    saveLocalHandoffAppliedSnapshot(snapshot)
+    applyHandoffEnvToLocalDevice(envText)
     setLocalAppliedOnly(true)
     setStatusMsg(
-      'Lokaler Handoff-Fallback gespeichert. Profilhinweise sind bei Offline/Basis-Ausfall sichtbar; endgültiges Anwenden zur Basis folgt bei Verbindung.'
+      'Lokal gespeichert: Profil, Fullnode-URL und Ketten-IDs für Standalone-APK (Direkt-IOTA ohne Morgendrot-Basis). Optional später „Import bestätigen“, wenn eine Basis erreichbar ist.'
     )
   }
 

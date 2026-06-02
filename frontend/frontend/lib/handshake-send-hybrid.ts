@@ -2,6 +2,7 @@
 
 import { startHandshake } from '@/frontend/lib/api/package-connect'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
+import { canUseMessengerApiRelay } from '@/frontend/lib/messenger-standalone-relay'
 import {
   canTryDirectHandshakeSubmit,
   trySubmitHandshakeViaDirectIota,
@@ -19,7 +20,7 @@ export async function sendHandshakeHybrid(
   opts?: { backendReachable?: boolean; mailboxObjectId?: string }
 ): Promise<HandshakeSendHybridResult> {
   const addr = recipient.trim()
-  const backendReachable = opts?.backendReachable !== false
+  const allowApiRelay = canUseMessengerApiRelay(opts)
 
   if (canTryDirectHandshakeSubmit()) {
     const direct = await trySubmitHandshakeViaDirectIota({
@@ -34,7 +35,7 @@ export async function sendHandshakeHybrid(
         message: `Handshake on-chain (Direkt-RPC).${digest}`,
       }
     }
-    if (!backendReachable) {
+    if (!allowApiRelay) {
       return { ok: false, path: 'direct', error: direct.error }
     }
     const api = await startHandshake(addr)
@@ -51,7 +52,7 @@ export async function sendHandshakeHybrid(
     }
   }
 
-  if (!backendReachable) {
+  if (!allowApiRelay) {
     return {
       ok: false,
       error:

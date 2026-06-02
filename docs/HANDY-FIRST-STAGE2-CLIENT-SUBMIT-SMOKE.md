@@ -149,8 +149,12 @@ Ziel: denselben APK-Basislauf lokal wiederholen, ohne implizite IDE-Schritte.
 1. [ ] **Build:** `cd frontend` und `npm run apk:debug:build` (oder einzeln `build:capacitor-web` → `cap:sync:android` → `gradlew assembleDebug`).
 2. [ ] **Artefakt:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
 3. [ ] **PC im WLAN:** Root `npm run dev:lan` oder `npm run start:prod:lan` (API **3342**, UI **3341** auf `0.0.0.0`); Firewall TCP **3341** + **3342**.
-4. [ ] **Basis-URL in der APK:** Einstellungen → **Basis-URL (APK / Gerät)** — **PC-LAN-IP**, z. B. `http://192.168.0.10:3342` (**nicht** `127.0.0.1`, das ist auf dem Handy das Gerät selbst). Am PC: **`npm run dev:lan`** (API `API_BIND_HOST=0.0.0.0`), Firewall TCP **3342**. Optional: Boss **Install-QR** am Dashboard scannen → **Boss Install-QR** in den Einstellungen übernimmt `b`.
-5. [ ] **Geräte-Smoke:** App startet; Status/Tresor oder klare Fehlermeldung; Offline-Verhalten ohne Basis prüfbar.
+4. [ ] **Basis-URL in der APK (Relay-Modus, optional):** Einstellungen → **Basis-URL (APK / Gerät)** — **PC-LAN-IP**, z. B. `http://192.168.0.10:3342` (**nicht** `127.0.0.1`). Nur nötig für Relay, Telegram, ffmpeg-Sprachmemo, serverseitigen Handoff-Apply.
+4b. [ ] **Standalone-APK (ohne Basis, § H.15 Phase 1–2):** Handoff-ZIP → **„Lokal vormerken (ohne Basis)“** (schreibt Fullnode-URL + Ketten-IDs). Erster Start setzt Autarkie-Defaults. Puls: Mnemonic/Signer setzen. Erwartung: `GET /api/status` fällt nicht ins Leere (lokaler Handoff-Fallback), Klartext-Mailbox per **Direkt-RPC** sendbar, Funk unverändert über BLE.
+4c. [ ] **Standalone verschlüsselt (§ H.15 B.3):** Persistenz **Mailbox** (APK-Default). Puls: **Chat-ECDH-JWK** anwenden (wird lokal gespeichert). Partner: Handshake/Connect per **Direkt-RPC** (Peer-Pub von Chain). Privater Chat, verschlüsselt, Online — Erwartung **Direkt-RPC**, kein `/api/send`; bei fehlendem Relay keine sinnlose API-Fehlermeldung.
+4d. [ ] **Standalone Posteingang (§ H.15 B.4):** Nach Send (4b/4c) **Posteingang → Aktualisieren**. Erwartung: Zeilen von **Fullnode** (`inboxLiveSource` = rpc), kein `/api/inbox`; verschlüsselte Nachrichten lesbar wenn ECDH + Peer-Pub; bei fehlendem RPC klare Meldung statt API-Netzwerkfehler.
+4e. [ ] **Standalone Peering (§ H.15 B.5):** Zwei Geräte ohne Basis — A: **Handshake senden** (Direkt-RPC). B: Posteingang zeigt Angebot (RPC), **Handshake annehmen** / Connect (Direkt-RPC, Peer-Pub lokal). Erwartung: kein `/api/handshake`, `/api/connect`, `/api/pending-handshakes`; verschlüsselter Chat danach wie 4c.
+5. [ ] **Geräte-Smoke:** App startet; Status/Tresor oder klare Fehlermeldung; Offline-Verhalten ohne Basis prüfbar (Schritt 4b).
 6. [ ] **Toolchain bei Fehlern:** `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `frontend/android/local.properties` (`sdk.dir`).
 
 ---

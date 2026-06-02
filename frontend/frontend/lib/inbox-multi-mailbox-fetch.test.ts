@@ -14,6 +14,11 @@ vi.mock('@/frontend/lib/direct-iota-inbox-fetch', () => ({
   tryFetchDirectMailboxInboxViaIota: (...args: unknown[]) => tryFetchDirectMailboxInboxViaIota(...args),
 }))
 
+const shouldSkipMessengerApiRelayFallback = vi.fn(() => false)
+vi.mock('@/frontend/lib/messenger-standalone-relay', () => ({
+  shouldSkipMessengerApiRelayFallback: () => shouldSkipMessengerApiRelayFallback(),
+}))
+
 const MB_A = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const MB_B = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
 
@@ -22,7 +27,16 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     fetchInbox.mockReset()
     tryFetchDirectMailboxInboxViaIota.mockReset()
     tryFetchDirectMailboxInboxViaIota.mockResolvedValue({ ok: false, error: 'direct skipped' })
+    shouldSkipMessengerApiRelayFallback.mockReturnValue(false)
     readActiveSendMailboxObjectId.mockReturnValue('')
+  })
+
+  it('Standalone ohne Basis: kein /inbox-Fallback wenn Direkt-RPC fehlschlägt', async () => {
+    shouldSkipMessengerApiRelayFallback.mockReturnValue(true)
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: false })
+    expect(r.ok).toBe(false)
+    expect(fetchInbox).not.toHaveBeenCalled()
+    expect(r.error).toMatch(/direct skipped/)
   })
 
   it('private Mailbox: Direkt-RPC mit mailboxObjectId, ohne /inbox', async () => {

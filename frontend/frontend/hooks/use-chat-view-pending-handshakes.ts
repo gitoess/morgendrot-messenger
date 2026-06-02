@@ -16,6 +16,8 @@ import {
   pickNewHandshakeOffersForNotify,
 } from '@/frontend/lib/pending-handshake-offers'
 import { ACTIVE_MAILBOX_CHANGED_EVENT } from '@/frontend/lib/my-mailbox-active'
+import { canTryDirectConnectPeer } from '@/frontend/lib/direct-iota-connect'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 
 const POLL_MS = 45_000
 
@@ -94,13 +96,18 @@ export function useChatViewPendingHandshakes(p: {
             outgoingOffersEqual(prev, visibleOutgoing) ? prev : visibleOutgoing
           )
           if (r.fromCache && !opts?.silent) {
+            const standalone = shouldSkipMessengerApiRelayFallback()
             toast.info('Handshake-Liste aus Cache', {
-              description: `Basis nicht erreichbar — Stand vor ${r.cacheAgeMinutes ?? '?'} Min. (TTL 30 Min.). Annehmen/Ablehnen braucht die Basis.`,
+              description: standalone
+                ? `Stand vor ${r.cacheAgeMinutes ?? '?'} Min. — für frische Angebote Direkt-RPC prüfen (Handoff, Fullnode). Annehmen/Connect per Direkt-RPC wenn Puls vollständig.`
+                : `Basis nicht erreichbar — Stand vor ${r.cacheAgeMinutes ?? '?'} Min. (TTL 30 Min.). Annehmen/Ablehnen braucht die Basis.`,
               duration: 10_000,
             })
           } else if (r.liveSource === 'rpc' && !opts?.silent && basisUnreachable) {
             toast.info('Handshake-Liste per Direkt-RPC', {
-              description: 'Basis offline — Angebote von der Fullnode. Annehmen/Connect braucht weiterhin die Basis.',
+              description: canTryDirectConnectPeer()
+                ? 'Basis offline — Angebote von der Fullnode. Annehmen/Connect ohne Morgendrot-API möglich.'
+                : 'Basis offline — Angebote von der Fullnode. Annehmen: RPC + Ketten-IDs + Signer + ECDH-JWK im Puls.',
               duration: 8_000,
             })
           }
