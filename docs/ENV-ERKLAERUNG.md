@@ -2,6 +2,8 @@
 
 Die Datei **.env** ist wie die „Einstellungszentrale“ von Morgendrot: Hier trägst du ein, wer du bist, wo die Blockchain wohnt, ob du Schloss oder Chat bist, und vieles mehr. Alles in einfachen Worten – wie für einen Freund.
 
+**Nur Messenger-PWA (Einstellungen → Erweiterte Konfiguration):** vollständige Key-Liste und Tabellen — **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`** (Handbuch: `/handbook?file=ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`). Dieses Dokument hier deckt zusätzlich Lock, Shop, Monitor und weitere Projekt-Keys ab.
+
 **Wichtig: Nach jeder Änderung in der .env die Änderung speichern und das Programm neu starten!**
 
 **Erste `.env` im Repo:** Nach **`npm install`** wird automatisch eine **`.env`** aus **`.env.example`** erstellt, **wenn noch keine** existiert (Skript `scripts/ensure-env.mjs`). Du musst `.env.example` nicht mehr manuell kopieren.
@@ -211,6 +213,7 @@ Die Datei **.env** ist wie die „Einstellungszentrale“ von Morgendrot: Hier t
 
 ## 📖 Weitere Infos
 
+- **docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md** – **Hauptreferenz** alle Keys in Messenger-Einstellungen (77 Keys, kategorisiert)
 - **docs/CONFIG-REFERENCE.md** – technische Referenz
 - **docs/STREAMS-INTEGRATION.md** – Streams letzte Meile, Ablauf, Fallback
 - **.env.example** – alle Variablen mit Defaults

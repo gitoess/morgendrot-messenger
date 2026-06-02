@@ -86,6 +86,8 @@ Boss kann **ohne** alles neu zu erfinden anpassen:
 
 ## 4. Code-Referenz
 
+**Vollständige Feldliste (UI, API, `.env`, IDs, Backlog):** `docs/EXPORT-ASSISTENT-REFERENZ.md`
+
 | Teil | Pfad |
 |------|------|
 | Basis-Presets | `frontend/frontend/lib/handoff-export-presets.ts` |

@@ -18,6 +18,45 @@
 
 ## Sendepfad: Online (IOTA/Mailbox) vs. Funk (LoRa/Meshtastic)
 
+| Kanal | Online (IOTA) | Funk (Meshtastic) | Ad-hoc | Telegram |
+|-------|---------------|-------------------|--------|----------|
+| **1:1** | ✓ | ✓ (DM an Node oder Klartext) | ✓ (Platzhalter) | ✓ (mehrere Chat-IDs) |
+| **Gruppe** | ✓ | ✓ (Secondary Channel, PSK — siehe unten) | — | — (Boss-Alarm: Roadmap § B4) |
+| **Pinnwand** | ✓ | — | — | — |
+
+In der App sind nur sinnvolle Kombinationen wählbar (z. B. kein Ad-hoc + Pinnwand).
+
+### Meshtastic vs. Morgendrot-Kanäle (Funk)
+
+Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuration/radio/channels/):
+
+| Meshtastic | Bedeutung | Morgendrot-Kanal |
+|------------|-----------|------------------|
+| **Secondary Channel** (Name + PSK, AES256) | Geschlossener Gruppenchat — QR/Link teilen | **Gruppe** |
+| **DM an Node** (PKC ab FW 2.5) | 1:1 zwischen zwei Knoten | **1:1 Privat** |
+| **Primary Broadcast** (Default-PSK oft öffentlich) | **An alle** im offenen Mesh (Klartext) | **Kanal 1:1** + Sendepfad **Funk**, Haken „an Node-ID“ **aus** — **≠ Pinnwand** |
+
+**Pinnwand** in Morgendrot = IOTA-Broadcast mit **BROADCAST_AUTHORIZED_SENDERS** — das gibt es auf LoRa nicht 1:1. Funk-Gruppenchat = **Secondary Channel** in der Meshtastic-App anlegen und PSK mit dem Team teilen (QR).
+
+**Ist (App):** Funk-Senden nutzt den **Primary-Kanal** des verbundenen Heltec (Klartext). Volle Secondary-Channel-Anbindung (Kanal-Index pro Messenger-Gruppe) → **Roadmap § H.3o**.
+
+#### LoRa „An alle“ — nicht Pinnwand
+
+**Kurz:** Primary-Broadcast auf Funk heißt in der App **„An alle“** (nur **Klartext**, Kanal **1:1**, Sendepfad **Funk**). Das ist **kein** eigener Kanal-Tab und **keine** Morgendrot-Pinnwand.
+
+| | **Pinnwand** (Kanal-Tab) | **An alle** (Funk in 1:1) |
+|---|--------------------------|---------------------------|
+| **Sendepfad** | Online (IOTA) | Funk (Meshtastic Primary) |
+| **Verschlüsselung** | Klartext (IOTA-Policy) | **Nur unverschlüsselt** (LongFast-Klartext) |
+| **Wer liest mit?** | Alle mit `PACKAGE_ID`; Schreiben nur autorisierte `0x` | Alle im **selben** Primary-Mesh (Default-PSK oft öffentlich) |
+| **Archiv** | Chain / Posteingang Pinnwand | Funk-Posteingang lokal, kein IOTA-Brett |
+
+**Gruppe + Funk** = Meshtastic **Secondary Channel** (PSK, geschlossenes Team) — wieder **nicht** „An alle“.
+
+**Kritische Grenzen „An alle“:** Kein Sender-Whitelist, kein IOTA-Archiv, Inhalt für jeden mit Default-Key mitlesbar — nur für kurze Lage/SOS im offenen Mesh, nicht für vertrauliche Einsatzinfos.
+
+**Ist (UI):** Composer zeigt bei Funk ohne Node-ID **„An alle“**; Pinnwand-Tab bleibt **online-only**. Secondary-Channel-Anbindung für Gruppe → **§ H.3o**.
+
 **Strikt getrennt:** **IOTA/Mailbox** läuft nur über das **Backend** und die **Chain** — hier ist **Verschlüsselung** möglich. **LoRa/Meshtastic** sendet **Klartext** (Meshtastic-Text / **Pfad 4**) — **ohne** IOTA-Transaktion für denselben Funk-Klick.
 
 Der frühere **Mesh-v2-/PRIVATE_APP-Versand** ist im **Produkt abgeschaltet** (nur noch **Empfang** älterer Nachrichten).
@@ -58,6 +97,195 @@ Spezifikation und Wire: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**.
 
 ---
 
+## Vertraulichkeit: Klartext-Konfiguration
+
+Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINTEXT`** aktiv hat, können Nachrichteninhalte **zusätzlich oder ausschließlich als Klartext** in der Mailbox bzw. auf der Chain landen. Für maximale Inhaltsvertraulichkeit beide Optionen in der Server-**`.env`** aus und nur den **verschlüsselten** Pfad nutzen. Prüfen in **Einstellungen → System & Identität** / Konfiguration.
+
+---
+
+## Einstellungen: System & Identität
+
+- **IOTA-RPC (Node):** kleiner Status in der Kopfzeile von „System & Identität“ (Erreichbar / nicht erreichbar) — Check beim Öffnen und über **Aktualisieren**.
+- **Backend & Offline:** Verbindung zur **Basis** siehst du auf der **Startseite** (grüne Karte „Verbindung zur Basis“) — nicht als eigene Liste in den Einstellungen.
+- **Meine Adresse:** vollständige `0x`-Wallet oben in „System & Identität“ (kopierbar) — nicht noch einmal maskiert im Puls-Panel.
+- **Package-ID / RPC_URL:** je ein Bearbeitungsfeld oben; in **Erweiterte Konfiguration (.env)** nicht doppelt.
+- **`.env` vs. Move-Deploy:** Die meisten Keys betreffen nur die laufende Node (Runtime sofort, sonst Neustart). **Neues Move-Deploy** nur bei geändertem Smart-Contract — dann neue **PACKAGE_ID** und ggf. **MAILBOX_ID** nach `create_globals`.
+- **Erweiterte Konfiguration (.env):** Im **Messenger** nur Chat-/Mailbox-/Einsatz-relevante Keys (kein Shop/Tickets, Lock, Monitor, Stripe). Im **Morgendrot Projekt** alle Keys.
+- **PARTNER_ADDRESS** in `.env`: Legacy für Lite-UI **`/connect`** — im Messenger **Telefonbuch + Handshake**, nicht mehr als fester Partner-Button.
+- **Streams-Anchor:** nur **Puls/Monitor** (Gerät lebt), nicht der Chat-Posteingang (Mailbox).
+
+### Mailbox · Direkt-RPC · Streams-Puls
+
+**IDs und Status:** Beim Öffnen des Panels liest die App **`/api/status`** und zusätzlich **`/api/current-ids`** (Package, Mailbox, eigene Adresse, Streams-Anchor), sofern die Morgendrot-Basis erreichbar ist. Zum Kopieren stehen die Zeilen im Panel bereit (im Chat auch Package-ID; in den Einstellungen steht Package-ID bereits oben).
+
+**Direkt-IOTA ohne dauernd erreichbare Basis:** Package-ID, Mailbox-ID und Absender-Adresse manuell eintragen und im Browser **`localStorage`** speichern (**Ketten-IDs speichern**). Optional **Optimistische Flags**, wenn `/api/status` zuletzt nicht verfügbar war. Siehe Architektur **§ H.15**.
+
+**Checkliste Direkt-Pfad** (Einstellungen → System & Identität → „Mailbox · Direkt-RPC · Streams-Puls“):
+
+1. **Fullnode-URL** eintragen und speichern  
+2. **„Direkt-Mailbox-Drain“** einschalten  
+3. **Session-Signer (Mnemonic)** anwenden (nur RAM)  
+4. **Package, Mailbox, Absender** speichern (von Basis übernehmen oder manuell)  
+5. Ggf. Basis einmal verbinden für `/api/status`-Flags — oder **Optimistische Flags**
+
+**Partner-Adresse austauschen (QR):** Tauscht Partner-**Wallet** (`0x`) und optional **ECDH-Pub** für **verschlüsselten Online-Chat** — nicht für LoRa/Mesh. Anschließend **Handshake** im Posteingang oder Telefonbuch. Siehe auch **§ H.16** unten.
+
+---
+
+## Peering-QR (§ H.16)
+
+**Mein Peering-QR** / **Peering-QR scannen:** Partner-**Wallet-Adresse** und optional **ECDH-Pub** austauschen **ohne laufende Morgendrot-Basis** — danach optional **Handshake** und **Connect** online. Siehe auch Fahrplan **§ H.16**.
+
+---
+
+## Handshake annehmen vs. Einsatz-Partner
+
+| Aktion | Bedeutung |
+|--------|-----------|
+| **Handshake annehmen** | Braucht die **`0x`-Adresse des Partners** im Feld oben (64 Hex). Wartet auf einen Handshake dieser Adresse (Einsatz-Mailbox oder Event auf der Chain) und antwortet automatisch mit deinem Schlüssel. **Ignoriert** `.env`-Partner — nur die eingetragene Adresse. |
+| **Mit Einsatz-Partner verbinden** | Nutzt **`PARTNER_ADDRESS`**, **`PARTNER_ADDRESSES`** oder Hierarchie aus der Server-**`.env`** — unabhängig vom Feld oben. Typisch: erster Kontakt zum Einsatzleiter/Boss, wenn du seine `0x` noch nicht kennst. |
+
+Beide Seiten warten auf einen Handshake und antworten ggf. automatisch (Hintergrund-Connect). Ausführlicher Ablauf: Abschnitt **Schnell verbinden und /connect** unten.
+
+---
+
+## Kanäle, Speicher und Mailboxen
+
+**Drei Ebenen** nicht vermischen: (1) **Kanal** 1:1 / Gruppe / Pinnwand, (2) **Speicher** Event vs. Mailbox, (3) **Ziel-Mailbox** Server / Team / Privat. Verschlüsselung (Schloss oben) ist unabhängig — verschlüsselt braucht Handshake zwischen zwei `0x`-Adressen.
+
+**Senden (Persistent, online):** Kontakt-Mailbox im Telefonbuch → aktiv gesetzte Team- oder Private-Mailbox → Server-`MAILBOX_ID`.
+
+**Posteingang:** immer Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox (nicht alle Team-Listen auf einmal).
+
+**Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann Posteingang **Aktualisieren**. Klartext vs. verschlüsselt steuert das Schloss oben.
+
+| Kanal / Ziel | Persistenz | Wer sieht was? |
+|--------------|------------|----------------|
+| **1:1 Privat** | Event oder Mailbox | Nur Gesprächspartner (`0x`) |
+| **Gruppenchat** | wie 1:1 | Posteingang = Union der Mitglieder; Senden an **eine** `0x` im Composer (pairwise, kein Chain-Gruppenraum) |
+| **Pinnwand** | meist Klartext | Alle mit gleicher `PACKAGE_ID`; Schreiben nur autorisierte `0x` |
+| **Server · Einsatz** | Mailbox | Alle auf diesem Knoten (`MAILBOX_ID`) |
+| **Team / Privat** | Mailbox | Object-ID kennen; **aktiv** unter **Einstellungen → Meine Mailboxen** |
+
+Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`.
+
+**Ziel-Postfach (Kontakt):** Im Composer kann pro Kontakt ein anderes Postfach gewählt werden; die **Empfänger-Wallet** (`0x`) bleibt unverändert — es ändert sich nur die Mailbox-Object-ID für den Submit.
+
+---
+
+## Kontakte (Import und Export, JSON)
+
+**Telefonbuch** (Navigation unten) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt).
+
+**Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
+
+| Aktion | Format | Hinweis |
+|--------|--------|---------|
+| **Importieren** | `initialProfile` | Schreibt ins Telefonbuch (Backend-Kontaktdatei), **nicht** die volle Telefonbuch-Struktur mit allen Mesh-Feldern |
+| **Exportieren** | `initialProfile` v1 | Gleiches Schema wie Import |
+| **Verschl. Kontakt-Backup** | Server-API, passwortgeschützt | Inkl. Mesh-Felder — für vollständige Wiederherstellung |
+
+### Akzeptierte Import-JSON-Formen
+
+1. **Root `initialProfile`:** Objekt mit `version: 1` und `contacts[]` (auch verschachtelt in Handoff-`jsonConfig` / Device-JSON aus einer ZIP).
+2. **Direkt:** `{ "version": 1, "contacts": [ … ] }` — gleiche Struktur wie Export.
+
+**Kontakt-Eintrag (minimal):**
+
+```json
+{
+  "name": "Medic",
+  "address": "0x…64 hex…",
+  "roleTags": ["Medic"]
+}
+```
+
+Optional auf Root-Ebene: `deploymentChannelTag`, `offlineBriefing`, `validUntil`, `metadata` (siehe `docs/API-INITIAL-PROFILE.md`).
+
+**Abweichungen / nicht über initialProfile:**
+
+- **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): nur über **verschl. Kontakt-Backup** oder manuell im Telefonbuch — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
+- **Handoff-ZIP** für Helfer: **Einsatzleitung → Export-Assistent** — enthält neben `initialProfile` auch Rechte, Presets, ggf. verschlüsselte Pakete (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
+- **`npm run bundle:messenger`:** Entwickler-Standalone-Ordner — **kein** Ersatz für Handoff-ZIP.
+
+**Nachrichten-Forensik** (Verlauf JSON/TXT, verschl. Bericht, Protokoll-ZIP): **Posteingang** → Menü Export — nicht in der Einsatzleitung dupliziert.
+
+---
+
+## Einsatzleitung — Orientierung {#einsatzleitung-orientierung}
+
+Wo welche Funktion liegt (Messenger, Boss):
+
+| Thema | Ort |
+|--------|-----|
+| **Handoff-ZIP** (Helfer, Arbeiter, Führer einrichten) | **Einsatzleitung → Export-Assistent** |
+| **PWA im WLAN** (nur App installieren, keine Kontakte) | **Einsatzleitung → Helfer per QR (WLAN)** |
+| **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (Navigation unten) |
+| **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
+| **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
+| **Handoff importieren** (Helfer-Gerät) | **Einstellungen → Handoff importieren** (oder Posteingang bei IOTA-Zustellung) |
+
+**Nicht verwechseln:** `npm run bundle:messenger` = Entwickler-Standalone auf dem Server — **kein** Ersatz für die Helfer-Handoff-ZIP.
+
+---
+
+## Handoff: .env, Move und Package {#handoff-env-move-und-package}
+
+### Kurzantwort
+
+| Begriff | Was ist das? | Pro Helfer neu? |
+|---------|----------------|-----------------|
+| **`.env` im Handoff-ZIP** | Geräte-Konfiguration: `ROLE`, `ROLE_ID`, Partner-Adressen, Mailbox-Object-IDs, RPC, `PACKAGE_ID`-Verweis, PSK-Hinweise | **Ja** — jeder Export erzeugt eine **eigene** `.env` (oder verschlüsselte `handoff.morg.enc`) für **dieses** Zielprofil |
+| **Move-Package (`PACKAGE_ID`)** | On-Chain-Vertrag / Einsatz-Instanz auf IOTA — gemeinsame „Move-Umgebung“ | **Nein** — normalerweise **dieselbe** `PACKAGE_ID` wie beim Boss (alle Helfer im **gleichen** Einsatz) |
+| **Mailboxen auf der Chain** | Objekte (Server-, Team-, Private-IDs), die Nachrichten speichern | **Nein** — vom Boss (oder Betrieb) **angelegt**; der Helfer bekommt nur die **IDs und Rechte** in seiner `.env` |
+| **Export-Assistent** | UI zum Bündeln: Profil + Partner + Team-Postfächer → ZIP | Erzeugt **kein** neues Move-Deploy, nur Konfiguration + README |
+
+### Muss jeder Helfer eine eigene `.env` bekommen?
+
+**Ja**, wenn Rolle, Partner, Team-Postfächer oder Rechte (`ROLE_ID`, Capabilities) **unterschiedlich** sind — oder wenn du bewusst getrennte Presets (Helfer vs. Führer vs. Spezial) ausrollst.
+
+**Gleiche** `.env` für mehrere Geräte ist nur sinnvoll, wenn sie **identisch** provisioniert werden sollen (selten; Passwort-Schutz trotzdem pro Auslieferung empfohlen).
+
+### Muss jeder Helfer ein eigenes Move-Package?
+
+**In der Regel nein.** Alle im **selben Einsatz** teilen sich `PACKAGE_ID` (und die vom Boss konfigurierten Registry-/Mailbox-Strukturen). Nur bei **einem anderen** on-chain Einsatz (anderes deploytes Package) wählt der Boss in **Erweiterte Technik** eine abweichende `PACKAGE_ID` — das ist Expert-Fall, nicht Standard.
+
+### Ablauf (Boss)
+
+1. Move/Mailbox-Struktur auf dem **Boss-PC** / Server betreiben (`.env` des Boss, ggf. Team-Mailboxen unter Einstellungen anlegen).
+2. Im **Export-Assistenten**: Bezeichnung, **Profil** (Helfer/Führer/Spezial), Team-Postfächer und Partner wählen.
+3. ZIP herunterladen (oder per IOTA an Partner) — Helfer importiert auf dem Gerät.
+
+Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
+
+**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
+
+---
+
+## Einsatzleitung (Boss): QR im WLAN vs. Export-Assistent
+
+| Funktion | Zweck |
+|----------|--------|
+| **Helfer per QR (WLAN)** | Helfer installiert die PWA im gleichen LAN; QR enthält PWA-URL + API-Basis (`install-qr`, Schema `mi`). **Keine** Kontakte, keine Rolle — nur Erreichbarkeit der App. |
+| **Export-Assistent** | Handoff-ZIP für Untergebene: Rolle, `ROLE_ID`, Capabilities, Partner, Team-Mailboxen, optional verschlüsselt. |
+| **Einsatz-Vorlagen** | Gespeicherte Presets (`chainRole`, `roleId`, Kanal-Tag) im **Export-Assistenten** (Dropdown / „Als Vorlage speichern“) — Datei `.morgendrot-einsatz-templates.json` auf dem Boss-PC (`docs/API-EINSATZ-ROLE-TEMPLATES.md`). |
+
+---
+
+## Gruppenchat
+
+Gemeinsamer **Posteingang** für alle Gruppenmitglieder (`0x…`). **Senden** weiter an **eine** Adresse im Composer (**pairwise**) — kein gemeinsamer Chain-Raum. Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüsselt**.
+
+---
+
+## Pinnwand einbinden
+
+**Gemeinsam** braucht ihr dieselbe Move-Instanz (`PACKAGE_ID`). Online-Klartext: Empfänger = **Broadcast-Adresse** aus `/api/status` (wenn `ENABLE_BROADCAST_PINNWAND` + `BROADCAST_PINNWAND_ADDRESS` gesetzt). **Sendepfad:** Pinnwand läuft über **Online (IOTA)** — Meshtastic-Primary-Broadcast ist kein Ersatz (keine Sender-Autorisierung, anderer Kanal). Für Funk-Gruppenchat: Kanal **Gruppe** + Secondary Channel in der Meshtastic-App (Handbuch § Sendepfad).
+
+**Posteingang:** Filter **„Klartext“** für Pinnwand-Ketten; **Anheften** über Menü ⋯ an der Nachricht (lokal, `sessionStorage`). Spezifikation: `docs/BROADCAST-PINNWAND.md`, Handbuch `BROADCAST-PINNWAND.md`.
+
+---
+
 ## Handshake Vertrauen und Risiken
 
 **Adresse prüfen:** Vor **Handshake starten** oder **`/connect`** die **Partner-`0x`-Adresse** verifizieren (Tippfehler, Phishing, falsches Clipboard). Ein Handshake mit der **falschen** Adresse liefert ein **ECDH-Geheimnis mit dem Falschen** — der Chat/Mailbox-Kanal ist dann nicht mit dem gewollten Partner vertraulich.
@@ -70,9 +298,11 @@ Spezifikation und Wire: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**.
 
 ## Funk Klartext Einsatzmodus
 
-**Meshtastic-Klartext (LongFast / Text):** Standard-Meshtastic-Text — **ohne** Morgendrot-Mesh-v2 und **ohne** `/connect`. **Broadcast** an alle im Kanal, oder **Ziel-Knoten** (`!…` wie am Radio angezeigt) mit der Option „An Node-ID senden“.
+**Meshtastic-Klartext (LongFast / Text):** Standard-Meshtastic-Text — **ohne** Morgendrot-Mesh-v2 und **ohne** `/connect`. **An alle:** Broadcast im Primary-Kanal (Haken „an Node-ID“ aus) — **nur unverschlüsselt**, Kanal **1:1**. **An einen Knoten:** Ziel-Node (`!…`) mit Haken „an Node-ID senden“.
 
 **Nur Klartext + „funk“:** **Verschlüsselung** läuft über den **Online/IOTA-Pfad** — nicht über den Funk-Composer (bei aktivem Schloss wechselt die UI entsprechend).
+
+**Expert-Option Kanalindex (0-7):** Im Composer kann optional ein **Meshtastic-Kanalindex** gesetzt werden. **Leer** = Geräte-Default (typisch Primary). Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen; daher nur nutzen, wenn der Kanal in der Meshtastic-App/QR-Handoff eindeutig abgestimmt ist.
 
 ---
 
@@ -85,6 +315,8 @@ Nach erfolgreichem **Klartext-Funk**: optionale Kopie per **Klartext-Mailbox** a
 ## Package-ID und Posteingang
 
 Wenn du eine **ID** per Messenger, Datei oder mündlich erhältst: hier eintragen. **Aktiv speichern** schreibt sie wie **`/set-package-id`**. **Nur Posteingang** lädt die Mailbox für diese ID **ohne** die lokale Datei zu ändern.
+
+Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteingang eine **Event-Union** über alle IDs — das ist Betreiber-Konfiguration, kein UI-Hinweis nötig.
 
 ---
 
@@ -106,4 +338,4 @@ Wenn du eine **ID** per Messenger, Datei oder mündlich erhältst: hier eintrage
 
 ---
 
-*Stand: UI-Kürzung 2026-04-20; Partner-Setup / Handshake-Risiken / Funk-Pfad 2026-04-20.*
+*Stand: UI-Kürzung 2026-05; Kanäle/Mailboxen/Gruppe/Pinnwand ins Handbuch.*

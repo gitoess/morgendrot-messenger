@@ -2,6 +2,8 @@
 
 Alle Konfigurationsoptionen mit kurzer Erklärung. Quelle: `.env` (oder `.env.example` als Vorlage). Design-Prinzipien: siehe [DESIGN-PRINCIPLES.md](DESIGN-PRINCIPLES.md).
 
+**Nur Messenger-PWA (Einstellungen):** Teilmenge mit 77 Keys, kategorisiert — **[ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md](ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md)** (Hauptreferenz für die UI-Liste; Code: `frontend/frontend/lib/config-env-field-meta.ts`).
+
 ---
 
 ## Netzwerk
