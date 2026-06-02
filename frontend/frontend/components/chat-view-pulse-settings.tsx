@@ -1029,6 +1029,7 @@ export function ChatViewPulseSettings({
               className="flex flex-wrap gap-2"
               myAddress={(apiStatus.myAddressFull || apiStatus.myAddress || sessionAddr || chainAddr || '').trim()}
               displayName={apiStatus.displayName?.trim()}
+              includeNetworkInQr
               disabled={busy !== null}
               onStatus={(m) => setMsg(m)}
               onImported={({ address, peerPubStored }) => {

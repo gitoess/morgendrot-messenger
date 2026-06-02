@@ -45,7 +45,13 @@
 
 ---
 
-## E — Optional / Backlog (nur wenn Zeit)
+## E — Peering-QR (§ H.16, Standalone)
+
+- [ ] A: Puls → **Mein Peering-QR** (mit ECDH-JWK im Puls); B scannt → Partner-Adresse + Peer-Pub
+- [ ] Optional: Boss-QR mit `u`/`p` → B bestätigt Netzwerk-Import → Direkt-RPC ohne Handoff-ZIP
+- [ ] Composer: Handshake-Hinweis → **Peering-QR scannen** → danach Handshake senden / annehmen (4e)
+
+## F — Optional / Backlog (nur wenn Zeit)
 
 - [ ] **§ H.25a** LoRa-Bild Feldtest (zwei Heltecs)
 - [ ] PWA installiert: Hintergrund → Tresor-Sperre (45 s)

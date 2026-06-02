@@ -12,10 +12,13 @@ import {
 } from '@/components/ui/dialog'
 import { exportDirectChatEcdhPublicKeyRawBase64 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
   applyPeeringQrImport,
   buildPeeringQrPayload,
   parsePeeringQrPayload,
+  peeringQrHasNetworkHints,
 } from '@/frontend/lib/peering-qr'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import QRCode from 'qrcode'
@@ -26,12 +29,27 @@ export type PeeringQrActionsProps = {
   disabled?: boolean
   className?: string
   /** Nach erfolgreichem Scan (Partner-Adresse + ggf. Pub). */
-  onImported?: (r: { address: string; displayName?: string; peerPubStored: boolean }) => void
+  onImported?: (r: {
+    address: string
+    displayName?: string
+    peerPubStored: boolean
+    networkApplied?: string[]
+  }) => void
+  /** RPC + Package-ID ins Peering-QR (Boss-LAN / Helfer ohne Handoff-ZIP). */
+  includeNetworkInQr?: boolean
   onStatus?: (msg: string) => void
 }
 
 export function PeeringQrActions(p: PeeringQrActionsProps) {
-  const { myAddress, displayName, disabled = false, className, onImported, onStatus } = p
+  const {
+    myAddress,
+    displayName,
+    disabled = false,
+    className,
+    onImported,
+    onStatus,
+    includeNetworkInQr = false,
+  } = p
   const [showOpen, setShowOpen] = useState(false)
   const [qrText, setQrText] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState('')
@@ -49,6 +67,15 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       setBuildErr('Eigene 0x-Adresse fehlt (Status / Ketten-IDs).')
       return
     }
+    const snap = getDirectMailboxChainSnapshot()
+    const net =
+      includeNetworkInQr
+        ? {
+            rpcUrl: getConfiguredDirectIotaRpcUrl() ?? undefined,
+            packageId: snap?.packageId?.trim() || undefined,
+          }
+        : {}
+
     const pub = await exportDirectChatEcdhPublicKeyRawBase64()
     if (!pub.ok) {
       setBuildErr(pub.error)
@@ -56,6 +83,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
         const fallback = buildPeeringQrPayload({
           address: myAddress.trim(),
           displayName,
+          ...net,
         })
         setQrText(fallback)
         const url = await QRCode.toDataURL(fallback, { width: 220, margin: 2 })
@@ -70,6 +98,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
         address: myAddress.trim(),
         ecdhPubB64: pub.b64,
         displayName,
+        ...net,
       })
       setQrText(text)
       const url = await QRCode.toDataURL(text, { width: 220, margin: 2 })
@@ -77,7 +106,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
     } catch (e) {
       setBuildErr(e instanceof Error ? e.message : String(e))
     }
-  }, [addrOk, myAddress, displayName])
+  }, [addrOk, myAddress, displayName, includeNetworkInQr])
 
   useEffect(() => {
     if (showOpen) void loadMyQr()
@@ -99,7 +128,16 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       onStatus?.('Kein Peering- oder Kontakt-QR erkannt.')
       return
     }
-    const r = applyPeeringQrImport(parsed)
+    let applyNetwork = false
+    if (peeringQrHasNetworkHints(parsed) && typeof window !== 'undefined') {
+      const parts: string[] = []
+      if (parsed.rpcUrl) parts.push(`RPC: ${parsed.rpcUrl}`)
+      if (parsed.packageId) parts.push(`Package: ${parsed.packageId.slice(0, 14)}…`)
+      applyNetwork = window.confirm(
+        `Netzwerk aus QR übernehmen?\n${parts.join('\n')}\nNur von vertrauenswürdigem Partner scannen.`
+      )
+    }
+    const r = applyPeeringQrImport(parsed, { applyNetworkHints: applyNetwork })
     if (!r.ok) {
       onStatus?.(r.error)
       return
@@ -109,10 +147,13 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       address: r.address,
       displayName: r.displayName,
       peerPubStored: r.peerPubStored,
+      networkApplied: r.networkApplied,
     })
+    const netNote =
+      r.networkApplied?.length ? ` Netzwerk: ${r.networkApplied.join(', ')}.` : ''
     const hint = r.peerPubStored
-      ? `Peering übernommen: ${maskWalletAddress(r.address)} + Peer-Pub gespeichert.`
-      : `Adresse übernommen: ${maskWalletAddress(r.address)} (ohne ECDH-Pub im QR).`
+      ? `Peering übernommen: ${maskWalletAddress(r.address)} + Peer-Pub gespeichert.${netNote}`
+      : `Adresse übernommen: ${maskWalletAddress(r.address)} (ohne ECDH-Pub im QR).${netNote}`
     onStatus?.(hint)
   }
 

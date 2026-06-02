@@ -105,7 +105,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
     if ('error' in s) return
     const peering = parsePeeringQrPayload(s.bundleJson)
     if (!peering) return
-    if (peering.ecdhPubB64) applyPeeringQrImport(peering)
+    applyPeeringQrImport(peering)
     const contactExtras = parseContactQrPayload(s.bundleJson)
     const next: ContactPhonebookFormValues = {
       ...form,

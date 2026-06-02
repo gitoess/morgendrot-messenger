@@ -562,8 +562,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   <ChatViewEncryptedRecipientHandshakeBar
                     status={encryptedRecipientHandshakeStatus}
                     sending={sending}
+                    myAddress={myAddress}
                     onHandshake={onEncryptedHandshakeForRecipient}
                     onAccept={onEncryptedAcceptHandshakeForRecipient}
+                    onPeeringImported={({ address }) => {
+                      const v = address.trim().toLowerCase()
+                      onPartnerChange?.(v)
+                      onRecipientChange(v)
+                    }}
+                    onPeeringStatus={(m) => onStatusFeedback?.(m)}
                   />
                 ) : null}
               </>

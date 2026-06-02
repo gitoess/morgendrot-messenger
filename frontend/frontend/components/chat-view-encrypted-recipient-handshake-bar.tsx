@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
+import { PeeringQrActions } from '@/frontend/components/peering-qr-actions'
 import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
@@ -9,12 +10,16 @@ import {
 export type ChatViewEncryptedRecipientHandshakeBarProps = {
   status: EncryptedRecipientHandshakeStatus
   sending?: boolean
+  myAddress?: string
   onHandshake?: () => void | Promise<void>
   onAccept?: () => void | Promise<void>
+  onPeeringImported?: (r: { address: string; displayName?: string; peerPubStored: boolean }) => void
+  onPeeringStatus?: (msg: string) => void
 }
 
 export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecipientHandshakeBarProps) {
-  const { status, sending = false, onHandshake, onAccept } = p
+  const { status, sending = false, myAddress = '', onHandshake, onAccept, onPeeringImported, onPeeringStatus } =
+    p
   if (status === 'idle' || status === 'ready') return null
 
   const label = encryptedHandshakeStatusLabel(status)
@@ -55,6 +60,15 @@ export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecip
           </button>
         ) : null}
       </div>
+      {onPeeringImported ? (
+        <PeeringQrActions
+          className="mt-2 flex flex-wrap gap-1.5"
+          myAddress={myAddress}
+          disabled={sending}
+          onImported={onPeeringImported}
+          onStatus={onPeeringStatus}
+        />
+      ) : null}
     </div>
   )
 }
