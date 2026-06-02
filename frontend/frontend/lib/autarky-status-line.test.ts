@@ -38,8 +38,9 @@ describe('autarky-status-line', () => {
     expect(line).toMatch(/Autarkie: noch offen/)
   })
 
-  it('Header ohne Autarkie: zählt Setup-Lücken', () => {
+  it('Header ohne Autarkie: nennt erste Lücke oder Anzahl', () => {
     const line = getDirectIotaHeaderStatusLine()
-    expect(line).toMatch(/Direkt: \d+ Schritt/)
+    expect(line).toMatch(/Direkt:/)
+    expect(line).toMatch(/Puls/)
   })
 })

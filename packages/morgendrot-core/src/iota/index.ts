@@ -10,6 +10,11 @@ export { buildStoreEcdhInitTransaction } from './handshake-ecdh-txb'
 export type { BuildStoreEcdhInitTxInput } from './handshake-ecdh-txb'
 export { buildPurgeHandshakeTransaction } from './purge-handshake-txb'
 export type { BuildPurgeHandshakeTxInput } from './purge-handshake-txb'
+export { buildPurgeMailboxMessageTransaction } from './purge-message-txb'
+export type {
+  BuildPurgeMailboxMessageTxInput,
+  PurgeMailboxMessageVariant,
+} from './purge-message-txb'
 export {
   fetchMessagingEventInboxRpcRows,
 } from './messaging-events-inbox-rpc'

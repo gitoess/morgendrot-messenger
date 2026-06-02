@@ -8,7 +8,10 @@ import { fetchStatus } from '@/frontend/lib/api/status'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { getNativeLoopbackApiBaseWarning } from '@/frontend/lib/api-base-native-hints'
 import { formatRelativeMinutes } from '@/frontend/lib/format-relative-sync'
-import { getDirectIotaHeaderStatusLine } from '@/frontend/lib/autarky-status-line'
+import {
+  getDirectIotaHeaderStatusLine,
+  getDirectIotaSetupGapLabels,
+} from '@/frontend/lib/autarky-status-line'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 
 function modeLabel(mode: OfflineStatusSnapshot['mode']): string {
@@ -37,6 +40,7 @@ export function OfflineStatusCard(p: {
   const [busy, setBusy] = useState(false)
   const [probeLine, setProbeLine] = useState<string | null>(null)
   const [autarkyLine, setAutarkyLine] = useState<string | null>(null)
+  const [directGaps, setDirectGaps] = useState<string[]>([])
 
   useEffect(() => {
     setHydrated(true)
@@ -44,7 +48,10 @@ export function OfflineStatusCard(p: {
 
   useEffect(() => {
     if (!hydrated) return
-    const refresh = () => setAutarkyLine(getDirectIotaHeaderStatusLine())
+    const refresh = () => {
+      setAutarkyLine(getDirectIotaHeaderStatusLine())
+      setDirectGaps(getDirectIotaSetupGapLabels())
+    }
     refresh()
     window.addEventListener(DIRECT_IOTA_UI_CHANGED, refresh)
     window.addEventListener('storage', refresh)
@@ -161,6 +168,13 @@ export function OfflineStatusCard(p: {
             {autarkyLine}
           </p>
         ) : null}
+        {directGaps.length > 1 ? (
+          <ul className="mt-1.5 list-inside list-disc space-y-0.5 text-[11px] text-amber-900/90 dark:text-amber-100/90">
+            {directGaps.map((g) => (
+              <li key={g}>{g}</li>
+            ))}
+          </ul>
+        ) : null}
         <p className="mt-1.5 text-xs text-muted-foreground">
           Letzte Synchronisation:{' '}
           {!hydrated ? '…' : formatRelativeMinutes(p.status.lastSuccessfulSyncMinutes)}
@@ -228,6 +242,13 @@ export function OfflineStatusCard(p: {
         >
           {autarkyLine}
         </p>
+      ) : null}
+      {directGaps.length > 1 ? (
+        <ul className="mt-2 list-inside list-disc space-y-0.5 text-[11px] text-amber-950/90 dark:text-amber-50/90">
+          {directGaps.map((g) => (
+            <li key={g}>{g}</li>
+          ))}
+        </ul>
       ) : null}
       <p className="mt-1 text-xs text-muted-foreground">
         Letzte Synchronisation: {!hydrated ? '…' : formatRelativeMinutes(p.status.lastSuccessfulSyncMinutes)}

@@ -27,13 +27,21 @@ export function getAutarkyStatusLine(): string | null {
   return `Autarkie: noch offen — ${open[0]!.label}`
 }
 
+/** Alle offenen Direkt-Schritte (Puls-Checkliste). */
+export function getDirectIotaSetupGapLabels(): string[] {
+  if (typeof window === 'undefined') return []
+  if (getIotaSubmitMode() === 'relay') return []
+  return listDirectIotaSetupGaps()
+}
+
 /** Chat-Kopf / Offline-Karte: Autarkie-Checkliste oder kompakte Direkt-Lücken. */
 export function getDirectIotaHeaderStatusLine(): string | null {
   const autarky = getAutarkyStatusLine()
   if (autarky) return autarky
-  if (getIotaSubmitMode() === 'relay') return null
-  const gaps = listDirectIotaSetupGaps()
+  const gaps = getDirectIotaSetupGapLabels()
   if (gaps.length === 0) return null
-  const n = gaps.length
-  return `Direkt: ${n} Schritt${n === 1 ? '' : 'e'} offen — Puls`
+  if (gaps.length === 1) return `Direkt: ${gaps[0]} — Puls`
+  const first = gaps[0]!
+  const short = first.length > 52 ? `${first.slice(0, 49)}…` : first
+  return `Direkt: ${gaps.length} offen — z. B. ${short} — Puls`
 }

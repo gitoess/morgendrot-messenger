@@ -320,6 +320,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 **Abgeschlossen (Code, 2026-06-02 — Standalone Backlog):**
 - **Event-Posteingang** per Fullnode: **`fetchMessagingEventInboxRpcRows`** + Merge in **`tryFetchDirectMailboxInboxViaIota`**.
 - **Handshake-Purge** clientseitig: **`purge-handshake-hybrid`** / **`buildPurgeHandshakeTransaction`**.
+- **Nachrichten-Purge** clientseitig: **`purge-message-hybrid`** / **`buildPurgeMailboxMessageTransaction`** (Posteingang „Auf Chain löschen“).
+- **Puls-Hinweis:** Offline-Karte zeigt **konkrete** offene Direkt-Schritte (nicht nur „4 offen“).
 
 **Nächste kleine Scheiben (Code / Abnahme, Stand 2026-06-02):**
 1. **§ H.15 Stufe 2 / Smoke** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f** am Gerät (zwei Profile/APKs); Ergebnis **`docs/TEST-RUN-LOGBOOK.md`**.

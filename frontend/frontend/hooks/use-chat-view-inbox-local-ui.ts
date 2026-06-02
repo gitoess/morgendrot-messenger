@@ -6,7 +6,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { purgeMailboxMessage, type ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { purgeMailboxMessageHybrid } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import {
   filterInboxMessagesByPartnerAndDirection,
@@ -414,7 +415,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       setSending(true)
       try {
-        const r = await purgeMailboxMessage(msg.chainNonce, msg.from.startsWith('0x') ? msg.from : undefined)
+        const r = await purgeMailboxMessageHybrid(msg, { backendReachable: true })
         if (r.ok) {
           setHiddenInboxIds((prev) => {
             const n = new Set(prev)
@@ -533,7 +534,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setSending(true)
     try {
       for (const msg of list) {
-        const r = await purgeMailboxMessage(msg.chainNonce!, msg.from.startsWith('0x') ? msg.from : undefined)
+        const r = await purgeMailboxMessageHybrid(msg, { backendReachable: true })
         if (!r.ok) {
           setStatus('error')
           setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
