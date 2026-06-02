@@ -37,11 +37,15 @@
 
 ---
 
-## 4. Umsetzungsreihenfolge (Repo-Ist: 2026-03)
+## 4. Umsetzungsreihenfolge (Repo-Ist: 2026-06)
 
-1. **Doku & Fahrplan** (dieses Dokument, **§ H.6f**) — **erledigt** mit Einführung des Abschnitts.
-2. **Native Projekt** anlegen oder bestehende Hülle wählen — **noch offen** im Hauptrepo (kein `android/` Ordner); bei Einführung: Manifest, `foregroundServiceType`, Notification-Channel, Tests auf Referenzgeräten.
-3. **PWA:** unverändert ehrliche UX; keine falschen FG-Versprechen im Web.
+1. **Doku & Fahrplan** (dieses Dokument, **§ H.6f**) — **erledigt**.
+2. **Native Schale (Capacitor)** — **Ist (minimal):**
+   - `frontend/android/` — `MessengerForegroundService`, `MessengerFgSyncPlugin`, Manifest (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_DATA_SYNC`, `POST_NOTIFICATIONS`), `foregroundServiceType="dataSync"`.
+   - JS: `frontend/frontend/lib/capacitor-foreground-sync.ts`, Web-Stub, Bootstrap in `messenger-dashboard.tsx`, Opt-in in **Basis-URL (APK / Gerät)** (`capacitor-api-base-card.tsx`).
+   - **Akku:** Start unter ~15 % ohne Laden wird im Service abgelehnt (kein FG).
+   - **Offen:** Inaktivitäts-Stopp, SOS-Kanal, Feldtest auf Referenz-APK.
+3. **PWA:** unverändert ehrliche UX; keine falschen FG-Versprechen im Web (`MessengerFgSyncWeb` = No-op).
 
 ---
 
@@ -56,4 +60,4 @@
 
 ---
 
-*Stand: 2026-03-31 — dokumentierte Entscheidung; native Implementierung folgt eigenem Meilenstein.*
+*Stand: 2026-06-02 — minimaler FG-Service + Capacitor-Plugin im Repo; Feldtest APK folgt.*

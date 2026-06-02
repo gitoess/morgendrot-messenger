@@ -42,7 +42,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 5 | **Private Mailbox Nummerierung/Label** nach Erstellen | UX: `Private #1`, `#2`, … in Meine Mailboxen | **Ist 2026-05-21** |
 | 6 | **Gruppenchat „Mailbox an alle Mitglieder“** | Checkbox im Gruppen-Panel; Consumer-Einschränkung optional | **Arbeiter ✅** sichtbar; Consumer offen |
 | 7 | **§ H.25a** Flüchtig-LoRa-Bild Feldtest | Zwei Heltecs, Vitest grün | **Vitest Schreibtisch ✅** — Feld offen |
-| 8 | **§ H.15 Stufe 2** Handy-first Smoke | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md` | **Offen** |
+| 8 | **§ H.15 Stufe 2** Handy-first Smoke | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md` **4b–4f** (Code Standalone/APK) | **Offen (Feld)** |
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 
@@ -304,17 +304,24 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **Einstellungen:** Status-Poll alle 10 s für Handoff-Reconnect-Banner (`backendOnline`).
 - **§ H.15 Phase 2 + B.1 + B.2 (Code):** Posteingang/Handshake-RPC, Peering-QR, **Handshake senden + Connect per Fullnode** (Hybrid vor API); Einsatz-Connect (.env) weiter API.
 
+**Abgeschlossen (Code, 2026-06-02 — § H.15 Offline-APK Kernpfad):**
+- **Standalone:** Handoff lokal, Status-Fallback, Capacitor-Bootstrap; **B.3–B.5** Send/Inbox/Peering ohne `/api/*`-Relay (`messenger-standalone-relay.ts`).
+- **§ H.16 Peering-QR:** `u`/`p` im QR, Composer-Scan, Puls `includeNetworkInQr`; **`WANDERER-STANDALONE-BUNDLE.md`** Variante B.
+
 **Abgeschlossen (Code, 2026-05-28):**
 - **§ H.16 Rest — Boss-LAN-Install-QR:** Payload `k: "mi"` (`w` PWA-URL, optional `b` API, `u` RPC) in `frontend/lib/install-qr.ts`; Dashboard **`LanInstallQrPanel`** (Boss anzeigen / Helfer scannen); Einstellungen **Basis-URL** → „Boss Install-QR“; Vitest `install-qr.test.ts` in **`npm run test:h15-direct-submit`**.
 
 **Abgeschlossen (Code, 2026-05-28 — § H.25a Nachzug):**
 - **`MORG_IMG_INIT_V1`** (`path4-image-transfer.ts`) vor Luma/Chroma-Burst; Empfänger „Bild wird zusammengesetzt…“; Path-4-Mirror mit Segment-`msgId`; Vitest `path4-image-transfer`, `lora-image-morg-seg-v1-send`.
 
-**Nächste kleine Scheiben (Code):**
-1. ~~Optional: Vitest für `hardReloadAfterChunkFailure`~~ — **erledigt 2026-06-02** (`chunk-load-error.test.ts`).
-2. ~~**§ H.25a Schreibtisch**~~ — **`npm run test:h25a-lora-image`** (28 Tests: NAK-Nachsenden, 32-Segment-Cap, INIT/SEG).
-3. **§ H.25a Feldtest** (2 Heltecs, **`TESTING.md`**) — Code-Ist, Abnahme offen.
-4. Backlog **IMG_CHUNK/ACK** als separates Protokoll nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht (Fahrplan: nicht parallel duplizieren).
+**Abgeschlossen (Code, 2026-06-02 — § H.6f minimal):**
+- Capacitor **`MessengerForegroundService`** (`dataSync`), Plugin **`MessengerFgSync`**, JS **`capacitor-foreground-sync.ts`**, Bootstrap + Opt-in in **Basis-URL (APK)**; Doku **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**. **Offen:** APK-Feldtest (Notification, Akku-Stopp, POST_NOTIFICATIONS).
+
+**Nächste kleine Scheiben (Code / Abnahme, Stand 2026-06-02):**
+1. **§ H.15 Stufe 2 / Smoke** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f** am Gerät (zwei Profile/APKs); Ergebnis **`docs/TEST-RUN-LOGBOOK.md`**.
+2. **§ H.25a Feldtest** (2 Heltecs, **`TESTING.md`**) — Vitest Schreibtisch grün; Abnahme offen.
+3. **§ H.6f Abnahme** — FG-Service am Referenz-APK prüfen (mit Smoke 4b–4f bündelbar).
+4. Backlog **Event-Posteingang** per Direkt-RPC (ohne DOF); **Handshake-Purge** clientseitig; **IMG_CHUNK/ACK** nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht.
 
 **Manuell (eine Runde, nicht blockierend):** **`docs/HANDY-LATER-MANUAL-TESTS.md`** (§ A–E inkl. H.15 § 2).
 

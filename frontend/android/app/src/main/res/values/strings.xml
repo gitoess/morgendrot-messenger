@@ -4,4 +4,8 @@
     <string name="title_activity_main">Morgendrot Messenger</string>
     <string name="package_name">de.morgendrot.messenger</string>
     <string name="custom_url_scheme">de.morgendrot.messenger</string>
+    <string name="fg_sync_channel_name">Messenger Hintergrund</string>
+    <string name="fg_sync_channel_desc">Hält die App aktiv für Outbox und Direkt-RPC — kein periodischer Abruf.</string>
+    <string name="fg_sync_notification_title">Morgendrot Messenger aktiv</string>
+    <string name="fg_sync_notification_text">Outbox &amp; Direkt-RPC — WebView bleibt erreichbar</string>
 </resources>

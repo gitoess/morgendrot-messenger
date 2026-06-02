@@ -39,7 +39,9 @@ import { OfflineStatusCard } from '@/frontend/components/offline-status-card'
 import { enableOfflineMailboxQueue } from '@/frontend/lib/api/offline-queue'
 import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
+import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
+import { getMessengerDashboardOfflineHint } from '@/frontend/lib/dashboard-basis-offline-hint'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
@@ -49,6 +51,7 @@ export function MessengerDashboard() {
   return (
     <>
       <CapacitorStandaloneBootstrap />
+      <CapacitorForegroundSyncBootstrap />
       <MessengerDashboardBody
         hoveredFeature={hoveredFeature}
         setHoveredFeature={setHoveredFeature}
@@ -517,11 +520,7 @@ function MessengerDashboardBody({
         {/* Quick Hint: nur wenn Backend wirklich nicht erreichbar */}
         {s.backendReachable === false && (
           <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-            <p className="text-sm text-amber-400">
-              Keine Verbindung zum Backend. Starte <code className="rounded bg-amber-500/20 px-1">npm run dev</code> (Backend 127.0.0.1:3342 + UI 127.0.0.1:3341). Bei Port-Kollision zuerst{' '}
-              <code className="rounded bg-amber-500/20 px-1">npm run dev:stop</code>, dann erneut <code className="rounded bg-amber-500/20 px-1">npm run dev</code>. Wenn das Backend mit Fehlercode beendet:{' '}
-              <code className="rounded bg-amber-500/20 px-1">npm run start:secrets</code> einzeln in einem Terminal ausführen, um die Fehlermeldung zu sehen.
-            </p>
+            <p className="text-sm leading-relaxed text-amber-400">{getMessengerDashboardOfflineHint()}</p>
           </div>
         )}
       </main>

@@ -5,6 +5,14 @@ import { API_BASE_OVERRIDE_KEY, getApiBase } from '@/frontend/lib/api/api-base'
 import { getNativeLoopbackApiBaseWarning } from '@/frontend/lib/api-base-native-hints'
 import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { shouldShowCapacitorApiBaseSettings } from '@/frontend/lib/capacitor-platform'
+import {
+  canUseAndroidForegroundSync,
+  getAndroidForegroundSyncRunning,
+  isAndroidFgSyncEnabled,
+  setAndroidFgSyncEnabled,
+  startAndroidForegroundSyncIfEnabled,
+  stopAndroidForegroundSync,
+} from '@/frontend/lib/capacitor-foreground-sync'
 import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { isAutarkyModeEnabled } from '@/frontend/lib/autarky-status-line'
@@ -18,9 +26,16 @@ export function CapacitorApiBaseCard() {
   const [saved, setSaved] = useState('')
   const [testMsg, setTestMsg] = useState<string | null>(null)
   const [testing, setTesting] = useState(false)
+  const [fgEnabled, setFgEnabled] = useState(false)
+  const [fgRunning, setFgRunning] = useState(false)
+  const [fgBusy, setFgBusy] = useState(false)
 
   useEffect(() => {
     setVisible(shouldShowCapacitorApiBaseSettings())
+    if (canUseAndroidForegroundSync()) {
+      setFgEnabled(isAndroidFgSyncEnabled())
+      void getAndroidForegroundSyncRunning().then(setFgRunning)
+    }
     try {
       const v = window.localStorage.getItem(API_BASE_OVERRIDE_KEY)?.trim() ?? ''
       setDraft(v)
@@ -47,6 +62,25 @@ export function CapacitorApiBaseCard() {
   }, [draft])
 
   const loopbackWarn = getNativeLoopbackApiBaseWarning()
+
+  const toggleFgSync = async () => {
+    if (!canUseAndroidForegroundSync()) return
+    setFgBusy(true)
+    try {
+      const next = !fgEnabled
+      setAndroidFgSyncEnabled(next)
+      setFgEnabled(next)
+      if (next) {
+        const res = await startAndroidForegroundSyncIfEnabled()
+        setFgRunning(res.running)
+      } else {
+        await stopAndroidForegroundSync()
+        setFgRunning(false)
+      }
+    } finally {
+      setFgBusy(false)
+    }
+  }
 
   const applyFromBossQr = async () => {
     setTestMsg(null)
@@ -213,6 +247,29 @@ export function CapacitorApiBaseCard() {
           ? ''
           : ' — ohne URL und ohne Handoff/Direkt-RPC sind API-Funktionen nicht erreichbar.'}
       </p>
+      {canUseAndroidForegroundSync() ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <h5 className="text-sm font-semibold text-foreground">Android Hintergrund (§ H.6f)</h5>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Foreground Service mit sichtbarer Benachrichtigung — hält den Prozess aktiv,{' '}
+            <strong className="text-foreground">kein</strong> periodischer Abruf. Stoppt unter ~15 % Akku
+            ohne Ladegerät. Web Bluetooth in der WebView bleibt vom OS abhängig.
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={fgBusy}
+              onClick={() => void toggleFgSync()}
+              className="rounded-md border border-border bg-muted/50 px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60"
+            >
+              {fgBusy ? '…' : fgEnabled ? 'Hintergrund-Sync aus' : 'Hintergrund-Sync an'}
+            </button>
+            <span className="text-[11px] text-muted-foreground">
+              Service: {fgRunning ? 'läuft' : 'gestoppt'}
+            </span>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

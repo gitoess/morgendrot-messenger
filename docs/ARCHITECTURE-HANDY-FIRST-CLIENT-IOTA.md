@@ -100,8 +100,8 @@
 2. **Klartext-Mailbox client-only verifizieren** — **`trySubmitPlaintextMailboxViaDirectIota`** + Outbox/Drain (**`offline-queue.ts`**, **`@morgendrot/core`**) auf einem Referenzprofil **Handy/Schreibtisch** nach **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** grün bekommen.
 3. **Verschlüsselter Sendepfad** — gleiches Muster wie Klartext: PTB bauen + signieren in **`@morgendrot/core`**, Ausführung über **RPC**; **`executeCommand`/`/send`** nur noch Fallback/Relay.
 4. **Empfang ohne `/api/fetch`** — Inbox aus der Kette/RPC lesen (owned objects / dokumentierte Read-Pfade), Pagination + Dedup mit **§ H.12** / **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8. **Ist (Stufe 1–2):** `fetchMailboxInboxRpcRows` (**`@morgendrot/core`**) sammelt Klartext (`PlainMsgKey`) und/oder verschlüsselte Mailbox-Objekte (`MsgKey`); **`tryFetchDirectMailboxInboxViaIota`** entschlüsselt im Browser (Chat-ECDH wie Direkt-Senden), wenn **Direkt-Mailbox-Drain** an und Mailbox ohne Credits; Klartext-Zweig wie zuvor ohne Drain-Zwang. **`use-chat-view-inbox`:** **RPC vor API** — bei gültigem Direkt-Pfad Fullnode zuerst, **`/inbox`** parallel nur ergänzend; gleicher Dedup-Schlüssel → Chain. Reine **Event**-Pfade (ohne DOF) folgen.
-5. **Peering (Handshake/Connect)** — solange nur über Node: **Relay-Modus** klar als opt-in; Ersatz (QR, on-chain, …) **nach** Fahrplan **§ C.0b** planen, nicht parallel zum großen Mesh-Kern.
-6. **Abgabe & Erwartungshaltung** — **`docs/WANDERER-STANDALONE-BUNDLE.md`** / Export-README: „Node optional“ statt implizit „`npm start` zuerst“.
+5. **Peering (Handshake/Connect)** — **Ist (2026-06):** Hybrid **Direkt-RPC vor API** (`handshake-send-hybrid`, `connect-hybrid`, `fetchHandshakeOffers` / `findPeerHandshake`); **Peering-QR** (`mp`/`mc`, optional `u`/`p` für RPC/Package); Standalone ohne Relay (`messenger-standalone-relay.ts`). **Relay-Modus** bleibt opt-in. **Offen:** On-Chain-**Purge** von Handshake-Angeboten ohne `/purge-handshake`-API.
+6. **Abgabe & Erwartungshaltung** — **Ist (2026-06):** **`docs/WANDERER-STANDALONE-BUNDLE.md`** Variante **B** (APK, Handoff lokal, Peering-QR, Smoke **4b–4f**); Dashboard-Hinweis ohne „`npm run dev`“-Pflicht im Standalone. **Offen:** Event-only-Posteingang ohne DOF; **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** manuell abnehmen.
 
 ### **B.2b — LoRa-Fluent-Bildkodierung lokal (12 KB, ohne PC/Server)**
 
@@ -128,7 +128,7 @@
 
 **Operator-UX (parallel, keine Blockade für B.2–B.4):** Telefonbuch mit Klarnamen, QR zum Einlesen/Teilen von Adressen und Installations-URLs, Boss-LAN-Szenario (Helfer scannen QR am Boss-PC → PWA installieren) — **kritische** Einordnung (HTTPS, Same-Origin, § H.12 Kontakt-Wahrheit, QR-Schema **§ H.3b**) in **`docs/ROADMAP-FAHRPLAN.md`** § **H.16**.
 
-**Messpunkt:** Wenn **B.2–B.4** für den privaten Chat erledigt sind, ist der Messenger für den Kernpfad **ohne** laufenden Morgendrot-Node nutzbar; **A** bleibt parallel für Teams, die bis dahin **deployen** wollen.
+**Messpunkt:** **B.2–B.5** (Send, Inbox, Peering, QR) sind im Code für den privaten Online-Chat **ohne** laufenden Morgendrot-Node vorgesehen; **Feldabnahme** (Smoke **4b–4f**) und **H.6f** (Android-Hintergrund) folgen laut Fahrplan. **A** bleibt parallel für Teams, die **deployen** wollen.
 
 ---
 

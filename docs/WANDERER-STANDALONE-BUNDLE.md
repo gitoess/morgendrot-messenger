@@ -20,8 +20,17 @@ npm run bundle:standalone-smartphone
 
 ## 2. Boss → Medium → Helfer (Kurzablauf)
 
+### Variante A — PC/Server mit Morgendrot-Basis (klassisch)
+
 1. Bundle bauen (oder archivierte Kopie verwenden).
 2. Auf dem Gerät: `npm install` … **Handoff:** Boss-**ZIP** (~3 KB) → **Einstellungen → Handoff importieren** (oder manuell `.env` aus ZIP, **`docs/HANDOFF-IMPORT-UX.md`**). **Boss-Export** auch unter **Einstellungen** (Rolle Boss). Dann `npm run dev` / Produktionsstart.
+
+### Variante B — APK ohne dauernden Morgendrot-Node (**§ H.15**, Stand 2026-06)
+
+1. **APK:** `cd frontend && npm run apk:debug:build` → installieren (siehe **`docs/HANDY-LATER-MANUAL-TESTS.md`** § B).
+2. **Handoff** auf dem Handy: ZIP → **„Lokal vormerken (ohne Basis)“** (RPC + Ketten-IDs) — optional später Basis-Apply, wenn ein Server erreichbar ist.
+3. **Peering-QR** (Boss zeigt, Helfer scannt) oder Puls → Partner-Adresse + ECDH-Pub; danach Handshake/Connect/Senden per **Direkt-RPC** (kein Pflicht-`/api/handshake`).
+4. **Erwartung:** Node optional für den privaten Online-Chat; Funk (LoRa/Mesh) unverändert lokal. Smoke: **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f**.
 
 Vollständigere Tabelle: **`docs/ROADMAP-FAHRPLAN.md` § H.7**.
 
@@ -47,4 +56,4 @@ Einordnung: **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**, Fahrplan **§ H.8**.
 
 ---
 
-*Stand: 2026-04-28 — Verweis **§ H.7b** (Backpack-Node, Heltec, Degraded-Zielbild); **§ H.15** (Handy-first, optionaler Node); H.0 #2 „Wanderer“/Bundle bleibt kanonische Einstiegsseite.*
+*Stand: 2026-06-02 — **Variante B** APK ohne Pflicht-Node (Handoff lokal, Peering-QR, Direkt-RPC); zuvor 2026-04-28: **§ H.7b**, **§ H.15**, H.0 #2.*
