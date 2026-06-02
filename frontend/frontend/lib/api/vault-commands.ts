@@ -20,14 +20,18 @@ export function vaultSave(password?: string, notes?: string, opts?: VaultSaveOpt
 }
 
 /** Antwort flach wie vom Backend (nicht unter `data`). */
-export async function vaultLoad(password?: string): Promise<{
+export async function vaultLoad(password?: string, filePath?: string): Promise<{
   ok: boolean
   message?: string
   notes?: string
   personalSecrets?: PersonalSecretEntry[]
   error?: string
 }> {
-  const r = await executeCommand('/vault-load', password ? [password] : [])
+  const args: string[] = []
+  if (password?.trim()) args.push(password.trim())
+  else if (filePath?.trim()) args.push('')
+  if (filePath?.trim()) args.push(filePath.trim())
+  const r = await executeCommand('/vault-load', args)
   return r as {
     ok: boolean
     message?: string
@@ -92,3 +96,13 @@ export const emergencyPurge = () => executeCommand('/emergency-purge', [])
 
 /** RAM-Keys + Wallet-Passwort der Sitzung leeren; lokaler Inbox-Klartext-Cache (.inbox.enc) schreddern. */
 export const vaultLockCommand = () => executeCommand('/vault-lock', [])
+
+/** Lokale `.morgendrot-vault` mit neuem Passwort neu verschlüsseln (Sitzung muss entsperrt sein). */
+export function vaultChangePassword(currentPassword: string, newPassword: string) {
+  return executeCommand('/vault-change-password', [currentPassword.trim(), newPassword.trim()])
+}
+
+/** Lokale `.morgendrot-vault` löschen (nur wenn On-Chain-Vault für MY_ADDRESS existiert). */
+export function vaultDeleteLocal(filePath?: string) {
+  return executeCommand('/vault-delete-local', filePath?.trim() ? [filePath.trim()] : [])
+}

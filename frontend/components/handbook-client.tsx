@@ -10,6 +10,7 @@ const DOCS: { file: string; title: string }[] = [
   { file: 'BOSS-ORIENTIERUNG.md', title: 'Boss-Orientierung' },
   { file: 'DASHBOARD-ERSTE-SCHRITTE.md', title: 'Dashboard: Erste Schritte' },
   { file: 'DASHBOARD-PORT-UND-OBERFLAECHE.md', title: 'Dashboard: Ports & Oberflächen' },
+  { file: 'TELEGRAM-INTEGRATION-EINRICHTUNG.md', title: 'Telegram einrichten' },
   { file: 'ONBOARDING-WALLET-UX-SPEC.md', title: 'Onboarding & Wallet (UX)' },
   { file: 'RECOVERY-PHRASE-BACKUP.md', title: 'Recovery Phrase / Backup' },
   { file: 'PWA-HANDBUCH-OFFLINE.md', title: 'PWA & Offline' },

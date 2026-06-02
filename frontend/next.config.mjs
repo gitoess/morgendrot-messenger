@@ -5,6 +5,7 @@ import { createRequire } from 'node:module'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const require = createRequire(import.meta.url)
 const { loadEnvConfig } = require('@next/env')
+const isCapacitorExport = process.env.CAPACITOR_EXPORT === '1'
 
 /** Eine zentrale `.env` im Projektroot (nicht `frontend/.env.local`). */
 const repoRoot = path.join(__dirname, '..')
@@ -44,6 +45,7 @@ const nodeUtilClientShim = path.join(__dirname, 'frontend/lib/node-util-client-s
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  ...(isCapacitorExport ? { output: 'export' } : {}),
   allowedDevOrigins: [...new Set([...defaultDevOrigins, ...extraDevOrigins])],
   /* @morgendrot/shared + @morgendrot/core: lokale file:-Pakete — Next transpiliert .ts (siehe docs/MONOREPO-NEXT-AND-SHARED.md, docs/MORGENDROT-CORE-PACKAGE-PLAN.md). */
   transpilePackages: [
@@ -83,23 +85,27 @@ const nextConfig = {
     }
     return config
   },
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${MORGENDROT_API_INTERNAL}/api/:path*`,
-      },
-    ]
-  },
-  /** SW-Updates: Browser sollen neue sw.js schnell ziehen. */
-  async headers() {
-    return [
-      {
-        source: '/sw.js',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
-      },
-    ]
-  },
+  ...(!isCapacitorExport
+    ? {
+        async rewrites() {
+          return [
+            {
+              source: '/api/:path*',
+              destination: `${MORGENDROT_API_INTERNAL}/api/:path*`,
+            },
+          ]
+        },
+        /** SW-Updates: Browser sollen neue sw.js schnell ziehen. */
+        async headers() {
+          return [
+            {
+              source: '/sw.js',
+              headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
+            },
+          ]
+        },
+      }
+    : {}),
 }
 
 export default nextConfig

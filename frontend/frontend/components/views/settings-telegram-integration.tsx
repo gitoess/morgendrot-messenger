@@ -1,12 +1,13 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { MessageCircle } from 'lucide-react'
+import { Check, Copy, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { Switch } from '@/components/ui/switch'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import {
   fetchTelegramIntegration,
   saveTelegramIntegration,
@@ -24,17 +25,21 @@ type FeedbackKind = 'ok' | 'err' | 'info'
 export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramIntegrationProps) {
   const [pub, setPub] = useState<TelegramIntegrationPublic | null>(null)
   const [enabled, setEnabled] = useState(false)
-  const [botToken, setBotToken] = useState('')
+  const [savedBotToken, setSavedBotToken] = useState('')
+  const [botTokenDraft, setBotTokenDraft] = useState('')
   const [adminChatId, setAdminChatId] = useState('')
   const [relayBaseUrl, setRelayBaseUrl] = useState('http://127.0.0.1:8787')
   const [busy, setBusy] = useState<'load' | 'save' | 'test' | 'testNotify' | null>(null)
   const [testNotifyChatId, setTestNotifyChatId] = useState('')
   const [inboundMode, setInboundMode] = useState<'off' | 'longPoll' | 'webhook'>('longPoll')
   const [feedback, setFeedback] = useState<{ kind: FeedbackKind; text: string } | null>(null)
+  const [tokenCopied, setTokenCopied] = useState(false)
+  const [tokenReplaceOpen, setTokenReplaceOpen] = useState(false)
 
   const applyPublic = useCallback((p: TelegramIntegrationPublic) => {
     setPub(p)
     setEnabled(p.enabled)
+    setSavedBotToken(p.botToken || '')
     setAdminChatId(p.adminChatId || '')
     setRelayBaseUrl(p.relayBaseUrl || 'http://127.0.0.1:8787')
     setInboundMode(
@@ -63,11 +68,14 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
     void load()
   }, [load])
 
-  const canTest = Boolean(pub?.botTokenConfigured || botToken.trim()) && Boolean(adminChatId.trim() || pub?.adminChatId)
+  const canTest =
+    Boolean(pub?.botTokenConfigured || savedBotToken.trim() || botTokenDraft.trim()) &&
+    Boolean(adminChatId.trim() || pub?.adminChatId)
 
   const handleSave = async () => {
     setFeedback({ kind: 'info', text: 'Speichere…' })
     setBusy('save')
+    const tokenToSave = botTokenDraft.trim() || savedBotToken.trim()
     const body: {
       enabled: boolean
       botToken?: string
@@ -80,21 +88,33 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
       relayBaseUrl: relayBaseUrl.trim(),
       inboundMode,
     }
-    if (botToken.trim()) body.botToken = botToken.trim()
+    if (tokenToSave) body.botToken = tokenToSave
     const res = await saveTelegramIntegration(body)
     if (res.ok) {
       applyPublic(res)
-      setBotToken('')
+      if (res.botToken) {
+        setSavedBotToken(res.botToken)
+        setBotTokenDraft('')
+        setTokenReplaceOpen(false)
+      } else if (res.botTokenConfigured && tokenToSave) {
+        setSavedBotToken(tokenToSave)
+        setBotTokenDraft('')
+        setTokenReplaceOpen(false)
+      } else {
+        setBotTokenDraft('')
+      }
       setFeedback({
         kind: 'ok',
         text: res.botTokenConfigured
-          ? `Gespeichert. Token maskiert: ${res.botTokenMasked || '—'}, Chat-ID: ${res.adminChatId || '—'}.`
+          ? `Gespeichert. Chat-ID: ${res.adminChatId || '—'}.`
           : 'Gespeichert (ohne Token).',
       })
     } else {
       setFeedback({
         kind: 'err',
-        text: res.error || 'Speichern fehlgeschlagen. Schalter aktivieren, Token + Chat-ID eintragen.',
+        text:
+          res.error ||
+          'Speichern fehlgeschlagen. Token eintragen; für Monitor-Alarme zusätzlich Chat-ID — oder „System-Alarme“ aus lassen.',
       })
     }
     setBusy(null)
@@ -127,7 +147,19 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
     if (res.ok) void load()
   }
 
+  const copySavedToken = async () => {
+    if (!savedBotToken) return
+    try {
+      await navigator.clipboard.writeText(savedBotToken)
+      setTokenCopied(true)
+      setTimeout(() => setTokenCopied(false), 2000)
+    } catch {
+      /* ignore */
+    }
+  }
+
   const formDisabled = !backendOnline || busy !== null
+  const displayToken = savedBotToken.trim()
 
   return (
     <div className="rounded-xl border border-border bg-card p-4">
@@ -136,40 +168,15 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
           <MessageCircle className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-4">
-          <div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="font-semibold text-foreground">Integrationen · Telegram</h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Push bei <strong className="text-foreground">Systemalarmen</strong> (Monitor). Es gibt hier{' '}
-              <strong className="text-foreground">kein Nachrichtenfeld</strong> — „Test an mich“ schickt automatisch
-              eine Meldung in deine <strong className="text-foreground">Telegram-App</strong> (Chat mit dem Bot).{' '}
-              <Link
-                href="/handbook?file=TELEGRAM-INTEGRATION-ZIELBILD.md"
-                className="text-primary underline hover:no-underline"
-              >
-                Zielbild
-              </Link>
-            </p>
+            <Link
+              href="/handbook?file=TELEGRAM-INTEGRATION-EINRICHTUNG.md"
+              className="text-xs text-primary underline hover:no-underline"
+            >
+              Handbuch
+            </Link>
           </div>
-
-          <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
-            <li>Bei @BotFather Bot anlegen → Token hier einfügen</li>
-            <li>
-              In Telegram den Bot öffnen → <strong className="text-foreground">Start</strong>
-            </li>
-            <li>Chat-ID von @userinfobot kopieren</li>
-            <li>
-              Schalter <strong className="text-foreground">Telegram-Alarme aktiv</strong> an → Speichern
-            </li>
-            <li>
-              Optional: zweites Terminal <span className="font-mono">npm run telegram-webhook</span> (für Monitor)
-            </li>
-            <li>
-              <strong className="text-foreground">Test an mich</strong> → deine Telegram-App
-            </li>
-            <li>
-              Partner-Chat-ID im <strong className="text-foreground">Telefonbuch</strong>; im Chat Schalter „Telegram-Hinweis“
-            </li>
-          </ol>
 
           {!backendOnline ? (
             <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
@@ -189,32 +196,88 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
 
           <div className="space-y-3">
             <div>
-              <Label htmlFor="tg-token" className="text-xs text-muted-foreground">
-                Bot-Token (@BotFather)
-              </Label>
-              <Input
-                id="tg-token"
-                type="password"
-                autoComplete="off"
-                value={botToken}
-                onChange={(e) => setBotToken(e.target.value)}
-                placeholder={pub?.botTokenConfigured ? `Gespeichert (${pub.botTokenMasked})` : '123456789:AAH…'}
-                disabled={formDisabled}
-                className="mt-1 font-mono text-xs"
-              />
+              <Label className="text-xs text-muted-foreground">Bot-Token (@BotFather)</Label>
+              {displayToken && !tokenReplaceOpen ? (
+                <div className="mt-1 space-y-2">
+                  <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 px-3 py-2">
+                    <p className="min-w-0 flex-1 break-all font-mono text-xs text-foreground">{displayToken}</p>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 shrink-0"
+                      onClick={() => void copySavedToken()}
+                      aria-label="Bot-Token kopieren"
+                    >
+                      {tokenCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <button
+                    type="button"
+                    className="text-xs text-primary underline hover:no-underline"
+                    disabled={formDisabled}
+                    onClick={() => {
+                      setTokenReplaceOpen(true)
+                      setBotTokenDraft('')
+                    }}
+                  >
+                    Token ersetzen
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {displayToken && tokenReplaceOpen ? (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Nur ausfüllen, wenn @BotFather einen <strong className="text-foreground">neuen</strong> Token
+                      ausgegeben hat — danach Speichern.
+                    </p>
+                  ) : (
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Token von @BotFather einfügen, dann Speichern.
+                    </p>
+                  )}
+                  <Input
+                    id="tg-token"
+                    type="text"
+                    autoComplete="off"
+                    value={botTokenDraft}
+                    onChange={(e) => setBotTokenDraft(e.target.value)}
+                    placeholder="123456789:AAH…"
+                    disabled={formDisabled}
+                    className="mt-1 font-mono text-xs"
+                  />
+                  {displayToken && tokenReplaceOpen ? (
+                    <button
+                      type="button"
+                      className="mt-1 text-xs text-muted-foreground underline hover:no-underline"
+                      onClick={() => {
+                        setTokenReplaceOpen(false)
+                        setBotTokenDraft('')
+                      }}
+                    >
+                      Abbrechen — gespeicherten Token behalten
+                    </button>
+                  ) : null}
+                </>
+              )}
             </div>
             <div>
               <Label htmlFor="tg-chat" className="text-xs text-muted-foreground">
-                Deine Chat-ID (Alarme)
+                Deine persönliche Chat-ID (Alarme & „Test an mich“)
               </Label>
               <Input
                 id="tg-chat"
                 value={adminChatId}
                 onChange={(e) => setAdminChatId(e.target.value)}
-                placeholder="z. B. von @userinfobot"
+                placeholder="z. B. 1156058618 von @userinfobot"
                 disabled={formDisabled}
                 className="mt-1 font-mono text-xs"
               />
+              <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                <strong className="text-foreground">Nicht</strong> die Zahl vor „:“ im Bot-Token — das ist die Bot-ID.
+                Deine ID bekommst du von <strong className="text-foreground">@userinfobot</strong>. Vorher den Bot in
+                Telegram öffnen und <strong className="text-foreground">Start</strong> tippen.
+              </p>
             </div>
             <div>
               <Label htmlFor="tg-relay" className="text-xs text-muted-foreground">
@@ -255,7 +318,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
                 <span className="mt-1 block text-emerald-600 dark:text-emerald-400">
                   Poll aktiv — Partner-Antworten erscheinen im Posteingang (Filter „Eingang“), alle ~20 s.
                 </span>
-              ) : inboundMode === 'longPoll' && (pub?.botTokenConfigured || botToken.trim()) ? (
+              ) : inboundMode === 'longPoll' && (pub?.botTokenConfigured || botTokenDraft.trim()) ? (
                 <span className="mt-1 block text-amber-700 dark:text-amber-300">
                   Poll noch nicht aktiv — unten <strong className="text-foreground">Speichern</strong>, dann API neu
                   starten (<span className="font-mono">npm run dev</span>).

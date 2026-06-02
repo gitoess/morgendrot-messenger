@@ -4,24 +4,39 @@
 
 ## Wichtig: `npm start` ≠ Next auf Port 3341
 
-| Befehl | Port **3342** (API + Lite-UI `ui/`) | Port **3341** (Next.js Messenger / „Standalone“-Dev) |
-|--------|--------------------------------------|--------------------------------------------------------|
+| Befehl | Port **3342** (API + Lite-UI `ui/`) | Port **3341** (Next.js / PWA-Dev) |
+|--------|--------------------------------------|----------------------------------|
 | **`npm start`** | **Ja** (Backend + Streams-Mock) | **Nein** — Next wird **nicht** gestartet. |
-| **`npm run dev`** | **Ja** | **Ja** (parallel über `concurrently`) |
+| **`npm run dev`** | **Ja** | **Ja** — **Morgendrot Projekt** (volles Dashboard) |
+| **`npm run dev:messenger`** | **Ja** | **Ja** — **Morgendrot Messenger** (Einsatz-App, eigenes Next-Bundle) |
 
 **Häufiger Irrtum:** Nur **`http://127.0.0.1:3342`** zu sehen ist **normal bei `npm start`**. Die **PWA/Messenger-Oberfläche** im Entwicklungsmodus ist **`http://127.0.0.1:3341`** und braucht **`npm run dev`**.
 
 **Nicht verwenden:** `npm start dev` — das ist **kein** offizielles Script; das zweite Wort kann **`concurrently`** stören oder ignoriert werden. Richtig: **`npm run dev`**.
 
-**Nur Next nachträglich:** Backend läuft schon → zweites Terminal: `cd frontend && npm run dev` (3341).
+**Nur Next nachträglich:** Backend läuft schon → zweites Terminal: `cd frontend && npm run dev` (Projekt) oder `npm run dev:messenger` (Messenger).
+
+**Nur UI ohne Backend:** `cd frontend && npm run dev:messenger` zeigt „Keine Verbindung zum Backend“ — normal. Entweder im **Root** `npm run dev:messenger` oder zusätzlich `npm run start:secrets` im Root.
 
 ---
 
 ## Ein Befehl: Backend + UI (3341 + 3342)
 
+**Morgendrot Projekt** (Standard):
+
 ```bash
 npm run dev
 ```
+
+**Morgendrot Messenger** (Einsatz-UI, Hot Reload, getrenntes Frontend-Bundle):
+
+```bash
+npm run dev:messenger
+```
+
+Beide öffnen dieselbe URL **http://127.0.0.1:3341/** — der Unterschied ist das geladene Dashboard (`projekt-dashboard` vs. `messenger-dashboard`). Siehe **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.
+
+**Dev wieder stoppen (Ports 3341–3344 freigeben):** **`npm run dev:stop`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
 
 - **Backend (API):** http://127.0.0.1:3342  
 - **Next.js-UI:** http://127.0.0.1:3341  
@@ -31,7 +46,7 @@ npm run dev
 
 ### Handy im WLAN (Android / Chrome)
 
-- **`npm run dev`** startet Next nur auf **`127.0.0.1:3341`** — vom **anderen Gerät** im LAN erreichst du die Seite **nicht**. Verwende **`npm run dev:lan`**: Next lauscht auf **`0.0.0.0:3341`**, dann im Handy **`http://<PC-LAN-IP>:3341`** (z. B. `http://192.168.178.41:3341`).
+- **`npm run dev`** startet Next nur auf **`127.0.0.1:3341`** — vom **anderen Gerät** im LAN erreichst du die Seite **nicht**. Verwende **`npm run dev:lan`**: Next auf **`0.0.0.0:3341`** **und** API auf **`0.0.0.0:3342`** (`API_BIND_HOST`), dann im Handy Browser **`http://<PC-LAN-IP>:3341`** oder in der **APK** unter Einstellungen Basis-URL **`http://<PC-LAN-IP>:3342`** (**nicht** `127.0.0.1` — das ist auf dem Handy das Gerät selbst).
 - **„Nicht sicher“ / Warnung:** Bei **HTTP** (ohne TLS) zeigt Chrome das normal — **Fortfahren** wählen oder explizit **`http://`** nutzen (kein `https://` zur IP tippen).
 - **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Client-Aufrufe: Barrel **`frontend/frontend/lib/api.ts`** (`@/frontend/lib/api`), Basis-URL u. a. **`frontend/frontend/lib/api/api-base.ts`**; Rewrites in **`frontend/next.config.mjs`**.
 - **Firewall (Windows):** Erster Zugriff kann blockiert werden — Node.js für **private Netzwerke** erlauben oder eingehend **TCP 3341** (und ggf. 3342 nur wenn ihr direkt zur API testet) freigeben.
@@ -78,7 +93,7 @@ Das Repository bewusst **zwei Web-UIs** – das ist **kein** „kostenlos vs. ko
 | Oberfläche | Ordner | Typische URL (lokal) | Zweck |
 |-----------|--------|----------------------|--------|
 | **Boss-Werkstatt** | `ui/` | http://127.0.0.1:3342/ (mit laufendem API-Server) | Administration und Expertenbedienung: Batch-Exporte, Messenger-Stapel, Paket-/Minting-Steuerung, tiefe `.env`-Pflege, Rebate-Tab, volle Befehls-Oberfläche. |
-| **Kunden-Produkt** | `frontend/` (Next.js) | http://127.0.0.1:3341 (bei `npm run dev`) | Geführtes Nutzererlebnis: Messenger-Kachel, Chat, Status (z. B. Credits, Schloss/Tor), weniger „Werkstatt-Lärm“. |
+| **Kunden-Produkt (Next)** | `frontend/` (Next.js) | http://127.0.0.1:3341 (bei `npm run dev` oder `dev:messenger`) | **`dev`** = **Morgendrot Projekt** (Zugang, Überwachung, Radar, Nachrichten-Kachel, …). **`dev:messenger`** = **Messenger** allein (Einsatz-App). Beide: Chat, Tresor, rollenabhängig Einsatzleitung; Projekt importiert **kein** Messenger-Monolith-Bundle. |
 
 **Keine Einheits-UI:** Es gibt **kein** aktives Ziel, Alpine und Next zu einer Oberfläche zu verschmelzen. Das spart Aufwand; stattdessen ist die Arbeitsteilung oben die feste Leitplanke.
 
@@ -126,7 +141,7 @@ Unter Windows kann das erscheinen, wenn das Backend (oder ein anderes Programm) 
 
 - **Backend + Streams (empfohlen):** `npm start` (API auf 127.0.0.1:3342, Streams-Mock auf 9343)
 - **Nur Backend** (ohne Streams, z. B. Debug): `npm run start:backend` (API auf 127.0.0.1:3342)
-- **Nur Frontend:** `npm run dev:frontend` (UI auf 127.0.0.1:3341; Backend muss separat laufen, sonst „offline“)
+- **Nur Frontend:** `npm run dev:frontend` (Projekt-UI) oder `npm run dev:frontend:messenger` (Messenger-UI) auf 127.0.0.1:3341 — Backend muss separat laufen (`npm run start:secrets`), sonst „offline“
 
 ## Ein Befehl für alles (empfohlen)
 

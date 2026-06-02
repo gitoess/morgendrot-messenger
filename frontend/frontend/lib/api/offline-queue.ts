@@ -35,6 +35,7 @@ import {
 } from '@/frontend/lib/direct-iota-plain-submit'
 import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
+import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
 
 export {
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -62,12 +63,24 @@ export type EnqueueOfflineMailboxResult =
   | { ok: true; queued: false }
   | { ok: false; queued: false; reason: string }
 
+export const OFFLINE_MAILBOX_QUEUE_OPT_IN_KEY = 'morgendrot.offlineMailboxQueue'
+
 export function isOfflineMailboxQueueEnabled(): boolean {
   if (typeof window === 'undefined') return false
   try {
-    return window.localStorage.getItem('morgendrot.offlineMailboxQueue') === '1'
+    return window.localStorage.getItem(OFFLINE_MAILBOX_QUEUE_OPT_IN_KEY) === '1'
   } catch {
     return false
+  }
+}
+
+export function enableOfflineMailboxQueue(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(OFFLINE_MAILBOX_QUEUE_OPT_IN_KEY, '1')
+    window.dispatchEvent(new CustomEvent('morgendrot.offlinePrefsChanged'))
+  } catch {
+    // optional
   }
 }
 
@@ -119,13 +132,6 @@ function canAttemptDirectEncryptedMailbox(item: OfflineMailboxQueueItem): boolea
     canUseDirectEncryptedMailboxDrain() &&
     getDirectChatEcdhMaterialForRecipient(item.recipient) != null
   )
-}
-
-function mergeDirectThenRelayErrors(directErr: string | undefined, relayErr: string | undefined): string {
-  const d = (directErr || '').trim()
-  const r = (relayErr || '').trim()
-  if (d && r) return `Direkt: ${d} · Relay: ${r}`
-  return r || d || 'Senden fehlgeschlagen'
 }
 
 function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {

@@ -7,21 +7,27 @@ import { TELEGRAM_EMOJI_QUICK_PICK } from '@/frontend/lib/telegram-emoji-quick-p
 export type ChatComposerEmojiPickerProps = {
   onPick: (emoji: string) => void
   disabled?: boolean
+  /** Gleiche Höhe wie „Datei importieren“ / „Von Kamera“. */
+  compact?: boolean
 }
 
-export function ChatComposerEmojiPicker({ onPick, disabled }: ChatComposerEmojiPickerProps) {
+export function ChatComposerEmojiPicker({ onPick, disabled, compact = false }: ChatComposerEmojiPickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
           disabled={disabled}
-          className="inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 text-sm text-foreground hover:bg-muted disabled:opacity-50"
+          className={
+            compact
+              ? 'inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50'
+              : 'inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 text-sm text-foreground hover:bg-muted disabled:opacity-50'
+          }
           aria-label="Emoji einfügen (Telegram)"
           data-testid="chat-composer-emoji-trigger"
         >
           <Smile className="h-4 w-4 shrink-0" aria-hidden />
-          <span className="hidden sm:inline">Emoji</span>
+          <span className={compact ? 'inline' : 'hidden sm:inline'}>Emoji</span>
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto max-w-[min(20rem,calc(100vw-2rem))] p-2">

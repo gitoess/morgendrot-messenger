@@ -5,12 +5,18 @@
 import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
 import { crc16CcittFalse } from '@/frontend/lib/lora-sarq-wire'
 import { base64ToUint8Array } from '@/frontend/lib/emergency-binary-browser'
+import { messageLooksLikePath4ImageInitWire } from '@/frontend/lib/path4-image-transfer'
 
 export const MORG_SEG_V1_PREFIX = '[[MORG_SEG_V1:' as const
 
 /** Schneller Filter für Inbox/Chat (kein CRC-Decode). */
 export function messageLooksLikeMorgSegV1Wire(content: string): boolean {
   return normalizeMessengerWireContent(content).startsWith(MORG_SEG_V1_PREFIX)
+}
+
+/** Pfad-4-Bild: S-ARQ-Segment oder optionaler IMG_INIT (§ H.25a). */
+export function messageLooksLikePath4ImageTransferWire(content: string): boolean {
+  return messageLooksLikeMorgSegV1Wire(content) || messageLooksLikePath4ImageInitWire(content)
 }
 export const MORG_NAK_V1_PREFIX = '[[MORG_NAK_V1:' as const
 

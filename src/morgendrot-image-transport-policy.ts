@@ -69,3 +69,13 @@ export const LORA_PROGRESSIVE_CHROMA_JPEG_MAX_BYTES = 2560
  * Gesamte UTF-8-Länge **einer** Textnachricht (ein LUMA- bzw. ein CHROMA-Wire) muss darunter bleiben.
  */
 export const MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES = 500
+
+/**
+ * § H.25a Flüchtig (LoRa): LUMA+CHROMA als Roh-JPEG, Übertragung per `MORG_SEG_V1` (Chunking).
+ * Kein Meshtastic-Einzelwire-Limit — nur Gesamtgröße + Segmentanzahl (Frontend max. 32/Phase).
+ */
+export const FLUENT_LORA_JPEG_PAIR_TOTAL_MAX_BYTES = 12_000
+
+export const FLUENT_LORA_LUMA_JPEG_MAX_BYTES = 9000
+
+export const FLUENT_LORA_CHROMA_JPEG_MAX_BYTES = 4500

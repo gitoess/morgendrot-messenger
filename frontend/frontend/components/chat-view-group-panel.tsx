@@ -20,6 +20,7 @@ import {
   readGroupMailboxSendAll,
   writeGroupMailboxSendAll,
 } from '@/frontend/lib/group-mailbox-pairwise-send'
+import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
 
 export type ChatViewGroupPanelProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
@@ -35,6 +36,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const [name, setName] = useState('')
   const [membersText, setMembersText] = useState('')
   const [streamsAnchorId, setStreamsAnchorId] = useState('')
+  const [secondaryChannelIndex, setSecondaryChannelIndex] = useState('')
+  const [secondaryChannelName, setSecondaryChannelName] = useState('')
+  const [secondaryPskRef, setSecondaryPskRef] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [phonebookPickerOpen, setPhonebookPickerOpen] = useState(false)
   const [sendAllMembers, setSendAllMembers] = useState(() => readGroupMailboxSendAll())
@@ -47,10 +51,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       setName(active.name)
       setMembersText(active.memberAddresses.join('\n'))
       setStreamsAnchorId(active.streamsAnchorId ?? '')
+      setSecondaryChannelIndex(
+        active.secondaryChannel?.channelIndex != null ? String(active.secondaryChannel.channelIndex) : ''
+      )
+      setSecondaryChannelName(active.secondaryChannel?.channelName ?? '')
+      setSecondaryPskRef(active.secondaryChannel?.pskRef ?? '')
     } else {
       setName('')
       setMembersText('')
       setStreamsAnchorId('')
+      setSecondaryChannelIndex('')
+      setSecondaryChannelName('')
+      setSecondaryPskRef('')
     }
   }, [])
 
@@ -74,17 +86,39 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     }
     const id = activeId ?? createMessengerGroupId()
     const anchor = streamsAnchorId.trim()
+    const normalizedSecondaryIndex = normalizeMeshtasticChannelIndex(secondaryChannelIndex)
+    const secondaryName = secondaryChannelName.trim()
+    const secondaryPsk = secondaryPskRef.trim()
     upsertMessengerGroup({
       id,
       name: name.trim() || `Gruppe (${memberAddresses.length})`,
       memberAddresses,
       ...(anchor && /^0x[a-fA-F0-9]{64}$/i.test(anchor) ? { streamsAnchorId: anchor } : {}),
+      ...(normalizedSecondaryIndex != null || secondaryName || secondaryPsk
+        ? {
+            secondaryChannel: {
+              ...(normalizedSecondaryIndex != null ? { channelIndex: normalizedSecondaryIndex } : {}),
+              ...(secondaryName ? { channelName: secondaryName } : {}),
+              ...(secondaryPsk ? { pskRef: secondaryPsk } : {}),
+            },
+          }
+        : {}),
     })
     writeActiveGroupId(id)
     setMsg('Gruppe gespeichert.')
     reload()
     onGroupsChanged?.()
-  }, [activeId, membersText, name, onGroupsChanged, reload, streamsAnchorId])
+  }, [
+    activeId,
+    membersText,
+    name,
+    onGroupsChanged,
+    reload,
+    streamsAnchorId,
+    secondaryChannelIndex,
+    secondaryChannelName,
+    secondaryPskRef,
+  ])
 
   const selectGroup = useCallback(
     (id: string) => {
@@ -101,6 +135,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     setName('')
     setMembersText(directoryAddrs.join('\n'))
     setStreamsAnchorId('')
+    setSecondaryChannelIndex('')
+    setSecondaryChannelName('')
+    setSecondaryPskRef('')
     setMsg('Neue Gruppe — Name und Mitglieder eintragen, dann speichern.')
   }, [directoryAddrs])
 
@@ -181,6 +218,38 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           spellCheck={false}
           className="w-full max-w-lg rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
         />
+        <label className="block text-[10px] font-medium text-muted-foreground">
+          Meshtastic Secondary (optional: Index 0-7, Name, PSK-Referenz)
+        </label>
+        <div className="grid max-w-lg gap-2 sm:grid-cols-3">
+          <input
+            type="number"
+            min={0}
+            max={7}
+            step={1}
+            value={secondaryChannelIndex}
+            onChange={(e) => setSecondaryChannelIndex(e.target.value)}
+            placeholder="Index 0-7"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+          />
+          <input
+            type="text"
+            value={secondaryChannelName}
+            onChange={(e) => setSecondaryChannelName(e.target.value)}
+            placeholder="Kanalname"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
+          />
+          <input
+            type="text"
+            value={secondaryPskRef}
+            onChange={(e) => setSecondaryPskRef(e.target.value)}
+            placeholder="PSK-Ref (kein Secret)"
+            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Nur Metadaten. Secret-PSK bleibt in Meshtastic-App/Handoff, nicht im Klartext-Store.
+        </p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"

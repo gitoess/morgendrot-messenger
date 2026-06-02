@@ -19,6 +19,8 @@ export type TelegramIntegrationPublic = {
     ok: true;
     enabled: boolean;
     botTokenConfigured: boolean;
+    /** Vollständiger Token für lokale Einstellungs-UI (selbst gehostete Basis). */
+    botToken: string;
     botTokenMasked: string;
     adminChatId: string;
     relayBaseUrl: string;
@@ -74,6 +76,46 @@ export function isValidTelegramBotToken(token: string): boolean {
 export function isValidTelegramChatId(chatId: string): boolean {
     const c = chatId.trim();
     return /^-?\d{1,20}$/.test(c);
+}
+
+/** Bot-User-ID — steht vor dem „:“ im Token (nicht als Chat-ID verwenden). */
+export function extractTelegramBotUserIdFromToken(token: string): string | null {
+    const t = token.trim();
+    const colon = t.indexOf(':');
+    if (colon < 1) return null;
+    const id = t.slice(0, colon);
+    return /^\d+$/.test(id) ? id : null;
+}
+
+export function isTelegramChatIdLikelyBotSelf(botToken: string, chatId: string): boolean {
+    const botId = extractTelegramBotUserIdFromToken(botToken);
+    const cid = chatId.trim();
+    if (!botId || !cid) return false;
+    return botId === cid;
+}
+
+export function formatTelegramApiErrorHint(httpStatus: number, rawBody: string): string {
+    let description = rawBody;
+    try {
+        const j = JSON.parse(rawBody) as { description?: string };
+        if (j.description) description = j.description;
+    } catch {
+        /* raw text */
+    }
+    const lower = description.toLowerCase();
+    if (httpStatus === 403 && lower.includes("can't send messages to the bot")) {
+        return (
+            'Die Chat-ID ist die Bot-ID (Zahl vor „:“ im Token) — falsch. ' +
+            'Deine persönliche Chat-ID von @userinfobot eintragen; Bot in Telegram öffnen und „Start“ tippen.'
+        );
+    }
+    if (httpStatus === 403 && (lower.includes('bot was blocked') || lower.includes('blocked by the user'))) {
+        return 'Bot in Telegram öffnen und „Start“ tippen (ggf. Blockierung aufheben).';
+    }
+    if (lower.includes('chat not found')) {
+        return 'Chat-ID unbekannt — @userinfobot oder Bot-Start prüfen.';
+    }
+    return description.length > 220 ? `${description.slice(0, 220)}…` : description;
 }
 
 function normalizeRelayBaseUrl(url: string): string {
@@ -138,7 +180,7 @@ export async function sendTelegramMessage(
         });
         if (!resp.ok) {
             const body = await resp.text();
-            return { ok: false, error: `Telegram HTTP ${resp.status}: ${body.slice(0, 200)}` };
+            return { ok: false, error: formatTelegramApiErrorHint(resp.status, body) };
         }
         return { ok: true };
     } catch (e: unknown) {
@@ -210,6 +252,7 @@ export function getTelegramIntegrationPublic(): TelegramIntegrationPublic {
         ok: true,
         enabled,
         botTokenConfigured: Boolean(botToken),
+        botToken,
         botTokenMasked: botToken ? maskTelegramBotToken(botToken) : '',
         adminChatId,
         relayBaseUrl,
@@ -253,12 +296,37 @@ export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
         return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
 
+    const inboundMode = normalizeTelegramInboundMode(
+        input.inboundMode ?? integrationsTelegramRaw(readRuntimeConfigRaw())?.inboundMode ?? prev?.inboundMode ?? 'off'
+    );
+
+    if (botToken && !isValidTelegramBotToken(botToken)) {
+        return { ok: false, error: 'Bot-Token-Format ungültig (erwartet: Ziffern:Geheimnis von @BotFather).' };
+    }
+
+    if (inboundMode !== 'off' && !botToken) {
+        return {
+            ok: false,
+            error: 'Bot-Token fehlt — für eingehende Partner-Antworten (Long Polling/Webhook) eintragen und speichern.',
+        };
+    }
+
+    if (botToken && adminChatId && isTelegramChatIdLikelyBotSelf(botToken, adminChatId)) {
+        return {
+            ok: false,
+            error:
+                'Chat-ID ist die Bot-ID aus dem Token (Zahl vor „:“) — bitte deine persönliche Chat-ID von @userinfobot eintragen.',
+        };
+    }
+
     if (enabled) {
         if (!botToken) return { ok: false, error: 'Bot-Token fehlt (von @BotFather).' };
-        if (!isValidTelegramBotToken(botToken)) {
-            return { ok: false, error: 'Bot-Token-Format ungültig (erwartet: Ziffern:Geheimnis).' };
+        if (!adminChatId) {
+            return {
+                ok: false,
+                error: 'Admin-Chat-ID fehlt — für System-Alarme (Monitor) eintragen oder Schalter „System-Alarme“ aus lassen.',
+            };
         }
-        if (!adminChatId) return { ok: false, error: 'Admin-Chat-ID fehlt.' };
         if (!isValidTelegramChatId(adminChatId)) {
             return { ok: false, error: 'Chat-ID muss numerisch sein (ggf. führendes Minus für Gruppen).' };
         }
@@ -272,17 +340,14 @@ export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
     const prevTg = integrationsTelegramRaw(merged) || {};
     const relaySecret = String(prevTg.relaySecret ?? prev?.relaySecret ?? '').trim();
 
-    const inboundMode = normalizeTelegramInboundMode(
-        input.inboundMode ?? prevTg.inboundMode ?? prev?.inboundMode ?? 'off'
-    );
-
     integrations.telegram = {
+        ...prevTg,
         enabled,
+        relayBaseUrl,
+        inboundMode,
         ...(botToken ? { botToken } : {}),
         ...(adminChatId ? { adminChatId } : {}),
-        relayBaseUrl,
         ...(relaySecret ? { relaySecret } : {}),
-        inboundMode,
     };
     merged.integrations = integrations;
 
@@ -333,8 +398,10 @@ export async function sendTelegramTestAlarm(): Promise<{ ok: boolean; error?: st
         };
     }
     let hint = direct.error || viaRelay.error || 'Unbekannter Fehler';
-    if (/chat not found|bot was blocked|Forbidden/i.test(hint)) {
-        hint += ' — Bot in Telegram öffnen und „Start“ tippen; Chat-ID prüfen (@userinfobot).';
+    if (/chat not found|bot was blocked|Forbidden|Bot-ID|@userinfobot/i.test(hint)) {
+        if (!hint.includes('@userinfobot')) {
+            hint += ' — Bot in Telegram öffnen und „Start“ tippen; persönliche Chat-ID von @userinfobot (nicht die Bot-Nummer aus dem Token).';
+        }
     }
     return { ok: false, error: hint };
 }

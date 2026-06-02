@@ -6,6 +6,11 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Messenger vs. Morgendrot Projekt (Next)
+
+- **Getrennte Next-Builds:** `NEXT_PUBLIC_MORG_PRODUCT=messenger|projekt` — `messenger-dashboard.tsx` / `projekt-dashboard.tsx`, gemeinsamer Hook **`use-dashboard-session`**. Doku **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.
+- **Dev (Repo-Root):** `npm run dev:messenger` / `dev:messenger:lan` (Backend + Messenger-UI); `npm run dev` = Projekt. CI: **`build`** + **`build:messenger`** in **`.github/workflows/frontend-checks.yml`**.
+
 ### Messenger (PWA)
 
 - **Telegram-Integration (§ H.26, Runtime):** Backend **`src/integrations/telegram-runtime.ts`**, API-Routen **`/api/telegram-integration`**, Einstellungen-Panel; Long-Polling/Webhook-Relay; lokales Journal **`.morgendrot-telegram-journal.json`**; Posteingang-Merge für `tg:`-Kontakte; optionaler Composer-Hinweis nach Senden. Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**.

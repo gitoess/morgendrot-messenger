@@ -23,26 +23,51 @@ import {
 } from '@/frontend/lib/direct-iota-rpc'
 import {
   applyDirectMailboxChainSnapshotFromNetworkIds,
+  formatDirectChainSnapshotStatusLine,
+  getDirectChainSnapshotMeta,
+  getDirectChainFieldIdsFromLs,
+  getDirectMailboxChainSnapshot,
+  isDirectChainOptimisticFlagsEnabled,
   loadDirectMailboxChainSnapshotFromLs,
+  persistDirectChainFieldIds,
   persistDirectMailboxChainSnapshot,
+  resolveDirectMailboxChainSnapshot,
   persistDirectMailboxTtlDays,
+  setDirectChainOptimisticFlagsEnabled,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 import {
   applyDirectIotaMnemonicSession,
+  clearPersistedDirectIotaSessionSigner,
   clearDirectIotaSessionSigner,
   getDirectIotaSessionSignerAddress,
+  hasPersistedDirectIotaSessionSigner,
+  persistDirectIotaSessionSignerEncrypted,
+  restoreDirectIotaSessionSignerFromEncryptedStorage,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
   applyDirectChatEcdhPrivateJwk,
   clearDirectChatEcdhPrivateKey,
   clearDirectChatEcdhPeerPubs,
   getDirectChatEcdhPrivateKey,
+  exportDirectChatEcdhPeerPubPreview,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
+import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
+import Link from 'next/link'
 import {
+  formatDirectIotaPeeringStatusLine,
+  formatDirectIotaPeeringStatusLineForSettings,
+  listDirectIotaPeeringExchangeGaps,
+  listDirectIotaPeeringGaps,
+} from '@/frontend/lib/direct-iota-peering'
+import { PeeringQrActions } from '@/frontend/components/peering-qr-actions'
+import {
+  DIRECT_IOTA_UI_CHANGED,
+  getAutarkyChecklistItems,
   getIotaSubmitMode,
   isDirectMailboxDrainEnabled,
+  listDirectIotaSetupGaps,
   setDirectMailboxDrainEnabled,
   setIotaSubmitMode,
   type IotaSubmitMode,
@@ -51,6 +76,7 @@ import {
 const LS_STRICT_ONLINE = 'morgendrot.strictOnlineNoMeshFallback'
 const LS_LORA_TX = 'morgendrot.loraTxTier'
 const LS_EXPERT_TOOLS = 'morgendrot.dev.expertTools'
+const LS_AUTARKY_MODE = 'morgendrot.autarkyMode'
 
 /** Leerzeichen / Zero-Width entfernen; Kleinbuchstaben für 0x-Hex (Copy-Paste von Explorern). */
 function normalizeIotaHexInput(s: string): string {
@@ -70,9 +96,15 @@ type ChatViewPulseSettingsProps = {
   apiStatus: ApiStatus
   /** Simple Mode: kein localStorage-Expert-Bypass. */
   allowDevExpertTools?: boolean
+  /** Einstellungen: ohne doppelte Package-ID / IOTA-Modus. */
+  settingsEmbedded?: boolean
 }
 
-export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }: ChatViewPulseSettingsProps) {
+export function ChatViewPulseSettings({
+  apiStatus,
+  allowDevExpertTools = true,
+  settingsEmbedded = false,
+}: ChatViewPulseSettingsProps) {
   const [open, setOpen] = useState(false)
   const [busy] = useState<'interval' | 'enabled' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -94,12 +126,74 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
   /** Wenn an: Flags für Klartext-Direktdrain schätzen (Mailbox+Klartext an, keine Messenger-Credits) — nötig wenn Basis offline. */
   const [optimisticDrainFlags, setOptimisticDrainFlags] = useState(false)
   const [mnemoInput, setMnemoInput] = useState('')
+  const [signerStorePassword, setSignerStorePassword] = useState('')
+  const [hasPersistedSigner, setHasPersistedSigner] = useState(false)
   const [sessionAddr, setSessionAddr] = useState<string | null>(null)
   const [ecdhPeerAddr, setEcdhPeerAddr] = useState('')
   const [ecdhPeerB64, setEcdhPeerB64] = useState('')
   const [ecdhJwkInput, setEcdhJwkInput] = useState('')
   const [ecdhPrivActive, setEcdhPrivActive] = useState(false)
   const [iotaSubmitMode, setIotaSubmitModeState] = useState<IotaSubmitMode>('client')
+  const [autarkyMode, setAutarkyMode] = useState(false)
+  const [autarkyChecklist, setAutarkyChecklist] = useState(() => getAutarkyChecklistItems())
+  const [directSetupGaps, setDirectSetupGaps] = useState<string[]>([])
+  const [chainSnapshotLine, setChainSnapshotLine] = useState('')
+  const [chainSnapshotStale, setChainSnapshotStale] = useState(false)
+  const [peeringLine, setPeeringLine] = useState('')
+  const [peeringGaps, setPeeringGaps] = useState<string[]>([])
+  const [peeringStatusHint, setPeeringStatusHint] = useState<string | null>(null)
+
+  const refreshDirectSetupGaps = useCallback(() => {
+    setDirectSetupGaps(listDirectIotaSetupGaps())
+    setAutarkyChecklist(getAutarkyChecklistItems())
+  }, [])
+
+  const refreshChainSnapshotMeta = useCallback(() => {
+    const meta = getDirectChainSnapshotMeta()
+    setChainSnapshotLine(formatDirectChainSnapshotStatusLine(meta))
+    setChainSnapshotStale(meta.stale && meta.hasSnapshot)
+  }, [])
+
+  const syncChainFieldsToLs = useCallback(() => {
+    persistDirectChainFieldIds({
+      packageId: normalizeIotaHexInput(chainPkg),
+      mailboxId: normalizeIotaHexInput(chainMb),
+      senderAddress: normalizeIotaHexInput(chainAddr),
+    })
+    refreshChainSnapshotMeta()
+    refreshDirectSetupGaps()
+  }, [chainPkg, chainMb, chainAddr, refreshChainSnapshotMeta, refreshDirectSetupGaps])
+
+  const refreshPeeringUi = useCallback(() => {
+    const backendReachable = apiStatus.backendOnline !== false
+    const resolved = resolveConnectedAddresses({
+      fromStatus: apiStatus.connectedAddresses,
+      preferCacheWhenEmpty: !backendReachable,
+    })
+    setPeeringLine(
+      formatDirectIotaPeeringStatusLine({
+        backendReachable,
+        connectedAddresses: resolved.addresses,
+      })
+    )
+    if (settingsEmbedded) {
+      setPeeringStatusHint(
+        formatDirectIotaPeeringStatusLineForSettings({
+          backendReachable,
+          connectedAddresses: resolved.addresses,
+        })
+      )
+      setPeeringGaps(
+        listDirectIotaPeeringExchangeGaps({
+          backendReachable,
+          connectedAddresses: resolved.addresses,
+        })
+      )
+    } else {
+      setPeeringStatusHint(null)
+      setPeeringGaps(listDirectIotaPeeringGaps({ backendReachable }))
+    }
+  }, [apiStatus.backendOnline, apiStatus.connectedAddresses, settingsEmbedded])
 
   const streams = apiStatus.streams
 
@@ -157,14 +251,21 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
       setDirectRpcUrl(getConfiguredDirectIotaRpcUrl() || '')
       setDirectDrainOn(isDirectMailboxDrainEnabled())
       setIotaSubmitModeState(getIotaSubmitMode())
+      setAutarkyMode(window.localStorage.getItem(LS_AUTARKY_MODE) === '1')
       setSessionAddr(getDirectIotaSessionSignerAddress())
+      setHasPersistedSigner(hasPersistedDirectIotaSessionSigner())
       setEcdhPrivActive(getDirectChatEcdhPrivateKey() != null)
+      setOptimisticDrainFlags(isDirectChainOptimisticFlagsEnabled())
       const devExpert =
         allowDevExpertTools &&
         typeof window !== 'undefined' &&
         window.localStorage.getItem(LS_EXPERT_TOOLS) === '1'
       setShowExpertTools(apiStatus.uiVariant !== 'messenger' || devExpert)
-      const snap = loadDirectMailboxChainSnapshotFromLs()
+      const fields = getDirectChainFieldIdsFromLs()
+      if (fields.packageId) setChainPkg(fields.packageId)
+      if (fields.mailboxId) setChainMb(fields.mailboxId)
+      if (fields.senderAddress) setChainAddr(fields.senderAddress)
+      const snap = resolveDirectMailboxChainSnapshot() ?? loadDirectMailboxChainSnapshotFromLs()
       if (snap) {
         setTtlDaysStr(String(snap.ttlDays))
         setChainPkg(snap.packageId)
@@ -175,6 +276,42 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
       /* ignore */
     }
   }, [apiStatus.uiVariant, allowDevExpertTools])
+
+  useEffect(() => {
+    refreshDirectSetupGaps()
+    refreshChainSnapshotMeta()
+    refreshPeeringUi()
+    const onChange = () => {
+      refreshDirectSetupGaps()
+      refreshChainSnapshotMeta()
+      refreshPeeringUi()
+    }
+    window.addEventListener(DIRECT_IOTA_UI_CHANGED, onChange)
+    window.addEventListener('storage', onChange)
+    return () => {
+      window.removeEventListener(DIRECT_IOTA_UI_CHANGED, onChange)
+      window.removeEventListener('storage', onChange)
+    }
+  }, [
+    refreshDirectSetupGaps,
+    refreshChainSnapshotMeta,
+    refreshPeeringUi,
+    iotaSubmitMode,
+    directDrainOn,
+    directRpcUrl,
+    sessionAddr,
+    chainPkg,
+    chainMb,
+    chainAddr,
+    optimisticDrainFlags,
+  ])
+
+  useEffect(() => {
+    if (!open) return
+    refreshChainSnapshotMeta()
+    const id = window.setInterval(refreshChainSnapshotMeta, 60_000)
+    return () => window.clearInterval(id)
+  }, [open, refreshChainSnapshotMeta])
 
   useEffect(() => {
     if (!open) return
@@ -247,6 +384,43 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
     }
   }
 
+  const toggleAutarkyMode = useCallback(
+    (on: boolean) => {
+      setAutarkyMode(on)
+      try {
+        if (on) window.localStorage.setItem(LS_AUTARKY_MODE, '1')
+        else window.localStorage.removeItem(LS_AUTARKY_MODE)
+      } catch {
+        /* ignore */
+      }
+      if (on) {
+        persistDirectChainFieldIds({
+          packageId: normalizeIotaHexInput(chainPkg),
+          mailboxId: normalizeIotaHexInput(chainMb),
+          senderAddress: normalizeIotaHexInput(chainAddr),
+        })
+        setIotaSubmitMode('client')
+        setIotaSubmitModeState('client')
+        setDirectMailboxDrainEnabled(true)
+        setDirectDrainOn(true)
+        setDirectChainOptimisticFlagsEnabled(true)
+        setOptimisticDrainFlags(true)
+        setMsg('Autarkie-Modus aktiv: Direkt + Drain + Optimistische Flags gesetzt.')
+      } else {
+        setMsg('Autarkie-Modus aus. Einzeloptionen bleiben manuell steuerbar.')
+      }
+      refreshDirectSetupGaps()
+      refreshChainSnapshotMeta()
+    },
+    [
+      chainPkg,
+      chainMb,
+      chainAddr,
+      refreshDirectSetupGaps,
+      refreshChainSnapshotMeta,
+    ]
+  )
+
   const onLoraTierChange = (vals: number[]) => {
     const t = vals[0] ?? 1
     setLoraTier(t)
@@ -260,7 +434,6 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
   const anchorFull = (streams?.anchorIdFull?.trim() || idsOverride?.streamsAnchorId || '').trim()
   const addrFull = (apiStatus.myAddressFull?.trim() || idsOverride?.myAddress || '').trim()
   const pkgFull = (apiStatus.packageId?.trim() || idsOverride?.packageId || '').trim()
-
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <CollapsibleTrigger asChild>
@@ -268,18 +441,32 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
           type="button"
           className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/35"
         >
-          <span>IDs zum Kopieren · Direkt-RPC · Funk</span>
+          <span>
+            {settingsEmbedded
+              ? 'Mailbox · Direkt-RPC · Streams-Puls'
+              : 'IDs zum Kopieren · Direkt-RPC · Funk'}
+          </span>
           {open ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-4 rounded-lg border border-border/60 bg-card/50 px-3 py-3 text-xs">
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Werte kommen aus dem Backend (<span className="font-mono">/api/status</span>, beim Öffnen zusätzlich{' '}
-          <span className="font-mono">/api/current-ids</span>), falls erreichbar. Zum <strong className="text-foreground">Kopieren</strong> die Zeilen
-          unten. Für <strong className="text-foreground">Direkt-IOTA ohne dauernd erreichbare Basis</strong>: Ketten-IDs im Abschnitt{' '}
-          <strong className="text-foreground">„Direkt-RPC“</strong> eintragen und dort in <span className="font-mono">localStorage</span> speichern
-          (siehe Handbuch / Architektur H.15).
-        </p>
+        {settingsEmbedded ? (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Mailbox, Direkt-RPC und optionaler Streams-Puls — Erklärung und Checkliste im{' '}
+            <Link href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#einstellungen-system--identität" className="text-primary underline hover:no-underline">
+              Handbuch
+            </Link>
+            .
+          </p>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Werte kommen aus dem Backend (<span className="font-mono">/api/status</span>, beim Öffnen zusätzlich{' '}
+            <span className="font-mono">/api/current-ids</span>), falls erreichbar. Zum <strong className="text-foreground">Kopieren</strong> die Zeilen
+            unten. Für <strong className="text-foreground">Direkt-IOTA ohne dauernd erreichbare Basis</strong>: Ketten-IDs im Abschnitt{' '}
+            <strong className="text-foreground">„Direkt-RPC“</strong> eintragen und dort in <span className="font-mono">localStorage</span> speichern
+            (siehe Handbuch / Architektur H.15).
+          </p>
+        )}
         {idsPanelErr ? (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
             {idsPanelErr}
@@ -287,36 +474,43 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
         ) : null}
 
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-foreground">Explorer / Prüfen</p>
+          <p className="text-[11px] font-semibold text-foreground">
+            {settingsEmbedded ? 'Streams-Puls (optional)' : 'Explorer / Prüfen'}
+          </p>
           <CopyRow
             label="Streams-Anchor (Objekt-ID)"
             value={anchorFull}
             invalid={!!anchorFull && !isLikelyIotaObjectId(anchorFull)}
-            invalidHint="Erwartet: 0x + 64 Hex (IOTA-Objekt-ID). Sonst Explorer/Streams unzuverlässig."
-            hint="Explorer: Objekt-ID einfügen und Transaktionen/Channel prüfen."
+            invalidHint="Erwartet: 0x + 64 Hex (IOTA-Objekt-ID). Nur Puls/Monitor — nicht der Chat-Posteingang."
+            hint="Optional: Live-Puls an die Basis (Heartbeat). Chat läuft über Mailbox."
             copied={copied === 'anchor'}
             onCopy={() => void copy('anchor', anchorFull)}
           />
-          <CopyRow
-            label="Eigene Adresse"
-            value={addrFull}
-            invalid={!!addrFull && !isLikelyIotaObjectId(addrFull)}
-            invalidHint="Erwartet: 0x + 64 Hex. Nach Wallet-Entsperren laden – oder MY_ADDRESS in .env setzen."
-            hint="Wallet-Adresse (z. B. Explorer, Handshake)."
-            copied={copied === 'addr'}
-            onCopy={() => void copy('addr', addrFull)}
-          />
-          <CopyRow
-            label="Package-ID (Move)"
-            value={pkgFull}
-            invalid={!!pkgFull && !isLikelyIotaObjectId(pkgFull)}
-            invalidHint="Erwartet: 0x + 64 Hex (deployte Package-ID)."
-            hint="Mailbox / Move-Bezug."
-            copied={copied === 'pkg'}
-            onCopy={() => void copy('pkg', pkgFull)}
-          />
+          {!settingsEmbedded ? (
+            <>
+              <CopyRow
+                label="Eigene Adresse"
+                value={addrFull}
+                invalid={!!addrFull && !isLikelyIotaObjectId(addrFull)}
+                invalidHint="Erwartet: 0x + 64 Hex. Nach Wallet-Entsperren laden."
+                hint="Wallet-Adresse (Explorer, Handshake)."
+                copied={copied === 'addr'}
+                onCopy={() => void copy('addr', addrFull)}
+              />
+              <CopyRow
+                label="Package-ID (Move)"
+                value={pkgFull}
+                invalid={!!pkgFull && !isLikelyIotaObjectId(pkgFull)}
+                invalidHint="Erwartet: 0x + 64 Hex (deployte Package-ID)."
+                hint="Mailbox / Move-Bezug."
+                copied={copied === 'pkg'}
+                onCopy={() => void copy('pkg', pkgFull)}
+              />
+            </>
+          ) : null}
         </div>
 
+        {!settingsEmbedded ? (
         <div className="space-y-2 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">Hybrid-Versand (Chat)</p>
           <div className="rounded-md border border-border/50 bg-muted/20 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
@@ -331,7 +525,9 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
             </ul>
           </div>
         </div>
+        ) : null}
 
+        {!settingsEmbedded ? (
         <div className="space-y-3 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">IOTA-Sendeweg (Handy-first, § H.15)</p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -362,9 +558,40 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
             </div>
           </RadioGroup>
         </div>
+        ) : null}
 
         <div className="space-y-3 border-t border-border/50 pt-3">
-          <p className="text-[11px] font-semibold text-foreground">Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)</p>
+          <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] font-semibold text-foreground">Autarkie-Modus (APK/EXE ohne Basis-Pflicht)</p>
+              <Switch
+                checked={autarkyMode}
+                disabled={busy !== null}
+                onCheckedChange={toggleAutarkyMode}
+                aria-label="Autarkie-Modus"
+              />
+            </div>
+            <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+              Setzt Direkt-Pfad, Direkt-Drain und Optimistische Flags als Autarkie-Defaults. RPC, IDs und Signer bleiben
+              bewusst unter deiner Kontrolle.
+            </p>
+            <ul className="mt-2 list-inside list-disc space-y-0.5 text-[10px]">
+              {autarkyChecklist.map((item) => (
+                <li
+                  key={item.label}
+                  className={item.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}
+                >
+                  {item.ok ? 'PASS' : 'OFFEN'} — {item.label}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        <div className="space-y-3 border-t border-border/50 pt-3">
+          <p className="text-[11px] font-semibold text-foreground">
+            {settingsEmbedded ? 'Mailbox & Direkt-RPC (Browser)' : 'Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)'}
+          </p>
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             Für die <strong className="text-foreground">Mailbox-Warteschlange</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Klartext und (mit ECDH-Material) Verschlüsseltes zuerst direkt; scheitert der RPC-Versand, wird <span className="font-mono">/api</span> versucht, wenn die Basis erreichbar ist.
           </p>
@@ -446,11 +673,24 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
               onCheckedChange={(v) => {
                 setDirectDrainOn(v)
                 setDirectMailboxDrainEnabled(v)
+                refreshDirectSetupGaps()
                 setMsg(v ? 'Direkt-Mailbox-Drain an — Mnemonic + Ketten-IDs nötig.' : 'Direkt-Mailbox-Drain aus.')
               }}
               aria-label="Direkt-Mailbox-Drain"
             />
           </div>
+          {iotaSubmitMode !== 'relay' && directSetupGaps.length > 0 ? (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-950 dark:text-amber-100">
+              <p className="font-semibold">
+                {settingsEmbedded ? 'Noch einzurichten (Direkt-Pfad):' : 'Direkt-Pfad — noch offen:'}
+              </p>
+              <ul className="mt-1 list-inside list-disc space-y-0.5">
+                {directSetupGaps.map((g) => (
+                  <li key={g}>{g}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="grid max-w-md grid-cols-[1fr_4rem] items-end gap-2">
             <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">TTL (Tage, Move)</Label>
@@ -474,6 +714,7 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   return
                 }
                 persistDirectMailboxTtlDays(BigInt(n))
+                refreshChainSnapshotMeta()
                 setMsg(`TTL ${n} Tage gespeichert.`)
               }}
             >
@@ -482,6 +723,18 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
           </div>
           <div className="space-y-2 border-t border-border/40 pt-3">
             <p className="text-[11px] font-semibold text-foreground">Ketten-IDs (Package, Mailbox, eigene Adresse)</p>
+            {chainSnapshotLine ? (
+              <p
+                className={cn(
+                  'text-[10px] leading-relaxed',
+                  chainSnapshotStale
+                    ? 'rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-amber-950 dark:text-amber-100'
+                    : 'text-muted-foreground'
+                )}
+              >
+                <strong className="font-semibold text-foreground">Snapshot:</strong> {chainSnapshotLine}
+              </p>
+            ) : null}
             <p className="text-[10px] leading-relaxed text-muted-foreground">
               Für Direkt-Klartext ohne dauernd erreichbare Basis: IDs manuell eintragen oder — wenn die Basis antwortet — beim Öffnen dieses Panels per{' '}
               <span className="font-mono">/api/current-ids</span> befüllen, dann hier speichern.
@@ -494,6 +747,7 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   list="pulse-hex-chain-suggestions"
                   value={chainPkg}
                   onChange={(e) => setChainPkg(e.target.value)}
+                  onBlur={syncChainFieldsToLs}
                   spellCheck={false}
                   placeholder="0x…"
                 />
@@ -505,6 +759,7 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   list="pulse-hex-chain-suggestions"
                   value={chainMb}
                   onChange={(e) => setChainMb(e.target.value)}
+                  onBlur={syncChainFieldsToLs}
                   spellCheck={false}
                   placeholder="0x…"
                 />
@@ -516,6 +771,7 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   list="pulse-hex-chain-suggestions"
                   value={chainAddr}
                   onChange={(e) => setChainAddr(e.target.value)}
+                  onBlur={syncChainFieldsToLs}
                   spellCheck={false}
                   placeholder="0x…"
                 />
@@ -526,7 +782,11 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                 type="checkbox"
                 className="mt-0.5"
                 checked={optimisticDrainFlags}
-                onChange={(e) => setOptimisticDrainFlags(e.target.checked)}
+                onChange={(e) => {
+                  const on = e.target.checked
+                  setOptimisticDrainFlags(on)
+                  setDirectChainOptimisticFlagsEnabled(on)
+                }}
               />
               <span>
                 Flags für Klartext-Direktdrain <strong className="text-foreground">schätzen</strong> (Mailbox an, Klartext erlaubt,{' '}
@@ -575,13 +835,16 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   }
                   const ttlN = parseInt(ttlDaysStr, 10)
                   const ttl = BigInt(Number.isFinite(ttlN) && ttlN > 0 && ttlN <= 3650 ? ttlN : 30)
+                  const previousFlags = getDirectMailboxChainSnapshot()?.flags
                   const flags = optimisticDrainFlags
                     ? { useMailbox: true, mailboxStorePlaintext: true, messengerCreditsConfigured: false }
-                    : {
-                        useMailbox: apiStatus.useMailbox === true,
-                        mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
-                        messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
-                      }
+                    : apiStatus.backendOnline === false && previousFlags
+                      ? previousFlags
+                      : {
+                          useMailbox: apiStatus.useMailbox === true,
+                          mailboxStorePlaintext: apiStatus.mailboxStorePlaintext === true,
+                          messengerCreditsConfigured: apiStatus.messengerCreditsConfigured === true,
+                        }
                   const persisted = persistDirectMailboxChainSnapshot({
                     packageId: pkg,
                     mailboxId: mb,
@@ -597,9 +860,14 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                   setChainMb(mb)
                   setChainAddr(addr)
                   let out = 'Ketten-IDs für Direkt-Pfad gespeichert (localStorage).'
+                  if (!optimisticDrainFlags && apiStatus.backendOnline === false && previousFlags) {
+                    out += ' Basis offline: letzte bekannte Direkt-Flags wurden weiterverwendet.'
+                  }
                   if (!optimisticDrainFlags && flags.messengerCreditsConfigured) {
                     out += ' Hinweis: Messenger-Credits aktiv — Klartext-Direkt-Drain bleibt geblockt, bis die Kette ohne Credits läuft oder du die Flags schätzt.'
                   }
+                  refreshChainSnapshotMeta()
+                  refreshDirectSetupGaps()
                   setMsg(out)
                 }}
               >
@@ -652,11 +920,125 @@ export function ChatViewPulseSettings({ apiStatus, allowDevExpertTools = true }:
                 Signer löschen
               </Button>
             </div>
+            <div className="mt-2 rounded-md border border-border/70 bg-muted/20 p-2">
+              <Label className="mb-1 block text-[10px] text-muted-foreground">
+                Optional: lokal verschlüsselt speichern (für Neustart ohne Basis/PC)
+              </Label>
+              <Input
+                type="password"
+                value={signerStorePassword}
+                onChange={(e) => setSignerStorePassword(e.target.value)}
+                placeholder="Lokales Passwort (mind. 8 Zeichen)"
+                className="h-8 max-w-sm text-xs"
+                autoComplete="off"
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 text-xs"
+                  disabled={busy !== null || !mnemoInput.trim()}
+                  onClick={() => {
+                    void (async () => {
+                      const r = await persistDirectIotaSessionSignerEncrypted({
+                        signerImportRaw: mnemoInput,
+                        password: signerStorePassword,
+                      })
+                      if (r.ok) {
+                        setHasPersistedSigner(true)
+                        setMsg('Session-Signer lokal verschlüsselt gespeichert.')
+                      } else {
+                        setMsg(`Speichern fehlgeschlagen: ${r.error}`)
+                      }
+                    })()
+                  }}
+                >
+                  Signer verschlüsselt speichern
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 text-xs"
+                  disabled={busy !== null || !hasPersistedSigner}
+                  onClick={() => {
+                    void (async () => {
+                      const r = await restoreDirectIotaSessionSignerFromEncryptedStorage({
+                        password: signerStorePassword,
+                      })
+                      if (r.ok) {
+                        setSessionAddr(r.address)
+                        setMsg(`Signer aus lokaler Ablage geladen: ${r.address.slice(0, 10)}…`)
+                      } else {
+                        setMsg(`Laden fehlgeschlagen: ${r.error}`)
+                      }
+                    })()
+                  }}
+                >
+                  Aus lokaler Ablage laden
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={busy !== null || !hasPersistedSigner}
+                  onClick={() => {
+                    clearPersistedDirectIotaSessionSigner()
+                    setHasPersistedSigner(false)
+                    setMsg('Lokale Signer-Ablage gelöscht.')
+                  }}
+                >
+                  Lokale Ablage löschen
+                </Button>
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Status: {hasPersistedSigner ? 'verschlüsselte Ablage vorhanden' : 'keine lokale Ablage'}
+              </p>
+            </div>
             {sessionAddr && (
               <p className="text-[10px] font-mono text-muted-foreground">
-                Aktiver Signer: <span className="text-foreground">{sessionAddr}</span>
+                Aktiver Signer: <span className="break-all text-foreground">{sessionAddr}</span>
               </p>
             )}
+          </div>
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <p className="text-[11px] font-semibold text-foreground">
+              {settingsEmbedded ? 'Partner-Adresse austauschen (QR)' : 'Peering (§ H.15 B.2)'}
+            </p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              {settingsEmbedded
+                ? 'Wallet-Adresse (0x) und optional Verschlüsselungsschlüssel mit dem Chat-Partner tauschen — für verschlüsselten Online-Chat. Anschließend Handshake im Posteingang oder Telefonbuch, nicht LoRa/Mesh.'
+                : 'Partner-Wallet und optional ECDH-Pub austauschen; danach Handshake/Connect online.'}
+            </p>
+            {!settingsEmbedded && peeringLine ? (
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{peeringLine}</p>
+            ) : null}
+            {settingsEmbedded && peeringStatusHint ? (
+              <p className="text-[10px] text-muted-foreground">{peeringStatusHint}</p>
+            ) : null}
+            {peeringGaps.length > 0 ? (
+              <ul className="list-inside list-disc space-y-0.5 text-[10px] text-amber-950 dark:text-amber-100">
+                {peeringGaps.map((g) => (
+                  <li key={g}>{g}</li>
+                ))}
+              </ul>
+            ) : null}
+            <PeeringQrActions
+              className="flex flex-wrap gap-2"
+              myAddress={(apiStatus.myAddressFull || apiStatus.myAddress || sessionAddr || chainAddr || '').trim()}
+              displayName={apiStatus.displayName?.trim()}
+              disabled={busy !== null}
+              onStatus={(m) => setMsg(m)}
+              onImported={({ address, peerPubStored }) => {
+                setEcdhPeerAddr(address)
+                if (peerPubStored) {
+                  setEcdhPeerB64(exportDirectChatEcdhPeerPubPreview(address))
+                }
+                refreshPeeringUi()
+              }}
+            />
           </div>
           <div className="space-y-2 border-t border-border/40 pt-3">
             <p className="text-[10px] leading-relaxed text-muted-foreground">

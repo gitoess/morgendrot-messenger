@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Download, Package, Save, Send, Users } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getStatus } from '@/frontend/lib/api'
@@ -52,7 +53,6 @@ import {
 import { HANDOFF_PRESET_VISUAL } from '@/frontend/lib/handoff-preset-ui'
 import { readHandoffLastPresetId, writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
 import {
-  HANDOFF_MESHTASTIC_PSK_BOSS_NOTE,
   HANDOFF_MESHTASTIC_PSK_SHORT,
   HANDOFF_README_IOTA_ARCHIV_BLOCK,
 } from '@/frontend/lib/handoff-lora-psk-copy'
@@ -84,6 +84,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([])
   const [selectedPartnerAddrs, setSelectedPartnerAddrs] = useState<Set<string>>(() => new Set())
   const [handoffBusy, setHandoffBusy] = useState(false)
+  const [wizardStep, setWizardStep] = useState<1 | 2>(1)
   const [statusMsg, setStatusMsg] = useState('')
 
   const [handoffRpc, setHandoffRpc] = useState('')
@@ -533,39 +534,42 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
         </div>
         <div className="min-w-0 flex-1 space-y-5">
           <div>
-            <h3 className="text-base font-semibold text-foreground">Export-Assistent — Untergebenen einrichten</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Nur <strong className="text-foreground">Einsatz-Modus</strong>: Boss provisioniert Helfer, Arbeiter oder Führer
-              mit vorgegebenen Rechten und Kontakten. Technik ist unten ausklappbar.
+            <h3 className="text-base font-semibold text-foreground">Export-Assistent</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Schritt {wizardStep}/2 ·{' '}
+              <Link
+                href="/handbook?file=EXPORT-ASSISTENT-REFERENZ.md"
+                className="text-primary underline hover:no-underline"
+              >
+                Alle Optionen (Referenz)
+              </Link>
             </p>
-            <p className="mt-2 rounded-lg border border-slate-600/40 bg-slate-950/30 px-3 py-2 text-xs text-muted-foreground">
-              <strong className="text-foreground">Wanderer / Prepper / Privat:</strong> eigener Messenger — kein Boss-Handoff.
-              Bundle und Solo-Start: <span className="font-mono">docs/WANDERER-STANDALONE-BUNDLE.md</span> (Erststart-Wizard
-              geplant).
-            </p>
-            <div
-              className={cn(
-                'mt-3 rounded-lg border px-3 py-2.5',
-                presetVisual.activeBg
-              )}
-            >
+            <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
               <p className="text-sm font-semibold text-foreground">{summary.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{summary.detail}</p>
             </div>
-            <p className="mt-3 rounded-lg border border-sky-600/35 bg-sky-950/20 px-3 py-2 text-xs leading-snug text-sky-100/95">
-              <strong className="text-foreground">LoRa / Meshtastic:</strong> {HANDOFF_MESHTASTIC_PSK_SHORT}
-              <span className="mt-1 block text-muted-foreground">{HANDOFF_MESHTASTIC_PSK_BOSS_NOTE}</span>
-            </p>
+          </div>
+
+          {wizardStep === 1 ? (
+          <>
+          <div>
+            <label htmlFor="handoff-bezeichnung" className="mb-1 block text-sm font-medium text-foreground">
+              Bezeichnung
+            </label>
+            <input
+              id="handoff-bezeichnung"
+              value={bezeichnung}
+              onChange={(e) => {
+                labelEdited.current = true
+                setBezeichnung(e.target.value)
+              }}
+              placeholder="z. B. THW Einsatz Süd"
+              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-foreground"
+            />
           </div>
 
           <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Basis-Profil (Parameter-Bündel)
-            </h4>
-            <p className="text-[11px] text-muted-foreground">
-              Hybrid: Karte wählen → optional Feineinstellung → Partner/Team pro Einsatz. Gespeicherte Vorlagen unter{' '}
-              <strong className="text-foreground">Einstellungen → Einsatz-Rollen-Vorlagen</strong>.
-            </p>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profil</h4>
             <div className="flex flex-wrap items-end gap-2">
               {savedTemplates.length > 0 ? (
                 <label className="min-w-[12rem] flex-1 text-xs">
@@ -583,65 +587,14 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     <option value="">— Vorlage laden (Reporter, Medic, …) —</option>
                     {savedTemplates.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.label} (ROLE_ID={t.roleId}, {t.chainRole})
+                        {t.label}
                       </option>
                     ))}
                   </select>
                 </label>
-              ) : (
-                <p className="flex-1 text-[11px] text-muted-foreground">
-                  Noch keine Vorlagen — unten aus aktueller Feineinstellung speichern oder in Einstellungen anlegen.
-                </p>
-              )}
-              {canSaveTemplates ? (
-                <button
-                  type="button"
-                  onClick={() => (saveTemplateOpen ? setSaveTemplateOpen(false) : openSaveTemplateForm())}
-                  className="flex items-center gap-1.5 rounded-lg border border-violet-500/40 bg-violet-500/15 px-3 py-2 text-xs font-medium text-foreground hover:bg-violet-500/25"
-                >
-                  <Save className="h-3.5 w-3.5" aria-hidden />
-                  {saveTemplateOpen ? 'Abbrechen' : 'Als Vorlage speichern'}
-                </button>
               ) : null}
             </div>
-            {saveTemplateOpen && canSaveTemplates ? (
-              <div className="rounded-lg border border-violet-500/30 bg-violet-950/15 p-3 text-xs">
-                <p className="mb-2 text-muted-foreground">
-                  Speichert <strong className="text-foreground">ROLE_ID</strong> ({resolvedParams.roleId}) und{' '}
-                  <strong className="text-foreground">chainRole</strong> — keine Partner/Team-Mailboxen (pro Einsatz).
-                </p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  <label>
-                    <span className="mb-1 block text-muted-foreground">Anzeigename</span>
-                    <input
-                      value={templateSaveLabel}
-                      onChange={(e) => {
-                        setTemplateSaveLabel(e.target.value)
-                        setTemplateSaveId(slugifyHandoffTemplateId(e.target.value))
-                      }}
-                      className="w-full rounded-lg border border-border bg-input px-2 py-2"
-                    />
-                  </label>
-                  <label>
-                    <span className="mb-1 block text-muted-foreground">ID (Datei)</span>
-                    <input
-                      value={templateSaveId}
-                      onChange={(e) => setTemplateSaveId(slugifyHandoffTemplateId(e.target.value))}
-                      className="w-full rounded-lg border border-border bg-input px-2 py-2 font-mono"
-                    />
-                  </label>
-                </div>
-                <button
-                  type="button"
-                  disabled={templateSaveBusy || !templateSaveLabel.trim()}
-                  onClick={() => void onSaveHandoffTemplate()}
-                  className="mt-2 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-600/90 disabled:opacity-50"
-                >
-                  {templateSaveBusy ? 'Speichere…' : 'Auf Boss-PC speichern'}
-                </button>
-              </div>
-            ) : null}
-            <div className="grid gap-2 sm:grid-cols-1 sm:max-w-xl">
+            <div className="grid gap-2 sm:grid-cols-3">
               {HANDOFF_EINSATZ_PRESETS.map((item) => {
                 const vis = HANDOFF_PRESET_VISUAL[item.id]
                 const active = presetId === item.id
@@ -651,115 +604,47 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     type="button"
                     onClick={() => applyPreset(item.id)}
                     className={cn(
-                      'rounded-xl border p-3 text-left transition-all',
+                      'rounded-xl border p-3 text-left transition-all min-h-[88px]',
                       active ? cn('ring-2', vis.activeRing, vis.activeBg) : cn('bg-muted/15', vis.idleBorder)
                     )}
                   >
                     <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <span aria-hidden>{vis.emoji}</span>
                       {item.label}
+                      {item.id === 'helfer' ? (
+                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-200">
+                          Standard
+                        </span>
+                      ) : null}
                     </span>
-                    <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{vis.chipHint}</span>
+                    <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{item.hint}</span>
                   </button>
                 )
               })}
             </div>
           </section>
 
-          <details className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-sm">
-            <summary className="cursor-pointer select-none py-1 font-medium text-foreground">
-              Feineinstellung (optional)
-            </summary>
-            <div className="mt-3 grid gap-3 border-t border-border/60 pt-3 text-xs sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <p className="mb-2 text-muted-foreground">
-                  <strong className="text-foreground">ROLE_ID</strong> — kanonische Bits{' '}
-                  <span className="font-mono">D · LW · BW · L · S · P</span> (wie Lite-UI, keine neue Semantik).
-                  Siehe <span className="font-mono">docs/HANDOFF-PERMISSIONS-MATRIX.md</span>.
-                </p>
-                <HandoffRoleIdBitPicker
-                  effectiveRoleId={resolvedParams.roleId}
-                  presetRoleId={preset.roleId}
-                  tuningRoleId={tuningRoleId}
-                  onTuningRoleIdChange={setTuningRoleId}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <HandoffCapabilitiesMatrixPicker
-                  effective={resolvedCapabilities}
-                  capabilitiesOverride={capabilitiesOverride}
-                  onCapabilitiesOverrideChange={setCapabilitiesOverride}
-                  onApplyCapabilityPreset={applyCapabilityPreset}
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-muted-foreground">ROLE (Hierarchie)</label>
-                <select
-                  value={tuningHelperRole}
-                  onChange={(e) => setTuningHelperRole(e.target.value as HandoffHelperRole | '')}
-                  className="w-full rounded-lg border border-border bg-input px-2 py-2"
-                >
-                  <option value="">— wie Basis-Profil —</option>
-                  <option value="messenger">messenger (Helfer)</option>
-                  <option value="arbeiter">arbeiter</option>
-                  <option value="kommandant">kommandant (Führer)</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-muted-foreground">Simple Mode</label>
-                <select
-                  value={tuningSimpleMode}
-                  onChange={(e) => setTuningSimpleMode(e.target.value as 'preset' | 'true' | 'false')}
-                  className="w-full rounded-lg border border-border bg-input px-2 py-2"
-                >
-                  <option value="preset">wie Basis-Profil</option>
-                  <option value="true">an (einfache UI)</option>
-                  <option value="false">aus (mehr Expert)</option>
-                </select>
-              </div>
-              <div className="flex items-end">
-                <label className="flex cursor-pointer items-start gap-2">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={omitTeamMailboxes}
-                    onChange={(e) => setOmitTeamMailboxes(e.target.checked)}
-                  />
-                  <span>Keine Team-Mailboxen im ZIP</span>
-                </label>
-              </div>
-            </div>
-            <p className="mt-2 text-[10px] text-muted-foreground">
-              Exportiert ROLE={resolvedParams.helperRole}, ROLE_ID={resolvedParams.roleId}, SIMPLE_MODE=
-              {String(resolvedParams.simpleMode)} · Capabilities: LoRa{' '}
-              {resolvedCapabilities.transport.lora.read ? 'L' : '−'}
-              {resolvedCapabilities.transport.lora.write ? 'S' : ''} · Telegram{' '}
-              {resolvedCapabilities.transport.telegram.read ? 'L' : '−'}
-              {resolvedCapabilities.transport.telegram.write ? 'S' : ''} · IOTA{' '}
-              {resolvedCapabilities.transport.iota.read ? 'L' : '−'}
-              {resolvedCapabilities.transport.iota.write ? 'S' : ''}
-            </p>
-          </details>
+          <button
+            type="button"
+            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+            onClick={() => setWizardStep(2)}
+          >
+            Weiter: Team &amp; Partner
+          </button>
+          </>
+          ) : null}
 
-          <section className="space-y-3 rounded-xl border border-border/70 bg-muted/10 p-4">
-            <h4 className="text-sm font-semibold text-foreground">Was der Helfer bekommt</h4>
+          {wizardStep === 2 ? (
+          <>
+          <button
+            type="button"
+            className="text-xs font-medium text-primary underline hover:no-underline"
+            onClick={() => setWizardStep(1)}
+          >
+            ← Profil &amp; Bezeichnung ändern
+          </button>
 
-            <div>
-              <label htmlFor="handoff-bezeichnung" className="mb-1 block text-sm font-medium text-foreground">
-                Bezeichnung im Paket
-              </label>
-              <input
-                id="handoff-bezeichnung"
-                value={bezeichnung}
-                onChange={(e) => {
-                  labelEdited.current = true
-                  setBezeichnung(e.target.value)
-                }}
-                placeholder="z. B. THW Einsatz Süd"
-                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-foreground"
-              />
-            </div>
-
+          <section className="space-y-3">
             {usesTeamMb ? (
               <fieldset>
                 <legend className="mb-2 block text-sm font-medium text-foreground">Team-Postfächer</legend>
@@ -774,11 +659,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                             checked={selectedTeamIds.includes(opt.id)}
                             onChange={() => toggleTeamMailbox(opt.id)}
                           />
-                          <span className="min-w-0">
-                            <span className="font-medium text-foreground">{opt.label}</span>
-                            <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
-                              {formatHandoffMailboxShort(opt.id)}
-                            </span>
+                          <span className="min-w-0 font-medium text-foreground" title={opt.id}>
+                            {opt.label}
                           </span>
                         </label>
                       </li>
@@ -830,47 +712,32 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 </ul>
               ) : (
                 <p className="rounded-lg border border-dashed border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-50">
-                  Noch keine Kontakte — unter <strong>Einsatzleitung → Kontakte</strong> anlegen, dann hier Partner
-                  mit Namen wählen.
+                  Noch keine Kontakte — im <strong>Telefonbuch</strong> anlegen, dann hier Partner mit Namen wählen.
                 </p>
               )}
             </fieldset>
 
-            {preset.transportProfile === 'mesh-first' && !protectWithPassword ? (
-              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs">
+            <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/10 px-3 py-2 text-xs">
+              {preset.transportProfile === 'mesh-first' && !protectWithPassword ? (
+                <label className="flex cursor-pointer items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={includeIotaArchivReadme}
+                    onChange={(e) => setIncludeIotaArchivReadme(e.target.checked)}
+                  />
+                  <span className="text-foreground">IOTA-Archiv im README</span>
+                </label>
+              ) : null}
+              <label className="flex cursor-pointer items-center gap-2">
                 <input
                   type="checkbox"
-                  className="mt-0.5"
-                  checked={includeIotaArchivReadme}
-                  onChange={(e) => setIncludeIotaArchivReadme(e.target.checked)}
-                />
-                <span>
-                  <span className="font-medium text-foreground">IOTA-Archiv im README (optional)</span>
-                  <span className="mt-0.5 block text-muted-foreground">
-                    Erklärt Pfad 4 für den Helfer — im Chat bleibt Simple Mode ohne Expert-Checkbox.
-                  </span>
-                </span>
-              </label>
-            ) : null}
-
-            <div className="rounded-lg border border-amber-600/35 bg-amber-950/20 px-3 py-3 text-xs">
-              <label className="flex cursor-pointer items-start gap-2">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
                   checked={protectWithPassword}
                   onChange={(e) => setProtectWithPassword(e.target.checked)}
                 />
-                <span>
-                  <span className="font-medium text-foreground">Handoff mit Passwort schützen (empfohlen)</span>
-                  <span className="mt-0.5 block text-muted-foreground">
-                    ZIP enthält <span className="font-mono">handoff.morg.enc</span> statt Klartext-.env (~3 KB).
-                    Passwort nur mündlich / zweiter Kanal — nie in die Datei schreiben.
-                  </span>
-                </span>
+                <span className="font-medium text-foreground">Handoff mit Passwort schützen (empfohlen)</span>
               </label>
               {protectWithPassword ? (
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 border-t border-border/60 pt-2 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-muted-foreground">Passwort</label>
                     <input
@@ -891,9 +758,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                       className="w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground"
                     />
                   </div>
-                  <p className="sm:col-span-2 text-[11px] text-amber-100/90">
-                    Bei Passwort-Schutz: keine PACKAGE_ID/PSK im README — LoRa-PSK und Archiv-Hinweise separat
-                    mitteilen.
+                  <p className="sm:col-span-2 text-[11px] text-muted-foreground">
+                    Passwort mündlich / zweiter Kanal — nicht in die ZIP schreiben.
                   </p>
                 </div>
               ) : null}
@@ -914,7 +780,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
               title={`Preset „${preset.label}“ und aktuelle Auswahl (Partner, Team, Technik)`}
             >
               <Download className="h-5 w-5" aria-hidden />
-              {handoffBusy ? 'ZIP…' : `ZIP (${preset.label})`}
+              {handoffBusy ? 'ZIP…' : `ZIP-Paket herunterladen (${preset.label})`}
             </button>
             {showRepeatDownload ? (
               <button
@@ -939,17 +805,12 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
               {handoffBusy ? 'Sende…' : 'Per IOTA an Partner'}
             </button>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            <strong className="text-foreground">ZIP ({preset.label}):</strong> das Preset, das Sie oben gewählt haben.
-            {showRepeatDownload ? (
-              <>
-                {' '}
-                <strong>Nochmal:</strong> letztes erfolgreiches Preset ({getHandoffPreset(repeatPresetId).label}) — falls
-                Sie gerade ein anderes Preset in der UI offen haben.
-              </>
-            ) : null}{' '}
-            <strong>IOTA:</strong> dieselbe Nutzlast an Partner mit Handshake; Helfer importiert aus dem Posteingang.
-          </p>
+          {showRepeatDownload ? (
+            <p className="text-[11px] text-muted-foreground">
+              <strong>Nochmal:</strong> letztes Preset ({getHandoffPreset(repeatPresetId).label}) — ohne die aktuelle
+              Profil-Karte zu ändern.
+            </p>
+          ) : null}
 
           {statusMsg ? (
             <p className="text-sm text-muted-foreground" role="status">
@@ -959,9 +820,116 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
           <details className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm">
             <summary className="cursor-pointer select-none py-1 font-medium text-foreground">
-              Erweiterte Technik (RPC, PACKAGE_ID, manuelle Partner-Adressen)
+              Experte (Feineinstellung, Vorlagen, LoRa, RPC)
             </summary>
-            <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs">
+            <div className="mt-3 space-y-4 border-t border-border/60 pt-3 text-xs">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <HandoffRoleIdBitPicker
+                    effectiveRoleId={resolvedParams.roleId}
+                    presetRoleId={preset.roleId}
+                    tuningRoleId={tuningRoleId}
+                    onTuningRoleIdChange={setTuningRoleId}
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <HandoffCapabilitiesMatrixPicker
+                    effective={resolvedCapabilities}
+                    capabilitiesOverride={capabilitiesOverride}
+                    onCapabilitiesOverrideChange={setCapabilitiesOverride}
+                    onApplyCapabilityPreset={applyCapabilityPreset}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-muted-foreground">ROLE</label>
+                  <select
+                    value={tuningHelperRole}
+                    onChange={(e) => setTuningHelperRole(e.target.value as HandoffHelperRole | '')}
+                    className="w-full rounded-lg border border-border bg-input px-2 py-2"
+                  >
+                    <option value="">— wie Profil —</option>
+                    <option value="messenger">messenger</option>
+                    <option value="arbeiter">arbeiter</option>
+                    <option value="kommandant">kommandant</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1 block text-muted-foreground">Simple Mode</label>
+                  <select
+                    value={tuningSimpleMode}
+                    onChange={(e) => setTuningSimpleMode(e.target.value as 'preset' | 'true' | 'false')}
+                    className="w-full rounded-lg border border-border bg-input px-2 py-2"
+                  >
+                    <option value="preset">wie Profil</option>
+                    <option value="true">an</option>
+                    <option value="false">aus</option>
+                  </select>
+                </div>
+                <label className="flex cursor-pointer items-center gap-2 sm:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={omitTeamMailboxes}
+                    onChange={(e) => setOmitTeamMailboxes(e.target.checked)}
+                  />
+                  <span>Keine Team-Mailboxen im ZIP</span>
+                </label>
+              </div>
+
+              {canSaveTemplates ? (
+                <div className="rounded-lg border border-violet-500/25 bg-violet-500/10 p-3">
+                  <button
+                    type="button"
+                    onClick={() => (saveTemplateOpen ? setSaveTemplateOpen(false) : openSaveTemplateForm())}
+                    className="flex items-center gap-1.5 text-xs font-medium text-foreground"
+                  >
+                    <Save className="h-3.5 w-3.5" aria-hidden />
+                    {saveTemplateOpen ? 'Abbrechen' : 'Als Vorlage speichern'}
+                  </button>
+                  {saveTemplateOpen ? (
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <input
+                        value={templateSaveLabel}
+                        onChange={(e) => {
+                          setTemplateSaveLabel(e.target.value)
+                          setTemplateSaveId(slugifyHandoffTemplateId(e.target.value))
+                        }}
+                        placeholder="Anzeigename"
+                        className="rounded-lg border border-border bg-input px-2 py-2"
+                      />
+                      <input
+                        value={templateSaveId}
+                        onChange={(e) => setTemplateSaveId(slugifyHandoffTemplateId(e.target.value))}
+                        placeholder="id"
+                        className="rounded-lg border border-border bg-input px-2 py-2 font-mono"
+                      />
+                      <button
+                        type="button"
+                        disabled={templateSaveBusy || !templateSaveLabel.trim()}
+                        onClick={() => void onSaveHandoffTemplate()}
+                        className="sm:col-span-2 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        {templateSaveBusy ? 'Speichere…' : 'Speichern'}
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <p className="rounded-lg border border-sky-600/30 bg-sky-950/15 px-3 py-2 leading-snug text-muted-foreground">
+                <strong className="text-foreground">LoRa:</strong> {HANDOFF_MESHTASTIC_PSK_SHORT}
+              </p>
+              <p className="text-muted-foreground">
+                <Link href="/handbook?file=EXPORT-ASSISTENT-REFERENZ.md" className="text-primary underline">
+                  Referenz
+                </Link>
+                {' · '}
+                <Link
+                  href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#handoff-env-move-und-package"
+                  className="text-primary underline"
+                >
+                  .env vs. Move
+                </Link>
+              </p>
               <p className="text-muted-foreground">
                 Nur bei Abweichung vom Boss-Setup. Bundle:{' '}
                 <span className="font-mono">npm run bundle:standalone-smartphone</span>
@@ -1101,6 +1069,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
               </div>
             </div>
           </details>
+          </>
+          ) : null}
         </div>
       </div>
     </div>

@@ -11,7 +11,8 @@
     "./ports": "./src/ports/index.ts",
     "./device-time": "./src/device-time/index.ts",
     "./iota": "./src/iota/index.ts",
-    "./attestation": "./src/attestation/index.ts"
+    "./attestation": "./src/attestation/index.ts",
+    "./image": "./src/image/index.ts"
   },
   "scripts": {
     "test:unit": "vitest run",

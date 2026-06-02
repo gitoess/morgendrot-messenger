@@ -8,7 +8,8 @@ export type SendTransportChoicePort = {
   readonly forcedTransport: ForcedTransport
   readonly onForcedTransportChange: (t: ForcedTransport) => void
   readonly messagingPersistenceMode: MessagingPersistenceMode
-  readonly onMessagingPersistenceModeChange: (m: MessagingPersistenceMode) => void
+  /** @deprecated Persistenz wird im Composer abgeleitet — optional für Abwärtskompatibilität. */
+  readonly onMessagingPersistenceModeChange?: (m: MessagingPersistenceMode) => void
 }
 
 /** Send-Panel: nur Lesen von Verschlüsselung und Transport (Umschalter in der Card). */

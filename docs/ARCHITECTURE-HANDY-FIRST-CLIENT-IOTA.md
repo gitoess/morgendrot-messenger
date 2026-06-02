@@ -103,10 +103,33 @@
 5. **Peering (Handshake/Connect)** — solange nur über Node: **Relay-Modus** klar als opt-in; Ersatz (QR, on-chain, …) **nach** Fahrplan **§ C.0b** planen, nicht parallel zum großen Mesh-Kern.
 6. **Abgabe & Erwartungshaltung** — **`docs/WANDERER-STANDALONE-BUNDLE.md`** / Export-README: „Node optional“ statt implizit „`npm start` zuerst“.
 
+### **B.2b — LoRa-Fluent-Bildkodierung lokal (12 KB, ohne PC/Server)**
+
+**Ziel:** Anhang **Flüchtig (LoRa)** — LUMA+CHROMA bis **12 000 B** JPEG-Paar — **vollständig auf dem Gerät** kodieren; **kein** Pflicht-`POST /api/lora-progressive-encode` (Sharp/Node).
+
+| Schicht | Ort | Rolle |
+|---------|-----|--------|
+| **Policy + Wire** | **`@morgendrot/core/image`** | Harte Limits (`FLUENT_LORA_JPEG_PAIR_TOTAL_MAX_BYTES`), progressive Wire (`MORG_LUMA_V1` / `MORG_CHROMA_V1`), Such-/Robust-Policy (`encodeLoraFluentRobustWithPolicy`) — **transportneutral**, Vitest. |
+| **`ImageEncodePort`** | **`frontend/frontend/lib/image-encode/`** | Port-Typ + **`encodeLoRaFluentAutark`**: Standard-Backend **WASM** (Canvas + **`@jsquash/jpeg`** / MozJPEG); optional **Relay** nur bei `localStorage` **`morgendrot.imageEncodeRelayFallback`** = **`1`** → bestehendes **`/api/lora-progressive-encode`**. |
+| **Ingest** | **`chat-view-attachment-ingest.ts`** | Mesh/Pfad‑4: **`encodeLoRaFluentAutark`** statt API-first; IOTA-Kompakt (`compactImageEncode`) bleibt **separater** Scheiben-Backlog. |
+| **Funk-Send** | **`sendLoraImageViaMorgSegV1`** usw. | Unverändert client-lokal nach vorhandenen Wires. |
+
+**Messpunkt:** Große Rohbilder → Warnung „auf dem Gerät verkleinert“; Funk-Bild-Anhang **ohne** erreichbaren Morgendrot-Node testbar (Capacitor/PWA). ### **B.2c — IOTA-Kompaktbild lokal (`MORG_COMPACT_IMG_V1`, 11 800 B Netto)**
+
+**Ziel:** Online/IOTA-Anhang — ein Blob (Luma-WebP + Chroma-PNG) — **auf dem Gerät**; **kein** Pflicht-`POST /api/compact-image-encode`.
+
+| Schicht | Ort | Rolle |
+|---------|-----|--------|
+| **Blob + Policy** | **`@morgendrot/core/image`** | `packVaultImageBlob`, `encodeIotaCompactFitChain`, Presets wie `VaultImagePipeline` |
+| **`ImageEncodePort.encodeIotaCompact`** | **`frontend/…/image-encode/`** | WASM: Canvas + **`@jsquash/webp`** (Luma) + PNG (Chroma); Relay optional wie B.2b |
+| **Ingest / .morg-pkg** | **`chat-view-attachment-ingest.ts`**, **`use-chat-view-morg-pkg-actions.ts`** | **`encodeIotaCompactAutark`** |
+
+**Messpunkt Schreibtisch:** Vitest Ingest + Core-Policy. **Gerät (später):** Abschnitt **„Bild-Kodierung autark (LoRa + IOTA)“** in **`TESTING.md`** — gemeinsam mit **§ H.25a**-Feldtest, nicht vor Schreibtisch-Grün blockieren.
+
 **Operator-UX (parallel, keine Blockade für B.2–B.4):** Telefonbuch mit Klarnamen, QR zum Einlesen/Teilen von Adressen und Installations-URLs, Boss-LAN-Szenario (Helfer scannen QR am Boss-PC → PWA installieren) — **kritische** Einordnung (HTTPS, Same-Origin, § H.12 Kontakt-Wahrheit, QR-Schema **§ H.3b**) in **`docs/ROADMAP-FAHRPLAN.md`** § **H.16**.
 
 **Messpunkt:** Wenn **B.2–B.4** für den privaten Chat erledigt sind, ist der Messenger für den Kernpfad **ohne** laufenden Morgendrot-Node nutzbar; **A** bleibt parallel für Teams, die bis dahin **deployen** wollen.
 
 ---
 
-*Stand: 2026-04-28 — erste Fassung nach Architektur-Pivot; **§ 6** ergänzt: Reihenfolge Handy-only vs. Deploy.*
+*Stand: 2026-05-28 — **§ 6 B.2b/B.2c** Bild-Encode lokal (LoRa + IOTA, `ImageEncodePort`, WASM); zuvor 2026-04-28: erste Fassung, Reihenfolge Handy-only vs. Deploy.*

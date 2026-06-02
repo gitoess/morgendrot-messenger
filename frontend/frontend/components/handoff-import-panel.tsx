@@ -1,6 +1,11 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  HANDOFF_IMPORT_DRAFT_KEY,
+  hasLocalHandoffPendingServerApply,
+  readHandoffImportDraft,
+} from '@/frontend/lib/handoff-pending-server-apply'
 import { FileUp, Lock, Package, RefreshCw } from 'lucide-react'
 import { applyHandoffEnvImport, previewHandoffEnvImport, type HandoffImportSummary } from '@/frontend/lib/api/handoff-env-import'
 import {
@@ -16,6 +21,11 @@ import {
 import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
 import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-preview'
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import {
+  buildLocalHandoffAppliedSnapshot,
+  clearLocalHandoffAppliedSnapshot,
+  saveLocalHandoffAppliedSnapshot,
+} from '@/frontend/lib/handoff-local-apply'
 import { restartBackend } from '@/frontend/lib/api/backend-restart'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import { waitForBackend } from '@/frontend/lib/wait-for-backend'
@@ -26,9 +36,7 @@ type HandoffDraftSnapshot = {
   runtimeConfigText: string | null
 }
 
-const HANDOFF_DRAFT_KEY = 'morgendrot.handoffImportDraft.v1'
-
-export function HandoffImportPanel() {
+export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [envText, setEnvText] = useState<string | null>(null)
@@ -43,9 +51,12 @@ export function HandoffImportPanel() {
   const [handoffPassword, setHandoffPassword] = useState('')
   const [runtimeConfigText, setRuntimeConfigText] = useState<string | null>(null)
   const [draft, setDraft] = useState<HandoffDraftSnapshot | null>(null)
+  const [localAppliedOnly, setLocalAppliedOnly] = useState(false)
   const [stage, setStage] = useState<
     'idle' | 'reading' | 'decrypting' | 'previewing' | 'ready' | 'applying' | 'applied'
   >('idle')
+  const [basisApplyReady, setBasisApplyReady] = useState(false)
+  const prevBackendOnlineRef = useRef<boolean | null>(null)
 
   const reset = () => {
     setEnvText(null)
@@ -57,13 +68,14 @@ export function HandoffImportPanel() {
     setPendingEncrypted(null)
     setHandoffPassword('')
     setRuntimeConfigText(null)
+    setLocalAppliedOnly(false)
     setStage('idle')
   }
 
   const loadDraftFromStorage = useCallback(() => {
     if (typeof window === 'undefined') return
     try {
-      const raw = window.localStorage.getItem(HANDOFF_DRAFT_KEY)
+      const raw = window.localStorage.getItem(HANDOFF_IMPORT_DRAFT_KEY)
       if (!raw) {
         setDraft(null)
         return
@@ -82,7 +94,7 @@ export function HandoffImportPanel() {
         !envText.trim()
       ) {
         try {
-          window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+          window.localStorage.removeItem(HANDOFF_IMPORT_DRAFT_KEY)
         } catch {
           // ignore
         }
@@ -99,7 +111,7 @@ export function HandoffImportPanel() {
     if (typeof window === 'undefined') return
     try {
       window.localStorage.setItem(
-        HANDOFF_DRAFT_KEY,
+        HANDOFF_IMPORT_DRAFT_KEY,
         JSON.stringify({
           savedAtMs: Date.now(),
           envText: env,
@@ -221,6 +233,38 @@ export function HandoffImportPanel() {
     return () => window.removeEventListener(HANDOFF_PENDING_INBOX_EVENT, onPending)
   }, [loadPendingFromInbox])
 
+  useEffect(() => {
+    if (hasLocalHandoffPendingServerApply()) {
+      setLocalAppliedOnly(true)
+    }
+  }, [])
+
+  useEffect(() => {
+    const online = p.backendOnline === true
+    const wasOnline = prevBackendOnlineRef.current === true
+    prevBackendOnlineRef.current = p.backendOnline ?? null
+    if (!online) {
+      setBasisApplyReady(false)
+      return
+    }
+    const pendingServerApply = localAppliedOnly || hasLocalHandoffPendingServerApply()
+    if (!pendingServerApply) return
+    if (!wasOnline) {
+      const storedDraft = readHandoffImportDraft()
+      if (!envText?.trim() && storedDraft?.envText) {
+        void applyExtractedEnv(
+          storedDraft.envText,
+          'Entwurf (nach Reconnect)',
+          storedDraft.runtimeConfigText ?? undefined
+        )
+      }
+      setBasisApplyReady(true)
+      setStatusMsg(
+        'Basis wieder erreichbar — „Import bestätigen“ ausführen, damit das Profil persistent auf der Basis liegt (nicht nur lokal vorgemerkt).'
+      )
+    }
+  }, [p.backendOnline, localAppliedOnly, envText, applyExtractedEnv])
+
   const onDecrypt = async () => {
     if (!pendingEncrypted) return
     if (!handoffPassword.trim()) {
@@ -271,15 +315,19 @@ export function HandoffImportPanel() {
         return
       }
       setApplied(true)
+      setLocalAppliedOnly(false)
       setStage('applied')
       if (typeof window !== 'undefined') {
         try {
-          window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+          window.localStorage.removeItem(HANDOFF_IMPORT_DRAFT_KEY)
         } catch {
           // ignore
         }
       }
       setDraft(null)
+      clearLocalHandoffAppliedSnapshot()
+      setBasisApplyReady(false)
+      setLocalAppliedOnly(false)
       if (r.summary) recordHandoffProfileImport(envText, r.summary)
       setStatusMsg(
         r.applied?.length
@@ -289,6 +337,16 @@ export function HandoffImportPanel() {
     } finally {
       setBusy(false)
     }
+  }
+
+  const onApplyLocalOnly = () => {
+    if (!envText?.trim()) return
+    const snapshot = buildLocalHandoffAppliedSnapshot(envText)
+    saveLocalHandoffAppliedSnapshot(snapshot)
+    setLocalAppliedOnly(true)
+    setStatusMsg(
+      'Lokaler Handoff-Fallback gespeichert. Profilhinweise sind bei Offline/Basis-Ausfall sichtbar; endgültiges Anwenden zur Basis folgt bei Verbindung.'
+    )
   }
 
   const onReloadPage = () => {
@@ -323,6 +381,16 @@ export function HandoffImportPanel() {
           <Package className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
+          {basisApplyReady && p.backendOnline === true && envText && !applied ? (
+            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-950 dark:text-emerald-100">
+              <p className="font-medium">Basis erreichbar — persistentes Profil anwenden</p>
+              <p className="mt-1 text-xs opacity-90">
+                Lokal vorgemerkt reicht für Offline-Hinweise. Für den dauerhaften Stand auf dem Server jetzt{' '}
+                <strong>Import bestätigen</strong> (unten).
+              </p>
+            </div>
+          ) : null}
+
           <div>
             <h4 className="font-semibold text-foreground">Handoff importieren</h4>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -412,7 +480,7 @@ export function HandoffImportPanel() {
                   disabled={busy}
                   onClick={() => {
                     try {
-                      window.localStorage.removeItem(HANDOFF_DRAFT_KEY)
+                      window.localStorage.removeItem(HANDOFF_IMPORT_DRAFT_KEY)
                     } catch {
                       // ignore
                     }
@@ -499,17 +567,27 @@ export function HandoffImportPanel() {
           ) : null}
 
           {envText && !applied && errors.length === 0 && summary ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void onApply()}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              {busy ? 'Speichere…' : 'Import bestätigen'}
-            </button>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void onApply()}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {busy ? 'Speichere…' : 'Import bestätigen'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onApplyLocalOnly}
+                className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+              >
+                Lokal vormerken (ohne Basis)
+              </button>
+            </div>
           ) : null}
 
-          {applied ? (
+          {applied || localAppliedOnly ? (
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
@@ -530,6 +608,9 @@ export function HandoffImportPanel() {
               </button>
               <p className="w-full text-xs text-amber-900/90 dark:text-amber-100/90">
                 Hinweis: Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.
+                {localAppliedOnly
+                  ? ' Lokaler Modus bleibt ein Fallback; fuer persistentes Anwenden bitte spaeter mit Basisverbindung "Import bestätigen".'
+                  : ''}
               </p>
             </div>
           ) : null}

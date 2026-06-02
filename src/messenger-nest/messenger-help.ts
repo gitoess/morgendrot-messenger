@@ -34,6 +34,7 @@ Hinweis SIGNER=cli: IOTA-CLI muss zur RPC passen (gleiche API-Version), sonst Cl
 /vault-show-signer-import <passwort> [pfad]   Nur SIGNER=sdk: gespeicherten Mnemonic/Bech32-Import aus der Vault-Datei anzeigen (Backup prüfen). Erfordert denselben Import wie bei „Signer-Import mit speichern“.
 /vault-save [passwort] [notizen] [pfad] [includeIotaMnemonic]   Keys + Notizen + personalSecrets in lokaler Vault-Datei speichern (Keys müssen im RAM sein). Optional letztes Argument includeIotaMnemonic (oder 1/true): SIGNER=sdk — Session-Mnemonic/Bech32 verschlüsselt in die Datei; ohne Pfad z. B. [passwort, notizen, includeIotaMnemonic].
 /vault-lock              Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert. Vault-Datei bleibt.
+/vault-change-password <alt> <neu>   Vault-Datei neu verschlüsseln (min. 8 Zeichen); Sitzung muss entsperrt sein, aktuelles Passwort wird geprüft.
 Hinweis UI/API: GET/POST /api/vault-personal-secrets – Safe-Einträge nur bei entsperrtem Tresor; persistLocal=true schreibt sofort die Vault-Datei.
 /exit                    Programm beenden.
 /help                    Diese Hilfe anzeigen.

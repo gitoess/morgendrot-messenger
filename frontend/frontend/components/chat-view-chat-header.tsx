@@ -4,22 +4,26 @@
  * Chat-Kopf: Modus (Privat/Pinnwand), Verschlüsselungs-Hinweis, Status-Banner (Tresor, Klartext-Konfig). „Partner verbinden“ sitzt bei der Verschlüsselungs-Karte.
  */
 
-import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
+import type { ReactNode } from 'react'
+import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import Link from 'next/link'
 import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import { channelDisabledReason } from '@/frontend/lib/messenger-channel-send-path'
 import {
   MessengerGuideHint,
   MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_GRUPPENCHAT,
   MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
 } from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
+import { ChatViewDirectIotaPathBadge } from '@/frontend/components/chat-view-direct-iota-path-badge'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -43,16 +47,18 @@ export type ChatViewChatHeaderProps = {
   role: string
   /** Keine sichere Referenzzeit (HTTP-`Date` / GPS) — Fahrplan § H.6c. */
   deviceTimeTrustWarn?: boolean
-  /** Kompakter Sendepfad (online / funk / adhoc). */
+  /** Kompakter Sendepfad (online / funk / adhoc / telegram). */
   sendPath?: {
     visible: boolean
+    channelMode: MessengerChatChannel
     encrypted: boolean
     forcedTransport: ForcedTransport
     onForcedTransportChange: (t: ForcedTransport) => void
     onEncryptedChange?: (encrypted: boolean) => void
-    /** 1:1: dezente Kontakt-ID unter online / funk / adhoc. */
     myAddressLine?: string
     showAdhocTransport?: boolean
+    composerDelivery?: ComposerDeliveryChannel
+    onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
   }
   /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -63,35 +69,63 @@ export type ChatViewChatHeaderProps = {
   afterPulse?: ReactNode
   /** Kompakter Gesamtstatus (optional, z. B. aus use-offline-status). */
   offlineStatus?: OfflineStatusSnapshot
+  /** § H.15: Direkt-RPC / Relay-Kurzstatus neben Sendepfad. */
+  showDirectIotaPath?: boolean
+}
+
+type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
+
+function tresorSessionUi(sessionLocked: boolean, hasKeys?: boolean): TresorSessionUi {
+  if (sessionLocked) return 'locked'
+  if (hasKeys !== true) return 'no-keys'
+  return 'ready'
 }
 
 function TresorSessionBadge({
-  locked,
+  sessionLocked,
+  hasKeys,
   actions,
 }: {
-  locked: boolean
+  /** API: Entsperr-Dialog offen / Passwort-Resolver aktiv. */
+  sessionLocked: boolean
+  /** Keys im Backend-RAM (nach /vault-load) — nötig für Signieren/Mailbox. */
+  hasKeys?: boolean
   actions?: ChatViewVaultBannerActions
 }) {
   const [busy, setBusy] = useState(false)
+  const ui = tresorSessionUi(sessionLocked, hasKeys)
   const shellClass = cn(
-    'inline-flex max-w-[min(100%,12rem)] items-center gap-1 truncate rounded-full border px-2 py-1 text-[11px]',
-    locked
+    'inline-flex max-w-[min(100%,14rem)] items-center gap-1 truncate rounded-full border px-2 py-1 text-[11px]',
+    ui === 'locked'
       ? 'border-amber-500/45 bg-amber-500/10 text-amber-950 dark:text-amber-100'
-      : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100'
+      : ui === 'no-keys'
+        ? 'border-orange-500/45 bg-orange-500/10 text-orange-950 dark:text-orange-100'
+        : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100'
   )
-  const passiveTitle = locked
-    ? 'Backend-Sitzung gesperrt — Keys nicht im RAM. Startseite: Tresor entsperren.'
-    : 'Backend-Sitzung entsperrt — Signieren/Mailbox möglich, solange die Basis erreichbar ist.'
-  const activeTitle = locked
-    ? 'Zur Startseite wechseln — dort Dialog „Tresor entsperren“ (Randfall: Sitzung gesperrt während du hier warst).'
-    : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis; danach Passwort erneut nötig.'
+  const passiveTitle =
+    ui === 'locked'
+      ? 'Entsperr-Dialog nötig — Startseite: Tresor entsperren.'
+      : ui === 'no-keys'
+        ? 'Passwort ok, aber Schlüssel nicht im Server-RAM — Startseite erneut entsperren oder Tresor → Datei laden.'
+        : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
+  const activeTitle =
+    ui === 'locked'
+      ? 'Zur Startseite wechseln — dort Dialog „Tresor entsperren“.'
+      : ui === 'no-keys'
+        ? 'Zur Startseite — Tresor erneut entsperren (lädt Keys in die Sitzung).'
+        : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis.'
 
-  const icon = locked ? (
-    <Lock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
-  ) : (
-    <Unlock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+  const icon =
+    ui === 'ready' ? (
+      <Unlock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+    ) : (
+      <Lock className="h-3 w-3 shrink-0 opacity-90" aria-hidden />
+    )
+  const label = (
+    <span className="truncate font-medium">
+      {ui === 'locked' ? 'Tresor: gesperrt' : ui === 'no-keys' ? 'Tresor: Keys fehlen' : 'Tresor: bereit'}
+    </span>
   )
-  const label = <span className="truncate font-medium">{locked ? 'Tresor: gesperrt' : 'Tresor: entsperrt'}</span>
 
   if (!actions) {
     return (
@@ -108,9 +142,11 @@ function TresorSessionBadge({
       className={cn(shellClass, 'cursor-pointer text-left transition-opacity hover:opacity-90', busy && 'opacity-70')}
       disabled={busy}
       title={activeTitle}
-      aria-label={locked ? 'Zur Startseite für Tresor entsperren' : 'API-Sitzung sperren'}
+      aria-label={
+        ui === 'locked' || ui === 'no-keys' ? 'Zur Startseite für Tresor entsperren' : 'API-Sitzung sperren'
+      }
       onClick={() => {
-        if (locked) {
+        if (ui === 'locked' || ui === 'no-keys') {
           actions.onNavigateHomeWhenLocked()
           return
         }
@@ -144,6 +180,8 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     onChannelModeChange,
     afterPulse,
     offlineStatus,
+    showDirectIotaPath = false,
+    basisUnreachable,
   } = p
 
   return (
@@ -174,49 +212,44 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   role="group"
                   aria-label="Kanal"
                 >
-                  <button
-                    type="button"
-                    onClick={() => onChannelModeChange('private')}
-                    className={cn(
-                      'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
-                      channelMode === 'private'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    1:1
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onChannelModeChange('group')}
-                    className={cn(
-                      'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
-                      channelMode === 'group'
-                        ? 'bg-violet-600 text-white'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    Gruppe
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onChannelModeChange('pinnwand')}
-                    className={cn(
-                      'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
-                      channelMode === 'pinnwand'
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    Pinnwand
-                  </button>
+                  {(['private', 'group', 'pinnwand'] as const).map((mode) => {
+                    const label = mode === 'private' ? '1:1' : mode === 'group' ? 'Gruppe' : 'Pinnwand'
+                    const disabledReason =
+                      sendPath && mode !== channelMode
+                        ? channelDisabledReason(
+                            mode,
+                            sendPath.composerDelivery ?? 'chain',
+                            sendPath.forcedTransport ?? 'internet'
+                          )
+                        : null
+                    const disabled = Boolean(disabledReason)
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        disabled={disabled}
+                        title={disabled ? disabledReason ?? undefined : undefined}
+                        onClick={() => onChannelModeChange(mode)}
+                        className={cn(
+                          'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                          disabled && 'cursor-not-allowed opacity-40',
+                          channelMode === mode && !disabled
+                            ? mode === 'group'
+                              ? 'bg-violet-600 text-white'
+                              : 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    )
+                  })}
                 </span>
               ) : null}
             </div>
             {channelMode === 'group' ? (
-              <p className="mt-1 text-[11px] leading-snug text-muted-foreground">
-                Gemeinsamer Posteingang für alle Gruppenmitglieder (0x…). Senden weiter an eine Adresse im Composer
-                (pairwise).
+              <p className="mt-1 text-[10px]">
+                <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_GRUPPENCHAT} className="text-[10px]" />
               </p>
             ) : null}
             {channelMode != null && onChannelModeChange && isPinnwandChannel(channelMode) ? (
@@ -244,9 +277,22 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
             </span>
           ) : null}
           {isPrivate && apiStatus ? (
-            <TresorSessionBadge locked={!!apiStatus.locked} actions={vaultBannerActions} />
+            <TresorSessionBadge
+              sessionLocked={!!apiStatus.locked}
+              hasKeys={apiStatus.hasKeys}
+              actions={vaultBannerActions}
+            />
           ) : null}
-          {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
+          <div className="flex flex-col items-end gap-0.5">
+            {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
+            {showDirectIotaPath ? (
+              <ChatViewDirectIotaPathBadge
+                backendOnline={
+                  basisUnreachable ? false : apiStatus?.backendOnline ?? apiStatus?.backendRunning
+                }
+              />
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -298,18 +344,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
         </div>
       )}
 
-      {isPrivate &&
-        encrypted &&
-        apiStatus &&
-        (apiStatus.plaintextMode === true || apiStatus.mailboxStorePlaintext === true) && (
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-950 dark:text-red-100">
-            <strong className="font-semibold">Vertraulichkeit eingeschränkt:</strong> Das Backend ist für{' '}
-            <span className="font-mono text-xs">ENABLE_PLAINTEXT_CHANNEL</span> und/oder{' '}
-            <span className="font-mono text-xs">MAILBOX_STORE_PLAINTEXT</span> konfiguriert – Nachrichteninhalte können
-            zusätzlich oder ausschließlich als Klartext in der Mailbox bzw. auf der Chain landen. Für maximale
-            Inhaltsvertraulichkeit beide Optionen aus und nur verschlüsselten Pfad nutzen.
-          </div>
-        )}
     </>
   )
 }

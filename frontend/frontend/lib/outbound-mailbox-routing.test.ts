@@ -22,7 +22,11 @@ describe('resolveOutboundMailboxObjectId', () => {
     expect(resolveOutboundMailboxObjectId(dir, WALLET, 'private')).toBe(CONTACT_MB)
   })
 
-  it('nutzt eigene aktive private Mailbox ohne Kontakt-Mapping', () => {
-    expect(resolveOutboundMailboxObjectId({}, WALLET)).toBe(PRIVATE_MB)
+  it('nutzt Composer-Mailbox-0x wenn gesetzt', () => {
+    expect(resolveOutboundMailboxObjectId({}, WALLET, undefined, PRIVATE_MB)).toBe(PRIVATE_MB)
+  })
+
+  it('ohne Composer-Mailbox kein Fallback (Event)', () => {
+    expect(resolveOutboundMailboxObjectId({}, WALLET)).toBeUndefined()
   })
 })

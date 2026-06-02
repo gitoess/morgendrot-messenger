@@ -6,6 +6,8 @@ export {
 } from './direct-client'
 export { probeDirectIotaRpc } from './chain-reachability'
 export { buildStorePlaintextMailboxTransaction, isLikelyIotaHexId } from './mailbox-plain-txb'
+export { buildStoreEcdhInitTransaction } from './handshake-ecdh-txb'
+export type { BuildStoreEcdhInitTxInput } from './handshake-ecdh-txb'
 export type { BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
 export {
   buildStoreEncryptedMailboxTransaction,
@@ -20,6 +22,19 @@ export {
 } from './mailbox-inbox-plain-rpc'
 export type { PlainMailboxRowForInbox, FetchPlaintextMailboxInboxInput } from './mailbox-inbox-plain-rpc'
 export { fetchMailboxInboxRpcRows } from './mailbox-inbox-mixed-rpc'
+export {
+  fetchHsKeyFromMailbox,
+  findPeerHandshakeFromRpc,
+  listIncomingHandshakeOffersRpc,
+  listOutgoingHandshakeOffersRpc,
+} from './handshake-offers-rpc'
+export type {
+  IncomingHandshakeOfferRpc,
+  OutgoingHandshakeOfferRpc,
+  ListHandshakeOffersRpcInput,
+  FindPeerHandshakeFromRpcResult,
+  HandshakeOfferSource,
+} from './handshake-offers-rpc'
 export type {
   MailboxInboxRpcRow,
   MailboxInboxRpcPlainPiece,

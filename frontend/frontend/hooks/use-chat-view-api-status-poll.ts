@@ -21,7 +21,9 @@ import {
   applyDirectMailboxChainSnapshotFromNetworkIds,
   syncDirectMailboxFlagsFromApiStatus,
 } from '@/frontend/lib/direct-iota-chain-context'
+import { persistConnectedPeersSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
+import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
@@ -96,6 +98,11 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     }
     if (hadBasisUnreachable.current) {
       toast.success('Basis wieder erreichbar')
+      if (readLocalHandoffAppliedSnapshot()) {
+        toast.info(
+          'Handoff nur lokal vorgemerkt — unter Einstellungen → Handoff-Import jetzt auf die Basis anwenden.'
+        )
+      }
       void onReconnectNow?.()
       hadBasisUnreachable.current = false
     }
@@ -112,6 +119,10 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     const addr = (rest.myAddressFull || rest.myAddress || '').trim()
     if (mb && pkg && addr) {
       applyDirectMailboxChainSnapshotFromNetworkIds({ packageId: pkg, mailboxId: mb, myAddress: addr })
+    }
+    const conn = rest.connectedAddresses
+    if (Array.isArray(conn) && conn.length > 0) {
+      persistConnectedPeersSnapshot(conn)
     }
   }, [])
 

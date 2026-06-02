@@ -1,0 +1,91 @@
+'use client'
+
+import { HelpCircle } from 'lucide-react'
+import type { ApiStatus } from '@/frontend/lib/api'
+import type { DashboardUnlockMode } from '@/frontend/lib/dashboard-unlock'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
+
+export function DashboardSharedDialogs(p: {
+  locked: boolean
+  helpOpen: boolean
+  onHelpOpenChange: (open: boolean) => void
+  helpLoading: boolean
+  helpText: string
+  unlock: {
+    unlockMode: DashboardUnlockMode
+    onUnlockModeChange: (m: DashboardUnlockMode) => void
+    signerKind: ApiStatus['signer']
+    apiSnapshot: (ApiStatus & { error?: string }) | null
+    password: string
+    setPassword: (v: string) => void
+    passwordConfirm: string
+    setPasswordConfirm: (v: string) => void
+    signerImport: string
+    setSignerImport: (v: string) => void
+    signerImportConfirm: string
+    setSignerImportConfirm: (v: string) => void
+    showSignerImportOpen: boolean
+    setShowSignerImportOpen: (v: boolean) => void
+    unlockError: string
+    unlocking: boolean
+    unlockButtonDisabled: boolean
+    importMnemonicRequired: boolean
+    handleUnlock: () => void | Promise<void>
+  }
+}) {
+  const u = p.unlock
+  return (
+    <>
+      <Dialog open={p.helpOpen} onOpenChange={p.onHelpOpenChange}>
+        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Hilfe
+            </DialogTitle>
+            <DialogDescription>
+              Oben Kurzüberblick, darunter vollständige Befehlsliste — vom Backend
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-auto rounded-lg border border-border bg-muted/30 p-4 font-mono text-sm whitespace-pre-wrap">
+            {p.helpLoading ? (
+              <span className="text-muted-foreground">Lade…</span>
+            ) : (
+              p.helpText
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <VaultUnlockDialog
+        open={p.locked}
+        unlockMode={u.unlockMode}
+        onUnlockModeChange={u.onUnlockModeChange}
+        signerKind={u.signerKind}
+        apiSnapshot={u.apiSnapshot}
+        password={u.password}
+        onPasswordChange={u.setPassword}
+        passwordConfirm={u.passwordConfirm}
+        onPasswordConfirmChange={u.setPasswordConfirm}
+        signerImport={u.signerImport}
+        onSignerImportChange={u.setSignerImport}
+        signerImportConfirm={u.signerImportConfirm}
+        onSignerImportConfirmChange={u.setSignerImportConfirm}
+        showSignerImportOpen={u.showSignerImportOpen}
+        onShowSignerImportOpenChange={u.setShowSignerImportOpen}
+        unlockError={u.unlockError}
+        unlocking={u.unlocking}
+        unlockButtonDisabled={u.unlockButtonDisabled}
+        importMnemonicRequired={u.importMnemonicRequired}
+        onUnlock={() => void u.handleUnlock()}
+      />
+    </>
+  )
+}

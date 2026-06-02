@@ -8,6 +8,12 @@ export type MessengerGroupDefinition = {
   memberAddresses: string[]
   /** M2b: optionaler Streams-Anchor für Live-Hinweise (Archiv bleibt Mailbox). */
   streamsAnchorId?: string
+  /** H.3o.6 Schritt 2: optionale Secondary-Channel-Metadaten (ohne PSK-Secret im Klartext). */
+  secondaryChannel?: {
+    channelIndex?: number
+    channelName?: string
+    pskRef?: string
+  }
 }
 
 const LS_GROUPS = 'morgendrot.messenger.groups.v1'
@@ -42,12 +48,40 @@ function parseGroups(raw: string | null): MessengerGroupDefinition[] {
         typeof o.streamsAnchorId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(o.streamsAnchorId.trim())
           ? o.streamsAnchorId.trim()
           : undefined
+      const rawSecondary = o.secondaryChannel
+      const secondaryObj =
+        rawSecondary && typeof rawSecondary === 'object' ? (rawSecondary as Record<string, unknown>) : null
+      const channelIndexRaw = secondaryObj?.channelIndex
+      const channelIndex =
+        typeof channelIndexRaw === 'number' &&
+        Number.isInteger(channelIndexRaw) &&
+        channelIndexRaw >= 0 &&
+        channelIndexRaw <= 7
+          ? channelIndexRaw
+          : undefined
+      const channelName =
+        typeof secondaryObj?.channelName === 'string' && secondaryObj.channelName.trim()
+          ? secondaryObj.channelName.trim()
+          : undefined
+      const pskRef =
+        typeof secondaryObj?.pskRef === 'string' && secondaryObj.pskRef.trim()
+          ? secondaryObj.pskRef.trim()
+          : undefined
+      const secondaryChannel =
+        channelIndex != null || channelName || pskRef
+          ? {
+              ...(channelIndex != null ? { channelIndex } : {}),
+              ...(channelName ? { channelName } : {}),
+              ...(pskRef ? { pskRef } : {}),
+            }
+          : undefined
       if (!id || memberAddresses.length === 0) continue
       out.push({
         id,
         name: name || `Gruppe (${memberAddresses.length})`,
         memberAddresses,
         ...(streamsAnchorId ? { streamsAnchorId } : {}),
+        ...(secondaryChannel ? { secondaryChannel } : {}),
       })
     }
     return out

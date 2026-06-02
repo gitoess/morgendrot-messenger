@@ -264,10 +264,6 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
             </button>
           ))}
         </div>
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          „Klartext“: Einträge ohne Verschlüsselungs-Markierung (typisch Pinnwand/Funk). 1:1-Klartext kann
-          mit erscheinen — kein separater Server-Tag.
-        </p>
       </div>
       ) : null}
       {showChannelSection && showTransportRow ? (

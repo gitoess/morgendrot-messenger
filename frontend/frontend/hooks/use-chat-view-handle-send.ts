@@ -24,6 +24,7 @@ import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-s
 import {
   CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
   CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
+  CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG,
   CHAT_ENCRYPTED_MESH_DISABLED_MSG,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
@@ -40,6 +41,8 @@ import {
 } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { connect, findPeerHandshake } from '@/frontend/lib/api/package-connect'
+import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
+import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
 import {
   getDirectChatEcdhMaterialForRecipient,
@@ -152,6 +155,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     forcedTransport,
     partner,
     messagingPersistenceMode,
+    composerMailboxObjectId,
     apiStatus,
     refreshApiStatus,
     recipient,
@@ -176,6 +180,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    meshtasticChannelIndex,
     clearMeshInboundText,
     drainMeshInboundText,
     appendMeshMessage,
@@ -254,6 +259,23 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return { ok: false, message: 'Wallet ist gesperrt — zuerst entsperren.' }
       }
       const connected = (apiStatus?.connectedAddresses ?? []).map((a) => a.toLowerCase())
+      const cachedHs = readCachedHandshakeOffers()
+      const hsSync = resolveEncryptedRecipientHandshakeStatusSync({
+        recipient: target,
+        connectedAddresses: connected,
+        incomingOffers: cachedHs?.offers ?? [],
+        outgoingOffers: cachedHs?.outgoingOffers ?? [],
+      })
+      if (hsSync === 'awaiting_peer') {
+        return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG }
+      }
+      if (hsSync === 'needs_accept') {
+        return {
+          ok: false,
+          message:
+            'Der Partner hat einen Handshake gesendet — zuerst „Handshake annehmen“ (Connect), dann verschlüsselt senden.',
+        }
+      }
       if (connected.includes(target)) return { ok: true }
       if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
       if (canTryLiveEncryptedDirectMailbox(target)) return { ok: true }
@@ -353,7 +375,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     const mailboxOptsFor = (to: string) => {
-      const mb = resolveOutboundMailboxObjectId(contactDirectory, to)
+      const mb = resolveOutboundMailboxObjectId(contactDirectory, to, undefined, p.composerMailboxObjectId)
       return {
         messagingPersistenceMode,
         ...(mb ? { mailboxObjectId: mb } : {}),
@@ -435,19 +457,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return { status: 'duplicate', note: 'Eigen-Archiv: bereits in Offline-Warteschlange (Dedup).' }
     }
 
-    const runPath4SelfMirrorForLoraImage = async (lumaText: string, chromaText: string): Promise<string> => {
+    const runPath4SelfMirrorForLoraImage = async (
+      lumaText: string,
+      chromaText: string,
+      segMsgIds?: { luma?: string; chroma?: string }
+    ): Promise<string> => {
       if (!meshSelfArchiveAfterLoRa || forcedTransport !== 'mesh') return ''
       throwIfCancelled()
-      const loraMsgId =
-        parseLoraProgressiveMessage(lumaText)?.msgId ?? parseLoraProgressiveMessage(chromaText)?.msgId ?? null
+      const loraMsgIdLuma =
+        segMsgIds?.luma ??
+        parseLoraProgressiveMessage(lumaText)?.msgId ??
+        parseLoraProgressiveMessage(chromaText)?.msgId ??
+        null
+      const loraMsgIdChroma =
+        segMsgIds?.chroma ?? parseLoraProgressiveMessage(chromaText)?.msgId ?? loraMsgIdLuma
       const n1 = nextChainMessageNonceU64()
       const w1 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(lumaText), n1)
-      const d1 = await dispatchPath4Mirror(w1, n1, 'image_luma', loraMsgId)
+      const d1 = await dispatchPath4Mirror(w1, n1, 'image_luma', loraMsgIdLuma)
       if (d1.status !== 'anchored') return ` ${d1.note}`
       throwIfCancelled()
       const n2 = n1 + 1n
       const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
-      const d2 = await dispatchPath4Mirror(w2, n2, 'image_chroma', loraMsgId)
+      const d2 = await dispatchPath4Mirror(w2, n2, 'image_chroma', loraMsgIdChroma)
       if (d2.status !== 'anchored') return ` ${d2.note}`
       const mbTx = d2.txDigest ?? d1.txDigest
       if (isForensicImageMailboxAttestationEnabled()) {
@@ -601,7 +632,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           onProgress: (line) => setMeshProgress?.(line),
           onStatusMsg: setStatusMsg,
           drainInboundMeshText: drainInbound,
-          sendMeshText: (text, d) => meshtastic.sendMeshText(text, d),
+          sendMeshText: (text, d) => meshtastic.sendMeshText(text, d, meshtasticChannelIndex),
         })
         if (!segResult.ok) {
           applyValidationError({ ok: false, message: segResult.error, idleMs: 10_000 }, setStatus, setStatusMsg)
@@ -610,7 +641,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         throwIfCancelled()
         const mirrorNote = await runPath4SelfMirrorForLoraImage(
           attachedLora.lumaWire,
-          attachedLora.chromaWire
+          attachedLora.chromaWire,
+          { luma: segResult.plan.luma.msgId, chroma: segResult.plan.chroma.msgId }
         )
         setStatus('success')
         setStatusMsg(
@@ -907,6 +939,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       messageNonceU64: bigint
     ): Promise<QueueMailboxOutcome> => {
       if (!allowOfflineMailboxQueue) return 'skipped'
+      if (apiStatus?.locked || /tresor gesperrt/i.test(lastErr)) {
+        return {
+          reject:
+            'Tresor gesperrt — bitte zuerst entsperren. Nicht erneut in die Warteschlange gelegt.',
+        }
+      }
       const recipientTrim = encrypted ? encryptedMailboxRecipient : recipient.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(recipientTrim)) {
         return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
@@ -1103,7 +1141,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             )
           }
           try {
-            await meshtastic.sendMeshText(textSnap, dest)
+            await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             if (path4Footnote.startsWith('__PATH4_FAILED__')) {
@@ -1139,7 +1177,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 if (!meshtastic.connected) {
                   throw new Error(MESH_BT_NOT_CONNECTED_MSG)
                 }
-                await meshtastic.sendMeshText(textSnap, dest)
+                await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
                 recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
                 const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
                 if (path4Footnote.startsWith('__PATH4_FAILED__')) {
@@ -1166,7 +1204,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return failSend(MESH_BT_NOT_CONNECTED_MSG)
           }
           try {
-            await meshtastic.sendMeshText(textSnap, dest)
+            await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
             recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, path4Active)
             const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
             if (path4Footnote.startsWith('__PATH4_FAILED__')) {
@@ -1367,6 +1405,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    meshtasticChannelIndex,
     clearMeshInboundText,
     drainMeshInboundText,
     contactDirectory,

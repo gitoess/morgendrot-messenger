@@ -2,6 +2,7 @@
  * Ziel-Mailbox für Send: Kontakt-Slot (gewählt) > Kontakt-Default > eigene aktive > Server-Shared.
  */
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { normalizeMailboxObjectIdInput } from '@/frontend/lib/composer-mailbox-object-id'
 import {
   type ContactSendMailboxTarget,
   defaultContactSendSlot,
@@ -19,15 +20,21 @@ function isValidMb(id: string): boolean {
 export function resolveOutboundMailboxObjectId(
   directory: Record<string, ContactMeshEntryClient>,
   recipientAddress: string,
-  targetOverride?: ContactSendMailboxTarget
+  targetOverride?: ContactSendMailboxTarget,
+  explicitComposerMailboxObjectId?: string
 ): string | undefined {
+  const explicit = normalizeMailboxObjectIdInput(explicitComposerMailboxObjectId ?? '')
+  if (explicit) return explicit
+
   const to = recipientAddress.trim().toLowerCase()
   const entry = /^0x[a-f0-9]{64}$/.test(to) ? directory[to] : undefined
 
   const target =
     targetOverride ??
     (to.startsWith('0x') ? readContactSendMailboxTarget(to) : undefined) ??
-    (entry ? defaultContactSendSlot(entry) : 'own')
+    'event'
+
+  if (target === 'event') return undefined
 
   if (target === 'shared' || target === 'private' || target === 'team' || target === 'buffer') {
     const fromSlot = resolveContactMailboxSlotObjectId(entry, target)

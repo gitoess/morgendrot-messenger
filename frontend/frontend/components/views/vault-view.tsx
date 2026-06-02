@@ -1,20 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   Shield,
   Download,
-  Upload,
+  Cloud,
   AlertTriangle,
   Trash2,
   Check,
   AlertCircle,
   Lock,
-  Cloud,
-  CloudOff,
-  KeyRound,
-  Copy,
-  Plus,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
@@ -28,11 +23,10 @@ import {
   fetchStatus,
   vaultLockCommand,
   clearLocalHistory,
-  fetchVaultPersonalSecrets,
-  saveVaultPersonalSecrets,
+  vaultChangePassword,
   vaultListLocalFiles,
-  type VaultStatus,
-  type PersonalSecretEntry,
+  vaultDeleteLocal,
+  importVaultFileFromDevice,
 } from '@/frontend/lib/api'
 import { VAULT_FREETEXT_NOTES_MAX_CHARS } from '../../lib/vault-limits'
 
@@ -41,8 +35,11 @@ interface VaultViewProps {
 }
 
 export function VaultView({ variant }: VaultViewProps) {
-  const [password, setPassword] = useState('')
   const [confirmPurge, setConfirmPurge] = useState(false)
+  const [changePwCurrent, setChangePwCurrent] = useState('')
+  const [changePwNew, setChangePwNew] = useState('')
+  const [changePwConfirm, setChangePwConfirm] = useState('')
+  const [changePwBusy, setChangePwBusy] = useState(false)
   const [confirmText, setConfirmText] = useState('')
   /** full = Vault on-chain + Inbox-Cache; local_cache = nur Klartext-Inbox-Datei; lock_session = nur RAM/Tresor sperren */
   const [purgeScope, setPurgeScope] = useState<'full' | 'local_cache' | 'lock_session'>('full')
@@ -50,63 +47,74 @@ export function VaultView({ variant }: VaultViewProps) {
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [statusMsg, setStatusMsg] = useState('')
   const [syncingOnchain, setSyncingOnchain] = useState(false)
-  const [vaultStatus, setVaultStatus] = useState<VaultStatus | null>(null)
   const [hasKeys, setHasKeys] = useState<boolean | undefined>(undefined)
+  /** GET /api/status locked — wartet auf Entsperr-Dialog (nicht dasselbe wie hasKeys). */
+  const [vaultLocked, setVaultLocked] = useState(false)
   const [notes, setNotes] = useState('')
   const [sessionBusy, setSessionBusy] = useState(false)
-  const [vaultMainTab, setVaultMainTab] = useState<'backup' | 'safe'>('backup')
-  const [safeEntries, setSafeEntries] = useState<PersonalSecretEntry[]>([])
-  const [safeBusy, setSafeBusy] = useState(false)
-  const [safeMsg, setSafeMsg] = useState<string | null>(null)
-  const [vaultPaths, setVaultPaths] = useState<string[]>([])
-  const [vaultDefaultPath, setVaultDefaultPath] = useState<string | null>(null)
   /** cli | sdk | remote — aus GET /api/status (SIGNER=sdk: optional Mnemonic in Backup). */
   const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
   const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackup] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(true)
+  const notesHydratedRef = useRef(false)
+  const [vaultPaths, setVaultPaths] = useState<string[]>([])
+  const [defaultVaultPath, setDefaultVaultPath] = useState('.morgendrot-vault')
+  const [selectedVaultPath, setSelectedVaultPath] = useState('')
+  const vaultFileInputRef = useRef<HTMLInputElement>(null)
 
   const refreshVaultStatus = useCallback(async () => {
     try {
       const s = await fetchStatus()
       if ('pollClockHint' in s) {
-        setVaultStatus(s.vaultStatus ?? null)
         setHasKeys(s.hasKeys)
+        setVaultLocked(!!s.locked)
         setSignerKind(typeof s.signer === 'string' ? s.signer : undefined)
       }
     } catch {
-      setVaultStatus(null)
       setHasKeys(undefined)
+      setVaultLocked(false)
       setSignerKind(undefined)
     }
   }, [])
 
-  const refreshVaultPaths = useCallback(async () => {
+  const refreshVaultFileList = useCallback(async () => {
     const r = await vaultListLocalFiles()
-    if (r.ok && Array.isArray(r.paths)) setVaultPaths(r.paths)
-    else setVaultPaths([])
-    setVaultDefaultPath(typeof r.defaultPath === 'string' ? r.defaultPath : null)
+    if (r.ok && Array.isArray(r.paths)) {
+      setVaultPaths(r.paths)
+      const def = r.defaultPath?.trim() || '.morgendrot-vault'
+      setDefaultVaultPath(def)
+      setSelectedVaultPath((prev) => {
+        if (prev && r.paths!.includes(prev)) return prev
+        if (r.paths!.includes(def)) return def
+        return r.paths![0] ?? def
+      })
+      toast.success(
+        r.paths.length
+          ? `${r.paths.length} Vault-Datei(en) gefunden.`
+          : 'Keine .morgendrot-vault*-Dateien im Server-Arbeitsverzeichnis.'
+      )
+    } else {
+      toast.error(r.error || r.message || 'Dateiliste konnte nicht geladen werden.')
+    }
   }, [])
 
   useEffect(() => {
     if (variant === 'local-vault') {
       void refreshVaultStatus()
-      void refreshVaultPaths()
+      void refreshVaultFileList()
     }
-  }, [variant, refreshVaultStatus, refreshVaultPaths])
+  }, [variant, refreshVaultStatus, refreshVaultFileList])
 
   useEffect(() => {
-    if (hasKeys === false) setSafeEntries([])
+    if (hasKeys !== true) notesHydratedRef.current = false
   }, [hasKeys])
 
   useEffect(() => {
-    if (variant !== 'local-vault' || hasKeys !== true) return
-    let alive = true
-    fetchVaultPersonalSecrets().then((r) => {
-      if (!alive || !r.ok || !r.unlocked || !Array.isArray(r.entries)) return
-      setSafeEntries(r.entries)
+    if (variant !== 'local-vault' || hasKeys !== true || notesHydratedRef.current) return
+    notesHydratedRef.current = true
+    void vaultLoad().then((res) => {
+      if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     })
-    return () => {
-      alive = false
-    }
   }, [variant, hasKeys])
 
   const showStatus = (success: boolean, msg: string) => {
@@ -119,7 +127,7 @@ export function VaultView({ variant }: VaultViewProps) {
     setProcessing(true)
     const includeSigner =
       includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true
-    const res = await vaultSave(password || undefined, notes, {
+    const res = await vaultSave(undefined, notes, {
       includeIotaMnemonic: includeSigner,
     })
     const okMsg = res.ok
@@ -132,28 +140,21 @@ export function VaultView({ variant }: VaultViewProps) {
     else if (!res.ok) toast.error(okMsg)
     if (res.ok) {
       refreshVaultStatus()
-      void refreshVaultPaths()
     }
     setProcessing(false)
   }
 
-  const handleLoad = async () => {
+  const handleLoad = async (filePath?: string) => {
     setProcessing(true)
-    const res = await vaultLoad(password || undefined)
-    if (res.ok && 'notes' in res && typeof (res as { notes?: string }).notes === 'string') setNotes((res as { notes: string }).notes)
-    if (res.ok && Array.isArray(res.personalSecrets)) setSafeEntries(res.personalSecrets)
+    const res = await vaultLoad(undefined, filePath)
+    if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
       const n = typeof res.notes === 'string' ? res.notes.trim() : ''
-      const ps = Array.isArray(res.personalSecrets) ? res.personalSecrets.length : 0
-      const unchangedHint =
-        n.length === 0 && ps === 0
-          ? ' (Keine Notizen/Safe-Einträge in der Datei — kann unverändert wirken, war aber erfolgreich.)'
-          : ''
+      const unchangedHint = n.length === 0 ? ' (Keine Notizen in der Datei.)' : ''
       const msg = `Tresor-Datei eingelesen.${unchangedHint}`
       showStatus(true, msg)
       toast.success(msg)
       refreshVaultStatus()
-      void refreshVaultPaths()
     } else {
       const err = res.error || res.message || 'Fehler beim Laden'
       showStatus(false, err)
@@ -164,15 +165,13 @@ export function VaultView({ variant }: VaultViewProps) {
 
   const handleLoadFromChain = async () => {
     setProcessing(true)
-    const res = await vaultLoadFromChain(password || undefined)
-    if (res.ok && 'notes' in res && typeof (res as { notes?: string }).notes === 'string') setNotes((res as { notes: string }).notes)
-    if (res.ok && Array.isArray(res.personalSecrets)) setSafeEntries(res.personalSecrets)
+    const res = await vaultLoadFromChain()
+    if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
       const msg = 'Tresor von Chain geladen.'
       showStatus(true, msg)
       toast.success(msg)
       refreshVaultStatus()
-      void refreshVaultPaths()
     } else {
       const err = res.error || res.message || 'Von Chain laden fehlgeschlagen'
       showStatus(false, err)
@@ -183,16 +182,58 @@ export function VaultView({ variant }: VaultViewProps) {
 
   const handleOnchain = async () => {
     setSyncingOnchain(true)
-    const res = await vaultOnchain(password || undefined, notes, {
+    const res = await vaultOnchain(undefined, notes, {
       includeIotaMnemonic:
         includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true,
     })
     showStatus(res.ok, res.ok ? 'Tresor auf Chain gesichert.' : res.error || 'On-Chain-Speichern fehlgeschlagen')
     if (res.ok) {
       refreshVaultStatus()
-      void refreshVaultPaths()
+      const wantDelete = window.confirm(
+        'On-Chain-Backup erfolgreich.\n\n' +
+          'Lokale Vault-Datei auf diesem Server löschen? Nur sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.\n\n' +
+          'Die Datei wird nur gelöscht, wenn ein On-Chain-Eintrag für deine Adresse existiert.'
+      )
+      if (wantDelete) {
+        const del = await vaultDeleteLocal()
+        if (del.ok) {
+          toast.success(typeof del.message === 'string' ? del.message : 'Lokale Vault-Datei gelöscht.')
+          void refreshVaultFileList()
+        } else {
+          toast.error(del.error || del.message || 'Lokale Datei konnte nicht gelöscht werden.')
+        }
+      }
     }
     setSyncingOnchain(false)
+  }
+
+  const handleChangePassword = async () => {
+    if (!changePwCurrent.trim() || !changePwNew.trim()) {
+      showStatus(false, 'Aktuelles und neues Passwort eingeben.')
+      return
+    }
+    if (changePwNew !== changePwConfirm) {
+      showStatus(false, 'Neues Passwort und Wiederholung stimmen nicht überein.')
+      return
+    }
+    if (changePwNew.length < 8) {
+      showStatus(false, 'Neues Passwort: mindestens 8 Zeichen.')
+      return
+    }
+    setChangePwBusy(true)
+    const res = await vaultChangePassword(changePwCurrent.trim(), changePwNew.trim())
+    if (res.ok) {
+      showStatus(true, res.message || 'Passwort geändert.')
+      toast.success(res.message || 'Passwort geändert.')
+      setChangePwCurrent('')
+      setChangePwNew('')
+      setChangePwConfirm('')
+    } else {
+      const err = res.error || res.message || 'Passwort ändern fehlgeschlagen'
+      showStatus(false, err)
+      toast.error(err)
+    }
+    setChangePwBusy(false)
   }
 
   const handlePurge = async () => {
@@ -243,10 +284,41 @@ export function VaultView({ variant }: VaultViewProps) {
     setSessionBusy(false)
   }
 
+  const handleImportVaultFromDevice = async (file: File) => {
+    setProcessing(true)
+    const imp = await importVaultFileFromDevice(file)
+    if (!imp.ok) {
+      showStatus(false, imp.error || 'Import fehlgeschlagen')
+      toast.error(imp.error || 'Import fehlgeschlagen')
+      setProcessing(false)
+      return
+    }
+    const loadPath = imp.path
+    const loadRes = await vaultLoad(undefined, loadPath)
+    if (loadRes.ok && typeof loadRes.notes === 'string') setNotes(loadRes.notes)
+    const ok = loadRes.ok
+    showStatus(ok, ok ? imp.message || 'Vault importiert und geladen.' : loadRes.error || 'Laden nach Import fehlgeschlagen')
+    if (ok) {
+      toast.success(imp.message || 'Vault importiert und in die Sitzung geladen.')
+      void refreshVaultFileList()
+      void refreshVaultStatus()
+    } else if (imp.ok) {
+      toast.message(
+        loadRes.error ||
+          'Datei gespeichert — Startseite „Tresor entsperren“, dann wird die Vault in die Sitzung geladen.'
+      )
+      void refreshVaultFileList()
+      void refreshVaultStatus()
+    } else {
+      toast.error(loadRes.error || 'Nach Import: Laden in die Sitzung fehlgeschlagen.')
+    }
+    setProcessing(false)
+  }
+
   const handleVaultLock = async () => {
     if (
       !window.confirm(
-        'Tresor sperren? Entfernt Keys und Wallet-Passwort aus der Backend-Sitzung und schreddert den lokalen Inbox-Klartext-Cache. Danach in der App erneut entsperren (/vault-load bzw. Passwort-Dialog).'
+        'Tresor sperren? Keys und Passwort verlassen den Server-RAM; Inbox-Cache wird geschreddert. Danach Entsperr-Dialog.'
       )
     ) {
       return
@@ -257,35 +329,20 @@ export function VaultView({ variant }: VaultViewProps) {
       res.ok,
       res.ok ? res.message || 'Tresor gesperrt.' : res.error || res.message || 'Fehler'
     )
-    setSafeEntries([])
-    setVaultMainTab('backup')
+    if (res.ok) {
+      toast.message('Entsperr-Dialog sollte jetzt erscheinen', {
+        description: 'Passwort dort eingeben. Falls nicht sichtbar: zur Startseite zurück oder Seite neu laden.',
+        duration: 12_000,
+      })
+    }
     await refreshVaultStatus()
     setSessionBusy(false)
   }
 
+  const canUseVault = !vaultLocked && hasKeys === true
+
   return (
     <div className="space-y-6">
-      {variant === 'local-vault' ? (
-        <div className="rounded-xl border border-sky-500/30 bg-sky-500/5 px-4 py-3 text-sm text-muted-foreground">
-          <p className="font-semibold text-foreground">Tresor: wann gesperrt, wann offen?</p>
-          <ul className="mt-2 list-inside list-disc space-y-1.5 text-xs leading-relaxed">
-            <li>
-              <strong className="text-foreground">Gesperrt</strong> siehst du als Vollbild-Dialog beim Start oder nach{' '}
-              <strong className="text-foreground">„Tresor sperren“</strong> (unten auf dieser Seite): die{' '}
-              <strong>API-Sitzung</strong> hat dann keine Schlüssel mehr im Arbeitsspeicher.
-            </li>
-            <li>
-              <strong className="text-foreground">Entsperrt</strong> bist du, wenn dieser Dialog <strong>nicht</strong> sichtbar
-              ist und oben im Dashboard-Badge <strong>„Tresor: entsperrt“</strong> oder <strong>„Chat verbunden“</strong> steht
-              — dann laufen Signieren und Messenger-Funktionen, die einen freien Tresor brauchen.
-            </li>
-            <li>
-              Installierte <strong className="text-foreground">PWA</strong>: nach längerer Zeit im Hintergrund kann die App
-              automatisch sperren (wie ein erneutes Öffnen mit gesperrtem Tresor).
-            </li>
-          </ul>
-        </div>
-      ) : null}
       {/* Header */}
       <div className="flex items-center gap-3">
         <div
@@ -302,43 +359,19 @@ export function VaultView({ variant }: VaultViewProps) {
             <AlertTriangle className="h-6 w-6" />
           )}
         </div>
-        <div>
+        <div className="flex flex-1 flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-bold text-foreground">
-            {variant === 'local-vault' ? 'Tresor & Passwortmanager' : 'Notfall-Löschung'}
+            {variant === 'local-vault' ? 'Tresor & Sicherheit' : 'Notfall-Löschung'}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            {variant === 'local-vault'
-              ? 'Verschlüsselte Datei für Keys, Notizen und Passwortmanager — nicht für den Nachrichtenverlauf'
-              : 'Lösche alle sensiblen Daten sofort'}
-          </p>
-          {variant === 'local-vault' && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setVaultMainTab('backup')}
-                className={cn(
-                  'rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                  vaultMainTab === 'backup'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-accent'
-                )}
-              >
-                Tresor öffnen &amp; sichern
-              </button>
-              <button
-                type="button"
-                onClick={() => setVaultMainTab('safe')}
-                className={cn(
-                  'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors',
-                  vaultMainTab === 'safe'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-accent'
-                )}
-              >
-                <KeyRound className="h-3.5 w-3.5" />
-                Passwortmanager
-              </button>
-            </div>
+          {variant === 'local-vault' ? (
+            <Link
+              href="/handbook?file=VAULT-EINRICHTEN.md"
+              className="text-sm text-primary underline underline-offset-2 hover:text-primary/90"
+            >
+              Handbuch
+            </Link>
+          ) : (
+            <span className="text-sm text-muted-foreground">Unwiderruflich on-chain</span>
           )}
         </div>
       </div>
@@ -360,329 +393,64 @@ export function VaultView({ variant }: VaultViewProps) {
 
       {variant === 'local-vault' && (
         <div className="space-y-4">
-          {vaultMainTab === 'safe' ? (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-4">
-                <h4 className="mb-1 flex items-center gap-2 font-semibold text-foreground">
-                  <KeyRound className="h-5 w-5 text-violet-500" />
-                  Passwortmanager
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  <span className="text-foreground font-medium">Übernehmen</span> = nur diese Sitzung.{' '}
-                  <span className="text-foreground font-medium">In Tresor-Datei schreiben</span> = in der Vault-Datei speichern
-                  (zusammen mit den Keys). Details:{' '}
-                  <Link
-                    href="/handbook?file=VAULT-EINRICHTEN.md"
-                    className="text-primary underline underline-offset-2 hover:text-primary/90"
-                  >
-                    Handbuch
-                  </Link>
-                  .
-                </p>
-              </div>
-              {hasKeys !== true ? (
-                <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-800 dark:text-amber-200">
-                  Tresor auf der Startseite entsperren, dann hier <strong className="font-medium">Daten laden</strong> — erst
-                  danach Einträge bearbeiten.
-                </p>
-              ) : (
-                <>
-                  {safeMsg && (
-                    <p className="text-xs text-muted-foreground" role="status">
-                      {safeMsg}
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={safeBusy}
-                      onClick={() =>
-                        setSafeEntries((p) => [
-                          ...p,
-                          {
-                            id:
-                              typeof crypto !== 'undefined' && 'randomUUID' in crypto
-                                ? crypto.randomUUID()
-                                : `e-${Date.now()}`,
-                            title: 'Neuer Eintrag',
-                            updatedAt: Date.now(),
-                          },
-                        ])
-                      }
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Neuer Eintrag
-                    </button>
-                    <button
-                      type="button"
-                      disabled={safeBusy}
-                      onClick={async () => {
-                        setSafeBusy(true)
-                        setSafeMsg(null)
-                        const r = await saveVaultPersonalSecrets(safeEntries, false)
-                        setSafeBusy(false)
-                        if (r.ok) {
-                          setSafeMsg(r.message ?? 'Passwortmanager in der Sitzung übernommen (noch nicht in der Datei).')
-                          if (r.entries) setSafeEntries(r.entries)
-                        } else setSafeMsg(r.error ?? 'Fehler')
-                      }}
-                      className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                    >
-                      Passwortmanager übernehmen (nur Sitzung)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={safeBusy}
-                      onClick={async () => {
-                        setSafeBusy(true)
-                        setSafeMsg(null)
-                        const r = await saveVaultPersonalSecrets(safeEntries, true)
-                        setSafeBusy(false)
-                        if (r.ok) {
-                          setSafeMsg(r.message ?? 'Passwortmanager in Tresor-Datei gespeichert.')
-                          if (r.entries) setSafeEntries(r.entries)
-                          void refreshVaultStatus()
-                        } else setSafeMsg(r.error ?? 'Fehler')
-                      }}
-                      className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                    >
-                      Passwortmanager in Tresor-Datei schreiben
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {safeEntries.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Noch keine Einträge – „Neuer Eintrag“ oder nach Vault-Laden erscheinen gespeicherte Daten.</p>
-                    ) : (
-                      safeEntries.map((e) => (
-                        <div key={e.id} className="space-y-2 rounded-lg border border-border bg-card p-3">
-                          <input
-                            value={e.title}
-                            onChange={(ev) =>
-                              setSafeEntries((prev) =>
-                                prev.map((x) =>
-                                  x.id === e.id ? { ...x, title: ev.target.value, updatedAt: Date.now() } : x
-                                )
-                              )
-                            }
-                            placeholder="Titel"
-                            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm font-medium"
-                          />
-                          <input
-                            value={e.username ?? ''}
-                            onChange={(ev) =>
-                              setSafeEntries((prev) =>
-                                prev.map((x) =>
-                                  x.id === e.id ? { ...x, username: ev.target.value, updatedAt: Date.now() } : x
-                                )
-                              )
-                            }
-                            placeholder="Benutzername (optional)"
-                            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm"
-                          />
-                          <input
-                            type="password"
-                            value={e.secret ?? ''}
-                            onChange={(ev) =>
-                              setSafeEntries((prev) =>
-                                prev.map((x) =>
-                                  x.id === e.id ? { ...x, secret: ev.target.value, updatedAt: Date.now() } : x
-                                )
-                              )
-                            }
-                            placeholder="Passwort / Seed / Schlüssel"
-                            autoComplete="off"
-                            className="w-full rounded-md border border-border bg-input px-2 py-1.5 font-mono text-sm"
-                          />
-                          <textarea
-                            value={e.note ?? ''}
-                            onChange={(ev) =>
-                              setSafeEntries((prev) =>
-                                prev.map((x) =>
-                                  x.id === e.id ? { ...x, note: ev.target.value, updatedAt: Date.now() } : x
-                                )
-                              )
-                            }
-                            placeholder="Notiz (optional)"
-                            rows={2}
-                            className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-sm"
-                          />
-                          <div className="flex flex-wrap gap-2">
-                            <button
-                              type="button"
-                              disabled={!e.secret}
-                              onClick={async () => {
-                                try {
-                                  await navigator.clipboard.writeText(e.secret ?? '')
-                                  setSafeMsg('Geheimtext in Zwischenablage kopiert.')
-                                } catch {
-                                  setSafeMsg('Kopieren fehlgeschlagen (Berechtigung / HTTPS).')
-                                }
-                              }}
-                              className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent disabled:opacity-50"
-                            >
-                              <Copy className="h-3 w-3" />
-                              Kopieren
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSafeEntries((prev) => prev.filter((x) => x.id !== e.id))}
-                              className="inline-flex items-center gap-1 rounded-md border border-red-500/30 px-2 py-1 text-xs text-red-600 hover:bg-red-500/10 dark:text-red-400"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              Entfernen
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">Aktueller Zustand</h4>
-            <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-xs text-muted-foreground">Keys in dieser Sitzung</dt>
-                <dd className="mt-0.5 font-medium text-foreground">
-                  {hasKeys === true
-                    ? 'Geladen — Chat und Signatur möglich'
-                    : vaultStatus?.hasLocal
-                      ? 'Noch nicht geladen — „Daten laden“ oder „Von Chain laden“'
-                      : 'Keine Vault-Datei erkannt — nach Setup „Lokal sichern“'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-xs text-muted-foreground">Letztes Chain-Backup (gemeldet)</dt>
-                <dd className="mt-0.5 inline-flex items-center gap-2 font-medium text-foreground">
-                  {vaultStatus?.lastSavedToChainAt ? (
-                    <>
-                      <Cloud className="h-4 w-4 shrink-0 text-emerald-500" />
-                      {new Date(vaultStatus.lastSavedToChainAt).toLocaleString('de-DE', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </>
-                  ) : (
-                    <>
-                      <CloudOff className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      Kein Zeitstempel
-                    </>
-                  )}
-                </dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h4 className="font-semibold text-foreground">Gefundene Vault-Dateien (Server-Verzeichnis)</h4>
-              <button
-                type="button"
-                onClick={() => void refreshVaultPaths()}
-                className="rounded-lg border border-border px-2 py-1 text-xs font-medium hover:bg-accent"
-              >
-                Liste aktualisieren
-              </button>
-            </div>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Dateien <span className="font-mono">.morgendrot-vault*</span> im Server-Verzeichnis. Standard für „Daten
-              laden“: <span className="font-mono text-foreground">{vaultDefaultPath ?? '.morgendrot-vault'}</span>. Anderer
-              Pfad: CLI <span className="font-mono">/vault-load</span> — siehe{' '}
-              <Link
-                href="/handbook?file=VAULT-EINRICHTEN.md"
-                className="text-primary underline underline-offset-2 hover:text-primary/90"
-              >
-                Handbuch
-              </Link>
-              .
+          {vaultLocked ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+              Tresor ist <strong className="font-medium">gesperrt</strong>. Der{' '}
+              <strong className="font-medium">Entsperr-Dialog</strong> (Vollbild) sollte über dieser Seite liegen — dort
+              Passwort eingeben. Siehst du ihn nicht: <strong className="font-medium">Zurück</strong> zur Startseite oder
+              Seite neu laden (F5).
             </p>
-            {vaultPaths.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Keine Vault-Dateien im Arbeitsverzeichnis des Backends.</p>
-            ) : (
-              <ul className="max-h-40 space-y-1 overflow-y-auto font-mono text-[11px] text-muted-foreground">
-                {vaultPaths.map((p) => (
-                  <li
-                    key={p}
-                    className={cn(
-                      'rounded border border-border/60 px-2 py-1',
-                      vaultDefaultPath && p === vaultDefaultPath && 'border-primary/40 bg-primary/5 text-foreground'
-                    )}
-                  >
-                    {p}
-                    {vaultDefaultPath && p === vaultDefaultPath ? (
-                      <span className="ml-2 text-[10px] text-primary">Standard</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          ) : null}
 
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-3 flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
-              <h4 className="font-semibold text-foreground">Tresor-Passwort</h4>
+              <h4 className="font-semibold text-foreground">Passwort ändern</h4>
             </div>
-            <label className="mb-1.5 block text-sm text-muted-foreground">
-              Passwort dieser Vault-Datei (beim Laden zuerst; leer = wie Wallet-Entsperr-Passwort der Sitzung).
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Passwort eingeben…"
-              autoComplete="off"
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">
-              Passwort vergessen oder mehrere Dateien:{' '}
-              <Link
-                href="/handbook?file=VAULT-EINRICHTEN.md"
-                className="text-primary underline underline-offset-2 hover:text-primary/90"
-              >
-                Tresor einrichten (Handbuch)
-              </Link>
-              .
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-1 font-semibold text-foreground">1. Tresor öffnen</h4>
-            <p className="mb-3 text-xs text-muted-foreground">Lokal oder von der Chain — Passwortfeld wie oben.</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid max-w-md gap-3">
+              <label className="block text-sm">
+                <span className="text-muted-foreground">Aktuelles Passwort</span>
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={changePwCurrent}
+                  onChange={(e) => setChangePwCurrent(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-muted-foreground">Neues Passwort (min. 8 Zeichen)</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={changePwNew}
+                  onChange={(e) => setChangePwNew(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="text-muted-foreground">Neues Passwort wiederholen</span>
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={changePwConfirm}
+                  onChange={(e) => setChangePwConfirm(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2"
+                />
+              </label>
               <button
                 type="button"
-                onClick={() => void handleLoad()}
-                disabled={processing}
-                className="flex flex-col items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-5 text-center transition-colors hover:bg-blue-500/10 disabled:opacity-50"
+                disabled={changePwBusy || !canUseVault}
+                onClick={() => void handleChangePassword()}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                <Upload className="h-8 w-8 text-blue-400" />
-                <span className="font-semibold text-foreground">{processing ? 'Lade…' : 'Daten laden'}</span>
-                <span className="text-xs text-muted-foreground">Standard-Vault-Datei auf dem Server</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleLoadFromChain()}
-                disabled={processing}
-                className="flex flex-col items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 p-5 text-center transition-colors hover:bg-sky-500/10 disabled:opacity-50"
-              >
-                <Cloud className="h-8 w-8 text-sky-400" />
-                <span className="font-semibold text-foreground">{processing ? 'Lade…' : 'Von Chain laden'}</span>
-                <span className="text-xs text-muted-foreground">Braucht vorheriges Chain-Backup und Konfiguration</span>
+                {changePwBusy ? 'Ändere…' : 'Passwort ändern'}
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-2 font-semibold text-foreground">2. Notizen &amp; Freitext</h4>
-            <p className="mb-2 text-xs text-muted-foreground">
-              Max. {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen — lange Texte lieber außerhalb. Für
-              Zugangsdaten: Tab Passwortmanager.
-            </p>
+            <h4 className="mb-2 font-semibold text-foreground">Notizen</h4>
             <textarea
               value={notes}
               onChange={(e) =>
@@ -690,8 +458,9 @@ export function VaultView({ variant }: VaultViewProps) {
               }
               maxLength={VAULT_FREETEXT_NOTES_MAX_CHARS}
               rows={5}
+              disabled={!canUseVault}
               placeholder="Notizen, Mnemonics, beliebiger Text…"
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y min-h-[100px]"
+              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y min-h-[100px] disabled:opacity-50"
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
               {notes.length.toLocaleString('de-DE')} / {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen
@@ -699,27 +468,25 @@ export function VaultView({ variant }: VaultViewProps) {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-1 font-semibold text-foreground">3. Sichern &amp; Backup</h4>
-            <p className="mb-3 text-xs text-muted-foreground">Nach Änderungen: zuerst lokal, optional zusätzlich Chain.</p>
+            <h4 className="mb-3 font-semibold text-foreground">Sichern</h4>
             {signerKind === 'sdk' ? (
               <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={includeSdkMnemonicInBackup}
                   onChange={(e) => setIncludeSdkMnemonicInBackup(e.target.checked)}
-                  disabled={hasKeys !== true}
+                  disabled={!canUseVault}
                   className="mt-0.5 shrink-0"
                 />
                 <span>
-                  <span className="font-medium text-foreground">Signer-Import mit speichern</span>
-                  {' — '}
-                  Mnemonic/Bech32 wie beim Entsperren, verschlüsselt im Vault. Erst danach funktioniert{' '}
-                  <span className="font-mono text-[11px]">/vault-show-signer-import</span> / „Recovery anzeigen“ aus der Datei.
-                  {hasKeys !== true ? (
-                    <span className="block pt-1 text-amber-700 dark:text-amber-300">
-                      Nur mit geladenem Tresor möglich — oben „Daten laden“ (oder Sitzung muss Keys im RAM haben).
-                    </span>
-                  ) : null}
+                  <span className="font-medium text-foreground">Wallet-Seed im Vault speichern</span> (nur{' '}
+                  <span className="font-mono">SIGNER=sdk</span>) —{' '}
+                  <Link
+                    href="/handbook?file=VAULT-EINRICHTEN.md#signer-import-sdk"
+                    className="text-primary underline underline-offset-2 hover:text-primary/90"
+                  >
+                    Handbuch: Signer-Import
+                  </Link>
                 </span>
               </label>
             ) : null}
@@ -749,13 +516,99 @@ export function VaultView({ variant }: VaultViewProps) {
             </div>
           </div>
 
+          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !showAdvanced
+                setShowAdvanced(next)
+                if (next) void refreshVaultFileList()
+              }}
+              className="text-sm font-medium text-foreground hover:text-primary"
+            >
+              {showAdvanced ? '▼ Erweitert ausblenden' : '▶ Erweitert: Vault-Datei / Chain'}
+            </button>
+            {showAdvanced ? (
+              <div className="mt-4 space-y-4">
+                <div>
+                  <h5 className="mb-2 text-sm font-medium text-foreground">Vault-Datei vom Gerät</h5>
+                  <input
+                    ref={vaultFileInputRef}
+                    type="file"
+                    className="hidden"
+                    accept="*"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      e.target.value = ''
+                      if (f) void handleImportVaultFromDevice(f)
+                    }}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={processing}
+                      onClick={() => vaultFileInputRef.current?.click()}
+                      className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-medium hover:bg-blue-500/15 disabled:opacity-50"
+                    >
+                      {processing ? 'Bitte warten…' : 'Datei wählen & laden'}
+                    </button>
+                    {!canUseVault && !processing ? (
+                      <p className="mt-2 text-[11px] text-muted-foreground">
+                        {vaultLocked
+                          ? 'Zuerst Tresor entsperren — danach wird die Datei in die Sitzung geladen.'
+                          : hasKeys !== true
+                            ? 'Datei kann hochgeladen werden; zum Entschlüsseln in die Sitzung: Startseite → Tresor entsperren oder hier nach Upload „Laden“ (wenn Keys da).'
+                            : null}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {vaultPaths.length > 1 ? (
+                  <div>
+                    <h5 className="mb-2 text-sm font-medium text-foreground">Weitere Dateien auf dem Server</h5>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="min-w-[12rem] flex-1 text-sm">
+                        <select
+                          value={selectedVaultPath}
+                          onChange={(e) => setSelectedVaultPath(e.target.value)}
+                          className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
+                        >
+                          {vaultPaths.map((p) => (
+                            <option key={p} value={p}>
+                              {p.split(/[/\\]/).pop()}
+                              {p === defaultVaultPath ? ' (Standard)' : ''}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        disabled={processing || !selectedVaultPath || !canUseVault}
+                        onClick={() => void handleLoad(selectedVaultPath)}
+                        className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
+                      >
+                        Laden
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => void handleLoadFromChain()}
+                    disabled={processing || !canUseVault}
+                    className="inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium hover:bg-sky-500/15 disabled:opacity-50"
+                  >
+                    <Cloud className="h-4 w-4 text-sky-400" />
+                    {processing ? 'Lade…' : 'Von Chain laden'}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
-            <h4 className="font-semibold text-foreground">4. Sitzung beenden &amp; lokale Spuren</h4>
-            <p className="text-xs text-muted-foreground">
-              <strong className="text-foreground">Spuren verwischen</strong> = lokalen Nachrichten-Cache (
-              <span className="font-mono">.inbox.enc</span>) schreddern. <strong className="text-foreground">Tresor sperren</strong>{' '}
-              = zusätzlich Keys und Wallet-Passwort aus dem Server-RAM entfernen und Cache schreddern.
-            </p>
+            <h4 className="font-semibold text-foreground">Sitzung</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -763,7 +616,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleClearLocalInboxOnly()}
                 className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
-                Lokale Spuren verwischen (Inbox-Cache)
+                Inbox-Cache leeren
               </button>
               <button
                 type="button"
@@ -771,22 +624,20 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleVaultLock()}
                 className="rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
               >
-                Tresor sperren + Inbox-Cache schreddern
+                Tresor sperren
               </button>
             </div>
+            <p className="text-[11px] text-muted-foreground">
+              Unterschied &amp; „alles löschen“:{' '}
+              <Link
+                href="/handbook?file=VAULT-EINRICHTEN.md#spuren-inbox-cache-vs-tresor-sperren"
+                className="text-primary underline underline-offset-2"
+              >
+                Handbuch
+              </Link>
+            </p>
           </div>
 
-          {/* Info */}
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-2 font-semibold text-foreground">Was wird gesichert?</h4>
-            <ul className="space-y-1 text-sm text-muted-foreground">
-              <li>Messaging-Keys und Handshake</li>
-              <li>Passwortmanager-Einträge</li>
-              <li>Optional: Streams-Anker und weitere Konfiguration</li>
-            </ul>
-          </div>
-            </>
-          )}
         </div>
       )}
 

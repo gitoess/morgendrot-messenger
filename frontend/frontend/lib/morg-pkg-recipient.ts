@@ -4,6 +4,8 @@ export function resolveMorgPkgRecipientAddress(opts: {
   connectedAddresses?: string[]
   partner: string
   recipient: string
+  /** Explizite Auswahl im Pakete-Menü (hat Vorrang). */
+  exportRecipient?: string
 }): { recipient: string | null; error: string | null } {
   if (opts.locked) {
     return { recipient: null, error: 'Tresor entsperren – .morg-pkg braucht Messaging-Keys.' }
@@ -13,6 +15,19 @@ export function resolveMorgPkgRecipientAddress(opts: {
     return {
       recipient: null,
       error: 'Zuerst verbinden (/connect): .morg-pkg braucht den öffentlichen Schlüssel des Empfängers.',
+    }
+  }
+  const picked = (opts.exportRecipient ?? '').trim()
+  if (picked) {
+    const rec =
+      addrs.find((a) => a.toLowerCase() === picked.toLowerCase()) ??
+      (/^0x[a-fA-F0-9]{64}$/i.test(picked) ? picked : null)
+    if (rec && addrs.some((a) => a.toLowerCase() === rec.toLowerCase())) {
+      return { recipient: rec, error: null }
+    }
+    return {
+      recipient: null,
+      error: 'Empfänger im Pakete-Menü ist kein verbundener Handshake-Partner.',
     }
   }
   if (addrs.length === 1) return { recipient: addrs[0]!, error: null }

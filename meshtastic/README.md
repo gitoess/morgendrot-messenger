@@ -8,6 +8,7 @@ Die **App-/Node-Pipeline** erzeugt **zwei Klartext-Wires** (Luma + Chroma); sie 
 
 | Element | Verhalten |
 |---------|-----------|
+| **„Funk“ / online** | **Sendepfad-Matrix:** Gruppe+Funk ✓, Pinnwand+Funk ✗. Ist: **Klartext** auf Primary-Kanal; Meshtastic **Channel-PSK / Secondary Channels** = Backlog **§ H.3o** (`docs/ROADMAP-FAHRPLAN.md`). |
 | **„Für LoRa senden“** | Nur **Funk** (Mesh-Burst pro Wire), wenn Heltec per Web Bluetooth verbunden. |
 | **Kein stiller Online-Fallback** | Schlägt Funk fehl oder kein Heltec → **nichts** gesendet; gelber Kasten mit **„Trotzdem über Online (IOTA) senden“** (explizite Bestätigung) oder **Abbrechen**. |
 | **Empfänger** | `MORG_LUMA_V1` sofort S/W + Hinweis/Timeout; `MORG_CHROMA_V1` → Fusion (`/api/lora-progressive-fuse` oder Canvas-Fallback). Siehe `frontend/…/chat-message-body.tsx`. |

@@ -1,4 +1,5 @@
 import { toAppError } from '@/frontend/lib/app-error'
+import { getApiBase } from '@/frontend/lib/api/api-base'
 
 const NETWORKISH =
   /failed to fetch|network|load failed|Connection refused|aborted|AbortError|message channel closed|asynchronous response/i
@@ -51,7 +52,7 @@ export async function fetchApiText(
   | { ok: false; error: string }
 > {
   try {
-    const url = joinApiUrl(apiBase, path)
+    const url = joinApiUrl(apiBase || getApiBase(), path)
     const response = await fetch(url, init)
     const text = await response.text()
     return { ok: true, response, text }

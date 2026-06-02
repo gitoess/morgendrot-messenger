@@ -27,9 +27,12 @@ export const CHAT_PATH4_SELF_ARCHIVE_HINT =
 export const CHAT_SIMPLE_LORA_ARCHIV_HINT =
   'Funk-Nachricht geht sofort raus (Meshtastic, ggf. Kanal-PSK). Kopie auf IOTA wird später verankert, sobald Netz/Basis da ist (Pfad 4 — Boss stellt Mailbox vor).'
 
-/** Verschlüsselte Peer-Nachrichten brauchen vorherigen Schlüsselkanal (`/handshake` + `/connect`). */
+/** Verschlüsselte Peer-Nachrichten brauchen den öffentlichen Schlüssel des Partners (Handshake angenommen oder Partner hat geantwortet). */
 export const CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG =
-  'Verschlüsselte Nachricht an andere Person: zuerst Handshake/Connect über Online-IOTA aufbauen. Ohne verbundenen Partner ist nur Klartext (Funk/Pfad 4) oder Versand an dich selbst sinnvoll.'
+  'Verschlüsselte Nachricht: zuerst Handshake mit dieser 0x — der Partner muss antworten oder du musst sein Angebot annehmen, bis der Status „Handshake aktiv“ erscheint.'
+
+export const CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG =
+  'Dein Handshake liegt auf der Chain, aber der Partner hat noch keinen Schlüssel zurückgesendet — verschlüsselt senden ist erst nach seiner Antwort möglich (nicht nur „Handshake senden“).'
 
 /** Aktueller Produktzustand: verschlüsselter LoRa-Funk ist bewusst aus; Pfad 4 bleibt Klartext. */
 export const CHAT_ENCRYPTED_MESH_DISABLED_MSG =
@@ -50,7 +53,15 @@ export function isAttachedLoraDualComposerAllowed(p: {
 
 export type MeshtasticBleSendApi = {
   connected: boolean
-  sendBinaryV2: (raw: Uint8Array, destination?: number | 'broadcast') => Promise<unknown>
+  sendBinaryV2: (
+    raw: Uint8Array,
+    destination?: number | 'broadcast',
+    channelIndex?: number
+  ) => Promise<unknown>
   /** Klartext über Meshtastic (TEXT_MESSAGE_APP). `destination` = Knoten-Nummer oder Broadcast. */
-  sendMeshText: (text: string, destination?: number | 'broadcast') => Promise<unknown>
+  sendMeshText: (
+    text: string,
+    destination?: number | 'broadcast',
+    channelIndex?: number
+  ) => Promise<unknown>
 }

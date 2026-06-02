@@ -4,6 +4,7 @@ import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib
 import { API_BASE } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 /** Rechte aus getHierarchyPermissions (nur bei role boss/kommandant/arbeiter). */
@@ -31,6 +32,8 @@ export type ApiStatus = {
   backendOnline?: boolean
   /** Frontend-Fallback: letzter bekannter Status aus lokalem Cache. */
   fromCache?: boolean
+  /** Fallback aus lokal vorgemerkt importiertem Handoff (kein Server-Apply). */
+  fromLocalHandoff?: boolean
   /** Zeitpunkt des letzten erfolgreichen Live-Status (Epoch ms) bei Cache-Fallback. */
   cacheSavedAtMs?: number
   locked?: boolean
@@ -193,6 +196,32 @@ function readCachedStatusSnapshot():
   }
 }
 
+function readLocalHandoffStatusFallback():
+  | { status: ApiStatus; pollClockHint: StatusPollClockHint }
+  | null {
+  const local = readLocalHandoffAppliedSnapshot()
+  if (!local) return null
+  return {
+    status: {
+      backendOnline: false,
+      backendRunning: false,
+      connected: false,
+      fromCache: true,
+      fromLocalHandoff: true,
+      cacheSavedAtMs: local.savedAtMs,
+      handoffLabel: local.handoffLabel,
+      role: local.role,
+      deploymentProfile: local.deploymentProfile,
+      transportProfile: local.transportProfile,
+      uiVariant: local.uiVariant,
+      simpleMode: local.simpleMode,
+      packageId: local.packageId,
+      mailboxId: local.mailboxId,
+    },
+    pollClockHint: { okAtMs: local.savedAtMs, httpDateUtcMs: null },
+  }
+}
+
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/status', {
@@ -203,6 +232,11 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
       if (cached) {
         console.info('[status] Live-Request fehlgeschlagen, nutze Cache-Fallback.', { error: fr.error })
         return { ...cached.status, pollClockHint: cached.pollClockHint, error: fr.error }
+      }
+      const localHandoff = readLocalHandoffStatusFallback()
+      if (localHandoff) {
+        console.info('[status] Live-Request fehlgeschlagen, nutze lokalen Handoff-Fallback.', { error: fr.error })
+        return { ...localHandoff.status, pollClockHint: localHandoff.pollClockHint, error: fr.error }
       }
       return {
         backendRunning: false,
@@ -220,6 +254,15 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
             : 'Unerwartetes Antwortformat (API).'
         console.info('[status] Ungültige Live-Antwort, nutze Cache-Fallback.', { error: err })
         return { ...cached.status, pollClockHint: cached.pollClockHint, error: err }
+      }
+      const localHandoff = readLocalHandoffStatusFallback()
+      if (localHandoff) {
+        const err =
+          p.error === 'invalid_json'
+            ? 'Antwort vom Backend ist kein gültiges JSON.'
+            : 'Unerwartetes Antwortformat (API).'
+        console.info('[status] Ungültige Live-Antwort, nutze lokalen Handoff-Fallback.', { error: err })
+        return { ...localHandoff.status, pollClockHint: localHandoff.pollClockHint, error: err }
       }
       return {
         backendRunning: false,
@@ -250,6 +293,12 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
         error: formatFetchFailureMessage(error),
       })
       return { ...cached.status, pollClockHint: cached.pollClockHint, error: formatFetchFailureMessage(error) }
+    }
+    const localHandoff = readLocalHandoffStatusFallback()
+    if (localHandoff) {
+      const err = formatFetchFailureMessage(error)
+      console.info('[status] Ausnahme beim Live-Request, nutze lokalen Handoff-Fallback.', { error: err })
+      return { ...localHandoff.status, pollClockHint: localHandoff.pollClockHint, error: err }
     }
     return {
       backendRunning: false,

@@ -8,6 +8,7 @@
 import {
   createDirectIotaClient,
   fetchMailboxInboxRpcRows,
+  isLikelyIotaHexId,
   normalizeMailboxAddress,
 } from '@morgendrot/core/iota'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
@@ -17,16 +18,20 @@ import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
   canUseDirectEncryptedMailboxDrain,
   canUseDirectPlaintextMailboxDrain,
+  getDirectChainIdsReadiness,
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
-import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
+import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
+import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
 export type TryFetchDirectMailboxInboxViaIotaOpts = {
   limit: number
   offset: number
   /** Wenn gesetzt und von API übergeben: muss mit Snapshot-Package übereinstimmen (sonst Abbruch). */
   packageIdOverride?: string
+  /** M4b: private Kontakt-Mailbox statt Snapshot-Shared-Mailbox. */
+  mailboxObjectId?: string
 }
 
 export async function tryFetchDirectMailboxInboxViaIota(
@@ -41,10 +46,18 @@ export async function tryFetchDirectMailboxInboxViaIota(
   }
   const snap = getDirectMailboxChainSnapshot()
   if (!snap) {
-    return { ok: false, error: 'Keine Ketten-IDs (Snapshot).' }
+    const { missing } = getDirectChainIdsReadiness()
+    return {
+      ok: false,
+      error:
+        missing.length > 0
+          ? `Ketten-IDs für Direkt-Posteingang unvollständig: ${missing.join(', ')}.`
+          : 'Keine Ketten-IDs (Snapshot).',
+    }
   }
   const includePlain = canUseDirectPlaintextMailboxDrain()
-  const includeEnc = canUseDirectEncryptedMailboxDrain() && isDirectMailboxDrainEnabled()
+  /** Entkopplung: Lesen/Entschlüsseln soll auch ohne aktiven Drain-Schalter möglich sein. */
+  const includeEnc = canUseDirectEncryptedMailboxDrain()
   if (!includePlain && !includeEnc) {
     return {
       ok: false,
@@ -56,13 +69,17 @@ export async function tryFetchDirectMailboxInboxViaIota(
   if (opts.packageIdOverride?.trim() && opts.packageIdOverride.trim().toLowerCase() !== pkg.toLowerCase()) {
     return { ok: false, error: 'Package-ID weicht vom gespeicherten Snapshot ab — Posteingang per API laden.' }
   }
+  const mailboxObjectId = (opts.mailboxObjectId?.trim() || snap.mailboxId).trim()
+  if (!isLikelyIotaHexId(mailboxObjectId)) {
+    return { ok: false, error: 'Ungültige Mailbox-ID für Direkt-Posteingang.' }
+  }
   const my = snap.senderAddress.trim()
   const myNorm = normalizeMailboxAddress(my)
 
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const rpcRows = await fetchMailboxInboxRpcRows(client, {
-      mailboxObjectId: snap.mailboxId,
+      mailboxObjectId,
       packageId: pkg,
       myAddress: my,
       includePlaintext: includePlain,
@@ -129,6 +146,6 @@ export async function tryFetchDirectMailboxInboxViaIota(
     }
     return { ok: true, rows: apiRows }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
 }

@@ -22,6 +22,7 @@ import {
 } from '@/frontend/lib/direct-iota-chain-context'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
+import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import {
   isDirectMailboxDrainEnabled,
   isIotaRelayOnlyMode,
@@ -134,7 +135,7 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
       error: `Chain-Status: ${out.status || 'kein Digest'} — im Explorer prüfen, ob die TX trotzdem existiert.`,
     }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
 }
 
@@ -181,6 +182,6 @@ export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(
       mailboxObjectId: opts.mailboxObjectId,
     })
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
 }

@@ -12,6 +12,7 @@ import { buildChatInboxRows, type ChatInboxRow } from '@/frontend/features/inbox
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { sendMeshV2WireBurst } from '@/frontend/features/send/chat-view-mesh-send'
+import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { useChatViewSendFlow } from '@/frontend/hooks/use-chat-view-send-flow'
 import { useChatViewAttachments } from '@/frontend/hooks/use-chat-view-attachments'
@@ -30,11 +31,19 @@ import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-con
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import type { Message } from '@/frontend/lib/types'
 import {
-  readMessagingPersistenceModeFromStorage,
-  writeMessagingPersistenceModeToStorage,
   type MessagingPersistenceMode,
+  writeMessagingPersistenceModeToStorage,
 } from '@/frontend/lib/messaging-persistence-mode'
+import { inferMessagingPersistenceModeFromComposer } from '@/frontend/lib/infer-composer-persistence-mode'
+import { readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
+import {
+  readComposerMailboxObjectId,
+  writeComposerMailboxObjectId,
+} from '@/frontend/lib/composer-mailbox-object-id'
+import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
+import { applyMorgPkgItemToComposer } from '@/frontend/lib/apply-morg-pkg-item-to-composer'
+import type { MorgPkgImportItem } from '@/frontend/lib/morg-pkg-import-store'
 import { toast } from 'sonner'
 import {
   getActiveMessengerGroup,
@@ -46,6 +55,8 @@ import {
   isPinnwandChannel,
   type MessengerChatChannel,
 } from '@/frontend/lib/messenger-chat-channel'
+import { reconcileChannelSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
 const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
@@ -86,9 +97,38 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [showSetup, setShowSetup] = useState(false)
   const [encrypted, setEncryptedInternal] = useState(true)
   const [forcedTransport, setForcedTransportInternal] = useState<ForcedTransport>('internet')
+  const [composerDelivery, setComposerDelivery] = useState<ComposerDeliveryChannel>('chain')
+  const [meshtasticChannelIndex, setMeshtasticChannelIndexState] = useState<number | undefined>(() => {
+    if (typeof window === 'undefined') return undefined
+    try {
+      return normalizeMeshtasticChannelIndex(window.localStorage.getItem('morgendrot.meshChannelIndex'))
+    } catch {
+      return undefined
+    }
+  })
+
+  const setMeshtasticChannelIndex = useCallback((v: number | undefined) => {
+    const normalized = normalizeMeshtasticChannelIndex(v)
+    setMeshtasticChannelIndexState(normalized)
+    if (typeof window === 'undefined') return
+    try {
+      if (normalized == null) window.localStorage.removeItem('morgendrot.meshChannelIndex')
+      else window.localStorage.setItem('morgendrot.meshChannelIndex', String(normalized))
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isGroup || !activeGroup) return
+    const groupChannelIndex = normalizeMeshtasticChannelIndex(activeGroup.secondaryChannel?.channelIndex)
+    if (groupChannelIndex == null) return
+    setMeshtasticChannelIndexState((prev) => (prev == null ? groupChannelIndex : prev))
+  }, [isGroup, activeGroup])
 
   /** Verschlüsselter Funk (Mesh v2 / PRIVATE_APP) ist produktseitig abgeschaltet — Funk = Klartext; Verschlüsselung nur Online/IOTA. */
   const setForcedTransport = useCallback((t: ForcedTransport) => {
+    setComposerDelivery('chain')
     if (t === 'mesh') setEncryptedInternal(false)
     setForcedTransportInternal(t)
   }, [])
@@ -110,8 +150,26 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   }, [isPrivate])
 
   useEffect(() => {
+    const r = reconcileChannelSendPath(channelMode, composerDelivery, forcedTransport)
+    if (r.channel !== channelMode) {
+      /* channel correction happens in ChatView via onChannelModeChange — skip here */
+    }
+    if (r.composerDelivery !== composerDelivery) setComposerDelivery(r.composerDelivery)
+    if (r.forcedTransport !== forcedTransport) setForcedTransportInternal(r.forcedTransport)
+  }, [channelMode, composerDelivery, forcedTransport])
+
+  useEffect(() => {
     if (!encrypted) setShowSetup(false)
   }, [encrypted])
+
+  /** Telegram: kein Heltec/Setup — Transport zurück auf online. */
+  useEffect(() => {
+    if (composerDelivery !== 'telegram') return
+    setShowSetup(false)
+    if (forcedTransport === 'mesh' || forcedTransport === 'adhoc') {
+      setForcedTransportInternal('internet')
+    }
+  }, [composerDelivery, forcedTransport])
 
   /** Nach SOS-Sprache: Hinweis + optional „Jetzt senden“, bis Anhang weg oder ersetzt. */
   const [sosVoiceAwaitingSend, setSosVoiceAwaitingSend] = useState(false)
@@ -140,6 +198,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loadError,
     inboxFromCache,
     inboxCacheAgeMinutes,
+    inboxLiveSource,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
@@ -212,12 +271,57 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     }
   }, [forcedTransport, setMeshSelfArchiveAfterLoRa])
 
-  const [messagingPersistenceMode, setMessagingPersistenceModeState] = useState<MessagingPersistenceMode>(() =>
-    readMessagingPersistenceModeFromStorage()
+  const [composerMailboxObjectId, setComposerMailboxObjectIdState] = useState('')
+
+  useEffect(() => {
+    const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
+    if (/^0x[a-f0-9]{64}$/i.test(addr)) {
+      setComposerMailboxObjectIdState(readComposerMailboxObjectId(addr))
+    } else {
+      setComposerMailboxObjectIdState('')
+    }
+  }, [recipient, partner, encrypted])
+
+  const setComposerMailboxObjectId = useCallback(
+    (id: string) => {
+      const normalized = id.trim().toLowerCase()
+      setComposerMailboxObjectIdState(normalized)
+      const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
+      if (/^0x[a-f0-9]{64}$/i.test(addr)) writeComposerMailboxObjectId(addr, normalized)
+    },
+    [recipient, partner, encrypted]
   )
-  const setMessagingPersistenceMode = useCallback((m: MessagingPersistenceMode) => {
-    setMessagingPersistenceModeState(m)
-    writeMessagingPersistenceModeToStorage(m)
+
+  const messagingPersistenceMode = useMemo(
+    () =>
+      inferMessagingPersistenceModeFromComposer({
+        recipient,
+        partner,
+        encrypted,
+        forcedTransport,
+        deliveryChannel: composerDelivery,
+        composerMailboxObjectId,
+        isGroupChannel: isGroup,
+        groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
+      }),
+    [
+      recipient,
+      partner,
+      encrypted,
+      forcedTransport,
+      composerDelivery,
+      composerMailboxObjectId,
+      isGroup,
+    ]
+  )
+
+  useEffect(() => {
+    writeMessagingPersistenceModeToStorage(messagingPersistenceMode)
+  }, [messagingPersistenceMode])
+
+  /** Persistenz kommt aus Empfänger + Postfach-Auswahl — kein globaler Umschalter mehr. */
+  const setMessagingPersistenceMode = useCallback((_m: MessagingPersistenceMode) => {
+    /* noop */
   }, [])
 
   /** Optional: Fortschrittszeile für die Anhang-Leiste beim LoRa-Bild (z. B. SOS-/Retry-Text). */
@@ -301,6 +405,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       onReconnectNow: () => {
         void loadMessages('poll', undefined, { silent: true })
         refreshContactDirectory()
+        void runOfflineMailboxDrain()
       },
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
@@ -441,6 +546,10 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     attachmentPipelineHint,
     compactFileRef,
     clearCompactAttachment,
+    setAttachedBlobBase64,
+    setAttachedTxtFile,
+    setAttachedAudioBase64,
+    setCompactMeta,
     handleCompactAttachmentPick,
     ingestChatAttachmentFile,
   } = useChatViewAttachments({
@@ -486,6 +595,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onMorgPkgDeviceFiles,
     onMorgPkgImportFile,
     runMorgPkgDeviceExportPick,
+    morgPkgImports,
+    morgPkgImportsOpen,
+    setMorgPkgImportsOpen,
+    removeMorgPkgImport,
+    morgPkgExportRecipient,
+    setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions,
     confirmLoraSendViaOnline,
     handleSend,
     cancelSend,
@@ -524,11 +640,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     deviceTimeTrustWarn,
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
+    meshtasticChannelIndex,
     clearMeshInboundText,
     drainMeshInboundText,
     contactDirectory: directory,
     activeGroup,
     isGroupChannel: isGroup,
+    composerMailboxObjectId,
   })
 
   const {
@@ -542,6 +660,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     openPartnerSetupPanel,
   } = useChatViewConnectionActions({
     partner,
+    backendReachable: !basisUnreachable,
     refreshApiStatus,
     setSending,
     setStatus,
@@ -585,6 +704,51 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       })
     },
     [clearCompactAttachmentAndSos, setMessage, setStatus, setStatusMsg]
+  )
+
+  const onForwardMorgPkgItem = useCallback(
+    (sender: string, item: MorgPkgImportItem) => {
+      const r = applyMorgPkgItemToComposer(item, {
+        clearAttachments: clearCompactAttachmentAndSos,
+        setMessage,
+        setAttachedBlobBase64,
+        setAttachedTxtFile,
+        setAttachedAudioBase64,
+        setAttachedLora: () => {},
+        setCompactMeta,
+      })
+      if (!r.ok) {
+        toast.error(r.error)
+        return
+      }
+      const from = sender.trim().toLowerCase()
+      if (/^0x[a-f0-9]{64}$/i.test(from)) {
+        setRecipient(from)
+        selectInboxPartnerForSend(from)
+      }
+      setMorgPkgImportsOpen(false)
+      setStatus('success')
+      const kindLabel =
+        r.kind === 'image' ? 'Bild' : r.kind === 'audio' ? 'Audio' : r.kind === 'text_file' ? 'Textdatei' : 'Text'
+      setStatusMsg(`${kindLabel} im Composer — Empfänger prüfen und senden.`)
+      toast.success(`Weiterleiten: ${kindLabel} als Anhang — Empfänger prüfen.`)
+      requestAnimationFrame(() => {
+        document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    },
+    [
+      clearCompactAttachmentAndSos,
+      setMessage,
+      setAttachedBlobBase64,
+      setAttachedTxtFile,
+      setAttachedAudioBase64,
+      setCompactMeta,
+      setRecipient,
+      selectInboxPartnerForSend,
+      setMorgPkgImportsOpen,
+      setStatus,
+      setStatusMsg,
+    ]
   )
 
   return {
@@ -635,8 +799,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     packageIdBusy,
     forcedTransport,
     setForcedTransport,
+    composerDelivery,
+    setComposerDelivery,
+    meshtasticChannelIndex,
+    setMeshtasticChannelIndex,
     messagingPersistenceMode,
     setMessagingPersistenceMode,
+    composerMailboxObjectId,
+    setComposerMailboxObjectId,
     morgPkgDeviceBusy,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
@@ -652,6 +822,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     loadError,
     inboxFromCache,
     inboxCacheAgeMinutes,
+    inboxLiveSource,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
@@ -703,6 +874,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onMorgPkgDeviceFiles,
     onMorgPkgImportFile,
     onMorgPkgDeviceExportPick: runMorgPkgDeviceExportPick,
+    morgPkgImports,
+    morgPkgImportsOpen,
+    setMorgPkgImportsOpen,
+    removeMorgPkgImport,
+    onForwardMorgPkgItem,
+    morgPkgExportRecipient,
+    setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions,
     confirmLoraSendViaOnline,
     handleSend,
     cancelSend,

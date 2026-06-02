@@ -8,8 +8,21 @@ import { useEffect } from 'react'
 export function PwaServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === 'undefined') return
-    if (process.env.NODE_ENV !== 'production') return
     if (!('serviceWorker' in navigator)) return
+
+    if (process.env.NODE_ENV !== 'production') {
+      // Dev-Schutz: alte PWA-Service-Worker von vorherigen Prod-Läufen entfernen,
+      // damit next dev/HMR keine stale Chunk-Dateien serviert.
+      void (async () => {
+        try {
+          const regs = await navigator.serviceWorker.getRegistrations()
+          await Promise.all(regs.map((r) => r.unregister()))
+        } catch {
+          /* ignore */
+        }
+      })()
+      return
+    }
 
     let cancelled = false
     void (async () => {

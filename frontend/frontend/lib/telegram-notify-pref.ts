@@ -31,6 +31,43 @@ export function normalizeTelegramRecipientInput(raw: string): string {
   return lower
 }
 
+/** Mehrere Telegram-Empfänger: komma-/semikolongetrennt oder mehrere tg:-Keys. */
+export function parseTelegramRecipientChatIds(raw: string): string[] {
+  const parts = String(raw || '')
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+  const ids = new Set<string>()
+  for (const p of parts) {
+    const norm = normalizeTelegramRecipientInput(p)
+    if (TG_KEY.test(norm)) ids.add(norm.slice(3))
+    else if (/^-?\d{1,20}$/.test(p)) ids.add(p)
+  }
+  return [...ids]
+}
+
+/** Anzeige im Composer (ohne tg:-Präfix). */
+export function formatTelegramRecipientListDisplay(raw: string): string {
+  return parseTelegramRecipientChatIds(raw).join(', ')
+}
+
+/** Rohes recipient-Feld → Anzeige im Composer (Ziffern, Kommas; ohne 0x-Wallet). */
+export function telegramRecipientToComposerDisplay(raw: string): string {
+  const t = String(raw || '').trim()
+  if (!t || /^0x[a-f0-9]{64}$/i.test(t)) return ''
+  if (t.includes('tg:') || /[,;\n]/.test(t) || /^-?\d{1,20}$/.test(t)) {
+    return formatTelegramRecipientListDisplay(t)
+  }
+  return t
+}
+
+/** Speichern im recipient-Feld als tg:123,tg:456 (optional, z. B. Export). */
+export function encodeTelegramRecipientList(raw: string): string {
+  return parseTelegramRecipientChatIds(raw)
+    .map((id) => `tg:${id}`)
+    .join(',')
+}
+
 /** Ziel-Adresse für Telegram-Hinweis (Klartext-Empfänger oder Handshake-Partner). */
 export function resolveTelegramNotifyRecipientAddress(opts: {
   recipient: string

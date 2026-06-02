@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react'
 import { Check, Copy, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 
 function maskMid(addr: string): string {
   const t = addr.trim()
@@ -75,7 +74,10 @@ export function ChatViewIdentityCard(p: {
       </div>
 
       <div className="border-t border-border/60 pt-3">
-        <ChatViewMyMailboxesPanel myAddressLine={full} serverMailboxIdHint={p.serverMailboxId} />
+        <p className="text-xs text-muted-foreground">
+          Mailboxen (Server-Shared, Team, Privat) unter{' '}
+          <span className="font-medium text-foreground">Einstellungen → Meine Mailboxen</span>.
+        </p>
       </div>
     </div>
   )

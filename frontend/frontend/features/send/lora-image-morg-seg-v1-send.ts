@@ -15,6 +15,7 @@ import {
   type FluentLoraImagePlan,
   type FluentLoraPhasePlan,
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
+import { buildPath4ImageInitWire } from '@/frontend/lib/path4-image-transfer'
 
 const PACKET_GAP_MS = 140
 const NAK_ROUND_WAIT_MS = 18_000
@@ -40,7 +41,8 @@ function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
-function collectMissingFromNaks(
+/** Für Vitest (§ H.25a NAK-Loop). */
+export function collectMissingFromNaks(
   inbound: string[],
   msgId: string,
   phase: 'luma' | 'chroma',
@@ -97,6 +99,16 @@ async function sendPhaseWithNak(
       await sleep(PACKET_GAP_MS)
     }
   }
+
+  const initWire = buildPath4ImageInitWire({
+    msgId: phase.msgId,
+    phase: phase.phase,
+    n: phase.n,
+    jpeg: phase.jpeg,
+  })
+  p.onStatusMsg(`Flüchtig (LoRa): ${label} — Start (${phase.n} Segmente)…`)
+  await sendWireWithRetry(initWire, p.dest, p.sendMeshText, p.throwIfCancelled)
+  await sleep(PACKET_GAP_MS)
 
   p.onStatusMsg(`Flüchtig (LoRa): ${label} — ${phase.n} Segmente senden…`)
   await sendIndices([...Array(phase.n).keys()])

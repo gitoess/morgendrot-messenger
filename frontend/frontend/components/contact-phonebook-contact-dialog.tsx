@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
+import { applyPeeringQrImport, parsePeeringQrPayload } from '@/frontend/lib/peering-qr'
 import { fetchResolvePrivateMailboxOwner } from '@/frontend/lib/fetch-resolve-private-mailbox-owner'
 import { readMyPrivateMailboxes } from '@/frontend/lib/my-private-mailbox-store'
 import {
@@ -102,16 +103,19 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   const scanQr = async () => {
     const s = await scanMeshBundleQrWithCamera()
     if ('error' in s) return
-    const parsed = parseContactQrPayload(s.bundleJson)
-    if (!parsed) return
+    const peering = parsePeeringQrPayload(s.bundleJson)
+    if (!peering) return
+    if (peering.ecdhPubB64) applyPeeringQrImport(peering)
+    const contactExtras = parseContactQrPayload(s.bundleJson)
     const next: ContactPhonebookFormValues = {
       ...form,
-      address: parsed.address,
-      label: parsed.displayName ?? form.label,
-      mailboxPrivateId: parsed.mailboxPrivateId ?? parsed.mailboxObjectId ?? form.mailboxPrivateId,
-      mailboxSharedId: parsed.mailboxSharedId ?? form.mailboxSharedId,
-      mailboxTeamId: parsed.mailboxTeamId ?? form.mailboxTeamId,
-      mailboxBufferId: parsed.mailboxBufferId ?? form.mailboxBufferId,
+      address: peering.address,
+      label: peering.displayName ?? form.label,
+      mailboxPrivateId:
+        contactExtras?.mailboxPrivateId ?? contactExtras?.mailboxObjectId ?? form.mailboxPrivateId,
+      mailboxSharedId: contactExtras?.mailboxSharedId ?? form.mailboxSharedId,
+      mailboxTeamId: contactExtras?.mailboxTeamId ?? form.mailboxTeamId,
+      mailboxBufferId: contactExtras?.mailboxBufferId ?? form.mailboxBufferId,
     }
     setForm(next)
     if (onScanImport) await onScanImport(next)

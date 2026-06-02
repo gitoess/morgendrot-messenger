@@ -5,9 +5,13 @@
  */
 
 import { useState } from 'react'
-import { Check, Copy, Pin, Share2 } from 'lucide-react'
+import { Check, Copy, Share2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
+import {
+  MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_PINNWAND,
+} from '@/components/messenger-handbook-link'
 
 function CopyLine({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
@@ -53,12 +57,8 @@ export function ChatViewPinnwandContextCard(p: {
         <Share2 className="h-4 w-4 shrink-0 text-sky-500" aria-hidden />
         Pinnwand einbinden / teilen
       </div>
-      <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-        <strong className="text-foreground/90">Gemeinsam braucht ihr</strong> dieselbe Move-Instanz (
-        <span className="font-mono text-[11px]">PACKAGE_ID</span>). Online-Klartext an die Pinnwand: Empfängerfeld =
-        Broadcast-Adresse (wird unten aus <span className="font-mono text-[11px]">/api/status</span> übernommen, wenn
-        konfiguriert). Im Posteingang: Nachrichten mit <Pin className="inline h-3 w-3" aria-hidden /> anheften (lokal,
-        sessionStorage). Doku: <span className="font-mono text-[11px]">docs/BROADCAST-PINNWAND.md</span>.
+      <p className="mb-3 text-xs text-muted-foreground">
+        <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_PINNWAND} className="text-xs" />
       </p>
       {broadcastOn ? (
         <p className="mb-2 text-[11px] text-emerald-800 dark:text-emerald-200">
@@ -76,10 +76,6 @@ export function ChatViewPinnwandContextCard(p: {
         <CopyLine label="Broadcast-Adresse (Empfänger Klartext)" value={broadcastAddr} />
         <CopyLine label="Eigene Adresse (MY_ADDRESS, für Abgleich)" value={addr} />
       </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">
-        Posteingang: Filter <strong className="text-foreground/90">„Klartext“</strong> für Pinnwand-Ketten; Anheften über
-        das Menü ⋯ an der Nachricht.
-      </p>
     </div>
   )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
 import type { AttachmentBarPort } from '@/frontend/features/messenger-ports'
@@ -12,7 +12,10 @@ import {
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
 import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-webcam-capture-dialog'
 
-export type ChatViewAttachmentBarProps = AttachmentBarPort
+export type ChatViewAttachmentBarProps = AttachmentBarPort & {
+  /** z. B. STT, Sprachmemo — rechts neben „Von Kamera“. */
+  trailingActions?: ReactNode
+}
 
 export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
   const {
@@ -32,6 +35,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     compactPreviewUrl,
     loraPreviewUrl,
     loraMeshProgressLine,
+    trailingActions,
   } = p
 
   const cameraCaptureRef = useRef<HTMLInputElement>(null)
@@ -124,6 +128,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />
           Von Kamera
         </button>
+        {trailingActions}
         {compactMeta && attachedBlobBase64 && (
           <span className="text-xs text-muted-foreground">
             Blob ~{Math.round(compactMeta.total / 1024)} KB · Luma {compactMeta.luma} B · Chroma {compactMeta.chroma} B ·
@@ -132,7 +137,8 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
         )}
         {compactMeta && attachedLora && (
           <span className="text-xs text-muted-foreground">
-            Flüchtig (LoRa): Luma {compactMeta.luma} B · Chroma {compactMeta.chroma} B · Pfad 4 + MORG_SEG_V1.
+            Flüchtig (LoRa): ~{Math.round(compactMeta.total / 1024)} KB komprimiert · Luma {compactMeta.luma} B · Chroma{' '}
+            {compactMeta.chroma} B · Pfad 4 + MORG_SEG_V1.
           </span>
         )}
         {compactMeta && attachedTxtFile != null && (

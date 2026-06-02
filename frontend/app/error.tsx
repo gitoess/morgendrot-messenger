@@ -1,6 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
+import {
+  hardReloadAfterChunkFailure,
+  isChunkLoadErrorMessage,
+} from '@/frontend/lib/chunk-load-error'
 import { toastFromUnknown } from '@/frontend/lib/show-app-error-toast'
 
 export default function AppErrorPage({
@@ -10,6 +14,9 @@ export default function AppErrorPage({
   error: Error & { digest?: string }
   reset: () => void
 }) {
+  const msg = error.message || ''
+  const chunkFail = isChunkLoadErrorMessage(msg)
+
   useEffect(() => {
     toastFromUnknown(error, 'APP_SEGMENT')
   }, [error])
@@ -27,6 +34,15 @@ export default function AppErrorPage({
       >
         Erneut versuchen
       </button>
+      {chunkFail ? (
+        <button
+          type="button"
+          onClick={() => void hardReloadAfterChunkFailure()}
+          className="rounded-md border border-slate-500 px-4 py-2 text-sm font-medium text-slate-100 hover:bg-slate-700"
+        >
+          Seite hart neu laden (Chunk-Fehler)
+        </button>
+      ) : null}
     </div>
   )
 }

@@ -94,7 +94,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   }, [isPinnwandMode])
 
   const displayMessages = useMemo(
-    () => messages.filter((m) => !hiddenInboxIds.has(m.id)),
+    () =>
+      messages.filter(
+        (m) => !hiddenInboxIds.has(m.id) && !m.id.startsWith('morg-pkg-')
+      ),
     [messages, hiddenInboxIds]
   )
 
@@ -170,22 +173,37 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     return () => window.removeEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
   }, [])
 
+  const observedPartnerNormsKey = useMemo(() => {
+    return uniqueCounterpartyAddresses(displayMessages, myAddress)
+      .map((v) => v.trim().toLowerCase())
+      .filter((v) => v.length > 0)
+      .sort()
+      .join('|')
+  }, [displayMessages, myAddress])
+
   useEffect(() => {
-    const observed = uniqueCounterpartyAddresses(displayMessages, myAddress)
-    if (observed.length === 0) return
+    if (!observedPartnerNormsKey) return
+    const observedNorms = observedPartnerNormsKey.split('|')
     setInboxPartnerMemory((prev) => {
-      const byNorm = new Map(prev.map((v) => [v.trim().toLowerCase(), v]))
-      for (const v of observed) {
-        const t = v.trim()
-        if (!t) continue
-        const n = t.toLowerCase()
+      const prevNorms = new Set(prev.map((v) => v.trim().toLowerCase()))
+      let hasNew = false
+      for (const n of observedNorms) {
         if (inboxPartnerBlockedNorms.has(n)) continue
-        byNorm.set(n, t)
+        if (!prevNorms.has(n)) {
+          hasNew = true
+          break
+        }
+      }
+      if (!hasNew) return prev
+
+      const byNorm = new Map(prev.map((v) => [v.trim().toLowerCase(), v.trim().toLowerCase()]))
+      for (const n of observedNorms) {
+        if (inboxPartnerBlockedNorms.has(n)) continue
+        byNorm.set(n, n)
       }
       const merged = Array.from(byNorm.values())
-        .filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
-        .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-      if (merged.length === prev.length && merged.every((v, i) => v === prev[i])) return prev
+        .filter((a) => !inboxPartnerBlockedNorms.has(a))
+        .sort((a, b) => a.localeCompare(b))
       if (typeof window !== 'undefined') {
         try {
           window.localStorage.setItem(INBOX_PARTNER_MEMORY_LS, JSON.stringify(merged))
@@ -195,7 +213,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       }
       return merged
     })
-  }, [displayMessages, myAddress, inboxPartnerBlockedNorms])
+  }, [observedPartnerNormsKey, inboxPartnerBlockedNorms])
 
   const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
     setInboxMeshTransportOnly(v)
@@ -538,44 +556,63 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const resetInboxViewFilters = useCallback(() => {
     clearInboxBrowserViewFilters()
-    setHiddenInboxIds(new Set())
-    setInboxPartnerKey(null)
-    setInboxDirectionFilter('all')
-    setInboxMeshTransportOnly(false)
-    setInboxIotaTransportOnly(false)
-    setInboxWireFilterState('all')
+    setHiddenInboxIds((prev) => (prev.size === 0 ? prev : new Set()))
+    setInboxPartnerKey((cur) => (cur == null ? cur : null))
+    setInboxDirectionFilter((cur) => (cur === 'all' ? cur : 'all'))
+    setInboxMeshTransportOnly((cur) => (cur ? false : cur))
+    setInboxIotaTransportOnly((cur) => (cur ? false : cur))
+    setInboxWireFilterState((cur) => (cur === 'all' ? cur : 'all'))
   }, [])
 
-  /** Geladen vs. sichtbar — Hinweis wenn Mailbox/verschlüsselt im State, aber Filter versteckt. */
+  /** Geladen vs. sichtbar — konkrete Filter nennen (nicht pauschal „Nur Funk“). */
   const inboxVisibilityHint = useMemo(() => {
-    if (messages.length === 0) return null
-    const encLoaded = messages.filter((m) => m.encrypted === true).length
+    const inboxMessages = messages.filter(
+      (m) => !m.id.startsWith('morg-pkg-')
+    )
+    if (inboxMessages.length === 0) return null
+    if (filteredDisplayMessages.length > 0) return null
+
+    const hiddenLocal = inboxMessages.filter((m) => hiddenInboxIds.has(m.id)).length
+    const reasons: string[] = []
+    if (hiddenLocal > 0) reasons.push(`${hiddenLocal} lokal ausgeblendet`)
+    if (inboxMeshTransportOnly) reasons.push('„Nur Funk“')
+    if (inboxIotaTransportOnly) reasons.push('„Nur IOTA“')
+    if (inboxPartnerKey && !isGroupMode) reasons.push('Partner-Filter')
+    if (inboxDirectionFilter !== 'all') reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
+    if (inboxWireFilter === 'plaintext') reasons.push('Inhalt „Klartext“')
+
+    const encLoaded = inboxMessages.filter((m) => m.encrypted === true).length
     const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
-    const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
-    const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
-    if (encLoaded > 0 && encVisible === 0) {
-      if (inboxWireFilter === 'plaintext') {
-        return `${encLoaded} verschlüsselt geladen — unter „Klartext“ werden sie ausgeblendet. „Alles“ oder „Verschlüsselt“ wählen.`
-      }
-      return `${encLoaded} verschlüsselt geladen, aber keiner sichtbar — Filter „Alle / Alles“ oder „Verschlüsselt“ wählen.`
+    if (encLoaded > 0 && encVisible === 0 && inboxWireFilter === 'plaintext') {
+      reasons.push(`${encLoaded} verschlüsselt (unter „Klartext“ ausgeblendet)`)
     }
-    const plainLoaded = messages.filter((m) => m.encrypted !== true).length
+    const plainLoaded = inboxMessages.filter((m) => m.encrypted !== true).length
     const plainVisible = filteredDisplayMessages.filter((m) => m.encrypted !== true).length
     if (plainLoaded > 0 && plainVisible === 0 && inboxWireFilter === 'encrypted') {
-      return `${plainLoaded} Klartext-Zeilen geladen — unter „Verschlüsselt“ ausgeblendet. „Alles“ oder „Klartext“ wählen.`
+      reasons.push(`${plainLoaded} Klartext (unter „Verschlüsselt“ ausgeblendet)`)
     }
-    if (mbLoaded > 0 && mbVisible === 0) {
-      return `${mbLoaded} Mailbox-Zeilen geladen, aber keine sichtbar — nicht „Nur Funk“ aktivieren.`
+
+    if (reasons.length === 0) {
+      return `${inboxMessages.length} Nachrichten geladen, Anzeige leer — Filter unter Partner / Kanal / Posteingang prüfen.`
     }
-    if (filteredDisplayMessages.length === 0 && messages.length > 0) {
-      return `${messages.length} Nachrichten geladen, Anzeige leer — Partner-/Transport-Filter zurücksetzen.`
-    }
-    return null
-  }, [messages, filteredDisplayMessages, inboxWireFilter])
+    return `${inboxMessages.length} geladen, keine sichtbar: ${reasons.join(' · ')}.`
+  }, [
+    messages,
+    filteredDisplayMessages,
+    hiddenInboxIds,
+    inboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+    inboxPartnerKey,
+    isGroupMode,
+    inboxDirectionFilter,
+    inboxWireFilter,
+  ])
 
   /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
   useEffect(() => {
     if (messages.length === 0) return
+    if (displayMessages.length === 0) return
     if (inboxWireFilter !== 'all') return
     const encLoaded = messages.filter((m) => m.encrypted === true).length
     const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
@@ -583,16 +620,25 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
     const transportFilterBlocksMailbox =
       (inboxMeshTransportOnly || inboxIotaTransportOnly) && mbLoaded > 0 && mbVisible === 0
-    if (
-      filteredDisplayMessages.length === 0 ||
-      (encLoaded > 0 && encVisible === 0) ||
+    const filtersActive =
+      hiddenInboxIds.size > 0 ||
+      inboxPartnerKey != null ||
+      inboxDirectionFilter !== 'all' ||
+      inboxMeshTransportOnly ||
+      inboxIotaTransportOnly
+    const needsReset =
+      (filteredDisplayMessages.length === 0 && filtersActive) ||
+      (encLoaded > 0 && encVisible === 0 && filtersActive) ||
       transportFilterBlocksMailbox
-    ) {
-      resetInboxViewFilters()
-    }
+    if (!needsReset) return
+    resetInboxViewFilters()
   }, [
     messages,
+    displayMessages.length,
     filteredDisplayMessages,
+    hiddenInboxIds.size,
+    inboxPartnerKey,
+    inboxDirectionFilter,
     resetInboxViewFilters,
     inboxMeshTransportOnly,
     inboxIotaTransportOnly,

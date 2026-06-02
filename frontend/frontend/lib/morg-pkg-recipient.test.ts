@@ -25,4 +25,15 @@ describe('resolveMorgPkgRecipientAddress', () => {
       resolveMorgPkgRecipientAddress({ connectedAddresses: [A, B], partner: '', recipient: B })
     ).toEqual({ recipient: B, error: null })
   })
+
+  it('nutzt exportRecipient aus Pakete-Menü', () => {
+    expect(
+      resolveMorgPkgRecipientAddress({
+        connectedAddresses: [A, B],
+        partner: '',
+        recipient: '',
+        exportRecipient: A,
+      })
+    ).toEqual({ recipient: A, error: null })
+  })
 })

@@ -22,6 +22,7 @@ import {
   throwIfMeshtasticRoutingFailed,
 } from '@/frontend/lib/meshtastic-routing-error'
 import { tryDecodeMeshtasticCompressedTextPayload } from '@/frontend/lib/mesh-meshtastic-compressed-text'
+import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
 
 const MESH_TEXT_RETRY_BACKOFF_MS = [600, 1800] as const
 
@@ -669,37 +670,70 @@ export function useMeshtasticBle(opts?: MeshtasticBleOptions) {
   }, [device, connecting, connectInternal, transportKind])
 
   const sendBinaryV2 = useCallback(
-    async (wire: Uint8Array, destination: number | 'broadcast' = 'broadcast') => {
+    async (
+      wire: Uint8Array,
+      destination: number | 'broadcast' = 'broadcast',
+      channelIndex?: number
+    ) => {
       let d = deviceRef.current
       if (!d && stickyConnectRef.current) {
         await connectInternal(true, transportKind)
         d = deviceRef.current
       }
       if (!d) throw new Error('Meshtastic nicht verbunden')
+      const normalizedChannelIndex = normalizeMeshtasticChannelIndex(channelIndex)
+      const sendPacketFn = d.sendPacket as unknown as (
+        payload: Uint8Array,
+        port: Protobuf.Portnums.PortNum,
+        dest?: number | 'broadcast',
+        channel?: number
+      ) => Promise<Awaited<ReturnType<MeshDevice['sendPacket']>>>
       const r = await raceMeshtasticOutbound(
-        d.sendPacket(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination),
+        normalizedChannelIndex == null
+          ? sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination)
+          : sendPacketFn(wire, Protobuf.Portnums.PortNum.PRIVATE_APP, destination, normalizedChannelIndex),
         {} as Awaited<ReturnType<MeshDevice['sendPacket']>>
       )
-      throwIfMeshtasticRoutingFailed(r, 'Mesh v2 (PRIVATE_APP)')
+      throwIfMeshtasticRoutingFailed(
+        r,
+        normalizedChannelIndex == null
+          ? 'Mesh v2 (PRIVATE_APP)'
+          : `Mesh v2 (PRIVATE_APP, Kanal ${normalizedChannelIndex})`
+      )
       return r
     },
     [connectInternal, transportKind]
   )
 
   const sendMeshText = useCallback(
-    async (text: string, destination: number | 'broadcast' = 'broadcast') => {
+    async (
+      text: string,
+      destination: number | 'broadcast' = 'broadcast',
+      channelIndex?: number
+    ) => {
       let d = deviceRef.current
       if (!d && stickyConnectRef.current) {
         await connectInternal(true, transportKind)
         d = deviceRef.current
       }
       if (!d) throw new Error('Meshtastic nicht verbunden')
-      const ctx = 'Meshtastic-Text (LongFast)'
+      const normalizedChannelIndex = normalizeMeshtasticChannelIndex(channelIndex)
+      const ctx =
+        normalizedChannelIndex == null
+          ? 'Meshtastic-Text (LongFast)'
+          : `Meshtastic-Text (LongFast, Kanal ${normalizedChannelIndex})`
       let lastErr: unknown
       for (let attempt = 0; attempt <= MESH_TEXT_RETRY_BACKOFF_MS.length; attempt++) {
         try {
+          const sendTextFn = d.sendText as unknown as (
+            payload: string,
+            dest?: number | 'broadcast',
+            channel?: number
+          ) => Promise<Awaited<ReturnType<MeshDevice['sendText']>>>
           const r = await raceMeshtasticOutbound(
-            d.sendText(text, destination),
+            normalizedChannelIndex == null
+              ? sendTextFn(text, destination)
+              : sendTextFn(text, destination, normalizedChannelIndex),
             {} as Awaited<ReturnType<MeshDevice['sendText']>>
           )
           if (r && typeof r === 'object') {

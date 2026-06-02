@@ -26,6 +26,11 @@ export const MESSENGER_HB_ANCHOR_FUNK_KLARTEXT = handbookHeadingIdFromPlainTitle
   'Funk Klartext Einsatzmodus'
 )
 export const MESSENGER_HB_ANCHOR_PATH4 = handbookHeadingIdFromPlainTitle('Pfad 4 LoRa und eigene Verankerung')
+export const MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN = handbookHeadingIdFromPlainTitle(
+  'Kanäle, Speicher und Mailboxen'
+)
+export const MESSENGER_HB_ANCHOR_GRUPPENCHAT = handbookHeadingIdFromPlainTitle('Gruppenchat')
+export const MESSENGER_HB_ANCHOR_PINNWAND = handbookHeadingIdFromPlainTitle('Pinnwand einbinden')
 
 function handbookMessengerHref(anchor?: string) {
   return anchor ? `${MESSENGER_HANDBOOK_CHAT_HREF}#${anchor}` : MESSENGER_HANDBOOK_CHAT_HREF

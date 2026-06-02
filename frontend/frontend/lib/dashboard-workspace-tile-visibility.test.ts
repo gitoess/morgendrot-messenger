@@ -15,12 +15,14 @@ const rows = [
 ]
 
 describe('projectTypeVisibleInMessengerWorkspace', () => {
-  it('messenger tile set: chat + vault (+ einsatzleitung für Kommandant)', () => {
+  it('Messenger-Produkt: chat + vault; Boss + Steuerung; Kommandant + Einsatzleitung', () => {
     const boss = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: true, isBossRole: true, role: 'boss' }
     expect(projectTypeVisibleInMessengerWorkspace('chat', boss)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('vault', boss)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', boss)).toBe(true)
-    expect(projectTypeVisibleInMessengerWorkspace('boss', boss)).toBe(false)
+    expect(projectTypeVisibleInMessengerWorkspace('boss', boss)).toBe(true)
+    expect(projectTypeVisibleInMessengerWorkspace('lock', boss)).toBe(false)
+    expect(projectTypeVisibleInMessengerWorkspace('monitor', boss)).toBe(false)
 
     const kom = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: true, isBossRole: false, role: 'kommandant' }
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', kom)).toBe(true)
@@ -28,36 +30,37 @@ describe('projectTypeVisibleInMessengerWorkspace', () => {
 
     const arbeiter = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: true, isBossRole: false, role: 'arbeiter' }
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', arbeiter)).toBe(false)
+    expect(projectTypeVisibleInMessengerWorkspace('lock', arbeiter)).toBe(false)
   })
 
-  it('full + lite messenger + boss: chat, vault, boss, einsatzleitung', () => {
+  it('Messenger-Produkt: gespeichertes full in localStorage ändert nichts', () => {
     const p = { workspaceTileSet: 'full' as const, liteMessengerFromApi: true, isBossRole: true, role: 'boss' }
-    expect(projectTypeVisibleInMessengerWorkspace('boss', p)).toBe(true)
-    expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', p)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('lock', p)).toBe(false)
+    expect(projectTypeVisibleInMessengerWorkspace('boss', p)).toBe(true)
   })
 
-  it('full + lite messenger + kommandant: einsatzleitung, kein boss', () => {
-    const p = { workspaceTileSet: 'full' as const, liteMessengerFromApi: true, isBossRole: false, role: 'kommandant' }
-    expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', p)).toBe(true)
-    expect(projectTypeVisibleInMessengerWorkspace('boss', p)).toBe(false)
-  })
-
-  it('full + kein lite messenger: alle Typen', () => {
+  it('Morgendrot Projekt + full: alle Kacheltypen für Arbeiter', () => {
     const p = { workspaceTileSet: 'full' as const, liteMessengerFromApi: false, isBossRole: false, role: 'arbeiter' }
     expect(projectTypeVisibleInMessengerWorkspace('monitor', p)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', p)).toBe(false)
   })
+
+  it('Morgendrot Projekt + Messenger-Vorschau: nur chat + vault', () => {
+    const p = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: false, isBossRole: true, role: 'boss' }
+    expect(projectTypeVisibleInMessengerWorkspace('chat', p)).toBe(true)
+    expect(projectTypeVisibleInMessengerWorkspace('boss', p)).toBe(false)
+    expect(projectTypeVisibleInMessengerWorkspace('lock', p)).toBe(false)
+  })
 })
 
 describe('shouldShowWorkerActionCenter', () => {
-  it('Messenger-Arbeiter: kein Action Center', () => {
+  it('Messenger-Produkt: kein Action Center', () => {
     expect(
       shouldShowWorkerActionCenter({ role: 'arbeiter', showAllTiles: false, liteMessengerFromApi: true })
     ).toBe(false)
   })
 
-  it('Volldashboard-Arbeiter ohne Kacheln: Action Center', () => {
+  it('Morgendrot Projekt: Action Center für Arbeiter', () => {
     expect(
       shouldShowWorkerActionCenter({ role: 'arbeiter', showAllTiles: false, liteMessengerFromApi: false })
     ).toBe(true)
@@ -65,7 +68,7 @@ describe('shouldShowWorkerActionCenter', () => {
 })
 
 describe('filterFeaturesByMessengerWorkspaceTileSet', () => {
-  it('filtert konsistent für Boss lite', () => {
+  it('Messenger-Produkt Boss: kein lock/monitor', () => {
     const p = { workspaceTileSet: 'full' as const, liteMessengerFromApi: true, isBossRole: true, role: 'boss' }
     const out = filterFeaturesByMessengerWorkspaceTileSet(rows, p)
     expect(out.map((x) => x.id).sort()).toEqual(['boss', 'chat', 'einsatzleitung', 'vault'])

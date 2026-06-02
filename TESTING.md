@@ -56,7 +56,9 @@ Empfohlene Reihenfolge ohne Chain:
    - **Nur Messenger / Chat-Kachel:** **`npm run test:messages`** / **`npm run test:messenger`** / **`npm run test:messages:single`** → **`scripts/run-messages-chat-realworld.ts`**. Das ist der **Messenger-Chain-Smoke**; **`npm run test:realworld`** gehört **nicht** dazu und ist für reine Messenger-Arbeit **nicht** nötig. (API(s) laufen, Tresor entsperrt — in der **UI** reicht; **`UNLOCK_PASSWORD_*`** optional, wenn das Skript **`POST /api/unlock`** selbst ausführen soll. **`/vault-save`**: ohne Env ruft das Skript leere Args auf, der **Server** nutzt dann das Passwort aus dem UI-Unlock — siehe Skriptkopf.)  
    - **Nur Ticket-/AccessKey-/Event-Kacheln** (andere Oberfläche, anderes Skript): **`npm run test:tickets-accesskey-realworld`** (historischer Kurzname: **`npm run test:realworld`**, gleiche Datei **`scripts/run-ticket-accesskey-realworld.ts`**). Nur ausführen, wenn du **diese Kachel** änderst oder freigibst — **kein** Ersatz- oder Zusatzpfad zum Messenger-Lauf oben.  
    Wenn die **IOTA-CLI** und der **RPC-Server** unterschiedliche **API-Versionen** melden, schlagen **nur** die Ticket/Key-Schritte fehl („**Client/Server api version mismatch**“) — typisch ab **„Personalisiertes Ticket“**. **IOTA-CLI** an **RPC_URL** angleichen; Lauflog: **`docs/TEST-RUN-LOGBOOK.md`**. Ersetzt **nicht** die Chain-freien Smoke-Tests oben.
-4. **Mit Next:** `npm run dev` → **http://127.0.0.1:3341/** — Chat-Kachel: Credits-Balken erscheint, wenn **`MESSENGER_CREDITS_OBJECT_ID`** gültig ist und die API das Objekt lesen kann; Lock-Kachel: Statuszeile „Backend / Chat / Keys“. Optional: **`/handbook`** (Markdown-Handbuch; Produktion: SW-Cache) — siehe **`docs/PWA-HANDBUCH-OFFLINE.md`**. Vor Release/Feldtest: Schreibtisch **`npm run check:pwa-desk`** (A+B) bzw. **`npm run check:pwa-desk:full`** (+ `next build`) — **`docs/PWA-MANUAL-CHECKS.md`**; am Gerät weiter die manuellen **PWA-Checks** (Install, Offline-Shell, Handbuch) — Fahrplan **§ H.2**.
+4. **Mit Next:** `npm run dev` → **http://127.0.0.1:3341/** — vor erneutem Start bei Port-Kollision: **`npm run dev:stop`** (freigibt 3341–3344). — Chat-Kachel: Credits-Balken erscheint, wenn **`MESSENGER_CREDITS_OBJECT_ID`** gültig ist und die API das Objekt lesen kann; Lock-Kachel: Statuszeile „Backend / Chat / Keys“. Optional: **`/handbook`** (Markdown-Handbuch; Produktion: SW-Cache) — siehe **`docs/PWA-HANDBUCH-OFFLINE.md`**. Vor Release/Feldtest: Schreibtisch **`npm run check:pwa-desk`** (A+B) bzw. **`npm run check:pwa-desk:full`** (+ `next build`) — **`docs/PWA-MANUAL-CHECKS.md`**; am Gerät weiter die manuellen **PWA-Checks** (Install, Offline-Shell, Handbuch) — Fahrplan **§ H.2**.
+4b. **Offline->Reconnect Pflichtcheck:** Vor Feldtest einmal den Ablauf aus **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § **9** durchgehen (offline/cache sichtbar, Reconnect ohne Hard-Reload, sofortiger Inbox-/Kontakt-Refresh, Queue-Status konsistent).
+4c. **Android-APK Basislauf (Capacitor):** `cd frontend` -> **`npm run apk:debug:build`** (One-Command) oder einzeln `build:capacitor-web` -> `cap:sync:android` -> `gradlew assembleDebug`. Erwartetes Artefakt: **`frontend/android/app/build/outputs/apk/debug/app-debug.apk`**. Bei Fehlern zuerst `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT` sowie `frontend/android/local.properties` (`sdk.dir`) prüfen.
 5. **Credits vs. MIST (kein Vermischen):** **`MESSENGER_CREDITS_OBJECT_ID`** bezieht sich auf **Messenger-Credits** (Tarif/Kontingent als Move-Objekt), **nicht** auf natives **Gas-Guthaben** (MIST) auf der Wallet. Kurz: **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8. Smoke: **`GET /api/status`** (3342) — wenn Credits gesetzt und lesbar: Anzeige/Hinweise plausibel; in Support/UI nicht „Credits = IOTA“ gleichsetzen.
 6. **Onboarding / Unlock (manuell):** Verifikations-Checkliste und Backlog **L1–L6** in **`docs/ONBOARDING-WALLET-UX-SPEC.md`** §3 und §6 — z. B. `locked` bis `/api/unlock`, bei **`SIGNER=sdk`** Mnemonic-Feld sichtbar; Shop-Adressfeld mit erwartbarem Verhalten bei **mit/ohne** `recipientIotaAddress` (Mint vs. Claim-Token).
 7. **Recovery / Signer-Backup (optional):** Mit **`SIGNER=sdk`**, lokaler Vault **mit** gespeichertem Signer-Import — Einstellungen → **Wallet & Backup** → Passwort → Anzeige; API-Befehl **`/vault-show-signer-import`** (siehe **`docs/RECOVERY-PHRASE-BACKUP.md`**).
@@ -112,6 +114,28 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 1. **`npx tsc --noEmit`** im Ordner **`frontend/`** nach Mesh-Änderungen.
 2. Spike **Web Serial Android** (**`docs/HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** § 5) **parallel** möglich — **blockiert** Mesh-MVP nicht.
 
+### Bild-Kodierung autark (LoRa + IOTA) — **Gerät, später**
+
+**Zweck:** Abnahme **`ImageEncodePort`** / **`encodeLoRaFluentAutark`** / **`encodeIotaCompactAutark`** ohne laufenden Morgendrot-PC (nur PWA/Capacitor + optional IOTA-RPC).
+
+**Wann:** Im **Handy-Fenster** (`docs/HANDY-TEST-WINDOW.md`), **nach** grünem Schreibtisch (`npm run test:core`, Ingest-Vitest). **Nicht** vor Merge blockieren. **Backlog (Schreibtisch, später):** optionaler Vitest mit **echtem** 1×1-PNG gegen **live WASM** (`@jsquash/jpeg` / `@jsquash/webp`) — langsamer, näher am Gerät; Ingest-Tests mocken den Port bewusst.
+
+**Kurz-Checkliste (ohne Node, `morgendrot.imageEncodeRelayFallback` ≠ 1):**
+
+1. **LoRa:** Transport **funk**, Pfad 4, Bild anhängen → Hinweis „lokal kodiert“ oder Verkleinerung; Senden bis Empfänger-Vorschau (siehe **H.25a** unten).
+2. **IOTA:** Transport **online**, Bild anhängen → `attachedBlobBase64` gesetzt, keine Fehlermeldung „Backend/Sharp“.
+3. **Optional Relay:** `localStorage.setItem('morgendrot.imageEncodeRelayFallback','1')` — nur wenn deployte Basis bewusst getestet werden soll.
+
+Ergebnis in **`docs/TEST-RUN-LOGBOOK.md`** (Datum, Gerät, Pass/Fail pro Zeile).
+
+**Schreibtisch (§ H.25a, vor Feldtest):** Im Ordner `frontend/`:
+
+```bash
+npm run test:h25a-lora-image
+```
+
+Deckt u. a. `MORG_SEG_V1`/`MORG_NAK_V1`, `MORG_IMG_INIT_V1`, Segment-Cap 12 KB, max. 32 Segmente/Phase und Sender-NAK-Nachsenden ab. Ergebnis kurz in **`docs/TEST-RUN-LOGBOOK.md`**.
+
 ### H.25a Feldtest — 2 Heltecs (Pfad 4 Bild, Pass/Fail)
 
 **Ziel:** Offenen Fahrplanpunkt **§ H.25a Feldtest** reproduzierbar abhaken: ein Bild im Modus **Funk + Pfad 4** wird zwischen zwei Heltecs robust übertragen und die spätere Verankerung bleibt konsistent.
@@ -121,7 +145,7 @@ Voraussetzung: Root **`npm run dev`** (API + Next), Tresor entsperrt, Adresse/Pa
 1. Zwei Heltecs mit gleicher Region/Kanal/PSK, Antenne montiert, stabile Stromversorgung.
 2. Zwei Endgeräte (A=Sender, B=Empfänger), beide Messenger offen, Transport **funk**.
 3. Auf A: **„LoRa + eigene Verankerung“** aktiv, privater Chat, Tresor entsperrt.
-4. Testbild so wählen, dass der LoRa-Pfad aktiv bleibt (Hard-Cap greift im UI; kein Online-IOTA-Bildpfad).
+4. Testbild beliebig (bis 12 MB Rohdatei) — Messenger **komprimiert auf dem Gerät** (WASM, ohne Morgendrot-Node) auf ≤ 12 KB LUMA+CHROMA; IOTA-Anhang analog ≤ 11,8 KB Netto-Blob.
 
 **Durchlauf (ein Lauf = ein Bild):**
 

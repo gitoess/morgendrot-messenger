@@ -32,10 +32,12 @@ export function isPrivateLanOrigin(origin: string): boolean {
 export function corsHeaders(req: http.IncomingMessage): Record<string, string> {
     const origin = req.headers.origin;
     const defaultOrigin = 'http://127.0.0.1:' + CFG.UI_PORT;
+    const isCapacitorOrigin = typeof origin === 'string' && origin.startsWith('capacitor://');
     const isLocal =
         !origin ||
         origin === 'null' ||
         origin === '' ||
+        isCapacitorOrigin ||
         /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin) ||
         isPrivateLanOrigin(origin);
     const allowOrigin = isLocal && origin ? origin : defaultOrigin;

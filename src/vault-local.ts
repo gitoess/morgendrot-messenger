@@ -252,6 +252,21 @@ export function vaultFileExists(filePath: string): boolean {
     }
 }
 
+/**
+ * Lokale Vault-Datei für Unlock/Laden: konfigurierter Pfad, sonst einzige `.morgendrot-vault*` im cwd.
+ * Hilft nach Browser-Import unter abweichendem Dateinamen.
+ */
+export function resolveVaultFilePathForSession(configuredPath?: string, cwd: string = process.cwd()): string {
+    const base = (configuredPath || '').trim() || '.morgendrot-vault';
+    const candidates = path.isAbsolute(base) ? [base] : [base, path.join(cwd, base)];
+    for (const p of candidates) {
+        if (vaultFileExists(p)) return p;
+    }
+    const listed = listVaultFiles(cwd);
+    if (listed.length === 1) return listed[0]!;
+    return path.isAbsolute(base) ? base : path.join(cwd, base);
+}
+
 /** Liste Vault-Dateien im Verzeichnis (z. B. .morgendrot-vault, .morgendrot-vault-arbeit). Ohne Sidecars (.handshakes, .inbox, .package-id). */
 export function listVaultFiles(dir: string = process.cwd()): string[] {
     try {

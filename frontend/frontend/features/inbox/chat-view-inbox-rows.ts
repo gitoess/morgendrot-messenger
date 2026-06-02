@@ -10,6 +10,7 @@ import type { CompletedSlideSequence } from '@/frontend/features/inbox/inbox-sli
 import { normalizeMessengerWireContent } from '@/frontend/lib/compact-image-wire'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import { parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
+import { path4ImageInitInboxGroupKey } from '@/frontend/lib/path4-image-transfer'
 
 export type MeshInboundEntry = {
   hint: string | null
@@ -33,6 +34,8 @@ export type ChatInboxRow =
 
 /** Eine sichtbare Inbox-Zeile pro S-ARQ-Session (`MORG_SEG_V1`: Absender + msgId + phase + n). */
 export function morgSarqSegInboxGroupKey(m: Message): string | null {
+  const initKey = path4ImageInitInboxGroupKey(m)
+  if (initKey) return initKey
   const p = parseMorgSegV1Message(normalizeMessengerWireContent(m.content ?? ''))
   if (!p) return null
   const f = (m.from ?? '').trim().toLowerCase()

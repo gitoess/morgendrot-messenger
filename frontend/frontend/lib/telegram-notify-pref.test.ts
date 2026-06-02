@@ -2,13 +2,27 @@ import { describe, expect, it } from 'vitest'
 import {
   buildTelegramMessagePreview,
   normalizeTelegramRecipientInput,
+  parseTelegramRecipientChatIds,
   resolveTelegramNotifyRecipientAddress,
+  telegramRecipientToComposerDisplay,
 } from '@/frontend/lib/telegram-notify-pref'
 
 describe('telegram-notify-pref', () => {
   it('normalisiert Empfänger auf tg:-Schlüssel', () => {
     expect(normalizeTelegramRecipientInput('12345')).toBe('tg:12345')
     expect(normalizeTelegramRecipientInput('tg:-999')).toBe('tg:-999')
+  })
+
+  it('parst mehrere Chat-IDs komma-/tg-getrennt', () => {
+    expect(parseTelegramRecipientChatIds('123456, 789')).toEqual(['123456', '789'])
+    expect(parseTelegramRecipientChatIds('tg:111,tg:222')).toEqual(['111', '222'])
+    expect(parseTelegramRecipientChatIds('111; 222')).toEqual(['111', '222'])
+  })
+
+  it('Composer-Anzeige lässt Komma-Liste zu (kein sofortiges Wegnormalisieren)', () => {
+    expect(telegramRecipientToComposerDisplay('123, 456')).toBe('123, 456')
+    expect(telegramRecipientToComposerDisplay('tg:1,tg:2')).toBe('1, 2')
+    expect(telegramRecipientToComposerDisplay(`0x${'a'.repeat(64)}`)).toBe('')
   })
 
   it('verwendet recipient-0x als Notify-Ziel', () => {

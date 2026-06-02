@@ -67,6 +67,7 @@ import { HELP_START, HELP_CHAT } from './messenger-help.js';
 import type { CommandApiOptions } from './command-api-options.js';
 import {
     getWalletPassword,
+    setWalletPassword,
     getSessionIotaMnemonic,
     clearSessionIotaMnemonic,
     clearWalletPassword,
@@ -134,10 +135,12 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const vpLock = CFG.VAULT_FILE || '.morgendrot-vault';
                         purgeInboxCache(vpLock, { shred: true });
                         setSessionStatus({ connected: false, hasKeys: false, connectedAddresses: [] });
+                        const { requestUiVaultUnlock } = await import('../api-server.js');
+                        requestUiVaultUnlock();
                         return {
                             ok: true,
                             message:
-                                'Tresor gesperrt: Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) geschreddert. Vault-Datei unverändert – erneut /vault-load oder UI-Entsperren.',
+                                'Tresor gesperrt: Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) geschreddert. Vault-Datei unverändert – im UI Entsperr-Dialog (Vollbild) erneut Passwort eingeben.',
                         };
                     }
                     if (c === '/cancel-connect') {
@@ -149,7 +152,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -371,6 +374,66 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         return { ok: true, message: 'On-Chain-Vault erstellt.' };
                     }
+                    if (c === '/vault-change-password') {
+                        const currentPw = String(a[0] ?? '').trim();
+                        const newPw = String(a[1] ?? '').trim();
+                        if (!currentPw || !newPw) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /vault-change-password <aktuelles-passwort> <neues-passwort>',
+                            };
+                        }
+                        if (newPw.length < 8) {
+                            return { ok: false, message: 'Neues Passwort: mindestens 8 Zeichen.' };
+                        }
+                        const path = (CFG.VAULT_FILE || '.morgendrot-vault').trim();
+                        if (!vaultFileExists(path)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Keine Vault-Datei — zuerst entsperren und „Lokal sichern“, oder Passwort beim ersten Setup im Entsperr-Dialog setzen.',
+                            };
+                        }
+                        if (!keys) {
+                            return {
+                                ok: false,
+                                message: 'Tresor gesperrt — zuerst mit dem aktuellen Passwort entsperren.',
+                            };
+                        }
+                        try {
+                            const content = await loadVaultContent(currentPw, path);
+                            const notes = vaultStateRef.current?.notes ?? content.notes;
+                            const psecrets = vaultStateRef.current?.personalSecrets ?? content.personalSecrets ?? [];
+                            const phrase = (content.iotaSdkSignerImport || '').trim() || undefined;
+                            await saveVaultLocal(keys, newPw, path, notes, phrase, psecrets);
+                            if (vaultStateRef.current) {
+                                vaultStateRef.current = {
+                                    keys: vaultStateRef.current.keys,
+                                    notes,
+                                    personalSecrets: psecrets,
+                                };
+                            }
+                            if (CFG.PACKAGE_ID) writeVaultPackageId(path, CFG.PACKAGE_ID);
+                            if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(path, CFG.STREAMS_ANCHOR_ID, newPw);
+                            setWalletPassword(newPw);
+                            return {
+                                ok: true,
+                                message:
+                                    'Vault-Datei mit neuem Passwort verschlüsselt. Die laufende Sitzung nutzt das neue Passwort.',
+                            };
+                        } catch (e) {
+                            const msg = String((e as Error)?.message ?? e);
+                            const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(
+                                msg
+                            );
+                            return {
+                                ok: false,
+                                message: decryptFail
+                                    ? 'Aktuelles Passwort falsch oder Datei beschädigt.'
+                                    : 'Passwort ändern fehlgeschlagen: ' + msg,
+                            };
+                        }
+                    }
                     if (c === '/vault-list-chain') {
                         if (!CFG.VAULT_REGISTRY_ID) return { ok: false, message: 'VAULT_REGISTRY_ID nötig.' };
                         const names = await listVaultRegistryDynamicFields(getClient(), CFG.VAULT_REGISTRY_ID);
@@ -429,6 +492,43 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             const msg = String((e as Error)?.message ?? e);
                             const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(msg);
                             return { ok: false, message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : ('Von Chain laden fehlgeschlagen: ' + msg) };
+                        }
+                    }
+                    if (c === '/vault-delete-local') {
+                        const delPath =
+                            a[0] != null && String(a[0]).trim()
+                                ? String(a[0]).trim()
+                                : (CFG.VAULT_FILE || '.morgendrot-vault');
+                        if (!vaultFileExists(delPath)) {
+                            return { ok: false, message: 'Keine lokale Vault-Datei: ' + delPath };
+                        }
+                        if (!CFG.VAULT_REGISTRY_ID || !CFG.PACKAGE_ID) {
+                            return {
+                                ok: false,
+                                message:
+                                    'VAULT_REGISTRY_ID und PACKAGE_ID nötig — lokale Datei wird nur gelöscht, wenn ein On-Chain-Vault für MY_ADDRESS existiert.',
+                            };
+                        }
+                        try {
+                            const enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);
+                            if (!enc || enc.length === 0) {
+                                return {
+                                    ok: false,
+                                    message:
+                                        'Kein On-Chain-Vault für diese Adresse — lokale Datei bleibt erhalten. Zuerst „Auf Chain sichern“.',
+                                };
+                            }
+                            const { unlink } = await import('node:fs/promises');
+                            await unlink(delPath);
+                            return {
+                                ok: true,
+                                message:
+                                    'Lokale Vault-Datei gelöscht: ' +
+                                    delPath +
+                                    '. Beim nächsten Start reicht On-Chain-Entsperren (oder Seed-Import).',
+                            };
+                        } catch (e) {
+                            return { ok: false, message: 'Löschen fehlgeschlagen: ' + String((e as Error)?.message ?? e) };
                         }
                     }
                     if (c === '/emergency-purge' && CFG.VAULT_REGISTRY_ID) {

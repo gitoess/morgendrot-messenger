@@ -2,7 +2,7 @@
 
 **Zweck:** Erfolgskriterium aus **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 4 Stufe **2** — ergänzt **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** (Online-IOTA; LoRa→Tangle = Delayed Upload / Pfad 4, nicht volle TX über Funk). — ein **nachvollziehbarer** Ablauf: **Browser** → **`@morgendrot/core`** (PTB + Signatur) → **IOTA-RPC**; Node-`/api`-Pfad bleibt Fallback für verschlüsselte Outbox und Relais. **Zentral:** **`frontend/frontend/lib/mailbox-send-hybrid.ts`** (`sendPlaintextMailboxHybrid` / `sendEncryptedMailboxHybrid`) — gleiche Reihenfolge für Composer, SOS-Mailbox, Spiegel, Mirror-/Drain-Hintergrund (Composer-**Delayed-Mirror**-UI entfernt 2026-04-20), LUMA+CHROMA **nur online mit Verschlüsselung** oder **Funk mit Pfad 4 (Klartext)** (Fahrplan Nachtrag 2026-04-20), Einsatzprotokoll-Anker, **Attestation-Manifest-Anker** (`attestation-manifest-anchor.ts` → Klartext an eigene Adresse, **ohne** Mailbox-Offline-Outbox).
 
-**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-05-21** — Rollen **`deploymentProfile`**, **§ H.27** Handshake-Badge; **§ H.25a** LoRa-Bild Code-Ist, Feldtest offen).
+**Verwandt:** **`docs/PWA-HANDBUCH-OFFLINE.md`** (Sendeweg § 5), **`TESTING.md`** (Smoke, Merge-Ritual), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** § 8 (Outbox vs. andere Queues), **`docs/HANDY-TEST-WINDOW.md`** (wann Gerätetest), **`docs/TEST-RUN-LOGBOOK.md`** (letzte dokumentierte Läufe), **`docs/HANDY-LATER-MANUAL-TESTS.md`** (gebündelte manuelle Runde: § 9/§ 10/Handoff/H.15 § 2), **`docs/ROADMAP-FAHRPLAN.md`** (Nachtrag **2026-05-21** — Rollen **`deploymentProfile`**, **§ H.27** Handshake-Badge; **§ H.25a** LoRa-Bild Code-Ist, Feldtest offen).
 
 **Nachtrag 2026-05-21 (Move-Deploy + Rollen):** Nach **`npm run deploy:move-package`** und **`create_globals`** neue **`PACKAGE_ID`** in `.env` — **`create_team_mailbox`** on-chain verfügbar. Backend neu starten. Rollen-Retest: Team-Mailbox erstellen (Kommandant/Boss), Handshake-Badge.
 
@@ -12,12 +12,16 @@
 
 ## 0. Automatisierte Mindestabdeckung
 
-- **Schnell (Repo-Root):** **`npm run test:h15-direct-submit`** — nur **`frontend/frontend/lib/direct-iota-plain-submit.test.ts`** (Modus „Nur API“, Drain aus).
+- **Schnell (Repo-Root):** **`npm run test:h15-direct-submit`** — Plain-Submit, Fehlertexte, Ketten-Snapshot, **Peering-Snapshot**, Hybrid-Merge, Chat-Kopf-Badge (**24** Tests).
 - **Voll im Ordner `frontend/`:** **`npm run test:unit`** — gesamter Vitest-Lauf inkl. dieser Datei.
 - **Schreibtisch (ohne Browser, 2026-03-28):** Root **`npm run test:smoke`** (36 Modulgruppen) + **`test:h15-direct-submit`** dokumentiert in **`docs/TEST-RUN-LOGBOOK.md`** — ersetzt **nicht** § 2 (Testnet / Puls / Basis aus).
 - **Nach grünem PWA-Schreibtisch-Check** (`npm run check:pwa-desk:full`, Fahrplan **§ H.2**): laut **`docs/ROADMAP-FAHRPLAN.md`** **§ C.0b** als Nächstes **§ H.1a** und am Gerät **L1–L5** — **§ 2** dieses Dokuments **danach**, wenn **`docs/HANDY-TEST-WINDOW.md`** passt.
 
-**Letzter automatisierter Lauf (Schreibtisch):** **2026-05-28** — Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5 Tests) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. Das vollständige Merge-Ritual aus **`TESTING.md`** bleibt für größere PRs weiterhin Pflicht; § 2 weiter **manuell** abhaken.
+**Letzter automatisierter Lauf (Schreibtisch):** **2026-05-28** — **`npm run test:h15-direct-submit`** (**24** Tests, inkl. B.2 Peering-Snapshot) grün; Eintrag **`docs/TEST-RUN-LOGBOOK.md`**. § 2 weiter **manuell** (**`docs/HANDY-LATER-MANUAL-TESTS.md`** § D).
+
+**Nachtrag 2026-05-28 (Phase 2 + B.1 + B.2 + H.16):** Posteingang/Handshake-RPC; Peering-QR; **Handshake senden + Connect (Partner)** per Fullnode (`connect-hybrid`); Einsatz-Connect (.env) weiter API. Manuelles: **`docs/HANDY-LATER-MANUAL-TESTS.md`** § D/E.
+
+**Nachtrag 2026-06-02 (Autarkie-Bootstrap, Code):** Ketten-IDs einzeln in `localStorage` (Blur im Puls); `getDirectChainIdsReadiness()` für Posteingang + Autarkie-Checkliste; Autarkie-Zeile auf der Offline-Statuskarte. § 2 Smoke weiter manuell.
 
 ---
 
@@ -25,7 +29,7 @@
 
 | # | Bedingung |
 |---|-----------|
-| 1 | **`npm run dev`** (API **3342** + Next **3341**), Tresor entsperrt, **`GET /api/status`** zeigt für **Direkt-Klartext** passende Flags (Mailbox-Klartext **ohne** Messenger-Credits-Sperre — siehe Chat-/Puls-Hinweise und **`canUseDirectPlaintextMailboxDrain`**). |
+| 1 | **`npm run dev`** (API **3342** + Next **3341**), Tresor entsperrt, **`GET /api/status`** zeigt für **Direkt-Klartext** passende Flags (Mailbox-Klartext **ohne** Messenger-Credits-Sperre — siehe Chat-/Puls-Hinweise und **`canUseDirectPlaintextMailboxDrain`**). Bei Port-Kollision zuerst **`npm run dev:stop`**, dann erneut **`npm run dev`**. |
 | 2 | In **Chat → Puls:** **IOTA-Sendeweg** = **Direkt (Standard)** (nicht „Nur Morgendrot-API“). |
 | 3 | **Fullnode-URL** gesetzt (`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL` oder in Puls **URL speichern**); **Erreichbarkeit prüfen** = OK. |
 | 4 | **Ketten-IDs** vorhanden (aus Basis **`/api/current-ids`** übernehmen oder manuell in Puls persistieren): Package, Mailbox, Absender = Session-Signer-Adresse. |
@@ -114,8 +118,56 @@
 - **Status/Kontakte/Posteingang:** Bei Ausfall der Basis werden zuletzt bekannte Daten aus lokalem Cache genutzt (TTL aktuell **30 Min.**). UI kennzeichnet den Cache-Modus sichtbar.
 - **Inbox-Hinweis im Offline-Fall:** Nutzer sieht klar, dass Live-Refresh nicht moeglich ist und jetzt primär **LoRa/Funk** weiter nutzbar bleibt.
 - **Queue-Status:** Wartende Sends zeigen differenziert **queued / retrying / backoff** inkl. Zeit fuer den naechsten Versuch.
-- **Handoff-Import:** ZIP-Parsing/Entschluesselung + lokale Vorschau funktionieren auch ohne Basis; das **endgueltige Anwenden** bleibt an erreichbare Basis-API gebunden.
+- **Handoff-Import:** ZIP-Parsing/Entschluesselung + lokale Vorschau funktionieren auch ohne Basis; **lokales Vormerken** als Offline-Fallback. Nach Reconnect: Hinweis in **Einstellungen → Handoff importieren** und **Import bestätigen** (persistent auf der Basis).
+- **Lokal-vorgemerkt sichtbar:** Dashboard/Einstellungen markieren jetzt explizit, wenn ein Handoff nur lokal vorgemerkt ist (Basis-Apply noch offen).
+- **Capacitor-Readiness (Update):** Native Basis wurde aktiviert (`@capacitor/cli`, `@capacitor/android`, `capacitor.config.ts`, `frontend/android/`, `cap sync android` gruen). Toolchain lokal funktionsfaehig: `assembleDebug` laeuft erfolgreich.
+
+## 9. Offline->Reconnect Betriebsritual (neu, verpflichtend vor Feldtest)
+
+Ziel: reproduzierbar pruefen, dass der Wechsel **offline/cache -> online** sichtbar ist und der Sofort-Refresh greift.
+
+1. [ ] **Online-Start:** App normal starten, Dashboard + Chat + Einstellungen offen; `OfflineStatusCard` zeigt **online**.
+2. [ ] **Basis trennen:** Backend kurz stoppen oder Proxy unterbrechen, dann in Chat **Neu laden** ausloesen.
+3. [ ] **Cache-Sichtbarkeit:** Erwartung in UI:
+   - Banner/Hinweis auf **Cache-Modus** mit Alter („letzter Stand vor X Min.“),
+   - Inbox-Hinweis: Live-Refresh nicht moeglich, LoRa/Funk weiter nutzbar.
+4. [ ] **Reconnect:** Backend wieder starten, ohne manuellen Hard-Reload der Seite.
+5. [ ] **Sofort-Refresh:** Erwartung in UI:
+   - Status wechselt von **cache/offline** zurueck auf **online**,
+   - Posteingang und Kontakte ziehen zeitnah nach (ohne auf langes Poll-Intervall zu warten),
+   - Cache-Hinweise verschwinden wieder oder werden als aktuell markiert.
+6. [ ] **Queue-Konsistenz:** Falls wartende Sends existieren, Status bleibt nachvollziehbar (`queued`/`retrying`/`backoff`) und springt nicht auf leer ohne Grund.
+   - Vorbereitung: In der Offline-Statuskarte **„Queue-Opt-in aktivieren“** (oder `localStorage.setItem('morgendrot.offlineMailboxQueue','1')`), dann bei gestoppter Basis senden, damit mindestens ein wartender Eintrag entsteht. Nach Reconnect soll der Drain ohne Hard-Reload starten.
+   - Erwartung nach Reconnect: Eintrag bleibt konsistent sichtbar bis erfolgreicher Drain/Retry den Status sauber aktualisiert.
 
 ---
 
-*Stand: 2026-05-20 — Stufe 2; § 6 Simple-Mode-Gates; Runtime-vs-.env; Anhang Stufe 4. Phase B Delayed Upload = Backlog.*
+## 10. Android-APK Basislauf (Capacitor, reproduzierbar)
+
+Ziel: denselben APK-Basislauf lokal wiederholen, ohne implizite IDE-Schritte.
+
+1. [ ] **Build:** `cd frontend` und `npm run apk:debug:build` (oder einzeln `build:capacitor-web` → `cap:sync:android` → `gradlew assembleDebug`).
+2. [ ] **Artefakt:** `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
+3. [ ] **PC im WLAN:** Root `npm run dev:lan` oder `npm run start:prod:lan` (API **3342**, UI **3341** auf `0.0.0.0`); Firewall TCP **3341** + **3342**.
+4. [ ] **Basis-URL in der APK:** Einstellungen → **Basis-URL (APK / Gerät)** — **PC-LAN-IP**, z. B. `http://192.168.0.10:3342` (**nicht** `127.0.0.1`, das ist auf dem Handy das Gerät selbst). Am PC: **`npm run dev:lan`** (API `API_BIND_HOST=0.0.0.0`), Firewall TCP **3342**. Optional: Boss **Install-QR** am Dashboard scannen → **Boss Install-QR** in den Einstellungen übernimmt `b`.
+5. [ ] **Geräte-Smoke:** App startet; Status/Tresor oder klare Fehlermeldung; Offline-Verhalten ohne Basis prüfbar.
+6. [ ] **Toolchain bei Fehlern:** `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `frontend/android/local.properties` (`sdk.dir`).
+
+---
+
+## 11. H.3o random-PSK Feldtest (Meshtastic Secondary + Kanalindex)
+
+Ziel: Schritt **H.3o.6 (4)** praxisnah abhaken (Secondary-Channel mit random PSK, Kanalindex wirkt wie erwartet, falscher Index bricht Empfang reproduzierbar).
+
+1. [ ] **Secondary-Kanal anlegen:** In der Meshtastic-App auf beiden Geräten denselben Secondary-Channel mit random PSK erstellen/teilen (QR/Link), ohne PSK-Secret im Morgendrot-Protokolltext zu notieren.
+2. [ ] **Gruppen-Metadaten setzen:** In Morgendrot Gruppenpanel für die aktive Gruppe `channelIndex` (0-7) + optional `channelName` + `pskRef` eintragen und speichern.
+3. [ ] **Composer-Expert prüfen:** Sendepfad `funk`, Expert-Eingabe Kanalindex sichtbar; leer = Geräte-Default, gesetzter Wert = gezielter Kanal.
+4. [ ] **Positivtest A→B:** Kurztext von Gerät A an B über denselben Secondary-Kanal senden (Erwartung: Empfang OK).
+5. [ ] **Positivtest B→A:** Kurztext von B an A senden (Erwartung: Empfang OK).
+6. [ ] **Negativtest falscher Index:** Auf einem Gerät absichtlich falschen Kanalindex setzen (Erwartung: kein Empfang).
+7. [ ] **Recoverytest:** Richtigen Index wieder setzen (Erwartung: Empfang wiederhergestellt).
+8. [ ] **Logbook-Eintrag:** Ergebnis mit PASS/FAIL + Gerät/Firmware + kurzer Setup-Notiz in `docs/TEST-RUN-LOGBOOK.md` ergänzen.
+
+---
+
+*Stand: 2026-06-02 — Stufe 2; § 6 Simple-Mode-Gates; Runtime-vs-.env; Offline-Nachtrag inkl. Reconnect-Betriebsritual; § 11 H.3o random-PSK Feldtest-Template.*

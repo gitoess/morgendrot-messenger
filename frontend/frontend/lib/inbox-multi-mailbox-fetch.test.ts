@@ -9,13 +9,57 @@ vi.mock('@/frontend/lib/my-mailbox-active', () => ({
   readActiveSendMailboxObjectId: () => readActiveSendMailboxObjectId(),
 }))
 
+const tryFetchDirectMailboxInboxViaIota = vi.fn()
+vi.mock('@/frontend/lib/direct-iota-inbox-fetch', () => ({
+  tryFetchDirectMailboxInboxViaIota: (...args: unknown[]) => tryFetchDirectMailboxInboxViaIota(...args),
+}))
+
 const MB_A = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
 const MB_B = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
 
 describe('fetchInboxFromAllOwnedMailboxes', () => {
   beforeEach(() => {
     fetchInbox.mockReset()
+    tryFetchDirectMailboxInboxViaIota.mockReset()
+    tryFetchDirectMailboxInboxViaIota.mockResolvedValue({ ok: false, error: 'direct skipped' })
     readActiveSendMailboxObjectId.mockReturnValue('')
+  })
+
+  it('private Mailbox: Direkt-RPC mit mailboxObjectId, ohne /inbox', async () => {
+    readActiveSendMailboxObjectId.mockReturnValue(MB_A)
+    tryFetchDirectMailboxInboxViaIota
+      .mockResolvedValueOnce({
+        ok: true,
+        rows: [{ sender: '0xs', text: 'shared rpc', isPlain: true, nonce: '1', chainPurgeable: true }],
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        rows: [{ sender: '0xs', text: 'private rpc', isPlain: true, nonce: '2', chainPurgeable: true }],
+      })
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: true })
+    expect(r.ok).toBe(true)
+    expect(r.loadedViaRpc).toBe(true)
+    expect(fetchInbox).not.toHaveBeenCalled()
+    expect(tryFetchDirectMailboxInboxViaIota).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ mailboxObjectId: MB_A, offset: 0 })
+    )
+    expect(r.messages.some((m) => m.content.includes('private rpc'))).toBe(true)
+  })
+
+  it('Shared-Posteingang: Direkt-RPC zuerst, API nur bei Misserfolg', async () => {
+    tryFetchDirectMailboxInboxViaIota.mockResolvedValueOnce({
+      ok: true,
+      rows: [{ sender: '0xs', text: 'via rpc', isPlain: true, nonce: '1', chainPurgeable: true }],
+    })
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: false })
+    expect(r.ok).toBe(true)
+    expect(r.loadedViaRpc).toBe(true)
+    expect(tryFetchDirectMailboxInboxViaIota).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 50, offset: 0 })
+    )
+    expect(fetchInbox).not.toHaveBeenCalled()
+    expect(r.messages.some((m) => m.content.includes('via rpc'))).toBe(true)
   })
 
   it('ruft Shared und nur die aktive private Mailbox auf', async () => {

@@ -64,8 +64,8 @@ export function normalizeMessengerWireContent(s: string): string {
 }
 
 /**
- * **IOTA / Online:** `MORG_COMPACT_IMG_V1` – ein Blob (Luma-WebP + Chroma-PNG), `/api/compact-image-encode`.
- * **Funk / LoRa:** `MORG_LUMA_V1` + `MORG_CHROMA_V1` (zwei JPEGs, hart ≤ ~6,5 KiB Summe) – `/api/lora-progressive-encode`.
+ * **IOTA / Online:** `MORG_COMPACT_IMG_V1` – ein Blob (Luma-WebP + Chroma-PNG), lokal via `encodeIotaCompactAutark` (Relay optional).
+ * **Funk / LoRa:** `MORG_LUMA_V1` + `MORG_CHROMA_V1` (zwei JPEGs, hart ≤ 12 KB Summe) – Kodierung lokal via `ImageEncodePort` / `@morgendrot/core/image` (Relay optional).
  *
  * Kompaktbild-Netto: `MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES` (Backend `MESSENGER_COMPACT_IMAGE_BLOB_MAX_BYTES`).
  * Audio: Online `MEDIA_IOTA_AUDIO_RAW_MAX_BYTES`, Funk `MEDIA_LORA_AUDIO_RAW_MAX_BYTES`.

@@ -28,6 +28,7 @@ import {
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
+import { ChatViewMorgPkgImportsSheet } from '@/frontend/components/chat-view-morg-pkg-imports-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
@@ -35,14 +36,19 @@ import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/ap
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
 import {
+  canAccessEinsatzleitung,
   canCreateTeamMailbox,
   getMessengerUiCapabilities,
 } from '@/frontend/lib/messenger-role-capabilities'
 import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
+import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
+import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
+import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
+import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import {
   useChatViewPendingHandshakes,
   type PendingHandshakesPollState,
@@ -56,6 +62,9 @@ import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
 } from '@/frontend/lib/handshake-offer-delete'
+import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
+import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
+import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -64,6 +73,7 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
   pendingHandshakes?: PendingHandshakesPollState
   onOpenEinsatzleitung?: () => void
   phonebookNavRequest?: number
+  onOpenSettings?: () => void
 }
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
@@ -112,8 +122,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     packageIdBusy,
     forcedTransport,
     setForcedTransport,
+    composerDelivery,
+    setComposerDelivery,
     messagingPersistenceMode,
     setMessagingPersistenceMode,
+    composerMailboxObjectId,
+    setComposerMailboxObjectId,
     morgPkgDeviceBusy,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
@@ -128,6 +142,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loadError,
     inboxFromCache,
     inboxCacheAgeMinutes,
+    inboxLiveSource,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,
@@ -159,6 +174,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
     setMeshPlaintextNodeId,
+    meshtasticChannelIndex,
+    setMeshtasticChannelIndex,
     attachedBlobBase64,
     attachedTxtFile,
     attachedAudioBase64,
@@ -178,6 +195,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMorgPkgDeviceFiles,
     onMorgPkgImportFile,
     onMorgPkgDeviceExportPick,
+    morgPkgImports,
+    morgPkgImportsOpen,
+    setMorgPkgImportsOpen,
+    removeMorgPkgImport,
+    onForwardMorgPkgItem,
+    morgPkgExportRecipient,
+    setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions,
     confirmLoraSendViaOnline,
     handleSend,
     cancelSend,
@@ -246,6 +271,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pendingHandshakes,
     onOpenEinsatzleitung,
     phonebookNavRequest,
+    onOpenSettings,
     inboxWireFilter,
     setInboxWireFilter,
   } = c
@@ -256,8 +282,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } | null>(null)
   const [contactAliasBusy, setContactAliasBusy] = useState(false)
   const [phonebookOpen, setPhonebookOpen] = useState(false)
-  const [mailboxesPanelOpen, setMailboxesPanelOpen] = useState(false)
-
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
@@ -266,14 +290,27 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
   }, [phonebookNavRequest])
 
-  const pendingHandshakeRefreshKey = `${(apiStatus?.connectedAddresses ?? []).join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
+  const handshakeConnected = useMemo(
+    () =>
+      resolveConnectedAddresses({
+        fromStatus: apiStatus?.connectedAddresses,
+        preferCacheWhenEmpty: basisUnreachable,
+      }),
+    [apiStatus?.connectedAddresses, basisUnreachable]
+  )
+
+  const pendingHandshakeRefreshKey = `${handshakeConnected.addresses.join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
   const internalPendingHandshakes = useChatViewPendingHandshakes({
-    enabled: !c.pendingHandshakes && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()),
-    connectedAddresses: apiStatus?.connectedAddresses ?? [],
+    enabled:
+      !c.pendingHandshakes &&
+      /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) &&
+      (basisUnreachable !== true || hasCachedHandshakeOffers() || canFetchHandshakesViaDirectIota()),
+    connectedAddresses: handshakeConnected.addresses,
     refreshToken: pendingHandshakeRefreshKey,
     contactDirectory: directory,
     vaultLocked: apiStatus?.locked === true,
+    basisUnreachable: basisUnreachable === true,
   })
 
   const {
@@ -286,6 +323,56 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } = c.pendingHandshakes ?? internalPendingHandshakes
 
   const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
+
+  const composerEncryptedRecipient = useMemo(
+    () => resolveComposerIotaAddress(recipient, partner, encrypted),
+    [recipient, partner, encrypted]
+  )
+
+  const encryptedRecipientHandshake = useEncryptedRecipientHandshakeStatus({
+    enabled:
+      isPrivate &&
+      encrypted &&
+      forcedTransport === 'internet' &&
+      composerDelivery === 'chain' &&
+      isValidRecipient0x(composerEncryptedRecipient),
+    recipient: composerEncryptedRecipient,
+    connectedAddresses: handshakeConnected.addresses,
+    incomingOffers: pendingHandshakeOffers,
+    outgoingOffers: outgoingHandshakeOffers,
+  })
+
+  const handleEncryptedHandshakeForComposerRecipient = useCallback(async () => {
+    const addr = composerEncryptedRecipient.trim().toLowerCase()
+    if (!isValidRecipient0x(addr)) return
+    setPartner(addr)
+    await handleHandshakeForAddress(addr)
+    encryptedRecipientHandshake.refresh()
+    window.setTimeout(() => void reloadPendingHandshakes(), 3000)
+  }, [
+    composerEncryptedRecipient,
+    setPartner,
+    handleHandshakeForAddress,
+    encryptedRecipientHandshake,
+    reloadPendingHandshakes,
+  ])
+
+  const handleEncryptedAcceptForComposerRecipient = useCallback(async () => {
+    const addr = composerEncryptedRecipient.trim().toLowerCase()
+    if (!isValidRecipient0x(addr)) return
+    setPartner(addr)
+    await handleConnectAcceptForAddress(addr)
+    encryptedRecipientHandshake.refresh()
+    await refreshApiStatus?.()
+    window.setTimeout(() => void reloadPendingHandshakes(), 4000)
+  }, [
+    composerEncryptedRecipient,
+    setPartner,
+    handleConnectAcceptForAddress,
+    encryptedRecipientHandshake,
+    refreshApiStatus,
+    reloadPendingHandshakes,
+  ])
 
   const handleResendOutgoingHandshake = useCallback(
     async (recipient: string) => {
@@ -387,7 +474,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setRecipient(t)
       toast.info('Partner-Adresse übernommen.')
     },
-    [setPartner, setRecipient]
+    [setPartner, setRecipient, setComposerDelivery]
   )
 
   const addInboxSenderToContactBook = useCallback(
@@ -464,6 +551,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       })
       recordContactLastContacted(applied.storageKey)
       setPhonebookOpen(false)
+      if (applied.telegramChatId && !applied.iotaAddress) {
+        setComposerDelivery('telegram')
+      } else if (applied.iotaAddress) {
+        setComposerDelivery('chain')
+      }
       const parts: string[] = []
       if (applied.iotaAddress) parts.push('IOTA')
       if (applied.telegramChatId) parts.push('Telegram')
@@ -484,6 +576,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setMeshPlaintextToNodeEnabled,
       setContactBleUuid,
       selectInboxPartnerForSend,
+      setComposerDelivery,
     ]
   )
 
@@ -492,6 +585,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     apiSnapshot: apiStatus,
     backendReachable: basisUnreachable ? false : true,
   })
+
+  /** Inbox-Cache ≠ offline: Composer-Status nicht mit Posteingang-Fallback verwechseln. */
+  useEffect(() => {
+    if (basisUnreachable === true) return
+    setStatus((cur) => {
+      if (cur !== 'error') return cur
+      return 'idle'
+    })
+    setStatusMsg((msg) =>
+      /Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(msg) ? '' : msg
+    )
+  }, [basisUnreachable, inboxFromCache])
 
   useEffect(() => {
     if (!uiCaps.showInboxIotaFilter && inboxIotaTransportOnly) {
@@ -527,16 +632,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMorgPkgDeviceFiles,
     onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
+    morgPkgExportRecipient,
+    onMorgPkgExportRecipientChange: setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions,
+    morgPkgImportCount: morgPkgImports.length,
+    onOpenMorgPkgArchive: () => setMorgPkgImportsOpen(true),
     apiStatus,
     onRefresh: () => {
-      if (basisUnreachable || inboxFromCache) {
-        setStatus('error')
-        setStatusMsg(
-          inboxFromCache
-            ? `Offline - zeige letzte bekannte Nachrichten (vor ${Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min.).`
-            : 'Offline - Basis derzeit nicht erreichbar. Zeige lokale/letzte bekannte Daten.'
-        )
-      }
       void loadMessages('reset')
       refreshContactDirectory()
       void reloadPendingHandshakes()
@@ -558,6 +660,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     loadError,
     inboxFromCache,
     inboxCacheAgeMinutes,
+    inboxLiveSource,
     basisUnreachable,
     inboxVisibilityHint,
     inboxPartnerOptions,
@@ -609,9 +712,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pinnedPinnwandIds,
     onTogglePinnedPinnwand: togglePinnedPinnwand,
     showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
-    showPhonebookButton: isPrivate || isGroup,
-    mailboxesPanelOpen,
-    onToggleMailboxesPanel: () => setMailboxesPanelOpen((v) => !v),
+    showPhonebookButton: false,
     onContactsChanged: refreshContactDirectory,
     onMailboxPanelStatus: (msg, kind) => {
       if (kind === 'success') toast.success(msg)
@@ -623,11 +724,36 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     },
     onOpenPhonebook: () => setPhonebookOpen(true),
     onOpenPartnerSetup: openPartnerSetupPanel,
-    onOpenEinsatzleitung,
     messagingPersistenceMode,
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
     showIotaExpertInboxActions: uiCaps.expertTools,
   } satisfies ChatViewInboxPanelProps
+
+  const telegramComposer = useChatViewTelegramComposer({
+    isPrivate,
+    composerDelivery,
+    recipient,
+    partner,
+    encrypted,
+    message,
+    apiStatus,
+    contactDirectory: directory,
+    myAddress,
+    sending,
+    attachedTxtFile,
+    attachedBlobBase64,
+    attachedAudioBase64,
+    hasLoraAttachment: attachedLora != null,
+    onMessageChange: setMessage,
+    clearAttachments: clearCompactAttachment,
+    onStatusFeedback: (msg, st = 'success') => {
+      setStatus(st)
+      setStatusMsg(msg)
+    },
+    onTelegramDelivered: ({ recipientKey, text }) => {
+      recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
+    },
+  })
 
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
@@ -653,6 +779,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMeshPlaintextToNodeEnabledChange: setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange: setMeshPlaintextNodeId,
+    meshtasticChannelIndex,
+    onMeshtasticChannelIndexChange: setMeshtasticChannelIndex,
+    showMeshtasticChannelIndexInput: uiCaps.expertTools,
     ...asVoiceRecordSendPanel(
       {
         voicePhase,
@@ -700,17 +829,31 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setStatus(st)
       setStatusMsg(msg)
     },
-    onTelegramDelivered: ({ recipientKey, text }) => {
-      recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
-    },
+    composerDelivery,
+    messagingPersistenceMode,
+    onTelegramSend: telegramComposer.handleTelegramOnly,
+    canSendTelegram: telegramComposer.canSendTelegramOnly,
+    telegramBusy: telegramComposer.telegramOnlyBusy,
+    onNavigateHomeWhenLocked: vaultBannerActions?.onNavigateHomeWhenLocked,
+    composerMailboxObjectId,
+    onComposerMailboxObjectIdChange: setComposerMailboxObjectId,
+    encryptedRecipientHandshakeStatus: encryptedRecipientHandshake.status,
+    encryptedHandshakeBlocksSend: encryptedRecipientHandshake.blocksSend,
+    onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,
+    onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
     showPath4Checkbox: uiCaps.expertTools,
+    onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
   } satisfies ChatViewSendPanelProps
 
   const showEncryptedPartnerPanel =
-    (isPrivate || isGroup) && encrypted && forcedTransport === 'internet'
+    composerDelivery === 'chain' &&
+    (isGroup || (isPrivate && encryptedRecipientHandshake.status !== 'ready')) &&
+    encrypted &&
+    forcedTransport === 'internet'
 
   const showPartnerSetupPanel =
     (isPrivate || isGroup) &&
+    composerDelivery === 'chain' &&
     (showSetup || forcedTransport === 'mesh' || forcedTransport === 'adhoc')
 
   const transportCardProps = {
@@ -723,7 +866,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setMessagingPersistenceMode
     ),
     isPrivate,
-    isGroup,
     apiStatus,
     partner,
     meshBleSupported: meshtastic.bleSupported,
@@ -754,9 +896,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           groupMemberAddresses: activeGroup?.memberAddresses ?? [],
           connectedAddresses: apiStatus?.connectedAddresses ?? [],
           onHandshakeForAddress: handleHandshakeForAddress,
+          myAddress: myAddress.trim(),
+          onPeeringStatus: (msg) => {
+            setStatusMsg(msg)
+            if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
+            else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
+            else toast.info(msg)
+          },
         }
       : undefined,
-    showSendPathOverview: uiCaps.expertTools,
   } satisfies ChatViewTransportCardProps
 
   return (
@@ -777,13 +925,17 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onChannelModeChange={onChannelModeChange}
         sendPath={{
           visible: isPrivate || !encrypted,
+          channelMode: channelMode ?? 'private',
           encrypted,
           forcedTransport,
           onForcedTransportChange: setForcedTransport,
           onEncryptedChange: setEncrypted,
           myAddressLine: isPrivate ? myAddress : undefined,
           showAdhocTransport: uiCaps.showAdhocTransport,
+          composerDelivery,
+          onComposerDeliveryChange: setComposerDelivery,
         }}
+        showDirectIotaPath={isPrivate && uiCaps.iotaTransportUi}
       />
 
       {uiCaps.showProminentOfflineQueueBanner ? (
@@ -817,7 +969,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      <ChatViewTransportCard {...transportCardProps} />
+      {(isPrivate || isGroup) && composerDelivery === 'chain' ? (
+        <ChatViewTransportCard {...transportCardProps} />
+      ) : null}
 
       {showPartnerSetupPanel ? (
         <ChatViewSetupPanel
@@ -900,6 +1054,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       <ChatViewInboxPanel {...inboxPanelProps} />
 
+      <ChatViewMorgPkgImportsSheet
+        open={morgPkgImportsOpen}
+        onOpenChange={setMorgPkgImportsOpen}
+        records={morgPkgImports}
+        contactDirectory={directory}
+        onRemove={removeMorgPkgImport}
+        onForwardItem={onForwardMorgPkgItem}
+      />
+
       {(isPrivate || isGroup) ? (
         <ChatViewPhonebookSheet
           open={phonebookOpen}
@@ -909,6 +1072,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           connectedAddresses={apiStatus?.connectedAddresses ?? []}
           onSelectContact={applyPhonebookContact}
           teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+          allowInitialProfileImport={canAccessEinsatzleitung(role)}
+          onOpenSettings={onOpenSettings}
           setStatusMsg={(msg) => {
             setStatus('success')
             setStatusMsg(msg)

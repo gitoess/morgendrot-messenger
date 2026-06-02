@@ -3,13 +3,16 @@ import { act, renderHook } from '@testing-library/react'
 import { useRef, useState } from 'react'
 import { useChatViewConnectionActions } from '@/frontend/hooks/use-chat-view-connection-actions'
 
-const startHandshakeMock = vi.fn()
+const sendHandshakeHybridMock = vi.fn()
 const connectMock = vi.fn()
 const findPeerHandshakeMock = vi.fn()
 const setPeerPubMock = vi.fn()
 
+vi.mock('@/frontend/lib/handshake-send-hybrid', () => ({
+  sendHandshakeHybrid: (...args: unknown[]) => sendHandshakeHybridMock(...args),
+}))
+
 vi.mock('@/frontend/lib/api', () => ({
-  startHandshake: (...args: unknown[]) => startHandshakeMock(...args),
   connect: (...args: unknown[]) => connectMock(...args),
   findPeerHandshake: (...args: unknown[]) => findPeerHandshakeMock(...args),
 }))
@@ -18,7 +21,7 @@ vi.mock('@/frontend/lib/direct-chat-ecdh-session', () => ({
   setDirectChatEcdhPeerPubBase64: (...args: unknown[]) => setPeerPubMock(...args),
 }))
 
-function setup(partner: string) {
+function setup(partner: string, backendReachable = true) {
   return renderHook(() => {
     const [sending, setSending] = useState(false)
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
@@ -28,6 +31,7 @@ function setup(partner: string) {
     const ref = useRef<{ lumaText: string; chromaText: string } | null>(null)
     const actions = useChatViewConnectionActions({
       partner,
+      backendReachable,
       setSending,
       setStatus,
       setStatusMsg,
@@ -41,14 +45,14 @@ function setup(partner: string) {
 
 describe('useChatViewConnectionActions / handshake autofill', () => {
   beforeEach(() => {
-    startHandshakeMock.mockReset()
+    sendHandshakeHybridMock.mockReset()
     connectMock.mockReset()
     findPeerHandshakeMock.mockReset()
     setPeerPubMock.mockReset()
   })
 
   it('stores peer pub automatically when handshake data exists', async () => {
-    startHandshakeMock.mockResolvedValue({ ok: true, message: 'Handshake gesendet.' })
+    sendHandshakeHybridMock.mockResolvedValue({ ok: true, message: 'Handshake gesendet.', path: 'api' })
     findPeerHandshakeMock.mockResolvedValue({
       ok: true,
       found: true,
@@ -74,9 +78,23 @@ describe('useChatViewConnectionActions / handshake autofill', () => {
       await h.result.current.actions.handleHandshake()
     })
 
-    expect(startHandshakeMock).not.toHaveBeenCalled()
+    expect(sendHandshakeHybridMock).not.toHaveBeenCalled()
     expect(findPeerHandshakeMock).not.toHaveBeenCalled()
     expect(setPeerPubMock).not.toHaveBeenCalled()
     expect(h.result.current.status).toBe('idle')
+  })
+
+  it('ruft Hybrid-Handshake auch bei Basis offline auf', async () => {
+    sendHandshakeHybridMock.mockResolvedValue({
+      ok: true,
+      message: 'Handshake on-chain (Direkt-RPC).',
+      path: 'direct',
+    })
+    const h = setup('0x' + 'ab'.repeat(32), false)
+    await act(async () => {
+      await h.result.current.actions.handleHandshake()
+    })
+    expect(sendHandshakeHybridMock).toHaveBeenCalledWith('0x' + 'ab'.repeat(32), { backendReachable: false })
+    expect(h.result.current.status).toBe('success')
   })
 })

@@ -5,7 +5,7 @@
  * Peer-Public-Keys: **localStorage** (pro Empfängeradresse). Privater ECDH-Key: **nur RAM** (JWK einmalig einlesen).
  */
 
-import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
+import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
 
 const LS_PEER_PUB = 'morgendrot.directChatEcdh.peerPubB64ByRecipient.v1'
 
@@ -155,6 +155,11 @@ export function getDirectChatEcdhMaterialForRecipient(recipientHex: string): Dir
   }
 }
 
+/** Alle Empfänger mit gespeichertem Peer-Pub (§ H.15 B.2 — Offline-Peering). */
+export function listDirectChatEcdhPeerRecipientAddresses(): string[] {
+  return Object.keys(readPeerMap()).filter((a) => /^0x[a-f0-9]{64}$/.test(a))
+}
+
 /** Nur Anzeige: ob für diese Adresse ein Peer-Pub in LS liegt. */
 export function hasDirectChatEcdhPeerPubForRecipient(recipientHex: string): boolean {
   return getDirectChatEcdhPeerPubBase64(recipientHex) != null
@@ -163,4 +168,35 @@ export function hasDirectChatEcdhPeerPubForRecipient(recipientHex: string): bool
 /** Base64(raw) für UI / Export. */
 export function exportDirectChatEcdhPeerPubPreview(recipientHex: string): string {
   return getDirectChatEcdhPeerPubBase64(recipientHex) ?? ''
+}
+
+function base64UrlToBytes(b64url: string): Uint8Array {
+  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/')
+  while (b64.length % 4) b64 += '='
+  return base64ToUint8(b64)
+}
+
+/** Eigener P-256-Publickey (65 Byte raw) für Peering-QR (§ H.16). */
+export async function exportDirectChatEcdhPublicKeyRawBase64(): Promise<
+  { ok: true; b64: string } | { ok: false; error: string }
+> {
+  if (!ecdhPrivateKey) {
+    return { ok: false, error: 'Kein Chat-ECDH-Privatkey — im Puls JWK anwenden (oder Handshake/Connect).' }
+  }
+  try {
+    const subtle = globalThis.crypto?.subtle
+    if (!subtle) return { ok: false, error: 'Web Crypto fehlt.' }
+    const jwk = await subtle.exportKey('jwk', ecdhPrivateKey)
+    if (!jwk.x || !jwk.y) return { ok: false, error: 'JWK ohne öffentlichen Schlüssel (x/y).' }
+    const x = base64UrlToBytes(jwk.x)
+    const y = base64UrlToBytes(jwk.y)
+    if (x.length !== 32 || y.length !== 32) return { ok: false, error: 'Ungültige JWK-Koordinaten.' }
+    const raw = new Uint8Array(P256_RAW_PUB_LEN)
+    raw[0] = 0x04
+    raw.set(x, 1)
+    raw.set(y, 33)
+    return { ok: true, b64: uint8ToBase64(raw) }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }

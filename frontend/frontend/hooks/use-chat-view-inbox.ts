@@ -51,11 +51,15 @@ const RESET_PAGE_SIZE = 300
 const POLL_PAGE_SIZE = 80
 const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'
 
+type InboxLiveSource = 'rpc' | 'api'
+
 type InboxCacheEnvelope = {
   savedAtMs: number
   messageCount: number
   unreadCountEstimate: number
   messages: Message[]
+  /** Letzter erfolgreicher Live-Ladepfad (§ H.15 B.1). */
+  liveSource?: InboxLiveSource
 }
 
 function inboxCacheKey(packageId?: string, activeMailboxId?: string): string {
@@ -64,7 +68,7 @@ function inboxCacheKey(packageId?: string, activeMailboxId?: string): string {
   return `${INBOX_CACHE_KEY_PREFIX}${pkg}:${mb}`
 }
 
-function writeInboxCache(key: string, messages: Message[]): void {
+function writeInboxCache(key: string, messages: Message[], liveSource?: InboxLiveSource): void {
   if (typeof window === 'undefined') return
   try {
     const unreadCountEstimate = 0
@@ -73,6 +77,7 @@ function writeInboxCache(key: string, messages: Message[]): void {
       messageCount: messages.length,
       unreadCountEstimate,
       messages,
+      liveSource,
     }
     window.localStorage.setItem(key, JSON.stringify(payload))
   } catch {
@@ -80,7 +85,9 @@ function writeInboxCache(key: string, messages: Message[]): void {
   }
 }
 
-function readInboxCache(key: string): { messages: Message[]; cacheAgeMinutes: number; savedAtMs: number } | null {
+function readInboxCache(
+  key: string
+): { messages: Message[]; cacheAgeMinutes: number; savedAtMs: number; liveSource?: InboxLiveSource } | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(key)
@@ -92,7 +99,9 @@ function readInboxCache(key: string): { messages: Message[]; cacheAgeMinutes: nu
     if (!Number.isFinite(ageMs) || ageMs < 0 || ageMs > OFFLINE_CACHE_TTL_MS) return null
     const messages = Array.isArray(parsed.messages) ? (parsed.messages as Message[]) : []
     const cacheAgeMinutes = Math.floor(ageMs / 60_000)
-    return { messages, cacheAgeMinutes, savedAtMs }
+    const liveSource =
+      parsed.liveSource === 'rpc' || parsed.liveSource === 'api' ? parsed.liveSource : undefined
+    return { messages, cacheAgeMinutes, savedAtMs, liveSource }
   } catch {
     return null
   }
@@ -106,6 +115,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [inboxFromCache, setInboxFromCache] = useState(false)
   const [inboxCacheAgeMinutes, setInboxCacheAgeMinutes] = useState<number | null>(null)
+  const [inboxLiveSource, setInboxLiveSource] = useState<InboxLiveSource | null>(null)
   const [inboxHasMore, setInboxHasMore] = useState(true)
   const mailboxOffsetRef = useRef(0)
   /** Nach „Cache leeren“: kein Auto-Poll bis „Aktualisieren“ (voller Reload). */
@@ -122,6 +132,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     setLoadError(null)
     setInboxFromCache(false)
     setInboxCacheAgeMinutes(null)
+    setInboxLiveSource(null)
     setMessages([])
   }, [])
 
@@ -234,9 +245,11 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           const mapped: Message[] = raw
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
           const page = mergeAllMessages([...mapped, ...tgJournal])
-          writeInboxCache(cacheKey, page)
+          const liveSource: InboxLiveSource = res.loadedViaRpc === true ? 'rpc' : 'api'
+          writeInboxCache(cacheKey, page, liveSource)
           setInboxFromCache(false)
           setInboxCacheAgeMinutes(null)
+          setInboxLiveSource(liveSource)
           applyMappedToState(page, mappedLength, res.hasMore === true)
         } else if (!res.ok) {
           const cached = readInboxCache(cacheKey)
@@ -250,6 +263,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             })
             setInboxFromCache(true)
             setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
+            setInboxLiveSource(cached.liveSource ?? null)
             applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
             return
           }
@@ -270,6 +284,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             })
             setInboxFromCache(true)
             setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
+            setInboxLiveSource(cached.liveSource ?? null)
             applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
             return
           }
@@ -330,6 +345,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     loadError,
     inboxFromCache,
     inboxCacheAgeMinutes,
+    inboxLiveSource,
     loadMessages,
     loadMoreInbox,
     inboxHasMore,

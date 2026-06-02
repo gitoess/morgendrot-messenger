@@ -110,7 +110,11 @@ export {
   vaultOnchain,
   emergencyPurge,
   vaultLockCommand,
+  vaultChangePassword,
+  vaultDeleteLocal,
 } from '@/frontend/lib/api/vault-commands'
+
+export { importVaultFileFromDevice } from '@/frontend/lib/api/vault-import'
 
 export {
   compactImageEncode,

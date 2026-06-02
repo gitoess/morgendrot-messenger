@@ -48,13 +48,16 @@ export type PendingHandshakesPollState = {
 }
 
 export function useChatViewPendingHandshakes(p: {
+  /** false = kein Poll (Tresor); bei Basis-Ausfall reicht Handshake-Cache (§ H.15 B.2). */
   enabled: boolean
   connectedAddresses: string[]
   refreshToken: string | number
   contactDirectory?: Record<string, ContactMeshEntryClient>
   vaultLocked?: boolean
+  /** Einmal-Hinweis, wenn Angebote per Fullnode ohne Basis geladen wurden. */
+  basisUnreachable?: boolean
 }) {
-  const { enabled, connectedAddresses, refreshToken, contactDirectory, vaultLocked = false } = p
+  const { enabled, connectedAddresses, refreshToken, contactDirectory, vaultLocked = false, basisUnreachable = false } = p
   const [offers, setOffers] = useState<PendingHandshakeOffer[]>([])
   const [outgoingOffers, setOutgoingOffers] = useState<OutgoingHandshakeOffer[]>([])
   const [loading, setLoading] = useState(false)
@@ -90,7 +93,18 @@ export function useChatViewPendingHandshakes(p: {
           setOutgoingOffers((prev) =>
             outgoingOffersEqual(prev, visibleOutgoing) ? prev : visibleOutgoing
           )
-          const fresh = pickNewHandshakeOffersForNotify(visible, notifiedRef.current)
+          if (r.fromCache && !opts?.silent) {
+            toast.info('Handshake-Liste aus Cache', {
+              description: `Basis nicht erreichbar — Stand vor ${r.cacheAgeMinutes ?? '?'} Min. (TTL 30 Min.). Annehmen/Ablehnen braucht die Basis.`,
+              duration: 10_000,
+            })
+          } else if (r.liveSource === 'rpc' && !opts?.silent && basisUnreachable) {
+            toast.info('Handshake-Liste per Direkt-RPC', {
+              description: 'Basis offline — Angebote von der Fullnode. Annehmen/Connect braucht weiterhin die Basis.',
+              duration: 8_000,
+            })
+          }
+          const fresh = r.fromCache ? [] : pickNewHandshakeOffersForNotify(visible, notifiedRef.current)
           for (const o of fresh) {
             const addr = o.sender.trim().toLowerCase()
             const label =
@@ -111,7 +125,7 @@ export function useChatViewPendingHandshakes(p: {
         if (!opts?.silent) setLoading(false)
       }
     },
-    [enabled, vaultLocked]
+    [enabled, vaultLocked, basisUnreachable]
   )
 
   useEffect(() => {

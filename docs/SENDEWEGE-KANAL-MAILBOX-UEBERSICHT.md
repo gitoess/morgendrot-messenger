@@ -22,8 +22,8 @@
 | Kanal | Ist-Zustand | Posteingang | Senden |
 |-------|-------------|-------------|--------|
 | **1:1 Privat** | Standard-Dialog | Partner-Filter, alle Transporte | Empfänger-`0x`; Event/Mailbox-Umschalter sichtbar (online) |
-| **Gruppenchat** | **M2a** — kein Chain-Gruppenraum | Union aller **Mitglieder-0x** im Posteingang | **Persistent + online:** optional **„Mailbox an alle Mitglieder“** → pairwise an jede 0x (`group-mailbox-pairwise-send.ts`); sonst eine 0x im Composer; Streams-Anchor optional |
-| **Pinnwand** | **M3** — Broadcast | Klartext-Filter, Broadcast-Adresse | Empfänger = `BROADCAST_PINNWAND_ADDRESS`; UI erzwingt Klartext; Funk-Broadcast möglich |
+| **Gruppenchat** | **M2a** — kein Chain-Gruppenraum | Union aller **Mitglieder-0x** im Posteingang | **Persistent + online:** optional **„Mailbox an alle Mitglieder“** → pairwise; **Funk:** Meshtastic **Secondary Channel** (PSK/QR) — Roadmap Anbindung Kanal-Index |
+| **Pinnwand** | **M3** — Broadcast | Klartext-Filter, Broadcast-Adresse | Empfänger = `BROADCAST_PINNWAND_ADDRESS`; UI erzwingt Klartext; **Sendepfad Online (IOTA)** — kein Funk (Meshtastic Primary ≠ autorisiertes Brett) |
 
 **Wichtig:** Gruppenchat ≠ Shared Mailbox „für alle“. Gruppe = **lokale Mitgliederliste** + gefilterter Posteingang. Pinnwand ≠ Gruppe — Brett mit autorisierten Sendern.
 

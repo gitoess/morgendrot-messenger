@@ -6,30 +6,29 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
-import { AlertCircle, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
+import { AlertCircle, BookUser, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
 import { cn } from '@/lib/utils'
-import { Switch } from '@/components/ui/switch'
-import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
+import {
+  needsComposerIotaAddress,
+  needsComposerMailboxUi,
+  needsComposerTelegramId,
+  showComposerRecipientRow,
+  type ComposerDeliveryChannel,
+} from '@/frontend/lib/composer-delivery-channel'
 import {
   resolveComposerIotaAddress,
   resolveComposerIotaFieldValue,
-  resolveComposerTelegramChatId,
+  resolveComposerTelegramChatIds,
 } from '@/frontend/lib/composer-recipient-fields'
-import {
-  buildTelegramMessagePreview,
-  normalizeTelegramRecipientInput,
-  readTelegramNotifyOnSend,
-  resolveTelegramNotifyRecipientAddress,
-  writeTelegramNotifyOnSend,
-} from '@/frontend/lib/telegram-notify-pref'
+import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-notify-pref'
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
-import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
-import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
-import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
+import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
+import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
+import type { EncryptedRecipientHandshakeStatus } from '@/frontend/lib/encrypted-recipient-handshake-status'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
   CHAT_SIMPLE_LORA_ARCHIV_HINT,
@@ -37,6 +36,14 @@ import {
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
 import { parseMeshtasticNodeIdToNumber } from '@/frontend/lib/meshtastic-node-id'
+import {
+  MESHTASTIC_CHANNEL_INDEX_MAX,
+  MESHTASTIC_CHANNEL_INDEX_MIN,
+  normalizeMeshtasticChannelIndex,
+} from '@/frontend/lib/meshtastic-channel-index'
+import { buildComposerMailboxOptions } from '@/frontend/lib/composer-mailbox-options'
+import { getComposerMailboxRecipientHint } from '@/frontend/lib/composer-mailbox-recipient-hint'
+import { readActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import type {
   AttachmentBarPort,
   ComposerDraftPort,
@@ -76,8 +83,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   partner?: string
   onPartnerChange?: (v: string) => void
   myAddress?: string
-  /** Nach erfolgreichem Nur-Telegram-Send: Zeile im Posteingang/Ausgang. */
-  onTelegramDelivered?: (payload: { recipientKey: string; text: string }) => void
+  composerDelivery?: ComposerDeliveryChannel
+  messagingPersistenceMode?: MessagingPersistenceMode
   /** § H.3g 7a: Einträge in der lokalen Mailbox-Warteschlange (Opt-in). */
   offlineMailboxQueuePending?: number
   /** § H.6c: Einträge mit `timeIsTrusted === false` (Legacy ohne Feld zählt als unvertraut). */
@@ -93,6 +100,10 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onMeshPlaintextToNodeEnabledChange: (v: boolean) => void
   meshPlaintextNodeId: string
   onMeshPlaintextNodeIdChange: (v: string) => void
+  /** Expert: optionaler Meshtastic Channel-Index (0..7), leer = Default/Primary. */
+  meshtasticChannelIndex?: number
+  onMeshtasticChannelIndexChange?: (v: number | undefined) => void
+  showMeshtasticChannelIndexInput?: boolean
   /** Manueller Status-/Drain-Impuls nach Netzwechsel, ohne kompletten Seitenreload. */
   onManualRefresh?: () => void | Promise<void>
   /** M4b: Kontaktverzeichnis für Mailbox-Routing-Hinweis */
@@ -103,6 +114,19 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   groupMemberCount?: number
   /** Expert: Pfad-4-Checkbox; Simple Mode: nur Hinweistext. */
   showPath4Checkbox?: boolean
+  /** Nur bei composerDelivery === 'telegram'. */
+  onTelegramSend?: () => void | Promise<void>
+  canSendTelegram?: boolean
+  telegramBusy?: boolean
+  onNavigateHomeWhenLocked?: () => void
+  composerMailboxObjectId?: string
+  onComposerMailboxObjectIdChange?: (id: string) => void
+  /** Verschlüsselt + online: Handshake-Status zur Empfänger-0x. */
+  encryptedRecipientHandshakeStatus?: EncryptedRecipientHandshakeStatus
+  encryptedHandshakeBlocksSend?: boolean
+  onEncryptedHandshakeForRecipient?: () => void | Promise<void>
+  onEncryptedAcceptHandshakeForRecipient?: () => void | Promise<void>
+  onOpenPhonebook?: () => void
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -128,7 +152,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     partner = '',
     onPartnerChange,
     myAddress = '',
-    onTelegramDelivered,
+    composerDelivery = 'chain',
+    messagingPersistenceMode = 'event',
     offlineMailboxQueuePending = 0,
     offlineMailboxQueueUntrustedTimeCount = 0,
     offlineMailboxQueueBackoffCount = 0,
@@ -139,12 +164,26 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onMeshPlaintextToNodeEnabledChange,
     meshPlaintextNodeId,
     onMeshPlaintextNodeIdChange,
+    meshtasticChannelIndex,
+    onMeshtasticChannelIndexChange,
+    showMeshtasticChannelIndexInput = false,
     onManualRefresh,
     contactDirectory = {},
     isGroupChannel = false,
     groupMailboxSendAll = false,
     groupMemberCount = 0,
     showPath4Checkbox = true,
+    onTelegramSend,
+    canSendTelegram = false,
+    telegramBusy = false,
+    onNavigateHomeWhenLocked,
+    composerMailboxObjectId = '',
+    onComposerMailboxObjectIdChange,
+    encryptedRecipientHandshakeStatus = 'idle',
+    encryptedHandshakeBlocksSend = false,
+    onEncryptedHandshakeForRecipient,
+    onEncryptedAcceptHandshakeForRecipient,
+    onOpenPhonebook,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,
@@ -159,13 +198,20 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     ...attachmentBarProps
   } = p
 
-  const [dropHover, setDropHover] = useState(false)
-  const [telegramNotifyOnSend, setTelegramNotifyOnSend] = useState(false)
-  const [telegramOnlyBusy, setTelegramOnlyBusy] = useState(false)
+  const mailboxOptions = useMemo(() => {
+    const base = buildComposerMailboxOptions({
+      serverMailboxId: apiStatus?.mailboxId,
+      activeSend: readActiveSendMailbox(),
+      contactDirectory,
+    })
+    const cur = composerMailboxObjectId.trim().toLowerCase()
+    if (/^0x[a-f0-9]{64}$/i.test(cur) && !base.some((o) => o.objectId === cur)) {
+      base.unshift({ objectId: cur, label: `Eigene Eingabe · ${cur.slice(0, 10)}…${cur.slice(-6)}` })
+    }
+    return base
+  }, [apiStatus?.mailboxId, contactDirectory, composerMailboxObjectId])
 
-  useEffect(() => {
-    setTelegramNotifyOnSend(readTelegramNotifyOnSend())
-  }, [])
+  const [dropHover, setDropHover] = useState(false)
   const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
   const [showQueueItems, setShowQueueItems] = useState(false)
   const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([])
@@ -248,8 +294,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
+  const vaultLocked = apiStatus?.locked === true
+  const sessionKeysReady = apiStatus?.hasKeys === true
+  const isTelegramDelivery = composerDelivery === 'telegram'
+  const onlineChainNeedsKeys = !isTelegramDelivery && forcedTransport === 'internet'
+
   const sendDisabled =
     sending ||
+    vaultLocked ||
+    (onlineChainNeedsKeys && !sessionKeysReady) ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
     (!encrypted && !meshKlartextRecipientOk) ||
@@ -264,16 +317,36 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     !attachmentBarProps.attachedLora &&
     loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
-  const persistenceMode = readMessagingPersistenceModeFromStorage()
+  const showTelegramField = needsComposerTelegramId({
+    deliveryChannel: composerDelivery,
+    isPrivate,
+  })
+  const showRecipientRow =
+    showComposerRecipientRow({
+      isPrivate,
+      deliveryChannel: composerDelivery,
+      encrypted,
+      forcedTransport,
+      meshPlaintextToNodeEnabled,
+    }) ||
+    !encrypted
+  const showIotaField = needsComposerIotaAddress({
+    deliveryChannel: composerDelivery,
+    encrypted,
+    forcedTransport,
+    meshPlaintextToNodeEnabled,
+  })
+  const showMailboxUi = needsComposerMailboxUi({
+    deliveryChannel: composerDelivery,
+    forcedTransport,
+    recipient,
+    partner: partner ?? '',
+    encrypted,
+  })
 
   const composerIota = useMemo(
     () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
     [recipient, partner, encrypted]
-  )
-
-  const routedMailboxId = useMemo(
-    () => resolveOutboundMailboxObjectId(contactDirectory, composerIota || recipient.trim()),
-    [contactDirectory, recipient, composerIota]
   )
 
   const composerIotaField = useMemo(
@@ -281,81 +354,74 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     [recipient, partner, encrypted]
   )
 
-  const composerTelegramId = useMemo(
-    () => resolveComposerTelegramChatId(recipient, contactDirectory, composerIota),
-    [recipient, contactDirectory, composerIota]
-  )
-
-  const notifyRecipientAddr = useMemo(() => {
-    const resolved = resolveTelegramNotifyRecipientAddress({
-      recipient,
-      partner,
-      encrypted,
-      connectedAddresses: apiStatus?.connectedAddresses,
-    })
-    if (resolved) return resolved
-    if (/^-?\d{1,20}$/.test(composerTelegramId)) return `tg:${composerTelegramId}`
-    return null
-  }, [recipient, partner, encrypted, apiStatus?.connectedAddresses, composerTelegramId])
-
-  const recipientHasTelegram = useMemo(() => {
-    if (!notifyRecipientAddr) return false
-    if (notifyRecipientAddr.startsWith('tg:')) return true
-    return Boolean(contactDirectory?.[notifyRecipientAddr]?.telegramChatId?.trim())
-  }, [contactDirectory, notifyRecipientAddr])
-
-  const telegramPreview = useMemo(
+  const mailboxRecipientHint = useMemo(
     () =>
-      buildTelegramMessagePreview({
-        message,
-        attachedTxtFile: attachmentBarProps.attachedTxtFile,
-        attachedBlobBase64: attachmentBarProps.attachedBlobBase64,
-        attachedAudioBase64: attachmentBarProps.attachedAudioBase64,
-        hasLoraAttachment: attachmentBarProps.attachedLora != null,
+      getComposerMailboxRecipientHint({
+        recipientAddress: composerIota,
+        composerMailboxObjectId,
+        contactDirectory,
       }),
-    [
-      message,
-      attachmentBarProps.attachedTxtFile,
-      attachmentBarProps.attachedBlobBase64,
-      attachmentBarProps.attachedAudioBase64,
-      attachmentBarProps.attachedLora,
-    ]
+    [composerIota, composerMailboxObjectId, contactDirectory]
   )
 
-  const canSendTelegramOnly =
-    isPrivate &&
-    recipientHasTelegram &&
-    !telegramOnlyBusy &&
-    !sending &&
-    Boolean(telegramPreview.trim()) &&
-    !apiStatus?.locked
+  const composerTelegramIds = useMemo(
+    () =>
+      resolveComposerTelegramChatIds(recipient, contactDirectory, composerIota, {
+        telegramDelivery: isTelegramDelivery,
+      }),
+    [recipient, contactDirectory, composerIota, isTelegramDelivery]
+  )
 
-  const handleTelegramOnly = async () => {
-    if (!notifyRecipientAddr || !onStatusFeedback) return
-    setTelegramOnlyBusy(true)
-    onStatusFeedback('Sende Telegram-Hinweis…', 'idle')
-    const myLabel =
-      contactDirectory[myAddress.trim().toLowerCase()]?.label ||
-      (myAddress.trim() ? `${myAddress.trim().slice(0, 10)}…` : 'Morgendrot')
-    const r = await notifyTelegramContact({
-      recipientAddress: notifyRecipientAddr,
-      messagePreview: telegramPreview,
-      senderLabel: myLabel,
-    })
-    if (r.delivered) {
-      onTelegramDelivered?.({
-        recipientKey: notifyRecipientAddr,
-        text: telegramPreview,
-      })
-      onMessageChange('')
-      attachmentBarProps.clearCompactAttachment()
-      onStatusFeedback('Telegram gesendet — siehe Ausgang im Posteingang.', 'success')
-    } else if (r.skipped) {
-      onStatusFeedback(`Telegram: ${r.skipped}`, 'error')
-    } else {
-      onStatusFeedback(r.error || 'Telegram-Hinweis fehlgeschlagen', 'error')
+  const telegramInputFocused = useRef(false)
+  const [telegramDraft, setTelegramDraft] = useState('')
+
+  useEffect(() => {
+    if (!showTelegramField) return
+    if (telegramInputFocused.current) return
+    setTelegramDraft(telegramRecipientToComposerDisplay(recipient))
+  }, [showTelegramField, recipient])
+
+  const meshBroadcastNoRecipient =
+    !isTelegramDelivery &&
+    !encrypted &&
+    forcedTransport === 'mesh' &&
+    !meshPlaintextToNodeEnabled
+
+  const chainRecipientReady =
+    encrypted
+      ? /^0x[a-f0-9]{64}$/i.test((composerIota || recipient.trim()).toLowerCase())
+      : meshBroadcastNoRecipient || meshKlartextRecipientOk
+
+  const primarySendDisabled = isTelegramDelivery
+    ? !canSendTelegram || telegramBusy || sending || vaultLocked
+    : sendDisabled
+
+  const encryptedOnlineSendBlocked =
+    encrypted && forcedTransport === 'internet' && !isTelegramDelivery && encryptedHandshakeBlocksSend
+
+  const primarySendReady =
+    sessionKeysReady &&
+    !vaultLocked &&
+    !sending &&
+    !telegramBusy &&
+    !encryptedOnlineSendBlocked &&
+    (isTelegramDelivery
+      ? canSendTelegram
+      : !hasNoPayload &&
+        chainRecipientReady &&
+        !meshPlaintextBlocked &&
+        !meshPath4Blocked &&
+        loraOnlineFallbackOffer == null)
+
+  const showPrimarySendButton =
+    isTelegramDelivery || forcedTransport === 'internet' || forcedTransport === 'mesh'
+
+  const handlePrimarySend = () => {
+    if (isTelegramDelivery) {
+      void onTelegramSend?.()
+      return
     }
-    setTelegramOnlyBusy(false)
+    void onSend()
   }
 
   const recipientSuggestions = useMemo(() => {
@@ -375,6 +441,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     }
     return Array.from(set)
   }, [apiStatus?.connectedAddresses, apiStatus?.myAddress, contactDirectory])
+
+  const telegramContactSuggestions = useMemo(() => {
+    const set = new Set<string>()
+    if (contactDirectory) {
+      for (const entry of Object.values(contactDirectory)) {
+        const tid = entry.telegramChatId?.trim()
+        if (tid && /^-?\d{1,20}$/.test(tid)) set.add(tid)
+      }
+    }
+    return Array.from(set)
+  }, [contactDirectory])
 
   const messageRef = useRef<HTMLTextAreaElement>(null)
 
@@ -417,13 +494,52 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 md:p-6">
       <div className="space-y-4">
-        {(isPrivate || !encrypted) && (
-          <div>
-            <p className="mb-2 text-xs font-medium text-foreground">Empfänger (Telefonbuch oder manuell)</p>
-            <div className="space-y-3">
-              <div>
+        {showRecipientRow ? (
+          <div className="min-h-[4.5rem]">
+            {showTelegramField ? (
+              <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  IOTA-Adresse (0x + 64 Hex)
+                  Empfänger · Telegram (Chat-ID, mehrere mit Komma)
+                </label>
+                <input
+                  type="text"
+                  list="chat-telegram-recipients"
+                  value={telegramDraft}
+                  onFocus={() => {
+                    telegramInputFocused.current = true
+                  }}
+                  onBlur={() => {
+                    telegramInputFocused.current = false
+                    onRecipientChange(telegramDraft.trim())
+                  }}
+                  onChange={(e) => {
+                    const raw = e.target.value
+                    setTelegramDraft(raw)
+                    onRecipientChange(raw)
+                  }}
+                  placeholder="1156058618, 987654321 — aus Telefonbuch oder @userinfobot"
+                  className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <datalist id="chat-telegram-recipients">
+                  {telegramContactSuggestions.map((id) => (
+                    <option key={id} value={id} />
+                  ))}
+                </datalist>
+                {composerTelegramIds.length > 1 ? (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {composerTelegramIds.length} Empfänger — Senden geht an alle.
+                  </p>
+                ) : null}
+              </>
+            ) : meshBroadcastNoRecipient ? (
+              <p className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
+                Empfänger · <strong className="text-foreground">An alle</strong> (Funk, Klartext, Primary-Mesh) — keine
+                0x nötig. Optional Ziel-Knoten unten.
+              </p>
+            ) : showIotaField ? (
+              <>
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Empfänger · Wallet (0x)
                 </label>
                 <input
                   type="text"
@@ -432,124 +548,73 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   onChange={(e) => {
                     const v = e.target.value.trim().toLowerCase()
                     onPartnerChange?.(v)
-                    const tgOnly = recipient.trim().toLowerCase().startsWith('tg:')
-                    if (!tgOnly || v) onRecipientChange(v)
+                    onRecipientChange(v)
                   }}
-                  placeholder="0x… — Online / verschlüsselt"
+                  placeholder="0x…"
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Telegram Chat-ID</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={composerTelegramId}
-                  onChange={(e) => {
-                    const raw = e.target.value.trim()
-                    if (raw === '') {
-                      if (recipient.trim().toLowerCase().startsWith('tg:')) {
-                        onRecipientChange(composerIota)
-                      }
-                      return
-                    }
-                    if (!/^-?\d{0,20}$/.test(raw)) return
-                    if (/^-?\d{1,20}$/.test(raw)) {
-                      onRecipientChange(normalizeTelegramRecipientInput(raw))
-                    }
-                  }}
-                  placeholder="Zahl von @userinfobot — für „Nur Telegram senden“"
-                  className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-            </div>
-            <datalist id="chat-recipient-addresses">
-              {recipientSuggestions.map((addr) => (
-                <option key={addr} value={addr} />
-              ))}
-            </datalist>
-            {isGroupChannel && persistenceMode === 'mailbox' ? (
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                {groupMailboxSendAll ? (
-                  <>
-                    Gruppe + Persistent: Senden geht{' '}
-                    <strong className="text-foreground">pairwise</strong> an{' '}
-                    {groupMemberCount > 0 ? `${groupMemberCount} Mitglieder` : 'alle gespeicherten Mitglieder'} (
-                    {groupMemberCount}× Chain-Fee). Umschalter im Gruppen-Panel.
-                  </>
-                ) : (
-                  <>
-                    Gruppe: nur die <strong className="text-foreground">0x im Composer</strong> (ein Mitglied). „An alle“
-                    im Gruppen-Panel aktivieren.
-                  </>
-                )}
-              </p>
+                <datalist id="chat-recipient-addresses">
+                  {recipientSuggestions.map((addr) => (
+                    <option key={addr} value={addr} />
+                  ))}
+                </datalist>
+                {encrypted && forcedTransport === 'internet' ? (
+                  <ChatViewEncryptedRecipientHandshakeBar
+                    status={encryptedRecipientHandshakeStatus}
+                    sending={sending}
+                    onHandshake={onEncryptedHandshakeForRecipient}
+                    onAccept={onEncryptedAcceptHandshakeForRecipient}
+                  />
+                ) : null}
+              </>
             ) : null}
-            {/^0x[a-fA-F0-9]{64}$/i.test(composerIota) && !groupMailboxSendAll ? (
-              <ChatViewContactSendMailboxSelect
-                className="mt-2"
-                recipientWallet={composerIota}
-                contactDirectory={contactDirectory}
-                serverMailboxId={apiStatus?.mailboxId}
-              />
-            ) : null}
-            {routedMailboxId && persistenceMode === 'mailbox' ? (
-              <p className="mt-1.5 text-[11px] text-violet-800 dark:text-violet-200">
-                On-chain Postfach:{' '}
-                <span className="font-mono text-[10px]">
-                  {routedMailboxId.slice(0, 10)}…{routedMailboxId.slice(-6)}
-                </span>
-                {' '}
-                (Empfänger-Wallet{' '}
-                <strong className="font-mono">{maskWalletAddress(composerIota || recipient.trim(), 10, 6)}</strong>)
-              </p>
-            ) : persistenceMode === 'mailbox' ? (
-              <p className="mt-1.5 text-[11px] text-muted-foreground">
-                Empfänger = <strong className="text-foreground">Wallet 0x</strong>. Ziel-Postfach wählbar, sobald im
-                Telefonbuch Mailbox-IDs hinterlegt sind.
-              </p>
-            ) : null}
-          </div>
-        )}
-
-        {isPrivate ? (
-          <div className="space-y-2 rounded-lg border border-border/80 bg-muted/15 px-3 py-3">
-            <div className="min-w-0 text-xs">
-              <p className="font-medium text-foreground">Telegram an Kontakt</p>
-              <p className="mt-1 text-muted-foreground">
-                {recipientHasTelegram
-                  ? 'Ausgang erscheint im Posteingang (Filter „Ausgang“). Eingehende Telegram-Antworten nur mit Bot-Webhook (öffentliche URL → /api/integrations/telegram/webhook).'
-                  : 'Telefonbuch antippen oder Chat-ID oben eintragen.'}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={!canSendTelegramOnly || !onStatusFeedback}
-                onClick={() => void handleTelegramOnly()}
-                className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-medium text-white hover:bg-sky-600/90 disabled:opacity-50 dark:bg-sky-500"
-                title="Nur Telegram — ohne IOTA/Mailbox/LoRa"
-              >
-                {telegramOnlyBusy ? 'Sende…' : 'Nur Telegram senden'}
-              </button>
-            </div>
-            {forcedTransport === 'internet' ? (
-              <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-2">
-                <span className="text-xs text-foreground">Zusätzlich nach Online-Send (IOTA)</span>
-                <Switch
-                  checked={telegramNotifyOnSend}
-                  onCheckedChange={(on) => {
-                    writeTelegramNotifyOnSend(on)
-                    setTelegramNotifyOnSend(on)
-                  }}
-                  aria-label="Telegram-Hinweis zusätzlich nach IOTA-Send"
-                />
+            {!showTelegramField && showMailboxUi && !groupMailboxSendAll ? (
+              <div className="mt-2 space-y-1.5">
+                <label className="mb-0 block text-xs font-medium text-muted-foreground">
+                  Mailbox · Object-ID (0x)
+                </label>
+                <select
+                  value={
+                    composerMailboxObjectId.trim().toLowerCase() &&
+                    /^0x[a-f0-9]{64}$/i.test(composerMailboxObjectId.trim())
+                      ? composerMailboxObjectId.trim().toLowerCase()
+                      : ''
+                  }
+                  onChange={(e) => onComposerMailboxObjectIdChange?.(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  <option value="">Standard (Event — keine feste Mailbox-ID)</option>
+                  {mailboxOptions.map((o) => (
+                    <option key={o.objectId} value={o.objectId}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-muted-foreground">
+                  Bekannte IDs aus Server, aktiver Mailbox, Einstellungen → Meine Mailboxen und Telefonbuch. Leer = Event.
+                </p>
+                {mailboxRecipientHint.show ? (
+                  <p
+                    role="status"
+                    className={`flex gap-1.5 rounded-md border px-2 py-1.5 text-[10px] leading-snug ${
+                      mailboxRecipientHint.tone === 'mismatch'
+                        ? 'border-amber-500/45 bg-amber-500/10 text-amber-950 dark:text-amber-50'
+                        : 'border-border/70 bg-muted/25 text-muted-foreground'
+                    }`}
+                  >
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span>
+                      <span className="font-medium text-foreground">{mailboxRecipientHint.message}</span>{' '}
+                      {mailboxRecipientHint.detail}
+                    </span>
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </div>
         ) : null}
 
-        {!encrypted && forcedTransport === 'mesh' && (
+        {!isTelegramDelivery && !encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
             <p className="text-[11px] font-semibold text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
             <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
@@ -559,7 +624,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onChange={(e) => onMeshPlaintextToNodeEnabledChange(e.target.checked)}
                 className="mt-1 border-border"
               />
-              <span>An Node-ID senden (statt Broadcast)</span>
+              <span>An Node-ID senden (statt „An alle“)</span>
             </label>
             {meshPlaintextToNodeEnabled ? (
               <div>
@@ -577,10 +642,34 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ) : null}
               </div>
             ) : null}
+            {showMeshtasticChannelIndexInput ? (
+              <div>
+                <label htmlFor="chat-mesh-channel-index" className="mb-1 block text-xs font-medium text-foreground">
+                  Kanalindex (Meshtastic, optional)
+                </label>
+                <input
+                  id="chat-mesh-channel-index"
+                  type="number"
+                  min={MESHTASTIC_CHANNEL_INDEX_MIN}
+                  max={MESHTASTIC_CHANNEL_INDEX_MAX}
+                  step={1}
+                  value={meshtasticChannelIndex ?? ''}
+                  onChange={(e) => {
+                    onMeshtasticChannelIndexChange?.(normalizeMeshtasticChannelIndex(e.target.value))
+                  }}
+                  placeholder="leer = Default (Primary)"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+                  inputMode="numeric"
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Optional 0–7. Falscher Kanal kann Empfang verhindern; leer nutzt den Geräte-Default.
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
-        {forcedTransport === 'mesh' && isPrivate ? (
+        {!isTelegramDelivery && forcedTransport === 'mesh' && isPrivate ? (
           showPath4Checkbox ? (
             <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
               <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
@@ -612,18 +701,61 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-            <label htmlFor="chat-composer-message" className="text-sm font-medium text-foreground">
-              Nachricht
-            </label>
-            {isPrivate ? (
-              <ChatComposerEmojiPicker onPick={insertEmojiIntoMessage} disabled={sending} />
-            ) : null}
-          </div>
+          <label htmlFor="chat-composer-message" className="mb-2 block text-sm font-medium text-foreground">
+            Nachricht
+          </label>
           <ChatViewAttachmentBar
             {...attachmentBarProps}
             sending={sending}
             pickDisabled={voiceLocksComposer}
+            trailingActions={
+              isPrivate ? (
+                <>
+                  {(forcedTransport === 'internet' || forcedTransport === 'mesh' || isTelegramDelivery) && (
+                    <button
+                      type="button"
+                      disabled={sending || voiceLocksComposer || telegramBusy}
+                      onClick={prepareSttDictation}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
+                      title="Sprach-zu-Text über Betriebssystem-Diktat"
+                    >
+                      STT diktieren
+                    </button>
+                  )}
+                  {forcedTransport === 'internet' && !isTelegramDelivery ? (
+                    <ChatViewVoiceRecord
+                      slot="normal"
+                      density="compact"
+                      activeKind={voiceActiveKind}
+                      phase={voicePhase}
+                      progress01={voiceProgress01}
+                      maxSeconds={voiceMaxSeconds}
+                      normalIsOnline
+                      onToggle={onVoiceToggle}
+                      blockedStart={voiceNormalBlockedStart}
+                    />
+                  ) : null}
+                  <ChatComposerEmojiPicker onPick={insertEmojiIntoMessage} disabled={sending} compact />
+                  {onOpenPhonebook ? (
+                    <button
+                      type="button"
+                      disabled={sending || voiceLocksComposer}
+                      onClick={onOpenPhonebook}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
+                      title="Telefonbuch"
+                    >
+                      <BookUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                      Telefonbuch
+                    </button>
+                  ) : null}
+                </>
+              ) : null
+            }
+          />
+          <ChatViewEncryptionContextHint
+            forcedTransport={forcedTransport}
+            encrypted={encrypted}
+            className="mb-2"
           />
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
@@ -711,25 +843,59 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {isPrivate && offlineMailboxQueuePending > 0 ? (
           <div
-            className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-600/45 bg-amber-950/25 px-3 py-2 text-xs text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-50"
+            className={cn(
+              'mb-3 flex flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-xs',
+              !sessionKeysReady || vaultLocked || /tresor gesperrt/i.test(offlineMailboxQueueErrorHint)
+                ? 'border-red-500/45 bg-red-950/25 text-red-950 dark:border-red-500/40 dark:bg-red-950/30 dark:text-red-50'
+                : 'border-amber-600/45 bg-amber-950/25 text-amber-950 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-50'
+            )}
             role="status"
             aria-live="polite"
           >
-            <span className="inline-flex items-center gap-1.5 font-semibold text-amber-900 dark:text-amber-100">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 font-semibold',
+                !sessionKeysReady || vaultLocked || /tresor gesperrt/i.test(offlineMailboxQueueErrorHint)
+                  ? 'text-red-900 dark:text-red-100'
+                  : 'text-amber-900 dark:text-amber-100'
+              )}
+            >
               <ListOrdered className="h-3.5 w-3.5 shrink-0" aria-hidden />
               Mailbox-Warteschlange
             </span>
             <span
-              className="rounded-full bg-amber-600/90 px-2 py-0.5 font-mono text-[11px] font-bold text-white tabular-nums dark:bg-amber-500/90"
+              className={cn(
+                'rounded-full px-2 py-0.5 font-mono text-[11px] font-bold text-white tabular-nums',
+                !sessionKeysReady || vaultLocked || /tresor gesperrt/i.test(offlineMailboxQueueErrorHint)
+                  ? 'bg-red-600/90 dark:bg-red-500/90'
+                  : 'bg-amber-600/90 dark:bg-amber-500/90'
+              )}
               title="Lokal zwischengespeicherte Sendeversuche (Opt-in: localStorage morgendrot.offlineMailboxQueue = 1)"
             >
               {offlineMailboxQueuePending}
             </span>
-            <span className="text-amber-900/90 dark:text-amber-100/90">
-              {offlineMailboxQueuePending === 1
-                ? 'Eine Nachricht wartet auf die Basis — wird mit dem Status-Takt erneut versucht.'
-                : `${offlineMailboxQueuePending} Nachrichten warten auf die Basis — werden mit dem Status-Takt erneut versucht.`}
-            </span>
+            {!sessionKeysReady || vaultLocked || /tresor gesperrt/i.test(offlineMailboxQueueErrorHint) ? (
+              <span className="w-full leading-snug text-red-900/95 dark:text-red-100/95">
+                {!sessionKeysReady || vaultLocked ? (
+                  <>
+                    <strong className="font-semibold">Schlüssel nicht in der Sitzung</strong> — die Basis kann nicht
+                    signieren (Badge: „Tresor: Keys fehlen“ oder „gesperrt“). Startseite →{' '}
+                    <strong>Tresor entsperren</strong>, dann „Aktualisieren“ oder „Warteschlange leeren“.
+                  </>
+                ) : (
+                  <>
+                    Letzter Fehler: <span className="font-mono">{offlineMailboxQueueErrorHint}</span> — vermutlich
+                    veraltet. <strong>Tresor entsperren</strong>, dann „Aktualisieren“ oder Warteschlange leeren.
+                  </>
+                )}
+              </span>
+            ) : (
+              <span className="text-amber-900/90 dark:text-amber-100/90">
+                {offlineMailboxQueuePending === 1
+                  ? 'Eine Nachricht wartet auf die Basis — wird mit dem Status-Takt erneut versucht.'
+                  : `${offlineMailboxQueuePending} Nachrichten warten auf die Basis — werden mit dem Status-Takt erneut versucht.`}
+              </span>
+            )}
             {offlineMailboxQueueUntrustedTimeCount > 0 ? (
               <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
                 Bei {offlineMailboxQueueUntrustedTimeCount}{' '}
@@ -738,11 +904,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 Attestation/Export gespeichert als <span className="font-mono">timeIsTrusted: false</span>.
               </span>
             ) : null}
-            {offlineMailboxQueueBackoffCount > 0 ? (
+            {offlineMailboxQueueBackoffCount > 0 &&
+            !(
+              !sessionKeysReady ||
+              vaultLocked ||
+              /tresor gesperrt/i.test(offlineMailboxQueueErrorHint)
+            ) ? (
               <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
                 {offlineMailboxQueueBackoffCount === 1
-                  ? '1 Eintrag wartet im Backoff-Zeitfenster vor dem nächsten Versuch (exponentielles Warten — SYNC §8.1).'
-                  : `${offlineMailboxQueueBackoffCount} Einträge warten im Backoff vor dem nächsten Versuch (SYNC §8.1).`}
+                  ? '1 Eintrag wartet im Backoff-Zeitfenster vor dem nächsten Versuch.'
+                  : `${offlineMailboxQueueBackoffCount} Einträge warten im Backoff vor dem nächsten Versuch.`}
               </span>
             ) : null}
             {offlineMailboxQueueErrorHint ? (
@@ -753,6 +924,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 Letzte Meldung: {offlineMailboxQueueErrorHint}
               </span>
             ) : null}
+            {(!sessionKeysReady || vaultLocked) && onNavigateHomeWhenLocked ? (
+              <button
+                type="button"
+                onClick={onNavigateHomeWhenLocked}
+                className="inline-flex items-center gap-1 rounded-md border border-red-700/50 bg-red-100/80 px-2 py-1 text-[11px] font-semibold text-red-950 hover:bg-red-100 dark:border-red-400/40 dark:bg-red-900/50 dark:text-red-50"
+              >
+                Tresor entsperren
+              </button>
+            ) : null}
             {onManualRefresh ? (
               <button
                 type="button"
@@ -762,6 +942,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 Aktualisieren
+              </button>
+            ) : null}
+            {onRemoveOfflineMailboxQueueItems && offlineMailboxQueueItems.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => onRemoveOfflineMailboxQueueItems(offlineMailboxQueueItems.map((q) => q.id))}
+                className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-muted"
+              >
+                Warteschlange leeren
               </button>
             ) : null}
             {offlineMailboxQueueItems.length > 0 ? (
@@ -829,46 +1018,39 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         <div className="space-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {forcedTransport === 'internet' && onlineConnected ? (
+            {showPrimarySendButton ? (
               <button
                 type="button"
-                onClick={() => void onSend()}
-                disabled={sendDisabled}
+                onClick={handlePrimarySend}
+                disabled={primarySendDisabled}
                 data-testid="chat-composer-primary-send"
-                className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className={cn(
+                  'flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed',
+                  primarySendReady && !primarySendDisabled
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/35 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400'
+                    : primarySendDisabled
+                      ? 'bg-muted text-muted-foreground opacity-50'
+                      : isTelegramDelivery
+                        ? 'bg-sky-600/80 text-white hover:bg-sky-600/90'
+                        : 'border border-border bg-muted/80 text-muted-foreground hover:bg-muted'
+                )}
+                title={
+                  isTelegramDelivery
+                    ? 'Telegram-Hinweis senden'
+                    : forcedTransport === 'internet' && !onlineConnected
+                      ? 'Online-Verbindung derzeit nicht bestätigt'
+                      : undefined
+                }
               >
-                {sending ? (
+                {sending || telegramBusy ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {sending ? 'Wird gesendet…' : 'Online senden (IOTA)'}
-              </button>
-            ) : forcedTransport === 'internet' ? (
-              <button
-                type="button"
-                onClick={() => void onSend()}
-                disabled={sendDisabled}
-                data-testid="chat-composer-primary-send"
-                className="flex items-center gap-2 rounded-lg border border-border bg-muted px-6 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/80 disabled:cursor-not-allowed disabled:opacity-50"
-                title={onlineConnected ? 'Online-Verbindung aktiv' : 'Online-Verbindung derzeit nicht bestätigt'}
-              >
-                <Send className="h-4 w-4" />
-                Online senden (IOTA)
-              </button>
-            ) : forcedTransport === 'mesh' ? (
-              <button
-                type="button"
-                onClick={() => void onSend()}
-                disabled={sendDisabled}
-                data-testid="chat-composer-primary-send"
-                className="flex items-center gap-2 rounded-lg border border-sky-700/70 bg-sky-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50 dark:border-sky-300/40 dark:bg-sky-700 dark:hover:bg-sky-600"
-              >
-                {sending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                {sending ? 'Wird gesendet…' : attachmentBarProps.attachedLora != null ? 'Für LoRa senden' : 'LoRa senden'}
+                {sending || telegramBusy ? 'Wird gesendet…' : 'Senden'}
               </button>
             ) : null}
-            {canOfferSosText ? (
+            {canOfferSosText && !isTelegramDelivery ? (
               <button
                 type="button"
                 disabled={sending}
@@ -894,30 +1076,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               >
                 SOS — Hilferuf
               </button>
-            ) : null}
-            {forcedTransport === 'internet' || forcedTransport === 'mesh' ? (
-              <button
-                type="button"
-                disabled={sending || voiceLocksComposer}
-                onClick={prepareSttDictation}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
-                title="Sprach-zu-Text ueber Betriebssystem-Diktat in das Nachrichtenfeld"
-              >
-                STT diktieren
-              </button>
-            ) : null}
-            {forcedTransport === 'internet' ? (
-              <ChatViewVoiceRecord
-                slot="normal"
-                density="compact"
-                activeKind={voiceActiveKind}
-                phase={voicePhase}
-                progress01={voiceProgress01}
-                maxSeconds={voiceMaxSeconds}
-                normalIsOnline
-                onToggle={onVoiceToggle}
-                blockedStart={voiceNormalBlockedStart}
-              />
             ) : null}
             {sending ? (
               <button

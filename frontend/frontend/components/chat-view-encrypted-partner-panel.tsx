@@ -5,24 +5,9 @@
  */
 
 import { useMemo } from 'react'
-import { CircleHelp } from 'lucide-react'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  MessengerGuideHint,
-  MESSENGER_HB_ANCHOR_HANDSHAKE,
-} from '@/components/messenger-handbook-link'
-
-const ACCEPT_PARTNER_HINT =
-  'Wartet auf einen Handshake der 0x-Adresse oben (Einsatz-Mailbox des Servers oder Event auf der Chain), antwortet automatisch mit deinem Schlüssel. Ignoriert .env-Partner — nur die eingetragene Adresse.'
-
-const CONNECT_DEPLOYMENT_HINT =
-  'Verbindet mit Adressen aus der Server-.env (PARTNER_ADDRESS, PARTNER_ADDRESSES oder Hierarchie). Typisch: erster Kontakt zum Einsatzleiter/Boss, wenn du seine 0x noch nicht kennst. Das Feld oben kann leer bleiben.'
+import { PeeringQrActions } from '@/frontend/components/peering-qr-actions'
 
 const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/
 
@@ -39,25 +24,8 @@ export type ChatViewEncryptedPartnerPanelProps = {
   connectedAddresses?: string[]
   onHandshakeForAddress?: (address: string) => void | Promise<void>
   onConnectAcceptForAddress?: (address: string) => void | Promise<void>
-}
-
-function HintButton({ label, text }: { label: string; text: string }) {
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label={label}
-        >
-          <CircleHelp className="h-4 w-4 shrink-0" aria-hidden />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 text-xs leading-relaxed" align="start">
-        {text}
-      </PopoverContent>
-    </Popover>
-  )
+  myAddress?: string
+  onPeeringStatus?: (msg: string) => void
 }
 
 export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelProps) {
@@ -66,14 +34,14 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
     onPartnerChange,
     sending,
     onHandshake,
-    onConnectAcceptPartner,
-    onConnectDeployment,
     directory,
     isGroupMode = false,
     groupMemberAddresses = [],
     connectedAddresses = [],
     onHandshakeForAddress,
     onConnectAcceptForAddress,
+    myAddress = '',
+    onPeeringStatus,
   } = p
 
   const partnerTrim = partner.trim()
@@ -188,52 +156,14 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
           >
             {sending ? 'Wird gestartet...' : 'Handshake starten'}
           </button>
+          <PeeringQrActions
+            myAddress={myAddress}
+            disabled={sending}
+            onStatus={onPeeringStatus}
+            onImported={({ address }) => onPartnerChange(address)}
+          />
         </div>
 
-        <div className="space-y-2 border-t border-amber-500/20 pt-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-sm font-medium text-foreground">Verbindung</span>
-            <MessengerGuideHint
-              ariaLabel="Hilfe Handshake und Connect"
-              teaser="Ablauf"
-              anchor={MESSENGER_HB_ANCHOR_HANDSHAKE}
-            />
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] text-muted-foreground">Handshake annehmen</span>
-                <HintButton label="Erklärung Handshake annehmen" text={ACCEPT_PARTNER_HINT} />
-              </div>
-              <button
-                type="button"
-                onClick={onConnectAcceptPartner}
-                disabled={!partnerValid || sending}
-                className="w-full rounded-lg border border-emerald-600/40 bg-emerald-500/10 px-3 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-emerald-500/15 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? 'Verbinde...' : 'Handshake annehmen'}
-              </button>
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <div className="flex items-center gap-1">
-                <span className="text-[11px] text-muted-foreground">Einsatz-Partner (.env)</span>
-                <HintButton label="Erklärung Einsatz-Partner verbinden" text={CONNECT_DEPLOYMENT_HINT} />
-              </div>
-              <button
-                type="button"
-                onClick={onConnectDeployment}
-                disabled={sending}
-                className="w-full rounded-lg border border-border bg-accent px-3 py-2.5 text-sm font-medium text-accent-foreground transition-colors hover:bg-accent/80 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {sending ? 'Verbinde...' : 'Mit Einsatz-Partner verbinden'}
-              </button>
-            </div>
-          </div>
-          <p className="text-[10px] leading-relaxed text-muted-foreground">
-            Annehmen braucht die 0x des Partners. Einsatz-Partner nutzt nur die Server-Konfiguration — unabhängig vom
-            Feld oben. Beide warten auf einen Handshake und antworten ggf. automatisch.
-          </p>
-        </div>
       </div>
     </div>
   )

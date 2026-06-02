@@ -8,7 +8,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import type { Message } from '@/frontend/lib/types'
-import { messageLooksLikeMorgSegV1Wire, parseMorgSegV1Message } from '@/frontend/lib/lora-sarq-parser'
+import {
+  messageLooksLikePath4ImageTransferWire,
+  parseMorgSegV1Message,
+} from '@/frontend/lib/lora-sarq-parser'
+import { parsePath4ImageInitMessage } from '@/frontend/lib/path4-image-transfer'
 import { useMorgSegReassembly } from '@/frontend/hooks/use-morg-seg-reassembly'
 import {
   fuseLoraProgressivePreferSharpBackend,
@@ -86,10 +90,11 @@ export function MorgSegV1ChatSink({
   copyRaw,
   copiedRaw,
 }: MorgSegV1ChatSinkProps) {
-  const looks = useMemo(() => messageLooksLikeMorgSegV1Wire(raw), [raw])
+  const looks = useMemo(() => messageLooksLikePath4ImageTransferWire(raw), [raw])
   const anchor = useMemo(() => parseMorgSegV1Message(raw), [raw])
+  const initAnchor = useMemo(() => parsePath4ImageInitMessage(raw), [raw])
   const fromLower = useMemo(() => (selfMessage.from ?? '').trim().toLowerCase(), [selfMessage.from])
-  const msgId = anchor?.msgId ?? ''
+  const msgId = anchor?.msgId ?? initAnchor?.msgId ?? ''
 
   const inboxSig = useMemo(() => {
     const n = inboxMessages.length
@@ -164,24 +169,45 @@ export function MorgSegV1ChatSink({
     }
   }, [lumaJpeg, chromaJpeg])
 
+  const phaseNFromInbox = useCallback(
+    (phase: 'luma' | 'chroma') => {
+      for (const m of inboxMessages) {
+        const init = parsePath4ImageInitMessage(m.content ?? '')
+        if (init && init.msgId === msgId && init.phase === phase) return init.n
+        const p = parseMorgSegV1Message(m.content ?? '')
+        if (p && p.msgId === msgId && p.phase === phase) return p.n
+      }
+      return null
+    },
+    [inboxMessages, msgId, inboxSig]
+  )
+
   const lumaN = useMemo(() => {
-    for (const m of inboxMessages) {
-      const p = parseMorgSegV1Message(m.content ?? '')
-      if (p && p.msgId === msgId && p.phase === 'luma') return p.n
-    }
-    return anchor?.phase === 'luma' ? anchor.n : null
-  }, [anchor, inboxMessages, msgId, inboxSig])
+    const fromInbox = phaseNFromInbox('luma')
+    if (fromInbox != null) return fromInbox
+    return anchor?.phase === 'luma' ? anchor.n : initAnchor?.phase === 'luma' ? initAnchor.n : null
+  }, [anchor, initAnchor, phaseNFromInbox])
 
   const chromaN = useMemo(() => {
-    for (const m of inboxMessages) {
-      const p = parseMorgSegV1Message(m.content ?? '')
-      if (p && p.msgId === msgId && p.phase === 'chroma') return p.n
-    }
-    return anchor?.phase === 'chroma' ? anchor.n : null
-  }, [anchor, inboxMessages, msgId, inboxSig])
+    const fromInbox = phaseNFromInbox('chroma')
+    if (fromInbox != null) return fromInbox
+    return anchor?.phase === 'chroma' ? anchor.n : initAnchor?.phase === 'chroma' ? initAnchor.n : null
+  }, [anchor, initAnchor, phaseNFromInbox])
 
   if (!looks) {
     return <p className="text-xs text-muted-foreground">Kein MORG_SEG_V1-Wire.</p>
+  }
+
+  if (!anchor && initAnchor) {
+    const phaseLabel = initAnchor.phase === 'luma' ? 'Luma' : 'Chroma'
+    return (
+      <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
+        <p className="text-sm font-medium text-foreground">Bild wird zusammengesetzt… (Pfad 4)</p>
+        <p className="text-xs text-muted-foreground">
+          {phaseLabel}: {initAnchor.n} Segmente erwartet — warte auf Funkpakete.
+        </p>
+      </div>
+    )
   }
 
   if (!anchor) {
@@ -237,8 +263,8 @@ export function MorgSegV1ChatSink({
         </div>
       ) : (
         <p className="text-[11px] leading-snug text-muted-foreground">
-          Raster: empfangene Segmente (grün), fehlende (Rausch-Platzhalter). JPEG erscheint, sobald die Luma-Phase
-          vollständig ist — kein echtes „Teil-JPEG“ pro Kachel (JPEG ist ein Datenstrom).
+          <strong className="font-medium text-foreground">Bild wird zusammengesetzt…</strong> Raster: empfangene
+          Segmente (grün), fehlende (Platzhalter). JPEG erscheint, sobald Luma vollständig ist.
         </p>
       )}
 

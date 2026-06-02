@@ -6,6 +6,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
+import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel, lookupContactEntry } from '@/frontend/lib/contact-display'
@@ -30,7 +31,6 @@ import {
   recordContactLastContacted,
   toggleContactFavorite,
 } from '@/frontend/lib/contact-phonebook-meta-store'
-import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
 import { cn } from '@/lib/utils'
 
 export type ChatViewPhonebookSectionProps = {
@@ -45,6 +45,10 @@ export type ChatViewPhonebookSectionProps = {
   /** Im Sheet: kein eigener Seitentitel (steht in SheetHeader). */
   embedded?: boolean
   teamMailboxCreateAllowed?: boolean
+  /** Boss/Kommandant: initialProfile-JSON ins Telefonbuch. */
+  allowInitialProfileImport?: boolean
+  /** Mailbox-Verwaltung liegt unter Einstellungen. */
+  onOpenSettings?: () => void
 }
 
 type ContactRow = {
@@ -264,32 +268,27 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   return (
     <div className="space-y-4">
-      {showMailboxes ? (
+      {showMailboxes && p.onOpenSettings ? (
         <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p id="morg-my-mailboxes" className="text-sm font-semibold text-foreground mb-2 scroll-mt-4">
-            Meine Mailboxen
-          </p>
+          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
           <p className="text-[11px] text-muted-foreground mb-2">
-            Erstellte private Mailboxen hier verwalten und Kontakten zuordnen (Feld „Private Mailbox“).
+            Server-Shared, Team und Private Mailboxen verwaltest du unter Einstellungen.
           </p>
-          <ChatViewMyMailboxesPanel
-            myAddressLine={myAddr}
-            serverMailboxIdHint={p.serverMailboxId}
-            contactDirectory={directory}
-            onContactsChanged={refreshContactDirectory}
-            onApplySendRecipient={
-              onSelectContact
-                ? (walletAddress) => {
-                    const key = walletAddress.trim().toLowerCase()
-                    const entry = directory[key]
-                    if (entry) onSelectContact(key, entry)
-                  }
-                : undefined
-            }
-            onStatus={(msg, kind) => setStatusMsg(kind === 'error' ? `⚠ ${msg}` : msg)}
-            teamMailboxCreateAllowed={p.teamMailboxCreateAllowed}
-          />
+          <button
+            type="button"
+            onClick={p.onOpenSettings}
+            className="text-xs font-medium text-primary underline hover:no-underline"
+          >
+            Einstellungen → Meine Mailboxen
+          </button>
         </div>
+      ) : null}
+
+      {p.allowInitialProfileImport ? (
+        <PhonebookContactDistributePanel
+          directory={directory}
+          onContactsChanged={refreshContactDirectory}
+        />
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -300,14 +299,16 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         ) : (
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonbuch</h2>
         )}
-        <button
-          type="button"
-          onClick={() => setDialog({ mode: 'create' })}
-          className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
-        >
-          <Plus className="h-5 w-5" aria-hidden />
-          Neuer Kontakt
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDialog({ mode: 'create' })}
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
+          >
+            <Plus className="h-5 w-5" aria-hidden />
+            Neuer Kontakt
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -403,6 +404,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         address={qrAddress ?? ''}
         entry={qrAddress ? lookupContactEntry(directory, qrAddress) : undefined}
       />
+
     </div>
   )
 }

@@ -1,6 +1,9 @@
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { isIotaWalletAddress } from '@/frontend/lib/contact-storage-key'
-import { normalizeTelegramRecipientInput } from '@/frontend/lib/telegram-notify-pref'
+import {
+  normalizeTelegramRecipientInput,
+  parseTelegramRecipientChatIds,
+} from '@/frontend/lib/telegram-notify-pref'
 
 /** Rohes IOTA-Feld im Composer (auch unfertige Eingabe). */
 export function resolveComposerIotaFieldValue(
@@ -34,16 +37,27 @@ export function resolveEncryptedMailboxRecipient(recipient: string, partner: str
   return resolveComposerIotaAddress(recipient, partner, true)
 }
 
-/** Telegram Chat-ID (Ziffern) aus recipient tg:-Key oder Telefonbuch. */
+/** Telegram Chat-ID(s) aus recipient oder Telefonbuch. */
 export function resolveComposerTelegramChatId(
   recipient: string,
   contactDirectory: Record<string, ContactMeshEntryClient> | undefined,
   iotaAddress: string
 ): string {
-  const norm = normalizeTelegramRecipientInput(recipient)
-  if (norm.startsWith('tg:')) return norm.slice(3)
+  const list = resolveComposerTelegramChatIds(recipient, contactDirectory, iotaAddress)
+  return list[0] ?? ''
+}
+
+export function resolveComposerTelegramChatIds(
+  recipient: string,
+  contactDirectory: Record<string, ContactMeshEntryClient> | undefined,
+  iotaAddress: string,
+  opts?: { telegramDelivery?: boolean }
+): string[] {
+  const fromField = parseTelegramRecipientChatIds(recipient)
+  if (fromField.length > 0) return fromField
+  if (opts?.telegramDelivery) return []
   if (iotaAddress && contactDirectory?.[iotaAddress]?.telegramChatId?.trim()) {
-    return contactDirectory[iotaAddress].telegramChatId!.trim()
+    return [contactDirectory[iotaAddress].telegramChatId!.trim()]
   }
-  return ''
+  return []
 }

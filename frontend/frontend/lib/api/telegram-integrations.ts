@@ -7,6 +7,7 @@ export type TelegramIntegrationPublic = {
   ok?: boolean
   enabled: boolean
   botTokenConfigured: boolean
+  botToken: string
   botTokenMasked: string
   adminChatId: string
   relayBaseUrl: string
@@ -27,6 +28,7 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
       error: 'Antwort ist kein gültiges JSON.',
       enabled: false,
       botTokenConfigured: false,
+      botToken: '',
       botTokenMasked: '',
       adminChatId: '',
       relayBaseUrl: 'http://127.0.0.1:8787',
@@ -42,6 +44,7 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
       error: body.error || `HTTP ${httpStatus}`,
       enabled: false,
       botTokenConfigured: false,
+      botToken: '',
       botTokenMasked: '',
       adminChatId: '',
       relayBaseUrl: 'http://127.0.0.1:8787',
@@ -57,6 +60,7 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
       error: body.error || 'API-Fehler',
       enabled: false,
       botTokenConfigured: false,
+      botToken: '',
       botTokenMasked: '',
       adminChatId: '',
       relayBaseUrl: 'http://127.0.0.1:8787',
@@ -72,6 +76,7 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
     ok: true,
     enabled: body.enabled === true,
     botTokenConfigured: body.botTokenConfigured === true,
+    botToken: body.botToken || '',
     botTokenMasked: body.botTokenMasked || '',
     adminChatId: body.adminChatId || '',
     relayBaseUrl: body.relayBaseUrl || 'http://127.0.0.1:8787',
@@ -91,6 +96,7 @@ export async function fetchTelegramIntegration(): Promise<TelegramIntegrationPub
         error: fr.error,
         enabled: false,
         botTokenConfigured: false,
+        botToken: '',
         botTokenMasked: '',
         adminChatId: '',
         relayBaseUrl: 'http://127.0.0.1:8787',
@@ -107,6 +113,7 @@ export async function fetchTelegramIntegration(): Promise<TelegramIntegrationPub
       error: formatFetchFailureMessage(e),
       enabled: false,
       botTokenConfigured: false,
+      botToken: '',
       botTokenMasked: '',
       adminChatId: '',
       relayBaseUrl: 'http://127.0.0.1:8787',
@@ -139,6 +146,7 @@ export async function saveTelegramIntegration(body: {
       error: formatFetchFailureMessage(e),
       enabled: false,
       botTokenConfigured: false,
+      botToken: '',
       botTokenMasked: '',
       adminChatId: '',
       relayBaseUrl: 'http://127.0.0.1:8787',

@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import {
     CFG,
     getConfigDisplay,
+    getConfigDisplayForWebApi,
     getConnectAddresses,
     setEnvKey,
     setRuntimeConfigKey,
@@ -90,11 +91,16 @@ import { exportAuditCsv, exportAuditPdfStream, appendAuditEvent, readAuditEvents
 import { runGasStationCheck } from './gas-station.js';
 import { verifyTinyHmac, processTinyMessage } from './tiny-gateway.js';
 import { extractCompactImageBase64FromWire } from './compact-image-wire-extract.js';
-import { fuseLoraProgressiveJpegsSharp, prepareImageForLoRaRobust } from './lora-progressive-image.js';
+import {
+    fuseLoraProgressiveJpegsSharp,
+    prepareImageForLoRaFluentRobust,
+    prepareImageForLoRaRobust,
+} from './lora-progressive-image.js';
 import archiver from 'archiver';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from './shared/heartbeat-presets.js';
 import {
     vaultFileExists,
+    resolveVaultFilePathForSession,
     loadVaultLocal,
     loadVaultContent,
     loadVaultFromChainPayload,
@@ -103,6 +109,7 @@ import {
     type PersonalSecretEntry,
 } from './vault-local.js';
 import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
+import { setWalletPassword } from './messenger-nest/messenger-session-password.js';
 import {
     saveContactLabel,
     saveContactMeshFields,
@@ -270,6 +277,11 @@ export function setCommandHandler(handler: CommandHandlerFn | null): void {
     _commandHandler = handler;
 }
 
+/** true, sobald wallet-bridge den Messenger-Handler registriert hat (nicht mehr Stub). */
+export function isMessengerCommandHandlerReady(): boolean {
+    return _commandHandler !== null && _commandHandler !== _stubCommandHandler;
+}
+
 /** Optional: Zugriff auf „Mein Safe“ (personalSecrets) im entsperrten Vault-RAM. Setzt wallet-bridge nach Init. */
 export type VaultPersonalSecretsBridge = {
     getEntries: () => PersonalSecretEntry[] | null;
@@ -290,8 +302,16 @@ export function setPasswordResolver(resolve: (pw: string) => void): void {
     _resolvePassword = resolve;
 }
 
+/** Nach /vault-lock: UI wieder auf „wartet auf Passwort“ (Entsperr-Dialog). */
+export function requestUiVaultUnlock(): void {
+    if (_resolvePassword) return;
+    setPasswordResolver(() => {
+        /* Erst-Start: resolve beendet wallet-bridge-Promise; Re-Lock: Keys kommen via /vault-load in /api/unlock. */
+    });
+}
+
 export function setSessionStatus(status: Partial<ApiStatus>): void {
-    _sessionStatus = status;
+    _sessionStatus = { ..._sessionStatus, ...status };
 }
 
 /** Tatsächlich gebundener API-Port (nach tryListen). Damit die UI den richtigen Port in index.html einsetzt. */
@@ -474,6 +494,15 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        if (url === '/api/config' && req.method === 'GET') {
+            try {
+                sendJson(res, 200, { ok: true, config: getConfigDisplayForWebApi() }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
         if (url === '/api/config' && req.method === 'POST') {
             let body = '';
             req.on('data', (chunk) => { body += chunk; });
@@ -627,17 +656,31 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 400, { ok: false, error: 'Passwort fehlt' }, cors);
                         return;
                     }
-                    const vaultPath = CFG.VAULT_FILE || '.morgendrot-vault';
+                    const vaultPath = resolveVaultFilePathForSession(CFG.VAULT_FILE || undefined);
+                    const vaultLoadArgs: string[] = [password];
+                    if (vaultFileExists(vaultPath)) {
+                        const def = CFG.VAULT_FILE || '.morgendrot-vault';
+                        if (path.resolve(vaultPath) !== path.resolve(def) && path.basename(vaultPath) !== path.basename(def)) {
+                            vaultLoadArgs.push(vaultPath);
+                        }
+                    }
                     let vaultChecked = false;
+                    /** Wo das Passwort geprüft wurde — bestimmt den Sitzungs-Ladepfad nach dem Unlock. */
+                    let vaultVerifiedSource: 'local' | 'chain' | 'none' = 'none';
                     const signerPost = String(data.sdkSignerImport ?? data.secretKey ?? data.mnemonic ?? '').trim();
                     let sdkSignerReady = CFG.SIGNER !== 'sdk';
+                    /** Vault hatte bereits gespeicherten Signer-Import — sonst nach Unlock optional in Datei sichern. */
+                    let vaultHadSdkSignerImport = false;
+                    let sdkImportPersistedToVault = false;
 
                     if (vaultFileExists(vaultPath)) {
                         try {
                             if (CFG.SIGNER === 'sdk') {
                                 const content = await loadVaultContent(password, vaultPath);
                                 vaultChecked = true;
+                                vaultVerifiedSource = 'local';
                                 const fromVault = (content.iotaSdkSignerImport || '').trim();
+                                vaultHadSdkSignerImport = Boolean(fromVault);
                                 try {
                                     if (fromVault) {
                                         applySdkSignerFromImport(fromVault);
@@ -661,6 +704,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             } else {
                                 await loadVaultLocal(password, vaultPath);
                                 vaultChecked = true;
+                                vaultVerifiedSource = 'local';
                             }
                         } catch {
                             sendJson(
@@ -688,7 +732,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                     if (CFG.SIGNER === 'sdk') {
                                         const content = await loadVaultFromChainPayload(enc, password);
                                         vaultChecked = true;
+                                        vaultVerifiedSource = 'chain';
                                         const fromVault = (content.iotaSdkSignerImport || '').trim();
+                                        vaultHadSdkSignerImport = Boolean(fromVault);
                                         try {
                                             if (fromVault) {
                                                 applySdkSignerFromImport(fromVault);
@@ -712,6 +758,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                     } else {
                                         await loadVaultFromChainPayload(enc, password);
                                         vaultChecked = true;
+                                        vaultVerifiedSource = 'chain';
                                     }
                                 }
                             } catch {
@@ -740,12 +787,65 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             return;
                         }
                     }
+                    setWalletPassword(password);
+                    /**
+                     * Erst-Entsperren: wallet-bridge wartet noch auf resolve(password) und lädt den Vault selbst
+                     * (Command-Handler ist zu diesem Zeitpunkt noch der Stub → /vault-load würde fehlschlagen).
+                     * Nach /vault-lock: Handler ist bereit → Keys per /vault-load in die Sitzung holen.
+                     */
+                    if (isMessengerCommandHandlerReady()) {
+                        const handler = _commandHandler!;
+                        let loadRes: { ok?: boolean; message?: string; error?: string };
+                        if (vaultFileExists(vaultPath)) {
+                            loadRes = (await handler('/vault-load', vaultLoadArgs, {})) as typeof loadRes;
+                        } else if (vaultVerifiedSource === 'chain') {
+                            loadRes = (await handler('/vault-load-from-chain', [password], {})) as typeof loadRes;
+                        } else if (!vaultChecked) {
+                            loadRes = { ok: true };
+                        } else {
+                            loadRes = {
+                                ok: false,
+                                message:
+                                    'Vault-Passwort geprüft, aber Schlüssel nicht in die Sitzung geladen (weder lokale Datei noch On-Chain-Laden).',
+                            };
+                        }
+                        if (!loadRes?.ok) {
+                            const detail = String(loadRes?.message || loadRes?.error || '').trim();
+                            sendJson(
+                                res,
+                                400,
+                                {
+                                    ok: false,
+                                    error: detail || 'Tresor konnte nicht in die Sitzung geladen werden.',
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                        if (
+                            CFG.SIGNER === 'sdk' &&
+                            signerPost &&
+                            !vaultHadSdkSignerImport &&
+                            vaultFileExists(vaultPath)
+                        ) {
+                            const saveArgs = [password, '', vaultPath, 'includeIotaMnemonic'];
+                            const saveRes = (await handler('/vault-save', saveArgs, {})) as {
+                                ok?: boolean;
+                                message?: string;
+                            };
+                            if (saveRes?.ok) sdkImportPersistedToVault = true;
+                        }
+                    }
                     const resolve = _resolvePassword;
                     _resolvePassword = null;
-                    resolve(password);
-                    const okMessage = vaultChecked
+                    if (resolve) resolve(password);
+                    let okMessage = vaultChecked
                         ? 'Passwort korrekt – Vault entschlüsselt.'
                         : 'Entsperrt. Hinweis: Es wurde kein lokaler Vault und kein On-Chain-Vault mit Daten gefunden – das Passwort konnte nicht gegen einen Vault geprüft werden.';
+                    if (CFG.SIGNER === 'sdk' && sdkImportPersistedToVault) {
+                        okMessage +=
+                            ' IOTA-Seed/Secret wurde in der Vault-Datei gespeichert — beim nächsten Mal reicht meist nur noch das Passwort unter „Tresor öffnen“.';
+                    }
                     sendJson(res, 200, { ok: true, message: okMessage, vaultVerified: vaultChecked }, cors);
                 } catch (e: any) {
                     sendJson(res, 500, { ok: false, error: String(e?.message || e) }, cors);
@@ -794,6 +894,64 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     sendJson(res, 200, { ok: true, message: result.message, entries: sanitized }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Vault-Datei vom Browser hochladen → Server-Arbeitsverzeichnis (für /vault-load). */
+        if (url === '/api/vault-import' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { contentBase64?: string; filename?: string };
+                    const b64 = String(data.contentBase64 ?? '').trim();
+                    if (!b64) {
+                        sendJson(res, 400, { ok: false, error: 'contentBase64 fehlt.' }, cors);
+                        return;
+                    }
+                    let raw: Buffer;
+                    try {
+                        raw = Buffer.from(b64, 'base64');
+                    } catch {
+                        sendJson(res, 400, { ok: false, error: 'Ungültiges Base64.' }, cors);
+                        return;
+                    }
+                    if (raw.length < 32) {
+                        sendJson(res, 400, { ok: false, error: 'Datei zu kurz für eine Vault-Datei.' }, cors);
+                        return;
+                    }
+                    if (raw.length > 12 * 1024 * 1024) {
+                        sendJson(res, 400, { ok: false, error: 'Datei zu groß (max. 12 MB).' }, cors);
+                        return;
+                    }
+                    let base = path.basename(String(data.filename ?? '').trim() || '.morgendrot-vault');
+                    if (!base.startsWith('.morgendrot-vault')) {
+                        base = '.morgendrot-vault';
+                    }
+                    if (base.length > 128) base = base.slice(0, 128);
+                    const target = path.join(process.cwd(), base);
+                    fs.writeFileSync(target, raw);
+                    try {
+                        fs.chmodSync(target, 0o600);
+                    } catch {
+                        /* Windows */
+                    }
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            path: target,
+                            message: `Vault-Datei übernommen: ${base} (${raw.length} Bytes). Mit „Laden“ in die Sitzung holen.`,
+                        },
+                        cors
+                    );
                 } catch (e: unknown) {
                     sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
                 }
@@ -1003,7 +1161,22 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 400, { ok: false, error: 'Bildgröße ungültig (32 B … 24 MB).' }, cors);
                         return;
                     }
-                    const r = await prepareImageForLoRaRobust(raw);
+                    const segmented =
+                        data.segmented === true ||
+                        data.segmented === 'true' ||
+                        data.segmented === 1 ||
+                        data.segmented === '1';
+                    const maxTotalRaw =
+                        typeof data.maxTotalBytes === 'number'
+                            ? data.maxTotalBytes
+                            : typeof data.maxTotalBytes === 'string'
+                              ? parseInt(data.maxTotalBytes, 10)
+                              : NaN;
+                    const r = segmented
+                        ? await prepareImageForLoRaFluentRobust(raw, {
+                              maxTotalBytes: Number.isFinite(maxTotalRaw) ? maxTotalRaw : undefined,
+                          })
+                        : await prepareImageForLoRaRobust(raw);
                     sendJson(
                         res,
                         200,
@@ -1067,7 +1240,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     const png = await VaultImagePipeline.reconstructBlendToPng(blob);
-                    const r = await prepareImageForLoRaRobust(png);
+                    const r = await prepareImageForLoRaFluentRobust(png);
                     sendJson(
                         res,
                         200,
@@ -2484,10 +2657,15 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     'PAIRING_GATE_NFT_OBJECT_ID ist gesetzt aber kein gültiges 0x+64-Hex – Türsteher-Peering greift nicht zuverlässig; .env prüfen.'
                 );
             }
+            const bindHost = CFG.API_BIND_HOST || '127.0.0.1';
+            const statusUrl =
+                bindHost === '0.0.0.0'
+                    ? `http://<PC-LAN-IP>:${p}/api/status (lauscht auf allen Interfaces)`
+                    : `http://127.0.0.1:${p}/api/status`;
             logger.info(
                 CFG.SERVE_LITE_UI_STATIC
-                    ? `Morgendrot API: http://127.0.0.1:${p}/api/status  Lite-UI: http://127.0.0.1:${p}/`
-                    : `Morgendrot API: http://127.0.0.1:${p}/api/status  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
+                    ? `Morgendrot API: ${statusUrl}  Lite-UI: http://127.0.0.1:${p}/`
+                    : `Morgendrot API: ${statusUrl}  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
             );
         };
         const onError = (err: NodeJS.ErrnoException) => {
@@ -2502,7 +2680,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         };
         server.once('error', onError);
         server.once('listening', onSuccess);
-        server.listen(p, '127.0.0.1');
+        server.listen(p, CFG.API_BIND_HOST || '127.0.0.1');
     }
 
     const startListen = () => {

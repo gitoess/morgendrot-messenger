@@ -21,6 +21,7 @@ import {
   trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
 } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
+import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
 
 function resolvePersistenceMode(opts?: { messagingPersistenceMode?: MessagingPersistenceMode }): MessagingPersistenceMode {
   return opts?.messagingPersistenceMode ?? readMessagingPersistenceModeFromStorage()
@@ -44,6 +45,11 @@ function nonceFromApi(res: ApiResponse): string | undefined {
   return undefined
 }
 
+function apiRelayErrorMessage(res: ApiResponse): string {
+  const parts = [res.error, res.message].map((s) => (typeof s === 'string' ? s.trim() : '')).filter(Boolean)
+  return parts[0] || 'Relay/API fehlgeschlagen'
+}
+
 function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
   const digest = txDigestFromApi(res)
   if (res.ok === true || digest) {
@@ -59,6 +65,7 @@ export async function sendPlaintextMailboxHybrid(
   messageNonceU64: bigint,
   opts?: { messagingPersistenceMode?: MessagingPersistenceMode; mailboxObjectId?: string }
 ): Promise<MailboxHybridSendResult> {
+  let directErr: string | undefined
   if (canTryLivePlaintextDirectMailbox()) {
     const dr = await trySubmitPlaintextMailboxViaDirectIota({
       recipient: recipient.trim(),
@@ -67,14 +74,19 @@ export async function sendPlaintextMailboxHybrid(
       mailboxObjectId: opts?.mailboxObjectId,
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
+    directErr = dr.error
   }
   const mode = resolvePersistenceMode(opts)
-  return fromApiResponse(
-    await sendMessage(recipient, wireForApi, false, {
-      messagingPersistenceMode: mode,
-      mailboxObjectId: opts?.mailboxObjectId,
-    })
-  )
+  const apiRes = await sendMessage(recipient, wireForApi, false, {
+    messagingPersistenceMode: mode,
+    mailboxObjectId: opts?.mailboxObjectId,
+  })
+  const hybrid = fromApiResponse(apiRes)
+  if (hybrid.ok) return hybrid
+  if (directErr) {
+    return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
+  }
+  return hybrid
 }
 
 /** Verschlüsselter Online-Versand: bei Modus „mailbox“ Direct zuerst, dann `/send` (inkl. Event-Modus). */
@@ -90,6 +102,7 @@ export async function sendEncryptedMailboxHybrid(
   const rTrim = recipient.trim()
   const mode = resolvePersistenceMode(opts)
   const useMailboxStore = mode === 'mailbox'
+  let directErr: string | undefined
   if (useMailboxStore && rTrim && canTryLiveEncryptedDirectMailbox(rTrim)) {
     const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
     if (mat) {
@@ -101,12 +114,17 @@ export async function sendEncryptedMailboxHybrid(
         mailboxObjectId: opts?.mailboxObjectId,
       })
       if (er.ok) return { ok: true, txDigest: er.digest }
+      directErr = er.error
     }
   }
-  return fromApiResponse(
-    await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
-      mailboxObjectId: opts?.mailboxObjectId,
-      messagingPersistenceMode: mode,
-    })
-  )
+  const apiRes = await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
+    mailboxObjectId: opts?.mailboxObjectId,
+    messagingPersistenceMode: mode,
+  })
+  const hybrid = fromApiResponse(apiRes)
+  if (hybrid.ok) return hybrid
+  if (directErr) {
+    return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
+  }
+  return hybrid
 }

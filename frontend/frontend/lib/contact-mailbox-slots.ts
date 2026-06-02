@@ -6,8 +6,8 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 export const CONTACT_MAILBOX_SLOT_IDS = ['shared', 'private', 'team', 'buffer'] as const
 export type ContactMailboxSlotId = (typeof CONTACT_MAILBOX_SLOT_IDS)[number]
 
-/** Send-Ziel: Kontakt-Slot oder eigene aktive / Server-Shared. */
-export type ContactSendMailboxTarget = ContactMailboxSlotId | 'own' | 'server'
+/** Send-Ziel: Kontakt-Slot, eigene/Server-Mailbox, oder nur Wallet (Event). */
+export type ContactSendMailboxTarget = ContactMailboxSlotId | 'own' | 'server' | 'event'
 
 export type ContactMailboxSlots = Partial<Record<ContactMailboxSlotId, string>>
 
@@ -78,6 +78,7 @@ function readSendSlotMap(): Record<string, ContactSendMailboxTarget> {
       if (
         v === 'own' ||
         v === 'server' ||
+        v === 'event' ||
         v === 'shared' ||
         v === 'private' ||
         v === 'team' ||
@@ -115,7 +116,9 @@ export function buildSendMailboxTargetOptions(
   serverMailboxId?: string
 ): { value: ContactSendMailboxTarget; label: string; objectId?: string }[] {
   const slots = readContactMailboxSlots(entry)
-  const opts: { value: ContactSendMailboxTarget; label: string; objectId?: string }[] = []
+  const opts: { value: ContactSendMailboxTarget; label: string; objectId?: string }[] = [
+    { value: 'event', label: 'Nur Wallet-Adresse (Event auf Chain)' },
+  ]
   for (const id of CONTACT_MAILBOX_SLOT_IDS) {
     const oid = slots[id]
     if (!oid) continue

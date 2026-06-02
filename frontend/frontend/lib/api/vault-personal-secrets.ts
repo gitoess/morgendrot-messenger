@@ -48,12 +48,13 @@ export async function saveVaultPersonalSecrets(
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Safe speichern fehlgeschlagen.' })
     if (!r.ok) return { ok: false, error: r.error }
     const b = r.body
-    return {
-      ok: true,
+    const out = {
+      ok: true as const,
       message: typeof b.message === 'string' ? b.message : undefined,
       error: typeof b.error === 'string' ? b.error : undefined,
       entries: Array.isArray(b.entries) ? (b.entries as PersonalSecretEntry[]) : undefined,
     }
+    return out
   } catch (error) {
     return { ok: false, error: formatFetchFailureMessage(error) }
   }

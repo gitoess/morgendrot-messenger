@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next'
 
+export const dynamic = 'force-static'
+
 /**
  * Web App Manifest – installierbare PWA (Chrome/Android; Safari: teilweise über Meta-Tags in layout).
  * PNG-Icons: `public/icon-192.png`, `public/icon-512.png` — erzeugen mit `npm run build:pwa-icons` (Root).

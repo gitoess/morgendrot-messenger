@@ -80,11 +80,6 @@ export async function handleStatusRoutes(
                 `Posteingang-Mailbox-Union: ${inboxUnion.mailboxIds.length} IDs (aktiv + .morgendrot-mailbox-id-history).`
             );
         }
-        if (inboxUnion.packageIds.length > 1) {
-            configHints.push(
-                `Posteingang-Event-Union: ${inboxUnion.packageIds.length} Package-IDs (.env + package-id-history).`
-            );
-        }
         const credRaw = (CFG.MESSENGER_CREDITS_OBJECT_ID || '').trim();
         if (credRaw && !/^0x[a-fA-F0-9]{64}$/i.test(credRaw)) {
             configHints.push('MESSENGER_CREDITS_OBJECT_ID ist kein gültiges 0x+64-Hex-Format.');

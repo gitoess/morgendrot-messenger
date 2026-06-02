@@ -1306,6 +1306,11 @@ export const CFG = {
     /** Port der API (Status, Befehle). Default 3342. Nur bei ENABLE_UI. */
     API_PORT: envInt('API_PORT', 3342),
     /**
+     * Bind-Adresse der API. Default 127.0.0.1 (nur dieser PC).
+     * Für APK/Handy im WLAN: 0.0.0.0 (oder npm run dev:lan). Env: API_BIND_HOST
+     */
+    API_BIND_HOST: (process.env.API_BIND_HOST || '127.0.0.1').trim() || '127.0.0.1',
+    /**
      * Vor dem Listen: ggf. laufende Morgendrot-API auf demselben Port per /restart beenden.
      * Bei zweiter Instanz auf demselben PC auf false setzen, sonst wird die erste API neu gestartet.
      */
@@ -1726,6 +1731,37 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL', value: CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL ? mask(CFG.SHOP_CLAIM_NOTIFY_WEBHOOK_URL, 20) : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_WEBHOOK_URL' },
         { key: 'SHOP_CLAIM_NOTIFY_SECRET', value: CFG.SHOP_CLAIM_NOTIFY_SECRET ? '***' : '(leer)', envKey: 'SHOP_CLAIM_NOTIFY_SECRET' },
     ];
+}
+
+/** Wie getConfigDisplay(), aber mit echten Werten für Web-UI-Bearbeitung (keine Adress-Maskierung). */
+export function getConfigDisplayForWebApi(): Array<{ key: string; value: string; envKey: string }> {
+    const rawByEnvKey: Record<string, string> = {
+        RPC_URL: CFG.RPC_URL || '',
+        RPC_SOCKS_PROXY: CFG.RPC_SOCKS_PROXY || '',
+        RPC_HTTP_PROXY: CFG.RPC_HTTP_PROXY || '',
+        PACKAGE_ID: CFG.PACKAGE_ID || '',
+        MAILBOX_ID: CFG.MAILBOX_ID || '',
+        MY_ADDRESS: CFG.MY_ADDRESS || '',
+        PARTNER_ADDRESS: CFG.PARTNER_ADDRESS || '',
+        BOSS_ADDRESS: CFG.BOSS_ADDRESS || '',
+        ROLE: CFG.ROLE || '',
+        UI_VARIANT: CFG.UI_VARIANT || '',
+        DEPLOYMENT_PROFILE: CFG.DEPLOYMENT_PROFILE || '',
+        TRANSPORT_PROFILE: CFG.TRANSPORT_PROFILE || '',
+        HANDOFF_LABEL: CFG.HANDOFF_LABEL || '',
+        SIMPLE_MODE: String(CFG.SIMPLE_MODE),
+        ENABLE_PLAINTEXT_CHANNEL: String(CFG.ENABLE_PLAINTEXT_CHANNEL),
+        USE_MAILBOX: String(CFG.USE_MAILBOX),
+        MAILBOX_STORE_PLAINTEXT: String(CFG.MAILBOX_STORE_PLAINTEXT),
+        SIGNER: CFG.SIGNER || '',
+        WALLET_DERIVATION_PATH: CFG.WALLET_DERIVATION_PATH || '',
+    };
+    return getConfigDisplay().map((row) => {
+        if (row.envKey in rawByEnvKey) {
+            return { ...row, value: rawByEnvKey[row.envKey] ?? '' };
+        }
+        return row;
+    });
 }
 
 /** Hardware-Typ für Provisioning: voller Node (Desktop/Server), Headless (Raspi), oder Tiny (nur Identity/Token, kein Node). */

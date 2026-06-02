@@ -1,12 +1,14 @@
 # Morgendrot — Positionierung (GitHub / Außenwirkung)
 
-**Stand:** 2026-05-20 — kanonisch mit **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** und **§ H.0-SIMPLE**.
+**Stand:** 2026-05-28 — kanonisch mit **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** und **§ H.0-SIMPLE**.
 
 ---
 
 ## Einzeiler (Repository-Beschreibung)
 
 **Boss-geführtes Einsatz-Messenger:** LoRa/Meshtastic (Feld-Default) + IOTA (Mailbox, Archiv, Delayed LoRa→Tangle) + Handoff in unter 20 Sekunden.
+
+**GitHub „About“ (Web-UI):** Copy-Paste für Description, Website und Topics → **`.github/REPOSITORY-ABOUT.md`** (Repo: `gitoess/morgendrot-messenger`). Per CLI: `gh repo edit` — Befehl dort.
 
 ---
 
@@ -39,6 +41,7 @@ Empfohlene GitHub-Topics:
 | Strategie & Prioritäten | **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** |
 | Fahrplan & Simple Mode | **`docs/ROADMAP-FAHRPLAN.md` § H.0-SIMPLE** |
 | Entwickler-Start | **`docs/DEV-START.md`** |
+| Messenger vs. Projekt (Next) | **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`** — `npm run dev` vs. `npm run dev:messenger` |
 | Rollen testen | **`docs/TEST-ROLLE-PROFILES.md`**, `npm run dev:role:*` |
 | Zwei Modi (Einsatz vs. Privat) | **`docs/HANDOFF-UND-MODUS-ZIELBILD.md`** |
 | Handoff Einsatz | Export-Assistent → Untergebene; **`docs/HANDOFF-IMPORT-UX.md`** |

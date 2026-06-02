@@ -32,6 +32,34 @@ describe('direct-iota-inbox-fetch', () => {
     vi.unstubAllGlobals()
   })
 
+  it('lehnt ungültige mailboxObjectId ab', async () => {
+    const pkg = '0x' + '11'.repeat(32)
+    store['morgendrot.directChain.packageId'] = pkg
+    store['morgendrot.directChain.mailboxId'] = '0x' + '22'.repeat(32)
+    store['morgendrot.directChain.senderAddress'] = '0x' + '33'.repeat(32)
+    store['morgendrot.directChain.flagsJson'] = JSON.stringify({
+      useMailbox: true,
+      mailboxStorePlaintext: true,
+      messengerCreditsConfigured: false,
+    })
+    store['morgendrot.directMailboxDrain'] = '1'
+    store['morgendrot.directIotaRpcUrl'] = 'https://rpc.test'
+    const r = await tryFetchDirectMailboxInboxViaIota({
+      limit: 5,
+      offset: 0,
+      mailboxObjectId: '0xshort',
+    })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/Mailbox-ID/)
+  })
+
+  it('meldet fehlende Ketten-IDs konkret', async () => {
+    store['morgendrot.directIotaRpcUrl'] = 'https://rpc.test'
+    const r = await tryFetchDirectMailboxInboxViaIota({ limit: 5, offset: 0 })
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toMatch(/Package-ID/)
+  })
+
   it('bricht bei Nur-API-Modus ab', async () => {
     setIotaSubmitMode('relay')
     const r = await tryFetchDirectMailboxInboxViaIota({ limit: 10, offset: 0 })

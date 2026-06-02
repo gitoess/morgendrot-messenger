@@ -19,9 +19,6 @@ import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
-import { ChatViewEinsatzProfilImportDialog } from '@/frontend/components/chat-view-einsatz-profil-import-dialog'
-import { canAccessEinsatzleitung, canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
@@ -90,8 +87,6 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onContactsChanged?: () => void
     onMailboxPanelStatus?: (msg: string, kind: 'success' | 'error') => void
     onApplySendRecipient?: (walletAddress: string) => void
-    /** Boss/Kommandant: Einsatzleitung-Tab im Dashboard. */
-    onOpenEinsatzleitung?: () => void
     showInboxIotaFilter?: boolean
     showIotaExpertInboxActions?: boolean
   }
@@ -100,7 +95,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   const [showWireControls, setShowWireControls] = useState(false)
   const [showChannelControls, setShowChannelControls] = useState(false)
   const [showPartnerControls, setShowPartnerControls] = useState(false)
-  const [bossImportOpen, setBossImportOpen] = useState(false)
   const {
     loadError,
     inboxFromCache,
@@ -163,14 +157,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     inboxHasMore,
     onAddSenderToContactBook,
     onSarqNakWire,
-    onOpenEinsatzleitung,
     showInboxIotaFilter = true,
     showIotaExpertInboxActions = true,
     ...toolbarProps
   } = props
-
-  const roleLine = (apiStatus?.role || '').trim()
-  const showEinsatzleitungActions = canAccessEinsatzleitung(roleLine)
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -191,42 +181,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
         onToggleHideAllVisibleLocal={onToggleHideAllVisibleLocal}
-        mailboxesPanelOpen={mailboxesPanelOpen}
-        onToggleMailboxesPanel={onToggleMailboxesPanel}
         apiStatus={apiStatus}
         pendingHandshakeCount={pendingHandshakeCount}
-        isBossRole={showEinsatzleitungActions}
-        onOpenBossEinsatzleitung={onOpenEinsatzleitung}
-        onOpenBossJsonImport={() => setBossImportOpen(true)}
         showIotaExpertInboxActions={showIotaExpertInboxActions}
       />
-      {mailboxesPanelOpen && myAddress.trim() && /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) ? (
-        <div className="border-b border-violet-500/25 bg-violet-500/[0.06] px-4 py-3 dark:bg-violet-950/15">
-          <p className="mb-2 text-sm font-semibold text-foreground">Meine Mailboxen</p>
-          <p className="mb-3 text-[11px] leading-snug text-muted-foreground">
-            <strong className="text-foreground">Aktiv setzen</strong>, dann unten im Posteingang{' '}
-            <strong className="text-foreground">Aktualisieren</strong> — lädt Shared + alle privaten Mailboxen.
-            Verschlüsselt braucht Handshake zum Partner (Schloss oben).
-          </p>
-          <ChatViewMyMailboxesPanel
-            myAddressLine={myAddress.trim()}
-            serverMailboxIdHint={apiStatus?.mailboxId}
-            contactDirectory={contactDirectory}
-            onContactsChanged={onContactsChanged}
-            onApplySendRecipient={onApplySendRecipient}
-            onStatus={onMailboxPanelStatus}
-            onMailboxActivated={toolbarProps.onRefresh}
-            teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
-          />
-        </div>
-      ) : null}
-      {showEinsatzleitungActions ? (
-        <ChatViewEinsatzProfilImportDialog
-          open={bossImportOpen}
-          onOpenChange={setBossImportOpen}
-          onContactsApplied={onContactsChanged}
-        />
-      ) : null}
       {showWireControls || showChannelControls || showPartnerControls ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}

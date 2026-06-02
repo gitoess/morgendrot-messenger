@@ -29,22 +29,20 @@ export function buildHandoffExportSummary(p: {
   includeIotaArchivReadme: boolean
 }): { title: string; detail: string } {
   const name = p.bezeichnung.trim() || p.preset.defaultBezeichnung
-  const title = `${p.preset.label}-Paket „${name}"`
+  const title = `Helfer-Paket „${name}"`
 
   const parts: string[] = []
   if (p.usesTeamMailboxes) {
     parts.push(
       p.teamMailboxCount === 0
-        ? 'Kein Team-Postfach gewählt'
+        ? '0 Team-Postfächer'
         : `${p.teamMailboxCount} Team-Postfach${p.teamMailboxCount === 1 ? '' : 'er'}`
     )
-  } else {
-    parts.push('Kein Team-Postfach (Preset)')
   }
   parts.push(`${p.partnerCount} Partner`)
   parts.push('Meshtastic-PSK')
   if (p.preset.transportProfile === 'mesh-first') {
-    parts.push(p.includeIotaArchivReadme ? 'IOTA-Archiv im README' : 'IOTA-Archiv aus')
+    parts.push(p.includeIotaArchivReadme ? 'IOTA optional' : 'ohne IOTA-README')
   }
 
   return { title, detail: parts.join(' · ') }

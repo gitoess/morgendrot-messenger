@@ -1,6 +1,6 @@
 /**
- * Welche Dashboard-Kachel-IDs (`ProjectType`) bei gegebenem Arbeitsbereich sichtbar sind — **§ H.17**,
- * **`docs/UI-ROLLEN-WORKSPACES.md`** §6. Reine Logik (kein React), für Tests und **`dashboard.tsx`**.
+ * Welche Dashboard-Kachel-IDs (`ProjectType`) sichtbar sind — **§ H.17**,
+ * **`docs/UI-ROLLEN-WORKSPACES.md`**, **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.
  */
 
 import type { ProjectType } from '@/frontend/lib/types'
@@ -10,7 +10,6 @@ import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilit
 export type DashboardWorkspaceTileSet = 'full' | 'messenger'
 
 const MESSENGER_CORE_TILE_IDS = new Set<ProjectType>(['chat', 'vault'])
-const MESSENGER_BOSS_FULL_TILE_IDS = new Set<ProjectType>(['chat', 'vault', 'boss', 'einsatzleitung'])
 
 export function projectTypeVisibleInMessengerWorkspace(
   id: ProjectType,
@@ -24,16 +23,23 @@ export function projectTypeVisibleInMessengerWorkspace(
   if (id === 'einsatzleitung') {
     return canAccessEinsatzleitung(p.role)
   }
+
+  /** Messenger-Produkt (`UI_VARIANT=messenger`): festes Set, kein Umschalten auf Projekt-Kacheln. */
+  if (p.liteMessengerFromApi) {
+    if (id === 'boss') return p.isBossRole
+    return MESSENGER_CORE_TILE_IDS.has(id)
+  }
+
   if (id === 'boss') {
     if ((p.role || '').trim().toLowerCase() !== 'boss') return false
     if (p.workspaceTileSet === 'messenger') return false
-    if (p.liteMessengerFromApi) return p.isBossRole
     return true
   }
+
   if (p.workspaceTileSet === 'messenger') {
     return MESSENGER_CORE_TILE_IDS.has(id)
   }
-  if (p.liteMessengerFromApi && p.isBossRole) return MESSENGER_BOSS_FULL_TILE_IDS.has(id)
+
   return true
 }
 
@@ -45,8 +51,7 @@ export function filterFeaturesByMessengerWorkspaceTileSet<T extends { id: Projec
 }
 
 /**
- * „Action Center“ (Heartbeat, Tickets, Keys) nur für Arbeiter/Lock im **Volldashboard** —
- * nicht bei `UI_VARIANT=messenger` (Helfer-Paket: Start = Nachrichten + Tresor).
+ * Action Center nur im **Morgendrot Projekt** für Arbeiter/Lock — nicht im Messenger-Produkt.
  */
 export function shouldShowWorkerActionCenter(p: {
   role: string

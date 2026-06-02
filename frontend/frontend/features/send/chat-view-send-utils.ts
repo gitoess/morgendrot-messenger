@@ -80,7 +80,7 @@ export function validateStandardOutgoingWire(
     if (net > MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES) {
       return {
         ok: false,
-        message: `Kompakt-Bild-Blob zu groß (${net} B, max. ${MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES} B). Bild erneut anhängen – die Server-Pipeline (Sharp) muss das Motiv verkleinern.`,
+        message: `Kompakt-Bild-Blob zu groß (${net} B, max. ${MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES} B). Bild erneut anhängen – die Geräte-Kodierung muss das Motiv verkleinern.`,
         idleMs: 7000,
       }
     }

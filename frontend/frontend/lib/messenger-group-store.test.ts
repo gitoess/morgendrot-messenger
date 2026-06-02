@@ -33,4 +33,23 @@ describe('messenger-group-store', () => {
     deleteMessengerGroup(id)
     expect(getActiveMessengerGroup()).toBeNull()
   })
+
+  it('persists optional secondary channel metadata', () => {
+    const id = createMessengerGroupId()
+    const m1 = '0x' + '1'.repeat(64)
+    upsertMessengerGroup({
+      id,
+      name: 'Team Funk',
+      memberAddresses: [m1],
+      secondaryChannel: {
+        channelIndex: 3,
+        channelName: 'Einsatz-Alpha',
+        pskRef: 'handoff:alpha-2026',
+      },
+    })
+    const loaded = readMessengerGroups()[0]
+    expect(loaded?.secondaryChannel?.channelIndex).toBe(3)
+    expect(loaded?.secondaryChannel?.channelName).toBe('Einsatz-Alpha')
+    expect(loaded?.secondaryChannel?.pskRef).toBe('handoff:alpha-2026')
+  })
 })

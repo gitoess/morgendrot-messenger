@@ -11,6 +11,12 @@ function primarySend(container: HTMLElement) {
   return el as HTMLButtonElement
 }
 
+const READY_API_STATUS = {
+  connected: true,
+  hasKeys: true,
+  locked: false,
+} as const
+
 function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSendPanelProps {
   return {
     isPrivate: true,
@@ -52,7 +58,7 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     loraOnlineFallbackOffer: null,
     onConfirmLoraOnline: vi.fn(),
     onDismissLoraOnlineFallback: vi.fn(),
-    apiStatus: null,
+    apiStatus: READY_API_STATUS as ChatViewSendPanelProps['apiStatus'],
     onSend: vi.fn(),
     status: 'idle',
     statusMsg: '',
@@ -122,7 +128,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         loraOnlineFallbackOffer={null}
         onConfirmLoraOnline={vi.fn()}
         onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={null}
+        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
         onSend={vi.fn()}
         status="idle"
         statusMsg="Funk: LUMA …"
@@ -176,7 +182,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         loraOnlineFallbackOffer={null}
         onConfirmLoraOnline={vi.fn()}
         onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={null}
+        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
         onSend={vi.fn()}
         status="idle"
         statusMsg=""
@@ -240,7 +246,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         loraOnlineFallbackOffer={null}
         onConfirmLoraOnline={vi.fn()}
         onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={null}
+        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
         onSend={vi.fn()}
         status="idle"
         statusMsg=""
@@ -296,7 +302,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         loraOnlineFallbackOffer={null}
         onConfirmLoraOnline={vi.fn()}
         onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={null}
+        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
         onSend={vi.fn()}
         status="idle"
         statusMsg=""
@@ -428,6 +434,39 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
+  })
+
+  it('zeigt Kanalindex-Feld nur im Expert-Modus und übernimmt 0..7', () => {
+    const onMeshtasticChannelIndexChange = vi.fn()
+    const { rerender } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          showMeshtasticChannelIndexInput: false,
+          onMeshtasticChannelIndexChange,
+        })}
+      />
+    )
+    expect(screen.queryByLabelText(/Kanalindex \(Meshtastic, optional\)/i)).not.toBeInTheDocument()
+
+    rerender(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          showMeshtasticChannelIndexInput: true,
+          onMeshtasticChannelIndexChange,
+        })}
+      />
+    )
+    const input = screen.getByLabelText(/Kanalindex \(Meshtastic, optional\)/i)
+    fireEvent.change(input, { target: { value: '3' } })
+    expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(3)
+    fireEvent.change(input, { target: { value: '9' } })
+    expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(undefined)
+    fireEvent.change(input, { target: { value: '' } })
+    expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(undefined)
   })
 
   it('blockiert Klartext-LoRa über Zeichenlimit und zeigt Zähler', () => {

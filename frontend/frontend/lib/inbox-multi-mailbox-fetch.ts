@@ -7,6 +7,7 @@ import {
   pickInboxRawMessages,
   type InboxApiRow,
 } from '@/frontend/features/inbox/inbox-map-messages'
+import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
 import { pickInboxHasMore } from '@/frontend/lib/inbox-pick-raw-messages'
 import { mergeAllMessages } from '@/frontend/lib/message-dedup'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
@@ -20,6 +21,8 @@ export type FetchInboxUnionResult = {
   stride: number
   /** Server-/inbox-Fetch: weitere Zeilen auf der Chain. */
   hasMore: boolean
+  /** Mindestens ein Mailbox-Chunk kam von Direkt-RPC (ohne /inbox). */
+  loadedViaRpc?: boolean
 }
 
 /** Aktive Team- oder Private-Mailbox (Send + Posteingang-Fokus). */
@@ -71,6 +74,7 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
   }
 
   let anyOk = false
+  let loadedViaRpc = false
   let lastError: string | undefined
   let serverStride = 0
   let serverHasMore = false
@@ -79,6 +83,26 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
   for (let i = 0; i < sources.length; i++) {
     const mailboxObjectId = sources[i]
     const isServer = mailboxObjectId == null
+
+    const direct = await tryFetchDirectMailboxInboxViaIota({
+      limit: p.limit,
+      offset: isServer ? p.offset : 0,
+      packageIdOverride: p.packageId,
+      mailboxObjectId: isServer ? undefined : mailboxObjectId,
+    })
+    if (direct.ok) {
+      anyOk = true
+      loadedViaRpc = true
+      const mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
+      if (isServer) {
+        serverStride = mapped.length
+        serverHasMore = mapped.length >= p.limit
+      }
+      mappedChunks.push(...mapped)
+      continue
+    }
+    if (isServer) lastError = direct.error || lastError
+
     const res = await fetchInbox(
       p.limit,
       undefined,
@@ -119,6 +143,7 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       error: lastError || 'Posteingang konnte nicht geladen werden.',
       stride: 0,
       hasMore: false,
+      loadedViaRpc: false,
     }
   }
 
@@ -127,5 +152,6 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
     messages: mergeAllMessages(mappedChunks),
     stride: serverStride,
     hasMore: serverHasMore,
+    loadedViaRpc,
   }
 }

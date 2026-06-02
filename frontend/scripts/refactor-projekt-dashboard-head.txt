@@ -1,0 +1,19 @@
+export function ProjektDashboard() {
+  const [hoveredFeature, setHoveredFeature] = useState<ProjectType | null>(null)
+  const s = useDashboardSession({ restoreFeatures: projektFeatures })
+
+  const visibleFeatures = filterFeaturesByMessengerWorkspaceTileSet(projektFeatures, {
+    workspaceTileSet: 'full',
+    liteMessengerFromApi: false,
+    isBossRole: s.isBossRole,
+    role: s.role,
+  })
+
+  const showWorkerActionCenter = shouldShowWorkerActionCenter({
+    role: s.role || '',
+    showAllTiles: s.showAllTiles,
+    liteMessengerFromApi: false,
+  })
+
+  const showDeviceRadar =
+    s.isBossRole || (s.role || '').toLowerCase() === 'kommandant'

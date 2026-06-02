@@ -32,7 +32,7 @@
 
 ### 2.3 Medien & Anhänge (MORG-Wires)
 
-- **Kompaktes Bild** (WebP-Pipeline über Backend), **.txt**, **Opus/Ogg** (rollenabhängig).
+- **Kompaktes Bild** (Luma-WebP + Chroma-PNG): **Anhang-Kodierung lokal** (`ImageEncodePort`, WASM) für IOTA und LoRa; Relay optional. Vorschau/Dekodierung im Posteingang weiter client-seitig wo implementiert.
 - **LoRa-Zweiphasen-Bild** (Luma/Chroma-Wires) für **Mesh v2**, mit explizitem **Online-Fallback** nur nach Nutzerbestätigung (kein stiller Wechsel zu IOTA).
 
 ### 2.4 LoRa / Meshtastic (experimentell)
@@ -43,7 +43,7 @@
 
 ### 2.5 Sneakernet / Pakete
 
-- **`.morg-pkg`**: Import, Export pro Nachricht (ECDH-Bundle), **Gerät → .morg-pkg** (mehrere Dateien), JSON-Snapshot-Export.
+- **`.morg-pkg`**: Import, Export pro Nachricht (ECDH-Bundle), **Gerät → .morg-pkg** (mehrere Dateien), JSON-Snapshot-Export; **Weiterleiten → Online-Composer** (nicht direkt auf Funk — Archivdaten zu groß für § H.25a-Limits).
 
 ### 2.6 Rollen & Modi
 

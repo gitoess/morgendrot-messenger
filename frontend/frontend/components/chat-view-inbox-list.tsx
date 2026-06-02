@@ -81,6 +81,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   inboxFromCache?: boolean
   /** Alter des Cache-Snapshots in Minuten. */
   inboxCacheAgeMinutes?: number | null
+  /** Letzter erfolgreicher Live-Ladepfad. */
+  inboxLiveSource?: 'rpc' | 'api' | null
   /** GET /api/status derzeit nicht erreichbar (zusätzlicher Hinweis bei leerem Posteingang). */
   basisUnreachable?: boolean
   inboxRows: ChatInboxRow[]
@@ -124,6 +126,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     loadError,
     inboxFromCache = false,
     inboxCacheAgeMinutes = null,
+    inboxLiveSource = null,
     basisUnreachable = false,
     messages,
     inboxRows,
@@ -194,8 +197,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-3 pb-0">
         <div className="mx-auto max-w-3xl rounded-xl border border-amber-500/45 bg-amber-500/[0.08] px-4 py-3 text-amber-950 dark:text-amber-100">
           <p className="text-sm font-semibold">
-            Offline - zeige letzte bekannte Nachrichten (vor {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL
-            30 Min.)
+            Offline — letzte Nachrichten (vor {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL 30 Min.
+            {inboxLiveSource === 'rpc' ? ', zuletzt per Direkt-RPC' : ''})
           </p>
           <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
             Live-Aktualisierung ist derzeit nicht möglich. Jetzt kannst du mit Funk (LoRa) weiterarbeiten; Online-Inhalte
@@ -205,7 +208,20 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       </div>
     ) : null
 
+  const rpcLiveBanner =
+    inboxFromCache !== true && inboxLiveSource === 'rpc' ? (
+      <div className="p-3 pb-0">
+        <div className="mx-auto max-w-3xl rounded-xl border border-emerald-500/35 bg-emerald-500/[0.08] px-4 py-2.5 text-emerald-950 dark:text-emerald-100">
+          <p className="text-xs font-medium">
+            Posteingang live per <strong className="font-semibold">Direkt-RPC</strong> (Fullnode) — Morgendrot-Basis ist
+            für diesen Abruf optional.
+          </p>
+        </div>
+      </div>
+    ) : null
+
   if (inboxRows.length === 0) {
+    if (rpcLiveBanner) return rpcLiveBanner
     if (cacheModeBanner) return cacheModeBanner
     if (loadErrorBanner) return loadErrorBanner
     if (visibilityHintBanner) return visibilityHintBanner
@@ -233,6 +249,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
 
   return (
     <>
+    {rpcLiveBanner}
     {cacheModeBanner}
     {loadErrorBanner}
     {visibilityHintBanner}

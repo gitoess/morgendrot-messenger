@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildPhaseSegmentWires,
   FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES,
   FLUENT_LORA_MAX_SEGMENTS_PER_PHASE,
+  isFluentLoraImageValidationError,
   planFluentLoraImage,
   segmentCountForJpeg,
 } from '@/frontend/features/send/lora-image-morg-seg-v1-policy'
+import { MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES } from '@/frontend/lib/lora-sarq-wire'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import { uint8ArrayToBase64 } from '@/frontend/lib/emergency-binary-browser'
 
@@ -16,6 +19,16 @@ function miniJpegWire(kind: 'luma' | 'chroma', msgId: string, byteLen: number): 
   const prefix = kind === 'luma' ? '[[MORG_LUMA_V1:' : '[[MORG_CHROMA_V1:'
   return `${prefix}msgId=${msgId}|len=${b64.length}|${b64}]]`
 }
+
+describe('buildPhaseSegmentWires', () => {
+  it('lehnt mehr als 32 Segmente pro Phase ab', () => {
+    const jpeg = new Uint8Array((FLUENT_LORA_MAX_SEGMENTS_PER_PHASE + 1) * MORG_SEG_V1_DEFAULT_MAX_RAW_BYTES)
+    const r = buildPhaseSegmentWires('luma', 'aabbccdd', jpeg)
+    expect(isFluentLoraImageValidationError(r)).toBe(true)
+    if (!isFluentLoraImageValidationError(r)) return
+    expect(r.message).toMatch(/32/)
+  })
+})
 
 describe('segmentCountForJpeg', () => {
   it('ceil division', () => {

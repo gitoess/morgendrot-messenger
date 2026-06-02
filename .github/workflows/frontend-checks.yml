@@ -46,3 +46,9 @@ jobs:
       - run: npx tsc --noEmit
 
       - run: npm run test:unit
+
+      - name: Next build (Morgendrot Projekt)
+        run: npm run build
+
+      - name: Next build (Morgendrot Messenger)
+        run: npm run build:messenger

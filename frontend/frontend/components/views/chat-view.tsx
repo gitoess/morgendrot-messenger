@@ -20,13 +20,14 @@ interface ChatViewProps {
   onOpenEinsatzleitung?: () => void
   /** Bottom-Nav: Telefonbuch-Sheet öffnen. */
   phonebookNavRequest?: number
+  onOpenSettings?: () => void
 }
 
 /**
  * Messenger-Chat: Dashboard-Kachel „Nachrichten“ öffnet immer `private-chat`; gespeicherte Sessions
  * mit `pinnwand` setzen den Kanal beim Mount. Umschalten: **`channel`** → `isPrivate` fürs Core-Hook.
  */
-export function ChatView({ variant, role = '', myAddress = '', vaultBannerActions, pendingHandshakes, onOpenEinsatzleitung, phonebookNavRequest }: ChatViewProps) {
+export function ChatView({ variant, role = '', myAddress = '', vaultBannerActions, pendingHandshakes, onOpenEinsatzleitung, phonebookNavRequest, onOpenSettings }: ChatViewProps) {
   const [channel, setChannel] = useState<MessengerChatChannel>(() =>
     variant === 'pinnwand' ? 'pinnwand' : 'private'
   )
@@ -44,6 +45,7 @@ export function ChatView({ variant, role = '', myAddress = '', vaultBannerAction
       pendingHandshakes={pendingHandshakes}
       onOpenEinsatzleitung={onOpenEinsatzleitung}
       phonebookNavRequest={phonebookNavRequest}
+      onOpenSettings={onOpenSettings}
     />
   )
 }

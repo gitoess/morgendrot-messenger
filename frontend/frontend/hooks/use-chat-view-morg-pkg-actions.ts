@@ -1,21 +1,30 @@
 'use client'
 
-import { useCallback, useState, type ChangeEvent } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react'
 import { toast } from 'sonner'
-import { morgPkgExport, morgPkgImport, compactImageEncode } from '@/frontend/lib/api'
+import { morgPkgExport, morgPkgImport } from '@/frontend/lib/api'
+import { encodeIotaCompactAutark } from '@/frontend/lib/image-encode/get-image-encode-port'
 import { createMorgPkgDownloadAction, downloadMorgPkgJson } from '@/frontend/lib/sneakernet-export'
 import { resolveMorgPkgRecipientAddress } from '@/frontend/lib/morg-pkg-recipient'
+import { buildMorgPkgExportPartnerOptions } from '@/frontend/lib/morg-pkg-export-partners'
 import { pickFilesForMorgPkgExport } from '@/frontend/lib/pick-files-for-morg-pkg'
 import {
   buildMorgPkgBundleFromFiles,
   bundleItemToWireContent,
   tryParseMorgPkgBundle,
 } from '@/frontend/lib/morg-pkg-bundle'
-import { contentDedupKey, mergeMessageByDedup } from '@/frontend/lib/message-dedup'
-import type { Message } from '@/frontend/lib/types'
+import {
+  itemKindFromBundleKind,
+  readMorgPkgImports,
+  writeMorgPkgImports,
+  type MorgPkgImportItem,
+  type MorgPkgImportRecord,
+} from '@/frontend/lib/morg-pkg-import-store'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import { parseJsonObjectFromFileText } from '@/frontend/lib/morg-pkg-import-utils'
 import type { MorgPkgDownloadOffer } from '@/frontend/components/chat-view-morg-pkg-download-dialog'
+
+const MORG_PKG_EXPORT_RECIPIENT_LS = 'morgendrot.morgPkgExportRecipient'
 
 function showMorgPkgRecipientError(
   error: string | null,
@@ -34,7 +43,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     partner,
     recipient: composerRecipient,
     myAddress,
-    setMessages,
+    contactDirectory,
     setStatus,
     setStatusMsg,
     setMorgPkgDeviceBusy,
@@ -43,6 +52,45 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
   } = p
 
   const [morgPkgDownloadOffer, setMorgPkgDownloadOffer] = useState<MorgPkgDownloadOffer | null>(null)
+  const [morgPkgImports, setMorgPkgImports] = useState<MorgPkgImportRecord[]>(() => readMorgPkgImports())
+  const [morgPkgImportsOpen, setMorgPkgImportsOpen] = useState(false)
+  const [morgPkgExportRecipient, setMorgPkgExportRecipient] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    try {
+      return window.sessionStorage.getItem(MORG_PKG_EXPORT_RECIPIENT_LS) || ''
+    } catch {
+      return ''
+    }
+  })
+
+  const morgPkgExportPartnerOptions = useMemo(
+    () => buildMorgPkgExportPartnerOptions(apiStatus?.connectedAddresses, contactDirectory),
+    [apiStatus?.connectedAddresses, contactDirectory]
+  )
+
+  useEffect(() => {
+    const addrs = apiStatus?.connectedAddresses?.filter(Boolean) ?? []
+    if (addrs.length !== 1) return
+    const only = addrs[0]!
+    setMorgPkgExportRecipient((cur) => cur || only)
+  }, [apiStatus?.connectedAddresses])
+
+  useEffect(() => {
+    writeMorgPkgImports(morgPkgImports)
+  }, [morgPkgImports])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (morgPkgExportRecipient.trim()) {
+        window.sessionStorage.setItem(MORG_PKG_EXPORT_RECIPIENT_LS, morgPkgExportRecipient.trim())
+      } else {
+        window.sessionStorage.removeItem(MORG_PKG_EXPORT_RECIPIENT_LS)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [morgPkgExportRecipient])
 
   const resolveMorgPkgRecipient = useCallback((): { recipient: string | null; error: string | null } => {
     return resolveMorgPkgRecipientAddress({
@@ -50,8 +98,24 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       connectedAddresses: apiStatus?.connectedAddresses,
       partner,
       recipient: composerRecipient,
+      exportRecipient: morgPkgExportRecipient,
     })
-  }, [apiStatus?.connectedAddresses, apiStatus?.locked, partner, composerRecipient])
+  }, [
+    apiStatus?.connectedAddresses,
+    apiStatus?.locked,
+    partner,
+    composerRecipient,
+    morgPkgExportRecipient,
+  ])
+
+  const appendMorgPkgImport = useCallback((record: MorgPkgImportRecord) => {
+    setMorgPkgImports((prev) => [record, ...prev].slice(0, 48))
+    setMorgPkgImportsOpen(true)
+  }, [])
+
+  const removeMorgPkgImport = useCallback((id: string) => {
+    setMorgPkgImports((prev) => prev.filter((r) => r.id !== id))
+  }, [])
 
   const finishMorgPkgDownload = useCallback((morgPkg: Record<string, unknown>, stem: string, okMsg: string) => {
     downloadMorgPkgJson(morgPkg, stem)
@@ -76,7 +140,11 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       setStatusMsg(`Paket: ${files.length} Datei(en) werden verarbeitet…`)
       toast.message('.morg-pkg-Export', { description: `${files.length} Datei(en) — bitte warten…` })
       try {
-        const built = await buildMorgPkgBundleFromFiles(files, compactImageEncode)
+        const built = await buildMorgPkgBundleFromFiles(files, async (dataUrl) => {
+          const enc = await encodeIotaCompactAutark(dataUrl)
+          if (!enc.ok) return { ok: false, error: enc.error }
+          return { ok: true, blobBase64: enc.blobBase64 }
+        })
         if (!built.ok) {
           setStatus('error')
           setStatusMsg(built.error)
@@ -231,50 +299,41 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
             ? parsed.createdAtMs
             : Date.now()
         const bundle = tryParseMorgPkgBundle(plain)
+        const recordId = `morg-pkg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
         if (bundle && bundle.items.length > 0) {
-          const baseTs = ts
-          const incoming: Message[] = bundle.items.map((item, i) => {
-            const content = bundleItemToWireContent(item)
-            const t = baseTs + i
-            return {
-              id: `morg-pkg-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 9)}`,
-              from: sender,
-              content,
-              timestamp: t,
-              encrypted: true,
-              recipient: myAddress || undefined,
-              transports: ['adhoc'],
-              dedupKey: contentDedupKey(sender, content, t),
-            }
-          })
-          setMessages((prev: Message[]) => {
-            let next = [...prev]
-            for (const nm of incoming) {
-              next = mergeMessageByDedup(next, nm)
-            }
-            return next.sort((a, b) => b.timestamp - a.timestamp)
+          const items: MorgPkgImportItem[] = bundle.items.map((item, i) => ({
+            label:
+              item.kind === 'compact_image'
+                ? `Bild ${i + 1}${item.caption?.trim() ? `: ${item.caption.trim().slice(0, 40)}` : ''}`
+                : item.kind === 'file_txt'
+                  ? `Textdatei ${i + 1}`
+                  : item.kind === 'opus'
+                    ? `Audio ${i + 1}`
+                    : `Eintrag ${i + 1}`,
+            content: bundleItemToWireContent(item),
+            kind: itemKindFromBundleKind(item.kind),
+          }))
+          appendMorgPkgImport({
+            id: recordId,
+            importedAt: ts,
+            sender,
+            fileName: f.name,
+            items,
           })
           setStatus('success')
-          setStatusMsg(`.morg-pkg Bundle: ${bundle.items.length} Nachrichten importiert (lokal).`)
-          toast.success(`${bundle.items.length} Nachrichten importiert.`)
+          setStatusMsg(`.morg-pkg: ${bundle.items.length} Einträge im Paket-Archiv.`)
+          toast.success(`${bundle.items.length} Einträge im Paket-Archiv.`)
         } else {
-          const imported: Message = {
-            id: `morg-pkg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-            from: sender,
-            content: plain,
-            timestamp: ts,
-            encrypted: true,
-            recipient: myAddress || undefined,
-            transports: ['adhoc'],
-            dedupKey: contentDedupKey(sender, plain, ts),
-          }
-          setMessages((prev: Message[]) => {
-            const merged = mergeMessageByDedup(prev, imported)
-            return merged.sort((a, b) => b.timestamp - a.timestamp)
+          appendMorgPkgImport({
+            id: recordId,
+            importedAt: ts,
+            sender,
+            fileName: f.name,
+            items: [{ label: 'Nachricht', content: plain, kind: 'text' }],
           })
           setStatus('success')
-          setStatusMsg('.morg-pkg importiert (nur lokal im Posteingang).')
-          toast.success('Importiert.')
+          setStatusMsg('.morg-pkg im Paket-Archiv (nicht im Posteingang).')
+          toast.success('Paket-Archiv geöffnet.')
         }
         setTimeout(() => setStatus('idle'), 4000)
       } catch (err) {
@@ -284,7 +343,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
         setTimeout(() => setStatus('idle'), 6000)
       }
     },
-    [apiStatus?.connected, apiStatus?.locked, myAddress, setMessages, setStatus, setStatusMsg]
+    [apiStatus?.connected, apiStatus?.locked, appendMorgPkgImport, setStatus, setStatusMsg]
   )
 
   return {
@@ -294,5 +353,12 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     runMorgPkgDeviceExportPick,
     morgPkgDownloadOffer,
     dismissMorgPkgDownloadOffer,
+    morgPkgImports,
+    morgPkgImportsOpen,
+    setMorgPkgImportsOpen,
+    removeMorgPkgImport,
+    morgPkgExportRecipient,
+    setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions,
   }
 }

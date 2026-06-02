@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildTelegramAlarmWebhookUrl,
+    extractTelegramBotUserIdFromToken,
+    formatTelegramApiErrorHint,
     formatTelegramAlarmText,
     formatTelegramNotifyText,
+    isTelegramChatIdLikelyBotSelf,
     isValidTelegramBotToken,
     isValidTelegramChatId,
     maskTelegramBotToken,
@@ -54,5 +57,20 @@ describe('telegram-integration', () => {
         expect(text).toContain('L2');
         expect(text).toContain('DEV');
         expect(text).toContain('Test');
+    });
+
+    it('extractTelegramBotUserIdFromToken', () => {
+        expect(extractTelegramBotUserIdFromToken('123456789:AAHabc')).toBe('123456789');
+        expect(isTelegramChatIdLikelyBotSelf('123456789:AAHabc', '123456789')).toBe(true);
+        expect(isTelegramChatIdLikelyBotSelf('123456789:AAHabc', '987654321')).toBe(false);
+    });
+
+    it('formatTelegramApiErrorHint for bot-self chat id', () => {
+        const hint = formatTelegramApiErrorHint(
+            403,
+            '{"description":"Forbidden: the bot can\'t send messages to the bot"}'
+        );
+        expect(hint).toMatch(/Bot-ID/);
+        expect(hint).toMatch(/userinfobot/);
     });
 });

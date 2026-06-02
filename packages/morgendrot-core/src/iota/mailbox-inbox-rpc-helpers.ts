@@ -5,7 +5,10 @@ export function normalizeMailboxAddress(a: string): string {
   return t.startsWith('0x') ? t : `0x${t}`
 }
 
-export function messagingStructType(packageId: string, local: 'MsgKey' | 'PlainMsgKey'): string {
+export function messagingStructType(
+  packageId: string,
+  local: 'MsgKey' | 'PlainMsgKey' | 'HsKey'
+): string {
   const pkg = packageId.trim()
   if (!MAILBOX_INBOX_HEX64.test(pkg)) throw new Error('PACKAGE_ID ungültig.')
   return `${pkg}::messaging::${local}`

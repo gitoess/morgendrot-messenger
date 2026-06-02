@@ -55,10 +55,14 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   /** Klartext-Funk: an feste Node-ID (!hex) statt Mesh-Broadcast. */
   meshPlaintextToNodeEnabled: boolean
   meshPlaintextNodeId: string
+  /** H.3o Schritt 2: optionaler Meshtastic-Kanalindex (0..7), sonst Default-Kanal. */
+  meshtasticChannelIndex?: number
   /** § H.25a: Mesh-Klartext für Sender-NAK während Flüchtig-Bild. */
   clearMeshInboundText?: () => void
   drainMeshInboundText?: () => string[]
   contactDirectory: Record<string, ContactMeshEntryClient>
   activeGroup: MessengerGroupDefinition | null
   isGroupChannel: boolean
+  /** Leer = Event; gültige Mailbox-0x = persistent. */
+  composerMailboxObjectId?: string
 }

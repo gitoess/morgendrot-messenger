@@ -64,14 +64,15 @@
 ## 5. Stand Umsetzung (2026-03, H.0 #3)
 
 - **Ist:** `dashboard.tsx` blendet für **Arbeiter/Lock** zuerst **Action Center** ein; **Geräte-Radar** (`DeviceRadarView`) oben nur bei Arbeitsbereich **`morgendrot_workspace_tile_set` = `full`** — im Messenger-Bundle nur **`boss`**, im Hauptprojekt zusätzlich **`kommandant`** mit `full`. **Messenger + Boss + `full`:** Kachel-Whitelist nur **`chat`**, **`vault`**, **`boss`** (kein `lock`/`monitor`). Kurztexte zum Arbeitsbereich/Radar liegen in **§7** (früher im Panel „Arbeitsbereich & Projekte“).
-- **Lite-Messenger (`GET /api/status` → `uiVariant: 'messenger'`, entspricht `UI_VARIANT=messenger` am Backend):** Für alle Rollen **außer `boss`** ist das sichtbare Kachelset auf **Nachrichten + Tresor** (inkl. Notfall-Purge) begrenzt; Schalter **„Volldashboard“** (= **`full`**) ist für diese Rollen **deaktiviert**. **`boss`** kann **`full`** wählen (alle Kacheln + Radar). **`kommandant`** im Lite-Bundle: nur Messenger-Kacheln.
+- **Morgendrot Messenger (`uiVariant: 'messenger'`):** Festes Messenger-Kachelset für **alle** Rollen; **kein** Umschalter auf Morgendrot Projekt (s. **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**). Boss/Kommandant: zusätzlich Einsatzleitung; Boss optional Kachel „Steuerung“. Kein Lock/Monitor/Radar.
+- **Morgendrot Projekt (`uiVariant: 'full'`):** Panel **„Morgendrot Projekt“** mit Arbeitsbereich **`full`** oder **Messenger-Vorschau** (`messenger` in `localStorage`). Geräte-Radar nur bei **`full`**.
 - **Offen:** Vollständige **Workflow-Oberfläche** (Spec § 3) ohne Kachel-Navigation — weiterhin Backlog.
 
 ## 6. Glossar: nicht verwechseln (**H.17**)
 
 | Wort in der UI / im Team | Gemeint ist **nicht** | Gemeint ist |
 |--------------------------|----------------------|---------------|
-| **„Volldashboard“**-Button (Arbeitsbereich & Projekte) | Weder Chat-**Boss-Übersicht** noch „alle Einstellungen der Welt“ | Nur **`morgendrot_workspace_tile_set`** = **`full`**: Dashboard mit **vollem Kachel-Set**; **Geräte-Radar** erscheint **nur** in diesem Modus (s. `dashboard.tsx`). |
+| **„Morgendrot Projekt“** (früher „Volldashboard“) | Weder Chat-**Boss-Übersicht** noch Messenger-Produkt | Nur im **Projekt-Deploy** (`UI_VARIANT=full`): **`morgendrot_workspace_tile_set`** = **`full`** — volles Kachel-Set + Radar. Im **Messenger** gibt es diesen Schalter **nicht**. |
 | **Volle Oberfläche** / „Alle Funktionen (Kacheln)“ (Arbeiter/Lock) | Arbeitsbereich **`full`** | Nur **`morgendrot_show_all_tiles`**: Action Center vs. Kachel-Grid umschalten. |
 | **Chat → Boss-Übersicht** (`bossView`) | Radar oder Arbeitsbereich | Nur **Posteingang-API**: Boss sieht optional Traffic **an Kommandanten** (`/inbox` mit Flag). **Separater** Code-Pfad — **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`**. |
 | **Geräte-Radar** | Das gesamte „Volldashboard“ | Eine **Monitoring-Sektion** (`DeviceRadarView`, `/api/monitor-status`) **oben** auf dem **Haupt-Dashboard**, wenn **`full`** aktiv (und Rolle laut Deploy). |
@@ -112,7 +113,7 @@ Implementierung: `showDeviceRadar` in `frontend/frontend/components/dashboard.ts
 
 | Frage | Stand heute |
 |--------|----------------|
-| Kann ein Kunde **ohne** Next-**Volldashboard-Code** nur den Messenger bekommen? | **Ja**, über das **Messenger-Export-Bundle** (`npm run bundle:messenger`): dort sind **`src/`**, **`ui/`**, **`move-test/`** usw. — **`frontend/` (Next) fehlt bewusst**; Oberfläche ist **Lite-UI** (`ui/`). Siehe **`docs/MESSENGER-BUNDLE-SOURCE-OF-TRUTH.md`**. |
-| Ist die **Next-App** (`frontend/`) so aufgeteilt, dass der Messenger-PWA-Build **kein** Volldashboard-**JavaScript** enthält? | **Nein (nicht strikt).** `dashboard.tsx` **importiert** Lock/Monitor/Boss/Vault/Radar usw.; **Sichtbarkeit** steuert `filterFeaturesByMessengerWorkspaceTileSet` in **`dashboard-workspace-tile-visibility.ts`** — das ist **Laufzeit**, kein separates Produkt-Bundle. Für **Byte-Trennung** im Next-Client bräuchte es z. B. eigenes **Build-Target** / Feature-Flags mit **lazy boundaries** oder ein **zweites** Frontend-Paket. |
+| Kann ein Kunde **ohne** Projekt-Code nur den Messenger bekommen? | **Ja:** (1) **ZIP** `npm run bundle:messenger` → Lite-UI `ui/` ohne `frontend/`; (2) **Next** `npm run build:messenger` → `messenger-dashboard.tsx` ohne Imports von Lock/Monitor/Radar. Siehe **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**. |
+| Ist die **Next-App** byte-getrennt? | **Ja (2026-05-28):** `app/page.tsx` lädt per **dynamic import** nur `messenger-dashboard` **oder** `projekt-dashboard`. Schwere Views nur in `projekt-dashboard.tsx`. |
 | **Boss „kommt dazu“** im Messenger — ist das dasselbe wie **Hauptprojekt-Volldashboard**? | **Nein.** Bei **`UI_VARIANT=messenger`** und Rolle **Boss** + Arbeitsbereich **`full`** sind nur die Kacheln **`chat`**, **`vault`**, **`boss`** erlaubt (`MESSENGER_BOSS_FULL_TILE_IDS`) — **kein** volles Hauptprojekt-Grid (Zugang/Überwachung/…). Das ist **Boss im Messenger-Ökosystem**, nicht „alles wie Hauptrepo“. |
 | **„Messenger-Projekt“**-Schalter in Next (`morgendrot_workspace_tile_set` = **`messenger`**) | Nur **`chat`** + **`vault`** — Boss-Steuerungskachel **ohne** `full` nicht in dieser Whitelist; Boss erweitert den Funktionsumfang über **`full`** im **Lite-Deploy**, nicht über ein zweites Haupt-Dashboard. |

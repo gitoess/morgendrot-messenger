@@ -23,7 +23,7 @@ import {
   downloadDataUrlAsFile,
   LORA_CHROMA_WAIT_MS,
 } from '@/frontend/lib/lora-progressive-image-client'
-import { messageLooksLikeMorgSegV1Wire } from '@/frontend/lib/lora-sarq-parser'
+import { messageLooksLikePath4ImageTransferWire } from '@/frontend/lib/lora-sarq-parser'
 import { MorgSegV1ChatSink } from '@/frontend/components/morg-seg-v1-chat-sink'
 import { cn } from '@/lib/utils'
 
@@ -460,7 +460,7 @@ export function ChatMessageBody({
   const parsedLora =
     parsedImg || parsedFile || parsedAudio || parsedTxt ? null : parseLoraProgressiveMessage(raw)
 
-  const looksSarqSeg = useMemo(() => messageLooksLikeMorgSegV1Wire(raw), [raw])
+  const looksSarqSeg = useMemo(() => messageLooksLikePath4ImageTransferWire(raw), [raw])
 
   const [imgUrl, setImgUrl] = useState<string | null>(null)
   const [imgIncomplete, setImgIncomplete] = useState(false)

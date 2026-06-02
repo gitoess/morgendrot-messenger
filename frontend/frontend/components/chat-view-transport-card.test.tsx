@@ -23,6 +23,7 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
       />
     )
     expect(screen.getByText(/Heltec koppeln/i)).toBeInTheDocument()
+    expect(screen.getByText(/Schloss gilt nur für/i)).toBeInTheDocument()
     screen.getByRole('button', { name: /Funk.*Geräte öffnen/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })

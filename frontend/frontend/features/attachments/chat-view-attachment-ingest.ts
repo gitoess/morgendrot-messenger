@@ -5,7 +5,7 @@
  * Ohne React; Delayed Upload kann dieselben Grenzen/Probes nutzen.
  */
 
-import { compactImageEncode, loraProgressiveEncode } from '@/frontend/lib/api'
+import { encodeIotaCompactAutark, encodeLoRaFluentAutark } from '@/frontend/lib/image-encode/get-image-encode-port'
 import {
   wrapFileTxtMessage,
   wrapMorgAudioV1Message,
@@ -197,23 +197,24 @@ async function ingestImage(
     ) {
       return { ok: false, message: CHAT_LORA_DUAL_IMAGE_POLICY_MSG, idleMs: 9000 }
     }
-    const enc = await loraProgressiveEncode(dataUrl)
-    if (!enc.ok || !enc.lumaWire || !enc.chromaWire) {
+    const rawOverLoRaCap = file.size > FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES
+    const enc = await encodeLoRaFluentAutark(dataUrl, {
+      maxTotalBytes: FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES,
+    })
+    if (!enc.ok) {
       return {
         ok: false,
-        message:
-          enc.error ||
-          'LoRa-Kodierung fehlgeschlagen (Backend POST /api/lora-progressive-encode, Sharp?).',
-        idleMs: 6000,
+        message: enc.error || 'LoRa-Bild-Kodierung auf dem Gerät fehlgeschlagen.',
+        idleMs: 8000,
       }
     }
-    const lumaB = enc.lumaJpegBytes ?? 0
-    const chromaB = enc.chromaJpegBytes ?? 0
+    const lumaB = enc.lumaJpegBytes
+    const chromaB = enc.chromaJpegBytes
     const totalLoRa = lumaB + chromaB
     if (totalLoRa > FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES) {
       return {
         ok: false,
-        message: `LoRa-Bild zu groß: ${Math.round(totalLoRa / 1024)} KB nach Kompression (max. ${Math.round(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 1024)} KB für „Flüchtig“). Kleineres Motiv wählen.`,
+        message: `LoRa-Bild nach Kompression noch zu groß (${Math.round(totalLoRa / 1024)} KB). Bitte erneut importieren oder anderes Motiv.`,
         idleMs: 10_000,
       }
     }
@@ -226,6 +227,11 @@ async function ingestImage(
     }
     return {
       ok: true,
+      softWarning: rawOverLoRaCap
+        ? `Bild wird für Funk (Flüchtig) auf dem Gerät verkleinert (max. ${Math.round(FLUENT_LORA_IMAGE_MAX_TOTAL_BYTES / 1024)} KB, MozJPEG WASM — ohne PC/Server).`
+        : enc.encoder === 'wasm'
+          ? 'LoRa-Bild lokal kodiert (Gerät, ohne Morgendrot-API).'
+          : undefined,
       attachedBlobBase64: null,
       attachedTxtFile: null,
       attachedAudioBase64: null,
@@ -239,15 +245,15 @@ async function ingestImage(
       },
     }
   }
-  /** Online / IOTA: ein Wire `MORG_COMPACT_IMG_V1`, höheres Blob-Budget als Audio (siehe Messenger-Chain-Limit). */
-  const enc = await compactImageEncode(dataUrl, { maxPlaintextBytes: MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES })
-  if (!enc.ok || !enc.blobBase64) {
+  /** Online / IOTA: ein Wire `MORG_COMPACT_IMG_V1` — lokal (WebP WASM + PNG), ohne Pflicht-Node. */
+  const enc = await encodeIotaCompactAutark(dataUrl, {
+    maxPlaintextBytes: MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES,
+  })
+  if (!enc.ok) {
     return {
       ok: false,
-      message:
-        enc.error ||
-        'Kompakt-Kodierung fehlgeschlagen (Backend erreichbar? Sharp installiert?). Zum **Senden** der Nachricht ist weiterhin Wallet-Unlock nötig.',
-      idleMs: 5000,
+      message: enc.error || 'IOTA-Bild-Kodierung auf dem Gerät fehlgeschlagen.',
+      idleMs: 8000,
     }
   }
   const packed = enc.totalBytes ?? 0
@@ -262,8 +268,10 @@ async function ingestImage(
   return {
     ok: true,
     softWarning: rawOverIotaTarget
-      ? 'Bild zu groß für IOTA – wird automatisch verkleinert.'
-      : undefined,
+      ? `Bild wird für IOTA auf dem Gerät verkleinert (max. ${Math.round(MEDIA_COMPACT_IMAGE_BLOB_MAX_BYTES / 1024)} KB Netto, ohne PC/Server).`
+      : enc.encoder === 'wasm'
+        ? 'IOTA-Bild lokal kodiert (Gerät, ohne Morgendrot-API).'
+        : undefined,
     attachedBlobBase64: enc.blobBase64,
     attachedTxtFile: null,
     attachedAudioBase64: null,

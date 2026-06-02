@@ -30,11 +30,8 @@ import {
   ChatViewEncryptedPartnerPanel,
   type ChatViewEncryptedPartnerPanelProps,
 } from '@/frontend/components/chat-view-encrypted-partner-panel'
-import { ChatViewSendPathOverview } from '@/frontend/components/chat-view-send-path-overview'
-
 export type ChatViewTransportCardProps = SendTransportChoicePort & {
   isPrivate: boolean
-  isGroup?: boolean
   apiStatus: ApiStatus | null
   /** Aktuelles Partnerfeld aus Setup (0x…), für Inline-Hinweis bei mehreren verbundenen Partnern. */
   partner?: string
@@ -53,20 +50,16 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   onRefreshApiStatus?: () => void | Promise<void>
   /** Unter „Verschlüsselt“: Handshake senden / annehmen / Einsatz-Partner (online). */
   encryptedPartner?: ChatViewEncryptedPartnerPanelProps
-  /** Sendepfad-Matrix (Expert) — Simple Mode aus. */
-  showSendPathOverview?: boolean
 }
 
 export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
   const {
     isPrivate,
-    isGroup = false,
     encrypted,
     onEncryptedChange,
     forcedTransport,
     onForcedTransportChange,
     messagingPersistenceMode,
-    onMessagingPersistenceModeChange,
     apiStatus,
     partner = '',
     meshBleSupported = false,
@@ -75,11 +68,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     channelMode,
     myAddressLine,
     encryptedPartner,
-    showSendPathOverview = true,
   } = p
-
-  const showChainPersistence =
-    forcedTransport === 'internet' && channelMode != null && channelMode !== 'pinnwand'
 
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
 
@@ -105,6 +94,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     () => (apiStatus?.connectedAddresses ?? []).map((a) => a.trim().toLowerCase()).filter(Boolean),
     [apiStatus?.connectedAddresses]
   )
+
   const selectedPartner = partner.trim().toLowerCase()
   const requiresPartnerSelection =
     isPrivate && encrypted && forcedTransport === 'internet' && connectedAddresses.length > 1
@@ -174,69 +164,6 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         {encryptedPartner ? <ChatViewEncryptedPartnerPanel {...encryptedPartner} /> : null}
       </div>
 
-      {showChainPersistence ? (
-        <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-foreground">Speicher auf der Chain</span>
-          <div className="flex rounded-lg border border-border bg-background p-1">
-            <button
-              type="button"
-              onClick={() => onMessagingPersistenceModeChange('event')}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                messagingPersistenceMode === 'event'
-                  ? 'bg-amber-500/20 text-amber-200'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Flüchtig (Event)
-            </button>
-            <button
-              type="button"
-              onClick={() => onMessagingPersistenceModeChange('mailbox')}
-              className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-                messagingPersistenceMode === 'mailbox'
-                  ? 'bg-emerald-500/15 text-emerald-200'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              Persistent (Mailbox)
-            </button>
-          </div>
-          </div>
-          {messagingPersistenceMode === 'mailbox' && apiStatus?.mailboxConfigured === false ? (
-            <p className="w-full text-xs text-amber-700 dark:text-amber-300">
-              Persistent gewählt, aber <span className="font-mono">MAILBOX_ID</span> fehlt auf dem Server — Betreiber
-              prüfen oder „Flüchtig (Event)“ wählen.
-            </p>
-          ) : null}
-          {messagingPersistenceMode === 'mailbox' ? (
-            <p className="w-full text-[11px] text-muted-foreground">
-              Klartext vs. verschlüsselt: Schloss oben. Ziel-Mailbox: Posteingang →{' '}
-              <strong className="text-foreground">Meine Mailboxen</strong> (Server immer an + aktiv Team/Privat), dann{' '}
-              <strong className="text-foreground">Aktualisieren</strong>.
-            </p>
-          ) : null}
-          {isGroup ? (
-            <p className="w-full text-[10px] text-muted-foreground">
-              Gruppenchat: Posteingang = Union der Mitglieder; Senden weiter an <strong className="text-foreground">eine</strong>{' '}
-              0x im Composer (kein gemeinsamer Chain-Raum).
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-
-      {showSendPathOverview ? <ChatViewSendPathOverview compact /> : null}
-
-      {!isPrivate && !encrypted && (
-        <p className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-2 text-xs text-sky-950 dark:text-sky-100/90">
-          <strong className="text-foreground">Pinnwand · Klartext:</strong> Du kannst{' '}
-          <strong className="text-foreground">„funk“</strong> wählen und (mit verbundenem Heltec) Meshtastic-Klartext
-          senden — ohne 0x-Empfänger bei Broadcast. Verschlüsselt/IOTA: privater Chat.
-        </p>
-      )}
-
       {(isPrivate || !encrypted) && !encrypted && forcedTransport !== 'mesh' ? (
         <span className="sr-only">Klartext-Online nutzt den IOTA-Pfad; Funk nutzt Meshtastic-Klartext.</span>
       ) : null}
@@ -272,6 +199,10 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
               </button>
             ) : null}
           </div>
+          <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
+            <strong>Hinweis:</strong> Das Schloss gilt nur für <strong>online</strong> (Morgendrot-E2E). Bei{' '}
+            <strong>funk</strong> steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung.
+          </p>
           {apiStatus?.rpcSocksProxyActive || apiStatus?.rpcHttpProxyActive ? (
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400">RPC-Proxy aktiv (SOCKS/HTTP).</p>
           ) : null}
@@ -337,13 +268,18 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
           Messenger-Credits-Objekt nicht lesbar (RPC oder MESSENGER_CREDITS_OBJECT_ID prüfen).
         </p>
       )}
-      {isPrivate && apiStatus?.configHints && apiStatus.configHints.length > 0 && (
-        <ul className="list-inside list-disc rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200/90">
-          {apiStatus.configHints.map((h, i) => (
-            <li key={`hint-${i}`}>{h}</li>
-          ))}
-        </ul>
-      )}
+      {(() => {
+        const hints =
+          apiStatus?.configHints?.filter((h) => !/^Posteingang-Event-Union:/i.test(h)) ?? []
+        if (!isPrivate || hints.length === 0) return null
+        return (
+          <ul className="list-inside list-disc rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-200/90">
+            {hints.map((h, i) => (
+              <li key={`hint-${i}`}>{h}</li>
+            ))}
+          </ul>
+        )
+      })()}
     </>
   )
 }

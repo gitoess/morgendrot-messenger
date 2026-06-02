@@ -26,10 +26,9 @@ describe('DashboardPwaInstallCard', () => {
   it('zeigt Titel und Hinweis wenn nicht standalone', async () => {
     render(<DashboardPwaInstallCard />)
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /App auf den Startbildschirm/i })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: /App installieren/i })).toBeInTheDocument()
     })
-    expect(screen.getByText(/Installierte PWAs starten ohne Browser-Leiste/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Handbuch \(Offline-Hinweise\)/i })).toHaveAttribute('href', '/handbook')
+    expect(screen.getByText(/Für besten Offline-Betrieb/i)).toBeInTheDocument()
   })
 
   it('blendet Karte aus wenn display-mode standalone', async () => {

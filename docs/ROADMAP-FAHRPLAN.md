@@ -148,7 +148,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.1b** | Messenger-UI-Modularität (ESLint, madge, RTL) |
 | **§ H.2** | Als Nächstes: PWA-Checks, Status, Kabel-Bridge-Backlog |
 | **§ H.3** | **Phase B**-Kern (Mesh v2, Delayed LoRa→IOTA) |
-| **§ H.3b–n** | Optional: QR v2, Betrieb, Meshtastic-Hops, Ops/Git, Vision Provisioning, **H.3g** Umsetzungspaket, **H.3h** Metadata, Heim-Heltec-Narrativ, EU-Funk, Kern/Adapter, USB-Serial/BLE (**H.3l**), **H.3m** Notfall/LoRa-Realität, **H.3n** SOS / **`MORG_EMERGENCY_V1`** (**`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**) |
+| **§ H.3b–o** | Optional: QR v2, Betrieb, Meshtastic-Hops, Ops/Git, Vision Provisioning, **H.3g** Umsetzungspaket, **H.3h** Metadata, Heim-Heltec-Narrativ, EU-Funk, Kern/Adapter, USB-Serial/BLE (**H.3l**), **H.3m** Notfall/LoRa-Realität, **H.3n** SOS / **`MORG_EMERGENCY_V1`**, **H.3o** Meshtastic-Verschlüsselung & Steuerungsmodell |
 | **§ H.4** | Merge-/Qualitätscheck vor großen Merges |
 | **§ H.5** | Git-Aufräumen |
 | **§ H.6** | Ideen (nicht gebucht) |
@@ -272,10 +272,53 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **TTL zentralisiert:** gemeinsame Konstanten in **`frontend/frontend/lib/offline-cache-ttl.ts`** (`OFFLINE_CACHE_TTL_MS`, `HANDOFF_DRAFT_TTL_MS`) statt verteilter Magic-Numbers.
 - **Reconnect-Feinschliff (Ist):** bei Wechsel **offline/cache -> online** wird sofort ein leiser Posteingangs-Refresh plus Kontakt-Refresh ausgelöst (kein Warten auf das nächste Poll-Intervall).
 
-**Nächste kleine Scheiben (vor neuer Groß-Funktion):**
-1. **Reconnect-Feinschliff:** Bei Wechsel `offline/cache -> online` gezielt einen sofortigen Inbox-/Kontakt-Refresh auslösen (nicht erst auf nächstes Poll-Intervall warten).
-2. **Offline-Status in Einstellungen:** dieselbe Karte in „Einstellungen“ anzeigen (Wiederverwendung, kein zweites Modell).
-3. **Capacitor-Spike (Readiness-Check):** einmaliger Build-Test als Machbarkeitsprobe (APK-Basis, keine Feature-Migration), Ergebnis nur als Entscheidungsnotiz dokumentieren.
+**Nachtrag 2026-05-28 (Capacitor-Readiness-Spike — Ist, Entscheidungsnotiz):**
+- **Ergebnis (Update):** Mini-Meilenstein **Capacitor-Basis aktivieren** technisch umgesetzt; lokaler Android-Grundbuild ist jetzt nachgezogen.
+- **Ist-Zustand (neu):** `@capacitor/cli` + `@capacitor/android` sind installiert; `frontend/capacitor.config.ts` ist vorhanden; `frontend/android/` wurde erzeugt und `cap sync android` laeuft reproduzierbar.
+- **WebDir produktiviert (Ist):** `webDir` nutzt jetzt den statischen Next-Export (`out`) statt Minimal-Shell; Build ueber `npm run build:capacitor-web`.
+- **Build-Nachweis (Ist):** JDK + Android-SDK wurden lokal eingerichtet; `build:capacitor-web` + `cap sync android` + `frontend/android` -> `gradlew assembleDebug` laufen **BUILD SUCCESSFUL**.
+
+**Nachtrag 2026-05-28 (Handoff-Apply-Entkopplung, gezielt — Ist):**
+- **Neu:** Im Handoff-Import gibt es neben dem finalen API-Apply jetzt **„Lokal vormerken (ohne Basis)“**.
+- **Wirkung:** Bei Basis-Ausfall liefert `fetchStatus` einen lokalen Handoff-Fallback (Label/Rolle/Profile/Transport), damit das aktive Profil im Offline-Betrieb sichtbar bleibt.
+- **Leitplanke bleibt:** Persistentes/autoritatives Anwenden bleibt bewusst bei erreichbarer Basis-API (`/api/apply-handoff-env`), um Sicherheits-/Betriebsbrüche zu vermeiden.
+
+**Abgeschlossen (Mini-Meilensteine A–C, 2026-05-28):**
+1. **Capacitor-APK-Lauf automatisiert:** `cd frontend && npm run apk:debug:build` (Next-Export → `cap sync` → `assembleDebug`).
+2. **Offline-Betriebsritual:** § 9 in **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** — Schritte 1–3 **PASS**; Schritt 6 Queue-Konsistenz bei Bedarf mit Opt-in nachziehen.
+3. **Handoff-Lokalmodus:** Badge/Hinweis in Dashboard, Profilpanel, Offline-Statuskarte; Reconnect-Toast weist auf Basis-Apply hin.
+
+**Abgeschlossen (Betrieb/APK-Vorbereitung, 2026-05-28):**
+1. **`npm run dev:stop`** — Ports 3341–3344 freigeben.
+2. **Queue § 9:** UI-Button „Queue-Opt-in aktivieren“; Reconnect triggert sofort **`runOfflineMailboxDrain`**.
+3. **APK API-URL:** `getApiBase()` + `localStorage` **`morgendrot.apiBaseOverride`**; Einstellungen **`CapacitorApiBaseCard`**; Android **`usesCleartextTraffic`** für HTTP-LAN.
+4. **Handoff:** Button „Handoff-Import öffnen“ in Offline-Statuskarte (Dashboard → Einstellungen).
+
+**Abgeschlossen (Handoff Reconnect, 2026-05-28):**
+- **Handoff Basis-Apply (UI):** Nach Reconnect Banner „Basis erreichbar“ + Draft-Wiederherstellung im **HandoffImportPanel**; nach erfolgreichem Import wird lokales Vormerken gelöscht. **APK-Start-Gate** bewusst zurückgestellt.
+
+**Manuelle Testrunde (bewusst später):** Checkliste **`docs/HANDY-LATER-MANUAL-TESTS.md`** — § 9 Queue Schritt 6, § 10 APK, Handoff Basis-Apply, H.15 § 2; Ergebnisse ins Logbook. Nicht bei jedem Code-Schritt.
+
+**Abgeschlossen (Code, 2026-05-28):**
+- **Chunk-Recovery global:** `ChunkLoadRecovery` im Root-Layout + gemeinsames Modul `chunk-load-error.ts` (auch `error.tsx`).
+- **Einstellungen:** Status-Poll alle 10 s für Handoff-Reconnect-Banner (`backendOnline`).
+- **§ H.15 Phase 2 + B.1 + B.2 (Code):** Posteingang/Handshake-RPC, Peering-QR, **Handshake senden + Connect per Fullnode** (Hybrid vor API); Einsatz-Connect (.env) weiter API.
+
+**Abgeschlossen (Code, 2026-05-28):**
+- **§ H.16 Rest — Boss-LAN-Install-QR:** Payload `k: "mi"` (`w` PWA-URL, optional `b` API, `u` RPC) in `frontend/lib/install-qr.ts`; Dashboard **`LanInstallQrPanel`** (Boss anzeigen / Helfer scannen); Einstellungen **Basis-URL** → „Boss Install-QR“; Vitest `install-qr.test.ts` in **`npm run test:h15-direct-submit`**.
+
+**Abgeschlossen (Code, 2026-05-28 — § H.25a Nachzug):**
+- **`MORG_IMG_INIT_V1`** (`path4-image-transfer.ts`) vor Luma/Chroma-Burst; Empfänger „Bild wird zusammengesetzt…“; Path-4-Mirror mit Segment-`msgId`; Vitest `path4-image-transfer`, `lora-image-morg-seg-v1-send`.
+
+**Nächste kleine Scheiben (Code):**
+1. ~~Optional: Vitest für `hardReloadAfterChunkFailure`~~ — **erledigt 2026-06-02** (`chunk-load-error.test.ts`).
+2. ~~**§ H.25a Schreibtisch**~~ — **`npm run test:h25a-lora-image`** (28 Tests: NAK-Nachsenden, 32-Segment-Cap, INIT/SEG).
+3. **§ H.25a Feldtest** (2 Heltecs, **`TESTING.md`**) — Code-Ist, Abnahme offen.
+4. Backlog **IMG_CHUNK/ACK** als separates Protokoll nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht (Fahrplan: nicht parallel duplizieren).
+
+**Manuell (eine Runde, nicht blockierend):** **`docs/HANDY-LATER-MANUAL-TESTS.md`** (§ A–E inkl. H.15 § 2).
+
+**Schreibtisch (automatisiert, laufend):** Root `npm run test:smoke` + `test:h15-direct-submit` + `test:frontend-unit` nach größeren Änderungen (**TESTING.md**).
 
 **Nachtrag 2026-03-28 (Stabilität/UX, laufend):** Meshtastic-Echo-Dedup weiter gehärtet (Packet-ID + normalisierter Text, weniger doppelte LoRa-Zeilen), **sticky reconnect** nach einmaligem Verbinden (stille Wiederverbindung statt manuell pro Nachricht), Senden mit **„Übertragung abbrechen“** (Hook-Cancel), Posteingang-Partner als persistente Memory-Liste (**einmalig, dedupliziert**), sowie Pfad‑4-Bild-Guard gegen Meshtastic-Textgrenze (~512B) mit klarer UI-Meldung statt später Laufzeitwarnung.
 
@@ -879,6 +922,32 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **Bezug** | **`emergency-binary-wire.ts`** (v2, Byte `0x02`), **`src/shared/opcodes.ts`**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**, **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** §3. |
 | **Priorität** | **Phase B** zusammen mit Mesh v2 + Delayed Upload — **nicht** vor **§ C.0b** Stufe 4-Voraussetzungen; **nicht** parallel zu großem **§ H.1b**-Refactor ohne Absprache. |
 
+### H.3o Meshtastic-Verschlüsselung & Steuerungsmodell (**Backlog**, Phase B)
+
+**Status:** **Ist** = Funk-Senden nur **Klartext** über Primary-Kanal (`sendText`, LongFast). Meshtastic **bietet** Channel-PSK (AES128/256), **DM-PKC** (FW ≥2.5) und **Secondary Channels** — wir nutzen das im Messenger **noch nicht aktiv** (Verschlüsselung läuft über **Online/IOTA**).
+
+**Offizielle Referenz:** [Channel Configuration](https://meshtastic.org/docs/configuration/radio/channels/), [Encryption Overview](https://meshtastic.org/docs/about/overview/encryption/), [Encryption Technical](https://meshtastic.org/docs/development/reference/encryption-technical/).
+
+| # | Thema | Entscheidung / Backlog |
+|---|--------|-------------------------|
+| **H.3o.1** | **Modus A — Meshtastic Channel-Crypto** | Verschlüsselung durch **Kanal-PSK** (Primary/Secondary). **Gruppe** = Secondary Channel (random PSK, QR teilen). **1:1** = DM an Node (PKC) oder Klartext an Node. **Kein** App-Mesh-v2-Versand (Produkt-Ist). |
+| **H.3o.2** | **Modus B — Morgendrot E2E (Mesh v2)** | App-Handshake + PRIVATE_APP — **Versand abgeschaltet**; nur Empfang Alt-Nachrichten. **Nicht** reaktivieren ohne Architektur-Review. |
+| **H.3o.3** | **Wo konfigurieren? (Split)** | **Phase 1 (empfohlen):** Kanal/PSK/Secondary in **Meshtastic-App** (oder CLI) — Messenger sendet auf **vorkonfiguriertem** Kanal-Index. **Phase 2 (optional):** Messenger übernimmt **Teilfunktionen** (QR anzeigen, Kanal-Index wählen, PSK aus Handoff/Gruppe) — **nicht** Modem-Preset/Frequenz (bleibt Firmware). |
+| **H.3o.4** | **UI Sendepfad-Matrix** | **Gruppe + Funk ✓**, **Pinnwand + Funk ✗** (IOTA-Brett ≠ Primary-Broadcast). Siehe **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Sendepfad. |
+| **H.3o.5** | **„An alle“ vs. Pinnwand** | Primary-Broadcast = UI-Label **„An alle“** (Kanal **1:1**, Funk, **nur Klartext**) — **kein** Pinnwand-Tab, kein IOTA-Archiv, keine Sender-Whitelist. Pinnwand bleibt **online-only**. Abgrenzung zu **Gruppe** (Secondary/PSK). |
+| **H.3o.6** | **Umsetzungsschritte** | (1) `sendText`/`sendPacket` mit **channelIndex**; (2) Gruppe ↔ Secondary-Metadaten (Name/PSK-Ref, QR aus Handoff); (3) Composer-Hinweis „Verschlüsselung = Meshtastic-Kanal“ vs. „Schloss = Online“; (4) Feldtest mit random PSK.<br>**Stand 2026-06-02:** **(1)–(3) erledigt (Code)** — Kanalindex, Gruppen-Metadaten, Hinweis in Sendepfad-Kopf + Composer (`composer-encryption-context-hint.ts`). **(4)** offen (Feldtest random PSK). |
+| **H.3o.7** | **Freeze Bildtransport vs. Text-Chunking** | Für LoRa-Bilder gilt **§ H.25a** (LUMA/CHROMA + S-ARQ) als Kern. Text-Chunking-Konzepte aus externen Bridges nur für allgemeine Reliability-Patterns, nicht als Ersatz des Bildprotokolls. |
+
+**Verknüpfung:** Nachtrag 2026-04-20 (**Modus A/B**), **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`meshtastic/README.md`**, **§ H.16** Telefonbuch/QR.
+
+**Feldtest-Checkliste H.3o.6 (4) — random PSK (MVP):**
+
+1. In Meshtastic-App auf beiden Geräten einen **Secondary Channel** mit random PSK anlegen (gleiches Profil/QR teilen).
+2. In Morgendrot Gruppenpanel für die aktive Gruppe Metadaten setzen: `channelIndex`, optional `channelName`, `pskRef`.
+3. Im Composer (Expert, Funk) denselben Kanalindex setzen oder Gruppenwert automatisch übernehmen lassen.
+4. Testfälle senden und protokollieren: **A→B Kurztext**, **B→A Kurztext**, **falscher Index** (erwartet: kein Empfang), **Index korrigiert** (Empfang wieder da).
+5. Ergebnis im **`docs/TEST-RUN-LOGBOOK.md`** eintragen (PASS/FAIL + Gerät/Firmware + PSK-Setup-Kurznotiz ohne Secret).
+
 ### H.4 Kurz-Check vor jedem größeren Merge
 
 - **`npx tsc`** (Root)  
@@ -905,6 +974,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **E2E-IOTA-Quittung vs. Digest-Stop** | **Tangle-verankerte** Rückbestätigung + schlanker Burst = **eigenes** Priorität‑1-Ziel; optionale Digest-/Gateway-Hooks **ersetzen** das narrativ **nicht** — siehe **§ H.6b**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
 | **`@morgendrot/core` / geteilter TS-Kern** | Wire, Hash, Retry, Opcodes **eine** Bibliothek für Handy + optional Laptop — Schrittweise aus **`src/shared`** + Frontend-Spiegel konsolidieren (**§ C.1** Prio‑1‑Reihe). |
 | **`.env` vs. Runtime-Konfig** | `.env` ist auf dem **Handy** nach Build kaum änderbar; Core braucht **keinen** `.env`-Loader. | **§ H.6e** — Node bleibt `.env`, App = **Storage/DB** + injizierbare Defaults. |
+| **`.morg` / Paket-Archiv → LoRa weiterleiten** | **Idee nur — bewusst nicht umsetzen (2026-06-02):** Archiv-Inhalte (vollständige Wire-Payloads, Audio, große Bilder) sind für Funk **praktisch zu groß** (§ **H.25a**: max. **12 KB** LUMA+CHROMA gesamt, **≤32** Segmente/Phase, Airtime). **Ist:** Import, Vorschau, Öffnen/Speichern, **Weiterleiten in den Online-Composer** (IOTA/Mailbox). Kein „Paket 1:1 auf Funk spiegeln“. | Referenz **§ H.25a**, **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**. |
+| **LoRa-Verschlüsselung über Meshtastic klären** | **Gebucht → § H.3o** (Modus A Channel-PSK, Split Meshtastic-App vs. Messenger). Ist: Klartext LongFast; E2E über Online/IOTA. | **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** |
 
 ### H.6b **Handy-Only Resilience** (Vorschlag — **kritisch eingeordnet**, kein harter Architektur-Bruch)
 
@@ -1316,7 +1387,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.25 Bilder über LoRa — Produktpfad vs. Referenz-Labor (ESP32-CAM)
 
-**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün (Schreibtisch **2026-05-21**). **Schreibtisch-Nachzug 2026-05-28:** Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5) grün, Logbuch aktualisiert. **Feldtest-Protokoll konkretisiert (2026-05-28):** **`TESTING.md`** Abschnitt **„H.25a Feldtest — 2 Heltecs (Pfad 4 Bild, Pass/Fail)“**. **Offen:** Durchführung und Log-Eintrag mit Pass/Fail.
+**Status:** **§ H.25a Code Ist (2026-05-21):** Versand **`sendLoraImageViaMorgSegV1()`** (Pfad 4, MORG_SEG_V1-Burst, Sender-NAK max. 3 Runden, Hard-Cap 12 KB, UI Vorschau/ETA/Fortschritt in **`chat-view-attachment-bar`**). Vitest **`lora-image-morg-seg-v1*`** + **`lora-sarq*`** grün (Schreibtisch **2026-05-21**). **Schreibtisch-Nachzug 2026-05-28:** Root **`npm run test:smoke`** (41/41) + **`npm run test:h15-direct-submit`** (5) grün, Logbuch aktualisiert. **Anhang-Kodierung autark (2026-05-28):** **`ImageEncodePort`** + WASM (**`@jsquash/jpeg`** LoRa, **`@jsquash/webp`** IOTA) + Policy **`@morgendrot/core/image`** — Ingest ohne Pflicht-`/api/lora-progressive-encode` / **`/api/compact-image-encode`**; **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`** § 6 **B.2b/B.2c**. **Feldtest + Gerät (später):** **`TESTING.md`** — **H.25a** (2 Heltecs) und **„Bild-Kodierung autark“** (LoRa+IOTA ohne Node) im **Handy-Fenster**, nach Schreibtisch-Vitest.
 
 #### H.25a Umsetzungspaket „Flüchtig (LoRa)“ — **priorisiert**
 
@@ -1332,13 +1403,21 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **6** | **UI vor Senden** | Vorschau (bestehend) + **Warnung**: Gesamtgröße (KB), Segmente Luma/Chroma, **geschätzte Dauer** (Heuristik aus Segmentzahl × Airtime-Faktor, Bandbreite z. B. „ca. 30–120 s“). |
 | **7** | **UI während Senden** | Fortschrittsbalken **pro Phase** (z. B. „Luma 12/18“, „Chroma 5/14“), **Abbrechen** (bestehenden Cancel an State koppeln). |
 | **8** | **Optional (gleiche Scheibe)** | Self-Mirror Pfad 4 (**`mesh-path4-self-archive`**) nach erfolgreichem Transfer; Empfänger-UI „Bild wird zusammengesetzt…“ bereits nahe **`MorgSegV1ChatSink`** — nur Text angleichen. |
-| **9** | **Tests / Abnahme** | Vitest: Segmentierung, Cap 12 KB, `n>32` abgelehnt, NAK-Mask-Parsing; **`TESTING.md`** § Funk: zwei Heltecs, 1 kleines Bild &lt;12 KB. |
+| **9** | **Tests / Abnahme** | Vitest: Segmentierung, Cap 12 KB, `n>32` abgelehnt, NAK-Mask-Parsing + Sender-Nachsenden; Schreibtisch: **`npm run test:h25a-lora-image`** (`TESTING.md`). Feld: zwei Heltecs, 1 kleines Bild &lt;12 KB — **offen**. |
 
 **Leitplanken:**
 
 - **Kein** verschlüsselter Mesh-v2-Versand über Funk (Produkt-Ist); E2E nur **online**.
 - **Kein** paralleles „IMG_INIT“-Protokoll, solange **`MORG_SEG_V1`** reicht — `msgId` pro Phase reicht für Session.
+- **Kein** **`.morg-pkg` → Funk** (Idee archiviert): Archiv-Payloads sind für LoRa typischerweise **viel zu groß**; Sneakernet/Import bleibt, Versand über Funk nur über **bewusst komprimierten** Composer-Anhang (§ H.25a, max. 12 KB).
 - Abhängigkeiten: **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`**, **`onSarqNakWire`** (Empfänger sendet NAK — Sender muss **inbound** Mesh-Nachrichten während Transfer auswerten).
+
+**Architecture Freeze (2026-06-02, bindend bis neue ADR):**
+
+- Für **Bilder über LoRa** bleibt der Produktkern: **LUMA/CHROMA + `MORG_SEG_V1` + `MORG_NAK_V1`** (Selective-ARQ je Phase).
+- Externe Bridge-Projekte (z. B. meshgram-plus) liefern nur **Zuverlässigkeitsmuster** (Queue/Retry/Backoff), **nicht** das Bild-Wire-Protokoll.
+- **Kein** generisches „Long-Message-Splitting“ als Ersatz für den Bildtransportpfad.
+- Änderungen am Bildtransport nur mit Abgleich gegen **`docs/LORA-MORGENDROT-S-ARQ-SPEC.md`** und **§ H.3o**.
 
 **Abgrenzung Ist → Soll:**
 
@@ -1493,6 +1572,63 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 - Partner mit ID erhält Vorschau-Text; Partner **ohne** ID: kein Fehler am IOTA-Send.
 - LoRa/Pfad-4-Send **ohne** Internet: IOTA/Mesh-Pfad unverändert; Telegram-Fehler **nicht blockierend**.
 
+##### Backlog B4 — Telegram Mehrfach, Boss-Gruppenalarm, Telefonbuch Multi-Pick (2026-05-28)
+
+| # | Lieferung | Status | Details |
+|---|-----------|--------|---------|
+| **B4a** | **Mehrfach 1:1 Telegram** | **Ist** | Composer Sendepfad Telegram: kommagetrennte Chat-IDs; Vorschläge aus Telefonbuch (`telegram-notify-pref.ts`, `chat-view-send-panel.tsx`) |
+| **B4b** | **Boss-Gruppenalarm (Telegram)** | **Backlog** | Ganze Messenger-Gruppe oder Einsatz-Gruppe per Telegram alarmieren. **Vor Umsetzung klären:** Welche Gruppen existieren (Messenger-Gruppe vs. Telegram-Gruppe vs. Einzel-IDs)? Wer darf alarmieren (Boss/Kommandant)? Wie werden Gruppen erstellt und gepflegt? UI-Ziel: **Einsatzleitung/Boss**; kein Blockieren des IOTA-Sends. |
+| **B4c** | **Telefonbuch Multi-Pick** | **Backlog** | Mehrere Kontakte in **einem** Schritt für Telegram (und später Funk-Gruppe) wählen — Checkbox/Multi-Select im Telefonbuch-Sheet, nicht nur manuelle Komma-Liste im Composer. Abhängigkeit: **B4b** Gruppenmodell. |
+
+**Abnahme B4 (wenn umgesetzt):** Boss wählt definierte Gruppe → N Telegram-Hinweise; Telefonbuch: 3+ Kontakte markieren → alle Chat-IDs im Composer; Fehler bei fehlender ID blockieren nicht den Haupt-Sendepfad.
+
+**Nachtrag 2026-05-28 (Sendepfad × Kanal — Meshtastic):** Secondary Channels = Meshtastic-Gruppenchat → UI **Gruppe + Funk ✓**, **Pinnwand + Funk ✗**. Technik: **§ H.3o** (Channel-PSK, Steuerung Meshtastic-App vs. Messenger).
+
+##### B5 — Externe Bridge-Projekte (Adopt/Adapt/Reject, 2026-06-02)
+
+**Ausgangsfrage:** Kann Morgendrot Projekte wie `meshtastic-telegram-gateway` oder `meshgram` direkt übernehmen?
+
+| Projekt | Einstufung | Entscheidung |
+|---|---|---|
+| **`meshtastic-telegram-gateway` (tb0hdan)** | Referenzwert hoch, direkte Integration niedrig | **Adapt** (Muster übernehmen, kein Fork) |
+| **`meshgram` / `meshgram-plus`** | Referenzwert hoch, direkte Integration niedrig-mittel | **Adapt** (Queue/Splitting-Ideen), **kein** Direktimport |
+| **DIY Node-RED + MQTT-Stacks** | Prototyping ok, Betriebsstabilität schwankend | **Reject als Kernpfad**, nur optionaler Integrationsrand |
+
+**Architektur-Entscheid (bindend):**
+
+- **Kein Fork** kompletter Python-Bridges in den Produktkern.
+- **Eigene schlanke Node-Implementierung** auf bestehender Runtime/API (`/api/integrations/telegram`).
+- **Telegram ist Zustell-/Alarmkanal**, kein Ersatz für IOTA/Mailbox/LoRa-Forensik.
+- **Queues getrennt pro Transport** (Telegram/LoRa/IOTA), kein monolithischer Universal-Queue-Block.
+
+**Was konkret übernommen wird (Adapt):**
+
+| Feature-Idee | Quelle | Umsetzungsziel in Morgendrot | Priorität |
+|---|---|---|---|
+| Bidirektionales Routing-Muster | beide | Telegram ↔ Node-Backend ↔ Morgendrot-Events/Notify | **hoch** |
+| Username-/Nickname-Mapping | tb0hdan | Kontakt-/Chat-ID-Auflösung mit klaren Fallbacks | **hoch** |
+| Queue + Retry + Backoff | meshgram-plus | Nicht-blockierende Zustellung, robuste Fehlerpfade | **hoch** |
+| Long-message splitting | meshgram-plus | LoRa-/Telegram-konforme Segmentierung | **hoch** |
+| Bot-Kommandos (`/help`, `/status`, `/nodes`, später `/qr`) | tb0hdan | Ops-Hilfen ohne UI-Zwang | **mittel** |
+| Reaktionen/Standorte | meshgram-plus | optionales Mapping nach Kernstabilisierung | **niedrig-mittel** |
+| KI-Integration (Ollama/OpenAI) | meshgram-plus | nur opt-in, experimenteller Zusatz | **niedrig (Backlog)** |
+
+**Nicht übernehmen (Reject):**
+
+- KI als **Kernfeature** der Telegram/LoRa-Bridge.
+- Frühzeitige MQTT-Umstellung als Basisarchitektur.
+- Server-zentrierte Dauerbetriebsmuster, die Handoff/Simple-Mode/Rollenmodell unterlaufen.
+
+**Umsetzung in drei Scheiben (DoD):**
+
+| Scheibe | Inhalt | Definition of Done |
+|---|---|---|
+| **B5.1 Core-Bridge** | Node-Routing, Mapping, Minimal-Kommandos | Telegram In/Out stabil; `/help` + `/status`; nachvollziehbare Journal-Einträge |
+| **B5.2 Reliability** | Queue/Retry/Splitting getrennt pro Transport | Telegram-Fehler blockieren Hauptsendepfad nicht; reproduzierbare Retries mit Limits |
+| **B5.3 Boss-Gruppenfluss** | B4b + B4c auf B5-Kern aufsetzen | Boss kann definierte Gruppen alarmieren; Multi-Pick liefert mehrere valide Ziele |
+
+**Verknüpfung:** **§ H.26**, **§ H.3o**, **§ H.16**, **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**.
+
 ---
 
 #### Architektur (Zielbild)
@@ -1587,6 +1723,28 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | 4 | Token-Rotation dokumentiert (Leak-/Incident-fest). |
 
 **Nicht-Ziel:** Telegram abschalten; nur Secret-Ablage aus `.env` herausziehen.
+
+---
+
+### H.30 Geführter Assistent „Neu anfangen“ (Tresor) — **ganz hinten**
+
+**Status:** **Backlog / Vision** (2026-05-28). **Ziel:** Ein **stark bestätigter** UI-Flow (mehrstufig, mit klarer Auflistung), der einen kontrollierten **Neustart** ermöglicht — **ohne** einen versehentlichen Ein-Klick-Wipe.
+
+**Geplanter Umfang (Grobraster):**
+
+| Stufe | Aktion (optional) |
+|-------|-------------------|
+| 1 | **Inbox-Cache leeren** (`.inbox.enc`) |
+| 2 | **Tresor sperren** (RAM) |
+| 3 | Lokale **`.morgendrot-vault`** löschen (nur mit expliziter Bestätigung + Hinweis On-Chain-Backup) |
+| 4 | Verweis auf **Notfall-Löschung** (Chain) — eigene Kachel, nicht im selben Klick |
+| 5 | Hinweis **PWA/Browser-Daten** (System) |
+
+**Nicht-Ziel:** Ein versteckter „Factory Reset“, der Seed/Passwort/Chain ohne Nachvollziehbarkeit vernichtet.
+
+**Doku-Ist:** **`docs/VAULT-EINRICHTEN.md`** (Abschnitt „Komplett auf Null setzen?“), **`frontend/public/handbook/VAULT-EINRICHTEN.md`**. **Vision:** auch **`docs/VISION-ZUKUNFT.md`**.
+
+**Priorität:** **Nach** Tresor-UX stabil (**Entsperren nach Lock**, Import vom Gerät) und **§ H.29** — kein Blocker für Messenger-Feldtests.
 
 ---
 

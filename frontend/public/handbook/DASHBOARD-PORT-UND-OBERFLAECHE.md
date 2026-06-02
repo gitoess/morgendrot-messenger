@@ -22,8 +22,8 @@ Im Backend setzen u. a. `UI_VARIANT` und `MESSENGER_EDITION` das Verhalten der O
 
 | UI_VARIANT | MESSENGER_EDITION (Beispiel) | Kurz |
 |------------|-----------------------------|------|
-| `full` | `standalone` o. ä. | Volldashboard-Logik am Node; Next (3341) nutzt dasselbe Backend per Proxy. |
-| `messenger` | je nach Build | Lite-UI am API-Port; Rollen können auf „nur Nachrichten + Tresor“ eingeschränkt sein. |
+| `full` | `standalone` o. ä. | **Morgendrot Projekt** — volle Plattform; Next (3341) nutzt dasselbe Backend per Proxy. |
+| `messenger` | je nach Build | **Morgendrot Messenger** — Lite-UI am API-Port oder Next-PWA ohne Plattform-Umschalter. |
 
 Die **laufenden Werte** siehst du in Next unter `GET /api/status` (`uiVariant`, `messengerEdition`, ggf. `serveLiteUiStatic`). Details im Fahrplan § H.0 und in der Boss-Orientierung.
 

@@ -7,6 +7,9 @@
 ## Bereits als Vision festgehalten
 
 - **Proxy-Chip (Heimnetzwerk-Firewall):** Siehe [PROXY-CHIP-VISION.md](PROXY-CHIP-VISION.md). Traffic-Interception + Chain-Berechtigung.
+- **Geführter Assistent „Neu anfangen“ (Tresor):** Mehrstufiger Reset (Inbox, Sperren, optional Vault-Datei, Verweis Notfall/Chain) — Fahrplan **`ROADMAP-FAHRPLAN.md` § H.30**; Ist-Doku **`VAULT-EINRICHTEN.md`** (Checkliste ohne UI).
+
+**Ordner-Idee:** Alles unter **`docs/VISION-ZUKUNFT.md`** und verlinkte `*-VISION.md` / `*-ZIELBILD.md` — **kein** separates `ideas/`-Verzeichnis; Backlog mit Status bleibt **`docs/ROADMAP-FAHRPLAN.md`**.
 
 ---
 

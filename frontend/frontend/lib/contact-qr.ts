@@ -14,6 +14,8 @@ export type MorgendrotContactQrV2 = {
   ms?: string
   mt?: string
   mb?: string
+  /** § H.16: ECDH-Pub (Base64 raw 65 Byte) für Peering im Kontakt-QR. */
+  e?: string
 }
 
 export function buildContactQrPayload(input: {
@@ -23,6 +25,7 @@ export function buildContactQrPayload(input: {
   mailboxSharedId?: string
   mailboxTeamId?: string
   mailboxBufferId?: string
+  ecdhPubB64?: string
 }): string {
   const a = input.address.trim()
   if (!/^0x[a-fA-F0-9]{64}$/i.test(a)) {
@@ -39,6 +42,8 @@ export function buildContactQrPayload(input: {
   if (mt && /^0x[a-fA-F0-9]{64}$/i.test(mt)) o.mt = mt
   const mb = (input.mailboxBufferId ?? '').trim()
   if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) o.mb = mb
+  const e = (input.ecdhPubB64 ?? '').trim().replace(/\s+/g, '')
+  if (e) o.e = e
   return JSON.stringify(o)
 }
 
@@ -50,6 +55,7 @@ export function parseContactQrPayload(raw: string): {
   mailboxSharedId?: string
   mailboxTeamId?: string
   mailboxBufferId?: string
+  ecdhPubB64?: string
 } | null {
   const t = raw.trim()
   if (!t) return null
@@ -73,6 +79,8 @@ export function parseContactQrPayload(raw: string): {
       const mailboxSharedId = pickMb(j.ms) ?? pickMb(j.mailboxSharedId)
       const mailboxTeamId = pickMb(j.mt) ?? pickMb(j.mailboxTeamId)
       const mailboxBufferId = pickMb(j.mb) ?? pickMb(j.mailboxBufferId)
+      const ecdhPubB64 =
+        typeof j.e === 'string' ? j.e.trim().replace(/\s+/g, '') : undefined
       return {
         address: addr,
         ...(displayName?.trim() ? { displayName: displayName.trim().slice(0, 64) } : {}),
@@ -80,6 +88,7 @@ export function parseContactQrPayload(raw: string): {
         ...(mailboxSharedId ? { mailboxSharedId } : {}),
         ...(mailboxTeamId ? { mailboxTeamId } : {}),
         ...(mailboxBufferId ? { mailboxBufferId } : {}),
+        ...(ecdhPubB64 ? { ecdhPubB64 } : {}),
       }
     }
   } catch {

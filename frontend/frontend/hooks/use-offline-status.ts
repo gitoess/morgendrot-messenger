@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getOfflineMailboxQueueCount, isOfflineMailboxQueueEnabled } from '@/frontend/lib/api/offline-queue'
 
@@ -13,6 +13,7 @@ export type OfflineStatusSnapshot = {
   lastSuccessfulSyncMinutes: number | null
   queuePending: number
   queueEnabled: boolean
+  localHandoffOnly: boolean
   restrictedFeatures: string[]
 }
 
@@ -40,11 +41,23 @@ export function useOfflineStatus(p: {
   backendReachable: boolean | null
 }): OfflineStatusSnapshot {
   const { apiSnapshot, backendReachable } = p
+  const [hydrated, setHydrated] = useState(false)
+  const [prefsTick, setPrefsTick] = useState(0)
+
+  useEffect(() => {
+    setHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    const onPrefs = () => setPrefsTick((n) => n + 1)
+    window.addEventListener('morgendrot.offlinePrefsChanged', onPrefs)
+    return () => window.removeEventListener('morgendrot.offlinePrefsChanged', onPrefs)
+  }, [])
 
   return useMemo(() => {
     const now = Date.now()
     const savedFromStatus = Number(apiSnapshot?.cacheSavedAtMs ?? 0)
-    const savedFromInbox = latestInboxCacheSavedAtMs() ?? 0
+    const savedFromInbox = hydrated ? (latestInboxCacheSavedAtMs() ?? 0) : 0
     const savedAt = Math.max(
       Number.isFinite(savedFromStatus) ? savedFromStatus : 0,
       Number.isFinite(savedFromInbox) ? savedFromInbox : 0
@@ -52,8 +65,9 @@ export function useOfflineStatus(p: {
     const lastSuccessfulSyncMinutes =
       savedAt > 0 && Number.isFinite(savedAt) && now >= savedAt ? Math.floor((now - savedAt) / 60_000) : null
 
-    const queuePending = getOfflineMailboxQueueCount()
-    const queueEnabled = isOfflineMailboxQueueEnabled()
+    const queuePending = hydrated ? getOfflineMailboxQueueCount() : 0
+    const queueEnabled = hydrated ? isOfflineMailboxQueueEnabled() : false
+    const localHandoffOnly = apiSnapshot?.fromLocalHandoff === true
 
     const mode: OfflineMode =
       backendReachable === false ? (savedAt > 0 ? 'cache' : 'offline') : apiSnapshot?.fromCache === true ? 'cache' : 'online'
@@ -64,13 +78,15 @@ export function useOfflineStatus(p: {
       restrictedFeatures.push('Neue Inbox-Liveabfrage')
     }
     if (mode === 'offline') restrictedFeatures.push('Handoff-Apply ueber Basis')
+    if (localHandoffOnly) restrictedFeatures.push('Handoff nur lokal vorgemerkt (Basis-Apply offen)')
 
     return {
       mode,
       lastSuccessfulSyncMinutes,
       queuePending,
       queueEnabled,
+      localHandoffOnly,
       restrictedFeatures,
     }
-  }, [apiSnapshot?.cacheSavedAtMs, apiSnapshot?.fromCache, backendReachable])
+  }, [apiSnapshot?.cacheSavedAtMs, apiSnapshot?.fromCache, apiSnapshot?.fromLocalHandoff, backendReachable, hydrated, prefsTick])
 }

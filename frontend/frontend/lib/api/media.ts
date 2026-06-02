@@ -103,7 +103,15 @@ export async function loraProgressiveFromCompactBlob(compactBlobBase64: string):
 }
 
 /** Zweiphasig Luma+Chroma für Funk/Mesh (scharfes S/W + optionale Farbe) – kein IOTA-Kompaktformat. */
-export async function loraProgressiveEncode(imageBase64: string): Promise<{
+export async function loraProgressiveEncode(
+  imageBase64: string,
+  options?: {
+    /** § H.25a: Ziel LUMA+CHROMA Rohbytes (Default Server 12 KB). */
+    maxTotalBytes?: number
+    /** `true` = `prepareImageForLoRaFluentRobust` (Chunking, kein 500-B-Wire-Deckel). */
+    segmented?: boolean
+  }
+): Promise<{
   ok: boolean
   messageId?: string
   lumaWire?: string
@@ -118,7 +126,11 @@ export async function loraProgressiveEncode(imageBase64: string): Promise<{
     const fr = await fetchApiText(API_BASE, '/api/lora-progressive-encode', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageBase64 }),
+      body: JSON.stringify({
+        imageBase64,
+        ...(options?.maxTotalBytes != null ? { maxTotalBytes: options.maxTotalBytes } : {}),
+        ...(options?.segmented ? { segmented: true } : {}),
+      }),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'LoRa-Kodierung fehlgeschlagen.' })

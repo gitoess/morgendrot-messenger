@@ -5,7 +5,7 @@
  */
 
 import type { ChangeEvent, RefObject } from 'react'
-import { BookUser, ChevronDown, Crown, FileDown, FileJson, Inbox, KeyRound, Lock, Mailbox, Package, RefreshCw, Trash2 } from 'lucide-react'
+import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
@@ -25,9 +25,19 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
+export type MorgPkgExportPartnerOption = {
+  address: string
+  label: string
+}
+
 export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number
   inboxRowCount: number
+  morgPkgExportRecipient?: string
+  onMorgPkgExportRecipientChange?: (address: string) => void
+  morgPkgExportPartnerOptions?: MorgPkgExportPartnerOption[]
+  morgPkgImportCount?: number
+  onOpenMorgPkgArchive?: () => void
   morgPkgFileRef: RefObject<HTMLInputElement | null>
   morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
   onMorgPkgImportFile: (e: ChangeEvent<HTMLInputElement>) => void
@@ -66,9 +76,6 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   localPurgeBusy?: boolean
   onOpenPhonebook?: () => void
   showPhonebookButton?: boolean
-  /** Meine Mailboxen (Shared/Privat) ein-/ausklappen. */
-  mailboxesPanelOpen?: boolean
-  onToggleMailboxesPanel?: () => void
   onOpenPartnerSetup?: () => void
   messagingPersistenceMode: MessagingPersistenceMode
   offlineMailboxQueuePending?: number
@@ -78,10 +85,6 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   onRemoveOfflineMailboxQueueItems?: (ids: string[]) => void
   /** Offene Handshake-Anfragen (nicht verbunden, nicht abgelehnt). */
   pendingHandshakeCount?: number
-  /** Boss: kompakte Aktionen in der Posteingang-Kopfzeile. */
-  isBossRole?: boolean
-  onOpenBossEinsatzleitung?: () => void
-  onOpenBossJsonImport?: () => void
   /** Verankern / Tangle-Inventar / Relay — nur Expert + iota-Transport. */
   showIotaExpertInboxActions?: boolean
 }
@@ -111,6 +114,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const {
     messageCount,
     inboxRowCount,
+    morgPkgExportRecipient = '',
+    onMorgPkgExportRecipientChange,
+    morgPkgExportPartnerOptions = [],
+    morgPkgImportCount = 0,
+    onOpenMorgPkgArchive,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
     onMorgPkgImportFile,
@@ -150,8 +158,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onToggleHideAllVisibleLocal,
     localPurgeBusy = false,
     onOpenPhonebook,
-    mailboxesPanelOpen = false,
-    onToggleMailboxesPanel,
     showPhonebookButton = false,
     onOpenPartnerSetup,
     messagingPersistenceMode,
@@ -161,9 +167,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onOfflineMailboxQueueRefresh,
     onRemoveOfflineMailboxQueueItems,
     pendingHandshakeCount = 0,
-    isBossRole = false,
-    onOpenBossEinsatzleitung,
-    onOpenBossJsonImport,
     showIotaExpertInboxActions = true,
   } = p
 
@@ -178,28 +181,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
           <h3 className="font-semibold text-foreground">Posteingang</h3>
-          {isBossRole && onOpenBossEinsatzleitung ? (
-            <button
-              type="button"
-              onClick={onOpenBossEinsatzleitung}
-              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-amber-500/45 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-500/25 dark:text-amber-100"
-              title="Boss / Einsatzleitung — Import, Export, Team"
-            >
-              <Crown className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Einsatzleitung
-            </button>
-          ) : null}
-          {isBossRole && onOpenBossJsonImport ? (
-            <button
-              type="button"
-              onClick={onOpenBossJsonImport}
-              className="inline-flex min-h-8 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-              title="Kontaktliste (initialProfile) ins Telefonbuch importieren"
-            >
-              <FileJson className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
-              JSON import
-            </button>
-          ) : null}
           {pendingHandshakeCount > 0 ? (
             <span
               className="inline-flex min-h-6 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
@@ -219,23 +200,6 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               showRelayManage={false}
               triggerClassName="inline-flex min-h-8 items-center gap-1 rounded-md border border-amber-600/45 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-950 hover:bg-amber-500/25 dark:text-amber-100"
             />
-          ) : null}
-          {onToggleMailboxesPanel ? (
-            <button
-              type="button"
-              onClick={onToggleMailboxesPanel}
-              className={cn(
-                'inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium',
-                mailboxesPanelOpen
-                  ? 'border-violet-500/50 bg-violet-500/20 text-violet-950 dark:text-violet-100'
-                  : 'border-violet-500/40 bg-violet-500/10 text-violet-900 hover:bg-violet-500/15 dark:text-violet-100'
-              )}
-              title="Server-Shared immer an; Team oder Privat aktiv setzen, dann Posteingang aktualisieren"
-              aria-expanded={mailboxesPanelOpen}
-            >
-              <Mailbox className="h-4 w-4 shrink-0" aria-hidden />
-              Meine Mailboxen
-            </button>
           ) : null}
           {showPhonebookButton && onOpenPhonebook ? (
             <button
@@ -297,11 +261,45 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[18rem]">
               <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                <strong className="text-foreground">.morg-pkg</strong> = verschlüsseltes Sneakernet-Paket für einen
-                Partner (USB/Air-Gap), nicht lesbar wie JSON/TXT. <strong className="text-foreground">Import</strong>{' '}
-                öffnet eine .morg-pkg → Posteingang. <strong className="text-foreground">Export</strong> wählt Fotos/Text
-                auf diesem Gerät → lädt .morg-pkg herunter (kein Posteingang).
+                ECDH-verschlüsselt für einen Handshake-Partner. Import → <strong className="text-foreground">Paket-Archiv</strong>{' '}
+                (nicht Posteingang).
               </p>
+              {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
+                <div className="space-y-1 border-b border-border px-2 py-2">
+                  <label htmlFor="morg-pkg-export-recipient" className="text-[10px] font-medium text-foreground">
+                    Empfänger für Export
+                  </label>
+                  <select
+                    id="morg-pkg-export-recipient"
+                    value={morgPkgExportRecipient}
+                    onChange={(e) => onMorgPkgExportRecipientChange(e.target.value)}
+                    className="h-9 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground"
+                  >
+                    {morgPkgExportPartnerOptions.length > 1 ? (
+                      <option value="">— Partner wählen —</option>
+                    ) : null}
+                    {morgPkgExportPartnerOptions.map((o) => (
+                      <option key={o.address} value={o.address}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-200">
+                  Export: zuerst Handshake/Connect — dann Empfänger wählbar.
+                </p>
+              )}
+              {onOpenMorgPkgArchive ? (
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault()
+                    onOpenMorgPkgArchive()
+                  }}
+                >
+                  Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem
                 disabled={pkgImportDisabled}
                 title={morgPkgImportTitle(apiStatus)}
@@ -316,7 +314,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   triggerHiddenFileInput(morgPkgFileRef)
                 }}
               >
-                Import: .morg-pkg → Posteingang
+                Import: .morg-pkg → Archiv
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={pkgDeviceDisabled}
@@ -472,16 +470,16 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           >
             Partner
           </button>
-          <button
-            type="button"
-            disabled={inboxRowCount === 0 && !hasHiddenMessages}
-            onClick={onToggleHideAllVisibleLocal}
-            title="Nur in diesem Browser (sessionStorage) — Chain bleibt unverändert"
-            className="rounded-md border border-border px-2 py-1 hover:bg-muted disabled:opacity-50"
-          >
-            {hasHiddenMessages ? 'Wieder einblenden' : 'Alle sichtbaren lokal ausblenden'}
-          </button>
-          <span className="sr-only">Lokal ausblenden nur in diesem Browser (sessionStorage).</span>
+          {hasHiddenMessages ? (
+            <button
+              type="button"
+              onClick={onToggleHideAllVisibleLocal}
+              title="Lokal ausgeblendete Zeilen wieder anzeigen"
+              className="rounded-md border border-border px-2 py-1 hover:bg-muted"
+            >
+              Wieder einblenden
+            </button>
+          ) : null}
         </div>
         {inboxSelectMode ? (
           <div className="mt-2 flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/15 p-2.5">
