@@ -1,5 +1,5 @@
-import { executeCommand } from '@/frontend/lib/api/execute-command'
 import type { ApiStatus } from '@/frontend/lib/api/status'
+import { purgeHandshakeHybrid } from '@/frontend/lib/purge-handshake-hybrid'
 
 export type HandshakeOfferSource = 'mailbox' | 'event'
 
@@ -12,10 +12,6 @@ export function canAttemptHandshakeOnChainPurge(
   if (apiStatus?.locked === true) return false
   const mb = (apiStatus?.mailboxId ?? '').trim()
   return /^0x[a-fA-F0-9]{64}$/i.test(mb)
-}
-
-export async function purgeHandshakeOnChain(recipient: string, sender: string) {
-  return executeCommand('/purge-handshake', [recipient.trim(), sender.trim()])
 }
 
 export type PurgeHandshakeOfferResult =
@@ -36,17 +32,15 @@ export async function tryPurgeHandshakeOfferOnChain(p: {
   if (!canAttemptHandshakeOnChainPurge(p.source, p.apiStatus)) {
     return { ok: true, onChain: false, reason: 'mailbox-unavailable' }
   }
-  const res = await purgeHandshakeOnChain(p.recipient, p.sender)
+  const res = await purgeHandshakeHybrid(p.recipient, p.sender, {
+    backendReachable: p.apiStatus?.backendRunning !== false,
+  })
   if (res.ok) {
     return {
       ok: true,
       onChain: true,
-      message: typeof (res as { message?: unknown }).message === 'string' ? (res as { message: string }).message : undefined,
+      message: res.message,
     }
   }
-  const err =
-    (typeof (res as { error?: unknown }).error === 'string' ? (res as { error: string }).error : '') ||
-    (typeof (res as { message?: unknown }).message === 'string' ? (res as { message: string }).message : '') ||
-    'Purge fehlgeschlagen'
-  return { ok: false, onChain: true, error: err }
+  return { ok: false, onChain: true, error: res.error || 'Purge fehlgeschlagen' }
 }

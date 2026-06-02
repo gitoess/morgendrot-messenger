@@ -8,6 +8,17 @@ export { probeDirectIotaRpc } from './chain-reachability'
 export { buildStorePlaintextMailboxTransaction, isLikelyIotaHexId } from './mailbox-plain-txb'
 export { buildStoreEcdhInitTransaction } from './handshake-ecdh-txb'
 export type { BuildStoreEcdhInitTxInput } from './handshake-ecdh-txb'
+export { buildPurgeHandshakeTransaction } from './purge-handshake-txb'
+export type { BuildPurgeHandshakeTxInput } from './purge-handshake-txb'
+export {
+  fetchMessagingEventInboxRpcRows,
+} from './messaging-events-inbox-rpc'
+export type {
+  MessagingEventInboxRpcRow,
+  MessagingEventInboxPlainRow,
+  MessagingEventInboxEncryptedRow,
+  FetchMessagingEventInboxRpcInput,
+} from './messaging-events-inbox-rpc'
 export type { BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
 export {
   buildStoreEncryptedMailboxTransaction,

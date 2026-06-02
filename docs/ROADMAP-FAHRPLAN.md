@@ -317,11 +317,15 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 **Abgeschlossen (Code, 2026-06-02 — § H.6f minimal):**
 - Capacitor **`MessengerForegroundService`** (`dataSync`), Plugin **`MessengerFgSync`**, JS **`capacitor-foreground-sync.ts`**, Bootstrap + Opt-in in **Basis-URL (APK)**; Doku **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**. **Offen:** APK-Feldtest (Notification, Akku-Stopp, POST_NOTIFICATIONS).
 
+**Abgeschlossen (Code, 2026-06-02 — Standalone Backlog):**
+- **Event-Posteingang** per Fullnode: **`fetchMessagingEventInboxRpcRows`** + Merge in **`tryFetchDirectMailboxInboxViaIota`**.
+- **Handshake-Purge** clientseitig: **`purge-handshake-hybrid`** / **`buildPurgeHandshakeTransaction`**.
+
 **Nächste kleine Scheiben (Code / Abnahme, Stand 2026-06-02):**
 1. **§ H.15 Stufe 2 / Smoke** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** **4b–4f** am Gerät (zwei Profile/APKs); Ergebnis **`docs/TEST-RUN-LOGBOOK.md`**.
 2. **§ H.25a Feldtest** (2 Heltecs, **`TESTING.md`**) — Vitest Schreibtisch grün; Abnahme offen.
 3. **§ H.6f Abnahme** — FG-Service am Referenz-APK prüfen (mit Smoke 4b–4f bündelbar).
-4. Backlog **Event-Posteingang** per Direkt-RPC (ohne DOF); **Handshake-Purge** clientseitig; **IMG_CHUNK/ACK** nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht.
+4. Backlog **IMG_CHUNK/ACK** nur wenn `MORG_SEG_V1`+NAK in Feld nicht reicht.
 
 **Manuell (eine Runde, nicht blockierend):** **`docs/HANDY-LATER-MANUAL-TESTS.md`** (§ A–E inkl. H.15 § 2).
 

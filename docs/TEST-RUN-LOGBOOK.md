@@ -10,6 +10,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-06-02** | Repo lokal (Windows), **Standalone: Event-Inbox + Purge Direkt-RPC** | `fetchMessagingEventInboxRpcRows`, `purge-handshake-hybrid`, `buildPurgeHandshakeTransaction`; `npm run test:h15-direct-submit` | **OK (Code)** — Event-Union im Direkt-Posteingang; Handshake-Purge ohne `/purge-handshake` in Standalone. |
 | **2026-06-02** | Repo lokal (Windows), **§ H.6f Android FG-Service (minimal)** | `MessengerForegroundService` + `MessengerFgSyncPlugin`; `capacitor-foreground-sync.ts`; `npx vitest run frontend/lib/capacitor-foreground-sync.test.ts`; `frontend/android` → `gradlew assembleDebug` | **OK (Code)** — APK-Feldtest: Notification sichtbar, Akku &lt;15 % ohne Laden startet nicht; Opt-in in Basis-URL-Karte. |
 | **2026-06-02** | Repo lokal (Windows), **§ H.25a Schreibtisch-Nachzug** | `cd frontend` → `npm run test:h25a-lora-image` (NAK-Nachsenden, >32 Segmente abgelehnt, INIT+SEG) | **OK (Code)** — Feldtest 2 Heltecs weiter offen (`TESTING.md` § H.25a). |
 | **2026-06-02** | Repo lokal (Windows), **§ H.15 UI-Sync + Chunk-Recovery-Test** | `direct-iota-ui-events.ts`; `notifyDirectIotaUiChanged` bei Ketten-IDs/Flags; `getDirectIotaHeaderStatusLine`; `chunk-load-error.test.ts`; `npm run test:h15-direct-submit` | **OK (Code)** — Chat-Kopf/Offline zeigen Direkt-Lücken auch ohne Autarkie; Blur/Toggle aktualisiert Kopf im selben Tab. |
