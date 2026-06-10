@@ -36,10 +36,15 @@ describe('messenger-pinnwand-capabilities', () => {
     ).toBe(true)
   })
 
-  it('Arbeiter: kein Tab, aber Streifen im 1:1', () => {
-    expect(showPinnwandChannelTab(statusWithBoard, 'arbeiter')).toBe(false)
+  it('Arbeiter: Lagebild-Tab und Streifen im 1:1', () => {
+    expect(showPinnwandChannelTab(statusWithBoard, 'arbeiter')).toBe(true)
     expect(showPinnwandInboxStrip(statusWithBoard, 'arbeiter', 'private')).toBe(true)
     expect(showPinnwandInboxStrip(statusWithBoard, 'arbeiter', 'pinnwand')).toBe(false)
+  })
+
+  it('Boss: Tab ohne Streifen im 1:1', () => {
+    expect(showPinnwandChannelTab(statusWithBoard, 'boss')).toBe(true)
+    expect(showPinnwandInboxStrip(statusWithBoard, 'boss', 'private')).toBe(false)
   })
 
   it('Kommandant: Tab sichtbar', () => {
@@ -51,7 +56,7 @@ describe('messenger-pinnwand-capabilities', () => {
       id: '1',
       from: ME,
       recipient: BOARD,
-      text: 'Lage',
+      content: 'Lage',
       timestamp: 1,
     }
     expect(messageBelongsToPinnwand(msg, BOARD)).toBe(true)

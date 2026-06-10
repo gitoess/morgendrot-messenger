@@ -15,6 +15,7 @@ import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-pa
 import Link from 'next/link'
 import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import { showPinnwandChannelTab } from '@/frontend/lib/messenger-pinnwand-capabilities'
+import { pinnwandChannelTabLabel } from '@/frontend/lib/pinnwand-display'
 import { channelDisabledReason } from '@/frontend/lib/messenger-channel-send-path'
 import {
   MessengerGuideHint,
@@ -74,6 +75,8 @@ export type ChatViewChatHeaderProps = {
   showDirectIotaPath?: boolean
   /** Kanal-Umschalter: Rolle/Server (z. B. Pinnwand-Tab nur Führung). */
   role?: string
+  /** Ungelesene Lagebild-Meldungen — Badge am Tab. */
+  pinnwandTabUnreadCount?: number
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -186,6 +189,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     showDirectIotaPath = false,
     basisUnreachable,
     role = '',
+    pinnwandTabUnreadCount = 0,
   } = p
 
   const channelModes: MessengerChatChannel[] = (['private', 'group', 'pinnwand'] as const).filter(
@@ -210,7 +214,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                 {channelMode === 'group'
                   ? 'Gruppenchat'
                   : channelMode === 'pinnwand'
-                    ? 'Pinnwand'
+                    ? pinnwandChannelTabLabel(role, apiStatus)
                     : '1:1 Privat'}
               </h2>
               <ActiveProfileBadge status={apiStatus} compact />
@@ -221,7 +225,13 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   aria-label="Kanal"
                 >
                   {channelModes.map((mode) => {
-                    const label = mode === 'private' ? '1:1' : mode === 'group' ? 'Gruppe' : 'Pinnwand'
+                    const label =
+                      mode === 'private'
+                        ? '1:1'
+                        : mode === 'group'
+                          ? 'Gruppe'
+                          : pinnwandChannelTabLabel(role, apiStatus)
+                    const tabUnread = mode === 'pinnwand' ? pinnwandTabUnreadCount : 0
                     const disabledReason =
                       sendPath && mode !== channelMode
                         ? channelDisabledReason(
@@ -244,11 +254,20 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                           channelMode === mode && !disabled
                             ? mode === 'group'
                               ? 'bg-violet-600 text-white'
-                              : 'bg-primary text-primary-foreground'
+                              : mode === 'pinnwand'
+                                ? 'bg-orange-600 text-white'
+                                : 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:text-foreground'
                         )}
                       >
-                        {label}
+                        <span className="inline-flex items-center gap-1">
+                          {label}
+                          {tabUnread > 0 && channelMode !== mode ? (
+                            <span className="min-w-[1rem] rounded-full bg-red-600 px-1 text-[9px] font-bold leading-4 text-white">
+                              {tabUnread > 99 ? '99+' : tabUnread}
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                     )
                   })}

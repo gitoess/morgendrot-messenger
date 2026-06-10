@@ -547,6 +547,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     markOverviewCategorySeen,
   ])
 
+  useEffect(() => {
+    if (!isPinnwandMode) return
+    markOverviewCategorySeen('lagebild')
+  }, [isPinnwandMode, wireFilteredMessages, markOverviewCategorySeen])
+
   const inboxOverviewUnreadCounts = useMemo(
     () => countUnreadInboxByOverviewCategory(wireFilteredMessages, inboxOverviewCtx, overviewLastSeen),
     [wireFilteredMessages, inboxOverviewCtx, overviewLastSeen]

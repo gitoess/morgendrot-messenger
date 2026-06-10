@@ -21,8 +21,10 @@ import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
 import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
 import { ChatViewPinnwandInboxStrip } from '@/frontend/components/chat-view-pinnwand-inbox-strip'
+import { ChatViewPinnwandReaderBanner } from '@/frontend/components/chat-view-pinnwand-reader-banner'
 import { ChatViewInboxUnreadThreadsStrip } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import {
+  canPostToPinnwand,
   getMessengerPinnwandCapabilities,
   messageBelongsToPinnwand,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
@@ -1023,6 +1025,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onComposerDeliveryChange: setComposerDelivery,
         }}
         showDirectIotaPath={isPrivate && uiCaps.iotaTransportUi}
+        pinnwandTabUnreadCount={
+          channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
+        }
       />
 
       {uiCaps.showProminentOfflineQueueBanner ? (
@@ -1047,14 +1052,24 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} role={role} />
       ) : null}
 
+      {channelMode != null && isPinnwandChannel(channelMode) && !canPostToPinnwand(apiStatus, role) ? (
+        <ChatViewPinnwandReaderBanner
+          unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
+        />
+      ) : null}
+
       {pinnwandCaps.showInboxStrip ? (
         <ChatViewPinnwandInboxStrip
           messages={pinnwandPreviewMessages}
+          role={role}
+          apiStatus={apiStatus}
           contactDirectory={directory}
           unreadCount={
-            inboxOverviewCategory !== 'lagebild' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
+            channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
           }
-          onSelectCategory={() => setInboxOverviewCategory('lagebild')}
+          onOpenFullPinnwand={
+            onChannelModeChange ? () => onChannelModeChange('pinnwand') : undefined
+          }
         />
       ) : null}
 

@@ -112,11 +112,12 @@
 | **Moderation** | UI zeigt, wer schreiben darf (`BROADCAST_AUTHORIZED_SENDERS` / Rolle) | **✓** via `broadcastPinnwand` in `/api/status` + Kontext-Karte |
 | **Pinning** | Wichtige Posts oben (zuerst **lokal** / `sessionStorage`, optional Move später) | **✓** `pinnwand-pin-store.ts`, Menü im Posteingang |
 | **Lesen für alle** | Filter Posteingang „Pinnwand“; Doku Einsatz | **✓** Kanal + Klartext-Filter; Empfänger aus Status |
-| **Rollen-UX** | Tab nur Führung/Wanderer; Helfer (`arbeiter`/`lock`) Lesen via Streifen im 1:1 | **✓** `messenger-pinnwand-capabilities.ts` (2026-06) |
-| **Feste Brett-0x** | Composer: Empfänger read-only; Server `.env` | **✓**; Boss-UI vor Handoff = Export/.env (kein Client-Edit) |
-| **Push / Badge / Ungelesen** | Pinnwand prominent | **Backlog** (nach Feldtest M3) |
+| **Rollen-UX** | Helfer: Lagebild-Streifen + Tab „Lagebild“; Führung: Tab + Schreiben | **✓** `docs/PINNWAND-ANZEIGE-ZIELBILD.md` |
+| **Feste Brett-0x** | Composer: Empfänger read-only; Handoff übernimmt Brett-Adresse | **✓** |
+| **Ungelesen / Badge** | Kategorie, Tab, Streifen (lokal) | **✓** `inbox-overview-unread.ts` |
+| **Push / Wichtigkeit / Lese-Statistik** | Feldtest | **Backlog** |
 
-**Bezug:** Kachel **`pinnwand-admin`** (Boss) — **Stub**; Konfiguration heute **`.env`** + Export-Assistent (`docs/EXPORT-ASSISTENT-REFERENZ.md`, `BROADCAST_*` nicht im Standard-Handoff).
+**Bezug:** Kachel **`pinnwand-admin`** (Boss) — **Stub**; Konfiguration **`.env`** + automatisch im Handoff-ZIP wenn aktiv.
 
 ---
 

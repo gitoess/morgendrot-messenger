@@ -1,6 +1,9 @@
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import type { Message } from '@/frontend/lib/types'
-import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
+import {
+  canAccessEinsatzleitung,
+  isSimpleUiMode,
+} from '@/frontend/lib/messenger-role-capabilities'
 
 const ADDR_64 = /^0x[a-f0-9]{64}$/
 
@@ -33,17 +36,15 @@ export function canPostToPinnwand(
   return false
 }
 
-/** Kanal-Tab „Pinnwand“ — Führung / Wanderer, nicht Arbeiter-Helfer. */
+/** Kanal-Tab „Lagebild“ / „Pinnwand“ — alle Rollen, wenn Brett konfiguriert (Wanderer: nur dann sichtbar). */
 export function showPinnwandChannelTab(
   status: ApiStatus | null | undefined,
-  role: string | null | undefined
+  _role?: string | null | undefined
 ): boolean {
-  if (!isPinnwandBroadcastConfigured(status)) return false
-  if (isMessengerHelperRole(role)) return false
-  return true
+  return isPinnwandBroadcastConfigured(status)
 }
 
-/** Helfer: kompaktes Lagebild oben im 1:1-Posteingang. */
+/** Kompaktes Lagebild oben im 1:1 — Helfer/Simple; Führung nutzt den Kanal-Tab. */
 export function showPinnwandInboxStrip(
   status: ApiStatus | null | undefined,
   role: string | null | undefined,
@@ -51,7 +52,8 @@ export function showPinnwandInboxStrip(
 ): boolean {
   if (channelMode != null && channelMode !== 'private') return false
   if (!isPinnwandBroadcastConfigured(status)) return false
-  return isMessengerHelperRole(role)
+  if (canAccessEinsatzleitung(role)) return false
+  return isMessengerHelperRole(role) || isSimpleUiMode(status)
 }
 
 /** Posteingang Pinnwand-Kanal: nur Nachrichten an die Brett-Adresse. */
