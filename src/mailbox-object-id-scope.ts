@@ -2,10 +2,11 @@
  * M4b/M4d: temporär andere MAILBOX_ID für einen Send-/Store-Aufruf (Kontakt-private Mailbox).
  */
 import { CFG } from './config.js';
+import { isPrivateMailboxObjectOnChain } from './mailbox-object-kind.js';
 
 let privateMailboxOverrideActive = false;
 
-/** `true` wenn `runWithMailboxObjectIdOverride` eine private Mailbox-Object-ID gesetzt hat. */
+/** `true` wenn Override eine on-chain `PrivateMailbox` ist (nicht Team/shared `Mailbox`). */
 export function isPrivateMailboxObjectIdOverrideActive(): boolean {
     return privateMailboxOverrideActive;
 }
@@ -28,7 +29,7 @@ export async function runWithMailboxObjectIdOverride<T>(
         return fn();
     }
     const prev = CFG.MAILBOX_ID;
-    privateMailboxOverrideActive = true;
+    privateMailboxOverrideActive = await isPrivateMailboxObjectOnChain(use);
     (CFG as { MAILBOX_ID: string }).MAILBOX_ID = use;
     try {
         return await fn();

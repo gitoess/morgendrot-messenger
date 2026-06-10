@@ -17,6 +17,7 @@ import {
   formatTeamMailboxIds,
   pickPrimaryMailboxId,
 } from '@/frontend/lib/handoff-export-autofill'
+import { resolveMessengerGroupHandoffJson } from '@/frontend/lib/messenger-group-handoff'
 import {
   buildHandoffExportSummary,
   formatHandoffAddressShort,
@@ -396,6 +397,15 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       const primaryMb = useTeam ? pickPrimaryMailboxId(selectedTeamIds) || handoffMailbox.trim() || undefined : undefined
       const teamIds = useTeam ? formatTeamMailboxIds(selectedTeamIds) : undefined
       const meshFirst = resolved.transportProfile === 'mesh-first'
+      const memberPool = [
+        handoffBoss.trim(),
+        ...partnerExportCsv.split(/[\s,;]+/),
+      ].filter(Boolean)
+      const messengerGroupHandoff = resolveMessengerGroupHandoffJson({
+        handoffLabel: bezeichnung.trim() || getHandoffPreset(activePresetId).label,
+        teamMailboxObjectId: primaryMb,
+        memberAddresses: memberPool,
+      })
       return {
         handoffLabel: bezeichnung.trim() || undefined,
         rpcUrl: handoffRpc.trim() || undefined,
@@ -421,6 +431,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
           !protectWithPassword && includeIotaArchivReadme && meshFirst
             ? HANDOFF_README_IOTA_ARCHIV_BLOCK
             : undefined,
+        messengerGroupHandoff,
       }
     },
     [

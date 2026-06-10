@@ -16,11 +16,16 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false
     const shared = getSharedI18n()
 
-    void ensureI18nReady().then(() => {
-      if (cancelled) return
-      setReady(true)
-      syncDocumentLang(shared.language || shared.resolvedLanguage || 'de')
-    })
+    void ensureI18nReady()
+      .then(() => {
+        if (cancelled) return
+        setReady(true)
+        syncDocumentLang(shared.language || shared.resolvedLanguage || 'de')
+      })
+      .catch((e) => {
+        console.warn('[i18n] Init fehlgeschlagen — UI trotzdem anzeigen.', e)
+        if (!cancelled) setReady(true)
+      })
 
     const onChange = (lng: string) => syncDocumentLang(lng)
     shared.on('languageChanged', onChange)

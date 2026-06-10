@@ -29,7 +29,9 @@ cd c:\Users\damast\Desktop\morgendrot
 # 1) Bauen + publizieren → PACKAGE_ID in .env + .morgendrot-package-id
 npm run deploy:move-package
 
-**Enthält u. a.:** `create_private_mailbox`, `create_team_mailbox`, `create_globals`, Rebate-Purge.
+**Enthält u. a.:** `create_private_mailbox`, `create_team_mailbox`, **`store_team_plaintext_broadcast`** (M2c), `create_globals`, Rebate-Purge.
+
+**M2c (Gruppenchat 1× Fee):** **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`**
 
 # 2) Shared-Objekte anlegen (einmal pro neuer PACKAGE_ID)
 # <PACKAGE_ID> = Ausgabe von Schritt 1
@@ -111,10 +113,11 @@ Ausführlicher Alt-Text: **`docs/PACKAGE-ID-NEU-DEPLOYEN.md`**.
 
 | Key | Wert |
 |-----|------|
-| **PACKAGE_ID** | `0xf817237417674b9eb033cafe4dc035ce17099d85b3f1ca57027f13741377e504` |
-| **MAILBOX_ID** | `0xd14006bd17e926e1eec865d3da8e2d8460858de303618479cfdace4959dbb3a4` |
-| **VAULT_REGISTRY_ID** | `0x51d36b6fdb24c5f0584f402cab392bdf8cc5e2d2dcfff96205cb3d9f3adf153b` |
-| **COMMAND_REGISTRY_ID** | `0x84e0e508ddc4101587303df2fb5501d28a4623cc2b0b9cc159a804aeb7ba93c4` |
-| **create_globals TX** | `AdpvqeCyf1C7bY8EJb2Wm3wSw8btGXXLb62LE5gbMSPR` |
+| **PACKAGE_ID** | `0x50750755dda4661e8dfce3a20ab86b32e533673fd7998bd56694a3e7d174d517` |
+| **MAILBOX_ID** | `0x0140d9b206d74c9d0fb5d4e25ac336b23970c5eed717beb83af4479970eb6969` |
+| **VAULT_REGISTRY_ID** | `0x656d7af9d0472052c769d017bc48a721a0063ffefe28306b3b28148242745ab1` |
+| **COMMAND_REGISTRY_ID** | `0x15b1d53acf02a2e28b2a62de9efc2e06d1dd1f6512319428603519f1900b88ba` |
+| **create_globals TX** | `HPowcofzYP4HmQ8N5YedbU9qefB8XkGnpEzQyPLXeUZK` |
+| **Neu in Move** | `store_team_plaintext_broadcast` (M2c Gruppenchat) |
 
 Nach `.env`-Update: **API neu starten**, damit `GET /api/status` die neue `mailboxId` liefert.

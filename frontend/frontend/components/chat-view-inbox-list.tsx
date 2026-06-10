@@ -120,6 +120,7 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onUseSenderAsPartnerFromInbox?: (sender: string) => void
   sending?: boolean
   isInboxMessageUnread?: (msg: Message) => boolean
+  isPinnwandInboxMessage?: (msg: Message) => boolean
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -158,6 +159,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     onUseSenderAsPartnerFromInbox,
     sending = false,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
   } = p
 
   const visibilityHintBanner = inboxVisibilityHint ? (
@@ -370,9 +372,15 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             key={row.msg.id}
             className={cn(
               'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
-              isInboxMessageUnread?.(row.msg) && 'border-l-4 border-l-red-500/80 bg-red-500/[0.04]',
+              isPinnwandInboxMessage?.(row.msg) &&
+                'border-l-4 border-l-orange-600 bg-orange-500/12 dark:bg-orange-500/15',
+              isInboxMessageUnread?.(row.msg) &&
+                !isPinnwandInboxMessage?.(row.msg) &&
+                'border-l-4 border-l-red-500/80 bg-red-500/[0.04]',
               protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]',
-              pinnedPinnwandIds.has(row.msg.id) && 'border-l-4 border-l-sky-500 bg-sky-500/[0.06]'
+              pinnedPinnwandIds.has(row.msg.id) &&
+                isPinnwandInboxMessage?.(row.msg) &&
+                'ring-1 ring-orange-500/40'
             )}
           >
             {(() => {

@@ -5,7 +5,7 @@ import { ChatViewTransportCard } from './chat-view-transport-card'
 const noop = () => {}
 
 describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
-  it('zeigt bei Funk den Hinweis und öffnet Partner-Setup', () => {
+  it('zeigt bei Funk minimalen Status und öffnet Partner-Setup', () => {
     const onOpenPartnerSetup = vi.fn()
     render(
       <ChatViewTransportCard
@@ -22,9 +22,8 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onOpenPartnerSetup={onOpenPartnerSetup}
       />
     )
-    expect(screen.getByText(/Heltec koppeln/i)).toBeInTheDocument()
-    expect(screen.getByText(/Schloss gilt nur für/i)).toBeInTheDocument()
-    screen.getByRole('button', { name: /Funk.*Geräte öffnen/i }).click()
+    expect(screen.queryByText(/Policy:/i)).not.toBeInTheDocument()
+    screen.getByRole('button', { name: /Funk.*Geräte/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })
 

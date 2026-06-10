@@ -56,6 +56,20 @@ export type InboxDirectionFilter = 'all' | 'in' | 'out'
 export type InboxPartnerFilterOpts = {
   /** M2: Union aller Gruppenmitglieder — `partnerAddress` wird ignoriert. */
   groupMemberAddresses?: string[]
+  /** M2c: Team-Broadcast-Zeilen (recipient = Team-Mailbox-Object-ID). */
+  teamMailboxObjectId?: string
+}
+
+/** Team-Broadcast-Zeile: Empfänger ist die Team-Mailbox-Object-ID (nicht pairwise 0x-Mitglied). */
+export function isTeamBroadcastInboxRow(msg: Message, teamMailboxObjectId: string): boolean {
+  const teamMb = norm(teamMailboxObjectId)
+  if (!teamMb) return false
+  const recip = norm(msg.recipient ?? '')
+  if (recip !== teamMb) return false
+  const dk = msg.dedupKey?.trim() ?? ''
+  if (dk.startsWith('team:')) return true
+  /** Fallback: recipient = Team-Object-ID reicht (pairwise nutzt Mitglieder-Adressen). */
+  return true
 }
 
 export function filterInboxMessagesByPartnerAndDirection(
@@ -100,8 +114,26 @@ export function filterInboxMessagesByPartnerAndDirection(
     if (direction === 'in' && isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (groupNorms) {
+      const teamMb = opts?.teamMailboxObjectId ? norm(opts.teamMailboxObjectId) : ''
+      if (teamMb) {
+        if (isTeamBroadcastInboxRow(m, teamMb)) {
+          const senderNorm = norm(m.from ?? '')
+          if (addressMatchesIdentity(m.from, myAddress)) return true
+          if (senderNorm && groupNorms.has(senderNorm)) return true
+          return false
+        }
+        const recip = norm(m.recipient ?? '')
+        const dk = m.dedupKey?.trim() ?? ''
+        if (recip.startsWith('0x') && recip !== teamMb && dk.startsWith('team:')) {
+          return false
+        }
+      }
       const cp = messageCounterpartyAddress(m, myAddress)
-      if (!cp) return false
+      if (!cp) {
+        /** Eigene Gruppen-Sendung ohne Empfänger-Meta (API-Lücke) — in Ausgang/Alle behalten. */
+        if (isMessageOutgoing(m, myAddress)) return true
+        return false
+      }
       return groupNorms.has(norm(cp))
     }
     if (!partnerAddress) return true

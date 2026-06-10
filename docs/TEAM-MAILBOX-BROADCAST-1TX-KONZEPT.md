@@ -72,11 +72,33 @@ Abgrenzung zu heutigem `Mailbox`: Shared/Team-**Pairwise** bleibt für 1:1; **Te
 
 ---
 
-## Gruppenchat-UI — pairwise Multicast (**Ist 2026-05**)
+## Gruppenchat-UI — Team-Broadcast (**M2c, 2026-06**)
 
-**Umgesetzt (Option A):** `frontend/frontend/lib/group-mailbox-pairwise-send.ts`, Schleife in `use-chat-view-handle-send.ts` (`sendMailboxPairwiseGroup`), Checkbox im **Gruppen-Panel**, Hinweis im Composer. LocalStorage: `morgendrot.groupMailboxSendAll.v1` (Default: an).
+**Umgesetzt (Option C+E, Klartext-MVP):**
 
-**Noch nicht:** 1× Fee — siehe Move-Skizze oben (`TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`).
+| Teil | Datei / Move |
+|------|----------------|
+| Move | `store_team_plaintext_broadcast`, `TeamPlainBroadcastKey` — `move-test/sources/messaging.move` |
+| Core PTB + Fetch | `packages/morgendrot-core/src/iota/team-broadcast-*.ts` |
+| Gruppe ↔ Team-MB | `messenger-group-store.ts` (`teamMailboxObjectId`, `useTeamBroadcast`) |
+| UI | `chat-view-group-panel.tsx` — Team-Mailbox wählen/erstellen |
+| Send | `use-chat-view-handle-send.ts` → `sendTeamPlaintextBroadcastHybrid` (1× TX) |
+| Inbox | `direct-iota-inbox-fetch.ts` + `alsoMailboxIds` + Partner-Filter |
+| API | `/send-team-broadcast` + `storeTeamPlaintextBroadcast` in `chain-access.ts` |
+
+**Pairwise-Fallback:** verschlüsselt, kein Team-Mailbox-Link, `useTeamBroadcast` aus, oder Move noch nicht published.
+
+**Noch nicht:** verschlüsselter Team-Broadcast (Team-Key off-chain, § H.23), `purge_team_broadcast`.
+
+### Phase 3 — Team-Key im Handoff (geplant)
+
+| Thema | Plan |
+|-------|------|
+| **Problem heute** | Nur **Klartext**-Broadcast — für Einsatz mit Vertraulichkeit reicht das nicht |
+| **Team-Key** | 32-Byte symmetrisch, **nie** on-chain; Boss erzeugt, im Handoff-ZIP (verschlüsselt) oder Vault |
+| **Env-Skizze** | `MESSENGER_GROUP_TEAM_KEY_ENC=…` (AEAD, Passwort aus Handoff-ZIP) |
+| **Move** | `store_team_encrypted_broadcast` (Backlog) |
+| **Bis dahin** | Klartext + Funk-Secondary für Echtzeit; pairwise verschlüsselt pro Person möglich |
 
 ---
 

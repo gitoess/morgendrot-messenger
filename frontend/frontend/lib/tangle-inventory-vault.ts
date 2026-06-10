@@ -2,7 +2,7 @@
 
 import type { PersonalSecretEntry } from '@/frontend/lib/api'
 import { fetchVaultPersonalSecrets, saveVaultPersonalSecrets } from '@/frontend/lib/api'
-import type { TangleInventoryItem, TangleInventoryStatus, TangleInventoryType } from '@/frontend/lib/tangle-inventory'
+import type { TangleInventoryItem, TangleInventoryOrigin, TangleInventoryStatus, TangleInventoryType } from '@/frontend/lib/tangle-inventory'
 
 const AUTO_SAVE_KEY = 'morgendrot.tangleInventory.autoVaultSave.v1'
 const DIGEST_MARKER = 'morgendrot.tangle.digest.v1'
@@ -12,8 +12,11 @@ type DigestMeta = {
   timestamp: number
   type: TangleInventoryType
   status: TangleInventoryStatus
+  origin?: TangleInventoryOrigin
   nonce?: string
   encrypted?: boolean
+  contentPreview?: string
+  evidenceSecuredAt?: number
 }
 
 function shortDigest(d: string): string {
@@ -27,8 +30,11 @@ function toMeta(item: Omit<TangleInventoryItem, 'id'>): DigestMeta {
     timestamp: item.timestamp,
     type: item.type,
     status: item.status,
+    origin: item.origin,
     nonce: item.nonce,
     encrypted: item.encrypted,
+    contentPreview: item.contentPreview,
+    evidenceSecuredAt: item.evidenceSecuredAt,
   }
 }
 
@@ -58,8 +64,14 @@ function parseVaultDigestEntry(entry: PersonalSecretEntry): Omit<TangleInventory
         timestamp: Number.isFinite(m.timestamp) ? Number(m.timestamp) : Date.now(),
         type: (m.type as TangleInventoryType) ?? 'unknown',
         status: (m.status as TangleInventoryStatus) ?? 'anchored',
+        origin: typeof m.origin === 'string' ? (m.origin as TangleInventoryOrigin) : undefined,
         nonce: typeof m.nonce === 'string' ? m.nonce : undefined,
         encrypted: typeof m.encrypted === 'boolean' ? m.encrypted : undefined,
+        contentPreview: typeof m.contentPreview === 'string' ? m.contentPreview : undefined,
+        evidenceSecuredAt:
+          typeof m.evidenceSecuredAt === 'number' && Number.isFinite(m.evidenceSecuredAt)
+            ? m.evidenceSecuredAt
+            : undefined,
       }
     } catch {
       return null
@@ -113,6 +125,56 @@ export async function maybeAutoSaveDigestToVault(item: Omit<TangleInventoryItem,
   } catch {
     /* silent: darf Versandfluss nicht blockieren */
   }
+}
+
+function digestNorm(d: string): string {
+  return d.trim().toLowerCase()
+}
+
+function entryMatchesDigest(entry: PersonalSecretEntry, digest: string): boolean {
+  const want = digestNorm(digest)
+  if (digestNorm(String(entry.secret ?? '')) === want) return true
+  const parsed = parseVaultDigestEntry(entry)
+  return parsed != null && digestNorm(parsed.digest) === want
+}
+
+/** Alle txDigests, die aktuell im Tresor liegen (normalisiert lowercase). */
+export async function fetchVaultStoredDigestSet(): Promise<{
+  ok: boolean
+  digests?: Set<string>
+  error?: string
+}> {
+  const r = await fetchVaultPersonalSecrets()
+  if (!r.ok) return { ok: false, error: r.error ?? 'Tresor nicht erreichbar.' }
+  if (r.unlocked !== true) return { ok: false, error: 'Tresor ist gesperrt.' }
+  const entries = Array.isArray(r.entries) ? r.entries : []
+  const digests = new Set<string>()
+  for (const e of entries) {
+    const parsed = parseVaultDigestEntry(e)
+    if (parsed?.digest) digests.add(digestNorm(parsed.digest))
+    else {
+      const secret = String(e.secret ?? '').trim()
+      if (secret.startsWith('0x')) digests.add(digestNorm(secret))
+    }
+  }
+  return { ok: true, digests }
+}
+
+/** Entfernt alle Tresor-Einträge mit diesem txDigest. */
+export async function removeDigestFromVault(digest: string): Promise<{ ok: boolean; error?: string; removed?: number }> {
+  const want = digest.trim()
+  if (!want) return { ok: false, error: 'Digest fehlt.' }
+  const existing = await fetchVaultPersonalSecrets()
+  if (!existing.ok) return { ok: false, error: existing.error ?? 'Tresor nicht erreichbar.' }
+  if (existing.unlocked !== true) return { ok: false, error: 'Tresor ist gesperrt.' }
+  const entries = Array.isArray(existing.entries) ? [...existing.entries] : []
+  const kept = entries.filter((e) => !entryMatchesDigest(e, want))
+  const removed = entries.length - kept.length
+  if (removed === 0) return { ok: true, removed: 0 }
+  const save = await saveVaultPersonalSecrets(kept, true)
+  return save.ok
+    ? { ok: true, removed }
+    : { ok: false, error: save.error ?? 'Tresor-Eintrag konnte nicht gelöscht werden.' }
 }
 
 export async function importDigestsFromVault(): Promise<{

@@ -78,6 +78,7 @@
 | `historyFromNewest` / Package-History in UI | API-Feld **ja**, UI **nein** |
 | `initialProfile` / Kontakte **im** ZIP | **Nein** — Telefonbuch-Export separat; Handoff nur `.env` |
 | Ein-Klick „alle Team-Postfächer“ | **Nein** — manuell anhaken |
+| **Gruppe + Team-Postfach im ZIP** | **Ja (M2c)** — `MESSENGER_GROUP_HANDOFF` bei Team-Postfach im Export |
 | Wizard Schritt 3 „Vorschau .env“ | **Backlog** |
 | Helfer-Bundle **im** ZIP mitliefern | **Nein** — Medium getrennt (Bundle + Handoff-ZIP) |
 
@@ -116,6 +117,7 @@
 | `capabilitiesOverride` | object? | Matrix-UI | `.morgendrot-runtime-config.json` |
 | `includeIotaArchivReadme` | boolean | Checkbox | README-Block |
 | `readmeExtra` | string? | IOTA-Archiv-Text | README |
+| `messengerGroupHandoff` | string? | JSON | `MESSENGER_GROUP_HANDOFF` (Gruppe + Team-Postfach, M2c) |
 | `format` | zip \| parts | Client setzt | — |
 
 **Berechtigung API:** `ROLE=boss` oder `kommandant`.

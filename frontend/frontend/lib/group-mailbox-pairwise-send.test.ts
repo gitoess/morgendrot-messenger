@@ -46,6 +46,6 @@ describe('group-mailbox-pairwise-send', () => {
   it('localStorage toggles sendAll default on', () => {
     expect(readGroupMailboxSendAll()).toBe(true)
     writeGroupMailboxSendAll(false)
-    expect(readGroupMailboxSendAll()).toBe(false)
+    expect(readGroupMailboxSendAll()).toBe(true)
   })
 })

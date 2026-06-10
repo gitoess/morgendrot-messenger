@@ -25,7 +25,6 @@ import {
 } from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
-import { ChatViewDirectIotaPathBadge } from '@/frontend/components/chat-view-direct-iota-path-badge'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
 export type ChatViewVaultBannerActions = {
@@ -71,8 +70,6 @@ export type ChatViewChatHeaderProps = {
   afterPulse?: ReactNode
   /** Kompakter Gesamtstatus (optional, z. B. aus use-offline-status). */
   offlineStatus?: OfflineStatusSnapshot
-  /** § H.15: Direkt-RPC / Relay-Kurzstatus neben Sendepfad. */
-  showDirectIotaPath?: boolean
   /** Kanal-Umschalter: Rolle/Server (z. B. Pinnwand-Tab nur Führung). */
   role?: string
   /** Ungelesene Lagebild-Meldungen — Badge am Tab. */
@@ -186,7 +183,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     onChannelModeChange,
     afterPulse,
     offlineStatus,
-    showDirectIotaPath = false,
     basisUnreachable,
     role = '',
     pinnwandTabUnreadCount = 0,
@@ -312,13 +308,6 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
           ) : null}
           <div className="flex flex-col items-end gap-0.5">
             {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
-            {showDirectIotaPath ? (
-              <ChatViewDirectIotaPathBadge
-                backendOnline={
-                  basisUnreachable ? false : apiStatus?.backendOnline ?? apiStatus?.backendRunning
-                }
-              />
-            ) : null}
           </div>
         </div>
       </div>

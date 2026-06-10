@@ -19,13 +19,13 @@ import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
-import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
 import { ChatViewPinnwandInboxStrip } from '@/frontend/components/chat-view-pinnwand-inbox-strip'
 import { ChatViewPinnwandReaderBanner } from '@/frontend/components/chat-view-pinnwand-reader-banner'
 import { ChatViewInboxUnreadThreadsStrip } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import {
   canPostToPinnwand,
   getMessengerPinnwandCapabilities,
+  buildPinnwandMatchContext,
   messageBelongsToPinnwand,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -35,6 +35,10 @@ import {
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
+import {
+  ChatViewEncryptedPartnerPanel,
+  type ChatViewEncryptedPartnerPanelProps,
+} from '@/frontend/components/chat-view-encrypted-partner-panel'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
 import { ChatViewMorgPkgImportsSheet } from '@/frontend/components/chat-view-morg-pkg-imports-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
@@ -64,10 +68,8 @@ import {
   type PendingHandshakesPollState,
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
-import {
-  groupMailboxTargetCount,
-  readGroupMailboxSendAll,
-} from '@/frontend/lib/group-mailbox-pairwise-send'
+import { groupMailboxTargetCount, readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
+import { resolveGroupTeamMailboxObjectId } from '@/frontend/lib/group-team-broadcast'
 import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
@@ -160,14 +162,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     clearInboxRam,
     inboxRows,
     meshtastic,
-    meshExportPw,
-    setMeshExportPw,
-    meshImportPw,
-    setMeshImportPw,
-    meshImportJson,
-    setMeshImportJson,
-    meshSyncBusy,
-    setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
     localPurgeBusy,
@@ -178,8 +172,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    contactMeshNodeId,
-    setContactMeshNodeId,
     meshPlaintextToNodeEnabled,
     setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
@@ -290,6 +282,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxOverviewUnreadCounts,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
   } = c
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
@@ -561,7 +554,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       const applied = applyPhonebookContactToComposer(storageKey, entry, {
         setPartner,
         setRecipient,
-        setContactMeshNodeId,
         setMeshPlaintextNodeId,
         setMeshPlaintextToNodeEnabled,
         setContactBleUuid,
@@ -589,7 +581,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [
       setPartner,
       setRecipient,
-      setContactMeshNodeId,
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
       setContactBleUuid,
@@ -604,12 +595,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [apiStatus, role, channelMode, myAddress]
   )
   const pinnwandPreviewMessages = useMemo(() => {
-    if (!pinnwandCaps.showInboxStrip || !pinnwandCaps.broadcastAddress) return []
+    if (!pinnwandCaps.showInboxStrip) return []
+    const match = buildPinnwandMatchContext(apiStatus, myAddress)
+    if (!match) return []
     return messages
-      .filter((m) => messageBelongsToPinnwand(m, pinnwandCaps.broadcastAddress))
+      .filter((m) => messageBelongsToPinnwand(m, match))
       .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
       .slice(0, 3)
-  }, [messages, pinnwandCaps])
+  }, [messages, pinnwandCaps.showInboxStrip, apiStatus, myAddress])
   const showInboxPackageExpert = uiCaps.showInboxPackageExpertMenu(clientExpertMode)
 
   useEffect(() => {
@@ -767,7 +760,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     localPurgeBusy,
     pinnedPinnwandIds,
     onTogglePinnedPinnwand: togglePinnedPinnwand,
-    showPinnwandPinActions: channelMode != null && isPinnwandChannel(channelMode),
+    showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
     showPhonebookButton: false,
     onContactsChanged: refreshContactDirectory,
     onMailboxPanelStatus: (msg, kind) => {
@@ -789,6 +782,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxOverviewUnreadCounts,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
     showInboxPackageExpertMenu: showInboxPackageExpert,
     inboxPackageExpertMenu: showInboxPackageExpert ? (
       <ChatViewInboxPackageExpertMenu
@@ -906,6 +900,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     isGroupChannel: isGroup,
     groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
     groupMemberCount: isGroup && activeGroup ? groupMailboxTargetCount(activeGroup, myAddress) : 0,
+    groupTeamBroadcastReady: isGroup && !!resolveGroupTeamMailboxObjectId(activeGroup),
     partner,
     onPartnerChange: syncPartnerAndRecipient,
     myAddress,
@@ -935,15 +930,39 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } satisfies ChatViewSendPanelProps
 
   const showEncryptedPartnerPanel =
+    (channelMode === 'private' || isGroup) &&
     composerDelivery === 'chain' &&
     encrypted &&
-    forcedTransport === 'internet' &&
-    (isPrivate || isGroup)
+    forcedTransport === 'internet'
 
   const showPartnerSetupPanel =
-    (isPrivate || isGroup) &&
     composerDelivery === 'chain' &&
-    (showSetup || forcedTransport === 'mesh' || forcedTransport === 'adhoc')
+    ((channelMode === 'private' && (showSetup || forcedTransport === 'mesh' || forcedTransport === 'adhoc')) ||
+      (isGroup && (forcedTransport === 'mesh' || forcedTransport === 'adhoc')))
+
+  const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
+    ? {
+        partner,
+        onPartnerChange: syncPartnerAndRecipient,
+        sending,
+        onHandshake: handleHandshake,
+        onConnectAcceptPartner: handleConnectAcceptPartner,
+        onConnectDeployment: handleConnectDeployment,
+        onConnectAcceptForAddress: handleConnectAcceptForAddress,
+        directory,
+        isGroupMode: isGroup,
+        groupMemberAddresses: activeGroup?.memberAddresses ?? [],
+        connectedAddresses: apiStatus?.connectedAddresses ?? [],
+        onHandshakeForAddress: handleHandshakeForAddress,
+        myAddress: myAddress.trim(),
+        onPeeringStatus: (msg) => {
+          setStatusMsg(msg)
+          if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
+          else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
+          else toast.info(msg)
+        },
+      }
+    : null
 
   const transportCardProps = {
     ...asSendTransportChoice(
@@ -971,29 +990,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       if (kind === 'success') toast.success(msg)
       else toast.error(msg)
     },
-    encryptedPartner: showEncryptedPartnerPanel
-      ? {
-          partner,
-          onPartnerChange: syncPartnerAndRecipient,
-          sending,
-          onHandshake: handleHandshake,
-          onConnectAcceptPartner: handleConnectAcceptPartner,
-          onConnectDeployment: handleConnectDeployment,
-          onConnectAcceptForAddress: handleConnectAcceptForAddress,
-          directory,
-          isGroupMode: isGroup,
-          groupMemberAddresses: activeGroup?.memberAddresses ?? [],
-          connectedAddresses: apiStatus?.connectedAddresses ?? [],
-          onHandshakeForAddress: handleHandshakeForAddress,
-          myAddress: myAddress.trim(),
-          onPeeringStatus: (msg) => {
-            setStatusMsg(msg)
-            if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
-            else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
-            else toast.info(msg)
-          },
-        }
-      : undefined,
+    encryptedPartner: encryptedPartnerPanelProps ?? undefined,
   } satisfies ChatViewTransportCardProps
 
   return (
@@ -1013,7 +1010,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         channelMode={channelMode}
         onChannelModeChange={onChannelModeChange}
         sendPath={{
-          visible: isPrivate || !encrypted,
+          visible: isPrivate || isGroup || !encrypted,
           channelMode: channelMode ?? 'private',
           encrypted,
           forcedTransport,
@@ -1024,7 +1021,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           composerDelivery,
           onComposerDeliveryChange: setComposerDelivery,
         }}
-        showDirectIotaPath={isPrivate && uiCaps.iotaTransportUi}
         pinnwandTabUnreadCount={
           channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
         }
@@ -1042,14 +1038,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       {isGroup ? (
         <ChatViewGroupPanel
           contactDirectory={directory}
-          myAddressLine={myAddress}
+          forcedTransport={forcedTransport}
+          teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
           onOpenPhonebook={() => setPhonebookOpen(true)}
+          onOpenSettings={onOpenSettings}
+          encrypted={encrypted}
+          onEncryptedChange={setEncrypted}
         />
       ) : null}
 
-      {channelMode != null && isPinnwandChannel(channelMode) && canAccessEinsatzleitung(role) ? (
-        <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} role={role} />
+      {isGroup && encryptedPartnerPanelProps ? (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
+          <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
+        </div>
       ) : null}
 
       {channelMode != null && isPinnwandChannel(channelMode) && !canPostToPinnwand(apiStatus, role) ? (
@@ -1082,7 +1085,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {(isPrivate || isGroup) && composerDelivery === 'chain' ? (
+      {channelMode === 'private' && composerDelivery === 'chain' ? (
         <ChatViewTransportCard {...transportCardProps} />
       ) : null}
 
@@ -1119,18 +1122,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onContactBleAddressChange={setContactBleAddress}
           contactBleUuid={contactBleUuid}
           onContactBleUuidChange={setContactBleUuid}
-          contactMeshNodeId={contactMeshNodeId}
-          onContactMeshNodeIdChange={setContactMeshNodeId}
           contactBleBusy={contactBleBusy}
           setContactBleBusy={setContactBleBusy}
-          meshExportPw={meshExportPw}
-          onMeshExportPwChange={setMeshExportPw}
-          meshImportPw={meshImportPw}
-          onMeshImportPwChange={setMeshImportPw}
-          meshImportJson={meshImportJson}
-          onMeshImportJsonChange={setMeshImportJson}
-          meshSyncBusy={meshSyncBusy}
-          setMeshSyncBusy={setMeshSyncBusy}
           meshSyncMsg={meshSyncMsg}
           setMeshSyncMsg={setMeshSyncMsg}
           role={role}
@@ -1165,7 +1158,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewSendPanel {...sendPanelProps} />
       </section>
 
-      {isPrivate && inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+      {inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
         <ChatViewInboxUnreadThreadsStrip
           threads={inboxUnreadThreadOptions ?? []}
           onOpenThread={(address) => {

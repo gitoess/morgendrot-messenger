@@ -114,6 +114,14 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r).toHaveLength(1)
   })
 
+  it('groupMemberAddresses: eigene Sendung ohne recipient bleibt sichtbar', () => {
+    const outNoRecip = m({ id: 'out-bare', from: me, content: 'grp', timestamp: 8 })
+    const r = filterInboxMessagesByPartnerAndDirection([outNoRecip], me, null, 'all', {
+      groupMemberAddresses: [alice, bob],
+    })
+    expect(r.map((x) => x.id)).toEqual(['out-bare'])
+  })
+
   it('groupMemberAddresses: Union aller Mitglieder', () => {
     const bobMsg = m({ id: 'bob', from: bob, recipient: me, content: 'b', timestamp: 4 })
     const r = filterInboxMessagesByPartnerAndDirection([incoming, outgoing, bobMsg], me, null, 'all', {
@@ -124,6 +132,30 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
       groupMemberAddresses: [alice],
     })
     expect(onlyAlice.map((x) => x.id)).toEqual(['in'])
+  })
+
+  it('teamMailboxObjectId: Team-Broadcast-Zeilen (recipient = Team-Mailbox)', () => {
+    const teamMb = '0x' + 'f'.repeat(64)
+    const teamIn = m({ id: 'tb-in', from: alice, recipient: teamMb, content: 'team', timestamp: 5 })
+    const teamOut = m({ id: 'tb-out', from: me, recipient: teamMb, content: 'mine', timestamp: 6 })
+    const r = filterInboxMessagesByPartnerAndDirection([teamIn, teamOut], me, null, 'all', {
+      groupMemberAddresses: [alice, bob],
+      teamMailboxObjectId: teamMb,
+    })
+    expect(r.map((x) => x.id).sort()).toEqual(['tb-in', 'tb-out'])
+  })
+
+  it('teamMailboxObjectId: zwei Gruppen — nur aktive Team-MB', () => {
+    const teamA = '0x' + 'a'.repeat(64)
+    const teamB = '0x' + 'e'.repeat(64)
+    const tbA = m({ id: 'tb-a', from: alice, recipient: teamA, content: 'A', timestamp: 5, dedupKey: `team:${teamA}:${alice}:1` })
+    const tbB = m({ id: 'tb-b', from: bob, recipient: teamB, content: 'B', timestamp: 6, dedupKey: `team:${teamB}:${bob}:2` })
+    const pairwiseBob = m({ id: 'pw', from: bob, recipient: me, content: '1:1', timestamp: 7 })
+    const onlyA = filterInboxMessagesByPartnerAndDirection([tbA, tbB, pairwiseBob], me, null, 'all', {
+      groupMemberAddresses: [alice, bob],
+      teamMailboxObjectId: teamA,
+    })
+    expect(onlyA.map((x) => x.id).sort()).toEqual(['pw', 'tb-a'])
   })
 
   it('Telegram: Eingang/Ausgang und Partner tg:', () => {

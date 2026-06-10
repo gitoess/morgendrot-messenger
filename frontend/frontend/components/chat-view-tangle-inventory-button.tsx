@@ -1,44 +1,88 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { Database, ExternalLink, RefreshCw, Save, Search, Trash2, Upload } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Download, ExternalLink, RefreshCw, Save, Trash2, Upload, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { explorerTxUrlFromDigest } from '@/frontend/lib/iota-tx-explorer-hint'
+import type { Message } from '@/frontend/lib/types'
 import {
   addManyTangleInventoryItems,
-  addTangleInventoryItem,
+  canRecoverTangleInventoryText,
   clearTangleInventory,
   countTangleInventory,
   loadTangleInventory,
+  removeTangleInventoryItem,
+  tangleInventoryOriginLabel,
   type TangleInventoryItem,
 } from '@/frontend/lib/tangle-inventory'
-import { tryFetchDirectMailboxInboxViaIota } from '@/frontend/lib/direct-iota-inbox-fetch'
-import { fetchMailboxInboxPage } from '@/frontend/lib/mailbox-inbox-page-fetch'
-import { scanMailboxAndReassembleProtokollFull } from '@/frontend/lib/protokoll-chunk-mailbox-scan'
 import {
+  downloadTangleEvidenceJson,
+  secureTangleEvidenceLocally,
+  sortTangleInventoryForDisplay,
+} from '@/frontend/lib/tangle-inventory-evidence'
+import {
+  fetchVaultStoredDigestSet,
   importDigestsFromVault,
   isTangleInventoryAutoVaultSaveEnabled,
+  removeDigestFromVault,
   saveDigestToVault,
   setTangleInventoryAutoVaultSaveEnabled,
 } from '@/frontend/lib/tangle-inventory-vault'
+import {
+  recoverTangleInventoryText,
+  type RecoverTangleTextSource,
+} from '@/frontend/lib/tangle-inventory-recover'
+
+export type TangleInventoryScope = 'anchored' | 'all'
+
+type TextResult = { text: string; source?: RecoverTangleTextSource } | { error: string }
 
 function typeLabel(t: TangleInventoryItem['type']): string {
   if (t === 'image') return 'Bild'
   if (t === 'text') return 'Text'
   if (t === 'protocol-hash') return 'Protokoll-Hash'
   if (t === 'protocol-full') return 'Protokoll-voll'
-  return 'Unbekannt'
+  return 'Sonstiges'
 }
 
-export type TangleInventoryScope = 'anchored' | 'all'
+function sourceHint(source: RecoverTangleTextSource): string {
+  if (source === 'preview') return 'Lokal gespeichert'
+  if (source === 'local-inbox') return 'Aus geladenem Posteingang'
+  return 'Von Chain/API nachgeladen'
+}
+
+function digestKey(d: string): string {
+  return d.trim().toLowerCase()
+}
+
+function itemToVaultPayload(it: TangleInventoryItem) {
+  return {
+    digest: it.digest,
+    timestamp: it.timestamp,
+    type: it.type,
+    status: it.status,
+    origin: it.origin,
+    nonce: it.nonce,
+    encrypted: it.encrypted,
+    contentPreview: it.contentPreview,
+    evidenceSecuredAt: it.evidenceSecuredAt,
+  }
+}
+
+function textForItem(it: TangleInventoryItem, resultById: Record<string, TextResult>): string | undefined {
+  const r = resultById[it.id]
+  if (r && !('error' in r) && r.text.trim()) return r.text.trim()
+  return it.contentPreview?.trim() || undefined
+}
 
 export function ChatViewTangleInventoryButton(p?: {
   triggerClassName?: string
   triggerLabel?: string
-  /** `anchored` = nur On-Chain-Digests (Standard unter Nachrichtenverlauf). */
   inventoryScope?: TangleInventoryScope
+  messages?: readonly Message[]
+  packageId?: string
 }) {
   const inventoryScope = p?.inventoryScope ?? 'anchored'
   const triggerClassName =
@@ -46,104 +90,200 @@ export function ChatViewTangleInventoryButton(p?: {
     'w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent'
   const [open, setOpen] = useState(false)
   const [refreshTick, setRefreshTick] = useState(0)
-  const anchoredCount = useMemo(() => {
+  const [showTresorOpts, setShowTresorOpts] = useState(false)
+  const [autoVaultSave, setAutoVaultSave] = useState(false)
+  const [uiMsg, setUiMsg] = useState<string | null>(null)
+  const [vaultDigests, setVaultDigests] = useState<Set<string>>(new Set())
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchBusy, setBatchBusy] = useState(false)
+  const txCount = useMemo(() => {
     void refreshTick
-    return countTangleInventory({ status: 'anchored' })
-  }, [refreshTick])
-  const defaultTriggerLabel =
-    inventoryScope === 'anchored'
-      ? anchoredCount > 0
-        ? `Verankerte IOTA-Transaktionen (${anchoredCount})`
-        : 'Verankerte IOTA-Transaktionen'
-      : 'Gespeicherte IOTA-Transaktionen (alle)'
+    return countTangleInventory({
+      status: inventoryScope === 'anchored' ? 'anchored' : 'all',
+    })
+  }, [refreshTick, inventoryScope])
+  const defaultTriggerLabel = txCount > 0 ? `IOTA-Transaktionen (${txCount})` : 'IOTA-Transaktionen'
   const triggerLabel = p?.triggerLabel ?? defaultTriggerLabel
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [digestSearch, setDigestSearch] = useState('')
-  const [scanBusy, setScanBusy] = useState(false)
-  const [scanResult, setScanResult] = useState<string | null>(null)
-  const [filterType, setFilterType] = useState<'all' | TangleInventoryItem['type']>('all')
-  const [filterStatus, setFilterStatus] = useState<'all' | TangleInventoryItem['status']>(
-    inventoryScope === 'anchored' ? 'anchored' : 'all'
-  )
-  const [filterRecovery, setFilterRecovery] = useState<'all' | 'found' | 'not-found'>('all')
-  const [manualDigest, setManualDigest] = useState('')
-  const [manualType, setManualType] = useState<TangleInventoryItem['type']>('unknown')
-  const [manualStatus, setManualStatus] = useState<TangleInventoryItem['status']>('anchored')
-  const [autoVaultSave, setAutoVaultSave] = useState(isTangleInventoryAutoVaultSaveEnabled())
-  const [resultById, setResultById] = useState<Record<string, string>>({})
-  const [uiMsg, setUiMsg] = useState<string | null>(null)
-
-  const allItems = useMemo(() => {
-    void refreshTick
-    return loadTangleInventory()
-  }, [refreshTick])
+  const [resultById, setResultById] = useState<Record<string, TextResult>>({})
 
   const items = useMemo(() => {
-    const q = digestSearch.trim().toLowerCase()
-    return allItems.filter((it) => {
-      if (filterType !== 'all' && it.type !== filterType) return false
-      if (filterStatus !== 'all' && it.status !== filterStatus) return false
-      if (q) {
-        const hay = `${it.digest} ${it.nonce ?? ''} ${it.chunkSha256 ?? ''}`.toLowerCase()
-        if (!hay.includes(q)) return false
-      }
-      if (filterRecovery !== 'all') {
-        const res = resultById[it.id] ?? ''
-        const found = res.length > 0 && !/nicht gefunden/i.test(res)
-        if (filterRecovery === 'found' && !found) return false
-        if (filterRecovery === 'not-found' && found) return false
-      }
-      return true
-    })
-  }, [allItems, digestSearch, filterRecovery, filterStatus, filterType, resultById])
+    void refreshTick
+    const all = loadTangleInventory()
+    const filtered =
+      inventoryScope === 'anchored' ? all.filter((it) => it.status === 'anchored') : all
+    return sortTangleInventoryForDisplay(filtered)
+  }, [refreshTick, inventoryScope])
+
+  const selectedItems = useMemo(
+    () => items.filter((it) => selectedIds.has(it.id)),
+    [items, selectedIds]
+  )
+  const actionTargets = selectedItems.length > 0 ? selectedItems : items
+
+  const allVisibleSelected = items.length > 0 && items.every((it) => selectedIds.has(it.id))
+  const someSelected = selectedIds.size > 0
 
   const refresh = () => setRefreshTick((x) => x + 1)
 
-  const fetchNonceWithPaging = async (nonce: string): Promise<{ ok: true; text: string } | { ok: false; error: string }> => {
-    const limit = 200
-    const maxPages = 6
-    for (let page = 0; page < maxPages; page++) {
-      const offset = page * limit
-      let lastErr = ''
-      for (let retry = 0; retry < 2; retry++) {
-        const r = await tryFetchDirectMailboxInboxViaIota({ limit, offset })
-        if (!r.ok) {
-          lastErr = r.error
-          continue
-        }
-        const hit = r.rows.find((row) => String(row.nonce ?? '') === nonce)
-        if (hit) {
-          const text = String(hit.text ?? '')
-          return {
-            ok: true,
-            text:
-              text.length > 0
-                ? text
-                : '[Gefunden, aber kein Klartextinhalt zurückgegeben. ECDH/Session-Key oder Payload prüfen.]',
-          }
-        }
-        break
-      }
-      if (lastErr) {
-        return { ok: false, error: `RPC-Fehler (Offset ${offset}): ${lastErr}` }
-      }
-    }
-    return { ok: false, error: 'Eintrag nicht gefunden (Paging durchsucht: 6 Fenster à 200).' }
+  const refreshVaultDigests = useCallback(async () => {
+    const r = await fetchVaultStoredDigestSet()
+    if (r.ok && r.digests) setVaultDigests(r.digests)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    void refreshVaultDigests()
+  }, [open, refreshTick, refreshVaultDigests])
+
+  useEffect(() => {
+    const visible = new Set(items.map((it) => it.id))
+    setSelectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => visible.has(id)))
+      return next.size === prev.size ? prev : next
+    })
+  }, [items])
+
+  const isInVault = (digest: string) => vaultDigests.has(digestKey(digest))
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
-  const loadAndDecrypt = async (it: TangleInventoryItem) => {
-    if (!it.nonce) {
-      setResultById((m) => ({ ...m, [it.id]: 'Kein Nonce gespeichert — für diesen Eintrag kein Direkt-Recovery möglich.' }))
-      return
-    }
+  const toggleSelectAll = () => {
+    if (allVisibleSelected) setSelectedIds(new Set())
+    else setSelectedIds(new Set(items.map((it) => it.id)))
+  }
+
+  const loadText = async (it: TangleInventoryItem) => {
     setBusyId(it.id)
     try {
-      const r = await fetchNonceWithPaging(String(it.nonce))
-      setResultById((m) => ({ ...m, [it.id]: r.ok ? r.text : r.error }))
+      const r = await recoverTangleInventoryText({
+        nonce: it.nonce,
+        contentPreview: it.contentPreview,
+        origin: it.origin,
+        localMessages: p?.messages,
+        packageId: p?.packageId,
+      })
+      setResultById((m) => ({
+        ...m,
+        [it.id]: r.ok ? { text: r.text, source: r.source } : { error: r.error },
+      }))
+      return r.ok ? r.text : undefined
     } finally {
       setBusyId(null)
     }
   }
+
+  const secureEvidence = async (it: TangleInventoryItem, knownText?: string) => {
+    const r = await secureTangleEvidenceLocally(it, {
+      localMessages: p?.messages,
+      packageId: p?.packageId,
+      knownText: knownText ?? textForItem(it, resultById),
+      tryLoadText: true,
+    })
+    return r
+  }
+
+  const batchSecureEvidence = async () => {
+    if (actionTargets.length === 0) return
+    setBatchBusy(true)
+    setUiMsg(null)
+    let ok = 0
+    let withText = 0
+    for (const it of actionTargets) {
+      const r = await secureEvidence(it)
+      if (r.ok) {
+        ok++
+        if (r.textSaved) withText++
+      }
+    }
+    refresh()
+    setUiMsg(
+      `${ok} Beweis(e) lokal gesichert` +
+        (withText < ok ? ` (${withText} mit Text, ${ok - withText} nur IOTA-Daten).` : '.')
+    )
+    setBatchBusy(false)
+  }
+
+  const batchExportJson = () => {
+    if (actionTargets.length === 0) return
+    downloadTangleEvidenceJson(actionTargets, {
+      packageId: p?.packageId,
+      getText: (it) => textForItem(it, resultById),
+    })
+    setUiMsg(`${actionTargets.length} Beweis(e) als JSON exportiert.`)
+  }
+
+  const batchLoadText = async () => {
+    const targets = actionTargets.filter(canRecoverTangleInventoryText)
+    if (targets.length === 0) {
+      setUiMsg('Keine Einträge mit ladbarem Text.')
+      return
+    }
+    setBatchBusy(true)
+    let ok = 0
+    for (const it of targets) {
+      if (await loadText(it)) ok++
+    }
+    setUiMsg(`Text geladen: ${ok}/${targets.length}.`)
+    setBatchBusy(false)
+  }
+
+  const batchSaveToVault = async () => {
+    const targets = actionTargets.filter((it) => !isInVault(it.digest))
+    if (targets.length === 0) {
+      setUiMsg('Auswahl liegt bereits im Tresor.')
+      return
+    }
+    setBatchBusy(true)
+    let ok = 0
+    for (const it of targets) {
+      const r = await saveDigestToVault(itemToVaultPayload(it))
+      if (r.ok) ok++
+    }
+    await refreshVaultDigests()
+    setUiMsg(`${ok} im Tresor gespeichert.`)
+    setBatchBusy(false)
+  }
+
+  const batchOpenExplorer = () => {
+    for (const it of actionTargets.slice(0, 12)) {
+      window.open(explorerTxUrlFromDigest(it.digest), '_blank', 'noopener,noreferrer')
+    }
+    if (actionTargets.length > 12) setUiMsg('Explorer: max. 12 Tabs geöffnet.')
+  }
+
+  const batchRemoveFromList = () => {
+    for (const it of actionTargets) removeTangleInventoryItem(it.id)
+    setSelectedIds(new Set())
+    refresh()
+    setUiMsg(`${actionTargets.length} aus Liste entfernt.`)
+  }
+
+  const batchRemoveFromVault = async () => {
+    const inVault = actionTargets.filter((it) => isInVault(it.digest))
+    if (inVault.length === 0) {
+      setUiMsg('Keine Tresor-Einträge in der Auswahl.')
+      return
+    }
+    setBatchBusy(true)
+    let removed = 0
+    for (const it of inVault) {
+      const r = await removeDigestFromVault(it.digest)
+      if (r.ok) removed += r.removed ?? 0
+    }
+    await refreshVaultDigests()
+    setUiMsg(`${removed} aus Tresor entfernt.`)
+    setBatchBusy(false)
+  }
+
+  const selectedInVaultCount = selectedItems.filter((it) => isInVault(it.digest)).length
 
   return (
     <>
@@ -152,7 +292,9 @@ export function ChatViewTangleInventoryButton(p?: {
         onClick={() => {
           refresh()
           setAutoVaultSave(isTangleInventoryAutoVaultSaveEnabled())
-          if (inventoryScope === 'anchored') setFilterStatus('anchored')
+          setUiMsg(null)
+          setSelectedIds(new Set())
+          setShowTresorOpts(false)
           setOpen(true)
         }}
         className={cn(triggerClassName)}
@@ -160,315 +302,257 @@ export function ChatViewTangleInventoryButton(p?: {
         {triggerLabel}
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
-              {inventoryScope === 'anchored'
-                ? 'Verankerte IOTA-Transaktionen (dieses Gerät)'
-                : 'Gespeicherte IOTA-Transaktionen (dieses Gerät)'}
-            </DialogTitle>
+            <DialogTitle>IOTA-Transaktionen — Beweissicherung</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2 rounded-lg border border-border/70 bg-muted/20 p-3">
-            <p className="text-xs text-muted-foreground">
-              {inventoryScope === 'anchored' ? (
-                <>
-                  <strong className="text-foreground">On-Chain bestätigte</strong> Digests (Sendung, Verankerung, Relay nach
-                  „verankert“). Ablage: <strong className="text-foreground">localStorage</strong> — optional Kopie in den Tresor (Checkbox oder
-                  pro Zeile).
-                </>
-              ) : (
-                <>Alle Digest-Einträge in localStorage (inkl. manuell / fehlgeschlagen).</>
-              )}{' '}
-              „Nachricht laden“: Direkt-RPC oder <strong className="text-foreground">/inbox</strong>. Noch nicht verankert: Menü{' '}
-              <strong className="text-foreground">Wartende Sendungen</strong>.
-            </p>
-            <div className="flex flex-wrap gap-2">
+
+          <p className="text-xs text-muted-foreground">
+            Jede Zeile = eine IOTA-Transaktion (Digest, Nonce, Explorer-Link). Die Liste liegt auf{' '}
+            <strong className="font-medium text-foreground">diesem Gerät</strong>.{' '}
+            <strong className="font-medium text-foreground">Beweis lokal sichern</strong> hält Text (wenn vorhanden){' '}
+            und alle IOTA-Daten fest — für Nachweis und Export.
+          </p>
+
+          <div className="flex flex-wrap gap-2 rounded-lg border border-border/70 bg-muted/15 p-2">
+            <Button type="button" size="sm" disabled={batchBusy || items.length === 0} onClick={() => void batchSecureEvidence()}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              Beweis lokal sichern
+              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (alle)' : ''}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={items.length === 0} onClick={batchExportJson}>
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              JSON exportieren
+              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (alle)' : ''}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={batchBusy || items.length === 0} onClick={() => void batchLoadText()}>
+              <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', batchBusy && 'animate-spin')} />
+              Text nachladen
+            </Button>
+          </div>
+
+          <button
+            type="button"
+            className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+            onClick={() => setShowTresorOpts((v) => !v)}
+          >
+            {showTresorOpts ? '▾ Tresor-Optionen ausblenden' : '▸ Optional: Kopie im Wallet-Tresor'}
+          </button>
+          {showTresorOpts ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border/80 px-2 py-2">
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
                 onClick={async () => {
-                  setUiMsg(null)
                   const r = await importDigestsFromVault()
                   if (!r.ok) {
                     setUiMsg(r.error ?? 'Tresor-Import fehlgeschlagen.')
                     return
                   }
                   addManyTangleInventoryItems(r.items ?? [])
+                  await refreshVaultDigests()
                   refresh()
-                  setUiMsg(`Aus Tresor übernommen: ${(r.items ?? []).length} Digest-Einträge.`)
+                  setUiMsg(`${(r.items ?? []).length} aus Tresor übernommen.`)
                 }}
               >
-                <Upload className="mr-2 h-3.5 w-3.5" />
-                Aus Tresor laden (Digests)
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Aus Tresor laden
               </Button>
-              <label className="inline-flex items-center gap-2 rounded-md border border-border px-2 py-1 text-xs" title="Betrifft nur Digest-Einträge, nicht Messaging-Keys">
+              <Button type="button" size="sm" variant="outline" disabled={batchBusy} onClick={() => void batchSaveToVault()}>
+                Im Tresor speichern
+              </Button>
+              {selectedInVaultCount > 0 ? (
+                <Button type="button" size="sm" variant="outline" disabled={batchBusy} onClick={() => void batchRemoveFromVault()}>
+                  Aus Tresor löschen ({selectedInVaultCount})
+                </Button>
+              ) : null}
+              <label className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
                 <input
                   type="checkbox"
                   checked={autoVaultSave}
                   onChange={(e) => {
-                    const next = e.target.checked
-                    setAutoVaultSave(next)
-                    setTangleInventoryAutoVaultSaveEnabled(next)
+                    setAutoVaultSave(e.target.checked)
+                    setTangleInventoryAutoVaultSaveEnabled(e.target.checked)
                   }}
                 />
-                Neue Digests automatisch im Tresor speichern
+                Neue Sends automatisch im Tresor
               </label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const payload = JSON.stringify(allItems, null, 2)
-                  const blob = new Blob([payload], { type: 'application/json' })
-                  const url = URL.createObjectURL(blob)
-                  const a = document.createElement('a')
-                  a.href = url
-                  a.download = `morgendrot-tangle-inventory-${Date.now()}.json`
-                  a.click()
-                  URL.revokeObjectURL(url)
-                  setUiMsg('Inventory als JSON exportiert.')
-                }}
-              >
-                JSON export
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  const raw = window.prompt('JSON einfügen (Array aus Inventory-Einträgen):')
-                  if (!raw) return
-                  try {
-                    const parsed = JSON.parse(raw) as Array<Partial<TangleInventoryItem>>
-                    const mapped = parsed
-                      .filter((x) => typeof x?.digest === 'string' && x.digest.trim().length > 0)
-                      .map((x) => ({
-                        digest: String(x.digest),
-                        timestamp: Number.isFinite(x.timestamp) ? Number(x.timestamp) : Date.now(),
-                        type: (x.type as TangleInventoryItem['type']) ?? 'unknown',
-                        status: (x.status as TangleInventoryItem['status']) ?? 'anchored',
-                        nonce: typeof x.nonce === 'string' ? x.nonce : undefined,
-                        encrypted: typeof x.encrypted === 'boolean' ? x.encrypted : undefined,
-                      }))
-                    addManyTangleInventoryItems(mapped)
-                    refresh()
-                    setUiMsg(`JSON importiert: ${mapped.length} Einträge.`)
-                  } catch {
-                    setUiMsg('JSON-Import fehlgeschlagen.')
-                  }
-                }}
-              >
-                JSON import
-              </Button>
             </div>
-            <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto]">
-              <input
-                value={manualDigest}
-                onChange={(e) => setManualDigest(e.target.value)}
-                placeholder="Manueller Digest (0x...)"
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-              />
-              <select
-                value={manualType}
-                onChange={(e) => setManualType(e.target.value as TangleInventoryItem['type'])}
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-              >
-                <option value="unknown">Typ: Unbekannt</option>
-                <option value="text">Typ: Text</option>
-                <option value="image">Typ: Bild</option>
-                <option value="protocol-hash">Typ: Protokoll-Hash</option>
-                <option value="protocol-full">Typ: Protokoll-voll</option>
-              </select>
-              <select
-                value={manualStatus}
-                onChange={(e) => setManualStatus(e.target.value as TangleInventoryItem['status'])}
-                className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-              >
-                <option value="anchored">Status: anchored</option>
-                <option value="queued">Status: queued</option>
-                <option value="failed">Status: failed</option>
-              </select>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={async () => {
-                  const d = manualDigest.trim()
-                  if (!d) {
-                    setUiMsg('Digest fehlt.')
-                    return
-                  }
-                  addTangleInventoryItem({ digest: d, type: manualType, status: manualStatus })
-                  refresh()
-                  setUiMsg('Manueller Digest zur lokalen Liste hinzugefügt.')
-                }}
-              >
-                Hinzufügen
-              </Button>
-            </div>
-            {uiMsg ? <p className="text-xs text-muted-foreground">{uiMsg}</p> : null}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <input
-              value={digestSearch}
-              onChange={(e) => setDigestSearch(e.target.value)}
-              placeholder="Digest / Nonce / Chunk-Hash suchen…"
-              className="min-w-[12rem] flex-1 rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={scanBusy}
-              onClick={async () => {
-                setScanBusy(true)
-                setScanResult(null)
-                setUiMsg(null)
-                try {
-                  const r = await scanMailboxAndReassembleProtokollFull()
-                  if (!r.ok) {
-                    setScanResult(r.error)
-                    return
-                  }
-                  const preview = r.json.length > 4000 ? `${r.json.slice(0, 4000)}…` : r.json
-                  setScanResult(
-                    `Vollbericht zusammengesetzt (${r.partsFound}/${r.partsExpected} Teile, SHA-256 ${r.contentSha256.slice(0, 12)}…):\n${preview}`
-                  )
-                  setUiMsg('Protokoll-Chunks in der Mailbox gefunden und zusammengesetzt.')
-                } finally {
-                  setScanBusy(false)
-                }
-              }}
-            >
-              <Search className="mr-2 h-3.5 w-3.5" />
-              {scanBusy ? 'Suche…' : 'Protokoll-Chunks suchen'}
-            </Button>
-          </div>
-          {scanResult ? (
-            <pre className="max-h-40 overflow-auto rounded-md border border-border/70 bg-background/80 p-2 text-[10px] whitespace-pre-wrap">
-              {scanResult}
-            </pre>
           ) : null}
-          <div className="grid gap-2 rounded-lg border border-border/60 bg-muted/10 p-2 md:grid-cols-3">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as 'all' | TangleInventoryItem['type'])}
-              className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="all">Typ: alle</option>
-              <option value="text">Text</option>
-              <option value="image">Bild</option>
-              <option value="protocol-hash">Protokoll-Hash</option>
-              <option value="protocol-full">Protokoll-voll</option>
-              <option value="unknown">Unbekannt</option>
-            </select>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as 'all' | TangleInventoryItem['status'])}
-              className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="all">Status: alle</option>
-              <option value="anchored">anchored</option>
-              <option value="queued">queued</option>
-              <option value="failed">failed</option>
-            </select>
-            <select
-              value={filterRecovery}
-              onChange={(e) => setFilterRecovery(e.target.value as 'all' | 'found' | 'not-found')}
-              className="rounded-md border border-border bg-background px-2 py-1.5 text-xs"
-            >
-              <option value="all">Recovery: alle</option>
-              <option value="found">Recovery: gefunden</option>
-              <option value="not-found">Recovery: nicht gefunden</option>
-            </select>
-          </div>
+
+          {items.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/70 px-3 py-2">
+              <label className="inline-flex items-center gap-2 text-xs font-medium">
+                <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} />
+                Alle ({items.length})
+              </label>
+              {someSelected ? (
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={batchOpenExplorer}>
+                    <ExternalLink className="mr-1 h-3 w-3" />
+                    Explorer
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={batchRemoveFromList}>
+                    Aus Liste
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {uiMsg ? <p className="text-xs text-muted-foreground">{uiMsg}</p> : null}
+
           <div className="space-y-2">
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Noch keine lokalen txDigests gespeichert. Einträge entstehen nach erfolgreichen Verankerungen/Sendungen.
+                Noch keine IOTA-Transaktionen — entstehen nach Online-Sendung, Pfad-4-Spiegel oder Protokoll-Verankerung.
               </p>
             ) : (
-              items.map((it) => (
-                <div key={it.id} className="rounded-lg border border-border/70 bg-muted/10 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {typeLabel(it.type)} · {new Date(it.timestamp).toLocaleString('de-DE')}
-                      </p>
-                      <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">{it.digest}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        Status: {it.status}
-                        {it.encrypted != null ? ` · ${it.encrypted ? 'verschlüsselt' : 'Klartext'}` : ''}
-                        {it.nonce ? ` · Nonce ${it.nonce}` : ''}
-                        {it.chunkPart && it.chunkTotal
-                          ? ` · Teil ${it.chunkPart}/${it.chunkTotal}`
-                          : ''}
-                        {it.chunkSha256 ? ` · Chunk-Hash ${it.chunkSha256.slice(0, 12)}…` : ''}
-                        {it.anchorHashHex ? ` · Bericht-Hash ${it.anchorHashHex.slice(0, 12)}…` : ''}
-                      </p>
+              items.map((it) => {
+                const result = resultById[it.id]
+                const recoverable = canRecoverTangleInventoryText(it)
+                const secured = Boolean(it.evidenceSecuredAt)
+                const inVault = isInVault(it.digest)
+                const checked = selectedIds.has(it.id)
+                return (
+                  <div
+                    key={it.id}
+                    className={cn(
+                      'rounded-lg border border-border/70 bg-muted/10 p-3',
+                      checked && 'ring-1 ring-primary/40',
+                      secured && 'border-l-4 border-l-emerald-600'
+                    )}
+                  >
+                    <div className="flex flex-wrap items-start gap-2">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 shrink-0 rounded border-border"
+                        checked={checked}
+                        onChange={() => toggleSelected(it.id)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {typeLabel(it.type)} · {new Date(it.timestamp).toLocaleString('de-DE')}
+                        </p>
+                        <p className="mt-0.5 text-xs font-medium text-primary">
+                          {tangleInventoryOriginLabel(it.origin, it.type)}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {secured ? '✓ Beweis lokal gesichert' : 'Noch nicht gesichert'}
+                          {inVault ? ' · Im Tresor' : ''}
+                          {it.nonce ? ` · Nonce ${it.nonce}` : ''}
+                        </p>
+                        <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">{it.digest}</p>
+                      </div>
+                      <a
+                        href={explorerTxUrlFromDigest(it.digest)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Explorer
+                      </a>
                     </div>
-                    <a
-                      href={explorerTxUrlFromDigest(it.digest)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs hover:bg-muted"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Explorer
-                    </a>
-                  </div>
-                  <div className="mt-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={busyId === it.id}
-                      onClick={() => void loadAndDecrypt(it)}
-                    >
-                      {busyId === it.id ? (
-                        <>
-                          <RefreshCw className="mr-2 h-3.5 w-3.5 animate-spin" />
-                          Lädt…
-                        </>
-                      ) : (
-                        <>
-                          <Database className="mr-2 h-3.5 w-3.5" />
-                          Nachricht laden (RPC oder /inbox)
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="ml-2"
-                      onClick={async () => {
-                        setUiMsg(null)
-                        const r = await saveDigestToVault({
-                          digest: it.digest,
-                          timestamp: it.timestamp,
-                          type: it.type,
-                          status: it.status,
-                          nonce: it.nonce,
-                          encrypted: it.encrypted,
-                        })
-                        setUiMsg(r.ok ? 'Digest im Tresor gespeichert.' : (r.error ?? 'Tresor-Speichern fehlgeschlagen.'))
-                      }}
-                    >
-                      <Save className="mr-2 h-3.5 w-3.5" />
-                      Digest im Tresor speichern
-                    </Button>
-                    {resultById[it.id] ? (
-                      <pre className="mt-2 max-h-36 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/30 p-2 text-xs">
-                        {resultById[it.id]}
-                      </pre>
+                    <div className="mt-2 flex flex-wrap gap-2 pl-6">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={secured ? 'outline' : 'default'}
+                        disabled={batchBusy}
+                        onClick={async () => {
+                          const r = await secureEvidence(it)
+                          if (r.ok) {
+                            refresh()
+                            setUiMsg(
+                              r.textSaved
+                                ? 'Beweis lokal gesichert (Text + IOTA-Daten).'
+                                : 'Beweis lokal gesichert (IOTA-Daten; Text nicht verfügbar).'
+                            )
+                          } else {
+                            setUiMsg(r.error)
+                          }
+                        }}
+                      >
+                        <Save className="mr-1.5 h-3.5 w-3.5" />
+                        Beweis lokal sichern
+                      </Button>
+                      {recoverable ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busyId === it.id || batchBusy}
+                          onClick={() => void loadText(it)}
+                        >
+                          {busyId === it.id ? 'Lädt…' : 'Text nachladen'}
+                        </Button>
+                      ) : null}
+                      {!inVault && showTresorOpts ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const r = await saveDigestToVault(itemToVaultPayload(it))
+                            if (r.ok) await refreshVaultDigests()
+                            setUiMsg(r.ok ? 'Im Tresor.' : (r.error ?? 'Fehler'))
+                          }}
+                        >
+                          Im Tresor
+                        </Button>
+                      ) : null}
+                      {inVault && showTresorOpts ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            const r = await removeDigestFromVault(it.digest)
+                            if (r.ok) await refreshVaultDigests()
+                            setUiMsg(r.ok ? 'Aus Tresor entfernt.' : (r.error ?? 'Fehler'))
+                          }}
+                        >
+                          Aus Tresor löschen
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-muted-foreground"
+                        onClick={() => {
+                          removeTangleInventoryItem(it.id)
+                          refresh()
+                        }}
+                      >
+                        <X className="mr-1 h-3 w-3" />
+                        Entfernen
+                      </Button>
+                    </div>
+                    {(it.contentPreview && !result) || result ? (
+                      <div className="ml-6 mt-2">
+                        {result && 'error' in result ? (
+                          <p className="text-xs text-destructive">{result.error}</p>
+                        ) : (
+                          <div className="space-y-1">
+                            {result && !('error' in result) ? (
+                              <p className="text-[10px] text-muted-foreground">{sourceHint(result.source!)}</p>
+                            ) : null}
+                            <pre className="max-h-32 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/30 p-2 text-xs">
+                              {result && !('error' in result) ? result.text : it.contentPreview}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
                     ) : null}
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
+
           <DialogFooter>
             <Button
               type="button"
@@ -476,11 +560,13 @@ export function ChatViewTangleInventoryButton(p?: {
               onClick={() => {
                 clearTangleInventory()
                 setResultById({})
+                setSelectedIds(new Set())
                 refresh()
+                setUiMsg('Liste geleert.')
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Lokale Liste leeren
+              Liste leeren
             </Button>
             <Button type="button" onClick={() => setOpen(false)}>
               Schließen

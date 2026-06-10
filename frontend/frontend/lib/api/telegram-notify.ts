@@ -12,6 +12,8 @@ export async function notifyTelegramContact(body: {
   recipientAddress: string
   messagePreview: string
   senderLabel?: string
+  /** Kein Journal-Eintrag (z. B. Nebenkanal nach IOTA-Send — vermeidet Doppelzeile im Posteingang). */
+  skipJournal?: boolean
 }): Promise<TelegramNotifyResult> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/integrations/telegram/notify', {

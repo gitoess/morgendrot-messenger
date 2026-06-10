@@ -8,29 +8,16 @@
 import { useState } from 'react'
 
 export function useChatViewMeshPanelState() {
-  const [meshExportPw, setMeshExportPw] = useState('')
-  const [meshImportPw, setMeshImportPw] = useState('')
-  const [meshImportJson, setMeshImportJson] = useState('')
-  const [meshSyncBusy, setMeshSyncBusy] = useState(false)
   const [meshSyncMsg, setMeshSyncMsg] = useState<string | null>(null)
   const [localPurgeBusy, setLocalPurgeBusy] = useState(false)
   const [contactBleAddress, setContactBleAddress] = useState('')
   const [contactBleUuid, setContactBleUuid] = useState('')
   const [contactBleBusy, setContactBleBusy] = useState(false)
-  const [contactMeshNodeId, setContactMeshNodeId] = useState('')
   /** Composer: Klartext an einen Meshtastic-Knoten (!hex) statt Broadcast. */
   const [meshPlaintextToNodeEnabled, setMeshPlaintextToNodeEnabled] = useState(false)
   const [meshPlaintextNodeId, setMeshPlaintextNodeId] = useState('')
 
   return {
-    meshExportPw,
-    setMeshExportPw,
-    meshImportPw,
-    setMeshImportPw,
-    meshImportJson,
-    setMeshImportJson,
-    meshSyncBusy,
-    setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
     localPurgeBusy,
@@ -41,8 +28,6 @@ export function useChatViewMeshPanelState() {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    contactMeshNodeId,
-    setContactMeshNodeId,
     meshPlaintextToNodeEnabled,
     setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,

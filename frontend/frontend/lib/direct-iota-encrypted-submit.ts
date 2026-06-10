@@ -11,6 +11,7 @@ import {
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
+  validateMessagingMailboxObjectForPackage,
 } from '@morgendrot/core/iota'
 import { parseMailboxOutNonceMarker } from '@morgendrot/core'
 import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
@@ -23,6 +24,7 @@ import {
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
+import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 import {
   isDirectMailboxDrainEnabled,
   isIotaRelayOnlyMode,
@@ -109,10 +111,20 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   }
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
-    const mbOverride = (opts.mailboxObjectId ?? '').trim()
-    const usePrivateMb =
-      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) && mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
-    const mailboxObjectId = usePrivateMb ? mbOverride : snap.mailboxId
+    const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
+      mailboxObjectId: opts.mailboxObjectId,
+      serverMailboxId: snap.mailboxId,
+    })
+    const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+      client,
+      mailboxObjectId,
+      snap.packageId,
+      'any'
+    )
+    if (!mailboxCheck.ok) {
+      return { ok: false, error: mailboxCheck.error }
+    }
+    const privateMailbox = mailboxCheck.kind === 'privatemailbox'
     const txb = buildStoreEncryptedMailboxTransaction({
       packageId: snap.packageId,
       mailboxObjectId,
@@ -123,7 +135,7 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
       tag: opts.tag,
       nonce: opts.nonce,
       ttlDays: snap.ttlDays,
-      privateMailbox: usePrivateMb,
+      privateMailbox,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })

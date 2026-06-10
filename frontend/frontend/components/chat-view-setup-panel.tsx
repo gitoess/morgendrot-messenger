@@ -6,22 +6,9 @@
  */
 
 import { useMemo } from 'react'
-import { QrCode, Radio } from 'lucide-react'
-import { toast } from 'sonner'
-import {
-  exportContactMeshEncrypted,
-  importContactMeshEncrypted,
-  saveContactEntry,
-  type ContactMeshEntryClient,
-} from '@/frontend/lib/api'
-import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
-import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import {
-  MessengerGuideHint,
-  MessengerHandbookChatLink,
-  MESSENGER_HB_ANCHOR_HELTEC_MESH,
-} from '@/components/messenger-handbook-link'
+import { MESHTASTIC_WEB_DEVICE_SETTINGS_URL } from '@/frontend/lib/chat-view-messenger-transport'
 
 export type ChatViewSetupPanelMeshtastic = {
   bleSupported: boolean
@@ -54,18 +41,8 @@ export type ChatViewSetupPanelProps = {
   onContactBleAddressChange: (v: string) => void
   contactBleUuid: string
   onContactBleUuidChange: (v: string) => void
-  contactMeshNodeId: string
-  onContactMeshNodeIdChange: (v: string) => void
   contactBleBusy: boolean
   setContactBleBusy: (v: boolean) => void
-  meshExportPw: string
-  onMeshExportPwChange: (v: string) => void
-  meshImportPw: string
-  onMeshImportPwChange: (v: string) => void
-  meshImportJson: string
-  onMeshImportJsonChange: (v: string) => void
-  meshSyncBusy: boolean
-  setMeshSyncBusy: (v: boolean) => void
   meshSyncMsg: string | null
   setMeshSyncMsg: (v: string | null) => void
   /** Boss: dezenter Hinweis zu Handshake/Vertrauen */
@@ -110,18 +87,8 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     onContactBleAddressChange,
     contactBleUuid,
     onContactBleUuidChange,
-    contactMeshNodeId,
-    onContactMeshNodeIdChange,
     contactBleBusy,
     setContactBleBusy,
-    meshExportPw,
-    onMeshExportPwChange,
-    meshImportPw,
-    onMeshImportPwChange,
-    meshImportJson,
-    onMeshImportJsonChange,
-    meshSyncBusy,
-    setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
     activePackageId,
@@ -164,34 +131,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
 
       {/* ——— LoRa · Heltec ——— */}
       {showLora ? (
-      <div className="mt-2 rounded-lg border border-sky-500/30 bg-sky-500/[0.04] p-3 sm:p-4 dark:bg-sky-950/10">
-        <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
-          <Radio className="h-4 w-4" />
-          LoRa · Heltec & Meshtastic
-        </h4>
-        {typeof window !== 'undefined' && !window.isSecureContext ? (
-          <p className="mb-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-2.5 py-2 text-[11px] leading-relaxed text-amber-950 dark:text-amber-50/90">
-            <strong className="text-foreground">Web Bluetooth:</strong> Chromium-Browser erlauben die API nur in einem{' '}
-            <strong className="text-foreground">sicheren Kontext</strong> (HTTPS oder{' '}
-            <span className="font-mono">http://127.0.0.1</span> / <span className="font-mono">localhost</span>). Unter{' '}
-            <span className="font-mono">http://192.168.…</span> o. Ä. erscheint oft{' '}
-            <span className="font-mono">Web Bluetooth API globally disabled</span> — Abhilfe:{' '}
-            <strong className="text-foreground">adb reverse tcp:3341</strong> und am Telefon{' '}
-            <span className="font-mono">http://127.0.0.1:3341</span>, oder TLS-Dev-URL / Deploy mit HTTPS.
-          </p>
-        ) : null}
-        <p className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span>
-            <strong className="text-foreground">Heltec</strong> per Web Bluetooth — Details im Handbuch.
-          </span>
-          <MessengerGuideHint
-            ariaLabel="Hilfe Heltec, Web Bluetooth, Posteingang"
-            teaser="Mehr"
-            anchor={MESSENGER_HB_ANCHOR_HELTEC_MESH}
-          />
-          <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_HELTEC_MESH} />
-        </p>
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
             <span className="text-xs text-amber-600 dark:text-amber-400">
               Web Bluetooth/Serial nicht verfügbar (Browser/OS).
@@ -199,25 +139,6 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           ) : meshtastic.connected ? (
             <>
               <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic verbunden</span>
-              <span className="text-[11px] text-muted-foreground">
-                Transport: {meshtastic.transportKind === 'usb' ? 'USB (Web Serial)' : 'Bluetooth (Web BT)'}
-              </span>
-              <span className="text-[11px] text-muted-foreground">
-                RX: {meshtastic.lastRxDebug ?? 'noch kein Paket gesehen'}
-              </span>
-              {meshtastic.meshRxSubscriptions ? (
-                <span className="w-full text-[10px] leading-snug text-muted-foreground" title="Gebundene MeshDevice-Events">
-                  Events: {meshtastic.meshRxSubscriptions}
-                </span>
-              ) : null}
-              <span className="w-full text-[10px] leading-snug text-muted-foreground">
-                F12-Konsole:{' '}
-                <code className="rounded bg-muted px-1 py-0.5 text-[9px]">
-                  localStorage.setItem(&quot;morgendrot.meshRxDebug&quot;,&quot;1&quot;)
-                </code>{' '}
-                → Seite neu laden; dann erscheinen{' '}
-                <code className="rounded bg-muted px-1 py-0.5 text-[9px]">[morgendrot mesh]</code>-Zeilen bei RX.
-              </span>
               <button
                 type="button"
                 onClick={() => meshtastic.disconnect()}
@@ -225,6 +146,14 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
               >
                 Trennen
               </button>
+              <a
+                href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                Meshtastic einrichten
+              </a>
             </>
           ) : (
             <>
@@ -248,197 +177,22 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                   ? 'USB verbindet…'
                   : 'USB verbinden'}
               </button>
+              <a
+                href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
+              >
+                Meshtastic einrichten
+              </a>
             </>
           )}
+          {meshtastic.error ? (
+            <p className="w-full whitespace-pre-wrap break-words text-xs text-red-500 dark:text-red-400">
+              {meshtastic.error}
+            </p>
+          ) : null}
         </div>
-        {meshtastic.error && (
-          <p className="mb-2 whitespace-pre-wrap break-words text-xs text-red-500 dark:text-red-400">{meshtastic.error}</p>
-        )}
-
-        <div className="mb-4 rounded-lg border border-border bg-muted/20 p-3 space-y-2">
-          <p className="text-xs font-semibold text-foreground">Kontext für Funk (optional)</p>
-          <p className="text-[11px] text-muted-foreground">
-            <strong className="text-foreground">0x… (64 Hex):</strong> Zuordnung eines Mesh-Absenders zu einer{' '}
-            <strong className="text-foreground">IOTA-/Mailbox-Adresse</strong> (Fingerprint) —{' '}
-            <strong className="text-foreground">nicht</strong> die LoRa-Zieladresse im Composer. Zum Senden auf Funk brauchst du{' '}
-            <strong className="text-foreground">keine</strong> 0x im Nachrichtenfeld (Broadcast).{' '}
-            <strong className="text-foreground">Node-ID</strong> <span className="font-mono">!…</span> wie am Radio — für Kontaktbuch und Zielwahl im Klartext-Composer.
-          </p>
-          <input
-            type="text"
-            value={contactBleAddress}
-            onChange={(e) => onContactBleAddressChange(e.target.value.trim())}
-            placeholder="0x… (64 Hex) — Zuordnung Mesh ↔ IOTA"
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
-          />
-          <label className="text-[11px] font-medium text-foreground">Meshtastic Node-ID (optional)</label>
-          <p className="text-[10px] text-muted-foreground">
-            Funk-ID wie am Gerät/Radio: <span className="font-mono">!1a2b3c4d</span> — für Zuordnung und spätere
-            Klartext-Ziele; unabhängig von der 0x-Mailbox-Adresse.
-          </p>
-          <input
-            type="text"
-            value={contactMeshNodeId}
-            onChange={(e) => onContactMeshNodeIdChange(e.target.value.trim())}
-            placeholder="!… (Meshtastic)"
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
-            spellCheck={false}
-          />
-          <button
-            type="button"
-            disabled={contactBleBusy || contactBleAddress.length < 66}
-            onClick={async () => {
-              setContactBleBusy(true)
-              setMeshSyncMsg(null)
-              const r = await saveContactEntry({
-                address: contactBleAddress.trim(),
-                meshNodeId: contactMeshNodeId.trim() || undefined,
-              })
-              setContactBleBusy(false)
-              if (r.ok) {
-                setMeshSyncMsg(r.message || 'Funk-Kontext gespeichert (0x + optional Node-ID).')
-                refreshContactDirectory()
-              } else {
-                setMeshSyncMsg(r.error || 'Speichern fehlgeschlagen')
-              }
-            }}
-            className="w-full rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-          >
-            {contactBleBusy ? 'Speichere…' : 'Funk-Kontext speichern (0x + optional Node-ID)'}
-          </button>
-          {Object.keys(directory).length > 0 && (
-            <ul className="mt-2 max-h-28 overflow-y-auto text-[10px] font-mono text-muted-foreground space-y-0.5">
-              {Object.entries(directory).map(([addr, e]) =>
-                e.bleUuid || e.meshNodeId ? (
-                  <li key={addr}>
-                    {addr.slice(0, 10)}…
-                    {e.meshNodeId ? (
-                      <>
-                        {' '}
-                        · Node <span className="text-foreground">{e.meshNodeId}</span>
-                      </>
-                    ) : null}
-                    {e.bleUuid ? (
-                      <>
-                        {' '}
-                        · BLE <span className="text-foreground">{e.bleUuid}</span>
-                      </>
-                    ) : null}
-                  </li>
-                ) : null
-              )}
-            </ul>
-          )}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-foreground">Export (PC → QR / Datei)</p>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={meshExportPw}
-              onChange={(e) => onMeshExportPwChange(e.target.value)}
-              placeholder="Passwort (min. 8 Zeichen)"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
-            />
-            <button
-              type="button"
-              disabled={meshSyncBusy || meshExportPw.length < 8}
-              onClick={async () => {
-                setMeshSyncBusy(true)
-                setMeshSyncMsg(null)
-                const r = await exportContactMeshEncrypted(meshExportPw)
-                setMeshSyncBusy(false)
-                if (r.ok && r.bundle) {
-                  onMeshImportJsonChange(JSON.stringify(r.bundle))
-                  setMeshSyncMsg('Bundle unten im Import-Feld – als QR encodieren oder kopieren.')
-                  toast.success('Mesh-Daten exportiert – Bundle steht im Import-Feld.')
-                } else {
-                  const err = r.error || 'Export fehlgeschlagen'
-                  setMeshSyncMsg(err)
-                  toast.error(err)
-                }
-              }}
-              className="w-full rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-            >
-              Mesh-Daten exportieren
-            </button>
-          </div>
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-foreground">Import</p>
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={meshImportPw}
-              onChange={(e) => onMeshImportPwChange(e.target.value)}
-              placeholder="Passwort"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
-            />
-            <button
-              type="button"
-              disabled={meshSyncBusy}
-              onClick={async () => {
-                setMeshSyncBusy(true)
-                setMeshSyncMsg(null)
-                const s = await scanMeshBundleQrWithCamera()
-                if ('error' in s) {
-                  setMeshSyncMsg(s.error)
-                  toast.error(s.error)
-                  setMeshSyncBusy(false)
-                  return
-                }
-                onMeshImportJsonChange(s.bundleJson)
-                setMeshSyncMsg('QR gelesen – Passwort prüfen und „Import anwenden“.')
-                toast.success('QR gelesen – Import mit Passwort abschließen.')
-                setMeshSyncBusy(false)
-              }}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-            >
-              <QrCode className="h-3.5 w-3.5" />
-              QR scannen (Capacitor)
-            </button>
-            <textarea
-              value={meshImportJson}
-              onChange={(e) => onMeshImportJsonChange(e.target.value)}
-              placeholder="JSON-Bundle einfügen …"
-              rows={4}
-              className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-[11px]"
-            />
-            <button
-              type="button"
-              disabled={meshSyncBusy || meshImportPw.length < 8 || !meshImportJson.trim()}
-              onClick={async () => {
-                const bundle = parseMeshBundleFromQrText(meshImportJson)
-                if (!bundle) {
-                  const err = 'Ungültiges Bundle-JSON'
-                  setMeshSyncMsg(err)
-                  toast.error(err)
-                  return
-                }
-                setMeshSyncBusy(true)
-                setMeshSyncMsg(null)
-                const r = await importContactMeshEncrypted(meshImportPw, bundle)
-                setMeshSyncBusy(false)
-                if (r.ok) {
-                  const msg = r.message || `Import OK (${r.merged ?? 0})`
-                  setMeshSyncMsg(msg)
-                  toast.success(msg)
-                  refreshContactDirectory()
-                } else {
-                  const err = r.error || 'Import fehlgeschlagen'
-                  setMeshSyncMsg(err)
-                  toast.error(err)
-                }
-              }}
-              className="w-full rounded-lg bg-primary py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-            >
-              Import anwenden
-            </button>
-          </div>
-        </div>
-        {meshSyncMsg && showLora ? <p className="mt-2 text-xs text-muted-foreground">{meshSyncMsg}</p> : null}
-      </div>
       ) : null}
 
       {showAdhoc ? (

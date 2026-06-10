@@ -17,6 +17,10 @@ import {
   trySubmitPlaintextMailboxViaDirectIota,
 } from '@/frontend/lib/direct-iota-plain-submit'
 import {
+  canTryLiveTeamBroadcastDirectMailbox,
+  trySubmitTeamPlaintextBroadcastViaDirectIota,
+} from '@/frontend/lib/direct-iota-team-broadcast-submit'
+import {
   canTryLiveEncryptedDirectMailbox,
   trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
 } from '@/frontend/lib/direct-iota-encrypted-submit'
@@ -84,6 +88,39 @@ export async function sendPlaintextMailboxHybrid(
   const apiRes = await sendMessage(recipient, wireForApi, false, {
     messagingPersistenceMode: mode,
     mailboxObjectId: opts?.mailboxObjectId,
+  })
+  const hybrid = fromApiResponse(apiRes)
+  if (hybrid.ok) return hybrid
+  if (directErr) {
+    if (shouldSkipMessengerApiRelayFallback()) {
+      return { ok: false, error: directErr }
+    }
+    return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
+  }
+  return hybrid
+}
+
+/** Team-Broadcast Klartext: Direct zuerst, dann `/send-team-broadcast` (1× TX). */
+export async function sendTeamPlaintextBroadcastHybrid(
+  teamMailboxObjectId: string,
+  wireForApi: string,
+  messageNonceU64: bigint
+): Promise<MailboxHybridSendResult> {
+  const teamMb = teamMailboxObjectId.trim()
+  let directErr: string | undefined
+  if (canTryLiveTeamBroadcastDirectMailbox()) {
+    const dr = await trySubmitTeamPlaintextBroadcastViaDirectIota({
+      teamMailboxObjectId: teamMb,
+      payloadUtf8: wireForApi,
+      nonce: messageNonceU64,
+    })
+    if (dr.ok) return { ok: true, txDigest: dr.digest }
+    directErr = dr.error
+  }
+  const { executeCommand } = await import('@/frontend/lib/api/execute-command')
+  const apiRes = await executeCommand('/send-team-broadcast', [wireForApi], {
+    mailboxObjectId: teamMb,
+    messagingPersistenceMode: 'mailbox',
   })
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid

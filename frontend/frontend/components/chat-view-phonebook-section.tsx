@@ -6,6 +6,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
+import { PhonebookMeshBackupPanel } from '@/frontend/components/phonebook-mesh-backup-panel'
 import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { saveContactEntry } from '@/frontend/lib/api'
@@ -283,6 +284,8 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           </button>
         </div>
       ) : null}
+
+      <PhonebookMeshBackupPanel onContactsChanged={refreshContactDirectory} className="mb-3" />
 
       {p.allowInitialProfileImport ? (
         <PhonebookContactDistributePanel

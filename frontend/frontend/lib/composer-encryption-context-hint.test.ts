@@ -2,10 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { getComposerEncryptionContextHint } from './composer-encryption-context-hint'
 
 describe('getComposerEncryptionContextHint (H.3o.6)', () => {
-  it('funk klartext: Meshtastic-Kanal', () => {
-    expect(getComposerEncryptionContextHint({ forcedTransport: 'mesh', encrypted: false })).toMatch(
-      /Meshtastic-Kanal/
-    )
+  it('funk klartext: kein Zusatz-Hinweis (Details im Handbuch / Meshtastic-Web)', () => {
+    expect(getComposerEncryptionContextHint({ forcedTransport: 'mesh', encrypted: false })).toBeNull()
   })
 
   it('funk + schloss: warnt vor Mismatch', () => {

@@ -176,6 +176,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.26** | **Telegram-Integration (Runtime)** — Alarme + optionale Kontakt-Benachrichtigung; **kein** `.env` für `TG_*` auf dem Gerät; **§ H.6e** / **§ H.20** |
 | **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling, Inbox-Zeile; Push-Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
 | **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); **sehr spätes Backlog** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss) — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
+| **§ H.31** | **Multi-Pinnwand** — mehrere Bretter pro Einsatz (Boss schreibt, alle lesen); **Backlog ganz hinten** — **`docs/BROADCAST-PINNWAND.md`** |
 | **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -1328,6 +1329,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Nachtrag 2026-05-20 (M2a pairwise Mailbox-Send):** Gruppenkanal + **Persistent (Mailbox)** + **online** → optional **alle Mitglieder** (`morgendrot.groupMailboxSendAll.v1`, Default an): `sendMailboxPairwiseGroup` in **`use-chat-view-handle-send.ts`**, UI **`chat-view-group-panel.tsx`**. 1× Fee-Backlog: **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
 
+**Nachtrag 2026-06-02 (M2 — Gruppenchat Zielbild):** Kritische Einordnung + Empfehlung **Hybrid Funk + IOTA**, on-chain Ziel **Team-Broadcast (M2c)** — **`docs/GRUPPENCHAT-ZIELBILD.md`**. Posteingang Gruppen-Filter repariert (`use-chat-view-core.ts`).
+
 ### H.23 Verschlüsselung — MVP-Architektur (nächster Schwerpunkt)
 
 **Status:** **Backlog / Entscheidung offen** — **keine** klare MVP-Architektur dokumentiert und festgezogen. **Zwischenstand Persistenz (v1, vor Ratchet):** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`** — Chain-Handshake + Vault-`.handshakes` + Session-Restore nach Entsperren; **kein** Double Ratchet.
@@ -1760,6 +1763,30 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Doku-Ist:** **`docs/VAULT-EINRICHTEN.md`** (Abschnitt „Komplett auf Null setzen?“), **`frontend/public/handbook/VAULT-EINRICHTEN.md`**. **Vision:** auch **`docs/VISION-ZUKUNFT.md`**.
 
 **Priorität:** **Nach** Tresor-UX stabil (**Entsperren nach Lock**, Import vom Gerät) und **§ H.29** — kein Blocker für Messenger-Feldtests.
+
+---
+
+### H.31 Multi-Pinnwand (mehrere Bretter) — **Backlog ganz hinten**
+
+**Status:** **Backlog / Vision** (2026-06-02). **Ziel:** Mehr als **eine** Pinnwand pro Einsatz — **Boss/Führung** kann an **verschiedene Bretter schreiben** (z. B. Lage A vs. Lage B, Team vs. Öffentlichkeit intern); **alle berechtigten Rollen** können die für sie vorgesehenen Bretter **lesen** (Helfer weiterhin ohne technische Adressen).
+
+**Ist (M3):** Genau **eine** Brett-Adresse pro Deployment — `BROADCAST_PINNWAND_ADDRESS` + `BROADCAST_AUTHORIZED_SENDERS` in `.env`/Handoff; UI setzt Empfänger automatisch (`/api/status` → `broadcastPinnwand.address`); kein Adress-Picker im Composer. Workaround heute: **§ H.24** Package-Profile / anderer Handoff = anderes Brett — **kein** Multi-Board in einer Inbox.
+
+**Geplanter Produktumfang (Grobraster, offen):**
+
+| Aspekt | Ziel |
+|--------|------|
+| **Konfiguration** | Mehrere Brett-Adressen + Labels (Runtime oder Handoff; Whitelist pro Brett) |
+| **Schreiben (Boss)** | Auswahl **welches Brett** im Kanal Lagebild/Pinnwand (Dropdown o. ä.) |
+| **Lesen (alle)** | Gefilterte oder getrennte Inbox pro Brett; Helfer-Streifen weiter rollenmaskiert |
+| **Herkunft** | Sichtbar **welches Brett** (Label), Absender wie heute (`pinnwandSenderDisplayLabel`) |
+| **Abgrenzung** | Weiter **Klartext/IOTA-Online** — kein Ersatz für Gruppenchat oder Funk-Broadcast |
+
+**Nicht-Ziel (v1 Multi-Board):** Beliebig viele öffentliche Bretter ohne Moderation; parallele Meshtastic-Pinnwände; verschlüsselte Pinnwand-Posts.
+
+**Priorität:** **Ganz hinten** — erst nach stabilem **§ H.22 M3** (Pinning, Moderation, Rollen-Lesemodus) und sinnvoller **§ H.24**-Nutzung im Feld. Kein Blocker für Messenger-Feldtests.
+
+**Verknüpfung:** **§ H.22 M3**, **§ H.24**, **`docs/BROADCAST-PINNWAND.md`**, **`docs/PINNWAND-ANZEIGE-ZIELBILD.md`**, **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`**.
 
 ---
 

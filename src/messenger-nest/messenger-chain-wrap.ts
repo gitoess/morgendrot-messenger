@@ -10,6 +10,7 @@ import {
     sendEcdhInit,
     storeEncryptedMessage,
     storePlaintextMessage,
+    storeTeamPlaintextBroadcast,
     purgeHandshake as chainPurgeHandshake,
     purgeMessage as chainPurgeMessage,
     enableEmergencyPurgeVault as chainEnableEmergencyPurgeVault,
@@ -156,6 +157,29 @@ export async function sendPlaintextOnly(recipient: string, text: string, sendOpt
         forceLegacyPlaintext: forceLegacy,
         signOptions: messengerGasPolicyOpts(),
     });
+}
+
+/** Team-Broadcast Klartext — 1× TX in Shared Team-Mailbox (Gruppenchat M2c). */
+export async function sendTeamPlaintextBroadcastOnly(teamMailboxObjectId: string, text: string) {
+    const parsedNonce = parseMailboxOutNonceMarker(text);
+    const body = parsedNonce ? parsedNonce.rest : text;
+    const n = new TextEncoder().encode(body).length;
+    if (n > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+        throw new Error(
+            `Klartext zu lang (${n} B UTF-8, max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}; Move reines Arg ${MOVE_MAX_PURE_VECTOR_U8_BYTES} B).`
+        );
+    }
+    assertMessengerMediaNetBlobWithinLimit(body);
+    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
+    const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    return storeTeamPlaintextBroadcast(
+        teamMailboxObjectId.trim(),
+        MY_ADDR,
+        new TextEncoder().encode(body),
+        nonce,
+        getWalletPassword(),
+        { signOptions: messengerGasPolicyOpts() }
+    );
 }
 
 export async function purgeHandshake(recipient: string, sender: string) {

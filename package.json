@@ -106,6 +106,8 @@
     "test:wizard-30": "tsx scripts/run-wizard-30.ts",
     "test:move": "cd move-test && iota move test",
     "deploy:move-package": "tsx scripts/deploy-move-package.ts",
+    "test:team-mailbox-create": "tsx scripts/test-create-team-mailbox-command.ts",
+    "test:team-broadcast-smoke": "tsx scripts/test-team-broadcast-smoke.ts",
     "test:ui": "playwright test",
     "test:ui:lite": "playwright test e2e/lite-ui.spec.ts --project=lite-ui",
     "test:ui:messenger": "playwright test --project=messenger-ui",

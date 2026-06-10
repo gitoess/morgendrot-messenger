@@ -2,9 +2,8 @@
 
 import { useCallback, useState } from 'react'
 import Link from 'next/link'
-import { Download, FileJson, FileUp } from 'lucide-react'
+import { FileJson, FileUp } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { exportContactMeshEncrypted } from '@/frontend/lib/api'
 import {
   buildInitialProfileFromDirectory,
   downloadInitialProfileJson,
@@ -53,7 +52,7 @@ function ActionCard(p: {
 /** Import/Export initialProfile und verschl. Mesh-Backup — für Boss/Kommandant im Telefonbuch. */
 export function PhonebookContactDistributePanel(p: PhonebookContactDistributePanelProps) {
   const [importOpen, setImportOpen] = useState(false)
-  const [busy, setBusy] = useState<'contacts' | 'mesh' | null>(null)
+  const [busy, setBusy] = useState<'contacts' | null>(null)
   const [msg, setMsg] = useState('')
 
   const contactCount = Object.keys(p.directory).filter((a) => /^0x[a-fA-F0-9]{64}$/i.test(a)).length
@@ -70,26 +69,10 @@ export function PhonebookContactDistributePanel(p: PhonebookContactDistributePan
     setMsg(`${(profile.contacts as unknown[])?.length ?? 0} Kontakt(e) als initialProfile exportiert.`)
   }, [p.directory])
 
-  const exportMeshBackup = useCallback(async () => {
-    const pw = window.prompt('Passwort für verschlüsseltes Kontakt-Backup (min. 8 Zeichen):')?.trim()
-    if (!pw || pw.length < 8) {
-      if (pw != null) setMsg('Passwort zu kurz (min. 8 Zeichen).')
-      return
-    }
-    setBusy('mesh')
-    setMsg('')
-    try {
-      const r = await exportContactMeshEncrypted(pw)
-      setMsg(r.ok ? r.message || 'Verschlüsseltes Backup heruntergeladen.' : r.error || 'Export fehlgeschlagen.')
-    } finally {
-      setBusy(null)
-    }
-  }, [])
-
   return (
     <div className={cn('space-y-2 rounded-xl border border-border/80 bg-muted/15 p-3', p.className)}>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kontakte verteilen</p>
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         <ActionCard
           icon={<FileUp className="h-4 w-4 text-cyan-600" />}
           title="Importieren"
@@ -111,13 +94,6 @@ export function PhonebookContactDistributePanel(p: PhonebookContactDistributePan
               setBusy(null)
             }
           }}
-        />
-        <ActionCard
-          icon={<Download className="h-4 w-4 text-sky-600" />}
-          title="Verschl. Backup"
-          hint="Passwort — inkl. Mesh"
-          busy={busy === 'mesh'}
-          onClick={() => void exportMeshBackup()}
         />
       </div>
       <p className="text-[11px] text-muted-foreground">

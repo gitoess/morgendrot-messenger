@@ -34,7 +34,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(screen.getByRole('button', { name: /adhoc/i })).toBeInTheDocument()
   })
 
-  it('zeigt Verschlüsselungs-Hinweis bei funk', () => {
+  it('zeigt keinen Verschlüsselungs-Hinweis bei funk klartext', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -44,7 +44,7 @@ describe('ChatViewSendPathCompact', () => {
         onForcedTransportChange={noop}
       />
     )
-    expect(screen.getByRole('note')).toHaveTextContent(/Meshtastic-Kanal/)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
   it('telegram setzt nur delivery (nicht forcedTransport — der Wrapper würde chain erzwingen)', () => {

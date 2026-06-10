@@ -49,6 +49,7 @@ import {
   getActiveMessengerGroup,
   type MessengerGroupDefinition,
 } from '@/frontend/lib/messenger-group-store'
+import { resolveGroupTeamMailboxObjectId } from '@/frontend/lib/group-team-broadcast'
 import {
   isDialogChannel,
   isGroupChannel,
@@ -61,6 +62,7 @@ import { isSimpleUiMode } from '@/frontend/lib/messenger-role-capabilities'
 import {
   isMessengerHelperRole,
   showPinnwandInboxStrip,
+  buildPinnwandMatchContext,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
@@ -91,6 +93,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     return getActiveMessengerGroup()
   }, [isGroup, groupsRevision])
   const groupMemberFilter = isGroup && activeGroup ? activeGroup.memberAddresses : null
+  const groupTeamMailboxId = useMemo(
+    () => resolveGroupTeamMailboxObjectId(activeGroup),
+    [activeGroup]
+  )
+  const inboxAlsoMailboxIds = useMemo(
+    () => (groupTeamMailboxId ? [groupTeamMailboxId] : []),
+    [groupTeamMailboxId]
+  )
   const refreshMessengerGroups = useCallback(() => setGroupsRevision((n) => n + 1), [])
 
   const [message, setMessage] = useState('')
@@ -149,7 +159,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   /** Einmal: bei `TRANSPORT_PROFILE=mesh-first` Default-Sendeweg „funk“ (§ TRANSPORT-AND-IOTA-LAYERS). */
   const meshFirstTransportDefaultApplied = useRef(false)
 
-  /** Pinnwand: verschlüsselter Funk ist ohnehin gesperrt — Klartext konsistent setzen. */
+  /** Pinnwand: kein E2EE — Klartext konsistent setzen (Gruppe: Umschalter im Gruppenpanel). */
   useEffect(() => {
     if (!isPrivate) setEncryptedInternal(false)
   }, [isPrivate])
@@ -213,6 +223,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     refreshContactDirectory,
     packageId: inboxPackageFilter.trim() || undefined,
     myAddress,
+    alsoMailboxIds: inboxAlsoMailboxIds,
   })
 
   const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
@@ -366,13 +377,17 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     })
 
   const inboxOverviewEnabled = useMemo(() => {
-    if (!isPrivate || isPinnwandChannel(channelMode)) return false
     return isSimpleUiMode(apiStatus) || isMessengerHelperRole(role)
-  }, [isPrivate, channelMode, apiStatus, role])
+  }, [apiStatus, role])
 
   const excludePinnwandFromOverviewAlle = useMemo(
     () => showPinnwandInboxStrip(apiStatus, role, channelMode),
     [apiStatus, role, channelMode]
+  )
+
+  const pinnwandMatchContext = useMemo(
+    () => buildPinnwandMatchContext(apiStatus, myAddress),
+    [apiStatus, myAddress]
   )
 
   const {
@@ -395,6 +410,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxPartnerOptions,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
@@ -423,10 +439,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatusMsg,
     myAddress,
     contactDirectory: directory,
-    groupMemberFilter,
+    groupMemberFilter: isGroup ? groupMemberFilter : null,
+    teamMailboxObjectId: isGroup ? groupTeamMailboxId : null,
     isGroupMode: isGroup,
     isPinnwandMode: isPinnwandChannel(channelMode),
-    pinnwandBroadcastAddress: apiStatus?.broadcastPinnwand?.address ?? '',
+    pinnwandMatchContext,
     inboxOverviewEnabled,
     excludePinnwandFromOverviewAlle,
   })
@@ -529,14 +546,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   }, [meshtastic.connected, meshtastic.sendBinaryV2])
 
   const {
-    meshExportPw,
-    setMeshExportPw,
-    meshImportPw,
-    setMeshImportPw,
-    meshImportJson,
-    setMeshImportJson,
-    meshSyncBusy,
-    setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
     localPurgeBusy,
@@ -547,8 +556,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    contactMeshNodeId,
-    setContactMeshNodeId,
     meshPlaintextToNodeEnabled,
     setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
@@ -855,14 +862,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     slideSequences,
     inboxRows,
     meshtastic,
-    meshExportPw,
-    setMeshExportPw,
-    meshImportPw,
-    setMeshImportPw,
-    meshImportJson,
-    setMeshImportJson,
-    meshSyncBusy,
-    setMeshSyncBusy,
     meshSyncMsg,
     setMeshSyncMsg,
     localPurgeBusy,
@@ -873,8 +872,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    contactMeshNodeId,
-    setContactMeshNodeId,
     meshPlaintextToNodeEnabled,
     setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
@@ -955,6 +952,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxPartnerOptions,
     inboxUnreadThreadOptions,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,

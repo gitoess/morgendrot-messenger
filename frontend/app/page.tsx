@@ -2,14 +2,21 @@
 
 import dynamic from 'next/dynamic'
 import { DashboardPageLoading } from '@/frontend/components/dashboard-page-loading'
+import { importWithChunkRecovery } from '@/frontend/lib/chunk-load-error'
 
 const MessengerDashboard = dynamic(
-  () => import('@/frontend/components/messenger-dashboard').then((m) => m.MessengerDashboard),
+  () =>
+    importWithChunkRecovery(() =>
+      import('@/frontend/components/messenger-dashboard').then((m) => m.MessengerDashboard)
+    ),
   { ssr: false, loading: () => <DashboardPageLoading /> }
 )
 
 const ProjektDashboard = dynamic(
-  () => import('@/frontend/components/projekt-dashboard').then((m) => m.ProjektDashboard),
+  () =>
+    importWithChunkRecovery(() =>
+      import('@/frontend/components/projekt-dashboard').then((m) => m.ProjektDashboard)
+    ),
   { ssr: false, loading: () => <DashboardPageLoading /> }
 )
 

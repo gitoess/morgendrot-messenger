@@ -67,7 +67,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [activeView, setActiveView] = useState<DashboardActiveView | null>(null)
   const [connected, setConnected] = useState<boolean | null>(null)
   const [networkInfo, setNetworkInfo] = useState('')
-  const [locked, setLocked] = useState(false)
+  /** Bis zum ersten Status-Poll: Tresor als gesperrt annehmen (kein Dashboard ohne Entsperren). */
+  const [locked, setLocked] = useState(true)
   const [backendReachable, setBackendReachable] = useState<boolean | null>(null)
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -182,7 +183,16 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }
 
   const checkStatus = useCallback(async () => {
-    const res = await fetchStatus()
+    let res: Awaited<ReturnType<typeof fetchStatus>>
+    try {
+      res = await fetchStatus()
+    } catch (e) {
+      console.warn('[status] Unerwarteter Fehler beim Status-Poll.', e)
+      setBackendReachable(false)
+      setConnected(false)
+      if (!isStandaloneMessengerWithoutBasis()) setLocked(true)
+      return
+    }
     if ('pollClockHint' in res) {
       const { pollClockHint: _hint, ...snap } = res
       setApiSnapshot(snap)
@@ -232,6 +242,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       if (standaloneWithoutBasis) {
         setLocked(resolveStandaloneDeviceLocked())
         signerIsSdkRef.current = true
+      } else {
+        setLocked(true)
       }
     }
   }, [])

@@ -2244,6 +2244,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     const vaultRegistryId = String(data.vaultRegistryId ?? '').trim();
                     const nextPublicDirectIotaRpcUrl = String(data.nextPublicDirectIotaRpcUrl ?? '').trim();
                     const handoffLabel = String(data.handoffLabel ?? data.label ?? '').trim();
+                    const messengerGroupHandoff = String(data.messengerGroupHandoff ?? '').trim();
                     const helperRoleRaw = String(data.helperRole ?? '').trim().toLowerCase();
                     const helperRole =
                         helperRoleRaw === 'arbeiter' || helperRoleRaw === 'kommandant' ? helperRoleRaw : 'messenger';
@@ -2288,6 +2289,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             handoffLabel: handoffLabel || undefined,
                             broadcastPinnwandEnabled: CFG.ENABLE_BROADCAST_PINNWAND,
                             broadcastPinnwandAddress: (CFG.BROADCAST_PINNWAND_ADDRESS || '').trim() || undefined,
+                            messengerGroupHandoff: messengerGroupHandoff || undefined,
                         });
                         const resolvedRoleId =
                             roleId != null && Number.isFinite(roleId) ? roleId : 14;

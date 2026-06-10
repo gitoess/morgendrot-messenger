@@ -6,20 +6,19 @@ import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-st
 const LS_SEND_ALL = 'morgendrot.groupMailboxSendAll.v1'
 const ADDR_64 = /^0x[a-f0-9]{64}$/
 
+/** Gruppenchat sendet immer an alle Mitglieder (kein Einzel-Empfänger im Composer). */
 export function readGroupMailboxSendAll(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    const v = window.localStorage.getItem(LS_SEND_ALL)
-    if (v === '0') return false
-    return true
-  } catch {
-    return true
-  }
+  return true
 }
 
-export function writeGroupMailboxSendAll(value: boolean): void {
+/** @deprecated Gruppenchat ist immer „an alle“ — Schreiben hat keine Wirkung mehr. */
+export function writeGroupMailboxSendAll(_value: boolean): void {
   if (typeof window === 'undefined') return
-  window.localStorage.setItem(LS_SEND_ALL, value ? '1' : '0')
+  try {
+    window.localStorage.removeItem(LS_SEND_ALL)
+  } catch {
+    /* ignore */
+  }
 }
 
 export function resolveGroupMailboxSendTargets(p: {

@@ -8,6 +8,10 @@ export type MessengerGroupDefinition = {
   memberAddresses: string[]
   /** M2b: optionaler Streams-Anchor für Live-Hinweise (Archiv bleibt Mailbox). */
   streamsAnchorId?: string
+  /** M2c: dedizierte Team-Mailbox für 1× Broadcast (Object-ID teilen). */
+  teamMailboxObjectId?: string
+  /** M2c: Team-Broadcast statt pairwise (Default true wenn teamMailboxObjectId gesetzt). */
+  useTeamBroadcast?: boolean
   /** H.3o.6 Schritt 2: optionale Secondary-Channel-Metadaten (ohne PSK-Secret im Klartext). */
   secondaryChannel?: {
     channelIndex?: number
@@ -48,6 +52,11 @@ function parseGroups(raw: string | null): MessengerGroupDefinition[] {
         typeof o.streamsAnchorId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(o.streamsAnchorId.trim())
           ? o.streamsAnchorId.trim()
           : undefined
+      const teamMailboxObjectId =
+        typeof o.teamMailboxObjectId === 'string' && /^0x[a-fA-F0-9]{64}$/i.test(o.teamMailboxObjectId.trim())
+          ? o.teamMailboxObjectId.trim().toLowerCase()
+          : undefined
+      const useTeamBroadcast = o.useTeamBroadcast === false ? false : teamMailboxObjectId ? true : undefined
       const rawSecondary = o.secondaryChannel
       const secondaryObj =
         rawSecondary && typeof rawSecondary === 'object' ? (rawSecondary as Record<string, unknown>) : null
@@ -81,6 +90,8 @@ function parseGroups(raw: string | null): MessengerGroupDefinition[] {
         name: name || `Gruppe (${memberAddresses.length})`,
         memberAddresses,
         ...(streamsAnchorId ? { streamsAnchorId } : {}),
+        ...(teamMailboxObjectId ? { teamMailboxObjectId } : {}),
+        ...(useTeamBroadcast === false ? { useTeamBroadcast: false } : {}),
         ...(secondaryChannel ? { secondaryChannel } : {}),
       })
     }

@@ -18,10 +18,11 @@ import {
   mergeJournalIntoInboxIfChanged,
   mergeMessageByDedup,
 } from '@/frontend/lib/message-dedup'
+import { appendMeshToLocalArchive } from '@/frontend/lib/mesh-local-archive'
 import {
-  appendMeshToLocalArchive,
-  pickLocalOverlayRowsForInboxMerge,
-} from '@/frontend/lib/mesh-local-archive'
+  isPendingMailboxOptimisticRow,
+  pickInboxOverlayRowsForMerge,
+} from '@/frontend/lib/group-inbox-optimistic'
 import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
@@ -35,6 +36,8 @@ export type UseChatViewInboxParams = {
   /** Optional: Posteingang für diese Package-ID (0x…); leer = Backend-Standard. */
   packageId?: string
   myAddress?: string
+  /** Zusätzliche Mailbox-IDs (z. B. Team-Mailbox der aktiven Gruppe). */
+  alsoMailboxIds?: string[]
 }
 
 async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]> {
@@ -108,7 +111,7 @@ function readInboxCache(
 }
 
 export function useChatViewInbox(p: UseChatViewInboxParams) {
-  const { refreshContactDirectory, packageId, myAddress = '' } = p
+  const { refreshContactDirectory, packageId, myAddress = '', alsoMailboxIds = [] } = p
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -175,7 +178,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         clearInboxBrowserViewFilters()
       }
       const applyLocalOverlayFallback = () => {
-        setMessages((prev) => mergeAllMessages(pickLocalOverlayRowsForInboxMerge(prev)))
+        setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
       }
       try {
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
@@ -189,8 +192,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
                 (m) => !prevIds.has(m.id) && (!m.dedupKey || !prevDedup.has(m.dedupKey))
               )
               if (novel.length === 0) return prev
-              const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
-              const next = mergeAllMessages([...prev, ...novel, ...localOverlay])
+              const localOverlay = pickInboxOverlayRowsForMerge(prev, mapped)
+              const next = mergeAllMessages([
+                ...prev.filter((m) => !isPendingMailboxOptimisticRow(m)),
+                ...novel,
+                ...localOverlay,
+              ])
               if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
               return next
             })
@@ -209,13 +216,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             )
           }
           setMessages((prev) => {
-            const localOverlay = pickLocalOverlayRowsForInboxMerge(prev)
+            const localOverlay = pickInboxOverlayRowsForMerge(prev, mapped)
             const next =
               mode === 'reset'
                 ? mergeAllMessages([...mapped, ...localOverlay])
                 : mergeAllMessages([
                     ...prev.filter(
                       (m) =>
+                        !isPendingMailboxOptimisticRow(m) &&
                         !m.transports?.includes('mesh') &&
                         m.source !== 'telegram' &&
                         !m.transports?.includes('telegram')
@@ -236,6 +244,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           packageId: pkg,
           mergeLocalInbox: mergeLocal,
           includePrivateMailboxes: true,
+          alsoMailboxIds,
           silent,
         })
         const raw = res.ok ? res.messages : null
@@ -297,7 +306,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         setLoadingMore(false)
       }
     },
-    [packageId, myAddress]
+    [packageId, myAddress, alsoMailboxIds]
   )
 
   const loadMessagesRef = useRef(loadMessages)
@@ -308,10 +317,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     void loadMessages('append')
   }, [inboxHasMore, loading, loadingMore, loadMessages])
 
+  const alsoMailboxIdsKey = (alsoMailboxIds ?? []).map((id) => id.trim().toLowerCase()).join('|')
+
   useEffect(() => {
     mailboxOffsetRef.current = 0
     void loadMessagesRef.current('reset')
-  }, [packageId, myAddress])
+  }, [packageId, myAddress, alsoMailboxIdsKey])
 
   useEffect(() => {
     if (typeof window === 'undefined') return

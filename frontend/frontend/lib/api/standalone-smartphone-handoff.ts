@@ -29,6 +29,8 @@ export type StandaloneSmartphoneHandoffZipBody = {
   /** README-HANDOFF.txt: Block LoRa-PSK + IOTA-Archiv (Boss-Export). */
   includeIotaArchivReadme?: boolean
   readmeExtra?: string
+  /** M2c: JSON — Gruppe + Team-Mailbox (→ MESSENGER_GROUP_HANDOFF in .env). */
+  messengerGroupHandoff?: string
   /** `parts` = JSON mit envContent/readme (Client baut ggf. verschlüsseltes ZIP). */
   format?: 'zip' | 'parts'
 }

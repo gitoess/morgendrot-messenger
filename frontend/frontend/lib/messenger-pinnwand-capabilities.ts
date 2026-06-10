@@ -56,12 +56,44 @@ export function showPinnwandInboxStrip(
   return isMessengerHelperRole(role) || isSimpleUiMode(status)
 }
 
-/** Posteingang Pinnwand-Kanal: nur Nachrichten an die Brett-Adresse. */
-export function messageBelongsToPinnwand(msg: Message, broadcastAddr: string): boolean {
-  const b = broadcastAddr.trim().toLowerCase()
+export type PinnwandMatchContext = {
+  broadcastAddress: string
+  myAddress?: string
+  authorizedSenders?: string[]
+}
+
+function resolvePinnwandMatchContext(
+  broadcastAddrOrCtx: string | PinnwandMatchContext
+): PinnwandMatchContext {
+  if (typeof broadcastAddrOrCtx === 'string') {
+    return { broadcastAddress: broadcastAddrOrCtx }
+  }
+  return broadcastAddrOrCtx
+}
+
+/** Lagebild-Post: Klartext an die feste Brett-Adresse (kein verschlüsselter 1:1-Verkehr). */
+export function messageBelongsToPinnwand(
+  msg: Message,
+  broadcastAddrOrCtx: string | PinnwandMatchContext
+): boolean {
+  const ctx = resolvePinnwandMatchContext(broadcastAddrOrCtx)
+  const b = ctx.broadcastAddress.trim().toLowerCase()
   if (!ADDR_64.test(b)) return false
+  if (msg.encrypted === true) return false
   const r = (msg.recipient ?? '').trim().toLowerCase()
-  return r === b
+  if (r !== b) return false
+
+  const my = (ctx.myAddress ?? '').trim().toLowerCase()
+  if (my && b === my) {
+    const from = (msg.from ?? '').trim().toLowerCase()
+    if (from === my) return true
+    const authorized = (ctx.authorizedSenders ?? [])
+      .map((a) => a.trim().toLowerCase())
+      .filter((a) => ADDR_64.test(a))
+    if (authorized.length === 0) return false
+    return authorized.includes(from)
+  }
+  return true
 }
 
 export type MessengerPinnwandCapabilities = {
@@ -71,6 +103,20 @@ export type MessengerPinnwandCapabilities = {
   showChannelTab: boolean
   showInboxStrip: boolean
   broadcastEqualsMyAddress: boolean
+}
+
+export function buildPinnwandMatchContext(
+  status: ApiStatus | null | undefined,
+  myAddress?: string
+): PinnwandMatchContext | null {
+  const broadcastAddress = getPinnwandBroadcastAddress(status)
+  if (!isPinnwandBroadcastConfigured(status)) return null
+  const my = (status?.myAddressFull ?? myAddress ?? '').trim().toLowerCase()
+  return {
+    broadcastAddress,
+    myAddress: my || undefined,
+    authorizedSenders: status?.broadcastPinnwand?.authorizedSenders ?? [],
+  }
 }
 
 export function getMessengerPinnwandCapabilities(

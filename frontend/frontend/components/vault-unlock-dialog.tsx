@@ -129,6 +129,14 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
       !fullStandaloneUnlock
   )
 
+  const dialogDescription = streamlined
+    ? t('description.streamlined')
+    : soloPath
+      ? t('description.solo')
+      : standaloneApk
+        ? t('description.standalone')
+        : t('description.default')
+
   return (
     <Dialog open={p.open} onOpenChange={() => {}}>
       <DialogContent
@@ -148,21 +156,25 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                       ? t('title.standalone')
                       : t('title.default')}
               </DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                {streamlined
-                  ? t('description.streamlined')
-                  : soloPath
-                    ? t('description.solo')
-                    : standaloneApk
-                      ? t('description.standalone')
-                      : t('description.default')}
-              </DialogDescription>
+              {dialogDescription.trim() ? (
+                <DialogDescription className="text-sm text-muted-foreground">
+                  {dialogDescription}
+                </DialogDescription>
+              ) : null}
             </div>
             <LocaleFlagSwitch className="shrink-0" />
           </div>
         </DialogHeader>
 
         <div key={i18n.resolvedLanguage || i18n.language} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {!standaloneApk && p.apiSnapshot?.error && p.apiSnapshot.backendRunning !== true ? (
+            <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-950 dark:text-amber-100">
+              <strong>Backend nicht erreichbar.</strong> Tresor-Entsperren braucht die API auf Port{' '}
+              <span className="font-mono">3342</span>. Im Repo-Root starten:{' '}
+              <span className="font-mono">npm run dev:messenger</span> (nicht nur{' '}
+              <span className="font-mono">cd frontend && npm run dev:messenger</span>).
+            </p>
+          ) : null}
           {streamlined ? (
             <div className="space-y-3">
               <Label htmlFor="standalone-helper-mnemonic">{t('streamlined.walletKeyLabel')}</Label>
@@ -221,15 +233,6 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <p className="text-xs text-amber-600 dark:text-amber-300">{t('vault.noLocalFileSdk')}</p>
             ) : !hasLocal ? (
               <p className="text-xs text-muted-foreground">{t('vault.noLocalFileChain')}</p>
-            ) : null}
-            {p.signerKind === 'sdk' && hasLocal ? (
-              <p className="text-xs text-amber-700 dark:text-amber-200">
-                <Trans
-                  ns="vault"
-                  i18nKey="vault.sdkLocalHint"
-                  components={{ strong: <strong className="text-foreground" /> }}
-                />
-              </p>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="wallet-password" className="sr-only">

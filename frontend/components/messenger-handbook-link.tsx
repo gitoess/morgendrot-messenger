@@ -25,6 +25,9 @@ export const MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST = handbookHeadingIdFromPlainTit
 export const MESSENGER_HB_ANCHOR_FUNK_KLARTEXT = handbookHeadingIdFromPlainTitle(
   'Funk Klartext Einsatzmodus'
 )
+export const MESSENGER_HB_ANCHOR_FUNK_KONTEXT = handbookHeadingIdFromPlainTitle(
+  'Funk-Kontext Telefonbuch und Mesh-Export'
+)
 export const MESSENGER_HB_ANCHOR_PATH4 = handbookHeadingIdFromPlainTitle('Pfad 4 LoRa und eigene Verankerung')
 export const MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN = handbookHeadingIdFromPlainTitle(
   'Kanäle, Speicher und Mailboxen'

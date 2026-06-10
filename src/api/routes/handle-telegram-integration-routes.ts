@@ -98,7 +98,13 @@ export async function handleTelegramIntegrationRoutes(
             );
             return true;
         }
-        const result = await sendTelegramContactNotify({ recipientAddress, messagePreview, senderLabel });
+        const skipJournal = data.skipJournal === true;
+        const result = await sendTelegramContactNotify({
+            recipientAddress,
+            messagePreview,
+            senderLabel,
+            skipJournal,
+        });
         sendJson(
             res,
             200,

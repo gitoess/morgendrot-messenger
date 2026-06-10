@@ -402,15 +402,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     />
                   </div>
                   <div className="px-2 py-1">
-                    <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
-                      On-Chain: Digests, Nonce, Recovery. Tresor: optional Digest-Backup (nicht dieselbe Datei wie Keys).
-                    </p>
-                    <ChatViewTangleInventoryButton inventoryScope="anchored" />
+                    <ChatViewTangleInventoryButton
+                      inventoryScope="anchored"
+                      messages={messages}
+                      packageId={apiStatus?.packageId?.trim() || undefined}
+                    />
                   </div>
                   <div className="px-2 py-1">
-                    <p className="mb-1 text-[10px] leading-snug text-muted-foreground">
-                      Noch nicht verankert: Mailbox-Retry-Queue und Relay-Pakete (eigener Speicher).
-                    </p>
                     <ChatViewPendingSendsButton
                       offlineMailboxQueuePending={offlineMailboxQueuePending}
                       offlineMailboxQueueItems={offlineMailboxQueueItems}

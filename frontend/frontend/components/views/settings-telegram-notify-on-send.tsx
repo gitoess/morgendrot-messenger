@@ -34,9 +34,7 @@ export function SettingsTelegramNotifyOnSend() {
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Nur bei Sendepfad <strong className="text-foreground">online</strong> (IOTA/Mailbox): nach erfolgreichem
-            Senden optional eine kurze Telegram-Nachricht an den Kontakt, wenn im Telefonbuch eine Chat-ID hinterlegt
-            ist. Der Tab <strong className="text-foreground">telegram</strong> sendet nur Telegram — kein IOTA.
+            Aus = kein Telegram-Hinweis nach IOTA-Send. Tab „telegram“ im Composer ist unabhängig davon.
           </p>
         </div>
       </div>

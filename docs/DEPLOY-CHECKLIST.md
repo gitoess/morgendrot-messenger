@@ -33,7 +33,9 @@ npm run deploy:move-package
 
 **Manuell:** `cd move-test` → `iota move build` → `iota client publish` — siehe **`docs/PACKAGE-ID-NEU-DEPLOYEN.md`**.
 
-**Enthält aktuell u. a.:** Shared-Mailbox, **`create_private_mailbox`**, **`purge_private_mailbox`**, **`purge_*_private`** (Aufräumen vor Rebate), `store_*_private`.
+**Enthält aktuell u. a.:** Shared-Mailbox, **`create_private_mailbox`**, **`create_team_mailbox`**, **`store_team_plaintext_broadcast`** (M2c Team-Broadcast), **`purge_private_mailbox`**, **`purge_*_private`** (Aufräumen vor Rebate), `store_*_private`.
+
+**M2c Team-Broadcast:** Nach Deploy zusätzlich **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`** (Gruppe ↔ Team-Mailbox, Smoke).
 
 ---
 
@@ -188,6 +190,7 @@ Legt u. a. ab:
 | Chat / Posteingang | Fetch gegen neue Shared-Mailbox |
 | **Telefonbuch → Meine Mailboxen** | Shared-Zeile + private Mailboxen |
 | Private Mailbox **löschen** | Dialog: Inhalt zählen → **Aufräumen** → Rebate (TX im Explorer unter **txblock**) |
+| **M2c Team-Broadcast** (nach Publish) | `TEAM_MAILBOX_ID=0x… npx tsx scripts/test-team-broadcast-smoke.ts` — siehe **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`** |
 
 Funktions-Checkliste: **`TESTING.md`**. Deploy-Logbuch: **`docs/TEST-RUN-LOGBOOK.md`**.
 
@@ -225,6 +228,7 @@ Funktions-Checkliste: **`TESTING.md`**. Deploy-Logbuch: **`docs/TEST-RUN-LOGBOOK
 | Thema | Datei |
 |-------|--------|
 | M4d private Mailbox + letzte IDs | **`docs/DEPLOY-MOVE-M4d.md`** |
+| **M2c Team-Broadcast Publish** | **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`** |
 | Erstes Deploy ohne Package-ID | **`docs/PACKAGE-ID-NEU-DEPLOYEN.md`** |
 | Einsatzprofile (Konzept) | **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`** |
 | Messenger-Bundle | **`exports/README.md`**, **`deploy/README-DEPLOY-BUNDLES.md`** |

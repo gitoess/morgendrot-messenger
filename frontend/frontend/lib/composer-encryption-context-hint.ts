@@ -17,7 +17,7 @@ export function getComposerEncryptionContextHint(input: ComposerEncryptionHintIn
     if (encrypted) {
       return 'Funk + Schloss: Online-Verschlüsselung läuft nicht über Meshtastic — Schloss aus oder Sendepfad „online“.'
     }
-    return 'Funk · Klartext: Schutz = Meshtastic-Kanal (PSK in der Meshtastic-App), nicht das Online-Schloss.'
+    return null
   }
 
   if (forcedTransport === 'internet') {

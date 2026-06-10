@@ -100,6 +100,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     inboxOverviewUnreadCounts?: Record<InboxOverviewCategory, number>
     pinnwandOverviewConfigured?: boolean
     isInboxMessageUnread?: (msg: Message) => boolean
+    isPinnwandInboxMessage?: (msg: Message) => boolean
 }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
@@ -178,6 +179,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     inboxOverviewUnreadCounts,
     pinnwandOverviewConfigured = false,
     isInboxMessageUnread,
+    isPinnwandInboxMessage,
     ...toolbarProps
   } = props
 
@@ -282,6 +284,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           onAddSenderToContactBook={onAddSenderToContactBook}
           onSarqNakWire={onSarqNakWire}
           isInboxMessageUnread={isInboxMessageUnread}
+          isPinnwandInboxMessage={isPinnwandInboxMessage}
           inboxVisibilityHint={inboxVisibilityHint}
           pendingHandshakeOffers={pendingHandshakeOffers}
           onAcceptPendingHandshake={onAcceptPendingHandshake}

@@ -6,7 +6,7 @@
     "streamlined": "Enter mnemonic"
   },
   "description": {
-    "default": "Choose an option — the messenger stays locked without a password.",
+    "default": "",
     "standalone": "Standalone APK without Morgendrot server: mnemonic for direct send/receive — import handoff in settings first.",
     "solo": "Private mode without boss — like on desktop: unlock vault, import seed, or create new profile.",
     "streamlined": "Package, mailbox and full node are already from handoff — enter your seed phrase from the boss."
@@ -25,7 +25,6 @@
     "subtitle": "Unlock with password",
     "noLocalFileSdk": "No local vault file — use “Import seed” or “New profile”.",
     "noLocalFileChain": "No local file: if the vault is on-chain only, use the same vault password as when saving on-chain — keys load into the session after unlock.",
-    "sdkLocalHint": "Password alone works only if “save signer import” was enabled last time. Otherwise choose <strong>Import seed</strong> below and enter mnemonic/secret.",
     "passwordLabel": "Password",
     "passwordPlaceholder": "Password",
     "mnemonicOptionalLabel": "Mnemonic (if needed)",

@@ -2106,6 +2106,8 @@ export interface StandaloneSmartphoneHandoffParams {
     /** Lagebild — aus Boss-.env übernommen (kein Secret). */
     broadcastPinnwandEnabled?: boolean;
     broadcastPinnwandAddress?: string;
+    /** Kompaktes JSON — Gruppe + Team-Mailbox für Helfer (M2c). */
+    messengerGroupHandoff?: string;
 }
 
 function parseHandoffObjectIdList(raw: string | undefined): string[] {
@@ -2272,6 +2274,16 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${direct}`, '');
     } else {
         lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${rpc}`, '');
+    }
+    const groupHandoff = String(p.messengerGroupHandoff || '').trim();
+    if (groupHandoff) {
+        lines.push(
+            '',
+            '# --- Gruppenchat (M2c) — Team-Mailbox + Mitglieder automatisch nach Import ---',
+            `# Klartext-Teamkanal heute; verschlüsselt folgt mit Team-Key im Handoff (Phase 3).`,
+            `MESSENGER_GROUP_HANDOFF=${groupHandoff}`,
+            ''
+        );
     }
     return lines.join('\n');
 }

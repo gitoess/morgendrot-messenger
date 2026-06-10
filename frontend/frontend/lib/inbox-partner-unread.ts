@@ -1,5 +1,8 @@
 import { messageCounterpartyAddress } from '@/frontend/features/inbox/inbox-partner-filter'
-import { messageBelongsToPinnwand } from '@/frontend/lib/messenger-pinnwand-capabilities'
+import {
+  messageBelongsToPinnwand,
+  type PinnwandMatchContext,
+} from '@/frontend/lib/messenger-pinnwand-capabilities'
 import {
   inboxScopeKey,
   isIncomingInboxMessage,
@@ -18,6 +21,17 @@ type StoredPartnerLastSeen = {
 
 function normPartner(address: string): string {
   return address.trim().toLowerCase()
+}
+
+function normalizePinnwandMatch(
+  input?: string | PinnwandMatchContext | null
+): PinnwandMatchContext | null {
+  if (!input) return null
+  if (typeof input === 'string') {
+    const broadcastAddress = input.trim()
+    return broadcastAddress ? { broadcastAddress } : null
+  }
+  return input.broadcastAddress?.trim() ? input : null
 }
 
 export function readPartnerLastSeenMap(scopeKey: string): Record<string, number> {
@@ -60,11 +74,11 @@ export function messageCountsForPartnerThread(
   msg: Message,
   myAddress: string,
   partnerNorm: string,
-  broadcastAddress?: string
+  pinnwandMatch?: string | PinnwandMatchContext | null
 ): boolean {
   if (!isIncomingInboxMessage(msg, myAddress)) return false
-  const board = (broadcastAddress ?? '').trim().toLowerCase()
-  if (board && messageBelongsToPinnwand(msg, board)) return false
+  const match = normalizePinnwandMatch(pinnwandMatch)
+  if (match && messageBelongsToPinnwand(msg, match)) return false
   const cp = messageCounterpartyAddress(msg, myAddress)
   return !!cp && normPartner(cp) === partnerNorm
 }
@@ -74,13 +88,13 @@ export function countUnreadForPartner(
   myAddress: string,
   partnerAddress: string,
   lastSeenMs: number,
-  broadcastAddress?: string
+  pinnwandMatch?: string | PinnwandMatchContext | null
 ): number {
   const partnerNorm = normPartner(partnerAddress)
   if (!partnerNorm) return 0
   let count = 0
   for (const m of messages) {
-    if (!messageCountsForPartnerThread(m, myAddress, partnerNorm, broadcastAddress)) continue
+    if (!messageCountsForPartnerThread(m, myAddress, partnerNorm, pinnwandMatch)) continue
     const ts = messageReceivedAtMs(m)
     if (ts > lastSeenMs) count += 1
   }
@@ -91,13 +105,13 @@ export function countUnreadByPartner(
   messages: Message[],
   myAddress: string,
   lastSeenMap: Record<string, number>,
-  broadcastAddress?: string
+  pinnwandMatch?: string | PinnwandMatchContext | null
 ): Record<string, number> {
   const out: Record<string, number> = {}
+  const match = normalizePinnwandMatch(pinnwandMatch)
   const partnerNorms = new Set<string>()
   for (const m of messages) {
-    const board = (broadcastAddress ?? '').trim().toLowerCase()
-    if (board && messageBelongsToPinnwand(m, board)) continue
+    if (match && messageBelongsToPinnwand(m, match)) continue
     const cp = messageCounterpartyAddress(m, myAddress)
     if (!cp) continue
     partnerNorms.add(normPartner(cp))
@@ -108,7 +122,7 @@ export function countUnreadByPartner(
       myAddress,
       partnerNorm,
       lastSeenMap[partnerNorm] ?? 0,
-      broadcastAddress
+      match
     )
     if (unread > 0) out[partnerNorm] = unread
   }
@@ -120,13 +134,13 @@ export function markPartnerSeenFromMessages(
   partnerAddress: string,
   messages: Message[],
   myAddress: string,
-  broadcastAddress?: string
+  pinnwandMatch?: string | PinnwandMatchContext | null
 ): Record<string, number> {
   const partnerNorm = normPartner(partnerAddress)
   if (!partnerNorm) return readPartnerLastSeenMap(scopeKey)
   let seenAt = Date.now()
   for (const m of messages) {
-    if (!messageCountsForPartnerThread(m, myAddress, partnerNorm, broadcastAddress)) continue
+    if (!messageCountsForPartnerThread(m, myAddress, partnerNorm, pinnwandMatch)) continue
     seenAt = Math.max(seenAt, messageReceivedAtMs(m))
   }
   return writePartnerLastSeen(scopeKey, partnerNorm, seenAt)
@@ -136,11 +150,11 @@ export function isInboxMessageUnreadForPartner(
   msg: Message,
   myAddress: string,
   lastSeenMap: Record<string, number>,
-  broadcastAddress?: string
+  pinnwandMatch?: string | PinnwandMatchContext | null
 ): boolean {
   if (!isIncomingInboxMessage(msg, myAddress)) return false
-  const board = (broadcastAddress ?? '').trim().toLowerCase()
-  if (board && messageBelongsToPinnwand(msg, board)) return false
+  const match = normalizePinnwandMatch(pinnwandMatch)
+  if (match && messageBelongsToPinnwand(msg, match)) return false
   const cp = messageCounterpartyAddress(msg, myAddress)
   if (!cp) return false
   const ts = messageReceivedAtMs(msg)

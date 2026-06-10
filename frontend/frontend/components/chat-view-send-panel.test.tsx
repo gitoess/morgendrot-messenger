@@ -443,6 +443,23 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
+  it('zeigt bei Funk + Node-ID kein 0x-Empfängerfeld', () => {
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          recipient: '',
+          message: 'Hi',
+          forcedTransport: 'mesh',
+          meshPlaintextToNodeEnabled: true,
+          meshPlaintextNodeId: '!1a2b3c4d',
+        })}
+      />
+    )
+    expect(screen.getByPlaceholderText('!1a2b3c4d')).toBeInTheDocument()
+    expect(screen.queryByText(/Empfänger · Wallet \(0x\)/i)).not.toBeInTheDocument()
+  })
+
   it('zeigt Pfad-4-Checkbox bei Klartext + Funk (privat)', () => {
     render(
       <ChatViewSendPanel
@@ -469,7 +486,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.queryByLabelText(/Kanalindex \(Meshtastic, optional\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Kanalindex \(0–7, optional\)/i)).not.toBeInTheDocument()
 
     rerender(
       <ChatViewSendPanel
@@ -481,7 +498,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    const input = screen.getByLabelText(/Kanalindex \(Meshtastic, optional\)/i)
+    const input = screen.getByLabelText(/Kanalindex \(0–7, optional\)/i)
     fireEvent.change(input, { target: { value: '3' } })
     expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(3)
     fireEvent.change(input, { target: { value: '9' } })

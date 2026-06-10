@@ -34,6 +34,7 @@ export function ChunkLoadRecovery() {
 
     const onRejection = (event: PromiseRejectionEvent) => {
       if (!isChunkLoadErrorUnknown(event.reason)) return
+      event.preventDefault()
       notify('Asynchroner Chunk-Ladefehler — bitte hart neu laden.')
     }
 

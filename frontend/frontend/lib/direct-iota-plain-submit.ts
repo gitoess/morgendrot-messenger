@@ -6,6 +6,7 @@ import {
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
+  validateMessagingMailboxObjectForPackage,
 } from '@morgendrot/core/iota'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
@@ -34,6 +35,7 @@ const LS_DRAIN = 'morgendrot.directMailboxDrain'
 const LS_SUBMIT_MODE = 'morgendrot.iotaSubmitMode'
 
 import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
+import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 
 export { DIRECT_IOTA_UI_CHANGED, notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 
@@ -281,10 +283,20 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const plaintextUtf8 = new TextEncoder().encode(opts.payloadUtf8)
-    const mbOverride = (opts.mailboxObjectId ?? '').trim()
-    const usePrivateMb =
-      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) && mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
-    const mailboxObjectId = usePrivateMb ? mbOverride : snap.mailboxId
+    const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
+      mailboxObjectId: opts.mailboxObjectId,
+      serverMailboxId: snap.mailboxId,
+    })
+    const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+      client,
+      mailboxObjectId,
+      snap.packageId,
+      'any'
+    )
+    if (!mailboxCheck.ok) {
+      return { ok: false, error: mailboxCheck.error }
+    }
+    const privateMailbox = mailboxCheck.kind === 'privatemailbox'
     const txb = buildStorePlaintextMailboxTransaction({
       packageId: snap.packageId,
       mailboxObjectId,
@@ -293,7 +305,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
       plaintextUtf8,
       nonce: opts.nonce,
       ttlDays: snap.ttlDays,
-      privateMailbox: usePrivateMb,
+      privateMailbox,
       stored: snap.flags.mailboxStorePlaintext === true,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())

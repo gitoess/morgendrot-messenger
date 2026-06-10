@@ -34,8 +34,6 @@ import {
 } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
-  CHAT_PATH4_SELF_ARCHIVE_HINT,
-  CHAT_SIMPLE_LORA_ARCHIV_HINT,
   isLoRaMeshTransport,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
@@ -112,10 +110,11 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onManualRefresh?: () => void | Promise<void>
   /** M4b: Kontaktverzeichnis für Mailbox-Routing-Hinweis */
   contactDirectory?: Record<string, ContactMeshEntryClient>
-  /** Gruppenkanal: Hinweis zu pairwise Mailbox-Multicast */
+  /** Gruppenkanal: Team-Broadcast (1× Chain) statt pairwise */
   isGroupChannel?: boolean
   groupMailboxSendAll?: boolean
   groupMemberCount?: number
+  groupTeamBroadcastReady?: boolean
   /** Expert: Pfad-4-Checkbox; Simple Mode: nur Hinweistext. */
   showPath4Checkbox?: boolean
   /** Nur bei composerDelivery === 'telegram'. */
@@ -182,6 +181,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     isGroupChannel = false,
     groupMailboxSendAll = false,
     groupMemberCount = 0,
+    groupTeamBroadcastReady = false,
     showPath4Checkbox = true,
     onTelegramSend,
     canSendTelegram = false,
@@ -306,10 +306,18 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     [recipient, partner, isPrivate]
   )
 
-  /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
+  const groupMailboxInternetChain =
+    isGroupChannel && messagingPersistenceMode === 'mailbox' && forcedTransport === 'internet'
+  /** Klartext: Gruppe + Mailbox + Internet braucht Team-Postfach; Funk-Gruppe braucht Mitglieder. */
+  const groupSendReady =
+    isGroupChannel &&
+    (groupMailboxInternetChain
+      ? groupTeamBroadcastReady
+      : groupMemberCount > 0 || forcedTransport === 'mesh')
   const meshKlartextRecipientOk =
     encrypted ||
     klartextIota.length > 0 ||
+    groupSendReady ||
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
@@ -325,6 +333,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (onlineChainNeedsKeys && !sessionKeysReady) ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
+    (encrypted && groupMailboxInternetChain) ||
+    (groupMailboxInternetChain && !groupTeamBroadcastReady && !encrypted) ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
     meshPath4Blocked
@@ -340,8 +350,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (isPinnwandChannel && !canPostPinnwand) {
       return 'Nur autorisierte Führungs-Adressen dürfen auf die Pinnwand schreiben.'
     }
+    if (encrypted && groupMailboxInternetChain) {
+      return 'Gruppe verschlüsselt auf der Chain folgt mit Team-E2EE (§ H.22) — bis dahin Klartext + Team-Postfach.'
+    }
     if (!encrypted && !meshKlartextRecipientOk) {
-      return 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
+      if (isGroupChannel && groupMailboxInternetChain && !groupTeamBroadcastReady) {
+        return 'Gruppe: Team-Postfach im Gruppenpanel verknüpfen oder neu erstellen (1× Broadcast).'
+      }
+      return isGroupChannel && groupMemberCount === 0
+        ? 'Gruppe: Mitglieder eintragen und speichern — dann geht Senden ohne Empfängerfeld.'
+        : 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
     }
     if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
     if (meshPath4Blocked) return '„LoRa + eigene Verankerung“ passt nicht zur aktuellen Auswahl.'
@@ -357,6 +375,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     meshKlartextRecipientOk,
     meshPlaintextBlocked,
     meshPath4Blocked,
+    groupMailboxInternetChain,
+    groupTeamBroadcastReady,
+    isGroupChannel,
+    groupMemberCount,
+    isPinnwandChannel,
+    canPostPinnwand,
   ])
 
   const canOfferSosText =
@@ -371,13 +395,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     deliveryChannel: composerDelivery,
     isPrivate,
   })
-  const meshBroadcastNoRecipient =
-    !isTelegramDelivery &&
-    !encrypted &&
-    forcedTransport === 'mesh' &&
-    !meshPlaintextToNodeEnabled
   const showIotaField =
     !hideComposerIotaRecipient &&
+    !(isGroupChannel && groupMailboxSendAll) &&
     needsComposerIotaAddress({
       deliveryChannel: composerDelivery,
       encrypted,
@@ -395,7 +415,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     })
   const showRecipientRow =
     showTelegramField ||
-    meshBroadcastNoRecipient ||
     showIotaField ||
     (showMailboxUi && !groupMailboxSendAll) ||
     (!isPrivate &&
@@ -444,6 +463,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (telegramInputFocused.current) return
     setTelegramDraft(telegramRecipientToComposerDisplay(recipient))
   }, [showTelegramField, recipient])
+
+  const meshBroadcastNoRecipient =
+    !isTelegramDelivery &&
+    !encrypted &&
+    forcedTransport === 'mesh' &&
+    !meshPlaintextToNodeEnabled
 
   const chainRecipientReady =
     encrypted
@@ -589,21 +614,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   </p>
                 ) : null}
               </>
-            ) : isPinnwandChannel && pinnwandBroadcastAddress ? (
-              <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2.5 text-xs text-sky-950 dark:text-sky-100">
-                <div className="font-medium text-foreground">Empfänger · Pinnwand (fest, Server)</div>
-                <code className="mt-1 block break-all font-mono text-[11px]">{pinnwandBroadcastAddress}</code>
-                <p className="mt-1.5 text-[10px] text-muted-foreground">
-                  Öffentliches Lagebild — nur Klartext, Online (IOTA). Adresse nicht änderbar; Boss konfiguriert{' '}
-                  <span className="font-mono">BROADCAST_PINNWAND_ADDRESS</span> in der Basis-.env.
-                </p>
-              </div>
-            ) : meshBroadcastNoRecipient ? (
-              <p className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
-                Empfänger · <strong className="text-foreground">An alle</strong> (Funk, Klartext, Primary-Mesh) — keine
-                0x nötig. Optional Ziel-Knoten unten.
-              </p>
-            ) : showIotaField ? (
+            ) : isPinnwandChannel && pinnwandBroadcastAddress ? null : showIotaField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Empfänger · Wallet (0x)
@@ -690,7 +701,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
 
         {!isTelegramDelivery && !encrypted && forcedTransport === 'mesh' && (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/5 p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-foreground">Meshtastic-Klartext (LongFast / Text)</p>
             <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -719,7 +729,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             {showMeshtasticChannelIndexInput ? (
               <div>
                 <label htmlFor="chat-mesh-channel-index" className="mb-1 block text-xs font-medium text-foreground">
-                  Kanalindex (Meshtastic, optional)
+                  Kanalindex (0–7, optional)
                 </label>
                 <input
                   id="chat-mesh-channel-index"
@@ -731,39 +741,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   onChange={(e) => {
                     onMeshtasticChannelIndexChange?.(normalizeMeshtasticChannelIndex(e.target.value))
                   }}
-                  placeholder="leer = Default (Primary)"
+                  placeholder="leer = Primary"
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
                   inputMode="numeric"
                 />
-                <p className="mt-1 text-[10px] text-muted-foreground">
-                  Optional 0–7. Falscher Kanal kann Empfang verhindern; leer nutzt den Geräte-Default.
-                </p>
               </div>
             ) : null}
           </div>
         )}
-
-        {!isTelegramDelivery && forcedTransport === 'mesh' && isPrivate ? (
-          showPath4Checkbox ? (
-            <div className="rounded-lg border border-emerald-600/35 bg-emerald-950/15 p-3 dark:bg-emerald-950/20">
-              <label className="flex cursor-pointer items-start gap-2.5 text-sm text-foreground">
-                <input
-                  type="checkbox"
-                  checked={meshSelfArchiveAfterLoRa}
-                  onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
-                  data-testid="mesh-path4-self-archive"
-                  className="mt-0.5 border-border"
-                />
-                <span className="font-medium">LoRa + eigene Verankerung (Pfad 4)</span>
-              </label>
-              <p className="mt-2 text-[11px] leading-relaxed text-emerald-100/90">{CHAT_PATH4_SELF_ARCHIVE_HINT}</p>
-            </div>
-          ) : (
-            <p className="rounded-lg border border-emerald-600/30 bg-emerald-950/10 px-3 py-2 text-[11px] leading-relaxed text-emerald-100/90">
-              {CHAT_SIMPLE_LORA_ARCHIV_HINT}
-            </p>
-          )
-        ) : null}
 
         <div
           onDragEnter={onComposerDragEnter}
@@ -821,6 +806,21 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                       <BookUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
                       Telefonbuch
                     </button>
+                  ) : null}
+                  {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
+                    <label
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-950/35"
+                      title="LoRa sofort senden und später eigene Kopie auf IOTA verankern"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={meshSelfArchiveAfterLoRa}
+                        onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                        data-testid="mesh-path4-self-archive"
+                        className="border-border"
+                      />
+                      Pfad 4
+                    </label>
                   ) : null}
                 </>
               ) : null

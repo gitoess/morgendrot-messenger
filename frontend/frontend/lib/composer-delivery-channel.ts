@@ -17,7 +17,6 @@ export function needsComposerIotaAddress(p: {
   if (p.deliveryChannel === 'telegram') return false
   if (p.encrypted) return true
   if (p.forcedTransport === 'internet') return true
-  if (p.forcedTransport === 'mesh' && p.meshPlaintextToNodeEnabled) return true
   return false
 }
 

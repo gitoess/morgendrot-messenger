@@ -19,6 +19,9 @@ export function isLoRaMeshTransport(t: ForcedTransport): boolean {
 export const CHAT_LORA_DUAL_IMAGE_POLICY_MSG =
   'LoRa-Bild (LUMA+CHROMA): „online“ mit Verschlüsselung — oder „funk“ mit aktivem „LoRa + eigene Verankerung“ (Pfad 4; Funk bleibt Klartext). Sonst Anhang entfernen.'
 
+/** Meshtastic Web Client — Geräte-/Kanal-Einstellungen (PSK, Primary/Secondary). */
+export const MESHTASTIC_WEB_DEVICE_SETTINGS_URL = 'https://client.meshtastic.org/settings/device'
+
 /** Pfad 4: Funk sofort (Klartext), danach eigene Mailbox + optionale Attestation/Verankerung. */
 export const CHAT_PATH4_SELF_ARCHIVE_HINT =
   'Pfad 4: Funk geht sofort als Klartext raus. Zusätzlich wird eine eigene Mailbox-Kopie an deine Adresse geschrieben (später im Tangle sichtbar), sobald Basis/Internet verfügbar ist.'

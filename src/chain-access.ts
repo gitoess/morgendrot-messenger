@@ -2103,6 +2103,50 @@ export async function storePlaintextMessage(
     return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
 }
 
+/** Team-Broadcast: 1× Klartext in Shared Team-Mailbox (`store_team_plaintext_broadcast`, kein recipient). */
+export async function storeTeamPlaintextBroadcast(
+    teamMailboxObjectId: string,
+    senderAddress: string,
+    text: Uint8Array,
+    nonce: bigint,
+    walletPassword?: string,
+    options?: { signOptions?: SignAndExecuteOptions }
+): Promise<{ digest?: string; status?: string }> {
+    const mb = teamMailboxObjectId.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+        throw new Error('teamMailboxObjectId: 0x + 64 Hex.');
+    }
+    assertSafeAddress(senderAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    if (mb.toLowerCase() === (CFG.PACKAGE_ID || '').trim().toLowerCase()) {
+        throw new Error('Team-Mailbox-ID darf nicht gleich PACKAGE_ID sein.');
+    }
+    if (!mailboxStoresPlaintext()) {
+        throw new Error(
+            'Team-Broadcast braucht Mailbox-Klartext-Speicher (MAILBOX_STORE_PLAINTEXT / Move publish mit store_team_plaintext_broadcast).'
+        );
+    }
+    const { validateMessagingMailboxObjectForPackage } = await import('@morgendrot/core/iota');
+    const mbCheck = await validateMessagingMailboxObjectForPackage(getClient(), mb, CFG.PACKAGE_ID!, 'mailbox');
+    if (!mbCheck.ok) {
+        throw new Error(mbCheck.error);
+    }
+    const nonceU64 = nonce != null && typeof nonce === 'bigint' ? nonce : BigInt(Number(nonce) || Date.now() || 0);
+    const ttlDays = CFG.DEFAULT_TTL_DAYS != null ? CFG.DEFAULT_TTL_DAYS : 30n;
+    const txb = new Transaction();
+    txb.setSender(senderAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::store_team_plaintext_broadcast`,
+        arguments: [
+            txb.object(mb),
+            txb.pure(bcs.vector(bcs.u8()).serialize(text)),
+            txb.pure.u64(nonceU64),
+            txb.pure.u64(ttlDays),
+        ],
+    });
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
+}
+
 /** PTB: Dieselbe Plaintext-Nachricht an mehrere Empfaenger in einer TX senden (Boss-Broadcast). */
 export async function storePlaintextMessageBatch(
     recipients: string[],

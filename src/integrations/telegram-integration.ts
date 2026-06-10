@@ -453,6 +453,8 @@ export type TelegramContactNotifyInput = {
     senderLabel?: string;
     /** Wenn gesetzt: Ziel-Chat-ID (Test), sonst aus Telefonbuch. */
     targetChatId?: string;
+    /** Kein Journal — z. B. Hinweis nach IOTA-Send (Posteingang hat schon Mailbox-Zeile). */
+    skipJournal?: boolean;
 };
 
 export type TelegramContactNotifyResult = {
@@ -485,14 +487,16 @@ export async function sendTelegramContactNotify(
 
     const direct = await sendTelegramMessage(cfg.botToken, targetChatId, text);
     if (direct.ok) {
-        const { appendTelegramJournalEntry } = await import('./telegram-journal.js');
-        appendTelegramJournalEntry({
-            direction: 'out',
-            chatId: targetChatId,
-            contactKey: input.recipientAddress,
-            text: preview || text,
-            senderLabel,
-        });
+        if (!input.skipJournal) {
+            const { appendTelegramJournalEntry } = await import('./telegram-journal.js');
+            appendTelegramJournalEntry({
+                direction: 'out',
+                chatId: targetChatId,
+                contactKey: input.recipientAddress,
+                text: preview || text,
+                senderLabel,
+            });
+        }
         return { ok: true, delivered: true };
     }
 
@@ -502,14 +506,16 @@ export async function sendTelegramContactNotify(
         sender_label: senderLabel,
     });
     if (viaRelay.ok) {
-        const { appendTelegramJournalEntry } = await import('./telegram-journal.js');
-        appendTelegramJournalEntry({
-            direction: 'out',
-            chatId: targetChatId,
-            contactKey: input.recipientAddress,
-            text: preview || text,
-            senderLabel,
-        });
+        if (!input.skipJournal) {
+            const { appendTelegramJournalEntry } = await import('./telegram-journal.js');
+            appendTelegramJournalEntry({
+                direction: 'out',
+                chatId: targetChatId,
+                contactKey: input.recipientAddress,
+                text: preview || text,
+                senderLabel,
+            });
+        }
         return { ok: true, delivered: true };
     }
 

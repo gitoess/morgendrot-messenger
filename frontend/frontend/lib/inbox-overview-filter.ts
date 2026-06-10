@@ -1,4 +1,7 @@
-import { messageBelongsToPinnwand } from '@/frontend/lib/messenger-pinnwand-capabilities'
+import {
+  messageBelongsToPinnwand,
+  type PinnwandMatchContext,
+} from '@/frontend/lib/messenger-pinnwand-capabilities'
 import {
   messageTouchesMeshTransport,
 } from '@/frontend/features/inbox/inbox-partner-filter'
@@ -10,16 +13,27 @@ export type InboxOverviewCategory = 'alle' | 'lagebild' | 'direkt' | 'funk'
 export type InboxOverviewFilterContext = {
   myAddress: string
   broadcastAddress: string
+  /** Whitelist + Brett=eigenes Postfach — präzise Lagebild-Erkennung. */
+  pinnwandMatch?: PinnwandMatchContext | null
   /** Pinnwand oben im Streifen — aus Hauptliste ausblenden. */
   excludePinnwandFromAlle?: boolean
+}
+
+function pinnwandMatchForOverview(ctx: InboxOverviewFilterContext): PinnwandMatchContext {
+  return (
+    ctx.pinnwandMatch ?? {
+      broadcastAddress: ctx.broadcastAddress,
+      myAddress: ctx.myAddress,
+    }
+  )
 }
 
 export function inboxMessageOverviewCategory(
   msg: Message,
   ctx: InboxOverviewFilterContext
 ): Exclude<InboxOverviewCategory, 'alle'> {
-  const board = ctx.broadcastAddress.trim().toLowerCase()
-  if (board && messageBelongsToPinnwand(msg, board)) return 'lagebild'
+  const match = pinnwandMatchForOverview(ctx)
+  if (match.broadcastAddress.trim() && messageBelongsToPinnwand(msg, match)) return 'lagebild'
   if (messageTouchesMeshTransport(msg)) return 'funk'
   return 'direkt'
 }
@@ -31,9 +45,9 @@ export function filterInboxByOverviewCategory(
 ): Message[] {
   if (category === 'alle') {
     if (!ctx.excludePinnwandFromAlle) return messages
-    const board = ctx.broadcastAddress.trim().toLowerCase()
-    if (!board) return messages
-    return messages.filter((m) => !messageBelongsToPinnwand(m, board))
+    const match = pinnwandMatchForOverview(ctx)
+    if (!match.broadcastAddress.trim()) return messages
+    return messages.filter((m) => !messageBelongsToPinnwand(m, match))
   }
   return messages.filter((m) => inboxMessageOverviewCategory(m, ctx) === category)
 }

@@ -76,7 +76,7 @@ describe('ChatViewInboxToolbar Simple Mode', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /Wartende Sendungen \(2\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ausstehend \(2\)/i })).toBeInTheDocument()
   })
 
   it('blendet Wartende Sendungen aus wenn pending=0 und kein Expert-Menü', () => {
@@ -88,6 +88,6 @@ describe('ChatViewInboxToolbar Simple Mode', () => {
         })}
       />
     )
-    expect(screen.queryByRole('button', { name: /Wartende Sendungen/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ausstehend/i })).not.toBeInTheDocument()
   })
 })

@@ -38,6 +38,7 @@ import {
 import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
+  sendTeamPlaintextBroadcastHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
@@ -62,6 +63,7 @@ import {
 } from '@/frontend/lib/forensic-mailbox-attestation'
 import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint'
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
+import { trimTangleContentPreview } from '@/frontend/lib/tangle-inventory-recover'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
 import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import { sendLoraImageViaMorgSegV1 } from '@/frontend/features/send/lora-image-morg-seg-v1-send'
@@ -80,10 +82,18 @@ import {
   resolveTelegramNotifyRecipientAddress,
 } from '@/frontend/lib/telegram-notify-pref'
 import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
+import { readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
 import {
-  readGroupMailboxSendAll,
-  resolveGroupMailboxSendTargets,
-} from '@/frontend/lib/group-mailbox-pairwise-send'
+  GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG,
+  GROUP_TEAM_MAILBOX_REQUIRED_MSG,
+  isGroupMailboxInternetChainSend,
+  resolveGroupTeamMailboxObjectId,
+  shouldSendGroupTeamBroadcast,
+} from '@/frontend/lib/group-team-broadcast'
+import {
+  buildGroupMailboxOptimisticInboxRows,
+  mergeOptimisticGroupInboxRows,
+} from '@/frontend/lib/group-inbox-optimistic'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
 const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
@@ -173,6 +183,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     clearCompactAttachment,
     meshtastic,
     loadMessages,
+    setMessages,
     setSending,
     setStatus,
     setStatusMsg,
@@ -219,36 +230,29 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     /** Pfad 4 erzwingt Klartext-LoRa + Self-Mirror, unabhängig vom Encrypt-Toggle. */
     const path4Active = meshSelfArchiveAfterLoRa && isPrivate && forcedTransport === 'mesh'
 
-    const groupMailboxSendAll =
-      isGroupChannel &&
-      Boolean(activeGroup) &&
-      messagingPersistenceMode === 'mailbox' &&
-      forcedTransport === 'internet' &&
-      readGroupMailboxSendAll()
+    const groupMailboxInternetChain = isGroupMailboxInternetChainSend({
+      isGroupChannel,
+      messagingPersistenceMode,
+      forcedTransport,
+    })
 
-    const groupMailboxTargetsEarly =
-      isGroupChannel && activeGroup
-        ? resolveGroupMailboxSendTargets({
-            activeGroup,
-            myAddress,
-            composerRecipient: encrypted ? encryptedMailboxRecipient : plainMailboxRecipient,
-            sendAllMembers: groupMailboxSendAll,
-          })
-        : []
-
-    if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
-      if (!(groupMailboxSendAll && groupMailboxTargetsEarly.length > 0)) {
-        setStatus('error')
-        setStatusMsg(
-          'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen — oder „An alle Mitglieder“ mit gespeicherter Gruppe.'
-        )
-        return
-      }
+    if (groupMailboxInternetChain && encrypted) {
+      setStatus('error')
+      setStatusMsg(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG)
+      return
     }
 
-    if (groupMailboxSendAll && groupMailboxTargetsEarly.length === 0) {
+    if (groupMailboxInternetChain && !resolveGroupTeamMailboxObjectId(activeGroup)) {
       setStatus('error')
-      setStatusMsg('Gruppe: mindestens ein anderes Mitglied (0x…) in der Gruppenliste speichern.')
+      setStatusMsg(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
+      return
+    }
+
+    if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+      setStatus('error')
+      setStatusMsg(
+        'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
+      )
       return
     }
 
@@ -363,9 +367,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
     }
 
-    const singleWireSuccessMsg = (): string => {
-      if (isGroupChannel && groupMailboxSendAll && groupMailboxTargetsEarly.length > 1) {
-        return `An ${groupMailboxTargetsEarly.length} Gruppenmitglieder gesendet (pairwise Mailbox, ${groupMailboxTargetsEarly.length}× Chain).`
+    const singleWireSuccessMsg = (delivery?: 'team-broadcast' | 'pairwise'): string => {
+      if (isGroupChannel && delivery === 'team-broadcast') {
+        return 'Team-Broadcast gesendet (1× Chain). Posteingang: Kanal „Alle“ oder „Ausgang“.'
       }
       if (!isPrivate) return 'Gesendet!'
       if (path4Active) {
@@ -393,9 +397,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return false
     }
 
-    /** Nach Mailbox-Send: voller Reload (200 Zeilen), damit verschlüsselte/MsgKey nicht hinter Event-Klartext fehlen. */
+    /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). */
     const scheduleInboxReloadAfterSend = () => {
-      setTimeout(() => void loadMessages('reset', undefined, { silent: true }), 1200)
+      const delays = isGroupChannel ? [1200, 4000, 9000] : [1200]
+      for (const ms of delays) {
+        setTimeout(() => void loadMessages('reset', undefined, { silent: true }), ms)
+      }
     }
 
     const mailboxOptsFor = (to: string) => {
@@ -406,17 +413,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
 
-    const groupMailboxTargetsForSend = (): string[] => {
-      if (!isGroupChannel || !activeGroup || messagingPersistenceMode !== 'mailbox') return []
-      if (forcedTransport !== 'internet') return []
-      return resolveGroupMailboxSendTargets({
-        activeGroup,
-        myAddress,
-        composerRecipient: encrypted && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient,
-        sendAllMembers: readGroupMailboxSendAll(),
-      })
-    }
-
     const publishGroupStreamsAfterSend = (textSnap: string, toAddr: string, multicast: boolean) => {
       if (!isGroupChannel || !activeGroup?.streamsAnchorId) return
       void publishStreamsAnchor(activeGroup.streamsAnchorId, {
@@ -424,9 +420,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         groupId: activeGroup.id,
         from: myAddress.trim(),
         to: multicast ? `@group:${activeGroup.id}` : toAddr,
-        preview: multicast
-          ? `${textSnap.slice(0, 180)} [${groupMailboxTargetsForSend().length}× pairwise]`
-          : textSnap.slice(0, 240),
+        preview: multicast ? `${textSnap.slice(0, 180)} [team-broadcast]` : textSnap.slice(0, 240),
         ts: Date.now(),
       })
     }
@@ -773,7 +767,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
 
-    if (!encrypted && !plainMailboxRecipient) {
+    if (!encrypted && !plainMailboxRecipient && !groupMailboxInternetChain) {
       if (!meshKlartextOkWithoutZeroXRecipient) {
         applyValidationError(
           {
@@ -789,7 +783,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
     const recipientTrimLower = plainMailboxRecipient.trim().toLowerCase()
-    if (!encrypted && forcedTransport === 'internet' && !ADDR_64_LOWER.test(recipientTrimLower)) {
+    if (
+      !encrypted &&
+      forcedTransport === 'internet' &&
+      !ADDR_64_LOWER.test(recipientTrimLower) &&
+      !groupMailboxInternetChain
+    ) {
       applyValidationError(
         {
           ok: false,
@@ -1009,6 +1008,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           meshFallback?: { onlineErr: string }
           mailboxCapture?: MailboxSendCapture
           path4Footnote?: string
+          groupDelivery?: 'team-broadcast' | 'pairwise'
         }
       | { ok: false }
 
@@ -1034,8 +1034,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             digest: d.txDigest,
             type: 'text',
             status: 'anchored',
+            origin: 'path4',
             nonce: n.toString(),
             encrypted: false,
+            contentPreview: trimTangleContentPreview(marked),
           } as const
           addTangleInventoryItem(inv)
           void maybeAutoSaveDigestToVault({
@@ -1110,41 +1112,48 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return failPart(`${target.slice(0, 10)}…: ${errText}`)
       }
 
-      const sendMailboxPairwiseGroup = async (targets: string[], enc: boolean, textSnap: string): Promise<PartOk> => {
-        let okCount = 0
-        const failures: string[] = []
-        let lastCapture: MailboxSendCapture | undefined
-        for (const sendTo of targets) {
-          const part = await sendMailboxSingle(sendTo, enc, textSnap, { suppressStatus: true })
-          if (part.ok) {
-            okCount++
-            if (part.mailboxCapture) lastCapture = part.mailboxCapture
-          } else {
-            failures.push('error' in part ? part.error : 'Senden fehlgeschlagen.')
+      const tryGroupTeamBroadcast = async (textSnap: string, enc: boolean): Promise<PartOk | null> => {
+        if (
+          !shouldSendGroupTeamBroadcast({
+            activeGroup,
+            encrypted: enc,
+            messagingPersistenceMode,
+            forcedTransport,
+            sendAllMembers: readGroupMailboxSendAll(),
+            isGroupChannel,
+          })
+        ) {
+          return null
+        }
+        const teamMb = resolveGroupTeamMailboxObjectId(activeGroup)
+        if (!teamMb) return null
+        const body = payloadWithoutOutNonce(textSnap)
+        const messageNonceU64 = nextChainMessageNonceU64()
+        const res = await sendTeamPlaintextBroadcastHybrid(teamMb, body, messageNonceU64)
+        if (res.ok) {
+          publishGroupStreamsAfterSend(textSnap, teamMb, true)
+          return {
+            ok: true,
+            groupDelivery: 'team-broadcast',
+            mailboxCapture: {
+              payloadUtf8: body,
+              messageNonceU64,
+              encrypted: false,
+              txDigest: res.txDigest,
+            },
           }
         }
-        if (okCount > 0) {
-          publishGroupStreamsAfterSend(textSnap, targets[0] ?? '', true)
-        }
-        if (okCount === 0) {
-          return failSend(
-            failures[0] ??
-              'An kein Gruppenmitglied gesendet — Handshake/Connect pro 0x prüfen (verschlüsselt) oder Klartext wählen.'
-          )
-        }
-        if (failures.length > 0) {
-          return failSend(
-            `Gruppe: ${okCount}/${targets.length} Mitglieder OK (pairwise Mailbox). Erster Fehler: ${failures[0]}`
-          )
-        }
-        return { ok: true, mailboxCapture: lastCapture }
+        const errText = res.error || res.message || 'Team-Broadcast fehlgeschlagen.'
+        return failSend(
+          `${errText} — Team-Postfach muss zum aktuellen Move-Package passen (nach Deploy neu anlegen).`
+        )
       }
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
-        const targets = groupMailboxTargetsForSend()
-        const multicast = targets.length > 1 || (targets.length === 1 && readGroupMailboxSendAll() && isGroupChannel)
-        if (multicast && targets.length > 0) {
-          return sendMailboxPairwiseGroup(targets, enc, textSnap)
+        if (groupMailboxInternetChain) {
+          if (enc) return failSend(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG)
+          const tb = await tryGroupTeamBroadcast(textSnap, false)
+          return tb ?? failSend(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
         }
         const sendTo = enc && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient
         return sendMailboxSingle(sendTo, enc, textSnap)
@@ -1299,7 +1308,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
       } else {
-        successMsg = singleWireSuccessMsg() + successTail
+        successMsg = singleWireSuccessMsg(lastOk?.groupDelivery) + successTail
       }
 
       const forensicGate =
@@ -1355,6 +1364,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               recipientAddress: notifyAddr,
               messagePreview: preview,
               senderLabel: myLabel,
+              skipJournal: true,
             }).then((r) => {
               if (r.delivered) {
                 setStatusMsg(`${statusLine} · Telegram-Hinweis an Kontakt gesendet.`)
@@ -1367,12 +1377,21 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       if (lastOk?.ok && lastOk.mailboxCapture?.txDigest) {
+        const previewSource =
+          lastOk.mailboxCapture.payloadUtf8?.trim() ||
+          textSnaps[textSnaps.length - 1]?.trim() ||
+          message.trim()
         const inv = {
           digest: lastOk.mailboxCapture.txDigest,
           type: inventoryType,
           status: 'anchored',
+          origin: 'mailbox',
           nonce: lastOk.mailboxCapture.messageNonceU64.toString(),
           encrypted: lastOk.mailboxCapture.encrypted,
+          contentPreview:
+            previewSource && !lastOk.mailboxCapture.encrypted
+              ? trimTangleContentPreview(previewSource)
+              : undefined,
         } as const
         addTangleInventoryItem(inv)
         void maybeAutoSaveDigestToVault({
@@ -1380,6 +1399,30 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           timestamp: Date.now(),
         })
       }
+      if (
+        isGroupChannel &&
+        lastOk?.ok &&
+        lastOk.mailboxCapture &&
+        forcedTransport === 'internet' &&
+        messagingPersistenceMode === 'mailbox'
+      ) {
+        const previewText =
+          lastOk.mailboxCapture.payloadUtf8?.trim() ||
+          textSnaps[textSnaps.length - 1]?.trim() ||
+          message.trim()
+        const optimistic = buildGroupMailboxOptimisticInboxRows({
+          myAddress,
+          text: previewText,
+          encrypted: lastOk.mailboxCapture.encrypted,
+          messageNonceU64: lastOk.mailboxCapture.messageNonceU64,
+          mode: 'team-broadcast',
+          teamMailboxObjectId: resolveGroupTeamMailboxObjectId(activeGroup),
+        })
+        if (optimistic.length > 0) {
+          setMessages((prev) => mergeOptimisticGroupInboxRows(prev, optimistic))
+        }
+      }
+
       setMessage('')
       if (shouldLoadMessagesAfterSend()) {
         scheduleInboxReloadAfterSend()
@@ -1415,6 +1458,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     isPrivate,
     loraOnlineOfferPayloadRef,
     loadMessages,
+    setMessages,
     message,
     meshtastic,
     recipient,
@@ -1436,6 +1480,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     partner,
     encryptedMailboxRecipient,
     plainMailboxRecipient,
+    activeGroup,
+    isGroupChannel,
   ])
 
   return { handleSend, cancelSend }

@@ -9,6 +9,7 @@ import {
   createDirectIotaClient,
   fetchMailboxInboxRpcRows,
   fetchMessagingEventInboxRpcRows,
+  fetchTeamPlainBroadcastRpcRows,
   isLikelyIotaHexId,
   normalizeMailboxAddress,
   type MessagingEventInboxRpcRow,
@@ -264,6 +265,30 @@ export async function tryFetchDirectMailboxInboxViaIota(
           ts: r.ts,
           chainPurgeable: true,
         })
+      }
+    }
+
+    if (includePlain) {
+      const teamRows = await fetchTeamPlainBroadcastRpcRows(client, {
+        teamMailboxObjectId: mailboxObjectId,
+        packageId: pkg,
+        limit: opts.limit + opts.offset,
+        offset: 0,
+      })
+      for (const r of teamRows) {
+        apiRows.push({
+          sender: r.sender,
+          recipient: r.teamMailboxObjectId,
+          text: r.text,
+          isPlain: true,
+          nonce: r.nonce,
+          ts: r.ts,
+          chainPurgeable: true,
+          inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
+        })
+      }
+      if (teamRows.length > 0) {
+        apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)
       }
     }
 

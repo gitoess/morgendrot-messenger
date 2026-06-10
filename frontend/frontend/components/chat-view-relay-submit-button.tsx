@@ -436,6 +436,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       digest,
       type: 'text' as const,
       status: 'anchored' as const,
+      origin: 'relay' as const,
       timestamp: Date.now(),
     }
     addTangleInventoryItem(inv)

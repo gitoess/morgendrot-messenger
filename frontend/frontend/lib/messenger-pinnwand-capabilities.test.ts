@@ -61,6 +61,24 @@ describe('messenger-pinnwand-capabilities', () => {
     }
     expect(messageBelongsToPinnwand(msg, BOARD)).toBe(true)
     expect(messageBelongsToPinnwand({ ...msg, recipient: ME }, BOARD)).toBe(false)
+    expect(messageBelongsToPinnwand({ ...msg, encrypted: true }, BOARD)).toBe(false)
+  })
+
+  it('Brett = eigenes Postfach: nur Whitelist oder eigener Post', () => {
+    const ctx = { broadcastAddress: ME, myAddress: ME, authorizedSenders: [BOARD] }
+    const fromBoard: Message = {
+      id: 'b',
+      from: BOARD,
+      recipient: ME,
+      content: 'Lage',
+      timestamp: 1,
+      encrypted: false,
+    }
+    const fromStranger: Message = { ...fromBoard, from: `0x${'c'.repeat(64)}` }
+    const myPost: Message = { ...fromBoard, from: ME }
+    expect(messageBelongsToPinnwand(fromBoard, ctx)).toBe(true)
+    expect(messageBelongsToPinnwand(fromStranger, ctx)).toBe(false)
+    expect(messageBelongsToPinnwand(myPost, ctx)).toBe(true)
   })
 
   it('warnt wenn Brett-Adresse = eigene Adresse', () => {

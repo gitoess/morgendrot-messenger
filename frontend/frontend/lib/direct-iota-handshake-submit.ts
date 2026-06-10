@@ -20,6 +20,7 @@ import {
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 import {
   isDirectMailboxDrainEnabled,
   isIotaRelayOnlyMode,
@@ -99,16 +100,16 @@ export async function trySubmitHandshakeViaDirectIota(opts: {
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const mbOverride = (opts.mailboxObjectId ?? readActiveSendMailboxObjectId() ?? '').trim()
-    const usePrivateMb =
-      snap.flags.useMailbox &&
-      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) &&
-      mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
-    const mailboxObjectId =
-      snap.flags.useMailbox && !usePrivateMb
-        ? snap.mailboxId
-        : usePrivateMb
-          ? mbOverride
-          : undefined
+    let mailboxObjectId: string | undefined
+    let privateMailbox = false
+    if (snap.flags.useMailbox) {
+      const resolved = resolveDirectMailboxUsePrivateMoveCall({
+        mailboxObjectId: mbOverride || undefined,
+        serverMailboxId: snap.mailboxId,
+      })
+      mailboxObjectId = resolved.mailboxObjectId
+      privateMailbox = resolved.privateMailbox
+    }
 
     const txb = buildStoreEcdhInitTransaction({
       packageId: snap.packageId,
@@ -118,7 +119,7 @@ export async function trySubmitHandshakeViaDirectIota(opts: {
       nonce: BigInt(Date.now()),
       ttlDays: snap.ttlDays,
       mailboxObjectId,
-      privateMailbox: usePrivateMb,
+      privateMailbox,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })

@@ -6,7 +6,7 @@
     "streamlined": "Mnemonic eingeben"
   },
   "description": {
-    "default": "Wähle eine Option — ohne Passwort bleibt der Messenger gesperrt.",
+    "default": "",
     "standalone": "Standalone-APK ohne Morgendrot-Server: Mnemonic für Direkt senden/empfangen — Handoff vorher unter Einstellungen importieren.",
     "solo": "Privat-Modus ohne Boss — wie am PC: Tresor öffnen, Seed importieren oder neues Profil anlegen.",
     "streamlined": "Package, Mailbox und Fullnode sind schon aus dem Handoff da — nur noch deine Seed-Phrase vom Boss."
@@ -25,7 +25,6 @@
     "subtitle": "Mit Passwort entsperren",
     "noLocalFileSdk": "Keine lokale Vault-Datei — nutze „Seed importieren“ oder „Neues Profil“.",
     "noLocalFileChain": "Keine lokale Datei: Wenn der Tresor nur auf der Chain liegt, das gleiche Vault-Passwort wie beim On-Chain-Speichern — nach dem Entsperren werden die Schlüssel von der Chain in die Sitzung geladen.",
-    "sdkLocalHint": "Nur Passwort reicht, wenn beim letzten Speichern „Signer-Import mit speichern“ aktiv war. Sonst unten <strong>Seed importieren</strong> wählen und Mnemonic/Secret eintragen.",
     "passwordLabel": "Passwort",
     "passwordPlaceholder": "Passwort",
     "mnemonicOptionalLabel": "Mnemonic (nur falls nötig)",

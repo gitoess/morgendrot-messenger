@@ -37,7 +37,6 @@ export function parsePhonebookContact(
 export type ApplyPhonebookContactTargets = {
   setPartner: (v: string) => void
   setRecipient: (v: string) => void
-  setContactMeshNodeId: (v: string) => void
   setMeshPlaintextNodeId: (v: string) => void
   setMeshPlaintextToNodeEnabled: (v: boolean) => void
   setContactBleUuid: (v: string) => void
@@ -65,7 +64,6 @@ export function applyPhonebookContactToComposer(
   }
 
   if (c.meshNodeId) {
-    targets.setContactMeshNodeId(c.meshNodeId)
     targets.setMeshPlaintextNodeId(c.meshNodeId)
     targets.setMeshPlaintextToNodeEnabled(true)
   }

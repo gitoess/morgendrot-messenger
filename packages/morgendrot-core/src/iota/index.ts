@@ -6,6 +6,20 @@ export {
 } from './direct-client'
 export { probeDirectIotaRpc } from './chain-reachability'
 export { buildStorePlaintextMailboxTransaction, isLikelyIotaHexId } from './mailbox-plain-txb'
+export {
+  extractPackageIdFromMoveType,
+  classifyMessagingMailboxMoveType,
+  formatMailboxPackageMismatchError,
+  fetchMessagingMailboxObjectMeta,
+  validateMessagingMailboxObjectForPackage,
+} from './mailbox-object-validate'
+export type {
+  MessagingMailboxObjectKind,
+  MessagingMailboxObjectMeta,
+  ValidateMessagingMailboxResult,
+} from './mailbox-object-validate'
+export { buildStoreTeamPlaintextBroadcastTransaction } from './team-broadcast-txb'
+export type { BuildStoreTeamPlaintextBroadcastTxInput } from './team-broadcast-txb'
 export { buildStoreEcdhInitTransaction } from './handshake-ecdh-txb'
 export type { BuildStoreEcdhInitTxInput } from './handshake-ecdh-txb'
 export { buildPurgeHandshakeTransaction } from './purge-handshake-txb'
@@ -38,6 +52,8 @@ export {
 } from './mailbox-inbox-plain-rpc'
 export type { PlainMailboxRowForInbox, FetchPlaintextMailboxInboxInput } from './mailbox-inbox-plain-rpc'
 export { fetchMailboxInboxRpcRows } from './mailbox-inbox-mixed-rpc'
+export { fetchTeamPlainBroadcastRpcRows } from './team-broadcast-inbox-rpc'
+export type { TeamPlainBroadcastRpcRow, FetchTeamPlainBroadcastRpcInput } from './team-broadcast-inbox-rpc'
 export {
   fetchHsKeyFromMailbox,
   findPeerHandshakeFromRpc,

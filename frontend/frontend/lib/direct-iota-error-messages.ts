@@ -49,6 +49,15 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
   if (lower.includes('objectnotfound') || lower.includes('object not found')) {
     return 'Mailbox- oder Package-Objekt auf der Kette nicht gefunden — Ketten-IDs aus der Basis aktualisieren.'
   }
+  if (
+    lower.includes('invalid command argument') &&
+    (lower.includes('type of the value') || lower.includes('does not match the expected type'))
+  ) {
+    return (
+      'Mailbox-Typ passt nicht zur Move-Funktion (oft: Postfach von altem Package nach Move-Deploy). ' +
+      'Neues Team-Postfach anlegen oder create_globals + MAILBOX_ID aktualisieren, dann in der Gruppe verknüpfen.'
+    )
+  }
   if (lower.includes('locked') && lower.includes('object')) {
     return 'Objekt auf der Kette gesperrt — Mailbox-Version/Deploy prüfen.'
   }

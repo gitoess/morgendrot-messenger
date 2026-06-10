@@ -380,6 +380,28 @@ module messaging::messaging { // Named address via Move.toml
         expires_at_ms: u64,
     }
 
+    /// Team-Broadcast: ein DF pro Nachricht, kein Empfänger im Key (Shared Team-Mailbox).
+    struct TeamPlainBroadcastKey has copy, drop, store {
+        sender: address,
+        nonce: u64,
+    }
+
+    struct TeamPlainBroadcastEntry has key, store {
+        id: UID,
+        sender: address,
+        text: vector<u8>,
+        nonce: u64,
+        created_at_ms: u64,
+        expires_at_ms: u64,
+    }
+
+    struct TeamPlainBroadcastStored has copy, drop {
+        mailbox_id: ID,
+        sender: address,
+        nonce: u64,
+        expires_at_ms: u64,
+    }
+
     fun store_ecdh_init_on_uid(
         mailbox_uid: &mut UID,
         recipient: address,
@@ -829,6 +851,63 @@ module messaging::messaging { // Named address via Move.toml
     ) {
         store_plaintext_to_mailbox_stored_impl(mailbox, recipient, text, nonce, ttl_days, ctx);
         store_plaintext_mailbox_emit(recipient, text, nonce, ctx);
+    }
+
+    fun store_team_plaintext_broadcast_on_uid(
+        mailbox_uid: &mut UID,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let exp = now + ttl_days * 86400000;
+        let key = TeamPlainBroadcastKey { sender, nonce };
+        if (dof::exists_<TeamPlainBroadcastKey>(mailbox_uid, key)) {
+            let old = dof::remove<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key);
+            let TeamPlainBroadcastEntry {
+                id,
+                sender: _,
+                text: _,
+                nonce: _,
+                created_at_ms: _,
+                expires_at_ms: _,
+            } = old;
+            object::delete(id);
+        };
+        let entry = TeamPlainBroadcastEntry {
+            id: object::new(ctx),
+            sender,
+            text,
+            nonce,
+            created_at_ms: now,
+            expires_at_ms: exp,
+        };
+        let mailbox_id = object::uid_to_inner(mailbox_uid);
+        event::emit(TeamPlainBroadcastStored { mailbox_id, sender, nonce, expires_at_ms: exp });
+        dof::add<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key, entry);
+    }
+
+    fun store_team_plaintext_broadcast_impl(
+        mailbox: &mut Mailbox,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_team_plaintext_broadcast_on_uid(&mut mailbox.id, text, nonce, ttl_days, ctx);
+    }
+
+    /// Klartext Team-Broadcast: 1× TX pro Gruppennachricht (Shared Team-Mailbox, kein recipient im Key).
+    public entry fun store_team_plaintext_broadcast(
+        mailbox: &mut Mailbox,
+        text: vector<u8>,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_team_plaintext_broadcast_impl(mailbox, text, nonce, ttl_days, ctx);
     }
 
     public entry fun store_plaintext_message_with_credits(

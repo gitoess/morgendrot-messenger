@@ -251,6 +251,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
         bezeichnung,
         tuning: exportTuning,
         ids: chainIds,
+        helperAddress: mnemonic.address,
       })
 
       if (protectHandoffZip) {

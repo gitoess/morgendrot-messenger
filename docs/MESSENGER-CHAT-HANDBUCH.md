@@ -274,7 +274,9 @@ Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API
 
 ## Gruppenchat
 
-Gemeinsamer **Posteingang** für alle Gruppenmitglieder (`0x…`). **Senden** weiter an **eine** Adresse im Composer (**pairwise**) — kein gemeinsamer Chain-Raum. Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüsselt**.
+Gemeinsamer **Posteingang** für alle Gruppenmitglieder (`0x…`). **Senden:** pairwise (N× IOTA bei „Mailbox an alle“) — **kein** gemeinsamer Chain-Raum. **Echtzeit:** Funk Secondary. **Zielbild:** **`docs/GRUPPENCHAT-ZIELBILD.md`**, Move-Backlog **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
+
+Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüsselt**.
 
 ---
 
@@ -303,6 +305,23 @@ Gemeinsamer **Posteingang** für alle Gruppenmitglieder (`0x…`). **Senden** we
 **Nur Klartext + „funk“:** **Verschlüsselung** läuft über den **Online/IOTA-Pfad** — nicht über den Funk-Composer (bei aktivem Schloss wechselt die UI entsprechend).
 
 **Expert-Option Kanalindex (0-7):** Im Composer kann optional ein **Meshtastic-Kanalindex** gesetzt werden. **Leer** = Geräte-Default (typisch Primary). Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen; daher nur nutzen, wenn der Kanal in der Meshtastic-App/QR-Handoff eindeutig abgestimmt ist.
+
+**Policy (UI):** Verschlüsselter LoRa-Funk ist in Morgendrot **deaktiviert**. Für Ende-zu-Ende: Sendepfad **online** mit verbundenem Partner (Handshake/`/connect`). Das **Schloss** gilt nur für **online** (Morgendrot-E2E). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+
+**Heltec koppeln:** Unter **Funk & Geräte** (Setup) **Web Bluetooth** — der Browser zeigt die Geräteliste. Kein Web Bluetooth: Chrome/Edge; bei Brave ggf. `brave://flags`.
+
+---
+
+## Funk-Kontext Telefonbuch und Mesh-Export
+
+**Telefonbuch Funk** (Setup → Funk & Geräte): Speichert im **Kontaktverzeichnis**, welche **IOTA-Adresse (`0x…`)** zu welcher **Meshtastic Node-ID (`!…`)** gehört.
+
+| Feld | Zweck |
+|------|--------|
+| **0x… (64 Hex)** | IOTA-/Mailbox-Adresse des Kontakts — für Anzeige im Posteingang, Handshake/Online, Telefonbuch. **Nicht** die LoRa-Zieladresse beim Senden. Für Broadcast („An alle“) brauchst du **keine** 0x im Nachrichtenfeld. |
+| **!… Node-ID** | Funk-ID wie am Radio — erscheint im Telefonbuch und kann im Composer unter **„An Node-ID senden“** als Ziel gewählt werden (getrennt vom 0x-Feld). |
+
+**Mesh-Export / Import** (passwortgeschütztes JSON-Bundle): Alle gespeicherten Funk-Zuordnungen (0x, Node-ID, optional BLE-UUID) **verschlüsselt** auf einen anderen Rechner oder ins Handy übertragen — z. B. nach Gerätewechsel oder für QR-Handoff im Feld. Passwort min. 8 Zeichen; Export erzeugt JSON, Import merged ins lokale Telefonbuch.
 
 ---
 

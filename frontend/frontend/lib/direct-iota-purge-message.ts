@@ -17,6 +17,7 @@ import { canTryDirectPurgeHandshakeSubmit } from '@/frontend/lib/direct-iota-pur
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
+import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 
 export function canTryDirectPurgeMessageSubmit(): boolean {
   return canTryDirectPurgeHandshakeSubmit()
@@ -57,11 +58,12 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const mbOverride = (opts.mailboxObjectId ?? readActiveSendMailboxObjectId() ?? '').trim()
-    const usePrivateMb =
-      snap.flags.useMailbox &&
-      /^0x[a-fA-F0-9]{64}$/i.test(mbOverride) &&
-      mbOverride.toLowerCase() !== snap.mailboxId.toLowerCase()
-    const mailboxObjectId = usePrivateMb ? mbOverride : snap.mailboxId
+    const { mailboxObjectId, privateMailbox } = snap.flags.useMailbox
+      ? resolveDirectMailboxUsePrivateMoveCall({
+          mailboxObjectId: mbOverride || undefined,
+          serverMailboxId: snap.mailboxId,
+        })
+      : { mailboxObjectId: snap.mailboxId, privateMailbox: false }
 
     const txb = buildPurgeMailboxMessageTransaction({
       packageId: snap.packageId,
@@ -71,7 +73,7 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
       peerSender: peer,
       nonce,
       variant: opts.variant,
-      privateMailbox: usePrivateMb,
+      privateMailbox,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })

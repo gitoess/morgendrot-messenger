@@ -14,6 +14,7 @@ import { getWalletPassword } from '../messenger-session-password.js';
 import {
     sendEncryptedMessage,
     sendPlaintextOnly,
+    sendTeamPlaintextBroadcastOnly,
     buildMeshPeerInnerBlob,
     packMeshEmergencyV2Wire,
     decryptMeshEmergencyV2Wire,
@@ -30,6 +31,7 @@ import type { CommandHandlerResult, MessengerCommandContext } from './command-ty
 
 const SEND_COMMANDS = new Set([
     '/send-plain',
+    '/send-team-broadcast',
     '/send',
     '/sos-gateway-ack',
     '/mesh-build-v2',
@@ -92,6 +94,35 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
                 nonce: lastNonce,
             };
         });
+    }
+
+    if (c === '/send-team-broadcast') {
+        const teamMb = String(opts?.mailboxObjectId ?? '').trim();
+        if (!/^0x[a-fA-F0-9]{64}$/.test(teamMb)) {
+            return {
+                ok: false,
+                message:
+                    'Team-Broadcast: gültige Team-Mailbox-Object-ID (mailboxObjectId, 0x + 64 Hex) angeben — Gruppe im UI verknüpfen oder /create-team-mailbox.',
+            };
+        }
+        const text = a.join(' ').trim() || '(leer)';
+        if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
+            return {
+                ok: false,
+                message: `Nachricht zu lang für Team-Broadcast (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8).`,
+            };
+        }
+        const { parseMailboxOutNonceMarker } = await import('@morgendrot/core/queue/offline-mailbox');
+        const result = await sendTeamPlaintextBroadcastOnly(teamMb, text);
+        const parsed = parseMailboxOutNonceMarker(text);
+        const lastDigest = result?.digest;
+        return {
+            ok: true,
+            message: `Team-Broadcast in ${teamMb.slice(0, 12)}… gespeichert (1× TX).`,
+            digest: lastDigest,
+            txDigest: lastDigest,
+            nonce: parsed ? parsed.nonce.toString() : undefined,
+        };
     }
 
     if (c === '/send') {

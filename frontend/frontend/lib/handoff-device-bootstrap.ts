@@ -22,6 +22,7 @@ import {
   type LocalHandoffAppliedSnapshot,
 } from '@/frontend/lib/handoff-local-apply'
 import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
+import { applyMessengerGroupHandoffFromEnv } from '@/frontend/lib/messenger-group-handoff'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 
 const LS_FLAGS = 'morgendrot.directChain.flagsJson'
@@ -181,6 +182,7 @@ export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppli
 
   syncLocalHandoffSnapshotToChainContext(snapshot, env)
   seedPartnersFromHandoffEnv(env)
+  applyMessengerGroupHandoffFromEnv(env)
   enableStandaloneDirectDefaults()
 
   return snapshot

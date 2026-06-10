@@ -14,10 +14,13 @@ import {
 } from '@/frontend/lib/handoff-export-params'
 import {
   handoffPresetUsesTeamMailboxes,
+  getHandoffPreset,
   type HandoffEinsatzPresetId,
 } from '@/frontend/lib/handoff-export-presets'
 import { HANDOFF_README_IOTA_ARCHIV_BLOCK } from '@/frontend/lib/handoff-lora-psk-copy'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
+import { resolveMessengerGroupHandoffJson } from '@/frontend/lib/messenger-group-handoff'
+import { getActiveMessengerGroup } from '@/frontend/lib/messenger-group-store'
 
 const ADDR = /^0x[a-fA-F0-9]{64}$/i
 
@@ -36,6 +39,8 @@ export function buildWizardHandoffExportBody(opts: {
     packageId?: string
     directIotaRpcUrl?: string
   }
+  /** Provision-Wizard: frisch erzeugte Helfer-Adresse in Gruppenliste. */
+  helperAddress?: string
 }): StandaloneSmartphoneHandoffZipBody {
   const tuning = opts.tuning ?? {}
   const resolved = resolveHandoffExportParams(opts.presetId, tuning)
@@ -60,6 +65,24 @@ export function buildWizardHandoffExportBody(opts: {
     opts.apiSnapshot?.packageId?.trim() ||
     undefined
 
+  const activeGroup = getActiveMessengerGroup()
+  const teamMbForGroup =
+    activeGroup?.teamMailboxObjectId?.trim() ||
+    (useTeam ? pickPrimaryMailboxId(selectedTeamIds) : undefined) ||
+    undefined
+  const partnerCsv = buildDefaultPartnerAddresses(opts.apiSnapshot, opts.contactDirectory, boss) || ''
+  const memberPool = [
+    boss,
+    opts.helperAddress?.trim(),
+    ...partnerCsv.split(/[\s,;]+/),
+    ...(activeGroup?.memberAddresses ?? []),
+  ].filter(Boolean) as string[]
+  const messengerGroupHandoff = resolveMessengerGroupHandoffJson({
+    handoffLabel: opts.bezeichnung.trim() || getHandoffPreset(opts.presetId).label,
+    teamMailboxObjectId: teamMbForGroup,
+    memberAddresses: memberPool,
+  })
+
   return {
     handoffLabel: opts.bezeichnung.trim() || undefined,
     rpcUrl: opts.ids?.rpcUrl?.trim() || undefined,
@@ -81,5 +104,6 @@ export function buildWizardHandoffExportBody(opts: {
     simpleMode: resolved.simpleMode,
     includeIotaArchivReadme: meshFirst,
     readmeExtra: meshFirst ? HANDOFF_README_IOTA_ARCHIV_BLOCK : undefined,
+    messengerGroupHandoff,
   }
 }
