@@ -4,7 +4,8 @@ import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib
 import { API_BASE, getApiBase } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
-import { readStandaloneDeviceStatusFallback } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { readStandaloneDeviceStatusFallback, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { broadcastPinnwandStatusFromHandoff } from '@/frontend/lib/broadcast-pinnwand-handoff-status'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
@@ -202,6 +203,7 @@ function readLocalHandoffStatusFallback():
   | null {
   const local = readLocalHandoffAppliedSnapshot()
   if (!local) return null
+  const broadcastPinnwand = broadcastPinnwandStatusFromHandoff(local)
   return {
     status: {
       backendOnline: false,
@@ -218,6 +220,7 @@ function readLocalHandoffStatusFallback():
       simpleMode: local.simpleMode,
       packageId: local.packageId,
       mailboxId: local.mailboxId,
+      ...(broadcastPinnwand ? { broadcastPinnwand } : {}),
     },
     pollClockHint: { okAtMs: local.savedAtMs, httpDateUtcMs: null },
   }
@@ -225,7 +228,9 @@ function readLocalHandoffStatusFallback():
 
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   const apiBase = getApiBase()
-  if (!apiBase.trim()) {
+  const standaloneFirst =
+    !apiBase.trim() || shouldPreferStandaloneHandoffStatus()
+  if (standaloneFirst) {
     const standalone = readStandaloneDeviceStatusFallback()
     if (standalone) {
       return { ...standalone.status, pollClockHint: standalone.pollClockHint }

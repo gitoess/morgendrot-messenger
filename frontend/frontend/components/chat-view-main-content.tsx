@@ -20,6 +20,12 @@ import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/compo
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
 import { ChatViewPinnwandContextCard } from '@/frontend/components/chat-view-pinnwand-context-card'
+import { ChatViewPinnwandInboxStrip } from '@/frontend/components/chat-view-pinnwand-inbox-strip'
+import { ChatViewInboxUnreadThreadsStrip } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
+import {
+  getMessengerPinnwandCapabilities,
+  messageBelongsToPinnwand,
+} from '@/frontend/lib/messenger-pinnwand-capabilities'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   ChatViewTransportCard,
@@ -41,6 +47,8 @@ import {
   getMessengerUiCapabilities,
 } from '@/frontend/lib/messenger-role-capabilities'
 import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
+import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
+import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
@@ -274,7 +282,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenSettings,
     inboxWireFilter,
     setInboxWireFilter,
+    inboxOverviewChipsVisible,
+    inboxOverviewCategory,
+    setInboxOverviewCategory,
+    inboxOverviewUnreadCounts,
+    inboxUnreadThreadOptions,
+    isInboxMessageUnread,
   } = c
+
+  const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
   const [contactAliasDialog, setContactAliasDialog] = useState<{
     address: string
@@ -581,6 +597,44 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   )
 
   const uiCaps = useMemo(() => getMessengerUiCapabilities(apiStatus), [apiStatus])
+  const pinnwandCaps = useMemo(
+    () => getMessengerPinnwandCapabilities(apiStatus, role, channelMode, myAddress),
+    [apiStatus, role, channelMode, myAddress]
+  )
+  const pinnwandPreviewMessages = useMemo(() => {
+    if (!pinnwandCaps.showInboxStrip || !pinnwandCaps.broadcastAddress) return []
+    return messages
+      .filter((m) => messageBelongsToPinnwand(m, pinnwandCaps.broadcastAddress))
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+      .slice(0, 3)
+  }, [messages, pinnwandCaps])
+  const showInboxPackageExpert = uiCaps.showInboxPackageExpertMenu(clientExpertMode)
+
+  useEffect(() => {
+    if (!onChannelModeChange || channelMode == null) return
+    if (channelMode === 'pinnwand' && !pinnwandCaps.showChannelTab) {
+      onChannelModeChange('private')
+    }
+  }, [channelMode, pinnwandCaps.showChannelTab, onChannelModeChange])
+
+  useEffect(() => {
+    if (!showInboxPackageExpert) return
+    void refreshPackageIdSuggestions()
+  }, [showInboxPackageExpert, refreshPackageIdSuggestions])
+
+  const applyTemporaryInboxPackage = useCallback(
+    async (packageId: string) => {
+      setInboxPackageFilter(packageId)
+      await loadMessages('reset', packageId)
+    },
+    [loadMessages, setInboxPackageFilter]
+  )
+
+  const clearTemporaryInboxPackage = useCallback(async () => {
+    setInboxPackageFilter('')
+    await loadMessages('reset')
+  }, [loadMessages, setInboxPackageFilter])
+
   const offlineStatus = useOfflineStatus({
     apiSnapshot: apiStatus,
     backendReachable: basisUnreachable ? false : true,
@@ -619,7 +673,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     }
     setRecipient(a)
     selectInboxPartnerForSend(a)
-    toast.success('Empfänger übernommen — siehe „Empfänger-Adresse“ im Composer unten.')
+    toast.success('Empfänger übernommen — siehe „Verschlüsselung & Partner“ oben.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
   const inboxPanelProps = {
@@ -727,6 +781,25 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     messagingPersistenceMode,
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
     showIotaExpertInboxActions: uiCaps.expertTools,
+    inboxOverviewChipsVisible,
+    inboxOverviewCategory,
+    onInboxOverviewCategoryChange: setInboxOverviewCategory,
+    inboxOverviewUnreadCounts,
+    pinnwandOverviewConfigured: pinnwandCaps.configured,
+    isInboxMessageUnread,
+    showInboxPackageExpertMenu: showInboxPackageExpert,
+    inboxPackageExpertMenu: showInboxPackageExpert ? (
+      <ChatViewInboxPackageExpertMenu
+        serverPackageId={apiStatus?.packageId}
+        inboxPackageFilter={inboxPackageFilter}
+        packageIdSuggestions={packageIdSuggestions}
+        packageIdBusy={packageIdBusy}
+        onApplyTemporary={applyTemporaryInboxPackage}
+        onClearTemporary={clearTemporaryInboxPackage}
+        onApplyPermanent={applyPackageIdBackend}
+        onOpenSettings={onOpenSettings}
+      />
+    ) : null,
   } satisfies ChatViewInboxPanelProps
 
   const telegramComposer = useChatViewTelegramComposer({
@@ -754,6 +827,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
     },
   })
+
+  const syncPartnerAndRecipient = useCallback(
+    (v: string) => {
+      const t = v.trim().toLowerCase()
+      setPartner(t)
+      if (isPrivate) setRecipient(t)
+    },
+    [isPrivate, setPartner, setRecipient]
+  )
 
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
@@ -823,8 +905,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
     groupMemberCount: isGroup && activeGroup ? groupMailboxTargetCount(activeGroup, myAddress) : 0,
     partner,
-    onPartnerChange: setPartner,
+    onPartnerChange: syncPartnerAndRecipient,
     myAddress,
+    hideComposerIotaRecipient:
+      isPrivate && encrypted && forcedTransport === 'internet' && composerDelivery === 'chain',
     onStatusFeedback: (msg, st = 'success') => {
       setStatus(st)
       setStatusMsg(msg)
@@ -843,13 +927,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
     showPath4Checkbox: uiCaps.expertTools,
     onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
+    isPinnwandChannel: channelMode != null && isPinnwandChannel(channelMode),
+    pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
+    canPostToPinnwand: pinnwandCaps.canPost,
   } satisfies ChatViewSendPanelProps
 
   const showEncryptedPartnerPanel =
     composerDelivery === 'chain' &&
-    (isGroup || (isPrivate && encryptedRecipientHandshake.status !== 'ready')) &&
     encrypted &&
-    forcedTransport === 'internet'
+    forcedTransport === 'internet' &&
+    (isPrivate || isGroup)
 
   const showPartnerSetupPanel =
     (isPrivate || isGroup) &&
@@ -885,7 +972,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     encryptedPartner: showEncryptedPartnerPanel
       ? {
           partner,
-          onPartnerChange: setPartner,
+          onPartnerChange: syncPartnerAndRecipient,
           sending,
           onHandshake: handleHandshake,
           onConnectAcceptPartner: handleConnectAcceptPartner,
@@ -956,8 +1043,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {channelMode != null && isPinnwandChannel(channelMode) ? (
-        <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} />
+      {channelMode != null && isPinnwandChannel(channelMode) && canAccessEinsatzleitung(role) ? (
+        <ChatViewPinnwandContextCard apiStatus={apiStatus} myAddressLine={myAddress} role={role} />
+      ) : null}
+
+      {pinnwandCaps.showInboxStrip ? (
+        <ChatViewPinnwandInboxStrip
+          messages={pinnwandPreviewMessages}
+          contactDirectory={directory}
+          unreadCount={
+            inboxOverviewCategory !== 'lagebild' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
+          }
+          onSelectCategory={() => setInboxOverviewCategory('lagebild')}
+        />
       ) : null}
 
       {isPrivate && uiCaps.showPackageIdBanner ? (
@@ -1051,6 +1149,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         </h2>
         <ChatViewSendPanel {...sendPanelProps} />
       </section>
+
+      {isPrivate && inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+        <ChatViewInboxUnreadThreadsStrip
+          threads={inboxUnreadThreadOptions ?? []}
+          onOpenThread={(address) => {
+            setInboxOverviewCategory('direkt')
+            selectInboxPartnerForSend(address)
+          }}
+        />
+      ) : null}
 
       <ChatViewInboxPanel {...inboxPanelProps} />
 

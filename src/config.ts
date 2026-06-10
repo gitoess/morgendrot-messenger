@@ -2103,6 +2103,9 @@ export interface StandaloneSmartphoneHandoffParams {
     transportProfile?: TransportProfile;
     simpleMode?: boolean;
     handoffLabel?: string;
+    /** Lagebild — aus Boss-.env übernommen (kein Secret). */
+    broadcastPinnwandEnabled?: boolean;
+    broadcastPinnwandAddress?: string;
 }
 
 function parseHandoffObjectIdList(raw: string | undefined): string[] {
@@ -2242,6 +2245,21 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         'ENABLE_PLAINTEXT_CHANNEL=false',
         ''
     );
+    const broadcastEnabled = Boolean(p.broadcastPinnwandEnabled);
+    const broadcastRaw = String(p.broadcastPinnwandAddress || '').trim();
+    const broadcastAddr =
+        broadcastRaw && ADDR_64_HEX.test(normalizeAddress(broadcastRaw))
+            ? normalizeAddress(broadcastRaw)
+            : '';
+    if (broadcastEnabled && broadcastAddr) {
+        lines.push(
+            '# --- Lagebild (Pinnwand) — automatisch mit Handoff; Helfer konfiguriert nichts ---',
+            'ENABLE_BROADCAST_PINNWAND=true',
+            `BROADCAST_PINNWAND_ADDRESS=${broadcastAddr}`,
+            'ENABLE_PLAINTEXT_CHANNEL=true',
+            ''
+        );
+    }
     if (transportProfile === 'mesh-first') {
         lines.push(
             '# --- LoRa / Meshtastic (§ TRANSPORT-AND-IOTA-LAYERS) ---',
@@ -2252,6 +2270,8 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
     }
     if (direct) {
         lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${direct}`, '');
+    } else {
+        lines.push(`NEXT_PUBLIC_DIRECT_IOTA_RPC_URL=${rpc}`, '');
     }
     return lines.join('\n');
 }

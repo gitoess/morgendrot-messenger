@@ -92,6 +92,29 @@ export async function restoreDirectChatEcdhPrivateFromLocalStorage(): Promise<
   }
 }
 
+/** Standalone-Helfer: ECDH automatisch erzeugen, wenn noch keiner da ist (Peering-QR später). */
+export async function ensureStandaloneChatEcdhKeypair(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  if (getDirectChatEcdhPrivateKey()) return { ok: true }
+  const restored = await restoreDirectChatEcdhPrivateFromLocalStorage()
+  if (restored.ok) return { ok: true }
+  if (typeof window === 'undefined' || !globalThis.crypto?.subtle) {
+    return { ok: false, error: 'Web Crypto fehlt — Chat-ECDH kann nicht erzeugt werden.' }
+  }
+  try {
+    const pair = await globalThis.crypto.subtle.generateKey(
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,
+      ['deriveBits', 'deriveKey']
+    )
+    const jwk = await globalThis.crypto.subtle.exportKey('jwk', pair.privateKey)
+    return applyDirectChatEcdhPrivateJwk(JSON.stringify(jwk))
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
+}
+
 export async function applyDirectChatEcdhPrivateJwk(
   jwkJson: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {

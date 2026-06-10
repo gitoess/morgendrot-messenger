@@ -18,6 +18,7 @@ import {
 } from '@/frontend/lib/composer-delivery-channel'
 import {
   resolveComposerIotaAddress,
+  resolveComposerKlartextIotaAddress,
   resolveComposerIotaFieldValue,
   resolveComposerTelegramChatIds,
 } from '@/frontend/lib/composer-recipient-fields'
@@ -27,7 +28,10 @@ import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-recor
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
-import type { EncryptedRecipientHandshakeStatus } from '@/frontend/lib/encrypted-recipient-handshake-status'
+import {
+  encryptedHandshakeStatusLabel,
+  type EncryptedRecipientHandshakeStatus,
+} from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
   CHAT_PATH4_SELF_ARCHIVE_HINT,
@@ -123,6 +127,12 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onComposerMailboxObjectIdChange?: (id: string) => void
   /** Verschlüsselt + online: Handshake-Status zur Empfänger-0x. */
   encryptedRecipientHandshakeStatus?: EncryptedRecipientHandshakeStatus
+  /** 1:1 verschlüsselt online: 0x nur im Transport-Panel „Verschlüsselung & Partner“. */
+  hideComposerIotaRecipient?: boolean
+  /** Pinnwand-Kanal: Empfänger = feste Brett-0x (Server). */
+  isPinnwandChannel?: boolean
+  pinnwandBroadcastAddress?: string
+  canPostToPinnwand?: boolean
   encryptedHandshakeBlocksSend?: boolean
   onEncryptedHandshakeForRecipient?: () => void | Promise<void>
   onEncryptedAcceptHandshakeForRecipient?: () => void | Promise<void>
@@ -181,6 +191,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onComposerMailboxObjectIdChange,
     encryptedRecipientHandshakeStatus = 'idle',
     encryptedHandshakeBlocksSend = false,
+    hideComposerIotaRecipient = false,
+    isPinnwandChannel = false,
+    pinnwandBroadcastAddress = '',
+    canPostToPinnwand: canPostPinnwand = true,
     onEncryptedHandshakeForRecipient,
     onEncryptedAcceptHandshakeForRecipient,
     onOpenPhonebook,
@@ -287,10 +301,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null)
 
+  const klartextIota = useMemo(
+    () => resolveComposerKlartextIotaAddress(recipient, partner ?? '', isPrivate),
+    [recipient, partner, isPrivate]
+  )
+
   /** Klartext: 0x nötig außer Funk-Broadcast bzw. gültiger Node-ID bei „an Node-ID“. */
   const meshKlartextRecipientOk =
     encrypted ||
-    recipient.trim().length > 0 ||
+    klartextIota.length > 0 ||
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
@@ -302,12 +321,43 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const sendDisabled =
     sending ||
     vaultLocked ||
+    (isPinnwandChannel && !canPostPinnwand) ||
     (onlineChainNeedsKeys && !sessionKeysReady) ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
     meshPath4Blocked
+
+  const sendDisableReason = useMemo(() => {
+    if (sending) return 'Senden läuft bereits…'
+    if (vaultLocked) return 'Tresor gesperrt — bitte zuerst entsperren.'
+    if (onlineChainNeedsKeys && !sessionKeysReady) {
+      return 'Wallet-Keys fehlen — Tresor auf dem Startbildschirm entsperren („Tresor: Keys fehlen“).'
+    }
+    if (loraOnlineFallbackOffer != null) return 'LoRa-Online-Fallback offen — zuerst bestätigen oder abbrechen.'
+    if (hasNoPayload) return 'Text oder Anhang eingeben.'
+    if (isPinnwandChannel && !canPostPinnwand) {
+      return 'Nur autorisierte Führungs-Adressen dürfen auf die Pinnwand schreiben.'
+    }
+    if (!encrypted && !meshKlartextRecipientOk) {
+      return 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
+    }
+    if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
+    if (meshPath4Blocked) return '„LoRa + eigene Verankerung“ passt nicht zur aktuellen Auswahl.'
+    return undefined
+  }, [
+    sending,
+    vaultLocked,
+    onlineChainNeedsKeys,
+    sessionKeysReady,
+    loraOnlineFallbackOffer,
+    hasNoPayload,
+    encrypted,
+    meshKlartextRecipientOk,
+    meshPlaintextBlocked,
+    meshPath4Blocked,
+  ])
 
   const canOfferSosText =
     (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
@@ -321,28 +371,42 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     deliveryChannel: composerDelivery,
     isPrivate,
   })
-  const showRecipientRow =
-    showComposerRecipientRow({
-      isPrivate,
+  const meshBroadcastNoRecipient =
+    !isTelegramDelivery &&
+    !encrypted &&
+    forcedTransport === 'mesh' &&
+    !meshPlaintextToNodeEnabled
+  const showIotaField =
+    !hideComposerIotaRecipient &&
+    needsComposerIotaAddress({
       deliveryChannel: composerDelivery,
       encrypted,
       forcedTransport,
       meshPlaintextToNodeEnabled,
-    }) ||
-    !encrypted
-  const showIotaField = needsComposerIotaAddress({
-    deliveryChannel: composerDelivery,
-    encrypted,
-    forcedTransport,
-    meshPlaintextToNodeEnabled,
-  })
-  const showMailboxUi = needsComposerMailboxUi({
-    deliveryChannel: composerDelivery,
-    forcedTransport,
-    recipient,
-    partner: partner ?? '',
-    encrypted,
-  })
+    })
+  const showMailboxUi =
+    !isPinnwandChannel &&
+    needsComposerMailboxUi({
+      deliveryChannel: composerDelivery,
+      forcedTransport,
+      recipient,
+      partner: partner ?? '',
+      encrypted,
+    })
+  const showRecipientRow =
+    showTelegramField ||
+    meshBroadcastNoRecipient ||
+    showIotaField ||
+    (showMailboxUi && !groupMailboxSendAll) ||
+    (!isPrivate &&
+      (showComposerRecipientRow({
+        isPrivate,
+        deliveryChannel: composerDelivery,
+        encrypted,
+        forcedTransport,
+        meshPlaintextToNodeEnabled,
+      }) ||
+        !encrypted))
 
   const composerIota = useMemo(
     () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
@@ -380,12 +444,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (telegramInputFocused.current) return
     setTelegramDraft(telegramRecipientToComposerDisplay(recipient))
   }, [showTelegramField, recipient])
-
-  const meshBroadcastNoRecipient =
-    !isTelegramDelivery &&
-    !encrypted &&
-    forcedTransport === 'mesh' &&
-    !meshPlaintextToNodeEnabled
 
   const chainRecipientReady =
     encrypted
@@ -531,6 +589,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   </p>
                 ) : null}
               </>
+            ) : isPinnwandChannel && pinnwandBroadcastAddress ? (
+              <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2.5 text-xs text-sky-950 dark:text-sky-100">
+                <div className="font-medium text-foreground">Empfänger · Pinnwand (fest, Server)</div>
+                <code className="mt-1 block break-all font-mono text-[11px]">{pinnwandBroadcastAddress}</code>
+                <p className="mt-1.5 text-[10px] text-muted-foreground">
+                  Öffentliches Lagebild — nur Klartext, Online (IOTA). Adresse nicht änderbar; Boss konfiguriert{' '}
+                  <span className="font-mono">BROADCAST_PINNWAND_ADDRESS</span> in der Basis-.env.
+                </p>
+              </div>
             ) : meshBroadcastNoRecipient ? (
               <p className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
                 Empfänger · <strong className="text-foreground">An alle</strong> (Funk, Klartext, Primary-Mesh) — keine
@@ -1044,9 +1111,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 title={
                   isTelegramDelivery
                     ? 'Telegram-Hinweis senden'
-                    : forcedTransport === 'internet' && !onlineConnected
-                      ? 'Online-Verbindung derzeit nicht bestätigt'
-                      : undefined
+                    : primarySendDisabled && sendDisableReason
+                      ? sendDisableReason
+                      : encryptedOnlineSendBlocked
+                        ? encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)
+                        : forcedTransport === 'internet' && !onlineConnected
+                          ? 'Online-Verbindung derzeit nicht bestätigt'
+                          : undefined
                 }
               >
                 {sending || telegramBusy ? (

@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import { Smartphone } from 'lucide-react'
 import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 type DeferredPwaPrompt = {
   prompt: () => Promise<void>
@@ -21,6 +22,7 @@ export function DashboardPwaInstallCard({
   /** Schmale Kachel in der obersten Zeile neben IOTA Wallet. */
   inline?: boolean
 }) {
+  const { t } = useAppTranslation('dashboard')
   const [deferredPwaPrompt, setDeferredPwaPrompt] = useState<DeferredPwaPrompt | null>(null)
   const [pwaStandalone, setPwaStandalone] = useState(false)
 
@@ -68,19 +70,19 @@ export function DashboardPwaInstallCard({
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary">
             <Smartphone className="h-3.5 w-3.5" aria-hidden />
           </div>
-          <span className="text-[11px] font-semibold leading-tight text-foreground">App</span>
+          <span className="text-[11px] font-semibold leading-tight text-foreground">{t('cards.pwaShort')}</span>
         </div>
-        <p className="mt-1 text-[9px] leading-snug text-muted-foreground">Offline: Startbildschirm</p>
+        <p className="mt-1 text-[9px] leading-snug text-muted-foreground">{t('pwa.offlineHint')}</p>
         {deferredPwaPrompt ? (
           <button
             type="button"
             onClick={() => void handlePwaInstallClick()}
             className="mt-2 w-full rounded-md bg-primary px-2 py-1 text-[10px] font-medium text-primary-foreground hover:bg-primary/90"
           >
-            Installieren
+            {t('pwa.install')}
           </button>
         ) : (
-          <p className="mt-2 text-[9px] text-muted-foreground/80">Browser-Menü</p>
+          <p className="mt-2 text-[9px] text-muted-foreground/80">{t('pwa.browserMenu')}</p>
         )}
       </div>
     )
@@ -94,15 +96,15 @@ export function DashboardPwaInstallCard({
             <Smartphone className="h-4 w-4" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-semibold text-foreground">App installieren</h4>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">Für Offline: zum Startbildschirm.</p>
+            <h4 className="text-sm font-semibold text-foreground">{t('cards.pwaInstall')}</h4>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">{t('pwa.offlineDetail')}</p>
             {deferredPwaPrompt ? (
               <button
                 type="button"
                 onClick={() => void handlePwaInstallClick()}
                 className="mt-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90"
               >
-                Installieren
+                {t('pwa.install')}
               </button>
             ) : null}
           </div>
@@ -118,17 +120,15 @@ export function DashboardPwaInstallCard({
           <Smartphone className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-2">
-          <h4 className="font-semibold text-foreground">App installieren</h4>
-          <p className="text-sm text-muted-foreground">
-            Für besten Offline-Betrieb: App zum Home-Bildschirm hinzufügen.
-          </p>
+          <h4 className="font-semibold text-foreground">{t('cards.pwaInstall')}</h4>
+          <p className="text-sm text-muted-foreground">{t('pwa.fullDescription')}</p>
           {deferredPwaPrompt ? (
             <button
               type="button"
               onClick={() => void handlePwaInstallClick()}
               className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90"
             >
-              App installieren
+              {t('pwa.installApp')}
             </button>
           ) : null}
         </div>

@@ -1353,6 +1353,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.24 Package-Profile & package-abhängige UI
 
+**Nachtrag 2026-06 (Expertenmodus Posteingang):** Messenger-UI **Ist** — client opt-in **Expertenmodus** (Einstellungen) + **Pkg:**-Menü im Posteingang (temporär vs. `/set-package-id`); Typen `InboxPackageViewMode` / `multi_union` vorbereitet. Doku: **`docs/INBOX-PACKAGE-EXPERT-MODE.md`**. **Volles Multi-Package-Dropdown / Side-by-Side-Vergleich** bleibt **H.24b**-Backlog (parallele Einsätze auf einem Gerät).
+
 **Status:** **Backlog** — **später umsetzen** (nach **§ H.22 M4d**-Stabilisierung, **§ H.23**-Grundentscheid; kleine Scheiben parallel zu **§ H.0** / **§ H.2** möglich).  
 **SSOT Wechsel-Logik:** **`docs/PACKAGE-PROFILE-WECHSEL-SPEC.md`**.
 

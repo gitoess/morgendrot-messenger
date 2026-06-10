@@ -36,6 +36,24 @@ import {
   sortMessagesPinnedFirst,
   togglePinnedPinnwandId,
 } from '@/frontend/lib/pinnwand-pin-store'
+import { messageBelongsToPinnwand } from '@/frontend/lib/messenger-pinnwand-capabilities'
+import {
+  filterInboxByOverviewCategory,
+  type InboxOverviewCategory,
+} from '@/frontend/lib/inbox-overview-filter'
+import {
+  countUnreadInboxByOverviewCategory,
+  inboxScopeKey,
+  markInboxOverviewCategorySeenFromMessages,
+  readInboxOverviewLastSeen,
+} from '@/frontend/lib/inbox-overview-unread'
+import {
+  countUnreadByPartner,
+  isInboxMessageUnreadForPartner,
+  markPartnerSeenFromMessages,
+  readPartnerLastSeenMap,
+} from '@/frontend/lib/inbox-partner-unread'
+import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 
 function messageHasMeshTransport(m: Message): boolean {
   return messageTouchesMeshTransport(m)
@@ -58,6 +76,12 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   isGroupMode?: boolean
   /** M3: Anheften im Pinnwand-Kanal */
   isPinnwandMode?: boolean
+  /** M3: feste Brett-Adresse — Posteingang nur Nachrichten an diese 0x */
+  pinnwandBroadcastAddress?: string
+  /** Helfer/Simple: Kategorie-Chips (Alle / Lagebild / Direkt / Funk). */
+  inboxOverviewEnabled?: boolean
+  /** Lagebild oben im Streifen — aus „Alle“-Liste ausblenden. */
+  excludePinnwandFromOverviewAlle?: boolean
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
@@ -73,6 +97,9 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     groupMemberFilter = null,
     isGroupMode = false,
     isPinnwandMode = false,
+    pinnwandBroadcastAddress = '',
+    inboxOverviewEnabled = false,
+    excludePinnwandFromOverviewAlle = false,
   } = p
 
   const [pinnedPinnwandIds, setPinnedPinnwandIds] = useState<Set<string>>(() => new Set())
@@ -94,6 +121,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     }
   }, [isPinnwandMode])
 
+  useEffect(() => {
+    if (!isPinnwandMode) return
+    setInboxWireFilterState('plaintext')
+    setInboxPartnerKey(null)
+    setInboxDirectionFilter('all')
+    try {
+      sessionStorage.setItem(INBOX_WIRE_FILTER_LS, 'plaintext')
+    } catch {
+      /* ignore */
+    }
+  }, [isPinnwandMode])
+
   const displayMessages = useMemo(
     () =>
       messages.filter(
@@ -108,6 +147,14 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
   const [inboxIotaTransportOnly, setInboxIotaTransportOnly] = useState(false)
   const [inboxWireFilter, setInboxWireFilterState] = useState<InboxWireFilter>('all')
+  const [inboxOverviewCategory, setInboxOverviewCategoryState] =
+    useState<InboxOverviewCategory>('alle')
+  const [overviewLastSeen, setOverviewLastSeen] = useState(() =>
+    readInboxOverviewLastSeen(inboxScopeKey(myAddress))
+  )
+  const [partnerLastSeenMap, setPartnerLastSeenMap] = useState(() =>
+    readPartnerLastSeenMap(inboxScopeKey(myAddress))
+  )
   const [inboxPartnerMemory, setInboxPartnerMemory] = useState<string[]>([])
   const [inboxPartnerBlockedNorms, setInboxPartnerBlockedNorms] = useState<Set<string>>(() => new Set())
 
@@ -266,22 +313,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     }
   }, [])
 
-  const inboxPartnerOptions = useMemo(() => {
-    const live = uniqueCounterpartyAddresses(displayMessages, myAddress)
-    const byNorm = new Map<string, string>()
-    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
-    for (const a of live) byNorm.set(a.trim().toLowerCase(), a.trim())
-    const addrs = Array.from(byNorm.values()).filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
-    return addrs.map((address) => {
-      const label = contactDisplayLabel(contactDirectory, address)
-      const short =
-        address.startsWith('0x') && address.length > 12
-          ? `${address.slice(0, 8)}…${address.slice(-4)}`
-          : address
-      return { address, label: label || short }
-    })
-  }, [displayMessages, myAddress, contactDirectory, inboxPartnerMemory, inboxPartnerBlockedNorms])
-
   const removeInboxPartnerFromQuickList = useCallback(
     (
       address: string,
@@ -369,20 +400,173 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
   }, [partnerFilteredMessages, inboxWireFilter])
 
+  useEffect(() => {
+    setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
+  }, [myAddress])
+
+  const partnerUnreadByNorm = useMemo(
+    () =>
+      countUnreadByPartner(
+        wireFilteredMessages,
+        myAddress,
+        partnerLastSeenMap,
+        pinnwandBroadcastAddress
+      ),
+    [wireFilteredMessages, myAddress, partnerLastSeenMap, pinnwandBroadcastAddress]
+  )
+
+  const inboxPartnerOptions = useMemo(() => {
+    const live = uniqueCounterpartyAddresses(displayMessages, myAddress)
+    const byNorm = new Map<string, string>()
+    for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
+    for (const a of live) byNorm.set(a.trim().toLowerCase(), a.trim())
+    const addrs = Array.from(byNorm.values()).filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
+    return addrs.map((address) => {
+      const label = contactDisplayLabel(contactDirectory, address)
+      const short =
+        address.startsWith('0x') && address.length > 12
+          ? `${address.slice(0, 8)}…${address.slice(-4)}`
+          : address
+      const norm = address.trim().toLowerCase()
+      return {
+        address,
+        label: label || short,
+        unreadCount: partnerUnreadByNorm[norm] ?? 0,
+      }
+    })
+  }, [
+    displayMessages,
+    myAddress,
+    contactDirectory,
+    inboxPartnerMemory,
+    inboxPartnerBlockedNorms,
+    partnerUnreadByNorm,
+  ])
+
+  const inboxUnreadThreadOptions = useMemo((): InboxUnreadThreadOption[] => {
+    return inboxPartnerOptions
+      .filter((o) => (o.unreadCount ?? 0) > 0)
+      .sort((a, b) => (b.unreadCount ?? 0) - (a.unreadCount ?? 0))
+      .slice(0, 6)
+      .map((o) => ({
+        address: o.address,
+        label: o.label,
+        unreadCount: o.unreadCount ?? 0,
+      }))
+  }, [inboxPartnerOptions])
+
+  useEffect(() => {
+    if (!inboxPartnerKey?.trim()) return
+    const next = markPartnerSeenFromMessages(
+      inboxScopeKey(myAddress),
+      inboxPartnerKey,
+      wireFilteredMessages,
+      myAddress,
+      pinnwandBroadcastAddress
+    )
+    setPartnerLastSeenMap(next)
+  }, [inboxPartnerKey, wireFilteredMessages, myAddress, pinnwandBroadcastAddress])
+
+  const isInboxMessageUnread = useCallback(
+    (msg: Message) =>
+      isInboxMessageUnreadForPartner(msg, myAddress, partnerLastSeenMap, pinnwandBroadcastAddress),
+    [myAddress, partnerLastSeenMap, pinnwandBroadcastAddress]
+  )
+
+  const pinnwandBoardMessages = useMemo(() => {
+    const board = pinnwandBroadcastAddress.trim().toLowerCase()
+    if (!isPinnwandMode || !board) return wireFilteredMessages
+    return wireFilteredMessages.filter((m) => messageBelongsToPinnwand(m, board))
+  }, [wireFilteredMessages, isPinnwandMode, pinnwandBroadcastAddress])
+
   const filteredDisplayMessages = useMemo(() => {
+    const base = isPinnwandMode ? pinnwandBoardMessages : wireFilteredMessages
     if (inboxMeshTransportOnly) {
-      return wireFilteredMessages.filter((m) => messageHasMeshTransport(m))
+      return base.filter((m) => messageHasMeshTransport(m))
     }
     if (inboxIotaTransportOnly) {
-      return wireFilteredMessages.filter((m) => messagePureInternetInboxRow(m))
+      return base.filter((m) => messagePureInternetInboxRow(m))
     }
-    return wireFilteredMessages
-  }, [wireFilteredMessages, inboxMeshTransportOnly, inboxIotaTransportOnly])
+    return base
+  }, [
+    wireFilteredMessages,
+    pinnwandBoardMessages,
+    isPinnwandMode,
+    inboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+  ])
 
   const sortedFilteredDisplayMessages = useMemo(() => {
     if (!isPinnwandMode || pinnedPinnwandIds.size === 0) return filteredDisplayMessages
     return sortMessagesPinnedFirst(filteredDisplayMessages, pinnedPinnwandIds)
   }, [filteredDisplayMessages, isPinnwandMode, pinnedPinnwandIds])
+
+  const inboxOverviewCtx = useMemo(
+    () => ({
+      myAddress,
+      broadcastAddress: pinnwandBroadcastAddress,
+      excludePinnwandFromAlle: excludePinnwandFromOverviewAlle,
+    }),
+    [myAddress, pinnwandBroadcastAddress, excludePinnwandFromOverviewAlle]
+  )
+
+  useEffect(() => {
+    setOverviewLastSeen(readInboxOverviewLastSeen(inboxScopeKey(myAddress)))
+  }, [myAddress])
+
+  const markOverviewCategorySeen = useCallback(
+    (category: InboxOverviewCategory) => {
+      const next = markInboxOverviewCategorySeenFromMessages(
+        inboxScopeKey(myAddress),
+        category,
+        wireFilteredMessages,
+        inboxOverviewCtx
+      )
+      setOverviewLastSeen(next)
+    },
+    [myAddress, wireFilteredMessages, inboxOverviewCtx]
+  )
+
+  const setInboxOverviewCategory = useCallback((category: InboxOverviewCategory) => {
+    setInboxOverviewCategoryState(category)
+  }, [])
+
+  useEffect(() => {
+    if (!inboxOverviewEnabled || isPinnwandMode || isGroupMode) return
+    markOverviewCategorySeen(inboxOverviewCategory)
+    if (inboxOverviewCategory === 'alle' && excludePinnwandFromOverviewAlle) {
+      markOverviewCategorySeen('lagebild')
+    }
+  }, [
+    inboxOverviewEnabled,
+    isPinnwandMode,
+    isGroupMode,
+    inboxOverviewCategory,
+    excludePinnwandFromOverviewAlle,
+    wireFilteredMessages,
+    markOverviewCategorySeen,
+  ])
+
+  const inboxOverviewUnreadCounts = useMemo(
+    () => countUnreadInboxByOverviewCategory(wireFilteredMessages, inboxOverviewCtx, overviewLastSeen),
+    [wireFilteredMessages, inboxOverviewCtx, overviewLastSeen]
+  )
+
+  const overviewFilteredDisplayMessages = useMemo(() => {
+    if (!inboxOverviewEnabled || isPinnwandMode || isGroupMode) return sortedFilteredDisplayMessages
+    return filterInboxByOverviewCategory(
+      sortedFilteredDisplayMessages,
+      inboxOverviewCategory,
+      inboxOverviewCtx
+    )
+  }, [
+    inboxOverviewEnabled,
+    isPinnwandMode,
+    isGroupMode,
+    sortedFilteredDisplayMessages,
+    inboxOverviewCategory,
+    inboxOverviewCtx,
+  ])
 
   const togglePinnedPinnwand = useCallback((id: string) => {
     const nowPinned = togglePinnedPinnwandId(id)
@@ -654,7 +838,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxSelectMode,
     selectedInboxIds,
     displayMessages,
-    filteredDisplayMessages: sortedFilteredDisplayMessages,
+    filteredDisplayMessages: overviewFilteredDisplayMessages,
+    inboxOverviewEnabled: inboxOverviewEnabled && !isPinnwandMode && !isGroupMode,
+    inboxOverviewCategory,
+    setInboxOverviewCategory,
+    inboxOverviewUnreadCounts,
     hiddenInboxCount: hiddenInboxIds.size,
     inboxPartnerKey,
     setInboxPartnerKey,
@@ -667,6 +855,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,
+    inboxUnreadThreadOptions,
+    isInboxMessageUnread,
     toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,

@@ -57,6 +57,11 @@ import {
 } from '@/frontend/lib/messenger-chat-channel'
 import { reconcileChannelSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
+import { isSimpleUiMode } from '@/frontend/lib/messenger-role-capabilities'
+import {
+  isMessengerHelperRole,
+  showPinnwandInboxStrip,
+} from '@/frontend/lib/messenger-pinnwand-capabilities'
 
 /** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
 const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
@@ -328,57 +333,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const [loraMeshProgressLine, setLoraMeshProgressLine] = useState<string | null>(null)
 
   const {
-    protokollMarkedIds,
-    inboxSelectMode,
-    setInboxSelectMode,
-    selectedInboxIds,
-    displayMessages,
-    filteredDisplayMessages,
-    inboxPartnerKey,
-    setInboxPartnerKey,
-    inboxDirectionFilter,
-    setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
-    inboxWireFilter,
-    setInboxWireFilter,
-    inboxPartnerOptions,
-    toggleProtokollMark,
-    onHideInboxMessageLocal,
-    onPurgeInboxMessageChain,
-    toggleInboxSelection,
-    selectAllVisibleInbox,
-    clearInboxSelection,
-    onHideAllVisibleLocal,
-    hiddenInboxCount,
-    onBulkHideSelected,
-    onBulkPurgeSelected,
-    removeInboxPartnerFromQuickList,
-    resetInboxViewFilters,
-    inboxVisibilityHint,
-    pinnedPinnwandIds,
-    togglePinnedPinnwand,
-  } = useChatViewInboxLocalUi({
-    messages,
-    setMessages,
-    loadMessages,
-    setSending,
-    setStatus,
-    setStatusMsg,
-    myAddress,
-    contactDirectory: directory,
-    groupMemberFilter,
-    isGroupMode: isGroup,
-    isPinnwandMode: isPinnwandChannel(channelMode),
-  })
-
-  useEffect(() => {
-    if (isGroup) setInboxPartnerKey(null)
-  }, [isGroup, setInboxPartnerKey])
-
-  const {
     mirrorQueuePending,
     offlineMailboxQueuePending,
     offlineMailboxQueueUntrustedTimeCount,
@@ -411,19 +365,89 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       probeGeolocationForDeviceTime: isPrivate,
     })
 
+  const inboxOverviewEnabled = useMemo(() => {
+    if (!isPrivate || isPinnwandChannel(channelMode)) return false
+    return isSimpleUiMode(apiStatus) || isMessengerHelperRole(role)
+  }, [isPrivate, channelMode, apiStatus, role])
+
+  const excludePinnwandFromOverviewAlle = useMemo(
+    () => showPinnwandInboxStrip(apiStatus, role, channelMode),
+    [apiStatus, role, channelMode]
+  )
+
+  const {
+    protokollMarkedIds,
+    inboxSelectMode,
+    setInboxSelectMode,
+    selectedInboxIds,
+    displayMessages,
+    filteredDisplayMessages,
+    inboxPartnerKey,
+    setInboxPartnerKey,
+    inboxDirectionFilter,
+    setInboxDirectionFilter,
+    inboxMeshTransportOnly,
+    setInboxMeshTransportOnly,
+    inboxIotaTransportOnly,
+    setInboxIotaTransportOnly,
+    inboxWireFilter,
+    setInboxWireFilter,
+    inboxPartnerOptions,
+    inboxUnreadThreadOptions,
+    isInboxMessageUnread,
+    toggleProtokollMark,
+    onHideInboxMessageLocal,
+    onPurgeInboxMessageChain,
+    toggleInboxSelection,
+    selectAllVisibleInbox,
+    clearInboxSelection,
+    onHideAllVisibleLocal,
+    hiddenInboxCount,
+    onBulkHideSelected,
+    onBulkPurgeSelected,
+    removeInboxPartnerFromQuickList,
+    resetInboxViewFilters,
+    inboxVisibilityHint,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
+    inboxOverviewEnabled: inboxOverviewChipsVisible,
+    inboxOverviewCategory,
+    setInboxOverviewCategory,
+    inboxOverviewUnreadCounts,
+  } = useChatViewInboxLocalUi({
+    messages,
+    setMessages,
+    loadMessages,
+    setSending,
+    setStatus,
+    setStatusMsg,
+    myAddress,
+    contactDirectory: directory,
+    groupMemberFilter,
+    isGroupMode: isGroup,
+    isPinnwandMode: isPinnwandChannel(channelMode),
+    pinnwandBroadcastAddress: apiStatus?.broadcastPinnwand?.address ?? '',
+    inboxOverviewEnabled,
+    excludePinnwandFromOverviewAlle,
+  })
+
+  useEffect(() => {
+    if (isGroup) setInboxPartnerKey(null)
+  }, [isGroup, setInboxPartnerKey])
+
   /** Falsche Package-ID im Posteingang-Feld → leeren (Backend-.env), sonst leerer/falscher /inbox. */
   useEffect(() => {
     if (!packageIdMismatch) return
     setInboxPackageFilter((prev) => (prev.trim() ? '' : prev))
   }, [packageIdMismatch, setInboxPackageFilter])
 
-  /** M3: Broadcast-Adresse aus /api/status ins Empfängerfeld (Pinnwand-Kanal). */
+  /** M3: Broadcast-Adresse aus /api/status — festes Empfängerfeld (Pinnwand-Kanal). */
   useEffect(() => {
     if (!isPinnwandChannel(channelMode)) return
-    const addr = apiStatus?.broadcastPinnwand?.address?.trim() ?? ''
-    if (!addr || !/^0x[a-fA-F0-9]{64}$/i.test(addr)) return
-    setRecipient((prev) => (prev.trim() ? prev : addr))
-  }, [channelMode, apiStatus?.broadcastPinnwand?.address])
+    const addr = apiStatus?.broadcastPinnwand?.address?.trim().toLowerCase() ?? ''
+    if (!addr || !/^0x[a-f0-9]{64}$/.test(addr)) return
+    setRecipient(addr)
+  }, [channelMode, apiStatus?.broadcastPinnwand?.address, setRecipient])
 
   useEffect(() => {
     if (meshFirstTransportDefaultApplied.current || !apiStatus?.transportProfile) return
@@ -929,10 +953,16 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,
+    inboxUnreadThreadOptions,
+    isInboxMessageUnread,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
     inboxVisibilityHint,
+    inboxOverviewChipsVisible,
+    inboxOverviewCategory,
+    setInboxOverviewCategory,
+    inboxOverviewUnreadCounts,
     voicePhase,
     voiceActiveKind,
     voiceProgress01,

@@ -1,0 +1,14 @@
+import type { ApiStatus } from '@/frontend/lib/api/status'
+import type { LocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+
+const ADDR_64 = /^0x[a-f0-9]{64}$/i
+
+/** Lagebild-Adresse aus lokalem Handoff-Snapshot (Helfer ohne Boss-.env). */
+export function broadcastPinnwandStatusFromHandoff(
+  handoff: LocalHandoffAppliedSnapshot | null | undefined
+): ApiStatus['broadcastPinnwand'] | undefined {
+  if (!handoff?.broadcastPinnwandEnabled) return undefined
+  const addr = (handoff.broadcastPinnwandAddress ?? '').trim().toLowerCase()
+  if (!ADDR_64.test(addr)) return undefined
+  return { enabled: true, address: addr }
+}

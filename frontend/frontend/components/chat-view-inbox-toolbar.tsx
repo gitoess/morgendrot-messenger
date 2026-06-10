@@ -4,7 +4,7 @@
  * Posteingang: Kopfzeile (Zähler, Pakete, Nachrichtenverlauf, Aktualisieren).
  */
 
-import type { ChangeEvent, RefObject } from 'react'
+import type { ChangeEvent, ReactNode, RefObject } from 'react'
 import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
@@ -87,6 +87,9 @@ export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   pendingHandshakeCount?: number
   /** Verankern / Tangle-Inventar / Relay — nur Expert + iota-Transport. */
   showIotaExpertInboxActions?: boolean
+  /** Package-ID (Move) — nur Client-Expertenmodus + IOTA. */
+  showInboxPackageExpertMenu?: boolean
+  inboxPackageExpertMenu?: ReactNode
 }
 
 function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
@@ -168,6 +171,8 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
     onRemoveOfflineMailboxQueueItems,
     pendingHandshakeCount = 0,
     showIotaExpertInboxActions = true,
+    showInboxPackageExpertMenu = false,
+    inboxPackageExpertMenu,
   } = p
 
   const pkgImportDisabled = morgPkgImportDisabled(apiStatus)
@@ -228,6 +233,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
           ) : null}
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
+          {showInboxPackageExpertMenu && inboxPackageExpertMenu ? inboxPackageExpertMenu : null}
           <input
             ref={morgPkgFileRef}
             type="file"

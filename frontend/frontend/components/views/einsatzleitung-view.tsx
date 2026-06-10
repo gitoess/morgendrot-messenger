@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
 import { LanInstallQrPanel } from '@/frontend/components/lan-install-qr-panel'
+import { BossDeviceProvisionWizard } from '@/frontend/components/boss-device-provision-wizard'
 import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
 
 export type EinsatzleitungViewProps = {
@@ -19,6 +20,13 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
   return (
     <div className="space-y-8 pb-4">
       <EinsatzleitungHub apiStatus={p.apiSnapshot ?? null} />
+
+      {isBoss ? (
+        <BossDeviceProvisionWizard
+          apiSnapshot={p.apiSnapshot ?? null}
+          contactDirectory={p.contactDirectory}
+        />
+      ) : null}
 
       {isBoss ? (
         <section id="einsatz-handoff-export" className="scroll-mt-4 rounded-xl border border-purple-500/25 bg-card p-4">

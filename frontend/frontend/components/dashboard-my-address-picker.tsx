@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { setConfig } from '@/frontend/lib/api'
 import { mergeMyAddressOptions, recordSeenMyAddress } from '@/frontend/lib/my-address-local-history'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 function maskMid(addr: string): string {
   const t = addr.trim()
@@ -21,6 +22,7 @@ export type DashboardMyAddressPickerProps = {
 }
 
 export function DashboardMyAddressPicker({ apiSnapshot, onAfterSet }: DashboardMyAddressPickerProps) {
+  const { t } = useAppTranslation('dashboard')
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -65,7 +67,7 @@ export function DashboardMyAddressPicker({ apiSnapshot, onAfterSet }: DashboardM
 
   return (
     <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-      <span className="font-medium text-foreground/80">Eigene Adresse</span>
+      <span className="font-medium text-foreground/80">{t('address.label')}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <button
@@ -74,9 +76,9 @@ export function DashboardMyAddressPicker({ apiSnapshot, onAfterSet }: DashboardM
               'inline-flex max-w-[min(100%,22rem)] items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 font-mono text-[11px] text-foreground hover:bg-accent',
               !current && 'text-muted-foreground'
             )}
-            title={current || 'Keine MY_ADDRESS vom Backend'}
+            title={current || t('address.noBackendTitle')}
           >
-            <span className="truncate">{current ? maskMid(current) : '(nicht gesetzt)'}</span>
+            <span className="truncate">{current ? maskMid(current) : t('address.notConfigured')}</span>
             <ChevronDown className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
           </button>
         </PopoverTrigger>

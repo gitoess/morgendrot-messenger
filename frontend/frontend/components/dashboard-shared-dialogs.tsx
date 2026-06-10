@@ -14,6 +14,7 @@ import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
 
 export function DashboardSharedDialogs(p: {
   locked: boolean
+  suppressVaultUnlockForHelperSeed?: boolean
   helpOpen: boolean
   onHelpOpenChange: (open: boolean) => void
   helpLoading: boolean
@@ -37,6 +38,7 @@ export function DashboardSharedDialogs(p: {
     unlocking: boolean
     unlockButtonDisabled: boolean
     importMnemonicRequired: boolean
+    standaloneHelperUnlock?: boolean
     handleUnlock: () => void | Promise<void>
   }
 }) {
@@ -65,7 +67,7 @@ export function DashboardSharedDialogs(p: {
       </Dialog>
 
       <VaultUnlockDialog
-        open={p.locked}
+        open={p.locked && !p.suppressVaultUnlockForHelperSeed}
         unlockMode={u.unlockMode}
         onUnlockModeChange={u.onUnlockModeChange}
         signerKind={u.signerKind}
@@ -84,6 +86,7 @@ export function DashboardSharedDialogs(p: {
         unlocking={u.unlocking}
         unlockButtonDisabled={u.unlockButtonDisabled}
         importMnemonicRequired={u.importMnemonicRequired}
+        standaloneHelperUnlock={u.standaloneHelperUnlock}
         onUnlock={() => void u.handleUnlock()}
       />
     </>

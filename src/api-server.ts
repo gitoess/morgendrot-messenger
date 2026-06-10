@@ -2286,6 +2286,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             transportProfile,
                             simpleMode,
                             handoffLabel: handoffLabel || undefined,
+                            broadcastPinnwandEnabled: CFG.ENABLE_BROADCAST_PINNWAND,
+                            broadcastPinnwandAddress: (CFG.BROADCAST_PINNWAND_ADDRESS || '').trim() || undefined,
                         });
                         const resolvedRoleId =
                             roleId != null && Number.isFinite(roleId) ? roleId : 14;

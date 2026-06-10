@@ -1,4 +1,4 @@
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
 import { fetchApiText } from '@/frontend/lib/api-fetch-text'
 
 export type HandoffImportSummary = {
@@ -35,7 +35,15 @@ async function postHandoffEnv(body: {
   runtimeConfigJson?: string
   dryRun: boolean
 }): Promise<HandoffImportResponse & { ok: boolean }> {
-  const fr = await fetchApiText(API_BASE, '/api/apply-handoff-env', {
+  const apiBase = getApiBase().trim()
+  if (!apiBase) {
+    return {
+      ok: false,
+      error:
+        'Keine Basis-URL — auf der Standalone-APK „Lokal vormerken (ohne Basis)“ nutzen, nicht „Import bestätigen“.',
+    }
+  }
+  const fr = await fetchApiText(apiBase, '/api/apply-handoff-env', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

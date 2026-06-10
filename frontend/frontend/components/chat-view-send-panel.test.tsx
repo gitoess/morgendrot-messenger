@@ -402,6 +402,27 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(primarySend(container)).toBeEnabled()
   })
 
+  it('aktiviert Senden bei Klartext mit Partner-Adresse (privat, Empfängerfeld leer)', () => {
+    const onSend = vi.fn()
+    const addr = `0x${'c'.repeat(64)}`
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          recipient: '',
+          partner: addr,
+          message: 'OK',
+          forcedTransport: 'internet',
+          onSend,
+        })}
+      />
+    )
+    const sendBtn = primarySend(container)
+    expect(sendBtn).toBeEnabled()
+    fireEvent.click(sendBtn)
+    expect(onSend).toHaveBeenCalledTimes(1)
+  })
+
   it('aktiviert Senden bei Klartext mit Empfänger und Kurznachricht', () => {
     const onSend = vi.fn()
     const addr = `0x${'a'.repeat(64)}`

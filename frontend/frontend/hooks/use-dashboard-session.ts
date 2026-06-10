@@ -28,6 +28,28 @@ import { tryApplyPendingInitialProfileFromStorage } from '@/frontend/lib/initial
 import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { resolveStandaloneDeviceLocked } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import {
+  clearDirectIotaSessionSigner,
+  hasPersistedDirectIotaSessionSigner,
+  restoreDirectIotaSessionSignerFromEncryptedStorage,
+} from '@/frontend/lib/direct-iota-mnemonic-session'
+import {
+  activateStandaloneHelperWallet,
+  getStandaloneHelperReadiness,
+  HELPER_SEED_SETUP_REQUEST_EVENT,
+  STANDALONE_HANDOFF_APPLIED_EVENT,
+  shouldShowHelperSeedSetupDialog,
+} from '@/frontend/lib/handoff-standalone-ready'
+import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import {
+  isStandaloneEinsatzPath,
+  isStandaloneSoloPath,
+  STANDALONE_ONBOARDING_CHANGED_EVENT,
+  STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT,
+} from '@/frontend/lib/standalone-onboarding'
+import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
@@ -84,14 +106,28 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setPassword('')
       setPasswordConfirm('')
       setShowSignerImportOpen(false)
-      const hasVault = vaultHasLocalRef.current
-      const sdk = signerIsSdkRef.current
-      setUnlockMode(hasVault ? 'vault' : sdk ? 'create' : 'vault')
+      if (isStandaloneMessengerWithoutBasis() && readLocalHandoffAppliedSnapshot()) {
+        if (isStandaloneSoloPath()) {
+          setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
+          setShowSignerImportOpen(false)
+        } else {
+          setUnlockMode('import')
+          setShowSignerImportOpen(true)
+        }
+      } else if (isStandaloneMessengerWithoutBasis() && isStandaloneSoloPath()) {
+        setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
+        setShowSignerImportOpen(false)
+      } else {
+        const hasVault = vaultHasLocalRef.current
+        const sdk = signerIsSdkRef.current
+        setUnlockMode(hasVault ? 'vault' : sdk ? 'create' : 'vault')
+      }
     }
   }, [locked])
 
   useEffect(() => {
     if (!locked) return
+    if (isStandaloneMessengerWithoutBasis() && readLocalHandoffAppliedSnapshot() && !isStandaloneSoloPath()) return
     const s = apiSnapshot?.signer
     if (s != null && s !== 'sdk' && unlockMode === 'import') {
       setUnlockMode('vault')
@@ -153,13 +189,37 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     } else {
       setApiSnapshot(res)
     }
-    if ('pollClockHint' in res && res.backendRunning) {
-      setBackendReachable(true)
-      setConnected(!!res.connected)
-      setNetworkInfo(res.rpcUrlLabel || res.network || 'IOTA Rebased')
-      setLocked(!!res.locked)
-      vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
-      signerIsSdkRef.current = res.signer === 'sdk'
+
+    const liveBackend = 'pollClockHint' in res && res.backendRunning === true
+    const standaloneWithoutBasis = isStandaloneMessengerWithoutBasis()
+    const offlineSnapshot =
+      'pollClockHint' in res &&
+      !liveBackend &&
+      (standaloneWithoutBasis || res.fromLocalHandoff === true || res.fromCache === true)
+
+    if ('pollClockHint' in res && (liveBackend || offlineSnapshot)) {
+      setBackendReachable(liveBackend)
+      setConnected(liveBackend ? !!res.connected : false)
+      setNetworkInfo(
+        res.rpcUrlLabel ||
+          res.network ||
+          (liveBackend ? 'IOTA Rebased' : 'Standalone (Direkt-RPC)')
+      )
+
+      if (liveBackend) {
+        setLocked(!!res.locked)
+        vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
+        signerIsSdkRef.current = res.signer === 'sdk'
+      } else if (standaloneWithoutBasis) {
+        setLocked(resolveStandaloneDeviceLocked())
+        vaultHasLocalRef.current = false
+        signerIsSdkRef.current = true
+      } else {
+        setLocked(!!res.locked)
+        vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
+        signerIsSdkRef.current = res.signer === 'sdk'
+      }
+
       setRole(res.role || '')
       const addrLine = (res.myAddressFull || res.myAddress || '').trim()
       setMyAddress(addrLine)
@@ -169,6 +229,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     } else {
       setBackendReachable(false)
       setConnected(false)
+      if (standaloneWithoutBasis) {
+        setLocked(resolveStandaloneDeviceLocked())
+        signerIsSdkRef.current = true
+      }
     }
   }, [])
 
@@ -177,10 +241,37 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const ms = backendReachable === false ? 3_000 : 10_000
     const interval = window.setInterval(() => void checkStatus(), ms)
     const onApiBase = () => void checkStatus()
+    const onDirectIotaUi = () => void checkStatus()
     window.addEventListener('morgendrot.apiBaseChanged', onApiBase)
+    window.addEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUi)
+    const onHandoffApplied = () => {
+      void checkStatus()
+      if (shouldShowHelperSeedSetupDialog()) {
+        window.dispatchEvent(new CustomEvent(HELPER_SEED_SETUP_REQUEST_EVENT))
+      }
+      setLocked(resolveStandaloneDeviceLocked())
+    }
+    window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoffApplied)
+    const onOnboardingChanged = () => {
+      void checkStatus()
+      setLocked(resolveStandaloneDeviceLocked())
+    }
+    const onSoloWalletSetup = () => {
+      setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
+      setShowSignerImportOpen(false)
+      setUnlockError('')
+      setLocked(true)
+      void checkStatus()
+    }
+    window.addEventListener(STANDALONE_ONBOARDING_CHANGED_EVENT, onOnboardingChanged)
+    window.addEventListener(STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT, onSoloWalletSetup)
     return () => {
       window.clearInterval(interval)
       window.removeEventListener('morgendrot.apiBaseChanged', onApiBase)
+      window.removeEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUi)
+      window.removeEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoffApplied)
+      window.removeEventListener(STANDALONE_ONBOARDING_CHANGED_EVENT, onOnboardingChanged)
+      window.removeEventListener(STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT, onSoloWalletSetup)
     }
   }, [checkStatus, backendReachable])
 
@@ -369,6 +460,47 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
 
     setUnlocking(true)
+    if (isStandaloneMessengerWithoutBasis()) {
+      const mnemonic = signerImport.trim()
+      const vaultPassword = password.trim()
+      let unlockResult: { ok: true; address: string } | { ok: false; error: string }
+      if (hasPersistedDirectIotaSessionSigner() && !mnemonic) {
+        const restored = await restoreDirectIotaSessionSignerFromEncryptedStorage({
+          password: vaultPassword,
+        })
+        unlockResult = restored.ok
+          ? { ok: true, address: restored.address }
+          : { ok: false, error: restored.error }
+      } else if (mnemonic) {
+        if (unlockMode === 'create' && (!vaultPassword || vaultPassword !== passwordConfirm.trim())) {
+          setUnlocking(false)
+          setUnlockError('Neues Profil: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).')
+          return
+        }
+        unlockResult = await activateStandaloneHelperWallet({
+          mnemonic,
+          password: vaultPassword.length >= 8 ? vaultPassword : undefined,
+        })
+      } else {
+        setUnlocking(false)
+        setUnlockError('Wallet-Schlüssel eingeben (Mnemonic, Bech32 oder 64 Hex).')
+        return
+      }
+      setUnlocking(false)
+      if (unlockResult.ok) {
+        setPassword('')
+        setPasswordConfirm('')
+        setSignerImport('')
+        setSignerImportConfirm('')
+        setShowSignerImportOpen(false)
+        setLocked(false)
+        await checkStatus()
+      } else {
+        setUnlockError(unlockResult.error)
+      }
+      return
+    }
+
     const res = await unlockBackend(password, { sdkSignerImport: sdkExtra })
     setUnlocking(false)
     if (res.ok) {
@@ -427,6 +559,46 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo(null)
   }, [navigateTo])
 
+  const lockSession = useCallback(async () => {
+    if (isStandaloneMessengerWithoutBasis()) {
+      clearDirectIotaSessionSigner()
+      setLocked(resolveStandaloneDeviceLocked())
+      navigateTo(null)
+      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
+      return { ok: true as const }
+    }
+    const r = await vaultLockCommand()
+    if (r.ok) {
+      await checkStatus()
+      navigateTo(null)
+    }
+    return r
+  }, [checkStatus, navigateTo])
+
+  const requestStandaloneWalletUnlock = useCallback(() => {
+    const readiness = getStandaloneHelperReadiness()
+    if (
+      readiness.standaloneMode &&
+      readiness.hasHandoff &&
+      readiness.needsMnemonic &&
+      isStandaloneEinsatzPath()
+    ) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(HELPER_SEED_SETUP_REQUEST_EVENT))
+      }
+      return
+    }
+    if (isStandaloneSoloPath()) {
+      setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
+      setShowSignerImportOpen(false)
+    } else {
+      setUnlockMode('import')
+      setShowSignerImportOpen(true)
+    }
+    setUnlockError('')
+    setLocked(true)
+  }, [])
+
   const chatVaultBannerActions: ChatViewVaultBannerActions = useMemo(
     () => ({
       onLockSession: async () => {
@@ -437,17 +609,22 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         ) {
           return
         }
-        const r = await vaultLockCommand()
-        if (r.ok) {
-          await checkStatus()
-          navigateTo(null)
-        }
+        await lockSession()
       },
       onNavigateHomeWhenLocked: () => {
         navigateTo(null)
+        if (isStandaloneMessengerWithoutBasis()) {
+          if (apiSnapshot?.hasKeys !== true) {
+            requestStandaloneWalletUnlock()
+          }
+          return
+        }
+        if (apiSnapshot?.locked === true || apiSnapshot?.hasKeys !== true) {
+          setLocked(true)
+        }
       },
     }),
-    [checkStatus, navigateTo]
+    [apiSnapshot?.hasKeys, apiSnapshot?.locked, navigateTo, lockSession, requestStandaloneWalletUnlock]
   )
 
   const openHelp = useCallback(async () => {
@@ -466,24 +643,38 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         : 'internet'
 
   const signerKind = apiSnapshot?.signer
+  const standaloneHelperUnlock =
+    isStandaloneMessengerWithoutBasis() &&
+    isStandaloneEinsatzPath() &&
+    Boolean(readLocalHandoffAppliedSnapshot()) &&
+    unlockMode === 'import'
+  const suppressVaultUnlockForHelperSeed = shouldShowHelperSeedSetupDialog()
   const importMnemonicRequired =
     unlockMode === 'import' && (signerKind === 'sdk' || signerKind == null)
-  const unlockButtonDisabled =
-    unlocking ||
-    !password.trim() ||
-    (unlockMode === 'create' &&
-      (!passwordConfirm.trim() || password !== passwordConfirm)) ||
-    (unlockMode === 'create' &&
-      signerKind === 'sdk' &&
-      (!signerImport.trim() ||
-        !signerImportConfirm.trim() ||
-        normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm))) ||
-    (importMnemonicRequired && (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
-    (unlockMode === 'vault' &&
-      signerKind === 'sdk' &&
-      showSignerImportOpen &&
-      !!signerImport.trim() &&
-      !isPlausibleSdkImport(signerImport.trim()))
+  const unlockButtonDisabled = standaloneHelperUnlock
+    ? unlocking || !signerImport.trim() || !isPlausibleSdkImport(signerImport.trim())
+    : isStandaloneMessengerWithoutBasis() && unlockMode === 'create'
+      ? unlocking ||
+        !signerImport.trim() ||
+        !isPlausibleSdkImport(signerImport.trim()) ||
+        !password.trim() ||
+        password.length < 8 ||
+        password !== passwordConfirm.trim()
+      : unlocking ||
+      !password.trim() ||
+      (unlockMode === 'create' &&
+        (!passwordConfirm.trim() || password !== passwordConfirm)) ||
+      (unlockMode === 'create' &&
+        signerKind === 'sdk' &&
+        (!signerImport.trim() ||
+          !signerImportConfirm.trim() ||
+          normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm))) ||
+      (importMnemonicRequired && (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
+      (unlockMode === 'vault' &&
+        signerKind === 'sdk' &&
+        showSignerImportOpen &&
+        !!signerImport.trim() &&
+        !isPlausibleSdkImport(signerImport.trim()))
 
   const showMessengerBottomNav =
     activeView != null && (activeView.type === 'chat' || activeView.type === 'einsatzleitung')
@@ -545,6 +736,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     handleBack,
     handleSelectFeature,
     openHelp,
+    requestStandaloneWalletUnlock,
+    lockSession,
     helpOpen,
     setHelpOpen,
     helpText,
@@ -573,6 +766,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       unlocking,
       unlockButtonDisabled,
       importMnemonicRequired,
+      standaloneHelperUnlock,
+      suppressVaultUnlockForHelperSeed,
       handleUnlock,
     },
   }

@@ -37,6 +37,18 @@ export function resolveEncryptedMailboxRecipient(recipient: string, partner: str
   return resolveComposerIotaAddress(recipient, partner, true)
 }
 
+/** Klartext-Online: Composer-Empfänger; im privaten 1:1 zusätzlich Partner-Fallback (wie verschlüsselt). */
+export function resolveComposerKlartextIotaAddress(
+  recipient: string,
+  partner: string,
+  isPrivate: boolean
+): string {
+  const direct = resolveComposerIotaAddress(recipient, partner, false)
+  if (direct) return direct
+  if (isPrivate) return resolveComposerIotaAddress(recipient, partner, true)
+  return ''
+}
+
 /** Telegram Chat-ID(s) aus recipient oder Telefonbuch. */
 export function resolveComposerTelegramChatId(
   recipient: string,

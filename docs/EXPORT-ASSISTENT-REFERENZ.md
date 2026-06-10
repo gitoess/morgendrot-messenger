@@ -2,8 +2,8 @@
 
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  
-**UI:** Einsatzleitung → **Export-Assistent** · API: `POST /api/standalone-smartphone-handoff-zip`  
-**Verwandt:** `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move)
+**UI:** Einsatzleitung → **Neues Gerät provisionieren** (Wizard, empfohlen) oder **Export-Assistent** (Feineinstellung) · API: `POST /api/standalone-smartphone-handoff-zip`  
+**Verwandt:** `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move)
 
 > **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
 
@@ -192,7 +192,7 @@ Diese Werte schreibt der Server **immer** so — kein separates UI-Feld:
 | **COMMAND_REGISTRY_ID** | `0x` + 64 Hex | Deploy / Boss-.env | Chain-Registry Befehle |
 | **VAULT_REGISTRY_ID** | `0x` + 64 Hex | Deploy / Boss-.env | Chain-Registry Tresor |
 | **STREAMS_ANCHOR_ID** | `0x` + 64 Hex | Optional Puls | **Nicht** im Standard-Handoff |
-| **BROADCAST_PINNWAND_ADDRESS** | `0x` + 64 Hex | Boss-.env Pinnwand | **Nicht** im Standard-Handoff |
+| **BROADCAST_PINNWAND_ADDRESS** | `0x` + 64 Hex | Boss-.env Pinnwand | **Automatisch** im Handoff wenn Boss `ENABLE_BROADCAST_PINNWAND` aktiv (Helfer konfiguriert nichts) |
 | **Meshtastic Node-ID** | `!…` | Gerät / Telefonbuch | **Nicht** in .env — Kanal-PSK mündlich/README |
 
 ### Move vs. .env (Merksatz)

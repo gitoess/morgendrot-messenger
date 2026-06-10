@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   BookOpen,
   Lock,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ProjectType } from '@/frontend/lib/types'
@@ -25,6 +26,7 @@ import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-me
 import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-messenger-boss-home'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
 import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard-features-messenger'
+import { useMessengerFeatures } from '@/frontend/hooks/use-messenger-features'
 import { DashboardMyAddressPicker } from '@/frontend/components/dashboard-my-address-picker'
 import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
@@ -35,17 +37,26 @@ import {
   filterFeaturesByMessengerWorkspaceTileSet,
 } from '@/frontend/lib/dashboard-workspace-tile-visibility'
 import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
-import { OfflineStatusCard } from '@/frontend/components/offline-status-card'
-import { enableOfflineMailboxQueue } from '@/frontend/lib/api/offline-queue'
+import { HelperSeedSetupDialog } from '@/frontend/components/helper-seed-setup-dialog'
+import { StandaloneHandoffActivateCard } from '@/frontend/components/standalone-handoff-activate-card'
+import { StandaloneFirstStartCard } from '@/frontend/components/standalone-first-start-card'
+import { StandaloneSoloWizardCard } from '@/frontend/components/standalone-solo-wizard-card'
+import {
+  getStandaloneHelperReadiness,
+  HELPER_SEED_SETUP_REQUEST_EVENT,
+  maybeRequestHelperSeedSetup,
+} from '@/frontend/lib/handoff-standalone-ready'
 import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
-import { getMessengerDashboardOfflineHint } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
   const [hoveredFeature, setHoveredFeature] = useState<ProjectType | null>(null)
+  const messengerFeaturesI18n = useMessengerFeatures()
   const s = useDashboardSession({ restoreFeatures: messengerFeatures })
 
   return (
@@ -56,7 +67,8 @@ export function MessengerDashboard() {
         hoveredFeature={hoveredFeature}
         setHoveredFeature={setHoveredFeature}
         s={s}
-        visibleFeatures={filterFeaturesByMessengerWorkspaceTileSet(messengerFeatures, {
+        messengerFeaturesI18n={messengerFeaturesI18n}
+        visibleFeatures={filterFeaturesByMessengerWorkspaceTileSet(messengerFeaturesI18n, {
           workspaceTileSet: 'messenger',
           liteMessengerFromApi: true,
           isBossRole: s.isBossRole,
@@ -71,15 +83,25 @@ function MessengerDashboardBody({
   hoveredFeature,
   setHoveredFeature,
   s,
+  messengerFeaturesI18n,
   visibleFeatures,
 }: {
   hoveredFeature: ProjectType | null
   setHoveredFeature: (v: ProjectType | null) => void
   s: ReturnType<typeof useDashboardSession>
+  messengerFeaturesI18n: ReturnType<typeof useMessengerFeatures>
   visibleFeatures: ReturnType<typeof filterFeaturesByMessengerWorkspaceTileSet>
 }) {
+  const [helperSeedSetupOpen, setHelperSeedSetupOpen] = useState(false)
   const liteMessengerFromApi = true
   const isEinsatzLeadHome = canAccessEinsatzleitung(s.role)
+  const { t } = useAppTranslation('dashboard')
+  const { t: tc } = useAppTranslation('common')
+
+  const onLockSession = async () => {
+    if (!window.confirm(t('lock.confirm'))) return
+    await s.lockSession()
+  }
 
   useEffect(() => {
     if (!liteMessengerFromApi) return
@@ -90,15 +112,36 @@ function MessengerDashboardBody({
     writeShowAllTilesPref(true)
   }, [liteMessengerFromApi, s.role, s.showAllTiles, s.setShowAllTilesPersist])
 
+  useEffect(() => {
+    const onSeedSetup = () => {
+      if (getStandaloneHelperReadiness().needsMnemonic) setHelperSeedSetupOpen(true)
+    }
+    window.addEventListener(HELPER_SEED_SETUP_REQUEST_EVENT, onSeedSetup)
+    const boot = window.setTimeout(() => maybeRequestHelperSeedSetup(), 400)
+    return () => {
+      window.removeEventListener(HELPER_SEED_SETUP_REQUEST_EVENT, onSeedSetup)
+      window.clearTimeout(boot)
+    }
+  }, [])
+
   return (
     <>
       <DashboardSharedDialogs
         locked={s.locked}
+        suppressVaultUnlockForHelperSeed={s.unlock.suppressVaultUnlockForHelperSeed}
         helpOpen={s.helpOpen}
         onHelpOpenChange={s.setHelpOpen}
         helpLoading={s.helpLoading}
         helpText={s.helpText}
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
+      />
+      <HelperSeedSetupDialog
+        open={helperSeedSetupOpen}
+        onOpenChange={setHelperSeedSetupOpen}
+        onActivated={() => {
+          setHelperSeedSetupOpen(false)
+          void s.checkStatus()
+        }}
       />
       {s.activeView ? (
       <div className="min-h-screen bg-background">
@@ -110,17 +153,17 @@ function MessengerDashboardBody({
               className="flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
             >
               <ChevronLeft className="h-5 w-5" />
-              <span className="text-sm font-medium">Zurück</span>
+              <span className="text-sm font-medium">{t('nav.back')}</span>
             </button>
             <div className="h-4 w-px bg-border" />
             <span className="text-sm font-semibold text-foreground">
               {s.activeView.type === 'settings'
-                ? 'Einstellungen'
+                ? t('views.settings')
                 : s.activeView.type === 'config'
-                  ? '.env anpassen'
+                  ? t('views.config')
                   : s.activeView.type === 'einsatzleitung'
-                    ? 'Einsatzleitung'
-                    : featureTitle(s.activeView.type, messengerFeatures)}
+                    ? t('views.einsatzleitung')
+                    : featureTitle(s.activeView.type, messengerFeaturesI18n)}
             </span>
           </div>
         </header>
@@ -137,7 +180,7 @@ function MessengerDashboardBody({
                 type="button"
                 className="shrink-0 rounded px-2 py-0.5 text-emerald-300/90 hover:bg-emerald-500/20 hover:text-emerald-50"
                 onClick={() => s.setInitialProfileBanner(null)}
-                aria-label="Schließen"
+                aria-label={tc('actions.close')}
               >
                 ×
               </button>
@@ -204,6 +247,7 @@ function MessengerDashboardBody({
           role={s.role}
           myAddressFull={s.apiSnapshot?.myAddressFull}
           onOpenSettings={s.openSettingsView}
+          onLockSession={!s.locked ? onLockSession : undefined}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
@@ -214,13 +258,16 @@ function MessengerDashboardBody({
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-bold text-foreground">Morgendrot Messenger</h1>
+                <h1 className="text-lg font-bold text-foreground">{t('brand.messenger')}</h1>
               </div>
               <p className="text-xs text-muted-foreground">
-                {s.networkInfo || 'IOTA Rebased'}
+                {s.networkInfo || t('network.defaultLabel')}
                 {s.role ? (
-                  <span className="ml-1 font-mono text-[10px] text-foreground/80" title="Kommt aus Backend .env ROLE">
-                    · Rolle: {s.role}
+                  <span
+                    className="ml-1 font-mono text-[10px] text-foreground/80"
+                    title={t('network.roleTitle')}
+                  >
+                    · {t('network.role', { role: s.role })}
                   </span>
                 ) : null}
               </p>
@@ -229,8 +276,8 @@ function MessengerDashboardBody({
                   mode={s.meshPathMode}
                   subtitle={
                     s.rpcProxyActive
-                      ? 'IOTA-RPC geht über Backend-Proxy (SOCKS5 oder HTTP) – siehe Einstellungen → .env anpassen (RPC_SOCKS_PROXY).'
-                      : 'Tor/VPN: RPC_SOCKS_PROXY in Einstellungen setzen; LoRa/BLE im Chat (Meshtastic) koppeln.'
+                      ? t('network.meshProxySubtitle')
+                      : t('network.meshDefaultSubtitle')
                   }
                 />
               </div>
@@ -259,42 +306,54 @@ function MessengerDashboardBody({
               {s.backendReachable === null ? (
                 <>
                   <div className="h-2 w-2 animate-pulse rounded-full bg-current" />
-                  Verbinde...
+                  {t('connection.connecting')}
                 </>
               ) : s.locked ? (
                 <>
                   <Lock className="h-3.5 w-3.5" />
-                  <span title="Tresor gesperrt">Tresor gesperrt</span>
+                  <span title={t('connection.vaultLockedTitle')}>{t('connection.vaultLocked')}</span>
                 </>
               ) : s.connected ? (
                 <>
                   <Wifi className="h-3.5 w-3.5" />
-                  <span>Chat verbunden</span>
+                  <span>{t('connection.chatConnected')}</span>
                 </>
               ) : s.backendReachable ? (
                 <>
                   <Wifi className="h-3.5 w-3.5 text-emerald-500/80" />
-                  <span>Tresor: entsperrt</span>
+                  <span>{t('connection.vaultUnlocked')}</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-3.5 w-3.5" />
-                  Offline
+                  {t('connection.offline')}
                 </>
               )}
             </div>
+            {!s.locked ? (
+              <button
+                type="button"
+                onClick={() => void onLockSession()}
+                className="flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:px-3"
+                title={t('lock.buttonTitle')}
+                aria-label={t('lock.button')}
+              >
+                <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="hidden text-xs font-medium sm:inline">{t('lock.button')}</span>
+              </button>
+            ) : null}
             <Link
               href="/handbook"
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              title="Handbuch"
-              aria-label="Handbuch"
+              title={t('nav.handbook')}
+              aria-label={t('nav.handbook')}
             >
               <BookOpen className="h-5 w-5" />
             </Link>
             <button
               onClick={s.openSettingsView}
               className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-              aria-label="Einstellungen"
+              aria-label={t('nav.settings')}
             >
               <Settings className="h-5 w-5" />
             </button>
@@ -314,49 +373,27 @@ function MessengerDashboardBody({
               type="button"
               className="shrink-0 rounded px-2 py-0.5 text-emerald-300/90 hover:bg-emerald-500/20 hover:text-emerald-50"
               onClick={() => s.setInitialProfileBanner(null)}
-              aria-label="Schließen"
+              aria-label={tc('actions.close')}
             >
               ×
             </button>
           </div>
         ) : null}
-        {isEinsatzLeadHome && s.locked ? (
-          <OfflineStatusCard
-            variant="compact"
-            className="mb-4"
-            status={s.offlineStatus}
-            onTestConnection={s.checkStatus}
-            onResync={() => {
-              void s.checkStatus()
-            }}
-            onEnableQueueOptIn={() => enableOfflineMailboxQueue()}
-            onOpenHandoffImport={s.isBossRole ? undefined : s.openSettingsView}
-          />
-        ) : null}
-        {!isEinsatzLeadHome ? (
-          <OfflineStatusCard
-            variant="full"
-            status={s.offlineStatus}
-            onTestConnection={s.checkStatus}
-            onResync={() => {
-              void s.checkStatus()
-            }}
-            onEnableQueueOptIn={() => enableOfflineMailboxQueue()}
-            onOpenHandoffImport={s.openSettingsView}
-          />
-        ) : null}
+        <StandaloneFirstStartCard />
+        <StandaloneHandoffActivateCard
+          onOpenHandoffImport={s.openSettingsView}
+          onActivateWallet={s.requestStandaloneWalletUnlock}
+        />
+        <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
         {!s.locked && isEinsatzLeadHome ? (
           <DashboardMessengerBossHome
             apiSnapshot={s.apiSnapshot}
-            offlineStatus={s.offlineStatus}
             hasValidMyAddressForBalance={s.hasValidMyAddressForBalance}
             onRefreshStatus={s.checkStatus}
             addressSuggestions={s.dashboardTransferAddressSuggestions}
             onOpenMessages={s.openMessengerChatView}
             onOpenEinsatzleitung={s.openEinsatzleitungView}
             onOpenVault={s.openVaultView}
-            onOpenSettings={s.openSettingsView}
-            onEnableQueueOptIn={() => enableOfflineMailboxQueue()}
           />
         ) : null}
         {!s.locked && !isEinsatzLeadHome ? (
@@ -380,29 +417,30 @@ function MessengerDashboardBody({
           <div
             className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-xs text-muted-foreground"
             role="region"
-            aria-label="Einrichtung"
+            aria-label={t('firstSteps.aria')}
           >
             <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
               <BookOpen className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
-              Einrichtung
+              {t('firstSteps.title')}
             </span>
             <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
             <span className="max-w-prose">
-              Kurzüberblick &amp; Rollen:{' '}
+              {t('firstSteps.bodyBefore')}{' '}
               <Link
                 href="/handbook?file=DASHBOARD-ERSTE-SCHRITTE.md"
                 className="font-medium text-emerald-200 underline-offset-2 hover:underline"
               >
-                Handbuch „Erste Schritte“
+                {t('firstSteps.handbookFirstSteps')}
               </Link>
               {' · '}
               <Link
                 href="/handbook?file=DASHBOARD-PORT-UND-OBERFLAECHE.md"
                 className="font-medium text-emerald-200 underline-offset-2 hover:underline"
               >
-                Ports &amp; Oberflächen
+                {t('firstSteps.handbookPorts')}
               </Link>
-              . Wieder einblenden: <strong className="text-foreground/90">Einstellungen</strong>.
+              . {t('firstSteps.bodyAfter')}{' '}
+              <strong className="text-foreground/90">{t('nav.settings')}</strong>.
             </span>
             <div className="ml-auto flex flex-wrap items-center gap-2">
               <button
@@ -410,22 +448,22 @@ function MessengerDashboardBody({
                 onClick={() => void s.openHelp()}
                 className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
               >
-                Hilfe
+                {t('firstSteps.help')}
               </button>
               <button
                 type="button"
                 onClick={s.openSettingsView}
                 className="rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
               >
-                Einstellungen
+                {t('nav.settings')}
               </button>
               <button
                 type="button"
                 onClick={s.dismissFirstStepsBar}
                 className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label="Einrichtungszeile ausblenden"
+                aria-label={t('firstSteps.hideAria')}
               >
-                Ausblenden
+                {t('firstSteps.hide')}
               </button>
             </div>
           </div>
@@ -446,10 +484,8 @@ function MessengerDashboardBody({
                     <Crown className="h-6 w-6" aria-hidden />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-foreground">Einsatzleitung</p>
-                    <p className="text-sm text-muted-foreground">
-                      Team-Mailbox, Kontakte, Helfer-Handoff (Boss), Forensik
-                    </p>
+                    <p className="font-semibold text-foreground">{t('welcomeEinsatz.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('welcomeEinsatz.subtitle')}</p>
                   </div>
                   <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
                 </button>
@@ -520,7 +556,7 @@ function MessengerDashboardBody({
         {/* Quick Hint: nur wenn Backend wirklich nicht erreichbar */}
         {s.backendReachable === false && (
           <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-            <p className="text-sm leading-relaxed text-amber-400">{getMessengerDashboardOfflineHint()}</p>
+            <MessengerDashboardOfflineHint />
           </div>
         )}
       </main>

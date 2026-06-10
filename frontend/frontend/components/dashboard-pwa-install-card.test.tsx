@@ -1,6 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { DashboardPwaInstallCard } from './dashboard-pwa-install-card'
+
+vi.mock('@/frontend/lib/capacitor-platform', () => ({
+  isCapacitorNativePlatform: () => false,
+}))
 
 describe('DashboardPwaInstallCard', () => {
   const matchMediaMock = vi.fn()
@@ -12,7 +16,7 @@ describe('DashboardPwaInstallCard', () => {
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
     }))
-    vi.stubGlobal('matchMedia', matchMediaMock)
+    Object.assign(window, { matchMedia: matchMediaMock })
     Object.defineProperty(window.navigator, 'standalone', {
       configurable: true,
       value: false,
@@ -20,18 +24,16 @@ describe('DashboardPwaInstallCard', () => {
   })
 
   afterEach(() => {
-    vi.unstubAllGlobals()
+    vi.clearAllMocks()
   })
 
-  it('zeigt Titel und Hinweis wenn nicht standalone', async () => {
+  it('zeigt Titel und Hinweis wenn nicht standalone', () => {
     render(<DashboardPwaInstallCard />)
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /App installieren/i })).toBeInTheDocument()
-    })
+    expect(screen.getByRole('heading', { name: /App installieren/i })).toBeInTheDocument()
     expect(screen.getByText(/Für besten Offline-Betrieb/i)).toBeInTheDocument()
   })
 
-  it('blendet Karte aus wenn display-mode standalone', async () => {
+  it('blendet Karte aus wenn display-mode standalone', () => {
     matchMediaMock.mockImplementation((query: string) => ({
       matches: query === '(display-mode: standalone)',
       media: query,
@@ -39,8 +41,6 @@ describe('DashboardPwaInstallCard', () => {
       removeEventListener: vi.fn(),
     }))
     const { container } = render(<DashboardPwaInstallCard />)
-    await waitFor(() => {
-      expect(container.querySelector('#dashboard-pwa-install')).toBeNull()
-    })
+    expect(container.querySelector('#dashboard-pwa-install')).toBeNull()
   })
 })

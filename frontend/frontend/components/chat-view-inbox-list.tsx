@@ -119,6 +119,7 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
   onUseSenderAsPartnerFromInbox?: (sender: string) => void
   sending?: boolean
+  isInboxMessageUnread?: (msg: Message) => boolean
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -156,6 +157,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
     sending = false,
+    isInboxMessageUnread,
   } = p
 
   const visibilityHintBanner = inboxVisibilityHint ? (
@@ -368,6 +370,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             key={row.msg.id}
             className={cn(
               'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
+              isInboxMessageUnread?.(row.msg) && 'border-l-4 border-l-red-500/80 bg-red-500/[0.04]',
               protokollMarkedIds.has(row.msg.id) && 'border-l-4 border-l-amber-500 bg-amber-500/[0.06]',
               pinnedPinnwandIds.has(row.msg.id) && 'border-l-4 border-l-sky-500 bg-sky-500/[0.06]'
             )}

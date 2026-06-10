@@ -134,7 +134,12 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
 
       <div className={isGroupMode ? 'mt-4 space-y-3' : 'space-y-3'}>
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
+            {!isGroupMode && partnerValid && connectedSet.has(partnerTrim.toLowerCase()) ? (
+              <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">verbunden</span>
+            ) : null}
+          </div>
           <input
             type="text"
             list="chat-partner-addresses-encrypted"
@@ -154,7 +159,11 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
             disabled={!partnerValid || sending}
             className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {sending ? 'Wird gestartet...' : 'Handshake starten'}
+            {sending
+              ? 'Wird gestartet...'
+              : !isGroupMode && partnerValid && connectedSet.has(partnerTrim.toLowerCase())
+                ? 'Handshake erneut senden'
+                : 'Handshake starten'}
           </button>
           <PeeringQrActions
             myAddress={myAddress}

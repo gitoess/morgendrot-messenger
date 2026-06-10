@@ -2,24 +2,19 @@
 
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
-import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 import { DashboardBossQuickActions } from '@/frontend/components/dashboard-boss-quick-actions'
 import { DashboardPwaInstallCard } from '@/frontend/components/dashboard-pwa-install-card'
 import { DashboardIotaTransferCard } from '@/frontend/components/dashboard-iota-transfer-card'
-import { OfflineStatusCard } from '@/frontend/components/offline-status-card'
 import { shouldShowDashboardPwaInstallCard } from '@/frontend/lib/should-show-pwa-install'
 
 export function DashboardMessengerBossHome(p: {
   apiSnapshot: (ApiStatus & { error?: string }) | null
-  offlineStatus: OfflineStatusSnapshot
   hasValidMyAddressForBalance: boolean
   onRefreshStatus: () => void
   addressSuggestions: string[]
   onOpenMessages: () => void
   onOpenEinsatzleitung: () => void
   onOpenVault: () => void
-  onOpenSettings: () => void
-  onEnableQueueOptIn: () => void
 }) {
   const showPwa = shouldShowDashboardPwaInstallCard()
 
@@ -44,18 +39,6 @@ export function DashboardMessengerBossHome(p: {
           />
         </div>
       </div>
-
-      <OfflineStatusCard
-        variant="compact"
-        className="mb-0"
-        status={p.offlineStatus}
-        onTestConnection={p.onRefreshStatus}
-        onResync={() => {
-          void p.onRefreshStatus()
-        }}
-        onEnableQueueOptIn={p.onEnableQueueOptIn}
-        onOpenHandoffImport={p.onOpenSettings}
-      />
 
       <DashboardBossQuickActions
         onOpenMessages={p.onOpenMessages}

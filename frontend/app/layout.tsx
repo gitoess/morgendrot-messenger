@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { ChunkLoadRecovery } from '@/components/chunk-load-recovery'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import { AppToaster } from '@/components/app-toaster'
+import { I18nProvider } from '@/frontend/components/i18n-provider'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -51,10 +52,12 @@ export default function RootLayout({
   return (
     <html lang="de">
       <body className="font-sans antialiased">
-        <PwaServiceWorkerRegister />
-        <ChunkLoadRecovery />
-        <AppToaster />
-        {children}
+        <I18nProvider>
+          <PwaServiceWorkerRegister />
+          <ChunkLoadRecovery />
+          <AppToaster />
+          {children}
+        </I18nProvider>
         <Analytics />
       </body>
     </html>

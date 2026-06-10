@@ -36,6 +36,24 @@ npm run dev:messenger
 
 Beide öffnen dieselbe URL **http://127.0.0.1:3341/** — der Unterschied ist das geladene Dashboard (`projekt-dashboard` vs. `messenger-dashboard`). Siehe **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.
 
+### Messenger: Wanderer vs. Boss — `ROLE` in `.env`
+
+Die UI zeigt **Einsatzleitung** (Tab, Kachel, Boss-Startseite) nur bei **`ROLE=boss`** oder **`ROLE=kommandant`**. Für **Wanderer / Solo / Helfer** ohne Stab-Funktionen:
+
+```env
+ROLE=messenger
+```
+
+Für **Boss-Stab** (Einsatzleitung, Export, Provisionierung):
+
+```env
+ROLE=boss
+```
+
+Nach Änderung in der **`.env` im Repo-Root**: **`npm run dev:stop`**, dann **`npm run dev:messenger`**, Seite neu laden. Die Rolle steht auch im Messenger-Header (`Rolle: …` / `Role: …`). **Standalone-APK:** Rolle kommt aus dem **Handoff-ZIP** (`ROLE=…` in der `.env`); **Privat/Solo** setzt lokal `messenger` — ohne Einsatzleitung.
+
+Code: `frontend/frontend/lib/messenger-role-capabilities.ts` → `canAccessEinsatzleitung()`.
+
 **Dev wieder stoppen (Ports 3341–3344 freigeben):** **`npm run dev:stop`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
 
 - **Backend (API):** http://127.0.0.1:3342  

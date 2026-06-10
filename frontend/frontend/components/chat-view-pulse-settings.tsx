@@ -75,7 +75,7 @@ import {
 
 const LS_STRICT_ONLINE = 'morgendrot.strictOnlineNoMeshFallback'
 const LS_LORA_TX = 'morgendrot.loraTxTier'
-const LS_EXPERT_TOOLS = 'morgendrot.dev.expertTools'
+import { isMessengerClientExpertModeEnabled } from '@/frontend/lib/messenger-client-expert-mode'
 const LS_AUTARKY_MODE = 'morgendrot.autarkyMode'
 
 /** Leerzeichen / Zero-Width entfernen; Kleinbuchstaben für 0x-Hex (Copy-Paste von Explorern). */
@@ -256,10 +256,7 @@ export function ChatViewPulseSettings({
       setHasPersistedSigner(hasPersistedDirectIotaSessionSigner())
       setEcdhPrivActive(getDirectChatEcdhPrivateKey() != null)
       setOptimisticDrainFlags(isDirectChainOptimisticFlagsEnabled())
-      const devExpert =
-        allowDevExpertTools &&
-        typeof window !== 'undefined' &&
-        window.localStorage.getItem(LS_EXPERT_TOOLS) === '1'
+      const devExpert = allowDevExpertTools && isMessengerClientExpertModeEnabled()
       setShowExpertTools(apiStatus.uiVariant !== 'messenger' || devExpert)
       const fields = getDirectChainFieldIdsFromLs()
       if (fields.packageId) setChainPkg(fields.packageId)

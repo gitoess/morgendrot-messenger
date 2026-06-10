@@ -1,0 +1,73 @@
+{
+  "title": {
+    "default": "Tresor entsperren",
+    "standalone": "Direkt-IOTA entsperren",
+    "solo": "Wallet einrichten",
+    "streamlined": "Mnemonic eingeben"
+  },
+  "description": {
+    "default": "Wähle eine Option — ohne Passwort bleibt der Messenger gesperrt.",
+    "standalone": "Standalone-APK ohne Morgendrot-Server: Mnemonic für Direkt senden/empfangen — Handoff vorher unter Einstellungen importieren.",
+    "solo": "Privat-Modus ohne Boss — wie am PC: Tresor öffnen, Seed importieren oder neues Profil anlegen.",
+    "streamlined": "Package, Mailbox und Fullnode sind schon aus dem Handoff da — nur noch deine Seed-Phrase vom Boss."
+  },
+  "streamlined": {
+    "walletKeyLabel": "Wallet-Schlüssel",
+    "walletKeyPlaceholder": "Mnemonic (12+ Wörter), IOTA-Bech32-Secret oder 64 Hex …",
+    "hint": "Vom Boss: dieselbe Seed-Phrase wie im Handoff-Profil. Bech32/Hex-Secret geht auch. Neues Profil nur ohne Team-Handoff sinnvoll.",
+    "appPasswordOptional": "App-Passwort (optional)",
+    "activating": "Aktiviere…",
+    "activateChat": "Chat aktivieren",
+    "advancedCreate": "Erweitert: neues Profil anlegen (nur ohne Boss-Handoff)"
+  },
+  "vault": {
+    "title": "Tresor öffnen",
+    "subtitle": "Mit Passwort entsperren",
+    "noLocalFileSdk": "Keine lokale Vault-Datei — nutze „Seed importieren“ oder „Neues Profil“.",
+    "noLocalFileChain": "Keine lokale Datei: Wenn der Tresor nur auf der Chain liegt, das gleiche Vault-Passwort wie beim On-Chain-Speichern — nach dem Entsperren werden die Schlüssel von der Chain in die Sitzung geladen.",
+    "sdkLocalHint": "Nur Passwort reicht, wenn beim letzten Speichern „Signer-Import mit speichern“ aktiv war. Sonst unten <strong>Seed importieren</strong> wählen und Mnemonic/Secret eintragen.",
+    "passwordLabel": "Passwort",
+    "passwordPlaceholder": "Passwort",
+    "mnemonicOptionalLabel": "Mnemonic (nur falls nötig)",
+    "mnemonicPlaceholder": "24 Wörter …",
+    "hideMnemonic": "Ausblenden",
+    "showMnemonic": "Mnemonic ergänzen (erweitert)",
+    "unlocking": "Wird entsperrt…",
+    "unlock": "Entsperren"
+  },
+  "import": {
+    "title": "Seed importieren",
+    "subtitle": "Bestehendes Profil wiederherstellen (24 Wörter)",
+    "hint": "Vault-Passwort <strong>und</strong> dein IOTA-Mnemonic (12–24 Wörter) oder Bech32-Secret — Pflicht bei <mono>SIGNER=sdk</mono> ohne gespeicherten Import.",
+    "vaultPasswordPlaceholder": "Vault-Passwort",
+    "mnemonicLabel": "Mnemonic / Secret (Pflicht)",
+    "mnemonicPlaceholder": "24 Wörter oder Bech32-Secret …",
+    "importing": "Import läuft…",
+    "restore": "Profil wiederherstellen"
+  },
+  "create": {
+    "title": "Neues Profil anlegen",
+    "subtitle": "Frischen Tresor erstellen",
+    "existingVault": "Es gibt bereits eine Vault-Datei — meist reicht „Tresor öffnen“.",
+    "mnemonicLabel": "Mnemonic / Secret",
+    "mnemonicPlaceholder": "24 Wörter …",
+    "repeatLabel": "Wiederholen",
+    "repeatPlaceholder": "Erneut eingeben",
+    "newPasswordPlaceholder": "Neues Passwort",
+    "confirmPasswordPlaceholder": "Passwort wiederholen",
+    "creating": "Wird angelegt…",
+    "create": "Profil anlegen"
+  },
+  "techNotes": {
+    "toggle": "Technische Hinweise",
+    "sessionLocal": "lokale Wallet-Sitzung",
+    "sessionServer": "Server-Sitzung",
+    "signIntro": "Entsperrt die <strong>{{session}}</strong> zum Signieren.",
+    "standaloneExtra": " Standalone: Seed liegt verschlüsselt auf dem Gerät — kein Morgendrot-Backend nötig.",
+    "serverExtra": " Das Passwort entschlüsselt die Vault-Datei auf dem Gerät bzw. der Basis.",
+    "signerCli": "<mono>SIGNER=cli</mono>: Passwort des IOTA-CLI-Keystores — kein Mnemonic hier.",
+    "signerSdk": "<mono>SIGNER=sdk</mono>: Nach einmaligem Import reicht oft nur noch das Passwort unter „Tresor öffnen“.",
+    "signerRemote": "<mono>SIGNER=remote</mono>: Vault-Passwort; Signatur extern.",
+    "forgotPassword": "<strong>Passwort vergessen?</strong> Vault-Inhalt ohne altes Passwort nicht lesbar. Mit Seed lässt sich ein neues Profil anlegen — alte Messaging-Keys bleiben in der alten Vault."
+  }
+}

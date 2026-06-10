@@ -21,9 +21,34 @@ import {
   saveLocalHandoffAppliedSnapshot,
   type LocalHandoffAppliedSnapshot,
 } from '@/frontend/lib/handoff-local-apply'
+import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 
 const LS_FLAGS = 'morgendrot.directChain.flagsJson'
+export const LS_HANDOFF_ENV_BACKUP = 'morgendrot.handoff.envBackup.v1'
+
+export function parseHandoffEnvLines(text: string): Record<string, string> {
+  return parseEnv(text)
+}
+
+export function readHandoffEnvBackup(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(LS_HANDOFF_ENV_BACKUP)?.trim()
+    return raw || null
+  } catch {
+    return null
+  }
+}
+
+function saveHandoffEnvBackup(envText: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LS_HANDOFF_ENV_BACKUP, envText)
+  } catch {
+    /* ignore */
+  }
+}
 
 function parseEnv(text: string): Record<string, string> {
   const out: Record<string, string> = {}
@@ -41,6 +66,13 @@ function parseEnv(text: string): Record<string, string> {
     out[k] = v
   }
   return out
+}
+
+function normalizeHexId(v: string): string {
+  const t = String(v || '').trim()
+  if (/^0x[a-fA-F0-9]{64}$/i.test(t)) return t.toLowerCase()
+  if (/^[a-fA-F0-9]{64}$/i.test(t)) return `0x${t.toLowerCase()}`
+  return t
 }
 
 function parseBool(input: string | undefined): boolean | undefined {
@@ -78,9 +110,9 @@ export function syncLocalHandoffSnapshotToChainContext(
   snapshot: LocalHandoffAppliedSnapshot,
   env?: Record<string, string>
 ): void {
-  const packageId = snapshot.packageId?.trim() ?? ''
-  const mailboxId = snapshot.mailboxId?.trim() ?? ''
-  const senderFromEnv = env?.MY_ADDRESS?.trim() ?? ''
+  const packageId = normalizeHexId(snapshot.packageId?.trim() ?? '')
+  const mailboxId = normalizeHexId(snapshot.mailboxId?.trim() ?? '')
+  const senderFromEnv = normalizeHexId(env?.MY_ADDRESS?.trim() ?? '')
   const sender = isLikelyIotaHexId(senderFromEnv) ? senderFromEnv : ''
 
   persistDirectChainFieldIds({
@@ -122,11 +154,25 @@ function enableStandaloneDirectDefaults(): void {
   }
 }
 
+function seedPartnersFromHandoffEnv(env: Record<string, string>): void {
+  const add = (raw?: string) => {
+    const t = String(raw || '').trim()
+    if (t) addConnectedPeerToLocalSnapshot(t)
+  }
+  add(env.BOSS_ADDRESS)
+  add(env.PARTNER_ADDRESS)
+  const multi = env.PARTNER_ADDRESSES?.trim()
+  if (multi) {
+    for (const part of multi.split(',')) add(part)
+  }
+}
+
 /**
  * Handoff-.env lokal vormerken inkl. Direkt-RPC und Ketten-IDs (APK ohne Basis).
  */
 export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppliedSnapshot {
   const env = parseEnv(envText)
+  saveHandoffEnvBackup(envText)
   const snapshot = buildLocalHandoffAppliedSnapshot(envText)
   saveLocalHandoffAppliedSnapshot(snapshot)
 
@@ -134,6 +180,7 @@ export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppli
   if (rpc) setBrowserDirectIotaRpcUrlOverride(rpc)
 
   syncLocalHandoffSnapshotToChainContext(snapshot, env)
+  seedPartnersFromHandoffEnv(env)
   enableStandaloneDirectDefaults()
 
   return snapshot

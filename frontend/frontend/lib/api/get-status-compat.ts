@@ -1,5 +1,6 @@
 import type { ApiResponse } from '../types'
 import { fetchStatus, type ApiStatusFetchOk } from '@/frontend/lib/api/status'
+import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
 
 export type LegacyGetStatusData = {
   network: string
@@ -25,7 +26,7 @@ export type LegacyGetStatusResponse = ApiResponse<LegacyGetStatusData> & { locke
 export function mapApiStatusFetchOkToLegacyGetStatusResponse(t: ApiStatusFetchOk): LegacyGetStatusResponse {
   const raw = t as ApiStatusFetchOk & { version?: string }
   return {
-    ok: !!t.backendRunning,
+    ok: !!t.backendRunning || t.fromLocalHandoff === true || shouldPreferStandaloneHandoffStatus(),
     data: {
       network: t.rpcUrlLabel || t.network || '—',
       address: t.myAddress || '',

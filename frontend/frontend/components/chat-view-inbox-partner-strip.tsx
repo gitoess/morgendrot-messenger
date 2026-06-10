@@ -19,7 +19,7 @@ import {
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 
-export type InboxPartnerOption = { address: string; label: string }
+export type InboxPartnerOption = { address: string; label: string; unreadCount?: number }
 
 const MAX_VISIBLE_CHIPS = 5
 
@@ -77,11 +77,16 @@ function PartnerChipSection(p: {
                   onPartnerSelectForSend(o.address)
                 }}
                 className={cn(
-                  'min-w-0 flex-1 truncate px-2 py-1 text-left text-xs font-medium transition-colors',
+                  'inline-flex min-w-0 flex-1 items-center gap-1 truncate px-2 py-1 text-left text-xs font-medium transition-colors',
                   active ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-muted'
                 )}
               >
-                {o.label}
+                <span className="truncate">{o.label}</span>
+                {!active && (o.unreadCount ?? 0) > 0 ? (
+                  <span className="shrink-0 rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-4 text-white">
+                    {(o.unreadCount ?? 0) > 99 ? '99+' : o.unreadCount}
+                  </span>
+                ) : null}
               </button>
               {onRemoveFromQuickList ? (
                 <button

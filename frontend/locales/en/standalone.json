@@ -1,0 +1,68 @@
+{
+  "profileLabelSolo": "Private / Solo",
+  "firstStart": {
+    "title": "Welcome — how do you want to start?",
+    "description": "Team deployment with a boss, or private use on your own. Same app — you can switch later in settings (new profile).",
+    "einsatzTitle": "Deployment — handoff from boss",
+    "einsatzSubtitle": "Team, mailbox and full node come from the ZIP.",
+    "einsatzDetail": "Then enter seed via QR or mnemonic — no PC server required.",
+    "soloTitle": "Private / Solo — no boss",
+    "soloSubtitle": "Set up your wallet yourself, like on desktop.",
+    "soloDetail": "Import seed, create new, or unlock with app password. Network & mailbox come next.",
+    "tipEmptyBasisUrl": "Tip: leave API base URL empty for standalone without Morgendrot server.",
+    "actionEinsatz": "Deployment (handoff)",
+    "actionSolo": "Private / Solo"
+  },
+  "handoff": {
+    "step1Title": "Step 1: Handoff from boss",
+    "step1Description": "Import ZIP — package, mailbox and full node are applied automatically. Then enter your mnemonic.",
+    "importZip": "Import handoff ZIP",
+    "switchToSolo": "Start private / solo instead",
+    "step2Title": "Step 2: Activate wallet",
+    "walletSetupTitle": "Set up wallet",
+    "step2DescriptionEinsatz": "Already configured from handoff — scan seed QR or enter mnemonic (from boss).",
+    "step2DescriptionSolo": "Private mode: import seed, create new, or unlock with saved app password — like on desktop.",
+    "checkPackageId": "Package ID",
+    "checkMailboxId": "Mailbox ID",
+    "checkRpcUrl": "Full node URL",
+    "checkDirectMode": "Direct mode + drain (automatic)",
+    "activateWallet": "Set up seed — activate chat",
+    "openWalletDialog": "Open wallet dialog"
+  },
+  "hints": {
+    "firstStartChoice": "First launch: choose deployment (handoff) or private/solo — then set up wallet like on desktop.",
+    "einsatzAwaitHandoff": "Deployment mode: import handoff ZIP — then seed from boss. No PC server (empty API base URL).",
+    "soloActive": "Private/solo active — unlock wallet, then network & mailbox in the solo wizard on the dashboard.",
+    "soloWalletSetup": "Private/solo: set up wallet (seed). Then network & mailbox in the solo wizard — no boss needed.",
+    "handoffOkNeedSeed": "Handoff OK — set up seed (QR from boss), then chat under Messages.",
+    "standaloneActive": "Standalone APK active — direct RPC, no Morgendrot server required.",
+    "missingFullnode": "Standalone APK: full node URL missing — check handoff again."
+  },
+  "offline": {
+    "awaitHandoffSteps": "Handoff active — step 2: enter mnemonic (seed from boss). Package, mailbox and full node are already configured."
+  },
+  "readiness": {
+    "importHandoff": "Import handoff ZIP (settings)",
+    "setupWallet": "Set up wallet (mnemonic)",
+    "enterMnemonicSolo": "Enter mnemonic or import seed",
+    "enterMnemonicBoss": "Enter mnemonic (from boss)",
+    "setupChain": "Enter full node, package ID and mailbox ID (solo wizard)"
+  },
+  "soloWizard": {
+    "title": "Step 3: Network & mailbox",
+    "description": "Full node (testnet), package ID and mailbox ID — then chat is ready. Get IDs from your team or copy from a reachable boss setup.",
+    "rpcUrlLabel": "Full node URL (RPC)",
+    "packageIdLabel": "Package ID",
+    "mailboxIdLabel": "Mailbox ID",
+    "loadTestnetTemplate": "Testnet template (RPC)",
+    "prefillFromBoss": "Copy from reachable boss",
+    "saveAndContinue": "Save — activate chat",
+    "savedOk": "Saved — you can open Messages now.",
+    "errors": {
+      "invalidRpc": "Invalid full node URL — expected https://…",
+      "invalidPackageId": "Invalid package ID (0x + 64 hex characters).",
+      "invalidMailboxId": "Invalid mailbox ID (0x + 64 hex characters).",
+      "missingSigner": "Wallet address missing — unlock wallet first."
+    }
+  }
+}

@@ -29,10 +29,25 @@ export function canUseMessengerExpertTools(status: ApiStatus | null | undefined)
   return isIotaTransportUiVisible(status)
 }
 
+/**
+ * Posteingang: Package-ID-Steuerung (temporär/dauerhaft).
+ * Erfordert: IOTA-Transport, kein serverseitiger Simple Mode, plus client opt-in.
+ */
+export function canShowInboxPackageExpertMenu(
+  status: ApiStatus | null | undefined,
+  clientExpertModeEnabled: boolean
+): boolean {
+  if (!clientExpertModeEnabled) return false
+  if (isSimpleUiMode(status)) return false
+  return isIotaTransportUiVisible(status)
+}
+
 export type MessengerUiCapabilities = {
   simpleMode: boolean
   iotaTransportUi: boolean
   expertTools: boolean
+  /** Posteingang Package-ID-Menü — setze clientExpertModeEnabled separat. */
+  showInboxPackageExpertMenu: (clientExpertModeEnabled: boolean) => boolean
   showInboxIotaFilter: boolean
   showPackageIdBanner: boolean
   /** Ad-hoc BLE-Platzhalter — nicht im Simple Mode. */
@@ -52,6 +67,8 @@ export function getMessengerUiCapabilities(
     simpleMode,
     iotaTransportUi,
     expertTools,
+    showInboxPackageExpertMenu: (clientExpertModeEnabled) =>
+      canShowInboxPackageExpertMenu(status, clientExpertModeEnabled),
     showInboxIotaFilter: iotaTransportUi,
     showPackageIdBanner: iotaTransportUi,
     showAdhocTransport: !simpleMode,

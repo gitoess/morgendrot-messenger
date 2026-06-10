@@ -2,6 +2,7 @@
 
 import { ArrowRight, Crown, MessageSquare, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 const cardBase =
   'flex min-h-[148px] flex-col gap-3 rounded-2xl border p-5 text-left transition-colors hover:brightness-110'
@@ -11,9 +12,11 @@ export function DashboardBossQuickActions(p: {
   onOpenEinsatzleitung: () => void
   onOpenVault: () => void
 }) {
+  const { t } = useAppTranslation('dashboard')
+
   return (
-    <section aria-label="Schnellaktionen">
-      <h2 className="sr-only">Schnellaktionen</h2>
+    <section aria-label={t('bossQuickActions.aria')}>
+      <h2 className="sr-only">{t('bossQuickActions.aria')}</h2>
       <div className="grid gap-3 sm:grid-cols-3">
         <button
           type="button"
@@ -27,11 +30,11 @@ export function DashboardBossQuickActions(p: {
             <MessageSquare className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">Nachrichten</p>
-            <p className="text-sm text-muted-foreground">Chats, Funk, Team-Postfächer</p>
+            <p className="font-semibold text-foreground">{t('bossQuickActions.messages.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.messages.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300/90">
-            Öffnen <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </span>
         </button>
         <button
@@ -46,11 +49,11 @@ export function DashboardBossQuickActions(p: {
             <Crown className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">Einsatzleitung</p>
-            <p className="text-sm text-muted-foreground">Handoff-ZIP, Helfer-QR (WLAN)</p>
+            <p className="font-semibold text-foreground">{t('bossQuickActions.einsatzleitung.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.einsatzleitung.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-200/90">
-            Öffnen <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </span>
         </button>
         <button
@@ -65,11 +68,11 @@ export function DashboardBossQuickActions(p: {
             <Shield className="h-6 w-6" aria-hidden />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">Tresor &amp; Sicherheit</p>
-            <p className="text-sm text-muted-foreground">Passwort, Seed, Export</p>
+            <p className="font-semibold text-foreground">{t('bossQuickActions.vault.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.vault.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-red-300/90">
-            Öffnen <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+            {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </span>
         </button>
       </div>

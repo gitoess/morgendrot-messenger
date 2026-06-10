@@ -1,0 +1,183 @@
+{
+  "brand": {
+    "messenger": "Morgendrot Messenger",
+    "morgendrot": "Morgendrot"
+  },
+  "loading": {
+    "title": "Loading Morgendrot…",
+    "subtitle": "The first start may take a few seconds."
+  },
+  "nav": {
+    "back": "Back",
+    "handbook": "Handbook",
+    "handbookOpen": "Open handbook",
+    "settings": "Settings",
+    "bottomNavAria": "Messenger navigation",
+    "messages": "Messages",
+    "einsatzleitung": "Operations lead",
+    "phonebook": "Phonebook"
+  },
+  "views": {
+    "settings": "Settings",
+    "config": "Edit .env",
+    "einsatzleitung": "Operations lead"
+  },
+  "settings": {
+    "subtitleDefault": "Network status and configuration",
+    "subtitleSlim": "Profile, system and integrations — deployment features on the dashboard"
+  },
+  "network": {
+    "defaultLabel": "IOTA Rebased",
+    "role": "Role: {{role}}",
+    "roleTitle": "From backend .env ROLE",
+    "meshProxySubtitle": "IOTA RPC uses backend proxy (SOCKS5 or HTTP) — see Settings → Edit .env (RPC_SOCKS_PROXY).",
+    "meshDefaultSubtitle": "Tor/VPN: set RPC_SOCKS_PROXY in Settings; pair LoRa/BLE in chat (Meshtastic)."
+  },
+  "connection": {
+    "connecting": "Connecting…",
+    "vaultLocked": "Vault locked",
+    "vaultLockedTitle": "Vault locked",
+    "chatConnected": "Chat connected",
+    "vaultUnlocked": "Vault: unlocked",
+    "offline": "Offline"
+  },
+  "lock": {
+    "button": "Sign out",
+    "buttonTitle": "Lock vault — unlock again to continue",
+    "confirm": "Lock vault? Keys are removed from memory — unlock again with your password."
+  },
+  "mesh": {
+    "internet": "Internet",
+    "tor": "Tor/VPN",
+    "lora": "LoRa",
+    "ble": "BLE",
+    "offline": "Offline"
+  },
+  "features": {
+    "chat": {
+      "title": "Messages",
+      "subtitle": "Communicate securely",
+      "variants": {
+        "private-chat": {
+          "title": "Messages",
+          "hint": "Chats, radio, team mailboxes"
+        }
+      }
+    },
+    "einsatzleitung": {
+      "title": "Operations lead",
+      "subtitle": "Team, handoff, helpers",
+      "variants": {
+        "einsatzleitung-hub": {
+          "title": "Operations lead",
+          "hint": "Handoff ZIP, helper QR (LAN)"
+        }
+      }
+    },
+    "boss": {
+      "title": "Control",
+      "subtitle": "Command devices",
+      "variants": {
+        "boss-signer": {
+          "title": "Boss mode",
+          "hint": "Commands to devices"
+        },
+        "pinnwand-admin": {
+          "title": "Admin",
+          "hint": "Manage channels"
+        }
+      }
+    },
+    "vault": {
+      "title": "Vault & security",
+      "subtitle": "Secure keys & access",
+      "variants": {
+        "local-vault": {
+          "title": "Open vault",
+          "hint": "Password, seed, export"
+        },
+        "emergency-purge": {
+          "title": "Emergency",
+          "hint": "Delete everything"
+        }
+      }
+    }
+  },
+  "bossQuickActions": {
+    "aria": "Quick actions",
+    "open": "Open",
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Chats, radio, team mailboxes"
+    },
+    "einsatzleitung": {
+      "title": "Operations lead",
+      "subtitle": "Handoff ZIP, helper QR (LAN)"
+    },
+    "vault": {
+      "title": "Vault & security",
+      "subtitle": "Password, seed, export"
+    }
+  },
+  "welcomeEinsatz": {
+    "title": "Operations lead",
+    "subtitle": "Team mailbox, contacts, helper handoff (boss), forensics"
+  },
+  "firstSteps": {
+    "aria": "Setup",
+    "title": "Setup",
+    "bodyBefore": "Quick overview & roles:",
+    "handbookFirstSteps": "Handbook “First steps”",
+    "handbookPorts": "Ports & surfaces",
+    "bodyAfter": "Show again:",
+    "help": "Help",
+    "hide": "Hide",
+    "hideAria": "Hide setup bar"
+  },
+  "cards": {
+    "iotaWallet": "IOTA wallet",
+    "iotaTransfer": "Send IOTA",
+    "pwaInstall": "Install app",
+    "pwaShort": "App"
+  },
+  "address": {
+    "label": "My address",
+    "labelWithShort": "My address: {{short}}",
+    "notSet": "My address: not set yet",
+    "copy": "Copy address",
+    "copied": "Copied",
+    "notConfigured": "(not set)",
+    "noBackendTitle": "No MY_ADDRESS from backend"
+  },
+  "pwa": {
+    "offlineHint": "Offline: home screen",
+    "browserMenu": "Browser menu",
+    "install": "Install",
+    "offlineDetail": "For offline use: add to home screen.",
+    "fullDescription": "For best offline use: add the app to your home screen.",
+    "installApp": "Install app"
+  },
+  "iota": {
+    "send": "Send",
+    "sending": "Sending…",
+    "hideSend": "Hide send",
+    "receive": "Receive",
+    "copyAddress": "Copy address",
+    "copied": "Copied",
+    "refreshBalance": "Refresh balance",
+    "balanceFailed": "Balance: query failed",
+    "balanceAfterAddress": "Balance after valid MY_ADDRESS",
+    "balanceLoading": "Loading balance…",
+    "recipient": "Recipient",
+    "amount": "Amount (IOTA)",
+    "receiveTitle": "Receive IOTA",
+    "receiveDescription": "QR code with your wallet address — pay to this address.",
+    "receiveQrAlt": "Wallet address QR code",
+    "noValidAddress": "No valid address — set MY_ADDRESS first.",
+    "transferSuccess": "Transfer successful!",
+    "transferFailed": "Transfer failed"
+  },
+  "einsatzHub": {
+    "title": "Operations lead"
+  }
+}

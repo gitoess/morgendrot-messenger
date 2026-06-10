@@ -1,0 +1,26 @@
+{
+  "title": "Set up seed?",
+  "description": "Handoff ZIP applied{{label}}. Activate seed from boss via QR or manual entry.",
+  "descriptionLabel": " ({{label}})",
+  "scanQr": "Scan QR",
+  "pasteQrText": "Paste QR text",
+  "scanInvalidSchema": "Not a seed QR (schema ms) — enter mnemonic manually or scan boss QR again.",
+  "scanSuccess": "Seed from QR applied — activate below.",
+  "pastePrompt": "Paste QR text (from boss screen or photo OCR):",
+  "pasteInvalid": "Invalid seed QR.",
+  "pasteSuccess": "Seed from text applied.",
+  "mnemonicLabel": "Mnemonic / secret",
+  "mnemonicPlaceholder": "24 words, Bech32 or 64 hex (from boss)",
+  "appPasswordLabel": "Optional app password (local)",
+  "appPasswordPlaceholder": "8+ characters — unlock without re-entering seed",
+  "savedProfileTitle": "Saved profile on this device",
+  "savedProfileHint": "Enter app password below and unlock — or scan new seed from boss.",
+  "unlockWithAppPassword": "Unlock with app password",
+  "activating": "Activating…",
+  "activateWallet": "Activate wallet",
+  "errors": {
+    "savedPasswordMin": "Saved profile: enter app password (8+ characters).",
+    "mnemonicRequired": "Mnemonic (12+ words), Bech32 secret or 64 hex required.",
+    "optionalPasswordMin": "Optional app password: at least 8 characters or leave empty."
+  }
+}

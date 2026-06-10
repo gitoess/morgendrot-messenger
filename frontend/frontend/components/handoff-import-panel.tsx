@@ -23,6 +23,9 @@ import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-p
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { applyHandoffEnvToLocalDevice } from '@/frontend/lib/handoff-device-bootstrap'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import { getApiBase } from '@/frontend/lib/api/api-base'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { notifyStandaloneHandoffApplied } from '@/frontend/lib/handoff-standalone-ready'
 import { restartBackend } from '@/frontend/lib/api/backend-restart'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import { waitForBackend } from '@/frontend/lib/wait-for-backend'
@@ -121,6 +124,10 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     }
   }, [loadDraftFromStorage])
 
+  const standaloneHandoffMode =
+    typeof window !== 'undefined' &&
+    (!getApiBase().trim() || isStandaloneMessengerWithoutBasis())
+
   const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string) => {
     setStage('previewing')
     setEnvText(text)
@@ -128,6 +135,20 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     persistDraft(text, runtimeJson)
     setFileLabel(label)
     const local = previewHandoffEnvImportLocal(text, null)
+    if (!getApiBase().trim()) {
+      setSummary(local.summary)
+      setErrors(local.errors)
+      if (local.ok) {
+        setStatusMsg(
+          'Standalone-APK: Vorschau OK — unten „Lokal vormerken (ohne Basis)“ wählen (nicht „Import bestätigen“).'
+        )
+        setStage('ready')
+      } else {
+        setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
+        setStage('idle')
+      }
+      return
+    }
     let remoteError = ''
     try {
       const preview = await previewHandoffEnvImport(text)
@@ -292,8 +313,43 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     if (f) void loadZip(f)
   }
 
+  const onApplyLocalOnly = useCallback(() => {
+    if (!envText?.trim()) return
+    const local = previewHandoffEnvImportLocal(envText, null)
+    if (!local.ok) {
+      setErrors(local.errors)
+      setStatusMsg('Lokales Vormerken fehlgeschlagen — Vorschau-Fehler beheben.')
+      return
+    }
+    applyHandoffEnvToLocalDevice(envText)
+    setLocalAppliedOnly(true)
+    setApplied(true)
+    setStage('applied')
+    setErrors([])
+    if (local.summary) {
+      setSummary(local.summary)
+      recordHandoffProfileImport(envText, local.summary)
+    }
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(HANDOFF_IMPORT_DRAFT_KEY)
+      } catch {
+        // ignore
+      }
+    }
+    setDraft(null)
+    notifyStandaloneHandoffApplied()
+    setStatusMsg(
+      'Schritt 1 erledigt — Package, Mailbox und Fullnode sind gespeichert. Gleich „Seed einrichten?“ (QR oder Eingabe).'
+    )
+  }, [envText])
+
   const onApply = async () => {
     if (!envText?.trim()) return
+    if (!getApiBase().trim()) {
+      onApplyLocalOnly()
+      return
+    }
     setStage('applying')
     setBusy(true)
     setStatusMsg('')
@@ -334,15 +390,6 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     } finally {
       setBusy(false)
     }
-  }
-
-  const onApplyLocalOnly = () => {
-    if (!envText?.trim()) return
-    applyHandoffEnvToLocalDevice(envText)
-    setLocalAppliedOnly(true)
-    setStatusMsg(
-      'Lokal gespeichert: Profil, Fullnode-URL und Ketten-IDs für Standalone-APK (Direkt-IOTA ohne Morgendrot-Basis). Optional später „Import bestätigen“, wenn eine Basis erreichbar ist.'
-    )
   }
 
   const onReloadPage = () => {
@@ -391,8 +438,20 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
             <h4 className="font-semibold text-foreground">Handoff importieren</h4>
             <p className="mt-1 text-sm text-muted-foreground">
               Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
-              Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>. Danach{' '}
-              <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
+              Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>.
+              {standaloneHandoffMode ? (
+                <>
+                  {' '}
+                  Auf der <strong className="text-foreground">Standalone-APK ohne PC-Server</strong>: nach der Vorschau{' '}
+                  <strong className="text-foreground">Lokal vormerken (ohne Basis)</strong>, dann Seite neu laden und
+                  Mnemonic im Entsperren-Dialog oder Puls setzen.
+                </>
+              ) : (
+                <>
+                  {' '}
+                  Danach <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
+                </>
+              )}
             </p>
           </div>
 
@@ -564,47 +623,75 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
 
           {envText && !applied && errors.length === 0 && summary ? (
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void onApply()}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-              >
-                {busy ? 'Speichere…' : 'Import bestätigen'}
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onApplyLocalOnly}
-                className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
-              >
-                Lokal vormerken (ohne Basis)
-              </button>
+              {standaloneHandoffMode ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onApplyLocalOnly}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    Handoff übernehmen — weiter mit Mnemonic
+                  </button>
+                  <p className="w-full text-xs text-muted-foreground">
+                    Übernimmt Package, Mailbox, Fullnode und Direkt-Modus automatisch. Kein PC-Server nötig.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void onApply()}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {busy ? 'Speichere…' : 'Import bestätigen'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={onApplyLocalOnly}
+                    className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    Lokal vormerken (ohne Basis)
+                  </button>
+                </>
+              )}
             </div>
           ) : null}
 
           {applied || localAppliedOnly ? (
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                disabled={reloading || hardRestartBusy}
-                onClick={onReloadPage}
-                className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-foreground hover:bg-emerald-500/25 disabled:opacity-50"
-              >
-                <RefreshCw className={`h-4 w-4 ${reloading ? 'animate-spin' : ''}`} aria-hidden />
-                Seite neu laden
-              </button>
-              <button
-                type="button"
-                disabled={reloading || hardRestartBusy}
-                onClick={() => void onHardRestart()}
-                className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
-              >
-                {hardRestartBusy ? 'Warte auf Backend…' : 'Backend hart neu starten (nur wenn nötig)'}
-              </button>
+              {!standaloneHandoffMode ? (
+                <>
+                  <button
+                    type="button"
+                    disabled={reloading || hardRestartBusy}
+                    onClick={onReloadPage}
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-foreground hover:bg-emerald-500/25 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${reloading ? 'animate-spin' : ''}`} aria-hidden />
+                    Seite neu laden
+                  </button>
+                  <button
+                    type="button"
+                    disabled={reloading || hardRestartBusy}
+                    onClick={() => void onHardRestart()}
+                    className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {hardRestartBusy ? 'Warte auf Backend…' : 'Backend hart neu starten (nur wenn nötig)'}
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-100">
+                  Handoff übernommen — gleich erscheint „Seed einrichten?“ (QR scannen).
+                </p>
+              )}
               <p className="w-full text-xs text-amber-900/90 dark:text-amber-100/90">
-                Hinweis: Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.
-                {localAppliedOnly
+                {standaloneHandoffMode
+                  ? 'Kein Neustart nötig — Seed-QR vom Boss scannen oder Mnemonic eingeben.'
+                  : 'Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.'}
+                {localAppliedOnly && !standaloneHandoffMode
                   ? ' Lokaler Modus bleibt ein Fallback; fuer persistentes Anwenden bitte spaeter mit Basisverbindung "Import bestätigen".'
                   : ''}
               </p>

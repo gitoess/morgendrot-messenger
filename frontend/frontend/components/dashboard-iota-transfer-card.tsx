@@ -16,6 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import QRCode from 'qrcode'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 export type DashboardIotaTransferCardProps = {
   compact?: boolean
@@ -36,6 +37,7 @@ export function DashboardIotaTransferCard({
   onRefreshStatus,
   addressSuggestions = [],
 }: DashboardIotaTransferCardProps) {
+  const { t } = useAppTranslation('dashboard')
   const [transferOpen, setTransferOpen] = useState(!compact)
   const [receiveOpen, setReceiveOpen] = useState(false)
   const [receiveQrUrl, setReceiveQrUrl] = useState('')
@@ -67,13 +69,13 @@ export function DashboardIotaTransferCard({
     const res = await transferCoins(transferTo, parseFloat(transferAmount))
     if (res.ok) {
       setTransferStatus('success')
-      setTransferMsg('Transfer erfolgreich!')
+      setTransferMsg(t('iota.transferSuccess'))
       setTransferTo('')
       setTransferAmount('')
       void handleRefreshBalance()
     } else {
       setTransferStatus('error')
-      setTransferMsg(res.error || 'Transfer fehlgeschlagen')
+      setTransferMsg(res.error || t('iota.transferFailed'))
     }
     setTransferring(false)
     setTimeout(() => setTransferStatus('idle'), 5000)
@@ -109,7 +111,7 @@ export function DashboardIotaTransferCard({
 
   const balanceLine = (() => {
     if (walletNativeIotaBalanceFetchFailed) {
-      return <p className="text-xs text-amber-600 dark:text-amber-400">Saldo: Abfrage fehlgeschlagen</p>
+      return <p className="text-xs text-amber-600 dark:text-amber-400">{t('iota.balanceFailed')}</p>
     }
     if (walletNativeIotaBalance) {
       return (
@@ -119,9 +121,9 @@ export function DashboardIotaTransferCard({
       )
     }
     if (!hasValidMyAddressForBalance) {
-      return <p className="text-[11px] text-muted-foreground">Saldo nach gültiger MY_ADDRESS</p>
+      return <p className="text-[11px] text-muted-foreground">{t('iota.balanceAfterAddress')}</p>
     }
-    return <p className="text-[11px] text-muted-foreground">Saldo wird geladen…</p>
+    return <p className="text-[11px] text-muted-foreground">{t('iota.balanceLoading')}</p>
   })()
 
   const transferForm = (
@@ -139,7 +141,7 @@ export function DashboardIotaTransferCard({
       )}
       <div className="grid gap-2 sm:grid-cols-2">
         <div>
-          <label className="mb-0.5 block text-[11px] text-muted-foreground">Empfänger</label>
+          <label className="mb-0.5 block text-[11px] text-muted-foreground">{t('iota.recipient')}</label>
           <input
             type="text"
             list="dashboard-iota-transfer-recipients"
@@ -155,7 +157,7 @@ export function DashboardIotaTransferCard({
           </datalist>
         </div>
         <div>
-          <label className="mb-0.5 block text-[11px] text-muted-foreground">Betrag (IOTA)</label>
+          <label className="mb-0.5 block text-[11px] text-muted-foreground">{t('iota.amount')}</label>
           <input
             type="number"
             value={transferAmount}
@@ -173,7 +175,7 @@ export function DashboardIotaTransferCard({
         disabled={transferring || !transferTo || !transferAmount}
         className="mt-2 w-full rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
       >
-        {transferring ? 'Überweise…' : 'Überweisen'}
+        {transferring ? t('iota.sending') : t('iota.send')}
       </button>
     </>
   )
@@ -187,7 +189,7 @@ export function DashboardIotaTransferCard({
         >
           <div className="mb-2 flex items-start justify-between gap-2">
             <div>
-              <h4 className="text-sm font-semibold text-foreground">IOTA Wallet</h4>
+              <h4 className="text-sm font-semibold text-foreground">{t('cards.iotaWallet')}</h4>
               <div className="mt-0.5 flex flex-wrap items-center gap-2">{balanceLine}</div>
             </div>
             {onRefreshStatus ? (
@@ -196,8 +198,8 @@ export function DashboardIotaTransferCard({
                 onClick={() => void handleRefreshBalance()}
                 disabled={refreshingBalance}
                 className="rounded p-1 text-muted-foreground hover:bg-muted disabled:opacity-50"
-                title="Saldo aktualisieren"
-                aria-label="Saldo aktualisieren"
+                title={t('iota.refreshBalance')}
+                aria-label={t('iota.refreshBalance')}
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', refreshingBalance && 'animate-spin')} />
               </button>
@@ -209,7 +211,7 @@ export function DashboardIotaTransferCard({
               onClick={() => setTransferOpen((v) => !v)}
               className="rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
             >
-              {transferOpen ? 'Überweisen ausblenden' : 'Überweisen'}
+              {transferOpen ? t('iota.hideSend') : t('iota.send')}
             </button>
             <button
               type="button"
@@ -218,7 +220,7 @@ export function DashboardIotaTransferCard({
               className="inline-flex items-center gap-1.5 rounded-md border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-40"
             >
               <QrCode className="h-3.5 w-3.5" aria-hidden />
-              Empfangen
+              {t('iota.receive')}
             </button>
           </div>
           {transferOpen ? <div className="mt-3 border-t border-border/60 pt-3">{transferForm}</div> : null}
@@ -226,13 +228,13 @@ export function DashboardIotaTransferCard({
         <Dialog open={receiveOpen} onOpenChange={setReceiveOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>IOTA empfangen</DialogTitle>
-              <DialogDescription>QR mit deiner Wallet-Adresse — Zahlung an diese Adresse.</DialogDescription>
+              <DialogTitle>{t('iota.receiveTitle')}</DialogTitle>
+              <DialogDescription>{t('iota.receiveDescription')}</DialogDescription>
             </DialogHeader>
             {receiveQrUrl ? (
-              <img src={receiveQrUrl} alt="QR-Code Wallet-Adresse" className="mx-auto rounded-lg border border-border" />
+              <img src={receiveQrUrl} alt={t('iota.receiveQrAlt')} className="mx-auto rounded-lg border border-border" />
             ) : (
-              <p className="text-sm text-muted-foreground">Keine gültige Adresse — zuerst MY_ADDRESS setzen.</p>
+              <p className="text-sm text-muted-foreground">{t('iota.noValidAddress')}</p>
             )}
             {addrOk ? (
               <div className="space-y-2">
@@ -243,7 +245,7 @@ export function DashboardIotaTransferCard({
                   className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
                 >
                   {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                  {copied ? 'Kopiert' : 'Adresse kopieren'}
+                  {copied ? t('iota.copied') : t('iota.copyAddress')}
                 </button>
               </div>
             ) : null}
@@ -255,7 +257,7 @@ export function DashboardIotaTransferCard({
 
   return (
     <div id="dashboard-iota-transfer" className="rounded-xl border border-border bg-card p-4">
-      <h4 className="mb-3 font-semibold text-foreground">IOTA überweisen</h4>
+      <h4 className="mb-3 font-semibold text-foreground">{t('cards.iotaTransfer')}</h4>
       <div className="mb-3 rounded-lg border border-border/80 bg-muted/30 px-3 py-2">{balanceLine}</div>
       {transferForm}
     </div>

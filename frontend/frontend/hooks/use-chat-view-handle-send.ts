@@ -44,7 +44,10 @@ import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
 import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
 import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/encrypted-recipient-handshake-status'
-import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
+import {
+  resolveComposerKlartextIotaAddress,
+  resolveEncryptedMailboxRecipient,
+} from '@/frontend/lib/composer-recipient-fields'
 import {
   getDirectChatEcdhMaterialForRecipient,
   getDirectChatEcdhPrivateKey,
@@ -195,6 +198,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     () => resolveEncryptedMailboxRecipient(recipient, partner),
     [recipient, partner]
   )
+  const plainMailboxRecipient = useMemo(
+    () => resolveComposerKlartextIotaAddress(recipient, partner, isPrivate),
+    [recipient, partner, isPrivate]
+  )
 
   const cancelSend = useCallback(() => {
     cancelRequestedRef.current = true
@@ -224,7 +231,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         ? resolveGroupMailboxSendTargets({
             activeGroup,
             myAddress,
-            composerRecipient: encrypted ? encryptedMailboxRecipient : recipient.trim(),
+            composerRecipient: encrypted ? encryptedMailboxRecipient : plainMailboxRecipient,
             sendAllMembers: groupMailboxSendAll,
           })
         : []
@@ -268,9 +275,25 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         outgoingOffers: cachedHs?.outgoingOffers ?? [],
       })
       if (hsSync === 'awaiting_peer') {
+        const selfNorm = myAddress.trim().toLowerCase()
+        if (target === selfNorm && ADDR_64_LOWER.test(selfNorm)) {
+          return {
+            ok: false,
+            message:
+              'Handshake an deine eigene Adresse: im Partner-Panel „Handshake annehmen“ (Connect) — oder zum Test unverschlüsselt senden.',
+          }
+        }
         return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG }
       }
       if (hsSync === 'needs_accept') {
+        const selfNorm = myAddress.trim().toLowerCase()
+        if (target === selfNorm && ADDR_64_LOWER.test(selfNorm)) {
+          return {
+            ok: false,
+            message:
+              'Eigener Handshake wartet — im Partner-Panel „Handshake annehmen“ (Connect), dann verschlüsselt senden.',
+          }
+        }
         return {
           ok: false,
           message:
@@ -389,7 +412,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return resolveGroupMailboxSendTargets({
         activeGroup,
         myAddress,
-        composerRecipient: encrypted && isPrivate ? encryptedMailboxRecipient : recipient.trim(),
+        composerRecipient: encrypted && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient,
         sendAllMembers: readGroupMailboxSendAll(),
       })
     }
@@ -750,7 +773,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
 
-    if (!encrypted && !recipient.trim()) {
+    if (!encrypted && !plainMailboxRecipient) {
       if (!meshKlartextOkWithoutZeroXRecipient) {
         applyValidationError(
           {
@@ -765,7 +788,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return
       }
     }
-    const recipientTrimLower = recipient.trim().toLowerCase()
+    const recipientTrimLower = plainMailboxRecipient.trim().toLowerCase()
     if (!encrypted && forcedTransport === 'internet' && !ADDR_64_LOWER.test(recipientTrimLower)) {
       applyValidationError(
         {
@@ -946,7 +969,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             'Tresor gesperrt — bitte zuerst entsperren. Nicht erneut in die Warteschlange gelegt.',
         }
       }
-      const recipientTrim = encrypted ? encryptedMailboxRecipient : recipient.trim().toLowerCase()
+      const recipientTrim = encrypted ? encryptedMailboxRecipient : plainMailboxRecipient.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(recipientTrim)) {
         return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
       }
@@ -1123,7 +1146,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (multicast && targets.length > 0) {
           return sendMailboxPairwiseGroup(targets, enc, textSnap)
         }
-        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : recipient.trim()
+        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient
         return sendMailboxSingle(sendTo, enc, textSnap)
       }
 
@@ -1412,6 +1435,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     contactDirectory,
     partner,
     encryptedMailboxRecipient,
+    plainMailboxRecipient,
   ])
 
   return { handleSend, cancelSend }

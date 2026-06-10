@@ -1,0 +1,68 @@
+{
+  "profileLabelSolo": "Privat / Solo",
+  "firstStart": {
+    "title": "Willkommen — wie startest du?",
+    "description": "Einsatz mit Team und Boss, oder privat ohne Vorgabe. Beides läuft in derselben App — du kannst später jederzeit in den Einstellungen wechseln (neues Profil).",
+    "einsatzTitle": "Einsatz — Handoff vom Boss",
+    "einsatzSubtitle": "Team, Mailbox und Fullnode kommen aus dem ZIP.",
+    "einsatzDetail": "Danach nur noch Seed per QR oder Mnemonic — kein PC-Server nötig.",
+    "soloTitle": "Privat / Solo — ohne Boss",
+    "soloSubtitle": "Wallet selbst einrichten wie am PC.",
+    "soloDetail": "Seed importieren, neu anlegen oder mit App-Passwort entsperren. Netz & Postfach folgen danach.",
+    "tipEmptyBasisUrl": "Tipp: Basis-URL leer lassen für Standalone ohne Morgendrot-Server.",
+    "actionEinsatz": "Einsatz (Handoff)",
+    "actionSolo": "Privat / Solo"
+  },
+  "handoff": {
+    "step1Title": "Schritt 1: Handoff vom Boss",
+    "step1Description": "ZIP importieren — Package, Mailbox und Fullnode werden automatisch übernommen. Danach nur noch Mnemonic eingeben.",
+    "importZip": "Handoff-ZIP importieren",
+    "switchToSolo": "Stattdessen privat / solo starten",
+    "step2Title": "Schritt 2: Wallet aktivieren",
+    "walletSetupTitle": "Wallet einrichten",
+    "step2DescriptionEinsatz": "Aus dem Handoff bereits eingerichtet — Seed per QR scannen oder Mnemonic eingeben (vom Boss).",
+    "step2DescriptionSolo": "Privat-Modus: Seed importieren, neu anlegen oder mit gespeichertem App-Passwort entsperren — wie am PC.",
+    "checkPackageId": "Package-ID",
+    "checkMailboxId": "Mailbox-ID",
+    "checkRpcUrl": "Fullnode-URL",
+    "checkDirectMode": "Direkt-Modus + Drain (automatisch)",
+    "activateWallet": "Seed einrichten — Chat aktivieren",
+    "openWalletDialog": "Wallet-Dialog öffnen"
+  },
+  "hints": {
+    "firstStartChoice": "Erststart: Einsatz (Handoff) oder Privat/Solo wählen — dann Wallet wie am PC einrichten.",
+    "einsatzAwaitHandoff": "Einsatz-Modus: Handoff-ZIP importieren — danach Seed vom Boss. Kein PC-Server nötig (Basis-URL leer).",
+    "soloActive": "Privat/Solo aktiv — Wallet entsperren, danach Netz & Postfach im Solo-Wizard auf dem Dashboard.",
+    "soloWalletSetup": "Privat/Solo: Wallet einrichten (Seed). Danach Netz & Postfach im Solo-Wizard — kein Boss nötig.",
+    "handoffOkNeedSeed": "Handoff OK — Seed einrichten (QR vom Boss), dann Chat unter Nachrichten.",
+    "standaloneActive": "Standalone-APK aktiv — Direkt-RPC, kein Morgendrot-Server nötig.",
+    "missingFullnode": "Standalone-APK: Fullnode-URL fehlt — Handoff erneut prüfen."
+  },
+  "offline": {
+    "awaitHandoffSteps": "Handoff aktiv — Schritt 2: Mnemonic eingeben (Seed vom Boss). Package, Mailbox und Fullnode sind bereits konfiguriert."
+  },
+  "readiness": {
+    "importHandoff": "Handoff-ZIP importieren (Einstellungen)",
+    "setupWallet": "Wallet einrichten (Mnemonic)",
+    "enterMnemonicSolo": "Mnemonic eingeben oder Seed importieren",
+    "enterMnemonicBoss": "Mnemonic eingeben (vom Boss)",
+    "setupChain": "Fullnode, Package-ID und Mailbox-ID eintragen (Solo-Wizard)"
+  },
+  "soloWizard": {
+    "title": "Schritt 3: Netz & Postfach",
+    "description": "Fullnode (Testnet), Package-ID und Mailbox-ID — danach ist der Chat bereit. IDs vom Team oder aus dem Boss-Setup übernehmen.",
+    "rpcUrlLabel": "Fullnode-URL (RPC)",
+    "packageIdLabel": "Package-ID",
+    "mailboxIdLabel": "Mailbox-ID",
+    "loadTestnetTemplate": "Testnet-Vorlage (RPC)",
+    "prefillFromBoss": "Vom erreichbaren Boss übernehmen",
+    "saveAndContinue": "Speichern — Chat aktivieren",
+    "savedOk": "Gespeichert — du kannst jetzt Nachrichten öffnen.",
+    "errors": {
+      "invalidRpc": "Fullnode-URL ungültig — https://… erwartet.",
+      "invalidPackageId": "Package-ID ungültig (0x + 64 Hex-Zeichen).",
+      "invalidMailboxId": "Mailbox-ID ungültig (0x + 64 Hex-Zeichen).",
+      "missingSigner": "Wallet-Adresse fehlt — zuerst Wallet entsperren."
+    }
+  }
+}

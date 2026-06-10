@@ -1,0 +1,15 @@
+{
+  "language": {
+    "de": "Deutsch",
+    "en": "English",
+    "switchAria": "Sprache wählen",
+    "sectionTitle": "Sprache",
+    "sectionDescription": "Anzeigesprache für Menüs und Dialoge — auch im Entsperr-Fenster oben rechts."
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "continue": "Weiter",
+    "save": "Speichern"
+  }
+}

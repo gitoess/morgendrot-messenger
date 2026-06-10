@@ -1,7 +1,8 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { ChevronDown, KeyRound, PlusCircle, Sprout } from 'lucide-react'
+import { useState } from 'react'
+import { KeyRound, PlusCircle, Sprout } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import {
   Dialog,
@@ -14,12 +15,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible'
 import type { ApiStatus } from '@/frontend/lib/api'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { getStandaloneHelperReadiness } from '@/frontend/lib/handoff-standalone-ready'
+import { isStandaloneEinsatzPath, isStandaloneSoloPath } from '@/frontend/lib/standalone-onboarding'
+import { Trans, useAppTranslation } from '@/frontend/lib/i18n/hooks'
+import { LocaleFlagSwitch } from '@/frontend/components/locale-flag-switch'
 
 export type VaultUnlockMode = 'vault' | 'import' | 'create'
 
@@ -43,6 +44,7 @@ export type VaultUnlockDialogProps = {
   unlocking: boolean
   unlockButtonDisabled: boolean
   importMnemonicRequired: boolean
+  standaloneHelperUnlock?: boolean
   onUnlock: () => void
 }
 
@@ -100,6 +102,7 @@ function OptionCard({
 }
 
 export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
+  const { t, i18n } = useAppTranslation('vault')
   const selectMode = (m: VaultUnlockMode) => {
     p.onUnlockModeChange(m)
     if (m === 'vault') {
@@ -115,6 +118,16 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
 
   const hasLocal = p.apiSnapshot?.vaultStatus?.hasLocal
   const showImport = p.signerKind === 'sdk' || p.signerKind == null
+  const standaloneApk = isStandaloneMessengerWithoutBasis()
+  const soloPath = standaloneApk && isStandaloneSoloPath()
+  const helperReady = standaloneApk ? getStandaloneHelperReadiness() : null
+  const [fullStandaloneUnlock, setFullStandaloneUnlock] = useState(false)
+  const streamlined = Boolean(
+    p.standaloneHelperUnlock &&
+      helperReady?.hasHandoff &&
+      isStandaloneEinsatzPath() &&
+      !fullStandaloneUnlock
+  )
 
   return (
     <Dialog open={p.open} onOpenChange={() => {}}>
@@ -124,45 +137,108 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
         onEscapeKeyDown={(e) => p.open && e.preventDefault()}
       >
         <DialogHeader className="shrink-0 space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
-          <DialogTitle className="text-xl font-semibold tracking-tight">Tresor entsperren</DialogTitle>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Wähle eine Option — ohne Passwort bleibt der Messenger gesperrt.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                {streamlined
+                  ? t('title.streamlined')
+                  : soloPath
+                    ? t('title.solo')
+                    : standaloneApk
+                      ? t('title.standalone')
+                      : t('title.default')}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                {streamlined
+                  ? t('description.streamlined')
+                  : soloPath
+                    ? t('description.solo')
+                    : standaloneApk
+                      ? t('description.standalone')
+                      : t('description.default')}
+              </DialogDescription>
+            </div>
+            <LocaleFlagSwitch className="shrink-0" />
+          </div>
         </DialogHeader>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+        <div key={i18n.resolvedLanguage || i18n.language} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4">
+          {streamlined ? (
+            <div className="space-y-3">
+              <Label htmlFor="standalone-helper-mnemonic">{t('streamlined.walletKeyLabel')}</Label>
+              <Textarea
+                id="standalone-helper-mnemonic"
+                value={p.signerImport}
+                onChange={(e) => p.onSignerImportChange(e.target.value)}
+                placeholder={t('streamlined.walletKeyPlaceholder')}
+                className="min-h-[120px] font-mono text-sm"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <p className="text-xs text-muted-foreground">{t('streamlined.hint')}</p>
+              <Input
+                type="password"
+                placeholder={t('streamlined.appPasswordOptional')}
+                value={p.password}
+                onChange={(e) => p.onPasswordChange(e.target.value)}
+                autoComplete="new-password"
+                className="h-11"
+              />
+              {p.unlockError ? (
+                <p className="text-sm text-destructive whitespace-pre-wrap">{p.unlockError}</p>
+              ) : null}
+              <Button
+                type="button"
+                className="h-12 w-full text-base"
+                disabled={p.unlockButtonDisabled || p.unlocking}
+                onClick={p.onUnlock}
+              >
+                {p.unlocking ? t('streamlined.activating') : t('streamlined.activateChat')}
+              </Button>
+              <button
+                type="button"
+                className="w-full text-center text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+                onClick={() => {
+                  setFullStandaloneUnlock(true)
+                  p.onUnlockModeChange('create')
+                  p.onShowSignerImportOpenChange(true)
+                }}
+              >
+                {t('streamlined.advancedCreate')}
+              </button>
+            </div>
+          ) : (
+            <>
           <OptionCard
             active={p.unlockMode === 'vault'}
             accent
             onSelect={() => selectMode('vault')}
             icon={<KeyRound className="h-5 w-5" aria-hidden />}
-            title="Tresor öffnen"
-            subtitle="Mit Passwort entsperren"
+            title={t('vault.title')}
+            subtitle={t('vault.subtitle')}
           >
             {!hasLocal && p.signerKind === 'sdk' ? (
-              <p className="text-xs text-amber-600 dark:text-amber-300">
-                Keine lokale Vault-Datei — nutze „Seed importieren“ oder „Neues Profil“.
-              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-300">{t('vault.noLocalFileSdk')}</p>
             ) : !hasLocal ? (
-              <p className="text-xs text-muted-foreground">
-                Keine lokale Datei: Wenn der Tresor nur auf der Chain liegt, das gleiche Vault-Passwort wie beim
-                On-Chain-Speichern — nach dem Entsperren werden die Schlüssel von der Chain in die Sitzung geladen.
-              </p>
+              <p className="text-xs text-muted-foreground">{t('vault.noLocalFileChain')}</p>
             ) : null}
             {p.signerKind === 'sdk' && hasLocal ? (
               <p className="text-xs text-amber-700 dark:text-amber-200">
-                Nur Passwort reicht, wenn beim letzten Speichern „Signer-Import mit speichern“ aktiv war. Sonst unten{' '}
-                <strong className="text-foreground">Seed importieren</strong> wählen und Mnemonic/Secret eintragen.
+                <Trans
+                  ns="vault"
+                  i18nKey="vault.sdkLocalHint"
+                  components={{ strong: <strong className="text-foreground" /> }}
+                />
               </p>
             ) : null}
             <div className="space-y-2">
               <Label htmlFor="wallet-password" className="sr-only">
-                Passwort
+                {t('vault.passwordLabel')}
               </Label>
               <Input
                 id="wallet-password"
                 type="password"
-                placeholder="Passwort"
+                placeholder={t('vault.passwordPlaceholder')}
                 value={p.password}
                 onChange={(e) => p.onPasswordChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !p.unlockButtonDisabled && p.onUnlock()}
@@ -174,11 +250,11 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               p.showSignerImportOpen ? (
                 <div className="space-y-2">
                   <Label htmlFor="wallet-signer-import" className="text-xs text-muted-foreground">
-                    Mnemonic (nur falls nötig)
+                    {t('vault.mnemonicOptionalLabel')}
                   </Label>
                   <Textarea
                     id="wallet-signer-import"
-                    placeholder="24 Wörter …"
+                    placeholder={t('vault.mnemonicPlaceholder')}
                     value={p.signerImport}
                     onChange={(e) => p.onSignerImportChange(e.target.value)}
                     className="min-h-[72px] font-mono text-xs"
@@ -192,7 +268,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                       p.onSignerImportChange('')
                     }}
                   >
-                    Ausblenden
+                    {t('vault.hideMnemonic')}
                   </button>
                 </div>
               ) : (
@@ -201,7 +277,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                   className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
                   onClick={() => p.onShowSignerImportOpenChange(true)}
                 >
-                  Mnemonic ergänzen (erweitert)
+                  {t('vault.showMnemonic')}
                 </button>
               )
             ) : null}
@@ -210,7 +286,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               disabled={p.unlockButtonDisabled}
               className="h-12 w-full bg-emerald-600 text-base font-medium hover:bg-emerald-600/90"
             >
-              {p.unlocking ? 'Wird entsperrt…' : 'Entsperren'}
+              {p.unlocking ? t('vault.unlocking') : t('vault.unlock')}
             </Button>
           </OptionCard>
 
@@ -219,21 +295,27 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               active={p.unlockMode === 'import'}
               onSelect={() => selectMode('import')}
               icon={<Sprout className="h-5 w-5" aria-hidden />}
-              title="Seed importieren"
-              subtitle="Bestehendes Profil wiederherstellen (24 Wörter)"
+              title={t('import.title')}
+              subtitle={t('import.subtitle')}
             >
               <p className="text-xs text-muted-foreground">
-                Vault-Passwort <strong className="text-foreground">und</strong> dein IOTA-Mnemonic (12–24 Wörter) oder
-                Bech32-Secret — Pflicht bei <span className="font-mono">SIGNER=sdk</span> ohne gespeicherten Import.
+                <Trans
+                  ns="vault"
+                  i18nKey="import.hint"
+                  components={{
+                    strong: <strong className="text-foreground" />,
+                    mono: <span className="font-mono" />,
+                  }}
+                />
               </p>
               <div className="space-y-2">
                 <Label htmlFor="wallet-password-import" className="sr-only">
-                  Passwort
+                  {t('vault.passwordLabel')}
                 </Label>
                 <Input
                   id="wallet-password-import"
                   type="password"
-                  placeholder="Vault-Passwort"
+                  placeholder={t('import.vaultPasswordPlaceholder')}
                   value={p.password}
                   onChange={(e) => p.onPasswordChange(e.target.value)}
                   autoComplete="current-password"
@@ -242,11 +324,11 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="import-signer" className="text-xs text-muted-foreground">
-                  Mnemonic / Secret (Pflicht)
+                  {t('import.mnemonicLabel')}
                 </Label>
                 <Textarea
                   id="import-signer"
-                  placeholder="24 Wörter oder Bech32-Secret …"
+                  placeholder={t('import.mnemonicPlaceholder')}
                   value={p.signerImport}
                   onChange={(e) => p.onSignerImportChange(e.target.value)}
                   className="min-h-[88px] font-mono text-xs"
@@ -259,7 +341,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 variant="secondary"
                 className="h-11 w-full"
               >
-                {p.unlocking ? 'Import läuft…' : 'Profil wiederherstellen'}
+                {p.unlocking ? t('import.importing') : t('import.restore')}
               </Button>
             </OptionCard>
           ) : null}
@@ -268,23 +350,21 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
             active={p.unlockMode === 'create'}
             onSelect={() => selectMode('create')}
             icon={<PlusCircle className="h-5 w-5" aria-hidden />}
-            title="Neues Profil anlegen"
-            subtitle="Frischen Tresor erstellen"
+            title={t('create.title')}
+            subtitle={t('create.subtitle')}
           >
             {hasLocal ? (
-              <p className="text-xs text-amber-600 dark:text-amber-300">
-                Es gibt bereits eine Vault-Datei — meist reicht „Tresor öffnen“.
-              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-300">{t('create.existingVault')}</p>
             ) : null}
             {p.signerKind === 'sdk' ? (
               <>
                 <div className="space-y-2">
                   <Label htmlFor="create-signer-a" className="text-xs text-muted-foreground">
-                    Mnemonic / Secret
+                    {t('create.mnemonicLabel')}
                   </Label>
                   <Textarea
                     id="create-signer-a"
-                    placeholder="24 Wörter …"
+                    placeholder={t('create.mnemonicPlaceholder')}
                     value={p.signerImport}
                     onChange={(e) => p.onSignerImportChange(e.target.value)}
                     className="min-h-[72px] font-mono text-xs"
@@ -293,11 +373,11 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="create-signer-b" className="text-xs text-muted-foreground">
-                    Wiederholen
+                    {t('create.repeatLabel')}
                   </Label>
                   <Textarea
                     id="create-signer-b"
-                    placeholder="Erneut eingeben"
+                    placeholder={t('create.repeatPlaceholder')}
                     value={p.signerImportConfirm}
                     onChange={(e) => p.onSignerImportConfirmChange(e.target.value)}
                     className="min-h-[72px] font-mono text-xs"
@@ -310,7 +390,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <Input
                 id="wallet-password-create"
                 type="password"
-                placeholder="Neues Passwort"
+                placeholder={t('create.newPasswordPlaceholder')}
                 value={p.password}
                 onChange={(e) => p.onPasswordChange(e.target.value)}
                 autoComplete="new-password"
@@ -319,7 +399,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               <Input
                 id="wallet-password-create-2"
                 type="password"
-                placeholder="Passwort wiederholen"
+                placeholder={t('create.confirmPasswordPlaceholder')}
                 value={p.passwordConfirm}
                 onChange={(e) => p.onPasswordConfirmChange(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && !p.unlockButtonDisabled && p.onUnlock()}
@@ -333,7 +413,7 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               variant="secondary"
               className="h-11 w-full"
             >
-              {p.unlocking ? 'Wird angelegt…' : 'Profil anlegen'}
+              {p.unlocking ? t('create.creating') : t('create.create')}
             </Button>
           </OptionCard>
 
@@ -342,37 +422,8 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
               {p.unlockError}
             </p>
           ) : null}
-
-          <Collapsible>
-            <CollapsibleTrigger className="flex w-full items-center justify-center gap-1 py-2 text-xs text-muted-foreground hover:text-foreground">
-              <span>Technische Hinweise</span>
-              <ChevronDown className="h-3.5 w-3.5" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
-              <p>
-                Entsperrt die <strong className="text-foreground">Server-Sitzung</strong> zum Signieren. Das Passwort
-                entschlüsselt die Vault-Datei auf dem Gerät bzw. der Basis.
-              </p>
-              {p.signerKind === 'cli' ? (
-                <p>
-                  <span className="font-mono">SIGNER=cli</span>: Passwort des IOTA-CLI-Keystores — kein Mnemonic hier.
-                </p>
-              ) : p.signerKind === 'sdk' ? (
-                <p>
-                  <span className="font-mono">SIGNER=sdk</span>: Nach einmaligem Import reicht oft nur noch das Passwort
-                  unter „Tresor öffnen“.
-                </p>
-              ) : p.signerKind === 'remote' ? (
-                <p>
-                  <span className="font-mono">SIGNER=remote</span>: Vault-Passwort; Signatur extern.
-                </p>
-              ) : null}
-              <p>
-                <strong className="text-foreground">Passwort vergessen?</strong> Vault-Inhalt ohne altes Passwort nicht
-                lesbar. Mit Seed lässt sich ein neues Profil anlegen — alte Messaging-Keys bleiben in der alten Vault.
-              </p>
-            </CollapsibleContent>
-          </Collapsible>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

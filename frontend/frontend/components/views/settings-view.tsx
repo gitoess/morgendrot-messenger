@@ -17,7 +17,10 @@ import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settin
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
+import { SettingsLanguageSection } from '@/frontend/components/settings-language-section'
+import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
@@ -36,6 +39,7 @@ export function SettingsView({
   canToggleFullTiles = false,
   slimMessengerEinsatz = false,
 }: SettingsViewProps) {
+  const { t } = useAppTranslation('dashboard')
   const [status, setStatus] = useState<{
     network: string
     address: string
@@ -112,14 +116,16 @@ export function SettingsView({
           <Settings className="h-6 w-6" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-foreground">Einstellungen</h2>
+          <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
           <p className="text-sm text-muted-foreground">
-            {slimMessengerEinsatz
-              ? 'Profil, System und Integrationen — Einsatzfunktionen im Dashboard'
-              : 'Netzwerk-Status und Konfiguration'}
+            {slimMessengerEinsatz ? t('settings.subtitleSlim') : t('settings.subtitleDefault')}
           </p>
         </div>
       </div>
+
+      <SettingsLanguageSection />
+
+      <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
 
       <ActiveProfilePanel status={advancedIotaStatus} />
 

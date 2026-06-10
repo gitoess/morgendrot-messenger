@@ -1,0 +1,183 @@
+{
+  "brand": {
+    "messenger": "Morgendrot Messenger",
+    "morgendrot": "Morgendrot"
+  },
+  "loading": {
+    "title": "Morgendrot wird geladen…",
+    "subtitle": "Beim ersten Start kann das einige Sekunden dauern."
+  },
+  "nav": {
+    "back": "Zurück",
+    "handbook": "Handbuch",
+    "handbookOpen": "Handbuch öffnen",
+    "settings": "Einstellungen",
+    "bottomNavAria": "Messenger-Navigation",
+    "messages": "Nachrichten",
+    "einsatzleitung": "Einsatzleitung",
+    "phonebook": "Telefonbuch"
+  },
+  "views": {
+    "settings": "Einstellungen",
+    "config": ".env anpassen",
+    "einsatzleitung": "Einsatzleitung"
+  },
+  "settings": {
+    "subtitleDefault": "Netzwerk-Status und Konfiguration",
+    "subtitleSlim": "Profil, System und Integrationen — Einsatzfunktionen im Dashboard"
+  },
+  "network": {
+    "defaultLabel": "IOTA Rebased",
+    "role": "Rolle: {{role}}",
+    "roleTitle": "Kommt aus Backend .env ROLE",
+    "meshProxySubtitle": "IOTA-RPC geht über Backend-Proxy (SOCKS5 oder HTTP) – siehe Einstellungen → .env anpassen (RPC_SOCKS_PROXY).",
+    "meshDefaultSubtitle": "Tor/VPN: RPC_SOCKS_PROXY in Einstellungen setzen; LoRa/BLE im Chat (Meshtastic) koppeln."
+  },
+  "connection": {
+    "connecting": "Verbinde…",
+    "vaultLocked": "Tresor gesperrt",
+    "vaultLockedTitle": "Tresor gesperrt",
+    "chatConnected": "Chat verbunden",
+    "vaultUnlocked": "Tresor: entsperrt",
+    "offline": "Offline"
+  },
+  "lock": {
+    "button": "Abmelden",
+    "buttonTitle": "Tresor sperren — zum Weitermachen erneut entsperren",
+    "confirm": "Tresor sperren? Schlüssel werden aus dem Arbeitsspeicher entfernt — danach erneut mit Passwort entsperren."
+  },
+  "mesh": {
+    "internet": "Internet",
+    "tor": "Tor/VPN",
+    "lora": "LoRa",
+    "ble": "BLE",
+    "offline": "Offline"
+  },
+  "features": {
+    "chat": {
+      "title": "Nachrichten",
+      "subtitle": "Sicher kommunizieren",
+      "variants": {
+        "private-chat": {
+          "title": "Nachrichten",
+          "hint": "Chats, Funk, Team-Postfächer"
+        }
+      }
+    },
+    "einsatzleitung": {
+      "title": "Einsatzleitung",
+      "subtitle": "Team, Handoff, Helfer",
+      "variants": {
+        "einsatzleitung-hub": {
+          "title": "Einsatzleitung",
+          "hint": "Handoff-ZIP, Helfer-QR (WLAN)"
+        }
+      }
+    },
+    "boss": {
+      "title": "Steuerung",
+      "subtitle": "Geräte befehligen",
+      "variants": {
+        "boss-signer": {
+          "title": "Boss-Modus",
+          "hint": "Befehle an Geräte"
+        },
+        "pinnwand-admin": {
+          "title": "Admin",
+          "hint": "Kanäle verwalten"
+        }
+      }
+    },
+    "vault": {
+      "title": "Tresor & Sicherheit",
+      "subtitle": "Keys & Zugänge sichern",
+      "variants": {
+        "local-vault": {
+          "title": "Tresor öffnen",
+          "hint": "Passwort, Seed, Export"
+        },
+        "emergency-purge": {
+          "title": "Notfall",
+          "hint": "Alles löschen"
+        }
+      }
+    }
+  },
+  "bossQuickActions": {
+    "aria": "Schnellaktionen",
+    "open": "Öffnen",
+    "messages": {
+      "title": "Nachrichten",
+      "subtitle": "Chats, Funk, Team-Postfächer"
+    },
+    "einsatzleitung": {
+      "title": "Einsatzleitung",
+      "subtitle": "Handoff-ZIP, Helfer-QR (WLAN)"
+    },
+    "vault": {
+      "title": "Tresor & Sicherheit",
+      "subtitle": "Passwort, Seed, Export"
+    }
+  },
+  "welcomeEinsatz": {
+    "title": "Einsatzleitung",
+    "subtitle": "Team-Mailbox, Kontakte, Helfer-Handoff (Boss), Forensik"
+  },
+  "firstSteps": {
+    "aria": "Einrichtung",
+    "title": "Einrichtung",
+    "bodyBefore": "Kurzüberblick & Rollen:",
+    "handbookFirstSteps": "Handbuch „Erste Schritte“",
+    "handbookPorts": "Ports & Oberflächen",
+    "bodyAfter": "Wieder einblenden:",
+    "help": "Hilfe",
+    "hide": "Ausblenden",
+    "hideAria": "Einrichtungszeile ausblenden"
+  },
+  "cards": {
+    "iotaWallet": "IOTA Wallet",
+    "iotaTransfer": "IOTA überweisen",
+    "pwaInstall": "App installieren",
+    "pwaShort": "App"
+  },
+  "address": {
+    "label": "Eigene Adresse",
+    "labelWithShort": "Eigene Adresse: {{short}}",
+    "notSet": "Eigene Adresse: noch nicht gesetzt",
+    "copy": "Adresse kopieren",
+    "copied": "Kopiert",
+    "notConfigured": "(nicht gesetzt)",
+    "noBackendTitle": "Keine MY_ADDRESS vom Backend"
+  },
+  "pwa": {
+    "offlineHint": "Offline: Startbildschirm",
+    "browserMenu": "Browser-Menü",
+    "install": "Installieren",
+    "offlineDetail": "Für Offline: zum Startbildschirm.",
+    "fullDescription": "Für besten Offline-Betrieb: App zum Home-Bildschirm hinzufügen.",
+    "installApp": "App installieren"
+  },
+  "iota": {
+    "send": "Überweisen",
+    "sending": "Überweise…",
+    "hideSend": "Überweisen ausblenden",
+    "receive": "Empfangen",
+    "copyAddress": "Adresse kopieren",
+    "copied": "Kopiert",
+    "refreshBalance": "Saldo aktualisieren",
+    "balanceFailed": "Saldo: Abfrage fehlgeschlagen",
+    "balanceAfterAddress": "Saldo nach gültiger MY_ADDRESS",
+    "balanceLoading": "Saldo wird geladen…",
+    "recipient": "Empfänger",
+    "amount": "Betrag (IOTA)",
+    "receiveTitle": "IOTA empfangen",
+    "receiveDescription": "QR mit deiner Wallet-Adresse — Zahlung an diese Adresse.",
+    "receiveQrAlt": "QR-Code Wallet-Adresse",
+    "noValidAddress": "Keine gültige Adresse — zuerst MY_ADDRESS setzen.",
+    "transferSuccess": "Transfer erfolgreich!",
+    "transferFailed": "Transfer fehlgeschlagen"
+  },
+  "einsatzHub": {
+    "title": "Einsatzleitung"
+  }
+}

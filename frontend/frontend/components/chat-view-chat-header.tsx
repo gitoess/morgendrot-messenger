@@ -14,6 +14,7 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import Link from 'next/link'
 import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import { showPinnwandChannelTab } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import { channelDisabledReason } from '@/frontend/lib/messenger-channel-send-path'
 import {
   MessengerGuideHint,
@@ -71,6 +72,8 @@ export type ChatViewChatHeaderProps = {
   offlineStatus?: OfflineStatusSnapshot
   /** § H.15: Direkt-RPC / Relay-Kurzstatus neben Sendepfad. */
   showDirectIotaPath?: boolean
+  /** Kanal-Umschalter: Rolle/Server (z. B. Pinnwand-Tab nur Führung). */
+  role?: string
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -182,7 +185,12 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     offlineStatus,
     showDirectIotaPath = false,
     basisUnreachable,
+    role = '',
   } = p
+
+  const channelModes: MessengerChatChannel[] = (['private', 'group', 'pinnwand'] as const).filter(
+    (mode) => mode !== 'pinnwand' || showPinnwandChannelTab(apiStatus, role)
+  )
 
   return (
     <>
@@ -212,7 +220,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   role="group"
                   aria-label="Kanal"
                 >
-                  {(['private', 'group', 'pinnwand'] as const).map((mode) => {
+                  {channelModes.map((mode) => {
                     const label = mode === 'private' ? '1:1' : mode === 'group' ? 'Gruppe' : 'Pinnwand'
                     const disabledReason =
                       sendPath && mode !== channelMode

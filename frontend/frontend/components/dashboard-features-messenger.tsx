@@ -12,50 +12,47 @@ export type DashboardFeature = DashboardFeatureDef & {
   variants: { id: ProjectVariant; title: string; hint: string }[]
 }
 
-export const messengerFeatures: DashboardFeature[] = [
+type MessengerFeatureShell = DashboardFeatureDef & {
+  icon: React.ReactNode
+  color: string
+  variants: { id: ProjectVariant }[]
+}
+
+/** Icons/Farben — Texte über `useMessengerFeatures()` / dashboard.json. */
+export const messengerFeatureShells: MessengerFeatureShell[] = [
   {
     id: 'chat',
-    title: 'Nachrichten',
-    subtitle: 'Sicher kommunizieren',
     icon: <MessageSquare className="h-6 w-6" />,
     color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    variants: [
-      { id: 'private-chat', title: 'Nachrichten', hint: 'Chats, Funk, Team-Postfächer' },
-    ],
+    variants: [{ id: 'private-chat' }],
   },
   {
     id: 'einsatzleitung',
-    title: 'Einsatzleitung',
-    subtitle: 'Team, Handoff, Helfer',
     icon: <Crown className="h-6 w-6" />,
     color: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-    variants: [
-      { id: 'einsatzleitung-hub', title: 'Einsatzleitung', hint: 'Handoff-ZIP, Helfer-QR (WLAN)' },
-    ],
+    variants: [{ id: 'einsatzleitung-hub' }],
   },
   {
     id: 'boss',
-    title: 'Steuerung',
-    subtitle: 'Geräte befehligen',
     icon: <Crown className="h-6 w-6" />,
     color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    variants: [
-      { id: 'boss-signer', title: 'Boss-Modus', hint: 'Befehle an Geräte' },
-      { id: 'pinnwand-admin', title: 'Admin', hint: 'Kanäle verwalten' },
-    ],
+    variants: [{ id: 'boss-signer' }, { id: 'pinnwand-admin' }],
   },
   {
     id: 'vault',
-    title: 'Tresor & Sicherheit',
-    subtitle: 'Keys & Zugänge sichern',
     icon: <Shield className="h-6 w-6" />,
     color: 'bg-red-500/10 text-red-400 border-red-500/20',
-    variants: [
-      { id: 'local-vault', title: 'Tresor öffnen', hint: 'Passwort, Seed, Export' },
-      { id: 'emergency-purge', title: 'Notfall', hint: 'Alles löschen' },
-    ],
+    variants: [{ id: 'local-vault' }, { id: 'emergency-purge' }],
   },
 ]
+
+/** @deprecated Nur für Session-Restore-IDs — UI-Texte via useMessengerFeatures(). */
+export const messengerFeatures: DashboardFeature[] = messengerFeatureShells.map((shell) => ({
+  ...shell,
+  title: shell.id,
+  subtitle: '',
+  variants: shell.variants.map((v) => ({ ...v, title: v.id, hint: '' })),
+}))
 
 export function featureTitle(id: ProjectType, features: DashboardFeature[]): string | undefined {
   return features.find((f) => f.id === id)?.title

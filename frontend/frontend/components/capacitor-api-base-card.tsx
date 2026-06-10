@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { API_BASE_OVERRIDE_KEY, getApiBase } from '@/frontend/lib/api/api-base'
 import { getNativeLoopbackApiBaseWarning } from '@/frontend/lib/api-base-native-hints'
-import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { isStandaloneDeviceMode, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { shouldShowCapacitorApiBaseSettings } from '@/frontend/lib/capacitor-platform'
 import {
   canUseAndroidForegroundSync,
@@ -155,6 +155,12 @@ export function CapacitorApiBaseCard() {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <h4 className="font-semibold text-foreground">Basis-URL (APK / Gerät)</h4>
+      {shouldPreferStandaloneHandoffStatus() ? (
+        <p className="mt-1 text-xs text-emerald-800 dark:text-emerald-100">
+          <strong>Standalone mit Handoff:</strong> Feld leer lassen — kein PC-Server nötig. IOTA läuft über die
+          Fullnode aus dem Handoff (Direkt-RPC).
+        </p>
+      ) : null}
       {isStandaloneDeviceMode() && getConfiguredDirectIotaRpcUrl() ? (
         <p className="mt-1 rounded-md border border-emerald-500/35 bg-emerald-500/10 px-2 py-1.5 text-xs text-foreground">
           <strong>Standalone-Modus:</strong> Handoff + Direkt-RPC reichen für IOTA und Chat-Kern — diese URL ist{' '}

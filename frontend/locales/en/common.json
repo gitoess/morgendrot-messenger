@@ -1,0 +1,15 @@
+{
+  "language": {
+    "de": "German",
+    "en": "English",
+    "switchAria": "Choose language",
+    "sectionTitle": "Language",
+    "sectionDescription": "Display language for menus and dialogs — also in the unlock dialog (top right)."
+  },
+  "actions": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "continue": "Continue",
+    "save": "Save"
+  }
+}

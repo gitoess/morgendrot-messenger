@@ -24,6 +24,8 @@ export function useChatViewPackageFilterState() {
 
 export type UseChatViewPackageIdCommandsParams = {
   showSetup: boolean
+  /** Expertenmodus: Package-Verlauf auch ohne Setup-Panel laden. */
+  loadPackageSuggestions?: boolean
   inboxPackageFilter: string
   setInboxPackageFilter: React.Dispatch<React.SetStateAction<string>>
   setPackageIdSuggestions: React.Dispatch<React.SetStateAction<string[]>>
@@ -37,6 +39,7 @@ export type UseChatViewPackageIdCommandsParams = {
 export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsParams) {
   const {
     showSetup,
+    loadPackageSuggestions = false,
     inboxPackageFilter,
     setInboxPackageFilter,
     setPackageIdSuggestions,
@@ -59,9 +62,9 @@ export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsPara
   }, [setPackageIdSuggestions])
 
   useEffect(() => {
-    if (!showSetup) return
+    if (!showSetup && !loadPackageSuggestions) return
     void refreshPackageIdSuggestions()
-  }, [showSetup, refreshPackageIdSuggestions])
+  }, [showSetup, loadPackageSuggestions, refreshPackageIdSuggestions])
 
   const applyPackageIdBackend = useCallback(
     async (raw: string) => {

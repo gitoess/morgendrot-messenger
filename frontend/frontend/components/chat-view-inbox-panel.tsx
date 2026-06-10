@@ -17,6 +17,9 @@ import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partn
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
+import { ChatViewInboxCategoryChips } from '@/frontend/components/chat-view-inbox-category-chips'
+import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
+import type { Message } from '@/frontend/lib/types'
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
@@ -89,7 +92,15 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onApplySendRecipient?: (walletAddress: string) => void
     showInboxIotaFilter?: boolean
     showIotaExpertInboxActions?: boolean
-  }
+    showInboxPackageExpertMenu?: boolean
+    inboxPackageExpertMenu?: React.ReactNode
+    inboxOverviewChipsVisible?: boolean
+    inboxOverviewCategory?: InboxOverviewCategory
+    onInboxOverviewCategoryChange?: (c: InboxOverviewCategory) => void
+    inboxOverviewUnreadCounts?: Record<InboxOverviewCategory, number>
+    pinnwandOverviewConfigured?: boolean
+    isInboxMessageUnread?: (msg: Message) => boolean
+}
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
   const [showWireControls, setShowWireControls] = useState(false)
@@ -159,6 +170,14 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onSarqNakWire,
     showInboxIotaFilter = true,
     showIotaExpertInboxActions = true,
+    showInboxPackageExpertMenu = false,
+    inboxPackageExpertMenu,
+    inboxOverviewChipsVisible = false,
+    inboxOverviewCategory = 'alle',
+    onInboxOverviewCategoryChange,
+    inboxOverviewUnreadCounts,
+    pinnwandOverviewConfigured = false,
+    isInboxMessageUnread,
     ...toolbarProps
   } = props
 
@@ -184,7 +203,17 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         apiStatus={apiStatus}
         pendingHandshakeCount={pendingHandshakeCount}
         showIotaExpertInboxActions={showIotaExpertInboxActions}
+        showInboxPackageExpertMenu={showInboxPackageExpertMenu}
+        inboxPackageExpertMenu={inboxPackageExpertMenu}
       />
+      {inboxOverviewChipsVisible && onInboxOverviewCategoryChange && inboxOverviewUnreadCounts ? (
+        <ChatViewInboxCategoryChips
+          category={inboxOverviewCategory}
+          onCategoryChange={onInboxOverviewCategoryChange}
+          unreadCounts={inboxOverviewUnreadCounts}
+          showLagebild={pinnwandOverviewConfigured}
+        />
+      ) : null}
       {showWireControls || showChannelControls || showPartnerControls ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
@@ -252,6 +281,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           inboxHasMore={inboxHasMore}
           onAddSenderToContactBook={onAddSenderToContactBook}
           onSarqNakWire={onSarqNakWire}
+          isInboxMessageUnread={isInboxMessageUnread}
           inboxVisibilityHint={inboxVisibilityHint}
           pendingHandshakeOffers={pendingHandshakeOffers}
           onAcceptPendingHandshake={onAcceptPendingHandshake}

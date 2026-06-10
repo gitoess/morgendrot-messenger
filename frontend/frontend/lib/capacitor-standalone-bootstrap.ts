@@ -11,6 +11,7 @@ import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
 import { syncLocalHandoffSnapshotToChainContext } from '@/frontend/lib/handoff-device-bootstrap'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import { broadcastPinnwandStatusFromHandoff } from '@/frontend/lib/broadcast-pinnwand-handoff-status'
 import { isAutarkyModeEnabled } from '@/frontend/lib/autarky-status-line'
 import {
   setDirectMailboxDrainEnabled,
@@ -19,6 +20,17 @@ import {
 import { setDirectChainOptimisticFlagsEnabled } from '@/frontend/lib/direct-iota-chain-context'
 import { restoreDirectChatEcdhPrivateFromLocalStorage } from '@/frontend/lib/direct-chat-ecdh-session'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import {
+  getDirectIotaSessionSigner,
+  getDirectIotaSessionSignerAddress,
+  hasPersistedDirectIotaSessionSigner,
+} from '@/frontend/lib/direct-iota-mnemonic-session'
+import { readStandaloneLocalIdentitySnapshot } from '@/frontend/lib/standalone-local-identity'
+import {
+  isStandaloneSoloPath,
+  readStandaloneOnboardingPath,
+} from '@/frontend/lib/standalone-onboarding'
+import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import {
   MESSAGING_PERSISTENCE_MODE_LS_KEY,
   type MessagingPersistenceMode,
@@ -30,13 +42,37 @@ export function isStandaloneDeviceMode(): boolean {
   return isCapacitorNativePlatform() || isAutarkyModeEnabled()
 }
 
+/** APK mit Handoff/Autarkie: auch bei gesetzter (nutzloser) Basis-URL Standalone-Status nutzen. */
+export function shouldPreferStandaloneHandoffStatus(): boolean {
+  if (!isCapacitorNativePlatform()) return false
+  if (isAutarkyModeEnabled()) return true
+  return Boolean(readLocalHandoffAppliedSnapshot())
+}
+
+/** APK ohne Basis: Entsperren-Dialog, wenn Handoff/Signer da, aber keine aktive Direkt-Sitzung. */
+export function resolveStandaloneDeviceLocked(): boolean {
+  if (typeof window === 'undefined') return false
+  if (!isStandaloneDeviceMode()) return false
+  if (getApiBase().trim() && !shouldPreferStandaloneHandoffStatus()) return false
+  if (getDirectIotaSessionSigner()) return false
+  const handoff = readLocalHandoffAppliedSnapshot()
+  if (handoff || hasPersistedDirectIotaSessionSigner()) return true
+  if (isStandaloneSoloPath()) return true
+  return false
+}
+
 /** Einmalig beim ersten APK-Start: Direkt-IOTA-Defaults (ohne Server). */
 export function bootstrapCapacitorStandaloneSession(): void {
   if (!isCapacitorNativePlatform()) return
   if (typeof window === 'undefined') return
 
   const handoff = readLocalHandoffAppliedSnapshot()
-  if (handoff) syncLocalHandoffSnapshotToChainContext(handoff)
+  if (handoff) {
+    syncLocalHandoffSnapshotToChainContext(handoff)
+    setIotaSubmitMode('client')
+    setDirectMailboxDrainEnabled(true)
+    setDirectChainOptimisticFlagsEnabled(true)
+  }
 
   void restoreDirectChatEcdhPrivateFromLocalStorage()
 
@@ -63,15 +99,52 @@ export function readStandaloneDeviceStatusFallback():
   | null {
   if (typeof window === 'undefined') return null
   if (!isStandaloneDeviceMode()) return null
-  if (getApiBase().trim()) return null
+  const apiBase = getApiBase().trim()
+  if (apiBase && !shouldPreferStandaloneHandoffStatus()) return null
 
   const handoff = readLocalHandoffAppliedSnapshot()
   const chain = getDirectChainIdsReadiness()
   const rpc = getConfiguredDirectIotaRpcUrl()
-  if (!handoff && !chain.ready) return null
+  if (!handoff && !chain.ready) {
+    if (!isCapacitorNativePlatform()) return null
+    ensureI18nInitialized()
+    const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
+    const onboardingPath = readStandaloneOnboardingPath()
+    const solo = isStandaloneSoloPath()
+    return {
+      status: {
+        backendOnline: false,
+        backendRunning: false,
+        connected: false,
+        fromCache: true,
+        role: 'messenger',
+        deploymentProfile: solo ? 'consumer' : 'einsatz',
+        transportProfile: 'mesh-first',
+        uiVariant: 'messenger',
+        simpleMode: true,
+        signer: 'sdk',
+        useMailbox: true,
+        locked: resolveStandaloneDeviceLocked(),
+        hasKeys: Boolean(getDirectIotaSessionSigner()),
+        configHints: solo
+          ? [tt('hints.soloWalletSetup')]
+          : onboardingPath === 'einsatz'
+            ? [tt('hints.einsatzAwaitHandoff')]
+            : [tt('hints.firstStartChoice')],
+      },
+      pollClockHint: { okAtMs: Date.now(), httpDateUtcMs: null },
+    }
+  }
 
   const savedAtMs = handoff?.savedAtMs ?? Date.now()
+  const broadcastPinnwand = broadcastPinnwandStatusFromHandoff(handoff)
   const missingSigner = chain.missing.includes('Absender (0x)')
+  const standaloneLocked = resolveStandaloneDeviceLocked()
+  const sessionSignerActive = Boolean(getDirectIotaSessionSigner())
+  const identity = readStandaloneLocalIdentitySnapshot()
+  const addrFull = getDirectIotaSessionSignerAddress() || identity.myAddress || ''
+  ensureI18nInitialized()
+  const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
 
   return {
     status: {
@@ -80,6 +153,8 @@ export function readStandaloneDeviceStatusFallback():
       connected: false,
       fromCache: true,
       fromLocalHandoff: Boolean(handoff),
+      locked: standaloneLocked,
+      hasKeys: sessionSignerActive,
       cacheSavedAtMs: savedAtMs,
       handoffLabel: handoff?.handoffLabel,
       role: handoff?.role ?? 'messenger',
@@ -87,20 +162,24 @@ export function readStandaloneDeviceStatusFallback():
       transportProfile: handoff?.transportProfile ?? 'mesh-first',
       uiVariant: handoff?.uiVariant ?? 'messenger',
       simpleMode: handoff?.simpleMode ?? true,
-      packageId: handoff?.packageId,
-      mailboxId: handoff?.mailboxId,
+      packageId: (handoff?.packageId ?? identity.packageId) || undefined,
+      mailboxId: (handoff?.mailboxId ?? identity.mailboxId) || undefined,
+      myAddress: addrFull ? `${addrFull.slice(0, 10)}…${addrFull.slice(-6)}` : undefined,
+      myAddressFull: addrFull || undefined,
       useMailbox: true,
       mailboxConfigured: Boolean(handoff?.mailboxId),
       mailboxStorePlaintext: true,
       messengerCreditsConfigured: false,
       plaintextMode: true,
+      signer: 'sdk',
       uiMode: handoff?.simpleMode === false ? 'expert' : 'simple',
       configHints: missingSigner
-        ? ['Standalone-APK: Signer in Puls setzen (Mnemonic), dann Direkt senden.']
+        ? [tt('hints.handoffOkNeedSeed')]
         : rpc
-          ? ['Standalone-APK: ohne Morgendrot-Basis — Direkt-RPC und lokales Handoff aktiv.']
-          : ['Standalone-APK: Fullnode-URL in Puls oder Handoff ergänzen.'],
+          ? [tt('hints.standaloneActive')]
+          : [tt('hints.missingFullnode')],
       rpcUrlLabel: rpc ?? undefined,
+      ...(broadcastPinnwand ? { broadcastPinnwand } : {}),
     },
     pollClockHint: { okAtMs: savedAtMs, httpDateUtcMs: null },
   }

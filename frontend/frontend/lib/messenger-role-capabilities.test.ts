@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  canShowInboxPackageExpertMenu,
   canUseMessengerExpertTools,
   getMessengerUiCapabilities,
   isIotaTransportUiVisible,
@@ -25,6 +26,15 @@ describe('messenger-role-capabilities product profile', () => {
     expect(
       canUseMessengerExpertTools({ simpleMode: false, transportProfile: 'iota-full' } as ApiStatus)
     ).toBe(true)
+  })
+
+  it('canShowInboxPackageExpertMenu braucht Client-Toggle und kein Simple Mode', () => {
+    const status = { simpleMode: false, transportProfile: 'iota-full' } as ApiStatus
+    expect(canShowInboxPackageExpertMenu(status, false)).toBe(false)
+    expect(canShowInboxPackageExpertMenu(status, true)).toBe(true)
+    expect(canShowInboxPackageExpertMenu({ simpleMode: true, transportProfile: 'iota-full' } as ApiStatus, true)).toBe(
+      false
+    )
   })
 
   it('getMessengerUiCapabilities: mesh-first Helfer ohne IOTA-UI', () => {

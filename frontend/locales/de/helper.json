@@ -1,0 +1,26 @@
+{
+  "title": "Seed einrichten?",
+  "description": "Handoff-ZIP ist übernommen{{label}}. Jetzt Seed vom Boss per QR oder Eingabe aktivieren.",
+  "descriptionLabel": " ({{label}})",
+  "scanQr": "QR scannen",
+  "pasteQrText": "QR-Text einfügen",
+  "scanInvalidSchema": "Kein Seed-QR (Schema ms) — Mnemonic manuell eingeben oder Boss-QR erneut scannen.",
+  "scanSuccess": "Seed aus QR übernommen — unten aktivieren.",
+  "pastePrompt": "QR-Text einfügen (vom Boss-Bildschirm oder Foto-OCR):",
+  "pasteInvalid": "Kein gültiger Seed-QR.",
+  "pasteSuccess": "Seed aus Text übernommen.",
+  "mnemonicLabel": "Mnemonic / Secret",
+  "mnemonicPlaceholder": "24 Wörter, Bech32 oder 64 Hex (vom Boss)",
+  "appPasswordLabel": "Optionales App-Passwort (lokal)",
+  "appPasswordPlaceholder": "8+ Zeichen — Entsperren ohne erneute Eingabe",
+  "savedProfileTitle": "Gespeichertes Profil auf diesem Gerät",
+  "savedProfileHint": "App-Passwort unten eingeben und entsperren — oder neuen Seed vom Boss scannen.",
+  "unlockWithAppPassword": "Mit App-Passwort entsperren",
+  "activating": "Aktiviere…",
+  "activateWallet": "Wallet aktivieren",
+  "errors": {
+    "savedPasswordMin": "Gespeichertes Profil: App-Passwort (8+ Zeichen) eingeben.",
+    "mnemonicRequired": "Mnemonic (12+ Wörter), Bech32-Secret oder 64 Hex erforderlich.",
+    "optionalPasswordMin": "Optionales App-Passwort: mindestens 8 Zeichen oder leer lassen."
+  }
+}

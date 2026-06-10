@@ -28,6 +28,12 @@ import {
   setPackageIdCommand,
   type ApiStatus,
 } from '@/frontend/lib/api'
+import {
+  checkStandaloneChainReachable,
+  getStandaloneCurrentIds,
+  readStandaloneLocalIdentitySnapshot,
+} from '@/frontend/lib/standalone-local-identity'
+import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { ConfigView } from '@/frontend/components/views/config-view'
 import { SettingsIotaDirectCard } from '@/frontend/components/views/settings-iota-direct-card'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
@@ -76,14 +82,35 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
         getConfig(),
         checkChainReachable(),
       ])
-      const st = statusRes.ok && statusRes.data ? statusRes.data : null
-      const addr = (st?.address ?? '') || idsRes.myAddress || ''
-      const pkg = (st?.packageId ?? '') || idsRes.packageId || ''
+      const localSnap = shouldPreferStandaloneHandoffStatus()
+        ? readStandaloneLocalIdentitySnapshot()
+        : null
+      const standaloneIds = shouldPreferStandaloneHandoffStatus()
+        ? await getStandaloneCurrentIds()
+        : null
+      const st = statusRes.data ?? null
+      const addr =
+        (statusRes.ok && st?.address ? st.address : '') ||
+        standaloneIds?.myAddress ||
+        idsRes.myAddress ||
+        localSnap?.myAddress ||
+        ''
+      const pkg =
+        (statusRes.ok && st?.packageId ? st.packageId : '') ||
+        standaloneIds?.packageId ||
+        idsRes.packageId ||
+        localSnap?.packageId ||
+        ''
       setAddress(addr)
       setPackageId(pkg)
       setPackageDraft(pkg)
       setVersion(st?.version || 'Morgendrot v1.0')
-      setChainReachable(chainRes.reachable ?? null)
+      if (shouldPreferStandaloneHandoffStatus()) {
+        const directReach = await checkStandaloneChainReachable()
+        setChainReachable(directReach)
+      } else {
+        setChainReachable(chainRes.reachable ?? null)
+      }
 
       const hist = historyRes.ok
         ? [...new Set([...(historyRes.history ?? []), ...(historyRes.discovered ?? [])])].filter(Boolean)
@@ -102,6 +129,8 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
       if (configRes.ok && configRes.config) {
         const rpc = configRes.config.find((c) => c.envKey === 'RPC_URL')?.value ?? ''
         setRpcUrl(rpc)
+      } else if (localSnap?.rpcUrl) {
+        setRpcUrl(localSnap.rpcUrl)
       }
     } catch {
       setMsg('Status konnte nicht geladen werden.')

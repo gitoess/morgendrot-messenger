@@ -176,7 +176,9 @@ export function listDirectIotaSetupGaps(): string[] {
     )
   }
   if (!getDirectChatEcdhPrivateKey()) {
-    gaps.push('Chat-ECDH-JWK in Puls anwenden (für verschlüsselten Direkt-Send)')
+    if (!canUseDirectPlaintextMailboxDrain()) {
+      gaps.push('Chat-ECDH-JWK in Puls anwenden (für verschlüsselten Direkt-Send)')
+    }
   }
   return gaps
 }

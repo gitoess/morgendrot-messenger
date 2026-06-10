@@ -45,6 +45,8 @@
 
 ### Ablauf Helfer
 
+**Empfohlen (Standalone-APK, Boss-Wizard):** `docs/GERAET-PROVISIONIEREN-WIZARD.md` — Boss erzeugt ZIP + Seed-QR; Helfer importiert ZIP → Dialog **Seed einrichten?** (QR oder Eingabe).
+
 1. **Einstellungen → Handoff importieren**
 2. Boss-**ZIP** wählen **oder** Posteingang → Nachrichten-Menü **Handoff importieren** (IOTA)
 3. Bei Verschlüsselung: **Passwort** eingeben → Entschlüsseln

@@ -2,12 +2,27 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('@/frontend/lib/capacitor-standalone-bootstrap', () => ({
   isStandaloneDeviceMode: vi.fn(() => false),
+  shouldPreferStandaloneHandoffStatus: vi.fn(() => false),
 }))
 vi.mock('@/frontend/lib/api/api-base', () => ({
   getApiBase: vi.fn(() => ''),
 }))
 vi.mock('@/frontend/lib/handoff-local-apply', () => ({
   readLocalHandoffAppliedSnapshot: vi.fn(() => null),
+}))
+vi.mock('@/frontend/lib/standalone-onboarding', () => ({
+  readStandaloneOnboardingPath: vi.fn(() => null),
+  isStandaloneSoloPath: vi.fn(() => false),
+}))
+vi.mock('@/frontend/lib/i18n/client', () => ({
+  ensureI18nInitialized: vi.fn(),
+  i18n: {
+    t: (key: string, opts?: { ns?: string }) => {
+      if (key === 'hints.firstStartChoice') return 'Erststart: Einsatz oder Solo wählen.'
+      if (key === 'offline.awaitHandoffSteps') return 'Handoff aktiv — Schritt 2.'
+      return key
+    },
+  },
 }))
 
 import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
@@ -27,7 +42,7 @@ describe('dashboard-basis-offline-hint', () => {
     vi.mocked(isStandaloneDeviceMode).mockReturnValue(true)
     vi.mocked(getApiBase).mockReturnValue('')
     expect(isStandaloneMessengerWithoutBasis()).toBe(true)
-    expect(getMessengerDashboardOfflineHint()).toMatch(/Peering-QR/)
+    expect(getMessengerDashboardOfflineHint()).toMatch(/Erststart|Einsatz|Solo|firstStart/)
     expect(getMessengerDashboardOfflineHint()).not.toMatch(/npm run dev/)
   })
 
