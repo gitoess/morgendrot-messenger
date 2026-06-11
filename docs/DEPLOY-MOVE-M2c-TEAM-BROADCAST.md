@@ -12,6 +12,7 @@
 |-------------------------|--------|
 | `TeamPlainBroadcastKey { sender, nonce }` | DF-Key **ohne** `recipient` |
 | `store_team_plaintext_broadcast` | 1× Klartext pro Gruppennachricht in Team-Mailbox |
+| `purge_team_plaintext_broadcast` | Rebate pro Team-Broadcast (Sender jederzeit; nach TTL jeder) |
 | `TeamPlainBroadcastStored` (Event) | Explorer / spätere Indexer |
 
 **Unverändert:** Shared `MAILBOX_ID` (Einsatz-Postfach), `create_team_mailbox`, pairwise `PlainMsgKey`, private Mailbox, Rebate.

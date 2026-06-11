@@ -284,6 +284,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
           nonce: r.nonce,
           ts: r.ts,
           chainPurgeable: true,
+          chainPurgeKind: 'team-broadcast',
           inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
         })
       }

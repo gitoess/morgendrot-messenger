@@ -34,6 +34,8 @@ export interface Message {
   chainNonce?: string
   /** true: Nachricht liegt im Rebased-Mailbox-Objekt und kann on-chain gepurgt werden */
   chainPurgeable?: boolean
+  /** pairwise = 1:1 MsgKey; team-broadcast = TeamPlainBroadcastKey */
+  chainPurgeKind?: 'pairwise' | 'team-broadcast'
 }
 
 export interface KeyData {

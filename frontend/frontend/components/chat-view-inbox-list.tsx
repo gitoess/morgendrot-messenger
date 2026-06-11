@@ -51,6 +51,7 @@ import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/f
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
+import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
 
 function isRowMeshLike(msg: Message): boolean {
   if (msg.source === 'mesh') return true
@@ -446,7 +447,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   )}
                   {row.msg.chainPurgeable && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-violet-500/15 px-2 py-0.5 text-[10px] font-medium text-violet-800 dark:text-violet-300">
-                      Mailbox
+                      {isTeamBroadcastInboxMessage(row.msg) ? 'Team-Broadcast' : 'Mailbox'}
                     </span>
                   )}
                   {protokollMarkedIds.has(row.msg.id) && (
@@ -573,6 +574,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!row.msg.chainPurgeable}
+                    title={teamBroadcastPurgeHint(row.msg, myAddress) ?? undefined}
                     onClick={() => void onPurgeInboxMessageChain(row.msg)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />

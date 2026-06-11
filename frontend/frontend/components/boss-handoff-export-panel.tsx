@@ -114,6 +114,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [templateSaveId, setTemplateSaveId] = useState('')
   const [templateSaveBusy, setTemplateSaveBusy] = useState(false)
   const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
+  const [handoffTtlDays, setHandoffTtlDays] = useState<number>(() => p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30)
 
   const labelEdited = useRef(false)
   const canSaveTemplates = canEditEinsatzRoleTemplates(p.apiSnapshot)
@@ -305,6 +306,11 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   }, [p.apiSnapshot, p.contactDirectory, applyPreset])
 
   useEffect(() => {
+    const ttl = p.apiSnapshot?.einsatzConfig?.defaultTtlDays
+    if (ttl != null && Number.isFinite(ttl) && ttl >= 0) setHandoffTtlDays(Math.floor(ttl))
+  }, [p.apiSnapshot?.einsatzConfig?.defaultTtlDays])
+
+  useEffect(() => {
     let cancelled = false
     void (async () => {
       try {
@@ -432,6 +438,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
             ? HANDOFF_README_IOTA_ARCHIV_BLOCK
             : undefined,
         messengerGroupHandoff,
+        exportTtlDays: handoffTtlDays,
+        exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
       }
     },
     [
@@ -450,6 +458,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       protectWithPassword,
       exportTuning,
       capabilitiesOverride,
+      handoffTtlDays,
+      p.apiSnapshot?.einsatzConfig?.enablePurge,
     ]
   )
 
@@ -884,6 +894,24 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   />
                   <span>Keine Team-Mailboxen im ZIP</span>
                 </label>
+                <div>
+                  <label className="mb-1 block text-muted-foreground">DEFAULT_TTL_DAYS</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={3650}
+                    value={handoffTtlDays}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10)
+                      setHandoffTtlDays(Number.isFinite(n) && n >= 0 ? Math.min(3650, n) : 0)
+                    }}
+                    className="w-full rounded-lg border border-border bg-input px-2 py-2"
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    Nachrichten/Handshake on-chain (Tage). Standard = Boss-Server (
+                    {p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30}).
+                  </p>
+                </div>
               </div>
 
               {canSaveTemplates ? (

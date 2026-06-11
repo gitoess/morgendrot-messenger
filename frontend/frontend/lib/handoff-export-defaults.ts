@@ -105,5 +105,7 @@ export function buildWizardHandoffExportBody(opts: {
     includeIotaArchivReadme: meshFirst,
     readmeExtra: meshFirst ? HANDOFF_README_IOTA_ARCHIV_BLOCK : undefined,
     messengerGroupHandoff,
+    exportTtlDays: opts.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30,
+    exportEnablePurge: opts.apiSnapshot?.einsatzConfig?.enablePurge !== false,
   }
 }

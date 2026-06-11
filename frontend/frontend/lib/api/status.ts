@@ -137,6 +137,28 @@ export type ApiStatus = {
     authorizedSenders?: string[]
     myAddressAuthorized?: boolean
   }
+  /** Boss: Einsatz on-chain + Handoff-Parameter. */
+  einsatzConfig?: {
+    editionLabel: string
+    defaultTtlDays: number
+    enablePurge: boolean
+    vaultRegistryId?: string
+    vaultRegistryIdMasked?: string
+    commandRegistryId?: string
+    commandRegistryIdMasked?: string
+    moveFeatures?: {
+      teamBroadcastStore: boolean
+      teamBroadcastPurge: boolean
+      privateMailboxPurge: boolean
+      probed: boolean
+      error?: string
+    }
+    upgradeCapConfigured?: boolean
+    upgradeCapId?: string
+    upgradeCapIdMasked?: string
+    upgradeCapResolvedFromChain?: boolean
+    deployModeHint?: string
+  }
 }
 
 /** Erfolgreicher `fetchStatus` inkl. Referenz für Geräte-Uhr (HTTP `Date`, § H.6c). */

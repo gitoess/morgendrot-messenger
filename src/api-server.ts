@@ -82,6 +82,8 @@ import {
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
     MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from './chain-access.js';
+import { applyPublishResultToEnv, resolveUpgradeCapId, upgradePackageCli } from './move-package-deploy.js';
+import { invalidateMessagingMoveFeaturesCache } from './move-package-features.js';
 import { handleShopApi } from './api/shop/handle-shop-api.js';
 import { normalizeAddress } from './utils.js';
 import { HELP_START, HELP_CHAT, HELP_UI_INTRO, getWalletPassword } from './wallet-bridge.js';
@@ -198,6 +200,28 @@ export type ApiStatus = {
     inboxUnionPackageIds?: string[];
     /** Posteingang-Union: alle Mailbox-IDs (MsgKey), die /inbox scannt. */
     inboxUnionMailboxIds?: string[];
+    /** Boss: Einsatz on-chain + Handoff-Parameter (ohne Secrets). */
+    einsatzConfig?: {
+        editionLabel: string;
+        defaultTtlDays: number;
+        enablePurge: boolean;
+        vaultRegistryId?: string;
+        vaultRegistryIdMasked?: string;
+        commandRegistryId?: string;
+        commandRegistryIdMasked?: string;
+        moveFeatures?: {
+            teamBroadcastStore: boolean;
+            teamBroadcastPurge: boolean;
+            privateMailboxPurge: boolean;
+            probed: boolean;
+            error?: string;
+        };
+        upgradeCapConfigured?: boolean;
+        upgradeCapId?: string;
+        upgradeCapIdMasked?: string;
+        upgradeCapResolvedFromChain?: boolean;
+        deployModeHint?: string;
+    };
     /** M3: Pinnwand-Konfiguration (ohne Geheimnisse außer freigegebener Broadcast-Adresse). */
     broadcastPinnwand?: {
         enabled: boolean;
@@ -2267,6 +2291,28 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             : simpleModeRaw === false || simpleModeRaw === 'false' || simpleModeRaw === 0 || simpleModeRaw === '0'
                               ? false
                               : undefined;
+                    const ttlRaw = data.exportTtlDays ?? data.defaultTtlDays;
+                    let exportTtlDays: number | undefined;
+                    if (ttlRaw != null && ttlRaw !== '') {
+                        const n = Number(ttlRaw);
+                        if (Number.isFinite(n) && n >= 0 && n <= 3650) exportTtlDays = Math.floor(n);
+                    }
+                    if (exportTtlDays == null && CFG.DEFAULT_TTL_DAYS != null) {
+                        const bossTtl = Number(CFG.DEFAULT_TTL_DAYS);
+                        if (Number.isFinite(bossTtl) && bossTtl >= 0 && bossTtl <= 3650) exportTtlDays = Math.floor(bossTtl);
+                    }
+                    const exportEnablePurge =
+                        data.exportEnablePurge === false ||
+                        data.exportEnablePurge === 'false' ||
+                        data.exportEnablePurge === 0 ||
+                        data.exportEnablePurge === '0'
+                            ? false
+                            : data.exportEnablePurge === true ||
+                                data.exportEnablePurge === 'true' ||
+                                data.exportEnablePurge === 1 ||
+                                data.exportEnablePurge === '1'
+                              ? true
+                              : CFG.ENABLE_PURGE;
                     let envContent: string;
                     let runtimeConfigContent: string;
                     try {
@@ -2290,6 +2336,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             broadcastPinnwandEnabled: CFG.ENABLE_BROADCAST_PINNWAND,
                             broadcastPinnwandAddress: (CFG.BROADCAST_PINNWAND_ADDRESS || '').trim() || undefined,
                             messengerGroupHandoff: messengerGroupHandoff || undefined,
+                            exportTtlDays,
+                            exportEnablePurge,
                         });
                         const resolvedRoleId =
                             roleId != null && Number.isFinite(roleId) ? roleId : 14;
@@ -2530,6 +2578,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/deploy-package' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
             let body = '';
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', async () => {
@@ -2541,18 +2593,160 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         sendJson(res, 400, { ok: false, error: 'path darf nur einen einzelnen Ordner-Namen enthalten (z. B. move-test).' }, cors);
                         return;
                     }
-                    const packageId = await publishPackageCli(packageDir);
-                    (CFG as { PACKAGE_ID: string }).PACKAGE_ID = packageId;
-                    process.env.PACKAGE_ID = packageId;
-                    savePackageIdToFile(packageId);
-                    const envResult = setEnvKey('PACKAGE_ID', packageId);
-                    const message = envResult.ok
-                        ? 'Package deployt. Package-ID gesetzt und in .env sowie .morgendrot-package-id gespeichert.'
-                        : 'Package deployt. Package-ID gesetzt und in .morgendrot-package-id gespeichert. (.env: ' + (envResult.error || 'nicht aktualisiert') + ')';
-                    sendJson(res, 200, { ok: true, packageId, message }, cors);
+                    const result = await publishPackageCli(packageDir);
+                    const applied = applyPublishResultToEnv(result);
+                    const message =
+                        (applied.envPackageOk
+                            ? 'Package deployt. PACKAGE_ID in .env gespeichert.'
+                            : 'Package deployt. (.env PACKAGE_ID: ' + (applied.envPackageError || 'nicht aktualisiert') + ')') +
+                        (result.upgradeCapId && applied.envCapOk ? ' UPGRADE_CAP_ID gespeichert.' : '');
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            packageId: result.packageId,
+                            upgradeCapId: result.upgradeCapId,
+                            message,
+                        },
+                        cors
+                    );
                 } catch (e: any) {
                     const msg = String(e?.message || e);
                     sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
+        /** In-Place Move-Upgrade (gleiche PACKAGE_ID) — nicht deploy-package. */
+        if (url === '/api/upgrade-package' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const rawPath = typeof data.path === 'string' && data.path.trim() ? data.path.trim() : 'move-test';
+                    const packageDir = path.basename(rawPath) || 'move-test';
+                    if (packageDir !== rawPath || /[\\/]/.test(packageDir)) {
+                        sendJson(res, 400, { ok: false, error: 'path darf nur einen Ordner-Namen enthalten (z. B. move-test).' }, cors);
+                        return;
+                    }
+                    const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+                    const moveDir = path.join(rootDir, packageDir);
+                    if (!fs.existsSync(moveDir)) {
+                        sendJson(res, 400, {
+                            ok: false,
+                            error: `Move-Ordner ${packageDir} fehlt auf diesem PC (Dev-Setup nötig).`,
+                        }, cors);
+                        return;
+                    }
+                    const packageId = (CFG.PACKAGE_ID || '').trim();
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(packageId)) {
+                        sendJson(res, 400, { ok: false, error: 'PACKAGE_ID fehlt — zuerst deploy:move-package.' }, cors);
+                        return;
+                    }
+                    const capOverride = String(data.upgradeCapId || data.upgradeCapability || '').trim();
+                    let cap = /^0x[a-fA-F0-9]{64}$/i.test(capOverride) ? capOverride : '';
+                    if (!cap) {
+                        cap =
+                            (await resolveUpgradeCapId({
+                                client: getClient(),
+                                packageId,
+                                ownerAddress: CFG.MY_ADDRESS || process.env.MY_ADDRESS || '',
+                            })) || '';
+                    }
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(cap)) {
+                        sendJson(res, 400, {
+                            ok: false,
+                            error: 'UPGRADE_CAP_ID fehlt — nach Erst-Publish in .env oder Explorer notieren.',
+                        }, cors);
+                        return;
+                    }
+                    const result = await upgradePackageCli(cap, packageDir);
+                    invalidateMessagingMoveFeaturesCache(result.packageId);
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            packageId: result.packageId,
+                            message:
+                                'Move-Package upgraded (gleiche PACKAGE_ID). Backend neu starten. Kein neues Handoff nötig.',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
+        /** Boss-Einsatz-Parameter in Server-.env (TTL, Purge). */
+        if (url === '/api/einsatz-config-apply' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', () => {
+                try {
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const applied: string[] = [];
+                    const errors: string[] = [];
+                    if (data.defaultTtlDays != null && data.defaultTtlDays !== '') {
+                        const n = Number(data.defaultTtlDays);
+                        if (!Number.isFinite(n) || n < 0 || n > 3650) {
+                            errors.push('defaultTtlDays: 0–3650');
+                        } else {
+                            const v = String(Math.floor(n));
+                            (CFG as { DEFAULT_TTL_DAYS: bigint }).DEFAULT_TTL_DAYS = BigInt(Math.floor(n));
+                            process.env.DEFAULT_TTL_DAYS = v;
+                            const r = setEnvKey('DEFAULT_TTL_DAYS', v);
+                            if (r.ok) applied.push(`DEFAULT_TTL_DAYS=${v}`);
+                            else errors.push(r.error || 'DEFAULT_TTL_DAYS');
+                        }
+                    }
+                    if (data.enablePurge !== undefined && data.enablePurge !== null) {
+                        const on =
+                            data.enablePurge === true ||
+                            data.enablePurge === 'true' ||
+                            data.enablePurge === 1 ||
+                            data.enablePurge === '1';
+                        (CFG as { ENABLE_PURGE: boolean }).ENABLE_PURGE = on;
+                        process.env.ENABLE_PURGE = on ? 'true' : 'false';
+                        const r = setEnvKey('ENABLE_PURGE', on ? 'true' : 'false');
+                        if (r.ok) applied.push(`ENABLE_PURGE=${on}`);
+                        else errors.push(r.error || 'ENABLE_PURGE');
+                    }
+                    if (!applied.length && !errors.length) {
+                        sendJson(res, 400, { ok: false, error: 'Keine Parameter (defaultTtlDays, enablePurge).' }, cors);
+                        return;
+                    }
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: errors.length === 0,
+                            applied,
+                            errors: errors.length ? errors : undefined,
+                            message: applied.length ? `Server-.env: ${applied.join(', ')}` : undefined,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
                 }
             });
             return;

@@ -497,6 +497,7 @@ function applyEnvToCfg(key: string, value: string): void {
         }
         case 'ENABLE_HD_CONTACT_ADDRESSES': CFG.ENABLE_HD_CONTACT_ADDRESSES = truthy(v); break;
         case 'PACKAGE_ID': CFG.PACKAGE_ID = v; break;
+        case 'UPGRADE_CAP_ID': CFG.UPGRADE_CAP_ID = v; break;
         case 'VAULT_REGISTRY_ID': CFG.VAULT_REGISTRY_ID = v; break;
         case 'MAILBOX_ID': CFG.MAILBOX_ID = v; break;
         case 'COMMAND_REGISTRY_ID': CFG.COMMAND_REGISTRY_ID = v; break;
@@ -520,6 +521,13 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'ENABLE_PAIRWISE_GROUPS': (CFG as { ENABLE_PAIRWISE_GROUPS: boolean }).ENABLE_PAIRWISE_GROUPS = truthy(v); break;
         case 'ENABLE_BROADCAST_PINNWAND': (CFG as { ENABLE_BROADCAST_PINNWAND: boolean }).ENABLE_BROADCAST_PINNWAND = truthy(v); break;
         case 'ENABLE_PURGE': (CFG as { ENABLE_PURGE: boolean }).ENABLE_PURGE = truthy(v); break;
+        case 'DEFAULT_TTL_DAYS': {
+            const n = parseInt(v, 10);
+            if (Number.isFinite(n) && n >= 0 && n <= 3650) {
+                (CFG as { DEFAULT_TTL_DAYS: bigint }).DEFAULT_TTL_DAYS = BigInt(Math.floor(n));
+            }
+            break;
+        }
         case 'ENABLE_AUTO_EXECUTE': (CFG as { ENABLE_AUTO_EXECUTE: boolean }).ENABLE_AUTO_EXECUTE = truthy(v); break;
         case 'ENABLE_LISTENER': (CFG as { ENABLE_LISTENER: boolean }).ENABLE_LISTENER = truthy(v); break;
         case 'ENABLE_PLAINTEXT_CHANNEL': (CFG as { ENABLE_PLAINTEXT_CHANNEL: boolean }).ENABLE_PLAINTEXT_CHANNEL = truthy(v); break;
@@ -1003,6 +1011,8 @@ export const CFG = {
     // --- Package & Shared Objects ---
     /** Wird aus .env oder aus Datei .morgendrot-package-id geladen (automatisch). */
     PACKAGE_ID: process.env.PACKAGE_ID || readPackageIdFromFile(),
+    /** UpgradeCap nach Erst-Publish — für `npm run upgrade:move-package` (gleiche PACKAGE_ID). */
+    UPGRADE_CAP_ID: process.env.UPGRADE_CAP_ID || '',
     VAULT_REGISTRY_ID: process.env.VAULT_REGISTRY_ID || '',
     MAILBOX_ID: process.env.MAILBOX_ID || '',
 
@@ -1568,6 +1578,7 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'RPC_SOCKS_PROXY', value: CFG.RPC_SOCKS_PROXY ? mask(CFG.RPC_SOCKS_PROXY, 14) : '(leer)', envKey: 'RPC_SOCKS_PROXY' },
         { key: 'NETWORK_TRUST_TIER', value: String(CFG.NETWORK_TRUST_TIER) + ' (1=öffentlich … 3=eigener Node, Hinweis)', envKey: 'NETWORK_TRUST_TIER' },
         { key: 'PACKAGE_ID', value: CFG.PACKAGE_ID ? mask(CFG.PACKAGE_ID, 10) : '(leer)', envKey: 'PACKAGE_ID' },
+        { key: 'UPGRADE_CAP_ID', value: CFG.UPGRADE_CAP_ID ? mask(CFG.UPGRADE_CAP_ID, 10) : '(leer)', envKey: 'UPGRADE_CAP_ID' },
         { key: 'PACKAGE_ID_FILE', value: process.env.PACKAGE_ID_FILE || '.morgendrot-package-id', envKey: 'PACKAGE_ID_FILE' },
         { key: 'VAULT_REGISTRY_ID', value: CFG.VAULT_REGISTRY_ID ? mask(CFG.VAULT_REGISTRY_ID, 8) : '(leer)', envKey: 'VAULT_REGISTRY_ID' },
         { key: 'MAILBOX_ID', value: CFG.MAILBOX_ID ? mask(CFG.MAILBOX_ID, 8) : '(leer)', envKey: 'MAILBOX_ID' },
@@ -2108,6 +2119,10 @@ export interface StandaloneSmartphoneHandoffParams {
     broadcastPinnwandAddress?: string;
     /** Kompaktes JSON — Gruppe + Team-Mailbox für Helfer (M2c). */
     messengerGroupHandoff?: string;
+    /** Nachrichten-/Handshake-TTL in Tagen → DEFAULT_TTL_DAYS im Handoff. */
+    exportTtlDays?: number;
+    /** Purge über API/UI erlauben → ENABLE_PURGE im Handoff (Standard: true). */
+    exportEnablePurge?: boolean;
 }
 
 function parseHandoffObjectIdList(raw: string | undefined): string[] {
@@ -2228,6 +2243,10 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
             '# Mindestens eine Partner-Adresse setzen (z. B. BOSS_ADDRESS hierher kopieren), sonst kein verschlüsselter Chat.'
         );
     }
+    const ttlRaw =
+        typeof p.exportTtlDays === 'number' && Number.isFinite(p.exportTtlDays)
+            ? Math.max(0, Math.min(3650, Math.floor(p.exportTtlDays)))
+            : undefined;
     lines.push(
         '',
         '# =============================================================================',
@@ -2242,8 +2261,9 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         'API_KILL_PREVIOUS_INSTANCE=true',
         'SIGNER=sdk',
         'NETWORK_TRUST_TIER=1',
-        'ENABLE_PURGE=true',
+        `ENABLE_PURGE=${p.exportEnablePurge === false ? 'false' : 'true'}`,
         'ENABLE_REPLAY_PROTECTION=true',
+        ...(ttlRaw != null ? [`DEFAULT_TTL_DAYS=${ttlRaw}`] : []),
         'ENABLE_PLAINTEXT_CHANNEL=false',
         ''
     );

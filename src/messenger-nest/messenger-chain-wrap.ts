@@ -13,6 +13,7 @@ import {
     storeTeamPlaintextBroadcast,
     purgeHandshake as chainPurgeHandshake,
     purgeMessage as chainPurgeMessage,
+    purgeTeamPlaintextBroadcast as chainPurgeTeamPlaintextBroadcast,
     enableEmergencyPurgeVault as chainEnableEmergencyPurgeVault,
     purgeVaultOnChain as chainPurgeVaultOnChain,
     createAccessKey as chainCreateAccessKey,
@@ -192,6 +193,24 @@ export async function purgeHandshake(recipient: string, sender: string) {
 export async function purgeMessage(recipient: string, sender: string, nonce: bigint) {
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
     const result = await chainPurgeMessage(recipient, sender, nonce, MY_ADDR, getWalletPassword(), messengerGasPolicyOpts());
+    if (result?.digest) logger.info(`TX ausgeführt: ${result.digest}`);
+    return result;
+}
+
+export async function purgeTeamPlaintextBroadcast(
+    teamMailboxObjectId: string,
+    broadcastSender: string,
+    nonce: bigint
+) {
+    const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    const result = await chainPurgeTeamPlaintextBroadcast(
+        teamMailboxObjectId,
+        broadcastSender,
+        nonce,
+        MY_ADDR,
+        getWalletPassword(),
+        messengerGasPolicyOpts()
+    );
     if (result?.digest) logger.info(`TX ausgeführt: ${result.digest}`);
     return result;
 }

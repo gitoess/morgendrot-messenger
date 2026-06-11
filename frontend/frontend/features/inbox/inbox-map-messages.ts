@@ -23,6 +23,7 @@ export type InboxApiRow = {
   nonce?: string
   ts?: number | string
   chainPurgeable?: boolean
+  chainPurgeKind?: 'pairwise' | 'team-broadcast'
   /** Backend Dedup (evid:… / mb:…) — trennt gleiche nonce=1. */
   inboxKey?: string
 }
@@ -86,6 +87,12 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       dedupKey,
       chainNonce: m.nonce != null && String(m.nonce).length > 0 ? String(m.nonce) : undefined,
       chainPurgeable: m.chainPurgeable === true,
+      chainPurgeKind:
+        m.chainPurgeKind === 'team-broadcast' || (inboxKey && inboxKey.startsWith('team:'))
+          ? 'team-broadcast'
+          : m.chainPurgeable === true
+            ? 'pairwise'
+            : undefined,
     }
   })
   mapped.sort((a, b) => b.timestamp - a.timestamp)

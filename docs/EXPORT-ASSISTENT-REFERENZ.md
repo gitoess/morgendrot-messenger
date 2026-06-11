@@ -3,9 +3,9 @@
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  
 **UI:** Einsatzleitung → **Neues Gerät provisionieren** (Wizard, empfohlen) oder **Export-Assistent** (Feineinstellung) · API: `POST /api/standalone-smartphone-handoff-zip`  
-**Verwandt:** `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move)
+**Verwandt:** `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move), **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`** (Boss-Routine Move vs. Handoff)
 
-> **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
+> **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. **Move on-chain vs. Handoff** steht in **`docs/MOVE-MESSENGER-KONFIGURATION.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
 
 ---
 
@@ -67,6 +67,7 @@
 | **NEXT_PUBLIC_DIRECT_IOTA_RPC_URL** | `nextPublicDirectIotaRpcUrl` | Ist |
 | **Partner manuell (Textarea)** | `partnerAddresses` | Ist |
 | **LoRa / .env-Erklärung** | Nur Text | Ist (Doku) |
+| **DEFAULT_TTL_DAYS** (Experte) | `exportTtlDays` → Handoff | Ist (Default: Boss-Server) |
 
 ### 2.4 UI — geplant / Backlog (noch nicht oder nur Doku)
 
@@ -114,6 +115,8 @@
 | `uiVariant` | full \| messenger | Preset | `UI_VARIANT` |
 | `transportProfile` | mesh-first \| iota-anchored \| iota-full | Preset | `TRANSPORT_PROFILE` |
 | `simpleMode` | boolean | Preset | `SIMPLE_MODE` |
+| `exportTtlDays` | number? | Boss `DEFAULT_TTL_DAYS` | `DEFAULT_TTL_DAYS` |
+| `exportEnablePurge` | boolean? | Boss `ENABLE_PURGE` | `ENABLE_PURGE` |
 | `capabilitiesOverride` | object? | Matrix-UI | `.morgendrot-runtime-config.json` |
 | `includeIotaArchivReadme` | boolean | Checkbox | README-Block |
 | `readmeExtra` | string? | IOTA-Archiv-Text | README |

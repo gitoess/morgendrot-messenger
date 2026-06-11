@@ -145,6 +145,7 @@ export function ProjektDashboard() {
               apiSnapshot={s.apiSnapshot && !('error' in s.apiSnapshot && s.apiSnapshot.error) ? s.apiSnapshot : null}
               contactDirectory={s.contactDirectory}
               refreshContactDirectory={s.refreshContactDirectory}
+              onRefreshStatus={s.checkStatus}
             />
           )}
           {s.activeView.type === 'lock' && s.activeView.variant && (

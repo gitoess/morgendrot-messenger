@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { purgeMailboxMessageHybrid } from '@/frontend/lib/purge-message-hybrid'
+import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import {
   filterInboxMessagesByPartnerAndDirection,
@@ -596,18 +596,19 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           })
           setMessages((prev) => prev.filter((m) => m.id !== msg.id))
           setStatus('success')
-          setStatusMsg('Nachricht auf der Chain gelöscht (Storage-Rebate).')
+          setStatusMsg(r.message || 'Nachricht auf der Chain gelöscht (Storage-Rebate).')
           void loadMessages('reset', undefined, { silent: true })
         } else {
           setStatus('error')
-          setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
+          const hint = teamBroadcastPurgeHint(msg, myAddress)
+          setStatusMsg(r.error || hint || r.message || 'Purge fehlgeschlagen')
         }
       } finally {
         setSending(false)
         setTimeout(() => setStatus('idle'), 6000)
       }
     },
-    [loadMessages, setMessages, setSending, setStatus, setStatusMsg]
+    [loadMessages, myAddress, setMessages, setSending, setStatus, setStatusMsg]
   )
 
   const toggleProtokollMark = useCallback((id: string) => {

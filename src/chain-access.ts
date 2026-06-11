@@ -270,57 +270,20 @@ export async function generateNewAddressCli(walletPassword?: string): Promise<st
     throw new Error('Adresse in CLI-Ausgabe nicht gefunden. Erwartet: 0x… (64 Hex) oder bech32.');
 }
 
-/** Move-Package publizieren (iota client publish). Gibt die neue Package-ID zurück. packageDir = Pfad zum Move-Package (z. B. move-test). */
-export async function publishPackageCli(packageDir?: string): Promise<string> {
-    const cwd = packageDir
-        ? path.resolve(process.cwd(), packageDir)
-        : process.cwd();
-    // Move.lock vor Publish entfernen, um "Zugriff verweigert" beim Committen zu vermeiden (Windows).
-    const lockPath = path.join(cwd, 'Move.lock');
-    try {
-        await fs.unlink(lockPath);
-    } catch {
-        // Datei fehlt oder nicht löschbar – Publish trotzdem versuchen
-    }
-    const child = spawn('iota', ['client', 'publish'], { shell: false, env: process.env, cwd });
-    let stdout = '';
-    let stderr = '';
-    child.stdout?.on('data', (d) => { stdout += d; });
-    child.stderr?.on('data', (d) => { stderr += d; });
-    await new Promise<void>((resolve, reject) => {
-        child.on('error', reject);
-        child.on('close', (code) => {
-            if (code !== 0) {
-                const out = (stderr || stdout).trim();
-                const versionMismatch = /Client\/Server api version mismatch.*client api version:\s*([^\s,]+).*server api version:\s*([^\s\]]+)/i.exec(out)
-                    || /api version mismatch.*server api version:\s*([^\s\]]+)/i.exec(out);
-                if (versionMismatch) {
-                    const serverVer = versionMismatch[2] || versionMismatch[1];
-                    reject(new Error(
-                        `CLI- und Server-Version stimmen nicht überein. Bitte IOTA-CLI auf die Server-Version aktualisieren (z. B. ${serverVer}). ` +
-                        `(Original: ${out.slice(0, 200)}${out.length > 200 ? '…' : ''})`
-                    ));
-                } else if (/Zugriff verweigert|Access denied|failed to persist|lock file/i.test(out) && /os error 5|error 5/i.test(out)) {
-                    reject(new Error(
-                        'Schreibzugriff verweigert (z. B. Move.lock). Tipps: move-test/Move.lock manuell löschen; Projektordner nicht in anderem Programm geöffnet lassen; Antivirus prüfen. ' +
-                        'Alternativ: Deploy manuell im Terminal (Schritte unter „Manuell per Terminal“).'
-                    ));
-                } else {
-                    reject(new Error(`iota client publish exit ${code}: ${out}`));
-                }
-            } else resolve();
-        });
-    });
-    // Package-ID gezielt aus "PackageID: 0x…" oder aus dem Block "Published Objects" holen,
-    // damit nicht versehentlich die Absender-Adresse (erster 0x… in der Ausgabe) genommen wird.
-    const packageIdLine = /Package(?:ID)?\s*:\s*(0x[a-fA-F0-9]{64})/i.exec(stdout);
-    if (packageIdLine) return packageIdLine[1];
-    const publishedBlock = /Published\s+Objects[\s\S]*?(0x[a-fA-F0-9]{64})/i.exec(stdout);
-    if (publishedBlock) return publishedBlock[1];
-    const allHex = stdout.match(/0x[a-fA-F0-9]{64}/g);
-    if (allHex && allHex.length > 0) return allHex[allHex.length - 1];
-    throw new Error('Package-ID in Ausgabe nicht gefunden. Erwartet 0x… (64 Hex) in „Published Objects“.');
-}
+/** Move-Package publizieren — siehe `src/move-package-deploy.ts`. */
+export {
+    publishPackageCli,
+    upgradePackageCli,
+    findUpgradeCapForPackage,
+    resolveUpgradeCapId,
+    applyPublishResultToEnv,
+    parsePublishCliOutput,
+    type MovePackagePublishResult,
+    type MovePackageUpgradeResult,
+} from './move-package-deploy.js';
+
+/** @deprecated Import from move-package-deploy — Alias für Kompatibilität. */
+export type { MovePackagePublishResult as PublishPackageCliResult } from './move-package-deploy.js';
 
 let _client: IotaClient | null = null;
 /** Zuletzt für den Transport gewählte RPC-URL (nach Rotation/Dedupe-Liste). */
@@ -2284,6 +2247,50 @@ export async function purgeMessage(
             throw e1;
         }
     }
+}
+
+/** Purge Team-Broadcast aus Shared Team-Mailbox (TeamPlainBroadcastKey). */
+export async function purgeTeamPlaintextBroadcast(
+    teamMailboxObjectId: string,
+    broadcastSender: string,
+    nonce: bigint,
+    signingAddress: string,
+    walletPassword?: string,
+    signOptions?: SignAndExecuteOptions
+): Promise<{ digest?: string; status?: string }> {
+    const teamMb = teamMailboxObjectId.trim();
+    const broadcaster = broadcastSender.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(teamMb)) {
+        throw new Error('teamMailboxObjectId: 0x + 64 Hex.');
+    }
+    assertSafeAddress(broadcaster);
+    assertSafeAddress(signingAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    if (teamMb.toLowerCase() === (CFG.PACKAGE_ID || '').trim().toLowerCase()) {
+        throw new Error('Team-Mailbox-ID darf nicht gleich PACKAGE_ID sein.');
+    }
+    const { validateMessagingMailboxObjectForPackage } = await import('@morgendrot/core/iota');
+    const mbCheck = await validateMessagingMailboxObjectForPackage(
+        getClient(),
+        teamMb,
+        CFG.PACKAGE_ID!,
+        'mailbox'
+    );
+    if (!mbCheck.ok) {
+        throw new Error(mbCheck.error);
+    }
+    const nonceU64 = nonce != null && typeof nonce === 'bigint' ? nonce : BigInt(Number(nonce) || 0);
+    const txb = new Transaction();
+    txb.setSender(signingAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::purge_team_plaintext_broadcast`,
+        arguments: [
+            txb.object(teamMb),
+            txb.pure.address(broadcaster),
+            txb.pure.u64(nonceU64),
+        ],
+    });
+    return signAndExecute(getClient(), txb, signingAddress, walletPassword, signOptions);
 }
 
 /** Vault: Notfall-Purge aktivieren. */

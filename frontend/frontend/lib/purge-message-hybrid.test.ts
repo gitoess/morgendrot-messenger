@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { resolveMailboxPurgeAddresses } from './purge-message-hybrid'
+import { resolveMailboxPurgeAddresses } from './mailbox-purge-routing'
 import type { Message } from '@/frontend/lib/types'
 
 describe('purge-message-hybrid', () => {
@@ -13,6 +13,8 @@ describe('purge-message-hybrid', () => {
       content: 'hi',
       timestamp: 1,
       recipient: me,
+      chainNonce: '42',
+      chainPurgeable: true,
     }
     expect(resolveMailboxPurgeAddresses(msg, me)).toEqual({
       recipient: me,
@@ -27,6 +29,8 @@ describe('purge-message-hybrid', () => {
       content: 'hi',
       timestamp: 1,
       recipient: peer,
+      chainNonce: '43',
+      chainPurgeable: true,
     }
     expect(resolveMailboxPurgeAddresses(msg, me)).toEqual({
       recipient: peer,

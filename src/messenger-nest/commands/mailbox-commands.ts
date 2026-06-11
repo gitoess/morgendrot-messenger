@@ -7,7 +7,7 @@ import { getClient } from '../../chain-access.js';
 import { purgeHandshakeCache, purgeInboxCache } from '../../vault-local.js';
 import { fetchLastMessages, fetchPlaintextOnlyForRecipient, isRebasedStorageEnabled } from '../messenger-fetch.js';
 import type { FetchedMessage } from '../messenger-fetch.js';
-import { purgeHandshake, purgeMessage } from '../messenger-chain-wrap.js';
+import { purgeHandshake, purgeMessage, purgeTeamPlaintextBroadcast } from '../messenger-chain-wrap.js';
 import {
     purgeHandshakeBidirectional,
     purgeMessageBidirectional,
@@ -15,10 +15,30 @@ import {
 import type { PeerState } from '../peer-state.js';
 import type { CommandHandlerResult, MessengerCommandContext } from './command-types.js';
 
+const HEX64 = /^0x[a-fA-F0-9]{64}$/;
+
+function parsePurgeNonce(raw: string): bigint | null {
+    const t = String(raw ?? '').trim();
+    if (!t) return null;
+    try {
+        const b = BigInt(t);
+        return b < 0n ? null : b;
+    } catch {
+        return null;
+    }
+}
+
+/** 4. Argument bei `/purge-msg`: Team-Broadcast statt pairwise. */
+function isTeamPurgeModeFlag(raw: string | undefined): boolean {
+    const t = String(raw ?? '').trim().toLowerCase();
+    return t === 'team' || t === 'team-broadcast' || t === 'teambroadcast';
+}
+
 const MAILBOX_COMMANDS = new Set([
     '/purge-handshake',
     '/purge-msg',
     '/purge-message',
+    '/purge-team-broadcast',
     '/purge-handshake-cache',
     '/purge-local-inbox',
     '/clear-local-history',
@@ -59,28 +79,21 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
             return {
                 ok: false,
                 message:
-                    'Verwendung: /purge-msg <empfänger> <sender> <nonce> (UI) oder /purge-msg <nonce> [sender] mit Chat-Connect.',
+                    'Verwendung: /purge-msg <empfänger> <sender> <nonce> (UI) oder /purge-msg <teamMailboxId> <sender> <nonce> team-broadcast — oder /purge-msg <nonce> [sender] mit Chat-Connect.',
             };
         }
         if (!isRebasedStorageEnabled()) {
             return { ok: false, message: 'MAILBOX_ID nicht gesetzt (Mailbox-Modus nötig zum Purgen von Nachrichten).' };
         }
-        const hex64 = /^0x[a-fA-F0-9]{64}$/;
-        const parseNonce = (raw: string): bigint | null => {
-            const t = String(raw ?? '').trim();
-            if (!t) return null;
-            try {
-                const b = BigInt(t);
-                return b < 0n ? null : b;
-            } catch {
-                return null;
-            }
-        };
-        if (a.length >= 3 && hex64.test(String(a[0]).trim()) && hex64.test(String(a[1]).trim())) {
+        if (a.length >= 3 && HEX64.test(String(a[0]).trim()) && HEX64.test(String(a[1]).trim())) {
             const recipient = a[0].trim();
             const sender = a[1].trim();
-            const nonceBn = parseNonce(String(a[2]));
+            const nonceBn = parsePurgeNonce(String(a[2]));
             if (nonceBn === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
+            if (isTeamPurgeModeFlag(a[3])) {
+                await purgeTeamPlaintextBroadcast(recipient, sender, nonceBn);
+                return { ok: true, message: 'Team-Broadcast aus Mailbox gepurged (Rebate).' };
+            }
             await purgeMessage(recipient, sender, nonceBn);
             return { ok: true, message: 'Nachricht aus Mailbox gepurged.' };
         }
@@ -91,7 +104,7 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
                     'Befehl benötigt Chat-Verbindung (/connect) oder 3 Argumente: Empfänger, Sender, Nonce (wie im Rebate-Tab).',
             };
         }
-        const nonceBnPeer = parseNonce(String(a[0]));
+        const nonceBnPeer = parsePurgeNonce(String(a[0]));
         const senderArg = a[1]?.trim();
         if (nonceBnPeer === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
         const toPurge: PeerState[] = senderArg
@@ -101,6 +114,29 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
             : [...peerMap.values()];
         for (const p of toPurge) await purgeMessageBidirectional(MY_ADDR, p.address, nonceBnPeer);
         return { ok: true, message: 'Nachricht gepurged (Empfänger/Sender-Reihenfolge automatisch probiert).' };
+    }
+
+    if (c === '/purge-team-broadcast') {
+        if (!CFG.ENABLE_PURGE) return { ok: false, message: 'Purge deaktiviert.' };
+        if (!isRebasedStorageEnabled()) {
+            return { ok: false, message: 'MAILBOX_ID nicht gesetzt (Mailbox-Modus nötig).' };
+        }
+        if (a.length < 3) {
+            return {
+                ok: false,
+                message:
+                    'Verwendung: /purge-team-broadcast <teamMailboxObjectId> <broadcastSender> <nonce> — oder /purge-msg <teamMailboxId> <sender> <nonce> team-broadcast',
+            };
+        }
+        const teamMb = String(a[0]).trim();
+        const broadcastSender = String(a[1]).trim();
+        const nonceBn = parsePurgeNonce(String(a[2]));
+        if (!HEX64.test(teamMb) || !HEX64.test(broadcastSender)) {
+            return { ok: false, message: 'Team-Mailbox und Broadcast-Sender: jeweils 0x + 64 Hex.' };
+        }
+        if (nonceBn === null) return { ok: false, message: 'Ungültige Nonce (Zahl erwartet).' };
+        await purgeTeamPlaintextBroadcast(teamMb, broadcastSender, nonceBn);
+        return { ok: true, message: 'Team-Broadcast aus Mailbox gepurged (Rebate).' };
     }
 
     if (c === '/purge-handshake-cache') {

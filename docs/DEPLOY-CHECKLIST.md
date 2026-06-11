@@ -24,16 +24,28 @@
 
 Im **Projektroot** (PowerShell: Befehle **einzeln**, kein `&&`):
 
+**Erst-Deploy oder bewusst neues Package:**
+
 ```powershell
 cd c:\Users\damast\Desktop\morgendrot
 npm run deploy:move-package
 ```
 
-**Ergebnis:** Neue **`PACKAGE_ID`** in **`.env`** und **`.morgendrot-package-id`** (Skript `scripts/deploy-move-package.ts`).
+**Code-Fix / neue Funktion — gleiche PACKAGE_ID und Mailbox-IDs:**
+
+```powershell
+npm run upgrade:move-package
+```
+
+Entscheidungshilfe: **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**.
+
+**Ergebnis Publish:** Neue **`PACKAGE_ID`** + **`UPGRADE_CAP_ID`** in **`.env`** (Skript `scripts/deploy-move-package.ts`).
+
+**Ergebnis Upgrade:** Gleiche **`PACKAGE_ID`** — kein neues Handoff, kein `create_globals`.
 
 **Manuell:** `cd move-test` → `iota move build` → `iota client publish` — siehe **`docs/PACKAGE-ID-NEU-DEPLOYEN.md`**.
 
-**Enthält aktuell u. a.:** Shared-Mailbox, **`create_private_mailbox`**, **`create_team_mailbox`**, **`store_team_plaintext_broadcast`** (M2c Team-Broadcast), **`purge_private_mailbox`**, **`purge_*_private`** (Aufräumen vor Rebate), `store_*_private`.
+**Enthält aktuell u. a.:** Shared-Mailbox, **`create_private_mailbox`**, **`create_team_mailbox`**, **`store_team_plaintext_broadcast`**, **`purge_team_plaintext_broadcast`** (M2c Team-Broadcast Rebate), **`purge_private_mailbox`**, **`purge_*_private`** (Aufräumen vor Rebate), `store_*_private`.
 
 **M2c Team-Broadcast:** Nach Deploy zusätzlich **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`** (Gruppe ↔ Team-Mailbox, Smoke).
 

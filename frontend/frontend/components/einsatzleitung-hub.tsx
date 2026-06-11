@@ -22,7 +22,8 @@ export function EinsatzleitungHub(p: EinsatzleitungHubProps) {
       <p className="mt-1 text-xs leading-snug text-muted-foreground">
         {isBoss ? (
           <>
-            Zuerst <strong className="text-foreground">Gerät provisionieren</strong> (Seed + ZIP + QR), danach
+            Zuerst <strong className="text-foreground">Einsatz-Konfiguration</strong> prüfen, dann{' '}
+            <strong className="text-foreground">Gerät provisionieren</strong> (Seed + ZIP + QR), danach
             Export-Assistent für Feineinstellung und WLAN-QR. Was wo liegt:{' '}
             <Link
               href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#einsatzleitung-orientierung"

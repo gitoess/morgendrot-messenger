@@ -213,6 +213,7 @@ function MessengerDashboardBody({
               apiSnapshot={s.apiSnapshot && !('error' in s.apiSnapshot && s.apiSnapshot.error) ? s.apiSnapshot : null}
               contactDirectory={s.contactDirectory}
               refreshContactDirectory={s.refreshContactDirectory}
+              onRefreshStatus={s.checkStatus}
             />
           )}
           {s.activeView.type === 'boss' && s.activeView.variant && (

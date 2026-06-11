@@ -88,7 +88,9 @@ Abgrenzung zu heutigem `Mailbox`: Shared/Team-**Pairwise** bleibt für 1:1; **Te
 
 **Pairwise-Fallback:** verschlüsselt, kein Team-Mailbox-Link, `useTeamBroadcast` aus, oder Move noch nicht published.
 
-**Noch nicht:** verschlüsselter Team-Broadcast (Team-Key off-chain, § H.23), `purge_team_broadcast`.
+**Noch offen:** verschlüsselter Team-Broadcast (Team-Key off-chain, § H.23).
+
+**Erledigt (Move M2c+):** `purge_team_plaintext_broadcast` — Rebate pro Broadcast (Sender jederzeit; nach TTL jeder). UI: Posteingang → ⋯ → Auf Chain löschen.
 
 ### Phase 3 — Team-Key im Handoff (geplant)
 

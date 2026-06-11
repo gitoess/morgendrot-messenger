@@ -45,6 +45,7 @@ import {
     iotaToMist,
     createTicketsBatchPtb as chainCreateTicketsBatchPtb,
     publishPackageCli,
+    applyPublishResultToEnv,
     sendPairingOffer,
     queryRecentPairingOffers,
 } from '../chain-access.js';
@@ -126,6 +127,8 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                 try {
                     let c = String(cmd ?? '').trim().toLowerCase();
                     if (c && !c.startsWith('/')) c = '/' + c;
+                    if (c.length > 1) c = c.replace(/\/+$/, '');
+                    if (c === '/purge-teambroadcast' || c === '/purge_team_broadcast') c = '/purge-team-broadcast';
                     if (c === '/vault-lock') {
                         vaultStateRef.current = null;
                         sessionState.peerMap = null;
@@ -163,8 +166,13 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         a.length >= 3 &&
                         hex64Peer.test(String(a[0]).trim()) &&
                         hex64Peer.test(String(a[1]).trim());
+                    const purgeTeamBroadcastWithArgs =
+                        c === '/purge-team-broadcast' &&
+                        a.length >= 3 &&
+                        hex64Peer.test(String(a[0]).trim()) &&
+                        hex64Peer.test(String(a[1]).trim());
                     const purgeHandshakeWithArgs = c === '/purge-handshake' && a.length >= 2 && hex64Peer.test(String(a[0]).trim()) && hex64Peer.test(String(a[1]).trim());
-                    if (needPeer && !sessionState.peerMap?.size && !purgeMsgWithArgs && !purgeHandshakeWithArgs) {
+                    if (needPeer && !sessionState.peerMap?.size && !purgeMsgWithArgs && !purgeHandshakeWithArgs && !purgeTeamBroadcastWithArgs) {
                         return { ok: false, message: 'Befehl benötigt Chat-Verbindung. Zuerst /connect ausführen.' };
                     }
                     const vetoedCommands = ['/purge-key', '/purge-ticket', '/purge-asset', '/transfer-coins', '/use-ticket', '/transfer-key', '/transfer-asset', '/transfer-asset-key-package', '/create-key', '/create-keys', '/create-tickets', '/create-asset', '/link-nfc-asset'];
@@ -1152,21 +1160,23 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             return { ok: false, message: 'Nur Ordnername angeben (z. B. move-test), kein Pfad.' };
                         }
                         try {
-                            const packageId = await publishPackageCli(rawDir);
-                            (CFG as { PACKAGE_ID: string }).PACKAGE_ID = packageId;
-                            process.env.PACKAGE_ID = packageId;
-                            savePackageIdToFile(packageId);
-                            const envResult = setEnvKey('PACKAGE_ID', packageId);
-                            const envNote = envResult.ok
+                            const result = await publishPackageCli(rawDir);
+                            const applied = applyPublishResultToEnv(result);
+                            const envNote = applied.envPackageOk
                                 ? 'PACKAGE_ID in .env gespeichert.'
-                                : `.env nicht aktualisiert (${envResult.error || 'Schreibfehler'}).`;
+                                : `.env nicht aktualisiert (${applied.envPackageError || 'Schreibfehler'}).`;
+                            const capNote =
+                                result.upgradeCapId && applied.envCapOk
+                                    ? ' UPGRADE_CAP_ID gespeichert (upgrade:move-package).'
+                                    : '';
                             return {
                                 ok: true,
                                 message:
-                                    `Move-Paket publiziert (${rawDir}). ${envNote} Enthält u. a. create_private_mailbox (M4d). ` +
-                                    'Bei neuem Package: create_globals ausführen und MAILBOX_ID in .env setzen, dann /create-private-mailbox.',
-                                packageId,
-                                objectId: packageId,
+                                    `Move-Paket publiziert (${rawDir}). ${envNote}${capNote} ` +
+                                    'Bei neuem Package: create_globals + MAILBOX_ID. Für Fix ohne neue ID: npm run upgrade:move-package.',
+                                packageId: result.packageId,
+                                objectId: result.packageId,
+                                upgradeCapId: result.upgradeCapId,
                             };
                         } catch (e: unknown) {
                             return { ok: false, message: e instanceof Error ? e.message : String(e) };

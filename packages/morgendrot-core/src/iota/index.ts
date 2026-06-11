@@ -29,6 +29,8 @@ export type {
   BuildPurgeMailboxMessageTxInput,
   PurgeMailboxMessageVariant,
 } from './purge-message-txb'
+export { buildPurgeTeamPlaintextBroadcastTransaction } from './purge-team-broadcast-txb'
+export type { BuildPurgeTeamPlaintextBroadcastTxInput } from './purge-team-broadcast-txb'
 export {
   fetchMessagingEventInboxRpcRows,
 } from './messaging-events-inbox-rpc'

@@ -58,6 +58,9 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
       'Neues Team-Postfach anlegen oder create_globals + MAILBOX_ID aktualisieren, dann in der Gruppe verknüpfen.'
     )
   }
+  if (lower.includes('e_not_owner') || (lower.includes('not owner') && lower.includes('assert'))) {
+    return 'Purge nicht erlaubt — bei Team-Broadcast nur der Original-Sender vor Ablauf der TTL; danach jeder.'
+  }
   if (lower.includes('locked') && lower.includes('object')) {
     return 'Objekt auf der Kette gesperrt — Mailbox-Version/Deploy prüfen.'
   }

@@ -52,6 +52,8 @@ hole letzten <n>         Wie /fetch – natürliche Eingabe (z.B. hole letzten 1
 /vault-onchain [passwort] [notizen] [includeIotaMnemonic]   Tresor inkl. personalSecrets on-chain im VaultRegistry speichern. Erfordert VAULT_REGISTRY_ID. Optional letztes Argument includeIotaMnemonic wie bei /vault-save.
 /purge-handshake         Handshake aus Mailbox löschen (ENABLE_PURGE, MAILBOX_ID).
    /purge-msg <nonce> [sender]  Nachricht aus Mailbox löschen. Nonce aus Event/Explorer. Verschlüsselt (MsgKey) und gespeicherter Klartext (PlainMsgKey) sind verschiedene Einträge — der Client versucht ggf. zwei TX (purge_message, dann purge_plaintext_mail_entry).
+   /purge-msg <teamMailboxId> <sender> <nonce> team-broadcast  Team-Gruppenbroadcast purgen (Rebate). Alias: /purge-team-broadcast …
+   /purge-team-broadcast <teamMailboxId> <broadcastSender> <nonce>  Team-Gruppenbroadcast purgen (Rebate). Sender = Original-0x der Nachricht; vor TTL nur dieser Sender.
    /purge-handshake-cache Lokalen Handshake-Tresor leeren (immer purgable).
    /purge-local-inbox [shred]  Lokale Inbox-Cache leeren. Optional: shred → Datei überschreiben vor Löschen.
    /clear-local-history [0]    Nuclear: wie Inbox purge, Standard mit Shred. „0“ = nur unlink.

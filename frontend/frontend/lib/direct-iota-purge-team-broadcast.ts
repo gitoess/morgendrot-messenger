@@ -2,11 +2,11 @@
 
 import {
   attachGasPaymentForOwner,
-  buildPurgeMailboxMessageTransaction,
+  buildPurgeTeamPlaintextBroadcastTransaction,
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
-  type PurgeMailboxMessageVariant,
+  validateMessagingMailboxObjectForPackage,
 } from '@morgendrot/core/iota'
 import {
   canUseDirectEncryptedMailboxDrain,
@@ -16,22 +16,17 @@ import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-me
 import { canTryDirectPurgeHandshakeSubmit } from '@/frontend/lib/direct-iota-purge-handshake'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
-import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
-import { validateMessagingMailboxObjectForPackage } from '@morgendrot/core/iota'
 
-export function canTryDirectPurgeMessageSubmit(): boolean {
+export function canTryDirectPurgeTeamBroadcastSubmit(): boolean {
   return canTryDirectPurgeHandshakeSubmit()
 }
 
-export async function tryPurgeMailboxMessageViaDirectIota(opts: {
-  recipient: string
-  peerSender: string
+export async function tryPurgeTeamPlaintextBroadcastViaDirectIota(opts: {
+  teamMailboxObjectId: string
+  broadcastSender: string
   nonce: string
-  variant: PurgeMailboxMessageVariant
-  mailboxObjectId?: string
 }): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-  if (!canTryDirectPurgeMessageSubmit()) {
+  if (!canTryDirectPurgeTeamBroadcastSubmit()) {
     return { ok: false, error: 'Direkt-Purge: Session, RPC oder Ketten-IDs fehlen.' }
   }
   const rpc = getConfiguredDirectIotaRpcUrl()
@@ -47,8 +42,8 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
     return { ok: false, error: 'Purge per Fullnode braucht Mailbox-Drain-Flags im Puls.' }
   }
 
-  const recipient = opts.recipient.trim()
-  const peer = opts.peerSender.trim()
+  const teamMb = opts.teamMailboxObjectId.trim()
+  const broadcastSender = opts.broadcastSender.trim()
   let nonce: bigint
   try {
     nonce = BigInt(opts.nonce.trim())
@@ -58,33 +53,21 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
 
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
-    const mbOverride = (opts.mailboxObjectId ?? readActiveSendMailboxObjectId() ?? '').trim()
-    const { mailboxObjectId } = snap.flags.useMailbox
-      ? resolveDirectMailboxUsePrivateMoveCall({
-          mailboxObjectId: mbOverride || undefined,
-          serverMailboxId: snap.mailboxId,
-        })
-      : { mailboxObjectId: snap.mailboxId }
     const mailboxCheck = await validateMessagingMailboxObjectForPackage(
       client,
-      mailboxObjectId,
+      teamMb,
       snap.packageId,
-      'any'
+      'mailbox'
     )
     if (!mailboxCheck.ok) {
       return { ok: false, error: mailboxCheck.error }
     }
-    const privateMailbox = mailboxCheck.kind === 'privatemailbox'
-
-    const txb = buildPurgeMailboxMessageTransaction({
+    const txb = buildPurgeTeamPlaintextBroadcastTransaction({
       packageId: snap.packageId,
       senderAddress: snap.senderAddress.trim(),
-      mailboxObjectId,
-      recipient,
-      peerSender: peer,
+      teamMailboxObjectId: teamMb,
+      broadcastSender,
       nonce,
-      variant: opts.variant,
-      privateMailbox,
     })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })

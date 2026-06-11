@@ -31,6 +31,10 @@ export type StandaloneSmartphoneHandoffZipBody = {
   readmeExtra?: string
   /** M2c: JSON — Gruppe + Team-Mailbox (→ MESSENGER_GROUP_HANDOFF in .env). */
   messengerGroupHandoff?: string
+  /** Nachrichten-TTL in Tagen → DEFAULT_TTL_DAYS (Default: Boss-Server). */
+  exportTtlDays?: number
+  /** ENABLE_PURGE im Handoff (Default: wie Boss-Server). */
+  exportEnablePurge?: boolean
   /** `parts` = JSON mit envContent/readme (Client baut ggf. verschlüsseltes ZIP). */
   format?: 'zip' | 'parts'
 }

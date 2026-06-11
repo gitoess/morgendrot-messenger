@@ -910,6 +910,43 @@ module messaging::messaging { // Named address via Move.toml
         store_team_plaintext_broadcast_impl(mailbox, text, nonce, ttl_days, ctx);
     }
 
+    const E_TEAM_BROADCAST_MISSING: u64 = 44;
+
+    fun purge_team_plaintext_broadcast_on_uid(
+        mailbox_uid: &mut UID,
+        broadcast_sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        let by = tx_context::sender(ctx);
+        let key = TeamPlainBroadcastKey { sender: broadcast_sender, nonce };
+        assert!(dof::exists_<TeamPlainBroadcastKey>(mailbox_uid, key), E_TEAM_BROADCAST_MISSING);
+        let pref = dof::borrow<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let allowed = by == pref.sender || now >= pref.expires_at_ms;
+        assert!(allowed, E_NOT_OWNER);
+        let p = dof::remove<TeamPlainBroadcastKey, TeamPlainBroadcastEntry>(mailbox_uid, key);
+        let TeamPlainBroadcastEntry {
+            id,
+            sender: _,
+            text: _,
+            nonce: _,
+            created_at_ms: _,
+            expires_at_ms: _,
+        } = p;
+        object::delete(id);
+    }
+
+    /// Purge Team-Broadcast (Rebate): Original-Sender jederzeit; nach TTL jeder.
+    public entry fun purge_team_plaintext_broadcast(
+        mailbox: &mut Mailbox,
+        broadcast_sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_team_plaintext_broadcast_on_uid(&mut mailbox.id, broadcast_sender, nonce, ctx);
+    }
+
     public entry fun store_plaintext_message_with_credits(
         _mailbox: &mut Mailbox,
         credits: &mut MessengerCredits,

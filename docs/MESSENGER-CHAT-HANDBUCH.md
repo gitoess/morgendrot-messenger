@@ -162,12 +162,23 @@ Beide Seiten warten auf einen Handshake und antworten ggf. automatisch (Hintergr
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
 | **1:1 Privat** | Event oder Mailbox | Nur Gesprächspartner (`0x`) |
-| **Gruppenchat** | wie 1:1 | Posteingang = Union der Mitglieder; Senden an **eine** `0x` im Composer (pairwise, kein Chain-Gruppenraum) |
+| **Gruppenchat** | Team-Broadcast (Mailbox) | **1× TX** in Team-Mailbox; Posteingang aller Mitglieder mit gleicher Team-Object-ID |
 | **Pinnwand** | meist Klartext | Alle mit gleicher `PACKAGE_ID`; Schreiben nur autorisierte `0x` |
 | **Server · Einsatz** | Mailbox | Alle auf diesem Knoten (`MAILBOX_ID`) |
 | **Team / Privat** | Mailbox | Object-ID kennen; **aktiv** unter **Einstellungen → Meine Mailboxen** |
 
 Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`.
+
+**Auf Chain löschen (Rebate):** Posteingang → Zeile **⋯** → **Auf Chain löschen (Rebate)** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück.
+
+| Art | Wer darf purgen? | Hinweis |
+|-----|------------------|---------|
+| **1:1 pairwise** | Empfänger oder Sender (je nach Move-Regel) | Shared- oder Private-Mailbox |
+| **Team-Broadcast** | Original-Sender **jederzeit**; **nach TTL jeder** | Team-Mailbox-Object-ID; Badge **Team-Broadcast** |
+
+Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräumen / `purge_private_mailbox`. Team-Mailbox als Ganzes wird on-chain **nicht** zerstört — nur einzelne Broadcasts purgen.
+
+**Voraussetzung:** Neues Move-Package mit `purge_team_plaintext_broadcast` (siehe `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`).
 
 **Ziel-Postfach (Kontakt):** Im Composer kann pro Kontakt ein anderes Postfach gewählt werden; die **Empfänger-Wallet** (`0x`) bleibt unverändert — es ändert sich nur die Mailbox-Object-ID für den Submit.
 
@@ -258,7 +269,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
 
-**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
+**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
 
 ---
 

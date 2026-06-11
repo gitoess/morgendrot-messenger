@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
+import { DashboardEinsatzKonfiguration } from '@/frontend/components/dashboard-einsatz-konfiguration'
 import { LanInstallQrPanel } from '@/frontend/components/lan-install-qr-panel'
 import { BossDeviceProvisionWizard } from '@/frontend/components/boss-device-provision-wizard'
 import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
@@ -11,6 +12,7 @@ export type EinsatzleitungViewProps = {
   apiSnapshot?: ApiStatus | null
   contactDirectory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
+  onRefreshStatus?: () => void | Promise<void>
 }
 
 export function EinsatzleitungView(p: EinsatzleitungViewProps) {
@@ -20,6 +22,14 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
   return (
     <div className="space-y-8 pb-4">
       <EinsatzleitungHub apiStatus={p.apiSnapshot ?? null} />
+
+      {isBoss ? (
+        <DashboardEinsatzKonfiguration
+          apiStatus={p.apiSnapshot ?? null}
+          contactDirectory={p.contactDirectory}
+          onRefreshStatus={p.onRefreshStatus}
+        />
+      ) : null}
 
       {isBoss ? (
         <BossDeviceProvisionWizard

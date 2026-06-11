@@ -43,6 +43,7 @@ function getRequiredPermissionForCommand(cmd: string): 'keyIssue' | 'revokeDown'
             '/emergency-purge-key',
             '/purge-handshake',
             '/purge-msg',
+            '/purge-team-broadcast',
             '/emergency-purge',
             '/purge-ticket',
             '/emergency-purge-ticket',

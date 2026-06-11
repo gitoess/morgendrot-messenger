@@ -26,6 +26,9 @@ import {
     getMessengerCreditsSnapshot,
     isChainReachable,
 } from '../../chain-access.js';
+import { getMessagingMoveFeatures } from '../../move-package-features.js';
+import { getClient } from '../../chain-access.js';
+import { resolveUpgradeCapId } from '../../move-package-deploy.js';
 import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from '../../wallet-bridge.js';
 import { vaultFileExists } from '../../vault-local.js';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../../shared/heartbeat-presets.js';
@@ -136,6 +139,47 @@ export async function handleStatusRoutes(
             }
         }
         const lastVaultOnchainSuccessAt = ctx.getLastVaultOnchainAt();
+        const defaultTtlDays = Number(CFG.DEFAULT_TTL_DAYS ?? 30n);
+        const vaultRegTrim = (CFG.VAULT_REGISTRY_ID || '').trim();
+        const cmdRegTrim = (CFG.COMMAND_REGISTRY_ID || '').trim();
+        let moveFeatures:
+            | {
+                  teamBroadcastStore: boolean;
+                  teamBroadcastPurge: boolean;
+                  privateMailboxPurge: boolean;
+                  probed: boolean;
+                  error?: string;
+              }
+            | undefined;
+        if (packageTrim && /^0x[a-fA-F0-9]{64}$/i.test(packageTrim)) {
+            try {
+                moveFeatures = await getMessagingMoveFeatures(packageTrim);
+            } catch {
+                moveFeatures = undefined;
+            }
+        }
+        const upgradeCapFromEnv = (CFG.UPGRADE_CAP_ID || '').trim();
+        let upgradeCapId: string | undefined =
+            upgradeCapFromEnv && /^0x[a-fA-F0-9]{64}$/i.test(upgradeCapFromEnv) ? upgradeCapFromEnv : undefined;
+        let upgradeCapResolvedFromChain = false;
+        if (!upgradeCapId && packageTrim && /^0x[a-fA-F0-9]{64}$/i.test(packageTrim)) {
+            const owner = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+            if (owner && /^0x[a-fA-F0-9]{64}$/i.test(owner)) {
+                try {
+                    const found = await resolveUpgradeCapId({
+                        client: getClient(),
+                        packageId: packageTrim,
+                        ownerAddress: owner,
+                    });
+                    if (found) {
+                        upgradeCapId = found;
+                        upgradeCapResolvedFromChain = true;
+                    }
+                } catch {
+                    /* optional */
+                }
+            }
+        }
         const status: ApiStatus & {
             locked?: boolean;
             role?: string;
@@ -233,6 +277,29 @@ export async function handleStatusRoutes(
                 : {}),
             inboxUnionPackageIds: inboxUnion.packageIds,
             inboxUnionMailboxIds: inboxUnion.mailboxIds,
+            einsatzConfig: {
+                editionLabel: 'Standard (Purge + Rebate)',
+                defaultTtlDays: Number.isFinite(defaultTtlDays) ? defaultTtlDays : 30,
+                enablePurge: CFG.ENABLE_PURGE,
+                ...(vaultRegTrim && /^0x[a-fA-F0-9]{64}$/i.test(vaultRegTrim)
+                    ? { vaultRegistryId: vaultRegTrim, vaultRegistryIdMasked: mask(vaultRegTrim) }
+                    : {}),
+                ...(cmdRegTrim && /^0x[a-fA-F0-9]{64}$/i.test(cmdRegTrim)
+                    ? { commandRegistryId: cmdRegTrim, commandRegistryIdMasked: mask(cmdRegTrim) }
+                    : {}),
+                ...(moveFeatures ? { moveFeatures } : {}),
+                upgradeCapConfigured: !!upgradeCapId,
+                ...(upgradeCapId
+                    ? {
+                          upgradeCapId,
+                          upgradeCapIdMasked: mask(upgradeCapId),
+                          upgradeCapResolvedFromChain,
+                      }
+                    : {}),
+                deployModeHint: upgradeCapId
+                    ? 'upgrade-fähig (npm run upgrade:move-package)'
+                    : 'nur Neu-Publish (UpgradeCap fehlt)',
+            },
             ...(CFG.ENABLE_BROADCAST_PINNWAND
                 ? {
                       broadcastPinnwand: {
@@ -273,6 +340,7 @@ export async function handleStatusRoutes(
                     mailboxId: CFG.MAILBOX_ID || '',
                     commandRegistryId: CFG.COMMAND_REGISTRY_ID || '',
                     vaultRegistryId: CFG.VAULT_REGISTRY_ID || '',
+                    upgradeCapId: CFG.UPGRADE_CAP_ID || '',
                     streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
                     streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
                     rpcUrl: (CFG.RPC_URL || '').trim(),
