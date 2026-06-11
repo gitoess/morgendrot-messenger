@@ -157,7 +157,8 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 
 | Key | Im ZIP typisch | Bedeutung |
 |-----|----------------|-----------|
-| **RPC_URL** | Ja | IOTA-Fullnode für Helfer-Node/PWA |
+| **RPC_URL** | Ja | IOTA-Fullnode für Helfer-Node/PWA — **Mainnet** (Modus B/C) oder **Testnet** (Modus A); siehe **`docs/ROADMAP-FAHRPLAN.md` § H.33** |
+| **EINSATZ_CHAIN_MODE** | **Backlog (H.33)** | `mainnet-direct` \| `testnet-with-mainnet-anchor` \| `mainnet-direct-no-rollup` — steuert Banner + optional Anker-UI |
 | **PACKAGE_ID** | Ja | Move-Package des **Einsatzes** (gemeinsam mit Boss) |
 | **MAILBOX_ID** | Oft | Primäres Shared/Team-Postfach (Object-ID 0x…) |
 | **USE_MAILBOX** | Mit MAILBOX_ID | Persistente Mailbox auf Chain |

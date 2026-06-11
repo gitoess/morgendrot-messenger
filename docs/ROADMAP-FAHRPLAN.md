@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-06-02** (neu **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-06-02** (neu **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Nachtrag 2026-04-15:** Messenger-Realworld **`test:messages*`** — Abschnitt **`/vault-save`** nutzt Server-Sitzung nach UI-Unlock (kein `UNLOCK_PASSWORD_*` nötig); **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop gekennzeichnet; npm **`test:tickets-accesskey-realworld`** = Tickets/Keys (Alias zu **`test:realworld`**); Chain **`hasValidTicket`** / **`hasValidAccessKey`** mit **`normalizeAddress`** + Pagination, normalisierte IDs in **`getOwnedTickets`** / **`getOwnedAccessKeys`**; Ticket-Realworld-Skript Retries + ECONNREFUSED-Hinweis; **`npm run check:pwa-desk`** (**§ H.2** A+B). Siehe **`docs/CHAT-PROTOKOLL-2026-03-28.md`**.
@@ -51,6 +51,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 | 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Offen** (Backlog) |
 | 12 | **§ H.32b** **Einsatz beenden** → **Cache/IDs** weg, kein Chain-Purge | Helfer nach Feldende, dann neues Handoff | **Offen** (Backlog) |
+| 13 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Backlog** (Spec) |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
 
@@ -1915,6 +1916,209 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 | 3 | Funk-Klartext → **Antworten** → Funk + richtige Node/Broadcast |
 | 4 | **Einsatz beenden** → Posteingang leer, **kein** Cache-Badge, alte `packageId`-Zeilen weg |
 | 5 | Neues Handoff importieren → nur Nachrichten des neuen Einsatzes (nach Aktualisieren) |
+
+---
+
+### H.33 Einsatz-On-Chain: **Mainnet direkt** \| Testnet + Anker (**Archiv, Kosten**)
+
+**Status:** **Backlog / Spec** (2026-06-02, **Nachtrag 2026-06-02:** Betriebsmodus **Mainnet direkt** als Produktions-Default). **Ziel:** Der Boss wählt **beim Handoff/Export** explizit, **wo** Nachrichten landen — nicht nur, ob am Ende ein Anker kommt.
+
+**Priorität:** **Nach** **§ H.32b** (Einsatz-Zyklus) und **§ H.22** (Kanäle stabil). **Vor** breiter **§ H.28**-Integration. **Parallel** zu **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`** (Einzel-/Stapel-Verankerung im Chat) — **H.33** ist der **Einsatz-weite Rollup-Pfad**, nicht der Bubble-Kontextmenü-Pfad.
+
+**Move-Skizze:** **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`** (`store_einsatz_manifest`).
+
+**Verknüpfung Netz-Profil:** **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** § **H.8** — **Mainnet direkt** = Dienst/Einsatz; **Testnet + Anker** = Übung mit Mainnet-Beweis am Ende.
+
+#### Betriebsmodi (Übersicht)
+
+| Modus | Handoff `RPC_URL` | Wo landen Nachrichten? | Anker / Rollup | Typische Kosten | Default |
+|-------|-------------------|------------------------|----------------|-----------------|---------|
+| **B — Mainnet direkt** | **Mainnet** | **Jede** Sende-TX (Pinnwand, Gruppe, 1:1, Mailbox) auf **Mainnet** | **Optional** — Perioden-Manifest auf **demselben** Netz (`source_network=mainnet`) | Gas **pro Nachricht** (~0,001–0,003 IOTA je Pfad) | **Produktion / Dienst** |
+| **A — Testnet + Mainnet-Anker** | **Testnet** | Alle Betriebs-TXs auf Testnet | **Empfohlen** — `store_einsatz_manifest` auf Mainnet (`source_network=testnet`) | Testnet ≈ 0 + **1×** Boss-Anker-TX | **Übung / große Demo** |
+| **C — Mainnet direkt, ohne Rollup** | Mainnet | Wie **B** | **Kein** Einsatz-Manifest — Beweis = **TX-Digest** im Posteingang / Explorer | Nur Nachrichten-Gas | Minimal-Archiv, wenn Einzel-TXs reichen |
+
+**Merksatz:** **Mainnet direkt** = **ein** Netz, **kein** Umweg über Testnet. Der Chat **ist** der Chain-Betrieb; Explorer-Links zeigen echte Einsatz-TXs. **Testnet + Anker** = **zwei** Netze: günstig chatten, teurer **einmaliger** Beweis am Ende.
+
+#### Kern-Idee — zwei Paradigmen
+
+**Paradigma 1 — Mainnet direkt (Option B/C):**
+
+```
+  Mainnet (Betrieb = Beweis)
+  ─────────────────────────
+  TX₁ … TXₙ  (jede Nachricht)
+       │
+       ├─► Posteingang / Explorer (sofortiger Nachweis)
+       └─► optional: store_einsatz_manifest(source_network=mainnet)
+           (Rollup für Export-Paket / Perioden-Audit — nicht Pflicht)
+```
+
+**Paradigma 2 — Testnet + Mainnet-Anker (Option A):**
+
+| Schicht | Netz | Was passiert | Kosten | Wer liest |
+|---------|------|--------------|--------|-----------|
+| **Betrieb** | **Testnet** | Normale Messenger-TXs | ≈ 0 | App, Posteingang, Helfer |
+| **Beweis** | **Mainnet** (Anker) | **Eine** PTB mit Merkle-Root + Manifest-Hash | 1× Gas (Boss) | Audit, Einsatzleitung |
+
+```
+  Testnet (Betrieb)                    Mainnet (Beweis)
+  ─────────────────                    ────────────────
+  TX₁ … TXₙ  (Nachrichten)    ──►      store_einsatz_manifest(
+  App sammelt refs                      source_network=testnet, …)
+```
+
+**Wichtig (beide Paradigmen):** Ein **Einsatz-Manifest** speichert on-chain **Referenzen** (Hashes, Root, Zeitraum), **nicht** automatisch den vollständigen Chat-Klartext. Bei **Mainnet direkt** existieren die Nachrichten **bereits** on-chain — das Manifest ist **Zusatz** für gebündelte Forensik/Export, kein Ersatz für die Einzel-TXs.
+
+#### Abgrenzung (keine Doppelarbeit)
+
+| Thema | § H.33 (dieser Abschnitt) | Bestehende Spec |
+|-------|---------------------------|-----------------|
+| **Auslöser** | Boss/Einsatzleitung: **täglich / wöchentlich / Einsatz-Ende** | Nutzer: **„Protokoll verankern“** pro Auswahl/Thread |
+| **Umfang** | **Gesamter Einsatz** (Pinnwand + Gruppe + 1:1-Filter) | **Auswahl** oder Thread |
+| **Netz** | **Mainnet direkt** *oder* **Testnet → Mainnet-Anker** | **Gleiches Netz** wie Betrieb (Standard) |
+| **Manifest** | **`MORG_EINSATZ_MANIFEST_V1`** (Rollup) | **`PROTOCOL-ANCHOR-VERIFY`** Merkle + Manifest (Einzel/Stapel) |
+
+Beide Paradigmen können **dieselbe Move-Registry** nutzen (`store_einsatz_manifest`); H.33 definiert **Rollup-Semantik** und **`source_network`**-Metadaten.
+
+#### H.33a — Betriebsmodus wählen (Handoff / Export)
+
+**Ist:** Pro Deployment genau **ein** `RPC_URL` + **ein** `PACKAGE_ID` (`src/config.ts`, Handoff-`.env`). Kein UI-Schalter Testnet/Mainnet in der App.
+
+**Soll (Spec):** Boss wählt im **Export-Assistenten** (oder Boss-`.env`) den **Einsatz-Kettenmodus** — schreibt sich in Handoff + README:
+
+| UI / Spec-Feld (Vorschlag) | Wert | Handoff-Auswirkung |
+|----------------------------|------|-------------------|
+| **`EINSATZ_CHAIN_MODE=mainnet-direct`** | **B** (Default Produktion) | `RPC_URL` = Mainnet-Fullnode; `PACKAGE_ID` = **Mainnet-Deploy**; Helfer senden **direkt** on-chain |
+| **`EINSATZ_CHAIN_MODE=testnet-with-mainnet-anchor`** | **A** | `RPC_URL` = Testnet; Boss-`.env` zusätzlich `MAINNET_RPC_URL` + `EINSATZ_MANIFEST_REGISTRY_ID` **nur Boss** |
+| **`EINSATZ_CHAIN_MODE=mainnet-direct-no-rollup`** | **C** | Wie B, UI blendet „Einsatz-Protokoll verankern“ aus (nur Einzel-TX-Beweis) |
+
+**Zielbild Option B — Mainnet direkt (Produktion, empfohlen):**
+
+- Boss deployt Move **einmal auf Mainnet**; Handoff-ZIPs tragen **dieselbe** `PACKAGE_ID` + Mainnet-`RPC_URL`.
+- Jede Pinnwand-/Gruppen-/1:1-TX ist **sofort** Mainnet-nachweisbar (`source_tx_digest` = echte Betriebs-TX).
+- **Optional:** Perioden-Rollup (`store_einsatz_manifest`, `source_network=mainnet`) für Export-ZIP / Einsatz-Abschluss — **zusätzlich**, nicht statt Einzel-TXs.
+- **Kein** zweites Netz, **kein** `MAINNET_RPC_URL` für Helfer (nur normales Gas-Wallet).
+
+**Zielbild Option A — Testnet-Einsatz + Mainnet-Beweis (Übung):**
+
+- Boss-Handoff exportiert **`RPC_URL=testnet`**, Helfer chatten on-chain auf Testnet.
+- **`source_network=testnet`** in jedem Manifest-Eintrag.
+- Mainnet-Wallet des Boss **nur** für Anker-TXs (separates Guthaben); Helfer **ohne** Mainnet-Gas.
+
+**Zielbild Option C — Mainnet direkt, minimal:**
+
+- Wie **B**, aber **kein** Einsatz-Manifest in v1 — Audit über Explorer + **Protokoll exportieren** (ZIP) + ggf. **`PROTOCOL-ANCHOR-VERIFY`** pro Thread.
+- Für Organisationen, die **volle** On-Chain-Historie pro Nachricht wollen und Rollup-Kosten sparen wollen.
+
+**Produkt-Default (Vorschlag):** **Option B** für **Dienst/Einsatz**; **Option A** nur mit explizitem Opt-in und Banner **„Testnet — kein Mainnet-Betrieb“**; **Option C** als Preset „Mainnet ohne Rollup“.
+
+**Entscheidungshilfe:**
+
+| Anforderung | Modus |
+|-------------|-------|
+| Nachweis **sofort** pro Nachricht auf der **Produktionskette** | **B** oder **C** |
+| Minimale Kosten während des Einsatzes | **A** (+ Anker am Ende) |
+| Forensik-Paket (Merkle + Manifest-Datei) trotz Mainnet-Betrieb | **B** (Rollup optional) |
+| Kein Boss-Anker-Workflow nötig | **C** |
+
+#### H.33b — Manifest-Inhalt (`MORG_EINSATZ_MANIFEST_V1`)
+
+Kanonical off-chain JSON (Boss-App baut, SHA-256 → `manifest_hash`; Merkle über Einträge → `merkle_root`). An **`canonical_msg_ref`** aus **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** anlehnen.
+
+| Feld | Typ | Pflicht | Bedeutung |
+|------|-----|---------|-----------|
+| `manifest_version` | `1` | ja | Schema-Version |
+| `einsatz_id` | string (UUID oder Handoff-Label-Hash) | ja | Stabil über Handoff-Import |
+| `handoff_label` | string | nein | Anzeige |
+| `period_start_ms` / `period_end_ms` | u64 | ja | Abgedeckter Zeitraum |
+| `source_network` | `testnet` \| `mainnet` | ja | Wo die referenzierten TXs lagen |
+| `source_package_id` | 0x…64 | ja | Package auf Quell-Netz |
+| `entries[]` | Array | ja | Siehe unten |
+| `merkle_root` | 32 B hex | ja | Über sortierte `entry_hash` |
+| `manifest_hash` | 32 B | ja | SHA-256 kanonisches JSON (ohne dieses Feld) |
+
+**Pro Eintrag (`entries[]`):**
+
+| Feld | Inhalt |
+|------|--------|
+| `canonical_msg_ref` | 32 B (Spec Delayed Upload) |
+| `entry_hash` | SHA-256(ref ‖ sender ‖ ts ‖ content_hash) |
+| `source_tx_digest` | optional — Testnet/Mainnet-TX, die die Nachricht schrieb |
+| `primary_transport` | `iota` \| `lora` \| `bluetooth` \| `sneakernet` (Spec Protokoll-Anker) |
+| `channel` | `1:1` \| `group` \| `pinnwand` \| `telegram` |
+| `sender` / `recipient_or_board` | 0x…64 oder Brett-Adresse |
+
+**Größe:** Manifest **off-chain** (ZIP-Anhang, IPFS optional, Boss-Server-Datei). On-chain nur **Root + Hash + Zähler** — PTB-Limit **~128 KiB** (`chain-access.ts`) bleibt unberührt.
+
+#### H.33c — Boss-Workflow (UX)
+
+**Modus B/C (Mainnet direkt):**
+
+1. Handoff/Export mit **Mainnet-`RPC_URL`** — Banner **„Mainnet / Dienst“** (siehe **§ H.8**).
+2. Helfer senden normal; Posteingang zeigt **Mainnet-Explorer-Links** pro Nachricht.
+3. **Optional (B):** Einsatzleitung → **„Einsatz-Protokoll verankern“** — sammelt **dieselben** Mainnet-`source_tx_digest`-Werte in ein Rollup-Manifest (`source_network=mainnet`).
+4. **C:** Schritt 3 ausgeblendet; Abschluss = Export-ZIP + Explorer.
+
+**Modus A (Testnet + Anker):**
+
+1. Handoff mit **Testnet-`RPC_URL`** — Banner **„Testnet — Anker auf Mainnet am Einsatz-Ende“**.
+2. **Einsatzleitung → „Einsatz-Protokoll verankern“** (Expert) oder bei **§ H.32b Einsatz beenden** (Checkbox: **„Beweis auf Mainnet schreiben“** — **empfohlen**, fast Pflicht für forensischen Wert).
+3. App listet **neue** Einträge seit letztem Anker (`last_anchored_sequence`).
+4. Vorschau: Anzahl Nachrichten, `manifest_hash`, geschätzte **Mainnet**-Kosten, **Testnet-Hinweis**.
+5. Boss signiert **eine Mainnet-TX** (`store_einsatz_manifest`, `source_network=testnet`) — **separater** Mainnet-Client/Wallet.
+6. Erfolg: Explorer-Link (Mainnet) + **„Manifest-Datei speichern“** (Pflicht für Forensik).
+
+**Nicht-Ziel v1:** Automatisches Mainnet-Batching **ohne** Boss-Signatur; Helfer-seitiges Anker-Senden (Modus A); Klartext on-chain im Rollup.
+
+#### H.33d — Verifikation
+
+| Modus | Schritte |
+|-------|----------|
+| **B/C — Mainnet direkt** | 1) `source_tx_digest` im **Mainnet**-Explorer öffnen → Nachricht/ Event sichtbar. 2) Optional (B): Manifest + `store_einsatz_manifest`-TX; Merkle-Proof gegen `merkle_root`. |
+| **A — Testnet + Anker** | 1) Manifest-Datei + **Mainnet**-Anker-TX laden. 2) `manifest_hash` recomputen. 3) Merkle-Proof. 4) `source_tx_digest` auf **Testnet**-Explorer prüfen. |
+
+UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain (Mainnet)“** Badge pro Nachricht (Modus B/C).
+
+#### H.33e — Phasen & Aufwand
+
+| Phase | Inhalt | Aufwand |
+|-------|--------|---------|
+| **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
+| **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | Mittel |
+| **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | Mittel–Hoch |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | Mittel |
+| **5 — Verifikation** | Import Manifest + Match Posteingang | Mittel |
+
+**Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
+
+#### H.33 — Nicht-Ziele
+
+- **Kein** Bridge-Protokoll, das Testnet-Mailbox-Objekte auf Mainnet **spiegelt** (Modus A referenziert Testnet-TXs, **migriert** sie nicht).
+- **Kein** Ersatz für **§ H.32b** Cache-Wipe (Anker ≠ lokales Aufräumen).
+- **Kein** Pflicht-Anker in **Modus B/C** — Mainnet direkt reicht mit Einzel-TXs.
+- **Kein** verstecktes Testnet in Produktions-Handoffs (Modus muss **explizit** gewählt sein).
+
+#### Verknüpfung
+
+- **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`** — Einzelnachricht / Thread-Verankerung, Merkle-Standard
+- **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** — `canonical_msg_ref`, Queue
+- **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** — Archiv-TX als Querschnitt
+- **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** — PTB-Größe, Gas
+- **`docs/EXPORT-ASSISTENT-REFERENZ.md`** — Handoff-Felder (`RPC_URL`, künftig `EINSATZ_CHAIN_MODE`)
+- **`move-test/sources/messaging.move`** — bestehende Registry-Muster
+
+- **`docs/EINSATZ-BOSS-ABLAUF.md`** — Boss-Rolle, Handoff
+
+#### H.33 — Testplan (Schreibtisch)
+
+| # | Check |
+|---|--------|
+| 1 | **Modus B:** 3 Mainnet-Nachrichten → Explorer-Link je TX; optional Manifest mit `source_network=mainnet` |
+| 2 | **Modus A:** 3 Testnet-Nachrichten → Manifest → `merkle_root` stabil bei gleicher Sortierung |
+| 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) |
+| 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) |
+| 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel |
+| 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset |
 
 ---
 
