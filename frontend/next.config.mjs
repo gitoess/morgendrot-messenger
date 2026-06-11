@@ -1,4 +1,5 @@
 import path from 'node:path'
+import os from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 
@@ -38,7 +39,35 @@ const extraDevOrigins = (process.env.NEXT_ALLOWED_DEV_ORIGINS || '')
   .map(normalizeAllowedDevOrigin)
   .filter(Boolean)
 
-const defaultDevOrigins = ['localhost', '127.0.0.1', 'localhost:3341', '127.0.0.1:3341']
+/** LAN-IPs für Handy-Zugriff auf Next-Dev (WLAN-QR ohne extra Skript). */
+function collectLanIpv4DevOrigins() {
+  const uiPort = String(process.env.UI_PORT || '3341').trim() || '3341'
+  const hosts = []
+  for (const entries of Object.values(os.networkInterfaces())) {
+    for (const net of entries ?? []) {
+      const family = net.family
+      const isV4 = family === 'IPv4' || family === 4
+      if (!isV4 || net.internal) continue
+      const addr = net.address.trim()
+      if (!/^\d+\.\d+\.\d+\.\d+$/.test(addr)) continue
+      if (addr.startsWith('127.') || addr.startsWith('169.254.')) continue
+      const [a, b] = addr.split('.').map((x) => parseInt(x, 10))
+      const lan =
+        a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168)
+      if (!lan) continue
+      hosts.push(addr, `${addr}:${uiPort}`)
+    }
+  }
+  return [...new Set(hosts)]
+}
+
+const defaultDevOrigins = [
+  'localhost',
+  '127.0.0.1',
+  'localhost:3341',
+  '127.0.0.1:3341',
+  ...collectLanIpv4DevOrigins(),
+]
 
 /** Client-only: @meshtastic/core → Node `util.formatWithOptions`; Next's `util` stub lacks it. */
 const nodeUtilClientShim = path.join(__dirname, 'frontend/lib/node-util-client-shim.ts')

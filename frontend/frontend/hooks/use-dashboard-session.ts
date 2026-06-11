@@ -32,6 +32,7 @@ import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basi
 import { resolveStandaloneDeviceLocked } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import {
   clearDirectIotaSessionSigner,
+  getDirectIotaSessionSigner,
   hasPersistedDirectIotaSessionSigner,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
@@ -95,6 +96,43 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const vaultHasLocalRef = useRef(false)
   const signerIsSdkRef = useRef(false)
   const restoredDashboardViewRef = useRef(false)
+  /** Hält Entsperr-Dialog offen, bis Keys in der Sitzung sind (Poll setzt sonst locked=false). */
+  const vaultUnlockRequestedRef = useRef(false)
+  /** Entsperrt und stabil — verhindert kurzen Login-Dialog bei einem transienten locked-Poll. */
+  const sessionUnlockedStableRef = useRef(false)
+  const lockPollStreakRef = useRef(0)
+
+  const applyLockedFromStatusPoll = useCallback(
+    (defaultLocked: boolean, res: { locked?: boolean; hasKeys?: boolean }) => {
+      if (vaultUnlockRequestedRef.current) {
+        const keysReady =
+          res.hasKeys === true && !res.locked
+            ? true
+            : isStandaloneMessengerWithoutBasis() && !!getDirectIotaSessionSigner()
+        if (keysReady) {
+          vaultUnlockRequestedRef.current = false
+          sessionUnlockedStableRef.current = true
+          lockPollStreakRef.current = 0
+          setLocked(false)
+        } else {
+          setLocked(true)
+        }
+        return
+      }
+      if (!defaultLocked) {
+        lockPollStreakRef.current = 0
+        sessionUnlockedStableRef.current = true
+        setLocked(false)
+        return
+      }
+      lockPollStreakRef.current += 1
+      if (!sessionUnlockedStableRef.current || lockPollStreakRef.current >= 2) {
+        sessionUnlockedStableRef.current = false
+        setLocked(true)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
     const prev = prevLockedRef.current
@@ -190,7 +228,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       console.warn('[status] Unerwarteter Fehler beim Status-Poll.', e)
       setBackendReachable(false)
       setConnected(false)
-      if (!isStandaloneMessengerWithoutBasis()) setLocked(true)
       return
     }
     if ('pollClockHint' in res) {
@@ -217,15 +254,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       )
 
       if (liveBackend) {
-        setLocked(!!res.locked)
+        applyLockedFromStatusPoll(!!res.locked, res)
         vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
         signerIsSdkRef.current = res.signer === 'sdk'
       } else if (standaloneWithoutBasis) {
-        setLocked(resolveStandaloneDeviceLocked())
+        applyLockedFromStatusPoll(resolveStandaloneDeviceLocked(), res)
         vaultHasLocalRef.current = false
         signerIsSdkRef.current = true
       } else {
-        setLocked(!!res.locked)
+        applyLockedFromStatusPoll(!!res.locked, res)
         vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
         signerIsSdkRef.current = res.signer === 'sdk'
       }
@@ -242,15 +279,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       if (standaloneWithoutBasis) {
         setLocked(resolveStandaloneDeviceLocked())
         signerIsSdkRef.current = true
-      } else {
-        setLocked(true)
       }
     }
-  }, [])
+  }, [applyLockedFromStatusPoll])
 
   useEffect(() => {
     void checkStatus()
-    const ms = backendReachable === false ? 3_000 : 10_000
+    const inChat = activeView?.type === 'chat'
+    const ms = backendReachable === false ? 3_000 : inChat ? 20_000 : 12_000
     const interval = window.setInterval(() => void checkStatus(), ms)
     const onApiBase = () => void checkStatus()
     const onDirectIotaUi = () => void checkStatus()
@@ -261,17 +297,23 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       if (shouldShowHelperSeedSetupDialog()) {
         window.dispatchEvent(new CustomEvent(HELPER_SEED_SETUP_REQUEST_EVENT))
       }
+      sessionUnlockedStableRef.current = false
+      lockPollStreakRef.current = 0
       setLocked(resolveStandaloneDeviceLocked())
     }
     window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoffApplied)
     const onOnboardingChanged = () => {
       void checkStatus()
+      sessionUnlockedStableRef.current = false
+      lockPollStreakRef.current = 0
       setLocked(resolveStandaloneDeviceLocked())
     }
     const onSoloWalletSetup = () => {
       setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
       setShowSignerImportOpen(false)
       setUnlockError('')
+      sessionUnlockedStableRef.current = false
+      lockPollStreakRef.current = 0
       setLocked(true)
       void checkStatus()
     }
@@ -285,7 +327,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       window.removeEventListener(STANDALONE_ONBOARDING_CHANGED_EVENT, onOnboardingChanged)
       window.removeEventListener(STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT, onSoloWalletSetup)
     }
-  }, [checkStatus, backendReachable])
+  }, [checkStatus, activeView?.type, backendReachable])
 
   const { directory: contactDirectory, refresh: refreshContactDirectory } = useContactDirectory()
 
@@ -500,6 +542,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
       setUnlocking(false)
       if (unlockResult.ok) {
+        vaultUnlockRequestedRef.current = false
+        sessionUnlockedStableRef.current = true
+        lockPollStreakRef.current = 0
         setPassword('')
         setPasswordConfirm('')
         setSignerImport('')
@@ -516,6 +561,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const res = await unlockBackend(password, { sdkSignerImport: sdkExtra })
     setUnlocking(false)
     if (res.ok) {
+      vaultUnlockRequestedRef.current = false
+      sessionUnlockedStableRef.current = true
+      lockPollStreakRef.current = 0
       setPassword('')
       setPasswordConfirm('')
       setSignerImport('')
@@ -529,7 +577,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         if (!('pollClockHint' in s)) continue
         if (s.connected) {
           setConnected(true)
-          setLocked(!!s.locked)
+          applyLockedFromStatusPoll(!!s.locked, s)
           break
         }
         if (s.locked) break
@@ -554,6 +602,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     signerImport,
     signerImportConfirm,
     showSignerImportOpen,
+    applyLockedFromStatusPoll,
     checkStatus,
   ])
 
@@ -572,6 +621,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [navigateTo])
 
   const lockSession = useCallback(async () => {
+    vaultUnlockRequestedRef.current = false
+    sessionUnlockedStableRef.current = false
+    lockPollStreakRef.current = 0
     if (isStandaloneMessengerWithoutBasis()) {
       clearDirectIotaSessionSigner()
       setLocked(resolveStandaloneDeviceLocked())
@@ -587,7 +639,16 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     return r
   }, [checkStatus, navigateTo])
 
+  const requestVaultUnlock = useCallback(() => {
+    vaultUnlockRequestedRef.current = true
+    sessionUnlockedStableRef.current = false
+    lockPollStreakRef.current = 0
+    setUnlockError('')
+    setLocked(true)
+  }, [])
+
   const requestStandaloneWalletUnlock = useCallback(() => {
+    vaultUnlockRequestedRef.current = true
     const readiness = getStandaloneHelperReadiness()
     if (
       readiness.standaloneMode &&
@@ -624,19 +685,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         await lockSession()
       },
       onNavigateHomeWhenLocked: () => {
-        navigateTo(null)
         if (isStandaloneMessengerWithoutBasis()) {
-          if (apiSnapshot?.hasKeys !== true) {
-            requestStandaloneWalletUnlock()
-          }
+          requestStandaloneWalletUnlock()
           return
         }
-        if (apiSnapshot?.locked === true || apiSnapshot?.hasKeys !== true) {
-          setLocked(true)
-        }
+        requestVaultUnlock()
       },
     }),
-    [apiSnapshot?.hasKeys, apiSnapshot?.locked, navigateTo, lockSession, requestStandaloneWalletUnlock]
+    [lockSession, requestStandaloneWalletUnlock, requestVaultUnlock]
   )
 
   const openHelp = useCallback(async () => {

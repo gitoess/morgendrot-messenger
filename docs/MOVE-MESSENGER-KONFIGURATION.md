@@ -213,7 +213,7 @@ Capability/NFT-Lizenzen: erst sinnvoll, wenn Move **Capabilities bei Store/Purge
 
 1. Dev: `npm run upgrade:move-package` (UpgradeCap in `.env`)
 2. Boss: Backend neu starten — **kein** neues Handoff
-3. Einsatzleitung → Einsatz-Konfiguration: Move-Funktionen prüfen
+3. Einsatzleitung → **Erweitert** → Chain-Status: Move-Funktionen prüfen
 
 Details: **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**.
 

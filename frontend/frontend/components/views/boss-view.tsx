@@ -13,6 +13,7 @@ import {
   Download,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BossProject } from '../../../components/projects/boss-project'
 import {
   setBossRole,
   sendBossCommand,
@@ -270,6 +271,10 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
     setHandoffBusy(false)
     if (r.ok) showStatus(true, 'ZIP gespeichert (Handoff-.env + README).')
     else showStatus(false, r.error || 'Download fehlgeschlagen')
+  }
+
+  if (variant === 'pinnwand-admin') {
+    return <BossProject variant="pinnwand-admin" />
   }
 
   return (
@@ -608,19 +613,6 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
         </>
       )}
 
-      {variant === 'pinnwand-admin' && (
-        <div className="rounded-xl border border-border bg-card p-6 text-center">
-          <Radio className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h3 className="text-lg font-semibold text-foreground">Pinnwand-Verwaltung</h3>
-          <p className="mt-2 text-muted-foreground">
-            Verwalte hier deine Broadcast-Kanäle und Abonnenten.
-          </p>
-          <p className="mt-4 text-sm text-muted-foreground">
-            Diese Funktion verwendet die gleichen Befehle wie der Boss-Modus,
-            aber speziell für Pinnwand-Nachrichten.
-          </p>
-        </div>
-      )}
       <datalist id="boss-address-suggestions">
         {knownAddressSuggestions.map((addr) => (
           <option key={addr} value={addr} />

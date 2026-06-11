@@ -111,13 +111,13 @@
 |---------|---------|--------|
 | **Moderation** | UI zeigt, wer schreiben darf (`BROADCAST_AUTHORIZED_SENDERS` / Rolle) | **✓** via `broadcastPinnwand` in `/api/status` + Kontext-Karte |
 | **Pinning** | Wichtige Posts oben (zuerst **lokal** / `sessionStorage`, optional Move später) | **✓** `pinnwand-pin-store.ts`, Menü im Posteingang |
-| **Lesen für alle** | Filter Posteingang „Pinnwand“; Doku Einsatz | **✓** Kanal + Klartext-Filter; Empfänger aus Status |
-| **Rollen-UX** | Helfer: Lagebild-Streifen + Tab „Lagebild“; Führung: Tab + Schreiben | **✓** `docs/PINNWAND-ANZEIGE-ZIELBILD.md` |
+| **Lesen für alle** | Filter Posteingang „Pinnwand“; dedizierter **Lagebild-Feed** im Kanal-Tab; Doku Einsatz | **✓** Kanal-Feed + Klartext-Filter; Empfänger aus Status |
+| **Rollen-UX** | Helfer: Pinnwand-Streifen + Tab „Pinnwand“ (eigener Feed); Führung: Tab + Schreiben + Moderation | **✓** `docs/PINNWAND-ANZEIGE-ZIELBILD.md` |
 | **Feste Brett-0x** | Composer: Empfänger read-only; Handoff übernimmt Brett-Adresse | **✓** |
 | **Ungelesen / Badge** | Kategorie, Tab, Streifen (lokal) | **✓** `inbox-overview-unread.ts` |
 | **Push / Wichtigkeit / Lese-Statistik** | Feldtest | **Backlog** |
 
-**Bezug:** Kachel **`pinnwand-admin`** (Boss) — **Stub**; Konfiguration **`.env`** + automatisch im Handoff-ZIP wenn aktiv.
+**Bezug:** Kachel **`pinnwand-admin`** (Boss) — **✓** Runtime-Konfiguration (`ENABLE_BROADCAST_PINNWAND`, Adresse, Whitelist) via `BossProject`; Handoff-ZIP wenn aktiv.
 
 ---
 

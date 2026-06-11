@@ -63,6 +63,8 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   contactDirectory: Record<string, ContactMeshEntryClient>
   activeGroup: MessengerGroupDefinition | null
   isGroupChannel: boolean
+  /** Kanal-Tab Pinnwand — Klartext erhält `[[MORG_PINNWAND_V1]]`-Marker. */
+  isPinnwandChannel?: boolean
   /** Leer = Event; gültige Mailbox-0x = persistent. */
   composerMailboxObjectId?: string
 }

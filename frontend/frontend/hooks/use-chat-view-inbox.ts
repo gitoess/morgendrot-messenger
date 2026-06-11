@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchInboxFromAllOwnedMailboxes } from '@/frontend/lib/inbox-multi-mailbox-fetch'
+import { collectInboxAlsoMailboxIds } from '@/frontend/lib/inbox-also-mailbox-ids'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import {
   ACTIVE_MAILBOX_CHANGED_EVENT,
@@ -236,15 +237,19 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           })
         }
 
-        /** Shared (immer) + aktive private Mailbox (M4d), falls gesetzt. */
+        /** Shared (immer) + Team-Postfächer + aktive private Mailbox (M4d), falls gesetzt. */
         const mergeLocal = false
+        const teamMailboxIds = collectInboxAlsoMailboxIds()
+        const alsoMbMerged = [...new Set([...(alsoMailboxIds ?? []), ...teamMailboxIds].map((id) => id.trim().toLowerCase()))].filter(
+          (id) => /^0x[a-f0-9]{64}$/.test(id)
+        )
         const res = await fetchInboxFromAllOwnedMailboxes({
           limit: pageSize,
           offset,
           packageId: pkg,
           mergeLocalInbox: mergeLocal,
           includePrivateMailboxes: true,
-          alsoMailboxIds,
+          alsoMailboxIds: alsoMbMerged,
           silent,
         })
         const raw = res.ok ? res.messages : null

@@ -39,7 +39,7 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     expect(r.error).toMatch(/direct skipped/)
   })
 
-  it('private Mailbox: Direkt-RPC mit mailboxObjectId, ohne /inbox', async () => {
+  it('private Mailbox: Direkt-RPC mit mailboxObjectId, ohne /inbox für private', async () => {
     readActiveSendMailboxObjectId.mockReturnValue(MB_A)
     tryFetchDirectMailboxInboxViaIota
       .mockResolvedValueOnce({
@@ -50,10 +50,11 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
         ok: true,
         rows: [{ sender: '0xs', text: 'private rpc', isPlain: true, nonce: '2', chainPurgeable: true }],
       })
+    fetchInbox.mockResolvedValueOnce({ ok: true, messages: [] })
     const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: true })
     expect(r.ok).toBe(true)
     expect(r.loadedViaRpc).toBe(true)
-    expect(fetchInbox).not.toHaveBeenCalled()
+    expect(fetchInbox).toHaveBeenCalledTimes(1)
     expect(tryFetchDirectMailboxInboxViaIota).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({ mailboxObjectId: MB_A, offset: 0 })
@@ -61,10 +62,14 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     expect(r.messages.some((m) => m.content.includes('private rpc'))).toBe(true)
   })
 
-  it('Shared-Posteingang: Direkt-RPC zuerst, API nur bei Misserfolg', async () => {
+  it('Shared-Posteingang: Direkt-RPC + API-Union wenn Relay erreichbar', async () => {
     tryFetchDirectMailboxInboxViaIota.mockResolvedValueOnce({
       ok: true,
       rows: [{ sender: '0xs', text: 'via rpc', isPlain: true, nonce: '1', chainPurgeable: true }],
+    })
+    fetchInbox.mockResolvedValueOnce({
+      ok: true,
+      messages: [{ sender: '0xs', text: 'via api', isPlain: true, nonce: '2', chainPurgeable: true }],
     })
     const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: false })
     expect(r.ok).toBe(true)
@@ -72,6 +77,20 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     expect(tryFetchDirectMailboxInboxViaIota).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 50, offset: 0 })
     )
+    expect(fetchInbox).toHaveBeenCalledTimes(1)
+    expect(r.messages.some((m) => m.content.includes('via rpc'))).toBe(true)
+    expect(r.messages.some((m) => m.content.includes('via api'))).toBe(true)
+  })
+
+  it('Shared-Posteingang: nur Direkt-RPC im Standalone-Modus', async () => {
+    shouldSkipMessengerApiRelayFallback.mockReturnValue(true)
+    tryFetchDirectMailboxInboxViaIota.mockResolvedValueOnce({
+      ok: true,
+      rows: [{ sender: '0xs', text: 'via rpc', isPlain: true, nonce: '1', chainPurgeable: true }],
+    })
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: false })
+    expect(r.ok).toBe(true)
+    expect(r.loadedViaRpc).toBe(true)
     expect(fetchInbox).not.toHaveBeenCalled()
     expect(r.messages.some((m) => m.content.includes('via rpc'))).toBe(true)
   })

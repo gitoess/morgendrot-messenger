@@ -9,10 +9,17 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
+import { resolveOverviewFilteredInboxMessages } from '@/frontend/lib/inbox-overview-filter'
+import {
+  countUnreadInboxByOverviewCategory,
+  inboxScopeKey,
+  markInboxOverviewCategorySeenFromMessages,
+  readInboxOverviewLastSeen,
+} from '@/frontend/lib/inbox-overview-unread'
 import {
   filterInboxMessagesByPartnerAndDirection,
   messageCounterpartyAddress,
-  messagePureInternetInboxRow,
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
   uniqueCounterpartyAddresses,
@@ -21,6 +28,10 @@ import {
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import type { Message } from '@/frontend/lib/types'
 import { messageMatchesInboxWireFilter, type InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import {
+  messageMatchesInboxSourceFilter,
+  type InboxSourceFilter,
+} from '@/frontend/lib/inbox-source-filter'
 import {
   clearInboxBrowserViewFilters,
   INBOX_FILTERS_CLEARED_EVENT,
@@ -38,26 +49,13 @@ import {
   type PinnwandMatchContext,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import {
-  filterInboxByOverviewCategory,
-  type InboxOverviewCategory,
-} from '@/frontend/lib/inbox-overview-filter'
-import {
-  countUnreadInboxByOverviewCategory,
-  inboxScopeKey,
-  markInboxOverviewCategorySeenFromMessages,
-  readInboxOverviewLastSeen,
-} from '@/frontend/lib/inbox-overview-unread'
-import {
   countUnreadByPartner,
   isInboxMessageUnreadForPartner,
   markPartnerSeenFromMessages,
   readPartnerLastSeenMap,
 } from '@/frontend/lib/inbox-partner-unread'
 import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
-
-function messageHasMeshTransport(m: Message): boolean {
-  return messageTouchesMeshTransport(m)
-}
+import { selectPinnwandFeedMessages } from '@/frontend/lib/pinnwand-feed-messages'
 
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
@@ -71,18 +69,12 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setStatusMsg: (msg: string) => void
   myAddress: string
   contactDirectory: Record<string, ContactMeshEntryClient>
-  /** M2: Union-Filter für Gruppenmitglieder */
-  groupMemberFilter?: string[] | null
-  /** M2c: Team-Mailbox für Broadcast-Zeilen im Gruppen-Posteingang */
+  /** Team-Mailbox für Gruppen-Broadcast-Erkennung im Kanal-Filter. */
   teamMailboxObjectId?: string | null
-  isGroupMode?: boolean
-  /** M3: Anheften im Pinnwand-Kanal */
-  isPinnwandMode?: boolean
   /** M3: Brett-Kontext für Lagebild-Erkennung (Empfänger + ggf. Whitelist). */
   pinnwandMatchContext?: PinnwandMatchContext | null
-  /** Helfer/Simple: Kategorie-Chips (Alle / Lagebild / Direkt / Funk). */
+  /** Helfer/Simple: Kategorie-Chips + Listenfilter (Lagebild aus „Alle“ wenn Streifen). */
   inboxOverviewEnabled?: boolean
-  /** Lagebild oben im Streifen — aus „Alle“-Liste ausblenden. */
   excludePinnwandFromOverviewAlle?: boolean
 }
 
@@ -96,14 +88,15 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setStatusMsg,
     myAddress,
     contactDirectory,
-    groupMemberFilter = null,
     teamMailboxObjectId = null,
-    isGroupMode = false,
-    isPinnwandMode = false,
     pinnwandMatchContext = null,
     inboxOverviewEnabled = false,
     excludePinnwandFromOverviewAlle = false,
   } = p
+
+  const [inboxChannelFiltersArmed, setInboxChannelFiltersArmedState] = useState(false)
+  const [inboxWireFiltersArmed, setInboxWireFiltersArmedState] = useState(false)
+  const [inboxPartnerFiltersArmed, setInboxPartnerFiltersArmedState] = useState(false)
 
   const [pinnedPinnwandIds, setPinnedPinnwandIds] = useState<Set<string>>(() => new Set())
   const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
@@ -118,11 +111,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (h) setHiddenInboxIds(new Set(JSON.parse(h) as string[]))
       const pr = sessionStorage.getItem('morg.protokoll.marked.ids')
       if (pr) setProtokollMarkedIds(new Set(JSON.parse(pr) as string[]))
-      if (isPinnwandMode) setPinnedPinnwandIds(readPinnedPinnwandIds())
+      setPinnedPinnwandIds(readPinnedPinnwandIds())
     } catch {
       /* ignore */
     }
-  }, [isPinnwandMode])
+  }, [])
 
   const displayMessages = useMemo(
     () =>
@@ -135,8 +128,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   /** Schnellfilter: Gesprächspartner + Kanal (Eingang/Ausgang). */
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
-  const [inboxMeshTransportOnly, setInboxMeshTransportOnly] = useState(false)
-  const [inboxIotaTransportOnly, setInboxIotaTransportOnly] = useState(false)
+  const [inboxSourceFilter, setInboxSourceFilterState] = useState<InboxSourceFilter>('all')
   const [inboxWireFilter, setInboxWireFilterState] = useState<InboxWireFilter>('all')
   const [inboxOverviewCategory, setInboxOverviewCategoryState] =
     useState<InboxOverviewCategory>('alle')
@@ -152,19 +144,15 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   useEffect(() => {
     if (typeof window === 'undefined') return
     try {
-      /** Transport-Filter (Nur Funk/Nur IOTA) nicht aus alter Session — blendet Mailbox/verschlüsselt aus. */
-      setInboxMeshTransportOnly(false)
-      setInboxIotaTransportOnly(false)
+      /** Transport-Filter nicht aus alter Session — gesamter Posteingang standardmäßig. */
       try {
         sessionStorage.setItem(MESH_INBOX_ONLY_LS, '0')
         sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
-        const rawWire = sessionStorage.getItem(INBOX_WIRE_FILTER_LS)
-        const wire: InboxWireFilter =
-          rawWire === 'encrypted' || rawWire === 'plaintext' || rawWire === 'all' ? rawWire : 'all'
-        setInboxWireFilterState(wire)
+        sessionStorage.setItem(INBOX_WIRE_FILTER_LS, 'all')
       } catch {
-        setInboxWireFilterState('all')
+        /* ignore */
       }
+      setInboxWireFilterState('all')
       let blockedNorms = new Set<string>()
       const rawBlocked = window.localStorage.getItem(INBOX_PARTNER_MEMORY_BLOCKED_LS)
       if (rawBlocked) {
@@ -204,9 +192,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setHiddenInboxIds(new Set())
       setInboxPartnerKey(null)
       setInboxDirectionFilter('all')
-      setInboxMeshTransportOnly(false)
-      setInboxIotaTransportOnly(false)
+      setInboxSourceFilterState('all')
       setInboxWireFilterState('all')
+      setInboxChannelFiltersArmedState(false)
+      setInboxWireFiltersArmedState(false)
+      setInboxPartnerFiltersArmedState(false)
     }
     window.addEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
     return () => window.removeEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
@@ -254,26 +244,6 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     })
   }, [observedPartnerNormsKey, inboxPartnerBlockedNorms])
 
-  const setInboxMeshTransportOnlyPersist = useCallback((v: boolean) => {
-    setInboxMeshTransportOnly(v)
-    if (v) {
-      setInboxIotaTransportOnly(false)
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem(IOTA_INBOX_ONLY_LS, '0')
-        } catch {
-          /* ignore */
-        }
-      }
-    }
-    if (typeof window === 'undefined') return
-    try {
-      sessionStorage.setItem(MESH_INBOX_ONLY_LS, v ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
-  }, [])
-
   const setInboxWireFilter = useCallback((f: InboxWireFilter) => {
     setInboxWireFilterState(f)
     if (typeof window === 'undefined') return
@@ -284,24 +254,26 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     }
   }, [])
 
-  const setInboxIotaTransportOnlyPersist = useCallback((v: boolean) => {
-    setInboxIotaTransportOnly(v)
-    if (v) {
-      setInboxMeshTransportOnly(false)
-      if (typeof window !== 'undefined') {
-        try {
-          sessionStorage.setItem(MESH_INBOX_ONLY_LS, '0')
-        } catch {
-          /* ignore */
-        }
-      }
+  const setInboxSourceFilter = useCallback((f: InboxSourceFilter) => {
+    setInboxSourceFilterState(f)
+  }, [])
+
+  const setInboxChannelFiltersArmed = useCallback((armed: boolean) => {
+    setInboxChannelFiltersArmedState(armed)
+    if (!armed) {
+      setInboxDirectionFilter('all')
+      setInboxSourceFilterState('all')
     }
-    if (typeof window === 'undefined') return
-    try {
-      sessionStorage.setItem(IOTA_INBOX_ONLY_LS, v ? '1' : '0')
-    } catch {
-      /* ignore */
-    }
+  }, [])
+
+  const setInboxWireFiltersArmed = useCallback((armed: boolean) => {
+    setInboxWireFiltersArmedState(armed)
+    if (!armed) setInboxWireFilterState('all')
+  }, [])
+
+  const setInboxPartnerFiltersArmed = useCallback((armed: boolean) => {
+    setInboxPartnerFiltersArmedState(armed)
+    if (!armed) setInboxPartnerKey(null)
   }, [])
 
   const removeInboxPartnerFromQuickList = useCallback(
@@ -374,22 +346,41 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [myAddress, messages]
   )
 
-  const partnerFilteredMessages = useMemo(
-    () =>
-      filterInboxMessagesByPartnerAndDirection(
-        displayMessages,
-        myAddress,
-        isGroupMode ? null : inboxPartnerKey,
-        inboxDirectionFilter,
-        groupMemberFilter?.length ? { groupMemberAddresses: groupMemberFilter, teamMailboxObjectId: teamMailboxObjectId ?? undefined } : undefined
-      ),
-    [displayMessages, myAddress, inboxPartnerKey, inboxDirectionFilter, groupMemberFilter, teamMailboxObjectId, isGroupMode]
+  const sourceFilterCtx = useMemo(
+    () => ({
+      pinnwandMatch: pinnwandMatchContext,
+      teamMailboxObjectId: teamMailboxObjectId ?? undefined,
+    }),
+    [pinnwandMatchContext, teamMailboxObjectId]
   )
 
+  const partnerFilteredMessages = useMemo(() => {
+    let rows = displayMessages
+    if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) {
+      rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, inboxPartnerKey, 'all')
+    }
+    if (inboxChannelFiltersArmed) {
+      rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
+      if (inboxSourceFilter !== 'all') {
+        rows = rows.filter((m) => messageMatchesInboxSourceFilter(m, inboxSourceFilter, sourceFilterCtx))
+      }
+    }
+    return rows
+  }, [
+    displayMessages,
+    myAddress,
+    inboxPartnerKey,
+    inboxDirectionFilter,
+    inboxSourceFilter,
+    inboxChannelFiltersArmed,
+    inboxPartnerFiltersArmed,
+    sourceFilterCtx,
+  ])
+
   const wireFilteredMessages = useMemo(() => {
-    if (inboxWireFilter === 'all') return partnerFilteredMessages
+    if (!inboxWireFiltersArmed || inboxWireFilter === 'all') return partnerFilteredMessages
     return partnerFilteredMessages.filter((m) => messageMatchesInboxWireFilter(m, inboxWireFilter))
-  }, [partnerFilteredMessages, inboxWireFilter])
+  }, [partnerFilteredMessages, inboxWireFilter, inboxWireFiltersArmed])
 
   useEffect(() => {
     setPartnerLastSeenMap(readPartnerLastSeenMap(inboxScopeKey(myAddress)))
@@ -464,15 +455,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [myAddress, partnerLastSeenMap, pinnwandMatchContext]
   )
 
-  const filteredDisplayMessages = useMemo(() => {
-    if (inboxMeshTransportOnly) {
-      return wireFilteredMessages.filter((m) => messageHasMeshTransport(m))
-    }
-    if (inboxIotaTransportOnly) {
-      return wireFilteredMessages.filter((m) => messagePureInternetInboxRow(m))
-    }
-    return wireFilteredMessages
-  }, [wireFilteredMessages, inboxMeshTransportOnly, inboxIotaTransportOnly])
+  const filteredDisplayMessages = useMemo(() => wireFilteredMessages, [wireFilteredMessages])
 
   const sortedFilteredDisplayMessages = useMemo(
     () =>
@@ -513,7 +496,20 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const setInboxOverviewCategory = useCallback((category: InboxOverviewCategory) => {
     setInboxOverviewCategoryState(category)
-  }, [])
+    if (category === 'alle') {
+      setInboxChannelFiltersArmed(false)
+      setInboxSourceFilterState('all')
+      return
+    }
+    const source: InboxSourceFilter =
+      category === 'lagebild'
+        ? 'lagebild'
+        : category === 'funk'
+          ? 'funk'
+          : 'mailbox'
+    setInboxSourceFilterState(source)
+    setInboxChannelFiltersArmedState(true)
+  }, [setInboxChannelFiltersArmed])
 
   useEffect(() => {
     if (!inboxOverviewEnabled) return
@@ -534,14 +530,30 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     [wireFilteredMessages, inboxOverviewCtx, overviewLastSeen]
   )
 
-  const overviewFilteredDisplayMessages = useMemo(() => {
-    if (!inboxOverviewEnabled) return sortedFilteredDisplayMessages
-    return filterInboxByOverviewCategory(
+  const overviewFilteredDisplayMessages = useMemo(
+    () =>
+      resolveOverviewFilteredInboxMessages(sortedFilteredDisplayMessages, {
+        overviewEnabled: inboxOverviewEnabled,
+        category: inboxOverviewCategory,
+        ctx: inboxOverviewCtx,
+      }),
+    [
       sortedFilteredDisplayMessages,
+      inboxOverviewEnabled,
       inboxOverviewCategory,
-      inboxOverviewCtx
-    )
-  }, [inboxOverviewEnabled, sortedFilteredDisplayMessages, inboxOverviewCategory, inboxOverviewCtx])
+      inboxOverviewCtx,
+    ]
+  )
+
+  const pinnwandFeedMessages = useMemo(
+    () =>
+      selectPinnwandFeedMessages(
+        displayMessages,
+        pinnwandMatchContext,
+        pinnedPinnwandIds.size > 0 ? pinnedPinnwandIds : undefined
+      ),
+    [displayMessages, pinnwandMatchContext, pinnedPinnwandIds]
+  )
 
   const isPinnwandInboxMessage = useCallback(
     (msg: Message) =>
@@ -728,9 +740,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setHiddenInboxIds((prev) => (prev.size === 0 ? prev : new Set()))
     setInboxPartnerKey((cur) => (cur == null ? cur : null))
     setInboxDirectionFilter((cur) => (cur === 'all' ? cur : 'all'))
-    setInboxMeshTransportOnly((cur) => (cur ? false : cur))
-    setInboxIotaTransportOnly((cur) => (cur ? false : cur))
+    setInboxSourceFilterState((cur) => (cur === 'all' ? cur : 'all'))
     setInboxWireFilterState((cur) => (cur === 'all' ? cur : 'all'))
+    setInboxChannelFiltersArmedState(false)
+    setInboxWireFiltersArmedState(false)
+    setInboxPartnerFiltersArmedState(false)
   }, [])
 
   /** Geladen vs. sichtbar — konkrete Filter nennen (nicht pauschal „Nur Funk“). */
@@ -744,10 +758,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const hiddenLocal = inboxMessages.filter((m) => hiddenInboxIds.has(m.id)).length
     const reasons: string[] = []
     if (hiddenLocal > 0) reasons.push(`${hiddenLocal} lokal ausgeblendet`)
-    if (inboxMeshTransportOnly) reasons.push('„Nur Funk“')
-    if (inboxIotaTransportOnly) reasons.push('„Nur IOTA“')
-    if (inboxPartnerKey && !isGroupMode) reasons.push('Partner-Filter')
-    if (inboxDirectionFilter !== 'all') reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    if (inboxPartnerFiltersArmed && inboxPartnerKey) reasons.push('Partner-Filter')
+    if (inboxChannelFiltersArmed && inboxDirectionFilter !== 'all') {
+      reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
+    }
+    if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
+      reasons.push(`Quelle „${inboxSourceFilter}“`)
+    }
     if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
     if (inboxWireFilter === 'plaintext') reasons.push('Inhalt „Klartext“')
 
@@ -770,31 +787,35 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     messages,
     filteredDisplayMessages,
     hiddenInboxIds,
-    inboxMeshTransportOnly,
-    inboxIotaTransportOnly,
     inboxPartnerKey,
-    isGroupMode,
+    inboxChannelFiltersArmed,
+    inboxPartnerFiltersArmed,
     inboxDirectionFilter,
+    inboxSourceFilter,
     inboxWireFilter,
+    inboxWireFiltersArmed,
   ])
 
   /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
   useEffect(() => {
     if (messages.length === 0) return
     if (displayMessages.length === 0) return
-    if (inboxWireFilter !== 'all') return
+    if (inboxWireFiltersArmed && inboxWireFilter !== 'all') return
     const encLoaded = messages.filter((m) => m.encrypted === true).length
     const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
     const mbLoaded = messages.filter((m) => m.chainPurgeable === true).length
     const mbVisible = filteredDisplayMessages.filter((m) => m.chainPurgeable === true).length
     const transportFilterBlocksMailbox =
-      (inboxMeshTransportOnly || inboxIotaTransportOnly) && mbLoaded > 0 && mbVisible === 0
+      inboxChannelFiltersArmed &&
+      inboxSourceFilter === 'funk' &&
+      mbLoaded > 0 &&
+      mbVisible === 0
     const filtersActive =
       hiddenInboxIds.size > 0 ||
-      inboxPartnerKey != null ||
-      inboxDirectionFilter !== 'all' ||
-      inboxMeshTransportOnly ||
-      inboxIotaTransportOnly
+      (inboxPartnerFiltersArmed && inboxPartnerKey != null) ||
+      (inboxChannelFiltersArmed &&
+        (inboxDirectionFilter !== 'all' || inboxSourceFilter !== 'all')) ||
+      (inboxWireFiltersArmed && inboxWireFilter !== 'all')
     const needsReset =
       (filteredDisplayMessages.length === 0 && filtersActive) ||
       (encLoaded > 0 && encVisible === 0 && filtersActive) ||
@@ -807,11 +828,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     filteredDisplayMessages,
     hiddenInboxIds.size,
     inboxPartnerKey,
+    inboxChannelFiltersArmed,
+    inboxPartnerFiltersArmed,
     inboxDirectionFilter,
+    inboxSourceFilter,
     resetInboxViewFilters,
-    inboxMeshTransportOnly,
-    inboxIotaTransportOnly,
     inboxWireFilter,
+    inboxWireFiltersArmed,
   ])
 
   return {
@@ -823,6 +846,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     selectedInboxIds,
     displayMessages,
     filteredDisplayMessages: overviewFilteredDisplayMessages,
+    pinnwandFeedMessages,
     inboxOverviewEnabled,
     isPinnwandInboxMessage,
     inboxOverviewCategory,
@@ -833,10 +857,14 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly: setInboxMeshTransportOnlyPersist,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly: setInboxIotaTransportOnlyPersist,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,

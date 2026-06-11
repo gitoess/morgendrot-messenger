@@ -10,5 +10,12 @@ export function broadcastPinnwandStatusFromHandoff(
   if (!handoff?.broadcastPinnwandEnabled) return undefined
   const addr = (handoff.broadcastPinnwandAddress ?? '').trim().toLowerCase()
   if (!ADDR_64.test(addr)) return undefined
-  return { enabled: true, address: addr }
+  const authorized = (handoff.broadcastPinnwandAuthorizedSenders ?? [])
+    .map((a) => a.trim())
+    .filter(Boolean)
+  return {
+    enabled: true,
+    address: addr,
+    ...(authorized.length > 0 ? { authorizedSenders: authorized } : {}),
+  }
 }

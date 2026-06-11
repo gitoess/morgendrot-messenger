@@ -343,7 +343,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (sending) return 'Senden läuft bereits…'
     if (vaultLocked) return 'Tresor gesperrt — bitte zuerst entsperren.'
     if (onlineChainNeedsKeys && !sessionKeysReady) {
-      return 'Wallet-Keys fehlen — Tresor auf dem Startbildschirm entsperren („Tresor: Keys fehlen“).'
+      return 'Wallet-Keys fehlen — unten „Tresor entsperren“ oder Badge „Tresor: Keys fehlen“ im Header.'
     }
     if (loraOnlineFallbackOffer != null) return 'LoRa-Online-Fallback offen — zuerst bestätigen oder abbrechen.'
     if (hasNoPayload) return 'Text oder Anhang eingeben.'
@@ -1127,6 +1127,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 )}
                 {sending || telegramBusy ? 'Wird gesendet…' : 'Senden'}
               </button>
+            ) : null}
+            {primarySendDisabled && sendDisableReason && !sending && !telegramBusy ? (
+              <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
+                Senden blockiert: {sendDisableReason}
+              </p>
+            ) : null}
+            {encryptedOnlineSendBlocked && !primarySendDisabled ? (
+              <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
+                {encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)}
+              </p>
             ) : null}
             {canOfferSosText && !isTelegramDelivery ? (
               <button

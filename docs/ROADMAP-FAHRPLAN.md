@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-05-20** (Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-06-02** (neu **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Nachtrag 2026-04-15:** Messenger-Realworld **`test:messages*`** — Abschnitt **`/vault-save`** nutzt Server-Sitzung nach UI-Unlock (kein `UNLOCK_PASSWORD_*` nötig); **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop gekennzeichnet; npm **`test:tickets-accesskey-realworld`** = Tickets/Keys (Alias zu **`test:realworld`**); Chain **`hasValidTicket`** / **`hasValidAccessKey`** mit **`normalizeAddress`** + Pagination, normalisierte IDs in **`getOwnedTickets`** / **`getOwnedAccessKeys`**; Ticket-Realworld-Skript Retries + ECONNREFUSED-Hinweis; **`npm run check:pwa-desk`** (**§ H.2** A+B). Siehe **`docs/CHAT-PROTOKOLL-2026-03-28.md`**.
@@ -22,6 +22,10 @@
 **Nachtrag 2026-04-28:** **Handy-first / Client-IOTA** — wenn IOTA **aktiv** ist: Client-Signatur + direkter RPC-Upload (**local-first**); Node optional (Relay, Gas, Archiv). Doku: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **§ H.15**.
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
+
+**Nachtrag 2026-06-02 (§ H.32 — Antworten + Einsatz beenden):** Feld-Feedback: Posteingang braucht **„Antworten“** (Kanal + Sendepfad automatisch, nicht nur Weiterleiten); **„Einsatz beenden“** = **Cache & lokale IDs** des alten Einsatzes entfernen (verwirrende alte Nachrichten/IDs), **nicht** Online-Chain — danach neues **Handoff**. Spez **§ H.32**; ergänzt **§ H.0** #6–#7.
+
+**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Backlog (Zielbild Phase 2–4):** ein Knopf Seed+ZIP+QR; Capabilities überall durchsetzen; Vorlagen = voller Snapshot. **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
 
 **Merge-Ritual (Phase A):** **`TESTING.md`** § *Qualitätsritual vor Merge* — Root **`tsc`**, **`validate:ui`**, **`test:smoke`**; Ordner **`frontend/`** zusätzlich **`lint`**, **`check:circular`**, **`tsc`**, **`test:unit`**. **CI:** **`.github/workflows/frontend-checks.yml`**. **Handbuch:** nach Änderung an **`docs/BOSS-ORIENTIERUNG.md`** / **`PWA-HANDBUCH-OFFLINE.md`:** Root **`npm run sync:handbook`**.
 
@@ -45,6 +49,8 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 8 | **§ H.15 Stufe 2** Handy-first Smoke | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md` **4b–4f** (Code Standalone/APK) | **Offen (Feld)** |
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
+| 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Offen** (Backlog) |
+| 12 | **§ H.32b** **Einsatz beenden** → **Cache/IDs** weg, kein Chain-Purge | Helfer nach Feldende, dann neues Handoff | **Offen** (Backlog) |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
 
@@ -166,7 +172,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.13** | Code-Schlankheit & Härtung |
 | **§ H.14** | Hardening V3 (PWA-Speicher, Wipe, …) |
 | **§ H.15** | **Handy-first / Client-IOTA / optionaler Node** — **`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** |
-| **§ H.16** | **Telefonbuch, QR (Ein/Aus), Boss-LAN-Onboarding** — Kontakte mit Klarnamen, QR-Fluss, Helfer installieren PWA ohne dauernd Boss-PC; **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**) |
+| **§ H.16** | **Telefonbuch, QR (Ein/Aus), Boss-LAN-Onboarding** — Kontakte mit Klarnamen, QR-Fluss, Helfer installieren PWA ohne dauernd Boss-PC; **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**); **Einsatzleitung compact:** **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`** |
 | **§ H.17** | **Dashboard-Begriffe** — `morgendrot_show_all_tiles` vs. `morgendrot_workspace_tile_set` vs. Chat-`bossView` vs. **`DeviceRadarView`**; Messenger-Zielbild Boss-only / Hauptrepo volle Kacheln; **`docs/UI-ROLLEN-WORKSPACES.md`** §6; **Rollen Zielbild Consumer/Einsatz:** **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`** |
 | **§ H.18** | **TTS / STT (Spracheingabe & Vorlesen)** — optional nach **§ H.0**/**H.2**: Freihand/Feld ohne Tippen, Barrierefreiheit; **Privacy** (Cloud vs. on-device), **Offline**, EU-Daten; technisch Browser-**Web Speech API** vs. native Hülle — **`docs/MESSENGER-SPRACHAUFNAHME.md`** |
 | **§ H.22** | **Messenger-Kanäle & Mailbox M1–M4** — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** |
@@ -177,6 +183,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.27** | **Handshake-Anfragen UX** — Toast, Badge, Ablehnen, Polling, Inbox-Zeile; Push-Backlog — **`docs/HANDSHAKE-ANFRAGEN-UX.md`** |
 | **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); **sehr spätes Backlog** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss) — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
 | **§ H.31** | **Multi-Pinnwand** — mehrere Bretter pro Einsatz (Boss schreibt, alle lesen); **Backlog ganz hinten** — **`docs/BROADCAST-PINNWAND.md`** |
+| **§ H.32** | **Posteingang „Antworten“** + **„Einsatz beenden“** (nur **Cache/lokale IDs**, keine Chain) — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`**, **§ H.7** |
 | **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -309,8 +316,13 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **Standalone:** Handoff lokal, Status-Fallback, Capacitor-Bootstrap; **B.3–B.5** Send/Inbox/Peering ohne `/api/*`-Relay (`messenger-standalone-relay.ts`).
 - **§ H.16 Peering-QR:** `u`/`p` im QR, Composer-Scan, Puls `includeNetworkInQr`; **`WANDERER-STANDALONE-BUNDLE.md`** Variante B.
 
+**Abgeschlossen (Code, 2026-06-02 — Einsatzleitung / Helfer einrichten):**
+- **`BossHelferEinrichtenPanel`:** Handoff `layout=compact`, Capabilities-Matrix, Team/Partner, **ZIP / IOTA / WLAN-QR**, Seed-Block, **Bestehende Geräte** (TTL/Purge inline).
+- **WLAN-QR:** `GET /api/lan-install-urls`; Auto-LAN-IP in **`LanInstallQrPanel`** (ohne Terminal-Hinweis im Dialog).
+- **Erweitert:** nur Chain/Move — Doku **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`** Phase **1a–1e Ist**.
+
 **Abgeschlossen (Code, 2026-05-28):**
-- **§ H.16 Rest — Boss-LAN-Install-QR:** Payload `k: "mi"` (`w` PWA-URL, optional `b` API, `u` RPC) in `frontend/lib/install-qr.ts`; Dashboard **`LanInstallQrPanel`** (Boss anzeigen / Helfer scannen); Einstellungen **Basis-URL** → „Boss Install-QR“; Vitest `install-qr.test.ts` in **`npm run test:h15-direct-submit`**.
+- **§ H.16 Rest — Boss-LAN-Install-QR:** Payload `k: "mi"` in `frontend/lib/install-qr.ts`; **`LanInstallQrPanel`**; Vitest `install-qr.test.ts`. **Ergänzt 2026-06-02:** `/api/lan-install-urls`, QR in **Helfer einrichten** (nicht Erweitert).
 
 **Abgeschlossen (Code, 2026-05-28 — § H.25a Nachzug):**
 - **`MORG_IMG_INIT_V1`** (`path4-image-transfer.ts`) vor Luma/Chroma-Burst; Empfänger „Bild wird zusammengesetzt…“; Path-4-Mirror mit Segment-`msgId`; Vitest `path4-image-transfer`, `lora-image-morg-seg-v1-send`.
@@ -454,7 +466,9 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 - **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`** – `ROLE` vs `ROLE_ID` (0–63), Lock vs Messenger vs Arbeiter, Vorlagen  
 - **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`** – Einsatz: Rollenwechsel (Provisioning/`ROLE_ID` vs. Boss-`DEVICE_ROLES`, Trägerbild-Zielbild vs. Ist)  
 - **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** – Dienst/Mainnet vs. privat/Testnet (Zielgruppe „Interessierte“); zwei Kontexte = Vault **+** `.env`, keine NACK/RS485-Produktclaims
-- **`docs/WANDERER-STANDALONE-BUNDLE.md`** – „Wanderer“-Abgabe: `bundle:standalone-smartphone`, Boss→Helfer, optional zwei Ordner (**§ H.0 #2**, **§ H.7**)  
+- **`docs/WANDERER-STANDALONE-BUNDLE.md`** – „Wanderer“-Abgabe: `bundle:standalone-smartphone`, Boss→Helfer, optional zwei Ordner (**§ H.0 #2**, **§ H.7**)
+- **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`** – Einsatzleitung compact: Matrix + Handoff + Seed + TTL (**§ H.16**, **§ H.7**)
+- **`docs/EINSATZ-BOSS-ABLAUF.md`** – Move-Upgrade vs. Handoff vs. Parameter (Boss-Routine)  
 - **`docs/ONBOARDING-WALLET-UX-SPEC.md`** – Session, Vault, Unlock, Credits vs. MIST; Backlog L1–L6; Verknüpfung **§ H.0 #4**  
 - **`docs/RECOVERY-PHRASE-BACKUP.md`** – Recovery/Sicher anzeigen (`/vault-show-signer-import`, Settings **Wallet & Backup**)  
 - **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`** – Provisioning-Payload & Identity-Credits: Ist vs. Vision, **§ H.3f**  
@@ -605,6 +619,8 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | 3 | **Kacheln nach Rolle** | **Teilweise (2026-03)** | **Arbeiter/Lock:** Action Center + „alle Kacheln“; **Boss/Kommandant:** Geräte-Radar bei Volldashboard. **Arbeitsbereich/Radar/Rollen-Kurztexte:** **`docs/UI-ROLLEN-WORKSPACES.md`** §5–§7 (Panel schlank); **`dashboard.tsx`**, **`workspace-projects-panel.tsx`**. Workflow-Tiefe = Backlog. |
 | 4 | **Unlock- & Secret-UX** | **L2 weiter (2026-04-22)** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**; **„Erste Schritte“** + **`GET /api/help`**. **Neu (2026-03-28):** Next + Lite **„Tresor öffnen / Neu anlegen“**, Mnemonic bei `SIGNER=sdk` **progressiv** + API-**`SIGNER_IMPORT_REQUIRED`**; Next-Tresor **Signer-Import mit speichern**; Vitest **`unlock-response-parse`**. **Neu (2026-03-28):** dritter Einstieg **Seed importieren** (Next + Lite); **H.7** Export-Assistent (ZIP) im Boss-Modus. **Neu (2026-04-22):** optionaler Recovery/Signer-Backup-Dialog direkt nach Unlock (Vault-Passwort → **`/vault-show-signer-import`**, gleicher Backend-Flow wie **Wallet & Backup**). **Offen:** geführter Wizard; optional **Mnemonic per Knopf erzeugen**. |
 | 5 | **PWA-Realität** | **Doku + Checks (2026-03)** | **`docs/PWA-MANUAL-CHECKS.md`** — manuelle Feldprüf + **Vorprüfung am Schreibtisch** (Build/Icons/Handbuch); **§ H.2**; optional Offline-Fallback-Seite Backlog. |
+| 6 | **Posteingang „Antworten“** | **Backlog → § H.32a** | Ein-Klick vom Posteingang zum **passenden** Kanal + Sendepfad (IOTA 1:1, IOTA Gruppe, Funk Gruppe, Pinnwand, Telegram) — heute nur **Weiterleiten** / **Als Partner** (Handshake), ohne Pfad-Logik. |
+| 7 | **„Einsatz beenden“** | **Backlog → § H.32b** | **Nur Cache & lokale IDs** leeren (Posteingang-RAM, `inbox.cache`, Filter, alte Package-/Mailbox-IDs) — **keine Chain**; danach **neues Handoff** importieren. |
 
 **Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.
 
@@ -677,6 +693,8 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | Soll | Status |
 |------|--------|
 | Hub-Schnell-Handoff **entfernen** → nur Export-Assistent | **Ist 2026-05-20** |
+| **Einsatzleitung → Helfer einrichten** (compact, Matrix, TTL inline) | **Ist 2026-06-02** |
+| **WLAN-QR** neben IOTA + **`/api/lan-install-urls`** | **Ist 2026-06-02** |
 | **Schnell-Handoff** (1-Klick, letztes Preset im Assistenten) | **Ist 2026-05-20** |
 | Preset **Helfer** = `UI_VARIANT=messenger`, `mesh-first`, `SIMPLE_MODE=true` | **Ist** |
 | Preset **Wanderer** getrennt von `consumer` | **Ist** |
@@ -1085,7 +1103,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Technik** | Skript `scripts/bundle-standalone-smartphone.ts`; **keine** `.env` mit Secrets im Archiv; **`.env.example`** = Hauptrepo + Override-Block (`ENABLE_UI`, `SIGNER=sdk`, …). |
 | **Manuelle Anpassung** | Pro Kunde/Test: **`.env`** editieren (z. B. `PACKAGE_ID`, `RPC_URL`, `BOSS_ADDRESS` / Partner) — **sinnvoll und ausreichend** für erste Einsätze. |
 | **Geheimnisse** | **Nie** Seed oder Vault-Passwort auf das Medium schreiben; nur lokale Eingabe auf dem Telefon. |
-| **Boss-Handoff (optional)** | **Einstellungen** oder **Einsatzleitung → Export-Assistent** (Boss) + **`POST /api/standalone-smartphone-handoff-zip`**: ZIP ~**3 KB** mit **`morgendrot-standalone-handoff.env`** + **`README-HANDOFF.txt`** (öffentliche Keys, kein Seed). Helfer: **Einstellungen → Handoff importieren**. Doku: **`docs/HANDOFF-IMPORT-UX.md`**, Profil **`docs/HANDOFF-PROFILE-UX.md`**, Verschlüsselung Backlog **`docs/HANDOFF-ZIP-ENCRYPTION.md`**. Bundle: **`npm run bundle:standalone-smartphone`**. |
+| **Boss-Handoff (optional)** | **Einsatzleitung → Helfer einrichten** (Boss) + **`POST /api/standalone-smartphone-handoff-zip`**: ZIP ~**3 KB** mit **`morgendrot-standalone-handoff.env`** + **`README-HANDOFF.txt`** (öffentliche Keys, kein Seed). Helfer: **Einstellungen → Handoff importieren**. Doku: **`docs/HANDOFF-IMPORT-UX.md`**, **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Profil **`docs/HANDOFF-PROFILE-UX.md`**, Verschlüsselung Backlog **`docs/HANDOFF-ZIP-ENCRYPTION.md`**. Bundle: **`npm run bundle:standalone-smartphone`**. |
 | **Einstieg „Wanderer“** | **`docs/WANDERER-STANDALONE-BUNDLE.md`** — Narrativ H.0 #2 + Verknüpfung zu **§ H.8** (zwei Ordner Dienst/Test). |
 | **Feld: Backpack + Betriebsmodi** | **§ H.7b** — Referenzarchitektur (Node im Rucksack, Heltec, PWA); **Degraded / Delayed Upload** = Zielbild Phase B, nicht vollständig implementiert. |
 
@@ -1232,7 +1250,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |--------|------|
 | **Telefonbuch / Klarnamen** | **Ist:** Adressen tauchen an mehreren Stellen auf (`initialProfile` / API, lokale Labels **`.morgendrot-contact-labels.json`**, Chat-Empfängerfeld, Puls-Ketten-IDs **ohne** Namenskontext). **Risiko:** doppelte oder widersprüchliche „Wahrheiten“, schlechte Offline-Erfahrung. **Ziel:** **ein** kanonischer Kontakt-Speicher im Client (z. B. `localStorage`/IndexedDB), optional später Sync mit Server **nur** mit klarer Autorität (**§ H.12**). **Bezug H.15:** gespeicherte **Peer-Pub** (ECDH) pro Kontakt an Telefonbuch-Zeile hängen, statt nur freies Puls-Feld. |
 | **QR: Adresse einlesen & anzeigen** | **Lesen:** Kamera / `@capacitor-mlkit/barcode-scanning` (bereits im Stack) → Kontakt anlegen oder Chat füllen. **Anzeigen:** QR mit **mindestens** installierbarer **PWA-URL** + optional Anker/Profil — Feldinhalt an **`docs/QR-CONTACT-SCHEMA-V2.md`** (**§ H.3b**) koppeln, damit nicht „RPC-URL“ und „Messenger-API-URL“ verwechselt werden. **Boss:** gleicher QR-Flow für Einladungs-/Installationslinks wie für Helfer-Kontakte. |
-| **Boss-PC im lokalen WLAN** | **Szenario:** Boss läuft im LAN (`next dev --hostname 0.0.0.0` / deployter Host); Helfer scannen **QR am Bildschirm** → PWA/Seite öffnet sich → **Installieren** → Messenger auf dem Handy. **Danach:** Helfer brauchen den Boss-PC **nicht mehr**, um die **App zu öffnen** — klar kommunizieren, dass **Keys, RPC, ggf. Relay** trotzdem verstanden und ggf. einmalig provisioniert sein müssen (kein stiller „alles erledigt“-Trugschluss). **Kritisch:** **HTTPS** vs. **http://LAN-IP** (PWA-Install, Mixed Content, Android Cleartext); **Same-Origin** zur API; **Build-/Versions-Pin** (Helfer-Build = Boss-Build); optional **Captive-Portal**-Fall (nur WLAN, kein Internet) von „echtem“ Deploy trennen. **Doku:** **`docs/DEV-START.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**, **`docs/BOSS-ORIENTIERUNG.md`**. |
+| **Boss-PC im lokalen WLAN** | **Szenario:** Boss läuft im LAN (Standalone/PWA auf dem Einsatz-PC); Helfer scannen **WLAN-QR** in **Helfer einrichten** → PWA installieren. **Ist:** `GET /api/lan-install-urls` + Payload `k: "mi"` (**`frontend/lib/install-qr.ts`**). **Kein** Terminal-Schritt im Dialog. Handoff **separat** (ZIP/IOTA). **Kritisch:** Firewall (typ. 3341/3342), ggf. `API_BIND_HOST=0.0.0.0`; Cleartext HTTP für APK. **Doku:** **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, **`docs/PWA-HANDBUCH-OFFLINE.md`**. |
 | **Priorität** | **Nach** oder **parallel** zu kleinen **§ H.0–H.2**-Scheiben; **nicht** vor kritischem **Mesh-Kern** (**§ C.0b**) großflächig mit UI-Refactor kreuzen. **Nächster technischer Block** laut Architektur: weiter **§ 6.B.4** (**Inbox/Fetch per RPC**, **`ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**) — Telefonbuch/QR **ergänzen** Onboarding, ersetzen Fetch-Arbeit **nicht**. |
 
 ### H.17 Dashboard, „Volldashboard“ & Platzhalter-Kacheln (**Produkt / § H.0**)
@@ -1314,7 +1332,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 |-------------|--------|------------|----------------|
 | **M1 (jetzt)** | **Shared Mailbox** sauber + Kanal-Klarheit | **Ist:** ein `Mailbox`-Shared-Object pro Deployment (`MAILBOX_ID`); DF `MsgKey` / `HsKey` / `PlainMsgKey`; **`MESSAGING-MAILBOX-SSOT-SPEC`** Phase A | **Ist (Teil):** Kanal **1:1** vs. **Pinnwand (Brett)**; Karte **Meine IOTA-Adresse**; Tresor-Save inkl. Signer-Import; **offen:** Phase-A-Ritual, Config-Hinweis `MAILBOX_ID` |
 | **M2** | **Gruppenchat** eigener Kanal | **v1 ohne neues Objekt:** Union-Fetch / Gruppen-State; **v2** optional Streams-Anchor oder Gruppen-E2EE | Tab **Gruppe** (nicht N×1:1 tarnen); Mitgliederliste; **§ H.12** SSOT |
-| **M3** | **Pinnwand** Einsatz | **Ist:** `BROADCAST_PINNWAND_*`, Klartext | Pinning; Moderation sichtbar; Boss **`pinnwand-admin`** |
+| **M3** | **Pinnwand** Einsatz | **Ist:** `BROADCAST_PINNWAND_*`, Klartext | **✓** Pinning, Moderation, dedizierter Kanal-Feed, Boss **`pinnwand-admin`** |
 | **M4** | **Private Mailbox** (Erweitert) | **Neu:** `PrivateMailbox` + Owner; **nicht** Standard | **M4a:** Telefonbuch `mailboxObjectId`; **M4b–d:** Send-Routing, Kontakt-QR, eigene Mailbox; **M4e (Backlog):** vier Slots + Send-Auswahl — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 **Kritische Leitplanken:** Partner = **`0x`-Adresse**, nicht `MAILBOX_ID`. **Pinnwand ≠ Gruppenchat** (heute: Pairwise-Gruppe in Doku ≠ Produkt-Gruppenraum). **Private Mailbox** erst nach M1-Abschluss — kein paralleles `create_mailbox`-Pro-User-UI im MVP.
@@ -1330,6 +1348,8 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Nachtrag 2026-05-20 (M2a pairwise Mailbox-Send):** Gruppenkanal + **Persistent (Mailbox)** + **online** → optional **alle Mitglieder** (`morgendrot.groupMailboxSendAll.v1`, Default an): `sendMailboxPairwiseGroup` in **`use-chat-view-handle-send.ts`**, UI **`chat-view-group-panel.tsx`**. 1× Fee-Backlog: **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
 
 **Nachtrag 2026-06-02 (M2 — Gruppenchat Zielbild):** Kritische Einordnung + Empfehlung **Hybrid Funk + IOTA**, on-chain Ziel **Team-Broadcast (M2c)** — **`docs/GRUPPENCHAT-ZIELBILD.md`**. Posteingang Gruppen-Filter repariert (`use-chat-view-core.ts`).
+
+**Nachtrag 2026-06-02 (M3 — Pinnwand UX):** Kanal-Tab **Pinnwand** = dedizierter Feed (kein gemischter Posteingang); Kategorie-Filter repariert; Boss **`pinnwand-admin`** → Runtime-Konfiguration (`BossProject`). Doku **`docs/PINNWAND-ANZEIGE-ZIELBILD.md`**.
 
 ### H.23 Verschlüsselung — MVP-Architektur (nächster Schwerpunkt)
 
@@ -1787,6 +1807,114 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 **Priorität:** **Ganz hinten** — erst nach stabilem **§ H.22 M3** (Pinning, Moderation, Rollen-Lesemodus) und sinnvoller **§ H.24**-Nutzung im Feld. Kein Blocker für Messenger-Feldtests.
 
 **Verknüpfung:** **§ H.22 M3**, **§ H.24**, **`docs/BROADCAST-PINNWAND.md`**, **`docs/PINNWAND-ANZEIGE-ZIELBILD.md`**, **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`**.
+
+---
+
+### H.32 Posteingang „Antworten“ + „Einsatz beenden“ (**UX, Einsatz-Zyklus**)
+
+**Status:** **Backlog** (2026-06-02, aus Feld-Feedback). **Ziel:** (a) **Antworten** — eine Aktion pro Posteingangszeile führt zum richtigen Kanal/Sendepfad; (b) **Einsatz beenden** — **Cache & lokale IDs** des alten Einsatzes löschen (**nicht** Chain), danach **neues Handoff** importieren.
+
+**Priorität:** **Nach** stabilem **§ H.22 M2** (Kanäle 1:1 / Gruppe / Pinnwand + Sendepfad-Matrix) und **§ H.27** (Handshake sichtbar) — **vor** **§ H.28** (Discord/Matrix). **Parallel möglich** zu kleinen **§ H.1b**-Scheiben; **kein** Blocker für Pinnwand-Feldtests.
+
+#### H.32a — Posteingang: Button **„Antworten“** (Smart Reply Routing)
+
+**Problem (Ist):** Nutzer müssen aus dem Posteingang **manuell** Kanal-Tab, Sendepfad (Online/Funk/Telegram), Partner/Gruppe und Verschlüsselung erraten. Vorhanden sind nur **Weiterleiten** (Text in Composer kopieren, `chat-view-inbox-list.tsx`) und **Als Partner** (nur Handshake-Zeilen, setzt 0x — **ohne** Kanal/Pfad). Die Matrix **Kanal ↔ Sendepfad** existiert bereits (`frontend/frontend/lib/messenger-channel-send-path.ts`), wird aber **nicht** vom Posteingang genutzt.
+
+**Zielbild:** Pro Nachrichtenzeile ein **sichtbarer** Button **„Antworten“** (primär, nicht nur im ⋯-Menü). Klick **navigiert** zum Composer mit vorausgefülltem Kontext — **sendet nicht** automatisch.
+
+| Nachrichtentyp (Heuristik) | Kanal-Tab | Sendepfad | Empfänger / Kontext | Verschlüsselung |
+|----------------------------|-----------|-----------|---------------------|-----------------|
+| Eingehende **1:1** Mailbox/IOTA | **1:1** | **Online** | Absender-0x | wie Eingang (Klartext ↔ Klartext, verschl. ↔ verschl.) |
+| Ausgehende **1:1** (Antwort an Gegenüber) | **1:1** | **Online** | `recipient` der Zeile | wie Eingang |
+| **Team-Broadcast** (`team:` / `chainPurgeKind`) | **Gruppe** | **Online** | aktive Gruppe + Team-Mailbox-ID | Klartext-Team-Broadcast |
+| **Mesh** / Funk-Eingang | **1:1** oder **Gruppe** | **Funk** | Node-ID aus `meshMeta` / Telefonbuch | Klartext-Pfad 4 (kein v2-LoRa-Versand) |
+| **Telegram**-Journal | **1:1** | **Telegram** | `tg:`-Chat-ID aus Zeile | — |
+| **Pinnwand**-Post (`pinnwandPost` / Marker) | **Pinnwand** | **Online** | Brett-Adresse aus Status | Klartext |
+| **Verschlüsselt** ohne Handshake | **1:1** | **Online** | Absender | Composer + Hinweis „Handshake nötig“ (bestehende Leiste) |
+
+**Technik (Vorschlag):**
+
+1. **`resolveReplyContextFromInboxMessage(msg, ctx)`** in `frontend/frontend/lib/` (neben `messenger-channel-send-path.ts`) — liefert `ReplyContext`: `{ channel, forcedTransport, composerDelivery, recipient?, groupId?, meshNodeId?, quoteText?, hint? }`.
+2. **`applyReplyContextToChatView(ctx)`** — setzt Tab, Sendepfad, Partner, ggf. `reconcileChannelSendPath`; optional Zitatzeile (`> …`) im Composer.
+3. **Mehrdeutigkeit:** Wenn Heuristik **zwei** gültige Pfade findet (selten: Mesh + IOTA-Dedup), **Mini-Auswahl** („IOTA 1:1“ / „Funk an Node …“) statt falscher Default.
+4. **Vitest:** Tabelle oben als Fixture-Tests; RTL-Smoke: Klick „Antworten“ → sichtbarer Kanal/Pfad im Header.
+
+**Nicht-Ziel (v1):** Automatisches Senden; intelligente Antwort-Vorschläge (KI); neuer Transport.
+
+**Aufwand:** **Mittel** (1–2 Scheiben: Resolver + UI-Button + Wiring in `use-chat-view-core` / `chat-view-main-content`).
+
+**Verknüpfung:** **§ H.22**, **`docs/MESSENGER-CHAT-HANDBUCH.md`**, **`docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`**, **`docs/HANDSHAKE-ANFRAGEN-UX.md`**.
+
+#### H.32b — **„Einsatz beenden“** (Cache & lokale IDs — **ohne Chain**)
+
+**Kern (Präzision):** Es geht **nicht** um Löschen on-chain, sondern darum, dass nach einem Einsatz **keine alten Nachrichten und IDs aus dem lokalen Cache** den nächsten Einsatz verwirren. Chain-Einträge bleiben unberührt (TTL/Purge = separates Boss-Thema, **`docs/EINSATZ-BOSS-ABLAUF.md`**).
+
+**Problem (Ist):** Nach Einsatzende bleiben u. a.:
+
+- Posteingang im **RAM** und in **`localStorage`** (`morgendrot.inbox.cache.v1:<packageId>:<mailboxId>` — alte Zeilen tauchen beim Offline-Start wieder auf),
+- **Server-Datei** `.inbox.enc` (Klartext-Cache neben Vault, **`POST /api/clear-local-history`**),
+- **Filter/Partner-Chips** (`sessionStorage`: versteckte IDs, Protokoll-Markierungen, Wire-Filter, Partner-Memory),
+- **IDs des alten Profils** (`morgendrot.handoff.localApplied.v1`, `morgendrot.directChain.*`, Status-Cache, Handshake-Offers-Cache, Pinnwand-Pin-IDs, Overview-Last-Seen, Mesh-Lokalarchiv, Offline-Mailbox-Queue),
+- ggf. **Package-ID-Mismatch-Banner**, weil UI noch alte `packageId`/Mailbox-Liste führt.
+
+Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **kein** gebündeltes „Einsatz zu — Cache weg — Handoff neu“.
+
+**Zielbild:** Button **„Einsatz beenden“** (Einstellungen oder Einsatzleitung) → kurze Bestätigung → **alles Lokale des abgeschlossenen Einsatzes** weg → Hinweis **„Neues Handoff importieren“** (**§ H.7**). Wallet/Seed/Tresor-Datei **bleiben**.
+
+**Was wird gelöscht (Allowlist v1):**
+
+| Kategorie | Beispiele (Ist-Keys / APIs) |
+|-----------|------------------------------|
+| **Posteingang** | RAM (`clearInboxRam`), **alle** `morgendrot.inbox.cache.v1:*`, Server **`/api/clear-local-history`** (`.inbox.enc`) |
+| **Nachrichten-Metadaten** | Versteckte Zeilen, Protokoll-Markierungen, Pinnwand-Pins, Overview-Last-Seen, Partner-Last-Seen |
+| **Filter/UI-Zustand** | `clearInboxBrowserViewFilters`, Partner-Memory/Blocked-Chips |
+| **Einsatz-IDs (lokal)** | `clearLocalHandoffAppliedSnapshot`, `morgendrot.directChain.*` (Package/Mailbox-Snapshot), `GET /api/status`-Cache, aktives Send-Mailbox-Feld |
+| **Transport-Overlay** | Mesh-Lokalarchiv, Handshake-Offers-Cache, Delayed-Mirror-Queue, Offline-Mailbox-Queue (Opt-in-Häkchen) |
+| **Session (RAM)** | ECDH-Session-RAM (Peer-Pub in LS **optional** behalten — Produktentscheidung: Standard = **Partner-Keys behalten**, nur Einsatz-Cache weg) |
+
+**Was explizit nicht gelöscht wird:**
+
+| Ausnahme | Grund |
+|----------|--------|
+| **On-chain** Mailbox/Events | Nicht Ziel von „Einsatz beenden“ |
+| **Wallet / Seed / `.morgendrot-vault`** | Gerät bleibt nutzbar — nur Einsatz-Kontext weg (**§ H.30** für Voll-Reset) |
+| **Telefonbuch auf dem Server** (`.morgendrot-contact-labels.json`) | Liegt auf Boss-Basis; Helfer-PWA kann es nicht löschen |
+| **PWA Service Worker / App-Shell** | Nicht nötig für „keine alten Chat-Zeilen“ (**§ H.14** separat) |
+
+**Ablauf (UX):**
+
+1. Optional: „Protokoll exportieren?“ (ZIP — bereits vorhanden).
+2. Bestätigung: „Lokale Einsatz-Daten löschen — **nichts auf der Chain**.“
+3. **`performEinsatzEndCacheWipe()`** — eine Funktion, dokumentierte Allowlist, Vitest.
+4. Erfolg: **Leerer Posteingang**, kein „aus Cache“-Badge, Handoff-Import anbieten.
+5. Nach **neuem Handoff**: frischer `packageId`/Team-IDs aus ZIP — kein Mismatch mit altem Cache.
+
+**Technik (Vorschlag):**
+
+- `frontend/frontend/lib/einsatz-end-cache-wipe.ts` — zentrale Allowlist + `wipeAllInboxCacheKeys()` (Prefix-Scan `morgendrot.inbox.cache.v1:`).
+- Nutzt bestehend: `clearInboxRam`, `clearInboxBrowserViewFilters`, `clearLocalHandoffAppliedSnapshot`, `clearLocalHistory`, `clearDirectChainSnapshot` (falls vorhanden).
+- Hook/UI: Einstellungen + optional Einsatzleitung-Karte „Einsatz abgeschlossen“.
+
+**Abgrenzung:** **§ H.30** = Tresor/Wallet-Neustart (schwerer). **H.32b** = **leichtes** Cache-ID-Ritual für **Wiederholungseinsätze** auf demselben Gerät.
+
+**Aufwand:** **Mittel** (Allowlist + Dialog + Tests — enger Scope als ursprüngliche Voll-Wipe-Variante).
+
+**Verknüpfung:** **§ H.7**, **`docs/HANDOFF-IMPORT-UX.md`**, **`frontend/public/handbook/NOTFALL-PURGE-MESSENGER.md`** (Abgrenzung Cache vs. Chain), **`use-chat-view-inbox.ts`** (`INBOX_CACHE_KEY_PREFIX`).
+
+#### H.32 — Umsetzungsreihenfolge (empfohlen)
+
+1. **H.32b** zuerst — **hoher Feld-Nutzen**, klarer Scope (nur Cache/IDs).
+2. **H.32a** Antworten danach.
+
+**Testplan (Feld):**
+
+| # | Check |
+|---|--------|
+| 1 | Pinnwand-Post → **Antworten** → Tab Pinnwand + Online, Composer offen |
+| 2 | Team-Broadcast → **Antworten** → Tab Gruppe + Online |
+| 3 | Funk-Klartext → **Antworten** → Funk + richtige Node/Broadcast |
+| 4 | **Einsatz beenden** → Posteingang leer, **kein** Cache-Badge, alte `packageId`-Zeilen weg |
+| 5 | Neues Handoff importieren → nur Nachrichten des neuen Einsatzes (nach Aktualisieren) |
 
 ---
 

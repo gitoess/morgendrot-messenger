@@ -39,6 +39,8 @@
     "vaultLockedTitle": "Tresor gesperrt",
     "chatConnected": "Chat verbunden",
     "vaultUnlocked": "Tresor: entsperrt",
+    "vaultKeysMissing": "Keys fehlen",
+    "vaultKeysMissingTitle": "Wallet-Keys nicht in der Sitzung — antippen zum Entsperren",
     "offline": "Offline"
   },
   "lock": {
@@ -178,6 +180,8 @@
     "transferFailed": "Transfer fehlgeschlagen"
   },
   "einsatzHub": {
-    "title": "Einsatzleitung"
+    "title": "Einsatzleitung",
+    "bossHint": "Helfer einrichten (Profil + Kanal-Rechte) → oben. TTL/Purge → Parameter. Chain/WLAN → Erweitert.",
+    "handbookLink": "Handbuch"
   }
 }

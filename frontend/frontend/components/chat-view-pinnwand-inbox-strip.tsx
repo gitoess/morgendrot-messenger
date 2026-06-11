@@ -26,12 +26,12 @@ export function ChatViewPinnwandInboxStrip(p: {
   return (
     <section
       className="mb-4 rounded-xl border-2 border-orange-500/50 bg-gradient-to-br from-orange-500/15 to-red-500/10 px-3 py-3 shadow-sm"
-      aria-label="Offizielles Lagebild"
+      aria-label="Offizielle Pinnwand"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
           <Megaphone className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-300" aria-hidden />
-          Offizielles Lagebild
+          Offizielle Pinnwand
           {unread > 0 ? (
             <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
               {unread > 99 ? '99+' : unread} neu

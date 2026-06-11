@@ -8,6 +8,7 @@
 import { stripDelayMirrorMarker } from '@/frontend/features/send/mesh-delayed-upload'
 import { stripLeadingMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 import { tryParseMorgSosAckV1Plaintext } from '@/frontend/lib/morg-sos-ack-wire'
+import { stripPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 
 export function formatSosVisibleContent(plaintext: string): string {
   const e = stripLeadingMorgEmergencyV1Marker(plaintext)
@@ -28,5 +29,6 @@ export function normalizeChatMessageContentForDisplay(plaintext: string): string
   if (ackD) {
     return `[SOS-Bestätigung · …${ackD.slice(-8)}]`
   }
+  t = stripPinnwandPostMarker(t)
   return formatSosVisibleContent(t)
 }

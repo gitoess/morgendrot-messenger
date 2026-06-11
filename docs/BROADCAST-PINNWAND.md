@@ -36,7 +36,7 @@ Du musst nicht alles machen – nimm nur, was du brauchst.
 
 **Nachher:** Alle Nachrichten an diese Adresse sind für alle sichtbar (Klartext).
 
-**Beispiel:** Du nimmst deine eigene Adresse (MY_ADDRESS) oder eine extra Adresse – alle Gruppenmitglieder stellen ihre App auf diese Adresse.
+**Beispiel:** Du kannst **deine eigene Adresse (MY_ADDRESS)** oder eine **extra 0x** nehmen. Eigene Wallet als Brett ist möglich, aber Pinnwand-Posts werden dann per Marker von normalem 1:1-Klartext getrennt — im Tab **Pinnwand** senden (nicht 1:1). Für weniger Verwechslung im Feld: **eigene Brett-0x** bevorzugen.
 
 **Setzen?** Ja – ohne Adresse funktioniert die Pinnwand nicht.
 

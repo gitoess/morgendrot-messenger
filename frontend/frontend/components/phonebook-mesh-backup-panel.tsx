@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { Download, QrCode, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { exportContactMeshEncrypted, importContactMeshEncrypted } from '@/frontend/lib/api'
-import { parseMeshBundleFromQrText, scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { parseMeshBundleFromQrText } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import { MessengerHandbookChatLink, MESSENGER_HB_ANCHOR_FUNK_KONTEXT } from '@/components/messenger-handbook-link'
 import {
   Dialog,
@@ -27,6 +28,7 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
   const [importJson, setImportJson] = useState('')
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Mesh-Backup-QR scannen' })
 
   const runExport = async () => {
     if (exportPw.length < 8) {
@@ -159,10 +161,12 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
             disabled={busy}
             onClick={async () => {
               setBusy(true)
-              const s = await scanMeshBundleQrWithCamera()
+              const s = await startScan()
               if ('error' in s) {
-                setStatus(s.error)
-                toast.error(s.error)
+                if (s.error !== 'Scan abgebrochen.') {
+                  setStatus(s.error)
+                  toast.error(s.error)
+                }
               } else {
                 setImportJson(s.bundleJson)
                 toast.success('QR gelesen — Passwort prüfen und Import starten.')
@@ -192,6 +196,7 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
           </button>
         </DialogContent>
       </Dialog>
+      {cameraDialog}
     </div>
   )
 }

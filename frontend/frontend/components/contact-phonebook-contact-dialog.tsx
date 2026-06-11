@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import { parseContactQrPayload } from '@/frontend/lib/contact-qr'
 import { applyPeeringQrImport, parsePeeringQrPayload } from '@/frontend/lib/peering-qr'
 import { fetchResolvePrivateMailboxOwner } from '@/frontend/lib/fetch-resolve-private-mailbox-owner'
@@ -75,6 +75,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   const [resolveOwnerHint, setResolveOwnerHint] = useState('')
   const openSnapshotRef = useRef<Partial<ContactPhonebookFormValues> | undefined>(undefined)
   const myMailboxes = open ? readMyPrivateMailboxes() : []
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Kontakt-QR scannen' })
   const editKey = editStorageKey.trim().toLowerCase()
   const walletLocked = mode === 'edit' && isIotaWalletAddress(editKey)
   const telegramOnlyEdit = mode === 'edit' && isTelegramDirectoryKey(editKey)
@@ -101,7 +102,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   }, [open, initial, editKey])
 
   const scanQr = async () => {
-    const s = await scanMeshBundleQrWithCamera()
+    const s = await startScan()
     if ('error' in s) return
     const peering = parsePeeringQrPayload(s.bundleJson)
     if (!peering) return
@@ -122,6 +123,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
@@ -289,5 +291,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {cameraDialog}
+    </>
   )
 }

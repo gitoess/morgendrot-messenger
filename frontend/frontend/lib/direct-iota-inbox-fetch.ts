@@ -177,7 +177,8 @@ export async function tryFetchDirectMailboxInboxViaIota(
   }
   const includePlain = canIncludePlaintextInDirectInbox()
   const includeEnc = canIncludeEncryptedInDirectInbox()
-  if (!includePlain && !includeEnc) {
+  const includeTeamBroadcast = Boolean(snap?.flags.useMailbox)
+  if (!includePlain && !includeEnc && !includeTeamBroadcast) {
     return {
       ok: false,
       error:
@@ -197,14 +198,15 @@ export async function tryFetchDirectMailboxInboxViaIota(
 
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
+    const fetchWindow = opts.limit + opts.offset
     const rpcRows = await fetchMailboxInboxRpcRows(client, {
       mailboxObjectId,
       packageId: pkg,
       myAddress: my,
       includePlaintext: includePlain,
       includeEncrypted: includeEnc,
-      limit: opts.limit,
-      offset: opts.offset,
+      limit: fetchWindow,
+      offset: 0,
     })
 
     let apiRows: InboxApiRow[] = []
@@ -268,11 +270,11 @@ export async function tryFetchDirectMailboxInboxViaIota(
       }
     }
 
-    if (includePlain) {
+    if (includeTeamBroadcast) {
       const teamRows = await fetchTeamPlainBroadcastRpcRows(client, {
         teamMailboxObjectId: mailboxObjectId,
         packageId: pkg,
-        limit: opts.limit + opts.offset,
+        limit: fetchWindow,
         offset: 0,
       })
       for (const r of teamRows) {
@@ -288,9 +290,6 @@ export async function tryFetchDirectMailboxInboxViaIota(
           inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
         })
       }
-      if (teamRows.length > 0) {
-        apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)
-      }
     }
 
     const includeEvents =
@@ -300,13 +299,13 @@ export async function tryFetchDirectMailboxInboxViaIota(
       const eventRows = await fetchMessagingEventInboxRpcRows(client, {
         packageId: pkg,
         myAddress: my,
-        limit: opts.limit + opts.offset,
+        limit: fetchWindow,
         offset: 0,
       })
       apiRows.push(...(await mapEventRowsToInboxApi(eventRows, myNorm)))
-      apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)
     }
 
+    apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)
     return { ok: true, rows: apiRows }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }

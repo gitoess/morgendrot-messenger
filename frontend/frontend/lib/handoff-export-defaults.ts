@@ -1,6 +1,7 @@
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/standalone-smartphone-handoff'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 import {
   buildTeamMailboxOptions,
   defaultSelectedTeamMailboxIds,
@@ -41,6 +42,7 @@ export function buildWizardHandoffExportBody(opts: {
   }
   /** Provision-Wizard: frisch erzeugte Helfer-Adresse in Gruppenliste. */
   helperAddress?: string
+  capabilitiesOverride?: MessengerCapabilitiesOverride | null
 }): StandaloneSmartphoneHandoffZipBody {
   const tuning = opts.tuning ?? {}
   const resolved = resolveHandoffExportParams(opts.presetId, tuning)
@@ -107,5 +109,6 @@ export function buildWizardHandoffExportBody(opts: {
     messengerGroupHandoff,
     exportTtlDays: opts.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30,
     exportEnablePurge: opts.apiSnapshot?.einsatzConfig?.enablePurge !== false,
+    capabilitiesOverride: opts.capabilitiesOverride ?? undefined,
   }
 }

@@ -66,9 +66,11 @@ async function countMailboxMsgKeys(mailboxId) {
     cursor = result.nextCursor;
   }
   const isMsgKey = (t) => t.endsWith('::messaging::MsgKey') && !t.endsWith('::messaging::PlainMsgKey');
+  const isTeamBc = (t) => t.endsWith('::messaging::TeamPlainBroadcastKey');
   const msgKeys = all.filter((e) => isMsgKey(String(e?.name?.type ?? '')));
+  const teamBc = all.filter((e) => isTeamBc(String(e?.name?.type ?? '')));
   const enc = msgKeys.filter((e) => !String(e?.name?.type || '').includes('Plain'));
-  return { fields: all.length, msgKey: msgKeys.length, enc: enc.length };
+  return { fields: all.length, msgKey: msgKeys.length, enc: enc.length, teamBroadcast: teamBc.length };
 }
 
 async function main() {
@@ -82,7 +84,8 @@ async function main() {
   console.log('PACKAGE_ID:', envPkg || '(leer)');
   console.log('MAILBOX_ID:', envMb || '(leer)');
   console.log('package-id-history:', pkgHist.length, 'Zeilen');
-  console.log('mailbox-id-history:', mbHist.length, 'Zeilen');
+  const envTeam = readEnvKey('TEAM_MAILBOX_IDS');
+  console.log('TEAM_MAILBOX_IDS:', envTeam || '(leer)');
 
   let status;
   try {
@@ -118,11 +121,16 @@ async function main() {
     if (envMb) unionMb.push(envMb);
     for (const id of mbHist) if (!unionMb.some((x) => x.toLowerCase() === id.toLowerCase())) unionMb.push(id);
   }
+  if (envTeam) {
+    for (const id of envTeam.split(',').map((s) => s.trim()).filter(Boolean)) {
+      if (!unionMb.some((x) => x.toLowerCase() === id.toLowerCase())) unionMb.push(id);
+    }
+  }
 
   console.log('\n=== RPC MsgKey pro Mailbox ===');
   for (const mb of unionMb.length ? unionMb : [envMb].filter(Boolean)) {
     const c = await countMailboxMsgKeys(mb);
-    console.log(`  ${mb.slice(0, 10)}… → fields=${c.fields} msgKey=${c.msgKey} (enc~${c.enc})`);
+    console.log(`  ${mb.slice(0, 10)}… → fields=${c.fields} msgKey=${c.msgKey} teamBc=${c.teamBroadcast} (enc~${c.enc})`);
   }
 
   const inbox = await postCommand('/inbox', ['500']);

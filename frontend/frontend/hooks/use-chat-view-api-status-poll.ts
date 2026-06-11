@@ -168,7 +168,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   /** Posteingang getrennt (nicht jeden Status-Tick) — schont API/RPC und Terminal. */
   useEffect(() => {
     if (!pollInbox) return
-    const inboxPollMs = Math.max(pollIntervalMs, 45_000)
+    const inboxPollMs = Math.max(pollIntervalMs, 15_000)
     const pollTick = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       void pollInbox()

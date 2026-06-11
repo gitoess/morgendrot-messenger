@@ -18,7 +18,7 @@ import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { isAutarkyModeEnabled } from '@/frontend/lib/autarky-status-line'
 import { fetchStatus } from '@/frontend/lib/api/status'
 import { applyInstallQrApiBase, parseInstallQrPayload } from '@/frontend/lib/install-qr'
-import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 
 export function CapacitorApiBaseCard() {
   const [visible, setVisible] = useState(false)
@@ -29,6 +29,7 @@ export function CapacitorApiBaseCard() {
   const [fgEnabled, setFgEnabled] = useState(false)
   const [fgRunning, setFgRunning] = useState(false)
   const [fgBusy, setFgBusy] = useState(false)
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Install-QR scannen' })
 
   useEffect(() => {
     setVisible(shouldShowCapacitorApiBaseSettings())
@@ -85,12 +86,12 @@ export function CapacitorApiBaseCard() {
   const applyFromBossQr = async () => {
     setTestMsg(null)
     try {
-      const raw = await scanMeshBundleQrWithCamera()
-      if (!raw?.trim()) {
-        setTestMsg('QR-Scan abgebrochen oder leer.')
+      const scanned = await startScan()
+      if ('error' in scanned) {
+        if (scanned.error !== 'Scan abgebrochen.') setTestMsg(scanned.error)
         return
       }
-      const parsed = parseInstallQrPayload(raw)
+      const parsed = parseInstallQrPayload(scanned.bundleJson)
       if (!parsed?.apiBaseUrl) {
         setTestMsg('QR enthält keine API-Basis-URL.')
         return
@@ -140,7 +141,7 @@ export function CapacitorApiBaseCard() {
         window.dispatchEvent(new CustomEvent('morgendrot.apiBaseChanged'))
       } else {
         setTestMsg(
-          `Keine gültige Antwort. Am PC: npm run dev:lan, Firewall TCP 3342, gleiches WLAN. Ziel: ${base}`
+          `Keine gültige Antwort. Boss-PC läuft? Firewall TCP 3341/3342, gleiches WLAN. Ziel: ${base}`
         )
       }
     } catch (e) {
@@ -173,10 +174,8 @@ export function CapacitorApiBaseCard() {
       ) : null}
       <p className="mt-1 text-sm text-muted-foreground">
         <strong className="text-foreground">Nicht</strong> <span className="font-mono text-xs">127.0.0.1</span> — das
-        ist auf dem Handy das Gerät selbst. Trage die <strong>LAN-IPv4 deines PCs</strong> ein (am PC:{' '}
-        <span className="font-mono text-xs">ipconfig</span>), z. B.{' '}
-        <span className="font-mono text-xs">http://192.168.0.10:3342</span>. Am PC:{' '}
-        <code className="rounded bg-muted px-1 text-xs">npm run dev:lan</code> (API auf allen Interfaces).
+        ist auf dem Handy das Gerät selbst. Trage die <strong>LAN-IPv4 deines PCs</strong> ein, z. B.{' '}
+        <span className="font-mono text-xs">http://192.168.0.10:3342</span> (Boss normal starten, gleiches WLAN).
       </p>
       {loopbackWarn ? (
         <p className="mt-2 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1.5 text-xs text-amber-950 dark:text-amber-50">
@@ -276,6 +275,7 @@ export function CapacitorApiBaseCard() {
           </div>
         </div>
       ) : null}
+      {cameraDialog}
     </div>
   )
 }

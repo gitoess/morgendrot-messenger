@@ -104,6 +104,20 @@ describe('mapInboxApiRowsToMessages', () => {
     expect(out[0]!.timestamp).toBe(big)
   })
 
+  it('setzt pinnwandPost wenn Wire-Marker vor Anzeige-Normalisierung', () => {
+    const out = mapInboxApiRowsToMessages([
+      {
+        from: `0x${'a'.repeat(64)}`,
+        text: '[[MORG_PINNWAND_V1]]Lage',
+        recipient: `0x${'a'.repeat(64)}`,
+        timestamp: 100,
+        isPlain: true,
+      },
+    ])
+    expect(out[0]!.content).toBe('Lage')
+    expect(out[0]!.pinnwandPost).toBe(true)
+  })
+
   it('nutzt nonce=1 nicht als Zeitstempel (sonst Sortierung 1970)', () => {
     const out = mapInboxApiRowsToMessages([
       { from: '0xf', text: 'enc', nonce: '1', isPlain: false },

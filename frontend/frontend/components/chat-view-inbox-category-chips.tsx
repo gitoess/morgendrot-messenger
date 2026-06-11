@@ -5,7 +5,7 @@ import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter
 
 const CHIP_LABELS: Record<InboxOverviewCategory, string> = {
   alle: 'Alle',
-  lagebild: 'Lagebild',
+  lagebild: 'Pinnwand',
   direkt: 'Direkt',
   funk: 'Funk',
 }
@@ -41,7 +41,7 @@ export function ChatViewInboxCategoryChips(p: {
               'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
               active
                 ? id === 'lagebild'
-                  ? 'border-sky-500/60 bg-sky-500/15 text-sky-900 dark:text-sky-100'
+                  ? 'border-orange-500/60 bg-orange-500/15 text-orange-950 dark:text-orange-100'
                   : id === 'funk'
                     ? 'border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100'
                     : 'border-primary/50 bg-primary/10 text-foreground'

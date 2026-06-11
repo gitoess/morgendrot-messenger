@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import { parseSeedSetupFromQrText } from '@/frontend/lib/seed-setup-qr'
 import { isPlausibleSdkImport } from '@/frontend/lib/dashboard-unlock'
 import {
@@ -47,6 +47,7 @@ export function HelperSeedSetupDialog(p: {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [scanHint, setScanHint] = useState('')
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Seed-QR scannen' })
   const readiness = getStandaloneHelperReadiness()
   const hasSavedSeed = hasPersistedDirectIotaSessionSigner()
 
@@ -90,9 +91,9 @@ export function HelperSeedSetupDialog(p: {
     setScanHint('')
     setBusy(true)
     try {
-      const scanned = await scanMeshBundleQrWithCamera()
+      const scanned = await startScan()
       if ('error' in scanned) {
-        setScanHint(scanned.error)
+        if (scanned.error !== 'Scan abgebrochen.') setScanHint(scanned.error)
         return
       }
       const parsed = parseSeedSetupFromQrText(scanned.bundleJson)
@@ -156,6 +157,7 @@ export function HelperSeedSetupDialog(p: {
     : ''
 
   return (
+    <>
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -242,5 +244,7 @@ export function HelperSeedSetupDialog(p: {
         </div>
       </DialogContent>
     </Dialog>
+    {cameraDialog}
+    </>
   )
 }

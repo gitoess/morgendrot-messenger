@@ -39,6 +39,8 @@
     "vaultLockedTitle": "Vault locked",
     "chatConnected": "Chat connected",
     "vaultUnlocked": "Vault: unlocked",
+    "vaultKeysMissing": "Keys missing",
+    "vaultKeysMissingTitle": "Wallet keys not in session — tap to unlock",
     "offline": "Offline"
   },
   "lock": {
@@ -178,6 +180,8 @@
     "transferFailed": "Transfer failed"
   },
   "einsatzHub": {
-    "title": "Operations lead"
+    "title": "Operations lead",
+    "bossHint": "Set up helper (profile + channel rights) at top. TTL/purge → parameters. Chain/WLAN → Advanced.",
+    "handbookLink": "Handbook"
   }
 }

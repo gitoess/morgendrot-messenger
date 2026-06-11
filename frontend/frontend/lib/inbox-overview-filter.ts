@@ -52,6 +52,19 @@ export function filterInboxByOverviewCategory(
   return messages.filter((m) => inboxMessageOverviewCategory(m, ctx) === category)
 }
 
+/** Posteingangsliste nach Kategorie-Chips (Helfer/Simple) oder unverändert. */
+export function resolveOverviewFilteredInboxMessages(
+  sorted: Message[],
+  opts: {
+    overviewEnabled: boolean
+    category: InboxOverviewCategory
+    ctx: InboxOverviewFilterContext
+  }
+): Message[] {
+  if (!opts.overviewEnabled) return sorted
+  return filterInboxByOverviewCategory(sorted, opts.category, opts.ctx)
+}
+
 export function countInboxByOverviewCategory(
   messages: Message[],
   ctx: InboxOverviewFilterContext

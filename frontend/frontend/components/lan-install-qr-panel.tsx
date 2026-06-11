@@ -1,29 +1,30 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { QrCode } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
   applyInstallQrApiBase,
-  buildInstallQrPayload,
+  buildInstallQrScanText,
+  buildLanInstallUrls,
   parseInstallQrPayload,
-  resolveBossLanInstallUrls,
+  pickBossLanInstallHost,
+  writeLanInstallHostOverride,
 } from '@/frontend/lib/install-qr'
-import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import QRCode from 'qrcode'
 
 export type LanInstallQrPanelProps = {
   className?: string
   onStatus?: (msg: string) => void
-  /** `embedded` = Einsatzleitung (verständliche Texte); `dashboard` = veraltet, nicht mehr auf Startseite. */
-  variant?: 'embedded' | 'dashboard'
+  /** `embedded` = Einsatzleitung-Karte; `inline` = nur Button + Dialoge (neben ZIP/IOTA); `dashboard` = veraltet */
+  variant?: 'embedded' | 'inline' | 'dashboard'
 }
 
 export function LanInstallQrPanel({
@@ -35,40 +36,72 @@ export function LanInstallQrPanel({
   const [qrText, setQrText] = useState('')
   const [qrDataUrl, setQrDataUrl] = useState('')
   const [buildErr, setBuildErr] = useState('')
+  const [hostOptions, setHostOptions] = useState<string[]>([])
+  const [selectedHost, setSelectedHost] = useState('')
+  const [manualHost, setManualHost] = useState('')
+  const [needsManualHost, setNeedsManualHost] = useState(false)
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingApi, setPendingApi] = useState('')
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Install-QR scannen' })
 
-  const urls = useMemo(() => resolveBossLanInstallUrls(), [showBossQr])
-
-  const loadBossQr = useCallback(async () => {
+  const renderQrForHost = useCallback(async (host: string, uiPort: number, apiPort: number) => {
     setBuildErr('')
     setQrText('')
     setQrDataUrl('')
-    const { pwaUrl, apiBaseUrl, loopbackWarning } = resolveBossLanInstallUrls()
-    if (!pwaUrl) {
-      setBuildErr('Keine PWA-URL (nur im Browser).')
-      return
-    }
-    if (loopbackWarning) setBuildErr(loopbackWarning)
+    const { pwaUrl, apiBaseUrl } = buildLanInstallUrls(host, uiPort, apiPort)
     try {
-      const text = buildInstallQrPayload({
-        pwaUrl,
-        apiBaseUrl,
-        label: 'Boss-LAN',
-      })
+      const text = buildInstallQrScanText({ pwaUrl, apiBaseUrl })
       setQrText(text)
-      const url = await QRCode.toDataURL(text, { width: 240, margin: 2 })
-      setQrDataUrl(url)
+      setQrDataUrl(await QRCode.toDataURL(text, { width: 240, margin: 2 }))
+      writeLanInstallHostOverride(host)
     } catch (e) {
       setBuildErr(e instanceof Error ? e.message : String(e))
     }
   }, [])
 
+  const loadBossQr = useCallback(
+    async (hostOverride?: string) => {
+      setBuildErr('')
+      const picked = await pickBossLanInstallHost(hostOverride)
+      if (!picked) {
+        setNeedsManualHost(true)
+        setHostOptions([])
+        setSelectedHost('')
+        setQrText('')
+        setQrDataUrl('')
+        return
+      }
+      setNeedsManualHost(false)
+      setHostOptions(picked.hosts)
+      setSelectedHost(picked.host)
+      await renderQrForHost(picked.host, picked.uiPort, picked.apiPort)
+    },
+    [renderQrForHost]
+  )
+
   useEffect(() => {
     if (showBossQr) void loadBossQr()
   }, [showBossQr, loadBossQr])
+
+  const onHostChange = (host: string) => {
+    setSelectedHost(host)
+    void (async () => {
+      const picked = await pickBossLanInstallHost(host)
+      if (picked) await renderQrForHost(picked.host, picked.uiPort, picked.apiPort)
+    })()
+  }
+
+  const onApplyManualHost = () => {
+    const h = manualHost.trim()
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
+      setBuildErr('IPv4 eingeben (z. B. 192.168.0.10).')
+      return
+    }
+    setBuildErr('')
+    void loadBossQr(h)
+  }
 
   const requestApplyApi = (apiBase: string) => {
     setPendingApi(apiBase)
@@ -88,9 +121,7 @@ export function LanInstallQrPanel({
 
   const applyParsed = (parsed: NonNullable<ReturnType<typeof parseInstallQrPayload>>) => {
     if (parsed.pwaUrl && typeof window !== 'undefined') {
-      const open = window.confirm(
-        `PWA-Seite öffnen?\n\n${parsed.pwaUrl}\n\n(Danach im Browser „App installieren“ / Zum Home-Bildschirm.)`
-      )
+      const open = window.confirm(`PWA öffnen?\n\n${parsed.pwaUrl}`)
       if (open) window.open(parsed.pwaUrl, '_blank', 'noopener,noreferrer')
     }
     if (parsed.apiBaseUrl) {
@@ -112,104 +143,109 @@ export function LanInstallQrPanel({
   }
 
   const handleScan = async () => {
-    const s = await scanMeshBundleQrWithCamera()
+    const s = await startScan()
     if ('error' in s) {
-      setPasteOpen(true)
-      onStatus?.(s.error)
+      if (s.error !== 'Scan abgebrochen.') {
+        setPasteOpen(true)
+        onStatus?.(s.error)
+      }
       return
     }
     applyRaw(s.bundleJson)
   }
 
   const isEmbedded = variant === 'embedded'
+  const isInline = variant === 'inline'
 
-  return (
-    <div
-      id="lan-install-qr"
-      className={className ?? 'rounded-xl border border-border bg-card p-4'}
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
-          <QrCode className="h-5 w-5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <h4 className="font-semibold text-foreground">
-              {isEmbedded ? 'Helfer per QR einbinden (WLAN)' : 'Boss-LAN: PWA per QR'}
-            </h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {isEmbedded ? (
-                <>
-                  <strong className="text-foreground">Nur Installation im LAN</strong> — kein Handoff-ZIP, keine Kontakte.
-                  Am Einsatz-PC Messenger im WLAN starten (<code className="rounded bg-muted px-1 text-xs">npm run dev:lan</code>
-                  ), dann QR anzeigen. Helfer scannen → PWA öffnen →{' '}
-                  <strong className="text-foreground">zum Home-Bildschirm hinzufügen</strong>. Im QR stecken PWA-URL und
-                  API-Basis für dieses Gerät.
-                </>
-              ) : (
-                <>
-                  QR für PWA-Installation im lokalen Netz. Am PC zuerst{' '}
-                  <code className="rounded bg-muted px-1 text-xs">npm run dev:lan</code> (Firewall 3341/3342).
-                </>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="default"
-              className="h-9 text-xs"
-              onClick={() => setShowBossQr(true)}
+  const hostPicker =
+    needsManualHost || hostOptions.length > 1 ? (
+      <div className="space-y-2">
+        {hostOptions.length > 1 ? (
+          <label className="block text-xs">
+            <span className="mb-1 block text-muted-foreground">Boss-PC</span>
+            <select
+              className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-sm"
+              value={selectedHost}
+              onChange={(e) => onHostChange(e.target.value)}
             >
-              <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              QR anzeigen
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-9 text-xs"
-              onClick={() => void handleScan()}
-            >
-              QR scannen (Helfer-Gerät)
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-9 text-xs"
-              onClick={() => setPasteOpen(true)}
-            >
-              Link einfügen
+              {hostOptions.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
+        {needsManualHost ? (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={manualHost}
+              onChange={(e) => setManualHost(e.target.value)}
+              placeholder="192.168.0.10"
+              className="min-w-0 flex-1 rounded-lg border border-border bg-input px-2 py-1.5 font-mono text-sm"
+            />
+            <Button type="button" size="sm" variant="secondary" onClick={onApplyManualHost}>
+              QR
             </Button>
           </div>
-        </div>
+        ) : null}
       </div>
+    ) : selectedHost ? (
+      <p className="text-center font-mono text-xs text-muted-foreground">{selectedHost}</p>
+    ) : null
 
+  const copyInstallLink = async () => {
+    if (!qrText) return
+    try {
+      await navigator.clipboard.writeText(qrText)
+      onStatus?.('Link kopiert — im Browser mit http:// öffnen (nicht https).')
+    } catch {
+      onStatus?.('Kopieren fehlgeschlagen — Link unten manuell markieren.')
+    }
+  }
+
+  const dialogs = (
+    <>
       <Dialog open={showBossQr} onOpenChange={setShowBossQr}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>QR für Helfer-Einbindung</DialogTitle>
-            <DialogDescription>
-              Helfer im gleichen WLAN scannen → Messenger öffnen → App installieren. Technische URLs stehen unten im
-              Textfeld.
-            </DialogDescription>
+            <DialogTitle>WLAN-QR</DialogTitle>
           </DialogHeader>
+          <p className="text-xs text-muted-foreground">
+            Helfer: Handy-Kamera → Link antippen → Messenger im Browser → „Zum Home-Bildschirm“. Gleiches WLAN
+            wie der Boss-PC (Boss startet normal — kein Extra-Terminal).
+          </p>
+          <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+            <strong>Wichtig:</strong> Link beginnt mit <span className="font-mono">http://</span> — kein{' '}
+            <span className="font-mono">https://</span>. Wenn das Handy „sichere Verbindung“ verlangt: Link
+            kopieren und in Chrome/Safari <strong>manuell</strong> als <span className="font-mono">http://192…:3341</span>{' '}
+            eingeben.
+          </p>
+          {hostPicker}
           {buildErr ? (
             <p className="text-xs text-amber-800 dark:text-amber-200" role="status">
               {buildErr}
             </p>
           ) : null}
           {qrDataUrl ? (
-            <img src={qrDataUrl} alt="Boss-LAN Install QR" className="mx-auto rounded-lg border border-border" />
+            <img src={qrDataUrl} alt="WLAN Install QR" className="mx-auto rounded-lg border border-border" />
           ) : null}
-          <textarea
-            readOnly
-            value={qrText}
-            rows={4}
-            className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 font-mono text-[10px]"
-          />
+          {qrText ? (
+            <>
+              <textarea
+                readOnly
+                value={qrText}
+                rows={2}
+                className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 font-mono text-[10px]"
+                aria-label="Installations-Link"
+              />
+              <Button type="button" size="sm" variant="secondary" className="w-full" onClick={() => void copyInstallLink()}>
+                Link kopieren
+              </Button>
+            </>
+          ) : null}
         </DialogContent>
       </Dialog>
 
@@ -217,7 +253,6 @@ export function LanInstallQrPanel({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Install-QR einfügen</DialogTitle>
-            <DialogDescription>JSON (`mi`) oder http(s)-Link zur PWA.</DialogDescription>
           </DialogHeader>
           <textarea
             value={pasteText}
@@ -236,9 +271,6 @@ export function LanInstallQrPanel({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>API-Basis übernehmen?</DialogTitle>
-            <DialogDescription>
-              Speichert die Morgendrot-API-URL für dieses Gerät (APK/PWA). Nur aus vertrauenswürdigem Boss-QR.
-            </DialogDescription>
           </DialogHeader>
           <p className="break-all font-mono text-xs text-foreground">{pendingApi}</p>
           <div className="flex gap-2">
@@ -251,6 +283,72 @@ export function LanInstallQrPanel({
           </div>
         </DialogContent>
       </Dialog>
+      {cameraDialog}
+    </>
+  )
+
+  if (isInline) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setShowBossQr(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/45 bg-violet-500/15 px-5 py-3 text-sm font-semibold text-foreground hover:bg-violet-500/25 sm:w-auto"
+        >
+          <QrCode className="h-4 w-4 shrink-0" aria-hidden />
+          WLAN-QR
+        </button>
+        {dialogs}
+      </>
+    )
+  }
+
+  return (
+    <div
+      id="lan-install-qr"
+      className={className ?? 'rounded-xl border border-border bg-card p-4'}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-primary">
+          <QrCode className="h-5 w-5" aria-hidden />
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <h4 className="font-semibold text-foreground">
+            {isEmbedded ? 'WLAN-QR' : 'Boss-LAN: PWA per QR'}
+          </h4>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="default"
+              className="h-9 text-xs"
+              onClick={() => setShowBossQr(true)}
+            >
+              <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              QR anzeigen
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-9 text-xs"
+              onClick={() => void handleScan()}
+            >
+              QR scannen
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-9 text-xs"
+              onClick={() => setPasteOpen(true)}
+            >
+              Link einfügen
+            </Button>
+          </div>
+        </div>
+      </div>
+      {dialogs}
     </div>
   )
 }

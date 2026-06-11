@@ -11,6 +11,19 @@ import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-enc
 
 const ADDR = /^0x[a-f0-9]{64}$/
 
+export function resolveHandoffSenderAddress(apiStatus: ApiStatus | null | undefined): string {
+  return (apiStatus?.myAddressFull || apiStatus?.myAddress || '').trim().toLowerCase()
+}
+
+export function isHandoffIotaSelfTarget(
+  targetRaw: string,
+  apiStatus: ApiStatus | null | undefined
+): boolean {
+  const target = targetRaw.trim().toLowerCase()
+  const me = resolveHandoffSenderAddress(apiStatus)
+  return Boolean(me && target && me === target)
+}
+
 /** Verschlüsselter Mailbox-Versand an Partner: Session, Direkt-ECDH oder Handshake. */
 export async function ensureHandoffEncryptedPeerReady(
   targetRaw: string,
@@ -20,6 +33,13 @@ export async function ensureHandoffEncryptedPeerReady(
   const target = targetRaw.trim().toLowerCase()
   if (!ADDR.test(target)) {
     return { ok: false, message: 'Ungültige Partner-Adresse (0x + 64 Hex).' }
+  }
+  if (isHandoffIotaSelfTarget(target, apiStatus)) {
+    return {
+      ok: false,
+      message:
+        'Nicht an die eigene Adresse — IOTA-Handoff braucht die Wallet eines anderen Geräts (Helfer). Zum Testen: ZIP.',
+    }
   }
   if (apiStatus?.locked) {
     return { ok: false, message: 'Wallet ist gesperrt — zuerst entsperren.' }

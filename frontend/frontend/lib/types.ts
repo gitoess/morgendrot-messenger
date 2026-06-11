@@ -36,6 +36,8 @@ export interface Message {
   chainPurgeable?: boolean
   /** pairwise = 1:1 MsgKey; team-broadcast = TeamPlainBroadcastKey */
   chainPurgeKind?: 'pairwise' | 'team-broadcast'
+  /** Wire hatte [[MORG_PINNWAND_V1]] — bleibt gesetzt, auch wenn UI-Marker entfernt wird. */
+  pinnwandPost?: boolean
 }
 
 export interface KeyData {

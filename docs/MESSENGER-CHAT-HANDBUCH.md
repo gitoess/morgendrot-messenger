@@ -216,7 +216,7 @@ Optional auf Root-Ebene: `deploymentChannelTag`, `offlineBriefing`, `validUntil`
 **Abweichungen / nicht über initialProfile:**
 
 - **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): nur über **verschl. Kontakt-Backup** oder manuell im Telefonbuch — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
-- **Handoff-ZIP** für Helfer: **Einsatzleitung → Export-Assistent** — enthält neben `initialProfile` auch Rechte, Presets, ggf. verschlüsselte Pakete (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
+- **Handoff-ZIP** für Helfer: **Einsatzleitung → Helfer einrichten** — Profil, Rechte, Partner, Team (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
 - **`npm run bundle:messenger`:** Entwickler-Standalone-Ordner — **kein** Ersatz für Handoff-ZIP.
 
 **Nachrichten-Forensik** (Verlauf JSON/TXT, verschl. Bericht, Protokoll-ZIP): **Posteingang** → Menü Export — nicht in der Einsatzleitung dupliziert.
@@ -229,8 +229,11 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 | Thema | Ort |
 |--------|-----|
-| **Handoff-ZIP** (Helfer, Arbeiter, Führer einrichten) | **Einsatzleitung → Export-Assistent** |
-| **PWA im WLAN** (nur App installieren, keine Kontakte) | **Einsatzleitung → Helfer per QR (WLAN)** |
+| **Handoff-ZIP** (Profil, Rechte, Partner, Team) | **Einsatzleitung → Helfer einrichten** |
+| **Neues Helfer-Handy** (Seed + Handoff-ZIP + QR) | **Helfer einrichten** → **Neues Gerät** → Seed + QR |
+| **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |
+| **PWA im WLAN** (nur App installieren) | **Helfer einrichten** → **WLAN-QR** (neben ZIP/IOTA) |
+| **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (Navigation unten) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
 | **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
@@ -263,9 +266,9 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 ### Ablauf (Boss)
 
-1. Move/Mailbox-Struktur auf dem **Boss-PC** / Server betreiben (`.env` des Boss, ggf. Team-Mailboxen unter Einstellungen anlegen).
-2. Im **Export-Assistenten**: Bezeichnung, **Profil** (Helfer/Führer/Spezial), Team-Postfächer und Partner wählen.
-3. ZIP herunterladen (oder per IOTA an Partner) — Helfer importiert auf dem Gerät.
+1. Move/Mailbox-Struktur auf dem **Boss-PC** betreiben.
+2. **Helfer einrichten:** Profil + **Rechte** (Matrix / Medic / Reporter) → Team & Partner → **ZIP** / **IOTA**; neues Handy → **Seed + QR**; App installieren → **WLAN-QR** (ohne Handoff).
+3. **Bestehende Geräte:** TTL/Purge → **Handoff** im selben Panel.
 
 Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
 
@@ -273,13 +276,15 @@ Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API
 
 ---
 
-## Einsatzleitung (Boss): QR im WLAN vs. Export-Assistent
+## Einsatzleitung (Boss): WLAN-QR vs. Handoff
 
 | Funktion | Zweck |
 |----------|--------|
-| **Helfer per QR (WLAN)** | Helfer installiert die PWA im gleichen LAN; QR enthält PWA-URL + API-Basis (`install-qr`, Schema `mi`). **Keine** Kontakte, keine Rolle — nur Erreichbarkeit der App. |
-| **Export-Assistent** | Handoff-ZIP für Untergebene: Rolle, `ROLE_ID`, Capabilities, Partner, Team-Mailboxen, optional verschlüsselt. |
-| **Einsatz-Vorlagen** | Gespeicherte Presets (`chainRole`, `roleId`, Kanal-Tag) im **Export-Assistenten** (Dropdown / „Als Vorlage speichern“) — Datei `.morgendrot-einsatz-templates.json` auf dem Boss-PC (`docs/API-EINSATZ-ROLE-TEMPLATES.md`). |
+| **WLAN-QR** | PWA im LAN installieren (`install-qr`, Schema `mi`); LAN-IP via **`GET /api/lan-install-urls`**. **Keine** Rolle, **keine** Kontakte. |
+| **Helfer einrichten** | Handoff-ZIP: Rolle, `ROLE_ID`, Capabilities, Partner, Team-Mailboxen, optional verschlüsselt. |
+| **Einsatz-Vorlagen** | Dropdown / „Als Vorlage speichern“ im Experten-Block — `.morgendrot-einsatz-templates.json` (`docs/API-EINSATZ-ROLE-TEMPLATES.md`). |
+
+Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 ---
 

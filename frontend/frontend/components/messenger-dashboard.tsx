@@ -23,6 +23,7 @@ import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { ConfigView } from './views/config-view'
 import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-messenger-boss-header'
+import { TresorSessionBadge } from '@/frontend/components/chat-view-chat-header'
 import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-messenger-boss-home'
 import { DashboardSharedDialogs } from '@/frontend/components/dashboard-shared-dialogs'
 import { messengerFeatures, featureTitle } from '@/frontend/components/dashboard-features-messenger'
@@ -50,6 +51,7 @@ import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
+import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
 import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
@@ -61,6 +63,7 @@ export function MessengerDashboard() {
 
   return (
     <>
+      <InstallQrLandingBootstrap />
       <CapacitorStandaloneBootstrap />
       <CapacitorForegroundSyncBootstrap />
       <MessengerDashboardBody
@@ -102,6 +105,10 @@ function MessengerDashboardBody({
     if (!window.confirm(t('lock.confirm'))) return
     await s.lockSession()
   }
+
+  const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
+  const vaultKeysReady = s.apiSnapshot?.hasKeys === true
+  const showHomeVaultBadge = s.backendReachable === true && (!vaultKeysReady || vaultSessionLocked)
 
   useEffect(() => {
     if (!liteMessengerFromApi) return
@@ -249,6 +256,9 @@ function MessengerDashboardBody({
           myAddressFull={s.apiSnapshot?.myAddressFull}
           onOpenSettings={s.openSettingsView}
           onLockSession={!s.locked ? onLockSession : undefined}
+          vaultBannerActions={showHomeVaultBadge ? s.chatVaultBannerActions : undefined}
+          sessionLocked={vaultSessionLocked}
+          hasKeys={s.apiSnapshot?.hasKeys}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
@@ -290,6 +300,13 @@ function MessengerDashboardBody({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            {showHomeVaultBadge ? (
+              <TresorSessionBadge
+                sessionLocked={vaultSessionLocked}
+                hasKeys={s.apiSnapshot?.hasKeys}
+                actions={s.chatVaultBannerActions}
+              />
+            ) : null}
             <div
               className={cn(
                 'flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium',
@@ -297,6 +314,8 @@ function MessengerDashboardBody({
                   ? 'bg-muted text-muted-foreground'
                   : s.locked
                     ? 'bg-amber-500/10 text-amber-400'
+                    : !vaultKeysReady && s.backendReachable
+                      ? 'bg-orange-500/10 text-orange-400'
                     : s.connected
                       ? 'bg-emerald-500/10 text-emerald-400'
                       : s.backendReachable
@@ -313,6 +332,11 @@ function MessengerDashboardBody({
                 <>
                   <Lock className="h-3.5 w-3.5" />
                   <span title={t('connection.vaultLockedTitle')}>{t('connection.vaultLocked')}</span>
+                </>
+              ) : !vaultKeysReady && s.backendReachable ? (
+                <>
+                  <Lock className="h-3.5 w-3.5" />
+                  <span title={t('connection.vaultKeysMissingTitle')}>{t('connection.vaultKeysMissing')}</span>
                 </>
               ) : s.connected ? (
                 <>

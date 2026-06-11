@@ -2,7 +2,7 @@
  * Kammer „Inbox/Fetch“: Nachrichten von Chain laden, entschlüsseln, mit lokalem Cache mergen.
  */
 import { logger } from '../logger.js';
-import { CFG, isMessengerMailboxModeActive, readMailboxIdHistory, readPackageIdHistory } from '../config.js';
+import { CFG, isMessengerMailboxModeActive, readMailboxIdHistory, readPackageIdHistory, readTeamMailboxIds } from '../config.js';
 import { isPrivateMailboxObjectIdOverrideActive } from '../mailbox-object-id-scope.js';
 import {
     getClient,
@@ -32,6 +32,11 @@ function typeMatchesMsgKey(typeStr: unknown): boolean {
     return t === typeName('MsgKey') || t.endsWith('::messaging::MsgKey');
 }
 
+function typeMatchesTeamPlainBroadcastKey(typeStr: unknown): boolean {
+    const t = String(typeStr ?? '');
+    return t === typeName('TeamPlainBroadcastKey') || t.endsWith('::messaging::TeamPlainBroadcastKey');
+}
+
 type MsgItem = {
     nonce: bigint;
     sender: string;
@@ -47,6 +52,8 @@ type MsgItem = {
     tsMs?: number;
     /** Nur bei Mailbox-gespeicherten verschlüsselten Nachrichten mit /purge-msg entfernbar */
     chainPurgeable?: boolean;
+    /** Gruppen-Klartext (TeamPlainBroadcastKey) — kein recipient. */
+    teamBroadcast?: boolean;
 };
 
 /** Chain-Zeit: Sekunden (<1e12) → ms; ungültig → undefined. */
@@ -87,6 +94,22 @@ function effectiveInboxTsMs(m: { tsMs?: number; nonce: bigint }): number {
     const n = Number(m.nonce);
     if (Number.isFinite(n) && n >= 1_000_000_000_000) return n;
     return 0;
+}
+
+function fetchedChainMeta(m: MsgItem): Pick<FetchedMessage, 'chainPurgeable' | 'recipient' | 'inboxKey' | 'chainPurgeKind'> {
+    if (m.teamBroadcast) {
+        return {
+            recipient: m.recipient,
+            chainPurgeable: true,
+            inboxKey: m.key,
+            chainPurgeKind: 'team-broadcast',
+        };
+    }
+    return {
+        recipient: m.recipient,
+        chainPurgeable: m.isPlain ? m.chainPurgeable === true : m.chainPurgeable !== false,
+        inboxKey: m.key,
+    };
 }
 
 function resolveEventTsMs(tsMs: number | undefined, nonce: bigint): number | undefined {
@@ -133,6 +156,7 @@ export type FetchedMessage = {
     chainPurgeable?: boolean;
     /** Stabiler Dedup-Schlüssel (evid:… / mb:… / ev:…) — für UI bei gleicher nonce. */
     inboxKey?: string;
+    chainPurgeKind?: 'pairwise' | 'team-broadcast';
 };
 
 const PACKAGE_ID_HEX = /^0x[a-fA-F0-9]{64}$/i;
@@ -280,6 +304,7 @@ function mailboxIdsForInboxUnion(): string[] {
     };
     add(CFG.MAILBOX_ID || '');
     for (const h of readMailboxIdHistory()) add(h);
+    for (const h of readTeamMailboxIds()) add(h);
     return out;
 }
 
@@ -419,6 +444,46 @@ async function appendMailboxDynamicFieldsToItems(
                         chainPurgeable: true,
                     });
             }
+        }
+    }
+
+    const teamBcIds = [
+        ...new Set(
+            allEntries
+                .filter((e: any) => typeMatchesTeamPlainBroadcastKey(e?.name?.type))
+                .map((e: any) => e.objectId)
+                .filter(Boolean)
+        ),
+    ] as string[];
+    if (teamBcIds.length) {
+        const BATCH = 50;
+        const teamObjs: any[] = [];
+        for (let i = 0; i < teamBcIds.length; i += BATCH) {
+            const chunk = teamBcIds.slice(i, i + BATCH);
+            const part = await getClient().multiGetObjects({ ids: chunk, options: { showContent: true } } as any);
+            teamObjs.push(...(part ?? []));
+        }
+        for (const o of teamObjs) {
+            const f = o?.data?.content?.fields;
+            if (!f) continue;
+            const sender = f.sender as string;
+            if (!sender?.trim()) continue;
+            if (!matchesCounterparty(sender)) continue;
+            const nonce = BigInt(f.nonce ?? 0);
+            const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
+            const textBytes = toEventBytes(f.text);
+            if (textBytes.length === 0) continue;
+            items.push({
+                nonce,
+                sender,
+                recipient: parentId,
+                key: `team:${parentId}:${normalizeAddress(sender)}:${nonce}`,
+                isPlain: true,
+                text: textBytes,
+                tsMs,
+                chainPurgeable: true,
+                teamBroadcast: true,
+            });
         }
     }
 }
@@ -602,9 +667,7 @@ export async function fetchLastMessages(
                 isPlain: true,
                 nonce: String(m.nonce),
                 ts: ts > 0 ? ts : undefined,
-                recipient: m.recipient,
-                chainPurgeable: m.chainPurgeable === true,
-                inboxKey: m.key,
+                ...fetchedChainMeta(m),
             });
         } else if (m.iv && m.cipher && m.tag) {
             const isOutgoingMsg = normalizeAddress(m.sender) === myNorm;
@@ -615,9 +678,7 @@ export async function fetchLastMessages(
                 isPlain: false as const,
                 nonce: String(m.nonce),
                 ts: ts > 0 ? ts : undefined,
-                recipient: m.recipient,
-                chainPurgeable: m.chainPurgeable !== false,
-                inboxKey: m.key,
+                ...fetchedChainMeta(m),
             };
             if (!myPrivKey) {
                 out.push({
@@ -664,9 +725,7 @@ export async function fetchLastMessages(
                     isPlain: false,
                     nonce: String(m.nonce),
                     ts: ts > 0 ? ts : undefined,
-                    recipient: m.recipient,
-                    chainPurgeable: m.chainPurgeable !== false,
-                    inboxKey: m.key,
+                    ...fetchedChainMeta(m),
                 });
                 const vaultPath = CFG.VAULT_FILE || '.morgendrot-vault';
                 const pw = getWalletPassword();
@@ -739,7 +798,7 @@ export async function fetchLastMessages(
             }
             merged.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
             const result = merged.slice(skip, skip + count).map(
-                ({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient, inboxKey }) => ({
+                ({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient, inboxKey, chainPurgeKind }) => ({
                     sender,
                     text,
                     isPlain,
@@ -748,6 +807,7 @@ export async function fetchLastMessages(
                     chainPurgeable,
                     recipient,
                     inboxKey,
+                    chainPurgeKind,
                 })
             );
             if (toShow.length > 0 && !opts?.silent) logger.info(`Letzte ${result.length} Nachricht(en) geladen (inkl. lokaler Inbox).`);
@@ -756,7 +816,7 @@ export async function fetchLastMessages(
     }
     if (toShow.length > 0 && !opts?.silent) logger.info(`Letzte ${toShow.length} Nachricht(en) geladen.`);
     return {
-        messages: out.map(({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient, inboxKey }) => ({
+        messages: out.map(({ sender, text, isPlain, nonce, ts, chainPurgeable, recipient, inboxKey, chainPurgeKind }) => ({
             sender,
             text,
             isPlain,
@@ -765,6 +825,7 @@ export async function fetchLastMessages(
             chainPurgeable,
             recipient,
             inboxKey,
+            chainPurgeKind,
         })),
         hasMore,
     };

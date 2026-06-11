@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { BookOpen, LogOut, Settings } from 'lucide-react'
 import { DashboardRolePill } from '@/frontend/components/dashboard-role-pill'
 import { DashboardHeaderAddress } from '@/frontend/components/dashboard-header-address'
+import {
+  TresorSessionBadge,
+  type ChatViewVaultBannerActions,
+} from '@/frontend/components/chat-view-chat-header'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 export function DashboardMessengerBossHeader(p: {
@@ -11,8 +15,13 @@ export function DashboardMessengerBossHeader(p: {
   myAddressFull?: string | null
   onOpenSettings: () => void
   onLockSession?: () => void | Promise<void>
+  vaultBannerActions?: ChatViewVaultBannerActions
+  sessionLocked?: boolean
+  hasKeys?: boolean
 }) {
   const { t } = useAppTranslation('dashboard')
+  const showVaultBadge =
+    p.vaultBannerActions != null && (p.sessionLocked === true || p.hasKeys !== true)
 
   return (
     <header className="border-b border-border/80 bg-card/80 backdrop-blur-sm">
@@ -21,6 +30,13 @@ export function DashboardMessengerBossHeader(p: {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold tracking-tight text-foreground">{t('brand.morgendrot')}</h1>
             <DashboardRolePill role={p.role} />
+            {showVaultBadge ? (
+              <TresorSessionBadge
+                sessionLocked={!!p.sessionLocked}
+                hasKeys={p.hasKeys}
+                actions={p.vaultBannerActions}
+              />
+            ) : null}
           </div>
           <DashboardHeaderAddress address={p.myAddressFull} />
         </div>

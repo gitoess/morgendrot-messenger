@@ -1,7 +1,7 @@
 # Gerät provisionieren — Wizard & Helfer-Flow
 
 **Stand:** 2026-06-02  
-**UI:** Einsatzleitung → **Neues Gerät provisionieren** (Boss) · Helfer: Einstellungen → Handoff importieren → **Seed einrichten?**  
+**UI:** Einsatzleitung → **Helfer einrichten** → **Neues Gerät** → **Seed + QR** (Boss) · Helfer: Einstellungen → Handoff importieren → **Seed einrichten?**  
 **Custody:** **B** (Boss speichert Seeds verschlüsselt in lokaler Registry — Master-Passwort)
 
 ---
@@ -10,7 +10,7 @@
 
 | Schritt | Wer | Was |
 |--------|-----|-----|
-| 1 | Boss | Wizard: Bezeichnung + Profil → **Generieren & Exportieren** |
+| 1 | Boss | Wizard: Bezeichnung + Profil (+ optional Sonderrolle) → **Generieren & Exportieren** |
 | 2 | Boss | ZIP-Download (+ optional Passwort) + Seed-QR (60 s) + Registry |
 | 3 | Helfer | ZIP importieren (**Lokal vormerken** auf Standalone-APK) |
 | 4 | Helfer | Dialog **Seed einrichten?** → QR scannen oder Mnemonic eingeben |
@@ -23,12 +23,16 @@
 ## Boss — Wizard
 
 1. **Einsatzleitung** öffnen (Rolle Boss).
-2. **Wizard öffnen** unter „Neues Gerät provisionieren“.
+2. **Seed + QR** unter **Helfer einrichten** → **Neues Gerät** (Profil/Rechte im Formular darüber).
 3. Beim **ersten Mal:** Master-Passwort für die **Boss-Registry** setzen (min. 8 Zeichen).  
    Danach: Registry mit demselben Passwort **entsperren** (einmal pro Browser-Sitzung).
-4. **Bezeichnung** + **Profil** (Helfer / Führer / Spezial), optional Vorlage.
-5. **Handoff-ZIP:** Standard **Klartext** (schnell). Optional Checkbox **Handoff-ZIP mit Passwort** (wie Export-Assistent).
-6. **Generieren & Exportieren** — Mnemonic, ZIP, Seed-QR (60 s), Registry-Eintrag.
+4. **Bezeichnung** + **Profil** (Helfer / Führer / Spezial), optional gespeicherte Vorlage.
+5. **Sonderrolle (optional):**
+   - **Medic-Funker** — LoRa senden, Telegram nur lesen, IOTA aus (`ROLE_ID=12` + Capabilities)
+   - **Reporter (Transport)** — nur lesen auf allen Kanälen
+   - Weitere Presets (Nur Funk, …): **Rechte**-Matrix in **Helfer einrichten**
+6. **Handoff-ZIP:** Standard **Klartext** (schnell). Optional Checkbox **Handoff-ZIP mit Passwort**.
+7. **Generieren & Exportieren** — Mnemonic, ZIP, Seed-QR (60 s), Registry-Eintrag.
 
 ### Master-Passwort — wann nötig?
 
@@ -60,9 +64,15 @@ Das Master-Passwort liegt nach dem Entsperren **nur im RAM** dieser Browser-Sitz
 
 Filter **„Noch nicht übergeben“** zeigt offene Geräte — für längere Einsätze manuell pflegen oder Liste exportieren.
 
-### Export-Assistent
+### Abgrenzung
 
-Bleibt für **Feineinstellung** (Partner, Capabilities, IOTA-Versand). Wizard und Export-Assistent teilen dieselbe ZIP-Pipeline; im Wizard ist Passwort-ZIP optional integriert.
+| Aufgabe | Tool |
+|---------|------|
+| **Neues Handy** (Seed + ZIP) | **Helfer einrichten** → Neues Gerät |
+| TTL/Purge für **bestehende** Geräte | **Helfer einrichten** → Bestehende Geräte |
+| Partner, volle Capabilities-Matrix | **Helfer einrichten** (oben) |
+
+Wizard und Handoff-Export teilen dieselbe ZIP-Pipeline (`POST /api/standalone-smartphone-handoff-zip`). Zielbild: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**.
 
 ---
 
@@ -82,16 +92,19 @@ Bleibt für **Feineinstellung** (Partner, Capabilities, IOTA-Versand). Wizard un
 | Baustein | Pfad |
 |----------|------|
 | Wizard-UI | `frontend/frontend/components/boss-device-provision-wizard.tsx` |
+| Capability-Presets | `frontend/frontend/lib/handoff-capability-presets.ts` |
 | Boss-Registry | `frontend/frontend/lib/boss-provision-registry.ts` |
 | Seed-QR | `frontend/frontend/lib/seed-setup-qr.ts` |
 | QR-Schema-Doku | `docs/SEED-SETUP-QR-SCHEMA.md` |
 | Helfer-Dialog | `frontend/frontend/components/helper-seed-setup-dialog.tsx` |
+| Rechte-Übersicht | `docs/HANDOFF-PERMISSIONS-MATRIX.md` |
 
 ---
 
 ## Checkliste Feldtest
 
 - [ ] Boss: Wizard → ZIP (klar + optional Passwort) + QR + Registry
+- [ ] Boss: Medic-Funker / Reporter Preset → Capabilities in `.morgendrot-runtime-config.json`
 - [ ] Boss: Registry sperren / neu entsperren
 - [ ] Boss: Registry JSON sichern & importieren
 - [ ] Helfer: ZIP → Seed-QR → Chat (Direct-IOTA)

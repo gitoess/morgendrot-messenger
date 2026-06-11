@@ -51,7 +51,8 @@
 | Helfer: Lagebild-Streifen **ohne** technische Adresse | **Ist** |
 | Helfer/Simple: Kategorie-Chips im Posteingang | **Ist** |
 | Pinnwand aus „Alle“-Liste wenn Streifen sichtbar (keine Doppelung) | **Ist** |
-| Rollen: Helfer ohne Pinnwand-Tab, Führung mit Tab | **Ist** (M3) |
+| **Lagebild-Kanal-Tab:** eigener Feed (nur Brett-Posts), Posteingang bleibt für 1:1/Gruppe | **Ist** (2026-06) |
+| Rollen: Helfer ohne Pinnwand-Tab, Führung mit Tab | **überholt** — Helfer haben Tab + Streifen (PINNWAND-ANZEIGE-ZIELBILD) |
 
 ### Phase 2
 

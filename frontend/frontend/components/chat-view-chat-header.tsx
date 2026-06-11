@@ -63,15 +63,13 @@ export type ChatViewChatHeaderProps = {
   }
   /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
   vaultBannerActions?: ChatViewVaultBannerActions
-  /** Eine Kachel „Nachrichten“: Umschalten Privat ↔ Pinnwand (ohne Dashboard zurück). */
+  /** Eine Kachel „Nachrichten“: Umschalten Privat ↔ Gruppe ↔ Pinnwand (ohne Dashboard zurück). */
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
   /** Direkt unter Puls-Einstellungen (z. B. Einsatz-Profil). */
   afterPulse?: ReactNode
   /** Kompakter Gesamtstatus (optional, z. B. aus use-offline-status). */
   offlineStatus?: OfflineStatusSnapshot
-  /** Kanal-Umschalter: Rolle/Server (z. B. Pinnwand-Tab nur Führung). */
-  role?: string
   /** Ungelesene Lagebild-Meldungen — Badge am Tab. */
   pinnwandTabUnreadCount?: number
 }
@@ -84,7 +82,7 @@ function tresorSessionUi(sessionLocked: boolean, hasKeys?: boolean): TresorSessi
   return 'ready'
 }
 
-function TresorSessionBadge({
+export function TresorSessionBadge({
   sessionLocked,
   hasKeys,
   actions,
@@ -107,15 +105,15 @@ function TresorSessionBadge({
   )
   const passiveTitle =
     ui === 'locked'
-      ? 'Entsperr-Dialog nötig — Startseite: Tresor entsperren.'
+      ? 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'Passwort ok, aber Schlüssel nicht im Server-RAM — Startseite erneut entsperren oder Tresor → Datei laden.'
+        ? 'Schlüssel fehlen in der Sitzung — erneut entsperren oder Tresor → Datei laden.'
         : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle =
     ui === 'locked'
-      ? 'Zur Startseite wechseln — dort Dialog „Tresor entsperren“.'
+      ? 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Zur Startseite — Tresor erneut entsperren (lädt Keys in die Sitzung).'
+        ? 'Tresor erneut entsperren (lädt Keys in die Sitzung).'
         : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis.'
 
   const icon =
@@ -146,7 +144,7 @@ function TresorSessionBadge({
       disabled={busy}
       title={activeTitle}
       aria-label={
-        ui === 'locked' || ui === 'no-keys' ? 'Zur Startseite für Tresor entsperren' : 'API-Sitzung sperren'
+        ui === 'locked' || ui === 'no-keys' ? 'Tresor entsperren' : 'API-Sitzung sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys') {
@@ -192,36 +190,55 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     (mode) => mode !== 'pinnwand' || showPinnwandChannelTab(apiStatus, role)
   )
 
+  const channelTitle =
+    channelMode === 'group'
+      ? 'Gruppenchat'
+      : channelMode === 'pinnwand'
+        ? pinnwandChannelTabLabel(role, apiStatus)
+        : '1:1 Privat'
+
+  const handbookSubline =
+    channelMode === 'group' ? (
+      <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_GRUPPENCHAT} className="text-[10px]" />
+    ) : channelMode != null && isPinnwandChannel(channelMode) ? (
+      <Link href="/handbook?file=BROADCAST-PINNWAND.md" className="text-primary underline-offset-2 hover:underline">
+        Handbuch: Pinnwand
+      </Link>
+    ) : null
+
+  const sendPathPanelMinH = 'min-h-[6.5rem]'
+
   return (
     <>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-1 items-start gap-2 sm:items-center sm:gap-3">
-          <div
-            className={cn(
-              'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:mt-0 sm:h-12 sm:w-12',
-              encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
-            )}
-          >
-            {encrypted ? <Lock className="h-5 w-5 sm:h-6 sm:w-6" /> : <Unlock className="h-5 w-5 sm:h-6 sm:w-6" />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <h2 className="text-lg font-bold leading-tight text-foreground sm:text-xl">
-                {channelMode === 'group'
-                  ? 'Gruppenchat'
-                  : channelMode === 'pinnwand'
-                    ? pinnwandChannelTabLabel(role, apiStatus)
-                    : '1:1 Privat'}
-              </h2>
-              <ActiveProfileBadge status={apiStatus} compact />
+      <section
+        className="rounded-xl border border-border/60 bg-card/30 p-3 sm:p-4"
+        aria-label="Chat-Kopf"
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,22rem)] lg:items-start lg:gap-5">
+          {/* Links: Modus + Kanal-Umschalter */}
+          <div className="flex min-w-0 gap-3">
+            <div
+              className={cn(
+                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11',
+                encrypted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
+              )}
+              aria-hidden
+            >
+              {encrypted ? <Lock className="h-5 w-5" /> : <Unlock className="h-5 w-5" />}
+            </div>
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h2 className="text-base font-bold leading-tight text-foreground sm:text-lg">{channelTitle}</h2>
+                <ActiveProfileBadge status={apiStatus} compact />
+              </div>
               {channelMode != null && onChannelModeChange ? (
-                <span
-                  className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5"
+                <div
+                  className="grid w-full max-w-[15.5rem] grid-cols-3 gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5"
                   role="group"
                   aria-label="Kanal"
                 >
                   {channelModes.map((mode) => {
-                    const label =
+                    const tabLabel =
                       mode === 'private'
                         ? '1:1'
                         : mode === 'group'
@@ -245,7 +262,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         title={disabled ? disabledReason ?? undefined : undefined}
                         onClick={() => onChannelModeChange(mode)}
                         className={cn(
-                          'rounded-md px-2.5 py-1 text-[11px] font-semibold transition-colors',
+                          'rounded-md px-1 py-1.5 text-center text-[11px] font-semibold leading-none transition-colors',
                           disabled && 'cursor-not-allowed opacity-40',
                           channelMode === mode && !disabled
                             ? mode === 'group'
@@ -253,13 +270,13 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                               : mode === 'pinnwand'
                                 ? 'bg-orange-600 text-white'
                                 : 'bg-primary text-primary-foreground'
-                            : 'text-muted-foreground hover:text-foreground'
+                            : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         )}
                       >
-                        <span className="inline-flex items-center gap-1">
-                          {label}
+                        <span className="inline-flex items-center justify-center gap-0.5">
+                          {tabLabel}
                           {tabUnread > 0 && channelMode !== mode ? (
-                            <span className="min-w-[1rem] rounded-full bg-red-600 px-1 text-[9px] font-bold leading-4 text-white">
+                            <span className="min-w-[0.9rem] rounded-full bg-red-600 px-0.5 text-[8px] font-bold leading-[0.85rem] text-white">
                               {tabUnread > 99 ? '99+' : tabUnread}
                             </span>
                           ) : null}
@@ -267,50 +284,61 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       </button>
                     )
                   })}
-                </span>
+                </div>
               ) : null}
+              <div className="min-h-[1.125rem] text-[10px] text-muted-foreground">{handbookSubline}</div>
             </div>
-            {channelMode === 'group' ? (
-              <p className="mt-1 text-[10px]">
-                <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_GRUPPENCHAT} className="text-[10px]" />
-              </p>
-            ) : null}
-            {channelMode != null && onChannelModeChange && isPinnwandChannel(channelMode) ? (
-              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
-                <Link href="/handbook?file=BROADCAST-PINNWAND.md" className="text-primary underline-offset-2 hover:underline">
-                  Handbuch: Pinnwand
-                </Link>
-              </p>
-            ) : null}
           </div>
-        </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:pt-1">
-          {isPrivate ? (
-            <span className="inline-flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-              <MessengerGuideHint
-                ariaLabel="Messenger Risiken und Vertrauen"
-                teaser="Risiken"
-                anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
-              />
-              <MessengerHandbookChatLink
-                anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
-                className="text-[10px] font-normal text-muted-foreground hover:text-foreground"
-              />
-            </span>
-          ) : null}
-          {isPrivate && apiStatus ? (
-            <TresorSessionBadge
-              sessionLocked={!!apiStatus.locked}
-              hasKeys={apiStatus.hasKeys}
-              actions={vaultBannerActions}
-            />
-          ) : null}
-          <div className="flex flex-col items-end gap-0.5">
-            {sendPath ? <ChatViewSendPathCompact {...sendPath} /> : null}
+          {/* Rechts: Status + Sendepfad (feste Mindesthöhe gegen Springen) */}
+          <div className="flex min-w-0 flex-col gap-2">
+            {isPrivate ? (
+              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 border-b border-border/40 pb-2 text-[10px] text-muted-foreground">
+                <MessengerGuideHint
+                  ariaLabel="Messenger Risiken und Vertrauen"
+                  teaser="Risiken"
+                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+                />
+                <span className="hidden text-border/80 sm:inline" aria-hidden>
+                  ·
+                </span>
+                <MessengerHandbookChatLink
+                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+                  className="text-[10px] font-normal text-muted-foreground hover:text-foreground"
+                />
+                {apiStatus ? (
+                  <>
+                    <span className="hidden text-border/80 sm:inline" aria-hidden>
+                      ·
+                    </span>
+                    <TresorSessionBadge
+                      sessionLocked={!!apiStatus.locked}
+                      hasKeys={apiStatus.hasKeys}
+                      actions={vaultBannerActions}
+                    />
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+            <div className={sendPathPanelMinH}>
+              {sendPath?.visible ? (
+                <ChatViewSendPathCompact {...sendPath} className="h-full w-full" />
+              ) : (
+                <div
+                  className={cn(
+                    'flex h-full items-center rounded-lg border border-border/40 bg-muted/15 px-3 py-2 text-[10px] leading-snug text-muted-foreground',
+                    sendPathPanelMinH
+                  )}
+                >
+                  {channelMode === 'pinnwand'
+                    ? 'Pinnwand — nur Online (IOTA), Klartext. Senden unten im Bereich „An Pinnwand senden“.'
+                    : '\u00A0'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
       {afterPulse}
 

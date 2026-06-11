@@ -9,6 +9,7 @@ function isEncryptedPlaceholderContent(s: string): boolean {
 }
 import type { Message } from '@/frontend/lib/types'
 import { normalizeChatMessageContentForDisplay } from '@/frontend/lib/chat-message-display-normalize'
+import { hasPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 import { pickInboxRawMessages as pickInboxRawMessagesImpl } from '@/frontend/lib/inbox-pick-raw-messages'
 
 export type InboxApiRow = {
@@ -44,6 +45,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       if (cM !== tM) return cM ? rawC : rawT
       return rawC.length >= rawT.length ? rawC : rawT
     })()
+    const pinnwandPost = hasPinnwandPostMarker(contentRaw)
     const content = normalizeChatMessageContentForDisplay(contentRaw)
     const nonceStr = m.nonce != null && String(m.nonce).length > 0 ? String(m.nonce) : ''
     const tsRaw = m.ts ?? m.timestamp
@@ -77,6 +79,7 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
       id: stableId,
       from,
       content,
+      ...(pinnwandPost ? { pinnwandPost: true as const } : {}),
       timestamp,
       encrypted:
         m.isPlain === false ||

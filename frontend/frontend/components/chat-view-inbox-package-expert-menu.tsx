@@ -84,8 +84,12 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[min(100vw-2rem,20rem)]">
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          Package-ID (Move) — Expertenmodus
+          Move-Package (Smart Contract)
         </DropdownMenuLabel>
+        <p className="px-2 pb-2 text-[10px] leading-snug text-muted-foreground">
+          Normalerweise leer lassen — dann lädt der Posteingang <strong>alle</strong> bekannten Package-IDs vom
+          Server (aktuell + Verlauf). Nur zum gezielten Nachschlagen einer alten ID temporär wählen.
+        </p>
         {canonical ? (
           <p className="px-2 pb-1 font-mono text-[10px] text-foreground/90" title={canonical}>
             Basis: {maskPackageIdForUi(canonical)}
@@ -93,7 +97,7 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
         ) : null}
         {tempActive ? (
           <p className="px-2 pb-2 text-[10px] leading-snug text-amber-800 dark:text-amber-200">
-            Temporäre Anzeige — ändert .env / Backend nicht.
+            Nur diese eine ID — andere Nachrichten sind ausgeblendet. „Zurück zur Basis-ID“ für den vollen Posteingang.
           </p>
         ) : null}
         <div className="px-2 pb-2">
@@ -145,7 +149,9 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
         {packageIdSuggestions.length > 0 ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">Verlauf</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
+              Bekannte IDs ({packageIdSuggestions.length}) — nur zum Nachschlagen
+            </DropdownMenuLabel>
             {packageIdSuggestions.slice(0, 8).map((id) => (
               <DropdownMenuItem
                 key={id}

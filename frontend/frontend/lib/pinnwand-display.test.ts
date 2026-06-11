@@ -13,8 +13,8 @@ describe('pinnwand-display', () => {
     ).toBe('Einsatzleitung')
   })
 
-  it('Tab-Label Lagebild für Simple Mode', () => {
-    expect(pinnwandChannelTabLabel('arbeiter', { simpleMode: true })).toBe('Lagebild')
+  it('Tab-Label Pinnwand für alle Rollen', () => {
+    expect(pinnwandChannelTabLabel('arbeiter', { simpleMode: true })).toBe('Pinnwand')
     expect(pinnwandChannelTabLabel('boss', { simpleMode: false })).toBe('Pinnwand')
   })
 })

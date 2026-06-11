@@ -94,9 +94,9 @@ iota client upgrade --upgrade-capability <UPGRADE_CAP_ID> --json
 
 ---
 
-## UI: Einsatz-Konfiguration (Boss)
+## UI: Chain-Status (Boss)
 
-**Einsatzleitung → Einsatz-Konfiguration** zeigt:
+**Einsatzleitung → Erweitert → Chain-Status & Move-Upgrade** zeigt:
 
 | Feld | Bedeutung |
 |------|-----------|

@@ -1,8 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { Download, EyeOff, KeyRound, QrCode, Smartphone } from 'lucide-react'
 import QRCode from 'qrcode'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { fetchEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'
@@ -22,7 +24,12 @@ import { API_BASE } from '@/frontend/lib/api/api-base'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { buildWizardHandoffExportBody } from '@/frontend/lib/handoff-export-defaults'
-import { handoffParamsFromEinsatzTemplate } from '@/frontend/lib/handoff-export-params'
+import { handoffParamsFromEinsatzTemplate, resolveHandoffExportParams } from '@/frontend/lib/handoff-export-params'
+import {
+  applyHandoffCapabilityPresetToTuning,
+  getWizardCapabilityPresets,
+  type HandoffCapabilityPreset,
+} from '@/frontend/lib/handoff-capability-presets'
 import {
   getHandoffPreset,
   HANDOFF_EINSATZ_PRESETS,
@@ -54,6 +61,8 @@ const SEED_QR_SECONDS = 60
 type BossDeviceProvisionWizardProps = {
   apiSnapshot?: ApiStatus | null
   contactDirectory?: Record<string, ContactMeshEntryClient>
+  /** Unter „Helfer einrichten“ — Seed/QR-Block, Rechte im Formular darüber */
+  companionSeedBlock?: boolean
 }
 
 export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
@@ -62,6 +71,8 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   const [presetId, setPresetId] = useState<HandoffEinsatzPresetId>('helfer')
   const [bezeichnung, setBezeichnung] = useState(() => suggestHandoffBezeichnung(defaultPreset))
   const [exportTuning, setExportTuning] = useState<ReturnType<typeof handoffParamsFromEinsatzTemplate>['tuning']>({})
+  const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
+  const [capabilityPresetId, setCapabilityPresetId] = useState<string | null>(null)
   const [savedTemplates, setSavedTemplates] = useState<EinsatzRoleTemplate[]>([])
   const [chainIds, setChainIds] = useState<{
     rpcUrl?: string
@@ -112,7 +123,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     let cancelled = false
     void (async () => {
       const r = await fetchEinsatzRoleTemplates()
-      if (!cancelled && r.ok) setSavedTemplates(r.templates)
+      if (!cancelled && r.ok) setSavedTemplates(r.templates ?? [])
     })()
     void (async () => {
       try {
@@ -163,12 +174,35 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     const mapped = handoffParamsFromEinsatzTemplate(t)
     setPresetId(mapped.presetId)
     setExportTuning(mapped.tuning)
+    setCapabilitiesOverride(null)
+    setCapabilityPresetId(null)
     if (!labelEdited.current) {
       const day = new Date().toISOString().slice(0, 10)
       setBezeichnung(`${t.label}-${day}`)
     }
     setStatusMsg(`Vorlage „${t.label}" geladen.`)
   }
+
+  const applyCapabilityPreset = useCallback(
+    (capPreset: HandoffCapabilityPreset) => {
+      const merged = applyHandoffCapabilityPresetToTuning(presetId, exportTuning, capPreset.apply)
+      setExportTuning(merged.tuning)
+      setCapabilitiesOverride(merged.override)
+      setCapabilityPresetId(capPreset.id)
+      setStatusMsg(`Sonderrolle „${capPreset.label}" — ${capPreset.hint}`)
+    },
+    [presetId, exportTuning]
+  )
+
+  const clearCapabilityPreset = useCallback(() => {
+    setCapabilitiesOverride(null)
+    setCapabilityPresetId(null)
+    setExportTuning((prev) => {
+      const next = { ...prev }
+      delete next.roleId
+      return next
+    })
+  }, [])
 
   const rememberMasterPassword = (password: string) => {
     sessionMasterPassword.current = password
@@ -252,6 +286,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
         tuning: exportTuning,
         ids: chainIds,
         helperAddress: mnemonic.address,
+        capabilitiesOverride,
       })
 
       if (protectHandoffZip) {
@@ -399,36 +434,38 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   }
 
   const preset = useMemo(() => getHandoffPreset(presetId), [presetId])
+  const resolvedParams = useMemo(
+    () => resolveHandoffExportParams(presetId, exportTuning),
+    [presetId, exportTuning]
+  )
+  const wizardCapabilityPresets = useMemo(() => getWizardCapabilityPresets(), [])
 
   return (
     <>
       <section
         id="einsatz-provision-wizard"
-        className="scroll-mt-4 rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/10 to-card p-4"
+        className={cn(
+          'scroll-mt-4',
+          p.companionSeedBlock
+            ? 'border-t border-border/60 pt-4'
+            : 'rounded-xl border border-amber-500/35 bg-gradient-to-br from-amber-500/10 to-card p-4'
+        )}
       >
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 flex-1 space-y-2">
-            <p className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <Smartphone className="h-5 w-5 text-amber-500" aria-hidden />
-              Neues Gerät provisionieren
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Ein Schritt: Mnemonic + Handoff-ZIP + Seed-QR. Seeds verschlüsselt in der lokalen Boss-Registry (Custody B).
-              Der Boss-PC gilt als <strong className="text-foreground">High-Security-Gerät</strong> — siehe Sicherheitshinweis
-              im Wizard.
-            </p>
-          </div>
-          <Button type="button" onClick={() => setOpen(true)}>
-            Wizard öffnen
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Smartphone className="h-4 w-4 text-amber-500" aria-hidden />
+            {p.companionSeedBlock ? 'Neues Gerät' : 'Neues Gerät provisionieren'}
+          </p>
+          <Button type="button" size="sm" onClick={() => setOpen(true)}>
+            {p.companionSeedBlock ? 'Seed + QR' : 'Wizard öffnen'}
           </Button>
         </div>
 
         {registryUnlocked && entries.length > 0 ? (
-          <div className="mt-4 space-y-2">
+          <div className="mt-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground" key={registryTick}>
               <span>
-                {entryStats.total} Gerät(e) · {entryStats.open} offen · {entryStats.handedOver} übergeben
-                <span className="ml-1 opacity-80">(Import auf Helfer-Gerät wird nicht automatisch erkannt)</span>
+                {entryStats.total} · {entryStats.open} offen · {entryStats.handedOver} übergeben
               </span>
               <div className="flex flex-wrap gap-1">
                 <button
@@ -504,14 +541,14 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                 className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted"
                 onClick={onExportRegistryBackup}
               >
-                Registry sichern (JSON)
+                Sichern
               </button>
               <button
                 type="button"
                 className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted"
                 onClick={() => backupFileRef.current?.click()}
               >
-                Registry importieren
+                Import
               </button>
               <input
                 ref={backupFileRef}
@@ -648,6 +685,9 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                       type="button"
                       onClick={() => {
                         setPresetId(item.id)
+                        setExportTuning({})
+                        setCapabilitiesOverride(null)
+                        setCapabilityPresetId(null)
                         if (!labelEdited.current) setBezeichnung(suggestHandoffBezeichnung(item))
                       }}
                       className={cn(
@@ -663,9 +703,61 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               </div>
             </div>
 
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Sonderrolle (optional)
+              </p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {wizardCapabilityPresets.map((cap) => {
+                  const active = capabilityPresetId === cap.id
+                  return (
+                    <button
+                      key={cap.id}
+                      type="button"
+                      onClick={() => applyCapabilityPreset(cap)}
+                      className={cn(
+                        'rounded-xl border p-3 text-left text-sm transition-all',
+                        active
+                          ? 'border-violet-500/50 bg-violet-500/15 ring-2 ring-violet-500/40'
+                          : 'border-border bg-muted/15 hover:bg-muted/25'
+                      )}
+                    >
+                      <span className="font-semibold">{cap.label}</span>
+                      <span className="mt-1 block text-[10px] text-muted-foreground">{cap.hint}</span>
+                    </button>
+                  )
+                })}
+              </div>
+              {capabilityPresetId ? (
+                <button
+                  type="button"
+                  className="mt-2 text-xs text-primary underline hover:no-underline"
+                  onClick={clearCapabilityPreset}
+                >
+                  Sonderrolle zurücksetzen
+                </button>
+              ) : (
+                <p className="mt-2 text-[10px] text-muted-foreground">
+                  Weitere Rechte (Partner, alle Kanäle, Passwort-ZIP):{' '}
+                  <Link href="#einsatz-erweitert" className="text-primary underline hover:no-underline">
+                    Erweitert → Export-Assistent
+                  </Link>
+                </p>
+              )}
+            </div>
+
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs">
               <strong className="text-foreground">{preset.label}</strong>
-              <span className="text-muted-foreground"> · ROLE_ID={exportTuning.roleId ?? preset.roleId}</span>
+              {capabilityPresetId ? (
+                <span className="text-muted-foreground">
+                  {' '}
+                  · {wizardCapabilityPresets.find((c) => c.id === capabilityPresetId)?.label}
+                </span>
+              ) : null}
+              <span className="text-muted-foreground"> · ROLE_ID={resolvedParams.roleId}</span>
+              {capabilitiesOverride ? (
+                <span className="text-muted-foreground"> · Capabilities angepasst</span>
+              ) : null}
             </div>
 
             <div className="space-y-2 rounded-lg border border-border p-3">

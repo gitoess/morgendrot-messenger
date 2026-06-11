@@ -69,6 +69,15 @@ describe('ChatViewInboxList handshake inline row', () => {
     expect(screen.getAllByRole('button', { name: /Als Partner/i })).toHaveLength(2)
   })
 
+  it('shows Antworten button when onReplyToMessage is provided', () => {
+    const onReplyToMessage = vi.fn()
+    render(<ChatViewInboxList {...makeProps({ onReplyToMessage })} />)
+    const btn = screen.getByRole('button', { name: /Antworten/i })
+    expect(btn).toBeInTheDocument()
+    btn.click()
+    expect(onReplyToMessage).toHaveBeenCalledTimes(1)
+  })
+
   it('shows overflow hint when more than three offers exist', () => {
     render(
       <ChatViewInboxList

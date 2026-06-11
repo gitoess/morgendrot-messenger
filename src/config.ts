@@ -141,6 +141,25 @@ export function readMailboxIdHistory(): string[] {
     return [];
 }
 
+/** TEAM_MAILBOX_IDS aus .env (kommagetrennt) — Gruppen-Postfächer ≠ MAILBOX_ID. */
+export function readTeamMailboxIds(): string[] {
+    const raw = (process.env.TEAM_MAILBOX_IDS || '').trim();
+    if (!raw) return [];
+    const my = (process.env.MY_ADDRESS || CFG.MY_ADDRESS || '').trim().toLowerCase();
+    const pkg = (process.env.PACKAGE_ID || CFG.PACKAGE_ID || '').trim().toLowerCase();
+    const out: string[] = [];
+    const seen = new Set<string>();
+    for (const part of raw.split(',')) {
+        const t = part.trim();
+        if (!MAILBOX_ID_REGEX.test(t)) continue;
+        const n = t.toLowerCase();
+        if (n === my || n === pkg || seen.has(n)) continue;
+        seen.add(n);
+        out.push(t);
+    }
+    return out;
+}
+
 export function ensureMailboxIdInHistory(id: string): void {
     const t = (id || '').trim();
     if (!MAILBOX_ID_REGEX.test(t)) return;
@@ -235,6 +254,7 @@ export function getInboxUnionIdsForStatus(): { packageIds: string[]; mailboxIds:
     };
     addMb(CFG.MAILBOX_ID || '');
     for (const h of readMailboxIdHistory()) addMb(h);
+    for (const h of readTeamMailboxIds()) addMb(h);
     return { packageIds: pkgOut, mailboxIds: mbOut };
 }
 
@@ -1316,10 +1336,10 @@ export const CFG = {
     /** Port der API (Status, Befehle). Default 3342. Nur bei ENABLE_UI. */
     API_PORT: envInt('API_PORT', 3342),
     /**
-     * Bind-Adresse der API. Default 127.0.0.1 (nur dieser PC).
-     * Für APK/Handy im WLAN: 0.0.0.0 (oder npm run dev:lan). Env: API_BIND_HOST
+     * Bind-Adresse der API. Default 0.0.0.0 (WLAN/Handy im Einsatz-LAN).
+     * Nur dieser PC: API_BIND_HOST=127.0.0.1 in .env
      */
-    API_BIND_HOST: (process.env.API_BIND_HOST || '127.0.0.1').trim() || '127.0.0.1',
+    API_BIND_HOST: (process.env.API_BIND_HOST || '0.0.0.0').trim() || '0.0.0.0',
     /**
      * Vor dem Listen: ggf. laufende Morgendrot-API auf demselben Port per /restart beenden.
      * Bei zweiter Instanz auf demselben PC auf false setzen, sonst wird die erste API neu gestartet.

@@ -13,9 +13,9 @@ import {
   isSendPathAllowedForChannel,
   sendPathDisabledReason,
 } from '@/frontend/lib/messenger-channel-send-path'
-import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
+import { getComposerEncryptionContextHint } from '@/frontend/lib/composer-encryption-context-hint'
 
 export type ChatViewSendPathCompactProps = {
   /** Pinnwand: nur wenn Klartext; privater Chat: immer. */
@@ -29,6 +29,7 @@ export type ChatViewSendPathCompactProps = {
   showAdhocTransport?: boolean
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
+  className?: string
 }
 
 const ONLINE = {
@@ -135,12 +136,19 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     showAdhocTransport = true,
     composerDelivery = 'chain',
     onComposerDeliveryChange,
+    className,
   } = p
   if (!visible) return null
 
   const showTelegram =
     showTelegramDeliveryInHeader({ channelMode }) && Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
+  const encryptionHint =
+    chainActive
+      ? getComposerEncryptionContextHint({ forcedTransport, encrypted })
+      : composerDelivery === 'telegram'
+        ? 'Telegram — Zustellung über Bot/API, nicht IOTA-Mailbox.'
+        : null
 
   const onlineOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkOk = isSendPathAllowedForChannel(channelMode, 'mesh')
@@ -148,12 +156,17 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   const telegramOk = showTelegram && isSendPathAllowedForChannel(channelMode, 'telegram')
 
   return (
-    <div className="flex max-w-full flex-col items-end gap-0 rounded-lg border border-border/60 bg-muted/25 px-2 py-1.5">
-      <div className="flex flex-wrap items-center justify-end gap-1.5">
-        <span className="hidden text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:inline">
+    <div
+      className={cn(
+        'flex h-full min-h-[6.5rem] w-full flex-col rounded-lg border border-border/60 bg-muted/25 px-2.5 py-2',
+        className
+      )}
+    >
+      <div className="flex flex-nowrap items-center gap-1 overflow-x-auto">
+        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
           Sendepfad
         </span>
-        <span className="hidden h-4 w-px bg-border sm:inline" aria-hidden />
+        <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
         <PathButton
           active={chainActive && forcedTransport === ONLINE.id}
           disabled={!onlineOk}
@@ -192,7 +205,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         </PathButton>
         {showAdhocTransport ? (
           <>
-            <span className="hidden h-4 w-px bg-border/80 sm:inline" aria-hidden />
+            <span className="h-4 w-px shrink-0 bg-border/80" aria-hidden />
             <PathButton
               active={chainActive && forcedTransport === ADHOC.id}
               disabled={!adhocOk}
@@ -218,7 +231,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         ) : null}
         {showTelegram ? (
           <>
-            <span className="hidden h-4 w-px bg-border/80 sm:inline" aria-hidden />
+            <span className="h-4 w-px shrink-0 bg-border/80" aria-hidden />
             <PathButton
               active={composerDelivery === 'telegram'}
               disabled={!telegramOk}
@@ -235,17 +248,20 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           </>
         ) : null}
       </div>
-      {chainActive ? (
-        <ChatViewEncryptionContextHint
-          forcedTransport={forcedTransport}
-          encrypted={encrypted}
-          compact
-          className="mt-1 max-w-[18rem] text-right"
-        />
-      ) : null}
-      {chainActive && myAddressLine?.trim() ? (
-        <ChatViewMyWalletIdInline myAddressLine={myAddressLine} />
-      ) : null}
+      <div className="mt-1.5 min-h-[2.75rem] flex-1 space-y-0.5">
+        {encryptionHint ? (
+          <p role="note" className="line-clamp-2 text-[10px] leading-snug text-muted-foreground">
+            {encryptionHint}
+          </p>
+        ) : (
+          <div className="min-h-[2.25rem]" aria-hidden />
+        )}
+        {chainActive && myAddressLine?.trim() ? (
+          <ChatViewMyWalletIdInline myAddressLine={myAddressLine} />
+        ) : (
+          <div className="min-h-[1.25rem]" aria-hidden />
+        )}
+      </div>
     </div>
   )
 }

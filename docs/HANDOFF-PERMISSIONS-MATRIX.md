@@ -133,6 +133,8 @@ Legende: **H** = Hierarchie `ROLE`/`permissions` · **ID** = `ROLE_ID`-Bit · **
 | **Helfer** | `messenger` | **14** (BW+L+S) | true | mesh-first | Senden + empfangen, einfache UI |
 | **Führer** | `kommandant` | **46** (D+BW+L+S) oder 14 | false | iota-anchored | + Team erstellen, Einsatzleitung |
 | **Spezial** | `messenger` | **12** (BW+L) oder **4** (nur L) | true | mesh-first | Reporter: **S aus** manuell |
+| **Medic-Funker** (Wizard) | `messenger` | **12** + Capabilities-Override | true | mesh-first | LoRa schreiben, Telegram/IOTA aus |
+| **Reporter (Transport)** (Wizard) | `messenger` | **12** + read-only Transport | true | mesh-first | Alle Kanäle nur lesen |
 
 **Arbeiter** = Feineinstellung `ROLE=arbeiter` (Hierarchie), nicht eigene Marketing-Karte.
 

@@ -45,6 +45,7 @@ import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
 import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
 import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/encrypted-recipient-handshake-status'
+import { prependPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 import {
   resolveComposerKlartextIotaAddress,
   resolveEncryptedMailboxRecipient,
@@ -202,6 +203,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     contactDirectory,
     activeGroup,
     isGroupChannel,
+    isPinnwandChannel = false,
   } = p
   const cancelRequestedRef = useRef(false)
   /** Hook-Ebene: immer definiert (kein ReferenceError in älteren/minifizierten Bundles). */
@@ -212,6 +214,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
   const plainMailboxRecipient = useMemo(
     () => resolveComposerKlartextIotaAddress(recipient, partner, isPrivate),
     [recipient, partner, isPrivate]
+  )
+  const shouldMarkPinnwandPlainPost = useCallback(
+    (_target: string, enc: boolean) => {
+      if (enc) return false
+      /** Nur Tab „Pinnwand“ — sonst würde 1:1 an dieselbe 0x (Brett=Wallet) fälschlich markiert. */
+      return isPinnwandChannel
+    },
+    [isPinnwandChannel]
   )
 
   const cancelSend = useCallback(() => {
@@ -1069,7 +1079,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           const ready = await ensureEncryptedPeerReady(target)
           if (!ready.ok) return failPart(ready.message)
         }
-        const body = payloadWithoutOutNonce(textSnap)
+        let body = payloadWithoutOutNonce(textSnap)
+        if (shouldMarkPinnwandPlainPost(target, enc)) {
+          body = prependPinnwandPostMarker(body)
+        }
         const messageNonceU64 = nextChainMessageNonceU64()
         const wireForApi = enc ? prependMailboxOutNonceMarker(body, messageNonceU64) : body
         const hybridOpts = mailboxOptsFor(target)

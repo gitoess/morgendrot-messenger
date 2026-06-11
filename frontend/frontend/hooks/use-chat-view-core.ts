@@ -92,14 +92,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     void groupsRevision
     return getActiveMessengerGroup()
   }, [isGroup, groupsRevision])
-  const groupMemberFilter = isGroup && activeGroup ? activeGroup.memberAddresses : null
   const groupTeamMailboxId = useMemo(
     () => resolveGroupTeamMailboxObjectId(activeGroup),
     [activeGroup]
-  )
-  const inboxAlsoMailboxIds = useMemo(
-    () => (groupTeamMailboxId ? [groupTeamMailboxId] : []),
-    [groupTeamMailboxId]
   )
   const refreshMessengerGroups = useCallback(() => setGroupsRevision((n) => n + 1), [])
 
@@ -221,9 +216,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     clearInboxRam,
   } = useChatViewInbox({
     refreshContactDirectory,
-    packageId: inboxPackageFilter.trim() || undefined,
+    /** Kein UI-Filter: Backend lädt Union (aktuell + package-id-history). Temporär nur via loadMessages-Override. */
     myAddress,
-    alsoMailboxIds: inboxAlsoMailboxIds,
   })
 
   const sendSosAckBurstRef = useRef<((wire: string) => Promise<void>) | null>(null)
@@ -397,14 +391,19 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     selectedInboxIds,
     displayMessages,
     filteredDisplayMessages,
+    pinnwandFeedMessages,
     inboxPartnerKey,
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,
@@ -439,24 +438,29 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatusMsg,
     myAddress,
     contactDirectory: directory,
-    groupMemberFilter: isGroup ? groupMemberFilter : null,
-    teamMailboxObjectId: isGroup ? groupTeamMailboxId : null,
-    isGroupMode: isGroup,
-    isPinnwandMode: isPinnwandChannel(channelMode),
+    teamMailboxObjectId: groupTeamMailboxId,
     pinnwandMatchContext,
     inboxOverviewEnabled,
     excludePinnwandFromOverviewAlle,
   })
 
   useEffect(() => {
-    if (isGroup) setInboxPartnerKey(null)
-  }, [isGroup, setInboxPartnerKey])
+    if (!isPinnwandChannel(channelMode)) return
+    setInboxOverviewCategory('lagebild')
+  }, [channelMode, setInboxOverviewCategory])
 
-  /** Falsche Package-ID im Posteingang-Feld → leeren (Backend-.env), sonst leerer/falscher /inbox. */
+  useEffect(() => {
+    setInboxChannelFiltersArmed(false)
+    setInboxWireFiltersArmed(false)
+    setInboxPartnerFiltersArmed(false)
+  }, [channelMode, setInboxChannelFiltersArmed, setInboxWireFiltersArmed, setInboxPartnerFiltersArmed])
+
+  /** Package-Mismatch: View-Filter leeren und Backend-Union neu laden. */
   useEffect(() => {
     if (!packageIdMismatch) return
-    setInboxPackageFilter((prev) => (prev.trim() ? '' : prev))
-  }, [packageIdMismatch, setInboxPackageFilter])
+    setInboxPackageFilter('')
+    void loadMessages('reset')
+  }, [packageIdMismatch, setInboxPackageFilter, loadMessages])
 
   /** M3: Broadcast-Adresse aus /api/status — festes Empfängerfeld (Pinnwand-Kanal). */
   useEffect(() => {
@@ -515,6 +519,16 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const inboxRows = useMemo(
     (): ChatInboxRow[] => buildChatInboxRows(filteredDisplayMessages, slideSequences),
     [filteredDisplayMessages, slideSequences]
+  )
+
+  const pinnwandSlideSequences = useMemo(
+    () => extractCompletedSlideSequences(pinnwandFeedMessages),
+    [pinnwandFeedMessages]
+  )
+
+  const pinnwandInboxRows = useMemo(
+    (): ChatInboxRow[] => buildChatInboxRows(pinnwandFeedMessages, pinnwandSlideSequences),
+    [pinnwandFeedMessages, pinnwandSlideSequences]
   )
 
   const meshtastic = useMeshtasticBle({
@@ -677,6 +691,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     contactDirectory: directory,
     activeGroup,
     isGroupChannel: isGroup,
+    isPinnwandChannel: isPinnwandChannel(channelMode),
     composerMailboxObjectId,
   })
 
@@ -707,6 +722,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     applyInboxPackageFilterOnly,
   } = useChatViewPackageIdCommands({
     showSetup,
+    loadPackageSuggestions: true,
     inboxPackageFilter,
     setInboxPackageFilter,
     setPackageIdSuggestions,
@@ -716,6 +732,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
   })
+
+  /** Package-Verlauf: Union aus /api/status + Historie-Datei. */
+  useEffect(() => {
+    const union = apiStatus?.inboxUnionPackageIds
+    if (!union?.length) return
+    void refreshPackageIdSuggestions(union)
+  }, [apiStatus?.inboxUnionPackageIds, refreshPackageIdSuggestions])
 
   /** Kanonische ID von /api/status übernehmen (= /set-package-id + Posteingang neu). */
   const syncCanonicalPackageIdFromServer = useCallback(() => {
@@ -861,6 +884,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     clearInboxRam,
     slideSequences,
     inboxRows,
+    pinnwandFeedMessages,
+    pinnwandInboxRows,
     meshtastic,
     meshSyncMsg,
     setMeshSyncMsg,
@@ -943,10 +968,14 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,

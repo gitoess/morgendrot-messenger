@@ -3,6 +3,7 @@ import {
   countInboxByOverviewCategory,
   filterInboxByOverviewCategory,
   inboxMessageOverviewCategory,
+  resolveOverviewFilteredInboxMessages,
 } from '@/frontend/lib/inbox-overview-filter'
 import type { Message } from '@/frontend/lib/types'
 
@@ -55,5 +56,27 @@ describe('inbox-overview-filter', () => {
     expect(counts.funk).toBe(1)
     expect(counts.direkt).toBe(1)
     expect(counts.alle).toBe(2)
+  })
+
+  it('resolveOverviewFilteredInboxMessages respektiert Kategorie', () => {
+    const messages = [
+      msg({ id: '1', recipient: BOARD }),
+      msg({ id: '2', recipient: BOSS }),
+    ]
+    const ctxWithStrip = { ...ctx, excludePinnwandFromAlle: true }
+    expect(
+      resolveOverviewFilteredInboxMessages(messages, {
+        overviewEnabled: true,
+        category: 'lagebild',
+        ctx: ctxWithStrip,
+      }).map((m) => m.id)
+    ).toEqual(['1'])
+    expect(
+      resolveOverviewFilteredInboxMessages(messages, {
+        overviewEnabled: false,
+        category: 'lagebild',
+        ctx: ctxWithStrip,
+      }).map((m) => m.id)
+    ).toEqual(['1', '2'])
   })
 })

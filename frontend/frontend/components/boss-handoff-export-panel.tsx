@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Download, Package, Save, Send, Users } from 'lucide-react'
+import { LanInstallQrPanel } from '@/frontend/components/lan-install-qr-panel'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getStatus } from '@/frontend/lib/api'
 import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/standalone-smartphone-handoff'
@@ -19,14 +20,11 @@ import {
 } from '@/frontend/lib/handoff-export-autofill'
 import { resolveMessengerGroupHandoffJson } from '@/frontend/lib/messenger-group-handoff'
 import {
-  buildHandoffExportSummary,
   formatHandoffAddressShort,
-  formatHandoffMailboxShort,
   parsePartnerAddressCsv,
 } from '@/frontend/lib/handoff-export-display'
 import {
   buildHandoffPartnerOptions,
-  defaultSelectedPartnerAddresses,
   partnerAddressesToCsv,
 } from '@/frontend/lib/handoff-export-partners'
 import { fetchEinsatzRoleTemplates, saveEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'
@@ -53,10 +51,7 @@ import {
 } from '@/frontend/lib/handoff-export-presets'
 import { HANDOFF_PRESET_VISUAL } from '@/frontend/lib/handoff-preset-ui'
 import { readHandoffLastPresetId, writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
-import {
-  HANDOFF_MESHTASTIC_PSK_SHORT,
-  HANDOFF_README_IOTA_ARCHIV_BLOCK,
-} from '@/frontend/lib/handoff-lora-psk-copy'
+import { HANDOFF_README_IOTA_ARCHIV_BLOCK } from '@/frontend/lib/handoff-lora-psk-copy'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import {
   buildEinsatzTemplateFromHandoffExport,
@@ -76,9 +71,12 @@ export type BossHandoffExportPanelProps = {
   defaultExpanded?: boolean
   forceExpanded?: boolean
   embedded?: boolean
+  /** Einsatzleitung: eine scrollbare Seite, Rechte-Matrix sichtbar */
+  layout?: 'steps' | 'compact'
 }
 
 export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
+  const compact = p.layout === 'compact'
   const defaultPreset = getHandoffPreset('helfer')
   const [presetId, setPresetId] = useState<HandoffEinsatzPresetId>('helfer')
   const [bezeichnung, setBezeichnung] = useState(() => suggestHandoffBezeichnung(defaultPreset))
@@ -97,6 +95,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [handoffVaultReg, setHandoffVaultReg] = useState('')
   const [handoffDirectIota, setHandoffDirectIota] = useState('')
   const [partnersManual, setPartnersManual] = useState('')
+  const [iotaTargetInput, setIotaTargetInput] = useState('')
   const [includeIotaArchivReadme, setIncludeIotaArchivReadme] = useState(true)
   const [protectWithPassword, setProtectWithPassword] = useState(false)
   const [handoffPassword, setHandoffPassword] = useState('')
@@ -114,7 +113,6 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [templateSaveId, setTemplateSaveId] = useState('')
   const [templateSaveBusy, setTemplateSaveBusy] = useState(false)
   const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
-  const [handoffTtlDays, setHandoffTtlDays] = useState<number>(() => p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30)
 
   const labelEdited = useRef(false)
   const canSaveTemplates = canEditEinsatzRoleTemplates(p.apiSnapshot)
@@ -173,18 +171,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     [selectedPartnerAddrs]
   )
 
-  const summary = useMemo(
-    () =>
-      buildHandoffExportSummary({
-        preset,
-        bezeichnung,
-        teamMailboxCount: usesTeamMb ? selectedTeamIds.length : 0,
-        partnerCount: selectedPartnerAddrs.size,
-        usesTeamMailboxes: usesTeamMb,
-        includeIotaArchivReadme,
-      }),
-    [preset, bezeichnung, usesTeamMb, selectedTeamIds.length, selectedPartnerAddrs.size, includeIotaArchivReadme]
-  )
+
+  const bossDefaultTtlDays = p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30
 
   const applyPreset = useCallback((id: HandoffEinsatzPresetId, resetLabel = false, resetTuning = true) => {
     const next = getHandoffPreset(id)
@@ -201,17 +189,13 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     }
   }, [])
 
-  const applyCapabilityPreset = useCallback(
-    (capPreset: HandoffCapabilityPreset) => {
-      if (capPreset.apply.roleId != null) {
-        const base = getHandoffPreset(presetId).roleId
-        setTuningRoleId(capPreset.apply.roleId === base ? null : capPreset.apply.roleId)
-      }
-      setCapabilitiesOverride(capPreset.apply.override)
-      setStatusMsg(`Profil „${capPreset.label}" — ${capPreset.hint}`)
-    },
-    [presetId]
-  )
+  const applyCapabilityPreset = useCallback((capPreset: HandoffCapabilityPreset) => {
+    if (capPreset.apply.roleId != null) {
+      const base = getHandoffPreset(presetId).roleId
+      setTuningRoleId(capPreset.apply.roleId === base ? null : capPreset.apply.roleId)
+    }
+    setCapabilitiesOverride(capPreset.apply.override)
+  }, [presetId])
 
   const openSaveTemplateForm = useCallback(() => {
     const label = suggestHandoffTemplateLabel({
@@ -282,7 +266,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       setBezeichnung(`${t.label}-${day}`)
       labelEdited.current = false
     }
-    setStatusMsg(`Vorlage „${t.label}" geladen — Partner/Team-Mailboxen für diesen Einsatz anpassen.`)
+    setStatusMsg(`Vorlage „${t.label}" geladen.`)
   }, [applyPreset])
 
   useEffect(() => {
@@ -296,7 +280,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     if (pkg && /^0x[a-fA-F0-9]{64}$/i.test(pkg)) setHandoffPkgCustom(pkg)
 
     const opts = buildHandoffPartnerOptions(p.apiSnapshot, p.contactDirectory, full)
-    if (opts.length) setSelectedPartnerAddrs(new Set(defaultSelectedPartnerAddresses(opts)))
+    /* Partner nicht vorauswählen — sonst landet IOTA-Versand an falschen Adressen (z. B. PARTNER_ADDRESS). */
 
     const teamOpts = buildTeamMailboxOptions(p.apiSnapshot, readMyTeamMailboxes())
     if (teamOpts.length) setSelectedTeamIds(defaultSelectedTeamMailboxIds(teamOpts))
@@ -304,11 +288,6 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     const last = readHandoffLastPresetId()
     if (last) applyPreset(last)
   }, [p.apiSnapshot, p.contactDirectory, applyPreset])
-
-  useEffect(() => {
-    const ttl = p.apiSnapshot?.einsatzConfig?.defaultTtlDays
-    if (ttl != null && Number.isFinite(ttl) && ttl >= 0) setHandoffTtlDays(Math.floor(ttl))
-  }, [p.apiSnapshot?.einsatzConfig?.defaultTtlDays])
 
   useEffect(() => {
     let cancelled = false
@@ -369,15 +348,10 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
   const mergeManualPartners = () => {
     const raw = partnersManual.trim()
-    if (!raw) {
-      setStatusMsg(
-        'Textfeld ist leer. Partner wählen Sie oben per Checkbox — oder 0x-Adressen hier einfügen und erneut klicken.'
-      )
-      return
-    }
+    if (!raw) return
     const parsed = parsePartnerAddressCsv(raw)
     if (!parsed.length) {
-      setStatusMsg('Keine gültigen Adressen gefunden (je 0x + 64 Hex, durch Komma oder Leerzeichen getrennt).')
+      setStatusMsg('Keine gültigen Adressen.')
       return
     }
     setSelectedPartnerAddrs((prev) => {
@@ -386,15 +360,21 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       return next
     })
     setPartnersManual('')
-    setStatusMsg(
-      `${parsed.length} Adresse(n) zur Partner-Auswahl hinzugefügt — oben unter „Partner im Einsatz“ prüfen.`
-    )
   }
 
   const fillManualPartnersFromSelection = () => {
     setPartnersManual(partnerExportCsv)
-    setStatusMsg('Aktuelle Partner-Auswahl ins Textfeld kopiert — dort bearbeiten und „Zur Auswahl hinzufügen“.')
   }
+
+  const resolveIotaPartnerAddresses = useCallback((): string[] => {
+    const fromInput = parsePartnerAddressCsv(iotaTargetInput)
+    if (fromInput.length > 0) {
+      return fromInput.map((a) => a.toLowerCase())
+    }
+    return [...selectedPartnerAddrs].map((a) => a.toLowerCase())
+  }, [selectedPartnerAddrs, iotaTargetInput])
+
+  const iotaRecipientCount = resolveIotaPartnerAddresses().length
 
   const buildExportBody = useCallback(
     (activePresetId: HandoffEinsatzPresetId): StandaloneSmartphoneHandoffZipBody => {
@@ -438,7 +418,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
             ? HANDOFF_README_IOTA_ARCHIV_BLOCK
             : undefined,
         messengerGroupHandoff,
-        exportTtlDays: handoffTtlDays,
+        exportTtlDays: bossDefaultTtlDays,
         exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
       }
     },
@@ -458,7 +438,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       protectWithPassword,
       exportTuning,
       capabilitiesOverride,
-      handoffTtlDays,
+      bossDefaultTtlDays,
       p.apiSnapshot?.einsatzConfig?.enablePurge,
     ]
   )
@@ -486,13 +466,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       writeHandoffLastPresetId(activePresetId)
       setLastDownloadPresetId(activePresetId)
     }
-    setStatusMsg(
-      r.ok
-        ? protectWithPassword
-          ? 'Geschütztes ZIP gespeichert — Passwort dem Helfer nur über einen separaten Kanal mitteilen (nicht in der ZIP).'
-          : 'ZIP gespeichert — Handoff-.env und README bereit für den Helfer.'
-        : r.error || 'Download fehlgeschlagen.'
-    )
+    setStatusMsg(r.ok ? (protectWithPassword ? 'ZIP gespeichert (Passwort).' : 'ZIP gespeichert.') : r.error || 'Download fehlgeschlagen.')
   }
 
   const onDownload = () => downloadHandoffZip(presetId)
@@ -508,18 +482,19 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
   const onSendViaIota = async () => {
     if (!validatePasswordIfNeeded()) return
-    if (selectedPartnerAddrs.size === 0) {
-      setStatusMsg('Für IOTA-Handoff mindestens einen Partner oben auswählen (E2EE an deren Adresse).')
+    const recipients = resolveIotaPartnerAddresses()
+    if (recipients.length === 0) {
+      setStatusMsg('IOTA-Ziel: Partner ankreuzen oder 0x-Adresse eingeben (verschlüsselt, Handshake nötig).')
       return
     }
     setHandoffBusy(true)
-    setStatusMsg('Sende Handoff-ZIP per IOTA …')
+    setStatusMsg('')
     const statusRes = await getStatus()
     const snap = statusRes.ok && statusRes.data ? statusRes.data : p.apiSnapshot
     const r = await sendHandoffZipViaIota({
       body: buildExportBody(presetId),
       password: protectWithPassword ? handoffPassword : undefined,
-      partnerAddresses: [...selectedPartnerAddrs],
+      partnerAddresses: recipients,
       handoffLabel: bezeichnung.trim() || undefined,
       apiStatus: snap ?? null,
       refreshApiStatus: async () => {
@@ -533,27 +508,25 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     }
     writeHandoffLastPresetId(presetId)
     setLastDownloadPresetId(presetId)
-    const failHint =
-      r.failures.length > 0
-        ? ` (${r.failures.length} Partner fehlgeschlagen — Handshake/USB prüfen.)`
-        : ''
-    setStatusMsg(
-      `Handoff an ${r.sent} Partner gesendet (E2EE). Helfer: Posteingang → Menü „Handoff importieren“. Passwort weiterhin separat.${failHint}`
-    )
+    const failHint = r.failures.length > 0 ? ` (${r.failures.length} fehlgeschlagen)` : ''
+    setStatusMsg(`An ${r.sent} Partner gesendet.${failHint}`)
   }
 
   return (
     <div
       className={cn(
         p.embedded ? '' : 'rounded-xl border border-border bg-card p-4',
-        !p.embedded && `border-l-4 ${presetVisual.activeBg.split(' ').find((c) => c.startsWith('border-')) ?? 'border-l-purple-500/45'}`
+        !p.embedded && !compact && `border-l-4 ${presetVisual.activeBg.split(' ').find((c) => c.startsWith('border-')) ?? 'border-l-purple-500/45'}`
       )}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
-          <Package className="h-5 w-5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1 space-y-5">
+      <div className={cn(compact && p.embedded ? 'space-y-4' : 'flex items-start gap-3')}>
+        {!compact ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
+            <Package className="h-5 w-5" aria-hidden />
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1 space-y-4">
+          {!compact ? (
           <div>
             <h3 className="text-base font-semibold text-foreground">Export-Assistent</h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -562,19 +535,16 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 href="/handbook?file=EXPORT-ASSISTENT-REFERENZ.md"
                 className="text-primary underline hover:no-underline"
               >
-                Alle Optionen (Referenz)
+                Referenz
               </Link>
             </p>
-            <div className="mt-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3">
-              <p className="text-sm font-semibold text-foreground">{summary.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{summary.detail}</p>
-            </div>
           </div>
+          ) : null}
 
-          {wizardStep === 1 ? (
+          {(compact || wizardStep === 1) ? (
           <>
           <div>
-            <label htmlFor="handoff-bezeichnung" className="mb-1 block text-sm font-medium text-foreground">
+            <label htmlFor="handoff-bezeichnung" className="mb-1 block text-xs font-medium text-muted-foreground">
               Bezeichnung
             </label>
             <input
@@ -584,35 +554,32 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 labelEdited.current = true
                 setBezeichnung(e.target.value)
               }}
-              placeholder="z. B. THW Einsatz Süd"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-foreground"
+              placeholder="Einsatzname"
+              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
             />
           </div>
 
           <section className="space-y-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profil</h4>
             <div className="flex flex-wrap items-end gap-2">
               {savedTemplates.length > 0 ? (
-                <label className="min-w-[12rem] flex-1 text-xs">
-                  <span className="mb-1 block text-muted-foreground">Gespeicherte Vorlage</span>
-                  <select
-                    className="w-full rounded-lg border border-border bg-input px-2 py-2 text-sm"
-                    defaultValue=""
-                    onChange={(e) => {
-                      const id = e.target.value
-                      e.target.value = ''
-                      const t = savedTemplates.find((x) => x.id === id)
-                      if (t) applySavedTemplate(t)
-                    }}
-                  >
-                    <option value="">— Vorlage laden (Reporter, Medic, …) —</option>
-                    {savedTemplates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <select
+                  className="min-w-[10rem] flex-1 rounded-lg border border-border bg-input px-2 py-1.5 text-sm"
+                  defaultValue=""
+                  aria-label="Vorlage"
+                  onChange={(e) => {
+                    const id = e.target.value
+                    e.target.value = ''
+                    const t = savedTemplates.find((x) => x.id === id)
+                    if (t) applySavedTemplate(t)
+                  }}
+                >
+                  <option value="">Vorlage</option>
+                  {savedTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               ) : null}
             </div>
             <div className="grid gap-2 sm:grid-cols-3">
@@ -625,106 +592,108 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     type="button"
                     onClick={() => applyPreset(item.id)}
                     className={cn(
-                      'rounded-xl border p-3 text-left transition-all min-h-[88px]',
+                      'rounded-lg border p-2.5 text-left transition-all',
+                      compact ? 'min-h-[3rem]' : 'min-h-[88px]',
                       active ? cn('ring-2', vis.activeRing, vis.activeBg) : cn('bg-muted/15', vis.idleBorder)
                     )}
                   >
                     <span className="flex items-center gap-2 text-sm font-semibold text-foreground">
                       <span aria-hidden>{vis.emoji}</span>
                       {item.label}
-                      {item.id === 'helfer' ? (
-                        <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:text-emerald-200">
-                          Standard
-                        </span>
-                      ) : null}
                     </span>
-                    <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{item.hint}</span>
+                    {!compact ? (
+                      <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{item.hint}</span>
+                    ) : null}
                   </button>
                 )
               })}
             </div>
           </section>
 
+          {compact ? (
+            <details className="rounded-lg border border-border/60 px-3 py-2" open>
+              <summary className="cursor-pointer select-none py-1 text-sm font-medium text-foreground">
+                Rechte
+              </summary>
+              <div className="mt-2 border-t border-border/60 pt-2">
+                <HandoffCapabilitiesMatrixPicker
+                  minimal
+                  effective={resolvedCapabilities}
+                  capabilitiesOverride={capabilitiesOverride}
+                  onCapabilitiesOverrideChange={setCapabilitiesOverride}
+                  onApplyCapabilityPreset={applyCapabilityPreset}
+                />
+              </div>
+            </details>
+          ) : null}
+
+          {!compact ? (
           <button
             type="button"
             className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             onClick={() => setWizardStep(2)}
           >
-            Weiter: Team &amp; Partner
+            Weiter
           </button>
+          ) : null}
           </>
           ) : null}
 
-          {wizardStep === 2 ? (
+          {(compact || wizardStep === 2) ? (
           <>
+          {!compact ? (
           <button
             type="button"
             className="text-xs font-medium text-primary underline hover:no-underline"
             onClick={() => setWizardStep(1)}
           >
-            ← Profil &amp; Bezeichnung ändern
+            ← Zurück
           </button>
+          ) : null}
 
           <section className="space-y-3">
-            {usesTeamMb ? (
+            {usesTeamMb && teamMailboxOptions.length ? (
               <fieldset>
-                <legend className="mb-2 block text-sm font-medium text-foreground">Team-Postfächer</legend>
-                {teamMailboxOptions.length ? (
-                  <ul className="space-y-2">
-                    {teamMailboxOptions.map((opt) => (
-                      <li key={opt.id}>
-                        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-2 text-sm">
-                          <input
-                            type="checkbox"
-                            className="mt-1"
-                            checked={selectedTeamIds.includes(opt.id)}
-                            onChange={() => toggleTeamMailbox(opt.id)}
-                          />
-                          <span className="min-w-0 font-medium text-foreground" title={opt.id}>
-                            {opt.label}
-                          </span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-                    Kein Team-Postfach lokal — primäre ID aus Boss-.env wird verwendet (falls gesetzt).
-                  </p>
-                )}
-              </fieldset>
-            ) : (
-              <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
-                Preset „{preset.label}“: kein Team-Postfach — Fokus privates Postfach / Funk.
-              </p>
-            )}
-
-            <fieldset>
-              <legend className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
-                <Users className="h-4 w-4 text-muted-foreground" aria-hidden />
-                Partner im Einsatz
-              </legend>
-              <p className="mb-2 text-xs text-muted-foreground">
-                Namen aus dem Telefonbuch — ins ZIP gehen nur die Adressen (0x…).
-              </p>
-              {partnerOptions.length ? (
-                <ul className="space-y-2">
-                  {partnerOptions.map((opt) => (
-                    <li key={opt.address}>
-                      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/60 bg-background/50 px-3 py-2 text-sm">
+                <legend className="mb-2 block text-xs font-medium text-muted-foreground">Team-Postfächer</legend>
+                <ul className="space-y-1.5">
+                  {teamMailboxOptions.map((opt) => (
+                    <li key={opt.id}>
+                      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm">
                         <input
                           type="checkbox"
-                          className="mt-1"
+                          checked={selectedTeamIds.includes(opt.id)}
+                          onChange={() => toggleTeamMailbox(opt.id)}
+                        />
+                        <span className="min-w-0 font-medium text-foreground" title={opt.id}>
+                          {opt.label}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </fieldset>
+            ) : null}
+
+            <fieldset>
+              <legend className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+                <Users className="h-3.5 w-3.5" aria-hidden />
+                Partner
+              </legend>
+              {partnerOptions.length ? (
+                <ul className="space-y-1.5">
+                  {partnerOptions.map((opt) => (
+                    <li key={opt.address}>
+                      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm">
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
                           checked={selectedPartnerAddrs.has(opt.address)}
                           onChange={() => togglePartner(opt.address)}
                         />
                         <span className="min-w-0 flex-1">
                           <span className="font-medium text-foreground">{opt.label}</span>
-                          <span className="mt-0.5 block font-mono text-[11px] text-muted-foreground">
+                          <span className="mt-0.5 block font-mono text-[10px] text-muted-foreground">
                             {formatHandoffAddressShort(opt.address)}
-                            {opt.source === 'connected' ? (
-                              <span className="ml-1.5 text-emerald-600 dark:text-emerald-400">· verbunden</span>
-                            ) : null}
                           </span>
                         </span>
                       </label>
@@ -732,13 +701,30 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   ))}
                 </ul>
               ) : (
-                <p className="rounded-lg border border-dashed border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-50">
-                  Noch keine Kontakte — im <strong>Telefonbuch</strong> anlegen, dann hier Partner mit Namen wählen.
+                <p className="rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground">
+                  Keine Kontakte — Zieladresse unten für IOTA eingeben.
                 </p>
               )}
+              <label className="mt-2 block text-[11px] font-medium text-muted-foreground">
+                IOTA-Ziel (0x…)
+              </label>
+              <input
+                type="text"
+                value={iotaTargetInput}
+                onChange={(e) => setIotaTargetInput(e.target.value.trim())}
+                placeholder="0x…64hex — Helfer-Wallet"
+                className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
+                spellCheck={false}
+                autoComplete="off"
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                <strong>Andere</strong> Helfer-Wallet (nicht deine Boss-Adresse). Verschlüsselt — vorher
+                Handshake/Connect im Chat mit genau dieser Adresse, oder <strong>ZIP/USB</strong>. Passwort =
+                ZIP-Datei, nicht IOTA.
+              </p>
             </fieldset>
 
-            <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-muted/10 px-3 py-2 text-xs">
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
               {preset.transportProfile === 'mesh-first' && !protectWithPassword ? (
                 <label className="flex cursor-pointer items-center gap-2">
                   <input
@@ -746,7 +732,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     checked={includeIotaArchivReadme}
                     onChange={(e) => setIncludeIotaArchivReadme(e.target.checked)}
                   />
-                  <span className="text-foreground">IOTA-Archiv im README</span>
+                  IOTA-Archiv
                 </label>
               ) : null}
               <label className="flex cursor-pointer items-center gap-2">
@@ -755,95 +741,85 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   checked={protectWithPassword}
                   onChange={(e) => setProtectWithPassword(e.target.checked)}
                 />
-                <span className="font-medium text-foreground">Handoff mit Passwort schützen (empfohlen)</span>
+                Passwort
               </label>
-              {protectWithPassword ? (
-                <div className="grid gap-2 border-t border-border/60 pt-2 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-muted-foreground">Passwort</label>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      value={handoffPassword}
-                      onChange={(e) => setHandoffPassword(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-muted-foreground">Passwort wiederholen</label>
-                    <input
-                      type="password"
-                      autoComplete="new-password"
-                      value={handoffPasswordConfirm}
-                      onChange={(e) => setHandoffPasswordConfirm(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-input px-3 py-2 text-foreground"
-                    />
-                  </div>
-                  <p className="sm:col-span-2 text-[11px] text-muted-foreground">
-                    Passwort mündlich / zweiter Kanal — nicht in die ZIP schreiben.
-                  </p>
-                </div>
-              ) : null}
             </div>
+            {protectWithPassword ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={handoffPassword}
+                  onChange={(e) => setHandoffPassword(e.target.value)}
+                  placeholder="Passwort"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
+                />
+                <input
+                  type="password"
+                  autoComplete="new-password"
+                  value={handoffPasswordConfirm}
+                  onChange={(e) => setHandoffPasswordConfirm(e.target.value)}
+                  placeholder="Wiederholen"
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
+                />
+              </div>
+            ) : null}
           </section>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="button"
               disabled={handoffBusy}
               onClick={() => void onDownload()}
               className={cn(
-                'flex w-full items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold shadow-sm disabled:opacity-50 sm:w-auto sm:min-w-[240px]',
-                presetId === 'helfer' || presetId === 'arbeiter'
+                'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50',
+                presetId === 'helfer'
                   ? 'bg-emerald-600 text-white hover:bg-emerald-600/90'
                   : 'bg-primary text-primary-foreground hover:bg-primary/90'
               )}
-              title={`Preset „${preset.label}“ und aktuelle Auswahl (Partner, Team, Technik)`}
             >
-              <Download className="h-5 w-5" aria-hidden />
-              {handoffBusy ? 'ZIP…' : `ZIP-Paket herunterladen (${preset.label})`}
+              <Download className="h-4 w-4" aria-hidden />
+              {handoffBusy ? '…' : 'ZIP'}
             </button>
             {showRepeatDownload ? (
               <button
                 type="button"
                 disabled={handoffBusy}
                 onClick={() => void onRepeatLastPresetDownload()}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-purple-400/50 bg-purple-500/15 px-5 py-3 text-sm font-semibold text-foreground hover:bg-purple-500/25 disabled:opacity-50 sm:w-auto"
-                title="Lädt ZIP mit dem Preset des letzten Exports — ohne die aktuell gewählte Einsatz-Karte zu ändern"
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium disabled:opacity-50"
               >
                 <Download className="h-4 w-4 shrink-0" aria-hidden />
-                {handoffBusy ? 'ZIP…' : `Nochmal: ${getHandoffPreset(repeatPresetId).label}`}
+                {getHandoffPreset(repeatPresetId).label}
               </button>
             ) : null}
             <button
               type="button"
-              disabled={handoffBusy || selectedPartnerAddrs.size === 0}
+              disabled={handoffBusy || iotaRecipientCount === 0}
               onClick={() => void onSendViaIota()}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-sky-500/45 bg-sky-500/15 px-5 py-3 text-sm font-semibold text-foreground hover:bg-sky-500/25 disabled:opacity-50 sm:w-auto"
-              title="Gleiche ZIP-Nutzlast (~3 KB) verschlüsselt an ausgewählte Partner (Posteingang)"
+              title={
+                iotaRecipientCount === 0
+                  ? 'Partner oder IOTA-Zieladresse (0x…) erforderlich'
+                  : 'Handoff-ZIP verschlüsselt an Partner senden'
+              }
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-sky-500/45 bg-sky-500/15 px-4 py-2.5 text-sm font-semibold disabled:opacity-50"
             >
               <Send className="h-4 w-4 shrink-0" aria-hidden />
-              {handoffBusy ? 'Sende…' : 'Per IOTA an Partner'}
+              {handoffBusy ? '…' : 'IOTA'}
             </button>
+            <LanInstallQrPanel variant="inline" onStatus={(msg) => setStatusMsg(msg)} />
           </div>
-          {showRepeatDownload ? (
-            <p className="text-[11px] text-muted-foreground">
-              <strong>Nochmal:</strong> letztes Preset ({getHandoffPreset(repeatPresetId).label}) — ohne die aktuelle
-              Profil-Karte zu ändern.
-            </p>
-          ) : null}
 
           {statusMsg ? (
-            <p className="text-sm text-muted-foreground" role="status">
+            <p className="text-xs text-muted-foreground" role="status">
               {statusMsg}
             </p>
           ) : null}
 
-          <details className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-sm">
+          <details className="rounded-lg border border-border/60 px-3 py-2 text-sm">
             <summary className="cursor-pointer select-none py-1 font-medium text-foreground">
-              Experte (Feineinstellung, Vorlagen, LoRa, RPC)
+              Experte
             </summary>
-            <div className="mt-3 space-y-4 border-t border-border/60 pt-3 text-xs">
+            <div className="mt-3 space-y-3 border-t border-border/60 pt-3 text-xs">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                   <HandoffRoleIdBitPicker
@@ -853,6 +829,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     onTuningRoleIdChange={setTuningRoleId}
                   />
                 </div>
+                {!compact ? (
                 <div className="sm:col-span-2">
                   <HandoffCapabilitiesMatrixPicker
                     effective={resolvedCapabilities}
@@ -861,6 +838,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     onApplyCapabilityPreset={applyCapabilityPreset}
                   />
                 </div>
+                ) : null}
                 <div>
                   <label className="mb-1 block text-muted-foreground">ROLE</label>
                   <select
@@ -881,9 +859,9 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     onChange={(e) => setTuningSimpleMode(e.target.value as 'preset' | 'true' | 'false')}
                     className="w-full rounded-lg border border-border bg-input px-2 py-2"
                   >
-                    <option value="preset">wie Profil</option>
-                    <option value="true">an</option>
-                    <option value="false">aus</option>
+                    <option value="preset">Profil</option>
+                    <option value="true">An</option>
+                    <option value="false">Aus</option>
                   </select>
                 </div>
                 <label className="flex cursor-pointer items-center gap-2 sm:col-span-2">
@@ -892,26 +870,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     checked={omitTeamMailboxes}
                     onChange={(e) => setOmitTeamMailboxes(e.target.checked)}
                   />
-                  <span>Keine Team-Mailboxen im ZIP</span>
+                  Ohne Team-Mailboxen
                 </label>
-                <div>
-                  <label className="mb-1 block text-muted-foreground">DEFAULT_TTL_DAYS</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={3650}
-                    value={handoffTtlDays}
-                    onChange={(e) => {
-                      const n = parseInt(e.target.value, 10)
-                      setHandoffTtlDays(Number.isFinite(n) && n >= 0 ? Math.min(3650, n) : 0)
-                    }}
-                    className="w-full rounded-lg border border-border bg-input px-2 py-2"
-                  />
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    Nachrichten/Handshake on-chain (Tage). Standard = Boss-Server (
-                    {p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30}).
-                  </p>
-                </div>
               </div>
 
               {canSaveTemplates ? (
@@ -954,126 +914,55 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 </div>
               ) : null}
 
-              <p className="rounded-lg border border-sky-600/30 bg-sky-950/15 px-3 py-2 leading-snug text-muted-foreground">
-                <strong className="text-foreground">LoRa:</strong> {HANDOFF_MESHTASTIC_PSK_SHORT}
-              </p>
-              <p className="text-muted-foreground">
-                <Link href="/handbook?file=EXPORT-ASSISTENT-REFERENZ.md" className="text-primary underline">
-                  Referenz
-                </Link>
-                {' · '}
-                <Link
-                  href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#handoff-env-move-und-package"
-                  className="text-primary underline"
-                >
-                  .env vs. Move
-                </Link>
-              </p>
-              <p className="text-muted-foreground">
-                Nur bei Abweichung vom Boss-Setup. Bundle:{' '}
-                <span className="font-mono">npm run bundle:standalone-smartphone</span>
-              </p>
+              <details className="rounded-lg border border-border/60 px-3 py-2">
+                <summary className="cursor-pointer font-medium text-foreground">Chain-IDs</summary>
+                <div className="mt-3 space-y-3 border-t border-border/60 pt-3">
               <div>
-                <p className="mb-2 text-muted-foreground">
-                  <strong className="text-foreground">Partner:</strong> Standard ist die Auswahl oben (Checkboxen mit
-                  Namen). Nur wenn eine Adresse <em>nicht</em> im Telefonbuch steht:
-                </p>
-                <textarea
-                  value={partnersManual}
-                  onChange={(e) => setPartnersManual(e.target.value)}
-                  rows={3}
-                  placeholder="0x…64hex, 0x…64hex (kommagetrennt)"
-                  className="w-full resize-y rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
-                />
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={mergeManualPartners}
-                    className="rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-emerald-500/25"
-                  >
-                    Zur Auswahl hinzufügen
-                  </button>
-                  {selectedPartnerAddrs.size > 0 ? (
-                    <button
-                      type="button"
-                      onClick={fillManualPartnersFromSelection}
-                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
-                    >
-                      Auswahl ins Textfeld kopieren ({selectedPartnerAddrs.size})
-                    </button>
-                  ) : null}
-                </div>
-                <p className="mt-1.5 text-[11px] text-muted-foreground">
-                  Aktuell {selectedPartnerAddrs.size} Partner in der Auswahl (für das ZIP).
-                </p>
-              </div>
-              <div>
-                <label className="mb-1 block text-muted-foreground">RPC_URL</label>
+                <label className="mb-1 block text-muted-foreground">RPC</label>
                 <input
                   value={handoffRpc}
                   onChange={(e) => setHandoffRpc(e.target.value)}
-                  placeholder="https://api.testnet.iota.cafe"
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
                 />
               </div>
               <div>
-                <span className="mb-1 block font-medium text-foreground">Move-Package für den Handoff</span>
-                <p className="mb-2 text-muted-foreground">
-                  Standard: dieselbe <span className="font-mono">PACKAGE_ID</span> wie in Ihrer Boss-.env (empfohlen).
-                  Nur ändern, wenn der Helfer ein <strong>anderes</strong> deploytes Package nutzen soll.
-                </p>
-                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-2">
+                <label className="mb-1 flex items-center gap-2 text-muted-foreground">
                   <input
                     type="radio"
                     name="handoff-pkg-einsatz"
                     checked={handoffPkgSource === 'boss'}
                     onChange={() => setHandoffPkgSource('boss')}
-                    className="mt-0.5"
                   />
-                  <span>
-                    <span className="font-medium text-foreground">Boss-.env (Standard)</span>
-                    <span className="mt-0.5 block text-muted-foreground">
-                      {p.apiSnapshot?.packageId
-                        ? `Aktuell: ${formatHandoffAddressShort(p.apiSnapshot.packageId)}`
-                        : 'Aus Server-Konfiguration beim ZIP-Export'}
-                    </span>
-                  </span>
+                  Boss-Package
                 </label>
-                <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg border border-border/60 bg-background/40 px-3 py-2">
+                <label className="mb-1 flex items-center gap-2 text-muted-foreground">
                   <input
                     type="radio"
                     name="handoff-pkg-einsatz"
                     checked={handoffPkgSource === 'custom'}
                     onChange={() => setHandoffPkgSource('custom')}
-                    className="mt-0.5"
                   />
-                  <span className="min-w-0 flex-1">
-                    <span className="font-medium text-foreground">Andere PACKAGE_ID eintragen</span>
-                    <span className="mt-0.5 block text-muted-foreground">
-                      Nur wenn der Helfer ein anderes Move-Package braucht (0x + 64 Hex).
-                    </span>
-                  </span>
+                  Eigene PACKAGE_ID
                 </label>
                 {handoffPkgSource === 'custom' ? (
                   <input
                     value={handoffPkgCustom}
                     onChange={(e) => setHandoffPkgCustom(e.target.value)}
-                    placeholder="0x…64 Hex"
-                    className="mt-2 w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
                   />
                 ) : null}
               </div>
-              <div>
-                <label className="mb-1 block text-muted-foreground">BOSS_ADDRESS</label>
-                <input
-                  value={handoffBoss}
-                  onChange={(e) => setHandoffBoss(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
-                />
-              </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-muted-foreground">MAILBOX_ID (primär)</label>
+                  <label className="mb-1 block text-muted-foreground">Boss</label>
+                  <input
+                    value={handoffBoss}
+                    onChange={(e) => setHandoffBoss(e.target.value)}
+                    className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-muted-foreground">Mailbox</label>
                   <input
                     value={handoffMailbox}
                     onChange={(e) => setHandoffMailbox(e.target.value)}
@@ -1081,7 +970,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-muted-foreground">COMMAND_REGISTRY_ID</label>
+                  <label className="mb-1 block text-muted-foreground">Command Registry</label>
                   <input
                     value={handoffCmdReg}
                     onChange={(e) => setHandoffCmdReg(e.target.value)}
@@ -1089,23 +978,54 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-muted-foreground">VAULT_REGISTRY_ID</label>
+                  <label className="mb-1 block text-muted-foreground">Vault Registry</label>
                   <input
                     value={handoffVaultReg}
                     onChange={(e) => setHandoffVaultReg(e.target.value)}
                     className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
                   />
                 </div>
-                <div>
-                  <label className="mb-1 block text-muted-foreground">NEXT_PUBLIC_DIRECT_IOTA_RPC_URL</label>
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-muted-foreground">Direct IOTA RPC</label>
                   <input
                     value={handoffDirectIota}
                     onChange={(e) => setHandoffDirectIota(e.target.value)}
-                    placeholder="optional PWA Light-Client"
                     className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
                   />
                 </div>
               </div>
+                </div>
+              </details>
+
+              <details className="rounded-lg border border-border/60 px-3 py-2">
+                <summary className="cursor-pointer font-medium text-foreground">Partner (0x)</summary>
+                <div className="mt-3 space-y-2 border-t border-border/60 pt-3">
+                <textarea
+                  value={partnersManual}
+                  onChange={(e) => setPartnersManual(e.target.value)}
+                  rows={3}
+                  className="w-full resize-y rounded-lg border border-border bg-input px-3 py-2 font-mono text-foreground"
+                />
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={mergeManualPartners}
+                    className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                  >
+                    Hinzufügen
+                  </button>
+                  {selectedPartnerAddrs.size > 0 ? (
+                    <button
+                      type="button"
+                      onClick={fillManualPartnersFromSelection}
+                      className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted"
+                    >
+                      Auswahl kopieren
+                    </button>
+                  ) : null}
+                </div>
+                </div>
+              </details>
             </div>
           </details>
           </>

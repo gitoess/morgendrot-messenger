@@ -2,8 +2,8 @@
 
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  
-**UI:** Einsatzleitung → **Neues Gerät provisionieren** (Wizard, empfohlen) oder **Export-Assistent** (Feineinstellung) · API: `POST /api/standalone-smartphone-handoff-zip`  
-**Verwandt:** `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md` (Orientierung, .env vs. Move), **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`** (Boss-Routine Move vs. Handoff)
+**UI (Einsatzleitung):** **Helfer einrichten** — ein Formular (`layout=compact` in `BossHandoffExportPanel`); voller **Export-Assistent** (Schritt 1/2) nur noch außerhalb der Einsatzleitung falls eingebettet. **API:** `POST /api/standalone-smartphone-handoff-zip`  
+**Verwandt:** `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md`, **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`**
 
 > **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. **Move on-chain vs. Handoff** steht in **`docs/MOVE-MESSENGER-KONFIGURATION.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
 
@@ -24,32 +24,42 @@
 
 ---
 
-## 2. UI — alle Felder des Export-Assistenten
+## 2. UI — alle Felder
 
-### 2.1 Schritt 1 (schnell) — **Ist**
+### 2.0 Einsatzleitung — **Helfer einrichten** (`layout=compact`) — **Ist**
+
+| Bereich | Inhalt |
+|---------|--------|
+| **Kopf** | Bezeichnung, Vorlage, Profil-Karten (Helfer/Führer/Spezial) |
+| **Rechte** | Capabilities-Matrix + Schnellprofile (Medic, Reporter, …) |
+| **Team & Partner** | Checkboxen |
+| **Aktionen** | **ZIP**, **IOTA**, **WLAN-QR** (nur PWA — kein Handoff) |
+| **Neues Gerät** | Seed + QR + Registry (Wizard-Dialog) |
+| **Bestehende Geräte** | TTL, Purge, Boss-.env, Handoff-ZIP — **TTL nicht** im Experten |
+| **Experte** | ROLE_ID, RPC, Chain-IDs, Vorlage speichern, Partner manuell |
+
+### 2.1 Schritt 1 (Legacy `layout=steps`) — **Ist** (außerhalb Einsatzleitung)
 
 | UI-Element | API / Wirkung | Status |
 |------------|---------------|--------|
-| **Zusammenfassung** (grüne Box) | Nur Anzeige aus Preset + Auswahl | Ist |
 | **Bezeichnung** | `handoffLabel` → `HANDOFF_LABEL` + README | Ist |
-| **Profil Helfer** | Preset `helfer` → ROLE, ROLE_ID, TRANSPORT, SIMPLE_MODE, UI | Ist (Standard) |
-| **Profil Führer** | Preset `fuehrer` | Ist |
-| **Profil Spezial** | Preset `spezial` (z. B. ROLE_ID=4) | Ist |
-| **Vorlage laden** (Dropdown) | Lädt `.morgendrot-einsatz-templates.json` → Preset + ROLE_ID | Ist |
-| **Weiter** | Wechsel zu Schritt 2 | Ist |
+| **Profil Helfer / Führer / Spezial** | Presets → ROLE, ROLE_ID, TRANSPORT, SIMPLE_MODE, UI | Ist |
+| **Schnellprofile Medic / Reporter** | `capabilitiesOverride` via Matrix | Ist |
+| **Vorlage laden** | `.morgendrot-einsatz-templates.json` | Ist |
+| **Weiter** | Wechsel zu Schritt 2 | Ist (nur steps-Layout) |
 
-### 2.2 Schritt 2 — Team, Partner, Download — **Ist**
+### 2.2 Schritt 2 / Compact — Team, Partner, Download — **Ist**
 
 | UI-Element | API / Wirkung | Status |
 |------------|---------------|--------|
-| **Team-Postfächer** (Checkboxen) | `mailboxId` (primär), `teamMailboxIds` | Ist |
-| **Partner im Einsatz** (Checkboxen) | `partnerAddresses` → PARTNER_ADDRESS(S) | Ist |
-| **IOTA-Archiv im README** | `includeIotaArchivReadme`, `readmeExtra` | Ist (nur mesh-first, ohne Passwort) |
-| **Mit Passwort schützen** | Client: `handoff.morg.enc` | Ist |
-| **ZIP-Paket herunterladen (Profil)** | `format=zip` | Ist |
-| **Nochmal: letztes Preset** | Gleicher Download, anderes Preset in UI | Ist |
-| **Per IOTA an Partner** | `sendHandoffZipViaIota` | Ist |
-| **Zurück** | Schritt 1 | Ist |
+| **Team-Postfächer** | `mailboxId`, `teamMailboxIds` | Ist |
+| **Partner** | `partnerAddresses` | Ist |
+| **IOTA-Archiv** | `includeIotaArchivReadme` | Ist (mesh-first, ohne Passwort) |
+| **Passwort** | `handoff.morg.enc` | Ist |
+| **ZIP** | `format=zip` | Ist |
+| **Letztes Preset** | Repeat-Download | Ist |
+| **IOTA** | `sendHandoffZipViaIota` | Ist |
+| **WLAN-QR** | `LanInstallQrPanel` inline; `GET /api/lan-install-urls` | Ist |
 
 ### 2.3 Experte (ausklappbar) — **Ist**
 
@@ -66,8 +76,8 @@
 | **BOSS_ADDRESS, MAILBOX_ID, COMMAND_REGISTRY_ID, VAULT_REGISTRY_ID** | jeweilige Felder | Ist |
 | **NEXT_PUBLIC_DIRECT_IOTA_RPC_URL** | `nextPublicDirectIotaRpcUrl` | Ist |
 | **Partner manuell (Textarea)** | `partnerAddresses` | Ist |
-| **LoRa / .env-Erklärung** | Nur Text | Ist (Doku) |
-| **DEFAULT_TTL_DAYS** (Experte) | `exportTtlDays` → Handoff | Ist (Default: Boss-Server) |
+| **LoRa / .env-Erklärung** | README-Block | Ist |
+| **DEFAULT_TTL_DAYS** | — | **Nur** Block „Bestehende Geräte“ (nicht Export-Experte); API übernimmt Boss-`DEFAULT_TTL_DAYS` |
 
 ### 2.4 UI — geplant / Backlog (noch nicht oder nur Doku)
 
@@ -83,13 +93,16 @@
 | Wizard Schritt 3 „Vorschau .env“ | **Backlog** |
 | Helfer-Bundle **im** ZIP mitliefern | **Nein** — Medium getrennt (Bundle + Handoff-ZIP) |
 
-### 2.5 Entfernte / nicht mehr in Einsatzleitung
+### 2.5 Entfernte / verschoben
 
 | Element | Ort heute |
 |---------|-----------|
+| Grüne Summary-Box, lange Hilfetexte | **Entfernt** (2026-06) |
+| TTL im Export-Experten | **Entfernt** → **Bestehende Geräte** |
+| WLAN-QR | **Helfer einrichten** (neben IOTA), nicht Erweitert |
+| Export-Assistent (eigene Karte) | **Helfer einrichten** (compact) |
 | Kontakte importieren/exportieren | **Telefonbuch** |
 | Forensik-Export | **Posteingang** |
-| Messenger `npm run bundle:messenger` | Handbuch / Erweiterte Technik (Hinweis) |
 
 ---
 
@@ -115,7 +128,7 @@
 | `uiVariant` | full \| messenger | Preset | `UI_VARIANT` |
 | `transportProfile` | mesh-first \| iota-anchored \| iota-full | Preset | `TRANSPORT_PROFILE` |
 | `simpleMode` | boolean | Preset | `SIMPLE_MODE` |
-| `exportTtlDays` | number? | Boss `DEFAULT_TTL_DAYS` | `DEFAULT_TTL_DAYS` |
+| `exportTtlDays` | number? | Boss `DEFAULT_TTL_DAYS` (automatisch beim Export aus Server) | `DEFAULT_TTL_DAYS` — UI nur **Bestehende Geräte** |
 | `exportEnablePurge` | boolean? | Boss `ENABLE_PURGE` | `ENABLE_PURGE` |
 | `capabilitiesOverride` | object? | Matrix-UI | `.morgendrot-runtime-config.json` |
 | `includeIotaArchivReadme` | boolean | Checkbox | README-Block |

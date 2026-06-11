@@ -1,10 +1,8 @@
 'use client'
 
 /**
- * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang), optional Nur LoRa/Mesh bzw. Nur IOTA.
- * Überlauf hinter „+n“-Menü; Klick setzt Filter und Empfängerfeld für den nächsten Versand.
- * Wenn Nur-IOTA/Nur-Mesh in der Session aktiv ist, bleibt die Filterzeile sichtbar (auch ohne Wallet-Adresse),
- * damit Funk-Zeilen nicht „verschwinden“, ohne dass man den Filter zurücksetzen kann.
+ * Schnellfilter: Partner-Chips, Kanal (Eingang/Ausgang + Quelle), optional Inhalt (Klartext/Verschlüsselt).
+ * Filter wirken nur wenn die jeweilige Toolbar-Sektion eingeschaltet ist (armed).
  */
 
 import { useState } from 'react'
@@ -18,10 +16,20 @@ import {
 } from '@/components/ui/dropdown-menu'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import { type InboxSourceFilter, inboxSourceFilterLabel } from '@/frontend/lib/inbox-source-filter'
 
 export type InboxPartnerOption = { address: string; label: string; unreadCount?: number }
 
 const MAX_VISIBLE_CHIPS = 5
+
+const SOURCE_FILTERS: InboxSourceFilter[] = [
+  'all',
+  'mailbox',
+  'group',
+  'telegram',
+  'funk',
+  'lagebild',
+]
 
 function norm(s: string): string {
   return s.trim().toLowerCase()
@@ -154,21 +162,16 @@ function PartnerChipSection(p: {
 
 export type ChatViewInboxPartnerStripProps = {
   partnerOptions: InboxPartnerOption[]
-  /** Ohne eigene Adresse sind Eingang/Ausgang-Filter nicht sinnvoll – Zeile ausblenden. */
   myAddressKnown: boolean
   partnerKey: string | null
   onPartnerKeyChange: (key: string | null) => void
   direction: InboxDirectionFilter
   onDirectionChange: (d: InboxDirectionFilter) => void
-  /** Nur Zeilen mit Funk/Mesh (lokal + Echo nach Senden). */
-  meshTransportOnly: boolean
-  onMeshTransportOnlyChange: (v: boolean) => void
-  /** Nur reine Mailbox-/IOTA-Zeilen (ohne Mesh-Anteil). */
-  iotaTransportOnly: boolean
-  onIotaTransportOnlyChange: (v: boolean) => void
+  sourceFilter: InboxSourceFilter
+  onSourceFilterChange: (f: InboxSourceFilter) => void
+  showLagebildSource?: boolean
   wireFilter: InboxWireFilter
   onWireFilterChange: (f: InboxWireFilter) => void
-  /** Partner ausgewählt: Filter + Empfänger für Senden */
   onPartnerSelectForSend: (address: string) => void
   showWireSection?: boolean
   showChannelSection?: boolean
@@ -177,8 +180,6 @@ export type ChatViewInboxPartnerStripProps = {
     address: string,
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
-  /** Simple Mode / mesh-first: „Nur IOTA“ ausblenden. */
-  showInboxIotaFilter?: boolean
 }
 
 export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
@@ -189,10 +190,9 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     onPartnerKeyChange,
     direction,
     onDirectionChange,
-    meshTransportOnly,
-    onMeshTransportOnlyChange,
-    iotaTransportOnly,
-    onIotaTransportOnlyChange,
+    sourceFilter,
+    onSourceFilterChange,
+    showLagebildSource = true,
     wireFilter,
     onWireFilterChange,
     onPartnerSelectForSend,
@@ -200,44 +200,10 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     showChannelSection = true,
     showPartnerSection = true,
     onRemoveInboxPartnerFromQuickList,
-    showInboxIotaFilter = true,
   } = p
 
   const hasAnyPartners = partnerOptions.length > 0
-  /** Transport-Filter können in der Session hängen bleiben — Zeile sichtbar wenn Filter aktiv. */
-  const showTransportRow =
-    myAddressKnown || meshTransportOnly || (showInboxIotaFilter && iotaTransportOnly)
-
-  const meshIotaToggleButtons = (
-    <>
-      <button
-        type="button"
-        onClick={() => onMeshTransportOnlyChange(!meshTransportOnly)}
-        className={cn(
-          'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-          meshTransportOnly
-            ? 'border-sky-600 bg-sky-500/15 text-sky-900 dark:text-sky-100'
-            : 'border-border bg-background text-muted-foreground hover:bg-muted'
-        )}
-      >
-        Nur LoRa/Mesh
-      </button>
-      {showInboxIotaFilter ? (
-        <button
-          type="button"
-          onClick={() => onIotaTransportOnlyChange(!iotaTransportOnly)}
-          className={cn(
-            'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-            iotaTransportOnly
-              ? 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
-              : 'border-border bg-background text-muted-foreground hover:bg-muted'
-          )}
-        >
-          Nur IOTA
-        </button>
-      ) : null}
-    </>
-  )
+  const sourceOptions = SOURCE_FILTERS.filter((id) => id !== 'lagebild' || showLagebildSource)
 
   return (
     <div className="space-y-2 border-b border-border/80 bg-muted/20 px-3 py-2">
@@ -271,12 +237,12 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
         </div>
       </div>
       ) : null}
-      {showChannelSection && showTransportRow ? (
-        <div className="space-y-1.5">
+      {showChannelSection ? (
+        <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {myAddressKnown ? (
               <>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Richtung</span>
                 {(
                   [
                     ['all', 'Alle'],
@@ -300,21 +266,35 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
                 ))}
               </>
             ) : (
-              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                Posteingang-Filter
-              </span>
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
             )}
-            {meshIotaToggleButtons}
           </div>
-          {showInboxIotaFilter && iotaTransportOnly ? (
-            <p className="text-xs text-amber-800 dark:text-amber-200" role="status">
-              „Nur IOTA“ ist aktiv: Funk- und Mesh-Zeilen werden im Posteingang ausgeblendet. Zum Anzeigen erneut auf
-              „Nur IOTA“ tippen (oder Sitzung ohne diesen Filter neu laden).
-            </p>
-          ) : null}
-          {meshTransportOnly ? (
-            <p className="text-xs text-sky-950/90 dark:text-sky-100/90" role="status">
-              „Nur LoRa/Mesh“ ist aktiv: reine Mailbox-/Online-Zeilen ohne Funk sind ausgeblendet.
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Quelle</span>
+            {sourceOptions.map((id) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => onSourceFilterChange(id)}
+                className={cn(
+                  'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
+                  sourceFilter === id
+                    ? id === 'funk'
+                      ? 'border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100'
+                      : id === 'telegram'
+                        ? 'border-sky-500/50 bg-sky-500/10 text-sky-950 dark:text-sky-100'
+                        : 'border-violet-600 bg-violet-500/15 text-violet-950 dark:text-violet-100'
+                    : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                )}
+              >
+                {inboxSourceFilterLabel(id)}
+              </button>
+            ))}
+          </div>
+          {sourceFilter !== 'all' || direction !== 'all' ? (
+            <p className="text-xs text-muted-foreground" role="status">
+              Kanal-Filter aktiv — zum vollen Posteingang Quelle und Richtung auf „Alle“ setzen oder Kanal-Filter
+              ausschalten.
             </p>
           ) : null}
         </div>

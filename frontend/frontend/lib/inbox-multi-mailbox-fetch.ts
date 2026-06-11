@@ -84,6 +84,48 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
   for (let i = 0; i < sources.length; i++) {
     const mailboxObjectId = sources[i]
     const isServer = mailboxObjectId == null
+    const skipApiRelay = shouldSkipMessengerApiRelayFallback()
+
+    const fetchApiChunk = async (): Promise<boolean> => {
+      if (skipApiRelay) return false
+      const res = await fetchInbox(
+        p.limit,
+        undefined,
+        p.packageId,
+        false,
+        isServer ? p.offset : 0,
+        Boolean(p.mergeLocalInbox && isServer),
+        mailboxObjectId,
+        p.silent === true
+      )
+      const resLoose = res as {
+        data?: unknown
+        messages?: unknown
+        ok?: boolean
+        error?: string
+        message?: string
+        hasMore?: unknown
+      }
+      const raw = pickInboxRawMessages(resLoose)
+      const resHasMore = pickInboxHasMore(resLoose)
+      if (res.ok && raw != null) {
+        anyOk = true
+        const mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
+        if (isServer) {
+          serverStride = mapped.length
+          serverHasMore = resHasMore
+        }
+        mappedChunks.push(...mapped)
+        return true
+      }
+      if (!res.ok) lastError = resLoose.error || resLoose.message || lastError
+      return false
+    }
+
+    /** Shared: API zuerst (Event-Union über alle Package-IDs), Direkt-RPC ergänzt. */
+    if (isServer && !skipApiRelay) {
+      await fetchApiChunk()
+    }
 
     const direct = await tryFetchDirectMailboxInboxViaIota({
       limit: p.limit,
@@ -95,48 +137,21 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
       anyOk = true
       loadedViaRpc = true
       const mapped = mapInboxApiRowsToMessages(direct.rows as InboxApiRow[])
-      if (isServer) {
+      if (isServer && skipApiRelay) {
         serverStride = mapped.length
         serverHasMore = mapped.length >= p.limit
       }
       mappedChunks.push(...mapped)
-      continue
+      if (!isServer) continue
+    } else if (isServer) {
+      lastError = direct.error || lastError
     }
-    if (isServer) lastError = direct.error || lastError
 
-    if (shouldSkipMessengerApiRelayFallback()) continue
+    if (skipApiRelay) continue
+    if (!isServer && direct.ok) continue
+    if (isServer) continue
 
-    const res = await fetchInbox(
-      p.limit,
-      undefined,
-      p.packageId,
-      false,
-      isServer ? p.offset : 0,
-      Boolean(p.mergeLocalInbox && isServer),
-      mailboxObjectId,
-      p.silent === true
-    )
-    const resLoose = res as {
-      data?: unknown
-      messages?: unknown
-      ok?: boolean
-      error?: string
-      message?: string
-      hasMore?: unknown
-    }
-    const raw = pickInboxRawMessages(resLoose)
-    const resHasMore = pickInboxHasMore(resLoose)
-    if (res.ok && raw != null) {
-      anyOk = true
-      const mapped = mapInboxApiRowsToMessages(raw as InboxApiRow[])
-      if (isServer) {
-        serverStride = mapped.length
-        serverHasMore = resHasMore
-      }
-      mappedChunks.push(...mapped)
-    } else if (!res.ok) {
-      lastError = resLoose.error || resLoose.message || lastError
-    }
+    await fetchApiChunk()
   }
 
   if (!anyOk) {

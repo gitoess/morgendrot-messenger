@@ -19,8 +19,8 @@ import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
+import { ChatViewPinnwandFeedPanel } from '@/frontend/components/chat-view-pinnwand-feed-panel'
 import { ChatViewPinnwandInboxStrip } from '@/frontend/components/chat-view-pinnwand-inbox-strip'
-import { ChatViewPinnwandReaderBanner } from '@/frontend/components/chat-view-pinnwand-reader-banner'
 import { ChatViewInboxUnreadThreadsStrip } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import {
   canPostToPinnwand,
@@ -77,6 +77,20 @@ import {
 import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
+import {
+  applyReplyContextVariant,
+  resolveReplyContextFromInboxMessage,
+  type ReplyContextVariant,
+} from '@/frontend/lib/inbox-reply-context'
+import type { Message } from '@/frontend/lib/types'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -161,6 +175,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     appendMeshMessage,
     clearInboxRam,
     inboxRows,
+    pinnwandFeedMessages,
+    pinnwandInboxRows,
     meshtastic,
     meshSyncMsg,
     setMeshSyncMsg,
@@ -245,10 +261,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
+    inboxWireFilter,
+    setInboxWireFilter,
     inboxPartnerOptions,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
@@ -274,8 +296,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenEinsatzleitung,
     phonebookNavRequest,
     onOpenSettings,
-    inboxWireFilter,
-    setInboxWireFilter,
     inboxOverviewChipsVisible,
     inboxOverviewCategory,
     setInboxOverviewCategory,
@@ -488,6 +508,78 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [setPartner, setRecipient, setComposerDelivery]
   )
 
+  const [replyPathChoice, setReplyPathChoice] = useState<ReplyContextVariant[] | null>(null)
+
+  const applyInboxReplyVariant = useCallback(
+    (variant: ReplyContextVariant) => {
+      clearCompactAttachment()
+      applyReplyContextVariant(variant, {
+        onChannelModeChange,
+        setForcedTransport,
+        setComposerDelivery,
+        setPartner,
+        setRecipient,
+        setEncrypted,
+        setComposerMailboxObjectId,
+        setMeshtasticChannelIndex,
+        setMeshPlaintextNodeId,
+        setMeshPlaintextToNodeEnabled,
+        selectInboxPartnerForSend,
+        setMessage,
+        refreshMessengerGroups,
+      })
+      setStatus('success')
+      setStatusMsg(
+        variant.hint
+          ? `Antworten: ${variant.label} — ${variant.hint}`
+          : `Antworten: ${variant.label} — Nachricht ergänzen und senden.`
+      )
+      toast.success(`Antworten: ${variant.label}`)
+      requestAnimationFrame(() => {
+        document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    },
+    [
+      clearCompactAttachment,
+      onChannelModeChange,
+      setForcedTransport,
+      setComposerDelivery,
+      setPartner,
+      setRecipient,
+      setEncrypted,
+      setComposerMailboxObjectId,
+      setMeshtasticChannelIndex,
+      setMeshPlaintextNodeId,
+      setMeshPlaintextToNodeEnabled,
+      selectInboxPartnerForSend,
+      setMessage,
+      refreshMessengerGroups,
+      setStatus,
+      setStatusMsg,
+    ]
+  )
+
+  const handleReplyToInboxMessage = useCallback(
+    (msg: Message) => {
+      const result = resolveReplyContextFromInboxMessage(msg, {
+        myAddress,
+        contactDirectory: directory,
+        pinnwandBoardAddress: apiStatus?.broadcastPinnwand?.address,
+        activeGroup,
+      })
+      if (!result) {
+        toast.error('Antworten: Kein passender Kanal für diese Zeile.')
+        return
+      }
+      if (result.kind === 'choice') {
+        setReplyPathChoice(result.variants)
+        return
+      }
+      applyInboxReplyVariant(result.variant)
+    },
+    [myAddress, directory, apiStatus?.broadcastPinnwand?.address, activeGroup, applyInboxReplyVariant]
+  )
+
   const addInboxSenderToContactBook = useCallback(
     (address: string) => {
       const a = address.trim()
@@ -604,6 +696,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       .slice(0, 3)
   }, [messages, pinnwandCaps.showInboxStrip, apiStatus, myAddress])
   const showInboxPackageExpert = uiCaps.showInboxPackageExpertMenu(clientExpertMode)
+  /** Kanal-Tab „Pinnwand“ — eigener Feed, kein gemischter Posteingang. */
+  const onPinnwandTab =
+    channelMode != null && isPinnwandChannel(channelMode) && pinnwandCaps.configured
 
   useEffect(() => {
     if (!onChannelModeChange || channelMode == null) return
@@ -646,12 +741,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       /Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(msg) ? '' : msg
     )
   }, [basisUnreachable, inboxFromCache])
-
-  useEffect(() => {
-    if (!uiCaps.showInboxIotaFilter && inboxIotaTransportOnly) {
-      setInboxIotaTransportOnly(false)
-    }
-  }, [uiCaps.showInboxIotaFilter, inboxIotaTransportOnly, setInboxIotaTransportOnly])
 
   useEffect(() => {
     if (!uiCaps.showAdhocTransport && forcedTransport === 'adhoc') {
@@ -699,6 +788,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sending,
     onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
     onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
+    onReplyToMessage: handleReplyToInboxMessage,
     onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
     onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
     onResendOutgoingHandshake: handleResendOutgoingHandshake,
@@ -717,10 +807,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
     selectInboxPartnerForSend,
@@ -1055,12 +1149,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         </div>
       ) : null}
 
-      {channelMode != null && isPinnwandChannel(channelMode) && !canPostToPinnwand(apiStatus, role) ? (
-        <ChatViewPinnwandReaderBanner
-          unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
-        />
-      ) : null}
-
       {pinnwandCaps.showInboxStrip ? (
         <ChatViewPinnwandInboxStrip
           messages={pinnwandPreviewMessages}
@@ -1151,24 +1239,78 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onSave={saveContactAliasFromDialog}
       />
 
-      <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
-        <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
-          Nachricht verfassen
-        </h2>
-        <ChatViewSendPanel {...sendPanelProps} />
-      </section>
+      {onPinnwandTab ? (
+        <>
+          <ChatViewPinnwandFeedPanel
+            apiStatus={apiStatus}
+            role={role}
+            canPost={pinnwandCaps.canPost}
+            unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
+            loading={loading}
+            onRefresh={() => void loadMessages('reset')}
+            loadError={loadError}
+            inboxFromCache={inboxFromCache}
+            inboxCacheAgeMinutes={inboxCacheAgeMinutes}
+            basisUnreachable={basisUnreachable}
+            messages={pinnwandFeedMessages}
+            inboxRows={pinnwandInboxRows}
+            myAddress={myAddress}
+            contactDirectory={directory}
+            isMeshVerifiedForAddress={isMeshVerifiedForAddress}
+            exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
+            onHideInboxMessageLocal={onHideInboxMessageLocal}
+            onPurgeInboxMessageChain={onPurgeInboxMessageChain}
+            onForwardMessage={onForwardMessage}
+            onReplyToMessage={handleReplyToInboxMessage}
+            toggleProtokollMark={toggleProtokollMark}
+            protokollMarkedIds={protokollMarkedIds}
+            pinnedPinnwandIds={pinnedPinnwandIds}
+            onTogglePinnedPinnwand={togglePinnedPinnwand}
+            showPinnwandPinActions={pinnwandCaps.configured && pinnwandCaps.canPost}
+            inboxSelectMode={inboxSelectMode}
+            selectedInboxIds={selectedInboxIds}
+            toggleInboxSelection={toggleInboxSelection}
+            loadingMore={loadingMore}
+            loadMoreInbox={loadMoreInbox}
+            inboxHasMore={inboxHasMore}
+            onAddSenderToContactBook={addInboxSenderToContactBook}
+            onSarqNakWire={onSarqNakWire}
+            isInboxMessageUnread={isInboxMessageUnread}
+            isPinnwandInboxMessage={isPinnwandInboxMessage}
+            pendingHandshakeOffers={pendingHandshakeOffers}
+            onAcceptPendingHandshake={handleAcceptHandshakeFromInbox}
+            onUseSenderAsPartnerFromInbox={handleUseSenderAsPartnerFromInbox}
+            sending={sending}
+          />
+          <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
+            <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
+              An Pinnwand senden
+            </h2>
+            <ChatViewSendPanel {...sendPanelProps} />
+          </section>
+        </>
+      ) : (
+        <>
+          <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
+            <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
+              Nachricht verfassen
+            </h2>
+            <ChatViewSendPanel {...sendPanelProps} />
+          </section>
 
-      {inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
-        <ChatViewInboxUnreadThreadsStrip
-          threads={inboxUnreadThreadOptions ?? []}
-          onOpenThread={(address) => {
-            setInboxOverviewCategory('direkt')
-            selectInboxPartnerForSend(address)
-          }}
-        />
-      ) : null}
+          {inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+            <ChatViewInboxUnreadThreadsStrip
+              threads={inboxUnreadThreadOptions ?? []}
+              onOpenThread={(address) => {
+                setInboxOverviewCategory('direkt')
+                selectInboxPartnerForSend(address)
+              }}
+            />
+          ) : null}
 
-      <ChatViewInboxPanel {...inboxPanelProps} />
+          <ChatViewInboxPanel {...inboxPanelProps} />
+        </>
+      )}
 
       <ChatViewMorgPkgImportsSheet
         open={morgPkgImportsOpen}
@@ -1199,6 +1341,33 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ) : null}
 
       {uiCaps.expertTools ? <ChatViewRelaySubmitButton hideMenuTrigger /> : null}
+
+      <Dialog open={replyPathChoice != null} onOpenChange={(open) => !open && setReplyPathChoice(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Antworten — Sendeweg wählen</DialogTitle>
+            <DialogDescription>
+              Diese Nachricht kam über mehrere Wege an. Welchen Pfad soll der Composer übernehmen?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-1">
+            {(replyPathChoice ?? []).map((variant) => (
+              <Button
+                key={variant.id}
+                type="button"
+                variant="outline"
+                className="h-auto justify-start px-3 py-2.5 text-left"
+                onClick={() => {
+                  setReplyPathChoice(null)
+                  applyInboxReplyVariant(variant)
+                }}
+              >
+                <span className="font-semibold">{variant.label}</span>
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

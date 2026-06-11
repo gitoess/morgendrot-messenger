@@ -67,6 +67,7 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
     transports: [...tr],
     content: pickMergedInboxContent(cc, mc),
     encrypted: Boolean(msg.encrypted || cur.encrypted),
+    pinnwandPost: cur.pinnwandPost === true || msg.pinnwandPost === true ? true : undefined,
   }
   const rest = prev.filter((_, j) => j !== i)
   return [merged, ...rest]

@@ -59,10 +59,11 @@ export async function sendHandoffZipViaIota(opts: {
   }
 
   if (sent === 0) {
+    const summary = failures.map((f) => `${f.address.slice(0, 10)}…: ${f.error}`).join(' · ')
     return {
       ok: false,
       error:
-        failures[0]?.error ||
+        summary ||
         'Handoff konnte an keinen Partner gesendet werden — Handshake prüfen oder ZIP per USB.',
     }
   }

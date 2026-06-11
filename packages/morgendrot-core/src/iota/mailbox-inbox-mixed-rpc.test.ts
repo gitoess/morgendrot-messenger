@@ -93,4 +93,56 @@ describe('mailbox-inbox-mixed-rpc', () => {
     expect(rows[1]?.kind).toBe('plain')
     expect(rows[1]?.kind === 'plain' && rows[1].text).toBe('Hi')
   })
+
+  it('sortiert nach ms-Nonce wenn created_at_ms fehlt (neueste oben)', async () => {
+    const plainType = `${pkg}::messaging::PlainMsgKey`
+    const oldId = '0x' + '77'.repeat(32)
+    const newId = '0x' + '88'.repeat(32)
+    const oldNonce = '1700000000000'
+    const newNonce = '1700000000001'
+
+    const client = {
+      getDynamicFields: vi.fn().mockResolvedValue({
+        data: [
+          {
+            objectId: oldId,
+            name: { type: plainType, value: { recipient: me, sender: peer, nonce: oldNonce } },
+          },
+          {
+            objectId: newId,
+            name: { type: plainType, value: { recipient: me, sender: peer, nonce: newNonce } },
+          },
+        ],
+        hasNextPage: false,
+      }),
+      multiGetObjects: vi.fn().mockImplementation(({ ids }: { ids: string[] }) =>
+        ids.map((id) => ({
+          data: {
+            content: {
+              fields: {
+                sender: peer,
+                recipient: me,
+                text: id === newId ? [110, 101, 117] : [97, 108, 116],
+                nonce: id === newId ? newNonce : oldNonce,
+                expires_at_ms: '0',
+              },
+            },
+          },
+        }))
+      ),
+    } as unknown as IotaClient
+
+    const rows = await fetchMailboxInboxRpcRows(client, {
+      mailboxObjectId: mb,
+      packageId: pkg,
+      myAddress: me,
+      includePlaintext: true,
+      includeEncrypted: false,
+      limit: 10,
+      offset: 0,
+    })
+    expect(rows).toHaveLength(2)
+    expect(rows[0]?.kind === 'plain' && rows[0].text).toBe('neu')
+    expect(rows[0]?.nonce).toBe(newNonce)
+  })
 })

@@ -51,6 +51,6 @@ export function pinnwandChannelTabLabel(
   role: string | null | undefined,
   status: ApiStatus | null | undefined
 ): string {
-  if (shouldMaskPinnwandSender(role, status)) return 'Lagebild'
+  if (shouldMaskPinnwandSender(role, status)) return 'Pinnwand'
   return 'Pinnwand'
 }

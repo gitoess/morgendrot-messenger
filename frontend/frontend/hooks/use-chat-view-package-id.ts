@@ -50,15 +50,22 @@ export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsPara
     setStatusMsg,
   } = p
 
-  const refreshPackageIdSuggestions = useCallback(async () => {
+  const refreshPackageIdSuggestions = useCallback(async (extraUnionIds?: string[]) => {
     const r = await fetchPackageIdHistory()
-    if (!r.ok) return
-    const seen = new Set<string>()
-    for (const x of [r.current, ...(r.history ?? []), ...(r.discovered ?? [])]) {
-      const t = (x || '').trim()
-      if (/^0x[a-fA-F0-9]{64}$/.test(t)) seen.add(t.toLowerCase())
+    const seen = new Map<string, string>()
+    const add = (raw: string | undefined) => {
+      const t = (raw || '').trim()
+      if (!/^0x[a-fA-F0-9]{64}$/.test(t)) return
+      const k = t.toLowerCase()
+      if (!seen.has(k)) seen.set(k, t)
     }
-    setPackageIdSuggestions([...seen])
+    for (const x of extraUnionIds ?? []) add(x)
+    if (r.ok) {
+      add(r.current)
+      for (const x of r.history ?? []) add(x)
+      for (const x of r.discovered ?? []) add(x)
+    }
+    setPackageIdSuggestions([...seen.values()])
   }, [setPackageIdSuggestions])
 
   useEffect(() => {

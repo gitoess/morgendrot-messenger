@@ -17,6 +17,7 @@ export type LocalHandoffAppliedSnapshot = {
   /** Lagebild (Pinnwand) — automatisch aus Handoff, Helfer konfiguriert nichts. */
   broadcastPinnwandEnabled?: boolean
   broadcastPinnwandAddress?: string
+  broadcastPinnwandAuthorizedSenders?: string[]
 }
 
 const LOCAL_HANDOFF_APPLIED_KEY = 'morgendrot.handoff.localApplied.v1'
@@ -76,6 +77,11 @@ export function buildLocalHandoffAppliedSnapshot(envText: string): LocalHandoffA
     bossAddress: env.BOSS_ADDRESS?.trim() || undefined,
     broadcastPinnwandEnabled: parseBool(env.ENABLE_BROADCAST_PINNWAND),
     broadcastPinnwandAddress: env.BROADCAST_PINNWAND_ADDRESS?.trim() || undefined,
+    broadcastPinnwandAuthorizedSenders: env.BROADCAST_AUTHORIZED_SENDERS
+      ? env.BROADCAST_AUTHORIZED_SENDERS.split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined,
   }
 }
 
@@ -119,6 +125,9 @@ export function readLocalHandoffAppliedSnapshot(): LocalHandoffAppliedSnapshot |
         typeof parsed.broadcastPinnwandEnabled === 'boolean' ? parsed.broadcastPinnwandEnabled : undefined,
       broadcastPinnwandAddress:
         typeof parsed.broadcastPinnwandAddress === 'string' ? parsed.broadcastPinnwandAddress : undefined,
+      broadcastPinnwandAuthorizedSenders: Array.isArray(parsed.broadcastPinnwandAuthorizedSenders)
+        ? parsed.broadcastPinnwandAuthorizedSenders.filter((v): v is string => typeof v === 'string')
+        : undefined,
     }
   } catch {
     return null

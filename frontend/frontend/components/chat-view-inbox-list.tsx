@@ -24,6 +24,7 @@ import {
   MessageCircle,
   MoreHorizontal,
   Package,
+  Reply,
   ShieldCheck,
   Pin,
   Star,
@@ -95,6 +96,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   onPurgeInboxMessageChain: (msg: Message) => void | Promise<void>
   /** Text ins Composer-Feld; optional mit Absenderzeile. */
   onForwardMessage?: (msg: Message, includeSender: boolean) => void
+  /** H.32a: Kanal + Sendepfad für Antwort vorbereiten (sendet nicht). */
+  onReplyToMessage?: (msg: Message) => void
   toggleProtokollMark: (id: string) => void
   protokollMarkedIds: Set<string>
   /** M3 Pinnwand: lokal anheften */
@@ -140,6 +143,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
+    onReplyToMessage,
     toggleProtokollMark,
     protokollMarkedIds,
     pinnedPinnwandIds = new Set(),
@@ -488,7 +492,20 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   ) : null}
                 </div>
               </div>
-              <DropdownMenu>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {onReplyToMessage ? (
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => onReplyToMessage(row.msg)}
+                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/20 disabled:opacity-50"
+                    title="Antworten — Kanal und Sendepfad werden übernommen"
+                  >
+                    <Reply className="h-3.5 w-3.5" aria-hidden />
+                    Antworten
+                  </button>
+                ) : null}
+                <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
@@ -603,6 +620,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
             </div>
             <ChatMessageBody
               content={row.msg.content ?? ''}

@@ -2690,68 +2690,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
-        /** Boss-Einsatz-Parameter in Server-.env (TTL, Purge). */
-        if (url === '/api/einsatz-config-apply' && req.method === 'POST') {
-            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
-                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
-                return;
-            }
-            let body = '';
-            req.on('data', (chunk) => {
-                body += chunk;
-            });
-            req.on('end', () => {
-                try {
-                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
-                    const applied: string[] = [];
-                    const errors: string[] = [];
-                    if (data.defaultTtlDays != null && data.defaultTtlDays !== '') {
-                        const n = Number(data.defaultTtlDays);
-                        if (!Number.isFinite(n) || n < 0 || n > 3650) {
-                            errors.push('defaultTtlDays: 0–3650');
-                        } else {
-                            const v = String(Math.floor(n));
-                            (CFG as { DEFAULT_TTL_DAYS: bigint }).DEFAULT_TTL_DAYS = BigInt(Math.floor(n));
-                            process.env.DEFAULT_TTL_DAYS = v;
-                            const r = setEnvKey('DEFAULT_TTL_DAYS', v);
-                            if (r.ok) applied.push(`DEFAULT_TTL_DAYS=${v}`);
-                            else errors.push(r.error || 'DEFAULT_TTL_DAYS');
-                        }
-                    }
-                    if (data.enablePurge !== undefined && data.enablePurge !== null) {
-                        const on =
-                            data.enablePurge === true ||
-                            data.enablePurge === 'true' ||
-                            data.enablePurge === 1 ||
-                            data.enablePurge === '1';
-                        (CFG as { ENABLE_PURGE: boolean }).ENABLE_PURGE = on;
-                        process.env.ENABLE_PURGE = on ? 'true' : 'false';
-                        const r = setEnvKey('ENABLE_PURGE', on ? 'true' : 'false');
-                        if (r.ok) applied.push(`ENABLE_PURGE=${on}`);
-                        else errors.push(r.error || 'ENABLE_PURGE');
-                    }
-                    if (!applied.length && !errors.length) {
-                        sendJson(res, 400, { ok: false, error: 'Keine Parameter (defaultTtlDays, enablePurge).' }, cors);
-                        return;
-                    }
-                    sendJson(
-                        res,
-                        200,
-                        {
-                            ok: errors.length === 0,
-                            applied,
-                            errors: errors.length ? errors : undefined,
-                            message: applied.length ? `Server-.env: ${applied.join(', ')}` : undefined,
-                        },
-                        cors
-                    );
-                } catch (e: unknown) {
-                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
-                }
-            });
-            return;
-        }
-
         if (url === '/api/start-boss-signer' && req.method === 'POST') {
             try {
                 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');

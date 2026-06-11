@@ -48,7 +48,7 @@ async function main() {
     console.log(
         '\nNächste Schritte:\n' +
             '  1. Backend neu starten (npm run dev)\n' +
-            '  2. Einsatzleitung → Einsatz-Konfiguration: Move-Funktionen prüfen\n' +
+            '  2. Einsatzleitung → Erweitert → Chain-Status: Move-Funktionen prüfen\n' +
             '  3. Kein neues Handoff nötig (PACKAGE_ID + MAILBOX_ID unverändert)\n' +
             '  Siehe docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md'
     );

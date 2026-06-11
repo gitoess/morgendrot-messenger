@@ -1,4 +1,7 @@
 import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
+import type { HandoffEinsatzPresetId } from '@/frontend/lib/handoff-export-presets'
+import { getHandoffPreset } from '@/frontend/lib/handoff-export-presets'
+import type { HandoffExportTuning } from '@/frontend/lib/handoff-export-params'
 
 export type HandoffCapabilityPresetApply = {
   /** Optional ROLE_ID-Anpassung (zusätzlich zu Basis-Karte). */
@@ -28,6 +31,40 @@ export const HANDOFF_CAPABILITY_PRESETS: HandoffCapabilityPreset[] = [
           iota: { read: false, write: false },
         },
         security: { forceEncryptionOnly: true, allowPlaintextFallback: false },
+      },
+    },
+  },
+  {
+    id: 'reporter-lora-only',
+    label: 'Reporter nur Funk',
+    hint: 'LoRa lesen · sonst aus',
+    apply: {
+      roleId: 12,
+      override: {
+        transport: {
+          lora: { read: true, write: false },
+          telegram: { read: false, write: false },
+          iota: { read: false, write: false },
+          ble: { read: false, write: false },
+          streams: { read: false, write: false },
+        },
+      },
+    },
+  },
+  {
+    id: 'reporter-lora-telegram-read',
+    label: 'Reporter Funk + Telegram lesen',
+    hint: 'LoRa + Telegram lesen · IOTA aus',
+    apply: {
+      roleId: 12,
+      override: {
+        transport: {
+          lora: { read: true, write: false },
+          telegram: { read: true, write: false },
+          iota: { read: false, write: false },
+          ble: { read: false, write: false },
+          streams: { read: false, write: false },
+        },
       },
     },
   },
@@ -65,3 +102,33 @@ export const HANDOFF_CAPABILITY_PRESETS: HandoffCapabilityPreset[] = [
     },
   },
 ]
+
+/** Im kompakten „Helfer einrichten“ — häufigste Fälle (Rest: Matrix). */
+export const WIZARD_CAPABILITY_PRESET_IDS = [
+  'medic-funker',
+  'reporter-lora-only',
+  'reporter-lora-telegram-read',
+  'reporter-transport',
+] as const
+
+export type WizardCapabilityPresetId = (typeof WIZARD_CAPABILITY_PRESET_IDS)[number]
+
+export function getWizardCapabilityPresets(): HandoffCapabilityPreset[] {
+  const allowed = new Set<string>(WIZARD_CAPABILITY_PRESET_IDS)
+  return HANDOFF_CAPABILITY_PRESETS.filter((p) => allowed.has(p.id))
+}
+
+/** Capability-Schnellprofil auf Basis-Karte anwenden (Wizard + Export-Assistent). */
+export function applyHandoffCapabilityPresetToTuning(
+  presetId: HandoffEinsatzPresetId,
+  currentTuning: HandoffExportTuning,
+  cap: HandoffCapabilityPresetApply
+): { tuning: HandoffExportTuning; override: MessengerCapabilitiesOverride } {
+  const tuning = { ...currentTuning }
+  if (cap.roleId != null) {
+    const base = getHandoffPreset(presetId).roleId
+    if (cap.roleId === base) delete tuning.roleId
+    else tuning.roleId = cap.roleId
+  }
+  return { tuning, override: cap.override }
+}

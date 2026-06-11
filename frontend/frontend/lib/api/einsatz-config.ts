@@ -1,4 +1,5 @@
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchApiText } from '@/frontend/lib/api-fetch-text'
 
 export type UpgradeMovePackageResult =
   | { ok: true; packageId: string; message?: string }
@@ -13,14 +14,15 @@ export async function postUpgradeMovePackage(opts?: {
   packageDir?: string
 }): Promise<UpgradeMovePackageResult> {
   try {
-    const res = await fetch(`${API_BASE}/api/upgrade-package`, {
+    const fr = await fetchApiText(getApiBase(), '/api/upgrade-package', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: opts?.packageDir ?? 'move-test' }),
     })
-    const j = (await res.json()) as UpgradeMovePackageResult & { message?: string }
-    if (!res.ok || !j.ok) {
-      return { ok: false, error: j.error || `HTTP ${res.status}` }
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const j = JSON.parse(fr.text) as UpgradeMovePackageResult & { message?: string }
+    if (!fr.response.ok || !j.ok) {
+      return { ok: false, error: j.error || `HTTP ${fr.response.status}` }
     }
     return { ok: true, packageId: j.packageId, message: j.message }
   } catch (e) {
@@ -34,16 +36,17 @@ export async function postApplyEinsatzConfig(body: {
   enablePurge?: boolean
 }): Promise<ApplyEinsatzConfigResult> {
   try {
-    const res = await fetch(`${API_BASE}/api/einsatz-config-apply`, {
+    const fr = await fetchApiText(getApiBase(), '/api/einsatz-config-apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    const j = (await res.json()) as ApplyEinsatzConfigResult
-    if (!res.ok || !j.ok) {
+    if (!fr.ok) return { ok: false, error: fr.error }
+    const j = JSON.parse(fr.text) as ApplyEinsatzConfigResult
+    if (!fr.response.ok || !j.ok) {
       return {
         ok: false,
-        error: j.error || `HTTP ${res.status}`,
+        error: j.error || `HTTP ${fr.response.status}`,
         errors: j.errors,
         applied: j.applied,
       }

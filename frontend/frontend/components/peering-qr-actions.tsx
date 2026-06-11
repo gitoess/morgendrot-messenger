@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { exportDirectChatEcdhPublicKeyRawBase64 } from '@/frontend/lib/direct-chat-ecdh-session'
-import { scanMeshBundleQrWithCamera } from '@/frontend/lib/mesh-qr'
+import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
@@ -56,6 +56,10 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
   const [buildErr, setBuildErr] = useState('')
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  const { startScan, cameraDialog } = useMeshQrCameraScan({
+    title: 'Peering-QR scannen',
+    description: 'Partner-QR in den Rahmen halten.',
+  })
 
   const addrOk = /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim())
 
@@ -113,10 +117,12 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
   }, [showOpen, loadMyQr])
 
   const handleScan = async () => {
-    const s = await scanMeshBundleQrWithCamera()
+    const s = await startScan()
     if ('error' in s) {
-      setPasteOpen(true)
-      onStatus?.(s.error)
+      if (s.error !== 'Scan abgebrochen.') {
+        setPasteOpen(true)
+        onStatus?.(s.error)
+      }
       return
     }
     applyRaw(s.bundleJson)
@@ -229,6 +235,8 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
           </details>
         </DialogContent>
       </Dialog>
+
+      {cameraDialog}
 
       <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
         <DialogContent className="sm:max-w-md">

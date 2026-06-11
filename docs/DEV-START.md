@@ -64,7 +64,8 @@ Code: `frontend/frontend/lib/messenger-role-capabilities.ts` → `canAccessEinsa
 
 ### Handy im WLAN (Android / Chrome)
 
-- **`npm run dev`** startet Next nur auf **`127.0.0.1:3341`** — vom **anderen Gerät** im LAN erreichst du die Seite **nicht**. Verwende **`npm run dev:lan`**: Next auf **`0.0.0.0:3341`** **und** API auf **`0.0.0.0:3342`** (`API_BIND_HOST`), dann im Handy Browser **`http://<PC-LAN-IP>:3341`** oder in der **APK** unter Einstellungen Basis-URL **`http://<PC-LAN-IP>:3342`** (**nicht** `127.0.0.1` — das ist auf dem Handy das Gerät selbst).
+- **`npm run dev`** / **`npm run dev:messenger`** binden API und Next standardmäßig auf **`0.0.0.0`** (Handy im WLAN ohne `dev:lan`). Am PC weiterhin **http://127.0.0.1:3341**; am Handy **`http://<PC-LAN-IP>:3341`** mit **`http://`** (nicht `https://`).
+- **Nur localhost:** `API_BIND_HOST=127.0.0.1` in `.env` **oder** `npm run dev:localhost` im Ordner `frontend/`.
 - **„Nicht sicher“ / Warnung:** Bei **HTTP** (ohne TLS) zeigt Chrome das normal — **Fortfahren** wählen oder explizit **`http://`** nutzen (kein `https://` zur IP tippen).
 - **API:** Läuft nur auf **127.0.0.1:3342** auf dem PC; die Next-App leitet **`/api`** per Rewrite weiter — du musst am Handy **keine** `NEXT_PUBLIC_*`-URL auf `localhost` setzen (das wäre das Handy selbst). Client-Aufrufe: Barrel **`frontend/frontend/lib/api.ts`** (`@/frontend/lib/api`), Basis-URL u. a. **`frontend/frontend/lib/api/api-base.ts`**; Rewrites in **`frontend/next.config.mjs`**.
 - **Firewall (Windows):** Erster Zugriff kann blockiert werden — Node.js für **private Netzwerke** erlauben oder eingehend **TCP 3341** (und ggf. 3342 nur wenn ihr direkt zur API testet) freigeben.

@@ -10,8 +10,8 @@
 
 | Schritt | Wer | Was |
 |--------|-----|-----|
-| 1 | Boss | Wizard: Bezeichnung + Profil → **Generieren & Exportieren** |
-| 2 | Boss | ZIP-Download + Seed-QR (60 s) + optional Registry-Historie |
+| 1 | Boss | Wizard: Bezeichnung + Profil (+ optional Sonderrolle) → **Generieren & Exportieren** |
+| 2 | Boss | ZIP-Download (+ optional Passwort) + Seed-QR (60 s) + Registry |
 | 3 | Helfer | ZIP importieren (**Lokal vormerken** auf Standalone-APK) |
 | 4 | Helfer | Dialog **Seed einrichten?** → QR scannen oder Mnemonic eingeben |
 | 5 | Helfer | Chat aktiv — ohne Morgendrot-Basis-URL |
@@ -23,63 +23,34 @@
 ## Boss — Wizard
 
 1. **Einsatzleitung** öffnen (Rolle Boss).
-2. **Wizard öffnen** unter „Neues Gerät provisionieren“.
+2. **Wizard öffnen** unter „Neues Gerät provisionieren“ (erste Karte).
 3. Beim **ersten Mal:** Master-Passwort für die **Boss-Registry** setzen (min. 8 Zeichen).  
-   Danach: Registry mit demselben Passwort **entsperren**.
-4. **Bezeichnung** (z. B. „Anna – Helfer Zug Süd“) und **Profil** wählen:
-   - **Helfer** — Standard, Simple, Funk zuerst
-   - **Führer** — mehr UI, kommandant
-   - **Spezial** — z. B. Reporter (ROLE_ID anpassbar)
-5. Optional: **Vorlage laden** (gespeicherte Einsatz-Rollen).
-6. **Generieren & Exportieren** — das System:
-   - erzeugt Mnemonic + Adresse (`POST /api/generate-mnemonic`)
-   - baut Handoff-ZIP (`POST /api/standalone-smartphone-handoff-zip`)
-   - zeigt **Seed-QR** (60 Sekunden Countdown)
-   - speichert Eintrag in der **verschlüsselten Boss-Registry** (Seed als AES-GCM-Blob)
+   Danach: Registry mit demselben Passwort **entsperren** (einmal pro Browser-Sitzung).
+4. **Bezeichnung** + **Profil** (Helfer / Führer / Spezial), optional gespeicherte Vorlage.
+5. **Sonderrolle (optional):**
+   - **Medic-Funker** — LoRa senden, Telegram nur lesen, IOTA aus (`ROLE_ID=12` + Capabilities)
+   - **Reporter (Transport)** — nur lesen auf allen Kanälen
+   - Weitere Presets (Nur Funk, …): **Erweitert → Export-Assistent**
+6. **Handoff-ZIP:** Standard **Klartext** (schnell). Optional Checkbox **Handoff-ZIP mit Passwort**.
+7. **Generieren & Exportieren** — Mnemonic, ZIP, Seed-QR (60 s), Registry-Eintrag.
 
-### Boss-Registry (Custody B)
+### Abgrenzung
 
-- Speicherort: **localStorage** in diesem Browser (`morgendrot.bossProvisionRegistry.v1`).
-- **Kein Klartext-Seed** in der Tabelle — nur Metadaten nach Entsperren.
-- Status (manuell): **Erzeugt** → **Seed gezeigt** (Checkbox) → **Übergeben**.
-- **Seed erneut anzeigen:** Registry entsperren → „Seed“ in der Historie (Master-Passwort).
+| Aufgabe | Tool |
+|---------|------|
+| **Neues Handy** (Seed + ZIP) | **Wizard** |
+| TTL/Purge für **bestehende** Geräte | **Einsatz-Parameter geändert** |
+| Partner, volle Capabilities-Matrix | **Erweitert → Export-Assistent** |
 
-Siehe auch: `docs/BOSS-WORKER-SEED-CUSTODY.md` (Team-Modus A/B).
-
-### Export-Assistent
-
-Der **Export-Assistent** bleibt für Feineinstellung (Partner, verschlüsseltes ZIP, IOTA-Versand). Der Wizard nutzt **Boss-Defaults** (Team-Mailboxen, Partner aus Telefonbuch).
+Weitere Details: **`docs/EINSATZ-BOSS-ABLAUF.md`**, **`docs/HANDOFF-PERMISSIONS-MATRIX.md`**.
 
 ---
 
 ## Helfer — nach ZIP-Import
 
-1. **Einstellungen → Handoff importieren** → ZIP wählen.
-2. Auf **Standalone-APK ohne PC-Server:** **Lokal vormerken (ohne Basis)** — nicht „Import bestätigen“.
-3. Dialog **Seed einrichten?** erscheint automatisch (oder Dashboard → **Seed einrichten**).
-4. **QR scannen** (Capacitor-APK) oder **QR-Text einfügen** / Mnemonic manuell.
-5. Optional: **App-Passwort** (lokal, 8+ Zeichen) für späteres Entsperren.
-6. **Wallet aktivieren** — Direct-IOTA + Chat bereit.
+1. **Einstellungen → Handoff importieren** → ZIP (bei Passwort-ZIP: Passwort vom Boss).
+2. Standalone-APK: **Lokal vormerken (ohne Basis)**.
+3. **Seed einrichten?** → QR scannen / Mnemonic.
+4. Optional: App-Passwort (lokal, 8+ Zeichen).
 
-**Basis-URL:** leer lassen für Standalone. RPC/Package kommen aus dem Handoff.
-
----
-
-## Technik (Referenz)
-
-| Baustein | Pfad |
-|----------|------|
-| Wizard-UI | `frontend/frontend/components/boss-device-provision-wizard.tsx` |
-| Boss-Registry | `frontend/frontend/lib/boss-provision-registry.ts` |
-| Seed-QR | `frontend/frontend/lib/seed-setup-qr.ts` |
-| Helfer-Dialog | `frontend/frontend/components/helper-seed-setup-dialog.tsx` |
-| Handoff-Defaults | `frontend/frontend/lib/handoff-export-defaults.ts` |
-
----
-
-## Checkliste Feldtest
-
-- [ ] Boss: Wizard → ZIP + QR + Registry-Eintrag
-- [ ] Helfer: ZIP → Seed-QR → Chat senden/empfangen (Direct-IOTA)
-- [ ] Boss: Seed nach 60 s über Registry wieder anzeigen
-- [ ] Verlust Master-Passwort = Seeds in Registry **nicht** wiederherstellbar (Browser-local)
+**Basis-URL:** leer lassen für Standalone.

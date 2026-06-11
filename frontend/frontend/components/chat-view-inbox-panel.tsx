@@ -6,7 +6,6 @@
  */
 
 import type { ComponentProps } from 'react'
-import { useState } from 'react'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -15,6 +14,7 @@ import {
 import { ChatViewInboxToolbar } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
 import { ChatViewInboxCategoryChips } from '@/frontend/components/chat-view-inbox-category-chips'
@@ -50,10 +50,14 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     setInboxPartnerKey: (k: string | null) => void
     inboxDirectionFilter: InboxDirectionFilter
     setInboxDirectionFilter: (d: InboxDirectionFilter) => void
-    inboxMeshTransportOnly: boolean
-    setInboxMeshTransportOnly: (v: boolean) => void
-    inboxIotaTransportOnly: boolean
-    setInboxIotaTransportOnly: (v: boolean) => void
+    inboxSourceFilter: InboxSourceFilter
+    setInboxSourceFilter: (f: InboxSourceFilter) => void
+    inboxChannelFiltersArmed: boolean
+    setInboxChannelFiltersArmed: (v: boolean) => void
+    inboxWireFiltersArmed: boolean
+    setInboxWireFiltersArmed: (v: boolean) => void
+    inboxPartnerFiltersArmed: boolean
+    setInboxPartnerFiltersArmed: (v: boolean) => void
     inboxWireFilter: InboxWireFilter
     setInboxWireFilter: (f: InboxWireFilter) => void
     selectInboxPartnerForSend: (address: string) => void
@@ -69,6 +73,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     sending?: boolean
     onAcceptPendingHandshake?: (sender: string) => void | Promise<void>
     onUseSenderAsPartnerFromInbox?: (sender: string) => void
+    onReplyToMessage?: (msg: Message) => void
     onDeleteIncomingHandshake?: (
       sender: string,
       nonce: string,
@@ -104,9 +109,6 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
 }
 
 export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
-  const [showWireControls, setShowWireControls] = useState(false)
-  const [showChannelControls, setShowChannelControls] = useState(false)
-  const [showPartnerControls, setShowPartnerControls] = useState(false)
   const {
     loadError,
     inboxFromCache,
@@ -139,10 +141,14 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     setInboxPartnerKey,
     inboxDirectionFilter,
     setInboxDirectionFilter,
-    inboxMeshTransportOnly,
-    setInboxMeshTransportOnly,
-    inboxIotaTransportOnly,
-    setInboxIotaTransportOnly,
+    inboxSourceFilter,
+    setInboxSourceFilter,
+    inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed,
+    setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed,
     inboxWireFilter,
     setInboxWireFilter,
     selectInboxPartnerForSend,
@@ -154,6 +160,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
+    onReplyToMessage,
     onDeleteOutgoingHandshake,
     onResendOutgoingHandshake,
     pendingHandshakeCount = 0,
@@ -192,12 +199,12 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         inboxSelectMode={inboxSelectMode}
         setInboxSelectMode={setInboxSelectMode}
         selectedInboxCount={selectedInboxIds.size}
-        showWireControls={showWireControls}
-        onToggleWireControls={() => setShowWireControls((v) => !v)}
-        showChannelControls={showChannelControls}
-        onToggleChannelControls={() => setShowChannelControls((v) => !v)}
-        showPartnerControls={showPartnerControls}
-        onTogglePartnerControls={() => setShowPartnerControls((v) => !v)}
+        showWireControls={inboxWireFiltersArmed}
+        onToggleWireControls={() => setInboxWireFiltersArmed(!inboxWireFiltersArmed)}
+        showChannelControls={inboxChannelFiltersArmed}
+        onToggleChannelControls={() => setInboxChannelFiltersArmed(!inboxChannelFiltersArmed)}
+        showPartnerControls={inboxPartnerFiltersArmed}
+        onTogglePartnerControls={() => setInboxPartnerFiltersArmed(!inboxPartnerFiltersArmed)}
         onBulkHideSelected={onBulkHideSelected}
         onBulkPurgeSelected={() => void onBulkPurgeSelected()}
         hasHiddenMessages={hiddenInboxCount > 0}
@@ -216,7 +223,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {showWireControls || showChannelControls || showPartnerControls ? (
+      {inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}
@@ -224,17 +231,15 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           onPartnerKeyChange={setInboxPartnerKey}
           direction={inboxDirectionFilter}
           onDirectionChange={setInboxDirectionFilter}
-          meshTransportOnly={inboxMeshTransportOnly}
-          onMeshTransportOnlyChange={setInboxMeshTransportOnly}
-          iotaTransportOnly={inboxIotaTransportOnly}
-          onIotaTransportOnlyChange={setInboxIotaTransportOnly}
-          showInboxIotaFilter={showInboxIotaFilter}
+          sourceFilter={inboxSourceFilter}
+          onSourceFilterChange={setInboxSourceFilter}
+          showLagebildSource={pinnwandOverviewConfigured}
           wireFilter={inboxWireFilter}
           onWireFilterChange={setInboxWireFilter}
           onPartnerSelectForSend={selectInboxPartnerForSend}
-          showWireSection={showWireControls}
-          showChannelSection={showChannelControls}
-          showPartnerSection={showPartnerControls}
+          showWireSection={inboxWireFiltersArmed}
+          showChannelSection={inboxChannelFiltersArmed}
+          showPartnerSection={inboxPartnerFiltersArmed}
           onRemoveInboxPartnerFromQuickList={(address, opts) => {
             removeInboxPartnerFromQuickList(address, {
               hideMatchingMessages: opts.hideMatchingMessages,
@@ -289,6 +294,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           pendingHandshakeOffers={pendingHandshakeOffers}
           onAcceptPendingHandshake={onAcceptPendingHandshake}
           onUseSenderAsPartnerFromInbox={onUseSenderAsPartnerFromInbox}
+          onReplyToMessage={onReplyToMessage}
           sending={sending}
         />
       </div>

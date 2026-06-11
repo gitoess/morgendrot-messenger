@@ -16,10 +16,11 @@ Pinnwand-Nachrichten sind **offizielle Lageinformation** — sie dürfen nicht i
 | Element | Helfer / Simple | Führung |
 |---------|-----------------|---------|
 | **Lagebild-Streifen** oben im 1:1 | Ja — letzte 1–3 Meldungen, Orange/Rot, Zeit, „Einsatzleitung“ | Nein (Tab genügt) |
-| **Kanal-Tab** „Lagebild“ / „Pinnwand“ | Ja — volle chronologische Liste | Ja + Schreiben |
-| **Technische Adressen** | Nein | Nur in Kontext-Karte (Boss) |
-| **Ungelesen** | Badge am Streifen + Tab + Kategorie-Chip | Kategorie-Chip |
-| **„Alle anzeigen“** | Wechsel in Lagebild-Tab | — |
+| **Kanal-Tab** „Pinnwand“ | Ja — **eigener Feed** (nur Pinnwand-Posts, orange Panel) | Ja + Schreiben + Moderation |
+| **Posteingang 1:1/Gruppe** | Ohne Pinnwand-Doppelung (Chip „Alle“ filtert Brett aus) | Voller Posteingang |
+| **Technische Adressen** | Nein | Moderation-Karte (autorisierte Sender) |
+| **Ungelesen** | Badge am Streifen + Tab + Kategorie-Chip | Kategorie-Chip + Tab |
+| **„Alle anzeigen“** | Wechsel in Lagebild-Tab (dedizierter Feed) | — |
 
 ---
 
@@ -37,6 +38,7 @@ Pinnwand-Nachrichten sind **offizielle Lageinformation** — sie dürfen nicht i
 
 ## Kritik am früheren Stand
 
+- **Brett = MY_ADDRESS:** Alle Klartext-1:1-Nachrichten an die eigene 0x wurden fälschlich als Pinnwand gezählt — Fix: `messageBelongsToPinnwand` nutzt Whitelist (`BROADCAST_AUTHORIZED_SENDERS`) bzw. schließt Team-Broadcast aus.
 - Helfer **ohne** Pinnwand-Tab → nur Streifen war zu wenig für „volle Liste“
 - Streifen in **Blau** → zu wenig Signalwirkung
 - Absender als **0x-Kürzel** → zu technisch für Einsatz
@@ -51,5 +53,6 @@ Pinnwand-Nachrichten sind **offizielle Lageinformation** — sie dürfen nicht i
 | Rollen / Tab / Streifen | `messenger-pinnwand-capabilities.ts` |
 | Labels & Zeit | `pinnwand-display.ts` |
 | Streifen-UI | `chat-view-pinnwand-inbox-strip.tsx` |
-| Helfer-Banner im Kanal | `chat-view-pinnwand-reader-banner.tsx` |
+| **Dedizierter Lagebild-Feed** (Kanal-Tab) | `chat-view-pinnwand-feed-panel.tsx`, `pinnwand-feed-messages.ts` |
+| Moderation (Führung) | `chat-view-pinnwand-moderation-card.tsx` |
 | Ungelesen Kategorie | `inbox-overview-unread.ts` |

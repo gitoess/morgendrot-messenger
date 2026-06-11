@@ -53,6 +53,44 @@ export type FetchMailboxInboxRpcInput = {
 
 type DynEntry = { objectId?: string; name?: { type?: string; value?: Record<string, unknown> } }
 
+function parseChainTimeMs(raw: unknown): number | undefined {
+  if (raw == null) return undefined
+  const n =
+    typeof raw === 'bigint'
+      ? Number(raw)
+      : typeof raw === 'string'
+        ? parseInt(raw, 10)
+        : Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return undefined
+  if (n < 1_000_000_000_000) return n * 1000
+  return n
+}
+
+/** Wie `messenger-fetch.ts`: ms-Nonce, created_at_ms, expires − TTL. */
+function resolveMailboxTsMs(
+  rawCreated: unknown,
+  rawExpires: unknown,
+  nonce: bigint,
+  ttlDays = 30
+): number | undefined {
+  const n = Number(nonce)
+  if (Number.isFinite(n) && n >= 1_000_000_000_000) return n
+  const created = parseChainTimeMs(rawCreated)
+  const expires = parseChainTimeMs(rawExpires)
+  if (expires != null && expires > 1_000_000_000_000) {
+    const approx = expires - ttlDays * 86_400_000
+    if (approx > 1_000_000_000_000) return approx
+  }
+  return created
+}
+
+function effectiveSortTs(tsMs: number | undefined, nonce: bigint): number {
+  if (tsMs != null && Number.isFinite(tsMs) && tsMs > 0) return tsMs
+  const n = Number(nonce)
+  if (Number.isFinite(n) && n >= 1_000_000_000_000) return n
+  return 0
+}
+
 /**
  * Einmal `getDynamicFields` am Mailbox-Parent: Klartext (`PlainMsgKey`) und/oder verschlüsselt (`MsgKey`),
  * gemeinsame Sortierung (wie `messenger-fetch.ts`), dann Offset/Limit.
@@ -166,14 +204,7 @@ export async function fetchMailboxInboxRpcRows(
             : typeof nonceRaw === 'string' && nonceRaw.trim()
               ? BigInt(nonceRaw)
               : BigInt(0)
-      const rawCreated = f.created_at_ms
-      const createdNum =
-        typeof rawCreated === 'bigint'
-          ? Number(rawCreated)
-          : typeof rawCreated === 'string'
-            ? parseInt(rawCreated, 10)
-            : Number(rawCreated ?? 0)
-      const tsMs = Number.isFinite(createdNum) && createdNum > 0 ? createdNum : undefined
+      const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce)
 
       if (kind === 'plain') {
         const textBytes = coerceMoveU8Vector(f.text)
@@ -209,8 +240,8 @@ export async function fetchMailboxInboxRpcRows(
   }
 
   parsed.sort((a, b) => {
-    const ta = a.ts ?? 0
-    const tb = b.ts ?? 0
+    const ta = effectiveSortTs(a.ts, BigInt(a.nonce))
+    const tb = effectiveSortTs(b.ts, BigInt(b.nonce))
     if (tb !== ta) return tb - ta
     const na = BigInt(a.nonce)
     const nb = BigInt(b.nonce)
