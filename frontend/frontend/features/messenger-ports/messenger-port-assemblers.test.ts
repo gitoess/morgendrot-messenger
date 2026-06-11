@@ -81,7 +81,7 @@ describe('asSendTransportChoice', () => {
     const p = asSendTransportChoice(false, onEnc, 'internet', onTr, 'event' as MessagingPersistenceMode, onPersist)
     p.onEncryptedChange(true)
     p.onForcedTransportChange('mesh')
-    p.onMessagingPersistenceModeChange('mailbox')
+    p.onMessagingPersistenceModeChange?.('mailbox')
     expect(onEnc).toHaveBeenCalledWith(true)
     expect(onTr).toHaveBeenCalledWith('mesh')
     expect(onPersist).toHaveBeenCalledWith('mailbox')

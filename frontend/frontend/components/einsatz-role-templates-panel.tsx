@@ -33,7 +33,7 @@ export function EinsatzRoleTemplatesPanel(p: EinsatzRoleTemplatesPanelProps) {
   useEffect(() => {
     void (async () => {
       const s = await getStatus()
-      setBackendOnline(!!s.backendOnline)
+      setBackendOnline(!!s.data?.backendOnline)
     })()
   }, [])
 

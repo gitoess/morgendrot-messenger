@@ -37,6 +37,7 @@ import { DeploymentProfileBackdrop } from '@/frontend/components/deployment-prof
 import {
   filterFeaturesByMessengerWorkspaceTileSet,
 } from '@/frontend/lib/dashboard-workspace-tile-visibility'
+import type { DashboardFeature } from '@/frontend/components/dashboard-features-messenger'
 import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
 import { HelperSeedSetupDialog } from '@/frontend/components/helper-seed-setup-dialog'
 import { StandaloneHandoffActivateCard } from '@/frontend/components/standalone-handoff-activate-card'
@@ -93,7 +94,7 @@ function MessengerDashboardBody({
   setHoveredFeature: (v: ProjectType | null) => void
   s: ReturnType<typeof useDashboardSession>
   messengerFeaturesI18n: ReturnType<typeof useMessengerFeatures>
-  visibleFeatures: ReturnType<typeof filterFeaturesByMessengerWorkspaceTileSet>
+  visibleFeatures: DashboardFeature[]
 }) {
   const [helperSeedSetupOpen, setHelperSeedSetupOpen] = useState(false)
   const liteMessengerFromApi = true
@@ -561,7 +562,7 @@ function MessengerDashboardBody({
                 {feature.variants.map((variant) => (
                   <button
                     key={variant.id}
-                    onClick={() => s.handleSelectFeature(feature, variant.id)}
+                    onClick={() => s.handleSelectFeature(feature.id, variant.id)}
                     className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-accent"
                   >
                     <div>

@@ -77,7 +77,6 @@ export function recordHandoffProfileImport(
     transportProfile: summary?.transportProfile,
     simpleMode:
       summary?.simpleMode === 'true' ||
-      summary?.simpleMode === true ||
       /^\s*SIMPLE_MODE=true\s*$/im.test(envText),
     packageId: packageIdFull || summary?.packageId,
     envText,

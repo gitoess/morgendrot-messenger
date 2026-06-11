@@ -7,7 +7,7 @@ import {
   setStandaloneOnboardingPath,
 } from './standalone-onboarding'
 
-vi.mock('@/frontend/lib/dashboard-basis-offline-hint', () => ({
+vi.mock('@/frontend/lib/standalone-device-mode', () => ({
   isStandaloneMessengerWithoutBasis: () => true,
 }))
 

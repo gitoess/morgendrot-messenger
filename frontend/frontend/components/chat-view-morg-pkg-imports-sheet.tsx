@@ -99,7 +99,7 @@ export function ChatViewMorgPkgImportsSheet(p: ChatViewMorgPkgImportsSheetProps)
                       return (
                         <li key={`${rec.id}-${idx}`} className="rounded-lg border border-border/70 bg-muted/20 p-2">
                           <p className="mb-1.5 text-xs font-medium text-muted-foreground">{item.label}</p>
-                          <ChatMessageBody message={fakeMessage(rec.sender, item.content, rec.importedAt + idx)} />
+                          <ChatMessageBody content={item.content} selfMessage={fakeMessage(rec.sender, item.content, rec.importedAt + idx)} />
                           <div className="mt-2 flex flex-wrap gap-2">
                             <Button
                               type="button"

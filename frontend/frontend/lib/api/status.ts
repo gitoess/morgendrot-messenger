@@ -4,167 +4,17 @@ import { parseUnlockApiResponse, type UnlockBackendResult } from '@/frontend/lib
 import { API_BASE, getApiBase } from '@/frontend/lib/api/api-base'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
-import { readStandaloneDeviceStatusFallback, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { broadcastPinnwandStatusFromHandoff } from '@/frontend/lib/broadcast-pinnwand-handoff-status'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
-import type { MessengerCapabilitiesMatrix } from '@morgendrot/shared/messenger-capabilities-matrix'
 
-/** Rechte aus getHierarchyPermissions (nur bei role boss/kommandant/arbeiter). */
-export type HierarchyPermissions = {
-  commandDown?: boolean
-  keyIssue?: boolean
-  revokeDown?: boolean
-  statusReadDown?: boolean
-  statusReadUp?: boolean
-  configChange?: boolean
-  hierarchyChange?: boolean
-  teamManage?: boolean
-}
-
-/** Tresor-Status aus GET /api/status (Punkt 5 Marktreife: Listen-Ansicht + Sync-Status). */
-export type VaultStatus = {
-  hasLocal: boolean
-  lastSavedToChainAt?: number
-}
-
-/** Backend-Status (GET /api/status): backendRunning, locked, connected, role, roleId, vaultStatus, … */
-export type ApiStatus = {
-  backendRunning?: boolean
-  /** Frontend: aus getStatus() zusätzlich zu backendRunning. */
-  backendOnline?: boolean
-  /** Frontend-Fallback: letzter bekannter Status aus lokalem Cache. */
-  fromCache?: boolean
-  /** Fallback aus lokal vorgemerkt importiertem Handoff (kein Server-Apply). */
-  fromLocalHandoff?: boolean
-  /** Zeitpunkt des letzten erfolgreichen Live-Status (Epoch ms) bei Cache-Fallback. */
-  cacheSavedAtMs?: number
-  locked?: boolean
-  connected?: boolean
-  hasKeys?: boolean
-  network?: string
-  myAddress?: string
-  role?: string
-  roleId?: number
-  /** Feature-Matrix (Runtime/Handoff) — feingranulare Transport-/UI-Rechte. */
-  capabilities?: MessengerCapabilitiesMatrix
-  permissions?: HierarchyPermissions
-  vaultStatus?: VaultStatus
-  plaintextMode?: boolean
-  useMailbox?: boolean
-  mailboxConfigured?: boolean
-  /** Server-MAILBOX_ID (Einsatz-Postfach), wenn konfiguriert. */
-  mailboxId?: string
-  mailboxIdMasked?: string
-  /** Posteingang-Union (Events / MsgKey) — Diagnose nach Package-/Mailbox-Wechsel. */
-  inboxUnionPackageIds?: string[]
-  inboxUnionMailboxIds?: string[]
-  mailboxStorePlaintext?: boolean
-  messengerEdition?: 'standalone' | 'sales'
-  messengerCreditsConfigured?: boolean
-  messengerCredits?: { balance: string; maxBalance: string } | null
-  messengerCreditsFetchFailed?: boolean
-  configHints?: string[]
-  rpcUrlLabel?: string
-  packageId?: string
-  /** Gebundener API-Port (nach Port-Kollision). */
-  apiListenPort?: number
-  /** Next.js-UI (.env UI_PORT) – Sendepfad Online/Funk nur dort. */
-  dashboardPort?: number
-  /** Backend unterstützt POST /api/compact-image-encode. */
-  compactImageEncode?: boolean
-  /** Backend unterstützt POST /api/lora-progressive-encode (Mesh / zweiphasig). */
-  loraProgressiveEncode?: boolean
-  /** cli | sdk | remote – für Entsperr-Dialog (z. B. Mnemonic-Zusatzfeld). */
-  signer?: string
-  /** Herkunft der aktiven Signer-Konfiguration (env oder Runtime-Datei). */
-  signerConfigSource?: 'env' | 'runtime'
-  /** Herkunft der aktiven Ableitungspfad-Konfiguration (env oder Runtime-Datei). */
-  walletDerivationPathConfigSource?: 'env' | 'runtime'
-  /** Herkunft von USE_MAILBOX (env oder Runtime-Datei). */
-  useMailboxConfigSource?: 'env' | 'runtime'
-  /** Herkunft von MAILBOX_STORE_PLAINTEXT (env oder Runtime-Datei). */
-  mailboxStorePlaintextConfigSource?: 'env' | 'runtime'
-  /** Herkunft von ENABLE_PLAINTEXT_CHANNEL (env oder Runtime-Datei). */
-  enablePlaintextChannelConfigSource?: 'env' | 'runtime'
-  /** Aktive Runtime-Overrides (nur nicht-geheime Keys). */
-  runtimeConfigKeys?: string[]
-  /** full = Kacheln wie Dashboard; messenger = schlanker Messenger-Modus (Lite-UI). */
-  uiVariant?: 'full' | 'messenger'
-  /** Boss-Handoff-Bezeichnung (HANDOFF_LABEL / Einsatz-Profil). */
-  handoffLabel?: string
-  /** consumer = Privat/Prepper; einsatz = Organisation mit Stab (GET /api/status). */
-  deploymentProfile?: 'consumer' | 'einsatz'
-  /** mesh-first = Funk-Default in UI; IOTA-Backend bleibt (docs/TRANSPORT-AND-IOTA-LAYERS.md). */
-  transportProfile?: 'mesh-first' | 'iota-anchored' | 'iota-full'
-  /** Serverseitig erzwungener Simple Mode (Helfer/Wanderer). */
-  simpleMode?: boolean
-  /** simple | expert — abgeleitet aus SIMPLE_MODE. */
-  uiMode?: 'simple' | 'expert'
-  /** IOTA-UI (Banner, Relay, Filter) erlaubt. */
-  iotaTransportUiEnabled?: boolean
-  /** false: API-Port liefert keine statische ui/index.html. */
-  serveLiteUiStatic?: boolean
-  /** Backend nutzt SOCKS5 für IOTA-RPC (z. B. Tor). */
-  rpcSocksProxyActive?: boolean
-  /** Backend nutzt HTTP(S)-Proxy für RPC. */
-  rpcHttpProxyActive?: boolean
-  /** Nach /connect: verbundene Partner-Adressen (Handshake). */
-  connectedAddresses?: string[]
-  /** Konfigurierter Einsatz-Partner (maskiert wie myAddress). */
-  partnerAddress?: string
-  partnerCount?: number
-  /** Streams-Kanal für Heartbeat/Puls (GET /api/status). */
-  streams?: { active: boolean; anchorId?: string; anchorIdFull?: string }
-  /** Konfiguration Heartbeat (ENABLE_HEARTBEAT, Intervall) – Senden braucht S-Bit, siehe UI. */
-  heartbeat?: {
-    enabled: boolean
-    intervalMs: number
-    streamsReady: boolean
-    /** Feste Minuten-Presets (Server): 1, 5, 15, 30, 60. */
-    presetsMinutes?: number[]
-    /** false: .env-Intervall passt zu keinem Preset – in der UI ein Preset wählen. */
-    intervalMatchesPreset?: boolean
-  }
-  /** Volle eigene IOTA-Adresse (Explorer) – nur vertrauenswürdiges UI; myAddress bleibt maskiert. */
-  myAddressFull?: string
-  /** Nach Unlock: natives Wallet-Guthaben (MY_ADDRESS), vom Backend per RPC. */
-  walletNativeIotaBalance?: { mist: string; displayIota: string } | null
-  walletNativeIotaBalanceFetchFailed?: boolean
-  /** M3: Broadcast-Pinnwand aus Server-.env (ohne Geheimnisse). */
-  broadcastPinnwand?: {
-    enabled: boolean
-    address?: string
-    authorizedSenders?: string[]
-    myAddressAuthorized?: boolean
-  }
-  /** Boss: Einsatz on-chain + Handoff-Parameter. */
-  einsatzConfig?: {
-    editionLabel: string
-    defaultTtlDays: number
-    enablePurge: boolean
-    vaultRegistryId?: string
-    vaultRegistryIdMasked?: string
-    commandRegistryId?: string
-    commandRegistryIdMasked?: string
-    moveFeatures?: {
-      teamBroadcastStore: boolean
-      teamBroadcastPurge: boolean
-      privateMailboxPurge: boolean
-      probed: boolean
-      error?: string
-    }
-    upgradeCapConfigured?: boolean
-    upgradeCapId?: string
-    upgradeCapIdMasked?: string
-    upgradeCapResolvedFromChain?: boolean
-    deployModeHint?: string
-  }
-}
-
-/** Erfolgreicher `fetchStatus` inkl. Referenz für Geräte-Uhr (HTTP `Date`, § H.6c). */
-export type ApiStatusFetchOk = ApiStatus & { pollClockHint: StatusPollClockHint }
-
-export type ApiStatusFetchResult = ApiStatusFetchOk | (ApiStatus & { error: string; backendRunning?: boolean })
+export type {
+  ApiStatus,
+  ApiStatusFetchOk,
+  ApiStatusFetchResult,
+  HierarchyPermissions,
+  VaultStatus,
+} from '@/frontend/lib/api/api-status-types'
+import type { ApiStatus, ApiStatusFetchResult } from '@/frontend/lib/api/api-status-types'
 
 function parseResponseDateMs(res: Response): number | null {
   const raw = res.headers.get('date')
@@ -250,6 +100,9 @@ function readLocalHandoffStatusFallback():
 
 export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   const apiBase = getApiBase()
+  const { shouldPreferStandaloneHandoffStatus, readStandaloneDeviceStatusFallback } = await import(
+    '@/frontend/lib/capacitor-standalone-bootstrap'
+  )
   const standaloneFirst =
     !apiBase.trim() || shouldPreferStandaloneHandoffStatus()
   if (standaloneFirst) {

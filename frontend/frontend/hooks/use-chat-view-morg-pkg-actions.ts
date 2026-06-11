@@ -21,6 +21,7 @@ import {
   type MorgPkgImportRecord,
 } from '@/frontend/lib/morg-pkg-import-store'
 import type { UseChatViewSendFlowParams } from '@/frontend/hooks/use-chat-view-send-flow-types'
+import type { Message } from '@/frontend/lib/types'
 import { parseJsonObjectFromFileText } from '@/frontend/lib/morg-pkg-import-utils'
 import type { MorgPkgDownloadOffer } from '@/frontend/components/chat-view-morg-pkg-download-dialog'
 

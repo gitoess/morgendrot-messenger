@@ -1,6 +1,6 @@
 'use client'
 
-import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/handshake-offers-types'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 
 const LS_KEY = 'morgendrot.handshakeOffersCache.v1'

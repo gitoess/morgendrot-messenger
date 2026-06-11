@@ -27,7 +27,7 @@ describe('install-qr (H.16 Boss-LAN)', () => {
         },
       },
       dispatchEvent: vi.fn(),
-    } as Window & typeof globalThis)
+    } as unknown as Window & typeof globalThis)
   })
 
   afterEach(() => {
@@ -86,7 +86,7 @@ describe('install-qr (H.16 Boss-LAN)', () => {
       },
       history: { replaceState },
       dispatchEvent: vi.fn(),
-    } as Window & typeof globalThis)
+    } as unknown as Window & typeof globalThis)
     const r = applyInstallQrFromCurrentUrl()
     expect(r?.ok).toBe(true)
     expect(store['morgendrot.apiBaseOverride']).toBe('http://192.168.0.10:3342')
@@ -123,7 +123,7 @@ describe('install-qr (H.16 Boss-LAN)', () => {
         },
       },
       dispatchEvent: vi.fn(),
-    } as Window & typeof globalThis)
+    } as unknown as Window & typeof globalThis)
     expect(isLoopbackHostname('127.0.0.1')).toBe(true)
     const r = resolveBossLanInstallUrls()
     expect(r.pwaUrl).toBe('')

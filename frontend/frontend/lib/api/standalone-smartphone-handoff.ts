@@ -66,7 +66,7 @@ export async function fetchStandaloneSmartphoneHandoffParts(
       body: JSON.stringify({ ...body, format: 'parts' }),
     })
     const j = (await res.json()) as { ok?: boolean; error?: string; message?: string } & Partial<
-      StandaloneSmartphoneHandoffParts
+      StandaloneSmartphoneHandoffPartsOk
     >
     if (!res.ok || !j.ok) {
       return { ok: false, error: j.error || j.message || `HTTP ${res.status}` }

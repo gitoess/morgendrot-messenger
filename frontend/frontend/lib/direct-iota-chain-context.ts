@@ -5,7 +5,7 @@
  * Wird aus `/api/status` + `/api/current-ids` befüllt (wenn Basis erreichbar) und in localStorage gespiegelt
  * für den Fall „Basis aus, RPC + Mnemonic noch da“.
  */
-import type { ApiStatus } from '@/frontend/lib/api/status'
+import type { ApiStatus } from '@/frontend/lib/api/api-status-types'
 import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'

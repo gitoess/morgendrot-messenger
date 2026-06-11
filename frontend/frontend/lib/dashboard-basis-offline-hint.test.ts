@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('@/frontend/lib/capacitor-standalone-bootstrap', () => ({
+vi.mock('@/frontend/lib/standalone-device-mode', () => ({
   isStandaloneDeviceMode: vi.fn(() => false),
   shouldPreferStandaloneHandoffStatus: vi.fn(() => false),
+  isStandaloneMessengerWithoutBasis: vi.fn(() => false),
 }))
 vi.mock('@/frontend/lib/api/api-base', () => ({
   getApiBase: vi.fn(() => ''),
@@ -25,22 +26,19 @@ vi.mock('@/frontend/lib/i18n/client', () => ({
   },
 }))
 
-import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { isStandaloneDeviceMode, isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { getApiBase } from '@/frontend/lib/api/api-base'
-import {
-  getMessengerDashboardOfflineHint,
-  isStandaloneMessengerWithoutBasis,
-} from '@/frontend/lib/dashboard-basis-offline-hint'
+import { getMessengerDashboardOfflineHint } from '@/frontend/lib/dashboard-basis-offline-hint'
 
 describe('dashboard-basis-offline-hint', () => {
   beforeEach(() => {
     vi.mocked(isStandaloneDeviceMode).mockReturnValue(false)
+    vi.mocked(isStandaloneMessengerWithoutBasis).mockReturnValue(false)
     vi.mocked(getApiBase).mockReturnValue('http://127.0.0.1:3342')
   })
 
   it('Standalone ohne Basis', () => {
-    vi.mocked(isStandaloneDeviceMode).mockReturnValue(true)
-    vi.mocked(getApiBase).mockReturnValue('')
+    vi.mocked(isStandaloneMessengerWithoutBasis).mockReturnValue(true)
     expect(isStandaloneMessengerWithoutBasis()).toBe(true)
     expect(getMessengerDashboardOfflineHint()).toMatch(/Erststart|Einsatz|Solo|firstStart/)
     expect(getMessengerDashboardOfflineHint()).not.toMatch(/npm run dev/)

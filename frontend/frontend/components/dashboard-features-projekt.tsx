@@ -4,7 +4,7 @@ import { MessageSquare, Lock, Eye, Crown, Shield } from 'lucide-react'
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 import type { DashboardFeatureDef } from '@/frontend/lib/dashboard-active-view'
 
-export type DashboardFeature = DashboardFeatureDef & {
+export type DashboardFeature = Omit<DashboardFeatureDef, 'variants'> & {
   title: string
   subtitle: string
   icon: React.ReactNode

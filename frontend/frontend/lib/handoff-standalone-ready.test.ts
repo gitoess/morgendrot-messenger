@@ -28,7 +28,7 @@ describe('handoff-standalone-ready', () => {
         },
       },
       dispatchEvent: vi.fn(),
-    } as Window & typeof globalThis)
+    } as unknown as Window & typeof globalThis)
     store['morgendrot.autarkyMode'] = '1'
     store['morgendrot.iotaSubmitMode'] = 'client'
     store['morgendrot.directMailboxDrain'] = '1'

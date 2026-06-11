@@ -511,7 +511,7 @@ export function ProjektDashboard() {
                 {feature.variants.map((variant) => (
                   <button
                     key={variant.id}
-                    onClick={() => s.handleSelectFeature(feature, variant.id)}
+                    onClick={() => s.handleSelectFeature(feature.id, variant.id)}
                     className="flex w-full items-center justify-between rounded-xl p-3 text-left transition-colors hover:bg-accent"
                   >
                     <div>

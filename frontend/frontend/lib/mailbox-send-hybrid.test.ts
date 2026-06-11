@@ -56,7 +56,7 @@ describe('mailbox-send-hybrid (H.15 Phase 2)', () => {
       ok: false,
       error: 'RPC timeout',
     })
-    vi.mocked(sendMessage).mockResolvedValue({ ok: true, digest: '0xabc' })
+    vi.mocked(sendMessage).mockResolvedValue({ ok: true, txDigest: '0xabc' })
 
     const r = await sendPlaintextMailboxHybrid('0x' + 'bb'.repeat(32), 'hi', BigInt(2))
     expect(r.ok).toBe(true)

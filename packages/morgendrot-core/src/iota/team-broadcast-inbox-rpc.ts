@@ -2,15 +2,12 @@ import type { IotaClient } from '@iota/iota-sdk/client'
 import {
   coerceMoveU8Vector,
   MAILBOX_INBOX_HEX64,
-  messagingStructType,
 } from './mailbox-inbox-rpc-helpers'
 
 function typeMatchesTeamPlainBroadcastKey(typeStr: string, packageId: string): boolean {
   const t = String(typeStr || '')
-  return (
-    t === messagingStructType(packageId, 'TeamPlainBroadcastKey') ||
-    t.endsWith('::messaging::TeamPlainBroadcastKey')
-  )
+  const expected = `${packageId.trim()}::messaging::TeamPlainBroadcastKey`
+  return t === expected || t.endsWith('::messaging::TeamPlainBroadcastKey')
 }
 
 export type TeamPlainBroadcastRpcRow = {

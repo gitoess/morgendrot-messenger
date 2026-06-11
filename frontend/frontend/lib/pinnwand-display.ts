@@ -22,9 +22,9 @@ export function pinnwandSenderDisplayLabel(
   const from = fromAddress.trim()
   if (!from) return 'Einsatzleitung'
   if (shouldMaskPinnwandSender(role, status)) {
-    return canAccessEinsatzleitung(role) ? contactDisplayLabel(contactDirectory, from) || 'Einsatzleitung' : 'Einsatzleitung'
+    return canAccessEinsatzleitung(role) ? contactDisplayLabel(contactDirectory ?? {}, from) || 'Einsatzleitung' : 'Einsatzleitung'
   }
-  return contactDisplayLabel(contactDirectory, from) || `${from.slice(0, 10)}…${from.slice(-4)}`
+  return contactDisplayLabel(contactDirectory ?? {}, from) || `${from.slice(0, 10)}…${from.slice(-4)}`
 }
 
 export function formatPinnwandMessageTime(timestamp: number): string {

@@ -16,7 +16,7 @@ import {
 } from '@/frontend/lib/direct-iota-plain-submit'
 import { setDirectChainOptimisticFlagsEnabled } from '@/frontend/lib/direct-iota-chain-context'
 import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 
 export type StandaloneOnboardingPath = 'einsatz' | 'solo'

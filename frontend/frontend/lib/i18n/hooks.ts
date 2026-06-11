@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation, type UseTranslationOptions } from 'react-i18next'
+import { useTranslation } from 'react-i18next'
 import type { AppNamespace } from '@/frontend/lib/i18n/resources'
 import {
   APP_LOCALE_CHANGED_EVENT,
@@ -16,8 +16,8 @@ const translationDefaults = {
 } as const
 
 /** Typed translation hook — default namespace `common`. */
-export function useAppTranslation<N extends AppNamespace = 'common'>(ns?: N, options?: UseTranslationOptions<N>) {
-  return useTranslation(ns, { ...translationDefaults, ...options })
+export function useAppTranslation<N extends AppNamespace = 'common'>(ns?: N) {
+  return useTranslation(ns, translationDefaults)
 }
 
 /** Aktuelle Sprache — re-rendert bei languageChanged. */

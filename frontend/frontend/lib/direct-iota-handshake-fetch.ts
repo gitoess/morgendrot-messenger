@@ -14,7 +14,7 @@ import type {
   HandshakeOffersFetchResult,
   OutgoingHandshakeOffer,
   PendingHandshakeOffer,
-} from '@/frontend/lib/api/package-connect'
+} from '@/frontend/lib/handshake-offers-types'
 import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'

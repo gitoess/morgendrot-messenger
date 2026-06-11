@@ -1,4 +1,4 @@
-import type { MessengerFgSyncPlugin } from '@/frontend/lib/capacitor-foreground-sync'
+import type { MessengerFgSyncPlugin } from '@/frontend/lib/capacitor-foreground-sync-types'
 
 /** PWA/Browser — kein Foreground Service (§ H.6f). */
 export class MessengerFgSyncWeb implements MessengerFgSyncPlugin {

@@ -47,6 +47,6 @@ describe('extractHandoffFromZipFile', () => {
     const file = new File(['x'], 'handoff.txt', { type: 'text/plain' })
     const r = await extractHandoffFromZipFile(file)
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toMatch(/\.zip/)
+    if (!r.ok && 'error' in r) expect(r.error).toMatch(/\.zip/)
   })
 })

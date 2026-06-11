@@ -4,6 +4,16 @@ import {
   cacheHandshakeOffers,
   readCachedHandshakeOffers,
 } from '@/frontend/lib/handshake-offers-cache'
+import type {
+  HandshakeOffersFetchResult,
+  OutgoingHandshakeOffer,
+  PendingHandshakeOffer,
+} from '@/frontend/lib/handshake-offers-types'
+export type {
+  HandshakeOffersFetchResult,
+  OutgoingHandshakeOffer,
+  PendingHandshakeOffer,
+} from '@/frontend/lib/handshake-offers-types'
 import {
   canFetchHandshakesViaDirectIota,
   tryFetchHandshakeOffersViaDirectIota,
@@ -23,29 +33,6 @@ export const purgeHandshakeOnChainCommand = (recipient: string, sender: string) 
 
 export const connect = (address?: string) =>
   executeCommand('/connect', address ? [address] : [])
-
-export type PendingHandshakeOffer = {
-  sender: string
-  nonce: string
-  source: 'mailbox' | 'event'
-}
-
-export type OutgoingHandshakeOffer = {
-  recipient: string
-  nonce: string
-  source: 'mailbox' | 'event'
-}
-
-export type HandshakeOffersFetchResult = {
-  ok: boolean
-  offers?: PendingHandshakeOffer[]
-  outgoingOffers?: OutgoingHandshakeOffer[]
-  error?: string
-  fromCache?: boolean
-  cacheAgeMinutes?: number
-  /** § H.15 B.2 on-chain: Angebote direkt von der Fullnode. */
-  liveSource?: 'rpc' | 'api' | 'cache'
-}
 
 export async function fetchHandshakeOffers(): Promise<HandshakeOffersFetchResult> {
   const direct = await tryFetchHandshakeOffersViaDirectIota()

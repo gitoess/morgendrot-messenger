@@ -20,11 +20,11 @@ export async function postUpgradeMovePackage(opts?: {
       body: JSON.stringify({ path: opts?.packageDir ?? 'move-test' }),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
-    const j = JSON.parse(fr.text) as UpgradeMovePackageResult & { message?: string }
+    const j = JSON.parse(fr.text) as { ok?: boolean; error?: string; packageId?: string; message?: string }
     if (!fr.response.ok || !j.ok) {
       return { ok: false, error: j.error || `HTTP ${fr.response.status}` }
     }
-    return { ok: true, packageId: j.packageId, message: j.message }
+    return { ok: true, packageId: j.packageId || '', message: j.message }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
@@ -42,7 +42,13 @@ export async function postApplyEinsatzConfig(body: {
       body: JSON.stringify(body),
     })
     if (!fr.ok) return { ok: false, error: fr.error }
-    const j = JSON.parse(fr.text) as ApplyEinsatzConfigResult
+    const j = JSON.parse(fr.text) as {
+      ok?: boolean
+      error?: string
+      errors?: string[]
+      applied?: string[]
+      message?: string
+    }
     if (!fr.response.ok || !j.ok) {
       return {
         ok: false,
@@ -51,7 +57,7 @@ export async function postApplyEinsatzConfig(body: {
         applied: j.applied,
       }
     }
-    return j
+    return { ok: true, applied: j.applied, message: j.message }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }

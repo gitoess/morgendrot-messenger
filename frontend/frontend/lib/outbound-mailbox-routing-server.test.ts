@@ -13,6 +13,6 @@ vi.mock('@/frontend/lib/my-private-mailbox-store', () => ({
 
 describe('resolveOutboundMailboxObjectId (nur Shared)', () => {
   it('nutzt Server-MAILBOX_ID aus Status-Cache', () => {
-    expect(resolveOutboundMailboxObjectId({}, WALLET)).toBe(SERVER_MB)
+    expect(resolveOutboundMailboxObjectId({}, WALLET, 'shared')).toBe(SERVER_MB)
   })
 })

@@ -189,7 +189,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
         return
       }
       if (!extracted.ok) {
-        setErrors([extracted.error])
+        setErrors(['error' in extracted ? extracted.error : 'Handoff konnte nicht gelesen werden.'])
         setEnvText(null)
         return
       }
@@ -294,7 +294,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     try {
       const extracted = await decryptHandoffPending(pendingEncrypted, handoffPassword)
       if (!extracted.ok) {
-        setErrors([extracted.error])
+        setErrors(['error' in extracted ? extracted.error : 'Handoff konnte nicht gelesen werden.'])
         return
       }
       setPendingEncrypted(null)

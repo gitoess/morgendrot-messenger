@@ -125,3 +125,5 @@ export function getAppLocale(instance?: typeof i18next): AppLocale {
   const i18nInstance = instance ?? getSharedI18n()
   return normalizeAppLocale(i18nInstance.language || i18nInstance.resolvedLanguage)
 }
+
+export type { AppLocale } from '@/frontend/lib/i18n/resources'

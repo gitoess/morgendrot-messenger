@@ -28,7 +28,7 @@ vi.mock('@/frontend/lib/direct-iota-chain-context', () => ({
 
 describe('direct-iota-handshake-submit', () => {
   beforeEach(() => {
-    vi.stubGlobal('window', { localStorage: { getItem: () => null, setItem: () => {} } } as Window & typeof globalThis)
+    vi.stubGlobal('window', { localStorage: { getItem: () => null, setItem: () => {} } } as unknown as Window & typeof globalThis)
   })
   afterEach(() => {
     vi.unstubAllGlobals()

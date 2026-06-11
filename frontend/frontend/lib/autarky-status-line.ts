@@ -1,21 +1,13 @@
 'use client'
 
+export { isAutarkyModeEnabled } from '@/frontend/lib/standalone-device-mode'
+
 import {
   getAutarkyChecklistItems,
   getIotaSubmitMode,
   listDirectIotaSetupGaps,
 } from '@/frontend/lib/direct-iota-plain-submit'
-
-const LS_AUTARKY_MODE = 'morgendrot.autarkyMode'
-
-export function isAutarkyModeEnabled(): boolean {
-  if (typeof window === 'undefined') return false
-  try {
-    return window.localStorage.getItem(LS_AUTARKY_MODE) === '1'
-  } catch {
-    return false
-  }
-}
+import { isAutarkyModeEnabled } from '@/frontend/lib/standalone-device-mode'
 
 /** Kurzzeile für Offline-Karte / Dashboard, wenn Autarkie-Modus an ist. */
 export function getAutarkyStatusLine(): string | null {

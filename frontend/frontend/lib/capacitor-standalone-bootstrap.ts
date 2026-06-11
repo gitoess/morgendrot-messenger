@@ -6,13 +6,13 @@
  */
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import { getApiBase } from '@/frontend/lib/api/api-base'
-import type { ApiStatus } from '@/frontend/lib/api/status'
+import type { ApiStatus } from '@/frontend/lib/api/api-status-types'
 import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
 import { syncLocalHandoffSnapshotToChainContext } from '@/frontend/lib/handoff-device-bootstrap'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { broadcastPinnwandStatusFromHandoff } from '@/frontend/lib/broadcast-pinnwand-handoff-status'
-import { isAutarkyModeEnabled } from '@/frontend/lib/autarky-status-line'
+import { isStandaloneDeviceMode, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/standalone-device-mode'
 import {
   setDirectMailboxDrainEnabled,
   setIotaSubmitMode,
@@ -31,6 +31,7 @@ import {
   readStandaloneOnboardingPath,
 } from '@/frontend/lib/standalone-onboarding'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
+import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
 import {
   MESSAGING_PERSISTENCE_MODE_LS_KEY,
   type MessagingPersistenceMode,
@@ -38,18 +39,8 @@ import {
 
 const LS_CAP_BOOT = 'morgendrot.capacitorStandaloneBootstrapped.v1'
 
-export function isStandaloneDeviceMode(): boolean {
-  return isCapacitorNativePlatform() || isAutarkyModeEnabled()
-}
+export { isAutarkyModeEnabled, isStandaloneDeviceMode, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/standalone-device-mode'
 
-/** APK mit Handoff/Autarkie: auch bei gesetzter (nutzloser) Basis-URL Standalone-Status nutzen. */
-export function shouldPreferStandaloneHandoffStatus(): boolean {
-  if (!isCapacitorNativePlatform()) return false
-  if (isAutarkyModeEnabled()) return true
-  return Boolean(readLocalHandoffAppliedSnapshot())
-}
-
-/** APK ohne Basis: Entsperren-Dialog, wenn Handoff/Signer da, aber keine aktive Direkt-Sitzung. */
 export function resolveStandaloneDeviceLocked(): boolean {
   if (typeof window === 'undefined') return false
   if (!isStandaloneDeviceMode()) return false
@@ -108,7 +99,7 @@ export function readStandaloneDeviceStatusFallback():
   if (!handoff && !chain.ready) {
     if (!isCapacitorNativePlatform()) return null
     ensureI18nInitialized()
-    const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
+    const tt = standaloneT
     const onboardingPath = readStandaloneOnboardingPath()
     const solo = isStandaloneSoloPath()
     return {
@@ -144,7 +135,7 @@ export function readStandaloneDeviceStatusFallback():
   const identity = readStandaloneLocalIdentitySnapshot()
   const addrFull = getDirectIotaSessionSignerAddress() || identity.myAddress || ''
   ensureI18nInitialized()
-  const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
+  const tt = standaloneT
 
   return {
     status: {

@@ -326,7 +326,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     void (async () => {
       const r = await fetchEinsatzRoleTemplates()
       if (cancelled || !r.ok) return
-      setSavedTemplates(r.templates)
+      setSavedTemplates(r.templates ?? [])
     })()
     return () => {
       cancelled = true

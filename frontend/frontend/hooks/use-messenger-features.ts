@@ -13,12 +13,16 @@ export function useMessengerFeatures(): DashboardFeature[] {
     () =>
       messengerFeatureShells.map((shell) => ({
         ...shell,
-        title: t(`features.${shell.id}.title`),
-        subtitle: t(`features.${shell.id}.subtitle`),
+        title: t(`features.${shell.id}.title` as 'features.chat.title'),
+        subtitle: t(`features.${shell.id}.subtitle` as 'features.chat.subtitle'),
         variants: shell.variants.map((variant) => ({
           ...variant,
-          title: t(`features.${shell.id}.variants.${variant.id}.title`),
-          hint: t(`features.${shell.id}.variants.${variant.id}.hint`),
+          title: t(
+            `features.${shell.id}.variants.${variant.id}.title` as 'features.chat.variants.private-chat.title'
+          ),
+          hint: t(
+            `features.${shell.id}.variants.${variant.id}.hint` as 'features.chat.variants.private-chat.hint'
+          ),
         })),
       })),
     [t, i18n.language]

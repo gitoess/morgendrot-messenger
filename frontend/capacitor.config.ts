@@ -8,7 +8,6 @@ const config: CapacitorConfig = {
   appId: 'de.morgendrot.messenger',
   appName: 'Morgendrot Messenger',
   webDir: 'out',
-  bundledWebRuntime: false,
 }
 
 export default config

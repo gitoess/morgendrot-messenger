@@ -9,11 +9,9 @@ export const ANDROID_FG_SYNC_BOOTSTRAPPED_KEY = 'morgendrot.androidFgSync.bootst
 export const DEFAULT_FG_SYNC_REASON =
   'Outbox & Direkt-RPC — WebView bleibt erreichbar'
 
-export interface MessengerFgSyncPlugin {
-  start(options?: { reason?: string }): Promise<{ ok: boolean; running: boolean }>
-  stop(): Promise<{ ok: boolean; running: boolean }>
-  getState(): Promise<{ running: boolean }>
-}
+import type { MessengerFgSyncPlugin } from '@/frontend/lib/capacitor-foreground-sync-types'
+
+export type { MessengerFgSyncPlugin } from '@/frontend/lib/capacitor-foreground-sync-types'
 
 const MessengerFgSync = registerPlugin<MessengerFgSyncPlugin>('MessengerFgSync', {
   web: () =>

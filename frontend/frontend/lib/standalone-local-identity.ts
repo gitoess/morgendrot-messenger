@@ -3,7 +3,7 @@
 import { getDirectChainFieldIdsFromLs } from '@/frontend/lib/direct-iota-chain-context'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/standalone-device-mode'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { probeBrowserDirectIotaIfConfigured } from '@/frontend/lib/direct-iota-rpc'
 

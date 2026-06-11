@@ -5,7 +5,8 @@
  */
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
 import { isStandaloneSoloPath, readStandaloneOnboardingPath, setStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
-import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
+import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
+import { ensureI18nInitialized } from '@/frontend/lib/i18n/client'
 import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { getDirectChainIdsReadiness, persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
 import {
@@ -114,7 +115,7 @@ export function getStandaloneHelperReadiness(): StandaloneHelperReadiness {
 
   const remainingStepLabels: string[] = []
   ensureI18nInitialized()
-  const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
+  const tt = standaloneT
   if (!hasHandoff) {
     if (isStandaloneSoloPath()) {
       remainingStepLabels.push(tt('readiness.setupWallet'))

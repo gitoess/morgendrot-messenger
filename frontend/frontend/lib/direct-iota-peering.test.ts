@@ -39,7 +39,7 @@ vi.mock('@/frontend/lib/direct-iota-connect', () => ({
 
 describe('direct-iota-peering (H.15 B.2)', () => {
   beforeEach(() => {
-    vi.stubGlobal('window', { localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } } as Window & typeof globalThis)
+    vi.stubGlobal('window', { localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} } } as unknown as Window & typeof globalThis)
   })
   afterEach(() => {
     vi.unstubAllGlobals()

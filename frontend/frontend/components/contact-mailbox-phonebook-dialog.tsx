@@ -108,10 +108,10 @@ export function ContactMailboxPhonebookDialog(p: ContactMailboxPhonebookDialogPr
 
     const existingSlots = slotsFromEntry(directory[address])
     const merged = {
-      mailboxSharedId: slot === 'shared' ? mbId : existingSlots.shared ?? '',
-      mailboxPrivateId: slot === 'private' ? mbId : existingSlots.private ?? '',
-      mailboxTeamId: slot === 'team' ? mbId : existingSlots.team ?? '',
-      mailboxBufferId: slot === 'buffer' ? mbId : existingSlots.buffer ?? '',
+      mailboxSharedId: slot === 'shared' ? mbId : existingSlots.mailboxSharedId ?? '',
+      mailboxPrivateId: slot === 'private' ? mbId : existingSlots.mailboxPrivateId ?? '',
+      mailboxTeamId: slot === 'team' ? mbId : existingSlots.mailboxTeamId ?? '',
+      mailboxBufferId: slot === 'buffer' ? mbId : existingSlots.mailboxBufferId ?? '',
     }
 
     setLocalBusy(true)

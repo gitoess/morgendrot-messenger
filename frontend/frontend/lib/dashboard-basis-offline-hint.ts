@@ -1,26 +1,17 @@
 'use client'
 
-import { getApiBase } from '@/frontend/lib/api/api-base'
-import {
-  isCapacitorNativePlatform,
-  isStandaloneDeviceMode,
-  shouldPreferStandaloneHandoffStatus,
-} from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { isStandaloneSoloPath, readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
+import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 
-/** APK/Autarkie: Direkt-RPC + lokales Handoff — keine Morgendrot-Basis nötig. */
-export function isStandaloneMessengerWithoutBasis(): boolean {
-  if (!isStandaloneDeviceMode()) return false
-  if (!getApiBase().trim()) return true
-  return shouldPreferStandaloneHandoffStatus()
-}
+export { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 
 /** Hinweis unter dem Dashboard, wenn `backendReachable === false`. */
 export function getMessengerDashboardOfflineHint(): string {
   ensureI18nInitialized()
-  const tt = (key: string) => i18n.t(key, { ns: 'standalone' })
+  const tt = standaloneT
 
   if (!isStandaloneMessengerWithoutBasis()) {
     return (
