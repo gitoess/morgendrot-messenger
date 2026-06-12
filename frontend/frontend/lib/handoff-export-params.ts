@@ -43,16 +43,28 @@ export function resolveHandoffExportParams(
   }
 }
 
-/** Gespeicherte Einsatz-Vorlage → Basis-Karte + Tuning (Reporter, Medic, …). */
+/** Gespeicherte Einsatz-Vorlage → Basis-Karte + Tuning (Legacy + Snapshot Phase 4). */
 export function handoffParamsFromEinsatzTemplate(t: EinsatzRoleTemplate): {
   presetId: HandoffEinsatzPresetId
   tuning: HandoffExportTuning
   label: string
 } {
-  const tuning: HandoffExportTuning = { roleId: t.roleId }
-  if (t.defaultDeploymentChannelTag) {
-    /* nur Anzeige/Hinweis — Bezeichnung setzt der Boss manuell */
+  if (t.handoffSnapshot) {
+    const snap = t.handoffSnapshot
+    const tuning: HandoffExportTuning = {}
+    if (snap.tuning?.roleId != null) tuning.roleId = snap.tuning.roleId
+    else tuning.roleId = t.roleId
+    if (snap.tuning?.helperRole) tuning.helperRole = snap.tuning.helperRole
+    if (snap.tuning?.simpleMode === true) tuning.simpleMode = true
+    if (snap.tuning?.simpleMode === false) tuning.simpleMode = false
+    if (snap.tuning?.omitTeamMailboxes) tuning.omitTeamMailboxes = true
+    return {
+      presetId: snap.presetId,
+      tuning,
+      label: snap.bezeichnungHint?.trim() || t.label,
+    }
   }
+  const tuning: HandoffExportTuning = { roleId: t.roleId }
   switch (t.chainRole) {
     case 'kommandant':
       return { presetId: 'fuehrer', tuning, label: t.label }

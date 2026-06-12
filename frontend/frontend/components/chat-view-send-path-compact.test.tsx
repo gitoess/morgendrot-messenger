@@ -47,6 +47,44 @@ describe('ChatViewSendPathCompact', () => {
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
+  it('deaktiviert Sendepfad bei fehlender Schreibberechtigung', () => {
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="mesh"
+        onForcedTransportChange={noop}
+        onComposerDeliveryChange={noop}
+        apiStatus={{
+          roleId: 12,
+          capabilities: {
+            version: 1,
+            roleId: 12,
+            simpleMode: true,
+            product: {
+              canCreateGroup: false,
+              canInviteMembers: false,
+              canExportData: false,
+              canManageEinsatzTemplates: false,
+            },
+            transport: {
+              lora: { read: true, write: true },
+              telegram: { read: true, write: false },
+              iota: { read: true, write: false },
+              ble: { read: true, write: true },
+              streams: { read: true, write: false },
+            },
+            security: { forceEncryptionOnly: false, allowPlaintextFallback: true },
+          },
+        }}
+      />
+    )
+    expect(screen.getByRole('button', { name: /online/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /telegram/i })).toBeDisabled()
+  })
+
   it('telegram setzt nur delivery (nicht forcedTransport — der Wrapper würde chain erzwingen)', () => {
     const onDelivery = vi.fn()
     const onTransport = vi.fn()

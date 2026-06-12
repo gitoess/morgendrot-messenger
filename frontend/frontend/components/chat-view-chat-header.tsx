@@ -60,6 +60,7 @@ export type ChatViewChatHeaderProps = {
     showAdhocTransport?: boolean
     composerDelivery?: ComposerDeliveryChannel
     onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
+    apiStatus?: ApiStatus | null
   }
   /** Wenn gesetzt: „Tresor: …“ ist ein Button (Sitzung sperren bzw. Startseite für Entsperren). */
   vaultBannerActions?: ChatViewVaultBannerActions

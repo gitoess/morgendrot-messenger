@@ -16,6 +16,7 @@ import { ingestTelegramInboundUpdate, normalizeTelegramInboundMode } from '../..
 import { restartTelegramInbound } from '../../integrations/telegram-inbound-poll.js';
 import { listTelegramJournalEntries } from '../../integrations/telegram-journal.js';
 import type { SendJsonFn } from './api-route-types.js';
+import { denyTransportRead, denyTransportWrite } from '../../messenger-capability-gates.js';
 
 const NOTIFY_PATH = '/api/integrations/telegram/notify';
 
@@ -79,6 +80,11 @@ export async function handleTelegramIntegrationRoutes(
     }
 
     if (url === NOTIFY_PATH && req.method === 'POST') {
+        const capDenied = denyTransportWrite('telegram');
+        if (capDenied) {
+            sendJson(res, 403, capDenied, cors);
+            return true;
+        }
         const data = await readJsonBody(req);
         const recipientRaw = String(data.recipientAddress ?? data.recipient ?? '').trim();
         const telegramRaw =
@@ -120,6 +126,11 @@ export async function handleTelegramIntegrationRoutes(
     }
 
     if (url === '/api/integrations/telegram/journal' && req.method === 'GET') {
+        const capDenied = denyTransportRead('telegram');
+        if (capDenied) {
+            sendJson(res, 403, capDenied, cors);
+            return true;
+        }
         const u = new URL(req.url || '', 'http://local');
         const contactKey = u.searchParams.get('contactKey')?.trim() || '';
         const chatId = u.searchParams.get('chatId')?.trim() || '';

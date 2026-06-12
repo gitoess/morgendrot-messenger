@@ -24,7 +24,11 @@ import { API_BASE } from '@/frontend/lib/api/api-base'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { buildWizardHandoffExportBody } from '@/frontend/lib/handoff-export-defaults'
-import { handoffParamsFromEinsatzTemplate, resolveHandoffExportParams } from '@/frontend/lib/handoff-export-params'
+import {
+  resolveHandoffExportParams,
+  type HandoffExportTuning,
+} from '@/frontend/lib/handoff-export-params'
+import { applyEinsatzHandoffTemplate } from '@/frontend/lib/handoff-export-to-template'
 import {
   applyHandoffCapabilityPresetToTuning,
   getWizardCapabilityPresets,
@@ -70,7 +74,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   const [open, setOpen] = useState(false)
   const [presetId, setPresetId] = useState<HandoffEinsatzPresetId>('helfer')
   const [bezeichnung, setBezeichnung] = useState(() => suggestHandoffBezeichnung(defaultPreset))
-  const [exportTuning, setExportTuning] = useState<ReturnType<typeof handoffParamsFromEinsatzTemplate>['tuning']>({})
+  const [exportTuning, setExportTuning] = useState<HandoffExportTuning>({})
   const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
   const [capabilityPresetId, setCapabilityPresetId] = useState<string | null>(null)
   const [savedTemplates, setSavedTemplates] = useState<EinsatzRoleTemplate[]>([])
@@ -171,16 +175,19 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   }
 
   const applyTemplate = (t: EinsatzRoleTemplate) => {
-    const mapped = handoffParamsFromEinsatzTemplate(t)
-    setPresetId(mapped.presetId)
-    setExportTuning(mapped.tuning)
-    setCapabilitiesOverride(null)
+    const applied = applyEinsatzHandoffTemplate(t)
+    setPresetId(applied.presetId)
+    setExportTuning(applied.tuning)
+    setCapabilitiesOverride(applied.capabilitiesOverride)
     setCapabilityPresetId(null)
     if (!labelEdited.current) {
-      const day = new Date().toISOString().slice(0, 10)
-      setBezeichnung(`${t.label}-${day}`)
+      setBezeichnung(applied.bezeichnungSuggestion)
     }
-    setStatusMsg(`Vorlage „${t.label}" geladen.`)
+    setStatusMsg(
+      applied.hasFullSnapshot
+        ? `Vorlage „${t.label}" geladen (Capabilities inkl.).`
+        : `Vorlage „${t.label}" geladen.`
+    )
   }
 
   const applyCapabilityPreset = useCallback(
@@ -197,7 +204,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   const clearCapabilityPreset = useCallback(() => {
     setCapabilitiesOverride(null)
     setCapabilityPresetId(null)
-    setExportTuning((prev) => {
+    setExportTuning((prev: HandoffExportTuning) => {
       const next = { ...prev }
       delete next.roleId
       return next

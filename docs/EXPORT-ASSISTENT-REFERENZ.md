@@ -33,8 +33,8 @@
 | **Kopf** | Bezeichnung, Vorlage, Profil-Karten (Helfer/Führer/Spezial) |
 | **Rechte** | Capabilities-Matrix + Schnellprofile (Medic, Reporter, …) |
 | **Team & Partner** | Checkboxen |
-| **Aktionen** | **ZIP**, **IOTA**, **WLAN-QR** (nur PWA — kein Handoff) |
-| **Neues Gerät** | Seed + QR + Registry (Wizard-Dialog) |
+| **Aktionen** | **ZIP + Seed + QR** (neues Wallet), **Nur ZIP**, **IOTA**, **WLAN-QR** |
+| **Neues Gerät** | Registry inline (Custody B) — kein separater Wizard-Dialog |
 | **Bestehende Geräte** | TTL, Purge, Boss-.env, Handoff-ZIP — **TTL nicht** im Experten |
 | **Experte** | ROLE_ID, RPC, Chain-IDs, Vorlage speichern, Partner manuell |
 
@@ -239,11 +239,15 @@ Diese Werte schreibt der Server **immer** so — kein separates UI-Feld:
 | Feld Vorlage | In Handoff-ZIP? |
 |--------------|-----------------|
 | `id`, `label` | Nur Auswahl-UI |
-| `chainRole` | → Preset-Karte |
-| `roleId` | → `ROLE_ID` |
-| `defaultDeploymentChannelTag` | **Nein** (nur Doku/Hinweis) |
+| `chainRole`, `roleId` | Legacy-Fallback wenn kein `handoffSnapshot` |
+| `handoffSnapshot` (Phase 4) | **Ist** — wird beim Laden in Export-Assistent übernommen |
+| `handoffSnapshot.presetId` | Profil-Karte |
+| `handoffSnapshot.tuning` | ROLE_ID, ROLE, Simple Mode, Team-Mailboxen aus |
+| `handoffSnapshot.capabilitiesOverride` | → Runtime-JSON im ZIP |
+| `handoffSnapshot.export.teamMailboxIds` | → `teamMailboxIds` / `mailboxId` |
+| `handoffSnapshot.export.partnerAddresses` | → `partnerAddresses` |
+| `handoffSnapshot.export.*` Chain-IDs | Experten-Felder (optional) |
 | `iconHint` | **Nein** |
-| Partner / Team-IDs | **Nein** — pro Export in Schritt 2 |
 
 ---
 

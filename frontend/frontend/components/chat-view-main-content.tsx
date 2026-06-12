@@ -52,6 +52,7 @@ import {
   canCreateTeamMailbox,
   getMessengerUiCapabilities,
 } from '@/frontend/lib/messenger-role-capabilities'
+import { canCreateGroupCapability } from '@/frontend/lib/messenger-capability-gates'
 import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
@@ -1114,6 +1115,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           showAdhocTransport: uiCaps.showAdhocTransport,
           composerDelivery,
           onComposerDeliveryChange: setComposerDelivery,
+          apiStatus,
         }}
         pinnwandTabUnreadCount={
           channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
@@ -1134,6 +1136,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           contactDirectory={directory}
           forcedTransport={forcedTransport}
           teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+          groupCreateAllowed={canCreateGroupCapability(apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
           onOpenPhonebook={() => setPhonebookOpen(true)}
           onOpenSettings={onOpenSettings}

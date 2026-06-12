@@ -17,6 +17,8 @@ import {
   downloadEinsatzprotokollZipPlain,
 } from '@/frontend/lib/einsatzprotokoll-export'
 import type { Message } from '@/frontend/lib/types'
+import type { ApiStatus } from '@/frontend/lib/api'
+import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
 
 export type UseChatViewEinsatzExportsParams = {
   messagesLength: number
@@ -27,6 +29,7 @@ export type UseChatViewEinsatzExportsParams = {
   setStatusMsg: (msg: string) => void
   /** Aus `useChatViewApiStatusPoll` — bei `true` vor Export zusätzlich bestätigen (§ H.6c). */
   deviceTimeTrustWarn: boolean
+  apiStatus?: ApiStatus | null
 }
 
 /** Vor forensischen Downloads: Nutzer explizit einbinden, wenn die Geräte-Uhr unsicher ist. */
@@ -55,9 +58,20 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     setStatus,
     setStatusMsg,
     deviceTimeTrustWarn,
+    apiStatus = null,
   } = p
 
+  const guardExport = useCallback((): boolean => {
+    const denied = exportDataDeniedReason(apiStatus)
+    if (!denied) return true
+    setStatus('error')
+    setStatusMsg(denied)
+    setTimeout(() => setStatus('idle'), 6000)
+    return false
+  }, [apiStatus, setStatus, setStatusMsg])
+
   const onExportEinsatzberichtJson = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -83,9 +97,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzberichtTxt = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -111,9 +126,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzberichtTxtFull = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -139,9 +155,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzprotokoll = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -192,9 +209,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzprotokollPlainZip = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -228,9 +246,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzprotokollMarked = useCallback(async () => {
+    if (!guardExport()) return
     if (protokollMarkedIds.size === 0) {
       setStatus('error')
       setStatusMsg('Keine markierten Nachrichten (Stern in der Zeile).')
@@ -281,9 +300,10 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesForExport, myAddress, protokollMarkedIds, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   const onExportEinsatzberichtEncrypted = useCallback(async () => {
+    if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
       setStatusMsg('Keine Nachrichten im Posteingang.')
@@ -329,7 +349,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       setStatusMsg(e instanceof Error ? e.message : String(e))
       setTimeout(() => setStatus('idle'), 6000)
     }
-  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn])
+  }, [messagesLength, messagesForExport, myAddress, setStatus, setStatusMsg, deviceTimeTrustWarn, guardExport])
 
   return {
     onExportEinsatzberichtJson,

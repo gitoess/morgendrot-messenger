@@ -17,6 +17,11 @@ import {
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import { type InboxSourceFilter, inboxSourceFilterLabel } from '@/frontend/lib/inbox-source-filter'
+import type { ApiStatus } from '@/frontend/lib/api'
+import {
+  inboxSourceFilterDeniedReason,
+  inboxSourceFilterReadAllowed,
+} from '@/frontend/lib/messenger-capability-gates'
 
 export type InboxPartnerOption = { address: string; label: string; unreadCount?: number }
 
@@ -180,6 +185,7 @@ export type ChatViewInboxPartnerStripProps = {
     address: string,
     opts: { hideMatchingMessages: boolean; messageTransport: 'mesh' | 'iota' | 'all' }
   ) => void
+  apiStatus?: ApiStatus | null
 }
 
 export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
@@ -200,6 +206,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
     showChannelSection = true,
     showPartnerSection = true,
     onRemoveInboxPartnerFromQuickList,
+    apiStatus,
   } = p
 
   const hasAnyPartners = partnerOptions.length > 0
@@ -271,14 +278,20 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Quelle</span>
-            {sourceOptions.map((id) => (
+            {sourceOptions.map((id) => {
+              const sourceOk = inboxSourceFilterReadAllowed(apiStatus, id)
+              const deniedTitle = inboxSourceFilterDeniedReason(apiStatus, id)
+              return (
               <button
                 key={id}
                 type="button"
+                disabled={!sourceOk}
+                title={!sourceOk && deniedTitle ? deniedTitle : undefined}
                 onClick={() => onSourceFilterChange(id)}
                 className={cn(
                   'rounded-md border px-2.5 py-1 text-xs font-medium transition-colors',
-                  sourceFilter === id
+                  !sourceOk && 'cursor-not-allowed opacity-40',
+                  sourceFilter === id && sourceOk
                     ? id === 'funk'
                       ? 'border-amber-500/50 bg-amber-500/10 text-amber-950 dark:text-amber-100'
                       : id === 'telegram'
@@ -289,7 +302,7 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
               >
                 {inboxSourceFilterLabel(id)}
               </button>
-            ))}
+            )})}
           </div>
           {sourceFilter !== 'all' || direction !== 'all' ? (
             <p className="text-xs text-muted-foreground" role="status">

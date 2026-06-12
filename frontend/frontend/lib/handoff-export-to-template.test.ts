@@ -1,36 +1,72 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyEinsatzHandoffTemplate,
+  buildHandoffTemplateSnapshotFromExport,
   buildEinsatzTemplateFromHandoffExport,
-  helperRoleToChainRole,
-  slugifyHandoffTemplateId,
-  upsertEinsatzRoleTemplate,
 } from './handoff-export-to-template'
+import { resolveHandoffExportParams } from './handoff-export-params'
+import { validateEinsatzRoleTemplatesBody } from './einsatz-role-templates-validate'
 
-describe('handoff-export-to-template', () => {
-  it('slugify erzeugt gültige id', () => {
-    expect(slugifyHandoffTemplateId('Reporter Nur-Lesen')).toBe('reporter-nur-lesen')
-    expect(slugifyHandoffTemplateId('')).toBe('vorlage')
-  })
-
-  it('messenger → chainRole user', () => {
-    expect(helperRoleToChainRole('messenger')).toBe('user')
-    expect(helperRoleToChainRole('kommandant')).toBe('kommandant')
-  })
-
-  it('build + upsert', () => {
-    const t = buildEinsatzTemplateFromHandoffExport({
-      id: 'reporter',
-      label: 'Reporter',
+describe('handoff-export-to-template Phase 4', () => {
+  it('speichert und validiert vollen Snapshot', () => {
+    const resolved = resolveHandoffExportParams('helfer', {
+      roleId: 12,
+      helperRole: 'messenger',
+      omitTeamMailboxes: false,
+    })
+    const snapshot = buildHandoffTemplateSnapshotFromExport({
+      presetId: 'helfer',
+      bezeichnung: 'Medic Süd',
+      resolvedParams: resolved,
+      tuningRoleId: 12,
+      tuningHelperRole: '',
+      tuningSimpleMode: 'preset',
+      capabilitiesOverride: {
+        transport: {
+          lora: { read: true, write: true },
+          telegram: { read: true, write: false },
+        },
+      },
+      selectedTeamIds: ['0x' + 'a'.repeat(64)],
+      selectedPartnerAddresses: ['0x' + 'b'.repeat(64)],
+      includeIotaArchivReadme: true,
+      handoffRpc: '',
+      handoffPkgSource: 'boss',
+      handoffPkgCustom: '',
+      handoffBoss: '',
+      handoffMailbox: '',
+      handoffCmdReg: '',
+      handoffVaultReg: '',
+      handoffDirectIota: '',
+    })
+    const template = buildEinsatzTemplateFromHandoffExport({
+      id: 'medic-sued',
+      label: 'Medic Süd',
       helperRole: 'messenger',
       roleId: 12,
+      handoffSnapshot: snapshot,
     })
-    expect(t.roleId).toBe(12)
-    expect(t.chainRole).toBe('user')
-    const merged = upsertEinsatzRoleTemplate(
-      [{ id: 'reporter', label: 'Alt', chainRole: 'user', roleId: 4 }],
-      t
-    )
-    expect(merged).toHaveLength(1)
-    expect(merged[0]?.roleId).toBe(12)
+    const validated = validateEinsatzRoleTemplatesBody({ templates: [template] })
+    expect(validated.ok).toBe(true)
+    if (!validated.ok) return
+    const applied = applyEinsatzHandoffTemplate(validated.templates[0]!)
+    expect(applied.hasFullSnapshot).toBe(true)
+    expect(applied.presetId).toBe('helfer')
+    expect(applied.capabilitiesOverride?.transport?.telegram?.write).toBe(false)
+    expect(applied.selectedTeamIds).toHaveLength(1)
+    expect(applied.selectedPartnerAddresses).toHaveLength(1)
+    expect(applied.includeIotaArchivReadme).toBe(true)
+  })
+
+  it('Legacy-Vorlage ohne Snapshot bleibt kompatibel', () => {
+    const applied = applyEinsatzHandoffTemplate({
+      id: 'legacy',
+      label: 'Reporter',
+      chainRole: 'arbeiter',
+      roleId: 4,
+    })
+    expect(applied.hasFullSnapshot).toBe(false)
+    expect(applied.presetId).toBe('helfer')
+    expect(applied.tuning.helperRole).toBe('arbeiter')
   })
 })

@@ -2,7 +2,6 @@
 
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
-import { BossDeviceProvisionWizard } from '@/frontend/components/boss-device-provision-wizard'
 import { DashboardEinsatzParameterPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
 
 export function BossHelferEinrichtenPanel(p: {
@@ -18,12 +17,6 @@ export function BossHelferEinrichtenPanel(p: {
         contactDirectory={p.contactDirectory}
         embedded
         layout="compact"
-      />
-
-      <BossDeviceProvisionWizard
-        apiSnapshot={p.apiStatus ?? null}
-        contactDirectory={p.contactDirectory}
-        companionSeedBlock
       />
 
       <DashboardEinsatzParameterPanel

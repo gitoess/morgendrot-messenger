@@ -2,6 +2,13 @@
  * Einsatz-Rollen-Templates: JSON-Body-Parser (Boss-API, keine Chain).
  * Node: `src/einsatz-role-templates.ts`. Next-PWA: Paket **`@morgendrot/shared`** (`src/shared/package.json`, `file:` aus `frontend/`).
  */
+import {
+    parseEinsatzHandoffTemplateSnapshot,
+    type EinsatzHandoffTemplateSnapshot,
+} from './einsatz-handoff-template-snapshot.js';
+
+export type { EinsatzHandoffTemplateSnapshot } from './einsatz-handoff-template-snapshot.js';
+
 export const EINSATZ_TEMPLATES_MAX = 100;
 export const EINSATZ_TEMPLATES_FILE_MAX_BYTES = 262_144;
 
@@ -14,6 +21,8 @@ export type EinsatzRoleTemplate = {
     chainRole: 'kommandant' | 'arbeiter' | 'lock' | 'monitor' | 'waerter' | 'user';
     roleId: number;
     defaultDeploymentChannelTag?: string;
+    /** Phase 4: voller Handoff-Export-Snapshot (Capabilities, Partner, Team-Postfächer, …). */
+    handoffSnapshot?: EinsatzHandoffTemplateSnapshot;
 };
 
 function isId(s: string): boolean {
@@ -85,6 +94,14 @@ export function parseEinsatzRoleTemplates(
                 : String(x.defaultDeploymentChannelTag)
                       .trim()
                       .slice(0, 120);
+        let handoffSnapshot: EinsatzHandoffTemplateSnapshot | undefined;
+        if (x.handoffSnapshot !== undefined && x.handoffSnapshot !== null) {
+            const snap = parseEinsatzHandoffTemplateSnapshot(x.handoffSnapshot);
+            if (!snap.ok) {
+                return { ok: false, error: 'templates[' + i + '].handoffSnapshot: ' + snap.error };
+            }
+            handoffSnapshot = snap.snapshot;
+        }
         out.push({
             id,
             label,
@@ -92,6 +109,7 @@ export function parseEinsatzRoleTemplates(
             chainRole: cr as EinsatzRoleTemplate['chainRole'],
             roleId: rid,
             ...(defaultDeploymentChannelTag ? { defaultDeploymentChannelTag } : {}),
+            ...(handoffSnapshot ? { handoffSnapshot } : {}),
         });
     }
     const ser = JSON.stringify({ version: 1, templates: out });

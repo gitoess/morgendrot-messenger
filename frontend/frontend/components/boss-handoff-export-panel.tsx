@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Download, Package, Save, Send, Users } from 'lucide-react'
+import { Download, Package, QrCode, Save, Send, Users } from 'lucide-react'
 import { LanInstallQrPanel } from '@/frontend/components/lan-install-qr-panel'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getStatus } from '@/frontend/lib/api'
@@ -30,7 +30,6 @@ import {
 import { fetchEinsatzRoleTemplates, saveEinsatzRoleTemplates } from '@/frontend/lib/api/einsatz-role-templates'
 import type { EinsatzRoleTemplate } from '@morgendrot/shared/einsatz-role-templates'
 import {
-  handoffParamsFromEinsatzTemplate,
   resolveHandoffExportParams,
   type HandoffExportTuning,
 } from '@/frontend/lib/handoff-export-params'
@@ -54,7 +53,9 @@ import { readHandoffLastPresetId, writeHandoffLastPresetId } from '@/frontend/li
 import { HANDOFF_README_IOTA_ARCHIV_BLOCK } from '@/frontend/lib/handoff-lora-psk-copy'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import {
+  applyEinsatzHandoffTemplate,
   buildEinsatzTemplateFromHandoffExport,
+  buildHandoffTemplateSnapshotFromExport,
   slugifyHandoffTemplateId,
   suggestHandoffTemplateLabel,
   upsertEinsatzRoleTemplate,
@@ -62,6 +63,10 @@ import {
 import { validateEinsatzRoleTemplatesBody } from '@/frontend/lib/einsatz-role-templates-validate'
 import { canEditEinsatzRoleTemplates } from '@/frontend/lib/messenger-role-capabilities'
 import { cn } from '@/lib/utils'
+import { provisionNewHandoffDevice } from '@/frontend/lib/handoff-provision-new-device'
+import { useHandoffProvisionRegistryAccess } from '@/frontend/lib/handoff-provision-registry-access'
+import { HandoffProvisionRegistrySection } from '@/frontend/components/handoff-provision-registry-section'
+import { HandoffProvisionResultDialog } from '@/frontend/components/handoff-provision-result-dialog'
 
 type HandoffPkgSource = 'boss' | 'custom'
 
@@ -113,6 +118,12 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [templateSaveId, setTemplateSaveId] = useState('')
   const [templateSaveBusy, setTemplateSaveBusy] = useState(false)
   const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
+  const [provisionResultOpen, setProvisionResultOpen] = useState(false)
+  const [provisionAddress, setProvisionAddress] = useState('')
+  const [provisionEntryId, setProvisionEntryId] = useState<string | null>(null)
+  const [provisionQrDataUrl, setProvisionQrDataUrl] = useState('')
+
+  const provisionRegistry = useHandoffProvisionRegistryAccess()
 
   const labelEdited = useRef(false)
   const canSaveTemplates = canEditEinsatzRoleTemplates(p.apiSnapshot)
@@ -214,12 +225,33 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       setStatusMsg('Vorlagen speichern nur für Boss (configChange).')
       return
     }
+    const handoffSnapshot = buildHandoffTemplateSnapshotFromExport({
+      presetId,
+      bezeichnung,
+      resolvedParams,
+      tuningRoleId,
+      tuningHelperRole,
+      tuningSimpleMode,
+      capabilitiesOverride,
+      selectedTeamIds,
+      selectedPartnerAddresses: [...selectedPartnerAddrs],
+      includeIotaArchivReadme,
+      handoffRpc,
+      handoffPkgSource,
+      handoffPkgCustom,
+      handoffBoss,
+      handoffMailbox,
+      handoffCmdReg,
+      handoffVaultReg,
+      handoffDirectIota,
+    })
     const built = buildEinsatzTemplateFromHandoffExport({
       id: templateSaveId,
       label: templateSaveLabel,
       helperRole: resolvedParams.helperRole,
       roleId: resolvedParams.roleId,
       deploymentChannelTag: bezeichnung.trim() || undefined,
+      handoffSnapshot,
     })
     const merged = upsertEinsatzRoleTemplate(savedTemplates, built)
     const validated = validateEinsatzRoleTemplatesBody({ templates: merged })
@@ -238,7 +270,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       setSavedTemplates(res.templates ?? validated.templates)
       setSaveTemplateOpen(false)
       setStatusMsg(
-        `Vorlage „${built.label}" gespeichert (ROLE_ID=${built.roleId}, ${built.chainRole}) — im Dropdown wählbar.`
+        `Vorlage „${built.label}" gespeichert (Profil, Rechte, Partner/Team) — im Dropdown wählbar.`
       )
     } finally {
       setTemplateSaveBusy(false)
@@ -247,26 +279,59 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     canSaveTemplates,
     templateSaveId,
     templateSaveLabel,
-    resolvedParams.helperRole,
-    resolvedParams.roleId,
+    resolvedParams,
+    presetId,
     bezeichnung,
+    tuningRoleId,
+    tuningHelperRole,
+    tuningSimpleMode,
+    capabilitiesOverride,
+    selectedTeamIds,
+    selectedPartnerAddrs,
+    includeIotaArchivReadme,
+    handoffRpc,
+    handoffPkgSource,
+    handoffPkgCustom,
+    handoffBoss,
+    handoffMailbox,
+    handoffCmdReg,
+    handoffVaultReg,
+    handoffDirectIota,
     savedTemplates,
   ])
 
   const applySavedTemplate = useCallback((t: EinsatzRoleTemplate) => {
-    const mapped = handoffParamsFromEinsatzTemplate(t)
-    applyPreset(mapped.presetId, false, false)
-    const rid = mapped.tuning.roleId ?? t.roleId
-    const base = getHandoffPreset(mapped.presetId).roleId
-    setTuningRoleId(rid === base ? null : rid)
-    setTuningHelperRole(mapped.tuning.helperRole ?? '')
-    setTuningSimpleMode('preset')
+    const applied = applyEinsatzHandoffTemplate(t)
+    applyPreset(applied.presetId, false, false)
+    setTuningRoleId(applied.tuningRoleId)
+    setTuningHelperRole(applied.tuningHelperRole)
+    setTuningSimpleMode(applied.tuningSimpleMode)
+    setOmitTeamMailboxes(applied.omitTeamMailboxes === true)
+    setCapabilitiesOverride(applied.capabilitiesOverride)
+    if (applied.selectedTeamIds?.length) setSelectedTeamIds(applied.selectedTeamIds)
+    if (applied.selectedPartnerAddresses?.length) {
+      setSelectedPartnerAddrs(new Set(applied.selectedPartnerAddresses))
+    }
+    if (applied.includeIotaArchivReadme != null) {
+      setIncludeIotaArchivReadme(applied.includeIotaArchivReadme)
+    }
+    if (applied.handoffRpc) setHandoffRpc(applied.handoffRpc)
+    if (applied.handoffPkgSource) setHandoffPkgSource(applied.handoffPkgSource)
+    if (applied.handoffPkgCustom) setHandoffPkgCustom(applied.handoffPkgCustom)
+    if (applied.handoffBoss) setHandoffBoss(applied.handoffBoss)
+    if (applied.handoffMailbox) setHandoffMailbox(applied.handoffMailbox)
+    if (applied.handoffCmdReg) setHandoffCmdReg(applied.handoffCmdReg)
+    if (applied.handoffVaultReg) setHandoffVaultReg(applied.handoffVaultReg)
+    if (applied.handoffDirectIota) setHandoffDirectIota(applied.handoffDirectIota)
     if (!labelEdited.current) {
-      const day = new Date().toISOString().slice(0, 10)
-      setBezeichnung(`${t.label}-${day}`)
+      setBezeichnung(applied.bezeichnungSuggestion)
       labelEdited.current = false
     }
-    setStatusMsg(`Vorlage „${t.label}" geladen.`)
+    setStatusMsg(
+      applied.hasFullSnapshot
+        ? `Vorlage „${t.label}" geladen (voller Handoff-Snapshot).`
+        : `Vorlage „${t.label}" geladen (Legacy — nur Profil/ROLE_ID).`
+    )
   }, [applyPreset])
 
   useEffect(() => {
@@ -377,7 +442,10 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const iotaRecipientCount = resolveIotaPartnerAddresses().length
 
   const buildExportBody = useCallback(
-    (activePresetId: HandoffEinsatzPresetId): StandaloneSmartphoneHandoffZipBody => {
+    (
+      activePresetId: HandoffEinsatzPresetId,
+      opts?: { helperAddress?: string }
+    ): StandaloneSmartphoneHandoffZipBody => {
       const resolved = resolveHandoffExportParams(activePresetId, exportTuning)
       const useTeam = handoffPresetUsesTeamMailboxes(activePresetId, resolved.omitTeamMailboxes)
       const primaryMb = useTeam ? pickPrimaryMailboxId(selectedTeamIds) || handoffMailbox.trim() || undefined : undefined
@@ -385,8 +453,9 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
       const meshFirst = resolved.transportProfile === 'mesh-first'
       const memberPool = [
         handoffBoss.trim(),
+        opts?.helperAddress?.trim(),
         ...partnerExportCsv.split(/[\s,;]+/),
-      ].filter(Boolean)
+      ].filter((x): x is string => Boolean(x))
       const messengerGroupHandoff = resolveMessengerGroupHandoffJson({
         handoffLabel: bezeichnung.trim() || getHandoffPreset(activePresetId).label,
         teamMailboxObjectId: primaryMb,
@@ -470,6 +539,53 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   }
 
   const onDownload = () => downloadHandoffZip(presetId)
+
+  const onProvisionNewDevice = async () => {
+    if (!validatePasswordIfNeeded()) return
+    if (!provisionRegistry.registryUnlocked) {
+      if (!provisionRegistry.registryExists) {
+        const init = await provisionRegistry.initRegistry()
+        if (!init.ok) {
+          setStatusMsg(init.error)
+          return
+        }
+      } else {
+        const unlock = await provisionRegistry.unlockRegistry()
+        if (!unlock.ok) {
+          setStatusMsg(unlock.error)
+          return
+        }
+      }
+    }
+    setHandoffBusy(true)
+    setStatusMsg('')
+    try {
+      const r = await provisionNewHandoffDevice({
+        buildBody: (helperAddress) => buildExportBody(presetId, { helperAddress }),
+        presetId,
+        label: bezeichnung.trim() || preset.label,
+        masterPassword: provisionRegistry.activeMasterPassword(),
+        zipPassword: protectWithPassword ? handoffPassword : undefined,
+      })
+      if (!r.ok) {
+        setStatusMsg(r.error)
+        return
+      }
+      writeHandoffLastPresetId(presetId)
+      setLastDownloadPresetId(presetId)
+      setProvisionAddress(r.address)
+      setProvisionEntryId(r.entryId)
+      setProvisionQrDataUrl(r.qrDataUrl)
+      setProvisionResultOpen(true)
+      setStatusMsg(
+        r.zipPasswordProtected
+          ? 'Passwortgeschütztes ZIP — Handoff-Passwort dem Helfer mündlich mitteilen. Seed-QR: 60 Sekunden.'
+          : 'ZIP heruntergeladen — Seed-QR dem Helfer zeigen (60 Sekunden).'
+      )
+    } finally {
+      setHandoffBusy(false)
+    }
+  }
 
   const repeatPresetId = lastDownloadPresetId
   const showRepeatDownload =
@@ -767,19 +883,37 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
           </section>
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            {compact ? (
+              <button
+                type="button"
+                disabled={handoffBusy}
+                onClick={() => void onProvisionNewDevice()}
+                className={cn(
+                  'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50',
+                  presetId === 'helfer'
+                    ? 'bg-emerald-600 text-white hover:bg-emerald-600/90'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                )}
+              >
+                <QrCode className="h-4 w-4" aria-hidden />
+                {handoffBusy ? '…' : 'ZIP + Seed + QR'}
+              </button>
+            ) : null}
             <button
               type="button"
               disabled={handoffBusy}
               onClick={() => void onDownload()}
               className={cn(
                 'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold disabled:opacity-50',
-                presetId === 'helfer'
+                !compact && presetId === 'helfer'
                   ? 'bg-emerald-600 text-white hover:bg-emerald-600/90'
-                  : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                  : compact
+                    ? 'border border-border bg-background hover:bg-muted'
+                    : 'bg-primary text-primary-foreground hover:bg-primary/90'
               )}
             >
               <Download className="h-4 w-4" aria-hidden />
-              {handoffBusy ? '…' : 'ZIP'}
+              {handoffBusy ? '…' : compact ? 'Nur ZIP' : 'ZIP'}
             </button>
             {showRepeatDownload ? (
               <button
@@ -813,6 +947,10 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
             <p className="text-xs text-muted-foreground" role="status">
               {statusMsg}
             </p>
+          ) : null}
+
+          {compact ? (
+            <HandoffProvisionRegistrySection registry={provisionRegistry} />
           ) : null}
 
           <details className="rounded-lg border border-border/60 px-3 py-2 text-sm">
@@ -1032,6 +1170,17 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
           ) : null}
         </div>
       </div>
+
+      {compact ? (
+        <HandoffProvisionResultDialog
+          open={provisionResultOpen}
+          onOpenChange={setProvisionResultOpen}
+          address={provisionAddress}
+          entryId={provisionEntryId}
+          qrDataUrl={provisionQrDataUrl}
+          zipPasswordProtected={protectWithPassword}
+        />
+      ) : null}
     </div>
   )
 }

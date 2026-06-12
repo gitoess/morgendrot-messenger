@@ -246,6 +246,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
               messageTransport: opts.messageTransport,
             })
           }}
+          apiStatus={apiStatus}
         />
       ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">

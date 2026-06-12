@@ -442,6 +442,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     pinnwandMatchContext,
     inboxOverviewEnabled,
     excludePinnwandFromOverviewAlle,
+    apiStatus,
   })
 
   useEffect(() => {
@@ -495,6 +496,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     setStatus,
     setStatusMsg,
     deviceTimeTrustWarn,
+    apiStatus,
   })
 
   const selectInboxPartnerForSend = useCallback(

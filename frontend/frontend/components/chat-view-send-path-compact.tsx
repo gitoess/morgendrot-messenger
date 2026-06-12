@@ -16,6 +16,11 @@ import {
 import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
 import { getComposerEncryptionContextHint } from '@/frontend/lib/composer-encryption-context-hint'
+import type { ApiStatus } from '@/frontend/lib/api/status'
+import {
+  composerSendPathWriteDeniedReason,
+  type ComposerSendPathKey,
+} from '@/frontend/lib/messenger-capability-gates'
 
 export type ChatViewSendPathCompactProps = {
   /** Pinnwand: nur wenn Klartext; privater Chat: immer. */
@@ -29,7 +34,17 @@ export type ChatViewSendPathCompactProps = {
   showAdhocTransport?: boolean
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
+  /** Handoff-Runtime: Transport-Schreibrechte pro Sendepfad. */
+  apiStatus?: ApiStatus | null
   className?: string
+}
+
+function sendPathCapabilityReason(
+  apiStatus: ApiStatus | null | undefined,
+  path: ComposerSendPathKey
+): string | null {
+  if (!apiStatus?.capabilities) return null
+  return composerSendPathWriteDeniedReason(apiStatus, path)
 }
 
 const ONLINE = {
@@ -136,6 +151,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     showAdhocTransport = true,
     composerDelivery = 'chain',
     onComposerDeliveryChange,
+    apiStatus,
     className,
   } = p
   if (!visible) return null
@@ -150,10 +166,20 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         ? 'Telegram — Zustellung über Bot/API, nicht IOTA-Mailbox.'
         : null
 
-  const onlineOk = isSendPathAllowedForChannel(channelMode, 'internet')
-  const funkOk = isSendPathAllowedForChannel(channelMode, 'mesh')
-  const adhocOk = showAdhocTransport && isSendPathAllowedForChannel(channelMode, 'adhoc')
-  const telegramOk = showTelegram && isSendPathAllowedForChannel(channelMode, 'telegram')
+  const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
+  const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
+  const adhocChannelOk = showAdhocTransport && isSendPathAllowedForChannel(channelMode, 'adhoc')
+  const telegramChannelOk = showTelegram && isSendPathAllowedForChannel(channelMode, 'telegram')
+
+  const onlineCapReason = sendPathCapabilityReason(apiStatus, 'internet')
+  const funkCapReason = sendPathCapabilityReason(apiStatus, 'mesh')
+  const adhocCapReason = sendPathCapabilityReason(apiStatus, 'adhoc')
+  const telegramCapReason = sendPathCapabilityReason(apiStatus, 'telegram')
+
+  const onlineOk = onlineChannelOk && !onlineCapReason
+  const funkOk = funkChannelOk && !funkCapReason
+  const adhocOk = adhocChannelOk && !adhocCapReason
+  const telegramOk = telegramChannelOk && !telegramCapReason
 
   return (
     <div
@@ -170,7 +196,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         <PathButton
           active={chainActive && forcedTransport === ONLINE.id}
           disabled={!onlineOk}
-          disabledTitle={sendPathDisabledReason(channelMode, 'internet')}
+          disabledTitle={onlineCapReason ?? sendPathDisabledReason(channelMode, 'internet')}
           title={ONLINE.title}
           onClick={() => {
             onComposerDeliveryChange?.('chain')
@@ -185,7 +211,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         <PathButton
           active={chainActive && forcedTransport === FUNK.id}
           disabled={!funkOk}
-          disabledTitle={sendPathDisabledReason(channelMode, 'mesh')}
+          disabledTitle={funkCapReason ?? sendPathDisabledReason(channelMode, 'mesh')}
           title={FUNK.title}
           activeClass="border-sky-600/50 bg-sky-500/15 text-foreground"
           onClick={() =>
@@ -209,7 +235,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             <PathButton
               active={chainActive && forcedTransport === ADHOC.id}
               disabled={!adhocOk}
-              disabledTitle={sendPathDisabledReason(channelMode, 'adhoc')}
+              disabledTitle={adhocCapReason ?? sendPathDisabledReason(channelMode, 'adhoc')}
               title={ADHOC.title}
               activeClass="border-amber-600/45 bg-amber-500/12 text-foreground"
               onClick={() =>
@@ -235,7 +261,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             <PathButton
               active={composerDelivery === 'telegram'}
               disabled={!telegramOk}
-              disabledTitle={sendPathDisabledReason(channelMode, 'telegram')}
+              disabledTitle={telegramCapReason ?? sendPathDisabledReason(channelMode, 'telegram')}
               title={TELEGRAM.title}
               activeClass="border-sky-600/50 bg-sky-500/15 text-foreground"
               onClick={() => onComposerDeliveryChange?.('telegram')}

@@ -25,7 +25,7 @@
 
 **Nachtrag 2026-06-02 (§ H.32 — Antworten + Einsatz beenden):** Feld-Feedback: Posteingang braucht **„Antworten“** (Kanal + Sendepfad automatisch, nicht nur Weiterleiten); **„Einsatz beenden“** = **Cache & lokale IDs** des alten Einsatzes entfernen (verwirrende alte Nachrichten/IDs), **nicht** Online-Chain — danach neues **Handoff**. Spez **§ H.32**; ergänzt **§ H.0** #6–#7. **Ist 2026-06-02:** **H.32a** umgesetzt (`inbox-reply-context.ts`, Posteingang-Button); **H.32b** offen.
 
-**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Backlog (Zielbild Phase 2–4):** ein Knopf Seed+ZIP+QR; Capabilities überall durchsetzen; Vorlagen = voller Snapshot. **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
+**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Phase 2–4 Ist:** ZIP + Seed + QR; Capabilities UI + Backend-Gate; **Vorlagen** mit vollem `handoffSnapshot` (Capabilities, Partner, Team). **Backlog:** H.32b Einsatz beenden, H.33 Move. **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
 
 **Merge-Ritual (Phase A):** **`TESTING.md`** § *Qualitätsritual vor Merge* — Root **`tsc`**, **`validate:ui`**, **`test:smoke`**; Ordner **`frontend/`** zusätzlich **`lint`**, **`check:circular`**, **`tsc`**, **`test:unit`**. **CI:** **`.github/workflows/frontend-checks.yml`**. **Handbuch:** nach Änderung an **`docs/BOSS-ORIENTIERUNG.md`** / **`PWA-HANDBUCH-OFFLINE.md`:** Root **`npm run sync:handbook`**.
 
@@ -123,7 +123,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **Build** | Repo klonen → `npm install` → `npm run dev` / `dev:lan` |
 | **Ist** | Export-Assistent, Einsatzleitung compact, Handoff-ZIP, WLAN-QR |
 | **Soll** | Standard-Werkstatt für jeden Einsatz |
-| **Offen** | Einsatzleitung Phase 2–4 (ein Knopf Seed+ZIP+QR, Capabilities durchsetzen) |
+| **Offen** | ggf. weitere API-Routen mit Capability-Gate; H.33 Move / H.32b |
 
 #### B/C — PC Messenger-Bundle + Electron
 

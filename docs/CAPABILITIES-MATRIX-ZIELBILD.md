@@ -134,8 +134,8 @@ Ergebnis nach `resolveMessengerCapabilities()`:
 |-------|--------|--------|
 | **1** | Shared Schema, Resolver, Handoff-ZIP enthält Runtime-JSON, Import merged, `GET /api/status` → `capabilities` | **Ist** |
 | **2** | Export-Assistent: Capability-Matrix-UI (Transport + Produkt), Presets (Medic-Funker, …) | **Ist** |
-| **3** | Frontend: `canTransportWrite(status,'telegram')` in Composer, Gruppen-Button, Export-Menü | Backlog |
-| **4** | Backend: `send-commands` prüft Kanal aus Request + `capabilities` (Fallback S-Bit) | Backlog |
+| **3** | Frontend: Composer, Senden, Telegram, Gruppe, Posteingang-Quellenfilter, Nachrichtenverlauf-Export (`canExportData`) | **Ist 2026-06-02** (`messenger-capability-gates.ts`, Posteingang + Export) |
+| **4** | Backend: `send-commands` + Telegram notify/journal nach Transport-Kanal | **Ist 2026-06-02** (`src/messenger-capability-gates.ts`) |
 
 Hilfsmodul Frontend: `frontend/frontend/lib/messenger-capability-gates.ts`
 

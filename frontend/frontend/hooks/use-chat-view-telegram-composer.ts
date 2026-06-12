@@ -13,6 +13,7 @@ import {
   writeTelegramNotifyOnSend,
 } from '@/frontend/lib/telegram-notify-pref'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { canTransportWrite } from '@/frontend/lib/messenger-capability-gates'
 
 export function useChatViewTelegramComposer(p: {
   isPrivate: boolean
@@ -95,8 +96,11 @@ export function useChatViewTelegramComposer(p: {
     ]
   )
 
+  const telegramWriteAllowed = canTransportWrite(p.apiStatus, 'telegram')
+
   const canSendTelegramOnly =
     p.isPrivate &&
+    telegramWriteAllowed &&
     (p.composerDelivery === 'telegram' ? composerTelegramIds.length > 0 : recipientHasTelegram) &&
     !telegramOnlyBusy &&
     !p.sending &&

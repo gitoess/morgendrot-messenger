@@ -36,6 +36,8 @@ export type ChatViewGroupPanelProps = {
   /** Meshtastic Secondary nur bei Sendepfad „funk“. */
   forcedTransport?: ForcedTransport
   teamMailboxCreateAllowed?: boolean
+  /** Handoff-Runtime: neue Gruppe anlegen / erste Speicherung. */
+  groupCreateAllowed?: boolean
   onGroupsChanged?: () => void
   onOpenPhonebook?: () => void
   /** Einstellungen → Meine Mailboxen (Team-Postfächer verwalten). */
@@ -49,6 +51,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     contactDirectory,
     forcedTransport,
     teamMailboxCreateAllowed = false,
+    groupCreateAllowed = true,
     onGroupsChanged,
     onOpenPhonebook,
     onOpenSettings,
@@ -56,9 +59,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     onEncryptedChange,
   } = p
   const showMeshtasticSecondary = forcedTransport === 'mesh'
+  const groupCreateBlockedTitle = 'Keine Berechtigung zum Anlegen neuer Gruppen (Handoff-Rechte).'
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
   const [groups, setGroups] = useState<MessengerGroupDefinition[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
+  const creatingNewGroup = !activeId
+  const groupCreateBlocked = creatingNewGroup && !groupCreateAllowed
   const [name, setName] = useState('')
   const [membersText, setMembersText] = useState('')
   const [secondaryChannelIndex, setSecondaryChannelIndex] = useState('')
@@ -479,11 +485,25 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           <button
             type="button"
             onClick={saveGroup}
-            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground"
+            disabled={groupCreateBlocked}
+            title={groupCreateBlocked ? groupCreateBlockedTitle : undefined}
+            className={cn(
+              'rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground',
+              groupCreateBlocked && 'cursor-not-allowed opacity-40'
+            )}
           >
             Gruppe speichern
           </button>
-          <button type="button" onClick={newGroup} className="rounded-md border border-border px-3 py-1.5 text-xs">
+          <button
+            type="button"
+            onClick={newGroup}
+            disabled={!groupCreateAllowed}
+            title={!groupCreateAllowed ? groupCreateBlockedTitle : undefined}
+            className={cn(
+              'rounded-md border border-border px-3 py-1.5 text-xs',
+              !groupCreateAllowed && 'cursor-not-allowed opacity-40'
+            )}
+          >
             Neue Gruppe
           </button>
           <button

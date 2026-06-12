@@ -1,7 +1,7 @@
 # Helfer einrichten — Zielbild (kompakt, eine Oberfläche)
 
 **Stand:** 2026-06-02  
-**Status:** **Phase 1 Ist** — Phase 2–4 Backlog  
+**Status:** **Phase 1–4 Ist** (Helfer einrichten kompakt)  
 **Ersetzt langfristig:** getrennte Pfade „Provision-Wizard“ + „Export-Assistent“ + eigene Parameter-Karte
 
 ---
@@ -45,8 +45,8 @@ Gespeicherte Vorlagen = eure Org-Standards (Medic Süd, Reporter LoRa, …).
 │ Bezeichnung · Vorlage · Profil [Helfer|Führer|Spezial]  │
 │ ▼ Rechte — Matrix + Schnellprofile [Medic|Reporter|…]   │
 │ Team-Postfächer · Partner (Checkboxen)                  │
-│ [ZIP] [IOTA] [WLAN-QR]   Passwort optional              │
-│ ── Neues Gerät ── [Seed + QR]                           │
+│ [ZIP + Seed + QR] [Nur ZIP] [IOTA] [WLAN-QR]  Passwort   │
+│ ── Neues Gerät — Registry (Custody B)                   │
 │ ── Bestehende Geräte ── TTL · Purge · [Handoff]         │
 │ ▼ Experte (ROLE_ID, RPC, Vorlage speichern)             │
 └─────────────────────────────────────────────────────────┘
@@ -97,9 +97,9 @@ Details: `docs/HANDOFF-PERMISSIONS-MATRIX.md`
 | **1c** | Export aus Erweitert nach **Helfer einrichten** | **Ist** |
 | **1d** | TTL/Purge inline **Bestehende Geräte**; nicht im Export-Experten | **Ist** |
 | **1e** | UI ohne Hilfetexte; WLAN-QR neben IOTA; `/api/lan-install-urls` | **Ist** |
-| **2** | Ein Export-Knopf + Seed/Registry/QR im gleichen Flow | Backlog |
-| **3** | UI durchsetzt `canTransportRead/Write` überall (Composer, …) | Backlog |
-| **4** | Vorlagen speichern volles Handoff-Snapshot (Capabilities inkl.) | Backlog |
+| **2** | Ein Export-Knopf **ZIP + Seed + QR** + Registry im gleichen Flow (Formular-Rechte/Partner) | **Ist 2026-06-02** (`provisionNewHandoffDevice`, `BossHandoffExportPanel` compact) |
+| **3** | UI + Backend: `canTransportRead/Write` (Composer, Posteingang, Export; Server `send-commands`) | **Ist 2026-06-02** |
+| **4** | Vorlagen speichern volles Handoff-Snapshot (Capabilities, Partner, Team-Postfächer, Experten-IDs) | **Ist 2026-06-02** (`handoffSnapshot` in `.morgendrot-einsatz-templates.json`) |
 
 ---
 

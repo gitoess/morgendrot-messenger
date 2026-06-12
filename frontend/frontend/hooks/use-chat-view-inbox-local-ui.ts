@@ -6,7 +6,8 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { inboxSourceFilterReadAllowed } from '@/frontend/lib/messenger-capability-gates'
 import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
@@ -76,6 +77,7 @@ export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   /** Helfer/Simple: Kategorie-Chips + Listenfilter (Lagebild aus „Alle“ wenn Streifen). */
   inboxOverviewEnabled?: boolean
   excludePinnwandFromOverviewAlle?: boolean
+  apiStatus?: ApiStatus | null
 }
 
 export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
@@ -92,6 +94,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     pinnwandMatchContext = null,
     inboxOverviewEnabled = false,
     excludePinnwandFromOverviewAlle = false,
+    apiStatus = null,
   } = p
 
   const [inboxChannelFiltersArmed, setInboxChannelFiltersArmedState] = useState(false)
@@ -129,6 +132,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxPartnerKey, setInboxPartnerKey] = useState<string | null>(null)
   const [inboxDirectionFilter, setInboxDirectionFilter] = useState<InboxDirectionFilter>('all')
   const [inboxSourceFilter, setInboxSourceFilterState] = useState<InboxSourceFilter>('all')
+
+  useEffect(() => {
+    if (inboxSourceFilterReadAllowed(apiStatus, inboxSourceFilter)) return
+    setInboxSourceFilterState('all')
+  }, [apiStatus, inboxSourceFilter])
   const [inboxWireFilter, setInboxWireFilterState] = useState<InboxWireFilter>('all')
   const [inboxOverviewCategory, setInboxOverviewCategoryState] =
     useState<InboxOverviewCategory>('alle')

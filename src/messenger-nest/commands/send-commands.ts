@@ -2,7 +2,6 @@
  * Slice B: Senden / Mesh / .morg-pkg (/send, /send-plain, …).
  */
 import { logger } from '../../logger.js';
-import { CFG, ROLE_BITS, hasRoleBit } from '../../config.js';
 import { normalizeAddress } from '../../utils.js';
 import {
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
@@ -28,6 +27,7 @@ import {
     resolveCommandForceLegacyPlaintext,
 } from '../command-handler-shared.js';
 import type { CommandHandlerResult, MessengerCommandContext } from './command-types.js';
+import { denyMessengerReadCommand, denyMessengerSendCommand } from '../../messenger-capability-gates.js';
 
 const SEND_COMMANDS = new Set([
     '/send-plain',
@@ -41,19 +41,15 @@ const SEND_COMMANDS = new Set([
     '/boss-command',
 ]);
 
-function hierarchyCanSend(): boolean {
-    const isHierarchyRole = ['boss', 'kommandant', 'arbeiter'].includes(CFG.ROLE);
-    return !isHierarchyRole || hasRoleBit(ROLE_BITS.S);
-}
-
 export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promise<CommandHandlerResult | null> {
     const c = ctx.cmd;
     if (!SEND_COMMANDS.has(c)) return null;
 
     const { args: a, opts, myAddress: MY_ADDR, keys, sessionState } = ctx;
-    const canSend = hierarchyCanSend();
 
     if (c === '/send-plain') {
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         const addrsRaw = String(a[0] ?? '').split(',').map((s) => s.trim()).filter(Boolean);
         const addrs = addrsRaw.filter((addr) => /^0x[a-fA-F0-9]{64}$/.test(addr));
         const text = a.slice(1).join(' ').trim() || '(leer)';
@@ -97,6 +93,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/send-team-broadcast') {
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         const teamMb = String(opts?.mailboxObjectId ?? '').trim();
         if (!/^0x[a-fA-F0-9]{64}$/.test(teamMb)) {
             return {
@@ -126,12 +124,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/send') {
-        if (!canSend) {
-            return {
-                ok: false,
-                message: 'S-Bit (Send) nicht gesetzt – Senden verweigert (ROLE_ID=' + CFG.ROLE_ID + '). Bei Hierarchie ROLE_ID z. B. 14 setzen.',
-            };
-        }
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         const pm = sessionState.peerMap;
         if (!pm?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const text = a && a.length > 0 ? a.join(' ').trim() : '';
@@ -168,7 +162,6 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/sos-gateway-ack') {
-        if (!canSend) return { ok: false, message: 'S-Bit (Send) nicht gesetzt – SOS-Gateway-Ack verweigert.' };
         const pmAck = sessionState.peerMap;
         if (!pmAck?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const digest = String(a[0] ?? '')
@@ -185,12 +178,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/mesh-build-v2') {
-        if (!canSend) {
-            return {
-                ok: false,
-                message: 'S-Bit (Send) nicht gesetzt – Mesh-Build verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
-            };
-        }
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         const pmMesh = sessionState.peerMap;
         if (!pmMesh?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const textMesh = a && a.length > 0 ? a.join(' ').trim() : '';
@@ -231,6 +220,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/mesh-decrypt-v2') {
+        const capDenied = denyMessengerReadCommand(c);
+        if (capDenied) return capDenied;
         const senderMesh = (a[0] ?? '').trim();
         const b64 = (a[1] ?? '').trim();
         if (!senderMesh || !b64) {
@@ -253,12 +244,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/morg-pkg-export') {
-        if (!canSend) {
-            return {
-                ok: false,
-                message: 'S-Bit (Send) nicht gesetzt – .morg-pkg-Export verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
-            };
-        }
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         const pmEx = sessionState.peerMap;
         if (!pmEx?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
         const addrRaw = (a[0] ?? '').trim();
@@ -301,6 +288,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/morg-pkg-import') {
+        const capDenied = denyMessengerReadCommand(c);
+        if (capDenied) return capDenied;
         const rawPkg = opts?.morgPkg;
         if (rawPkg == null || typeof rawPkg !== 'object') {
             return {
@@ -343,12 +332,8 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
     }
 
     if (c === '/boss-command' && a[0] != null && a[1] != null) {
-        if (!canSend) {
-            return {
-                ok: false,
-                message: 'S-Bit (Send) nicht gesetzt – Senden verweigert (ROLE_ID=' + CFG.ROLE_ID + ').',
-            };
-        }
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
         let targets: string[];
         try {
             targets = JSON.parse(String(a[0]));

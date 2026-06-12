@@ -8,6 +8,7 @@ import type { ChangeEvent, ReactNode, RefObject } from 'react'
 import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, RefreshCw, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
+import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
 import { ChatViewProtokollAnchorButton } from '@/frontend/components/chat-view-protokoll-anchor-button'
 import { ChatViewTangleInventoryButton } from '@/frontend/components/chat-view-tangle-inventory-button'
 import {
@@ -179,6 +180,18 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
   const pkgDeviceDisabled =
     morgPkgDeviceBusy || apiStatus?.locked === true || !(apiStatus?.connectedAddresses?.length ?? 0)
   const vaultLocked = apiStatus?.locked === true
+  const exportDenied = exportDataDeniedReason(apiStatus)
+  const exportBlocked = Boolean(exportDenied)
+
+  const blockExportAction = (run: () => void) => {
+    if (!exportBlocked) {
+      run()
+      return
+    }
+    setStatus('error')
+    setStatusMsg(exportDenied ?? 'Export nicht erlaubt.')
+    setTimeout(() => setStatus('idle'), 6000)
+  }
 
   return (
     <div className="border-b border-border">
@@ -345,7 +358,9 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                disabled={exportBlocked}
+                title={exportDenied ?? undefined}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FileDown className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
                 Nachrichtenverlauf
@@ -360,27 +375,48 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 Vollständig: JSON, TXT vollständig, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
                 Nachricht.
               </p>
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtJson()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => onExportEinsatzberichtJson())}
+              >
                 Als JSON (vollständig, Klartext)
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtTxtFull()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => void onExportEinsatzberichtTxtFull())}
+              >
                 Als Text (vollständig, Klartext)
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => onExportEinsatzberichtTxt()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => onExportEinsatzberichtTxt())}
+              >
                 Als Text (kurz, ~200 Zeichen)
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzberichtEncrypted()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => void onExportEinsatzberichtEncrypted())}
+              >
                 <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
                 Verschlüsselt (vollständig, Passwort-JSON)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokoll()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => void onExportEinsatzprotokoll())}
+              >
                 ZIP + HTML (verschlüsselt)
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={messageCount === 0} onSelect={() => void onExportEinsatzprotokollPlainZip()}>
+              <DropdownMenuItem
+                disabled={messageCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => void onExportEinsatzprotokollPlainZip())}
+              >
                 ZIP Klartext
               </DropdownMenuItem>
-              <DropdownMenuItem disabled={protokollMarkedCount === 0} onSelect={() => void onExportEinsatzprotokollMarked()}>
+              <DropdownMenuItem
+                disabled={protokollMarkedCount === 0 || exportBlocked}
+                onSelect={() => blockExportAction(() => void onExportEinsatzprotokollMarked())}
+              >
                 ZIP nur markiert (★ {protokollMarkedCount})
               </DropdownMenuItem>
               {showIotaExpertInboxActions ? (

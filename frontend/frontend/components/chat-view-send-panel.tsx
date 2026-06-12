@@ -54,6 +54,10 @@ import type {
   VoiceRecordSendPanelPort,
 } from '@/frontend/features/messenger-ports'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
+import {
+  activeSendPathWriteDeniedReason,
+  plaintextSendBlockedByCapabilitiesReason,
+} from '@/frontend/lib/messenger-capability-gates'
 const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
 
 /** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
@@ -326,6 +330,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const isTelegramDelivery = composerDelivery === 'telegram'
   const onlineChainNeedsKeys = !isTelegramDelivery && forcedTransport === 'internet'
 
+  const sendPathCapabilityBlocked = Boolean(
+    activeSendPathWriteDeniedReason(apiStatus, forcedTransport, composerDelivery ?? 'chain')
+  )
+  const plaintextCapabilityBlocked = Boolean(
+    plaintextSendBlockedByCapabilitiesReason(apiStatus, encrypted, forcedTransport)
+  )
+
   const sendDisabled =
     sending ||
     vaultLocked ||
@@ -337,7 +348,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (groupMailboxInternetChain && !groupTeamBroadcastReady && !encrypted) ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
-    meshPath4Blocked
+    meshPath4Blocked ||
+    sendPathCapabilityBlocked ||
+    plaintextCapabilityBlocked
 
   const sendDisableReason = useMemo(() => {
     if (sending) return 'Senden läuft bereits…'
@@ -363,6 +376,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     }
     if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
     if (meshPath4Blocked) return '„LoRa + eigene Verankerung“ passt nicht zur aktuellen Auswahl.'
+    const capReason = activeSendPathWriteDeniedReason(apiStatus, forcedTransport, composerDelivery ?? 'chain')
+    if (capReason) return capReason
+    const plainCapReason = plaintextSendBlockedByCapabilitiesReason(apiStatus, encrypted, forcedTransport)
+    if (plainCapReason) return plainCapReason
     return undefined
   }, [
     sending,
@@ -375,6 +392,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     meshKlartextRecipientOk,
     meshPlaintextBlocked,
     meshPath4Blocked,
+    apiStatus,
+    forcedTransport,
+    composerDelivery,
     groupMailboxInternetChain,
     groupTeamBroadcastReady,
     isGroupChannel,
