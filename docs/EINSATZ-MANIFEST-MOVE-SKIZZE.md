@@ -1,6 +1,6 @@
 # Move-Skizze: `store_einsatz_manifest`
 
-**Status:** Entwurf (nicht im Build / nicht deployed).  
+**Status:** Implementiert in **`move-test/sources/messaging.move`** (Teil von `deploy:move-package`); **Mainnet-Registry-Deploy** manuell — **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`**.  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md` § H.33** (Betriebsmodi **A** Testnet+Anker, **B** Mainnet direkt, **C** Mainnet ohne Rollup)  
 **Verwandt:** **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`**, **`docs/LORA-IOTA-DELAYED-UPLOAD-SPEC.md`**, **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**
 
@@ -351,4 +351,4 @@ Core-Helfer analog `fetchTeamPlainBroadcastRpcRows` — neuer Typ `EinsatzManife
 
 ---
 
-*Stand: 2026-06-02 — Skizze für Review; kein Bestandteil von `npm run deploy:move-package` bis Phase H.33.2.*
+*Stand: 2026-06-02 — Move im Repo; Registry einmalig per `npm run print:create-einsatz-manifest-registry` → `apply:einsatz-manifest-registry-from-tx`.*

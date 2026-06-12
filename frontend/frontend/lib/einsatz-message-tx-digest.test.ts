@@ -32,4 +32,16 @@ describe('einsatz-message-tx-digest', () => {
         }
         expect(resolveInboxMessageTxDigest(msg)).toBe('abc123digest')
     })
+
+    it('bevorzugt chainTxDigest-Feld', () => {
+        const msg: Message = {
+            id: 'm2',
+            from: '0x' + 'b'.repeat(64),
+            content: 'Hi',
+            timestamp: 1000,
+            chainNonce: '99',
+            chainTxDigest: 'from-api',
+        }
+        expect(resolveInboxMessageTxDigest(msg)).toBe('from-api')
+    })
 })

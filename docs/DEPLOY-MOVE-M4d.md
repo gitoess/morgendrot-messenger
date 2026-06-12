@@ -29,7 +29,7 @@ cd c:\Users\damast\Desktop\morgendrot
 # 1) Bauen + publizieren → PACKAGE_ID in .env + .morgendrot-package-id
 npm run deploy:move-package
 
-**Enthält u. a.:** `create_private_mailbox`, `create_team_mailbox`, **`store_team_plaintext_broadcast`** (M2c), `create_globals`, Rebate-Purge.
+**Enthält u. a.:** `create_private_mailbox`, `create_team_mailbox`, **`store_team_plaintext_broadcast`** (M2c), `create_globals`, Rebate-Purge, **§ H.33** `create_einsatz_manifest_registry` / `store_einsatz_manifest` (Registry-Setup: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`**).
 
 **M2c (Gruppenchat 1× Fee):** **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`**
 

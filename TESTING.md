@@ -30,6 +30,8 @@ Alle Funktionen nacheinander testen und abhaken. Voraussetzung: Schritte aus **`
 
 **Reihenfolge (lokal, Repo-Root):**
 
+**Kurz (CI-Spiegel Frontend + Core):** **`npm run check:frontend`** — Core-Unit, ESLint, madge, `tsc`, Vitest (ohne `next build`).
+
 | # | Kommando | Zweck |
 |---|-----------|--------|
 | 1 | **`npx tsc --noEmit`** | Root-Typecheck (**nur** `src/**` laut Root-`tsconfig.json`) — kann **TS6059** melden, wenn `src/` über Workspace auf **`packages/morgendrot-core`** zeigt; dann Schritt **2** + **`npm run test:core`** als wirksamer Spiegel bis Root-/tsconfig erweitert wird |

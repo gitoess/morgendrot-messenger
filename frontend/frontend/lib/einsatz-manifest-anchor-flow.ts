@@ -29,7 +29,7 @@ export type RunEinsatzManifestAnchorFlowResult =
     | { ok: true; manifest: EinsatzManifestV1; digest?: string; downloaded: boolean; anchored: boolean }
     | { ok: false; error: string }
 
-function resolveEinsatzId(apiStatus?: ApiStatus | null): string {
+export function resolveEinsatzIdFromHandoff(apiStatus?: ApiStatus | null): string {
     const snap = readLocalHandoffAppliedSnapshot()
     const label = snap?.handoffLabel?.trim() || 'einsatz'
     const pkg = (snap?.packageId || apiStatus?.packageId || 'local').trim()
@@ -56,7 +56,7 @@ export async function buildEinsatzManifestFromInbox(opts: {
     }
     const lastSeq = readEinsatzManifestLastAnchoredSequence()
     const manifest = await buildEinsatzManifestV1({
-        einsatzId: resolveEinsatzId(opts.apiStatus),
+        einsatzId: resolveEinsatzIdFromHandoff(opts.apiStatus),
         handoffLabel: readLocalHandoffAppliedSnapshot()?.handoffLabel,
         packageId: pkg,
         chainMode: opts.chainMode,

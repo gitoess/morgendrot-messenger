@@ -29,7 +29,11 @@ import {
     tryAnchorEinsatzManifestViaDirectIota,
     writeBossMainnetRpcOverride,
 } from '@/frontend/lib/direct-iota-einsatz-manifest-anchor'
-import { writeAnchoredManifestFromV1 } from '@/frontend/lib/einsatz-manifest-anchor-cache'
+import {
+    readLastEinsatzManifestAnchorMeta,
+    writeAnchoredManifestFromV1,
+} from '@/frontend/lib/einsatz-manifest-anchor-cache'
+import { probeEinsatzManifestSequenceOnChain } from '@/frontend/lib/einsatz-manifest-on-chain-probe'
 import { Button } from '@/components/ui/button'
 
 export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) {
@@ -49,8 +53,10 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
     const [preview, setPreview] = useState<EinsatzManifestV1 | null>(null)
     const [imported, setImported] = useState<EinsatzManifestV1 | null>(null)
     const [lastAnchorDigest, setLastAnchorDigest] = useState('')
+    const [onChainProbe, setOnChainProbe] = useState('')
     const fileRef = useRef<HTMLInputElement>(null)
     const lastSeq = readEinsatzManifestLastAnchoredSequence()
+    const lastAnchorMeta = readLastEinsatzManifestAnchorMeta()
     const activeManifest = preview ?? imported
     const canAnchor = canTryEinsatzManifestAnchorSubmit(registryId)
 
@@ -141,6 +147,33 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
         }
     }
 
+    const onProbeOnChain = async () => {
+        const seq = activeManifest?.sequence ?? lastAnchorMeta?.sequence ?? lastSeq
+        if (!seq || seq < 1) {
+            setOnChainProbe('Keine Sequenz zum Prüfen — zuerst Manifest bauen oder ankern.')
+            return
+        }
+        setBusy(true)
+        setOnChainProbe('')
+        try {
+            const out = await probeEinsatzManifestSequenceOnChain({
+                apiStatus: p.apiStatus,
+                sequence: seq,
+            })
+            if (!out.ok) {
+                setOnChainProbe(out.error)
+                return
+            }
+            setOnChainProbe(
+                out.exists
+                    ? `Sequenz ${out.sequence} ist on-chain unter der Registry.`
+                    : `Sequenz ${out.sequence} nicht gefunden (noch nicht angekert oder falsche Registry).`
+            )
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const onAnchor = async () => {
         if (!activeManifest) return
         setBusy(true)
@@ -224,6 +257,16 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
                 </Button>
                 <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!registryId || busy}
+                    title="Registry per RPC prüfen (Dynamic Field)"
+                    onClick={() => void onProbeOnChain()}
+                >
+                    On-chain prüfen
+                </Button>
+                <Button
+                    type="button"
                     variant="default"
                     size="sm"
                     disabled={!activeManifest || !canAnchor || busy}
@@ -246,6 +289,27 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
             />
 
             {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
+            {onChainProbe ? <p className="text-xs text-muted-foreground">{onChainProbe}</p> : null}
+            {lastAnchorMeta ? (
+                <p className="text-xs text-muted-foreground">
+                    Letzter lokaler Anker: Sequenz {lastAnchorMeta.sequence},{' '}
+                    {lastAnchorMeta.manifest_hash.slice(0, 12)}…
+                    {lastAnchorMeta.digest ? (
+                        <>
+                            {' '}
+                            —{' '}
+                            <a
+                                href={explorerTxUrlForMainnetAnchor(lastAnchorMeta.digest)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-medium text-primary underline-offset-2 hover:underline"
+                            >
+                                Explorer ({shortTxDigestLabel(lastAnchorMeta.digest)})
+                            </a>
+                        </>
+                    ) : null}
+                </p>
+            ) : null}
             {lastAnchorDigest ? (
                 <p className="text-xs">
                     <a

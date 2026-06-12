@@ -34,6 +34,8 @@ export interface Message {
   chainNonce?: string
   /** true: Nachricht liegt im Rebased-Mailbox-Objekt und kann on-chain gepurgt werden */
   chainPurgeable?: boolean
+  /** Optional: IOTA-TX-Digest (Tangle-Inventar, API oder Manifest). */
+  chainTxDigest?: string
   /** pairwise = 1:1 MsgKey; team-broadcast = TeamPlainBroadcastKey */
   chainPurgeKind?: 'pairwise' | 'team-broadcast'
   /** Wire hatte [[MORG_PINNWAND_V1]] — bleibt gesetzt, auch wenn UI-Marker entfernt wird. */

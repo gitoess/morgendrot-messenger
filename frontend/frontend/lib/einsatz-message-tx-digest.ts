@@ -3,8 +3,10 @@
 import type { Message } from '@/frontend/lib/types'
 import { isTangleInventoryUserMessage, loadTangleInventory } from '@/frontend/lib/tangle-inventory'
 
-/** Lokaler Digest aus Tangle-Inventar (gesendete / gespiegelte Mailbox-TXs). */
+/** Lokaler Digest aus Message-Feld oder Tangle-Inventar (gesendete / gespiegelte Mailbox-TXs). */
 export function resolveInboxMessageTxDigest(msg: Message): string | undefined {
+    const fromField = msg.chainTxDigest?.trim()
+    if (fromField) return fromField
     const nonce = msg.chainNonce?.trim()
     if (!nonce) return undefined
     const matches = loadTangleInventory()

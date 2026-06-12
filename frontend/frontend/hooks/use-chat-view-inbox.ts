@@ -29,6 +29,7 @@ import { EINSATZ_END_CACHE_WIPED_EVENT } from '@/frontend/lib/einsatz-end-cache-
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
+import { enrichInboxMessagesWithChainDigests } from '@/frontend/lib/enrich-inbox-messages-chain-digest'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
@@ -259,7 +260,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         if (res.ok && raw != null) {
           const mapped: Message[] = raw
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
-          const page = mergeAllMessages([...mapped, ...tgJournal])
+          const page = enrichInboxMessagesWithChainDigests(
+            mergeAllMessages([...mapped, ...tgJournal])
+          )
           const liveSource: InboxLiveSource = res.loadedViaRpc === true ? 'rpc' : 'api'
           writeInboxCache(cacheKey, page, liveSource)
           setInboxFromCache(false)

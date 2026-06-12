@@ -665,6 +665,29 @@ async function testChainAnchor() {
     }
 }
 
+async function testParseIotaTxJsonEvents() {
+    console.log('\n--- parse-iota-tx-json-events (H.33) ---');
+    try {
+        const { extractEinsatzManifestRegistryIdFromTxJson } = await import(
+            '../src/shared/parse-iota-tx-json-events.js'
+        );
+        const reg = '0x' + 'c'.repeat(64);
+        const sample = {
+            events: [
+                {
+                    type: '0xpkg::messaging::EinsatzManifestRegistryCreated',
+                    parsedJson: { registry_id: reg, authorized_anchorer: '0x' + 'b'.repeat(64) },
+                },
+            ],
+        };
+        assert(extractEinsatzManifestRegistryIdFromTxJson(sample) === reg, 'registry_id from events');
+        assert(extractEinsatzManifestRegistryIdFromTxJson({}) === null, 'empty → null');
+        ok('EinsatzManifestRegistryCreated.registry_id');
+    } catch (e) {
+        fail('parse-iota-tx-json-events', e);
+    }
+}
+
 // --- Replay load/save (temp file) ---
 async function testReplayStateFile() {
     console.log('\n--- replay-state (load/save) ---');
@@ -1129,6 +1152,7 @@ async function main() {
     await testReplayStateFile();
     await testMonitoringState(monitorStatePath);
     await testChainAnchor();
+    await testParseIotaTxJsonEvents();
 
     try { fs.unlinkSync(monitorStatePath); fs.rmdirSync(monitorDir); } catch {}
 

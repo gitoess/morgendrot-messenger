@@ -11,7 +11,10 @@ import {
     resolveEinsatzInboxMessageBadges,
     type EinsatzInboxMessageBadges,
 } from '@/frontend/lib/einsatz-inbox-badges'
-import { buildInboxMessageTxDigestMap } from '@/frontend/lib/einsatz-message-tx-digest'
+import {
+    buildInboxMessageTxDigestMap,
+    resolveInboxMessageTxDigest,
+} from '@/frontend/lib/einsatz-message-tx-digest'
 import type { Message } from '@/frontend/lib/types'
 
 const TANGLE_INVENTORY_LS = 'morgendrot.tangleInventory.v1'
@@ -76,7 +79,8 @@ export function useEinsatzInboxBadges(messages: readonly Message[]): {
     }, [anchoredHashes, chainMode, entryHashById])
 
     const getTxDigestForMessage = useMemo(() => {
-        return (msg: Message): string | undefined => txDigestById.get(msg.id)
+        return (msg: Message): string | undefined =>
+            txDigestById.get(msg.id) ?? resolveInboxMessageTxDigest(msg)
     }, [txDigestById])
 
     return { getBadgesForMessage, getTxDigestForMessage, chainMode }

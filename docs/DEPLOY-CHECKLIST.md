@@ -13,6 +13,7 @@
 |---|---------|---------|
 | 1 | Move-Package deployen → **`PACKAGE_ID`** | Ja |
 | 2 | **`create_globals`** → Registry-IDs | Ja (pro neuer PACKAGE_ID) |
+| 2b | **§ H.33** `create_einsatz_manifest_registry` (Mainnet, Boss) | Optional (Modus A/B) |
 | 3 | **`.env`** aktualisieren | Ja |
 | 4 | Backend **neu starten** | Ja |
 | 5 | **`package-profiles.manifest.json`** pflegen + Sync | Ja (Bundle/Helfer) |
@@ -49,6 +50,8 @@ Entscheidungshilfe: **`docs/DEPLOY-MOVE-UPGRADE-VS-PUBLISH.md`**.
 
 **M2c Team-Broadcast:** Nach Deploy zusätzlich **`docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`** (Gruppe ↔ Team-Mailbox, Smoke).
 
+**§ H.33 Einsatz-Manifest:** `create_einsatz_manifest_registry`, `store_einsatz_manifest` im gleichen Modul — Registry-Deploy **nur Mainnet** (Boss): **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`**.
+
 ---
 
 ## 2. `create_globals` — Shared-Objekte anlegen
@@ -81,6 +84,22 @@ node --import tsx -e "import { setEnvKey } from './src/config.js'; setEnvKey('PA
 
 ---
 
+## 2b. § H.33 — `EinsatzManifestRegistry` (optional, Mainnet / Boss)
+
+Nur wenn **Einsatz-On-Chain** Modus **A** oder **B** mit Rollup-Anker genutzt wird — **nicht** für Modus C.
+
+```powershell
+npm run print:create-einsatz-manifest-registry
+# Befehl ausführen → JSON:
+npm run apply:einsatz-manifest-registry-from-tx -- registry-tx.json
+```
+
+Boss-`.env` (nicht ins Helfer-ZIP): `EINSATZ_MANIFEST_REGISTRY_ID`, bei Modus A zusätzlich `MAINNET_RPC_URL` + `MAINNET_PACKAGE_ID`.
+
+Vollständig: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`**.
+
+---
+
 ## 3. `.env` aktualisieren
 
 Mindestens:
@@ -92,6 +111,14 @@ MAILBOX_ID=0x…
 VAULT_REGISTRY_ID=0x…
 COMMAND_REGISTRY_ID=0x…
 USE_MAILBOX=true
+```
+
+Optional (Boss, § H.33):
+
+```env
+EINSATZ_MANIFEST_REGISTRY_ID=0x…
+MAINNET_RPC_URL=https://api.mainnet.iota.cafe
+MAINNET_PACKAGE_ID=0x…
 ```
 
 **MY_ADDRESS**, Partner, Signer, Gas usw. unverändert lassen, sofern dieselbe Wallet weiter genutzt wird.
