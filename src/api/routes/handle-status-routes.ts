@@ -289,6 +289,28 @@ export async function handleStatusRoutes(
                 ...(cmdRegTrim && /^0x[a-fA-F0-9]{64}$/i.test(cmdRegTrim)
                     ? { commandRegistryId: cmdRegTrim, commandRegistryIdMasked: mask(cmdRegTrim) }
                     : {}),
+                ...(CFG.EINSATZ_MANIFEST_REGISTRY_ID &&
+                /^0x[a-fA-F0-9]{64}$/i.test(CFG.EINSATZ_MANIFEST_REGISTRY_ID.trim())
+                    ? {
+                          einsatzManifestRegistryId: CFG.EINSATZ_MANIFEST_REGISTRY_ID.trim(),
+                          einsatzManifestRegistryIdMasked: mask(CFG.EINSATZ_MANIFEST_REGISTRY_ID.trim()),
+                      }
+                    : {}),
+                ...(CFG.MAINNET_RPC_URL?.trim()
+                    ? {
+                          mainnetRpcUrlLabel: rpcUrlLabel(CFG.MAINNET_RPC_URL.trim()),
+                          ...(CFG.ROLE === 'boss' || CFG.ROLE === 'kommandant'
+                              ? { mainnetRpcUrl: CFG.MAINNET_RPC_URL.trim() }
+                              : {}),
+                      }
+                    : {}),
+                ...(CFG.MAINNET_PACKAGE_ID &&
+                /^0x[a-fA-F0-9]{64}$/i.test(CFG.MAINNET_PACKAGE_ID.trim())
+                    ? {
+                          mainnetPackageId: CFG.MAINNET_PACKAGE_ID.trim(),
+                          mainnetPackageIdMasked: mask(CFG.MAINNET_PACKAGE_ID.trim()),
+                      }
+                    : {}),
                 ...(moveFeatures ? { moveFeatures } : {}),
                 upgradeCapConfigured: !!upgradeCapId,
                 ...(upgradeCapId

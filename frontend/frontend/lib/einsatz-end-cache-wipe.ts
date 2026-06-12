@@ -34,6 +34,9 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.inbox.overviewLastSeen.v1',
   'morgendrot.inbox.partnerLastSeen.v1',
   HANDOFF_IMPORT_DRAFT_KEY,
+  'morgendrot.einsatz.manifestAnchoredEntryHashes.v1',
+  'morgendrot.einsatz.manifestLastAnchorMeta.v1',
+  'morgendrot.einsatz.manifestLastSequence.v1',
 ] as const
 
 export const EINSATZ_END_LOCAL_STORAGE_PREFIXES = [

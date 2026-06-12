@@ -30,6 +30,11 @@ export type {
   PurgeMailboxMessageVariant,
 } from './purge-message-txb'
 export { buildPurgeTeamPlaintextBroadcastTransaction } from './purge-team-broadcast-txb'
+export { buildStoreEinsatzManifestTransaction } from './einsatz-manifest-txb'
+export type {
+  BuildStoreEinsatzManifestTxInput,
+  EinsatzManifestSourceNetworkU8,
+} from './einsatz-manifest-txb'
 export type { BuildPurgeTeamPlaintextBroadcastTxInput } from './purge-team-broadcast-txb'
 export {
   fetchMessagingEventInboxRpcRows,

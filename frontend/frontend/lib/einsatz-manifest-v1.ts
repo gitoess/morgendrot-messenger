@@ -33,7 +33,24 @@ export type EinsatzManifestV1 = {
     source_package_id: string
     entries: EinsatzManifestEntryV1[]
     merkle_root: string
+    sequence: number
     manifest_hash: string
+}
+
+export type EinsatzManifestBodyForHash = Omit<EinsatzManifestV1, 'manifest_hash'>
+
+export function manifestBodyForHash(manifest: EinsatzManifestV1): EinsatzManifestBodyForHash {
+    const { manifest_hash: _omit, ...body } = manifest
+    return body
+}
+
+export async function computeEinsatzManifestHash(manifest: EinsatzManifestV1): Promise<string> {
+    return sha256HexUtf8(JSON.stringify(manifestBodyForHash(manifest)))
+}
+
+export async function einsatzIdUtf8ToMoveAddress(einsatzId: string): Promise<string> {
+    const h = await sha256HexUtf8(einsatzId.trim() || 'einsatz')
+    return `0x${h.slice(0, 64)}`
 }
 
 function hexToBytes(hex: string): Uint8Array {
@@ -160,7 +177,7 @@ export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input)
         sequence: input.sequence ?? 0,
     }
     const manifest_hash = await sha256HexUtf8(JSON.stringify(body))
-    return { ...body, manifest_hash }
+    return { ...body, manifest_hash, sequence: body.sequence ?? 0 }
 }
 
 export function downloadEinsatzManifestJson(manifest: EinsatzManifestV1): void {

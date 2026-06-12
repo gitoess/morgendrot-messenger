@@ -521,6 +521,9 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'VAULT_REGISTRY_ID': CFG.VAULT_REGISTRY_ID = v; break;
         case 'MAILBOX_ID': CFG.MAILBOX_ID = v; break;
         case 'COMMAND_REGISTRY_ID': CFG.COMMAND_REGISTRY_ID = v; break;
+        case 'EINSATZ_MANIFEST_REGISTRY_ID': CFG.EINSATZ_MANIFEST_REGISTRY_ID = v; break;
+        case 'MAINNET_RPC_URL': CFG.MAINNET_RPC_URL = v; break;
+        case 'MAINNET_PACKAGE_ID': CFG.MAINNET_PACKAGE_ID = v; break;
         case 'EVENT_REGISTRY_ID': CFG.EVENT_REGISTRY_ID = v; break;
         case 'VAULT_FILE': CFG.VAULT_FILE = v; break;
         case 'LOCK_ID': CFG.LOCK_ID = v; break;
@@ -1160,6 +1163,12 @@ export const CFG = {
     OPEN_COMMAND_LIST_KEY: process.env.OPEN_COMMAND_LIST_KEY?.trim() || '',
     /** Optional: CommandRegistry-Objekt-ID für on-chain Öffnen-Wörter (set_open_words). */
     COMMAND_REGISTRY_ID: process.env.COMMAND_REGISTRY_ID?.trim() || '',
+    /** § H.33 — Shared Object `EinsatzManifestRegistry` (Mainnet, Boss-Anker). */
+    EINSATZ_MANIFEST_REGISTRY_ID: process.env.EINSATZ_MANIFEST_REGISTRY_ID?.trim() || '',
+    /** § H.33 Modus A — Mainnet-RPC nur für Boss-Anker (Helfer-Handoff ohne dieses Feld). */
+    MAINNET_RPC_URL: process.env.MAINNET_RPC_URL?.trim() || '',
+    /** § H.33 Modus A — Mainnet-Package für store_einsatz_manifest (kann ≠ Testnet-PACKAGE_ID). */
+    MAINNET_PACKAGE_ID: process.env.MAINNET_PACKAGE_ID?.trim() || '',
     /** Optional: EventTicketRegistry-Objekt-ID für /purge-expired-tickets (nicht Package-ID). */
     EVENT_REGISTRY_ID: process.env.EVENT_REGISTRY_ID?.trim() || '',
     /** Optional: IOTA Streams als letzte Meile (feeless, <1s). Bei OPEN GRANTED zusätzlich Nachricht auf Streams-Kanal. Siehe docs/STREAMS-INTEGRATION.md. */

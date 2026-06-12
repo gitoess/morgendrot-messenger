@@ -53,6 +53,8 @@ import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/i
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
+import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
+import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
 
 function isRowMeshLike(msg: Message): boolean {
   if (msg.source === 'mesh') return true
@@ -166,6 +168,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     isInboxMessageUnread,
     isPinnwandInboxMessage,
   } = p
+
+  const { getBadgesForMessage } = useEinsatzInboxBadges(messages)
 
   const visibilityHintBanner = inboxVisibilityHint ? (
     <div className="p-3 pb-0">
@@ -454,6 +458,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                       {isTeamBroadcastInboxMessage(row.msg) ? 'Team-Broadcast' : 'Mailbox'}
                     </span>
                   )}
+                  <EinsatzInboxMessageBadges badges={getBadgesForMessage(row.msg)} />
                   {protokollMarkedIds.has(row.msg.id) && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-600 dark:text-amber-300" aria-hidden />

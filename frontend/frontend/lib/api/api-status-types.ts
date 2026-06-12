@@ -102,6 +102,12 @@ export type ApiStatus = {
     vaultRegistryIdMasked?: string
     commandRegistryId?: string
     commandRegistryIdMasked?: string
+    einsatzManifestRegistryId?: string
+    einsatzManifestRegistryIdMasked?: string
+    mainnetRpcUrlLabel?: string
+    mainnetRpcUrl?: string
+    mainnetPackageId?: string
+    mainnetPackageIdMasked?: string
     moveFeatures?: {
       teamBroadcastStore: boolean
       teamBroadcastPurge: boolean

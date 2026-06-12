@@ -186,6 +186,14 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 | **ENABLE_PLAINTEXT_CHANNEL** | Ja | false (Handoff-Default) |
 | **NEXT_PUBLIC_DIRECT_IOTA_RPC_URL** | Optional | PWA Light-Client RPC |
 
+**Nur Boss-`.env` (nicht im Helfer-ZIP, Modus A):**
+
+| Key | Bedeutung |
+|-----|-----------|
+| **EINSATZ_MANIFEST_REGISTRY_ID** | Shared Object `EinsatzManifestRegistry` auf Mainnet (nach Deploy) |
+| **MAINNET_RPC_URL** | Mainnet-Fullnode nur für Boss-Anker-TXs |
+| **MAINNET_PACKAGE_ID** | Mainnet-`PACKAGE_ID` für `store_einsatz_manifest` (kann ≠ Testnet-Package) |
+
 **Niemals im Handoff:** Mnemonic, Vault-Passwort, Private Keys, `.morgendrot-vault` Dateien.
 
 ### Feste Defaults im Generator (nicht im UI)
