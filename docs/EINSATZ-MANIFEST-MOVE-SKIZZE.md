@@ -323,7 +323,7 @@ MAINNET_PACKAGE_ID=0x…
 | Endpoint (Vorschlag) | Zweck |
 |----------------------|--------|
 | `fetchEinsatzManifestAnchors(einsatzId)` | Dynamic Fields unter Registry filtern |
-| `verifyMessageInEinsatzAnchor(msgRef, manifestFile, proof)` | Off-chain Merkle-Proof |
+| `verifyMessageInEinsatzAnchor(msgRef, manifestFile, proof)` | Off-chain Merkle-Proof — **`einsatz-manifest-merkle-proof.ts`**, eingebunden in **Verifizieren** |
 
 Core-Helfer analog `fetchTeamPlainBroadcastRpcRows` — **`fetchEinsatzManifestAnchorsForEinsatz`** (`packages/morgendrot-core`); UI **Mainnet-Anker auflisten**.
 

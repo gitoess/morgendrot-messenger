@@ -24,6 +24,8 @@ import {
     parseEinsatzManifestV1Json,
 } from '@/frontend/lib/einsatz-manifest-inbox-match'
 import { verifyEinsatzManifestV1 } from '@/frontend/lib/einsatz-manifest-verify'
+import { verifySampleMerkleProofForManifest } from '@/frontend/lib/einsatz-manifest-merkle-proof'
+import { verifyEinsatzManifestOnMainnetRegistry } from '@/frontend/lib/einsatz-manifest-mainnet-verify'
 import {
     canTryEinsatzManifestAnchorSubmit,
     tryAnchorEinsatzManifestViaDirectIota,
@@ -145,6 +147,15 @@ export function EinsatzManifestAnchorPanel(p: {
                 setStatus(structural.error)
                 return
             }
+            const entryHashes = activeManifest.entries.map((e) => e.entry_hash).sort()
+            const merkleSample = await verifySampleMerkleProofForManifest({
+                sortedEntryHashesHex: entryHashes,
+                merkleRootHex: activeManifest.merkle_root,
+            })
+            if (!merkleSample.ok) {
+                setStatus(`Struktur OK — Merkle: ${merkleSample.error}`)
+                return
+            }
             const inbox = await fetchInboxFromAllOwnedMailboxes({
                 limit: 500,
                 offset: 0,
@@ -156,11 +167,23 @@ export function EinsatzManifestAnchorPanel(p: {
             }
             const match = await matchEinsatzManifestAgainstInbox(activeManifest, inbox.messages)
             if (!match.ok) {
-                setStatus(`Struktur OK — Abgleich: ${match.error}`)
+                setStatus(`Struktur/Merkle OK — Abgleich: ${match.error}`)
                 return
             }
+            let mainnetNote = ''
+            if (registryId) {
+                const onMainnet = await verifyEinsatzManifestOnMainnetRegistry({
+                    manifest: activeManifest,
+                    apiStatus: p.apiStatus,
+                })
+                if (onMainnet.ok) {
+                    mainnetNote = ` Mainnet-Anker Seq. ${onMainnet.row.sequence} bestätigt.`
+                } else {
+                    mainnetNote = ` Mainnet: ${onMainnet.error}`
+                }
+            }
             setStatus(
-                `Verifikation OK — ${match.matchedCount} Treffer, ${match.manifestOnlyCount} nur Manifest, ${match.inboxOnlyCount} nur Posteingang.`
+                `Verifikation OK — ${match.matchedCount} Treffer, ${match.manifestOnlyCount} nur Manifest, ${match.inboxOnlyCount} nur Posteingang — Merkle-Proof OK.${mainnetNote}`
             )
         } finally {
             setBusy(false)

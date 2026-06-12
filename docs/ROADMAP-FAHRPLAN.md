@@ -2216,7 +2216,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Move Ist** — **Deploy-Anleitung** `docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`, Skripte `print:create-einsatz-manifest-registry` / `apply:einsatz-manifest-registry-from-tx` |
 | **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
 | **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Modus-Banner Export, Mainnet-Registry/Anker UI, Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Anker auflisten**; optional API `GET /api/einsatz-manifest/*` offen) |
-| **5 — Verifikation** | Import Manifest + Match Posteingang | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`) |
+| **5 — Verifikation** | Import Manifest + Match Posteingang + Merkle-Proof + Mainnet-Abgleich | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`, `einsatz-manifest-merkle-proof.ts`, `einsatz-manifest-mainnet-verify.ts`) |
 
 **Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
 
@@ -2245,7 +2245,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | 1 | **Modus B:** 3 Mainnet-Nachrichten → Explorer-Link je TX; optional Manifest mit `source_network=mainnet` |
 | 2 | **Modus A:** 3 Testnet-Nachrichten → Manifest → `merkle_root` stabil bei gleicher Sortierung |
 | 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) — **RPC-Probe** `probeEinsatzManifestAnchorOnChain` + Boss-Button „Mainnet-Anker prüfen“ |
-| 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) |
+| 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) | **Ist** (Verifizieren-Button: Proof + optional Mainnet-Registry-Abgleich) |
 | 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel | **Ist** (Banner unter Kettenmodus-Auswahl) |
 | 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset | *(wenn H.32b implementiert)* |
 
