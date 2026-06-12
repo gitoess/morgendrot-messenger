@@ -26,6 +26,19 @@
 | `chainRole` | string | ja — einer von: `kommandant`, `arbeiter`, `lock`, `monitor`, `waerter`, `user` |
 | `roleId` | number | ja (0–63) |
 | `defaultDeploymentChannelTag` | string | nein (max. 120) |
+| `handoffSnapshot` | object | nein — **Phase 4:** voller Handoff-Export-Snapshot (`schemaVersion: 1`) |
+
+### `handoffSnapshot` (optional, Phase 4)
+
+| Feld | Inhalt |
+|------|--------|
+| `presetId` | `helfer` \| `fuehrer` \| `spezial` |
+| `bezeichnungHint` | Standard-Bezeichnung (ohne Datum) |
+| `tuning` | `roleId`, `helperRole`, `simpleMode`, `omitTeamMailboxes` |
+| `capabilitiesOverride` | wie Handoff-Export / Runtime-JSON |
+| `export` | `teamMailboxIds`, `partnerAddresses`, `includeIotaArchivReadme`, optionale Chain-IDs |
+
+**Keine Secrets** (kein Passwort, kein Seed). Parser: `src/shared/einsatz-handoff-template-snapshot.ts`.
 
 **Grenzen:** Max. **100** Templates; gespeicherte Datei max. **256 KiB** UTF-8.
 

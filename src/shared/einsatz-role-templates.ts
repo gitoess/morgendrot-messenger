@@ -5,9 +5,9 @@
 import {
     parseEinsatzHandoffTemplateSnapshot,
     type EinsatzHandoffTemplateSnapshot,
-} from './einsatz-handoff-template-snapshot.js';
+} from './einsatz-handoff-template-snapshot';
 
-export type { EinsatzHandoffTemplateSnapshot } from './einsatz-handoff-template-snapshot.js';
+export type { EinsatzHandoffTemplateSnapshot } from './einsatz-handoff-template-snapshot';
 
 export const EINSATZ_TEMPLATES_MAX = 100;
 export const EINSATZ_TEMPLATES_FILE_MAX_BYTES = 262_144;

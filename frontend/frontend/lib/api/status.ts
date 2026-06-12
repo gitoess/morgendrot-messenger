@@ -32,6 +32,18 @@ type CachedStatusEnvelope = {
   status: ApiStatus
 }
 
+export const API_STATUS_CACHE_KEY = STATUS_CACHE_KEY
+
+/** § H.32b — gecachten `/api/status`-Snapshot entfernen. */
+export function clearCachedApiStatusSnapshot(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.removeItem(STATUS_CACHE_KEY)
+  } catch {
+    /* ignore */
+  }
+}
+
 function cacheStatusSnapshot(status: ApiStatus): void {
   if (typeof window === 'undefined') return
   try {

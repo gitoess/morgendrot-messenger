@@ -4,6 +4,7 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
 import { EinsatzleitungErweitertPanel } from '@/frontend/components/einsatzleitung-erweitert-panel'
 import { BossHelferEinrichtenPanel } from '@/frontend/components/boss-helfer-einrichten-panel'
+import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 
 export type EinsatzleitungViewProps = {
   apiSnapshot?: ApiStatus | null
@@ -32,6 +33,11 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
           />
         </>
       ) : null}
+
+      <EinsatzEndPanel
+        backendOnline={p.apiSnapshot?.backendOnline === true || p.apiSnapshot?.backendRunning === true}
+        onCompleted={p.onRefreshStatus}
+      />
     </div>
   )
 }

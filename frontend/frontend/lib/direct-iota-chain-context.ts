@@ -345,6 +345,21 @@ export function setDirectChainOptimisticFlagsEnabled(on: boolean): void {
   }
 }
 
+/** § H.32b — lokale Ketten-IDs des abgeschlossenen Einsatzes entfernen (ohne Wallet/Chain). */
+export function clearDirectMailboxChainSnapshot(): void {
+  memorySnapshot = null
+  memoryFlagsOnly = null
+  if (typeof window === 'undefined') return
+  try {
+    for (const k of [LS_PKG, LS_MB, LS_SENDER, LS_TTL, LS_FLAGS, LS_SAVED_AT, LS_OPTIMISTIC_FLAGS]) {
+      window.localStorage.removeItem(k)
+    }
+    notifyDirectIotaUiChanged()
+  } catch {
+    /* ignore */
+  }
+}
+
 export function persistDirectMailboxTtlDays(ttlDays: bigint): void {
   if (typeof window === 'undefined') return
   try {

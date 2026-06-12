@@ -11,6 +11,7 @@ import {
 } from '@/frontend/lib/api'
 import Link from 'next/link'
 import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
+import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settings-telegram-notify-on-send'
@@ -148,6 +149,8 @@ export function SettingsView({
       ) : null}
 
       <CapacitorApiBaseCard />
+
+      <EinsatzEndPanel backendOnline={backendOnline} />
 
       {(!slimMessengerEinsatz || !isBossRole) ? (
         <HandoffImportPanel backendOnline={backendOnline} />

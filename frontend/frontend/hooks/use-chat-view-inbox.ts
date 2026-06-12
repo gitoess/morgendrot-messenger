@@ -25,6 +25,7 @@ import {
   pickInboxOverlayRowsForMerge,
 } from '@/frontend/lib/group-inbox-optimistic'
 import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-state'
+import { EINSATZ_END_CACHE_WIPED_EVENT } from '@/frontend/lib/einsatz-end-cache-wipe'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
@@ -352,6 +353,12 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     const iv = window.setInterval(() => void refreshTg(), 30_000)
     return () => window.clearInterval(iv)
   }, [myAddress])
+
+  useEffect(() => {
+    const onEinsatzEnd = () => clearInboxRam()
+    window.addEventListener(EINSATZ_END_CACHE_WIPED_EVENT, onEinsatzEnd)
+    return () => window.removeEventListener(EINSATZ_END_CACHE_WIPED_EVENT, onEinsatzEnd)
+  }, [clearInboxRam])
 
   return {
     messages,

@@ -23,9 +23,9 @@
 
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
-**Nachtrag 2026-06-02 (§ H.32 — Antworten + Einsatz beenden):** Feld-Feedback: Posteingang braucht **„Antworten“** (Kanal + Sendepfad automatisch, nicht nur Weiterleiten); **„Einsatz beenden“** = **Cache & lokale IDs** des alten Einsatzes entfernen (verwirrende alte Nachrichten/IDs), **nicht** Online-Chain — danach neues **Handoff**. Spez **§ H.32**; ergänzt **§ H.0** #6–#7. **Ist 2026-06-02:** **H.32a** umgesetzt (`inbox-reply-context.ts`, Posteingang-Button); **H.32b** offen.
+**Nachtrag 2026-06-02 (§ H.32 — Antworten + Einsatz beenden):** Feld-Feedback: Posteingang braucht **„Antworten“** (Kanal + Sendepfad automatisch, nicht nur Weiterleiten); **„Einsatz beenden“** = **Cache & lokale IDs** des alten Einsatzes entfernen (verwirrende alte Nachrichten/IDs), **nicht** Online-Chain — danach neues **Handoff**. Spez **§ H.32**; ergänzt **§ H.0** #6–#7. **Ist 2026-06-02:** **H.32a** umgesetzt (`inbox-reply-context.ts`, Posteingang-Button); **H.32b Ist** (`einsatz-end-cache-wipe.ts`, Einstellungen + Einsatzleitung).
 
-**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Phase 2–4 Ist:** ZIP + Seed + QR; Capabilities UI + Backend-Gate; **Vorlagen** mit vollem `handoffSnapshot` (Capabilities, Partner, Team). **Backlog:** H.32b Einsatz beenden, H.33 Move. **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
+**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Phase 2–4 Ist:** ZIP + Seed + QR; Capabilities UI + Backend-Gate; **Vorlagen** mit vollem `handoffSnapshot` (Capabilities, Partner, Team). **Backlog:** H.33 Move (Einsatz-On-Chain). **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
 
 **Merge-Ritual (Phase A):** **`TESTING.md`** § *Qualitätsritual vor Merge* — Root **`tsc`**, **`validate:ui`**, **`test:smoke`**; Ordner **`frontend/`** zusätzlich **`lint`**, **`check:circular`**, **`tsc`**, **`test:unit`**. **CI:** **`.github/workflows/frontend-checks.yml`**. **Handbuch:** nach Änderung an **`docs/BOSS-ORIENTIERUNG.md`** / **`PWA-HANDBUCH-OFFLINE.md`:** Root **`npm run sync:handbook`**.
 
@@ -51,7 +51,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 | 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Ist 2026-06-02** (`cab3e2e`) |
 | 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Backlog** (Spec ✅; Code Phase 2+) |
-| 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus (nach Smoke/H.33-Vorbereitung) | **Backlog ganz hinten** |
+| 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus | **Ist 2026-06-02** |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
 
@@ -123,7 +123,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **Build** | Repo klonen → `npm install` → `npm run dev` / `dev:lan` |
 | **Ist** | Export-Assistent, Einsatzleitung compact, Handoff-ZIP, WLAN-QR |
 | **Soll** | Standard-Werkstatt für jeden Einsatz |
-| **Offen** | ggf. weitere API-Routen mit Capability-Gate; H.33 Move / H.32b |
+| **Offen** | ggf. weitere API-Routen mit Capability-Gate; **§ H.33** Move |
 
 #### B/C — PC Messenger-Bundle + Electron
 
@@ -745,7 +745,7 @@ Ziel: **Produkt/UX** und **Einsatzfähigkeit** (Handy, Entsperren, schlanke Ober
 | 4 | **Unlock- & Secret-UX** | **L2 weiter (2026-04-22)** | Spez **`docs/ONBOARDING-WALLET-UX-SPEC.md`**. **Erledigt:** signer-spezifischer Unlock-Dialog; Shop-Tooltip; Recovery **Wallet & Backup**; **„Erste Schritte“** + **`GET /api/help`**. **Neu (2026-03-28):** Next + Lite **„Tresor öffnen / Neu anlegen“**, Mnemonic bei `SIGNER=sdk` **progressiv** + API-**`SIGNER_IMPORT_REQUIRED`**; Next-Tresor **Signer-Import mit speichern**; Vitest **`unlock-response-parse`**. **Neu (2026-03-28):** dritter Einstieg **Seed importieren** (Next + Lite); **H.7** Export-Assistent (ZIP) im Boss-Modus. **Neu (2026-04-22):** optionaler Recovery/Signer-Backup-Dialog direkt nach Unlock (Vault-Passwort → **`/vault-show-signer-import`**, gleicher Backend-Flow wie **Wallet & Backup**). **Offen:** geführter Wizard; optional **Mnemonic per Knopf erzeugen**. |
 | 5 | **PWA-Realität** | **Doku + Checks (2026-03)** | **`docs/PWA-MANUAL-CHECKS.md`** — manuelle Feldprüf + **Vorprüfung am Schreibtisch** (Build/Icons/Handbuch); **§ H.2**; optional Offline-Fallback-Seite Backlog. |
 | 6 | **Posteingang „Antworten“** | **Ist 2026-06-02 → § H.32a** | `inbox-reply-context.ts`, Posteingang-Button (`cab3e2e`). |
-| 7 | **„Einsatz beenden“** | **Backlog ganz hinten → § H.32b** | Cache-Wipe-Ritual **nach** Standalone-Smoke, H.33-Vorbereitung und Feldabnahme — nicht vorher erzwingen. |
+| 7 | **„Einsatz beenden“** | **Ist → § H.32b** | `einsatz-end-cache-wipe.ts`, Einstellungen + Einsatzleitung. |
 
 **Teil erledigt (2026-03-28):** Chat **Wald-Check** (grün/blau/rot) + **Rollenzeile**; Toast bei Basis-Wiederherstellung; **`docs/UX-MESSENGER-INVENTORY.md`** aktualisiert; **Onboarding/Wallet:** **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, README-Einstieg, Unlock-Dialog **signer-abhängig**, Shop-Tooltip; **Recovery:** **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`/vault-show-signer-import`**, Einstellungen **Wallet & Backup**.
 
@@ -1937,7 +1937,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.32 Posteingang „Antworten“ + „Einsatz beenden“ (**UX, Einsatz-Zyklus**)
 
-**Status:** **Teil umgesetzt** (2026-06-02). **H.32a** ✅ Code (`cab3e2e`). **H.32b** **bewusst ans Ende** des Messenger-Einsatz-Zyklus verschoben (nach Feld-Smoke / vor breitem H.33-Code optional). **Ziel:** (a) **Antworten** — erledigt; (b) **Einsatz beenden** — **Cache & lokale IDs** löschen (**nicht** Chain), danach **neues Handoff**.
+**Status:** **Ist** (2026-06-02). **H.32a** ✅ (`cab3e2e`). **H.32b** ✅ `performEinsatzEndCacheWipe()` — Einstellungen + Einsatzleitung. **Ziel:** (a) **Antworten**; (b) **Einsatz beenden** — lokaler Cache/IDs weg (**nicht** Chain), danach **neues Handoff**.
 
 **Priorität:** **Nach** stabilem **§ H.22 M2** (Kanäle 1:1 / Gruppe / Pinnwand + Sendepfad-Matrix) und **§ H.27** (Handshake sichtbar) — **vor** **§ H.28** (Discord/Matrix). **Parallel möglich** zu kleinen **§ H.1b**-Scheiben; **kein** Blocker für Pinnwand-Feldtests.
 
@@ -1974,7 +1974,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 #### H.32b — **„Einsatz beenden“** (Cache & lokale IDs — **ohne Chain**)
 
-**Priorität:** **Ganz hinten** (Entscheidung 2026-06-02) — **nach** **§ H.15** Standalone-Smoke **4b–4f**, **§ H.25a**-Feldtest und sinnvoller **§ H.33**-Vorbereitung. Spec bleibt hier; Implementierung **`performEinsatzEndCacheWipe()`** erst wenn der Einsatz-Kern im Feld sitzt.
+**Status:** **Ist 2026-06-02** — `frontend/frontend/lib/einsatz-end-cache-wipe.ts`, UI `einsatz-end-panel.tsx` (Einstellungen + Einsatzleitung).
 
 **Kern (Präzision):** Es geht **nicht** um Löschen on-chain, sondern darum, dass nach einem Einsatz **keine alten Nachrichten und IDs aus dem lokalen Cache** den nächsten Einsatz verwirren. Chain-Einträge bleiben unberührt (TTL/Purge = separates Boss-Thema, **`docs/EINSATZ-BOSS-ABLAUF.md`**).
 
@@ -2034,7 +2034,7 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 
 1. ~~**H.32a** Antworten~~ — **erledigt** (2026-06-02).
 2. **Dazwischen:** Standalone-Smoke, Consumer-Feldtests, **§ H.33** Phase 2+ (siehe Prioritätentabelle).
-3. **H.32b zuletzt** — `performEinsatzEndCacheWipe()`, Dialog, Vitest (Einsatz-Abschluss-Ritual).
+3. ~~**H.32b** Einsatz beenden~~ — **Ist 2026-06-02**.
 
 **Testplan (Feld):**
 
@@ -2253,7 +2253,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 
 ### H.32b — Einsatz-Abschluss-Ritual (**am Schluss**, Verweis)
 
-**Kurz:** Button **„Einsatz beenden“** → lokaler Cache-Wipe → neues Handoff. **Vollspec:** Abschnitt **§ H.32 → H.32b** oben. **Nicht** vor Standalone-Smoke und Kern-Feldabnahme coden.
+**Kurz:** Button **„Einsatz beenden“** → lokaler Cache-Wipe → neues Handoff. **Vollspec:** Abschnitt **§ H.32 → H.32b** oben. **Ist 2026-06-02.**
 
 ---
 

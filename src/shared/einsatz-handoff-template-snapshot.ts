@@ -4,7 +4,7 @@
 import {
     parseMessengerCapabilitiesOverride,
     type MessengerCapabilitiesOverride,
-} from './messenger-capabilities-matrix.js'
+} from './messenger-capabilities-matrix'
 
 export const EINSATZ_HANDOFF_TEMPLATE_SNAPSHOT_VERSION = 1 as const
 
