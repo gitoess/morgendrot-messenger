@@ -54,9 +54,7 @@ export async function tryFetchHandshakeOffersViaDirectIota(): Promise<HandshakeO
   if (!rpc || !snap) return null
 
   const mailboxObjectIds = collectMailboxIdsForHandshakeScan()
-  if (mailboxObjectIds.length === 0) {
-    return { ok: false, offers: [], outgoingOffers: [], error: 'Keine Mailbox-IDs für Handshake-Scan.' }
-  }
+  // EcdhInit-Events brauchen keine Mailbox — Consumer/Wanderer oft nur Wallet + Event-Handshake.
 
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
@@ -104,9 +102,6 @@ export async function tryFindPeerHandshakeViaDirectIota(peer: string): Promise<{
   if (!rpc || !snap) return null
 
   const mailboxObjectIds = collectMailboxIdsForHandshakeScan()
-  if (mailboxObjectIds.length === 0) {
-    return { ok: false, error: 'Keine Mailbox-IDs für Handshake-Scan.' }
-  }
 
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })

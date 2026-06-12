@@ -50,25 +50,7 @@ function makeProps(overrides: Partial<ChatViewInboxListProps> = {}): ChatViewInb
   } as unknown as ChatViewInboxListProps
 }
 
-describe('ChatViewInboxList handshake inline row', () => {
-  it('renders inline pending handshakes with actions', () => {
-    render(
-      <ChatViewInboxList
-        {...makeProps({
-          pendingHandshakeOffers: [
-            { sender: '0x' + 'a'.repeat(64), nonce: '1', source: 'mailbox' },
-            { sender: '0x' + 'b'.repeat(64), nonce: '2', source: 'event' },
-          ],
-          onAcceptPendingHandshake: vi.fn(),
-          onUseSenderAsPartnerFromInbox: vi.fn(),
-        })}
-      />
-    )
-    expect(screen.getByText(/Handshake-Anfragen \(eingehend\)/i)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /Annehmen/i })).toHaveLength(2)
-    expect(screen.getAllByRole('button', { name: /Als Partner/i })).toHaveLength(2)
-  })
-
+describe('ChatViewInboxList reply action', () => {
   it('shows Antworten button when onReplyToMessage is provided', () => {
     const onReplyToMessage = vi.fn()
     render(<ChatViewInboxList {...makeProps({ onReplyToMessage })} />)
@@ -76,22 +58,5 @@ describe('ChatViewInboxList handshake inline row', () => {
     expect(btn).toBeInTheDocument()
     btn.click()
     expect(onReplyToMessage).toHaveBeenCalledTimes(1)
-  })
-
-  it('shows overflow hint when more than three offers exist', () => {
-    render(
-      <ChatViewInboxList
-        {...makeProps({
-          pendingHandshakeOffers: [
-            { sender: '0x' + 'a'.repeat(64), nonce: '1', source: 'mailbox' },
-            { sender: '0x' + 'b'.repeat(64), nonce: '2', source: 'event' },
-            { sender: '0x' + 'c'.repeat(64), nonce: '3', source: 'event' },
-            { sender: '0x' + 'd'.repeat(64), nonce: '4', source: 'mailbox' },
-          ],
-          onAcceptPendingHandshake: vi.fn(),
-        })}
-      />
-    )
-    expect(screen.getByText(/\+1 weitere Anfrage\(n\) im Posteingang\./i)).toBeInTheDocument()
   })
 })

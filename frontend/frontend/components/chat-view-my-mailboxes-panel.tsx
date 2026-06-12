@@ -10,6 +10,10 @@ import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-v
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
 import { ContactMailboxPhonebookDialog } from '@/frontend/components/contact-mailbox-phonebook-dialog'
 import {
+    TeamMailboxJoinDialog,
+    TeamMailboxShareQrDialog,
+} from '@/frontend/components/team-mailbox-qr-dialog'
+import {
   MessengerHandbookChatLink,
   MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN,
 } from '@/components/messenger-handbook-link'
@@ -111,6 +115,8 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
     kind: 'private' | 'team'
     label?: string
   } | null>(null)
+  const [joinTeamOpen, setJoinTeamOpen] = useState(false)
+  const [shareTeamQr, setShareTeamQr] = useState<{ objectId: string; label?: string } | null>(null)
 
   const reload = useCallback(() => {
     backfillPrivateMailboxLabels()
@@ -180,14 +186,8 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
     p.onMailboxActivated?.()
   }
 
-  const joinTeam = () => {
-    const raw = window.prompt('Team-Mailbox Object-ID (0x + 64 Hex) oder aus QR einfügen:')?.trim()
-    if (!raw || !/^0x[a-fA-F0-9]{64}$/i.test(raw)) {
-      if (raw) p.onStatus?.('Ungültige Object-ID.', 'error')
-      return
-    }
-    const label = window.prompt('Anzeigename (optional):', 'Team Einsatz')?.trim()
-    joinMyTeamMailbox(raw, label || undefined)
+  const handleTeamJoined = (raw: string, label?: string) => {
+    joinMyTeamMailbox(raw, label)
     reload()
     p.onStatus?.(`Team-Mailbox ${maskMid(raw)} beigetreten.`, 'success')
     p.onMailboxActivated?.()
@@ -333,7 +333,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={joinTeam}
+              onClick={() => setJoinTeamOpen(true)}
               className="inline-flex items-center gap-1 rounded-md border border-amber-500/45 bg-amber-500/10 px-2 py-1 text-[10px] font-medium hover:bg-amber-500/15"
             >
               <UserRoundPlus className="h-3 w-3" />
@@ -390,6 +390,14 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                   >
                     <Trash2 className="h-3 w-3" />
                     Aus Liste
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShareTeamQr({ objectId: entry.objectId, label: entry.label })}
+                    className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
+                  >
+                    <QrCode className="h-3 w-3" />
+                    QR teilen
                   </button>
                   <button
                     type="button"
@@ -569,6 +577,24 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             setDeleteDialogId(null)
           }}
           onStatus={p.onStatus}
+        />
+      ) : null}
+
+      <TeamMailboxJoinDialog
+        open={joinTeamOpen}
+        onOpenChange={setJoinTeamOpen}
+        onJoined={handleTeamJoined}
+        onStatus={(msg, tone) => p.onStatus?.(msg, tone === 'error' ? 'error' : 'success')}
+      />
+
+      {shareTeamQr ? (
+        <TeamMailboxShareQrDialog
+          open={Boolean(shareTeamQr)}
+          onOpenChange={(open) => {
+            if (!open) setShareTeamQr(null)
+          }}
+          objectId={shareTeamQr.objectId}
+          label={shareTeamQr.label}
         />
       ) : null}
 

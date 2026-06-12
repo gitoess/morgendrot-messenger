@@ -52,7 +52,7 @@ import {
 } from '@/frontend/lib/standalone-onboarding'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
-import { useChatViewPendingHandshakes } from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import type { MessengerBottomNavTab } from '@/frontend/components/messenger-bottom-nav'
@@ -419,6 +419,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo({ type: 'chat', variant: 'private-chat' })
     setMessengerNavHighlight('messages')
   }, [navigateTo])
+
+  useEffect(() => {
+    const onOpenInbox = () => openMessengerChatView()
+    window.addEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+    return () => window.removeEventListener(OPEN_MESSENGER_INBOX_EVENT, onOpenInbox)
+  }, [openMessengerChatView])
 
   const openVaultView = useCallback(() => {
     navigateTo({ type: 'vault', variant: 'local-vault' })

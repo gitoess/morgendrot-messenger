@@ -168,6 +168,7 @@ export function ProjektDashboard() {
           <MessengerBottomNav
             active={s.messengerBottomNavActive}
             showEinsatzleitung={canAccessEinsatzleitung(s.role)}
+            pendingIncomingHandshakes={s.pendingHandshakes.offers.length}
             onMessages={s.openMessengerChatView}
             onEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
             onPhonebook={() => {

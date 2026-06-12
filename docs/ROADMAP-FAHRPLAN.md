@@ -39,10 +39,10 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 
 | # | Test | Kontext | Status |
 |---|------|---------|--------|
-| 1 | Consumer: Handshake **empfangen** (zweites Profil/Wallet) | Toast, Badge, Posteingang eingehend | **Offen** (nur ein Wallet verfügbar) |
+| 1 | Consumer: Handshake **empfangen** (zweites Profil/Wallet) | Toast, Badge, Posteingang eingehend | **Ist 2026-06-02** (Event-Scan ohne Mailbox; Toast→Posteingang; Bottom-Nav-Badge; **`docs/CONSUMER-HANDSHAKE-RECEIVE-SMOKE.md`**) |
 | 2 | Consumer: Handshake **gesendet** sichtbar | Posteingang „Ausstehende Anfragen (gesendet)“ | **Ist 2026-05-21** |
-| 3 | **Team-Mailbox beitreten** (ID / QR) | Consumer: kein „Team erstellen“, Beitritt muss möglich sein | **Offen** |
-| 4 | **Sendepfad** Flüchtig (Event) vs. Persistent (Mailbox) | Private/Shared-Mailbox, Consumer vs. Einsatz | **Offen** |
+| 3 | **Team-Mailbox beitreten** (ID / QR) | Consumer: kein „Team erstellen“, Beitritt muss möglich sein | **Ist 2026-06-02** (Dialog ID/QR/Paste; `tm`-QR; Boss „QR teilen“; Feld Consumer retesten) |
+| 4 | **Sendepfad** Flüchtig (Event) vs. Persistent (Mailbox) | Private/Shared-Mailbox, Consumer vs. Einsatz | **Ist 2026-06-02** (Composer „Speicher auf der Chain“, Persistenz-Badge, Kontakt-Default Consumer=Event / Einsatz=aktiv; Feld retesten) |
 | 5 | **Private Mailbox Nummerierung/Label** nach Erstellen | UX: `Private #1`, `#2`, … in Meine Mailboxen | **Ist 2026-05-21** |
 | 6 | **Gruppenchat „Mailbox an alle Mitglieder“** | Checkbox im Gruppen-Panel; Consumer-Einschränkung optional | **Arbeiter ✅** sichtbar; Consumer offen |
 | 7 | **§ H.25a** Flüchtig-LoRa-Bild Feldtest | Zwei Heltecs, Vitest grün | **Vitest Schreibtisch ✅** — Feld offen |
@@ -170,7 +170,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **Profil** | `DEPLOYMENT_PROFILE=consumer`, `SIMPLE_MODE=true`, kein Boss-Handoff |
 | **Ist** | Doku **`HANDOFF-UND-MODUS-ZIELBILD.md`**, Presets |
 | **Soll** | Privatnutzung ohne Einsatzleitung |
-| **Offen** | Consumer-Feldtests (Spätere Tests #1, #3, #4) |
+| **Offen** | Consumer-Feldtests (#1 Feld mit 2 Wallets — Smoke-Doku bereit) |
 
 ### Installer & exe — explizit
 

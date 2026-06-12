@@ -52,9 +52,6 @@ type FeedListProps = Pick<
   | 'onSarqNakWire'
   | 'isInboxMessageUnread'
   | 'isPinnwandInboxMessage'
-  | 'pendingHandshakeOffers'
-  | 'onAcceptPendingHandshake'
-  | 'onUseSenderAsPartnerFromInbox'
   | 'sending'
 >
 
@@ -149,7 +146,6 @@ export function ChatViewPinnwandFeedPanel(p: ChatViewPinnwandFeedPanelProps) {
               contactDirectory={contactDirectory}
               isPinnwandInboxMessage={isPinnwandInboxMessage}
               inboxVisibilityHint={null}
-              pendingHandshakeOffers={[]}
             />
           </div>
         )}

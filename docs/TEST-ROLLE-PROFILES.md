@@ -63,10 +63,10 @@ npm run dev:role:kommandant
 | Private Mailbox **Private #N** Label | ✅ (ab Fix) | ✅ (ab Fix) | ✅ Backfill für alte Einträge |
 | Team-Mailbox **beitreten** (ID/QR) | Später | Später | **Beitreten (ID/QR)** in Meine Mailboxen — kein separates Profil-QR |
 | Team-Mitglieder per QR/Profil einladen | — | — | ID kopieren / QR nach Beitritt teilen (kein dediziertes „Einladen“-UI) |
-| Sendepfad Event vs. Persistent (aktive MB) | Später | Später | Später |
+| Sendepfad Event vs. Persistent (aktive MB) | Composer: **Speicher auf der Chain** + Badge | gleich | gleich |
 | Gruppe: **„Mailbox an alle Mitglieder“** | Checkbox sichtbar | ✅ Checkbox | ✅ Checkbox (Gruppenchat später) |
 | Einsatz-Vorlagen Einstellungen | N/A | ✅ **nicht sichtbar** | **Einstellungen** → Lesen (Speichern nur Boss) |
-| Handshake empfangen (2. Wallet) | Später | — | — |
+| Handshake empfangen (2. Wallet) | **`docs/CONSUMER-HANDSHAKE-RECEIVE-SMOKE.md`** | — | — |
 | Handshake Annehmen/Ablehnen | — | — | ✅ |
 | Private + Team aktiv setzen / wechseln | — | — | ✅ Privat; Team nach erfolgreichem Erstellen unter **Team-Mailboxes** |
 

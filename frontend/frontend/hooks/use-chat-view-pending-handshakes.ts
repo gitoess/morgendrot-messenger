@@ -23,6 +23,18 @@ const POLL_MS = 45_000
 
 export const HANDSHAKE_OFFERS_REFRESH_EVENT = 'morg:handshake-offers-refresh'
 
+/** Dashboard/Chat: Posteingang öffnen (z. B. aus Handshake-Toast). */
+export const OPEN_MESSENGER_INBOX_EVENT = 'morg:open-messenger-inbox'
+
+export function notifyOpenMessengerInbox(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.dispatchEvent(new CustomEvent(OPEN_MESSENGER_INBOX_EVENT))
+  } catch {
+    /* ignore */
+  }
+}
+
 function offersEqual(a: PendingHandshakeOffer[], b: PendingHandshakeOffer[]): boolean {
   if (a.length !== b.length) return false
   for (let i = 0; i < a.length; i++) {
@@ -119,6 +131,10 @@ export function useChatViewPendingHandshakes(p: {
             toast.message('Handshake-Anfrage', {
               description: `${label} möchte verschlüsselt verbinden — im Posteingang annehmen oder ablehnen.`,
               duration: 12_000,
+              action: {
+                label: 'Posteingang',
+                onClick: () => notifyOpenMessengerInbox(),
+              },
             })
           }
         } else {

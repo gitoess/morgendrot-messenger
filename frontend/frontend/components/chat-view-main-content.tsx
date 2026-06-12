@@ -1280,9 +1280,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             onSarqNakWire={onSarqNakWire}
             isInboxMessageUnread={isInboxMessageUnread}
             isPinnwandInboxMessage={isPinnwandInboxMessage}
-            pendingHandshakeOffers={pendingHandshakeOffers}
-            onAcceptPendingHandshake={handleAcceptHandshakeFromInbox}
-            onUseSenderAsPartnerFromInbox={handleUseSenderAsPartnerFromInbox}
             sending={sending}
           />
           <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">

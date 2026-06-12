@@ -17,6 +17,7 @@ import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { ChatViewInboxOutgoingHandshakeRequests } from '@/frontend/components/chat-view-inbox-outgoing-handshake-requests'
+import { ChatViewInboxHandshakeRequests } from '@/frontend/components/chat-view-inbox-handshake-requests'
 import { ChatViewInboxCategoryChips } from '@/frontend/components/chat-view-inbox-category-chips'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { Message } from '@/frontend/lib/types'
@@ -160,6 +161,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     sending = false,
     onAcceptPendingHandshake,
     onUseSenderAsPartnerFromInbox,
+    onDeleteIncomingHandshake,
     onReplyToMessage,
     onDeleteOutgoingHandshake,
     onResendOutgoingHandshake,
@@ -250,6 +252,21 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         />
       ) : null}
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
+        {onAcceptPendingHandshake ? (
+          <ChatViewInboxHandshakeRequests
+            offers={pendingHandshakeOffers}
+            loading={pendingHandshakesLoading}
+            sending={sending}
+            directory={contactDirectory}
+            onAccept={onAcceptPendingHandshake}
+            onUseAsPartner={(sender) => onUseSenderAsPartnerFromInbox?.(sender)}
+            onDelete={
+              onDeleteIncomingHandshake
+                ? (sender, nonce, source) => void onDeleteIncomingHandshake(sender, nonce, source)
+                : undefined
+            }
+          />
+        ) : null}
         {onUseSenderAsPartnerFromInbox ? (
           <ChatViewInboxOutgoingHandshakeRequests
             offers={outgoingHandshakeOffers}
@@ -293,9 +310,6 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           isInboxMessageUnread={isInboxMessageUnread}
           isPinnwandInboxMessage={isPinnwandInboxMessage}
           inboxVisibilityHint={inboxVisibilityHint}
-          pendingHandshakeOffers={pendingHandshakeOffers}
-          onAcceptPendingHandshake={onAcceptPendingHandshake}
-          onUseSenderAsPartnerFromInbox={onUseSenderAsPartnerFromInbox}
           onReplyToMessage={onReplyToMessage}
           sending={sending}
         />

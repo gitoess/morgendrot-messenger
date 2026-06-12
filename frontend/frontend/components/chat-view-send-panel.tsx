@@ -27,6 +27,8 @@ import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachmen
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
+import { ChatViewChainPersistenceBadge } from '@/frontend/components/chat-view-chain-persistence-badge'
+import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
 import {
   encryptedHandshakeStatusLabel,
@@ -43,9 +45,6 @@ import {
   MESHTASTIC_CHANNEL_INDEX_MIN,
   normalizeMeshtasticChannelIndex,
 } from '@/frontend/lib/meshtastic-channel-index'
-import { buildComposerMailboxOptions } from '@/frontend/lib/composer-mailbox-options'
-import { getComposerMailboxRecipientHint } from '@/frontend/lib/composer-mailbox-recipient-hint'
-import { readActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import type {
   AttachmentBarPort,
   ComposerDraftPort,
@@ -215,19 +214,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     voiceRecording,
     ...attachmentBarProps
   } = p
-
-  const mailboxOptions = useMemo(() => {
-    const base = buildComposerMailboxOptions({
-      serverMailboxId: apiStatus?.mailboxId,
-      activeSend: readActiveSendMailbox(),
-      contactDirectory,
-    })
-    const cur = composerMailboxObjectId.trim().toLowerCase()
-    if (/^0x[a-f0-9]{64}$/i.test(cur) && !base.some((o) => o.objectId === cur)) {
-      base.unshift({ objectId: cur, label: `Eigene Eingabe · ${cur.slice(0, 10)}…${cur.slice(-6)}` })
-    }
-    return base
-  }, [apiStatus?.mailboxId, contactDirectory, composerMailboxObjectId])
 
   const [dropHover, setDropHover] = useState(false)
   const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
@@ -457,16 +443,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     [recipient, partner, encrypted]
   )
 
-  const mailboxRecipientHint = useMemo(
-    () =>
-      getComposerMailboxRecipientHint({
-        recipientAddress: composerIota,
-        composerMailboxObjectId,
-        contactDirectory,
-      }),
-    [composerIota, composerMailboxObjectId, contactDirectory]
-  )
-
   const composerTelegramIds = useMemo(
     () =>
       resolveComposerTelegramChatIds(recipient, contactDirectory, composerIota, {
@@ -674,46 +650,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               </>
             ) : null}
             {!showTelegramField && showMailboxUi && !groupMailboxSendAll ? (
-              <div className="mt-2 space-y-1.5">
-                <label className="mb-0 block text-xs font-medium text-muted-foreground">
-                  Mailbox · Object-ID (0x)
-                </label>
-                <select
-                  value={
-                    composerMailboxObjectId.trim().toLowerCase() &&
-                    /^0x[a-f0-9]{64}$/i.test(composerMailboxObjectId.trim())
-                      ? composerMailboxObjectId.trim().toLowerCase()
-                      : ''
+              <div className="mt-2">
+                <ChatViewContactSendMailboxSelect
+                  recipientWallet={composerIota}
+                  contactDirectory={contactDirectory ?? {}}
+                  serverMailboxId={apiStatus?.mailboxId}
+                  onTargetChange={(_target, resolvedObjectId) =>
+                    onComposerMailboxObjectIdChange?.(resolvedObjectId)
                   }
-                  onChange={(e) => onComposerMailboxObjectIdChange?.(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="">Standard (Event — keine feste Mailbox-ID)</option>
-                  {mailboxOptions.map((o) => (
-                    <option key={o.objectId} value={o.objectId}>
-                      {o.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-muted-foreground">
-                  Bekannte IDs aus Server, aktiver Mailbox, Einstellungen → Meine Mailboxen und Telefonbuch. Leer = Event.
-                </p>
-                {mailboxRecipientHint.show ? (
-                  <p
-                    role="status"
-                    className={`flex gap-1.5 rounded-md border px-2 py-1.5 text-[10px] leading-snug ${
-                      mailboxRecipientHint.tone === 'mismatch'
-                        ? 'border-amber-500/45 bg-amber-500/10 text-amber-950 dark:text-amber-50'
-                        : 'border-border/70 bg-muted/25 text-muted-foreground'
-                    }`}
-                  >
-                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                    <span>
-                      <span className="font-medium text-foreground">{mailboxRecipientHint.message}</span>{' '}
-                      {mailboxRecipientHint.detail}
-                    </span>
-                  </p>
-                ) : null}
+                />
               </div>
             ) : null}
           </div>
@@ -851,6 +796,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             encrypted={encrypted}
             className="mb-2"
           />
+          {!isTelegramDelivery &&
+          forcedTransport === 'internet' &&
+          (showMailboxUi || groupMailboxSendAll) ? (
+            <ChatViewChainPersistenceBadge
+              mode={messagingPersistenceMode}
+              encrypted={encrypted}
+              className="mb-2"
+            />
+          ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}

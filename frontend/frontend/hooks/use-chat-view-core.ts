@@ -40,6 +40,12 @@ import {
   readComposerMailboxObjectId,
   writeComposerMailboxObjectId,
 } from '@/frontend/lib/composer-mailbox-object-id'
+import {
+  readContactSendMailboxTarget,
+  writeContactSendMailboxTarget,
+} from '@/frontend/lib/contact-mailbox-slots'
+import { defaultContactSendMailboxTarget } from '@/frontend/lib/contact-send-mailbox-default'
+import { composerMailboxIdForSendTarget } from '@/frontend/lib/sync-composer-mailbox-from-target'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { applyMorgPkgItemToComposer } from '@/frontend/lib/apply-morg-pkg-item-to-composer'
@@ -283,15 +289,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
 
   const [composerMailboxObjectId, setComposerMailboxObjectIdState] = useState('')
 
-  useEffect(() => {
-    const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
-    if (/^0x[a-f0-9]{64}$/i.test(addr)) {
-      setComposerMailboxObjectIdState(readComposerMailboxObjectId(addr))
-    } else {
-      setComposerMailboxObjectIdState('')
-    }
-  }, [recipient, partner, encrypted])
-
   const setComposerMailboxObjectId = useCallback(
     (id: string) => {
       const normalized = id.trim().toLowerCase()
@@ -311,6 +308,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
         forcedTransport,
         deliveryChannel: composerDelivery,
         composerMailboxObjectId,
+        contactDirectory: directory,
         isGroupChannel: isGroup,
         groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
       }),
@@ -321,6 +319,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       forcedTransport,
       composerDelivery,
       composerMailboxObjectId,
+      directory,
       isGroup,
     ]
   )
@@ -369,6 +368,49 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       localPackageId: inboxPackageFilter.trim(),
       probeGeolocationForDeviceTime: isPrivate,
     })
+
+  useEffect(() => {
+    const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/i.test(addr)) {
+      setComposerMailboxObjectIdState('')
+      return
+    }
+    const savedComposer = readComposerMailboxObjectId(addr)
+    const savedTarget = readContactSendMailboxTarget(addr)
+    if (savedComposer) {
+      setComposerMailboxObjectIdState(savedComposer)
+      return
+    }
+    if (savedTarget && savedTarget !== 'event') {
+      const mb = composerMailboxIdForSendTarget({
+        recipientWallet: addr,
+        target: savedTarget,
+        contactDirectory: directory,
+        serverMailboxId: apiStatus?.mailboxId,
+      })
+      setComposerMailboxObjectIdState(mb)
+      return
+    }
+    setComposerMailboxObjectIdState('')
+  }, [recipient, partner, encrypted, directory, apiStatus?.mailboxId])
+
+  useEffect(() => {
+    const addr = resolveComposerIotaAddress(recipient, partner, encrypted).trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/i.test(addr)) return
+    if (readComposerMailboxObjectId(addr)) return
+    if (readContactSendMailboxTarget(addr)) return
+    const def = defaultContactSendMailboxTarget(apiStatus)
+    if (def === 'event') return
+    writeContactSendMailboxTarget(addr, def)
+    const mb = composerMailboxIdForSendTarget({
+      recipientWallet: addr,
+      target: def,
+      contactDirectory: directory,
+      serverMailboxId: apiStatus?.mailboxId,
+    })
+    setComposerMailboxObjectIdState(mb)
+    if (mb) writeComposerMailboxObjectId(addr, mb)
+  }, [recipient, partner, encrypted, apiStatus, directory])
 
   const inboxOverviewEnabled = useMemo(() => {
     return isSimpleUiMode(apiStatus) || isMessengerHelperRole(role)

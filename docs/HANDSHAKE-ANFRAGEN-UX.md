@@ -14,7 +14,8 @@
 | **Anzeige** | **Eingehend:** grüner Block oben im Posteingang (Annehmen/Ablehnen). **Gesendet:** blauer Block „Ausstehende Anfragen (gesendet)“ — Warte auf Partner. |
 | **Inbox-Zeile** | Zusätzlich im Nachrichtenstrom: kompakte Zeile „Handshake-Anfragen (eingehend)“ mit **Als Partner** / **Annehmen** (max. 3 + Resthinweis); ersetzt den alten doppelten Eingangs-Banner. |
 | **Badge** | Am Posteingang-Titel **und** an der Dashboard-Kachel **„Nachrichten“** (eingehend + gesendet, ohne bereits verbundene). |
-| **Toast** | Bei **neuer** Anfrage ab **erstem** erfolgreichen Poll (pro `sender:nonce` einmal pro Browser-Session). |
+| **Toast** | Bei **neuer** Anfrage ab **erstem** erfolgreichen Poll (pro `sender:nonce` einmal pro Browser-Session). Aktion **Posteingang** öffnet Nachrichten-Ansicht. |
+| **Bottom-Nav** | Consumer-Layout: Badge an **Nachrichten** (nur eingehend). |
 | **Löschen** | **Löschen** im Posteingang: lokal ausblenden; bei **Mailbox**-Eintrag zusätzlich `/purge-handshake` on-chain (ENABLE_PURGE + MAILBOX_ID). Event-only nur lokal. Eingehend + gesendet. |
 | **Annehmen** | Wie „Handshake annehmen“ → Partner setzen + Connect. |
 
