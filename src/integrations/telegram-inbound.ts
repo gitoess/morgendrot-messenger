@@ -7,6 +7,10 @@ import {
     appendTelegramJournalEntry,
     resolveContactKeyByTelegramChatId,
 } from './telegram-journal.js';
+import {
+    maskPackageIdForTelegramStatus,
+    tryHandleTelegramBotCommand,
+} from './telegram-bot-commands.js';
 
 export type TelegramInboundMode = 'off' | 'longPoll' | 'webhook';
 
@@ -77,10 +81,51 @@ export function parseTelegramUpdateMessage(update: unknown): {
     return { chatId, text, fromLabel, updateId, date };
 }
 
+
+async function buildTelegramBotCommandDeps(): Promise<Parameters<typeof tryHandleTelegramBotCommand>[1]> {
+    const { CFG } = await import('../config.js');
+    const { readTelegramIntegrationConfig, sendTelegramMessage } = await import('./telegram-integration.js');
+    const tgCfg = readTelegramIntegrationConfig();
+    const adminId = tgCfg?.adminChatId?.trim() ?? '';
+
+    return {
+        isChatAllowed: (id) => {
+            const c = id.trim();
+            if (isInboundTelegramChatAllowed(c)) return true;
+            return Boolean(adminId && adminId === c);
+        },
+        getBotToken: () => tgCfg?.botToken?.trim() || null,
+        buildStatusContext: () => ({
+            role: String(CFG.ROLE || '—'),
+            handoffLabel: String(CFG.HANDOFF_LABEL || '').trim() || '—',
+            packageIdMasked: maskPackageIdForTelegramStatus(String(CFG.PACKAGE_ID || '')),
+            apiPort: Number(CFG.API_PORT) || 0,
+            uiPort: Number(CFG.UI_PORT) || 0,
+            telegramEnabled: tgCfg?.enabled === true && Boolean(tgCfg.botToken),
+            inboundMode: tgCfg?.inboundMode ?? 'off',
+            inboundPollActive: isTelegramInboundPollRunning(),
+        }),
+        sendMessage: sendTelegramMessage,
+    };
+}
+
 /** Webhook-Body (ein Update) oder einzelnes Update-Objekt. */
-export function ingestTelegramInboundUpdate(update: unknown): { stored: boolean; reason?: string } {
+export async function ingestTelegramInboundUpdate(
+    update: unknown
+): Promise<{ stored: boolean; reason?: string; commandReply?: boolean }> {
     const parsed = parseTelegramUpdateMessage(update);
     if (!parsed) return { stored: false, reason: 'ignored' };
+
+    const cmdResult = await tryHandleTelegramBotCommand(parsed, await buildTelegramBotCommandDeps());
+    if (cmdResult.handled) {
+        if (cmdResult.error) {
+            logger.warn(`Telegram Bot-Kommando: ${cmdResult.error}`);
+        } else {
+            logger.info(`Telegram Bot-Kommando beantwortet (Chat ${parsed.chatId}).`);
+        }
+        return { stored: false, commandReply: true, reason: cmdResult.error ? 'command_reply_failed' : 'command' };
+    }
+
     if (!isInboundTelegramChatAllowed(parsed.chatId)) {
         logger.info(
             `Telegram Eingang ignoriert (Chat ${parsed.chatId} nicht im Telefonbuch — Partner-Chat-ID dort eintragen).`

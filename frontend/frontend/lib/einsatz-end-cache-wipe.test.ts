@@ -26,6 +26,7 @@ describe('einsatz-end-cache-wipe (H.32b)', () => {
     window.localStorage.setItem('morgendrot.directChain.packageId', '0x' + 'a'.repeat(64))
     window.localStorage.setItem(API_STATUS_CACHE_KEY, '{}')
     window.localStorage.setItem('morgendrot.handoff.localApplied.v1', '{}')
+    window.localStorage.setItem('morgendrot.einsatz.manifestLastSequence.v1', '3')
     for (const k of EINSATZ_END_LOCAL_STORAGE_KEYS) {
       window.localStorage.setItem(k, '[]')
     }
@@ -36,6 +37,7 @@ describe('einsatz-end-cache-wipe (H.32b)', () => {
     expect(window.localStorage.getItem(API_STATUS_CACHE_KEY)).toBeNull()
     expect(window.localStorage.getItem('morgendrot.directChain.packageId')).toBeNull()
     expect(window.localStorage.getItem('morgendrot.handoff.localApplied.v1')).toBeNull()
+    expect(window.localStorage.getItem('morgendrot.einsatz.manifestLastSequence.v1')).toBeNull()
     expect(window.sessionStorage.getItem('morg.pinnwand.pinned.ids.v1')).toBeNull()
   })
 })

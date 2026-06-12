@@ -147,11 +147,11 @@ export async function handleTelegramIntegrationRoutes(
 
     if (url === '/api/integrations/telegram/webhook' && req.method === 'POST') {
         const data = await readJsonBody(req);
-        const ingested = ingestTelegramInboundUpdate(data);
+        const ingested = await ingestTelegramInboundUpdate(data);
         sendJson(
             res,
             200,
-            { ok: true, stored: ingested.stored, reason: ingested.reason },
+            { ok: true, stored: ingested.stored, reason: ingested.reason, commandReply: ingested.commandReply === true },
             cors
         );
         return true;

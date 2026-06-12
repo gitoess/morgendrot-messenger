@@ -196,6 +196,8 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 
 Deploy: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`** — bevorzugt UI **Mainnet-Registry anlegen** (Einsatzleitung → Erweitert); alternativ Terminal `print:create-einsatz-manifest-registry` → `apply:einsatz-manifest-registry-from-tx`.
 
+**API (Boss-PC, optional):** **`GET /api/einsatz-manifest/config|anchors|probe`** — **`docs/API-EINSATZ-MANIFEST.md`**, Smoke **`docs/EINSATZ-MANIFEST-API-SMOKE.md`**. UI nutzt API mit Direct-RPC-Fallback.
+
 **Niemals im Handoff:** Mnemonic, Vault-Passwort, Private Keys, `.morgendrot-vault` Dateien.
 
 ### Feste Defaults im Generator (nicht im UI)

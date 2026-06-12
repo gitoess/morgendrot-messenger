@@ -2,7 +2,7 @@
 
 **Zweck:** **Priorisierte** Lieferliste – nur was **Nutzen** bringt; **geringer Aufwand** oben.  
 **Übergeordnet:** Phasen **A → B → C** in **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Meshtastic-First, kein Feature-Wildwuchs).  
-**Stand:** 2026-03 / **aktualisiert 2026-06-02** (neu **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
+**Stand:** 2026-03 / **aktualisiert 2026-06-02** (neu **§ H.33** API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**; zuvor **Produkt-Matrix** Abgabe Helfer-APK / Boss-PC / Wanderer / Installer; zuvor **§ H.33** Einsatz-On-Chain — **Mainnet direkt** + Testnet→Anker — **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**; zuvor **§ H.32** Posteingang **„Antworten“** + **„Einsatz beenden“**; zuvor Einsatzleitung **Helfer einrichten** compact — **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**; zuvor 2026-05-20 Strategie-Pivot **§ H.0-SIMPLE**: Mesh-First, IOTA optional, Simple Mode; zuvor 2026-05-21 Move-Deploy) (Move-Deploy **`create_team_mailbox`** + **`create_globals`**; § **H.28** Discord/Matrix Backlog; § **H.27** Handshake; § **H.26** Telegram Runtime **Ist-Code**; § **H.25a** Flüchtig-LoRa-Bild) — **§ H.22** Messenger-Kanäle & Mailbox **M1–M4** (`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`); zuvor 2026-03-28 — **§ H.18** TTS/STT (Barrierefreiheit / Freihand, Backlog); **§ H.17** Dashboard/Volldashboard vs. Boss-Ansicht (**Nachtrag**); **§ H.16** Telefonbuch / QR-Onboarding / Boss-LAN (**Nachtrag**); zuvor **2026-04-28** — **§ H.15** Handy-first / Client-IOTA / optionaler Node (**`docs/ARCHITECTURE-HANDY-FIRST-CLIENT-IOTA.md`**, **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6) — **§ H.6b–H.6f** Resilience, Cold-Start, Umzug-Zeitfenster, **Konfiguration (.env vs. Runtime)**, **Android FG-Service + minimale Sync-Ehrlichkeit** (**`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.6f**) — **§ C.0/C.0b** Gliederung + **kanonische Ausführungsreihenfolge** — **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** — **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**; **§ H.12** Sync/Source-of-Truth **`SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**; **§ H.11** Offline-Karten **`OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**; **§ H.10** Sicherheit/Vertrauen **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**; **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**; **§ H.3l** Spike **Web Serial Android** + USB/BLE-Doku **`HELTEC-USB-SERIAL-VS-BLE-TRANSPORT.md`** (Mesh/BLE zuerst); **§ H.3m** LoRa/Notfall: **keine** volle IOTA-TX über Funk, Gateway **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**; **§ H.3k** modularer Kern/Adapter/Interop **`MODULAR-KERN-ADAPTER-INTEROP.md`**; **§ H.3j** EU-Funk/Hardware/Einsatzprofile **`LORA-EU-FUNK-HARDWARE-EINSATZPROFILE.md`**; **§ G** Verweis **`NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**; Lite-Messenger **Boss-Ausnahme** in **§ H.0 #1** / **`UI-ROLLEN-WORKSPACES.md`** § 5; **§ H.9** ATAK/CoT-Backlog (**`ATAK-COT-INTEGRATION-ZIELBILD.md`**); Backend vs. IOTA-RPC + **kein Hybrid-Signatur-Pfad** **`BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`** § 6; **§ H.0**-Tabelle mit Status-Spalte; Box **„kompletter Plan?“** (Phase A/B/C, Heltec = B); **H.0:** Dashboard **„Erste Schritte“**, **`HELP_UI_INTRO`** in **`GET /api/help`**; **PWA:** **`docs/PWA-MANUAL-CHECKS.md`** (**§ H.2**); Onboarding **`docs/ONBOARDING-WALLET-UX-SPEC.md`**; Shop/Stripe **`docs/API-SHOP-SPEC.md`**, **`docs/STRIPE-TEST-SETUP.md`**, Credits/Shadow **`docs/CREDITS-SHADOW-SWEEP-AND-FULFILLMENT.md`**, Voucher **`docs/API-VOUCHER-CLAIM-SPEC.md`**, **`docs/VOUCHER-PRE-MINT-AND-SHOP.md`** §8; **`docs/OPERATIONS-SNAPSHOT-2026-03.md`**, **§ H.3c**, **§ H.3d**, **`TESTING.md`**; **Team-Rollenwechsel (Ist vs. Narrativ):** **`docs/ROLLENWECHSEL-TEAM-EINSATZ.md`**; **§ H.8:** zwei Installationen Dienst/Testnet (**`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`**), Weiterarbeit **A→B**, Aufräumen = fortlaufend (**§ H.5**); **§ H.1a** Qualität/Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**; **§ H.14** Hardening V3 (**`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**: PWA-Speicher, Lite-UI L2, Wipe, Idempotenz, PTB-Audit).  
 **QR-Kontakt v2:** Spezifikation (optional Anchor, API-Basis, Gateway) → **`docs/QR-CONTACT-SCHEMA-V2.md`** (Implementierung später; siehe **H.3b**).  
 
 **Nachtrag 2026-04-15:** Messenger-Realworld **`test:messages*`** — Abschnitt **`/vault-save`** nutzt Server-Sitzung nach UI-Unlock (kein `UNLOCK_PASSWORD_*` nötig); **`purge-handshake`**-Log bei fehlendem **`MAILBOX_ID`** als erwartbarer Noop gekennzeichnet; npm **`test:tickets-accesskey-realworld`** = Tickets/Keys (Alias zu **`test:realworld`**); Chain **`hasValidTicket`** / **`hasValidAccessKey`** mit **`normalizeAddress`** + Pagination, normalisierte IDs in **`getOwnedTickets`** / **`getOwnedAccessKeys`**; Ticket-Realworld-Skript Retries + ECONNREFUSED-Hinweis; **`npm run check:pwa-desk`** (**§ H.2** A+B). Siehe **`docs/CHAT-PROTOKOLL-2026-03-28.md`**.
@@ -25,13 +25,15 @@
 
 **Nachtrag 2026-06-02 (§ H.32 — Antworten + Einsatz beenden):** Feld-Feedback: Posteingang braucht **„Antworten“** (Kanal + Sendepfad automatisch, nicht nur Weiterleiten); **„Einsatz beenden“** = **Cache & lokale IDs** des alten Einsatzes entfernen (verwirrende alte Nachrichten/IDs), **nicht** Online-Chain — danach neues **Handoff**. Spez **§ H.32**; ergänzt **§ H.0** #6–#7. **Ist 2026-06-02:** **H.32a** umgesetzt (`inbox-reply-context.ts`, Posteingang-Button); **H.32b Ist** (`einsatz-end-cache-wipe.ts`, Einstellungen + Einsatzleitung).
 
-**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Phase 2–4 Ist:** ZIP + Seed + QR; Capabilities UI + Backend-Gate; **Vorlagen** mit vollem `handoffSnapshot` (Capabilities, Partner, Team). **Backlog:** H.33 Move (Einsatz-On-Chain). **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
+**Nachtrag 2026-06-02 (§ H.33 API):** Boss/Kommandant/Werkstatt: **`GET /api/einsatz-manifest/config|anchors|probe`** — Mainnet-Anker ohne Browser-Direct-RPC; UI-Fallback in `einsatz-manifest-anchors-list.ts` / `einsatz-manifest-on-chain-probe.ts`. Doku **`docs/API-EINSATZ-MANIFEST.md`**, Smoke **`docs/EINSATZ-MANIFEST-API-SMOKE.md`**.
+
+**Nachtrag 2026-06-02 (Einsatzleitung — Helfer einrichten, Ist):** Kanon: **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`**, Boss-Ablauf **`docs/EINSATZ-BOSS-ABLAUF.md`**. **UI:** Einsatzleitung = Hub-Titel → **Helfer einrichten** (eine Karte: Handoff compact + Capabilities-Matrix + Team/Partner + **ZIP / IOTA / WLAN-QR** + Seed-Block + **Bestehende Geräte** TTL/Purge) → **Erweitert** (nur Chain/Move). **Kein** Schritt 1/2, **keine** grüne Summary-Box, **keine** langen Hilfetexte; **TTL nur** im Block „Bestehende Geräte“ (nicht im Export-Experten). **WLAN-QR:** neben IOTA (nicht unter Erweitert); **`GET /api/lan-install-urls`** ermittelt LAN-IP automatisch (**ohne** Terminal/`npm run dev:lan` im Dialog). **Presets:** Medic-Funker / Reporter in Matrix-Schnellprofilen + Wizard. **Phase 2–4 Ist:** ZIP + Seed + QR; Capabilities UI + Backend-Gate; **Vorlagen** mit vollem `handoffSnapshot` (Capabilities, Partner, Team). **§ H.33** Move/UI/API **Ist** (Deploy Mainnet = Admin). **Doku-Sync:** **`docs/EXPORT-ASSISTENT-REFERENZ.md`**, **`docs/MESSENGER-CHAT-HANDBUCH.md`** § Einsatzleitung.
 
 **Merge-Ritual (Phase A):** **`TESTING.md`** § *Qualitätsritual vor Merge* — Root **`tsc`**, **`validate:ui`**, **`test:smoke`**; Ordner **`frontend/`** zusätzlich **`lint`**, **`check:circular`**, **`tsc`**, **`test:unit`**. **CI:** **`.github/workflows/frontend-checks.yml`**. **Handbuch:** nach Änderung an **`docs/BOSS-ORIENTIERUNG.md`** / **`PWA-HANDBUCH-OFFLINE.md`:** Root **`npm run sync:handbook`**.
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-05-20):** **P0-Doku** **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** + **§ H.0-SIMPLE** (IOTA gekoppelt, Funk-Default). **Keine neuen Move-Publishes** — **TypeScript-Runtime stabilisieren:** (1) `TRANSPORT_PROFILE` + `SIMPLE_MODE` in Config/Status-API, (2) `SimpleModeCapabilities` + Chat-Gates, (3) Handoff-Presets (Helfer = simple + mesh-first), (4) **§ H.1a** Vitest-Scheiben. **Move/Mailbox (Ist):** **`create_team_mailbox`** **✓ 2026-05-21**. **Parallel:** Rollen-Feldtest (**§ Spätere Tests**), **§ H.26** Telegram **Phase B2** Long Polling (Ist-Code, Spez), **§ H.23** Entscheidung Ratchet vs. Stufen-Kennzeichnung. **Zuletzt:** **§ H.15 Stufe 2** Handy-Smoke. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix **explizit nach hinten** (erst nach stabiler Phase B + den offenen H.24/H.25/H.15-Feldthemen).
+**Nächste konkrete Schritte (2026-06-02):** **§ H.33** Code **Ist** (Move + UI + API). **Jetzt:** **Feld-/Smoke** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2/§ 4b–4f, **`docs/EINSATZ-MANIFEST-API-SMOKE.md`**, Consumer-Retest (#1/#3/#4 mit 2 Wallets), **`docs/HANDY-LATER-MANUAL-TESTS.md`**. **Parallel (klein):** **§ H.1a** Vitest-Slices. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 
@@ -44,7 +46,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 3 | **Team-Mailbox beitreten** (ID / QR) | Consumer: kein „Team erstellen“, Beitritt muss möglich sein | **Ist 2026-06-02** (Dialog ID/QR/Paste; `tm`-QR; Boss „QR teilen“; Feld Consumer retesten) |
 | 4 | **Sendepfad** Flüchtig (Event) vs. Persistent (Mailbox) | Private/Shared-Mailbox, Consumer vs. Einsatz | **Ist 2026-06-02** (Composer „Speicher auf der Chain“, Persistenz-Badge, Kontakt-Default Consumer=Event / Einsatz=aktiv; Feld retesten) |
 | 5 | **Private Mailbox Nummerierung/Label** nach Erstellen | UX: `Private #1`, `#2`, … in Meine Mailboxen | **Ist 2026-05-21** |
-| 6 | **Gruppenchat „Mailbox an alle Mitglieder“** | Checkbox im Gruppen-Panel; Consumer-Einschränkung optional | **Arbeiter ✅** sichtbar; Consumer offen |
+| 6 | **Gruppenchat „Mailbox an alle Mitglieder“** | M2c Team-Broadcast (1× TX); pairwise-Checkbox entfernt | **Ist 2026-06-02** (Gruppe + Internet + Mailbox = Team-Postfach; `group-team-broadcast.ts`; Consumer wie Einsatz-Rollen) |
 | 7 | **§ H.25a** Flüchtig-LoRa-Bild Feldtest | Zwei Heltecs, Vitest grün | **Vitest Schreibtisch ✅** — Feld offen |
 | 8 | **§ H.15 Stufe 2** Handy-first Smoke | `docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md` **4b–4f** (Code Standalone/APK) | **Offen (Feld)** |
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
@@ -97,7 +99,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **D — Helfer-APK Standalone B** | Helfer im Einsatz | Next **`frontend/`** (Capacitor) | **Nein** (Pflicht) — nur **Fullnode** RPC | ✅ Code **§ H.15** B.1–B.5 | Chat ohne Boss-PC | **Feld-Smoke 4b–4f** |
 | **E — Helfer-PWA / Browser** | Helfer, Relay-Modus | Next PWA | **Optional** — Basis-URL = Boss-LAN | ✅ | Handoff + Relay | Nicht = Standalone-Abnahme |
 | **F — Smartphone-Bundle (Ordner)** | Übergabe SD/USB | Next + API im Ordner | **Ja** — `npm install` + Start | ✅ `bundle:standalone-smartphone` | Wanderer/Technik-Abgabe | Nicht Helfer-„eine APK“ |
-| **G — Wanderer / Consumer** | Privat, kein Boss | Messenger schlank | Konfiguration selbst | Teilweise Presets | `DEPLOYMENT_PROFILE=consumer` | Handshake #1, Team-Beitritt #3 |
+| **G — Wanderer / Consumer** | Privat, kein Boss | Messenger schlank | Konfiguration selbst | Presets + Handshake/Team-Beitritt **Ist** | `DEPLOYMENT_PROFILE=consumer` | Feld-Retest (#1/#3/#4) |
 | **H — PC „wie Handy ohne Server“** | Helfer/Boss nur RPC | Next (theoretisch) | **Nein** — nur Direkt-RPC | ⚠️ Architektur wie D, **kein** PC-exe-Produkt | Parität zu APK Variante B | Abnahme, Installer, UX |
 
 ### Zwei Achsen (nicht verwechseln)
@@ -123,7 +125,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **Build** | Repo klonen → `npm install` → `npm run dev` / `dev:lan` |
 | **Ist** | Export-Assistent, Einsatzleitung compact, Handoff-ZIP, WLAN-QR |
 | **Soll** | Standard-Werkstatt für jeden Einsatz |
-| **Offen** | ggf. weitere API-Routen mit Capability-Gate; **§ H.33** Move |
+| **Offen** | Mainnet-Registry **Deploy** (Admin, `DEPLOY-MOVE-H33`); Feld-Smoke Anker/API |
 
 #### B/C — PC Messenger-Bundle + Electron
 
@@ -170,7 +172,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | **Profil** | `DEPLOYMENT_PROFILE=consumer`, `SIMPLE_MODE=true`, kein Boss-Handoff |
 | **Ist** | Doku **`HANDOFF-UND-MODUS-ZIELBILD.md`**, Presets |
 | **Soll** | Privatnutzung ohne Einsatzleitung |
-| **Offen** | Consumer-Feldtests (#1 Feld mit 2 Wallets — Smoke-Doku bereit) |
+| **Offen** | Feld-Retest Handshake empfangen (#1), Team-Beitritt (#3), Sendepfad (#4) — Smoke-Dokus bereit |
 
 ### Installer & exe — explizit
 
@@ -1653,7 +1655,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.26 Telegram-Integration — Runtime statt `TG_*` in `.env` (**Produkt / § H.6e / § H.16**)
 
-**Status:** **Teil umgesetzt** (2026-05-17, **B2 Long Polling 2026-05-20**). **Ist-Code:** Monitor-Alarme → **`scripts/telegram-webhook.ts`** / Relay; Runtime **`src/integrations/telegram-integration.ts`**, API **`/api/integrations/telegram`**, UI **Einstellungen → Telegram**, Journal **`.morgendrot-telegram-journal.json`**, Posteingang-Merge; **Eingang:** **`src/integrations/telegram-inbound-poll.ts`** (Long Polling, **Phase B2**). Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**. **Offen:** Phase B3 Sende-Opt-in (Notify nach Forensik-Send); kein Chat-Vollspiegel.
+**Status:** **Teil umgesetzt** (2026-05-17, **B2 Long Polling 2026-05-20**, **B3 Opt-in 2026-05-28**, **B5 `/help`/`/status` 2026-06-02**). **Ist-Code:** Monitor-Alarme → **`scripts/telegram-webhook.ts`** / Relay; Runtime **`src/integrations/telegram-integration.ts`**, API **`/api/integrations/telegram`**, UI **Einstellungen → Telegram**, Journal **`.morgendrot-telegram-journal.json`**, Posteingang-Merge; **Eingang:** **`src/integrations/telegram-inbound-poll.ts`** (Long Polling, **Phase B2**); **Sende-Hinweis:** B3 Opt-in; **Bot-Kommandos:** B5 **`telegram-bot-commands.ts`**. Spez **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`**. **Offen:** B4b Boss-Gruppenalarm; B5 `/nodes`/`/qr`; kein Chat-Vollspiegel.
 
 **Nächste Scheibe B (2026-05-28, ohne Push):** B3 als nicht-blockierenden Hinweisspfad ausführen: Telegram-Notify nur bei explizitem Opt-in und vorhandener `telegramChatId`; Fehler dürfen den IOTA-/LoRa-Send nicht abbrechen; Abnahme über einen positiven und einen negativen Kontaktfall dokumentieren.
 
@@ -1712,6 +1714,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **B1** | Telefonbuch-Feld `telegramChatId` | **Teil-Ist** (`contact-labels.ts`, `tg:`-Schlüssel) |
 | **B2** | **Long Polling Eingang** — ohne öffentliche URL | **Ist** (`telegram-inbound-poll.ts`) — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md` § 4** |
 | **B3** | Sende-Opt-in → Notify nach Send (nicht blockierend) | **Ist (Opt-in)** |
+| **B5** | Bot-Kommandos `/help`, `/status` | **Ist** (`telegram-bot-commands.ts`) — `/nodes`, `/qr` Backlog |
 
 ##### Phase B2 — Long Polling (Ist)
 
@@ -1734,6 +1737,13 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 - Partner mit ID erhält Vorschau-Text; Partner **ohne** ID: kein Fehler am IOTA-Send.
 - LoRa/Pfad-4-Send **ohne** Internet: IOTA/Mesh-Pfad unverändert; Telegram-Fehler **nicht blockierend**.
+
+##### Phase B5 — Bot-Kommandos (Ist)
+
+- **`/help`**, **`/status`** — Antwort per `sendMessage`; Telefonbuch-Chat-ID oder **`adminChatId`**.
+- Kein Journal-Eintrag für Kommandos (Ops-Hilfe, kein Chat-Spiegel).
+
+**Abnahme B5:** Long Poll aktiv → `/status` liefert Rolle + Modus; fremde Chat-ID → keine Antwort.
 
 ##### Backlog B4 — Telegram Mehrfach, Boss-Gruppenalarm, Telefonbuch Multi-Pick (2026-05-28)
 
@@ -1772,7 +1782,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | Username-/Nickname-Mapping | tb0hdan | Kontakt-/Chat-ID-Auflösung mit klaren Fallbacks | **hoch** |
 | Queue + Retry + Backoff | meshgram-plus | Nicht-blockierende Zustellung, robuste Fehlerpfade | **hoch** |
 | Long-message splitting | meshgram-plus | LoRa-/Telegram-konforme Segmentierung | **hoch** |
-| Bot-Kommandos (`/help`, `/status`, `/nodes`, später `/qr`) | tb0hdan | Ops-Hilfen ohne UI-Zwang | **mittel** |
+| Bot-Kommandos (`/help`, `/status` **Ist**; `/nodes`, `/qr` Backlog) | tb0hdan | Ops-Hilfen ohne UI-Zwang | **mittel** |
 | Reaktionen/Standorte | meshgram-plus | optionales Mapping nach Kernstabilisierung | **niedrig-mittel** |
 | KI-Integration (Ollama/OpenAI) | meshgram-plus | nur opt-in, experimenteller Zusatz | **niedrig (Backlog)** |
 
@@ -1786,7 +1796,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 | Scheibe | Inhalt | Definition of Done |
 |---|---|---|
-| **B5.1 Core-Bridge** | Node-Routing, Mapping, Minimal-Kommandos | Telegram In/Out stabil; `/help` + `/status`; nachvollziehbare Journal-Einträge |
+| **B5.1 Core-Bridge** | Node-Routing, Mapping, Minimal-Kommandos | **`/help` + `/status` Ist** (`telegram-bot-commands.ts`); `/nodes`/`/qr` offen |
 | **B5.2 Reliability** | Queue/Retry/Splitting getrennt pro Transport | Telegram-Fehler blockieren Hauptsendepfad nicht; reproduzierbare Retries mit Limits |
 | **B5.3 Boss-Gruppenfluss** | B4b + B4c auf B5-Kern aufsetzen | Boss kann definierte Gruppen alarmieren; Multi-Pick liefert mehrere valide Ziele |
 
@@ -2033,7 +2043,7 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 #### H.32 — Umsetzungsreihenfolge (empfohlen)
 
 1. ~~**H.32a** Antworten~~ — **erledigt** (2026-06-02).
-2. **Dazwischen:** Standalone-Smoke, Consumer-Feldtests, **§ H.33** Phase 2+ (siehe Prioritätentabelle).
+2. **Dazwischen:** Standalone-Smoke, Consumer-Feldtests — **§ H.33** Move/UI/API **Ist** (2026-06-02).
 3. ~~**H.32b** Einsatz beenden~~ — **Ist 2026-06-02**.
 
 **Testplan (Feld):**
@@ -2050,7 +2060,7 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 
 ### H.33 Einsatz-On-Chain: **Mainnet direkt** \| Testnet + Anker (**Archiv, Kosten**)
 
-**Status:** **Teil-Ist 2026-06-02** — `EINSATZ_CHAIN_MODE` im Handoff + Export-Banner, Manifest-Builder, Verifikation, PTB + Boss-UI (**Mainnet-Registry anlegen**, **Auf Mainnet ankern**, **Mainnet-Anker auflisten/prüfen**). Move in `messaging.move`; **Deploy Mainnet** = Admin (`DEPLOY-MOVE-H33`) oder UI-Registry-Button.
+**Status:** **Ist 2026-06-02** — `EINSATZ_CHAIN_MODE` im Handoff + Export-Banner, Manifest-Builder, Verifikation, PTB + Boss-UI (**Mainnet-Registry anlegen**, **Auf Mainnet ankern**, **Mainnet-Anker auflisten/prüfen**), API **`GET /api/einsatz-manifest/*`**. Move in `messaging.move`; **Deploy Mainnet** = Admin (`DEPLOY-MOVE-H33`) oder UI-Registry-Button.
 
 **Priorität:** **Nach** **§ H.32b** (Einsatz-Zyklus) und **§ H.22** (Kanäle stabil). **Vor** breiter **§ H.28**-Integration. **Parallel** zu **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`** (Einzel-/Stapel-Verankerung im Chat) — **H.33** ist der **Einsatz-weite Rollup-Pfad**, nicht der Bubble-Kontextmenü-Pfad.
 
@@ -2247,7 +2257,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) — **RPC-Probe** `probeEinsatzManifestAnchorOnChain` + Boss-Button „Mainnet-Anker prüfen“ |
 | 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) | **Ist** (Verifizieren-Button: Proof + optional Mainnet-Registry-Abgleich) |
 | 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel | **Ist** (Banner unter Kettenmodus-Auswahl) |
-| 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset | *(wenn H.32b implementiert)* |
+| 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset | **Ist** (`einsatz-end-cache-wipe.ts` — `manifestLastSequence`, Anchor-Cache-Keys) |
 
 ---
 

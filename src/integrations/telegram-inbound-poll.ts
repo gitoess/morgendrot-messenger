@@ -120,9 +120,11 @@ async function pollLoop(generation: number): Promise<void> {
             if (typeof upd.update_id === 'number' && upd.update_id >= offset) {
                 offset = upd.update_id + 1;
             }
-            const ingested = ingestTelegramInboundUpdate(upd);
+            const ingested = await ingestTelegramInboundUpdate(upd);
             if (ingested.stored) {
                 logger.info(`Telegram Eingang (Poll): Chat ${String((upd as { message?: { chat?: { id?: number } } }).message?.chat?.id ?? '?')}`);
+            } else if (ingested.commandReply) {
+                logger.info(`Telegram Bot-Kommando (Poll): Chat ${String((upd as { message?: { chat?: { id?: number } } }).message?.chat?.id ?? '?')}`);
             }
         }
         if (offset > 1) writeLastUpdateId(offset - 1);

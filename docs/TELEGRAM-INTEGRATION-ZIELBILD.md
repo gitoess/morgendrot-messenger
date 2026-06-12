@@ -177,13 +177,13 @@ Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingan
 
 ---
 
-## 5. Phase B3 — Notify nach Send (geplant)
+## 5. Phase B3 — Notify nach Send (**Ist**)
 
 | Aspekt | Wert |
 |--------|------|
-| **Auslöser** | Erfolgreicher Forensik-Send **und** Nutzer-Opt-in |
+| **Auslöser** | Erfolgreicher Send **und** Nutzer-Opt-in (`morgendrot.telegramNotifyOnSend`) |
 | **Empfänger** | `telegramChatId` aus Telefonbuch |
-| **Transport** | Relay **`/morgendrot-telegram/notify`** |
+| **Transport** | API **`/api/integrations/telegram/notify`** → Relay **`/morgendrot-telegram/notify`** |
 | **Fehler** | **Nicht blockierend** für IOTA/Mesh-Send |
 
 **JSON (Backend → Relay):**
@@ -197,6 +197,23 @@ Erlaubte eingehende Telegram-Texte erscheinen als **Merge-Zeilen** im Posteingan
 ```
 
 Composer-Checkbox **„Telegram-Hinweis“** — Default **aus**.
+
+---
+
+## 5.1 Phase B5 — Bot-Kommandos `/help`, `/status` (**Ist**)
+
+| Aspekt | Wert |
+|--------|------|
+| **Auslöser** | Textnachricht `/help` oder `/status` (optional `@BotName`) |
+| **Berechtigung** | Telefonbuch-`telegramChatId` **oder** `adminChatId` aus Runtime-Config |
+| **Antwort** | Direkt `sendMessage` über Bot-Token (kein Relay) |
+| **Journal** | Kommandos **nicht** im Posteingang — nur normale Partner-Texte |
+
+**Code:** `src/integrations/telegram-bot-commands.ts`, Anbindung in **`ingestTelegramInboundUpdate`** (Long Poll + Webhook).
+
+**Abnahme:** Bekannte Chat-ID sendet `/status` → Antwort mit Rolle/Modus; `/help` listet Kommandos; fremde Chat-ID → ignoriert.
+
+**Backlog B5:** `/nodes`, `/qr`, B4b Boss-Gruppenalarm.
 
 ---
 
