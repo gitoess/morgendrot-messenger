@@ -132,8 +132,10 @@ export type BuildEinsatzManifestV1Input = {
     packageId: string
     chainMode: EinsatzChainMode
     rpcUrl?: string
-    messages: Message[]
+    messages: readonly Message[]
     sequence?: number
+    /** § H.33 — optional Digest pro Nachricht (Tangle-Inventar / RPC). */
+    resolveTxDigest?: (message: Message) => string | undefined
 }
 
 export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input): Promise<EinsatzManifestV1> {
@@ -148,10 +150,11 @@ export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input)
             timestamp_ms: m.timestamp,
             content,
         })
+        const source_tx_digest = input.resolveTxDigest?.(m)?.trim() || undefined
         entries.push({
             canonical_msg_ref,
             entry_hash,
-            source_tx_digest: undefined,
+            source_tx_digest,
             primary_transport: inferTransport(m),
             channel: inferChannel(m),
             sender: m.from,

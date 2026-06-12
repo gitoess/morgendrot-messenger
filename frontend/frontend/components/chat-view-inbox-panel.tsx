@@ -263,6 +263,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         ) : null}
         <ChatViewInboxList
           loadError={loadError}
+          einsatzRpcHint={apiStatus?.rpcUrlLabel || apiStatus?.network}
         inboxFromCache={inboxFromCache}
         inboxCacheAgeMinutes={inboxCacheAgeMinutes}
           basisUnreachable={basisUnreachable}

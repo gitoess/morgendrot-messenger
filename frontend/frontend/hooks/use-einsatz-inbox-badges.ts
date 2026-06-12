@@ -11,22 +11,33 @@ import {
     resolveEinsatzInboxMessageBadges,
     type EinsatzInboxMessageBadges,
 } from '@/frontend/lib/einsatz-inbox-badges'
+import { buildInboxMessageTxDigestMap } from '@/frontend/lib/einsatz-message-tx-digest'
 import type { Message } from '@/frontend/lib/types'
+
+const TANGLE_INVENTORY_LS = 'morgendrot.tangleInventory.v1'
 
 export function useEinsatzInboxBadges(messages: readonly Message[]): {
     getBadgesForMessage: (msg: Message) => EinsatzInboxMessageBadges
+    getTxDigestForMessage: (msg: Message) => string | undefined
+    chainMode: ReturnType<typeof resolveActiveEinsatzChainMode>
 } {
     const chainMode = resolveActiveEinsatzChainMode()
     const [anchoredHashes, setAnchoredHashes] = useState(() => readAnchoredManifestEntryHashes())
     const [entryHashById, setEntryHashById] = useState<Map<string, string>>(() => new Map())
+    const [txDigestTick, setTxDigestTick] = useState(0)
 
     useEffect(() => {
         const refresh = () => setAnchoredHashes(readAnchoredManifestEntryHashes())
+        const refreshDigests = (e: StorageEvent) => {
+            if (!e.key || e.key === TANGLE_INVENTORY_LS) setTxDigestTick((n) => n + 1)
+        }
         window.addEventListener(EINSATZ_MANIFEST_ANCHOR_CHANGED, refresh)
         window.addEventListener('storage', refresh)
+        window.addEventListener('storage', refreshDigests)
         return () => {
             window.removeEventListener(EINSATZ_MANIFEST_ANCHOR_CHANGED, refresh)
             window.removeEventListener('storage', refresh)
+            window.removeEventListener('storage', refreshDigests)
         }
     }, [])
 
@@ -49,6 +60,11 @@ export function useEinsatzInboxBadges(messages: readonly Message[]): {
         }
     }, [messageIdsKey, messages])
 
+    const txDigestById = useMemo(() => {
+        void txDigestTick
+        return buildInboxMessageTxDigestMap(messages)
+    }, [messageIdsKey, messages, txDigestTick])
+
     const getBadgesForMessage = useMemo(() => {
         return (msg: Message): EinsatzInboxMessageBadges =>
             resolveEinsatzInboxMessageBadges(
@@ -59,5 +75,9 @@ export function useEinsatzInboxBadges(messages: readonly Message[]): {
             )
     }, [anchoredHashes, chainMode, entryHashById])
 
-    return { getBadgesForMessage }
+    const getTxDigestForMessage = useMemo(() => {
+        return (msg: Message): string | undefined => txDigestById.get(msg.id)
+    }, [txDigestById])
+
+    return { getBadgesForMessage, getTxDigestForMessage, chainMode }
 }

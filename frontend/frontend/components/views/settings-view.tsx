@@ -150,7 +150,7 @@ export function SettingsView({
 
       <CapacitorApiBaseCard />
 
-      <EinsatzEndPanel backendOnline={backendOnline} />
+      <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
 
       {(!slimMessengerEinsatz || !isBossRole) ? (
         <HandoffImportPanel backendOnline={backendOnline} />

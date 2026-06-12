@@ -2184,7 +2184,7 @@ Kanonical off-chain JSON (Boss-App baut, SHA-256 → `manifest_hash`; Merkle üb
 **Modus B/C (Mainnet direkt):**
 
 1. Handoff/Export mit **Mainnet-`RPC_URL`** — Banner **„Mainnet / Dienst“** (siehe **§ H.8**).
-2. Helfer senden normal; Posteingang zeigt **Mainnet-Explorer-Links** pro Nachricht.
+2. Helfer senden normal; Posteingang zeigt **Explorer-Links** pro Nachricht (**Ist** wenn Digest im Tangle-Inventar).
 3. **Optional (B):** Einsatzleitung → **„Einsatz-Protokoll verankern“** — sammelt **dieselben** Mainnet-`source_tx_digest`-Werte in ein Rollup-Manifest (`source_network=mainnet`).
 4. **C:** Schritt 3 ausgeblendet; Abschluss = Export-ZIP + Explorer.
 
@@ -2215,7 +2215,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
 | **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Skizze im Repo** — Deploy offen |
 | **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
-| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Modus + Manifest-Panel + Anker-Button) |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Explorer-Links, Kosten-Hinweis, Einsatz-beenden-Mainnet-Checkbox; Deploy: `npm run print:create-einsatz-manifest-registry`) |
 | **5 — Verifikation** | Import Manifest + Match Posteingang | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`) |
 
 **Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.

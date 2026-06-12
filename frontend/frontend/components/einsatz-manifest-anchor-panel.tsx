@@ -5,6 +5,11 @@ import { Anchor } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { fetchInboxFromAllOwnedMailboxes } from '@/frontend/lib/inbox-multi-mailbox-fetch'
 import {
+    buildEinsatzManifestFromInbox,
+    estimateEinsatzManifestAnchorCostHint,
+} from '@/frontend/lib/einsatz-manifest-anchor-flow'
+import { explorerTxUrlForMainnetAnchor, shortTxDigestLabel } from '@/frontend/lib/einsatz-explorer-url'
+import {
     einsatzChainModeShowsManifestAnchorUi,
     describeEinsatzChainModeBanner,
 } from '@morgendrot/shared/einsatz-chain-mode'
@@ -13,11 +18,7 @@ import {
     resolveActiveEinsatzChainMode,
     writeEinsatzManifestLastAnchoredSequence,
 } from '@/frontend/lib/einsatz-chain-mode-local'
-import {
-    buildEinsatzManifestV1,
-    downloadEinsatzManifestJson,
-    type EinsatzManifestV1,
-} from '@/frontend/lib/einsatz-manifest-v1'
+import { downloadEinsatzManifestJson, type EinsatzManifestV1 } from '@/frontend/lib/einsatz-manifest-v1'
 import {
     matchEinsatzManifestAgainstInbox,
     parseEinsatzManifestV1Json,
@@ -29,7 +30,6 @@ import {
     writeBossMainnetRpcOverride,
 } from '@/frontend/lib/direct-iota-einsatz-manifest-anchor'
 import { writeAnchoredManifestFromV1 } from '@/frontend/lib/einsatz-manifest-anchor-cache'
-import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { Button } from '@/components/ui/button'
 
 export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) {
@@ -48,50 +48,33 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
     const [status, setStatus] = useState('')
     const [preview, setPreview] = useState<EinsatzManifestV1 | null>(null)
     const [imported, setImported] = useState<EinsatzManifestV1 | null>(null)
+    const [lastAnchorDigest, setLastAnchorDigest] = useState('')
     const fileRef = useRef<HTMLInputElement>(null)
     const lastSeq = readEinsatzManifestLastAnchoredSequence()
     const activeManifest = preview ?? imported
     const canAnchor = canTryEinsatzManifestAnchorSubmit(registryId)
 
-    const einsatzId = useMemo(() => {
-        const snap = readLocalHandoffAppliedSnapshot()
-        const label = snap?.handoffLabel?.trim() || 'einsatz'
-        const pkg = (snap?.packageId || p.apiStatus?.packageId || 'local').trim()
-        return `${label}-${pkg.slice(0, 10)}`
-    }, [p.apiStatus?.packageId])
-
     const buildManifest = async () => {
         setBusy(true)
         setStatus('')
         setPreview(null)
+        setLastAnchorDigest('')
         try {
-            const inbox = await fetchInboxFromAllOwnedMailboxes({
-                limit: 500,
-                offset: 0,
-                includePrivateMailboxes: true,
-            })
-            if (!inbox.ok) {
-                setStatus(inbox.error || 'Posteingang nicht geladen.')
-                return
-            }
-            const pkg = (p.apiStatus?.packageId || readLocalHandoffAppliedSnapshot()?.packageId || '').trim()
-            if (!pkg) {
-                setStatus('PACKAGE_ID fehlt — Handoff importieren oder Basis verbinden.')
-                return
-            }
-            const manifest = await buildEinsatzManifestV1({
-                einsatzId,
-                handoffLabel: readLocalHandoffAppliedSnapshot()?.handoffLabel,
-                packageId: pkg,
+            const built = await buildEinsatzManifestFromInbox({
+                apiStatus: p.apiStatus,
                 chainMode,
-                rpcUrl: rpcHint,
-                messages: inbox.messages,
-                sequence: lastSeq + 1,
+                rpcHint,
             })
+            if (!built.ok) {
+                setStatus(built.error)
+                return
+            }
+            const manifest = built.manifest
             setPreview(manifest)
             setImported(null)
+            const withDigest = manifest.entries.filter((e) => e.source_tx_digest).length
             setStatus(
-                `${manifest.entries.length} Nachrichten — manifest_hash ${manifest.manifest_hash.slice(0, 12)}…`
+                `${manifest.entries.length} Nachrichten (${withDigest} mit Tx-Digest) — ${estimateEinsatzManifestAnchorCostHint(manifest.entries.length)} — manifest_hash ${manifest.manifest_hash.slice(0, 12)}…`
             )
         } finally {
             setBusy(false)
@@ -184,9 +167,10 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
             }
             writeEinsatzManifestLastAnchoredSequence(activeManifest.sequence)
             writeAnchoredManifestFromV1(activeManifest, { digest: out.digest })
+            if (out.digest) setLastAnchorDigest(out.digest)
             setStatus(
                 out.digest
-                    ? `On-chain verankert — Digest ${out.digest.slice(0, 16)}… — Badges aktualisiert.`
+                    ? `On-chain verankert — Digest ${shortTxDigestLabel(out.digest)} — Badges aktualisiert.`
                     : 'On-chain verankert — Badges aktualisiert.'
             )
         } finally {
@@ -262,6 +246,23 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
             />
 
             {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
+            {lastAnchorDigest ? (
+                <p className="text-xs">
+                    <a
+                        href={explorerTxUrlForMainnetAnchor(lastAnchorDigest)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                        Mainnet-Anker im Explorer öffnen ({shortTxDigestLabel(lastAnchorDigest)})
+                    </a>
+                </p>
+            ) : null}
+            {chainMode === 'testnet-with-mainnet-anchor' && activeManifest ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                    Testnet-Betrieb: Nachrichten liegen auf Testnet — Mainnet-Anker speichert nur Hash/Merkle.
+                </p>
+            ) : null}
             {activeManifest ? (
                 <pre className="max-h-32 overflow-auto rounded border border-border bg-muted/40 p-2 font-mono text-[10px]">
                     {JSON.stringify(

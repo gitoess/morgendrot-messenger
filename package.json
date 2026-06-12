@@ -106,6 +106,7 @@
     "test:wizard-30": "tsx scripts/run-wizard-30.ts",
     "test:move": "cd move-test && iota move test",
     "deploy:move-package": "tsx scripts/deploy-move-package.ts",
+    "print:create-einsatz-manifest-registry": "tsx scripts/print-create-einsatz-manifest-registry.ts",
     "upgrade:move-package": "tsx scripts/upgrade-move-package.ts",
     "test:team-mailbox-create": "tsx scripts/test-create-team-mailbox-command.ts",
     "test:team-broadcast-smoke": "tsx scripts/test-team-broadcast-smoke.ts",

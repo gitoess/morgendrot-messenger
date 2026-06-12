@@ -1,22 +1,38 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Flag } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import type { ApiStatus } from '@/frontend/lib/api'
+import { resolveActiveEinsatzChainMode } from '@/frontend/lib/einsatz-chain-mode-local'
 import { performEinsatzEndCacheWipe } from '@/frontend/lib/einsatz-end-cache-wipe'
+import { runEinsatzManifestAnchorFlow } from '@/frontend/lib/einsatz-manifest-anchor-flow'
+import { explorerTxUrlForMainnetAnchor, shortTxDigestLabel } from '@/frontend/lib/einsatz-explorer-url'
 
 export type EinsatzEndPanelProps = {
   backendOnline?: boolean
+  apiStatus?: ApiStatus | null
   compact?: boolean
   onCompleted?: () => void
 }
 
 export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
+  const chainMode = resolveActiveEinsatzChainMode()
+  const showMainnetAnchorOption = chainMode === 'testnet-with-mainnet-anchor'
+  const rpcHint = p.apiStatus?.rpcUrlLabel || p.apiStatus?.network
+
   const [busy, setBusy] = useState(false)
   const [clearQueues, setClearQueues] = useState(true)
+  const [mainnetAnchor, setMainnetAnchor] = useState(showMainnetAnchorOption)
   const [status, setStatus] = useState('')
+  const [anchorDigest, setAnchorDigest] = useState('')
+
+  const anchorHint = useMemo(() => {
+    if (!showMainnetAnchorOption) return ''
+    return 'Empfohlen: Manifest bauen, Mainnet-Anker-TX senden, dann lokaler Cache-Wipe.'
+  }, [showMainnetAnchorOption])
 
   const handleEndEinsatz = async () => {
     if (
@@ -24,6 +40,9 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
         'Lokale Einsatz-Daten auf diesem Gerät löschen?\n\n' +
           'Posteingang-Cache, Filter und gespeicherte Einsatz-IDs werden entfernt. ' +
           'Nichts auf der Chain. Wallet und Tresor bleiben.\n\n' +
+          (mainnetAnchor && showMainnetAnchorOption
+            ? 'Zuvor: Mainnet-Anker (falls möglich).\n\n'
+            : '') +
           'Danach neues Handoff importieren.'
       )
     ) {
@@ -31,6 +50,28 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
     }
     setBusy(true)
     setStatus('')
+    setAnchorDigest('')
+
+    let digestFromAnchor = ''
+    if (mainnetAnchor && showMainnetAnchorOption) {
+      const anchor = await runEinsatzManifestAnchorFlow({
+        apiStatus: p.apiStatus,
+        chainMode,
+        rpcHint,
+        downloadJson: true,
+        anchorOnChain: true,
+      })
+      if (!anchor.ok) {
+        setBusy(false)
+        setStatus(`Mainnet-Anker fehlgeschlagen: ${anchor.error}`)
+        return
+      }
+      if (anchor.digest) {
+        digestFromAnchor = anchor.digest
+        setAnchorDigest(anchor.digest)
+      }
+    }
+
     const res = await performEinsatzEndCacheWipe({
       clearServerInbox: p.backendOnline === true,
       clearTransportQueues: clearQueues,
@@ -39,9 +80,12 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
     if (!res.ok && res.serverError) {
       setStatus(`Lokal geleert; Server-Cache: ${res.serverError}`)
     } else {
-      setStatus(
-        'Einsatz lokal beendet. Posteingang leer — neues Handoff importieren (Einstellungen).'
-      )
+      const anchorNote = digestFromAnchor
+        ? ' Mainnet-Anker bleibt on-chain.'
+        : mainnetAnchor && showMainnetAnchorOption
+          ? ' Manifest gespeichert (ohne Chain-Digest).'
+          : ''
+      setStatus(`Einsatz lokal beendet.${anchorNote} Neues Handoff importieren (Einstellungen).`)
       p.onCompleted?.()
     }
   }
@@ -80,11 +124,40 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
         </Label>
       </div>
 
-      <Button type="button" variant="outline" disabled={busy} onClick={() => void handleEndEinsatz()}>
-        {busy ? 'Lösche…' : 'Einsatz beenden'}
+      {showMainnetAnchorOption ? (
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="einsatz-end-mainnet-anchor"
+              checked={mainnetAnchor}
+              onCheckedChange={(v) => setMainnetAnchor(v === true)}
+              disabled={busy}
+            />
+            <Label htmlFor="einsatz-end-mainnet-anchor" className="text-sm font-normal cursor-pointer">
+              Beweis auf Mainnet schreiben (empfohlen)
+            </Label>
+          </div>
+          {anchorHint ? <p className="text-xs text-muted-foreground">{anchorHint}</p> : null}
+        </div>
+      ) : null}
+
+      <Button type="button" variant="destructive" size="sm" disabled={busy} onClick={() => void handleEndEinsatz()}>
+        {busy ? 'Beende…' : 'Einsatz beenden'}
       </Button>
 
-      {status ? <p className="text-sm text-muted-foreground">{status}</p> : null}
+      {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
+      {anchorDigest ? (
+        <p className="text-xs">
+          <a
+            href={explorerTxUrlForMainnetAnchor(anchorDigest)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Mainnet-Anker: {shortTxDigestLabel(anchorDigest)}
+          </a>
+        </p>
+      ) : null}
     </div>
   )
 }

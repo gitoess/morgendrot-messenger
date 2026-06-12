@@ -38,6 +38,7 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
       ) : null}
 
       <EinsatzEndPanel
+        apiStatus={p.apiSnapshot ?? null}
         backendOnline={p.apiSnapshot?.backendOnline === true || p.apiSnapshot?.backendRunning === true}
         onCompleted={p.onRefreshStatus}
       />

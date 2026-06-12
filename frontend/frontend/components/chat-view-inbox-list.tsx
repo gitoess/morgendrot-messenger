@@ -53,6 +53,7 @@ import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/i
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
+import { EinsatzInboxExplorerLink } from '@/frontend/components/einsatz-inbox-explorer-link'
 import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
 import { useEinsatzInboxBadges } from '@/frontend/hooks/use-einsatz-inbox-badges'
 
@@ -127,6 +128,8 @@ export type ChatViewInboxListProps = InboxFeedReadPort & {
   sending?: boolean
   isInboxMessageUnread?: (msg: Message) => boolean
   isPinnwandInboxMessage?: (msg: Message) => boolean
+  /** § H.33 — RPC/Netz-Hinweis für Explorer-Links (optional). */
+  einsatzRpcHint?: string
 }
 
 export function ChatViewInboxList(p: ChatViewInboxListProps) {
@@ -167,9 +170,11 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     sending = false,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
+    einsatzRpcHint = '',
   } = p
 
-  const { getBadgesForMessage } = useEinsatzInboxBadges(messages)
+  const { getBadgesForMessage, getTxDigestForMessage, chainMode: einsatzChainMode } =
+    useEinsatzInboxBadges(messages)
 
   const visibilityHintBanner = inboxVisibilityHint ? (
     <div className="p-3 pb-0">
@@ -459,6 +464,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     </span>
                   )}
                   <EinsatzInboxMessageBadges badges={getBadgesForMessage(row.msg)} />
+                  {getTxDigestForMessage(row.msg) ? (
+                    <EinsatzInboxExplorerLink
+                      txDigest={getTxDigestForMessage(row.msg)!}
+                      chainMode={einsatzChainMode}
+                      rpcHint={einsatzRpcHint}
+                    />
+                  ) : null}
                   {protokollMarkedIds.has(row.msg.id) && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-600 dark:text-amber-300" aria-hidden />
