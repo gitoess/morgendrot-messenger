@@ -3,6 +3,28 @@ import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { MESH_PLAINTEXT_MAX_CHARS } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPanel, type ChatViewSendPanelProps } from './chat-view-send-panel'
+import type { ApiStatus } from '@/frontend/lib/api/status'
+
+/** RTL-Fixture: volle Sende-Rechte (Phase 3 Capabilities — sonst ist Senden gesperrt). */
+const TEST_API_CAPABILITIES_ALL_WRITE: NonNullable<ApiStatus['capabilities']> = {
+  version: 1,
+  roleId: 14,
+  simpleMode: false,
+  product: {
+    canCreateGroup: true,
+    canInviteMembers: true,
+    canExportData: true,
+    canManageEinsatzTemplates: true,
+  },
+  transport: {
+    lora: { read: true, write: true },
+    telegram: { read: true, write: true },
+    iota: { read: true, write: true },
+    ble: { read: true, write: true },
+    streams: { read: true, write: true },
+  },
+  security: { forceEncryptionOnly: false, allowPlaintextFallback: true },
+}
 
 /** RTL-Fixture: gleiche Defaults wie Smoke-Tests, per Partial überschreibbar (§ H.1a). */
 function primarySend(container: HTMLElement) {
@@ -15,7 +37,9 @@ const READY_API_STATUS = {
   connected: true,
   hasKeys: true,
   locked: false,
-} as const
+  roleId: 14,
+  capabilities: TEST_API_CAPABILITIES_ALL_WRITE,
+} as const satisfies Partial<ApiStatus>
 
 function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSendPanelProps {
   return {
