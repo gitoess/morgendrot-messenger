@@ -9,6 +9,7 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import { resolveEinsatzIdFromHandoff } from '@/frontend/lib/einsatz-manifest-anchor-flow'
 import { einsatzIdUtf8ToMoveAddress } from '@/frontend/lib/einsatz-manifest-v1'
 import { resolveEinsatzManifestAnchorRpcUrl } from '@/frontend/lib/direct-iota-einsatz-manifest-anchor'
+import { fetchEinsatzManifestAnchorsFromApi } from '@/frontend/lib/api/einsatz-manifest-api'
 
 export type ListEinsatzManifestAnchorsResult =
     | { ok: true; rows: EinsatzManifestAnchorRow[] }
@@ -19,6 +20,12 @@ export async function listEinsatzManifestAnchorsOnMainnet(opts: {
     apiStatus?: ApiStatus | null
     einsatzId?: string
 }): Promise<ListEinsatzManifestAnchorsResult> {
+    const api = await fetchEinsatzManifestAnchorsFromApi({ einsatzId: opts.einsatzId })
+    if (api.ok) return { ok: true, rows: api.rows }
+    if (api.httpStatus != null && api.httpStatus !== 403) {
+        return { ok: false, error: api.error }
+    }
+
     const cfg = opts.apiStatus?.einsatzConfig
     const registryId = cfg?.einsatzManifestRegistryId?.trim() ?? ''
     const mainnetPkg =

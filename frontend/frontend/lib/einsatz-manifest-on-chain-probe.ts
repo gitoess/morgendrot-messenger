@@ -8,6 +8,7 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import { resolveEinsatzIdFromHandoff } from '@/frontend/lib/einsatz-manifest-anchor-flow'
 import { einsatzIdUtf8ToMoveAddress } from '@/frontend/lib/einsatz-manifest-v1'
 import { resolveEinsatzManifestAnchorRpcUrl } from '@/frontend/lib/direct-iota-einsatz-manifest-anchor'
+import { probeEinsatzManifestSequenceFromApi } from '@/frontend/lib/api/einsatz-manifest-api'
 export type ProbeEinsatzManifestOnChainResult =
     | { ok: true; exists: boolean; sequence: number }
     | { ok: false; error: string }
@@ -18,6 +19,15 @@ export async function probeEinsatzManifestSequenceOnChain(opts: {
     sequence: number
     einsatzId?: string
 }): Promise<ProbeEinsatzManifestOnChainResult> {
+    const api = await probeEinsatzManifestSequenceFromApi({
+        sequence: opts.sequence,
+        einsatzId: opts.einsatzId,
+    })
+    if (api.ok) return { ok: true, exists: api.exists, sequence: api.sequence }
+    if (api.httpStatus != null && api.httpStatus !== 403) {
+        return { ok: false, error: api.error }
+    }
+
     const cfg = opts.apiStatus?.einsatzConfig
     const registryId = cfg?.einsatzManifestRegistryId?.trim() ?? ''
     const mainnetPkg =

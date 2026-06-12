@@ -50,7 +50,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 | 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Ist 2026-06-02** (`cab3e2e`) |
-| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Teil-Ist** (PTB + UI + Mainnet-Registry in App; Anker-Liste RPC; Export-Banner Modus A/B/C) |
+| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Ist** (PTB + UI + Mainnet-Registry; Anker-Liste RPC/API; Export-Banner Modus A/B/C; **`docs/API-EINSATZ-MANIFEST.md`**) |
 | 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus | **Ist 2026-06-02** |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
@@ -2215,10 +2215,10 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
 | **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Move Ist** — **Deploy-Anleitung** `docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`, Skripte `print:create-einsatz-manifest-registry` / `apply:einsatz-manifest-registry-from-tx` |
 | **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
-| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Modus-Banner Export, Mainnet-Registry/Anker UI, Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Anker auflisten**; optional API `GET /api/einsatz-manifest/*` offen) |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Ist** (Modus-Banner Export, Mainnet-Registry/Anker UI, Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Anker auflisten**, API **`GET /api/einsatz-manifest/*`** — **`docs/API-EINSATZ-MANIFEST.md`**) |
 | **5 — Verifikation** | Import Manifest + Match Posteingang + Merkle-Proof + Mainnet-Abgleich | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`, `einsatz-manifest-merkle-proof.ts`, `einsatz-manifest-mainnet-verify.ts`) |
 
-**Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
+**Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** (**Ist** — `docs/API-EINSATZ-MANIFEST.md`); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
 
 #### H.33 — Nicht-Ziele
 
