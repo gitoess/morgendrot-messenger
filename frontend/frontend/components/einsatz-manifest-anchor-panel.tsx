@@ -39,6 +39,8 @@ import {
     writeAnchoredManifestFromV1,
 } from '@/frontend/lib/einsatz-manifest-anchor-cache'
 import { probeEinsatzManifestSequenceOnChain } from '@/frontend/lib/einsatz-manifest-on-chain-probe'
+import { listEinsatzManifestAnchorsOnMainnet } from '@/frontend/lib/einsatz-manifest-anchors-list'
+import type { EinsatzManifestAnchorRow } from '@morgendrot/core/iota'
 import { Button } from '@/components/ui/button'
 
 export function EinsatzManifestAnchorPanel(p: {
@@ -63,6 +65,8 @@ export function EinsatzManifestAnchorPanel(p: {
     const [imported, setImported] = useState<EinsatzManifestV1 | null>(null)
     const [lastAnchorDigest, setLastAnchorDigest] = useState('')
     const [onChainProbe, setOnChainProbe] = useState('')
+    const [anchorList, setAnchorList] = useState<EinsatzManifestAnchorRow[]>([])
+    const [anchorListStatus, setAnchorListStatus] = useState('')
     const fileRef = useRef<HTMLInputElement>(null)
     const lastSeq = readEinsatzManifestLastAnchoredSequence()
     const lastAnchorMeta = readLastEinsatzManifestAnchorMeta()
@@ -202,6 +206,27 @@ export function EinsatzManifestAnchorPanel(p: {
         }
     }
 
+    const onListMainnetAnchors = async () => {
+        setBusy(true)
+        setAnchorListStatus('')
+        setAnchorList([])
+        try {
+            const out = await listEinsatzManifestAnchorsOnMainnet({ apiStatus: p.apiStatus })
+            if (!out.ok) {
+                setAnchorListStatus(out.error)
+                return
+            }
+            setAnchorList(out.rows)
+            setAnchorListStatus(
+                out.rows.length
+                    ? `${out.rows.length} Mainnet-Anker für diesen Einsatz.`
+                    : 'Keine Mainnet-Anker für diesen Einsatz unter der Registry.'
+            )
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const onProbeOnChain = async () => {
         const seq = activeManifest?.sequence ?? lastAnchorMeta?.sequence ?? lastSeq
         if (!seq || seq < 1) {
@@ -331,6 +356,16 @@ export function EinsatzManifestAnchorPanel(p: {
                     variant="outline"
                     size="sm"
                     disabled={!registryId || busy}
+                    title="Alle Mainnet-Anker (Dynamic Fields) für diesen Einsatz"
+                    onClick={() => void onListMainnetAnchors()}
+                >
+                    Mainnet-Anker auflisten
+                </Button>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!registryId || busy}
                     title="Mainnet-Registry per RPC prüfen (Dynamic Field)"
                     onClick={() => void onProbeOnChain()}
                 >
@@ -361,6 +396,18 @@ export function EinsatzManifestAnchorPanel(p: {
 
             {status ? <p className="text-xs text-muted-foreground">{status}</p> : null}
             {onChainProbe ? <p className="text-xs text-muted-foreground">{onChainProbe}</p> : null}
+            {anchorListStatus ? <p className="text-xs text-muted-foreground">{anchorListStatus}</p> : null}
+            {anchorList.length > 0 ? (
+                <ul className="max-h-28 overflow-auto rounded border border-border bg-muted/30 p-2 text-[10px] font-mono space-y-1">
+                    {anchorList.map((row) => (
+                        <li key={`${row.sequence}-${row.anchorObjectId ?? row.manifestHashHex}`}>
+                            Seq. {row.sequence} — {row.messageCount ?? '?'} Nachrichten —{' '}
+                            {row.sourceNetwork === 0 ? 'Quelle Testnet' : 'Quelle Mainnet'}
+                            {row.manifestHashHex ? ` — hash ${row.manifestHashHex.slice(0, 12)}…` : null}
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
             {lastAnchorMeta ? (
                 <p className="text-xs text-muted-foreground">
                     Letzter lokaler Anker: Sequenz {lastAnchorMeta.sequence},{' '}

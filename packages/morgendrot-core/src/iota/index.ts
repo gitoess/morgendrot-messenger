@@ -32,6 +32,11 @@ export type {
 export { buildPurgeTeamPlaintextBroadcastTransaction } from './purge-team-broadcast-txb'
 export { extractEinsatzManifestRegistryIdFromTxJson } from './parse-iota-tx-events'
 export { fetchEinsatzManifestRegistryIdFromDigest } from './fetch-einsatz-manifest-registry-from-tx'
+export {
+  fetchEinsatzManifestAnchorsForEinsatz,
+  type EinsatzManifestAnchorRow,
+  type FetchEinsatzManifestAnchorsInput,
+} from './fetch-einsatz-manifest-anchors-rpc'
 export { probeEinsatzManifestAnchorOnChain } from './einsatz-manifest-probe-rpc'
 export type { ProbeEinsatzManifestAnchorInput } from './einsatz-manifest-probe-rpc'
 export { buildCreateEinsatzManifestRegistryTransaction } from './einsatz-manifest-registry-txb'

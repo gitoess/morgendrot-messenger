@@ -325,7 +325,7 @@ MAINNET_PACKAGE_ID=0x…
 | `fetchEinsatzManifestAnchors(einsatzId)` | Dynamic Fields unter Registry filtern |
 | `verifyMessageInEinsatzAnchor(msgRef, manifestFile, proof)` | Off-chain Merkle-Proof |
 
-Core-Helfer analog `fetchTeamPlainBroadcastRpcRows` — neuer Typ `EinsatzManifestAnchorRow`.
+Core-Helfer analog `fetchTeamPlainBroadcastRpcRows` — **`fetchEinsatzManifestAnchorsForEinsatz`** (`packages/morgendrot-core`); UI **Mainnet-Anker auflisten**.
 
 ---
 

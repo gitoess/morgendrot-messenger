@@ -69,6 +69,7 @@ import { HandoffProvisionRegistrySection } from '@/frontend/components/handoff-p
 import { HandoffProvisionResultDialog } from '@/frontend/components/handoff-provision-result-dialog'
 import {
     defaultHandoffRpcForChainMode,
+    describeEinsatzChainModeBanner,
     EINSATZ_CHAIN_MODE_LABELS,
     type EinsatzChainMode,
     parseEinsatzChainMode,
@@ -190,6 +191,10 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     [selectedPartnerAddrs]
   )
 
+  const einsatzChainModeBanner = useMemo(
+    () => describeEinsatzChainModeBanner(einsatzChainMode, handoffRpc),
+    [einsatzChainMode, handoffRpc]
+  )
 
   const bossDefaultTtlDays = p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30
 
@@ -1085,6 +1090,21 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     </option>
                   ))}
                 </select>
+                <p
+                  className={cn(
+                    'mt-2 rounded-md border px-2 py-1.5 text-xs',
+                    einsatzChainModeBanner.tone === 'testnet' &&
+                      'border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-100',
+                    einsatzChainModeBanner.tone === 'mainnet' &&
+                      'border-primary/30 bg-primary/5 text-foreground',
+                    einsatzChainModeBanner.tone === 'neutral' &&
+                      'border-border text-muted-foreground'
+                  )}
+                >
+                  <span className="font-medium">{einsatzChainModeBanner.title}</span>
+                  {' — '}
+                  {einsatzChainModeBanner.detail}
+                </p>
               </div>
               <div>
                 <label className="mb-1 block text-muted-foreground">RPC</label>

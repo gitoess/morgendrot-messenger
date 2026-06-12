@@ -50,7 +50,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 | 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Ist 2026-06-02** (`cab3e2e`) |
-| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Teil-Ist** (PTB + UI + Deploy-Doku `DEPLOY-MOVE-H33`; **Mainnet-Registry** manuell am Boss) |
+| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Teil-Ist** (PTB + UI + Mainnet-Registry in App; Anker-Liste RPC; Export-Banner Modus A/B/C) |
 | 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus | **Ist 2026-06-02** |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
@@ -2050,7 +2050,7 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 
 ### H.33 Einsatz-On-Chain: **Mainnet direkt** \| Testnet + Anker (**Archiv, Kosten**)
 
-**Status:** **Teil-Ist 2026-06-02** — `EINSATZ_CHAIN_MODE` im Handoff, Banner, Manifest-Builder (`einsatz-manifest-v1.ts`), Verifikation (Import + Posteingang-Abgleich), PTB `buildStoreEinsatzManifestTransaction` + Boss-UI **On-chain ankern** (`direct-iota-einsatz-manifest-anchor.ts`). Move `store_einsatz_manifest` in `messaging.move` — **Deploy + Registry-ID** noch offen. **Ziel:** Boss wählt beim Export, **wo** Nachrichten landen.
+**Status:** **Teil-Ist 2026-06-02** — `EINSATZ_CHAIN_MODE` im Handoff + Export-Banner, Manifest-Builder, Verifikation, PTB + Boss-UI (**Mainnet-Registry anlegen**, **Auf Mainnet ankern**, **Mainnet-Anker auflisten/prüfen**). Move in `messaging.move`; **Deploy Mainnet** = Admin (`DEPLOY-MOVE-H33`) oder UI-Registry-Button.
 
 **Priorität:** **Nach** **§ H.32b** (Einsatz-Zyklus) und **§ H.22** (Kanäle stabil). **Vor** breiter **§ H.28**-Integration. **Parallel** zu **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`** (Einzel-/Stapel-Verankerung im Chat) — **H.33** ist der **Einsatz-weite Rollup-Pfad**, nicht der Bubble-Kontextmenü-Pfad.
 
@@ -2215,7 +2215,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
 | **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Move Ist** — **Deploy-Anleitung** `docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`, Skripte `print:create-einsatz-manifest-registry` / `apply:einsatz-manifest-registry-from-tx` |
 | **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
-| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Registry anlegen** (Direct-IOTA), Mainnet-Anker prüfen; Terminal optional: `print:create-einsatz-manifest-registry`) |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Modus-Banner Export, Mainnet-Registry/Anker UI, Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Anker auflisten**; optional API `GET /api/einsatz-manifest/*` offen) |
 | **5 — Verifikation** | Import Manifest + Match Posteingang | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`) |
 
 **Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
@@ -2246,7 +2246,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | 2 | **Modus A:** 3 Testnet-Nachrichten → Manifest → `merkle_root` stabil bei gleicher Sortierung |
 | 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) — **RPC-Probe** `probeEinsatzManifestAnchorOnChain` + Boss-Button „Mainnet-Anker prüfen“ |
 | 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) |
-| 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel |
+| 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel | **Ist** (Banner unter Kettenmodus-Auswahl) |
 | 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset | *(wenn H.32b implementiert)* |
 
 ---
