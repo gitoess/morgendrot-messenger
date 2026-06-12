@@ -134,7 +134,37 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 ## Peering-QR (§ H.16)
 
-**Mein Peering-QR** / **Peering-QR scannen:** Partner-**Wallet-Adresse** und optional **ECDH-Pub** austauschen **ohne laufende Morgendrot-Basis** — danach optional **Handshake** und **Connect** online. Siehe auch Fahrplan **§ H.16**.
+**Mein Peering-QR** / **Peering-QR scannen** / **QR-Text einfügen:** Partner-**Wallet-Adresse** (`0x…`) und optional **ECDH-Pub** (Verschlüsselung) **lokal** austauschen — **ohne** laufende Morgendrot-Basis und **ohne** 64 Hex-Zeichen abtippen. Optional im QR: **Fullnode-URL** und **Package-ID** (Mini-Konfiguration).
+
+**Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
+
+### Wann brauchst du Peering-QR?
+
+| Situation | Peering-QR |
+|-----------|------------|
+| **Zwei Standalone-APKs** ohne Boss-PC, ad-hoc **verschlüsselter 1:1-Chat** | **Ja** — Partner + Pub ohne Relay |
+| **Neuer Kontakt** außerhalb Handoff/Telefonbuch (Wanderer, Zivilkontakt) | **Ja** |
+| Du willst **0x + ECDH-Pub** nicht manuell eintragen | **Ja** |
+| Optional: **RPC + Package** mitgeben, wenn kein Handoff-ZIP da ist | **Ja** (Boss zeigt QR mit Netz-Hints) |
+
+### Wann brauchst du Peering-QR **nicht**?
+
+| Situation | Stattdessen |
+|-----------|-------------|
+| **Normaler Einsatz-Helfer** mit **Handoff-ZIP** — Boss/Partner schon in `.env` | **Mit Einsatz-Partner verbinden** oder Telefonbuch |
+| Nur **Pinnwand**, **Gruppe** oder **Funk/LoRa** (Klartext) | Kein Peering-QR nötig |
+| Erwartung: *„QR scannen → danach ohne Netz IOTA senden“* | **Geht nicht** — Mesh/Funk ist ein anderer Kanal |
+| Boss hat Helfer schon per **Export / Telefonbuch-QR** eingerichtet | Handoff reicht |
+
+### Ablauf (kurz)
+
+```
+1. Peering-QR scannen     →  lokal: Adresse + Pub (+ optional RPC/Package)
+2. Handshake / Connect    →  on-chain (Internet / Fullnode nötig)
+3. Verschlüsselt senden   →  on-chain (Internet nötig)
+```
+
+Danach optional **Handshake** im Posteingang oder Telefonbuch. Siehe Fahrplan **§ H.16**, **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Variante B).
 
 ---
 
@@ -162,12 +192,23 @@ Beide Seiten warten auf einen Handshake und antworten ggf. automatisch (Hintergr
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
 | **1:1 Privat** | Event oder Mailbox | Nur Gesprächspartner (`0x`) |
-| **Gruppenchat** | wie 1:1 | Posteingang = Union der Mitglieder; Senden an **eine** `0x` im Composer (pairwise, kein Chain-Gruppenraum) |
+| **Gruppenchat** | Team-Broadcast (Mailbox) | **1× TX** in Team-Mailbox; Posteingang aller Mitglieder mit gleicher Team-Object-ID |
 | **Pinnwand** | meist Klartext | Alle mit gleicher `PACKAGE_ID`; Schreiben nur autorisierte `0x` |
 | **Server · Einsatz** | Mailbox | Alle auf diesem Knoten (`MAILBOX_ID`) |
 | **Team / Privat** | Mailbox | Object-ID kennen; **aktiv** unter **Einstellungen → Meine Mailboxen** |
 
 Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`.
+
+**Auf Chain löschen (Rebate):** Posteingang → Zeile **⋯** → **Auf Chain löschen (Rebate)** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück.
+
+| Art | Wer darf purgen? | Hinweis |
+|-----|------------------|---------|
+| **1:1 pairwise** | Empfänger oder Sender (je nach Move-Regel) | Shared- oder Private-Mailbox |
+| **Team-Broadcast** | Original-Sender **jederzeit**; **nach TTL jeder** | Team-Mailbox-Object-ID; Badge **Team-Broadcast** |
+
+Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräumen / `purge_private_mailbox`. Team-Mailbox als Ganzes wird on-chain **nicht** zerstört — nur einzelne Broadcasts purgen.
+
+**Voraussetzung:** Neues Move-Package mit `purge_team_plaintext_broadcast` (siehe `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`).
 
 **Ziel-Postfach (Kontakt):** Im Composer kann pro Kontakt ein anderes Postfach gewählt werden; die **Empfänger-Wallet** (`0x`) bleibt unverändert — es ändert sich nur die Mailbox-Object-ID für den Submit.
 
@@ -205,7 +246,7 @@ Optional auf Root-Ebene: `deploymentChannelTag`, `offlineBriefing`, `validUntil`
 **Abweichungen / nicht über initialProfile:**
 
 - **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): nur über **verschl. Kontakt-Backup** oder manuell im Telefonbuch — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
-- **Handoff-ZIP** für Helfer: **Einsatzleitung → Export-Assistent** — enthält neben `initialProfile` auch Rechte, Presets, ggf. verschlüsselte Pakete (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
+- **Handoff-ZIP** für Helfer: **Einsatzleitung → Helfer einrichten** — Profil, Rechte, Partner, Team (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
 - **`npm run bundle:messenger`:** Entwickler-Standalone-Ordner — **kein** Ersatz für Handoff-ZIP.
 
 **Nachrichten-Forensik** (Verlauf JSON/TXT, verschl. Bericht, Protokoll-ZIP): **Posteingang** → Menü Export — nicht in der Einsatzleitung dupliziert.
@@ -218,8 +259,11 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 | Thema | Ort |
 |--------|-----|
-| **Handoff-ZIP** (Helfer, Arbeiter, Führer einrichten) | **Einsatzleitung → Export-Assistent** |
-| **PWA im WLAN** (nur App installieren, keine Kontakte) | **Einsatzleitung → Helfer per QR (WLAN)** |
+| **Handoff-ZIP** (Profil, Rechte, Partner, Team) | **Einsatzleitung → Helfer einrichten** |
+| **Neues Helfer-Handy** (Seed + Handoff-ZIP + QR) | **Helfer einrichten** → **Neues Gerät** → Seed + QR |
+| **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |
+| **PWA im WLAN** (nur App installieren) | **Helfer einrichten** → **WLAN-QR** (neben ZIP/IOTA) |
+| **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
 | **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (Navigation unten) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
 | **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
@@ -252,23 +296,25 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 ### Ablauf (Boss)
 
-1. Move/Mailbox-Struktur auf dem **Boss-PC** / Server betreiben (`.env` des Boss, ggf. Team-Mailboxen unter Einstellungen anlegen).
-2. Im **Export-Assistenten**: Bezeichnung, **Profil** (Helfer/Führer/Spezial), Team-Postfächer und Partner wählen.
-3. ZIP herunterladen (oder per IOTA an Partner) — Helfer importiert auf dem Gerät.
+1. Move/Mailbox-Struktur auf dem **Boss-PC** betreiben.
+2. **Helfer einrichten:** Profil + **Rechte** (Matrix / Medic / Reporter) → Team & Partner → **ZIP** / **IOTA**; neues Handy → **Seed + QR**; App installieren → **WLAN-QR** (ohne Handoff).
+3. **Bestehende Geräte:** TTL/Purge → **Handoff** im selben Panel.
 
 Weiter: `docs/HANDOFF-IMPORT-UX.md`, `docs/HANDOFF-ZIP-ENCRYPTION.md`, `docs/API-EINSATZ-ROLE-TEMPLATES.md`.
 
-**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
+**Export-Assistent (Handoff-ZIP):** `docs/EXPORT-ASSISTENT-REFERENZ.md` · **Move on-chain (nur Messenger):** `docs/MOVE-MESSENGER-KONFIGURATION.md` · **Alle `.env`-Keys in den Einstellungen:** `docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md` · Laientext gesamt: `docs/ENV-ERKLAERUNG.md`
 
 ---
 
-## Einsatzleitung (Boss): QR im WLAN vs. Export-Assistent
+## Einsatzleitung (Boss): WLAN-QR vs. Handoff
 
 | Funktion | Zweck |
 |----------|--------|
-| **Helfer per QR (WLAN)** | Helfer installiert die PWA im gleichen LAN; QR enthält PWA-URL + API-Basis (`install-qr`, Schema `mi`). **Keine** Kontakte, keine Rolle — nur Erreichbarkeit der App. |
-| **Export-Assistent** | Handoff-ZIP für Untergebene: Rolle, `ROLE_ID`, Capabilities, Partner, Team-Mailboxen, optional verschlüsselt. |
-| **Einsatz-Vorlagen** | Gespeicherte Presets (`chainRole`, `roleId`, Kanal-Tag) im **Export-Assistenten** (Dropdown / „Als Vorlage speichern“) — Datei `.morgendrot-einsatz-templates.json` auf dem Boss-PC (`docs/API-EINSATZ-ROLE-TEMPLATES.md`). |
+| **WLAN-QR** | PWA im LAN installieren (`install-qr`, Schema `mi`); LAN-IP via **`GET /api/lan-install-urls`**. **Keine** Rolle, **keine** Kontakte. |
+| **Helfer einrichten** | Handoff-ZIP: Rolle, `ROLE_ID`, Capabilities, Partner, Team-Mailboxen, optional verschlüsselt. |
+| **Einsatz-Vorlagen** | Dropdown / „Als Vorlage speichern“ im Experten-Block — `.morgendrot-einsatz-templates.json` (`docs/API-EINSATZ-ROLE-TEMPLATES.md`). |
+
+Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 ---
 

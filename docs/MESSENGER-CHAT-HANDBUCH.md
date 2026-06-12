@@ -134,7 +134,37 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 ## Peering-QR (§ H.16)
 
-**Mein Peering-QR** / **Peering-QR scannen:** Partner-**Wallet-Adresse** und optional **ECDH-Pub** austauschen **ohne laufende Morgendrot-Basis** — danach optional **Handshake** und **Connect** online. Siehe auch Fahrplan **§ H.16**.
+**Mein Peering-QR** / **Peering-QR scannen** / **QR-Text einfügen:** Partner-**Wallet-Adresse** (`0x…`) und optional **ECDH-Pub** (Verschlüsselung) **lokal** austauschen — **ohne** laufende Morgendrot-Basis und **ohne** 64 Hex-Zeichen abtippen. Optional im QR: **Fullnode-URL** und **Package-ID** (Mini-Konfiguration).
+
+**Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
+
+### Wann brauchst du Peering-QR?
+
+| Situation | Peering-QR |
+|-----------|------------|
+| **Zwei Standalone-APKs** ohne Boss-PC, ad-hoc **verschlüsselter 1:1-Chat** | **Ja** — Partner + Pub ohne Relay |
+| **Neuer Kontakt** außerhalb Handoff/Telefonbuch (Wanderer, Zivilkontakt) | **Ja** |
+| Du willst **0x + ECDH-Pub** nicht manuell eintragen | **Ja** |
+| Optional: **RPC + Package** mitgeben, wenn kein Handoff-ZIP da ist | **Ja** (Boss zeigt QR mit Netz-Hints) |
+
+### Wann brauchst du Peering-QR **nicht**?
+
+| Situation | Stattdessen |
+|-----------|-------------|
+| **Normaler Einsatz-Helfer** mit **Handoff-ZIP** — Boss/Partner schon in `.env` | **Mit Einsatz-Partner verbinden** oder Telefonbuch |
+| Nur **Pinnwand**, **Gruppe** oder **Funk/LoRa** (Klartext) | Kein Peering-QR nötig |
+| Erwartung: *„QR scannen → danach ohne Netz IOTA senden“* | **Geht nicht** — Mesh/Funk ist ein anderer Kanal |
+| Boss hat Helfer schon per **Export / Telefonbuch-QR** eingerichtet | Handoff reicht |
+
+### Ablauf (kurz)
+
+```
+1. Peering-QR scannen     →  lokal: Adresse + Pub (+ optional RPC/Package)
+2. Handshake / Connect    →  on-chain (Internet / Fullnode nötig)
+3. Verschlüsselt senden   →  on-chain (Internet nötig)
+```
+
+Danach optional **Handshake** im Posteingang oder Telefonbuch. Siehe Fahrplan **§ H.16**, **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Variante B).
 
 ---
 
