@@ -194,7 +194,7 @@ Quelle: `buildStandaloneSmartphoneHandoffEnv` in `src/config.ts`. Import-Allowli
 | **MAINNET_RPC_URL** | Mainnet-Fullnode nur für Boss-Anker-TXs |
 | **MAINNET_PACKAGE_ID** | Mainnet-`PACKAGE_ID` für `store_einsatz_manifest` (kann ≠ Testnet-Package) |
 
-Deploy-Schritte: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`** (`npm run print:create-einsatz-manifest-registry` → `apply:einsatz-manifest-registry-from-tx`). Danach: Einsatzleitung → **On-chain prüfen**.
+Deploy: **`docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`** — bevorzugt UI **Mainnet-Registry anlegen** (Einsatzleitung → Erweitert); alternativ Terminal `print:create-einsatz-manifest-registry` → `apply:einsatz-manifest-registry-from-tx`.
 
 **Niemals im Handoff:** Mnemonic, Vault-Passwort, Private Keys, `.morgendrot-vault` Dateien.
 

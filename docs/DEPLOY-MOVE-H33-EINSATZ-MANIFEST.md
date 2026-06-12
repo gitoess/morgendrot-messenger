@@ -45,8 +45,15 @@ npm run deploy:move-package
 
 # 3) create_globals wie gewohnt (Messenger-Betrieb)
 #    siehe docs/DEPLOY-CHECKLIST.md
+```
 
-# 4) Registry anlegen (einmal pro Mainnet-PACKAGE_ID)
+**Schritt 4 — Registry anlegen (einmal pro Mainnet-PACKAGE_ID):**
+
+**Ohne Terminal (Boss-UI):** Einsatzleitung → **Erweitert** → **Einsatz-Protokoll verankern** → **Mainnet-Registry anlegen** (Puls-Wallet, Gas auf Mainnet — nicht Testnet-Betrieb). Schreibt `EINSATZ_MANIFEST_REGISTRY_ID` per API in `.env`.
+
+**Mit Terminal:**
+
+```powershell
 npm run print:create-einsatz-manifest-registry
 ```
 
@@ -61,7 +68,7 @@ npm run apply:einsatz-manifest-registry-from-tx -- registry-tx.json
 **Backend neu starten.** Prüfen:
 
 - `GET /api/status` → `einsatzConfig.einsatzManifestRegistryId`
-- Einsatzleitung → **Einsatz-Protokoll verankern** → **On-chain prüfen**
+- Einsatzleitung → **Einsatz-Protokoll verankern** → **Mainnet-Anker prüfen**
 
 ---
 
@@ -119,8 +126,8 @@ Nach Registry + laufendem Boss mit Session-Signer (Puls):
 
 1. Einsatzleitung → **Einsatz-Protokoll verankern**
 2. **Manifest bauen** (Posteingang mit Nachrichten)
-3. **On-chain ankern** (PTB `store_einsatz_manifest` — Client **`direct-iota-einsatz-manifest-anchor.ts`**)
-4. **On-chain prüfen** — RPC-Probe `probeEinsatzManifestAnchorOnChain`
+3. **Auf Mainnet ankern** (PTB `store_einsatz_manifest` — Client **`direct-iota-einsatz-manifest-anchor.ts`**)
+4. **Mainnet-Anker prüfen** — RPC-Probe `probeEinsatzManifestAnchorOnChain`
 
 Alternativ Schreibtisch ohne UI: Manifest-JSON importieren → Verifizieren.
 
@@ -132,7 +139,7 @@ Alternativ Schreibtisch ohne UI: Manifest-JSON importieren → Verifizieren.
 |---------|---------|-----|
 | `Function not found` | Altes Package ohne H.33 | `upgrade:move-package` oder neues `deploy:move-package` |
 | `E_MANIFEST_NOT_AUTHORIZED` (80) | Falscher Signer | Registry mit richtiger `BOSS_ADDRESS` anlegen; Puls-Wallet = Boss |
-| On-chain prüfen: „nicht gefunden“ | Falsche Registry / Sequenz / Einsatz-ID | `EINSATZ_MANIFEST_REGISTRY_ID`, `MAINNET_PACKAGE_ID`, Manifest-Sequenz |
+| Mainnet-Anker prüfen: „nicht gefunden“ | Falsche Registry / Sequenz / Einsatz-ID | `EINSATZ_MANIFEST_REGISTRY_ID`, `MAINNET_PACKAGE_ID`, Manifest-Sequenz |
 | Registry fehlt in `/api/status` | `.env` / Neustart | Key setzen, API neu starten |
 | CLI vs. RPC Netz mismatch | Testnet-CLI, Mainnet-RPC | `iota client active-env` / RPC_URL angleichen |
 

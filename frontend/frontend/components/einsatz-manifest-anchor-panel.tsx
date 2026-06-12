@@ -30,19 +30,28 @@ import {
     writeBossMainnetRpcOverride,
 } from '@/frontend/lib/direct-iota-einsatz-manifest-anchor'
 import {
+    canTryCreateEinsatzManifestRegistry,
+    tryCreateEinsatzManifestRegistryViaDirectIota,
+} from '@/frontend/lib/direct-iota-einsatz-manifest-registry-create'
+import { setConfig } from '@/frontend/lib/api/dashboard-rest'
+import {
     readLastEinsatzManifestAnchorMeta,
     writeAnchoredManifestFromV1,
 } from '@/frontend/lib/einsatz-manifest-anchor-cache'
 import { probeEinsatzManifestSequenceOnChain } from '@/frontend/lib/einsatz-manifest-on-chain-probe'
 import { Button } from '@/components/ui/button'
 
-export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) {
+export function EinsatzManifestAnchorPanel(p: {
+    apiStatus?: ApiStatus | null
+    onRefreshStatus?: () => void | Promise<void>
+}) {
     const chainMode = resolveActiveEinsatzChainMode()
     const showUi = einsatzChainModeShowsManifestAnchorUi(chainMode)
     const rpcHint = p.apiStatus?.rpcUrlLabel || p.apiStatus?.network
     const banner = useMemo(() => describeEinsatzChainModeBanner(chainMode, rpcHint), [chainMode, rpcHint])
     const einsatzCfg = p.apiStatus?.einsatzConfig
-    const registryId = einsatzCfg?.einsatzManifestRegistryId ?? ''
+    const [registryOverride, setRegistryOverride] = useState('')
+    const registryId = registryOverride || einsatzCfg?.einsatzManifestRegistryId || ''
     const mainnetRpcFromStatus = einsatzCfg?.mainnetRpcUrl ?? ''
     const mainnetPackageId =
         einsatzCfg?.mainnetPackageId?.trim() ||
@@ -59,6 +68,13 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
     const lastAnchorMeta = readLastEinsatzManifestAnchorMeta()
     const activeManifest = preview ?? imported
     const canAnchor = canTryEinsatzManifestAnchorSubmit(registryId)
+    const pkgForRegistry =
+        mainnetPackageId ||
+        (chainMode === 'testnet-with-mainnet-anchor' ? '' : p.apiStatus?.packageId?.trim() ?? '')
+    const canCreateRegistry = canTryCreateEinsatzManifestRegistry({
+        registryObjectId: registryId,
+        mainnetPackageId: pkgForRegistry,
+    })
 
     const buildManifest = async () => {
         setBusy(true)
@@ -147,6 +163,45 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
         }
     }
 
+    const onCreateRegistry = async () => {
+        if (!pkgForRegistry) {
+            setStatus('MAINNET_PACKAGE_ID fehlt (Modus A) — oder Package auf Mainnet deployen.')
+            return
+        }
+        setBusy(true)
+        setStatus('')
+        try {
+            const out = await tryCreateEinsatzManifestRegistryViaDirectIota({
+                mainnetPackageId: pkgForRegistry,
+                mainnetRpcFromStatus,
+            })
+            if (!out.ok) {
+                setStatus(out.error)
+                return
+            }
+            const cfg = await setConfig('EINSATZ_MANIFEST_REGISTRY_ID', out.registryId)
+            if (!cfg.ok) {
+                setStatus(
+                    `Mainnet-Registry (${out.registryId.slice(0, 12)}…) — .env nicht geschrieben: ${cfg.error || 'API-Fehler'}.`
+                )
+                setRegistryOverride(out.registryId)
+                return
+            }
+            if (chainMode === 'testnet-with-mainnet-anchor' && pkgForRegistry) {
+                await setConfig('MAINNET_PACKAGE_ID', pkgForRegistry)
+            }
+            setRegistryOverride(out.registryId)
+            await p.onRefreshStatus?.()
+            setStatus(
+                out.digest
+                    ? `Mainnet-Registry angelegt — ${out.registryId.slice(0, 12)}… — TX ${shortTxDigestLabel(out.digest)}`
+                    : `Mainnet-Registry angelegt — ${out.registryId.slice(0, 12)}…`
+            )
+        } finally {
+            setBusy(false)
+        }
+    }
+
     const onProbeOnChain = async () => {
         const seq = activeManifest?.sequence ?? lastAnchorMeta?.sequence ?? lastSeq
         if (!seq || seq < 1) {
@@ -166,8 +221,8 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
             }
             setOnChainProbe(
                 out.exists
-                    ? `Sequenz ${out.sequence} ist on-chain unter der Registry.`
-                    : `Sequenz ${out.sequence} nicht gefunden (noch nicht angekert oder falsche Registry).`
+                    ? `Sequenz ${out.sequence} ist auf Mainnet unter der Registry.`
+                    : `Sequenz ${out.sequence} auf Mainnet nicht gefunden (noch nicht angekert oder falsche Registry).`
             )
         } finally {
             setBusy(false)
@@ -203,8 +258,8 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
             if (out.digest) setLastAnchorDigest(out.digest)
             setStatus(
                 out.digest
-                    ? `On-chain verankert — Digest ${shortTxDigestLabel(out.digest)} — Badges aktualisiert.`
-                    : 'On-chain verankert — Badges aktualisiert.'
+                    ? `Auf Mainnet verankert — Digest ${shortTxDigestLabel(out.digest)} — Badges aktualisiert.`
+                    : 'Auf Mainnet verankert — Badges aktualisiert.'
             )
         } finally {
             setBusy(false)
@@ -224,13 +279,29 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
                     <p className="text-sm text-muted-foreground">
                         Rollup-Manifest (off-chain) für Forensik — {banner.title}. Letzte Sequenz: {lastSeq}.
                         {registryId
-                            ? ' Registry konfiguriert.'
-                            : ' Registry fehlt — nach Move-Deploy EINSATZ_MANIFEST_REGISTRY_ID setzen.'}
+                            ? ' Mainnet-Registry konfiguriert.'
+                            : ' Mainnet-Registry fehlt — einmal „Mainnet-Registry anlegen“ (Puls-Wallet, Gas Mainnet) oder Deploy-Doku.'}
                     </p>
                 </div>
             </div>
 
             <div className="flex flex-wrap gap-2">
+                {!registryId ? (
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={!canCreateRegistry || busy}
+                        title={
+                            canCreateRegistry
+                                ? 'create_einsatz_manifest_registry auf Mainnet — einmal pro Mainnet-Package'
+                                : 'Puls-Signer + Mainnet-Package-ID erforderlich'
+                        }
+                        onClick={() => void onCreateRegistry()}
+                    >
+                        Mainnet-Registry anlegen
+                    </Button>
+                ) : null}
                 <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void buildManifest()}>
                     {busy ? 'Sammle…' : 'Manifest bauen'}
                 </Button>
@@ -260,10 +331,10 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
                     variant="outline"
                     size="sm"
                     disabled={!registryId || busy}
-                    title="Registry per RPC prüfen (Dynamic Field)"
+                    title="Mainnet-Registry per RPC prüfen (Dynamic Field)"
                     onClick={() => void onProbeOnChain()}
                 >
-                    On-chain prüfen
+                    Mainnet-Anker prüfen
                 </Button>
                 <Button
                     type="button"
@@ -272,12 +343,12 @@ export function EinsatzManifestAnchorPanel(p: { apiStatus?: ApiStatus | null }) 
                     disabled={!activeManifest || !canAnchor || busy}
                     title={
                         canAnchor
-                            ? 'store_einsatz_manifest auf Chain senden'
-                            : 'Registry + Session-Signer (Puls) erforderlich'
+                            ? 'store_einsatz_manifest auf Mainnet senden'
+                            : 'Mainnet-Registry + Session-Signer (Puls) erforderlich'
                     }
                     onClick={() => void onAnchor()}
                 >
-                    On-chain ankern
+                    Auf Mainnet ankern
                 </Button>
             </div>
             <input

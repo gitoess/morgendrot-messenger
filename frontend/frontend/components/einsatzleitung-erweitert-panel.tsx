@@ -33,7 +33,10 @@ export function EinsatzleitungErweitertPanel(p: {
         <span className="text-sm font-semibold text-foreground">Erweitert</span>
       </CollapsibleTrigger>
       <CollapsibleContent className="border-t border-border/60 px-4 pb-4 pt-4 space-y-4">
-        <EinsatzManifestAnchorPanel apiStatus={p.apiStatus ?? null} />
+        <EinsatzManifestAnchorPanel
+          apiStatus={p.apiStatus ?? null}
+          onRefreshStatus={p.onRefreshStatus}
+        />
         <DashboardEinsatzChainPanel
           apiStatus={p.apiStatus ?? null}
           onRefreshStatus={p.onRefreshStatus}

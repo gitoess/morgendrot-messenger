@@ -2215,7 +2215,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
 | **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Move Ist** — **Deploy-Anleitung** `docs/DEPLOY-MOVE-H33-EINSATZ-MANIFEST.md`, Skripte `print:create-einsatz-manifest-registry` / `apply:einsatz-manifest-registry-from-tx` |
 | **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
-| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Explorer-Links, Kosten-Hinweis, Einsatz-beenden-Mainnet-Checkbox, **On-chain prüfen** per RPC-Probe, letzter Anker-Cache; Deploy: `npm run print:create-einsatz-manifest-registry`) |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Explorer, Kosten, Einsatz-Ende-Anker, **Mainnet-Registry anlegen** (Direct-IOTA), Mainnet-Anker prüfen; Terminal optional: `print:create-einsatz-manifest-registry`) |
 | **5 — Verifikation** | Import Manifest + Match Posteingang | **Ist** (`einsatz-manifest-verify.ts`, `einsatz-manifest-inbox-match.ts`) |
 
 **Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.
@@ -2244,7 +2244,7 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 |---|--------|
 | 1 | **Modus B:** 3 Mainnet-Nachrichten → Explorer-Link je TX; optional Manifest mit `source_network=mainnet` |
 | 2 | **Modus A:** 3 Testnet-Nachrichten → Manifest → `merkle_root` stabil bei gleicher Sortierung |
-| 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) — **RPC-Probe** `probeEinsatzManifestAnchorOnChain` + Boss-Button „On-chain prüfen“ |
+| 3 | `store_einsatz_manifest` auf Mainnet → Event + DOF lesbar (A und B) — **RPC-Probe** `probeEinsatzManifestAnchorOnChain` + Boss-Button „Mainnet-Anker prüfen“ |
 | 4 | Verifikation: Manifest-Hash = on-chain; Merkle-Proof (Rollup) |
 | 5 | Export-Assistent: Modus A zeigt Testnet-Banner; Modus B Mainnet — **kein** stiller Default-Wechsel |
 | 6 | **§ H.32b** + Anker (A): Einsatz beenden **löscht nicht** Mainnet-Anker; lokaler Index reset | *(wenn H.32b implementiert)* |

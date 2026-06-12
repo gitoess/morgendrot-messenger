@@ -30,6 +30,8 @@ export type {
   PurgeMailboxMessageVariant,
 } from './purge-message-txb'
 export { buildPurgeTeamPlaintextBroadcastTransaction } from './purge-team-broadcast-txb'
+export { extractEinsatzManifestRegistryIdFromTxJson } from './parse-iota-tx-events'
+export { fetchEinsatzManifestRegistryIdFromDigest } from './fetch-einsatz-manifest-registry-from-tx'
 export { probeEinsatzManifestAnchorOnChain } from './einsatz-manifest-probe-rpc'
 export type { ProbeEinsatzManifestAnchorInput } from './einsatz-manifest-probe-rpc'
 export { buildCreateEinsatzManifestRegistryTransaction } from './einsatz-manifest-registry-txb'

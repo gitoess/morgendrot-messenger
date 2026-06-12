@@ -33,7 +33,7 @@ export async function probeEinsatzManifestSequenceOnChain(opts: {
         operationRpcHint: opts.apiStatus?.rpcUrlLabel,
     })
     if (!rpc) {
-        return { ok: false, error: 'Keine RPC-URL für On-chain-Probe.' }
+        return { ok: false, error: 'Keine Mainnet-RPC-URL für die Probe.' }
     }
     const einsatzUtf8 = opts.einsatzId?.trim() || resolveEinsatzIdFromHandoff(opts.apiStatus)
     const einsatzMove = await einsatzIdUtf8ToMoveAddress(einsatzUtf8)
