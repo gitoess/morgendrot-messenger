@@ -8,6 +8,7 @@
   "exports": {
     "./einsatz-role-templates": "./einsatz-role-templates.ts",
     "./einsatz-handoff-template-snapshot": "./einsatz-handoff-template-snapshot.ts",
+    "./einsatz-chain-mode": "./einsatz-chain-mode.ts",
     "./device-time-trust": "./device-time-trust.ts",
     "./bytes-base64": "./bytes-base64.ts",
     "./morgendrot-crypto": "./morgendrot-crypto.ts",

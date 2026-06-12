@@ -50,7 +50,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 9 | **Rollen-Profile** Arbeiter / Kommandant / Boss | `npm run dev:role:*`, `docs/TEST-ROLLE-PROFILES.md` | **Schreibtisch ✅** (Simple-Mode-Gates, Vitest); Feld Team-Mailbox retesten |
 | 10 | **Move-Deploy** `create_team_mailbox` | `npm run deploy:move-package` + `create_globals` | **Ist 2026-05-21** |
 | 11 | **§ H.32a** Posteingang **Antworten** → richtiger Kanal/Sendepfad | 1:1, Gruppe, Funk, Pinnwand, Telegram | **Ist 2026-06-02** (`cab3e2e`) |
-| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Backlog** (Spec ✅; Code Phase 2+) |
+| 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Teil-Ist** (Move-Skizze im Repo, Manifest-Builder + UI; On-chain PTB nach Deploy) |
 | 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus | **Ist 2026-06-02** |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
@@ -2050,7 +2050,7 @@ Es gibt **`clearInboxRam()`** (nur RAM) und verstreute Einzel-Löschungen — **
 
 ### H.33 Einsatz-On-Chain: **Mainnet direkt** \| Testnet + Anker (**Archiv, Kosten**)
 
-**Status:** **Backlog / Spec** (2026-06-02, **Nachtrag 2026-06-02:** Betriebsmodus **Mainnet direkt** als Produktions-Default). **Ziel:** Der Boss wählt **beim Handoff/Export** explizit, **wo** Nachrichten landen — nicht nur, ob am Ende ein Anker kommt.
+**Status:** **Teil-Ist 2026-06-02** — `EINSATZ_CHAIN_MODE` im Handoff, Banner, Manifest-Builder (`einsatz-manifest-v1.ts`), Move `store_einsatz_manifest` in `messaging.move` (noch nicht deployed). **Offen:** PTB-Submit + Verifikation on-chain. **Ziel:** Boss wählt beim Export, **wo** Nachrichten landen.
 
 **Priorität:** **Nach** **§ H.32b** (Einsatz-Zyklus) und **§ H.22** (Kanäle stabil). **Vor** breiter **§ H.28**-Integration. **Parallel** zu **`docs/PROTOCOL-ANCHOR-VERIFY-SPEC.md`** (Einzel-/Stapel-Verankerung im Chat) — **H.33** ist der **Einsatz-weite Rollup-Pfad**, nicht der Bubble-Kontextmenü-Pfad.
 
@@ -2213,9 +2213,9 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 | Phase | Inhalt | Aufwand |
 |-------|--------|---------|
 | **1 — Spec + Move-Skizze** | Dieser Abschnitt + **`EINSATZ-MANIFEST-MOVE-SKIZZE.md`** | ✅ Spec |
-| **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | Mittel |
-| **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | Mittel–Hoch |
-| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | Mittel |
+| **2 — Move + Deploy Mainnet** | `EinsatzManifestRegistry`, `store_einsatz_manifest`, Events | **Skizze im Repo** — Deploy offen |
+| **3 — Collector (App)** | Inbox/Export → Manifest-Builder, Merkle; **`EINSATZ_CHAIN_MODE`** aus Handoff | **Ist** |
+| **4 — UI Boss** | Export-Assistent: Modus **A/B/C**; Dialog Anker, Kosten, Explorer | **Teil-Ist** (Modus + Manifest-Panel) |
 | **5 — Verifikation** | Import Manifest + Match Posteingang | Mittel |
 
 **Abhängigkeiten:** **`@morgendrot/core`** PTB-Builder; **`GET /api/einsatz-manifest/*`** optional (Phase 4); **§ H.32b** liefert sauberen Schnitt „Einsatz zu“.

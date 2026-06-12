@@ -2338,6 +2338,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             messengerGroupHandoff: messengerGroupHandoff || undefined,
                             exportTtlDays,
                             exportEnablePurge,
+                            einsatzChainMode: String(data.einsatzChainMode ?? '').trim() || undefined,
+                            mainnetRpcUrl: String(data.mainnetRpcUrl ?? '').trim() || undefined,
                         });
                         const resolvedRoleId =
                             roleId != null && Number.isFinite(roleId) ? roleId : 14;

@@ -37,6 +37,10 @@ export type StandaloneSmartphoneHandoffZipBody = {
   exportEnablePurge?: boolean
   /** `parts` = JSON mit envContent/readme (Client baut ggf. verschlüsseltes ZIP). */
   format?: 'zip' | 'parts'
+  /** § H.33 — Einsatz-Kettenmodus */
+  einsatzChainMode?: string
+  /** § H.33 Modus A — Boss Mainnet-RPC (optional, nicht in Helfer-ZIP nötig wenn leer). */
+  mainnetRpcUrl?: string
 }
 
 export type StandaloneSmartphoneHandoffPartsOk = {

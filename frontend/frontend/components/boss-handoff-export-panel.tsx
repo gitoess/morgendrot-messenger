@@ -67,6 +67,13 @@ import { provisionNewHandoffDevice } from '@/frontend/lib/handoff-provision-new-
 import { useHandoffProvisionRegistryAccess } from '@/frontend/lib/handoff-provision-registry-access'
 import { HandoffProvisionRegistrySection } from '@/frontend/components/handoff-provision-registry-section'
 import { HandoffProvisionResultDialog } from '@/frontend/components/handoff-provision-result-dialog'
+import {
+    defaultHandoffRpcForChainMode,
+    EINSATZ_CHAIN_MODE_LABELS,
+    type EinsatzChainMode,
+    parseEinsatzChainMode,
+} from '@morgendrot/shared/einsatz-chain-mode'
+import { persistEinsatzChainMode } from '@/frontend/lib/einsatz-chain-mode-local'
 
 type HandoffPkgSource = 'boss' | 'custom'
 
@@ -92,6 +99,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [statusMsg, setStatusMsg] = useState('')
 
   const [handoffRpc, setHandoffRpc] = useState('')
+  const [einsatzChainMode, setEinsatzChainMode] = useState<EinsatzChainMode>('mainnet-direct')
   const [handoffPkgSource, setHandoffPkgSource] = useState<HandoffPkgSource>('boss')
   const [handoffPkgCustom, setHandoffPkgCustom] = useState('')
   const [handoffBoss, setHandoffBoss] = useState('')
@@ -489,10 +497,12 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
         messengerGroupHandoff,
         exportTtlDays: bossDefaultTtlDays,
         exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
+        einsatzChainMode,
       }
     },
     [
       bezeichnung,
+      einsatzChainMode,
       handoffRpc,
       handoffPkgSource,
       handoffPkgCustom,
@@ -1055,6 +1065,27 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
               <details className="rounded-lg border border-border/60 px-3 py-2">
                 <summary className="cursor-pointer font-medium text-foreground">Chain-IDs</summary>
                 <div className="mt-3 space-y-3 border-t border-border/60 pt-3">
+              <div>
+                <label className="mb-1 block text-muted-foreground">Einsatz-Kettenmodus (H.33)</label>
+                <select
+                  value={einsatzChainMode}
+                  onChange={(e) => {
+                    const mode = parseEinsatzChainMode(e.target.value)
+                    setEinsatzChainMode(mode)
+                    persistEinsatzChainMode(mode)
+                    if (!handoffRpc.trim()) {
+                      setHandoffRpc(defaultHandoffRpcForChainMode(mode))
+                    }
+                  }}
+                  className="w-full rounded-lg border border-border bg-input px-2 py-2"
+                >
+                  {(Object.keys(EINSATZ_CHAIN_MODE_LABELS) as EinsatzChainMode[]).map((id) => (
+                    <option key={id} value={id}>
+                      {EINSATZ_CHAIN_MODE_LABELS[id]}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="mb-1 block text-muted-foreground">RPC</label>
                 <input

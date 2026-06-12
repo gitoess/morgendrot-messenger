@@ -1,3 +1,5 @@
+import { parseEinsatzChainMode, type EinsatzChainMode } from '@morgendrot/shared/einsatz-chain-mode'
+
 /**
  * Lokale Handoff-Vormerkung (Client-only):
  * Ermöglicht einen minimalen Profil-Fallback, wenn die Basis beim finalen Apply nicht erreichbar ist.
@@ -18,6 +20,8 @@ export type LocalHandoffAppliedSnapshot = {
   broadcastPinnwandEnabled?: boolean
   broadcastPinnwandAddress?: string
   broadcastPinnwandAuthorizedSenders?: string[]
+  /** § H.33 — Kettenmodus aus Handoff-.env */
+  einsatzChainMode?: EinsatzChainMode
 }
 
 const LOCAL_HANDOFF_APPLIED_KEY = 'morgendrot.handoff.localApplied.v1'
@@ -77,6 +81,7 @@ export function buildLocalHandoffAppliedSnapshot(envText: string): LocalHandoffA
     bossAddress: env.BOSS_ADDRESS?.trim() || undefined,
     broadcastPinnwandEnabled: parseBool(env.ENABLE_BROADCAST_PINNWAND),
     broadcastPinnwandAddress: env.BROADCAST_PINNWAND_ADDRESS?.trim() || undefined,
+    einsatzChainMode: parseEinsatzChainMode(env.EINSATZ_CHAIN_MODE),
     broadcastPinnwandAuthorizedSenders: env.BROADCAST_AUTHORIZED_SENDERS
       ? env.BROADCAST_AUTHORIZED_SENDERS.split(',')
           .map((s) => s.trim())

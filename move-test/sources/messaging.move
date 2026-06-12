@@ -162,6 +162,160 @@ module messaging::messaging { // Named address via Move.toml
     }
 
     /// ----------------------------------------------------------------
+    /// § H.33 — Einsatz-Manifest-Anker (Rollup-Referenz on-chain)
+    /// ----------------------------------------------------------------
+    const E_MANIFEST_NOT_AUTHORIZED: u64 = 80;
+    const E_BAD_MANIFEST_HASH_LEN: u64 = 81;
+    const E_BAD_MERKLE_ROOT_LEN: u64 = 82;
+    const E_MANIFEST_SEQUENCE_EXISTS: u64 = 83;
+
+    const SOURCE_NETWORK_TESTNET: u8 = 0;
+    const SOURCE_NETWORK_MAINNET: u8 = 1;
+    const MANIFEST_HASH_BYTES: u64 = 32;
+    const MERKLE_ROOT_BYTES: u64 = 32;
+
+    struct EinsatzManifestRegistry has key {
+        id: UID,
+        authorized_anchorer: address,
+    }
+
+    struct EinsatzManifestKey has copy, drop, store {
+        einsatz_id: address,
+        sequence: u64,
+    }
+
+    struct EinsatzManifestAnchor has key, store {
+        id: UID,
+        einsatz_id: address,
+        sequence: u64,
+        manifest_hash: vector<u8>,
+        merkle_root: vector<u8>,
+        source_network: u8,
+        source_package_id: vector<u8>,
+        period_start_ms: u64,
+        period_end_ms: u64,
+        message_count: u64,
+        manifest_uri_hash: vector<u8>,
+        anchored_by: address,
+        anchored_at_ms: u64,
+    }
+
+    struct EinsatzManifestStored has copy, drop {
+        registry_id: ID,
+        einsatz_id: address,
+        sequence: u64,
+        manifest_hash: vector<u8>,
+        merkle_root: vector<u8>,
+        source_network: u8,
+        message_count: u64,
+        anchored_by: address,
+        anchored_at_ms: u64,
+    }
+
+    struct EinsatzManifestRegistryCreated has copy, drop {
+        registry_id: ID,
+        authorized_anchorer: address,
+    }
+
+    public entry fun create_einsatz_manifest_registry(
+        authorized_anchorer: address,
+        ctx: &mut TxContext,
+    ) {
+        let reg = EinsatzManifestRegistry {
+            id: object::new(ctx),
+            authorized_anchorer,
+        };
+        let rid = object::id(&reg);
+        event::emit(EinsatzManifestRegistryCreated {
+            registry_id: rid,
+            authorized_anchorer,
+        });
+        transfer::share_object(reg);
+    }
+
+    fun assert_manifest_bytes(hash: &vector<u8>, root: &vector<u8>) {
+        assert!(vector::length(hash) == MANIFEST_HASH_BYTES, E_BAD_MANIFEST_HASH_LEN);
+        assert!(vector::length(root) == MERKLE_ROOT_BYTES, E_BAD_MERKLE_ROOT_LEN);
+    }
+
+    public entry fun store_einsatz_manifest(
+        registry: &mut EinsatzManifestRegistry,
+        einsatz_id: address,
+        sequence: u64,
+        manifest_hash: vector<u8>,
+        merkle_root: vector<u8>,
+        source_network: u8,
+        source_package_id: vector<u8>,
+        period_start_ms: u64,
+        period_end_ms: u64,
+        message_count: u64,
+        manifest_uri_hash: vector<u8>,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        assert!(sender == registry.authorized_anchorer, E_MANIFEST_NOT_AUTHORIZED);
+        assert!(
+            source_network == SOURCE_NETWORK_TESTNET || source_network == SOURCE_NETWORK_MAINNET,
+            E_MANIFEST_NOT_AUTHORIZED,
+        );
+        assert_manifest_bytes(&manifest_hash, &merkle_root);
+
+        let key = EinsatzManifestKey { einsatz_id, sequence };
+        assert!(!dof::exists_<EinsatzManifestKey>(&registry.id, key), E_MANIFEST_SEQUENCE_EXISTS);
+
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let mh = manifest_hash;
+        let mr = merkle_root;
+        let anchor = EinsatzManifestAnchor {
+            id: object::new(ctx),
+            einsatz_id,
+            sequence,
+            manifest_hash: mh,
+            merkle_root: mr,
+            source_network,
+            source_package_id,
+            period_start_ms,
+            period_end_ms,
+            message_count,
+            manifest_uri_hash,
+            anchored_by: sender,
+            anchored_at_ms: now,
+        };
+
+        dof::add(&mut registry.id, key, anchor);
+
+        event::emit(EinsatzManifestStored {
+            registry_id: object::id(registry),
+            einsatz_id,
+            sequence,
+            manifest_hash: mh,
+            merkle_root: mr,
+            source_network,
+            message_count,
+            anchored_by: sender,
+            anchored_at_ms: now,
+        });
+    }
+
+    public entry fun set_manifest_authorized_anchorer(
+        registry: &mut EinsatzManifestRegistry,
+        new_anchorer: address,
+        ctx: &mut TxContext,
+    ) {
+        assert!(tx_context::sender(ctx) == registry.authorized_anchorer, E_MANIFEST_NOT_AUTHORIZED);
+        registry.authorized_anchorer = new_anchorer;
+    }
+
+    public fun manifest_exists(
+        registry: &EinsatzManifestRegistry,
+        einsatz_id: address,
+        sequence: u64,
+    ): bool {
+        let key = EinsatzManifestKey { einsatz_id, sequence };
+        dof::exists_<EinsatzManifestKey>(&registry.id, key)
+    }
+
+    /// ----------------------------------------------------------------
     /// Vault (stored under VaultRegistry as dynamic child object)
     /// ----------------------------------------------------------------
     const E_NOT_OWNER: u64 = 1;

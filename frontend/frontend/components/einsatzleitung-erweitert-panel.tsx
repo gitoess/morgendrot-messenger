@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { DashboardEinsatzChainPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
+import { EinsatzManifestAnchorPanel } from '@/frontend/components/einsatz-manifest-anchor-panel'
 import {
   Collapsible,
   CollapsibleContent,
@@ -31,7 +32,8 @@ export function EinsatzleitungErweitertPanel(p: {
         />
         <span className="text-sm font-semibold text-foreground">Erweitert</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="border-t border-border/60 px-4 pb-4 pt-4">
+      <CollapsibleContent className="border-t border-border/60 px-4 pb-4 pt-4 space-y-4">
+        <EinsatzManifestAnchorPanel apiStatus={p.apiStatus ?? null} />
         <DashboardEinsatzChainPanel
           apiStatus={p.apiStatus ?? null}
           onRefreshStatus={p.onRefreshStatus}

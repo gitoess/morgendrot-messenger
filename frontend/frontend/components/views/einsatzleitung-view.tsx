@@ -5,6 +5,7 @@ import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
 import { EinsatzleitungErweitertPanel } from '@/frontend/components/einsatzleitung-erweitert-panel'
 import { BossHelferEinrichtenPanel } from '@/frontend/components/boss-helfer-einrichten-panel'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
+import { EinsatzChainModeBanner } from '@/frontend/components/einsatz-chain-mode-banner'
 
 export type EinsatzleitungViewProps = {
   apiSnapshot?: ApiStatus | null
@@ -19,6 +20,8 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
   return (
     <div className="space-y-4 pb-4">
       <EinsatzleitungHub apiStatus={p.apiSnapshot ?? null} />
+
+      <EinsatzChainModeBanner rpcUrl={p.apiSnapshot?.rpcUrlLabel || p.apiSnapshot?.network} />
 
       {isBoss ? (
         <>

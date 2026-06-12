@@ -2143,6 +2143,10 @@ export interface StandaloneSmartphoneHandoffParams {
     exportTtlDays?: number;
     /** Purge über API/UI erlauben → ENABLE_PURGE im Handoff (Standard: true). */
     exportEnablePurge?: boolean;
+    /** § H.33 — Kettenmodus im Handoff. */
+    einsatzChainMode?: string;
+    /** § H.33 Modus A — Boss Mainnet-RPC für Anker (nicht im Helfer-Handoff). */
+    mainnetRpcUrl?: string;
 }
 
 function parseHandoffObjectIdList(raw: string | undefined): string[] {
@@ -2225,6 +2229,17 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
         `RPC_URL=${rpc}`,
         `PACKAGE_ID=${pkg}`,
     ];
+    const chainModeRaw = String(p.einsatzChainMode || 'mainnet-direct').trim().toLowerCase();
+    const chainMode =
+        chainModeRaw === 'testnet-with-mainnet-anchor' || chainModeRaw === 'mainnet-direct-no-rollup'
+            ? chainModeRaw
+            : 'mainnet-direct';
+    lines.push(`EINSATZ_CHAIN_MODE=${chainMode}`);
+    const mainnetRpc = String(p.mainnetRpcUrl || '').trim();
+    if (chainMode === 'testnet-with-mainnet-anchor' && mainnetRpc) {
+        lines.push(`# Boss-only (nicht für Helfer-PWA): Mainnet für store_einsatz_manifest`);
+        lines.push(`${'MAINNET_RPC_URL'}=${mainnetRpc}`);
+    }
     if (mb) {
         lines.push(`MAILBOX_ID=${mb}`, 'USE_MAILBOX=true');
     } else {
