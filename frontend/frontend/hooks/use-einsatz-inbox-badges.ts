@@ -13,7 +13,7 @@ import {
 } from '@/frontend/lib/einsatz-inbox-badges'
 import type { Message } from '@/frontend/lib/types'
 
-export function useEinsatzInboxBadges(messages: Message[]): {
+export function useEinsatzInboxBadges(messages: readonly Message[]): {
     getBadgesForMessage: (msg: Message) => EinsatzInboxMessageBadges
 } {
     const chainMode = resolveActiveEinsatzChainMode()

@@ -16,7 +16,7 @@ export type EinsatzManifestInboxMatchResult =
       }
     | { ok: false; error: string }
 
-async function inboxEntryHashes(messages: Message[]): Promise<Set<string>> {
+async function inboxEntryHashes(messages: readonly Message[]): Promise<Set<string>> {
     const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp)
     const hashes = new Set<string>()
     for (const m of sorted) {
@@ -35,7 +35,7 @@ async function inboxEntryHashes(messages: Message[]): Promise<Set<string>> {
 /** § H.33d — Manifest-Einträge gegen aktuellen Posteingang abgleichen. */
 export async function matchEinsatzManifestAgainstInbox(
     manifest: EinsatzManifestV1,
-    messages: Message[]
+    messages: readonly Message[]
 ): Promise<EinsatzManifestInboxMatchResult> {
     if (!manifest.entries?.length) {
         return { ok: false, error: 'Manifest enthält keine Einträge.' }
