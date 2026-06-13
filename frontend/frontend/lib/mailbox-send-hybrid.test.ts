@@ -27,8 +27,8 @@ vi.mock('@/frontend/lib/direct-iota-encrypted-submit', () => ({
 }))
 
 vi.mock('@/frontend/lib/direct-iota-vault-unlock-sync', () => ({
-  tryAutoRestoreDirectIotaSessionSigner: vi.fn(() => ({ ok: false })),
-  tryAutoRestoreDirectIotaSessionSignerAsync: vi.fn(async () => ({ ok: false })),
+  tryAutoRestoreDirectIotaSessionSigner: vi.fn(),
+  tryAutoRestoreDirectIotaSessionSignerAsync: vi.fn().mockResolvedValue(undefined),
   tryAutoRestoreDirectChatEcdhPrivateKey: vi.fn(async () => ({ ok: false })),
 }))
 
@@ -58,10 +58,12 @@ describe('mailbox-send-hybrid (H.15 Phase 2)', () => {
   beforeEach(() => {
     vi.mocked(trySubmitPlaintextMailboxViaDirectIota).mockReset()
     vi.mocked(sendMessage).mockReset()
-    vi.mocked(readNetworkProfilesState).mockReturnValue({ active: 'testnet', testnet: {}, mainnet: {} } as ReturnType<
-      typeof readNetworkProfilesState
-    >)
-    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: false })
+    vi.mocked(readNetworkProfilesState).mockReturnValue({
+      active: 'testnet',
+      testnet: { rpcUrl: '', packageId: '', mailboxId: '' },
+      mainnet: { rpcUrl: '', packageId: '', mailboxId: '' },
+    } as ReturnType<typeof readNetworkProfilesState>)
+    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: false, missing: ['RPC-URL'] })
   })
 
   it('meldet Direct- und Relay-Fehler zusammen', async () => {
@@ -97,13 +99,14 @@ describe('mailbox-send-hybrid (H.15 Phase 2)', () => {
     vi.mocked(readNetworkProfilesState).mockReturnValue({
       active: 'mainnet',
       mainnet: {
+        rpcUrl: 'https://rpc.example',
         packageId: '0x' + '11'.repeat(32),
         mailboxId: '0x' + '22'.repeat(32),
         senderAddress: '0x' + '33'.repeat(32),
       },
-      testnet: {},
+      testnet: { rpcUrl: '', packageId: '', mailboxId: '' },
     } as ReturnType<typeof readNetworkProfilesState>)
-    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: true })
+    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: true, missing: [] })
     vi.mocked(prepareEncryptedDirectSend).mockResolvedValue({ ok: true })
     vi.mocked(getDirectChatEcdhMaterialForRecipient).mockReturnValue({
       peerPubRaw: new Uint8Array(65),
@@ -128,13 +131,14 @@ describe('mailbox-send-hybrid (H.15 Phase 2)', () => {
     vi.mocked(readNetworkProfilesState).mockReturnValue({
       active: 'mainnet',
       mainnet: {
+        rpcUrl: 'https://rpc.example',
         packageId: '0x' + '11'.repeat(32),
         mailboxId: '0x' + '22'.repeat(32),
         senderAddress: '0x' + '33'.repeat(32),
       },
-      testnet: {},
+      testnet: { rpcUrl: '', packageId: '', mailboxId: '' },
     } as ReturnType<typeof readNetworkProfilesState>)
-    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: true })
+    vi.mocked(validateNetworkProfile).mockReturnValue({ ok: true, missing: [] })
     vi.mocked(prepareEncryptedDirectSend).mockResolvedValue({
       ok: false,
       error: 'Chat-ECDH-Privatkey fehlt',

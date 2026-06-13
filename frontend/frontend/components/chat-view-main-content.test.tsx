@@ -70,16 +70,20 @@ function meshtasticStub() {
   return {
     bleSupported: false,
     serialSupported: false,
-    transportKind: null as const,
+    transportKind: null,
+    setTransportKind: noop,
     connected: false,
     connecting: false,
     error: null,
     lastRxDebug: null,
-    meshRxSubscriptions: 0,
+    meshRxSubscriptions: null,
+    device: null,
     connect: noop,
     connectBluetooth: noop,
     connectUsb: noop,
     disconnect: noop,
+    sendBinaryV2: vi.fn(async () => 0),
+    sendMeshText: vi.fn(async () => 0),
   }
 }
 

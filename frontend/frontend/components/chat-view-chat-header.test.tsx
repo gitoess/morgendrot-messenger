@@ -118,6 +118,9 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
             mode: 'offline',
             queuePending: 2,
             lastSuccessfulSyncMinutes: 5,
+            queueEnabled: true,
+            localHandoffOnly: false,
+            restrictedFeatures: [],
           },
         })}
       />

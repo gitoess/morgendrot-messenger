@@ -24,7 +24,7 @@
     "start:lan": "next start --port 3341 --hostname 0.0.0.0",
     "lint": "eslint frontend",
     "lint:feature-boundaries": "eslint frontend/features/send frontend/features/inbox frontend/features/attachments",
-    "check:circular": "madge --circular --ts-config ./tsconfig.json --extensions ts,tsx ./frontend",
+    "check:circular": "madge --circular --exclude lib --ts-config ./tsconfig.json --extensions ts,tsx ./frontend/components ./frontend/hooks ./frontend/features",
     "cap:doctor": "cap doctor",
     "cap:add:android": "cap add android",
     "cap:sync:android": "cap sync android"

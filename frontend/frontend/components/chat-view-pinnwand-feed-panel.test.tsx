@@ -15,7 +15,7 @@ vi.mock('@/frontend/components/chat-view-pinnwand-reader-banner', () => ({
   ),
 }))
 
-const msg = (id: string): Message => ({ id, content: 'pin', from: '0x', to: '0x', timestamp: 1 })
+const msg = (id: string): Message => ({ id, content: 'pin', from: '0x', timestamp: 1 })
 
 function baseListProps() {
   return {

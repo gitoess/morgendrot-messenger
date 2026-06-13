@@ -39,10 +39,10 @@ function requireExpectedAddress(expected: string | null | undefined):
   return { ok: true, address: t }
 }
 
-function finalizeSignerSession(
+function finalizeSignerSession<S extends 'import' | 'vault' | 'persisted'>(
   address: string,
-  source: 'import' | 'vault' | 'persisted'
-): { ok: true; address: string; source: typeof source } {
+  source: S
+): { ok: true; address: string; source: S } {
   syncActiveNetworkChainSnapshot(address)
   notifyDirectIotaUiChanged()
   return { ok: true, address, source }

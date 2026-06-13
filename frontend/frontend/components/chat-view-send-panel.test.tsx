@@ -82,59 +82,22 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
   it('zeigt LoRa-Mesh-Fortschritt wenn Anhang und Fortschrittszeile gesetzt', () => {
     render(
       <ChatViewSendPanel
-        isPrivate
-        encrypted
-        recipient=""
-        message=""
-        onRecipientChange={vi.fn()}
-        onMessageChange={vi.fn()}
-        meshSelfArchiveAfterLoRa={false}
-        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
-        forcedTransport="mesh"
-        voicePhase="idle"
-        voiceActiveKind={null}
-        voiceProgress01={0}
-        voiceMaxSeconds={35}
-        voiceEmergencyMaxSeconds={30}
-        sosVoiceFollowsOnline={false}
-        onVoiceToggle={vi.fn()}
-        onVoiceEmergencyToggle={vi.fn()}
-        voiceNormalBlockedStart={false}
-        voiceEmergencyBlockedStart={false}
-        voiceBusy={false}
-        voiceRecording={false}
-        sosVoiceAwaitingSend={false}
-        compactFileRef={createRef()}
-        compactBusy={false}
-        onFileChange={vi.fn()}
-        ingestChatAttachmentFile={vi.fn().mockResolvedValue(undefined)}
-        compactMeta={{ total: 100, luma: 40, chroma: 60, q: 40, mode: 'lora' }}
-        attachedBlobBase64={null}
-        attachedLora={{
-          lumaWire: '[[MORG_LUMA_V1:msgId=deadbeef|len=4|ABCD]]',
-          chromaWire: '[[MORG_CHROMA_V1:msgId=deadbeef|len=4|EFGH]]',
-          messageId: 'deadbeef',
-          lumaJpegBytes: 40,
-          chromaJpegBytes: 60,
-        }}
-        attachedTxtFile={null}
-        attachedAudioBase64={null}
-        clearCompactAttachment={vi.fn()}
-        compactPreviewUrl={null}
-        loraPreviewUrl="blob:mock"
-        loraMeshProgressLine="Luma 2/5 · Chroma ausstehend"
-        sending
-        loraOnlineFallbackOffer={null}
-        onConfirmLoraOnline={vi.fn()}
-        onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
-        onSend={vi.fn()}
-        status="idle"
-        statusMsg="Funk: LUMA …"
-        meshPlaintextToNodeEnabled={false}
-        onMeshPlaintextToNodeEnabledChange={vi.fn()}
-        meshPlaintextNodeId=""
-        onMeshPlaintextNodeIdChange={vi.fn()}
+        {...baseSendPanel({
+          message: '',
+          forcedTransport: 'mesh',
+          compactMeta: { total: 100, luma: 40, chroma: 60, q: 40, mode: 'lora' },
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:msgId=deadbeef|len=4|ABCD]]',
+            chromaWire: '[[MORG_CHROMA_V1:msgId=deadbeef|len=4|EFGH]]',
+            messageId: 'deadbeef',
+            lumaJpegBytes: 40,
+            chromaJpegBytes: 60,
+          },
+          loraPreviewUrl: 'blob:mock',
+          loraMeshProgressLine: 'Luma 2/5 · Chroma ausstehend',
+          sending: true,
+          statusMsg: 'Funk: LUMA …',
+        })}
       />
     )
     expect(screen.getByRole('status')).toHaveTextContent(/Luma 2\/5 · Chroma ausstehend/)
@@ -143,53 +106,10 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
   it('zeigt Mailbox-Warteschlange-Banner bei pending > 0 (privat)', () => {
     render(
       <ChatViewSendPanel
-        isPrivate
-        encrypted
-        recipient=""
-        message=""
-        onRecipientChange={vi.fn()}
-        onMessageChange={vi.fn()}
-        meshSelfArchiveAfterLoRa={false}
-        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
-        forcedTransport="internet"
-        voicePhase="idle"
-        voiceActiveKind={null}
-        voiceProgress01={0}
-        voiceMaxSeconds={35}
-        voiceEmergencyMaxSeconds={30}
-        sosVoiceFollowsOnline={false}
-        onVoiceToggle={vi.fn()}
-        onVoiceEmergencyToggle={vi.fn()}
-        voiceNormalBlockedStart={false}
-        voiceEmergencyBlockedStart={false}
-        voiceBusy={false}
-        voiceRecording={false}
-        sosVoiceAwaitingSend={false}
-        compactFileRef={createRef()}
-        compactBusy={false}
-        onFileChange={vi.fn()}
-        ingestChatAttachmentFile={vi.fn().mockResolvedValue(undefined)}
-        compactMeta={null}
-        attachedBlobBase64={null}
-        attachedLora={null}
-        attachedTxtFile={null}
-        attachedAudioBase64={null}
-        clearCompactAttachment={vi.fn()}
-        compactPreviewUrl={null}
-        loraPreviewUrl={null}
-        sending={false}
-        loraOnlineFallbackOffer={null}
-        onConfirmLoraOnline={vi.fn()}
-        onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
-        onSend={vi.fn()}
-        status="idle"
-        statusMsg=""
-        offlineMailboxQueuePending={2}
-        meshPlaintextToNodeEnabled={false}
-        onMeshPlaintextToNodeEnabledChange={vi.fn()}
-        meshPlaintextNodeId=""
-        onMeshPlaintextNodeIdChange={vi.fn()}
+        {...baseSendPanel({
+          message: '',
+          offlineMailboxQueuePending: 2,
+        })}
       />
     )
     expect(screen.getByText(/Mailbox queue/)).toBeInTheDocument()
@@ -207,54 +127,11 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
   it('zeigt § H.6c-Hinweis wenn Einträge mit unverifizierter Zeit anstehen', () => {
     render(
       <ChatViewSendPanel
-        isPrivate
-        encrypted
-        recipient=""
-        message=""
-        onRecipientChange={vi.fn()}
-        onMessageChange={vi.fn()}
-        meshSelfArchiveAfterLoRa={false}
-        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
-        forcedTransport="internet"
-        voicePhase="idle"
-        voiceActiveKind={null}
-        voiceProgress01={0}
-        voiceMaxSeconds={35}
-        voiceEmergencyMaxSeconds={30}
-        sosVoiceFollowsOnline={false}
-        onVoiceToggle={vi.fn()}
-        onVoiceEmergencyToggle={vi.fn()}
-        voiceNormalBlockedStart={false}
-        voiceEmergencyBlockedStart={false}
-        voiceBusy={false}
-        voiceRecording={false}
-        sosVoiceAwaitingSend={false}
-        compactFileRef={createRef()}
-        compactBusy={false}
-        onFileChange={vi.fn()}
-        ingestChatAttachmentFile={vi.fn().mockResolvedValue(undefined)}
-        compactMeta={null}
-        attachedBlobBase64={null}
-        attachedLora={null}
-        attachedTxtFile={null}
-        attachedAudioBase64={null}
-        clearCompactAttachment={vi.fn()}
-        compactPreviewUrl={null}
-        loraPreviewUrl={null}
-        sending={false}
-        loraOnlineFallbackOffer={null}
-        onConfirmLoraOnline={vi.fn()}
-        onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
-        onSend={vi.fn()}
-        status="idle"
-        statusMsg=""
-        offlineMailboxQueuePending={1}
-        offlineMailboxQueueUntrustedTimeCount={1}
-        meshPlaintextToNodeEnabled={false}
-        onMeshPlaintextToNodeEnabledChange={vi.fn()}
-        meshPlaintextNodeId=""
-        onMeshPlaintextNodeIdChange={vi.fn()}
+        {...baseSendPanel({
+          message: '',
+          offlineMailboxQueuePending: 1,
+          offlineMailboxQueueUntrustedTimeCount: 1,
+        })}
       />
     )
     expect(screen.getByText(/device time not verified/i)).toBeInTheDocument()
@@ -263,55 +140,12 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
   it('zeigt Backoff- und Fehlerhinweis für Mailbox-Warteschlange (§ H.12 / SYNC)', () => {
     render(
       <ChatViewSendPanel
-        isPrivate
-        encrypted
-        recipient=""
-        message=""
-        onRecipientChange={vi.fn()}
-        onMessageChange={vi.fn()}
-        meshSelfArchiveAfterLoRa={false}
-        onMeshSelfArchiveAfterLoRaChange={vi.fn()}
-        forcedTransport="internet"
-        voicePhase="idle"
-        voiceActiveKind={null}
-        voiceProgress01={0}
-        voiceMaxSeconds={35}
-        voiceEmergencyMaxSeconds={30}
-        sosVoiceFollowsOnline={false}
-        onVoiceToggle={vi.fn()}
-        onVoiceEmergencyToggle={vi.fn()}
-        voiceNormalBlockedStart={false}
-        voiceEmergencyBlockedStart={false}
-        voiceBusy={false}
-        voiceRecording={false}
-        sosVoiceAwaitingSend={false}
-        compactFileRef={createRef()}
-        compactBusy={false}
-        onFileChange={vi.fn()}
-        ingestChatAttachmentFile={vi.fn().mockResolvedValue(undefined)}
-        compactMeta={null}
-        attachedBlobBase64={null}
-        attachedLora={null}
-        attachedTxtFile={null}
-        attachedAudioBase64={null}
-        clearCompactAttachment={vi.fn()}
-        compactPreviewUrl={null}
-        loraPreviewUrl={null}
-        sending={false}
-        loraOnlineFallbackOffer={null}
-        onConfirmLoraOnline={vi.fn()}
-        onDismissLoraOnlineFallback={vi.fn()}
-        apiStatus={READY_API_STATUS as ChatViewSendPanelProps['apiStatus']}
-        onSend={vi.fn()}
-        status="idle"
-        statusMsg=""
-        offlineMailboxQueuePending={1}
-        offlineMailboxQueueBackoffCount={1}
-        offlineMailboxQueueErrorHint="rpc timeout"
-        meshPlaintextToNodeEnabled={false}
-        onMeshPlaintextToNodeEnabledChange={vi.fn()}
-        meshPlaintextNodeId=""
-        onMeshPlaintextNodeIdChange={vi.fn()}
+        {...baseSendPanel({
+          message: '',
+          offlineMailboxQueuePending: 1,
+          offlineMailboxQueueBackoffCount: 1,
+          offlineMailboxQueueErrorHint: 'rpc timeout',
+        })}
       />
     )
     expect(screen.getByText(/Backoff/i)).toBeInTheDocument()

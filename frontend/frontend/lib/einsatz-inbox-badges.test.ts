@@ -67,10 +67,9 @@ describe('einsatz-inbox-badges', () => {
 
     it('Batch-Badge bei Registry-Treffer', () => {
         const ref = 'f'.repeat(64)
-        const digest = '0x' + 'e'.repeat(64)
-        recordForensicBatchEntries([{ canonicalMsgRef: ref, batchDigest: digest, encrypted: true }])
+        recordForensicBatchEntries([{ canonicalMsgRef: ref, batchDigest: '0x' + 'ab'.repeat(32), encrypted: true }])
         const batch = resolveForensicBatchBadge(ref)
         expect(batch.inForensicBatch).toBe(true)
-        expect(batch.forensicBatchDigest).toBe(digest)
+        expect(batch.forensicBatchDigest).toBe('0x' + 'ab'.repeat(32))
     })
 })

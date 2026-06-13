@@ -3,7 +3,7 @@ import { filterPinnwandFeedRows } from './pinnwand-feed-filter'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import type { Message } from '@/frontend/lib/types'
 
-const msg = (id: string): Message => ({ id, content: 'x', from: '0x', to: '0x', timestamp: 1 })
+const msg = (id: string): Message => ({ id, content: 'x', from: '0x', timestamp: 1 })
 
 describe('filterPinnwandFeedRows (§ H.1b)', () => {
   const rows: ChatInboxRow[] = [

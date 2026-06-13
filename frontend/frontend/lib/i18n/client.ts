@@ -12,7 +12,6 @@ import '@/frontend/lib/i18n/types'
 export const APP_LOCALE_CHANGED_EVENT = 'morgendrot.appLocaleChanged' as const
 
 declare global {
-  // eslint-disable-next-line no-var
   var __MORGENDROT_I18N__: typeof i18next | undefined
 }
 

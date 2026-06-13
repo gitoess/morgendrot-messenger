@@ -4,11 +4,9 @@
  * after connect. We re-export that stub and add `formatWithOptions` via `inspect` (same idea as Node).
  */
 // Next internal — no published types for this path.
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error compiled util
 import * as base from 'next/dist/compiled/util/util.js'
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error compiled util
 export * from 'next/dist/compiled/util/util.js'
 

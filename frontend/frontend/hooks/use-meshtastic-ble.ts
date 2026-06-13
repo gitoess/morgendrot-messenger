@@ -38,7 +38,6 @@ function meshRxDebugEnabled(): boolean {
 /** Nur wenn `localStorage['morgendrot.meshRxDebug']==='1'` — siehe Setup-Panel Hinweis. */
 function meshRxLog(...args: unknown[]): void {
   if (!meshRxDebugEnabled()) return
-  // eslint-disable-next-line no-console -- absichtlich für Funk-Diagnose (F12)
   console.info('[morgendrot mesh]', ...args)
 }
 
