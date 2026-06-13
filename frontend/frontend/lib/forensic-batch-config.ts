@@ -2,11 +2,6 @@
 
 export type ForensicBatchArchiveMode = 'plaintext' | 'encrypted'
 
-export const FORENSIC_BATCH_MAX_MSGS_PER_TX = 50
-/** Grobe PTB-Obergrenze (Serialisierung + Gas) — dynamisches Packen statt fix 25. */
-export const FORENSIC_BATCH_MAX_TX_WIRE_BYTES = 400_000
-export const FORENSIC_BATCH_ESTIMATED_PTB_OVERHEAD_BYTES = 2_048
-
 const LS_AUTO = 'morgendrot.forensicBatchAutoArchive'
 const LS_INTERVAL = 'morgendrot.forensicBatchAutoIntervalMin'
 const LS_MODE = 'morgendrot.forensicBatchArchiveMode'
@@ -63,11 +58,14 @@ export function writeForensicBatchAutoIntervalMin(min: ForensicBatchAutoInterval
 }
 
 export function readForensicBatchArchiveMode(): ForensicBatchArchiveMode {
-  if (typeof window === 'undefined') return 'plaintext'
+  if (typeof window === 'undefined') return 'encrypted'
   try {
-    return window.localStorage.getItem(LS_MODE) === 'encrypted' ? 'encrypted' : 'plaintext'
+    const v = window.localStorage.getItem(LS_MODE)
+    if (v === 'plaintext') return 'plaintext'
+    if (v === 'encrypted') return 'encrypted'
+    return 'encrypted'
   } catch {
-    return 'plaintext'
+    return 'encrypted'
   }
 }
 

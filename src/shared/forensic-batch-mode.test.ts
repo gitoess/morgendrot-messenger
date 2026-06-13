@@ -9,9 +9,9 @@ describe('forensic-batch-mode', () => {
         else process.env.FORENSIC_BATCH_MODE = prev
     })
 
-    it('defaults to plaintext', () => {
+    it('defaults to encrypted', () => {
         delete process.env.FORENSIC_BATCH_MODE
-        expect(forensicBatchModeFromEnv()).toBe('plaintext')
+        expect(forensicBatchModeFromEnv()).toBe('encrypted')
     })
 
     it('reads encrypted from env', () => {

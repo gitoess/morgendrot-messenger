@@ -9,12 +9,21 @@ export type ForensicBatchRegistryEntry = {
 
 export const FORENSIC_BATCH_REGISTRY_MAX_ENTRIES = 5_000
 
+const CANONICAL_REF_HEX = /^[a-f0-9]{64}$/
+const BATCH_DIGEST = /^0x[a-fA-F0-9]{64}$/
+
 export function isValidForensicBatchRegistryEntry(x: unknown): x is ForensicBatchRegistryEntry {
+  if (!x || typeof x !== 'object') return false
+  const e = x as ForensicBatchRegistryEntry
+  const ref = e.canonicalMsgRef?.trim().toLowerCase()
+  const digest = e.batchDigest?.trim()
   return (
-    !!x &&
-    typeof x === 'object' &&
-    typeof (x as ForensicBatchRegistryEntry).canonicalMsgRef === 'string' &&
-    typeof (x as ForensicBatchRegistryEntry).batchDigest === 'string'
+    typeof ref === 'string' &&
+    CANONICAL_REF_HEX.test(ref) &&
+    typeof digest === 'string' &&
+    BATCH_DIGEST.test(digest) &&
+    Number.isFinite(e.batchedAtMs) &&
+    typeof e.encrypted === 'boolean'
   )
 }
 

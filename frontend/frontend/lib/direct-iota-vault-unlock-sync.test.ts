@@ -109,10 +109,16 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
   })
 
   it('applies signerImport from unlock form', async () => {
+    const applied = applyDirectIotaMnemonicSession(rawHexSecret)
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    clearDirectIotaSessionSigner()
+
     const r = await syncDirectIotaSessionSignerAfterVaultUnlock({
       vaultPassword: 'vault-pass-2026',
       signerMode: 'sdk',
       signerImport: rawHexSecret,
+      expectedAddress: applied.address,
     })
     expect(r.ok).toBe(true)
     if (r.ok) expect(r.source).toBe('import')

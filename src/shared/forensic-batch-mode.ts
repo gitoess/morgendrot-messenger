@@ -2,8 +2,8 @@
 export type ForensicBatchArchiveMode = 'plaintext' | 'encrypted'
 
 export function forensicBatchModeFromEnv(): ForensicBatchArchiveMode {
-  const v = (process.env.FORENSIC_BATCH_MODE ?? 'plaintext').trim().toLowerCase()
-  return v === 'encrypted' ? 'encrypted' : 'plaintext'
+  const v = (process.env.FORENSIC_BATCH_MODE ?? 'encrypted').trim().toLowerCase()
+  return v === 'plaintext' ? 'plaintext' : 'encrypted'
 }
 
 export function parseForensicBatchModeInput(raw: unknown): ForensicBatchArchiveMode | undefined {

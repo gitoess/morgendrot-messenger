@@ -49,6 +49,8 @@ export async function revealVaultEcdhPrivateJwk(password: string): Promise<{
   message?: string
   error?: string
 }> {
-  const r = await executeCommand<VaultEcdhJwkResponse>('/vault-show-ecdh-jwk', [password])
+  const pw = password.trim()
+  if (!pw) return { ok: false, error: 'Vault-Passwort fehlt.' }
+  const r = await executeCommand<VaultEcdhJwkResponse>('/vault-show-ecdh-jwk', [pw])
   return parseVaultEcdhJwkResponse(r as VaultEcdhJwkResponse)
 }

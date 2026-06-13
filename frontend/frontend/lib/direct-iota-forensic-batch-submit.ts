@@ -72,6 +72,9 @@ export async function trySubmitForensicBatchTxViaDirectIota(opts: {
   if (!rpc || !signer || !signerAddr || !snap) {
     return { ok: false, error: 'RPC, Signer oder Ketten-Snapshot fehlt.' }
   }
+  if (recipient.toLowerCase() !== signerAddr.trim().toLowerCase()) {
+    return { ok: false, error: 'Forensic-Batch-Archiv: Empfänger muss die eigene Adresse (MY_ADDRESS) sein.' }
+  }
   if (!opts.plan.items.length) {
     return { ok: false, error: 'Leerer Batch-Plan.' }
   }

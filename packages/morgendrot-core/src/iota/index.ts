@@ -18,6 +18,7 @@ export {
 export {
   chainMessageLogicalDedupKey,
   mailboxPlainInboxKey,
+  mailboxEncryptedInboxKey,
   nonceNeedsInboxKeyDisambiguation,
   resolveInboxRowDedupKey,
 } from './chain-inbox-dedup'

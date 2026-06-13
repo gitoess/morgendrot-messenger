@@ -59,6 +59,7 @@ import {
   STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT,
 } from '@/frontend/lib/standalone-onboarding'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
+import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
@@ -690,6 +691,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     lockPollStreakRef.current = 0
     if (isStandaloneMessengerWithoutBasis()) {
       clearDirectIotaSessionSignerOnLock()
+      clearDirectChatEcdhKeyMaterial()
       setLocked(resolveStandaloneDeviceLocked())
       navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
@@ -698,6 +700,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const r = await vaultLockCommand()
     if (r.ok) {
       clearDirectIotaSessionSignerOnLock()
+      clearDirectChatEcdhKeyMaterial()
       setMainnetSignerHint(null)
       await checkStatus()
       navigateTo(null)

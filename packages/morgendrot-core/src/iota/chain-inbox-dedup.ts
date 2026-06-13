@@ -36,6 +36,15 @@ export function mailboxPlainInboxKey(parts: {
   return `mbp:${normalizeMailboxAddress(parts.sender)}:${normalizeMailboxAddress(parts.recipient)}:${String(parts.nonce)}:${parts.tsMs ?? 0}`
 }
 
+export function mailboxEncryptedInboxKey(parts: {
+  sender: string
+  recipient: string
+  nonce: string | number | bigint
+  tsMs?: number
+}): string {
+  return `mb:${normalizeMailboxAddress(parts.sender)}:${normalizeMailboxAddress(parts.recipient)}:${String(parts.nonce)}:${parts.tsMs ?? 0}`
+}
+
 export function resolveInboxRowDedupKey(parts: {
   sender: string
   recipient?: string

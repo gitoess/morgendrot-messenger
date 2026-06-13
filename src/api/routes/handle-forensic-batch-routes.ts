@@ -28,25 +28,57 @@ import {
   writeForensicBatchAutoConfigFile,
   type ForensicBatchAutoIntervalMin,
 } from '../../shared/forensic-batch-auto-config.js'
+import {
+  filterValidForensicBatchRegistryEntries,
+  FORENSIC_BATCH_REGISTRY_MAX_ENTRIES,
+} from '@morgendrot/core/forensic-batch'
 
-function canAccessForensicBatchApi(): boolean {
+const FORENSIC_BATCH_MAX_BODY_BYTES = 2 * 1024 * 1024
+
+function canReadForensicBatchApi(): boolean {
   const role = CFG.ROLE
   return role === 'boss' || role === 'kommandant' || role === 'messenger'
+}
+
+/** Chain-Mutationen und Registry-Ersatz — nur Boss/Kommandant. */
+function canMutateForensicBatchApi(): boolean {
+  const role = CFG.ROLE
+  return role === 'boss' || role === 'kommandant'
 }
 
 function denyIfUnauthorized(
   res: http.ServerResponse,
   cors: Record<string, string>,
-  sendJson: SendJsonFn
+  sendJson: SendJsonFn,
+  mutate = false
 ): boolean {
-  if (canAccessForensicBatchApi()) return false
-  sendJson(res, 403, { ok: false, error: 'Nur Boss/Kommandant/Werkstatt.' }, cors)
+  const ok = mutate ? canMutateForensicBatchApi() : canReadForensicBatchApi()
+  if (ok) return false
+  sendJson(
+    res,
+    403,
+    {
+      ok: false,
+      error: mutate
+        ? 'Nur Boss/Kommandant dürfen Batch-Archiv ausführen oder Registry ersetzen.'
+        : 'Nur Boss/Kommandant/Werkstatt.',
+    },
+    cors
+  )
   return true
 }
 
-async function readJsonBody(req: http.IncomingMessage): Promise<unknown> {
+async function readJsonBody(req: http.IncomingMessage, maxBytes = FORENSIC_BATCH_MAX_BODY_BYTES): Promise<unknown> {
   const chunks: Buffer[] = []
-  for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  let total = 0
+  for await (const chunk of req) {
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
+    total += buf.length
+    if (total > maxBytes) {
+      throw new Error(`Body zu groß (max. ${maxBytes} Byte).`)
+    }
+    chunks.push(buf)
+  }
   const raw = Buffer.concat(chunks).toString('utf8').trim()
   if (!raw) return {}
   return JSON.parse(raw) as unknown
@@ -93,6 +125,7 @@ export async function handleForensicBatchRoutes(
   }
 
   if (url === '/api/forensic-batch/auto-config' && req.method === 'POST') {
+    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
     try {
       const body = (await readJsonBody(req)) as {
         autoEnabled?: unknown
@@ -155,6 +188,7 @@ export async function handleForensicBatchRoutes(
   }
 
   if (url === '/api/forensic-batch/run' && req.method === 'POST') {
+    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
     let mode = getEffectiveForensicBatchMode()
     try {
       const body = (await readJsonBody(req)) as { mode?: unknown }
@@ -184,8 +218,23 @@ export async function handleForensicBatchRoutes(
         entries?: ForensicBatchRegistryEntry[]
         mode?: 'merge' | 'replace'
       }
-      const entries = Array.isArray(body.entries) ? body.entries : []
       const mode = body.mode === 'replace' ? 'replace' : 'merge'
+      if (mode === 'replace' && denyIfUnauthorized(res, cors, sendJson, true)) return true
+      const rawEntries = Array.isArray(body.entries) ? body.entries : []
+      if (rawEntries.length > FORENSIC_BATCH_REGISTRY_MAX_ENTRIES) {
+        sendJson(
+          res,
+          400,
+          { ok: false, error: `Max. ${FORENSIC_BATCH_REGISTRY_MAX_ENTRIES} Registry-Einträge pro Import.` },
+          cors
+        )
+        return true
+      }
+      const entries = filterValidForensicBatchRegistryEntries(rawEntries)
+      if (rawEntries.length > 0 && entries.length === 0) {
+        sendJson(res, 400, { ok: false, error: 'Keine gültigen Registry-Einträge im Import.' }, cors)
+        return true
+      }
       const result = await mergeForensicBatchRegistryImport(entries, mode)
       sendJson(res, 200, { ok: true, ...result }, cors)
     } catch (e) {
@@ -210,12 +259,14 @@ export async function handleForensicBatchRoutes(
   }
 
   if (url === '/api/forensic-batch/scheduler/start' && req.method === 'POST') {
+    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
     startForensicBatchScheduler()
     sendJson(res, 200, { ok: true, ...getForensicBatchSchedulerStatus() }, cors)
     return true
   }
 
   if (url === '/api/forensic-batch/scheduler/stop' && req.method === 'POST') {
+    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
     stopForensicBatchScheduler()
     sendJson(res, 200, { ok: true, stopped: true }, cors)
     return true

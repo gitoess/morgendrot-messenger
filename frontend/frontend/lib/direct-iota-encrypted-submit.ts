@@ -30,6 +30,7 @@ import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-ma
 import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
 import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import { trimValidIotaAddress } from '@/frontend/lib/iota-address'
 import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = 16000
@@ -120,7 +121,11 @@ async function resolveEncryptedDirectSubmitContext(
       error: 'Keine Ketten-IDs — Basis einmal verbinden oder Package/Mailbox/Absender in den Einstellungen speichern.',
     }
   }
-  if (!canTryLiveEncryptedDirect(recipient.trim(), mode)) {
+  const recipientNorm = trimValidIotaAddress(recipient)
+  if (!recipientNorm) {
+    return { ok: false, error: 'Empfänger: gültige 0x-Adresse (64 Hex).' }
+  }
+  if (!canTryLiveEncryptedDirect(recipientNorm, mode)) {
     return {
       ok: false,
       error:
@@ -250,7 +255,10 @@ async function encryptPlaintextForDirectSubmit(
   | { ok: false; error: string }
 > {
   const parsedNonce = parseMailboxOutNonceMarker(opts.plaintextUtf8)
-  const bodyForE2ee = parsedNonce ? parsedNonce.rest : opts.plaintextUtf8
+  if (!parsedNonce) {
+    return { ok: false, error: 'Verschlüsselter Send: Nonce-Marker im Wire-Format fehlt.' }
+  }
+  const bodyForE2ee = parsedNonce.rest
   const msgUtf8 = new TextEncoder().encode(bodyForE2ee).length
   if (msgUtf8 > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
     return {
@@ -263,7 +271,7 @@ async function encryptPlaintextForDirectSubmit(
     const aesKey = await deriveAesGcmKey(sharedSecret)
     const encrypted = await encryptMessage(aesKey, bodyForE2ee)
     const full = base64ToUint8(encrypted.ciphertext)
-    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now())
+    const nonce = parsedNonce.nonce
     const ciphertext = new Uint8Array(full.subarray(0, -16))
     const iv = base64ToUint8(encrypted.iv)
     const tag = new Uint8Array(full.subarray(-16))

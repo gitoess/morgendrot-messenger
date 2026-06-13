@@ -4,8 +4,8 @@ import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-sign
 describe('directIotaSignerMatchesIdentity', () => {
   const full = '0x' + 'ab'.repeat(32)
 
-  it('leerer identity → immer ok', () => {
-    expect(directIotaSignerMatchesIdentity(full, '')).toBe(true)
+  it('leerer identity → fail-closed', () => {
+    expect(directIotaSignerMatchesIdentity(full, '')).toBe(false)
     expect(directIotaSignerMatchesIdentity('', full)).toBe(false)
   })
 

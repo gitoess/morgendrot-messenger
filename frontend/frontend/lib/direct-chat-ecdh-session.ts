@@ -180,8 +180,8 @@ export async function applyDirectChatEcdhPrivateJwk(
   } catch {
     return { ok: false, error: 'Kein gültiges JSON (JWK).' }
   }
-  if (jwk.kty !== 'EC' || jwk.crv !== 'P-256') {
-    return { ok: false, error: 'JWK muss EC / P-256 sein (wie Messenger-Handshake).' }
+  if (jwk.kty !== 'EC' || jwk.crv !== 'P-256' || typeof jwk.d !== 'string' || !jwk.d.trim()) {
+    return { ok: false, error: 'JWK muss EC / P-256 Privatkey sein (Feld „d“ fehlt).' }
   }
   try {
     const subtle = globalThis.crypto?.subtle

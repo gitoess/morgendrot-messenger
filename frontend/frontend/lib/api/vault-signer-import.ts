@@ -7,7 +7,9 @@ export async function revealVaultSignerImport(password: string): Promise<{
   message?: string
   error?: string
 }> {
-  const r = await executeCommand<{ signerImport?: string }>('/vault-show-signer-import', [password])
+  const pw = password.trim()
+  if (!pw) return { ok: false, error: 'Vault-Passwort fehlt.' }
+  const r = await executeCommand<{ signerImport?: string }>('/vault-show-signer-import', [pw])
   const raw = r as { ok?: boolean; signerImport?: string; message?: string; error?: string }
   return {
     ok: raw.ok === true,

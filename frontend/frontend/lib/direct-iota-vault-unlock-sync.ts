@@ -25,6 +25,17 @@ import {
 import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
 
+const MISSING_MY_ADDRESS =
+  'MY_ADDRESS unbekannt — Status aktualisieren und Tresor erneut entsperren.'
+
+function requireExpectedAddress(expected: string | null | undefined):
+  | { ok: true; address: string }
+  | { ok: false; error: string } {
+  const t = expected?.trim()
+  if (!t) return { ok: false, error: MISSING_MY_ADDRESS }
+  return { ok: true, address: t }
+}
+
 /** Tab-Reload oder fehlender RAM-Signer — ohne Vault-Passwort. */
 export function tryAutoRestoreDirectIotaSessionSigner(): { ok: true; address: string; source: 'session' | 'tab' } | { ok: false } {
   const existing = getDirectIotaSessionSignerAddress()
@@ -66,9 +77,11 @@ export async function syncDirectIotaSessionSignerAfterVaultUnlock(opts: {
   const expected = opts.expectedAddress
 
   if (importRaw) {
+    const expectedCheck = requireExpectedAddress(expected)
+    if (!expectedCheck.ok) return expectedCheck
     const applied = applyDirectIotaMnemonicSession(importRaw)
     if (!applied.ok) return applied
-    if (!directIotaSignerMatchesIdentity(applied.address, expected ?? '')) {
+    if (!directIotaSignerMatchesIdentity(applied.address, expectedCheck.address)) {
       clearDirectIotaSessionSigner()
       return { ok: false, error: 'Signer passt nicht zu MY_ADDRESS — Vault/Mnemonic prüfen.' }
     }
@@ -81,9 +94,11 @@ export async function syncDirectIotaSessionSignerAfterVaultUnlock(opts: {
   }
 
   if (hasPersistedDirectIotaSessionSigner() && pw.length >= 8) {
+    const expectedCheck = requireExpectedAddress(expected)
+    if (!expectedCheck.ok) return expectedCheck
     const restored = await restoreDirectIotaSessionSignerFromEncryptedStorage({ password: pw })
     if (restored.ok) {
-      if (expected && !directIotaSignerMatchesIdentity(restored.address, expected)) {
+      if (!directIotaSignerMatchesIdentity(restored.address, expectedCheck.address)) {
         clearDirectIotaSessionSigner()
         return { ok: false, error: 'Gespeicherter Signer passt nicht zu MY_ADDRESS — Vault prüfen.' }
       }
@@ -101,6 +116,9 @@ export async function syncDirectIotaSessionSignerAfterVaultUnlock(opts: {
     return { ok: false, error: 'Vault-Passwort fehlt für Session-Signer.' }
   }
 
+  const expectedCheck = requireExpectedAddress(expected)
+  if (!expectedCheck.ok) return expectedCheck
+
   const r = await revealVaultSignerImport(pw)
   if (!r.ok || !r.signerImport?.trim()) {
     return { ok: false, error: r.error || r.message || 'Signer aus Vault nicht lesbar.' }
@@ -109,7 +127,7 @@ export async function syncDirectIotaSessionSignerAfterVaultUnlock(opts: {
   const applied = applyDirectIotaMnemonicSession(r.signerImport)
   if (!applied.ok) return applied
 
-  if (!directIotaSignerMatchesIdentity(applied.address, expected ?? '')) {
+  if (!directIotaSignerMatchesIdentity(applied.address, expectedCheck.address)) {
     clearDirectIotaSessionSigner()
     return { ok: false, error: 'Vault-Signer passt nicht zu MY_ADDRESS — Adresse prüfen.' }
   }

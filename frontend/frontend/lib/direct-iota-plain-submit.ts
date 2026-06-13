@@ -39,6 +39,7 @@ import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
 import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import { trimValidIotaAddress } from '@/frontend/lib/iota-address'
 import {
   normalizeMessagingPersistenceMode,
   readMessagingPersistenceModeFromStorage,
@@ -299,6 +300,10 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
       error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender (MY_ADDRESS) überein.',
     }
   }
+  const recipient = trimValidIotaAddress(opts.recipient)
+  if (!recipient) {
+    return { ok: false, error: 'Empfänger: gültige 0x-Adresse (64 Hex).' }
+  }
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const plaintextUtf8 = new TextEncoder().encode(opts.payloadUtf8)
@@ -307,7 +312,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
       txb = buildSendPlaintextEventTransaction({
         packageId: snap.packageId,
         senderAddress: snap.senderAddress.trim(),
-        recipientAddress: opts.recipient.trim(),
+        recipientAddress: recipient,
         plaintextUtf8,
         nonce: opts.nonce,
       })
@@ -330,7 +335,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
         packageId: snap.packageId,
         mailboxObjectId,
         senderAddress: snap.senderAddress.trim(),
-        recipientAddress: opts.recipient.trim(),
+        recipientAddress: recipient,
         plaintextUtf8,
         nonce: opts.nonce,
         ttlDays: snap.ttlDays,

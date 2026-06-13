@@ -65,9 +65,8 @@ function apiRelayErrorMessage(res: ApiResponse): string {
 }
 
 function fromApiResponse(res: ApiResponse): MailboxHybridSendResult {
-  const digest = txDigestFromApi(res)
-  if (res.ok === true || digest) {
-    return { ok: true, txDigest: digest, nonce: nonceFromApi(res) }
+  if (res.ok === true) {
+    return { ok: true, txDigest: txDigestFromApi(res), nonce: nonceFromApi(res) }
   }
   return { ok: false, error: res.error, message: res.message }
 }
@@ -141,9 +140,6 @@ export async function sendTeamPlaintextBroadcastHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
-    if (!shouldUseMailboxApiRelayFallback()) {
-      return { ok: false, error: directErr }
-    }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid

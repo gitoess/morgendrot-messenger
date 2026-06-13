@@ -13,6 +13,7 @@ import {
   fetchTeamPlainBroadcastRpcRows,
   isLikelyIotaHexId,
   mailboxPlainInboxKey,
+  mailboxEncryptedInboxKey,
   normalizeMailboxAddress,
   type MessagingEventInboxRpcRow,
 } from '@morgendrot/core/iota'
@@ -233,6 +234,13 @@ export async function tryFetchDirectMailboxInboxViaIota(
         continue
       }
       const peerAddr = normalizeMailboxAddress(r.sender) === myNorm ? r.recipient : r.sender
+      const ts = r.ts ?? 0
+      const encInboxKey = mailboxEncryptedInboxKey({
+        sender: r.sender,
+        recipient: r.recipient,
+        nonce: r.nonce,
+        tsMs: ts,
+      })
       let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
       if (!mat && getDirectChatEcdhPrivateKey()) {
         await ensureDirectChatPeerPubForRecipient(peerAddr)
@@ -245,8 +253,9 @@ export async function tryFetchDirectMailboxInboxViaIota(
           text: `[Verschlüsselt] Kein Chat-ECDH für ${String(peerAddr).slice(0, 14)}… — Peer-Pub in den Puls-Einstellungen setzen.`,
           isPlain: false,
           nonce: r.nonce,
-          ts: r.ts,
+          ts,
           chainPurgeable: true,
+          inboxKey: encInboxKey,
         })
         continue
       }
@@ -263,8 +272,9 @@ export async function tryFetchDirectMailboxInboxViaIota(
           text,
           isPlain: false,
           nonce: r.nonce,
-          ts: r.ts,
+          ts,
           chainPurgeable: true,
+          inboxKey: encInboxKey,
         })
       } catch {
         apiRows.push({
@@ -273,8 +283,9 @@ export async function tryFetchDirectMailboxInboxViaIota(
           text: '[Verschlüsselt] Entschlüsselung fehlgeschlagen (Key passt nicht oder Nutzlast beschädigt).',
           isPlain: false,
           nonce: r.nonce,
-          ts: r.ts,
+          ts,
           chainPurgeable: true,
+          inboxKey: encInboxKey,
         })
       }
     }

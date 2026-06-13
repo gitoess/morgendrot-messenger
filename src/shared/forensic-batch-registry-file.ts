@@ -71,11 +71,12 @@ export async function mergeForensicBatchRegistryImport(
   incoming: ForensicBatchRegistryEntry[],
   mode: 'merge' | 'replace' = 'merge'
 ): Promise<{ merged: number; total: number }> {
+  const valid = filterValidForensicBatchRegistryEntries(incoming)
   return enqueueForensicBatchRegistryOp(() => {
     const prev = readForensicBatchRegistryFileUnlocked()
     const { merged, total, entries } = mergeForensicBatchRegistryEntries(
       prev,
-      incoming,
+      valid,
       mode,
       { maxEntries: FORENSIC_BATCH_REGISTRY_MAX_ENTRIES }
     )

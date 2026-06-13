@@ -7,12 +7,11 @@ function normalizeHexAddr(a: string): string {
   return t.startsWith('0x') ? t : `0x${t}`
 }
 
-/** Session-Signer vs. MY_ADDRESS (volle oder maskierte UI-Adresse). */
+/** Session-Signer vs. MY_ADDRESS (volle oder maskierte UI-Adresse). Leere Identity → fail-closed. */
 export function directIotaSignerMatchesIdentity(signerAddress: string, identityAddress: string): boolean {
   const signer = signerAddress.trim()
   const identity = identityAddress.trim()
-  if (!identity) return true
-  if (!signer) return false
+  if (!identity || !signer) return false
   return (
     addressMatchesIdentity(signer, identity) || normalizeHexAddr(signer) === normalizeHexAddr(identity)
   )
