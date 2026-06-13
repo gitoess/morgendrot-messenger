@@ -17,20 +17,18 @@ import {
 import { parseMailboxOutNonceMarker } from '@morgendrot/core'
 import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
 import { deriveAesGcmKey, deriveSharedSecret, encryptMessage } from '@morgendrot/shared/morgendrot-crypto'
-import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { resolveDirectIotaSubmitContext } from '@/frontend/lib/direct-iota-submit-context'
 import {
   canUseDirectEncryptedMailboxDrain,
   getDirectMailboxChainSnapshot,
   type DirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
-import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
 import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
-import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
-import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
-import { trimValidIotaAddress } from '@/frontend/lib/iota-address'
+import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = 16000
@@ -62,9 +60,6 @@ export function canTryLiveEncryptedDirect(
   return true
 }
 
-export const canTryLiveEncryptedDirectEvent = (recipient: string) =>
-  canTryLiveEncryptedDirect(recipient, 'event')
-
 export const canTryLiveEncryptedDirectMailbox = (recipient: string) =>
   canTryLiveEncryptedDirect(recipient, 'mailbox')
 
@@ -91,41 +86,13 @@ async function resolveEncryptedDirectSubmitContext(
   recipient: string,
   mode: EncryptedPersistenceMode
 ): Promise<EncryptedSubmitContext> {
-  if (isIotaRelayOnlyMode()) {
-    return {
-      ok: false,
-      error:
-        'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (verschlüsselt) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',
-    }
-  }
-  if (!isDirectMailboxDrainEnabled()) {
-    return { ok: false, error: 'Direkt-Mailbox-Drain ist aus.' }
-  }
-  syncActiveNetworkChainSnapshot()
-  const rpc = getConfiguredDirectIotaRpcUrl()
-  if (!rpc) {
-    return { ok: false, error: 'Keine Direkt-RPC-URL (localStorage oder NEXT_PUBLIC_DIRECT_IOTA_RPC_URL).' }
-  }
-  const signer = getDirectIotaSessionSigner()
-  const signerAddr = getDirectIotaSessionSignerAddress()
-  if (!signer || !signerAddr) {
-    return {
-      ok: false,
-      error: 'Kein Session-Signer — Tresor entsperren oder Mnemonic in den Einstellungen setzen (nur RAM).',
-    }
-  }
-  const snap = getDirectMailboxChainSnapshot()
-  if (!snap) {
-    return {
-      ok: false,
-      error: 'Keine Ketten-IDs — Basis einmal verbinden oder Package/Mailbox/Absender in den Einstellungen speichern.',
-    }
-  }
-  const recipientNorm = trimValidIotaAddress(recipient)
-  if (!recipientNorm) {
-    return { ok: false, error: 'Empfänger: gültige 0x-Adresse (64 Hex).' }
-  }
-  if (!canTryLiveEncryptedDirect(recipientNorm, mode)) {
+  const base = resolveDirectIotaSubmitContext({
+    relayBlockedMessage:
+      'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (verschlüsselt) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',
+    requireRecipient: recipient,
+  })
+  if (!base.ok) return base
+  if (!canTryLiveEncryptedDirect(base.recipient!, mode)) {
     return {
       ok: false,
       error:
@@ -134,13 +101,13 @@ async function resolveEncryptedDirectSubmitContext(
           : 'Konfiguration passt nicht: Direkt-verschlüsselt nur mit aktiver Mailbox **ohne** Messenger-Credits (Flags aus letztem /api/status oder manuell geschätzt).',
     }
   }
-  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
-    return {
-      ok: false,
-      error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender (MY_ADDRESS) überein.',
-    }
+  return {
+    ok: true,
+    rpc: base.rpc,
+    signer: base.signer,
+    snap: base.snap,
+    client: base.client,
   }
-  return { ok: true, rpc, signer, snap, client: createDirectIotaClient({ rpcUrl: rpc }) }
 }
 
 async function executeEncryptedDirectTransaction(
@@ -231,12 +198,6 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   opts: TrySubmitEncryptedMailboxViaDirectIotaInput
 ): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
   return trySubmitEncryptedViaDirectIota(opts, 'mailbox')
-}
-
-export async function trySubmitEncryptedEventViaDirectIota(
-  opts: TrySubmitEncryptedMailboxViaDirectIotaInput
-): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-  return trySubmitEncryptedViaDirectIota(opts, 'event')
 }
 
 export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {

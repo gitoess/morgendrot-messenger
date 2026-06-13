@@ -46,11 +46,11 @@ import {
 } from '@/frontend/lib/handoff-standalone-ready'
 import {
   syncDirectIotaSessionSignerAfterVaultUnlock,
-  syncDirectChatEcdhAfterVaultUnlock,
   tryAutoRestoreDirectIotaSessionSigner,
   tryAutoRestoreDirectChatEcdhPrivateKey,
   shouldAutoRestoreSessionSignerForMainnet,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { syncMainnetKeysAfterBackendUnlock } from '@/frontend/lib/dashboard-vault-key-sync'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   isStandaloneEinsatzPath,
@@ -594,38 +594,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (res.ok) {
       const vaultPw = password
       await checkStatus()
-      let statusSigner: string | undefined
-      let statusAddr: string | undefined
-      try {
-        const snap = await fetchStatus()
-        if ('pollClockHint' in snap) {
-          statusSigner = snap.signer
-          statusAddr = snap.myAddressFull?.trim() || snap.myAddress?.trim()
-        }
-      } catch {
-        /* checkStatus lief schon */
-      }
-      const expectedAddr = statusAddr || myAddress.trim() || undefined
-      const signerSync = await syncDirectIotaSessionSignerAfterVaultUnlock({
+      const { mainnetSignerHint } = await syncMainnetKeysAfterBackendUnlock({
         vaultPassword: vaultPw,
-        signerMode: statusSigner ?? signer,
         signerImport: sdkExtra,
-        expectedAddress: expectedAddr,
+        apiSigner: signer,
+        expectedAddress: myAddress.trim() || undefined,
       })
-      const ecdhSync = await syncDirectChatEcdhAfterVaultUnlock({ vaultPassword: vaultPw })
-      if (!signerSync.ok && (statusSigner === 'sdk' || signer === 'sdk')) {
-        setMainnetSignerHint(
-          signerSync.error.includes('Vault') || signerSync.error.includes('Signer')
-            ? `${signerSync.error} — ggf. Tresor mit „Signer-Import mit speichern“ neu sichern.`
-            : signerSync.error
-        )
-      } else if (!ecdhSync.ok) {
-        setMainnetSignerHint(
-          `${ecdhSync.error} — verschlüsselter Direkt-Send erst nach erneutem Entsperren oder Hard Refresh.`
-        )
-      } else {
-        setMainnetSignerHint(null)
-      }
+      setMainnetSignerHint(mainnetSignerHint)
       vaultUnlockRequestedRef.current = false
       sessionUnlockedStableRef.current = true
       lockPollStreakRef.current = 0

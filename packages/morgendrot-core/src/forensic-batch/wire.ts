@@ -26,11 +26,6 @@ export async function sha256HexUtf8(text: string): Promise<string> {
   return Array.from(new Uint8Array(hash), (b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/** @deprecated Alias — bitte `sha256HexUtf8` (async) verwenden. */
-export async function sha256HexUtf8Node(s: string): Promise<string> {
-  return sha256HexUtf8(s)
-}
-
 export function wireUtf8ByteLength(s: string): number {
   return new TextEncoder().encode(s).length
 }

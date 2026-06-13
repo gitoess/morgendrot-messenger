@@ -79,6 +79,6 @@ export function getForensicBatchSchedulerStatus(): {
     intervalMin: getEffectiveForensicBatchIntervalMin(),
     lastRunAt,
     lastStatus,
-    running: false,
+    running: timer !== null,
   }
 }

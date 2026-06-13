@@ -3,22 +3,17 @@
 import {
   attachGasPaymentForOwner,
   buildPurgeMailboxMessageTransaction,
-  createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
   type PurgeMailboxMessageVariant,
+  validateMessagingMailboxObjectForPackage,
 } from '@morgendrot/core/iota'
-import {
-  canUseDirectEncryptedMailboxDrain,
-  getDirectMailboxChainSnapshot,
-} from '@/frontend/lib/direct-iota-chain-context'
+import { resolveDirectIotaSubmitContext } from '@/frontend/lib/direct-iota-submit-context'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { canTryDirectPurgeHandshakeSubmit } from '@/frontend/lib/direct-iota-purge-handshake'
-import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
-import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
-import { validateMessagingMailboxObjectForPackage } from '@morgendrot/core/iota'
+import { canUseDirectEncryptedMailboxDrain } from '@/frontend/lib/direct-iota-chain-context'
 
 export function canTryDirectPurgeMessageSubmit(): boolean {
   return canTryDirectPurgeHandshakeSubmit()
@@ -34,20 +29,12 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
   if (!canTryDirectPurgeMessageSubmit()) {
     return { ok: false, error: 'Direkt-Purge: Session, RPC oder Ketten-IDs fehlen.' }
   }
-  const rpc = getConfiguredDirectIotaRpcUrl()
-  if (!rpc) return { ok: false, error: 'Keine Direkt-RPC-URL.' }
-  const signer = getDirectIotaSessionSigner()
-  const signerAddr = getDirectIotaSessionSignerAddress()
-  if (!signer || !signerAddr) {
-    return { ok: false, error: 'Kein Session-Signer — Mnemonic im Puls anwenden.' }
-  }
-  const snap = getDirectMailboxChainSnapshot()
-  if (!snap) return { ok: false, error: 'Keine Ketten-IDs (Snapshot).' }
   if (!canUseDirectEncryptedMailboxDrain()) {
     return { ok: false, error: 'Purge per Fullnode braucht Mailbox-Drain-Flags im Puls.' }
   }
+  const ctx = resolveDirectIotaSubmitContext({ requireRecipient: opts.recipient })
+  if (!ctx.ok) return ctx
 
-  const recipient = opts.recipient.trim()
   const peer = opts.peerSender.trim()
   let nonce: bigint
   try {
@@ -57,18 +44,18 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
   }
 
   try {
-    const client = createDirectIotaClient({ rpcUrl: rpc })
+    const client = ctx.client
     const mbOverride = (opts.mailboxObjectId ?? readActiveSendMailboxObjectId() ?? '').trim()
-    const { mailboxObjectId } = snap.flags.useMailbox
+    const { mailboxObjectId } = ctx.snap.flags.useMailbox
       ? resolveDirectMailboxUsePrivateMoveCall({
           mailboxObjectId: mbOverride || undefined,
-          serverMailboxId: snap.mailboxId,
+          serverMailboxId: ctx.snap.mailboxId,
         })
-      : { mailboxObjectId: snap.mailboxId }
+      : { mailboxObjectId: ctx.snap.mailboxId }
     const mailboxCheck = await validateMessagingMailboxObjectForPackage(
       client,
       mailboxObjectId,
-      snap.packageId,
+      ctx.snap.packageId,
       'any'
     )
     if (!mailboxCheck.ok) {
@@ -77,17 +64,17 @@ export async function tryPurgeMailboxMessageViaDirectIota(opts: {
     const privateMailbox = mailboxCheck.kind === 'privatemailbox'
 
     const txb = buildPurgeMailboxMessageTransaction({
-      packageId: snap.packageId,
-      senderAddress: snap.senderAddress.trim(),
+      packageId: ctx.snap.packageId,
+      senderAddress: ctx.snap.senderAddress.trim(),
       mailboxObjectId,
-      recipient,
+      recipient: ctx.recipient!,
       peerSender: peer,
       nonce,
       variant: opts.variant,
       privateMailbox,
     })
-    await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
-    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
+    await attachGasPaymentForOwner(client, txb, ctx.snap.senderAddress.trim())
+    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer: ctx.signer })
     if (isDirectChainExecutionSuccess(out.digest, out.status)) {
       return { ok: true, digest: out.digest }
     }

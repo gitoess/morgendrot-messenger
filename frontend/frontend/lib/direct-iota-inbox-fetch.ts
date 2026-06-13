@@ -18,8 +18,6 @@ import {
   type MessagingEventInboxRpcRow,
 } from '@morgendrot/core/iota'
 import type { InboxApiRow } from '@/frontend/features/inbox/inbox-map-messages'
-import { uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
-import { deriveAesGcmKey, deriveSharedSecret, decryptMessage } from '@morgendrot/shared/morgendrot-crypto'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
   canUseDirectEncryptedMailboxDrain,
@@ -28,29 +26,39 @@ import {
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
-import {
-  getDirectChatEcdhMaterialForRecipient,
-  getDirectChatEcdhPrivateKey,
-} from '@/frontend/lib/direct-chat-ecdh-session'
-import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import { getDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-chat-ecdh-session'
+import { decryptDirectInboxEncryptedPayload } from '@/frontend/lib/direct-iota-inbox-decrypt'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
 export type TryFetchDirectMailboxInboxViaIotaOpts = {
   limit: number
   offset: number
-  /** Wenn gesetzt und von API übergeben: muss mit Snapshot-Package übereinstimmen (sonst Abbruch). */
   packageIdOverride?: string
-  /** M4b: private Kontakt-Mailbox statt Snapshot-Shared-Mailbox. */
   mailboxObjectId?: string
-  /** Move-Events (EncryptedMessage/PlaintextMessage) — nur Shared-Posteingang-Union. */
   includeMessagingEvents?: boolean
 }
 
-function shouldIncludeMessagingEventsInDirectInbox(
-  mailboxObjectId: string,
-  sharedMailboxId: string
-): boolean {
+type PendingEncryptedRow = {
+  sortTs: number
+  sender: string
+  recipient: string
+  nonce: string
+  ts: number
+  inboxKey: string
+  peerAddr: string
+  iv: Uint8Array
+  ciphertext: Uint8Array
+  tag: Uint8Array
+  chainPurgeable: boolean
+  decryptErrorPrefix: string
+}
+
+type SortableInboxEntry =
+  | { sortTs: number; row: InboxApiRow }
+  | { sortTs: number; pending: PendingEncryptedRow }
+
+function shouldIncludeMessagingEventsInDirectInbox(mailboxObjectId: string, sharedMailboxId: string): boolean {
   const mb = mailboxObjectId.trim().toLowerCase()
   const shared = sharedMailboxId.trim().toLowerCase()
   return mb === shared
@@ -62,13 +70,9 @@ function inboxTsFromRow(tsMs: number, nonce: bigint): number {
   return Number.isFinite(n) && n >= 1_000_000_000_000 ? n : 0
 }
 
-function mergeSortPageInboxRows(rows: InboxApiRow[], limit: number, offset: number): InboxApiRow[] {
-  rows.sort((a, b) => {
-    const ta = inboxTsFromRow(Number(a.ts ?? 0), BigInt(String(a.nonce ?? 0)))
-    const tb = inboxTsFromRow(Number(b.ts ?? 0), BigInt(String(b.nonce ?? 0)))
-    return tb - ta
-  })
-  return rows.slice(offset, offset + limit)
+function sortAndSliceInboxEntries(entries: SortableInboxEntry[], limit: number, offset: number): SortableInboxEntry[] {
+  entries.sort((a, b) => b.sortTs - a.sortTs)
+  return entries.slice(offset, offset + limit)
 }
 
 async function mapEventRowsToInboxApi(
@@ -91,55 +95,53 @@ async function mapEventRowsToInboxApi(
       continue
     }
     const peerAddr = normalizeMailboxAddress(r.sender) === myNorm ? r.recipient : r.sender
-    let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
-    if (!mat && getDirectChatEcdhPrivateKey()) {
-      await ensureDirectChatPeerPubForRecipient(peerAddr)
-      mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
-    }
-    if (!mat) {
-      apiRows.push({
-        sender: r.sender,
-        recipient: r.recipient,
-        text: `[Verschlüsselt] Kein Chat-ECDH für ${String(peerAddr).slice(0, 14)}… — Peer-Pub in den Puls-Einstellungen setzen.`,
-        isPlain: false,
-        nonce: String(r.nonce),
-        ts: r.tsMs,
-        chainPurgeable: false,
-        inboxKey: r.inboxKey,
-      })
-      continue
-    }
-    try {
-      const sharedSecret = await deriveSharedSecret(mat.ecdhPrivateKey, mat.peerPubRaw)
-      const aesKey = await deriveAesGcmKey(sharedSecret)
-      const ivB64 = uint8ToBase64(r.iv)
-      const combined = new Uint8Array([...r.ciphertext, ...r.tag])
-      const combinedB64 = uint8ToBase64(combined)
-      const text = await decryptMessage(aesKey, ivB64, combinedB64)
-      apiRows.push({
-        sender: r.sender,
-        recipient: r.recipient,
-        text,
-        isPlain: false,
-        nonce: String(r.nonce),
-        ts: r.tsMs,
-        chainPurgeable: false,
-        inboxKey: r.inboxKey,
-      })
-    } catch {
-      apiRows.push({
-        sender: r.sender,
-        recipient: r.recipient,
-        text: '[Verschlüsselt] Entschlüsselung fehlgeschlagen (Event).',
-        isPlain: false,
-        nonce: String(r.nonce),
-        ts: r.tsMs,
-        chainPurgeable: false,
-        inboxKey: r.inboxKey,
-      })
-    }
+    const dec = await decryptDirectInboxEncryptedPayload(peerAddr, {
+      iv: r.iv,
+      ciphertext: r.ciphertext,
+      tag: r.tag,
+    })
+    apiRows.push({
+      sender: r.sender,
+      recipient: r.recipient,
+      text: dec.ok ? dec.text : `${dec.error} (Event).`,
+      isPlain: false,
+      nonce: String(r.nonce),
+      ts: r.tsMs,
+      chainPurgeable: false,
+      inboxKey: r.inboxKey,
+    })
   }
   return apiRows
+}
+
+async function resolvePendingEncryptedRow(pending: PendingEncryptedRow): Promise<InboxApiRow> {
+  const dec = await decryptDirectInboxEncryptedPayload(pending.peerAddr, {
+    iv: pending.iv,
+    ciphertext: pending.ciphertext,
+    tag: pending.tag,
+  })
+  return {
+    sender: pending.sender,
+    recipient: pending.recipient,
+    text: dec.ok ? dec.text : `${dec.error.replace('[Verschlüsselt] ', pending.decryptErrorPrefix)}`,
+    isPlain: false,
+    nonce: pending.nonce,
+    ts: pending.ts,
+    chainPurgeable: pending.chainPurgeable,
+    inboxKey: pending.inboxKey,
+  }
+}
+
+async function materializeInboxPage(entries: SortableInboxEntry[]): Promise<InboxApiRow[]> {
+  const rows: InboxApiRow[] = []
+  for (const entry of entries) {
+    if ('row' in entry) {
+      rows.push(entry.row)
+    } else {
+      rows.push(await resolvePendingEncryptedRow(entry.pending))
+    }
+  }
+  return rows
 }
 
 function canIncludePlaintextInDirectInbox(): boolean {
@@ -147,7 +149,6 @@ function canIncludePlaintextInDirectInbox(): boolean {
   return isStandaloneDeviceMode() && Boolean(getDirectMailboxChainSnapshot())
 }
 
-/** Lesen/Entschlüsseln auch ohne Drain-Flags, wenn Standalone + Chat-ECDH lokal. */
 function canIncludeEncryptedInDirectInbox(): boolean {
   if (canUseDirectEncryptedMailboxDrain()) return true
   return (
@@ -164,9 +165,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
     return { ok: false, error: 'Modus „Nur Morgendrot-API“: direkter Posteingang per Fullnode ist aus.' }
   }
   const rpc = getConfiguredDirectIotaRpcUrl()
-  if (!rpc) {
-    return { ok: false, error: 'Keine Direkt-RPC-URL.' }
-  }
+  if (!rpc) return { ok: false, error: 'Keine Direkt-RPC-URL.' }
   const snap = getDirectMailboxChainSnapshot()
   if (!snap) {
     const { missing } = getDirectChainIdsReadiness()
@@ -212,82 +211,54 @@ export async function tryFetchDirectMailboxInboxViaIota(
       offset: 0,
     })
 
-    let apiRows: InboxApiRow[] = []
+    const sortable: SortableInboxEntry[] = []
     for (const r of rpcRows) {
       if (r.kind === 'plain') {
         const ts = r.ts ?? 0
-        apiRows.push({
-          sender: r.sender,
-          recipient: r.recipient,
-          text: r.text,
-          isPlain: true,
-          nonce: r.nonce,
-          ts,
-          chainPurgeable: true,
-          inboxKey: mailboxPlainInboxKey({
+        sortable.push({
+          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          row: {
             sender: r.sender,
             recipient: r.recipient,
+            text: r.text,
+            isPlain: true,
             nonce: r.nonce,
-            tsMs: ts,
-          }),
+            ts,
+            chainPurgeable: true,
+            inboxKey: mailboxPlainInboxKey({
+              sender: r.sender,
+              recipient: r.recipient,
+              nonce: r.nonce,
+              tsMs: ts,
+            }),
+          },
         })
         continue
       }
       const peerAddr = normalizeMailboxAddress(r.sender) === myNorm ? r.recipient : r.sender
       const ts = r.ts ?? 0
-      const encInboxKey = mailboxEncryptedInboxKey({
-        sender: r.sender,
-        recipient: r.recipient,
-        nonce: r.nonce,
-        tsMs: ts,
+      sortable.push({
+        sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+        pending: {
+          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          sender: r.sender,
+          recipient: r.recipient,
+          nonce: r.nonce,
+          ts,
+          peerAddr,
+          iv: r.iv,
+          ciphertext: r.ciphertext,
+          tag: r.tag,
+          chainPurgeable: true,
+          decryptErrorPrefix: 'Entschlüsselung fehlgeschlagen (Key passt nicht oder Nutzlast beschädigt).',
+          inboxKey: mailboxEncryptedInboxKey({
+            sender: r.sender,
+            recipient: r.recipient,
+            nonce: r.nonce,
+            tsMs: ts,
+          }),
+        },
       })
-      let mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
-      if (!mat && getDirectChatEcdhPrivateKey()) {
-        await ensureDirectChatPeerPubForRecipient(peerAddr)
-        mat = getDirectChatEcdhMaterialForRecipient(peerAddr)
-      }
-      if (!mat) {
-        apiRows.push({
-          sender: r.sender,
-          recipient: r.recipient,
-          text: `[Verschlüsselt] Kein Chat-ECDH für ${String(peerAddr).slice(0, 14)}… — Peer-Pub in den Puls-Einstellungen setzen.`,
-          isPlain: false,
-          nonce: r.nonce,
-          ts,
-          chainPurgeable: true,
-          inboxKey: encInboxKey,
-        })
-        continue
-      }
-      try {
-        const sharedSecret = await deriveSharedSecret(mat.ecdhPrivateKey, mat.peerPubRaw)
-        const aesKey = await deriveAesGcmKey(sharedSecret)
-        const ivB64 = uint8ToBase64(r.iv)
-        const combined = new Uint8Array([...r.ciphertext, ...r.tag])
-        const combinedB64 = uint8ToBase64(combined)
-        const text = await decryptMessage(aesKey, ivB64, combinedB64)
-        apiRows.push({
-          sender: r.sender,
-          recipient: r.recipient,
-          text,
-          isPlain: false,
-          nonce: r.nonce,
-          ts,
-          chainPurgeable: true,
-          inboxKey: encInboxKey,
-        })
-      } catch {
-        apiRows.push({
-          sender: r.sender,
-          recipient: r.recipient,
-          text: '[Verschlüsselt] Entschlüsselung fehlgeschlagen (Key passt nicht oder Nutzlast beschädigt).',
-          isPlain: false,
-          nonce: r.nonce,
-          ts,
-          chainPurgeable: true,
-          inboxKey: encInboxKey,
-        })
-      }
     }
 
     if (includeTeamBroadcast) {
@@ -298,30 +269,42 @@ export async function tryFetchDirectMailboxInboxViaIota(
         offset: 0,
       })
       for (const r of teamRows) {
-        apiRows.push({
-          sender: r.sender,
-          recipient: r.teamMailboxObjectId,
-          text: r.text,
-          isPlain: true,
-          nonce: r.nonce,
-          ts: r.ts,
-          chainPurgeable: true,
-          chainPurgeKind: 'team-broadcast',
-          inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
+        const ts = r.ts ?? 0
+        sortable.push({
+          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          row: {
+            sender: r.sender,
+            recipient: r.teamMailboxObjectId,
+            text: r.text,
+            isPlain: true,
+            nonce: r.nonce,
+            ts,
+            chainPurgeable: true,
+            chainPurgeKind: 'team-broadcast',
+            inboxKey: `team:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
+          },
         })
       }
     }
 
     const mailboxLogicalKeys = new Set<string>()
-    for (const row of apiRows) {
-      if (row.chainPurgeable !== false) {
+    for (const entry of sortable) {
+      if ('row' in entry) {
+        if (entry.row.chainPurgeable === false) continue
         const lk = chainMessageLogicalDedupKey({
-          sender: row.sender ?? '',
-          recipient: row.recipient,
-          nonce: row.nonce ?? '',
+          sender: entry.row.sender ?? '',
+          recipient: entry.row.recipient,
+          nonce: entry.row.nonce ?? '',
         })
         if (lk) mailboxLogicalKeys.add(lk)
+        continue
       }
+      const lk = chainMessageLogicalDedupKey({
+        sender: entry.pending.sender,
+        recipient: entry.pending.recipient,
+        nonce: entry.pending.nonce,
+      })
+      if (lk) mailboxLogicalKeys.add(lk)
     }
 
     const includeEvents =
@@ -342,12 +325,16 @@ export async function tryFetchDirectMailboxInboxViaIota(
           nonce: row.nonce ?? '',
         })
         if (lk && mailboxLogicalKeys.has(lk)) continue
-        apiRows.push(row)
+        sortable.push({
+          sortTs: inboxTsFromRow(Number(row.ts ?? 0), BigInt(String(row.nonce ?? 0))),
+          row,
+        })
       }
     }
 
-    apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)
-    return { ok: true, rows: apiRows }
+    const pageEntries = sortAndSliceInboxEntries(sortable, opts.limit, opts.offset)
+    const rows = await materializeInboxPage(pageEntries)
+    return { ok: true, rows }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }

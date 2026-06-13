@@ -15,11 +15,13 @@ import {
 } from '@/frontend/lib/forensic-batch-config'
 import {
   readForensicBatchCanonicalRefSet,
+  readForensicBatchRegistry,
   recordForensicBatchEntries,
   mergeForensicBatchRegistryImport,
 } from '@/frontend/lib/forensic-batch-registry'
 import {
   fetchForensicBatchRegistryFromBossApi,
+  importForensicBatchRegistryToBossApi,
   runForensicBatchViaBossApi,
 } from '@/frontend/lib/api/forensic-batch-api'
 import { isFetchTransportFailureMessage } from '@/frontend/lib/api/boss-api-status'
@@ -61,6 +63,12 @@ async function syncBossRegistryToLocal(): Promise<void> {
   if (sync.ok && sync.entries.length) {
     mergeForensicBatchRegistryImport(sync.entries, 'merge')
   }
+}
+
+async function pushLocalRegistryToBoss(): Promise<void> {
+  const entries = readForensicBatchRegistry()
+  if (!entries.length) return
+  await importForensicBatchRegistryToBossApi(entries, 'merge')
 }
 
 function bossSkippedSummary(count: number): ForensicBatchPreparedSkip[] {
@@ -160,6 +168,7 @@ async function runViaDirectRpc(opts: {
     }
     messageCount += out.messageCount
   }
+  await pushLocalRegistryToBoss()
   return {
     ok: true,
     preparedCount,

@@ -7,7 +7,6 @@
 import {
   attachGasPaymentForOwner,
   buildStoreEcdhInitTransaction,
-  createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
 } from '@morgendrot/core/iota'
@@ -19,14 +18,11 @@ import {
 } from '@/frontend/lib/direct-iota-chain-context'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
-import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
-import {
-  isDirectMailboxDrainEnabled,
-  isIotaRelayOnlyMode,
-} from '@/frontend/lib/direct-iota-plain-submit'
+import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
-import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import { resolveDirectIotaSubmitContext } from '@/frontend/lib/direct-iota-submit-context'
 
 export function canTryDirectHandshakeSubmit(): boolean {
   if (typeof window === 'undefined') return false
@@ -42,29 +38,8 @@ export function canTryDirectHandshakeSubmit(): boolean {
 
 export async function trySubmitHandshakeViaDirectIota(opts: {
   recipient: string
-  /** M4b: aktive Private-/Team-Mailbox statt Shared-Snapshot. */
   mailboxObjectId?: string
 }): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-  if (isIotaRelayOnlyMode()) {
-    return {
-      ok: false,
-      error: 'Modus „Nur Morgendrot-API“: direkter Handshake per Fullnode ist aus.',
-    }
-  }
-  if (!isDirectMailboxDrainEnabled()) {
-    return { ok: false, error: 'Direkt-Mailbox-Drain ist aus.' }
-  }
-  const rpc = getConfiguredDirectIotaRpcUrl()
-  if (!rpc) return { ok: false, error: 'Keine Direkt-RPC-URL.' }
-  const signer = getDirectIotaSessionSigner()
-  const signerAddr = getDirectIotaSessionSignerAddress()
-  if (!signer || !signerAddr) {
-    return { ok: false, error: 'Kein Session-Signer — Mnemonic im Puls anwenden.' }
-  }
-  const snap = getDirectMailboxChainSnapshot()
-  if (!snap) {
-    return { ok: false, error: 'Keine Ketten-IDs (Package/Mailbox/Absender im Puls).' }
-  }
   if (!canUseDirectEncryptedMailboxDrain()) {
     return {
       ok: false,
@@ -72,13 +47,11 @@ export async function trySubmitHandshakeViaDirectIota(opts: {
         'Handshake per Fullnode blockiert durch Ketten-Flags (Mailbox/Credits) — optional „Optimistische Flags“ in den Puls-Einstellungen aktivieren.',
     }
   }
-  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
-    return { ok: false, error: 'Signer-Adresse ≠ gespeicherter Absender.' }
-  }
-  const recipient = opts.recipient.trim()
-  if (!/^0x[a-fA-F0-9]{64}$/i.test(recipient)) {
-    return { ok: false, error: 'Empfänger: 0x + 64 Hex.' }
-  }
+  const ctx = resolveDirectIotaSubmitContext({
+    relayBlockedMessage: 'Modus „Nur Morgendrot-API“: direkter Handshake per Fullnode ist aus.',
+    requireRecipient: opts.recipient,
+  })
+  if (!ctx.ok) return ctx
 
   const pub = await exportDirectChatEcdhPublicKeyRawBase64()
   if (!pub.ok) {
@@ -89,31 +62,31 @@ export async function trySubmitHandshakeViaDirectIota(opts: {
   }
 
   try {
-    const client = createDirectIotaClient({ rpcUrl: rpc })
+    const client = ctx.client
     const mbOverride = (opts.mailboxObjectId ?? readActiveSendMailboxObjectId() ?? '').trim()
     let mailboxObjectId: string | undefined
     let privateMailbox = false
-    if (snap.flags.useMailbox) {
+    if (ctx.snap.flags.useMailbox) {
       const resolved = resolveDirectMailboxUsePrivateMoveCall({
         mailboxObjectId: mbOverride || undefined,
-        serverMailboxId: snap.mailboxId,
+        serverMailboxId: ctx.snap.mailboxId,
       })
       mailboxObjectId = resolved.mailboxObjectId
       privateMailbox = resolved.privateMailbox
     }
 
     const txb = buildStoreEcdhInitTransaction({
-      packageId: snap.packageId,
-      senderAddress: snap.senderAddress.trim(),
-      recipientAddress: recipient,
+      packageId: ctx.snap.packageId,
+      senderAddress: ctx.snap.senderAddress.trim(),
+      recipientAddress: ctx.recipient!,
       pubKeyRaw: base64ToUint8(pub.b64),
       nonce: BigInt(Date.now()),
-      ttlDays: snap.ttlDays,
+      ttlDays: ctx.snap.ttlDays,
       mailboxObjectId,
       privateMailbox,
     })
-    await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
-    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
+    await attachGasPaymentForOwner(client, txb, ctx.snap.senderAddress.trim())
+    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer: ctx.signer })
     if (isDirectChainExecutionSuccess(out.digest, out.status)) {
       return { ok: true, digest: out.digest }
     }

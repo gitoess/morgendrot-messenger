@@ -22,16 +22,17 @@ import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import { chainMessageLogicalDedupKey } from '@morgendrot/core/iota';
 
-function addMailboxItemKeysToSeen(items: MsgItem[], keySeen: Set<string>): void {
-    for (const it of items) {
-        if (it.key) keySeen.add(it.key);
-        const lk = chainMessageLogicalDedupKey({
-            sender: it.sender,
-            recipient: it.recipient ?? '',
-            nonce: it.nonce,
-        });
-        if (lk) keySeen.add(lk);
-    }
+function pushUniqueMsgItem(items: MsgItem[], keySeen: Set<string>, item: MsgItem): void {
+    if (item.key && keySeen.has(item.key)) return;
+    const lk = chainMessageLogicalDedupKey({
+        sender: item.sender,
+        recipient: item.recipient ?? '',
+        nonce: item.nonce,
+    });
+    if (lk && keySeen.has(lk)) return;
+    items.push(item);
+    if (item.key) keySeen.add(item.key);
+    if (lk) keySeen.add(lk);
 }
 
 function eventAlreadyInMailbox(keySeen: Set<string>, sender: string, recipient: string, nonce: bigint): boolean {
@@ -333,7 +334,8 @@ async function appendMailboxDynamicFieldsToItems(
     items: MsgItem[],
     myNorm: string,
     matchesPeer: (s: string) => boolean,
-    matchesCounterparty: (peerAddr: string | undefined) => boolean
+    matchesCounterparty: (peerAddr: string | undefined) => boolean,
+    keySeen: Set<string>
 ): Promise<void> {
     let cursor: string | null = null;
     const allEntries: any[] = [];
@@ -384,7 +386,7 @@ async function appendMailboxDynamicFieldsToItems(
             const tagBytes = toEventBytes(f.tag);
             const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
             if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
-                    items.push({
+                    pushUniqueMsgItem(items, keySeen, {
                         nonce,
                         sender,
                         recipient,
@@ -447,7 +449,7 @@ async function appendMailboxDynamicFieldsToItems(
                 const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
                 const textBytes = toEventBytes(f.text);
                 if (textBytes.length === 0) continue;
-                    items.push({
+                    pushUniqueMsgItem(items, keySeen, {
                         nonce,
                         sender,
                         recipient,
@@ -587,6 +589,7 @@ export async function fetchLastMessages(
         const mailboxParents = isPrivateMailboxObjectIdOverrideActive()
             ? [CFG.MAILBOX_ID]
             : mailboxIdsForInboxUnion();
+        const keySeen = new Set<string>();
         for (const parentId of mailboxParents) {
             if (!MAILBOX_ID_HEX.test(String(parentId || '').trim())) continue;
             await appendMailboxDynamicFieldsToItems(
@@ -594,11 +597,10 @@ export async function fetchLastMessages(
                 items,
                 myNorm,
                 matchesPeer,
-                matchesCounterparty
+                matchesCounterparty,
+                keySeen
             );
         }
-        const keySeen = new Set<string>();
-        addMailboxItemKeysToSeen(items, keySeen);
         if (!opts?.skipMessagingEvents) {
             const primaryPkg = (packageIdForQuery || CFG.PACKAGE_ID || '').trim().toLowerCase();
             for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
