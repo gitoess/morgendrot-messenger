@@ -1,7 +1,7 @@
 'use client'
 
 import {
-    buildCanonicalMsgRefPlaceholder,
+    buildEinsatzManifestCanonicalMsgRef,
     buildEinsatzManifestEntryHash,
     type EinsatzManifestV1,
 } from '@/frontend/lib/einsatz-manifest-v1'
@@ -20,7 +20,7 @@ async function inboxEntryHashes(messages: readonly Message[]): Promise<Set<strin
     const sorted = [...messages].sort((a, b) => a.timestamp - b.timestamp)
     const hashes = new Set<string>()
     for (const m of sorted) {
-        const canonical_msg_ref = await buildCanonicalMsgRefPlaceholder(m)
+        const canonical_msg_ref = await buildEinsatzManifestCanonicalMsgRef(m)
         const entry_hash = await buildEinsatzManifestEntryHash({
             canonical_msg_ref,
             sender: m.from,

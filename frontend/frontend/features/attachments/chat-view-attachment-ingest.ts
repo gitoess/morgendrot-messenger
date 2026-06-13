@@ -175,7 +175,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
 async function ingestImage(
   file: File,
   forcedTransport: ForcedTransport,
-  policy: { isPrivate: boolean; encrypted: boolean; meshSelfArchiveAfterLoRa: boolean }
+  policy: { isPrivate: boolean; encrypted: boolean; meshLoRaImagesEnabled: boolean }
 ): Promise<AttachmentIngestFailure | AttachmentIngestSuccess> {
   if (file.size > CHAT_ATTACHMENT_MAX_RAW_IMAGE_BYTES) {
     return {
@@ -192,7 +192,7 @@ async function ingestImage(
         isPrivate: policy.isPrivate,
         encrypted: policy.encrypted,
         forcedTransport,
-        meshSelfArchiveAfterLoRa: policy.meshSelfArchiveAfterLoRa,
+        meshLoRaImagesEnabled: policy.meshLoRaImagesEnabled,
       })
     ) {
       return { ok: false, message: CHAT_LORA_DUAL_IMAGE_POLICY_MSG, idleMs: 9000 }
@@ -297,7 +297,7 @@ export async function ingestCompactAttachmentPick(
     transportOverride?: ForcedTransport
     isPrivate: boolean
     encrypted: boolean
-    meshSelfArchiveAfterLoRa: boolean
+    meshLoRaImagesEnabled: boolean
   }
 ): Promise<AttachmentIngestFailure | AttachmentIngestSuccess> {
   const typeErr = validateCompactPickFileType(file)
@@ -307,7 +307,7 @@ export async function ingestCompactAttachmentPick(
   const policy = {
     isPrivate: ctx.isPrivate,
     encrypted: ctx.encrypted,
-    meshSelfArchiveAfterLoRa: ctx.meshSelfArchiveAfterLoRa,
+    meshLoRaImagesEnabled: ctx.meshLoRaImagesEnabled,
   }
 
   if (isLikelyOpusFile(file)) {

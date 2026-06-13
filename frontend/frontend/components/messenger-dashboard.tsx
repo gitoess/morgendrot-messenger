@@ -194,6 +194,31 @@ function MessengerDashboardBody({
               </button>
             </div>
           ) : null}
+          {s.mainnetSignerHint ? (
+            <div
+              className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-950 dark:text-amber-100"
+              role="status"
+            >
+              <span>{s.mainnetSignerHint}</span>
+              <div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+                <button
+                  type="button"
+                  className="rounded px-2 py-1 text-xs font-medium text-amber-900 underline hover:no-underline dark:text-amber-100"
+                  onClick={() => s.requestVaultUnlock()}
+                >
+                  Tresor entsperren
+                </button>
+                <button
+                  type="button"
+                  className="rounded px-2 py-0.5 text-amber-800/80 hover:bg-amber-500/20 dark:text-amber-200/80"
+                  onClick={() => s.setMainnetSignerHint(null)}
+                  aria-label={tc('actions.close')}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          ) : null}
           {s.activeView.type === 'settings' && (
             <SettingsView
               onOpenConfig={s.openConfigView}
@@ -201,6 +226,8 @@ function MessengerDashboardBody({
               onShowAllTilesChange={s.setShowAllTilesPersist}
               canToggleFullTiles={s.role === 'arbeiter' || s.role === 'lock'}
               slimMessengerEinsatz={isEinsatzLeadHome}
+              vaultLocked={vaultSessionLocked}
+              onRequestVaultUnlock={s.requestVaultUnlock}
             />
           )}
           {s.activeView.type === 'config' && <ConfigView messengerMode />}

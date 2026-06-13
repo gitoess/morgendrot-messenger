@@ -9,7 +9,8 @@ export type TelegramBotCommandContext = {
     packageIdMasked: string;
     apiPort: number;
     uiPort: number;
-    telegramEnabled: boolean;
+    botConfigured: boolean;
+    monitorAlarmsEnabled: boolean;
     inboundMode: string;
     inboundPollActive: boolean;
 };
@@ -47,9 +48,9 @@ export function buildTelegramBotHelpText(): string {
 }
 
 export function buildTelegramBotStatusText(ctx: TelegramBotCommandContext): string {
-    const tgLine = ctx.telegramEnabled
-        ? `Telegram: an, Eingang ${ctx.inboundMode}${ctx.inboundPollActive ? ' (Poll aktiv)' : ''}`
-        : 'Telegram: aus oder nicht konfiguriert';
+    const tgLine = ctx.botConfigured
+        ? `Telegram: Bot ok, Eingang ${ctx.inboundMode}${ctx.inboundPollActive ? ' (Poll aktiv)' : ''}, Monitor ${ctx.monitorAlarmsEnabled ? 'an' : 'aus'}`
+        : 'Telegram: nicht konfiguriert (kein Bot-Token)';
     return (
         'Morgendrot Status\n' +
         `Rolle: ${ctx.role || '—'}\n` +

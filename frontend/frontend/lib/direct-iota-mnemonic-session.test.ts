@@ -10,26 +10,41 @@ import {
   hasPersistedDirectIotaSessionSigner,
   persistDirectIotaSessionSignerEncrypted,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
+  restoreDirectIotaSessionSignerFromTabSession,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 describe('direct-iota-mnemonic-session encrypted local storage', () => {
   const store: Record<string, string> = {}
+  const sessionStore: Record<string, string> = {}
   const rawHexSecret = '11'.repeat(32)
 
   beforeEach(() => {
     Object.keys(store).forEach((k) => delete store[k])
+    Object.keys(sessionStore).forEach((k) => delete sessionStore[k])
     clearDirectIotaSessionSigner()
-    vi.stubGlobal('window', {
-      localStorage: {
-        getItem: (k: string) => (k in store ? store[k] : null),
-        setItem: (k: string, v: string) => {
-          store[k] = v
-        },
-        removeItem: (k: string) => {
-          delete store[k]
-        },
-      } as Storage,
-    } as Window & typeof globalThis)
+    vi.stubGlobal(
+      'window',
+      {
+        localStorage: {
+          getItem: (k: string) => (k in store ? store[k] : null),
+          setItem: (k: string, v: string) => {
+            store[k] = v
+          },
+          removeItem: (k: string) => {
+            delete store[k]
+          },
+        } as Storage,
+        sessionStorage: {
+          getItem: (k: string) => (k in sessionStore ? sessionStore[k] : null),
+          setItem: (k: string, v: string) => {
+            sessionStore[k] = v
+          },
+          removeItem: (k: string) => {
+            delete sessionStore[k]
+          },
+        } as Storage,
+      } as Window & typeof globalThis
+    )
   })
 
   afterEach(() => {
@@ -73,6 +88,19 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
   })
 
+  it('restores signer from tab session after RAM clear', () => {
+    const applied = applyDirectIotaMnemonicSession(rawHexSecret)
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    clearDirectIotaSessionSigner()
+    expect(getDirectIotaSessionSignerAddress()).toBeNull()
+
+    const restored = restoreDirectIotaSessionSignerFromTabSession()
+    expect(restored.ok).toBe(true)
+    if (restored.ok) expect(restored.address).toBe(applied.address)
+    expect(getDirectIotaSessionSignerAddress()).not.toBeNull()
+  })
+
   it('clears persisted signer blob', async () => {
     const saved = await persistDirectIotaSessionSignerEncrypted({
       signerImportRaw: rawHexSecret,
@@ -84,4 +112,3 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     expect(hasPersistedDirectIotaSessionSigner()).toBe(false)
   })
 })
-

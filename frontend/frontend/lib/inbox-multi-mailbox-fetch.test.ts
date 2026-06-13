@@ -62,6 +62,16 @@ describe('fetchInboxFromAllOwnedMailboxes', () => {
     expect(r.messages.some((m) => m.content.includes('private rpc'))).toBe(true)
   })
 
+  it('dedupliziert identische Zeile aus API und Direkt-RPC', async () => {
+    const nonce = '1781371408086'
+    const row = { sender: '0xs', text: 'mainnet', isPlain: true, nonce, ts: 1781371408086, chainPurgeable: true }
+    tryFetchDirectMailboxInboxViaIota.mockResolvedValueOnce({ ok: true, rows: [row] })
+    fetchInbox.mockResolvedValueOnce({ ok: true, messages: [{ ...row, inboxKey: 'mbp:0xs:0xr:1781371408086:1781371408086' }] })
+    const r = await fetchInboxFromAllOwnedMailboxes({ limit: 50, offset: 0, includePrivateMailboxes: false })
+    expect(r.ok).toBe(true)
+    expect(r.messages.filter((m) => m.content.includes('mainnet'))).toHaveLength(1)
+  })
+
   it('Shared-Posteingang: Direkt-RPC + API-Union wenn Relay erreichbar', async () => {
     tryFetchDirectMailboxInboxViaIota.mockResolvedValueOnce({
       ok: true,

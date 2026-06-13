@@ -32,6 +32,7 @@ import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basi
 import { resolveStandaloneDeviceLocked } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import {
   clearDirectIotaSessionSigner,
+  clearDirectIotaSessionSignerOnLock,
   getDirectIotaSessionSigner,
   hasPersistedDirectIotaSessionSigner,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
@@ -43,6 +44,13 @@ import {
   STANDALONE_HANDOFF_APPLIED_EVENT,
   shouldShowHelperSeedSetupDialog,
 } from '@/frontend/lib/handoff-standalone-ready'
+import {
+  syncDirectIotaSessionSignerAfterVaultUnlock,
+  syncDirectChatEcdhAfterVaultUnlock,
+  tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectChatEcdhPrivateKey,
+  shouldAutoRestoreSessionSignerForMainnet,
+} from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   isStandaloneEinsatzPath,
@@ -91,6 +99,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [firstStepsVisible, setFirstStepsVisible] = useState(true)
   const [phonebookNavRequest, setPhonebookNavRequest] = useState(0)
   const [messengerNavHighlight, setMessengerNavHighlight] = useState<MessengerBottomNavTab>('messages')
+  const [mainnetSignerHint, setMainnetSignerHint] = useState<string | null>(null)
 
   const prevLockedRef = useRef(false)
   const vaultHasLocalRef = useRef(false)
@@ -265,6 +274,21 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         applyLockedFromStatusPoll(!!res.locked, res)
         vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
         signerIsSdkRef.current = res.signer === 'sdk'
+      }
+
+      if (!res.locked && res.signer === 'sdk' && shouldAutoRestoreSessionSignerForMainnet()) {
+        const restored = tryAutoRestoreDirectIotaSessionSigner()
+        if (restored.ok) {
+          setMainnetSignerHint(null)
+        } else if (!getDirectIotaSessionSigner()) {
+          setMainnetSignerHint(
+            'Mainnet-Direkt-Send: Tresor entsperren — Session-Signer wird automatisch aus dem Vault geladen.'
+          )
+        }
+      }
+
+      if (!res.locked) {
+        void tryAutoRestoreDirectChatEcdhPrivateKey()
       }
 
       setRole(res.role || '')
@@ -567,6 +591,40 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const res = await unlockBackend(password, { sdkSignerImport: sdkExtra })
     setUnlocking(false)
     if (res.ok) {
+      const vaultPw = password
+      await checkStatus()
+      let statusSigner: string | undefined
+      let statusAddr: string | undefined
+      try {
+        const snap = await fetchStatus()
+        if ('pollClockHint' in snap) {
+          statusSigner = snap.signer
+          statusAddr = snap.myAddressFull?.trim() || snap.myAddress?.trim()
+        }
+      } catch {
+        /* checkStatus lief schon */
+      }
+      const expectedAddr = statusAddr || myAddress.trim() || undefined
+      const signerSync = await syncDirectIotaSessionSignerAfterVaultUnlock({
+        vaultPassword: vaultPw,
+        signerMode: statusSigner ?? signer,
+        signerImport: sdkExtra,
+        expectedAddress: expectedAddr,
+      })
+      const ecdhSync = await syncDirectChatEcdhAfterVaultUnlock({ vaultPassword: vaultPw })
+      if (!signerSync.ok && (statusSigner === 'sdk' || signer === 'sdk')) {
+        setMainnetSignerHint(
+          signerSync.error.includes('Vault') || signerSync.error.includes('Signer')
+            ? `${signerSync.error} — ggf. Tresor mit „Signer-Import mit speichern“ neu sichern.`
+            : signerSync.error
+        )
+      } else if (!ecdhSync.ok) {
+        setMainnetSignerHint(
+          `${ecdhSync.error} — verschlüsselter Direkt-Send erst nach erneutem Entsperren oder Hard Refresh.`
+        )
+      } else {
+        setMainnetSignerHint(null)
+      }
       vaultUnlockRequestedRef.current = false
       sessionUnlockedStableRef.current = true
       lockPollStreakRef.current = 0
@@ -631,7 +689,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     sessionUnlockedStableRef.current = false
     lockPollStreakRef.current = 0
     if (isStandaloneMessengerWithoutBasis()) {
-      clearDirectIotaSessionSigner()
+      clearDirectIotaSessionSignerOnLock()
       setLocked(resolveStandaloneDeviceLocked())
       navigateTo(null)
       window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
@@ -639,8 +697,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     }
     const r = await vaultLockCommand()
     if (r.ok) {
+      clearDirectIotaSessionSignerOnLock()
+      setMainnetSignerHint(null)
       await checkStatus()
       navigateTo(null)
+      window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
     }
     return r
   }, [checkStatus, navigateTo])
@@ -651,7 +712,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     lockPollStreakRef.current = 0
     setUnlockError('')
     setLocked(true)
-  }, [])
+    navigateTo(null)
+  }, [navigateTo])
 
   const requestStandaloneWalletUnlock = useCallback(() => {
     vaultUnlockRequestedRef.current = true
@@ -812,6 +874,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     openHelp,
     requestStandaloneWalletUnlock,
     lockSession,
+    requestVaultUnlock,
+    mainnetSignerHint,
+    setMainnetSignerHint,
     helpOpen,
     setHelpOpen,
     helpText,

@@ -31,7 +31,7 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
 
   const anchorHint = useMemo(() => {
     if (!showMainnetAnchorOption) return ''
-    return 'Empfohlen: Manifest bauen, Mainnet-Anker-TX senden, dann lokaler Cache-Wipe.'
+    return 'Baut die Zusammenfassung, speichert den Hash auf Mainnet und legt optional eine JSON-Datei ab.'
   }, [showMainnetAnchorOption])
 
   const handleEndEinsatz = async () => {
@@ -103,10 +103,15 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
             <Flag className="h-5 w-5" aria-hidden />
           </div>
-          <div className="min-w-0 space-y-1">
+          <div className="min-w-0 space-y-2">
             <h4 className="font-semibold text-foreground">Einsatz beenden</h4>
             <p className="text-sm text-muted-foreground">
-              Lokaler Cache und Einsatz-IDs entfernen — nichts auf der Chain. Wallet bleibt.
+              Löscht <strong className="font-medium text-foreground">nur Daten auf diesem Gerät</strong> (Posteingang-Cache,
+              Filter, Einsatz-IDs). Wallet und Tresor bleiben. Chain-Einträge auf Mainnet bleiben unberührt.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Optional vorher einen Kurz-Beweis schreiben (wie unter Erweitert → Kurz-Beweis). Danach neues Handoff
+              importieren.
             </p>
           </div>
         </div>
@@ -134,7 +139,7 @@ export function EinsatzEndPanel(p: EinsatzEndPanelProps) {
               disabled={busy}
             />
             <Label htmlFor="einsatz-end-mainnet-anchor" className="text-sm font-normal cursor-pointer">
-              Beweis auf Mainnet schreiben (empfohlen)
+              Vorher Kurz-Beweis auf Mainnet speichern
             </Label>
           </div>
           {anchorHint ? <p className="text-xs text-muted-foreground">{anchorHint}</p> : null}

@@ -5,18 +5,21 @@ import {
     type EinsatzChainMode,
 } from '@morgendrot/shared/einsatz-chain-mode'
 import {
-    buildCanonicalMsgRefPlaceholder,
+    buildEinsatzManifestCanonicalMsgRef,
     buildEinsatzManifestEntryHash,
 } from '@/frontend/lib/einsatz-manifest-v1'
+import { lookupForensicBatchEntry } from '@/frontend/lib/forensic-batch-registry'
 import type { Message } from '@/frontend/lib/types'
 
 export type EinsatzInboxMessageBadges = {
     inEinsatzAnchor: boolean
     onChainMainnet: boolean
+    inForensicBatch: boolean
+    forensicBatchDigest?: string
 }
 
 export async function computeMessageManifestEntryHash(message: Message): Promise<string> {
-    const canonical_msg_ref = await buildCanonicalMsgRefPlaceholder(message)
+    const canonical_msg_ref = await buildEinsatzManifestCanonicalMsgRef(message)
     return buildEinsatzManifestEntryHash({
         canonical_msg_ref,
         sender: message.from,
@@ -43,18 +46,30 @@ export function isMessageInEinsatzAnchor(
     return anchoredHashes.has(entryHash.toLowerCase())
 }
 
+export function resolveForensicBatchBadge(
+    canonicalMsgRef: string | undefined
+): Pick<EinsatzInboxMessageBadges, 'inForensicBatch' | 'forensicBatchDigest'> {
+    if (!canonicalMsgRef?.trim()) return { inForensicBatch: false }
+    const hit = lookupForensicBatchEntry(canonicalMsgRef)
+    if (!hit) return { inForensicBatch: false }
+    return { inForensicBatch: true, forensicBatchDigest: hit.batchDigest }
+}
+
 export function resolveEinsatzInboxMessageBadges(
     message: Message,
     chainMode: EinsatzChainMode,
     entryHash: string | undefined,
-    anchoredHashes: ReadonlySet<string>
+    anchoredHashes: ReadonlySet<string>,
+    canonicalMsgRef?: string
 ): EinsatzInboxMessageBadges {
+    const batch = resolveForensicBatchBadge(canonicalMsgRef)
     return {
         inEinsatzAnchor: isMessageInEinsatzAnchor(entryHash, anchoredHashes, chainMode),
         onChainMainnet: isMessageOnChainMainnet(message, chainMode),
+        ...batch,
     }
 }
 
 export function einsatzInboxBadgesVisible(badges: EinsatzInboxMessageBadges): boolean {
-    return badges.inEinsatzAnchor || badges.onChainMainnet
+    return badges.inEinsatzAnchor || badges.onChainMainnet || badges.inForensicBatch
 }

@@ -26,17 +26,8 @@ import {
   isIotaRelayOnlyMode,
 } from '@/frontend/lib/direct-iota-plain-submit'
 import { readActiveSendMailboxObjectId } from '@/frontend/lib/my-mailbox-active'
+import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
 
-function normalizeHexAddr(a: string): string {
-  const t = a.trim().toLowerCase()
-  return t.startsWith('0x') ? t : `0x${t}`
-}
-
-export function canUseDirectHandshakeChainFlags(): boolean {
-  return canUseDirectEncryptedMailboxDrain()
-}
-
-/** Voraussetzungen für clientseitigen Handshake (ohne `/handshake`-API). */
 export function canTryDirectHandshakeSubmit(): boolean {
   if (typeof window === 'undefined') return false
   return (
@@ -45,7 +36,7 @@ export function canTryDirectHandshakeSubmit(): boolean {
     Boolean(getConfiguredDirectIotaRpcUrl()) &&
     Boolean(getDirectIotaSessionSigner()) &&
     Boolean(getDirectMailboxChainSnapshot()) &&
-    canUseDirectHandshakeChainFlags()
+    canUseDirectEncryptedMailboxDrain()
   )
 }
 
@@ -74,14 +65,14 @@ export async function trySubmitHandshakeViaDirectIota(opts: {
   if (!snap) {
     return { ok: false, error: 'Keine Ketten-IDs (Package/Mailbox/Absender im Puls).' }
   }
-  if (!canUseDirectHandshakeChainFlags()) {
+  if (!canUseDirectEncryptedMailboxDrain()) {
     return {
       ok: false,
       error:
         'Handshake per Fullnode blockiert durch Ketten-Flags (Mailbox/Credits) — optional „Optimistische Flags“ in den Puls-Einstellungen aktivieren.',
     }
   }
-  if (normalizeHexAddr(signerAddr) !== normalizeHexAddr(snap.senderAddress)) {
+  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
     return { ok: false, error: 'Signer-Adresse ≠ gespeicherter Absender.' }
   }
   const recipient = opts.recipient.trim()

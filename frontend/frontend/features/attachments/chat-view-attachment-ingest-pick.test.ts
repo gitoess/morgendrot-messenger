@@ -25,7 +25,7 @@ const baseCtx = {
   forcedTransport: 'internet' as const,
   isPrivate: true,
   encrypted: false,
-  meshSelfArchiveAfterLoRa: false,
+  meshLoRaImagesEnabled: false,
 }
 
 describe('ingestCompactAttachmentPick', () => {
@@ -80,7 +80,7 @@ describe('ingestCompactAttachmentPick', () => {
     const r = await ingestCompactAttachmentPick(tinyPngFile(), {
       ...baseCtx,
       forcedTransport: 'mesh',
-      meshSelfArchiveAfterLoRa: true,
+      meshLoRaImagesEnabled: true,
     })
     expect(encodeLoRaFluentAutarkMock).toHaveBeenCalledTimes(1)
     expect(encodeIotaCompactAutarkMock).not.toHaveBeenCalled()
@@ -95,18 +95,18 @@ describe('ingestCompactAttachmentPick', () => {
     }
   })
 
-  it('Bild + mesh ohne Pfad 4: kein LoRa-Encode, Policy-Meldung', async () => {
+  it('Bild + mesh ohne „Bilder über Funk“: kein LoRa-Encode, Policy-Meldung', async () => {
     const r = await ingestCompactAttachmentPick(tinyPngFile(), {
       ...baseCtx,
       forcedTransport: 'mesh',
-      meshSelfArchiveAfterLoRa: false,
+      meshLoRaImagesEnabled: false,
     })
     expect(encodeLoRaFluentAutarkMock).not.toHaveBeenCalled()
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.message).toBe(CHAT_LORA_DUAL_IMAGE_POLICY_MSG)
   })
 
-  it('Bild + mesh + Pfad 4 mit Schloss an: LoRa-Encode wie Klartext-Luft (Pfad 4)', async () => {
+  it('Bild + mesh + Bilder über Funk mit Schloss an: LoRa-Encode (Luft Klartext)', async () => {
     encodeLoRaFluentAutarkMock.mockResolvedValue({
       ok: true,
       messageId: 'a1b2c3d4',
@@ -120,7 +120,7 @@ describe('ingestCompactAttachmentPick', () => {
       ...baseCtx,
       forcedTransport: 'mesh',
       encrypted: true,
-      meshSelfArchiveAfterLoRa: true,
+      meshLoRaImagesEnabled: true,
     })
     expect(encodeLoRaFluentAutarkMock).toHaveBeenCalledTimes(1)
     expect(encodeIotaCompactAutarkMock).not.toHaveBeenCalled()
@@ -142,7 +142,7 @@ describe('ingestCompactAttachmentPick', () => {
       ...baseCtx,
       forcedTransport: 'internet',
       transportOverride: 'mesh',
-      meshSelfArchiveAfterLoRa: true,
+      meshLoRaImagesEnabled: true,
     })
     expect(encodeLoRaFluentAutarkMock).toHaveBeenCalledTimes(1)
     expect(encodeIotaCompactAutarkMock).not.toHaveBeenCalled()
@@ -160,7 +160,7 @@ describe('ingestCompactAttachmentPick', () => {
     const r = await ingestCompactAttachmentPick(tinyPngFile(), {
       ...baseCtx,
       forcedTransport: 'mesh',
-      meshSelfArchiveAfterLoRa: true,
+      meshLoRaImagesEnabled: true,
     })
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.message).toContain('LoRa kaputt')

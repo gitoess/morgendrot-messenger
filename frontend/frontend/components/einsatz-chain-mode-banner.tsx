@@ -10,9 +10,13 @@ export function EinsatzChainModeBanner(p: { rpcUrl?: string; className?: string 
 
   useEffect(() => {
     setMode(resolveActiveEinsatzChainMode())
-    const onHandoff = () => setMode(resolveActiveEinsatzChainMode())
-    window.addEventListener('morgendrot.standaloneHandoffApplied', onHandoff)
-    return () => window.removeEventListener('morgendrot.standaloneHandoffApplied', onHandoff)
+    const refresh = () => setMode(resolveActiveEinsatzChainMode())
+    window.addEventListener('morgendrot.standaloneHandoffApplied', refresh)
+    window.addEventListener('morgendrot:einsatz-network-profiles-changed', refresh)
+    return () => {
+      window.removeEventListener('morgendrot.standaloneHandoffApplied', refresh)
+      window.removeEventListener('morgendrot:einsatz-network-profiles-changed', refresh)
+    }
   }, [])
 
   const banner = describeEinsatzChainModeBanner(mode, p.rpcUrl)

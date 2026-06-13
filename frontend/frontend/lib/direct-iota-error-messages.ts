@@ -49,6 +49,12 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
   if (lower.includes('objectnotfound') || lower.includes('object not found')) {
     return 'Mailbox- oder Package-Objekt auf der Kette nicht gefunden — Ketten-IDs aus der Basis aktualisieren.'
   }
+  if (lower.includes('package object does not exist') || lower.includes('dependent package not found')) {
+    return (
+      'Package existiert auf diesem Netz nicht — vermutlich Testnet-Package-ID mit Mainnet-RPC gemischt. ' +
+      'Einstellungen → Netzwerk: Mainnet-Profil mit eigener Package-ID + Mailbox-ID (Mainnet-Deploy), dann erneut umschalten.'
+    )
+  }
   if (
     lower.includes('invalid command argument') &&
     (lower.includes('type of the value') || lower.includes('does not match the expected type'))

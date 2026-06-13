@@ -19,12 +19,15 @@ import {
     resolveHandoffLabel,
     isIotaTransportUiEnabled,
     readRuntimeConfigRaw,
+    readPackageIdHistory,
+    readPackageIdHints,
     setEnvKey,
     type HierarchyPermissions,
 } from '../../config.js';
 import {
     getBalanceInMist,
     getMessengerCreditsSnapshot,
+    getPackageIdsForOwner,
     isChainReachable,
 } from '../../chain-access.js';
 import { getMessagingMoveFeatures } from '../../move-package-features.js';
@@ -389,6 +392,48 @@ export async function handleStatusRoutes(
                     streamsAnchorId: CFG.STREAMS_ANCHOR_ID || '',
                     streamsBridgeUrl: CFG.STREAMS_BRIDGE_URL || '',
                     rpcUrl: (CFG.RPC_URL || '').trim(),
+                },
+                cors
+            );
+        } catch (e: unknown) {
+            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        }
+        return true;
+    }
+
+    if (url.startsWith('/api/package-id-history') && req.method === 'GET') {
+        try {
+            const wantDiscovered = /[?&]discovered=true/i.test(url);
+            const current = (CFG.PACKAGE_ID || '').trim();
+            const history = [...readPackageIdHistory()];
+            const hints = readPackageIdHints();
+            const mainnetPkg = (CFG.MAINNET_PACKAGE_ID || '').trim();
+            if (mainnetPkg && /^0x[a-fA-F0-9]{64}$/i.test(mainnetPkg)) {
+                const curLower = current.toLowerCase();
+                if (!history.some((h) => h.toLowerCase() === mainnetPkg.toLowerCase()) && curLower !== mainnetPkg.toLowerCase()) {
+                    history.push(mainnetPkg);
+                }
+            }
+            let discovered: string[] = [];
+            if (wantDiscovered) {
+                const owner = (CFG.MY_ADDRESS || '').trim();
+                if (/^0x[a-fA-F0-9]{64}$/i.test(owner)) {
+                    try {
+                        discovered = await getPackageIdsForOwner(owner);
+                    } catch {
+                        discovered = [];
+                    }
+                }
+            }
+            sendJson(
+                res,
+                200,
+                {
+                    ok: true,
+                    current,
+                    history,
+                    discovered,
+                    hints,
                 },
                 cors
             );

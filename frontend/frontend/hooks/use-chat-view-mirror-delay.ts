@@ -24,15 +24,22 @@ import {
 } from '@/frontend/lib/delayed-mirror-queue'
 import {
   drainOfflineMailboxQueue,
+  clearOfflineMailboxQueue,
   getOfflineMailboxQueueCount,
   loadOfflineMailboxQueue,
   saveOfflineMailboxQueue,
   backoffMsForDrainAttempt,
   shouldDeferDrainAttempt,
 } from '@/frontend/lib/api/offline-queue'
+import { EINSATZ_NETWORK_PROFILES_CHANGED } from '@/frontend/lib/einsatz-network-profiles'
+import {
+  applyDirectChainSnapshotFromStatusOrNetworkProfile,
+  isWrongNetworkPackageError,
+  purgeStaleOfflineMailboxQueue,
+  syncActiveNetworkChainSnapshot,
+} from '@/frontend/lib/active-network-chain-sync'
 import { drainAttestationQueue, loadAttestationQueue } from '@/frontend/lib/attestation-queue'
 import {
-  applyDirectMailboxChainSnapshotFromNetworkIds,
   syncDirectMailboxFlagsFromApiStatus,
   getDirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
@@ -118,10 +125,23 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     try {
       setMirrorQueuePending(getMirrorQueueCount())
       refreshOfflineMailboxQueueCount()
+      syncActiveNetworkChainSnapshot(senderAddress)
+      const cleared = purgeStaleOfflineMailboxQueue()
+      if (cleared > 0) refreshOfflineMailboxQueueCount()
     } catch {
       /* ignore */
     }
-  }, [refreshOfflineMailboxQueueCount])
+  }, [refreshOfflineMailboxQueueCount, senderAddress])
+
+  useEffect(() => {
+    const onNet = () => {
+      syncActiveNetworkChainSnapshot(senderAddress)
+      const cleared = purgeStaleOfflineMailboxQueue()
+      if (cleared > 0) refreshOfflineMailboxQueueCount()
+    }
+    window.addEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, onNet)
+    return () => window.removeEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, onNet)
+  }, [refreshOfflineMailboxQueueCount, senderAddress])
 
   const runMirrorDrain = useCallback(async () => {
     if (mirrorDrainInFlightRef.current) return
@@ -195,22 +215,27 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     if (getOfflineMailboxQueueCount() === 0 && loadAttestationQueue().length === 0) return
     offlineMailboxDrainInFlightRef.current = true
     try {
+      syncActiveNetworkChainSnapshot(senderAddress)
+      const purged = purgeStaleOfflineMailboxQueue()
+      if (purged > 0) {
+        refreshOfflineMailboxQueueCount()
+        setStatus('success')
+        setStatusMsg(
+          `${purged} veraltete Warteschlangen-Einträge verworfen (falsche Testnet-Package-ID). Bitte Nachricht neu senden.`
+        )
+        setTimeout(() => setStatus('idle'), 8000)
+        if (getOfflineMailboxQueueCount() === 0) return
+      }
       const s = await fetchStatus()
       const backendOk = 'pollClockHint' in s && s.backendRunning !== false && !s.locked
       if (backendOk) {
         syncDirectMailboxFlagsFromApiStatus(s)
-        try {
-          const res = await fetch('/api/current-ids')
-          const j = (await res.json()) as {
-            ok?: boolean
-            packageId?: string
-            mailboxId?: string
-            myAddress?: string
-          }
-          if (j.ok === true) applyDirectMailboxChainSnapshotFromNetworkIds(j)
-        } catch {
-          /* ignore */
-        }
+        applyDirectChainSnapshotFromStatusOrNetworkProfile({
+          packageId: s.packageId,
+          mailboxId: s.mailboxId,
+          myAddress: s.myAddress,
+          myAddressFull: s.myAddressFull,
+        })
       }
       const canDrainWithoutBackend =
         !backendOk &&
@@ -242,11 +267,23 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         setTimeout(() => setStatus('idle'), 9000)
         void loadMessages('poll', undefined, { silent: true })
       } else if (r.failed > 0) {
-        setStatus('error')
         const items = loadOfflineMailboxQueue()
         const hint = items
           .map((q) => q.lastError)
           .find((e) => e && e.trim())
+        if (hint && isWrongNetworkPackageError(hint)) {
+          const n = clearOfflineMailboxQueue()
+          refreshOfflineMailboxQueueCount()
+          setStatus('error')
+          setStatusMsg(
+            n > 0
+              ? `Warteschlange geleert (${n}) — alte Testnet-Einträge. Header: „Produktion · Mainnet“ prüfen, dann neu senden.`
+              : 'Package existiert auf dieser Kette nicht — Netzwerk in Einstellungen prüfen (Mainnet vs. Testnet).'
+          )
+          setTimeout(() => setStatus('idle'), 12000)
+          return
+        }
+        setStatus('error')
         const tail = hint ? ` Letzte Meldung: ${hint.replace(/\s+/g, ' ').trim().slice(0, 120)}` : ''
         setStatusMsg(
           r.failed === 1
@@ -259,7 +296,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
     } finally {
       offlineMailboxDrainInFlightRef.current = false
     }
-  }, [loadMessages, refreshOfflineMailboxQueueCount, setStatus, setStatusMsg])
+  }, [loadMessages, refreshOfflineMailboxQueueCount, senderAddress, setStatus, setStatusMsg])
 
   const removeOfflineMailboxQueueItems = useCallback((ids: string[]) => {
     if (ids.length === 0) return

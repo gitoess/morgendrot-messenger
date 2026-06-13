@@ -1,12 +1,13 @@
 'use client'
 
 /**
- * Verschlüsselte Mailbox (`store_encrypted_message`) per Fullnode — gleiches Muster wie Klartext (`direct-iota-plain-submit`).
- * ECDH P-256 + AES-GCM wie Server (`messenger-chain-wrap`); Schlüssel kommen vom Caller (noch kein Puls-UI für Chat-ECDH).
+ * Verschlüsselte Mailbox/Event per Fullnode — gleiches Muster wie Klartext (`direct-iota-plain-submit`).
  */
-
+import type { Signer } from '@iota/iota-sdk/cryptography'
+import type { Transaction } from '@iota/iota-sdk/transactions'
 import {
   attachGasPaymentForOwner,
+  buildSendEncryptedEventTransaction,
   buildStoreEncryptedMailboxTransaction,
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
@@ -20,22 +21,22 @@ import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import {
   canUseDirectEncryptedMailboxDrain,
   getDirectMailboxChainSnapshot,
+  type DirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { getDirectIotaSessionSigner, getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
-import {
-  isDirectMailboxDrainEnabled,
-  isIotaRelayOnlyMode,
-} from '@/frontend/lib/direct-iota-plain-submit'
+import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
+import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
+import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
-/** Konsistent mit Server-Default `MESSENGER_MAX_PLAINTEXT_UTF8_BYTES` (16000). */
 const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = 16000
 
-/** Live-Send (Composer, verschlüsselt): Direct-Mailbox möglich — ECDH-Material für Empfänger nötig. */
-export function canTryLiveEncryptedDirectMailbox(recipientTrimmed: string): boolean {
-  if (typeof window === 'undefined') return false
+type EncryptedPersistenceMode = 'event' | 'mailbox'
+
+function encryptedBaseReady(recipientTrimmed: string): boolean {
   const r = recipientTrimmed.trim()
   if (!r) return false
   return (
@@ -44,15 +45,27 @@ export function canTryLiveEncryptedDirectMailbox(recipientTrimmed: string): bool
     Boolean(getConfiguredDirectIotaRpcUrl()) &&
     Boolean(getDirectIotaSessionSigner()) &&
     Boolean(getDirectMailboxChainSnapshot()) &&
-    canUseDirectEncryptedMailboxDrain() &&
     getDirectChatEcdhMaterialForRecipient(r) != null
   )
 }
 
-function normalizeHexAddr(a: string): string {
-  const t = a.trim().toLowerCase()
-  return t.startsWith('0x') ? t : `0x${t}`
+/** Live-Send (Composer, verschlüsselt) — Event oder Mailbox. */
+export function canTryLiveEncryptedDirect(
+  recipientTrimmed: string,
+  mode: EncryptedPersistenceMode
+): boolean {
+  if (typeof window === 'undefined') return false
+  tryAutoRestoreDirectIotaSessionSigner()
+  if (!encryptedBaseReady(recipientTrimmed)) return false
+  if (mode === 'mailbox' && !canUseDirectEncryptedMailboxDrain()) return false
+  return true
 }
+
+export const canTryLiveEncryptedDirectEvent = (recipient: string) =>
+  canTryLiveEncryptedDirect(recipient, 'event')
+
+export const canTryLiveEncryptedDirectMailbox = (recipient: string) =>
+  canTryLiveEncryptedDirect(recipient, 'mailbox')
 
 export type TrySubmitEncryptedMailboxViaDirectIotaInput = {
   recipient: string
@@ -60,26 +73,34 @@ export type TrySubmitEncryptedMailboxViaDirectIotaInput = {
   iv: Uint8Array
   tag: Uint8Array
   nonce: bigint
-  /** M4b: Kontakt-Mailbox statt Snapshot-Mailbox. */
   mailboxObjectId?: string
 }
 
-/**
- * Bereits verschlüsselte Felder (wie nach `encryptMessage` + Split in `sendEncryptedMessage`).
- */
-export async function trySubmitEncryptedMailboxViaDirectIota(
-  opts: TrySubmitEncryptedMailboxViaDirectIotaInput
-): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+type EncryptedSubmitContext =
+  | {
+      ok: true
+      rpc: string
+      signer: Signer
+      snap: DirectMailboxChainSnapshot
+      client: ReturnType<typeof createDirectIotaClient>
+    }
+  | { ok: false; error: string }
+
+async function resolveEncryptedDirectSubmitContext(
+  recipient: string,
+  mode: EncryptedPersistenceMode
+): Promise<EncryptedSubmitContext> {
   if (isIotaRelayOnlyMode()) {
     return {
       ok: false,
       error:
-        'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (verschlüsselte Mailbox) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',
+        'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (verschlüsselt) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',
     }
   }
   if (!isDirectMailboxDrainEnabled()) {
     return { ok: false, error: 'Direkt-Mailbox-Drain ist aus.' }
   }
+  syncActiveNetworkChainSnapshot()
   const rpc = getConfiguredDirectIotaRpcUrl()
   if (!rpc) {
     return { ok: false, error: 'Keine Direkt-RPC-URL (localStorage oder NEXT_PUBLIC_DIRECT_IOTA_RPC_URL).' }
@@ -87,7 +108,10 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   const signer = getDirectIotaSessionSigner()
   const signerAddr = getDirectIotaSessionSignerAddress()
   if (!signer || !signerAddr) {
-    return { ok: false, error: 'Kein Session-Signer — Mnemonic/Secret in den Einstellungen setzen (nur RAM).' }
+    return {
+      ok: false,
+      error: 'Kein Session-Signer — Tresor entsperren oder Mnemonic in den Einstellungen setzen (nur RAM).',
+    }
   }
   const snap = getDirectMailboxChainSnapshot()
   if (!snap) {
@@ -96,49 +120,35 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
       error: 'Keine Ketten-IDs — Basis einmal verbinden oder Package/Mailbox/Absender in den Einstellungen speichern.',
     }
   }
-  if (!canUseDirectEncryptedMailboxDrain()) {
+  if (!canTryLiveEncryptedDirect(recipient.trim(), mode)) {
     return {
       ok: false,
       error:
-        'Konfiguration passt nicht: Direkt-verschlüsselt nur mit aktiver Mailbox **ohne** Messenger-Credits (Flags aus letztem /api/status oder manuell geschätzt).',
+        mode === 'event'
+          ? 'Direkt-verschlüsselt (Event) nicht bereit — Direkt-RPC, Drain, Session-Signer, Package/Absender und ECDH prüfen.'
+          : 'Konfiguration passt nicht: Direkt-verschlüsselt nur mit aktiver Mailbox **ohne** Messenger-Credits (Flags aus letztem /api/status oder manuell geschätzt).',
     }
   }
-  if (normalizeHexAddr(signerAddr) !== normalizeHexAddr(snap.senderAddress)) {
+  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
     return {
       ok: false,
       error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender (MY_ADDRESS) überein.',
     }
   }
+  return { ok: true, rpc, signer, snap, client: createDirectIotaClient({ rpcUrl: rpc }) }
+}
+
+async function executeEncryptedDirectTransaction(
+  ctx: Extract<EncryptedSubmitContext, { ok: true }>,
+  txb: Transaction
+): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
   try {
-    const client = createDirectIotaClient({ rpcUrl: rpc })
-    const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
-      mailboxObjectId: opts.mailboxObjectId,
-      serverMailboxId: snap.mailboxId,
+    await attachGasPaymentForOwner(ctx.client, txb, ctx.snap.senderAddress.trim())
+    const out = await signAndExecuteTransactionWithSigner({
+      client: ctx.client,
+      transaction: txb,
+      signer: ctx.signer,
     })
-    const mailboxCheck = await validateMessagingMailboxObjectForPackage(
-      client,
-      mailboxObjectId,
-      snap.packageId,
-      'any'
-    )
-    if (!mailboxCheck.ok) {
-      return { ok: false, error: mailboxCheck.error }
-    }
-    const privateMailbox = mailboxCheck.kind === 'privatemailbox'
-    const txb = buildStoreEncryptedMailboxTransaction({
-      packageId: snap.packageId,
-      mailboxObjectId,
-      senderAddress: snap.senderAddress.trim(),
-      recipientAddress: opts.recipient.trim(),
-      ciphertext: opts.ciphertext,
-      iv: opts.iv,
-      tag: opts.tag,
-      nonce: opts.nonce,
-      ttlDays: snap.ttlDays,
-      privateMailbox,
-    })
-    await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
-    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
     if (isDirectChainExecutionSuccess(out.digest, out.status)) {
       return { ok: true, digest: out.digest }
     }
@@ -151,22 +161,94 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   }
 }
 
-export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {
-  recipient: string
-  /** Wire inkl. optional `[[MORG_MAILBOX_NONCE_V1:…]]` — wie an `/send`. */
-  plaintextUtf8: string
-  peerPubRaw: Uint8Array
-  /** P-256 ECDH private key (Web Crypto), **nicht** der IOTA-Ed25519-Signer. */
-  ecdhPrivateKey: CryptoKey
-  mailboxObjectId?: string
+async function buildEncryptedDirectTransaction(
+  ctx: Extract<EncryptedSubmitContext, { ok: true }>,
+  opts: TrySubmitEncryptedMailboxViaDirectIotaInput,
+  mode: EncryptedPersistenceMode
+): Promise<{ ok: true; txb: Transaction } | { ok: false; error: string }> {
+  const recipient = opts.recipient.trim()
+  if (mode === 'event') {
+    return {
+      ok: true,
+      txb: buildSendEncryptedEventTransaction({
+        packageId: ctx.snap.packageId,
+        senderAddress: ctx.snap.senderAddress.trim(),
+        recipientAddress: recipient,
+        ciphertext: opts.ciphertext,
+        iv: opts.iv,
+        tag: opts.tag,
+        nonce: opts.nonce,
+      }),
+    }
+  }
+  const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
+    mailboxObjectId: opts.mailboxObjectId,
+    serverMailboxId: ctx.snap.mailboxId,
+  })
+  const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+    ctx.client,
+    mailboxObjectId,
+    ctx.snap.packageId,
+    'any'
+  )
+  if (!mailboxCheck.ok) {
+    return { ok: false, error: mailboxCheck.error }
+  }
+  return {
+    ok: true,
+    txb: buildStoreEncryptedMailboxTransaction({
+      packageId: ctx.snap.packageId,
+      mailboxObjectId,
+      senderAddress: ctx.snap.senderAddress.trim(),
+      recipientAddress: recipient,
+      ciphertext: opts.ciphertext,
+      iv: opts.iv,
+      tag: opts.tag,
+      nonce: opts.nonce,
+      ttlDays: ctx.snap.ttlDays,
+      privateMailbox: mailboxCheck.kind === 'privatemailbox',
+    }),
+  }
 }
 
-/**
- * Verschlüsselt lokal (ECDH + AES-GCM) und reicht `store_encrypted_message` an die Kette.
- */
-export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(
-  opts: TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput
+async function trySubmitEncryptedViaDirectIota(
+  opts: TrySubmitEncryptedMailboxViaDirectIotaInput,
+  mode: EncryptedPersistenceMode
 ): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  const ctx = await resolveEncryptedDirectSubmitContext(opts.recipient, mode)
+  if (!ctx.ok) return ctx
+  const txb = await buildEncryptedDirectTransaction(ctx, opts, mode)
+  if (!txb.ok) return txb
+  return executeEncryptedDirectTransaction(ctx, txb.txb)
+}
+
+export async function trySubmitEncryptedMailboxViaDirectIota(
+  opts: TrySubmitEncryptedMailboxViaDirectIotaInput
+): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  return trySubmitEncryptedViaDirectIota(opts, 'mailbox')
+}
+
+export async function trySubmitEncryptedEventViaDirectIota(
+  opts: TrySubmitEncryptedMailboxViaDirectIotaInput
+): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  return trySubmitEncryptedViaDirectIota(opts, 'event')
+}
+
+export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {
+  recipient: string
+  plaintextUtf8: string
+  peerPubRaw: Uint8Array
+  ecdhPrivateKey: CryptoKey
+  mailboxObjectId?: string
+  messagingPersistenceMode?: EncryptedPersistenceMode
+}
+
+async function encryptPlaintextForDirectSubmit(
+  opts: Pick<TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput, 'plaintextUtf8' | 'peerPubRaw' | 'ecdhPrivateKey'>
+): Promise<
+  | { ok: true; ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; nonce: bigint }
+  | { ok: false; error: string }
+> {
   const parsedNonce = parseMailboxOutNonceMarker(opts.plaintextUtf8)
   const bodyForE2ee = parsedNonce ? parsedNonce.rest : opts.plaintextUtf8
   const msgUtf8 = new TextEncoder().encode(bodyForE2ee).length
@@ -185,15 +267,27 @@ export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(
     const ciphertext = new Uint8Array(full.subarray(0, -16))
     const iv = base64ToUint8(encrypted.iv)
     const tag = new Uint8Array(full.subarray(-16))
-    return trySubmitEncryptedMailboxViaDirectIota({
-      recipient: opts.recipient,
-      ciphertext,
-      iv,
-      tag,
-      nonce,
-      mailboxObjectId: opts.mailboxObjectId,
-    })
+    return { ok: true, ciphertext, iv, tag, nonce }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
+}
+
+export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(
+  opts: TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput
+): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  const enc = await encryptPlaintextForDirectSubmit(opts)
+  if (!enc.ok) return enc
+  const mode: EncryptedPersistenceMode = opts.messagingPersistenceMode === 'mailbox' ? 'mailbox' : 'event'
+  return trySubmitEncryptedViaDirectIota(
+    {
+      recipient: opts.recipient,
+      ciphertext: enc.ciphertext,
+      iv: enc.iv,
+      tag: enc.tag,
+      nonce: enc.nonce,
+      mailboxObjectId: opts.mailboxObjectId,
+    },
+    mode
+  )
 }

@@ -3,6 +3,7 @@
  */
 
 import { contentDedupKey } from '@/frontend/lib/message-dedup'
+import { resolveInboxRowDedupKey } from '@morgendrot/core/iota'
 
 function isEncryptedPlaceholderContent(s: string): boolean {
   return s.trimStart().startsWith('[Verschlüsselt]')
@@ -70,11 +71,15 @@ export function mapInboxApiRowsToMessages(raw: InboxApiRow[]): Message[] {
         (nonceStr && from
           ? `${chainChannel}:${from.trim().toLowerCase()}:${nonceStr}:${timestamp}`
           : `${chainChannel}-row-${i}`))
-    const dedupKey =
-      inboxKey ||
-      (nonceStr
-        ? `chain|${from.trim().toLowerCase()}|${recipientNorm}|${nonceStr}|${timestamp}`
-        : contentDedupKey(from, content, timestamp))
+    const dedupKey = resolveInboxRowDedupKey({
+      sender: from,
+      recipient: recipientNorm,
+      nonce: nonceStr || undefined,
+      timestamp,
+      inboxKey: inboxKey || undefined,
+      content,
+      fallbackContentDedupKey: contentDedupKey(from, content, timestamp),
+    })
     return {
       id: stableId,
       from,

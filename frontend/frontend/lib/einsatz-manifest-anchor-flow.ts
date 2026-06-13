@@ -12,7 +12,10 @@ import {
     downloadEinsatzManifestJson,
     type EinsatzManifestV1,
 } from '@/frontend/lib/einsatz-manifest-v1'
+import { finalizeEinsatzManifestWithChainEvidence } from '@/frontend/lib/einsatz-manifest-finalize'
 import { resolveInboxMessageTxDigest } from '@/frontend/lib/einsatz-message-tx-digest'
+import { enrichInboxMessagesWithChainDigests } from '@/frontend/lib/enrich-inbox-messages-chain-digest'
+import { resolveManifestEnrichmentRpcUrl } from '@/frontend/lib/einsatz-manifest-rpc'
 import { writeAnchoredManifestFromV1 } from '@/frontend/lib/einsatz-manifest-anchor-cache'
 import {
     tryAnchorEinsatzManifestViaDirectIota,
@@ -55,16 +58,22 @@ export async function buildEinsatzManifestFromInbox(opts: {
         return { ok: false, error: 'PACKAGE_ID fehlt — Handoff importieren oder Basis verbinden.' }
     }
     const lastSeq = readEinsatzManifestLastAnchoredSequence()
-    const manifest = await buildEinsatzManifestV1({
+    const messages = enrichInboxMessagesWithChainDigests(inbox.messages)
+    const rpcUrl = resolveManifestEnrichmentRpcUrl({
+        chainMode: opts.chainMode,
+        apiStatus: opts.apiStatus,
+    })
+    const manifestBuilt = await buildEinsatzManifestV1({
         einsatzId: resolveEinsatzIdFromHandoff(opts.apiStatus),
         handoffLabel: readLocalHandoffAppliedSnapshot()?.handoffLabel,
         packageId: pkg,
         chainMode: opts.chainMode,
-        rpcUrl: opts.rpcHint,
-        messages: inbox.messages,
+        rpcUrl,
+        messages,
         sequence: lastSeq + 1,
         resolveTxDigest: (m: Message) => resolveInboxMessageTxDigest(m),
     })
+    const manifest = await finalizeEinsatzManifestWithChainEvidence(manifestBuilt, rpcUrl)
     return { ok: true, manifest }
 }
 

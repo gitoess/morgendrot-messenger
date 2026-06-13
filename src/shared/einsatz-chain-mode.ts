@@ -60,7 +60,9 @@ export function describeEinsatzChainModeBanner(
             return {
                 tone: 'mainnet',
                 title: 'Mainnet direkt (ohne Rollup)',
-                detail: 'Einzel-TXs auf Mainnet — kein Einsatz-Manifest-Rollup in v1.' + (rpc ? ` RPC: ${rpc}` : ''),
+                detail:
+                    'Einzel-TXs + optional Mainnet-Batch-Archiv (§ H.33e) — kein Manifest-Rollup nötig.' +
+                    (rpc ? ` RPC: ${rpc}` : ''),
             }
         default:
             return {

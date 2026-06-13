@@ -11,6 +11,7 @@ export type {
   SendTransportReadPort,
 } from './send-transport-ports'
 export {
+  asSendMeshFunkOptions,
   asSendMeshMirrorDelay,
   asSendTransportChoice,
   asSendTransportRead,

@@ -24,6 +24,7 @@ import {
   MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
 } from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
+import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
@@ -230,6 +231,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
             <div className="min-w-0 flex-1 space-y-2">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <h2 className="text-base font-bold leading-tight text-foreground sm:text-lg">{channelTitle}</h2>
+                <ChatNetworkBadge />
                 <ActiveProfileBadge status={apiStatus} compact />
               </div>
               {channelMode != null && onChannelModeChange ? (

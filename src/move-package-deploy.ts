@@ -4,6 +4,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { IotaClient } from '@iota/iota-sdk/client';
 import { CFG, savePackageIdToFile, setEnvKey } from './config.js';
 
@@ -108,8 +109,9 @@ function parseUpgradeCliOutput(stdout: string, expectedPackageId: string): MoveP
     throw new Error('Upgrade-Ausgabe: Package-ID nicht erkannt.');
 }
 
-async function runIotaCli(args: string[], cwd: string): Promise<string> {
-    const child = spawn('iota', args, { shell: false, env: process.env, cwd });
+async function runIotaCli(args: string[], cwd?: string): Promise<string> {
+    const workDir = cwd ?? process.cwd();
+    const child = spawn('iota', args, { shell: false, env: process.env, cwd: workDir });
     let stdout = '';
     let stderr = '';
     child.stdout?.on('data', (d) => {
@@ -139,12 +141,185 @@ async function prepareMoveLock(cwd: string): Promise<void> {
     }
 }
 
-/** Move-Package publizieren (neue PACKAGE_ID). */
+/** Move-Package publizieren (neue PACKAGE_ID). Nutzt aktives IOTA-CLI-Env. */
 export async function publishPackageCli(packageDir?: string): Promise<MovePackagePublishResult> {
     const cwd = packageDir ? path.resolve(process.cwd(), packageDir) : process.cwd();
     await prepareMoveLock(cwd);
     const stdout = await runIotaCli(['client', 'publish', '--json'], cwd);
     return parsePublishCliOutput(stdout);
+}
+
+export type GlobalsCreatedIds = {
+    vaultRegistryId: string;
+    mailboxId: string;
+    commandRegistryId: string;
+};
+
+/** Parst GlobalsCreated aus `iota client call … create_globals --json`. */
+export function parseGlobalsCreatedFromCliOutput(stdout: string): GlobalsCreatedIds {
+    const pickId = (v: unknown): string | undefined => {
+        if (typeof v === 'string' && HEX64.test(v.trim())) return v.trim();
+        if (v && typeof v === 'object' && typeof (v as { id?: string }).id === 'string') {
+            const id = (v as { id: string }).id.trim();
+            if (HEX64.test(id)) return id;
+        }
+        return undefined;
+    };
+    const trimmed = stdout.trim();
+    const tryJson = (raw: string): GlobalsCreatedIds | null => {
+        try {
+            const parsed = JSON.parse(raw) as Record<string, unknown>;
+            const events =
+                (Array.isArray(parsed.events) ? parsed.events : null) ??
+                (Array.isArray((parsed.transactionBlock as { events?: unknown[] } | undefined)?.events)
+                    ? (parsed.transactionBlock as { events: unknown[] }).events
+                    : null);
+            for (const ev of events ?? []) {
+                if (!ev || typeof ev !== 'object') continue;
+                const e = ev as { type?: string; parsedJson?: Record<string, unknown> };
+                if (!String(e.type ?? '').includes('GlobalsCreated')) continue;
+                const pj = e.parsedJson ?? {};
+                const vaultRegistryId = pickId(pj.vault_registry_id);
+                const mailboxId = pickId(pj.mailbox_id);
+                const commandRegistryId = pickId(pj.command_registry_id);
+                if (vaultRegistryId && mailboxId && commandRegistryId) {
+                    return { vaultRegistryId, mailboxId, commandRegistryId };
+                }
+            }
+        } catch {
+            /* fallback */
+        }
+        return null;
+    };
+    const fromJson = tryJson(trimmed);
+    if (fromJson) return fromJson;
+    const jsonStart = trimmed.indexOf('{');
+    if (jsonStart >= 0) {
+        const fromSlice = tryJson(trimmed.slice(jsonStart));
+        if (fromSlice) return fromSlice;
+    }
+    throw new Error('GlobalsCreated-Event in CLI-Ausgabe nicht gefunden.');
+}
+
+async function readActiveIotaCliEnv(): Promise<string | null> {
+    try {
+        const out = (await runIotaCli(['client', 'active-env'])).trim();
+        return out || null;
+    } catch {
+        return null;
+    }
+}
+
+/** Temporäres CLI-Env für RPC (z. B. Mainnet-Deploy), danach wiederherstellen. */
+export async function withTemporaryIotaCliRpc<T>(rpcUrl: string, fn: () => Promise<T>): Promise<T> {
+    const rpc = rpcUrl.trim();
+    if (!/^https?:\/\//i.test(rpc)) {
+        throw new Error('RPC-URL muss mit http:// oder https:// beginnen.');
+    }
+    const previousEnv = await readActiveIotaCliEnv();
+    const alias = `_mrg_deploy_${Date.now()}`;
+    try {
+        await runIotaCli(['client', 'new-env', '--alias', alias, '--rpc', rpc]);
+        await runIotaCli(['client', 'switch', '--env', alias]);
+        return await fn();
+    } finally {
+        if (previousEnv?.trim()) {
+            try {
+                await runIotaCli(['client', 'switch', '--env', previousEnv.trim()]);
+            } catch {
+                /* ignore restore errors */
+            }
+        }
+    }
+}
+
+/** create_globals auf der aktiven CLI-Kette (Env muss passende RPC nutzen). */
+export async function createGlobalsCli(packageId: string): Promise<GlobalsCreatedIds> {
+    const pkg = packageId.trim();
+    if (!HEX64.test(pkg)) throw new Error('Package-ID: 0x + 64 Hex erforderlich.');
+    const stdout = await runIotaCli([
+        'client',
+        'call',
+        '--package',
+        pkg,
+        '--module',
+        'messaging',
+        '--function',
+        'create_globals',
+        '--gas-budget',
+        '50000000',
+        '--json',
+    ]);
+    return parseGlobalsCreatedFromCliOutput(stdout);
+}
+
+export function applyMainnetPublishResultToEnv(result: MovePackagePublishResult): {
+    envMainnetPackageOk: boolean;
+    envMainnetPackageError?: string;
+} {
+    (CFG as { MAINNET_PACKAGE_ID?: string }).MAINNET_PACKAGE_ID = result.packageId;
+    process.env.MAINNET_PACKAGE_ID = result.packageId;
+    const envMainnet = setEnvKey('MAINNET_PACKAGE_ID', result.packageId);
+    return {
+        envMainnetPackageOk: envMainnet.ok,
+        envMainnetPackageError: envMainnet.error,
+    };
+}
+
+/** Mainnet: publish + create_globals — Testnet PACKAGE_ID / MAILBOX_ID bleiben unberührt. */
+export async function deployMainnetMovePackage(opts: {
+    rpcUrl: string;
+    packageDir?: string;
+    skipCreateGlobals?: boolean;
+}): Promise<{
+    packageId: string;
+    upgradeCapId?: string;
+    mailboxId?: string;
+    vaultRegistryId?: string;
+    commandRegistryId?: string;
+    mainnetRpcUrl: string;
+    envMainnetPackageOk: boolean;
+    envMainnetRpcOk: boolean;
+    message: string;
+}> {
+    const rpcUrl = opts.rpcUrl.trim();
+    const packageDir = opts.packageDir?.trim() || 'move-test';
+    const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const moveDir = path.join(rootDir, packageDir);
+    try {
+        await fs.access(moveDir);
+    } catch {
+        throw new Error(`Move-Ordner ${packageDir} fehlt auf diesem PC.`);
+    }
+
+    const publish = await withTemporaryIotaCliRpc(rpcUrl, () => publishPackageCli(packageDir));
+    const envPkg = applyMainnetPublishResultToEnv(publish);
+    (CFG as { MAINNET_RPC_URL?: string }).MAINNET_RPC_URL = rpcUrl;
+    process.env.MAINNET_RPC_URL = rpcUrl;
+    const envRpc = setEnvKey('MAINNET_RPC_URL', rpcUrl);
+
+    let globals: GlobalsCreatedIds | undefined;
+    if (!opts.skipCreateGlobals) {
+        globals = await withTemporaryIotaCliRpc(rpcUrl, () => createGlobalsCli(publish.packageId));
+    }
+
+    const parts = [
+        `Mainnet-Package: ${publish.packageId.slice(0, 10)}…`,
+        globals?.mailboxId ? `Postfach: ${globals.mailboxId.slice(0, 10)}…` : null,
+        'Testnet-IDs unverändert.',
+    ].filter(Boolean);
+
+    return {
+        packageId: publish.packageId,
+        upgradeCapId: publish.upgradeCapId,
+        mailboxId: globals?.mailboxId,
+        vaultRegistryId: globals?.vaultRegistryId,
+        commandRegistryId: globals?.commandRegistryId,
+        mainnetRpcUrl: rpcUrl,
+        envMainnetPackageOk: envPkg.envMainnetPackageOk,
+        envMainnetRpcOk: envRpc.ok,
+        message: parts.join(' '),
+    };
 }
 
 /** Move-Package upgraden (gleiche PACKAGE_ID, Mailbox-IDs bleiben). */

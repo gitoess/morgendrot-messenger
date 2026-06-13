@@ -15,11 +15,16 @@ export type SendTransportChoicePort = {
 /** Send-Panel: nur Lesen von Verschlüsselung und Transport (Umschalter in der Card). */
 export type SendTransportReadPort = Pick<SendTransportChoicePort, 'encrypted' | 'forcedTransport'>
 
-/** Pfad-4 „LoRa + eigene Verankerung“ (Klartext-Funk → Mailbox an sich). */
-export type SendMeshMirrorDelayPort = {
+/** Funk-Optionen: Bilder über Mesh und optionale Chain-Verankerung (unabhängig). */
+export type SendMeshFunkOptionsPort = {
+  readonly meshLoRaImagesEnabled: boolean
+  readonly onMeshLoRaImagesEnabledChange: (v: boolean) => void
   readonly meshSelfArchiveAfterLoRa: boolean
   readonly onMeshSelfArchiveAfterLoRaChange: (v: boolean) => void
 }
+
+/** @deprecated Alias — bitte `SendMeshFunkOptionsPort` / `asSendMeshFunkOptions`. */
+export type SendMeshMirrorDelayPort = SendMeshFunkOptionsPort
 
 export function asSendTransportChoice(
   encrypted: boolean,
@@ -46,12 +51,24 @@ export function asSendTransportRead(
   return { encrypted, forcedTransport }
 }
 
+export function asSendMeshFunkOptions(
+  meshLoRaImagesEnabled: boolean,
+  onMeshLoRaImagesEnabledChange: (v: boolean) => void,
+  meshSelfArchiveAfterLoRa: boolean,
+  onMeshSelfArchiveAfterLoRaChange: (v: boolean) => void
+): SendMeshFunkOptionsPort {
+  return {
+    meshLoRaImagesEnabled,
+    onMeshLoRaImagesEnabledChange,
+    meshSelfArchiveAfterLoRa,
+    onMeshSelfArchiveAfterLoRaChange,
+  }
+}
+
+/** @deprecated Alias — bitte `asSendMeshFunkOptions`. */
 export function asSendMeshMirrorDelay(
   meshSelfArchiveAfterLoRa: boolean,
   onMeshSelfArchiveAfterLoRaChange: (v: boolean) => void
 ): SendMeshMirrorDelayPort {
-  return {
-    meshSelfArchiveAfterLoRa,
-    onMeshSelfArchiveAfterLoRaChange,
-  }
+  return asSendMeshFunkOptions(false, () => {}, meshSelfArchiveAfterLoRa, onMeshSelfArchiveAfterLoRaChange)
 }

@@ -53,6 +53,7 @@ import {
     saveVaultLocal,
     loadVaultContent,
     vaultFileExists,
+    exportEcdhKeyMaterialForBrowser,
     listVaultFiles,
     encryptVaultPayloadForChain,
     writeVaultPackageId,
@@ -155,7 +156,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-show-ecdh-jwk', '/vault-ecdh-jwk', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -331,6 +332,61 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 message:
                                     'Signer-Import aus lokaler Vault gelesen. An einem sicheren Ort notieren; nicht weitergeben. Ohne Backup gehen Identität und ggf. gebundene Credits bei Geräteverlust verloren.',
                                 signerImport: imp,
+                            };
+                        } catch (e) {
+                            const msg = String((e as Error)?.message ?? e);
+                            const decryptFail = /decrypt|decryption|ungültig|Payload|tag|password|passwort|invalid|failed/i.test(msg);
+                            return {
+                                ok: false,
+                                message: decryptFail ? 'Entschlüsselung fehlgeschlagen – Passwort korrekt?' : 'Fehler: ' + msg,
+                            };
+                        }
+                    }
+                    if (c === '/vault-ecdh-jwk') {
+                        if (!keys) {
+                            return { ok: false, message: 'Tresor gesperrt. Zuerst entsperren (/vault-load oder UI-Unlock).' };
+                        }
+                        const exported = await exportEcdhKeyMaterialForBrowser(keys);
+                        if (!exported.ok) return { ok: false, message: exported.message };
+                        return {
+                            ok: true,
+                            message:
+                                'Chat-ECDH aus entsperrter Sitzung — nur für Direkt-Versand im Browser; nicht weitergeben.',
+                            ecdhPrivateJwk: exported.ecdhPrivateJwk,
+                            ecdhPrivatePkcs8Base64: exported.ecdhPrivatePkcs8Base64,
+                            ecdhPubRawBase64: exported.ecdhPubRawBase64,
+                        };
+                    }
+                    if (c === '/vault-show-ecdh-jwk') {
+                        const loadPath =
+                            a[1] != null && String(a[1]).trim() ? String(a[1]).trim() : CFG.VAULT_FILE || '.morgendrot-vault';
+                        const pw = String(a[0] ?? '').trim();
+                        if (!pw) {
+                            return {
+                                ok: false,
+                                message: 'Verwendung: /vault-show-ecdh-jwk <passwort> [pfad-zur-vault-datei]',
+                            };
+                        }
+                        if (!vaultFileExists(loadPath)) {
+                            return {
+                                ok: false,
+                                message:
+                                    'Keine Vault-Datei: ' +
+                                    loadPath +
+                                    '. Zuerst im Tresor „Lokal sichern“ oder /vault-load-from-chain.',
+                            };
+                        }
+                        try {
+                            const content = await loadVaultContent(pw, loadPath);
+                            const exported = await exportEcdhKeyMaterialForBrowser(content.keys);
+                            if (!exported.ok) return { ok: false, message: exported.message };
+                            return {
+                                ok: true,
+                                message:
+                                    'Chat-ECDH aus lokaler Vault gelesen. Nur für Direkt-Versand im Browser; nicht weitergeben.',
+                                ecdhPrivateJwk: exported.ecdhPrivateJwk,
+                                ecdhPrivatePkcs8Base64: exported.ecdhPrivatePkcs8Base64,
+                                ecdhPubRawBase64: exported.ecdhPubRawBase64,
                             };
                         } catch (e) {
                             const msg = String((e as Error)?.message ?? e);

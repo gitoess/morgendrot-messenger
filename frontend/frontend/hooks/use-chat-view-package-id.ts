@@ -5,7 +5,7 @@
  * Zwei Hooks: State vor useChatViewInbox; Befehle danach (braucht loadMessages + refreshApiStatus).
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { fetchPackageIdHistory, setPackageIdCommand } from '@/frontend/lib/api'
 
 export function useChatViewPackageFilterState() {
@@ -50,8 +50,9 @@ export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsPara
     setStatusMsg,
   } = p
 
+  const historyEndpointMissingRef = useRef(false)
+
   const refreshPackageIdSuggestions = useCallback(async (extraUnionIds?: string[]) => {
-    const r = await fetchPackageIdHistory()
     const seen = new Map<string, string>()
     const add = (raw: string | undefined) => {
       const t = (raw || '').trim()
@@ -60,11 +61,18 @@ export function useChatViewPackageIdCommands(p: UseChatViewPackageIdCommandsPara
       if (!seen.has(k)) seen.set(k, t)
     }
     for (const x of extraUnionIds ?? []) add(x)
-    if (r.ok) {
-      add(r.current)
-      for (const x of r.history ?? []) add(x)
-      for (const x of r.discovered ?? []) add(x)
+
+    if (!historyEndpointMissingRef.current) {
+      const r = await fetchPackageIdHistory()
+      if (r.ok) {
+        add(r.current)
+        for (const x of r.history ?? []) add(x)
+        for (const x of r.discovered ?? []) add(x)
+      } else if (/404|fehlt|not-found/i.test(r.error ?? '')) {
+        historyEndpointMissingRef.current = true
+      }
     }
+
     setPackageIdSuggestions([...seen.values()])
   }, [setPackageIdSuggestions])
 

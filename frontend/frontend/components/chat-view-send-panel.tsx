@@ -36,6 +36,8 @@ import {
 } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import {
+  CHAT_MESH_LORA_IMAGES_HINT,
+  CHAT_PATH4_SELF_ARCHIVE_HINT,
   isLoRaMeshTransport,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
@@ -144,6 +146,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const {
     isPrivate,
+    meshLoRaImagesEnabled,
+    onMeshLoRaImagesEnabledChange,
     meshSelfArchiveAfterLoRa,
     onMeshSelfArchiveAfterLoRaChange,
     encrypted,
@@ -267,12 +271,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     attachmentBarProps.attachedTxtFile == null &&
     attachmentBarProps.attachedAudioBase64 == null
 
+  const meshFunkSpecialMode = meshLoRaImagesEnabled || meshSelfArchiveAfterLoRa
+
   const meshPlaintextBlocked =
     !encrypted &&
     forcedTransport === 'mesh' &&
     !(
       isPrivate &&
-      meshSelfArchiveAfterLoRa &&
+      meshLoRaImagesEnabled &&
       attachmentBarProps.attachedLora != null &&
       !attachmentBarProps.attachedBlobBase64 &&
       attachmentBarProps.attachedTxtFile == null
@@ -282,9 +288,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       !!attachmentBarProps.attachedAudioBase64 ||
       attachmentBarProps.attachedTxtFile != null)
 
-  /** Pfad 4: erlaubt Klartext-Text und LoRa-LUMA/CHROMA, aber keine sonstigen Anhänge. */
+  /** Funk-Sondermodus: nur Kurztext + LoRa-Bild, keine IOTA-Blobs/Audio/.txt. */
   const meshPath4Blocked =
-    meshSelfArchiveAfterLoRa &&
+    meshFunkSpecialMode &&
     (!isPrivate ||
       forcedTransport !== 'mesh' ||
       !!attachmentBarProps.attachedBlobBase64 ||
@@ -361,7 +367,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         : 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
     }
     if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
-    if (meshPath4Blocked) return '„LoRa + eigene Verankerung“ passt nicht zur aktuellen Auswahl.'
+    if (meshPath4Blocked) return 'Funk-Optionen passen nicht zur aktuellen Anhang-Auswahl.'
     const capReason = activeSendPathWriteDeniedReason(apiStatus, forcedTransport, composerDelivery ?? 'chain')
     if (capReason) return capReason
     const plainCapReason = plaintextSendBlockedByCapabilitiesReason(apiStatus, encrypted, forcedTransport)
@@ -773,19 +779,34 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     </button>
                   ) : null}
                   {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
-                    <label
-                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-950/35"
-                      title="LoRa sofort senden und später eigene Kopie auf IOTA verankern"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={meshSelfArchiveAfterLoRa}
-                        onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
-                        data-testid="mesh-path4-self-archive"
-                        className="border-border"
-                      />
-                      Pfad 4
-                    </label>
+                    <>
+                      <label
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-600/40 bg-sky-950/20 px-3 py-1.5 text-xs font-medium text-sky-100 hover:bg-sky-950/35"
+                        title={CHAT_MESH_LORA_IMAGES_HINT}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={meshLoRaImagesEnabled}
+                          onChange={(e) => onMeshLoRaImagesEnabledChange(e.target.checked)}
+                          data-testid="mesh-lora-images-enabled"
+                          className="border-border"
+                        />
+                        Bilder über Funk
+                      </label>
+                      <label
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-950/35"
+                        title={CHAT_PATH4_SELF_ARCHIVE_HINT}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={meshSelfArchiveAfterLoRa}
+                          onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                          data-testid="mesh-path4-self-archive"
+                          className="border-border"
+                        />
+                        Auf Chain verankern
+                      </label>
+                    </>
                   ) : null}
                 </>
               ) : null

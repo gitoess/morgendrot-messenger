@@ -1,12 +1,11 @@
 'use client'
 
 /**
- * „Kontakt & Verbindung“: Partner-Wallet (0x), optional Handshake, Mesh/BLE, Package-ID (Admin), lokaler Inbox-Purge.
- * Zustand und Handler für API-Aufrufe bleiben in der View; dieses Panel ist die Darstellung.
+ * Funk & Geräte: Meshtastic (LoRa/Heltec) und Ad-hoc-BLE-Kontakt.
+ * Partner/Handshake/Package-ID liegen in `ChatViewEncryptedPartnerPanel` bzw. Transport-Karte.
  */
 
-import { useMemo } from 'react'
-import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
+import { saveContactEntry } from '@/frontend/lib/api'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { MESHTASTIC_WEB_DEVICE_SETTINGS_URL } from '@/frontend/lib/chat-view-messenger-transport'
 
@@ -27,15 +26,8 @@ export type ChatViewSetupPanelMeshtastic = {
 }
 
 export type ChatViewSetupPanelProps = {
-  partner: string
-  onPartnerChange: (v: string) => void
-  sending: boolean
-  onHandshake: () => void
-  onConnect: () => void
-  encrypted: boolean
   forcedTransport: ForcedTransport
   meshtastic: ChatViewSetupPanelMeshtastic
-  directory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
   contactBleAddress: string
   onContactBleAddressChange: (v: string) => void
@@ -45,43 +37,12 @@ export type ChatViewSetupPanelProps = {
   setContactBleBusy: (v: boolean) => void
   meshSyncMsg: string | null
   setMeshSyncMsg: (v: string | null) => void
-  /** Boss: dezenter Hinweis zu Handshake/Vertrauen */
-  role?: string
-  activePackageId?: string
-  /** Aus GET /api/status — nur Anzeige, nicht editierbar. */
-  serverMailboxIdMasked?: string
-  mailboxConfigured?: boolean
-  inboxPackageFilter: string
-  onInboxPackageFilterChange: (v: string) => void
-  packageIdSuggestions: string[]
-  onRefreshPackageIdSuggestions: () => void
-  onApplyPackageIdBackend: (raw: string) => void | Promise<void>
-  onApplyInboxPackageFilterOnly: () => void | Promise<void>
-  packageIdBusy?: boolean
-  /** Gruppe: Handshake pro Mitglied (aktive Gruppe). */
-  isGroupMode?: boolean
-  groupMemberAddresses?: string[]
-  connectedAddresses?: string[]
-  onHandshakeForAddress?: (address: string) => void | Promise<void>
-}
-
-function shortPackageId(a: string) {
-  const t = a.trim()
-  if (t.length < 22) return t || '—'
-  return `${t.slice(0, 12)}…${t.slice(-8)}`
 }
 
 export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
   const {
-    partner,
-    onPartnerChange,
-    sending,
-    onHandshake,
-    onConnect,
-    encrypted,
     forcedTransport,
     meshtastic,
-    directory,
     refreshContactDirectory,
     contactBleAddress,
     onContactBleAddressChange,
@@ -91,45 +52,16 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
     setContactBleBusy,
     meshSyncMsg,
     setMeshSyncMsg,
-    activePackageId,
-    serverMailboxIdMasked,
-    mailboxConfigured,
-    inboxPackageFilter,
-    onInboxPackageFilterChange,
-    packageIdSuggestions,
-    onRefreshPackageIdSuggestions,
-    onApplyPackageIdBackend,
-    onApplyInboxPackageFilterOnly,
-    packageIdBusy,
-    isGroupMode = false,
-    groupMemberAddresses = [],
-    connectedAddresses = [],
-    onHandshakeForAddress,
   } = p
-
-  const pkgInput = inboxPackageFilter.trim() || activePackageId?.trim() || ''
-  const connectedSet = useMemo(
-    () => new Set(connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
-    [connectedAddresses]
-  )
-  const groupMembers = useMemo(
-    () =>
-      groupMemberAddresses
-        .map((a) => a.trim().toLowerCase())
-        .filter((a) => /^0x[a-f0-9]{64}$/.test(a)),
-    [groupMemberAddresses]
-  )
 
   const showLora = forcedTransport === 'mesh'
   const showAdhoc = forcedTransport === 'adhoc'
+  if (!showLora && !showAdhoc) return null
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">
-        {showLora || showAdhoc ? 'Funk & Geräte' : 'Kontakt & Verbindung'}
-      </h3>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Funk & Geräte</h3>
 
-      {/* ——— LoRa · Heltec ——— */}
       {showLora ? (
         <div className="flex flex-wrap items-center gap-2">
           {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
@@ -196,7 +128,10 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
       ) : null}
 
       {showAdhoc ? (
-        <section className="mb-2 rounded-lg border border-amber-500/35 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15" aria-labelledby="setup-adhoc-ble">
+        <section
+          className="mb-2 rounded-lg border border-amber-500/35 bg-amber-500/[0.06] p-3 sm:p-4 dark:bg-amber-950/15"
+          aria-labelledby="setup-adhoc-ble"
+        >
           <h4 id="setup-adhoc-ble" className="mb-2 text-sm font-semibold text-foreground">
             Ad-hoc · BLE-Gerät (geplant)
           </h4>

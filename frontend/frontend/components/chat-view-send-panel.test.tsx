@@ -22,6 +22,8 @@ function baseSendPanel(over: Partial<ChatViewSendPanelProps> = {}): ChatViewSend
     message: 'Hallo Test',
     onRecipientChange: vi.fn(),
     onMessageChange: vi.fn(),
+    meshLoRaImagesEnabled: false,
+    onMeshLoRaImagesEnabledChange: vi.fn(),
     meshSelfArchiveAfterLoRa: false,
     onMeshSelfArchiveAfterLoRaChange: vi.fn(),
     forcedTransport: 'internet',
@@ -457,7 +459,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(screen.queryByText(/Empfänger · Wallet \(0x\)/i)).not.toBeInTheDocument()
   })
 
-  it('zeigt Pfad-4-Checkbox bei Klartext + Funk (privat)', () => {
+  it('zeigt getrennte Funk-Checkboxen bei Klartext + Funk (privat)', () => {
     render(
       <ChatViewSendPanel
         {...baseSendPanel({
@@ -468,6 +470,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
+    expect(screen.getByTestId('mesh-lora-images-enabled')).toBeInTheDocument()
     expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
   })
 
@@ -520,13 +523,40 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(primarySend(container)).toBeDisabled()
   })
 
-  it('erlaubt Pfad-4-Senden mit LoRa-Bildzweiteiler (LUMA/CHROMA)', () => {
+  it('erlaubt LoRa-Bild nur mit „Bilder über Funk“ (ohne Verankerung)', () => {
     const onSend = vi.fn()
     const { container } = render(
       <ChatViewSendPanel
         {...baseSendPanel({
           encrypted: false,
           forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: true,
+          meshSelfArchiveAfterLoRa: false,
+          attachedLora: {
+            lumaWire: '[[MORG_LUMA_V1:msgId=beef|len=4|ABCD]]',
+            chromaWire: '[[MORG_CHROMA_V1:msgId=beef|len=4|EFGH]]',
+            messageId: 'beef',
+            lumaJpegBytes: 40,
+            chromaJpegBytes: 60,
+          },
+          onSend,
+        })}
+      />
+    )
+    const sendBtn = primarySend(container)
+    expect(sendBtn).toBeEnabled()
+    fireEvent.click(sendBtn)
+    expect(onSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('erlaubt LoRa-Bildzweiteiler mit beiden Optionen', () => {
+    const onSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          encrypted: false,
+          forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: true,
           meshSelfArchiveAfterLoRa: true,
           attachedLora: {
             lumaWire: '[[MORG_LUMA_V1:msgId=beef|len=4|ABCD]]',
@@ -545,13 +575,14 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).toHaveBeenCalledTimes(1)
   })
 
-  it('Pfad 4 bleibt mit Encrypt-Toggle aktiv (kein Mesh-v2-Zwang)', () => {
+  it('Bilder über Funk bleibt mit Encrypt-Toggle sendbar (Luft Klartext)', () => {
     const onSend = vi.fn()
     const { container } = render(
       <ChatViewSendPanel
         {...baseSendPanel({
           encrypted: true,
           forcedTransport: 'mesh',
+          meshLoRaImagesEnabled: true,
           meshSelfArchiveAfterLoRa: true,
           attachedLora: {
             lumaWire: '[[MORG_LUMA_V1:msgId=cafe|len=4|ABCD]]',
@@ -564,7 +595,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByTestId('mesh-path4-self-archive')).toBeChecked()
+    expect(screen.getByTestId('mesh-lora-images-enabled')).toBeChecked()
     const sendBtn = primarySend(container)
     expect(sendBtn).toBeEnabled()
     fireEvent.click(sendBtn)
@@ -587,5 +618,70 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onConfirmLoraOnline).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: /^Abbrechen$/i }))
     expect(onDismissLoraOnlineFallback).toHaveBeenCalledTimes(1)
+  })
+
+  it('Telegram-Sendepfad: ruft onTelegramSend statt onSend (§ H.1a)', () => {
+    const onSend = vi.fn()
+    const onTelegramSend = vi.fn()
+    const { container } = render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          composerDelivery: 'telegram',
+          canSendTelegram: true,
+          recipient: '99317902',
+          onSend,
+          onTelegramSend,
+        })}
+      />
+    )
+    expect(screen.getByText(/Empfänger · Telegram/)).toBeInTheDocument()
+    fireEvent.click(primarySend(container))
+    expect(onTelegramSend).toHaveBeenCalledTimes(1)
+    expect(onSend).not.toHaveBeenCalled()
+  })
+
+  it('zeigt Persistenz-Badge bei Online + Mailbox-Modus (§ H.1a)', () => {
+    const partner = `0x${'d'.repeat(64)}`
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          messagingPersistenceMode: 'mailbox',
+          encrypted: true,
+          forcedTransport: 'internet',
+          partner,
+          recipient: partner,
+        })}
+      />
+    )
+    expect(screen.getByText(/Verschlüsselt · Mailbox/)).toBeInTheDocument()
+  })
+
+  it('zeigt Abbrechen-Button während sending und ruft onCancelSend (§ H.1a)', () => {
+    const onCancelSend = vi.fn()
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          sending: true,
+          onCancelSend,
+        })}
+      />
+    )
+    const cancel = screen.getByTestId('chat-composer-cancel-send')
+    expect(cancel).toHaveTextContent(/Übertragung abbrechen/)
+    fireEvent.click(cancel)
+    expect(onCancelSend).toHaveBeenCalledTimes(1)
+  })
+
+  it('zeigt Sendestatus im Composer (§ H.1a)', () => {
+    render(
+      <ChatViewSendPanel
+        {...baseSendPanel({
+          status: 'success',
+          statusMsg: 'Nachricht gesendet.',
+        })}
+      />
+    )
+    const statusEl = screen.getByTestId('chat-composer-send-status')
+    expect(statusEl).toHaveTextContent('Nachricht gesendet.')
   })
 })

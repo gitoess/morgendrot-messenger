@@ -20,16 +20,22 @@ import {
   canTryLiveTeamBroadcastDirectMailbox,
   trySubmitTeamPlaintextBroadcastViaDirectIota,
 } from '@/frontend/lib/direct-iota-team-broadcast-submit'
-import {
-  canTryLiveEncryptedDirectMailbox,
-  trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
-} from '@/frontend/lib/direct-iota-encrypted-submit'
+import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
-import {
-  prepareEncryptedDirectMailboxSend,
-  shouldSkipMessengerApiRelayFallback,
-} from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import { syncActiveNetworkChainSnapshot, formatMainnetDirectSendBlockedMessage } from '@/frontend/lib/active-network-chain-sync'
+import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
+import { prepareEncryptedDirectSend } from '@/frontend/lib/direct-iota-encrypted-send-prep'
+
+/** Boss `/api` nutzt oft noch Testnet-PACKAGE_ID — auf Mainnet nur Direkt-RPC, nicht Relay. */
+function shouldUseMailboxApiRelayFallback(): boolean {
+  if (shouldSkipMessengerApiRelayFallback()) return false
+  const state = readNetworkProfilesState()
+  if (state.active === 'mainnet' && validateNetworkProfile(state.mainnet).ok) return false
+  return true
+}
 
 function resolvePersistenceMode(opts?: { messagingPersistenceMode?: MessagingPersistenceMode }): MessagingPersistenceMode {
   return opts?.messagingPersistenceMode ?? readMessagingPersistenceModeFromStorage()
@@ -73,6 +79,8 @@ export async function sendPlaintextMailboxHybrid(
   messageNonceU64: bigint,
   opts?: { messagingPersistenceMode?: MessagingPersistenceMode; mailboxObjectId?: string }
 ): Promise<MailboxHybridSendResult> {
+  syncActiveNetworkChainSnapshot()
+  tryAutoRestoreDirectIotaSessionSigner()
   let directErr: string | undefined
   if (canTryLivePlaintextDirectMailbox()) {
     const dr = await trySubmitPlaintextMailboxViaDirectIota({
@@ -80,9 +88,16 @@ export async function sendPlaintextMailboxHybrid(
       payloadUtf8: wireForApi,
       nonce: messageNonceU64,
       mailboxObjectId: opts?.mailboxObjectId,
+      messagingPersistenceMode: resolvePersistenceMode(opts),
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
     directErr = dr.error
+  }
+  if (!shouldUseMailboxApiRelayFallback()) {
+    return {
+      ok: false,
+      error: directErr ?? formatMainnetDirectSendBlockedMessage(),
+    }
   }
   const mode = resolvePersistenceMode(opts)
   const apiRes = await sendMessage(recipient, wireForApi, false, {
@@ -92,9 +107,6 @@ export async function sendPlaintextMailboxHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
-    if (shouldSkipMessengerApiRelayFallback()) {
-      return { ok: false, error: directErr }
-    }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid
@@ -106,6 +118,7 @@ export async function sendTeamPlaintextBroadcastHybrid(
   wireForApi: string,
   messageNonceU64: bigint
 ): Promise<MailboxHybridSendResult> {
+  syncActiveNetworkChainSnapshot()
   const teamMb = teamMailboxObjectId.trim()
   let directErr: string | undefined
   if (canTryLiveTeamBroadcastDirectMailbox()) {
@@ -117,6 +130,9 @@ export async function sendTeamPlaintextBroadcastHybrid(
     if (dr.ok) return { ok: true, txDigest: dr.digest }
     directErr = dr.error
   }
+  if (!shouldUseMailboxApiRelayFallback()) {
+    return { ok: false, error: directErr ?? formatMainnetDirectSendBlockedMessage() }
+  }
   const { executeCommand } = await import('@/frontend/lib/api/execute-command')
   const apiRes = await executeCommand('/send-team-broadcast', [wireForApi], {
     mailboxObjectId: teamMb,
@@ -125,7 +141,7 @@ export async function sendTeamPlaintextBroadcastHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
-    if (shouldSkipMessengerApiRelayFallback()) {
+    if (!shouldUseMailboxApiRelayFallback()) {
       return { ok: false, error: directErr }
     }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
@@ -133,7 +149,7 @@ export async function sendTeamPlaintextBroadcastHybrid(
   return hybrid
 }
 
-/** Verschlüsselter Online-Versand: bei Modus „mailbox“ Direct zuerst, dann `/send` (inkl. Event-Modus). */
+/** Verschlüsselter Online-Versand: Direct zuerst (Event oder Mailbox), dann `/send`. */
 export async function sendEncryptedMailboxHybrid(
   recipient: string,
   wireForApi: string,
@@ -143,37 +159,37 @@ export async function sendEncryptedMailboxHybrid(
     messagingPersistenceMode?: MessagingPersistenceMode
   }
 ): Promise<MailboxHybridSendResult> {
+  syncActiveNetworkChainSnapshot()
+  tryAutoRestoreDirectIotaSessionSigner()
   const rTrim = recipient.trim()
   const mode = resolvePersistenceMode(opts)
-  const useMailboxStore = mode === 'mailbox'
   let directErr: string | undefined
-  if (useMailboxStore && rTrim) {
-    const prep = await prepareEncryptedDirectMailboxSend(rTrim)
-    if (prep.ok) {
+  if (rTrim) {
+    const prep = await prepareEncryptedDirectSend(rTrim, mode)
+    if (!prep.ok) {
+      directErr = prep.error
+    } else {
       const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
-      if (mat) {
+      if (!mat) {
+        directErr = 'ECDH-Material für Empfänger fehlt nach Vorbereitung.'
+      } else {
         const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
           recipient: rTrim,
           plaintextUtf8: wireForApi,
           peerPubRaw: mat.peerPubRaw,
           ecdhPrivateKey: mat.ecdhPrivateKey,
           mailboxObjectId: opts?.mailboxObjectId,
+          messagingPersistenceMode: mode,
         })
         if (er.ok) return { ok: true, txDigest: er.digest }
         directErr = er.error
       }
-    } else {
-      directErr = prep.error
     }
   }
-  if (shouldSkipMessengerApiRelayFallback()) {
+  if (!shouldUseMailboxApiRelayFallback()) {
     return {
       ok: false,
-      error:
-        directErr ??
-        (useMailboxStore
-          ? 'Verschlüsselter Direkt-Send nicht möglich.'
-          : 'Standalone ohne Basis: Persistenz „Mailbox“ in der Transport-Karte wählen (verschlüsselter Direkt-Pfad).'),
+      error: directErr ?? formatMainnetDirectSendBlockedMessage(),
     }
   }
   const apiRes = await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
@@ -183,9 +199,6 @@ export async function sendEncryptedMailboxHybrid(
   const hybrid = fromApiResponse(apiRes)
   if (hybrid.ok) return hybrid
   if (directErr) {
-    if (shouldSkipMessengerApiRelayFallback()) {
-      return { ok: false, error: directErr }
-    }
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid

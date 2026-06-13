@@ -12,7 +12,9 @@
     "./device-time": "./src/device-time/index.ts",
     "./iota": "./src/iota/index.ts",
     "./attestation": "./src/attestation/index.ts",
-    "./image": "./src/image/index.ts"
+    "./image": "./src/image/index.ts",
+    "./forensic-batch": "./src/forensic-batch/index.ts",
+    "./forensic-batch/registry": "./src/forensic-batch/registry.ts"
   },
   "scripts": {
     "test:unit": "vitest run",

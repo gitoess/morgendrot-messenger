@@ -146,7 +146,7 @@ Deckt u. a. `MORG_SEG_V1`/`MORG_NAK_V1`, `MORG_IMG_INIT_V1`, Segment-Cap 12 KB, 
 
 1. Zwei Heltecs mit gleicher Region/Kanal/PSK, Antenne montiert, stabile Stromversorgung.
 2. Zwei Endgeräte (A=Sender, B=Empfänger), beide Messenger offen, Transport **funk**.
-3. Auf A: **„LoRa + eigene Verankerung“** aktiv, privater Chat, Tresor entsperrt.
+3. Auf A: **„Bilder über Funk“** aktiv (Pflicht für LUMA/CHROMA); **„Auf Chain verankern“** optional.
 4. Testbild beliebig (bis 12 MB Rohdatei) — Messenger **komprimiert auf dem Gerät** (WASM, ohne Morgendrot-Node) auf ≤ 12 KB LUMA+CHROMA; IOTA-Anhang analog ≤ 11,8 KB Netto-Blob.
 
 **Durchlauf (ein Lauf = ein Bild):**

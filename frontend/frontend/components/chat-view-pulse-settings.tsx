@@ -47,7 +47,7 @@ import {
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
   applyDirectChatEcdhPrivateJwk,
-  clearDirectChatEcdhPrivateKey,
+  clearDirectChatEcdhKeyMaterial,
   clearDirectChatEcdhPeerPubs,
   getDirectChatEcdhPrivateKey,
   exportDirectChatEcdhPeerPubPreview,
@@ -98,14 +98,17 @@ type ChatViewPulseSettingsProps = {
   allowDevExpertTools?: boolean
   /** Einstellungen: ohne doppelte Package-ID / IOTA-Modus. */
   settingsEmbedded?: boolean
+  /** RPC/Package/Mailbox kommen vom Netzwerk-Schalter — nur Signer zeigen. */
+  networkManaged?: boolean
 }
 
 export function ChatViewPulseSettings({
   apiStatus,
   allowDevExpertTools = true,
   settingsEmbedded = false,
+  networkManaged = false,
 }: ChatViewPulseSettingsProps) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(networkManaged && settingsEmbedded)
   const [busy] = useState<'interval' | 'enabled' | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
   const [expertOpen, setExpertOpen] = useState(false)
@@ -439,7 +442,9 @@ export function ChatViewPulseSettings({
           className="flex w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-left text-xs font-medium text-foreground hover:bg-muted/35"
         >
           <span>
-            {settingsEmbedded
+            {networkManaged && settingsEmbedded
+              ? 'Wallet-Signer'
+              : settingsEmbedded
               ? 'Mailbox · Direkt-RPC · Streams-Puls'
               : 'IDs zum Kopieren · Direkt-RPC · Funk'}
           </span>
@@ -447,13 +452,17 @@ export function ChatViewPulseSettings({
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-4 rounded-lg border border-border/60 bg-card/50 px-3 py-3 text-xs">
-        {settingsEmbedded ? (
+        {settingsEmbedded && !networkManaged ? (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             Mailbox, Direkt-RPC und optionaler Streams-Puls — Erklärung und Checkliste im{' '}
             <Link href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#einstellungen-system--identität" className="text-primary underline hover:no-underline">
               Handbuch
             </Link>
             .
+          </p>
+        ) : networkManaged ? (
+          <p className="text-[11px] text-muted-foreground">
+            Mnemonic für Direkt-Send (ohne dauernd laufenden Boss-PC). Netz kommt von <strong className="text-foreground">Wo senden?</strong> oben.
           </p>
         ) : (
           <p className="text-[11px] leading-relaxed text-muted-foreground">
@@ -470,6 +479,138 @@ export function ChatViewPulseSettings({
           </p>
         ) : null}
 
+        {networkManaged && settingsEmbedded ? (
+          <>
+            {iotaSubmitMode !== 'relay' && directSetupGaps.length > 0 ? (
+              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-950 dark:text-amber-100">
+                <p className="font-semibold">Noch offen:</p>
+                <ul className="mt-1 list-inside list-disc space-y-0.5">
+                  {directSetupGaps.map((g) => (
+                    <li key={g}>{g}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+            <div className="space-y-1.5">
+              <Label className="text-[11px] text-muted-foreground">Wallet-Mnemonic (Session-Signer)</Label>
+              <textarea
+                className="min-h-[72px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[11px] text-foreground"
+                value={mnemoInput}
+                onChange={(e) => setMnemoInput(e.target.value)}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder="12/24 Wörter — nur im Browser-RAM, nicht dauerhaft gespeichert."
+              />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 text-xs"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    const r = applyDirectIotaMnemonicSession(mnemoInput)
+                    if (r.ok) {
+                      setSessionAddr(r.address)
+                      setMnemoInput('')
+                      setMsg(`Signer aktiv: ${r.address.slice(0, 10)}…`)
+                      refreshDirectSetupGaps()
+                    } else {
+                      setMsg(r.error)
+                    }
+                  }}
+                >
+                  Signer anwenden
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-8 text-xs"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    clearDirectIotaSessionSigner()
+                    setSessionAddr(null)
+                    setMsg('Session-Signer gelöscht.')
+                    refreshDirectSetupGaps()
+                  }}
+                >
+                  Signer löschen
+                </Button>
+              </div>
+              <div className="mt-2 rounded-md border border-border/70 bg-muted/20 p-2">
+                <Label className="mb-1 block text-[10px] text-muted-foreground">
+                  Optional: verschlüsselt auf dem Gerät speichern
+                </Label>
+                <Input
+                  type="password"
+                  value={signerStorePassword}
+                  onChange={(e) => setSignerStorePassword(e.target.value)}
+                  placeholder="Lokales Passwort (mind. 8 Zeichen)"
+                  className="h-8 max-w-sm text-xs"
+                  autoComplete="off"
+                />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="h-8 text-xs"
+                    disabled={busy !== null || !mnemoInput.trim()}
+                    onClick={() => {
+                      void (async () => {
+                        const r = await persistDirectIotaSessionSignerEncrypted({
+                          signerImportRaw: mnemoInput,
+                          password: signerStorePassword,
+                        })
+                        if (r.ok) {
+                          setHasPersistedSigner(true)
+                          setMsg('Signer lokal gespeichert.')
+                        } else {
+                          setMsg(`Speichern fehlgeschlagen: ${r.error}`)
+                        }
+                      })()
+                    }}
+                  >
+                    Speichern
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    disabled={busy !== null || !hasPersistedSigner}
+                    onClick={() => {
+                      void (async () => {
+                        const r = await restoreDirectIotaSessionSignerFromEncryptedStorage({
+                          password: signerStorePassword,
+                        })
+                        if (r.ok) {
+                          setSessionAddr(r.address)
+                          setMsg(`Signer geladen: ${r.address.slice(0, 10)}…`)
+                          refreshDirectSetupGaps()
+                        } else {
+                          setMsg(`Laden fehlgeschlagen: ${r.error}`)
+                        }
+                      })()
+                    }}
+                  >
+                    Laden
+                  </Button>
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {hasPersistedSigner ? 'Lokale Ablage vorhanden' : 'Keine lokale Ablage'}
+                </p>
+              </div>
+              {sessionAddr ? (
+                <p className="text-[10px] font-mono text-muted-foreground">
+                  Aktiv: <span className="break-all text-foreground">{sessionAddr}</span>
+                </p>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <>
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-foreground">
             {settingsEmbedded ? 'Streams-Puls (optional)' : 'Explorer / Prüfen'}
@@ -1148,7 +1289,7 @@ export function ChatViewPulseSettings({
                       className="h-8 text-xs"
                       disabled={busy !== null}
                       onClick={() => {
-                        clearDirectChatEcdhPrivateKey()
+                        clearDirectChatEcdhKeyMaterial()
                         setEcdhPrivActive(false)
                         setMsg('Chat-ECDH-Privatkey gelöscht.')
                       }}
@@ -1188,6 +1329,8 @@ export function ChatViewPulseSettings({
             )}
           </div>
         </div>
+          </>
+        )}
 
         {msg && <p className="text-[11px] text-emerald-700 dark:text-emerald-400">{msg}</p>}
       </CollapsibleContent>

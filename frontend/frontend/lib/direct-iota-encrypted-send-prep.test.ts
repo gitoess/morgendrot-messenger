@@ -11,10 +11,8 @@ vi.mock('@/frontend/lib/api/package-connect', () => ({
 
 import { getDirectChatEcdhPrivateKey, setDirectChatEcdhPeerPubBase64 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { applyDirectChatEcdhPrivateJwk } from '@/frontend/lib/direct-chat-ecdh-session'
-import {
-  ensureDirectChatPeerPubForRecipient,
-  shouldSkipMessengerApiRelayFallback,
-} from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
+import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 
 describe('direct-iota-encrypted-send-prep', () => {
   const store: Record<string, string> = {}

@@ -103,4 +103,109 @@ describe('ChatViewSendPathCompact', () => {
     expect(onDelivery).toHaveBeenCalledWith('telegram')
     expect(onTransport).not.toHaveBeenCalled()
   })
+
+  it('rendert nichts wenn visible=false (§ H.1a)', () => {
+    const { container } = render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible={false}
+        encrypted={false}
+        forcedTransport="mesh"
+        onForcedTransportChange={noop}
+      />
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('Pinnwand: funk deaktiviert, online aktiv (§ H.1a)', () => {
+    render(
+      <ChatViewSendPathCompact
+        channelMode="pinnwand"
+        visible
+        encrypted={false}
+        forcedTransport="internet"
+        onForcedTransportChange={noop}
+        onComposerDeliveryChange={noop}
+      />
+    )
+    expect(screen.getByRole('button', { name: /online/i })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: /funk/i })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /telegram/i })).not.toBeInTheDocument()
+  })
+
+  it('Gruppe: telegram ausgeblendet, funk aktiv (§ H.1a)', () => {
+    render(
+      <ChatViewSendPathCompact
+        channelMode="group"
+        visible
+        encrypted={false}
+        forcedTransport="mesh"
+        onForcedTransportChange={noop}
+        onComposerDeliveryChange={noop}
+      />
+    )
+    expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
+    expect(screen.queryByRole('button', { name: /telegram/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /adhoc/i })).toBeDisabled()
+  })
+
+  it('zeigt Verschlüsselungs-Hinweis bei Online + Schloss (§ H.1a)', () => {
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted
+        forcedTransport="internet"
+        onForcedTransportChange={noop}
+      />
+    )
+    expect(screen.getByRole('note')).toHaveTextContent(/Verschlüsselung/)
+  })
+
+  it('Online-Klick setzt forcedTransport internet (§ H.1a)', () => {
+    const onTransport = vi.fn()
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="mesh"
+        onForcedTransportChange={onTransport}
+        onComposerDeliveryChange={noop}
+      />
+    )
+    screen.getByRole('button', { name: /online/i }).click()
+    expect(onTransport).toHaveBeenCalledWith('internet')
+  })
+
+  it('Funk-Klick bei Klartext setzt mesh (§ H.1a)', () => {
+    const onTransport = vi.fn()
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="internet"
+        onForcedTransportChange={onTransport}
+        onComposerDeliveryChange={noop}
+      />
+    )
+    screen.getByRole('button', { name: /funk/i }).click()
+    expect(onTransport).toHaveBeenCalledWith('mesh')
+  })
+
+  it('Telegram-Modus zeigt Zustell-Hinweis (§ H.1a)', () => {
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="internet"
+        composerDelivery="telegram"
+        onForcedTransportChange={noop}
+        onComposerDeliveryChange={noop}
+      />
+    )
+    expect(screen.getByRole('note')).toHaveTextContent(/Telegram/)
+  })
 })

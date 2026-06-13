@@ -2,6 +2,7 @@
 
 import {
   attachGasPaymentForOwner,
+  buildSendPlaintextEventTransaction,
   buildStorePlaintextMailboxTransaction,
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
@@ -36,6 +37,14 @@ const LS_SUBMIT_MODE = 'morgendrot.iotaSubmitMode'
 
 import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
+import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
+import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import {
+  normalizeMessagingPersistenceMode,
+  readMessagingPersistenceModeFromStorage,
+  type MessagingPersistenceMode,
+} from '@/frontend/lib/messaging-persistence-mode'
+import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 export { DIRECT_IOTA_UI_CHANGED, notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 
@@ -164,7 +173,7 @@ export function listDirectIotaSetupGaps(): string[] {
   const gaps: string[] = []
   if (!isDirectMailboxDrainEnabled()) gaps.push('„Direkt-Mailbox-Drain“ einschalten')
   if (!getDirectIotaSessionSigner() || !getDirectIotaSessionSignerAddress()) {
-    gaps.push('Session-Signer (Mnemonic) anwenden')
+    gaps.push('Session-Signer fehlt — Tresor entsperren (wird automatisch aus Vault geladen)')
   }
   const chain = getDirectChainIdsReadiness()
   if (!chain.ready) {
@@ -203,17 +212,22 @@ export function isDirectMailboxDrainEnabled(): boolean {
   }
 }
 
-/** Live-Send (Composer): Direct-Klartext-Mailbox möglich — gleiche Voraussetzungen wie Offline-Drain. */
+/** Live-Send (Composer): Direct-Klartext möglich — Event braucht nur Package+Signer; Mailbox zusätzlich Drain-Flags. */
 export function canTryLivePlaintextDirectMailbox(): boolean {
   if (typeof window === 'undefined') return false
-  return (
-    !isIotaRelayOnlyMode() &&
-    isDirectMailboxDrainEnabled() &&
-    Boolean(getConfiguredDirectIotaRpcUrl()) &&
-    Boolean(getDirectIotaSessionSigner()) &&
-    Boolean(getDirectMailboxChainSnapshot()) &&
-    canUseDirectPlaintextMailboxDrain()
-  )
+  tryAutoRestoreDirectIotaSessionSigner()
+  if (
+    isIotaRelayOnlyMode() ||
+    !isDirectMailboxDrainEnabled() ||
+    !getConfiguredDirectIotaRpcUrl() ||
+    !getDirectIotaSessionSigner() ||
+    !getDirectMailboxChainSnapshot()
+  ) {
+    return false
+  }
+  const mode = readMessagingPersistenceModeFromStorage()
+  if (mode === 'event') return true
+  return canUseDirectPlaintextMailboxDrain()
 }
 
 export function setDirectMailboxDrainEnabled(on: boolean): void {
@@ -227,13 +241,9 @@ export function setDirectMailboxDrainEnabled(on: boolean): void {
   notifyDirectIotaUiChanged()
 }
 
-function normalizeHexAddr(a: string): string {
-  const t = a.trim().toLowerCase()
-  return t.startsWith('0x') ? t : `0x${t}`
-}
-
 /**
- * Klartext-Mailbox (`store_plaintext_message`) **ohne** `/api` — nur wenn Schalter + RPC + Signer + Snapshot passen.
+ * Klartext **ohne** `/api` — Direct-RPC im Browser.
+ * Respektiert `messagingPersistenceMode`: Event → `send_plaintext_message`; Mailbox → `store_plaintext_message*`.
  */
 export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   recipient: string
@@ -241,6 +251,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   nonce: bigint
   /** M4b: Kontakt-Mailbox statt Snapshot-Mailbox. */
   mailboxObjectId?: string
+  messagingPersistenceMode?: MessagingPersistenceMode
 }): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
   if (isIotaRelayOnlyMode()) {
     return {
@@ -251,6 +262,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   if (!isDirectMailboxDrainEnabled()) {
     return { ok: false, error: 'Direkt-Mailbox-Drain ist aus.' }
   }
+  syncActiveNetworkChainSnapshot()
   const rpc = getConfiguredDirectIotaRpcUrl()
   if (!rpc) {
     return { ok: false, error: 'Keine Direkt-RPC-URL (localStorage oder NEXT_PUBLIC_DIRECT_IOTA_RPC_URL).' }
@@ -267,14 +279,21 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
       error: 'Keine Ketten-IDs — Basis einmal verbinden oder Package/Mailbox/Absender in den Einstellungen speichern.',
     }
   }
-  if (!canUseDirectPlaintextMailboxDrain()) {
+  if (!canTryLivePlaintextDirectMailbox()) {
+    return { ok: false, error: 'Direkt-Klartext-Send ist nicht bereit (Modus, Drain, RPC, Signer oder Ketten-IDs prüfen).' }
+  }
+  const persistenceMode = normalizeMessagingPersistenceMode(
+    opts.messagingPersistenceMode ?? readMessagingPersistenceModeFromStorage()
+  )
+  const useEventPath = persistenceMode === 'event'
+  if (!useEventPath && !canUseDirectPlaintextMailboxDrain()) {
     return {
       ok: false,
       error:
         'Server-Konfiguration passt nicht: Direkt-Pfad nur mit Mailbox-Klartext **ohne** Messenger-Credits (Flags aus letztem /api/status).',
     }
   }
-  if (normalizeHexAddr(signerAddr) !== normalizeHexAddr(snap.senderAddress)) {
+  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
     return {
       ok: false,
       error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender (MY_ADDRESS) überein.',
@@ -283,31 +302,42 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
   try {
     const client = createDirectIotaClient({ rpcUrl: rpc })
     const plaintextUtf8 = new TextEncoder().encode(opts.payloadUtf8)
-    const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
-      mailboxObjectId: opts.mailboxObjectId,
-      serverMailboxId: snap.mailboxId,
-    })
-    const mailboxCheck = await validateMessagingMailboxObjectForPackage(
-      client,
-      mailboxObjectId,
-      snap.packageId,
-      'any'
-    )
-    if (!mailboxCheck.ok) {
-      return { ok: false, error: mailboxCheck.error }
+    let txb
+    if (useEventPath) {
+      txb = buildSendPlaintextEventTransaction({
+        packageId: snap.packageId,
+        senderAddress: snap.senderAddress.trim(),
+        recipientAddress: opts.recipient.trim(),
+        plaintextUtf8,
+        nonce: opts.nonce,
+      })
+    } else {
+      const { mailboxObjectId } = resolveDirectMailboxUsePrivateMoveCall({
+        mailboxObjectId: opts.mailboxObjectId,
+        serverMailboxId: snap.mailboxId,
+      })
+      const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+        client,
+        mailboxObjectId,
+        snap.packageId,
+        'any'
+      )
+      if (!mailboxCheck.ok) {
+        return { ok: false, error: mailboxCheck.error }
+      }
+      const privateMailbox = mailboxCheck.kind === 'privatemailbox'
+      txb = buildStorePlaintextMailboxTransaction({
+        packageId: snap.packageId,
+        mailboxObjectId,
+        senderAddress: snap.senderAddress.trim(),
+        recipientAddress: opts.recipient.trim(),
+        plaintextUtf8,
+        nonce: opts.nonce,
+        ttlDays: snap.ttlDays,
+        privateMailbox,
+        stored: snap.flags.mailboxStorePlaintext === true,
+      })
     }
-    const privateMailbox = mailboxCheck.kind === 'privatemailbox'
-    const txb = buildStorePlaintextMailboxTransaction({
-      packageId: snap.packageId,
-      mailboxObjectId,
-      senderAddress: snap.senderAddress.trim(),
-      recipientAddress: opts.recipient.trim(),
-      plaintextUtf8,
-      nonce: opts.nonce,
-      ttlDays: snap.ttlDays,
-      privateMailbox,
-      stored: snap.flags.mailboxStorePlaintext === true,
-    })
     await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
     const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
     if (isDirectChainExecutionSuccess(out.digest, out.status)) {

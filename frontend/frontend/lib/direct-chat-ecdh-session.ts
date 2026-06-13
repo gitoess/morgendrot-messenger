@@ -2,7 +2,7 @@
 
 /**
  * Chat-ECDH (P-256) für **verschlüsselten** Direkt-Mailbox-Drain — getrennt vom IOTA-Ed25519-Session-Signer.
- * Peer-Public-Keys: **localStorage** (pro Empfängeradresse). Privater ECDH-Key: **nur RAM** (JWK einmalig einlesen).
+ * Peer-Public-Keys: **localStorage** (pro Empfängeradresse). Privater ECDH-Key: RAM + optional JWK/Own-Pub in localStorage (Vault-Sync).
  */
 
 import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
@@ -10,6 +10,8 @@ import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
 const LS_PEER_PUB = 'morgendrot.directChatEcdh.peerPubB64ByRecipient.v1'
 /** P-256-ECDH-Privatkey als JWK (Gerät) — für Standalone-APK nach Puls „JWK anwenden“. */
 const LS_PRIVATE_JWK = 'morgendrot.directChatEcdh.privateJwk.v1'
+/** Eigenes P-256-Pub (65 B raw, Base64) — aus Vault, für Handshake ohne exportKey. */
+const LS_OWN_PUB = 'morgendrot.directChatEcdh.ownPubRawB64.v1'
 
 const P256_RAW_PUB_LEN = 65
 
@@ -73,8 +75,54 @@ export function clearPersistedDirectChatEcdhPrivateJwk(): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.removeItem(LS_PRIVATE_JWK)
+    window.localStorage.removeItem(LS_OWN_PUB)
   } catch {
     /* ignore */
+  }
+}
+
+function persistOwnPubRawBase64(b64: string): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(LS_OWN_PUB, b64.trim())
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Eigenes ECDH-Pub aus Vault-Sync (Handshake/Peering ohne Privatkey-Export). */
+export function setDirectChatEcdhOwnPubRawBase64(peerPubRawBase64: string): { ok: true } | { ok: false; error: string } {
+  const b64 = String(peerPubRawBase64 || '').trim().replace(/\s+/g, '')
+  if (!b64) {
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(LS_OWN_PUB)
+      } catch {
+        /* ignore */
+      }
+    }
+    return { ok: true }
+  }
+  let raw: Uint8Array
+  try {
+    raw = base64ToUint8(b64)
+  } catch {
+    return { ok: false, error: 'Own-Pub: ungültiges Base64.' }
+  }
+  if (raw.length !== P256_RAW_PUB_LEN) {
+    return { ok: false, error: `Own-Pub raw muss ${P256_RAW_PUB_LEN} Byte sein, ist ${raw.length}.` }
+  }
+  persistOwnPubRawBase64(b64)
+  return { ok: true }
+}
+
+export function getDirectChatEcdhOwnPubRawBase64(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const v = window.localStorage.getItem(LS_OWN_PUB)?.trim()
+    return v || null
+  } catch {
+    return null
   }
 }
 
@@ -109,6 +157,8 @@ export async function ensureStandaloneChatEcdhKeypair(): Promise<
       ['deriveBits', 'deriveKey']
     )
     const jwk = await globalThis.crypto.subtle.exportKey('jwk', pair.privateKey)
+    const pubRaw = await globalThis.crypto.subtle.exportKey('raw', pair.publicKey)
+    setDirectChatEcdhOwnPubRawBase64(uint8ToBase64(new Uint8Array(pubRaw)))
     return applyDirectChatEcdhPrivateJwk(JSON.stringify(jwk))
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
@@ -140,7 +190,7 @@ export async function applyDirectChatEcdhPrivateJwk(
       'jwk',
       jwk,
       { name: 'ECDH', namedCurve: 'P-256' },
-      false,
+      true,
       ['deriveBits', 'deriveKey']
     )
     persistPrivateJwkJson(raw)
@@ -153,6 +203,61 @@ export async function applyDirectChatEcdhPrivateJwk(
 
 export function clearDirectChatEcdhPrivateKey(): void {
   ecdhPrivateKey = null
+}
+
+/** RAM + gespeichertes JWK/Own-Pub entfernen (Puls „ECDH löschen“, Einsatz-Ende). */
+export function clearDirectChatEcdhKeyMaterial(): void {
+  clearDirectChatEcdhPrivateKey()
+  clearPersistedDirectChatEcdhPrivateJwk()
+}
+
+/** Vault-Sync: Privatkey + optional Own-Pub (65 B raw) aus Boss-Tresor. */
+export async function applyDirectChatEcdhVaultMaterial(opts: {
+  ecdhPrivateJwk?: string
+  ecdhPrivatePkcs8Base64?: string
+  ecdhPubRawBase64?: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (opts.ecdhPubRawBase64?.trim()) {
+    const pub = setDirectChatEcdhOwnPubRawBase64(opts.ecdhPubRawBase64)
+    if (!pub.ok) return pub
+  }
+  if (opts.ecdhPrivateJwk?.trim()) {
+    return applyDirectChatEcdhPrivateJwk(opts.ecdhPrivateJwk)
+  }
+  const pkcs8B64 = opts.ecdhPrivatePkcs8Base64?.trim()
+  if (pkcs8B64) {
+    return applyDirectChatEcdhPrivatePkcs8(pkcs8B64)
+  }
+  return { ok: false, error: 'Kein Chat-ECDH-Material aus Vault.' }
+}
+
+/** PKCS#8 (Base64) — Fallback wenn JWK-Export auf dem Server blockiert ist. */
+export async function applyDirectChatEcdhPrivatePkcs8(
+  pkcs8Base64: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const b64 = String(pkcs8Base64 || '').trim().replace(/\s+/g, '')
+  if (!b64) {
+    ecdhPrivateKey = null
+    return { ok: true }
+  }
+  try {
+    const subtle = globalThis.crypto?.subtle
+    if (!subtle) throw new Error('Web Crypto fehlt.')
+    const pkcs8 = base64ToUint8(b64)
+    ecdhPrivateKey = await subtle.importKey(
+      'pkcs8',
+      pkcs8,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,
+      ['deriveBits', 'deriveKey']
+    )
+    const jwk = await subtle.exportKey('jwk', ecdhPrivateKey)
+    persistPrivateJwkJson(JSON.stringify(jwk))
+    return { ok: true }
+  } catch (e) {
+    ecdhPrivateKey = null
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 /** Roher P-256-Publickey (65 Byte, typ. `exportKey('raw')`), Base64-codiert. */
@@ -239,8 +344,10 @@ function base64UrlToBytes(b64url: string): Uint8Array {
 export async function exportDirectChatEcdhPublicKeyRawBase64(): Promise<
   { ok: true; b64: string } | { ok: false; error: string }
 > {
+  const cached = getDirectChatEcdhOwnPubRawBase64()
+  if (cached) return { ok: true, b64: cached }
   if (!ecdhPrivateKey) {
-    return { ok: false, error: 'Kein Chat-ECDH-Privatkey — im Puls JWK anwenden (oder Handshake/Connect).' }
+    return { ok: false, error: 'Kein Chat-ECDH-Privatkey — Tresor entsperren oder Handshake/Connect.' }
   }
   try {
     const subtle = globalThis.crypto?.subtle
@@ -258,4 +365,21 @@ export async function exportDirectChatEcdhPublicKeyRawBase64(): Promise<
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
+}
+
+/**
+ * § H.33e — Self-Archiv: eigenes Pubkey als „Peer“ hinterlegen, damit ECDH an MY_ADDRESS funktioniert.
+ */
+export async function ensureSelfForensicEcdhMaterial(myAddress: string): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const addr = normalizeAddr(myAddress)
+  if (!addr) return { ok: false, error: 'MY_ADDRESS ungültig.' }
+  if (getDirectChatEcdhMaterialForRecipient(addr)) return { ok: true }
+  const ensured = await ensureStandaloneChatEcdhKeypair()
+  if (!ensured.ok) return ensured
+  const pub = await exportDirectChatEcdhPublicKeyRawBase64()
+  if (!pub.ok) return pub
+  const set = setDirectChatEcdhPeerPubBase64(addr, pub.b64)
+  return set.ok ? { ok: true } : set
 }

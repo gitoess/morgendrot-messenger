@@ -19,10 +19,7 @@ import {
   getDirectIotaSessionSignerAddress,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
-
-function normalizeHexAddr(a: string): string {
-  return a.trim().toLowerCase()
-}
+import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
 
 export function canTryLiveTeamBroadcastDirectMailbox(): boolean {
   if (isIotaRelayOnlyMode()) return false
@@ -52,7 +49,7 @@ export async function trySubmitTeamPlaintextBroadcastViaDirectIota(opts: {
   if (!rpc || !signer || !signerAddr || !snap) {
     return { ok: false, error: 'Direkt-RPC/Signer/Snapshot fehlt.' }
   }
-  if (normalizeHexAddr(signerAddr) !== normalizeHexAddr(snap.senderAddress)) {
+  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
     return { ok: false, error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender überein.' }
   }
   try {

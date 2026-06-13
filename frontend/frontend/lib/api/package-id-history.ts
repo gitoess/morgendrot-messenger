@@ -14,6 +14,12 @@ export async function fetchPackageIdHistory(): Promise<{
   try {
     const fr = await fetchApiText(API_BASE, '/api/package-id-history')
     if (!fr.ok) return { ok: false, error: fr.error }
+    if (fr.response.status === 404) {
+      return { ok: false, error: 'Endpoint /api/package-id-history fehlt — Boss-Backend neu starten.' }
+    }
+    if (fr.response.status >= 400) {
+      return { ok: false, error: `Package-ID-Verlauf: HTTP ${fr.response.status}` }
+    }
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Package-ID-Verlauf nicht lesbar.' })
     if (!r.ok) return { ok: false, error: r.error }
     const b = r.body

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { BookOpen, LogOut, Settings } from 'lucide-react'
 import { DashboardRolePill } from '@/frontend/components/dashboard-role-pill'
+import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import { DashboardHeaderAddress } from '@/frontend/components/dashboard-header-address'
 import {
   TresorSessionBadge,
@@ -30,6 +31,7 @@ export function DashboardMessengerBossHeader(p: {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-lg font-bold tracking-tight text-foreground">{t('brand.morgendrot')}</h1>
             <DashboardRolePill role={p.role} />
+            <ChatNetworkBadge />
             {showVaultBadge ? (
               <TresorSessionBadge
                 sessionLocked={!!p.sessionLocked}

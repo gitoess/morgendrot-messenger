@@ -9,16 +9,8 @@ import { ChatViewPinnwandReaderBanner } from '@/frontend/components/chat-view-pi
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
-import type { Message } from '@/frontend/lib/types'
+import { filterPinnwandFeedRows } from '@/frontend/lib/pinnwand-feed-filter'
 import { pinnwandChannelTabLabel } from '@/frontend/lib/pinnwand-display'
-
-function filterPinnwandFeedRows(
-  rows: ChatInboxRow[],
-  isPinnwand?: (msg: Message) => boolean
-): ChatInboxRow[] {
-  if (!isPinnwand) return rows
-  return rows.filter((row) => row.kind !== 'msg' || isPinnwand(row.msg))
-}
 
 type FeedListProps = Pick<
   ChatViewInboxListProps,

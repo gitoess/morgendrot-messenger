@@ -16,6 +16,8 @@ import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-con
 let sessionSigner: Signer | null = null
 let sessionAddress: string | null = null
 const LS_DIRECT_IOTA_SIGNER_ENC = 'morgendrot.directIotaSigner.enc.v1'
+/** Browser-Tab: Signer-Import über Reload (wie RAM, Tab-Ende gelöscht). */
+const SS_DIRECT_IOTA_SIGNER_TAB = 'morgendrot.directIotaSigner.tab.v1'
 
 function countMnemonicWords(s: string): number {
   return String(s || '')
@@ -35,6 +37,45 @@ export function getDirectIotaSessionSignerAddress(): string | null {
 export function clearDirectIotaSessionSigner(): void {
   sessionSigner = null
   sessionAddress = null
+}
+
+/** Beim Tresor-Sperren: RAM + Tab-Session entfernen. */
+export function clearDirectIotaSessionSignerOnLock(): void {
+  clearDirectIotaSessionSigner()
+  clearDirectIotaSessionSignerTabSession()
+}
+
+export function clearDirectIotaSessionSignerTabSession(): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
+  } catch {
+    /* ignore */
+  }
+}
+
+function persistDirectIotaSessionSignerTabSession(signerImportRaw: string): void {
+  if (typeof window === 'undefined') return
+  const raw = String(signerImportRaw || '').trim()
+  if (!raw) return
+  try {
+    window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB, raw)
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Nach Reload: Signer aus sessionStorage (Tab-Session) wiederherstellen. */
+export function restoreDirectIotaSessionSignerFromTabSession(): { ok: true; address: string } | { ok: false } {
+  if (typeof window === 'undefined') return { ok: false }
+  try {
+    const raw = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB)?.trim()
+    if (!raw) return { ok: false }
+    const applied = applyDirectIotaMnemonicSession(raw)
+    return applied.ok ? applied : { ok: false }
+  } catch {
+    return { ok: false }
+  }
 }
 
 function bytesToB64(u8: Uint8Array): string {
@@ -161,6 +202,7 @@ export function applyDirectIotaMnemonicSession(
     if (addr) {
       persistDirectChainFieldIds({ senderAddress: addr })
     }
+    persistDirectIotaSessionSignerTabSession(t)
     return { ok: true, address: addr }
   } catch (e) {
     clearDirectIotaSessionSigner()

@@ -21,8 +21,8 @@ export type UseChatViewAttachmentsParams = {
   isPrivate: boolean
   encrypted: boolean
   forcedTransport: ForcedTransport
-  /** Pfad 4: Kompaktbild → LUMA/CHROMA für Klartext-LoRa (verschlüsselter Funk ist abgeschaltet). */
-  meshSelfArchiveAfterLoRa: boolean
+  /** „Bilder über Funk“ — LUMA/CHROMA für Klartext-Mesh (unabhängig von Chain-Verankerung). */
+  meshLoRaImagesEnabled: boolean
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
   /** Vor jedem neuen Import (SOS-Banner o. Ä. zurücksetzen). */
@@ -35,7 +35,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     isPrivate,
     encrypted,
     forcedTransport,
-    meshSelfArchiveAfterLoRa,
+    meshLoRaImagesEnabled,
     setStatus,
     setStatusMsg,
     onCompactIngestStart,
@@ -50,7 +50,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     null
   )
   const loraOnlineOfferPayloadRef = useRef<{ lumaText: string; chromaText: string } | null>(null)
-  /** Gemeinsamer Idle-Reset nach Policy-Hinweis (LUMA-Strip oder IOTA-Blob auf Funk). */
+  /** Gemeinsame Idle-Reset nach Policy-Hinweis (LUMA-Strip oder IOTA-Blob auf Funk). */
   const attachmentPolicyIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [compactBusy, setCompactBusy] = useState(false)
   const [attachmentPipelineHint, setAttachmentPipelineHint] = useState<string | null>(null)
@@ -61,9 +61,9 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     attachedLora
   )
 
-  /** Privater Chat + Pfad 4 + „funk“: IOTA-Kompakt-Blob automatisch in LUMA+CHROMA (Luft Klartext; Schloss egal). */
+  /** Privater Chat + „Bilder über Funk“: IOTA-Kompakt-Blob → LUMA+CHROMA. */
   useEffect(() => {
-    if (!isPrivate || !meshSelfArchiveAfterLoRa || !isLoRaMeshTransport(forcedTransport)) return
+    if (!isPrivate || !meshLoRaImagesEnabled || !isLoRaMeshTransport(forcedTransport)) return
     if (!attachedBlobBase64 || attachedLora != null) return
     let cancelled = false
     setCompactBusy(true)
@@ -122,7 +122,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
       cancelled = true
       setAttachmentPipelineHint(null)
     }
-  }, [isPrivate, meshSelfArchiveAfterLoRa, forcedTransport, attachedBlobBase64, attachedLora, setStatus, setStatusMsg])
+  }, [isPrivate, meshLoRaImagesEnabled, forcedTransport, attachedBlobBase64, attachedLora, setStatus, setStatusMsg])
 
   useEffect(() => {
     return () => {
@@ -141,7 +141,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
         isPrivate,
         encrypted,
         forcedTransport,
-        meshSelfArchiveAfterLoRa,
+        meshLoRaImagesEnabled,
       })
     ) {
       return
@@ -165,15 +165,15 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     isPrivate,
     encrypted,
     forcedTransport,
-    meshSelfArchiveAfterLoRa,
+    meshLoRaImagesEnabled,
     setStatus,
     setStatusMsg,
   ])
 
-  /** IOTA-Kompakt auf Funk nur mit Pfad 4; ohne Pfad 4 → verwerfen (Schloss egal bei Pfad 4). */
+  /** IOTA-Kompakt auf Funk nur mit „Bilder über Funk“. */
   useEffect(() => {
     if (!attachedBlobBase64 || !isPrivate || !isLoRaMeshTransport(forcedTransport)) return
-    if (meshSelfArchiveAfterLoRa) return
+    if (meshLoRaImagesEnabled) return
     if (attachmentPolicyIdleTimerRef.current) {
       clearTimeout(attachmentPolicyIdleTimerRef.current)
       attachmentPolicyIdleTimerRef.current = null
@@ -191,7 +191,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
     isPrivate,
     encrypted,
     forcedTransport,
-    meshSelfArchiveAfterLoRa,
+    meshLoRaImagesEnabled,
     setStatus,
     setStatusMsg,
   ])
@@ -220,7 +220,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
           transportOverride: opts?.transportOverride,
           isPrivate,
           encrypted,
-          meshSelfArchiveAfterLoRa,
+          meshLoRaImagesEnabled,
         })
         if (!result.ok) {
           setStatus('error')
@@ -246,7 +246,7 @@ export function useChatViewAttachments(p: UseChatViewAttachmentsParams) {
         setCompactBusy(false)
       }
     },
-    [role, forcedTransport, isPrivate, encrypted, meshSelfArchiveAfterLoRa, setStatus, setStatusMsg, onCompactIngestStart]
+    [role, forcedTransport, isPrivate, encrypted, meshLoRaImagesEnabled, setStatus, setStatusMsg, onCompactIngestStart]
   )
 
   const handleCompactAttachmentPick = async (e: ChangeEvent<HTMLInputElement>) => {

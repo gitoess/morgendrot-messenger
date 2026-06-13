@@ -49,6 +49,7 @@ import { applyHandoffRuntimeConfigJson, HANDOFF_RUNTIME_CONFIG_FILENAME } from '
 import {
     buildHandoffRuntimeConfigPayload,
     parseMessengerCapabilitiesOverride,
+    type MessengerCapabilitiesMatrix,
 } from './shared/messenger-capabilities-matrix.js';
 import { parseAndValidateInitialProfile } from './initial-profile-provision.js';
 import { parseEinsatzRoleTemplates, loadEinsatzRoleTemplates, saveEinsatzRoleTemplates } from './einsatz-role-templates.js';
@@ -66,6 +67,7 @@ import {
     getVaultFromChain,
     generateNewAddressCli,
     publishPackageCli,
+    deployMainnetMovePackage,
     buildHandshakeTransaction,
     signAndExecute,
     getReferenceGasPrice,
@@ -141,6 +143,8 @@ import { handleContactRoutes } from './api/routes/handle-contact-routes.js';
 import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
 import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
+import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
+import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
 import { applyTelegramIntegrationToMonitorWebhook } from './integrations/telegram-integration.js';
 import { restartTelegramInbound } from './integrations/telegram-inbound-poll.js';
 import {
@@ -186,6 +190,8 @@ export type ApiStatus = {
     role?: string;
     roleId?: number;
     permissions?: import('./config.js').HierarchyPermissions;
+    /** Rollen-Matrix für Messenger-UI (Handoff / Runtime). */
+    capabilities?: MessengerCapabilitiesMatrix;
     /** standalone = klassischer Messenger; sales = Kunden-Bundle (Schatten-Seed / Sweep). */
     messengerEdition?: 'standalone' | 'sales';
     /** MAILBOX_STORE_PLAINTEXT: Klartext zusätzlich in Mailbox speichern (purgebar). */
@@ -376,6 +382,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (await handleContactRoutes(req, res, url, cors, sendJson, routeCtx)) return;
         if (await handleTelegramIntegrationRoutes(req, res, url, cors, sendJson)) return;
         if (await handleEinsatzManifestRoutes(req, res, url, cors, sendJson)) return;
+        if (await handleForensicBatchRoutes(req, res, url, cors, sendJson)) return;
 
         /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
         if (url === '/api/voucher-claim' && req.method === 'POST') {
@@ -2623,6 +2630,48 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             return;
         }
 
+        if (url === '/api/deploy-mainnet-package' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as Record<string, unknown>;
+                    const rawPath = typeof data.path === 'string' && data.path.trim() ? data.path.trim() : 'move-test';
+                    const packageDir = path.basename(rawPath) || 'move-test';
+                    if (packageDir !== rawPath || /[\\/]/.test(packageDir)) {
+                        sendJson(res, 400, { ok: false, error: 'path darf nur einen Ordner-Namen enthalten (z. B. move-test).' }, cors);
+                        return;
+                    }
+                    const rpcFromBody = typeof data.rpcUrl === 'string' ? data.rpcUrl.trim() : '';
+                    const rpcUrl =
+                        rpcFromBody ||
+                        (CFG.MAINNET_RPC_URL || '').trim() ||
+                        'https://api.mainnet.iota.cafe';
+                    const skipCreateGlobals = data.skipCreateGlobals === true;
+                    const result = await deployMainnetMovePackage({ rpcUrl, packageDir, skipCreateGlobals });
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            ...result,
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
+                    sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
         /** In-Place Move-Upgrade (gleiche PACKAGE_ID) — nicht deploy-package. */
         if (url === '/api/upgrade-package' && req.method === 'POST') {
             if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
@@ -2807,6 +2856,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     ? `Morgendrot API: ${statusUrl}  Lite-UI: http://127.0.0.1:${p}/`
                     : `Morgendrot API: ${statusUrl}  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
             );
+            startForensicBatchScheduler();
         };
         const onError = (err: NodeJS.ErrnoException) => {
             server.removeListener('error', onError);

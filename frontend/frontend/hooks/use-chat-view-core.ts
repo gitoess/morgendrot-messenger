@@ -71,8 +71,12 @@ import {
   buildPinnwandMatchContext,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 
-/** `1` = LoRa + Tangle (Delayed Mirror), sonst Nur LoRa. */
-const MESH_SELF_ARCHIVE_PATH4_LS = 'morgendrot.meshSelfArchiveAfterLoRa'
+import {
+  MESH_LORA_IMAGES_LS,
+  MESH_SELF_ARCHIVE_PATH4_LS,
+  readMeshLoRaImagesEnabledFromStorage,
+  readMeshSelfArchiveAfterLoRaFromStorage,
+} from '@/frontend/lib/mesh-lora-composer-options'
 
 export type UseChatViewCoreParams = {
   channelMode: MessengerChatChannel
@@ -263,14 +267,22 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     return mergeAllMessages([...fromApi, ...meshOnly])
   }, [messages, inboxPackageFilter, role])
 
-  const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() => {
-    if (typeof window === 'undefined') return false
+  const [meshLoRaImagesEnabled, setMeshLoRaImagesEnabledState] = useState(() =>
+    readMeshLoRaImagesEnabledFromStorage()
+  )
+  const setMeshLoRaImagesEnabled = useCallback((v: boolean) => {
+    setMeshLoRaImagesEnabledState(v)
+    if (typeof window === 'undefined') return
     try {
-      return window.localStorage.getItem(MESH_SELF_ARCHIVE_PATH4_LS) === '1'
+      window.localStorage.setItem(MESH_LORA_IMAGES_LS, v ? '1' : '0')
     } catch {
-      return false
+      /* ignore */
     }
-  })
+  }, [])
+
+  const [meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRaState] = useState(() =>
+    readMeshSelfArchiveAfterLoRaFromStorage()
+  )
   const setMeshSelfArchiveAfterLoRa = useCallback((v: boolean) => {
     setMeshSelfArchiveAfterLoRaState(v)
     if (typeof window === 'undefined') return
@@ -280,12 +292,6 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       /* ignore */
     }
   }, [])
-
-  useEffect(() => {
-    if (forcedTransport !== 'mesh') {
-      setMeshSelfArchiveAfterLoRa(false)
-    }
-  }, [forcedTransport, setMeshSelfArchiveAfterLoRa])
 
   const [composerMailboxObjectId, setComposerMailboxObjectIdState] = useState('')
 
@@ -646,7 +652,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     isPrivate,
     encrypted,
     forcedTransport,
-    meshSelfArchiveAfterLoRa,
+    meshLoRaImagesEnabled,
     setStatus,
     setStatusMsg,
     onCompactIngestStart: clearSosVoicePrompt,
@@ -723,6 +729,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     morgPkgDeviceFilesRef,
     setLoraOnlineFallbackOffer,
     loraOnlineOfferPayloadRef,
+    meshLoRaImagesEnabled,
     meshSelfArchiveAfterLoRa,
     setMeshProgress: setLoraMeshProgressLine,
     onOfflineMailboxQueueChanged: refreshOfflineMailboxQueueCount,
@@ -778,11 +785,11 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   })
 
   /** Package-Verlauf: Union aus /api/status + Historie-Datei. */
+  const inboxUnionPackageKey = (apiStatus?.inboxUnionPackageIds ?? []).join('|')
   useEffect(() => {
-    const union = apiStatus?.inboxUnionPackageIds
-    if (!union?.length) return
-    void refreshPackageIdSuggestions(union)
-  }, [apiStatus?.inboxUnionPackageIds, refreshPackageIdSuggestions])
+    if (!inboxUnionPackageKey) return
+    void refreshPackageIdSuggestions(apiStatus?.inboxUnionPackageIds)
+  }, [inboxUnionPackageKey, apiStatus?.inboxUnionPackageIds, refreshPackageIdSuggestions])
 
   /** Kanonische ID von /api/status übernehmen (= /set-package-id + Posteingang neu). */
   const syncCanonicalPackageIdFromServer = useCallback(() => {
@@ -989,6 +996,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
+    meshLoRaImagesEnabled,
+    setMeshLoRaImagesEnabled,
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,

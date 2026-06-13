@@ -13,6 +13,7 @@ import {
     explorerTxUrlFromDigest,
     parseMailboxCreatedIdsFromDigest,
     parseTxFailureReasonFromDigest,
+    type SignAndExecuteOptions,
 } from '../../chain-access.js';
 import { getWalletPassword } from '../messenger-session-password.js';
 import type { CommandHandlerResult, MessengerCommandContext } from './command-types.js';
@@ -24,6 +25,18 @@ const LIFECYCLE_COMMANDS = new Set([
     '/cleanup-private-mailbox',
     '/private-mailbox-contents',
 ]);
+
+function resolveLifecycleSignOptions(myAddress: string, sponsorForSender?: string): SignAndExecuteOptions | undefined {
+    const sender = (sponsorForSender || '').trim();
+    const useSponsor = Boolean(
+        sender && CFG.SPONSORED_TRANSACTION_ENABLED && CFG.SPONSOR_GAS_OWNER && sender !== myAddress
+    );
+    if (!useSponsor) return undefined;
+    return {
+        sponsorAddress: CFG.SPONSOR_GAS_OWNER!,
+        sponsorPassword: getWalletPassword(),
+    };
+}
 
 async function enrichCreatedMailboxIds(
     res: { status?: string; createdObjectIds?: string[]; digest?: string; gasSummary?: unknown } | undefined
@@ -92,12 +105,12 @@ export async function tryHandleMailboxLifecycleCommand(
 
     const MY_ADDR = ctx.myAddress;
     const pw = getWalletPassword();
-    const sponsorOpts = ctx.opts?.sponsorForSender ? { sponsorForSender: ctx.opts.sponsorForSender } : undefined;
+    const signOptions = resolveLifecycleSignOptions(MY_ADDR, ctx.opts?.sponsorForSender);
 
     if (c === '/create-private-mailbox') {
         if (!CFG.PACKAGE_ID) return { ok: false, message: 'PACKAGE_ID fehlt.' };
         try {
-            const res = await createPrivateMailbox(MY_ADDR, pw, sponsorOpts);
+            const res = await createPrivateMailbox(MY_ADDR, pw, signOptions);
             return await commandResultFromTx(await enrichCreatedMailboxIds(res), 'Private Mailbox on-chain erstellt.', {
                 moveFunctionHint: 'create_private_mailbox',
             });
@@ -123,7 +136,7 @@ export async function tryHandleMailboxLifecycleCommand(
         }
         if (!CFG.PACKAGE_ID) return { ok: false, message: 'PACKAGE_ID fehlt.' };
         try {
-            const res = await createTeamMailbox(MY_ADDR, pw, sponsorOpts);
+            const res = await createTeamMailbox(MY_ADDR, pw, signOptions);
             return await commandResultFromTx(await enrichCreatedMailboxIds(res), 'Team-Mailbox (Shared) on-chain erstellt.', {
                 moveFunctionHint: 'create_team_mailbox',
             });
@@ -161,7 +174,7 @@ export async function tryHandleMailboxLifecycleCommand(
 
     if (c === '/cleanup-private-mailbox') {
         try {
-            const r = await cleanupPrivateMailbox(mbId, MY_ADDR, pw, sponsorOpts);
+            const r = await cleanupPrivateMailbox(mbId, MY_ADDR, pw, signOptions);
             return {
                 ok: true,
                 message: `Aufräumen: ${r.purgedHandshakes} Handshake(s), ${r.purgedMessages} Nachricht(en), ${r.transactions} TX.`,
@@ -177,7 +190,7 @@ export async function tryHandleMailboxLifecycleCommand(
 
     if (c === '/purge-private-mailbox') {
         try {
-            const res = await purgePrivateMailbox(mbId, MY_ADDR, pw, sponsorOpts);
+            const res = await purgePrivateMailbox(mbId, MY_ADDR, pw, signOptions);
             return await commandResultFromTx(res, 'Private Mailbox on-chain gelöscht (Rebate).', {
                 moveFunctionHint: 'purge_private_mailbox',
             });

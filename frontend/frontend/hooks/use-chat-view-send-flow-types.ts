@@ -46,7 +46,9 @@ export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   loraOnlineOfferPayloadRef: MutableRefObject<{ lumaText: string; chromaText: string } | null>
   /** § H.6c: gleiche Quelle wie Export-Gate — `true` = Gerätezeit nicht „high“-vertrauenswürdig. */
   deviceTimeTrustWarn: boolean
-  /** Pfad 4 (MVP): nach Klartext-LoRa automatisch Klartext-Mailbox an eigene Adresse + Attestation. */
+  /** Funk: LUMA+CHROMA über Mesh (MORG_SEG_V1). */
+  meshLoRaImagesEnabled: boolean
+  /** Optional nach Funk: Klartext-Mailbox an eigene Adresse + Attestation. */
   meshSelfArchiveAfterLoRa: boolean
   /** Nur MF1/LoRa: kurze Fortschrittszeile z. B. „Luma 2/5 – Chroma 0/3“ (ohne „Funk:“-Präfix). */
   setMeshProgress?: (line: string | null) => void

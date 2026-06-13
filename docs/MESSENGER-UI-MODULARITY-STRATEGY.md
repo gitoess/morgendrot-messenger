@@ -144,4 +144,8 @@ CI-Spiegel: **`.github/workflows/frontend-checks.yml`**.
 
 **Fortschritt 2026-03-29 (Nachtrag):** **§ H.0 / § H.1** — Posteingang **„Absender ins Telefonbuch“**; PWA **standalone**: Hintergrund → **`/vault-lock`**, **Kachel** in **`sessionStorage`**; Puls **Ketten-IDs** mit Normalize + **`isLikelyIotaHexId`** — **`chat-view-inbox-list.tsx`**, **`dashboard.tsx`**, **`chat-view-main-content.tsx`**, **`chat-view-pulse-settings.tsx`**.
 
+**Fortschritt 2026-06-02 (Aufräumen):** **`ChatViewSetupPanel`** — Props auf Funk/BLE reduziert (Partner/Handshake/Package-ID entfernt, liegen in **`ChatViewEncryptedPartnerPanel`**); Anzeige nur bei **`mesh`/`adhoc`**; **`showPartnerSetupPanel`** in **`chat-view-main-content.tsx`** angeglichen.
+
+**Fortschritt 2026-06-02:** **`filterPinnwandFeedRows`** → **`lib/pinnwand-feed-filter.ts`** (aus **`chat-view-pinnwand-feed-panel.tsx`**); Vitest **`lib/pinnwand-feed-filter.test.ts`**; RTL **`chat-view-setup-panel.test.tsx`**, **`chat-view-pinnwand-feed-panel.test.tsx`**.
+
 **Fortschritt 2026-03-29:** **§ H.1b** — Messenger-/Boss-Kachel-Whitelist (**§ H.17**) aus **`dashboard.tsx`** nach **`lib/dashboard-workspace-tile-visibility.ts`** + **`dashboard-workspace-tile-visibility.test.ts`** (Vitest).

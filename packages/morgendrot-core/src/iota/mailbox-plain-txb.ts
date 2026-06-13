@@ -17,6 +17,41 @@ export type BuildStorePlaintextMailboxTxInput = {
   stored?: boolean
 }
 
+export type BuildSendPlaintextEventTxInput = {
+  packageId: string
+  senderAddress: string
+  recipientAddress: string
+  plaintextUtf8: Uint8Array
+  nonce: bigint
+}
+
+/**
+ * PTB: `messaging::send_plaintext_message` — flüchtiges Event, **ohne** Mailbox-Objekt.
+ */
+export function buildSendPlaintextEventTransaction(input: BuildSendPlaintextEventTxInput): Transaction {
+  const pkg = input.packageId.trim()
+  const sender = input.senderAddress.trim()
+  const recipient = input.recipientAddress.trim()
+  for (const [label, a] of [
+    ['PACKAGE_ID', pkg],
+    ['sender', sender],
+    ['recipient', recipient],
+  ] as const) {
+    if (!HEX64.test(a)) throw new Error(`Ungültige Adresse/Objekt-ID (${label}).`)
+  }
+  const txb = new Transaction()
+  txb.setSender(sender)
+  txb.moveCall({
+    target: `${pkg}::messaging::send_plaintext_message`,
+    arguments: [
+      txb.pure.address(recipient),
+      txb.pure(bcs.vector(bcs.u8()).serialize(input.plaintextUtf8)),
+      txb.pure.u64(input.nonce),
+    ],
+  })
+  return txb
+}
+
 /**
  * PTB: `messaging::store_plaintext_message` (Mailbox, **ohne** Credits).
  * Muss mit Server-Konfiguration übereinstimmen (Klartext in Mailbox, keine Credits auf diesem Pfad).

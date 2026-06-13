@@ -9,13 +9,30 @@ import {
     type EinsatzChainMode,
 } from '@morgendrot/shared/einsatz-chain-mode'
 import { sha256HexUtf8 } from '@/frontend/lib/einsatzprotokoll-anchor'
+import { buildEinsatzManifestCanonicalMsgRef } from '@/frontend/lib/einsatz-manifest-canonical-ref'
 
 export const MORG_EINSATZ_MANIFEST_VERSION = 1 as const
+
+export type EinsatzManifestEvidenceStatus = 'chain_linked' | 'local_only' | 'mesh_only'
+
+export function inferEinsatzManifestEvidenceStatus(
+    entry: Pick<EinsatzManifestEntryV1, 'source_tx_digest' | 'primary_transport'>
+): EinsatzManifestEvidenceStatus {
+    if (entry.source_tx_digest?.trim()) return 'chain_linked'
+    if (entry.primary_transport === 'lora') return 'mesh_only'
+    return 'local_only'
+}
 
 export type EinsatzManifestEntryV1 = {
     canonical_msg_ref: string
     entry_hash: string
     source_tx_digest?: string
+    /** Chain-Zeit aus RPC (`getTransactionBlock.timestampMs`) — unabhängig von Geräteuhr. */
+    source_tx_timestamp_ms?: number
+    /** SHA-256 (hex) über Klartext-Nutzlast (Wire ohne Nonce-Marker). */
+    content_sha256_hex?: string
+    /** Audit-Hinweis: fehlende Testnet-TX vs. reiner Funk. */
+    evidence_status?: EinsatzManifestEvidenceStatus
     primary_transport: 'iota' | 'lora' | 'bluetooth' | 'sneakernet' | 'telegram'
     channel: '1:1' | 'group' | 'pinnwand' | 'telegram'
     sender: string
@@ -89,10 +106,7 @@ function inferTransport(m: Message): EinsatzManifestEntryV1['primary_transport']
     return 'iota'
 }
 
-export async function buildCanonicalMsgRefPlaceholder(m: Message): Promise<string> {
-    const canon = `${m.id}|${m.from}|${m.timestamp}|${(m.content ?? '').length}`
-    return sha256HexUtf8(canon)
-}
+export { buildEinsatzManifestCanonicalMsgRef, buildCanonicalMsgRefPlaceholder } from '@/frontend/lib/einsatz-manifest-canonical-ref'
 
 export async function buildEinsatzManifestEntryHash(entry: {
     canonical_msg_ref: string
@@ -142,8 +156,9 @@ export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input)
     const sorted = [...input.messages].sort((a, b) => a.timestamp - b.timestamp)
     const entries: EinsatzManifestEntryV1[] = []
     for (const m of sorted) {
-        const canonical_msg_ref = await buildCanonicalMsgRefPlaceholder(m)
+        const canonical_msg_ref = await buildEinsatzManifestCanonicalMsgRef(m)
         const content = m.content ?? ''
+        const content_sha256_hex = await sha256HexUtf8(content)
         const entry_hash = await buildEinsatzManifestEntryHash({
             canonical_msg_ref,
             sender: m.from,
@@ -151,11 +166,14 @@ export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input)
             content,
         })
         const source_tx_digest = input.resolveTxDigest?.(m)?.trim() || undefined
+        const primary_transport = inferTransport(m)
         entries.push({
             canonical_msg_ref,
             entry_hash,
             source_tx_digest,
-            primary_transport: inferTransport(m),
+            content_sha256_hex,
+            evidence_status: inferEinsatzManifestEvidenceStatus({ source_tx_digest, primary_transport }),
+            primary_transport,
             channel: inferChannel(m),
             sender: m.from,
             recipient_or_board: (m.recipient ?? '').trim() || m.from,
@@ -179,8 +197,9 @@ export async function buildEinsatzManifestV1(input: BuildEinsatzManifestV1Input)
         merkle_root,
         sequence: input.sequence ?? 0,
     }
-    const manifest_hash = await sha256HexUtf8(JSON.stringify(body))
-    return { ...body, manifest_hash, sequence: body.sequence ?? 0 }
+    let manifest: EinsatzManifestV1 = { ...body, manifest_hash: '', sequence: body.sequence ?? 0 }
+    const manifest_hash = await sha256HexUtf8(JSON.stringify(manifestBodyForHash(manifest)))
+    return { ...manifest, manifest_hash }
 }
 
 export function downloadEinsatzManifestJson(manifest: EinsatzManifestV1): void {

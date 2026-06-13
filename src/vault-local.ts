@@ -170,6 +170,34 @@ function payloadToContent(payload: string): Promise<VaultContent> {
     }));
 }
 
+/** Browser-Direkt-RPC: JWK (oder PKCS#8-Fallback) + Own-Pub aus Vault-Keys. */
+export async function exportEcdhKeyMaterialForBrowser(
+    keys: VaultKeys
+): Promise<
+    | { ok: true; ecdhPrivateJwk?: string; ecdhPrivatePkcs8Base64?: string; ecdhPubRawBase64: string }
+    | { ok: false; message: string }
+> {
+    const ecdhPubRawBase64 = Buffer.from(keys.pubRaw).toString('base64');
+    try {
+        const jwk = await subtle.exportKey('jwk', keys.privateKey);
+        return { ok: true, ecdhPrivateJwk: JSON.stringify(jwk), ecdhPubRawBase64 };
+    } catch (e) {
+        try {
+            const pkcs8 = await subtle.exportKey('pkcs8', keys.privateKey);
+            return {
+                ok: true,
+                ecdhPrivatePkcs8Base64: Buffer.from(pkcs8).toString('base64'),
+                ecdhPubRawBase64,
+            };
+        } catch {
+            return {
+                ok: false,
+                message: 'ECDH-Export fehlgeschlagen: ' + String((e as Error)?.message ?? e),
+            };
+        }
+    }
+}
+
 /**
  * Keys (und optional Notizen) mit Passwort verschlüsselt in Datei speichern.
  * Datei: salt (16) + iv (12) + ciphertext (inkl. 16-Byte Auth-Tag).

@@ -273,13 +273,16 @@ export async function generateNewAddressCli(walletPassword?: string): Promise<st
 /** Move-Package publizieren — siehe `src/move-package-deploy.ts`. */
 export {
     publishPackageCli,
+    deployMainnetMovePackage,
     upgradePackageCli,
     findUpgradeCapForPackage,
     resolveUpgradeCapId,
     applyPublishResultToEnv,
     parsePublishCliOutput,
+    parseGlobalsCreatedFromCliOutput,
     type MovePackagePublishResult,
     type MovePackageUpgradeResult,
+    type GlobalsCreatedIds,
 } from './move-package-deploy.js';
 
 /** @deprecated Import from move-package-deploy — Alias für Kompatibilität. */
@@ -1626,7 +1629,7 @@ export async function mintMessengerCreditsBatchForRecipients(
     return merged;
 }
 
-export function typeName(localName: 'HsKey' | 'MsgKey' | 'PlainMsgKey' | 'VaultKey'): string {
+export function typeName(localName: 'HsKey' | 'MsgKey' | 'PlainMsgKey' | 'VaultKey' | 'TeamPlainBroadcastKey'): string {
     return `${CFG.PACKAGE_ID}::messaging::${localName}`;
 }
 
@@ -2090,7 +2093,7 @@ export async function storeTeamPlaintextBroadcast(
         );
     }
     const { validateMessagingMailboxObjectForPackage } = await import('@morgendrot/core/iota');
-    const mbCheck = await validateMessagingMailboxObjectForPackage(getClient(), mb, CFG.PACKAGE_ID!, 'mailbox');
+    const mbCheck = await validateMessagingMailboxObjectForPackage(getClient() as never, mb, CFG.PACKAGE_ID!, 'mailbox');
     if (!mbCheck.ok) {
         throw new Error(mbCheck.error);
     }
@@ -2106,6 +2109,102 @@ export async function storeTeamPlaintextBroadcast(
             txb.pure.u64(nonceU64),
             txb.pure.u64(ttlDays),
         ],
+    });
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
+}
+
+/** § H.33e — Forensisches Batch-Archiv: mehrere Klartext-Mailbox-Einträge in einer PTB. */
+export async function storeForensicPlaintextMailboxBatch(
+    recipient: string,
+    senderAddress: string,
+    items: Array<{ wireUtf8: string; nonce: bigint }>,
+    walletPassword?: string,
+    options?: { signOptions?: SignAndExecuteOptions }
+): Promise<SignAndExecuteResult> {
+    if (!items.length) throw new Error('Forensic-Batch: mindestens ein Eintrag nötig.');
+    assertSafeAddress(recipient);
+    assertSafeAddress(senderAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
+    const useMailbox = useMailboxForPlaintext() && mailboxIdValid;
+    const creditsId = messengerCreditsObjectIdForTx();
+    const storePlain = mailboxStoresPlaintext();
+    const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
+    const privateMb = isPrivateMailboxObjectIdOverrideActive();
+    if (!useMailbox || !storePlain || creditsId) {
+        let last: SignAndExecuteResult = {};
+        for (const item of items) {
+            last = await storePlaintextMessage(
+                recipient,
+                senderAddress,
+                new TextEncoder().encode(item.wireUtf8),
+                item.nonce,
+                walletPassword,
+                options
+            );
+        }
+        return last;
+    }
+    const { buildStorePlaintextMailboxBatchTransaction } = await import('@morgendrot/core/iota');
+    const txb = buildStorePlaintextMailboxBatchTransaction({
+        packageId: CFG.PACKAGE_ID,
+        mailboxObjectId: CFG.MAILBOX_ID!,
+        senderAddress,
+        recipientAddress: recipient,
+        ttlDays: CFG.DEFAULT_TTL_DAYS != null ? CFG.DEFAULT_TTL_DAYS : 30n,
+        privateMailbox: privateMb,
+        stored: true,
+        items: items.map((i) => ({
+            plaintextUtf8: new TextEncoder().encode(i.wireUtf8),
+            nonce: i.nonce,
+        })),
+    });
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
+}
+
+/** § H.33e — Forensisches verschlüsseltes Batch-Archiv (mehrere Mailbox-Einträge in einer PTB). */
+export async function storeForensicEncryptedMailboxBatch(
+    recipient: string,
+    senderAddress: string,
+    items: Array<{ ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; nonce: bigint }>,
+    walletPassword?: string,
+    options?: { signOptions?: SignAndExecuteOptions }
+): Promise<SignAndExecuteResult> {
+    if (!items.length) throw new Error('Forensic-Batch: mindestens ein Eintrag nötig.');
+    assertSafeAddress(recipient);
+    assertSafeAddress(senderAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
+    const useMailbox = isMessengerMailboxModeActive() && mailboxIdValid;
+    const creditsId = messengerCreditsObjectIdForTx();
+    const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
+    const privateMb = isPrivateMailboxObjectIdOverrideActive();
+    if (!useMailbox || creditsId) {
+        let last: SignAndExecuteResult = {};
+        for (const item of items) {
+            last = await storeEncryptedMessage(
+                recipient,
+                senderAddress,
+                item.ciphertext,
+                item.iv,
+                item.tag,
+                item.nonce,
+                undefined,
+                walletPassword,
+                { forceLegacyEncrypted: false, signOptions: options?.signOptions }
+            );
+        }
+        return last;
+    }
+    const { buildStoreEncryptedMailboxBatchTransaction } = await import('@morgendrot/core/iota');
+    const txb = buildStoreEncryptedMailboxBatchTransaction({
+        packageId: CFG.PACKAGE_ID,
+        mailboxObjectId: CFG.MAILBOX_ID!,
+        senderAddress,
+        recipientAddress: recipient,
+        ttlDays: CFG.DEFAULT_TTL_DAYS != null ? CFG.DEFAULT_TTL_DAYS : 30n,
+        privateMailbox: privateMb,
+        items,
     });
     return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
 }
@@ -2271,7 +2370,7 @@ export async function purgeTeamPlaintextBroadcast(
     }
     const { validateMessagingMailboxObjectForPackage } = await import('@morgendrot/core/iota');
     const mbCheck = await validateMessagingMailboxObjectForPackage(
-        getClient(),
+        getClient() as never,
         teamMb,
         CFG.PACKAGE_ID!,
         'mailbox'

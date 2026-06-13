@@ -26,12 +26,14 @@ describe('telegram-bot-commands', () => {
             packageIdMasked: '0xabcd…1234',
             apiPort: 3342,
             uiPort: 3341,
-            telegramEnabled: true,
+            botConfigured: true,
+            monitorAlarmsEnabled: false,
             inboundMode: 'longPoll',
             inboundPollActive: true,
         });
         expect(t).toContain('Rolle: boss');
         expect(t).toContain('Poll aktiv');
+        expect(t).toContain('Monitor aus');
     });
 
     it('maskPackageIdForTelegramStatus kürzt lange IDs', () => {
@@ -52,7 +54,8 @@ describe('telegram-bot-commands', () => {
                     packageIdMasked: '—',
                     apiPort: 3342,
                     uiPort: 3341,
-                    telegramEnabled: true,
+                    botConfigured: true,
+                    monitorAlarmsEnabled: true,
                     inboundMode: 'longPoll',
                     inboundPollActive: false,
                 }),
@@ -76,7 +79,8 @@ describe('telegram-bot-commands', () => {
                     packageIdMasked: '—',
                     apiPort: 3342,
                     uiPort: 3341,
-                    telegramEnabled: false,
+                    botConfigured: false,
+                    monitorAlarmsEnabled: false,
                     inboundMode: 'off',
                     inboundPollActive: false,
                 }),

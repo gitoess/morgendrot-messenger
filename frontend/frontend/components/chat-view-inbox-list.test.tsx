@@ -59,4 +59,49 @@ describe('ChatViewInboxList reply action', () => {
     btn.click()
     expect(onReplyToMessage).toHaveBeenCalledTimes(1)
   })
+
+  it('hides Antworten without onReplyToMessage (§ H.1a)', () => {
+    render(<ChatViewInboxList {...makeProps()} />)
+    expect(screen.queryByRole('button', { name: /Antworten/i })).not.toBeInTheDocument()
+  })
+
+  it('disables Antworten while sending (§ H.1a)', () => {
+    const onReplyToMessage = vi.fn()
+    render(<ChatViewInboxList {...makeProps({ onReplyToMessage, sending: true })} />)
+    const btn = screen.getByRole('button', { name: /Antworten/i })
+    expect(btn).toBeDisabled()
+  })
+
+  it('shows Eingang badge for incoming message (§ H.1a)', () => {
+    render(<ChatViewInboxList {...makeProps()} />)
+    expect(screen.getByText('Eingang')).toBeInTheDocument()
+    expect(screen.queryByText('Ausgang')).not.toBeInTheDocument()
+  })
+
+  it('shows visibility hint when inbox empty (§ H.1a)', () => {
+    render(
+      <ChatViewInboxList
+        {...makeProps({
+          inboxRows: [],
+          inboxVisibilityHint: 'Nur Partner „Hans“ sichtbar.',
+        })}
+      />
+    )
+    expect(screen.getByText('Nur Partner „Hans“ sichtbar.')).toBeInTheDocument()
+  })
+
+  it('shows offline cache banner when inboxFromCache and empty (§ H.1a)', () => {
+    render(
+      <ChatViewInboxList
+        {...makeProps({
+          inboxRows: [],
+          inboxFromCache: true,
+          inboxCacheAgeMinutes: 12,
+          inboxLiveSource: 'rpc',
+        })}
+      />
+    )
+    expect(screen.getByText(/Offline — letzte Nachrichten/)).toBeInTheDocument()
+    expect(screen.getByText(/zuletzt per Direkt-RPC/)).toBeInTheDocument()
+  })
 })

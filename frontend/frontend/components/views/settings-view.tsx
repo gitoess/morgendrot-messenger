@@ -16,6 +16,7 @@ import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settings-telegram-notify-on-send'
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
+import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsLanguageSection } from '@/frontend/components/settings-language-section'
@@ -31,6 +32,8 @@ interface SettingsViewProps {
   canToggleFullTiles?: boolean
   /** Messenger Boss/Kommandant: nur was nicht auf Startseite / Einsatzleitung / Tresor liegt. */
   slimMessengerEinsatz?: boolean
+  vaultLocked?: boolean
+  onRequestVaultUnlock?: () => void
 }
 
 export function SettingsView({
@@ -39,6 +42,8 @@ export function SettingsView({
   onShowAllTilesChange,
   canToggleFullTiles = false,
   slimMessengerEinsatz = false,
+  vaultLocked = false,
+  onRequestVaultUnlock,
 }: SettingsViewProps) {
   const { t } = useAppTranslation('dashboard')
   const [status, setStatus] = useState<{
@@ -63,6 +68,9 @@ export function SettingsView({
 
   const isBossRole =
     (advancedIotaStatus?.role || status?.role || '').trim().toLowerCase() === 'boss'
+  const isKommandant =
+    (advancedIotaStatus?.role || status?.role || '').trim().toLowerCase() === 'kommandant'
+  const managedNetwork = isBossRole || isKommandant
 
   const backendOnline =
     status?.backendOnline === true ||
@@ -130,8 +138,19 @@ export function SettingsView({
 
       <ActiveProfilePanel status={advancedIotaStatus} />
 
+      {managedNetwork ? (
+        <SettingsNetworkProfilesSection
+          apiStatus={advancedIotaStatus}
+          backendOnline={backendOnline}
+          onApplied={() => void loadStatus()}
+        />
+      ) : null}
+
       <SettingsSystemIdentitySection
         apiStatus={advancedIotaStatus}
+        managedNetwork={managedNetwork}
+        vaultLocked={vaultLocked}
+        onRequestVaultUnlock={onRequestVaultUnlock}
         onApplied={() => void loadStatus()}
       />
 

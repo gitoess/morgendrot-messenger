@@ -20,6 +20,24 @@ import { deriveSharedSecret, deriveAesGcmKey, decryptMessage } from '../crypto-l
 import { normalizeAddress, toEventBytes } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
+import { chainMessageLogicalDedupKey } from '@morgendrot/core/iota';
+
+function addMailboxItemKeysToSeen(items: MsgItem[], keySeen: Set<string>): void {
+    for (const it of items) {
+        if (it.key) keySeen.add(it.key);
+        const lk = chainMessageLogicalDedupKey({
+            sender: it.sender,
+            recipient: it.recipient ?? '',
+            nonce: it.nonce,
+        });
+        if (lk) keySeen.add(lk);
+    }
+}
+
+function eventAlreadyInMailbox(keySeen: Set<string>, sender: string, recipient: string, nonce: bigint): boolean {
+    const lk = chainMessageLogicalDedupKey({ sender, recipient, nonce });
+    return Boolean(lk && keySeen.has(lk));
+}
 
 /** Alias für ältere Aufrufer; gleiche Bedingung wie `isMessengerMailboxModeActive` (config). */
 export function isRebasedStorageEnabled(): boolean {
@@ -220,6 +238,7 @@ async function appendMessagingEventsForPackage(
             typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
         const nonce = BigInt(d.nonce ?? 0);
         const tsMs = resolveEventTsMs(tsRaw, nonce);
+        if (eventAlreadyInMailbox(keySeen, d.sender, d.recipient, nonce)) continue;
         if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
             const key = inboxDedupKey({
                 eventId: eventStableId(msg),
@@ -266,6 +285,7 @@ async function appendMessagingEventsForPackage(
             typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
         const nonce = BigInt(d.nonce ?? 0);
         const tsMs = resolveEventTsMs(tsRaw, nonce);
+        if (eventAlreadyInMailbox(keySeen, d.sender, d.recipient, nonce)) continue;
         const key = inboxDedupKey({
             eventId: eventStableId(msg),
             channel: 'plain',
@@ -578,9 +598,7 @@ export async function fetchLastMessages(
             );
         }
         const keySeen = new Set<string>();
-        for (const it of items) {
-            if (it.key) keySeen.add(it.key);
-        }
+        addMailboxItemKeysToSeen(items, keySeen);
         if (!opts?.skipMessagingEvents) {
             const primaryPkg = (packageIdForQuery || CFG.PACKAGE_ID || '').trim().toLowerCase();
             for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {

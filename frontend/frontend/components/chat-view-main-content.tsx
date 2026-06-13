@@ -10,7 +10,7 @@ import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/com
 import {
   asComposerDraft,
   asInboxFeedRead,
-  asSendMeshMirrorDelay,
+  asSendMeshFunkOptions,
   asSendTransportChoice,
   asSendTransportRead,
   asVoiceRecordSendPanel,
@@ -123,8 +123,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     statusMsg,
     setStatus,
     setStatusMsg,
-    showSetup,
-    toggleShowSetup,
     encrypted,
     setEncrypted,
     apiStatus,
@@ -239,6 +237,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
+    meshLoRaImagesEnabled,
+    setMeshLoRaImagesEnabled,
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
     protokollMarkedIds,
@@ -931,7 +931,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const sendPanelProps = {
     ...asComposerDraft(message, recipient, setMessage, setRecipient),
     ...asSendTransportRead(encrypted, forcedTransport),
-    ...asSendMeshMirrorDelay(meshSelfArchiveAfterLoRa, setMeshSelfArchiveAfterLoRa),
+    ...asSendMeshFunkOptions(
+      meshLoRaImagesEnabled,
+      setMeshLoRaImagesEnabled,
+      meshSelfArchiveAfterLoRa,
+      setMeshSelfArchiveAfterLoRa
+    ),
     isPrivate,
     sending,
     loraOnlineFallbackOffer,
@@ -1032,8 +1037,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const showPartnerSetupPanel =
     composerDelivery === 'chain' &&
-    ((channelMode === 'private' && (showSetup || forcedTransport === 'mesh' || forcedTransport === 'adhoc')) ||
-      (isGroup && (forcedTransport === 'mesh' || forcedTransport === 'adhoc')))
+    (forcedTransport === 'mesh' || forcedTransport === 'adhoc') &&
+    (channelMode === 'private' || isGroup)
 
   const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
     ? {
@@ -1182,16 +1187,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {showPartnerSetupPanel ? (
         <ChatViewSetupPanel
-          partner={partner}
-          onPartnerChange={setPartner}
-          sending={sending}
-          onHandshake={handleHandshake}
-          onConnect={handleConnectDeployment}
-          isGroupMode={isGroup}
-          groupMemberAddresses={activeGroup?.memberAddresses ?? []}
-          connectedAddresses={apiStatus?.connectedAddresses ?? []}
-          onHandshakeForAddress={handleHandshakeForAddress}
-          encrypted={encrypted}
           forcedTransport={forcedTransport}
           meshtastic={{
             bleSupported: meshtastic.bleSupported,
@@ -1207,7 +1202,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             connectUsb: meshtastic.connectUsb,
             disconnect: meshtastic.disconnect,
           }}
-          directory={directory}
           refreshContactDirectory={refreshContactDirectory}
           contactBleAddress={contactBleAddress}
           onContactBleAddressChange={setContactBleAddress}
@@ -1217,17 +1211,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setContactBleBusy={setContactBleBusy}
           meshSyncMsg={meshSyncMsg}
           setMeshSyncMsg={setMeshSyncMsg}
-          role={role}
-          activePackageId={apiStatus?.packageId}
-          serverMailboxIdMasked={apiStatus?.mailboxIdMasked}
-          mailboxConfigured={apiStatus?.mailboxConfigured}
-          inboxPackageFilter={inboxPackageFilter}
-          onInboxPackageFilterChange={setInboxPackageFilter}
-          packageIdSuggestions={packageIdSuggestions}
-          onRefreshPackageIdSuggestions={refreshPackageIdSuggestions}
-          onApplyPackageIdBackend={applyPackageIdBackend}
-          onApplyInboxPackageFilterOnly={applyInboxPackageFilterOnly}
-          packageIdBusy={packageIdBusy}
         />
       ) : null}
 

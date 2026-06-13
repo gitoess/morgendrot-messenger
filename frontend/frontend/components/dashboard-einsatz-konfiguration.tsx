@@ -136,9 +136,9 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
           <input type="checkbox" checked={enablePurge} onChange={(e) => setEnablePurge(e.target.checked)} />
           Purge
         </label>
-        <label className="flex cursor-pointer items-center gap-1.5 pb-1.5 text-sm">
+        <label className="flex cursor-pointer items-center gap-1.5 pb-1.5 text-sm" title="Schreibt TTL/Purge zusätzlich in die Boss-PC-.env — unabhängig vom Handoff-ZIP">
           <input type="checkbox" checked={syncToServer} onChange={(e) => setSyncToServer(e.target.checked)} />
-          Boss-.env
+          Boss-.env mit TTL/Purge sync
         </label>
         <button
           type="button"
@@ -155,7 +155,11 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
         <p className="mt-2 text-xs text-foreground" role="status">
           {statusMsg}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Handoff-ZIP enthält TTL/Purge immer — „Boss-.env sync“ aktualisiert nur den Boss-PC für Server-Defaults.
+        </p>
+      )}
     </div>
   )
 }
@@ -173,6 +177,14 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
   const extraUnion = unionMbs.filter((id) => id.toLowerCase() !== primaryMb.toLowerCase())
   const move = cfg?.moveFeatures
   const moveProbed = move?.probed === true
+  const needsMoveUpgrade =
+    moveProbed && move && (!move.teamBroadcastPurge || !move.teamBroadcastStore || !move.privateMailboxPurge)
+
+  const upgradeBlockReason = !cfg?.upgradeCapConfigured
+    ? 'UpgradeCap fehlt — Package wurde ohne Upgrade-Recht deployed (nur Neu-Publish möglich).'
+    : !needsMoveUpgrade && moveProbed
+      ? 'Alle geprüften Move-Funktionen sind aktiv — Upgrade nur nach neuem Code-Deploy nötig.'
+      : null
 
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
@@ -281,11 +293,21 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
           </div>
         )}
         {moveProbed && move && !move.teamBroadcastPurge ? (
-          <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Team-Purge fehlt — Move upgraden.</p>
+          <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+            Team-Purge fehlt on-chain — nach neuem Move-Build hier upgraden, dann Backend neu starten.
+          </p>
+        ) : null}
+        <p className="mt-2 text-xs text-muted-foreground">
+          <strong className="font-medium text-foreground">Move upgraden</strong> = neues Move-Package auf dieselbe
+          Package-ID spielen (In-Place). Nur nötig, wenn oben gelbe Hinweise oder fehlende Funktionen — nicht bei
+          jedem Einsatz.
+        </p>
+        {upgradeBlockReason ? (
+          <p className="mt-1 text-xs text-muted-foreground">{upgradeBlockReason}</p>
         ) : null}
         <button
           type="button"
-          disabled={busy || !cfg?.upgradeCapConfigured}
+          disabled={busy || !cfg?.upgradeCapConfigured || (!needsMoveUpgrade && moveProbed)}
           onClick={() => void onUpgrade()}
           className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-600/40 bg-sky-500/15 px-3 py-2 text-xs font-semibold disabled:opacity-50"
         >

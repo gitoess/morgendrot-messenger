@@ -6,11 +6,13 @@
  */
 
 import {
+  chainMessageLogicalDedupKey,
   createDirectIotaClient,
   fetchMailboxInboxRpcRows,
   fetchMessagingEventInboxRpcRows,
   fetchTeamPlainBroadcastRpcRows,
   isLikelyIotaHexId,
+  mailboxPlainInboxKey,
   normalizeMailboxAddress,
   type MessagingEventInboxRpcRow,
 } from '@morgendrot/core/iota'
@@ -212,14 +214,21 @@ export async function tryFetchDirectMailboxInboxViaIota(
     let apiRows: InboxApiRow[] = []
     for (const r of rpcRows) {
       if (r.kind === 'plain') {
+        const ts = r.ts ?? 0
         apiRows.push({
           sender: r.sender,
           recipient: r.recipient,
           text: r.text,
           isPlain: true,
           nonce: r.nonce,
-          ts: r.ts,
+          ts,
           chainPurgeable: true,
+          inboxKey: mailboxPlainInboxKey({
+            sender: r.sender,
+            recipient: r.recipient,
+            nonce: r.nonce,
+            tsMs: ts,
+          }),
         })
         continue
       }
@@ -292,6 +301,18 @@ export async function tryFetchDirectMailboxInboxViaIota(
       }
     }
 
+    const mailboxLogicalKeys = new Set<string>()
+    for (const row of apiRows) {
+      if (row.chainPurgeable !== false) {
+        const lk = chainMessageLogicalDedupKey({
+          sender: row.sender ?? '',
+          recipient: row.recipient,
+          nonce: row.nonce ?? '',
+        })
+        if (lk) mailboxLogicalKeys.add(lk)
+      }
+    }
+
     const includeEvents =
       opts.includeMessagingEvents !== false &&
       shouldIncludeMessagingEventsInDirectInbox(mailboxObjectId, snap.mailboxId)
@@ -302,7 +323,16 @@ export async function tryFetchDirectMailboxInboxViaIota(
         limit: fetchWindow,
         offset: 0,
       })
-      apiRows.push(...(await mapEventRowsToInboxApi(eventRows, myNorm)))
+      const eventApiRows = await mapEventRowsToInboxApi(eventRows, myNorm)
+      for (const row of eventApiRows) {
+        const lk = chainMessageLogicalDedupKey({
+          sender: row.sender ?? '',
+          recipient: row.recipient,
+          nonce: row.nonce ?? '',
+        })
+        if (lk && mailboxLogicalKeys.has(lk)) continue
+        apiRows.push(row)
+      }
     }
 
     apiRows = mergeSortPageInboxRows(apiRows, opts.limit, opts.offset)

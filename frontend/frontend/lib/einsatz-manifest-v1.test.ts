@@ -36,5 +36,7 @@ describe('einsatz-manifest-v1', () => {
     expect(manifest.entries).toHaveLength(2)
     expect(manifest.manifest_hash).toHaveLength(64)
     expect(manifest.source_network).toBe('testnet')
+    expect(manifest.entries[0]?.content_sha256_hex).toHaveLength(64)
+    expect(manifest.entries[0]?.evidence_status).toBe('local_only')
     })
 })

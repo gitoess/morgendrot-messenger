@@ -37,6 +37,7 @@ import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-st
 import { ConfigView } from '@/frontend/components/views/config-view'
 import { SettingsIotaDirectCard } from '@/frontend/components/views/settings-iota-direct-card'
 import { ChatViewPulseSettings } from '@/frontend/components/chat-view-pulse-settings'
+import { SessionSignerStatusStrip } from '@/frontend/components/session-signer-status-strip'
 import { isIotaTransportUiVisible } from '@/frontend/lib/messenger-role-capabilities'
 
 function maskId(id?: string): string {
@@ -48,9 +49,19 @@ function maskId(id?: string): string {
 type SettingsSystemIdentitySectionProps = {
   onApplied?: () => void
   apiStatus?: ApiStatus | null
+  /** Netzwerk-Schalter „Wo senden?“ verwaltet RPC/Package — Duplikate ausblenden */
+  managedNetwork?: boolean
+  vaultLocked?: boolean
+  onRequestVaultUnlock?: () => void
 }
 
-export function SettingsSystemIdentitySection({ onApplied, apiStatus }: SettingsSystemIdentitySectionProps) {
+export function SettingsSystemIdentitySection({
+  onApplied,
+  apiStatus,
+  managedNetwork,
+  vaultLocked,
+  onRequestVaultUnlock,
+}: SettingsSystemIdentitySectionProps) {
   const [loading, setLoading] = useState(true)
   const [chainReachable, setChainReachable] = useState<boolean | null>(null)
   const [address, setAddress] = useState('')
@@ -210,7 +221,9 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
         <div>
           <h4 className="font-semibold text-foreground">System & Identität</h4>
-          <p className="mt-0.5 text-sm text-muted-foreground">Adresse, Package-ID, IOTA/Mailbox, .env</p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {managedNetwork ? 'Adresse · Direkt-Send' : 'Adresse, Package-ID, IOTA/Mailbox, .env'}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {rpcStatusLabel}
@@ -260,6 +273,7 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
             </div>
           </div>
 
+          {!managedNetwork ? (
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label className="text-sm">Package-ID (Move)</Label>
             <p className="text-[11px] text-muted-foreground">
@@ -306,20 +320,41 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
               {settingPackageId ? 'Setze…' : 'Package-ID setzen'}
             </Button>
           </div>
+          ) : (
+            <p className="text-xs text-muted-foreground rounded-lg border border-border/60 px-3 py-2">
+              Package & RPC: Schalter <strong className="font-medium text-foreground">Wo senden?</strong> oben.
+            </p>
+          )}
 
           {showIotaBlocks && apiStatus ? (
             <>
-              <SettingsIotaDirectCard
-                embedded
-                backendOnline={apiStatus.backendOnline ?? apiStatus.backendRunning}
-              />
-              <div className="rounded-lg border border-border/80 p-3">
-                <ChatViewPulseSettings
-                  apiStatus={apiStatus}
-                  allowDevExpertTools={false}
-                  settingsEmbedded
+              {!managedNetwork ? (
+                <SettingsIotaDirectCard
+                  embedded
+                  backendOnline={apiStatus.backendOnline ?? apiStatus.backendRunning}
                 />
-              </div>
+              ) : (
+                <SessionSignerStatusStrip
+                  locked={vaultLocked}
+                  myAddress={
+                    apiStatus?.myAddressFull?.trim() ||
+                    apiStatus?.myAddress?.trim() ||
+                    address
+                  }
+                  signerMode={apiStatus.signer}
+                  onRequestUnlock={onRequestVaultUnlock}
+                />
+              )}
+              {!managedNetwork ? (
+                <div className="rounded-lg border border-border/80 p-3">
+                  <ChatViewPulseSettings
+                    apiStatus={apiStatus}
+                    allowDevExpertTools={false}
+                    settingsEmbedded
+                    networkManaged={false}
+                  />
+                </div>
+              ) : null}
             </>
           ) : null}
 
@@ -347,6 +382,7 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
               <ChevronDown className={cn('h-4 w-4 transition-transform', configOpen && 'rotate-180')} />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-4 pt-4">
+              {!managedNetwork ? (
               <div className="space-y-2 rounded-lg border border-border p-3">
                 <Label className="text-sm">RPC_URL</Label>
                 <p className="text-[11px] text-muted-foreground">
@@ -362,6 +398,11 @@ export function SettingsSystemIdentitySection({ onApplied, apiStatus }: Settings
                   {savingRpc ? 'Speichere…' : 'RPC speichern'}
                 </Button>
               </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  RPC-URL wird über <strong className="font-medium text-foreground">Wo senden?</strong> gesetzt.
+                </p>
+              )}
               <ConfigView embedded messengerMode />
             </CollapsibleContent>
           </Collapsible>

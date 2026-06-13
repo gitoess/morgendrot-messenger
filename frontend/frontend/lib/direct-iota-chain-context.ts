@@ -6,8 +6,9 @@
  * für den Fall „Basis aus, RPC + Mnemonic noch da“.
  */
 import type { ApiStatus } from '@/frontend/lib/api/api-status-types'
+import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
-import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
+import { getConfiguredDirectIotaRpcUrl, setBrowserDirectIotaRpcUrlOverride } from '@/frontend/lib/direct-iota-rpc'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 
@@ -192,6 +193,31 @@ export function getDirectChainFieldIdsFromLs(): {
   return { packageId, mailboxId, senderAddress, ttlDays }
 }
 
+/** Ersetzt Ketten-IDs strikt aus Netzwerk-Profil (keine verwaisten Testnet-IDs auf Mainnet). */
+export function setDirectChainFieldIdsFromNetworkProfile(p: {
+  packageId: string
+  mailboxId: string
+  senderAddress?: string
+}): void {
+  if (typeof window === 'undefined') return
+  try {
+    const pkg = (p.packageId ?? '').trim()
+    const mb = (p.mailboxId ?? '').trim()
+    const addr = (p.senderAddress ?? getDirectChainFieldIdsFromLs().senderAddress ?? '').trim()
+    if (isLikelyIotaHexId(pkg)) window.localStorage.setItem(LS_PKG, pkg)
+    else window.localStorage.removeItem(LS_PKG)
+    if (isLikelyIotaHexId(mb)) window.localStorage.setItem(LS_MB, mb)
+    else window.localStorage.removeItem(LS_MB)
+    if (isLikelyIotaHexId(addr)) window.localStorage.setItem(LS_SENDER, addr)
+    touchDirectChainSavedAtMs()
+  } catch {
+    /* ignore */
+  }
+  memorySnapshot = null
+  void resolveDirectMailboxChainSnapshot()
+  notifyDirectIotaUiChanged()
+}
+
 /** Einzelne Ketten-IDs in localStorage schreiben (auch ohne vollständigen Snapshot). */
 export function persistDirectChainFieldIds(p: {
   packageId?: string
@@ -218,8 +244,43 @@ export function persistDirectChainFieldIds(p: {
  * Nutzbaren Snapshot aus einzelnen LS-Feldern (ohne vollständigen API-Snapshot).
  * Für Direkt-RPC: Package + Mailbox + Absender (0x + 64 Hex).
  */
+function alignDirectChainWithActiveNetworkProfile(): void {
+  const state = readNetworkProfilesState()
+  const profile = state[state.active]
+  if (!validateNetworkProfile(profile).ok) return
+
+  const ls = getDirectChainFieldIdsFromLs()
+  const profilePkg = profile.packageId.trim().toLowerCase()
+  const profileMb = profile.mailboxId.trim().toLowerCase()
+  const lsPkg = ls.packageId.trim().toLowerCase()
+  const lsMb = ls.mailboxId.trim().toLowerCase()
+  const rpc = (getConfiguredDirectIotaRpcUrl() || '').trim().toLowerCase()
+  const profileRpc = profile.rpcUrl.trim().toLowerCase()
+  if (lsPkg === profilePkg && lsMb === profileMb && (rpc === profileRpc || !profileRpc)) return
+
+  setBrowserDirectIotaRpcUrlOverride(profile.rpcUrl)
+  setDirectChainFieldIdsFromNetworkProfile({
+    packageId: profile.packageId,
+    mailboxId: profile.mailboxId,
+    senderAddress: ls.senderAddress,
+  })
+  if (isLikelyIotaHexId(ls.senderAddress)) {
+    void persistDirectMailboxChainSnapshot({
+      packageId: profile.packageId.trim(),
+      mailboxId: profile.mailboxId.trim(),
+      senderAddress: ls.senderAddress.trim(),
+      ttlDays: ls.ttlDays,
+      flags: readFlagsFromLs() ?? memoryFlagsOnly ?? defaultFlagsForPartialSnapshot(),
+    })
+  } else {
+    memorySnapshot = null
+  }
+}
+
 export function resolveDirectMailboxChainSnapshot(): DirectMailboxChainSnapshot | null {
   if (typeof window === 'undefined') return memorySnapshot
+
+  alignDirectChainWithActiveNetworkProfile()
 
   const partial = getDirectChainFieldIdsFromLs()
   const packageId = partial.packageId
@@ -270,21 +331,33 @@ export function getDirectMailboxChainSnapshot(): DirectMailboxChainSnapshot | nu
 }
 
 export function syncDirectMailboxFlagsFromApiStatus(status: ApiStatus): void {
-  memoryFlagsOnly = {
-    useMailbox: status.useMailbox === true,
-    mailboxStorePlaintext: status.mailboxStorePlaintext === true,
-    messengerCreditsConfigured: status.messengerCreditsConfigured === true,
-  }
+  const state = readNetworkProfilesState()
+  const mainnetProfileReady =
+    state.active === 'mainnet' && validateNetworkProfile(state.mainnet).ok
+
+  memoryFlagsOnly = mainnetProfileReady
+    ? {
+        useMailbox: true,
+        mailboxStorePlaintext: true,
+        messengerCreditsConfigured: false,
+      }
+    : {
+        useMailbox: status.useMailbox === true,
+        mailboxStorePlaintext: status.mailboxStorePlaintext === true,
+        messengerCreditsConfigured: status.messengerCreditsConfigured === true,
+      }
+
   if (memorySnapshot) {
     memorySnapshot = { ...memorySnapshot, flags: memoryFlagsOnly }
-    void persistDirectMailboxChainSnapshot(memorySnapshot)
-  } else if (typeof window !== 'undefined') {
+  }
+  if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(LS_FLAGS, JSON.stringify(memoryFlagsOnly))
     } catch {
       /* ignore */
     }
   }
+  notifyDirectIotaUiChanged()
 }
 
 export function applyDirectMailboxChainSnapshotFromNetworkIds(j: {

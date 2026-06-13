@@ -71,3 +71,31 @@ export function buildStoreEncryptedMailboxTransaction(input: BuildStoreEncrypted
   })
   return txb
 }
+
+/** Verschlüsseltes Event (`send_encrypted_message`) — kein Mailbox-Objekt, flüchtig. */
+export function buildSendEncryptedEventTransaction(params: {
+  packageId: string
+  senderAddress: string
+  recipientAddress: string
+  ciphertext: Uint8Array
+  iv: Uint8Array
+  tag: Uint8Array
+  nonce: bigint
+}): Transaction {
+  const { packageId, senderAddress, recipientAddress, ciphertext, iv, tag, nonce } = params
+  if (iv.length !== 12) throw new Error('IV muss 12 Bytes sein (AES-GCM).')
+  if (tag.length !== 16) throw new Error('Tag muss 16 Bytes sein (AES-GCM).')
+  const txb = new Transaction()
+  txb.setSender(senderAddress)
+  txb.moveCall({
+    target: `${packageId}::messaging::send_encrypted_message`,
+    arguments: [
+      txb.pure.address(recipientAddress),
+      txb.pure(bcs.vector(bcs.u8()).serialize(ciphertext)),
+      txb.pure(bcs.vector(bcs.u8()).serialize(iv)),
+      txb.pure(bcs.vector(bcs.u8()).serialize(tag)),
+      txb.pure.u64(nonce),
+    ],
+  })
+  return txb
+}

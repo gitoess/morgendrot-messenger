@@ -4,7 +4,7 @@ export type TangleInventoryType = 'text' | 'image' | 'protocol-hash' | 'protocol
 export type TangleInventoryStatus = 'anchored' | 'queued' | 'failed'
 
 /** Woher der Chain-Eintrag stammt (Anzeige + Filter). */
-export type TangleInventoryOrigin = 'mailbox' | 'path4' | 'anchor' | 'relay' | 'unknown'
+export type TangleInventoryOrigin = 'mailbox' | 'path4' | 'anchor' | 'relay' | 'forensic-batch' | 'unknown'
 
 export type TangleInventoryItem = {
   id: string
@@ -52,6 +52,8 @@ export function tangleInventoryOriginLabel(origin: TangleInventoryOrigin | undef
       return 'Funk + IOTA-Spiegel (Pfad 4)'
     case 'anchor':
       return 'Protokoll-Verankerung'
+    case 'forensic-batch':
+      return 'Mainnet-Batch-Archiv (§ H.33e)'
     case 'relay':
       return 'Relay / manuell markiert'
     default:

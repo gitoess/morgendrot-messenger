@@ -9,34 +9,16 @@
  * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
  */
 
-import { sendMessage, sendEncryptedMessageWithTimeout } from './chat-commands'
+import { sendPlaintextMailboxHybrid, sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem, OfflineMailboxTrySend } from '@morgendrot/core'
-import type { OfflineMailboxSendPort } from '@morgendrot/core'
 import {
   createOfflineMailboxManager,
   createNullableDelegatingStorage,
   createSystemClock,
   createCryptoUuidIdGenerator,
   offlineMailboxDedupKey,
-  createOfflineMailboxTrySendFromSendPort,
 } from '@morgendrot/core'
-import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
-import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
-import {
-  canUseDirectEncryptedMailboxDrain,
-  canUseDirectPlaintextMailboxDrain,
-  getDirectMailboxChainSnapshot,
-} from '@/frontend/lib/direct-iota-chain-context'
-import {
-  isDirectMailboxDrainEnabled,
-  isIotaRelayOnlyMode,
-  trySubmitPlaintextMailboxViaDirectIota,
-} from '@/frontend/lib/direct-iota-plain-submit'
-import { ensureDirectChatPeerPubForRecipient } from '@/frontend/lib/direct-iota-encrypted-send-prep'
-import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
-import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
-import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
 
 export {
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -85,87 +67,24 @@ export function enableOfflineMailboxQueue(): void {
   }
 }
 
-function createChatCommandsSendPort(): OfflineMailboxSendPort {
-  return {
-    async sendEncrypted(payload: string) {
-      const r = await sendEncryptedMessageWithTimeout(payload, 120_000, {
-        messagingPersistenceMode: readMessagingPersistenceModeFromStorage(),
-      })
-      return {
-        ok: r.ok === true,
-        error: r.error ?? (r as { message?: string }).message,
-      }
-    },
-    async sendPlain(recipient: string, payload: string) {
-      const r = await sendMessage(recipient, payload, false, {
-        messagingPersistenceMode: readMessagingPersistenceModeFromStorage(),
-      })
-      return {
-        ok: r.ok === true,
-        error: r.error ?? (r as { message?: string }).message,
-      }
-    },
-  }
-}
-
-function canAttemptDirectPlainMailbox(item: OfflineMailboxQueueItem): boolean {
-  return (
-    item.kind === 'plain_send' &&
-    item.encrypted === false &&
-    !isIotaRelayOnlyMode() &&
-    isDirectMailboxDrainEnabled() &&
-    Boolean(getConfiguredDirectIotaRpcUrl()) &&
-    Boolean(getDirectIotaSessionSigner()) &&
-    Boolean(getDirectMailboxChainSnapshot()) &&
-    canUseDirectPlaintextMailboxDrain()
-  )
-}
-
-function canAttemptDirectEncryptedMailbox(item: OfflineMailboxQueueItem): boolean {
-  return (
-    item.kind === 'encrypted_send' &&
-    item.encrypted === true &&
-    !isIotaRelayOnlyMode() &&
-    isDirectMailboxDrainEnabled() &&
-    Boolean(getConfiguredDirectIotaRpcUrl()) &&
-    Boolean(getDirectIotaSessionSigner()) &&
-    Boolean(getDirectMailboxChainSnapshot()) &&
-    canUseDirectEncryptedMailboxDrain() &&
-    getDirectChatEcdhMaterialForRecipient(item.recipient) != null
-  )
-}
-
 function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
-  const viaHttp = createOfflineMailboxTrySendFromSendPort(createChatCommandsSendPort())
   return async (item) => {
-    if (canAttemptDirectPlainMailbox(item)) {
-      const r = await trySubmitPlaintextMailboxViaDirectIota({
-        recipient: item.recipient,
-        payloadUtf8: item.payload,
-        nonce: BigInt(item.clientOutSeq),
+    const mode = readMessagingPersistenceModeFromStorage()
+    if (item.kind === 'plain_send' && item.encrypted === false) {
+      const r = await sendPlaintextMailboxHybrid(item.recipient, item.payload, BigInt(item.clientOutSeq), {
+        messagingPersistenceMode: mode,
       })
       if (r.ok) return { ok: true as const }
-      const httpR = await viaHttp(item)
-      if (httpR.ok) return { ok: true as const }
-      return { ok: false as const, error: mergeDirectThenRelayErrors(r.error, httpR.error) }
+      return { ok: false as const, error: r.error ?? r.message ?? 'Klartext fehlgeschlagen' }
     }
-    if (canAttemptDirectEncryptedMailbox(item)) {
-      await ensureDirectChatPeerPubForRecipient(item.recipient)
-      const mat = getDirectChatEcdhMaterialForRecipient(item.recipient)
-      if (mat) {
-        const r = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
-          recipient: item.recipient,
-          plaintextUtf8: item.payload,
-          peerPubRaw: mat.peerPubRaw,
-          ecdhPrivateKey: mat.ecdhPrivateKey,
-        })
-        if (r.ok) return { ok: true as const }
-        const httpR = await viaHttp(item)
-        if (httpR.ok) return { ok: true as const }
-        return { ok: false as const, error: mergeDirectThenRelayErrors(r.error, httpR.error) }
-      }
+    if (item.kind === 'encrypted_send' && item.encrypted === true) {
+      const r = await sendEncryptedMailboxHybrid(item.recipient, item.payload, {
+        messagingPersistenceMode: mode,
+      })
+      if (r.ok) return { ok: true as const }
+      return { ok: false as const, error: r.error ?? r.message ?? 'Verschlüsselt fehlgeschlagen' }
     }
-    return viaHttp(item)
+    return { ok: false as const, error: 'Unbekannter Queue-Typ.' }
   }
 }
 
@@ -190,6 +109,13 @@ export function loadOfflineMailboxQueue() {
 
 export function saveOfflineMailboxQueue(items: OfflineMailboxQueueItem[]): void {
   getMailboxManager().save(items)
+}
+
+/** Netzwechsel: Queue-Einträge mit alter Package-ID verwerfen. */
+export function clearOfflineMailboxQueue(): number {
+  const n = getOfflineMailboxQueueCount()
+  saveOfflineMailboxQueue([])
+  return n
 }
 
 export function getOfflineMailboxQueueCount(): number {

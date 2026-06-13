@@ -10,10 +10,19 @@ import {
   hasDirectChatEcdhPeerPubForRecipient,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
-import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
-import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
+import { canTryLiveEncryptedDirect } from '@/frontend/lib/direct-iota-encrypted-submit'
+import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import { tryAutoRestoreDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
-export { shouldSkipMessengerApiRelayFallback }
+const ECDH_MISSING =
+  'Chat-ECDH-Privatkey fehlt — Tresor entsperren (wird automatisch aus Vault geladen) oder in Puls JWK anwenden.'
+
+const NOT_READY: Record<'event' | 'mailbox', string> = {
+  mailbox:
+    'Direkt-verschlüsselt nicht bereit — Direkt-RPC, Drain, Ketten-IDs und optimistische Flags prüfen (Puls / Autarkie).',
+  event:
+    'Direkt-verschlüsselt (Event) nicht bereit — Direkt-RPC, Drain, Session-Signer, Package/Absender und ECDH prüfen.',
+}
 
 /** Peer-Pub von Fullnode holen und lokal speichern (ohne /api/find-peer-handshake). */
 export async function ensureDirectChatPeerPubForRecipient(
@@ -42,28 +51,31 @@ export async function ensureDirectChatPeerPubForRecipient(
   }
 }
 
-/** Vorbereitung vor verschlüsseltem Live-Send (Composer). */
-export async function prepareEncryptedDirectMailboxSend(
-  recipientTrimmed: string
+/** Vorbereitung vor verschlüsseltem Live-Send (Composer, Event oder Mailbox). */
+export async function prepareEncryptedDirectSend(
+  recipientTrimmed: string,
+  mode: MessagingPersistenceMode
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  await tryAutoRestoreDirectChatEcdhPrivateKey()
   if (!getDirectChatEcdhPrivateKey()) {
-    return {
-      ok: false,
-      error:
-        'Chat-ECDH-Privatkey fehlt — in Puls JWK anwenden (gleicher Schlüssel wie Vault/Handshake auf dem Server).',
-    }
+    return { ok: false, error: ECDH_MISSING }
   }
   const peer = await ensureDirectChatPeerPubForRecipient(recipientTrimmed)
   if (!peer.ok) return peer
-  if (!canTryLiveEncryptedDirectMailbox(recipientTrimmed)) {
-    return {
-      ok: false,
-      error:
-        'Direkt-verschlüsselt nicht bereit — Direkt-RPC, Drain, Ketten-IDs und optimistische Flags prüfen (Puls / Autarkie).',
-    }
+  const persistMode = mode === 'mailbox' ? 'mailbox' : 'event'
+  if (!canTryLiveEncryptedDirect(recipientTrimmed, persistMode)) {
+    return { ok: false, error: NOT_READY[persistMode] }
   }
   if (!getDirectChatEcdhMaterialForRecipient(recipientTrimmed)) {
     return { ok: false, error: 'ECDH-Material für Empfänger fehlt nach Peer-Sync.' }
   }
   return { ok: true }
 }
+
+/** @deprecated Alias — nutze `prepareEncryptedDirectSend(..., 'mailbox')`. */
+export const prepareEncryptedDirectMailboxSend = (recipient: string) =>
+  prepareEncryptedDirectSend(recipient, 'mailbox')
+
+/** @deprecated Alias — nutze `prepareEncryptedDirectSend(..., 'event')`. */
+export const prepareEncryptedDirectEventSend = (recipient: string) =>
+  prepareEncryptedDirectSend(recipient, 'event')

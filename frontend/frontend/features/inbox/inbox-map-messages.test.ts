@@ -29,7 +29,34 @@ describe('mapInboxApiRowsToMessages', () => {
     expect(m.transports).toEqual(['internet'])
     expect(m.chainNonce).toBe('n1')
     expect(m.chainPurgeable).toBe(true)
-    expect(m.dedupKey).toBe('chain|0xs|0xr|n1|1700000000000')
+    expect(m.dedupKey).toBe('chain-msg|0xs|0xr|n1')
+  })
+
+  it('dedupliziert Stored-Mailbox + Event mit gleicher ms-Nonce', () => {
+    const nonce = '1781371408086'
+    const out = mergeAllMessages(
+      mapInboxApiRowsToMessages([
+        {
+          sender: '0xs',
+          text: 'mainnet',
+          nonce,
+          ts: 1781371408086,
+          chainPurgeable: true,
+          isPlain: true,
+          inboxKey: 'mbp:0xs:0xr:1781371408086:1781371408086',
+        },
+        {
+          sender: '0xs',
+          text: 'mainnet',
+          nonce,
+          ts: 1781371408086,
+          chainPurgeable: false,
+          isPlain: true,
+          inboxKey: 'evid:tx-event-1',
+        },
+      ])
+    )
+    expect(out).toHaveLength(1)
   })
 
   it('dedupliziert Event- und Mailbox-Zeile mit gleicher Nonce/Zeit', () => {

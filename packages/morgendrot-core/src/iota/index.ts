@@ -5,7 +5,22 @@ export {
   type DirectIotaFetch,
 } from './direct-client'
 export { probeDirectIotaRpc } from './chain-reachability'
-export { buildStorePlaintextMailboxTransaction, isLikelyIotaHexId } from './mailbox-plain-txb'
+export {
+  buildSendPlaintextEventTransaction,
+  buildStorePlaintextMailboxTransaction,
+  isLikelyIotaHexId,
+} from './mailbox-plain-txb'
+export {
+  buildStorePlaintextMailboxBatchTransaction,
+  type BuildStorePlaintextMailboxBatchTxInput,
+  type PlaintextMailboxBatchItem,
+} from './mailbox-plain-batch-txb'
+export {
+  chainMessageLogicalDedupKey,
+  mailboxPlainInboxKey,
+  nonceNeedsInboxKeyDisambiguation,
+  resolveInboxRowDedupKey,
+} from './chain-inbox-dedup'
 export {
   extractPackageIdFromMoveType,
   classifyMessagingMailboxMoveType,
@@ -41,11 +56,16 @@ export { probeEinsatzManifestAnchorOnChain } from './einsatz-manifest-probe-rpc'
 export type { ProbeEinsatzManifestAnchorInput } from './einsatz-manifest-probe-rpc'
 export { buildCreateEinsatzManifestRegistryTransaction } from './einsatz-manifest-registry-txb'
 export type { BuildCreateEinsatzManifestRegistryTxInput } from './einsatz-manifest-registry-txb'
-export { buildStoreEinsatzManifestTransaction } from './einsatz-manifest-txb'
+export {
+  buildStoreEncryptedMailboxBatchTransaction,
+  type BuildStoreEncryptedMailboxBatchTxInput,
+  type EncryptedMailboxBatchItem,
+} from './mailbox-encrypted-batch-txb'
 export type {
   BuildStoreEinsatzManifestTxInput,
   EinsatzManifestSourceNetworkU8,
 } from './einsatz-manifest-txb'
+export { buildStoreEinsatzManifestTransaction } from './einsatz-manifest-txb'
 export type { BuildPurgeTeamPlaintextBroadcastTxInput } from './purge-team-broadcast-txb'
 export {
   fetchMessagingEventInboxRpcRows,
@@ -56,9 +76,10 @@ export type {
   MessagingEventInboxEncryptedRow,
   FetchMessagingEventInboxRpcInput,
 } from './messaging-events-inbox-rpc'
-export type { BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
+export type { BuildSendPlaintextEventTxInput, BuildStorePlaintextMailboxTxInput } from './mailbox-plain-txb'
 export {
   buildStoreEncryptedMailboxTransaction,
+  buildSendEncryptedEventTransaction,
   DIRECT_MAILBOX_MAX_CIPHER_U8,
 } from './mailbox-encrypted-txb'
 export type { BuildStoreEncryptedMailboxTxInput } from './mailbox-encrypted-txb'

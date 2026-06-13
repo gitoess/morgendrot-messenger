@@ -18,9 +18,10 @@ import {
 } from '@/frontend/lib/device-time-trust'
 import { apiStatusPollSignature } from '@/frontend/lib/api-status-signature'
 import {
-  applyDirectMailboxChainSnapshotFromNetworkIds,
   syncDirectMailboxFlagsFromApiStatus,
 } from '@/frontend/lib/direct-iota-chain-context'
+import { applyDirectChainSnapshotFromStatusOrNetworkProfile } from '@/frontend/lib/active-network-chain-sync'
+import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { persistConnectedPeersSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
@@ -112,13 +113,20 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     const { pollClockHint: hint, ...rest } = s
     setPollClockHint(hint)
     setApiStatus(rest)
+    applyDirectChainSnapshotFromStatusOrNetworkProfile({
+      packageId: rest.packageId,
+      mailboxId: rest.mailboxId,
+      myAddress: rest.myAddress,
+      myAddressFull: rest.myAddressFull,
+    })
     syncDirectMailboxFlagsFromApiStatus(rest)
-    const mb = (rest.mailboxId || '').trim()
-    if (mb) cacheServerMailboxObjectId(mb)
-    const pkg = (rest.packageId || '').trim()
-    const addr = (rest.myAddressFull || rest.myAddress || '').trim()
-    if (mb && pkg && addr) {
-      applyDirectMailboxChainSnapshotFromNetworkIds({ packageId: pkg, mailboxId: mb, myAddress: addr })
+    const net = readNetworkProfilesState()
+    const activeProfile = net[net.active]
+    if (validateNetworkProfile(activeProfile).ok && activeProfile.mailboxId.trim()) {
+      cacheServerMailboxObjectId(activeProfile.mailboxId)
+    } else {
+      const mb = (rest.mailboxId || '').trim()
+      if (mb) cacheServerMailboxObjectId(mb)
     }
     const conn = rest.connectedAddresses
     if (Array.isArray(conn) && conn.length > 0) {
