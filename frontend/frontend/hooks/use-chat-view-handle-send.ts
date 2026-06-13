@@ -2,12 +2,9 @@
 
 import { useCallback, useMemo, useRef } from 'react'
 import {
-  enqueueOfflineMailboxFailure,
   isOfflineMailboxQueueEnabled,
-  stableOfflineMailboxThreadId,
   nextChainMessageNonceU64,
   nextOfflineMailboxClientOutSeq,
-  parseMailboxOutNonceMarker,
   prependMailboxOutNonceMarker,
 } from '@/frontend/lib/api'
 import {
@@ -25,24 +22,22 @@ import {
   CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
   CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG,
   CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG,
-  CHAT_ENCRYPTED_MESH_DISABLED_MSG,
   MESH_PLAINTEXT_MAX_CHARS,
 } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   isMeshLoRaImageSendActive,
   isMeshPath4SelfArchiveActive,
 } from '@/frontend/lib/mesh-lora-composer-options'
-import { prependPath4SelfArchiveMarker } from '@/frontend/features/send/mesh-path4-self-archive'
+import {
+  createChatViewPath4SendHandlers,
+} from '@/frontend/features/send/chat-view-handle-send-path4'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { prependMorgEmergencyV1Marker } from '@/frontend/lib/morg-emergency-v1-text'
 import {
   MESHTASTIC_LORA_TEXT_WIRE_UTF8_MAX_BYTES,
   wireUtf8ByteLength,
 } from '@/frontend/lib/compact-image-wire'
-import {
-  sendEncryptedMailboxHybrid,
-  sendPlaintextMailboxHybrid,
-} from '@/frontend/lib/mailbox-send-hybrid'
+import { sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
 import { connectPartnerHybrid } from '@/frontend/lib/connect-hybrid'
@@ -61,17 +56,16 @@ import {
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import {
   applyGroupOptimisticInboxMerge,
-  attemptGroupInternetChainMailbox,
   buildGroupOptimisticRowsAfterSend,
   getGroupSendPreSendError,
-  GROUP_TEAM_MAILBOX_REQUIRED_MSG,
   inboxReloadDelaysMs,
   isGroupMailboxInternetChainSend,
   publishGroupStreamsAnchorAfterSend,
   resolveGroupTargetsForInternetSend,
   resolveSingleWireSuccessMessage,
-  type GroupMailboxSingleResult,
 } from '@/frontend/features/send/chat-view-handle-send-group'
+import { createChatViewSendOnePart } from '@/frontend/features/send/chat-view-handle-send-one-part'
+import type { SendPartOk } from '@/frontend/features/send/chat-view-handle-send-part-types'
 import {
   isForensicImageMailboxAttestationEnabled,
   runForensicMailboxAttestationAfterSend,
@@ -81,14 +75,14 @@ import { formatTxDigestStatusSuffix } from '@/frontend/lib/iota-tx-explorer-hint
 import { addTangleInventoryItem } from '@/frontend/lib/tangle-inventory'
 import { trimTangleContentPreview } from '@/frontend/lib/tangle-inventory-recover'
 import { maybeAutoSaveDigestToVault } from '@/frontend/lib/tangle-inventory-vault'
-import { parseLoraProgressiveMessage } from '@/frontend/lib/lora-progressive-image-client'
 import { sendLoraImageViaMorgSegV1 } from '@/frontend/features/send/lora-image-morg-seg-v1-send'
 import {
-  formatMeshtasticNodeIdFromNum,
+  recordMeshOutgoingPlaintext,
+} from '@/frontend/features/send/chat-view-handle-send-mesh-plaintext'
+import {
   parseMeshtasticNodeIdToNumber,
   resolveMeshtasticPlaintextDestination,
 } from '@/frontend/lib/meshtastic-node-id'
-import { SOS_MESH_RETRY_DEFAULTS, sosMeshRetryDelayMs } from '@/frontend/lib/morg-sos-mesh-retry'
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
@@ -99,16 +93,9 @@ import {
 } from '@/frontend/lib/telegram-notify-pref'
 import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
 import {
-  isWrongNetworkPackageError,
-  isMainnetDirectSendBlockedError,
   purgeStaleOfflineMailboxQueue,
-  recoverWrongNetworkPackageSendFailure,
-  recoverMainnetDirectSendBlockedFailure,
   syncActiveNetworkChainSnapshot,
 } from '@/frontend/lib/active-network-chain-sync'
-
-/** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
-const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
 
 /** Abbruch-Button / `throwIfCancelled` — eine kanonische Meldung für `isUserCancelError`. */
 const CHAT_SEND_CANCELLED_MSG = 'Übertragung abgebrochen.'
@@ -137,40 +124,6 @@ function applyValidationError(
   setTimeout(() => setStatus('idle'), v.idleMs ?? 6000)
 }
 
-function recordMeshOutgoingPlaintext(
-  append: UseChatViewSendFlowParams['appendMeshMessage'],
-  myAddress: string,
-  text: string,
-  dest: number | 'broadcast',
-  mirrorOnline = false
-): void {
-  const addr = myAddress.trim()
-  if (!append || !addr) return
-  const destLabel = dest === 'broadcast' ? 'Meshtastic Broadcast' : `mesh:${formatMeshtasticNodeIdFromNum(dest)}`
-  const ts = Date.now()
-  const id = `mesh-out-plain-${ts}-${Math.random().toString(36).slice(2, 9)}`
-  append({
-    id,
-    from: addr,
-    recipient: destLabel,
-    content: text,
-    timestamp: ts,
-    encrypted: false,
-    source: mirrorOnline ? 'mailbox' : 'mesh',
-    transports: mirrorOnline ? ['mesh', 'internet'] : ['mesh'],
-    dedupKey: `mesh-out-plain|${addr}|${text.slice(0, 80)}|${Math.floor(ts / 120_000)}`,
-    meshMeta:
-      dest === 'broadcast' ? { kind: 'text', fromNodeNum: 0 } : { kind: 'text', fromNodeNum: (dest as number) >>> 0 },
-  })
-}
-
-function mailboxHybridErr(res: { error?: unknown; message?: unknown }): string {
-  if (typeof res.error === 'string' && res.error.trim()) return res.error.trim()
-  if (typeof res.message === 'string' && res.message.trim()) return res.message.trim()
-  if (res.error !== undefined && res.error !== null) return formatUnknownError(res.error)
-  if (res.message !== undefined && res.message !== null) return formatUnknownError(res.message)
-  return 'Fehler'
-}
 
 const ADDR_64_LOWER = /^0x[a-f0-9]{64}$/
 
@@ -460,114 +413,18 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       })
     }
 
-    type Path4MirrorKind = 'text' | 'image_luma' | 'image_chroma'
-    type Path4MirrorDispatch = {
-      status: 'anchored' | 'queued' | 'duplicate' | 'failed'
-      note: string
-      txDigest?: string
-    }
-    const dispatchPath4Mirror = async (
-      payload: string,
-      messageNonceU64: bigint,
-      kind: Path4MirrorKind,
-      loraMsgId?: string | null
-    ): Promise<Path4MirrorDispatch> => {
-      const selfAddr = myAddress.trim().toLowerCase()
-      if (!ADDR_64_LOWER.test(selfAddr)) {
-        return { status: 'failed', note: 'Eigen-Archiv: MY_ADDRESS ungültig — keine Mailbox-Kopie.' }
-      }
-      if (apiStatus?.locked) {
-        return { status: 'failed', note: 'Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.' }
-      }
-      const res = await sendPlaintextMailboxHybrid(selfAddr, payload, messageNonceU64, mailboxOptsFor(selfAddr))
-      if (res.ok) {
-        const txDigest = res.txDigest
-        if (txDigest) {
-          const previewSource = parseMailboxOutNonceMarker(payload)?.rest ?? payload
-          const inv = {
-            digest: txDigest,
-            type: kind === 'image_luma' || kind === 'image_chroma' ? ('image' as const) : ('text' as const),
-            status: 'anchored' as const,
-            origin: 'path4' as const,
-            nonce: messageNonceU64.toString(),
-            encrypted: false,
-            contentPreview: trimTangleContentPreview(previewSource),
-            ...(kind === 'image_luma' ? { chunkPart: 1, chunkTotal: 2 } : {}),
-            ...(kind === 'image_chroma' ? { chunkPart: 2, chunkTotal: 2 } : {}),
-          }
-          addTangleInventoryItem(inv)
-          void maybeAutoSaveDigestToVault({ ...inv, timestamp: Date.now() })
-        }
-        return {
-          status: 'anchored',
-          note: 'Eigen-Archiv: Klartext-Mailbox an dich gesendet.',
-          txDigest,
-        }
-      }
-      const err = mailboxHybridErr(res)
-      if (!isOfflineMailboxQueueEnabled()) return { status: 'failed', note: `Eigen-Archiv (Mailbox): ${err}` }
-      const msgIdTag = loraMsgId ? `|msgId=${loraMsgId}` : ''
-      const priority =
-        kind === 'text' ? 20 : kind === 'image_luma' ? 50 : kind === 'image_chroma' ? 60 : 100
-      const en = await enqueueOfflineMailboxFailure({
-        kind: 'plain_send',
-        recipient: selfAddr,
-        payload,
-        encrypted: false,
-        timeIsTrusted: !deviceTimeTrustWarn,
-        lastError: `path4:${kind}${msgIdTag} ${err}`.trim(),
-        senderAddress: myAddress.trim(),
-        threadId: `${stableOfflineMailboxThreadId(myAddress.trim(), selfAddr)}|path4:${kind}${msgIdTag}`,
-        messageNonceU64,
-        priority,
-      })
-      onOfflineMailboxQueueChanged?.()
-      if (!en.ok) return { status: 'failed', note: `Eigen-Archiv (Queue): ${en.reason}` }
-      if (en.queued) return { status: 'queued', note: 'Eigen-Archiv: in Offline-Warteschlange (Opt-in).' }
-      return { status: 'duplicate', note: 'Eigen-Archiv: bereits in Offline-Warteschlange (Dedup).' }
-    }
-
-    const runPath4SelfMirrorForLoraImage = async (
-      lumaText: string,
-      chromaText: string,
-      segMsgIds?: { luma?: string; chroma?: string }
-    ): Promise<string> => {
-      if (!meshSelfArchiveAfterLoRa || forcedTransport !== 'mesh') return ''
-      throwIfCancelled()
-      const loraMsgIdLuma =
-        segMsgIds?.luma ??
-        parseLoraProgressiveMessage(lumaText)?.msgId ??
-        parseLoraProgressiveMessage(chromaText)?.msgId ??
-        null
-      const loraMsgIdChroma =
-        segMsgIds?.chroma ?? parseLoraProgressiveMessage(chromaText)?.msgId ?? loraMsgIdLuma
-      const n1 = nextChainMessageNonceU64()
-      const w1 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(lumaText), n1)
-      const d1 = await dispatchPath4Mirror(w1, n1, 'image_luma', loraMsgIdLuma)
-      if (d1.status !== 'anchored') return ` ${d1.note}`
-      throwIfCancelled()
-      const n2 = n1 + 1n
-      const w2 = prependMailboxOutNonceMarker(prependPath4SelfArchiveMarker(chromaText), n2)
-      const d2 = await dispatchPath4Mirror(w2, n2, 'image_chroma', loraMsgIdChroma)
-      if (d2.status !== 'anchored') return ` ${d2.note}`
-      const mbTx = d2.txDigest ?? d1.txDigest
-      if (isForensicImageMailboxAttestationEnabled()) {
-        const selfAddr = myAddress.trim().toLowerCase()
-        await runForensicMailboxAttestationAfterSend({
-          recipient: selfAddr,
-          senderAddress: selfAddr,
-          primary: { payloadUtf8: w1, messageNonceU64: n1 },
-          secondary: { payloadUtf8: w2, messageNonceU64: n2 },
-          imageContentSha256Hex: null,
-          deviceTimeTrustWarn: !!deviceTimeTrustWarn,
-          baseSuccessMsg: 'Eigen-Archiv: Bild in eigener Mailbox verankert.',
-          setStatusMsg,
-          mailboxTxDigest: mbTx,
-          silent: true,
-        })
-      }
-      return ` Eigen-Archiv verankert.${formatTxDigestStatusSuffix(mbTx)}`
-    }
+    const { runPath4MailboxSelfArchive, runPath4SelfMirrorForLoraImage } = createChatViewPath4SendHandlers({
+      myAddress,
+      apiStatus,
+      deviceTimeTrustWarn,
+      path4SelfArchiveActive,
+      meshSelfArchiveAfterLoRa,
+      forcedTransport,
+      mailboxOptsFor,
+      onOfflineMailboxQueueChanged,
+      throwIfCancelled,
+      setStatusMsg,
+    })
 
     /** Ohne Pfad 4: verschlüsselter „Funk“-Modus + LUMA — nicht unterstützt (Pfad 4 = Klartext-Luft). */
     if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh' && !meshLoRaImageSendActive) {
@@ -1006,335 +863,49 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       !attachedTxtFile &&
       !attachedLora
 
-    type QueueMailboxOutcome = 'queued' | 'duplicate' | 'skipped' | { reject: string }
+    type PartOk = SendPartOk
 
-    const queueMailboxIfAllowed = async (
-      kind: 'encrypted_send' | 'plain_send',
-      /** Exakt der an `/send` bzw. `/send-plain` gegebene Wire (kann `MORG_MAILBOX_NONCE_V1` enthalten). */
-      wireForQueue: string,
-      encrypted: boolean,
-      lastErr: string,
-      /** § H.12: aus Marker geparst oder Fallback `nextOfflineMailboxClientOutSeq` beim Compose. */
-      messageNonceU64: bigint
-    ): Promise<QueueMailboxOutcome> => {
-      if (!allowOfflineMailboxQueue) return 'skipped'
-      if (isMainnetDirectSendBlockedError(lastErr) || isWrongNetworkPackageError(lastErr)) {
-        return { reject: 'Mainnet-Direkt-Send nicht bereit — nicht in Warteschlange (§ H.12).' }
-      }
-      if (apiStatus?.locked || /tresor gesperrt/i.test(lastErr)) {
-        return {
-          reject:
-            'Tresor gesperrt — bitte zuerst entsperren. Nicht erneut in die Warteschlange gelegt.',
-        }
-      }
-      const recipientTrim = encrypted ? encryptedMailboxRecipient : plainMailboxRecipient.trim().toLowerCase()
-      if (!ADDR_64_LOWER.test(recipientTrim)) {
-        return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
-      }
-      const en = await enqueueOfflineMailboxFailure({
-        kind,
-        recipient: recipientTrim,
-        payload: wireForQueue,
+    const sendOnePart = createChatViewSendOnePart({
+      throwIfCancelled,
+      setStatus,
+      setStatusMsg,
+      isPrivate,
+      encrypted,
+      meshPath4StyleActive,
+      forcedTransport,
+      mailbox: {
+        throwIfCancelled,
+        ensureEncryptedPeerReady,
+        shouldMarkPinnwandPlainPost,
+        mailboxOptsFor,
+        publishGroupStreamsAfterSend,
+        onOfflineMailboxQueueChanged,
+        myAddress,
+        encryptedMailboxRecipient,
+        plainMailboxRecipient,
+        apiStatus,
+        deviceTimeTrustWarn,
+        allowOfflineMailboxQueue,
+        groupMailboxInternetChain,
+        isGroupChannel,
+        isPrivate,
+        activeGroup,
+        messagingPersistenceMode,
+        forcedTransport,
+      },
+      mesh: {
+        meshtastic,
+        meshtasticChannelIndex,
+        meshPlaintextDest,
+        appendMeshMessage,
+        myAddress,
+        meshPath4StyleActive,
+        isEmergencySend,
         encrypted,
-        timeIsTrusted: !deviceTimeTrustWarn,
-        lastError: lastErr,
-        senderAddress: myAddress,
-        threadId: stableOfflineMailboxThreadId(myAddress, recipientTrim),
-        messageNonceU64,
-      })
-      if (!en.ok) {
-        onOfflineMailboxQueueChanged?.()
-        return { reject: en.reason }
-      }
-      if (en.queued) {
-        onOfflineMailboxQueueChanged?.()
-        return 'queued'
-      }
-      onOfflineMailboxQueueChanged?.()
-      return 'duplicate'
-    }
-
-    type MailboxSendCapture = {
-      payloadUtf8: string
-      messageNonceU64: bigint
-      encrypted: boolean
-      txDigest?: string
-    }
-
-    type PartOk =
-      | {
-          ok: true
-          meshFallback?: { onlineErr: string }
-          mailboxCapture?: MailboxSendCapture
-          path4Footnote?: string
-          groupDelivery?: 'team-broadcast' | 'pairwise'
-          pairwiseTargetCount?: number
-        }
-      | { ok: false }
-
-      const sendOnePart = async (textSnap: string): Promise<PartOk> => {
-        throwIfCancelled()
-      const failSend = (msg: string): PartOk => {
-        setStatus('error')
-        setStatusMsg(msg)
-        return { ok: false }
-      }
-
-      /** Pfad 4 (MVP): nach LongFast-Klartext nur eine Mailbox-Kopie (kein zusätzlicher Text-Attestation-TX). */
-      const runPath4MailboxSelfArchive = async (airUtf8: string): Promise<string> => {
-        if (!path4SelfArchiveActive) return ''
-        const n = nextChainMessageNonceU64()
-        const marked = prependPath4SelfArchiveMarker(airUtf8)
-        const wireForApi = prependMailboxOutNonceMarker(marked, n)
-        const d = await dispatchPath4Mirror(wireForApi, n, 'text')
-        if (d.status === 'failed') return `__PATH4_FAILED__${d.note}`
-        if (d.status !== 'anchored') return ` ${d.note}`
-        return ` ${d.note}${formatTxDigestStatusSuffix(d.txDigest)}`
-      }
-
-      const payloadWithoutOutNonce = (snap: string) => parseMailboxOutNonceMarker(snap)?.rest ?? snap
-
-      type MailboxPartResult = PartOk | { ok: false; error: string }
-
-      const sendMailboxSingle = async (
-        sendTo: string,
-        enc: boolean,
-        textSnap: string,
-        opts?: { suppressStatus?: boolean }
-      ): Promise<MailboxPartResult> => {
-        const failPart = (msg: string): { ok: false; error: string } => {
-          if (!opts?.suppressStatus) failSend(msg)
-          return { ok: false, error: msg }
-        }
-        throwIfCancelled()
-        const target = sendTo.trim().toLowerCase()
-        if (!ADDR_64_LOWER.test(target)) return failPart('Ungültige Empfänger-Wallet (0x + 64 Hex).')
-        if (enc) {
-          const ready = await ensureEncryptedPeerReady(target)
-          if (!ready.ok) return failPart(ready.message)
-        }
-        let body = payloadWithoutOutNonce(textSnap)
-        if (shouldMarkPinnwandPlainPost(target, enc)) {
-          body = prependPinnwandPostMarker(body)
-        }
-        const messageNonceU64 = nextChainMessageNonceU64()
-        const wireForApi = enc ? prependMailboxOutNonceMarker(body, messageNonceU64) : body
-        const hybridOpts = mailboxOptsFor(target)
-        const res = enc
-          ? await sendEncryptedMailboxHybrid(target, wireForApi, hybridOpts)
-          : await sendPlaintextMailboxHybrid(target, wireForApi, messageNonceU64, hybridOpts)
-        if (res.ok) {
-          publishGroupStreamsAfterSend(textSnap, target, false)
-          return {
-            ok: true,
-            mailboxCapture: {
-              payloadUtf8: wireForApi,
-              messageNonceU64,
-              encrypted: enc,
-              txDigest: res.txDigest,
-            },
-          }
-        }
-        const errText = mailboxHybridErr(res)
-        if (isWrongNetworkPackageError(errText)) {
-          const { userMessage } = recoverWrongNetworkPackageSendFailure(errText, myAddress.trim())
-          onOfflineMailboxQueueChanged?.()
-          return failPart(userMessage)
-        }
-        if (isMainnetDirectSendBlockedError(errText)) {
-          const { userMessage } = recoverMainnetDirectSendBlockedFailure(myAddress.trim())
-          onOfflineMailboxQueueChanged?.()
-          return failPart(userMessage)
-        }
-        const qm = await queueMailboxIfAllowed(
-          enc ? 'encrypted_send' : 'plain_send',
-          wireForApi,
-          enc,
-          errText,
-          messageNonceU64
-        )
-        if (qm === 'queued') {
-          return failPart(
-            `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
-          )
-        }
-        if (qm === 'duplicate') {
-          return failPart(
-            `${errText} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
-          )
-        }
-        if (typeof qm === 'object' && 'reject' in qm) {
-          return failPart(`Warteschlange: ${qm.reject}`)
-        }
-        return failPart(`${target.slice(0, 10)}…: ${errText}`)
-      }
-
-      const mapMailboxPartToGroupSingle = (part: MailboxPartResult): GroupMailboxSingleResult => {
-        if (part.ok && part.mailboxCapture) {
-          return { ok: true, mailboxCapture: part.mailboxCapture }
-        }
-        const err =
-          !part.ok && 'error' in part && typeof part.error === 'string'
-            ? part.error
-            : 'Mailbox-Send fehlgeschlagen.'
-        return { ok: false, error: err }
-      }
-
-      const tryMailbox = async (enc: boolean): Promise<PartOk> => {
-        if (groupMailboxInternetChain) {
-          const attempt = await attemptGroupInternetChainMailbox({
-            textSnap,
-            encrypted: enc,
-            activeGroup,
-            isGroupChannel,
-            messagingPersistenceMode,
-            forcedTransport,
-            payloadText: payloadWithoutOutNonce(textSnap),
-            myAddress,
-            composerRecipient: plainMailboxRecipient,
-            sendToMember: (target) =>
-              sendMailboxSingle(target, enc, textSnap, { suppressStatus: true }).then(mapMailboxPartToGroupSingle),
-          })
-          if (attempt.kind === 'failure') return failSend(attempt.message)
-          if (attempt.kind === 'success') {
-            publishGroupStreamsAfterSend(textSnap, attempt.streamsToAddr, attempt.streamsMulticast)
-            if (attempt.partialFailure) return failSend(attempt.partialFailure)
-            return {
-              ok: true,
-              groupDelivery: attempt.delivery,
-              mailboxCapture: attempt.mailboxCapture,
-              pairwiseTargetCount: attempt.pairwiseTargetCount,
-            }
-          }
-          return failSend(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
-        }
-        const sendTo = enc && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient
-        return sendMailboxSingle(sendTo, enc, textSnap)
-      }
-
-      if (!isPrivate) {
-        if (forcedTransport === 'mesh') {
-          if (encrypted) {
-            return failSend(
-              'Öffentlicher Kanal: verschlüsselter Funk braucht privaten Chat mit Handshake und /connect. Wähle Klartext + „funk“ oder wechsle in den privaten Chat.'
-            )
-          }
-          if (!meshtastic.connected) return failSend(MESH_BT_NOT_CONNECTED_MSG)
-          const dest = meshPlaintextDest()
-          if (dest === null) {
-            return failSend(
-              'Funk-Klartext an Node: gültige Node-ID (z. B. !1a2b3c4d) eintragen — oder Haken „an Node-ID“ deaktivieren für Broadcast.'
-            )
-          }
-          try {
-            await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
-            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, meshPath4StyleActive)
-            const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
-            if (path4Footnote.startsWith('__PATH4_FAILED__')) {
-              return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
-            }
-            return { ok: true, path4Footnote: path4Footnote || undefined }
-          } catch (e) {
-            if (isUserCancelError(e)) throw e
-            setStatus('error')
-            setStatusMsg(formatUnknownError(e))
-            return { ok: false }
-          }
-        }
-        return tryMailbox(encrypted)
-      }
-
-      if (!encrypted || meshPath4StyleActive) {
-        if (forcedTransport === 'internet') {
-          return tryMailbox(false)
-        }
-        if (forcedTransport === 'mesh') {
-          const dest = meshPlaintextDest()
-          if (dest === null) {
-            return failSend(
-              'Funk-Klartext: gültige Node-ID (z. B. !1a2b3c4d) oder Haken „an Node-ID“ aus für Broadcast.'
-            )
-          }
-          if (isEmergencySend) {
-            const max = SOS_MESH_RETRY_DEFAULTS.maxAttempts
-            let lastErr: unknown
-            for (let attempt = 0; attempt < max; attempt++) {
-              try {
-                if (!meshtastic.connected) {
-                  throw new Error(MESH_BT_NOT_CONNECTED_MSG)
-                }
-                await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
-                recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, meshPath4StyleActive)
-                const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
-                if (path4Footnote.startsWith('__PATH4_FAILED__')) {
-                  return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
-                }
-                return { ok: true, path4Footnote: path4Footnote || undefined }
-              } catch (e) {
-                if (isUserCancelError(e)) throw e
-                lastErr = e
-                if (attempt + 1 >= max) break
-                const delay = sosMeshRetryDelayMs(attempt)
-                setStatusMsg(
-                  `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
-                )
-                await new Promise((r) => setTimeout(r, delay))
-                throwIfCancelled()
-              }
-            }
-            setStatus('error')
-            setStatusMsg(formatUnknownError(lastErr))
-            return { ok: false }
-          }
-          if (!meshtastic.connected) {
-            return failSend(MESH_BT_NOT_CONNECTED_MSG)
-          }
-          try {
-            await meshtastic.sendMeshText(textSnap, dest, meshtasticChannelIndex)
-            recordMeshOutgoingPlaintext(appendMeshMessage, myAddress, textSnap, dest, meshPath4StyleActive)
-            const path4Footnote = await runPath4MailboxSelfArchive(textSnap)
-            if (path4Footnote.startsWith('__PATH4_FAILED__')) {
-              return failSend(path4Footnote.replace('__PATH4_FAILED__', '').trim())
-            }
-            return { ok: true, path4Footnote: path4Footnote || undefined }
-          } catch (e) {
-            if (isUserCancelError(e)) throw e
-            setStatus('error')
-            setStatusMsg(formatUnknownError(e))
-            return { ok: false }
-          }
-        }
-        setStatus('error')
-        setStatusMsg(
-          forcedTransport === 'adhoc'
-            ? 'Ad-hoc: nicht implementiert. Wähle „online“ oder „funk“ (Klartext) bzw. verschlüsselt.'
-            : 'Unbekannter Klartext-Pfad.'
-        )
-        return { ok: false }
-      }
-
-      if (forcedTransport === 'adhoc') {
-        setStatus('error')
-        setStatusMsg(
-          'Layer 3 (Smartphone-Direct): nicht implementiert – BLE-Advertising/Scan nur als Konzept (bleUuid im Vault).'
-        )
-        return { ok: false }
-      }
-
-      if (forcedTransport === 'mesh') {
-        return failSend(
-          CHAT_ENCRYPTED_MESH_DISABLED_MSG
-        )
-      }
-
-      if (forcedTransport === 'internet') {
-        return tryMailbox(true)
-      }
-
-      setStatus('error')
-      setStatusMsg('Unbekannter Sendepfad.')
-      return { ok: false }
-    }
+        isUserCancelError,
+        runPath4MailboxSelfArchive,
+      },
+    })
 
     let userCancelledMain = false
     try {

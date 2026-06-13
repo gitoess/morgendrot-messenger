@@ -300,7 +300,7 @@ describe('ChatViewMainContent (§ H.1a)', () => {
   it('zeigt Privat-Composer und Posteingang', () => {
     render(<ChatViewMainContent {...buildMainContentProps()} />)
     expect(screen.getByRole('heading', { name: /1:1 Privat/i })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: /Compose message/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Nachricht verfassen/i })).toBeInTheDocument()
     expect(screen.getByTestId('inbox-panel')).toBeInTheDocument()
     expect(screen.getByTestId('send-panel')).toBeInTheDocument()
   })
@@ -320,7 +320,7 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /^Group$/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Gruppe$/i })).toBeInTheDocument()
     expect(screen.queryByTestId('inbox-panel')).toBeInTheDocument()
   })
 
@@ -338,7 +338,7 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /Post to pinboard/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /An Pinnwand senden/i })).toBeInTheDocument()
     expect(screen.getByTestId('pinnwand-feed')).toBeInTheDocument()
   })
 
@@ -355,12 +355,12 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByText(/New protocol version available/)).toBeInTheDocument()
+    expect(screen.getByText(/Neue Protokoll-Version verfügbar/)).toBeInTheDocument()
   })
 
   it('zeigt Setup-Panel nur bei Funk-Sendepfad', () => {
     const { rerender } = render(<ChatViewMainContent {...buildMainContentProps()} />)
-    expect(screen.queryByRole('button', { name: /Connect Bluetooth/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Bluetooth verbinden/i })).not.toBeInTheDocument()
 
     rerender(
       <ChatViewMainContent
@@ -374,6 +374,6 @@ describe('ChatViewMainContent (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /Connect Bluetooth/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Bluetooth verbinden/i })).toBeInTheDocument()
   })
 })

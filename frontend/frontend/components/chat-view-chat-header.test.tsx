@@ -22,13 +22,13 @@ function baseHeader(over: Partial<ChatViewChatHeaderProps> = {}): ChatViewChatHe
 describe('TresorSessionBadge (§ H.1a)', () => {
   it('zeigt gesperrt / Keys fehlen / bereit', () => {
     const { rerender } = render(<TresorSessionBadge sessionLocked hasKeys={false} />)
-    expect(screen.getByText(/Vault: locked/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: gesperrt/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys={false} />)
-    expect(screen.getByText(/Vault: keys missing/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: Keys fehlen/)).toBeInTheDocument()
 
     rerender(<TresorSessionBadge sessionLocked={false} hasKeys />)
-    expect(screen.getByText(/Vault: ready/)).toBeInTheDocument()
+    expect(screen.getByText(/Tresor: bereit/)).toBeInTheDocument()
   })
 
   it('navigiert zur Startseite wenn gesperrt und Aktion gesetzt', () => {
@@ -40,7 +40,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession: vi.fn(), onNavigateHomeWhenLocked }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Unlock vault/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Tresor entsperren/i }))
     expect(onNavigateHomeWhenLocked).toHaveBeenCalledTimes(1)
   })
 
@@ -53,7 +53,7 @@ describe('TresorSessionBadge (§ H.1a)', () => {
         actions={{ onLockSession, onNavigateHomeWhenLocked: vi.fn() }}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Lock API session/i }))
+    fireEvent.click(screen.getByRole('button', { name: /API-Sitzung sperren/i }))
     expect(onLockSession).toHaveBeenCalledTimes(1)
   })
 })
@@ -69,8 +69,8 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /1:1 Private/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /^Group$/i }))
+    expect(screen.getByRole('heading', { name: /1:1 Privat/i })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Gruppe$/i }))
     expect(onChannelModeChange).toHaveBeenCalledWith('group')
   })
 
@@ -94,7 +94,7 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
 
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {
     render(<ChatViewChatHeader {...baseHeader({ deviceTimeTrustWarn: true })} />)
-    expect(screen.getByText(/Device clock not secured/)).toBeInTheDocument()
+    expect(screen.getByText(/Geräte-Uhr:/)).toBeInTheDocument()
   })
 
   it('zeigt Offline-Cache-Banner bei fromCache', () => {
@@ -106,8 +106,8 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Offline \(cache mode\)/)).toBeInTheDocument()
-    expect(screen.getByText(/12 min/)).toBeInTheDocument()
+    expect(screen.getByText(/Offline \(Cache-Modus\)/)).toBeInTheDocument()
+    expect(screen.getByText(/12 Min\./)).toBeInTheDocument()
   })
 
   it('zeigt Offline-Status-Streifen mit Queue', () => {
@@ -125,7 +125,7 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Offline status:/)).toBeInTheDocument()
+    expect(screen.getByText(/Offline-Status:/)).toBeInTheDocument()
     expect(screen.getByText(/Queue: 2/)).toBeInTheDocument()
   })
 })
