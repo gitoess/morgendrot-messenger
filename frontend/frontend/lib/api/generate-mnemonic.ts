@@ -1,5 +1,4 @@
 import { API_BASE } from '@/frontend/lib/api/api-base'
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 
 export type GenerateMnemonicOk = {
   ok: true
@@ -13,7 +12,7 @@ export type GenerateMnemonicResult = GenerateMnemonicOk | { ok: false; error: st
 /** POST /api/generate-mnemonic — nur Boss/Messenger. */
 export async function fetchGenerateMnemonic(): Promise<GenerateMnemonicResult> {
   try {
-    const res = await fetchWithApiAuth(`${API_BASE}/api/generate-mnemonic`, {
+    const res = await fetch(`${API_BASE}/api/generate-mnemonic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',

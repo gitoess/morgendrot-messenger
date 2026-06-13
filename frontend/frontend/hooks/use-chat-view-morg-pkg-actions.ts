@@ -33,8 +33,8 @@ function showMorgPkgRecipientError(
   setStatusMsg: UseChatViewSendFlowParams['setStatusMsg']
 ): void {
   setStatus('error')
-  setStatusMsg(error || 'Recipient unknown.')
-  toast.error(error || 'Recipient unknown.')
+  setStatusMsg(error || 'Empfänger unbekannt.')
+  toast.error(error || 'Empfänger unbekannt.')
   setTimeout(() => setStatus('idle'), 8000)
 }
 
@@ -123,12 +123,12 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     setMorgPkgDownloadOffer({ pkg: morgPkg, stem, message: okMsg })
     const saveAgain = createMorgPkgDownloadAction(morgPkg, stem)
     toast.success(okMsg, {
-      description: 'Use "Save file" dialog or toast action if download does not start.',
+      description: 'Dialog „Datei speichern“ oder Toast-Aktion nutzen, falls kein Download startet.',
       duration: 25000,
-      action: { label: 'Save file', onClick: saveAgain },
+      action: { label: 'Datei speichern', onClick: saveAgain },
     })
     setStatus('success')
-    setStatusMsg(`${okMsg} — "Save file" dialog opened.`)
+    setStatusMsg(`${okMsg} — Dialog „Datei speichern“ geöffnet.`)
     setTimeout(() => setStatus('idle'), 10000)
   }, [setStatus, setStatusMsg])
 
@@ -138,8 +138,8 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
     async (files: File[], rec: string) => {
       setMorgPkgDeviceBusy(true)
       setStatus('success')
-      setStatusMsg(`Package: processing ${files.length} file(s)…`)
-      toast.message('.morg-pkg export', { description: `${files.length} file(s) — please wait…` })
+      setStatusMsg(`Paket: ${files.length} Datei(en) werden verarbeitet…`)
+      toast.message('.morg-pkg-Export', { description: `${files.length} Datei(en) — bitte warten…` })
       try {
         const built = await buildMorgPkgBundleFromFiles(files, async (dataUrl) => {
           const enc = await encodeIotaCompactAutark(dataUrl)
@@ -153,10 +153,10 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
-        setStatusMsg('Encrypting on server (/morg-pkg-export)…')
+        setStatusMsg('Verschlüsselung auf dem Server (/morg-pkg-export)…')
         const r = await morgPkgExport(rec, built.plaintext)
         if (!r.ok || !r.morgPkg) {
-          const err = r.message || r.error || '.morg-pkg export failed.'
+          const err = r.message || r.error || '.morg-pkg-Export fehlgeschlagen.'
           setStatus('error')
           setStatusMsg(err)
           toast.error(err)
@@ -164,7 +164,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
           return
         }
         const stem = `Fuer_${rec.slice(0, 10)}_bundle_${built.itemCount}files_${Date.now()}`
-        const okMsg = `ECDH .morg-pkg ready (${built.itemCount} file(s)). Hand file to partner.`
+        const okMsg = `ECDH-.morg-pkg bereit (${built.itemCount} Datei(en)). Datei an Partner übergeben.`
         finishMorgPkgDownload(r.morgPkg, stem, okMsg)
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err)
@@ -187,7 +187,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       return
     }
     setStatus('idle')
-    setStatusMsg('File picker: choose photos/text…')
+    setStatusMsg('Dateiauswahl: Fotos/Text wählen…')
     let files: File[]
     try {
       files = await pickFilesForMorgPkgExport(morgPkgDeviceFilesRef.current)
@@ -200,7 +200,7 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       return
     }
     if (!files.length) {
-      setStatusMsg('File selection cancelled.')
+      setStatusMsg('Dateiauswahl abgebrochen.')
       setTimeout(() => setStatus('idle'), 3000)
       return
     }
@@ -222,17 +222,17 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
         return
       }
       setStatus('success')
-      setStatusMsg('Creating ECDH .morg-pkg…')
+      setStatusMsg('ECDH-.morg-pkg wird erstellt…')
       const r = await morgPkgExport(rec, msg.content)
       if (!r.ok || !r.morgPkg) {
         setStatus('error')
-        setStatusMsg(r.message || r.error || '.morg-pkg export failed.')
-        toast.error(r.message || r.error || '.morg-pkg export failed.')
+        setStatusMsg(r.message || r.error || '.morg-pkg-Export fehlgeschlagen.')
+        toast.error(r.message || r.error || '.morg-pkg-Export fehlgeschlagen.')
         setTimeout(() => setStatus('idle'), 6000)
         return
       }
       const stem = `Fuer_${rec.slice(0, 10)}_${msg.id.replace(/[^a-zA-Z0-9._-]+/g, '_').slice(0, 48)}`
-      finishMorgPkgDownload(r.morgPkg, stem, 'ECDH .morg-pkg ready (hand to partner offline).')
+      finishMorgPkgDownload(r.morgPkg, stem, 'ECDH-.morg-pkg bereit (offline an Partner übergeben).')
     },
     [finishMorgPkgDownload, resolveMorgPkgRecipient, setStatus, setStatusMsg]
   )
@@ -259,17 +259,17 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
       if (!f) return
       if (apiStatus?.locked) {
         setStatus('error')
-        setStatusMsg('Unlock vault to open .morg-pkg.')
-        toast.error('Unlock vault.')
+        setStatusMsg('Tresor entsperren, um .morg-pkg zu öffnen.')
+        toast.error('Tresor entsperren.')
         setTimeout(() => setStatus('idle'), 6000)
         return
       }
       if (apiStatus?.connected !== true) {
         setStatus('error')
         setStatusMsg(
-          '.morg-pkg import: first complete handshake and "Accept handshake" or "Connect to deployment partner". The file sender must be in peerMap, otherwise the backend cannot decrypt.'
+          '.morg-pkg import: Zuerst Handshake und „Handshake annehmen“ oder „Mit Einsatz-Partner verbinden“. Der Absender der Datei muss in der peerMap stehen, sonst kann das Backend nicht entschlüsseln.'
         )
-        toast.error('Connect to sender first (handshake).')
+        toast.error('Zuerst mit Absender verbinden (Handshake).')
         setTimeout(() => setStatus('idle'), 10000)
         return
       }
@@ -287,8 +287,8 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
         const r = await morgPkgImport(parsed)
         if (!r.ok || !r.plaintext) {
           setStatus('error')
-          setStatusMsg(r.message || r.error || 'Import failed (handshake with sender?).')
-          toast.error(r.message || r.error || 'Import failed.')
+          setStatusMsg(r.message || r.error || 'Import fehlgeschlagen (Handshake mit Absender?).')
+          toast.error(r.message || r.error || 'Import fehlgeschlagen.')
           setTimeout(() => setStatus('idle'), 7000)
           return
         }
@@ -305,12 +305,12 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
           const items: MorgPkgImportItem[] = bundle.items.map((item, i) => ({
             label:
               item.kind === 'compact_image'
-                ? `Image ${i + 1}${item.caption?.trim() ? `: ${item.caption.trim().slice(0, 40)}` : ''}`
+                ? `Bild ${i + 1}${item.caption?.trim() ? `: ${item.caption.trim().slice(0, 40)}` : ''}`
                 : item.kind === 'file_txt'
-                  ? `Text file ${i + 1}`
+                  ? `Textdatei ${i + 1}`
                   : item.kind === 'opus'
                     ? `Audio ${i + 1}`
-                    : `Entry ${i + 1}`,
+                    : `Eintrag ${i + 1}`,
             content: bundleItemToWireContent(item),
             kind: itemKindFromBundleKind(item.kind),
           }))
@@ -322,25 +322,25 @@ export function useChatViewMorgPkgActions(p: UseChatViewSendFlowParams) {
             items,
           })
           setStatus('success')
-          setStatusMsg(`.morg-pkg: ${bundle.items.length} entries in package archive.`)
-          toast.success(`${bundle.items.length} entries in package archive.`)
+          setStatusMsg(`.morg-pkg: ${bundle.items.length} Einträge im Paket-Archiv.`)
+          toast.success(`${bundle.items.length} Einträge im Paket-Archiv.`)
         } else {
           appendMorgPkgImport({
             id: recordId,
             importedAt: ts,
             sender,
             fileName: f.name,
-            items: [{ label: 'Message', content: plain, kind: 'text' }],
+            items: [{ label: 'Nachricht', content: plain, kind: 'text' }],
           })
           setStatus('success')
-          setStatusMsg('.morg-pkg in package archive (not in inbox).')
-          toast.success('Package archive opened.')
+          setStatusMsg('.morg-pkg im Paket-Archiv (nicht im Posteingang).')
+          toast.success('Paket-Archiv geöffnet.')
         }
         setTimeout(() => setStatus('idle'), 4000)
       } catch (err) {
         setStatus('error')
-        setStatusMsg(err instanceof Error ? err.message : 'Invalid JSON file.')
-        toast.error('Invalid JSON file.')
+        setStatusMsg(err instanceof Error ? err.message : 'Ungültige JSON-Datei.')
+        toast.error('Ungültige JSON-Datei.')
         setTimeout(() => setStatus('idle'), 6000)
       }
     },

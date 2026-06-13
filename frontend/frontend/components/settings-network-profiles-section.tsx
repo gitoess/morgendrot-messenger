@@ -55,7 +55,7 @@ function IdRow(p: { label: string; value: string; copyKey: string; copied: strin
                     onClick={() => p.onCopy(p.value, p.copyKey)}
                 >
                     {p.copied === p.copyKey ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {p.copied === p.copyKey ? 'Copied' : 'Copy'}
+                    {p.copied === p.copyKey ? 'Kopiert' : 'Kopieren'}
                 </button>
             </div>
         </div>

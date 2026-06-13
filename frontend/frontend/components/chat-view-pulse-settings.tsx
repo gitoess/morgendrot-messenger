@@ -14,7 +14,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import { cn } from '@/lib/utils'
 import {
   getConfiguredDirectIotaRpcUrl,
@@ -320,10 +319,10 @@ export function ChatViewPulseSettings({
     setIdsPanelErr(null)
     void (async () => {
       try {
-        const res = await fetchWithApiAuth('/api/current-ids')
+        const res = await fetch('/api/current-ids')
         if (cancelled) return
         if (!res.ok) {
-          setIdsPanelErr(`/api/current-ids: HTTP ${res.status} — is the backend reachable? Check Next rewrite → API port.`)
+          setIdsPanelErr(`/api/current-ids: HTTP ${res.status} — Basis erreichbar? Next-Rewrite → API-Port prüfen.`)
           return
         }
         const j = (await res.json()) as {
@@ -335,7 +334,7 @@ export function ChatViewPulseSettings({
         }
         if (cancelled) return
         if (j.ok !== true) {
-          setIdsPanelErr('/api/current-ids: ok≠true (check vault/API).')
+          setIdsPanelErr('/api/current-ids: ok≠true (Tresor/API prüfen).')
           return
         }
         const pkg = (j.packageId || '').trim()
@@ -379,9 +378,9 @@ export function ChatViewPulseSettings({
     if (m === 'relay') {
       setDirectMailboxDrainEnabled(false)
       setDirectDrainOn(false)
-      setMsg('Morgendrot API only: direct mailbox drain off.')
+      setMsg('Nur Morgendrot-API: Direkt-Mailbox-Drain aus.')
     } else {
-      setMsg('Direct (default): direct path available — enable drain if needed.')
+      setMsg('Direkt (Standard): Direkt-Pfad möglich — Drain bei Bedarf einschalten.')
     }
   }
 
@@ -406,9 +405,9 @@ export function ChatViewPulseSettings({
         setDirectDrainOn(true)
         setDirectChainOptimisticFlagsEnabled(true)
         setOptimisticDrainFlags(true)
-        setMsg('Autarky mode on: direct + drain + optimistic flags set.')
+        setMsg('Autarkie-Modus aktiv: Direkt + Drain + Optimistische Flags gesetzt.')
       } else {
-        setMsg('Autarky mode off. Individual options remain manual.')
+        setMsg('Autarkie-Modus aus. Einzeloptionen bleiben manuell steuerbar.')
       }
       refreshDirectSetupGaps()
       refreshChainSnapshotMeta()
@@ -446,13 +445,34 @@ export function ChatViewPulseSettings({
             {networkManaged && settingsEmbedded
               ? 'Wallet-Signer'
               : settingsEmbedded
-              ? 'Mailbox · direct RPC · streams pulse'
-              : 'Copy IDs · direct RPC · radio'}
+              ? 'Mailbox · Direkt-RPC · Streams-Puls'
+              : 'IDs zum Kopieren · Direkt-RPC · Funk'}
           </span>
           {open ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
         </button>
       </CollapsibleTrigger>
       <CollapsibleContent className="mt-2 space-y-4 rounded-lg border border-border/60 bg-card/50 px-3 py-3 text-xs">
+        {settingsEmbedded && !networkManaged ? (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Mailbox, Direkt-RPC und optionaler Streams-Puls — Erklärung und Checkliste im{' '}
+            <Link href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#einstellungen-system--identität" className="text-primary underline hover:no-underline">
+              Handbuch
+            </Link>
+            .
+          </p>
+        ) : networkManaged ? (
+          <p className="text-[11px] text-muted-foreground">
+            Mnemonic für Direkt-Send (ohne dauernd laufenden Boss-PC). Netz kommt von <strong className="text-foreground">Wo senden?</strong> oben.
+          </p>
+        ) : (
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Werte kommen aus dem Backend (<span className="font-mono">/api/status</span>, beim Öffnen zusätzlich{' '}
+            <span className="font-mono">/api/current-ids</span>), falls erreichbar. Zum <strong className="text-foreground">Kopieren</strong> die Zeilen
+            unten. Für <strong className="text-foreground">Direkt-IOTA ohne dauernd erreichbare Basis</strong>: Ketten-IDs im Abschnitt{' '}
+            <strong className="text-foreground">„Direkt-RPC“</strong> eintragen und dort in <span className="font-mono">localStorage</span> speichern
+            (siehe Handbuch / Architektur H.15).
+          </p>
+        )}
         {idsPanelErr ? (
           <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-[11px] text-destructive">
             {idsPanelErr}
@@ -463,7 +483,7 @@ export function ChatViewPulseSettings({
           <>
             {iotaSubmitMode !== 'relay' && directSetupGaps.length > 0 ? (
               <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-950 dark:text-amber-100">
-                <p className="font-semibold">Open:</p>
+                <p className="font-semibold">Noch offen:</p>
                 <ul className="mt-1 list-inside list-disc space-y-0.5">
                   {directSetupGaps.map((g) => (
                     <li key={g}>{g}</li>
@@ -479,7 +499,7 @@ export function ChatViewPulseSettings({
                 onChange={(e) => setMnemoInput(e.target.value)}
                 spellCheck={false}
                 autoComplete="off"
-                placeholder="12/24 words — browser RAM only, not persisted."
+                placeholder="12/24 Wörter — nur im Browser-RAM, nicht dauerhaft gespeichert."
               />
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -500,7 +520,7 @@ export function ChatViewPulseSettings({
                     }
                   }}
                 >
-                  Apply signer
+                  Signer anwenden
                 </Button>
                 <Button
                   type="button"
@@ -511,22 +531,22 @@ export function ChatViewPulseSettings({
                   onClick={() => {
                     clearDirectIotaSessionSigner()
                     setSessionAddr(null)
-                    setMsg('Session signer cleared.')
+                    setMsg('Session-Signer gelöscht.')
                     refreshDirectSetupGaps()
                   }}
                 >
-                  Clear signer
+                  Signer löschen
                 </Button>
               </div>
               <div className="mt-2 rounded-md border border-border/70 bg-muted/20 p-2">
                 <Label className="mb-1 block text-[10px] text-muted-foreground">
-                  Optional: encrypt and store on device
+                  Optional: verschlüsselt auf dem Gerät speichern
                 </Label>
                 <Input
                   type="password"
                   value={signerStorePassword}
                   onChange={(e) => setSignerStorePassword(e.target.value)}
-                  placeholder="Local password (min. 8 characters)"
+                  placeholder="Lokales Passwort (mind. 8 Zeichen)"
                   className="h-8 max-w-sm text-xs"
                   autoComplete="off"
                 />
@@ -547,12 +567,12 @@ export function ChatViewPulseSettings({
                           setHasPersistedSigner(true)
                           setMsg('Signer lokal gespeichert.')
                         } else {
-                          setMsg(`Save failed: ${r.error}`)
+                          setMsg(`Speichern fehlgeschlagen: ${r.error}`)
                         }
                       })()
                     }}
                   >
-                    Save
+                    Speichern
                   </Button>
                   <Button
                     type="button"
@@ -570,21 +590,21 @@ export function ChatViewPulseSettings({
                           setMsg(`Signer geladen: ${r.address.slice(0, 10)}…`)
                           refreshDirectSetupGaps()
                         } else {
-                          setMsg(`Load failed: ${r.error}`)
+                          setMsg(`Laden fehlgeschlagen: ${r.error}`)
                         }
                       })()
                     }}
                   >
-                    Load
+                    Laden
                   </Button>
                 </div>
                 <p className="mt-1 text-[10px] text-muted-foreground">
-                  {hasPersistedSigner ? 'Local storage present' : 'No local storage'}
+                  {hasPersistedSigner ? 'Lokale Ablage vorhanden' : 'Keine lokale Ablage'}
                 </p>
               </div>
               {sessionAddr ? (
                 <p className="text-[10px] font-mono text-muted-foreground">
-                  Active: <span className="break-all text-foreground">{sessionAddr}</span>
+                  Aktiv: <span className="break-all text-foreground">{sessionAddr}</span>
                 </p>
               ) : null}
             </div>
@@ -593,23 +613,25 @@ export function ChatViewPulseSettings({
           <>
         <div className="space-y-2">
           <p className="text-[11px] font-semibold text-foreground">
-            {settingsEmbedded ? 'Streams pulse (optional)' : 'Explorer'}
+            {settingsEmbedded ? 'Streams-Puls (optional)' : 'Explorer / Prüfen'}
           </p>
           <CopyRow
-            label="Streams anchor (object ID)"
+            label="Streams-Anchor (Objekt-ID)"
             value={anchorFull}
             invalid={!!anchorFull && !isLikelyIotaObjectId(anchorFull)}
-            invalidHint="Expected: 0x + 64 hex (IOTA object ID)."
+            invalidHint="Erwartet: 0x + 64 Hex (IOTA-Objekt-ID). Nur Puls/Monitor — nicht der Chat-Posteingang."
+            hint="Optional: Live-Puls an die Basis (Heartbeat). Chat läuft über Mailbox."
             copied={copied === 'anchor'}
             onCopy={() => void copy('anchor', anchorFull)}
           />
           {!settingsEmbedded ? (
             <>
               <CopyRow
-                label="Your address"
+                label="Eigene Adresse"
                 value={addrFull}
                 invalid={!!addrFull && !isLikelyIotaObjectId(addrFull)}
-                invalidHint="Expected: 0x + 64 hex."
+                invalidHint="Erwartet: 0x + 64 Hex. Nach Wallet-Entsperren laden."
+                hint="Wallet-Adresse (Explorer, Handshake)."
                 copied={copied === 'addr'}
                 onCopy={() => void copy('addr', addrFull)}
               />
@@ -618,6 +640,7 @@ export function ChatViewPulseSettings({
                 value={pkgFull}
                 invalid={!!pkgFull && !isLikelyIotaObjectId(pkgFull)}
                 invalidHint="Erwartet: 0x + 64 Hex (deployte Package-ID)."
+                hint="Mailbox / Move-Bezug."
                 copied={copied === 'pkg'}
                 onCopy={() => void copy('pkg', pkgFull)}
               />
@@ -626,8 +649,33 @@ export function ChatViewPulseSettings({
         </div>
 
         {!settingsEmbedded ? (
+        <div className="space-y-2 border-t border-border/50 pt-3">
+          <p className="text-[11px] font-semibold text-foreground">Hybrid-Versand (Chat)</p>
+          <div className="rounded-md border border-border/50 bg-muted/20 px-2.5 py-2 text-[11px] leading-relaxed text-muted-foreground">
+            <p className="mb-1.5 text-foreground/90">
+              Betrifft nur Nachrichten mit Transport <strong className="text-foreground">Online</strong> (IOTA/Mailbox).
+            </p>
+            <ul className="list-inside list-disc space-y-1">
+              <li>
+                <strong className="text-foreground">Standard (aktiv):</strong> Schlägt Online fehl und Heltec ist verbunden, wird versucht, denselben Inhalt über{' '}
+                <strong className="text-foreground">LoRa/Mesh</strong> zu senden (Fallback).
+              </li>
+            </ul>
+          </div>
+        </div>
+        ) : null}
+
+        {!settingsEmbedded ? (
         <div className="space-y-3 border-t border-border/50 pt-3">
-          <p className="text-[11px] font-semibold text-foreground">IOTA send path</p>
+          <p className="text-[11px] font-semibold text-foreground">IOTA-Sendeweg (Handy-first, § H.15)</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Direkt</strong> = Klartext- und (mit ECDH) verschlüsselte Mailbox zuerst über Fullnode + Signer; bei Fehler{' '}
+            <strong className="text-foreground">Fallback</strong> über <span className="font-mono">/api</span>, wenn die Basis online ist.{' '}
+            <strong className="text-foreground">Nur Morgendrot-API</strong> = kein direkter RPC-Upload; nur Relay. Schalter auch unter{' '}
+            <strong className="text-foreground">Einstellungen → IOTA auf diesem Gerät</strong>. Gespeichert:{' '}
+            <span className="font-mono">morgendrot.iotaSubmitMode</span> (<span className="font-mono">relay</span> oder leer ={' '}
+            <span className="font-mono">client</span>).
+          </p>
           <RadioGroup
             className="grid gap-2"
             value={iotaSubmitMode}
@@ -635,15 +683,15 @@ export function ChatViewPulseSettings({
             disabled={busy !== null}
           >
             <div className="flex items-start gap-2">
-              <RadioGroupItem value="client" id="iota-mode-client" className="mt-0.5" aria-label="Direct default" />
+              <RadioGroupItem value="client" id="iota-mode-client" className="mt-0.5" aria-label="Direkt Standard" />
               <Label htmlFor="iota-mode-client" className="cursor-pointer text-[11px] font-normal leading-snug">
-                Direct with IOTA (default)
+                Direkt mit IOTA (Standard)
               </Label>
             </div>
             <div className="flex items-start gap-2">
-              <RadioGroupItem value="relay" id="iota-mode-relay" className="mt-0.5" aria-label="Morgendrot API only" />
+              <RadioGroupItem value="relay" id="iota-mode-relay" className="mt-0.5" aria-label="Nur Morgendrot API" />
               <Label htmlFor="iota-mode-relay" className="cursor-pointer text-[11px] font-normal leading-snug">
-                Morgendrot API only (<span className="font-mono">/api</span>)
+                Nur Morgendrot-API (<span className="font-mono">/api</span>)
               </Label>
             </div>
           </RadioGroup>
@@ -653,21 +701,25 @@ export function ChatViewPulseSettings({
         <div className="space-y-3 border-t border-border/50 pt-3">
           <div className="rounded-md border border-emerald-500/35 bg-emerald-500/10 px-3 py-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[11px] font-semibold text-foreground">Autarky mode</p>
+              <p className="text-[11px] font-semibold text-foreground">Autarkie-Modus (APK/EXE ohne Basis-Pflicht)</p>
               <Switch
                 checked={autarkyMode}
                 disabled={busy !== null}
                 onCheckedChange={toggleAutarkyMode}
-                aria-label="Autarky mode"
+                aria-label="Autarkie-Modus"
               />
             </div>
+            <p className="mt-1 text-[10px] leading-snug text-muted-foreground">
+              Setzt Direkt-Pfad, Direkt-Drain und Optimistische Flags als Autarkie-Defaults. RPC, IDs und Signer bleiben
+              bewusst unter deiner Kontrolle.
+            </p>
             <ul className="mt-2 list-inside list-disc space-y-0.5 text-[10px]">
               {autarkyChecklist.map((item) => (
                 <li
                   key={item.label}
                   className={item.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'}
                 >
-                  {item.ok ? 'PASS' : 'OPEN'} — {item.label}
+                  {item.ok ? 'PASS' : 'OFFEN'} — {item.label}
                 </li>
               ))}
             </ul>
@@ -676,7 +728,10 @@ export function ChatViewPulseSettings({
 
         <div className="space-y-3 border-t border-border/50 pt-3">
           <p className="text-[11px] font-semibold text-foreground">
-            {settingsEmbedded ? 'Mailbox & direct RPC (browser)' : 'Direct RPC (IOTA fullnode)'}
+            {settingsEmbedded ? 'Mailbox & Direkt-RPC (Browser)' : 'Direkt-RPC (IOTA Fullnode, ohne Morgendrot-API-Pflicht)'}
+          </p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Für die <strong className="text-foreground">Mailbox-Warteschlange</strong>: RPC + Session-Signer + gespeicherte Package/Mailbox/Absender. Klartext und (mit ECDH-Material) Verschlüsseltes zuerst direkt; scheitert der RPC-Versand, wird <span className="font-mono">/api</span> versucht, wenn die Basis erreichbar ist.
           </p>
           <div className="space-y-1.5">
             <Label className="text-[11px] text-muted-foreground">Fullnode-URL (https://…)</Label>
@@ -709,7 +764,7 @@ export function ChatViewPulseSettings({
                     }
                   }}
                 >
-                  URL save
+                  URL speichern
                 </Button>
                 <Button
                   type="button"
@@ -726,12 +781,12 @@ export function ChatViewPulseSettings({
                         setMsg(ok ? 'Direkt-RPC: Fullnode antwortet.' : 'Direkt-RPC: keine Antwort oder nicht konfiguriert.')
                       } catch {
                         setDirectRpcProbe('err')
-                        setMsg('Direct RPC: check failed.')
+                        setMsg('Direkt-RPC: Prüfung fehlgeschlagen.')
                       }
                     })()
                   }}
                 >
-                  Check reachability
+                  Erreichbarkeit prüfen
                 </Button>
               </div>
             </div>
@@ -740,12 +795,15 @@ export function ChatViewPulseSettings({
               {directRpcProbe === 'idle' && '—'}
               {directRpcProbe === 'checking' && '…'}
               {directRpcProbe === 'ok' && <span className="text-emerald-600 dark:text-emerald-400">OK</span>}
-              {directRpcProbe === 'err' && <span className="text-amber-700 dark:text-amber-300">Error / not configured</span>}
+              {directRpcProbe === 'err' && <span className="text-amber-700 dark:text-amber-300">Fehler / nicht konfiguriert</span>}
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-[11px] font-semibold text-foreground">Direct mailbox drain (plain)</p>
+              <p className="text-[11px] font-semibold text-foreground">Direkt-Mailbox-Drain (Klartext)</p>
+              <p className="text-[10px] text-muted-foreground">
+                Warteschlange: Klartext per IOTA-RPC + Signer; Basis darf aus sein. Flags (Mailbox-Klartext, ohne Credits) aus letztem <span className="font-mono">/api/status</span> oder localStorage.
+              </p>
             </div>
             <Switch
               checked={directDrainOn}
@@ -756,13 +814,13 @@ export function ChatViewPulseSettings({
                 refreshDirectSetupGaps()
                 setMsg(v ? 'Direkt-Mailbox-Drain an — Mnemonic + Ketten-IDs nötig.' : 'Direkt-Mailbox-Drain aus.')
               }}
-              aria-label="Direct mailbox drain"
+              aria-label="Direkt-Mailbox-Drain"
             />
           </div>
           {iotaSubmitMode !== 'relay' && directSetupGaps.length > 0 ? (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[10px] text-amber-950 dark:text-amber-100">
               <p className="font-semibold">
-                {settingsEmbedded ? 'Setup pending (direct path):' : 'Direct path — open:'}
+                {settingsEmbedded ? 'Noch einzurichten (Direkt-Pfad):' : 'Direkt-Pfad — noch offen:'}
               </p>
               <ul className="mt-1 list-inside list-disc space-y-0.5">
                 {directSetupGaps.map((g) => (
@@ -773,7 +831,7 @@ export function ChatViewPulseSettings({
           ) : null}
           <div className="grid max-w-md grid-cols-[1fr_4rem] items-end gap-2">
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">TTL (days, Move)</Label>
+              <Label className="text-[11px] text-muted-foreground">TTL (Tage, Move)</Label>
               <Input
                 className="h-9 font-mono text-xs"
                 value={ttlDaysStr}
@@ -798,11 +856,11 @@ export function ChatViewPulseSettings({
                 setMsg(`TTL ${n} Tage gespeichert.`)
               }}
             >
-              Set TTL
+              TTL setzen
             </Button>
           </div>
           <div className="space-y-2 border-t border-border/40 pt-3">
-            <p className="text-[11px] font-semibold text-foreground">Chain IDs</p>
+            <p className="text-[11px] font-semibold text-foreground">Ketten-IDs (Package, Mailbox, eigene Adresse)</p>
             {chainSnapshotLine ? (
               <p
                 className={cn(
@@ -815,6 +873,10 @@ export function ChatViewPulseSettings({
                 <strong className="font-semibold text-foreground">Snapshot:</strong> {chainSnapshotLine}
               </p>
             ) : null}
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Für Direkt-Klartext ohne dauernd erreichbare Basis: IDs manuell eintragen oder — wenn die Basis antwortet — beim Öffnen dieses Panels per{' '}
+              <span className="font-mono">/api/current-ids</span> befüllen, dann hier speichern.
+            </p>
             <div className="grid max-w-lg gap-2">
               <div className="space-y-1">
                 <Label className="text-[11px] text-muted-foreground">Package-ID</Label>
@@ -841,7 +903,7 @@ export function ChatViewPulseSettings({
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">Sender (IOTA address / object)</Label>
+                <Label className="text-[11px] text-muted-foreground">Absender (IOTA-Adresse / Objekt)</Label>
                 <Input
                   className="h-9 font-mono text-xs"
                   list="pulse-hex-chain-suggestions"
@@ -864,7 +926,11 @@ export function ChatViewPulseSettings({
                   setDirectChainOptimisticFlagsEnabled(on)
                 }}
               />
-              <span>Optimistic mailbox flags</span>
+              <span>
+                Flags für Klartext-Direktdrain <strong className="text-foreground">schätzen</strong> (Mailbox an, Klartext erlaubt,{' '}
+                <strong className="text-foreground">ohne</strong> Messenger-Credits) — aktivieren, wenn <span className="font-mono">/api/status</span> zuletzt
+                nicht verfügbar war oder die Kette anders konfiguriert ist.
+              </span>
             </label>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -887,7 +953,7 @@ export function ChatViewPulseSettings({
                   setMsg('Felder aus letztem /api/current-ids übernommen (noch nicht gespeichert).')
                 }}
               >
-                Fill fields from API
+                Felder aus API füllen
               </Button>
               <Button
                 type="button"
@@ -943,19 +1009,19 @@ export function ChatViewPulseSettings({
                   setMsg(out)
                 }}
               >
-                Save chain IDs
+                Ketten-IDs speichern
               </Button>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] text-muted-foreground">Session signer (mnemonic / secret — RAM only)</Label>
+            <Label className="text-[11px] text-muted-foreground">Session-Signer (Mnemonic / Secret — nur RAM)</Label>
             <textarea
               className="min-h-[72px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[11px] text-foreground"
               value={mnemoInput}
               onChange={(e) => setMnemoInput(e.target.value)}
               spellCheck={false}
               autoComplete="off"
-              placeholder="Not persisted — cleared when you close the page."
+              placeholder="Nicht persistieren — nach Schließen der Seite weg."
             />
             <div className="flex flex-wrap gap-2">
               <Button
@@ -994,13 +1060,13 @@ export function ChatViewPulseSettings({
             </div>
             <div className="mt-2 rounded-md border border-border/70 bg-muted/20 p-2">
               <Label className="mb-1 block text-[10px] text-muted-foreground">
-                Optional: encrypt locally (restart without backend/PC)
+                Optional: lokal verschlüsselt speichern (für Neustart ohne Basis/PC)
               </Label>
               <Input
                 type="password"
                 value={signerStorePassword}
                 onChange={(e) => setSignerStorePassword(e.target.value)}
-                placeholder="Local password (min. 8 characters)"
+                placeholder="Lokales Passwort (mind. 8 Zeichen)"
                 className="h-8 max-w-sm text-xs"
                 autoComplete="off"
               />
@@ -1021,12 +1087,12 @@ export function ChatViewPulseSettings({
                         setHasPersistedSigner(true)
                         setMsg('Session-Signer lokal verschlüsselt gespeichert.')
                       } else {
-                        setMsg(`Save failed: ${r.error}`)
+                        setMsg(`Speichern fehlgeschlagen: ${r.error}`)
                       }
                     })()
                   }}
                 >
-                  Save signer encrypted
+                  Signer verschlüsselt speichern
                 </Button>
                 <Button
                   type="button"
@@ -1043,12 +1109,12 @@ export function ChatViewPulseSettings({
                         setSessionAddr(r.address)
                         setMsg(`Signer aus lokaler Ablage geladen: ${r.address.slice(0, 10)}…`)
                       } else {
-                        setMsg(`Load failed: ${r.error}`)
+                        setMsg(`Laden fehlgeschlagen: ${r.error}`)
                       }
                     })()
                   }}
                 >
-                  Load from local storage
+                  Aus lokaler Ablage laden
                 </Button>
                 <Button
                   type="button"
@@ -1062,23 +1128,34 @@ export function ChatViewPulseSettings({
                     setMsg('Lokale Signer-Ablage gelöscht.')
                   }}
                 >
-                  Delete local storage
+                  Lokale Ablage löschen
                 </Button>
               </div>
               <p className="mt-1 text-[10px] text-muted-foreground">
-                Status: {hasPersistedSigner ? 'encrypted storage present' : 'no local storage'}
+                Status: {hasPersistedSigner ? 'verschlüsselte Ablage vorhanden' : 'keine lokale Ablage'}
               </p>
             </div>
             {sessionAddr && (
               <p className="text-[10px] font-mono text-muted-foreground">
-                Active signer: <span className="break-all text-foreground">{sessionAddr}</span>
+                Aktiver Signer: <span className="break-all text-foreground">{sessionAddr}</span>
               </p>
             )}
           </div>
           <div className="space-y-2 border-t border-border/40 pt-3">
             <p className="text-[11px] font-semibold text-foreground">
-              {settingsEmbedded ? 'Exchange partner address (QR)' : 'Peering'}
+              {settingsEmbedded ? 'Partner-Adresse austauschen (QR)' : 'Peering (§ H.15 B.2)'}
             </p>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              {settingsEmbedded
+                ? 'Wallet-Adresse (0x) und optional Verschlüsselungsschlüssel mit dem Chat-Partner tauschen — für verschlüsselten Online-Chat. Anschließend Handshake im Posteingang oder Telefonbuch, nicht LoRa/Mesh.'
+                : 'Partner-Wallet und optional ECDH-Pub austauschen; danach Handshake/Connect online.'}
+            </p>
+            {!settingsEmbedded && peeringLine ? (
+              <p className="text-[10px] text-muted-foreground leading-relaxed">{peeringLine}</p>
+            ) : null}
+            {settingsEmbedded && peeringStatusHint ? (
+              <p className="text-[10px] text-muted-foreground">{peeringStatusHint}</p>
+            ) : null}
             {peeringGaps.length > 0 ? (
               <ul className="list-inside list-disc space-y-0.5 text-[10px] text-amber-950 dark:text-amber-100">
                 {peeringGaps.map((g) => (
@@ -1102,19 +1179,23 @@ export function ChatViewPulseSettings({
               }}
             />
           </div>
-          {showExpertTools ? (
-            <Collapsible open={expertOpen} onOpenChange={setExpertOpen}>
-              <CollapsibleTrigger asChild>
-                <Button type="button" size="sm" variant="outline" className="h-8 text-xs">
-                  {expertOpen ? 'Hide expert options' : 'Show expert options'}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-3 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2.5">
+          <div className="space-y-2 border-t border-border/40 pt-3">
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Chat-ECDH-Peer-Pubs sollten normal über Handshake entstehen. Manuelle Schlüsselpflege und Funkleistung sind nur für Debug/Edge-Fälle.
+            </p>
+            {showExpertTools ? (
+              <Collapsible open={expertOpen} onOpenChange={setExpertOpen}>
+                <CollapsibleTrigger asChild>
+                  <Button type="button" size="sm" variant="outline" className="h-8 text-xs">
+                    {expertOpen ? 'Expertenoptionen ausblenden' : 'Expertenoptionen anzeigen'}
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 space-y-3 rounded-md border border-border/50 bg-muted/15 px-2.5 py-2.5">
                 <div className="space-y-2">
-                  <p className="text-[11px] font-semibold text-foreground">Chat ECDH (manual, experts)</p>
+                  <p className="text-[11px] font-semibold text-foreground">Chat-ECDH (manuell, nur Experten)</p>
                   <div className="grid max-w-lg gap-2">
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">Recipient (0x…)</Label>
+                      <Label className="text-[11px] text-muted-foreground">Empfänger (0x…)</Label>
                       <Input
                         className="h-9 font-mono text-xs"
                         list="pulse-wallet-peer-suggestions"
@@ -1131,7 +1212,7 @@ export function ChatViewPulseSettings({
                         value={ecdhPeerB64}
                         onChange={(e) => setEcdhPeerB64(e.target.value)}
                         spellCheck={false}
-                        placeholder="From handshake / node export"
+                        placeholder="Aus Handshake / Node-Export"
                       />
                     </div>
                   </div>
@@ -1151,7 +1232,7 @@ export function ChatViewPulseSettings({
                         }
                       }}
                     >
-                      Save peer pub
+                      Peer-Pub speichern
                     </Button>
                     <Button
                       type="button"
@@ -1165,10 +1246,10 @@ export function ChatViewPulseSettings({
                         setMsg('Alle gespeicherten Peer-Pubs gelöscht.')
                       }}
                     >
-                      Delete all peer pubs
+                      Alle Peer-Pubs löschen
                     </Button>
                   </div>
-                  <Label className="text-[11px] text-muted-foreground">ECDH private key (JWK JSON — RAM only)</Label>
+                  <Label className="text-[11px] text-muted-foreground">ECDH-Privatkey (JWK JSON — nur RAM)</Label>
                   <textarea
                     className="min-h-[56px] w-full max-w-lg rounded-md border border-input bg-background px-2 py-1.5 font-mono text-[10px] text-foreground"
                     value={ecdhJwkInput}
@@ -1199,7 +1280,7 @@ export function ChatViewPulseSettings({
                         })()
                       }}
                     >
-                      Apply ECDH JWK
+                      ECDH-JWK anwenden
                     </Button>
                     <Button
                       type="button"
@@ -1213,15 +1294,18 @@ export function ChatViewPulseSettings({
                         setMsg('Chat-ECDH-Privatkey gelöscht.')
                       }}
                     >
-                      Clear ECDH
+                      ECDH löschen
                     </Button>
                   </div>
                   {ecdhPrivActive && (
-                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">ECDH session active.</p>
+                    <p className="text-[10px] text-emerald-700 dark:text-emerald-400">ECDH-Session aktiv.</p>
                   )}
                 </div>
                 <div className="space-y-2 border-t border-border/40 pt-3">
-                  <p className="text-[11px] font-semibold text-foreground">LoRa TX power</p>
+                  <p className="text-[11px] font-semibold text-foreground">LoRa Sendeleistung (nur Vorbereitung)</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Wird lokal gespeichert; Firmware/Gerät kann den Wert überschreiben. Standard bleibt „Normal“.
+                  </p>
                   <Slider
                     value={[loraTier]}
                     onValueChange={onLoraTierChange}
@@ -1236,11 +1320,16 @@ export function ChatViewPulseSettings({
                     <span>Boost</span>
                   </div>
                 </div>
-              </CollapsibleContent>
-            </Collapsible>
-          ) : null}
+                </CollapsibleContent>
+              </Collapsible>
+            ) : (
+              <p className="text-[10px] text-muted-foreground">
+                Expertenoptionen sind im Messenger ausgeblendet.
+              </p>
+            )}
+          </div>
         </div>
-        </>
+          </>
         )}
 
         {msg && <p className="text-[11px] text-emerald-700 dark:text-emerald-400">{msg}</p>}
@@ -1252,6 +1341,7 @@ export function ChatViewPulseSettings({
 function CopyRow(p: {
   label: string
   value: string
+  hint: string
   copied: boolean
   onCopy: () => void
   invalid?: boolean
@@ -1263,10 +1353,11 @@ function CopyRow(p: {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[11px] font-medium text-foreground">{p.label}</p>
-          <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground">{has ? p.value : '— (not set)'}</p>
+          <p className="mt-0.5 break-all font-mono text-[10px] text-muted-foreground">{has ? p.value : '— (nicht gesetzt)'}</p>
           {p.invalid && p.invalidHint && (
             <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200/90">{p.invalidHint}</p>
           )}
+          <p className="mt-1 text-[10px] text-muted-foreground">{p.hint}</p>
         </div>
         <Button
           type="button"
@@ -1275,7 +1366,7 @@ function CopyRow(p: {
           className="h-8 w-8 shrink-0"
           disabled={!has}
           onClick={p.onCopy}
-          aria-label={`Copy ${p.label}`}
+          aria-label={`${p.label} kopieren`}
         >
           {p.copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
         </Button>

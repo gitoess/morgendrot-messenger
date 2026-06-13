@@ -27,16 +27,16 @@ function baseAttachmentBar(over: Partial<ChatViewAttachmentBarProps> = {}): Chat
 describe('ChatViewAttachmentBar (§ H.1a)', () => {
   it('zeigt Import- und Kamera-Buttons', () => {
     render(<ChatViewAttachmentBar {...baseAttachmentBar()} />)
-    expect(screen.getByRole('button', { name: /Import file/i })).toBeEnabled()
-    expect(screen.getByRole('button', { name: /From camera/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Datei importieren/i })).toBeEnabled()
+    expect(screen.getByRole('button', { name: /Von Kamera/i })).toBeEnabled()
   })
 
   it('deaktiviert Pick bei sending oder compactBusy', () => {
     const { rerender } = render(<ChatViewAttachmentBar {...baseAttachmentBar({ sending: true })} />)
-    expect(screen.getByRole('button', { name: /Import file/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Datei importieren/i })).toBeDisabled()
 
     rerender(<ChatViewAttachmentBar {...baseAttachmentBar({ compactBusy: true })} />)
-    expect(screen.getByRole('button', { name: /Preparing attachment/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Anhang wird vorbereitet/i })).toBeDisabled()
   })
 
   it('zeigt Pipeline-Hinweis mit status role', () => {
@@ -60,7 +60,7 @@ describe('ChatViewAttachmentBar (§ H.1a)', () => {
       />
     )
     expect(screen.getByText(/notiz\.txt/)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Remove attachment/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Anhang entfernen/i }))
     expect(clearCompactAttachment).toHaveBeenCalledTimes(1)
   })
 

@@ -12,22 +12,19 @@ import {
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
 import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
-import { clearTabAesKey, tabAesDecrypt, tabAesEncrypt } from '@/frontend/lib/tab-crypto-idb'
 
 let sessionSigner: Signer | null = null
 let sessionAddress: string | null = null
 const LS_DIRECT_IOTA_SIGNER_ENC = 'morgendrot.directIotaSigner.enc.v1'
-/** Legacy: Klartext-Signer in sessionStorage (wird verworfen). */
+/** Legacy: Klartext-Signer in sessionStorage (Migration → tabEnc). */
 const SS_DIRECT_IOTA_SIGNER_TAB = 'morgendrot.directIotaSigner.tab.v1'
-/** Legacy v1: Handoff-Krypto + Tab-Passwort in sessionStorage (wird verworfen). */
+/** Tab-Session: zufälliges Tab-Passwort + verschlüsselter Signer-Import. */
 const SS_DIRECT_IOTA_SIGNER_TAB_KEY = 'morgendrot.directIotaSigner.tabKey.v1'
-const SS_DIRECT_IOTA_SIGNER_TAB_ENC_V1 = 'morgendrot.directIotaSigner.tabEnc.v1'
-/** Tab-Session v2: IndexedDB-AES, nur IV+Ciphertext in sessionStorage. */
-const SS_DIRECT_IOTA_SIGNER_TAB_ENC = 'morgendrot.directIotaSigner.tabEnc.v2'
+const SS_DIRECT_IOTA_SIGNER_TAB_ENC = 'morgendrot.directIotaSigner.tabEnc.v1'
 
-type StoredDirectIotaSignerTabEncV2 = {
-  schema: 'morgendrot.directIotaSigner.tabEnc.v2'
-  ivB64: string
+type StoredDirectIotaSignerTabEncV1 = {
+  schema: 'morgendrot.directIotaSigner.tabEnc.v1'
+  crypto: HandoffCryptoMetaJson
   ciphertextB64: string
 }
 
@@ -62,22 +59,28 @@ export function clearDirectIotaSessionSignerTabSession(): void {
   try {
     window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
     window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)
-    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC_V1)
     window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC)
   } catch {
     /* ignore */
   }
-  void clearTabAesKey()
 }
 
-function discardLegacyTabSessionStorage(): void {
-  if (typeof window === 'undefined') return
+function randomTabSessionPassword(): string {
+  const u = new Uint8Array(32)
+  crypto.getRandomValues(u)
+  return bytesToB64(u)
+}
+
+function getOrCreateTabSessionPassword(): string | null {
+  if (typeof window === 'undefined') return null
   try {
-    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
-    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)
-    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC_V1)
+    const existing = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)?.trim()
+    if (existing) return existing
+    const created = randomTabSessionPassword()
+    window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY, created)
+    return created
   } catch {
-    /* ignore */
+    return null
   }
 }
 
@@ -85,17 +88,18 @@ async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw
   if (typeof window === 'undefined') return
   const raw = String(signerImportRaw || '').trim()
   if (!raw) return
-  discardLegacyTabSessionStorage()
+  const tabPassword = getOrCreateTabSessionPassword()
+  if (!tabPassword) return
   try {
     const plain = JSON.stringify({ signerImportRaw: raw })
-    const enc = await tabAesEncrypt(plain)
-    if (!enc) return
-    const payload: StoredDirectIotaSignerTabEncV2 = {
-      schema: 'morgendrot.directIotaSigner.tabEnc.v2',
-      ivB64: enc.ivB64,
-      ciphertextB64: enc.ciphertextB64,
+    const { meta, ciphertext } = await encryptHandoffEnvUtf8(plain, tabPassword)
+    const payload: StoredDirectIotaSignerTabEncV1 = {
+      schema: 'morgendrot.directIotaSigner.tabEnc.v1',
+      crypto: meta,
+      ciphertextB64: bytesToB64(ciphertext),
     }
     window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC, JSON.stringify(payload))
+    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
   } catch {
     /* ignore */
   }
@@ -105,33 +109,45 @@ function persistDirectIotaSessionSignerTabSession(signerImportRaw: string): void
   void persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw)
 }
 
-/** Sync: Legacy-Tab-Session wird verworfen. */
+/** Sync: nur Legacy-Klartext-Tab (verschlüsselte Tab-Session → async Restore). */
 export function restoreDirectIotaSessionSignerFromTabSession(): { ok: true; address: string } | { ok: false } {
   if (typeof window === 'undefined') return { ok: false }
-  discardLegacyTabSessionStorage()
-  return { ok: false }
+  try {
+    const legacy = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB)?.trim()
+    if (!legacy) return { ok: false }
+    const applied = applyDirectIotaMnemonicSession(legacy, undefined, { skipTabPersist: true })
+    if (applied.ok) void persistDirectIotaSessionSignerTabSessionEncrypted(legacy)
+    return applied.ok ? applied : { ok: false }
+  } catch {
+    return { ok: false }
+  }
 }
 
-/** Nach Reload: Tab-Session v2 (IndexedDB-AES) oder Legacy verwerfen. */
+/** Nach Reload: verschlüsselte Tab-Session oder Legacy-Migration. */
 export async function restoreDirectIotaSessionSignerFromTabSessionAsync(): Promise<
   { ok: true; address: string } | { ok: false }
 > {
   if (typeof window === 'undefined') return { ok: false }
-  discardLegacyTabSessionStorage()
   try {
     const encRaw = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC)?.trim()
-    if (!encRaw) return { ok: false }
-    const payload = JSON.parse(encRaw) as Partial<StoredDirectIotaSignerTabEncV2>
-    if (payload.schema !== 'morgendrot.directIotaSigner.tabEnc.v2' || !payload.ivB64 || !payload.ciphertextB64) {
-      return { ok: false }
+    const tabPassword = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)?.trim()
+    if (encRaw && tabPassword) {
+      const payload = JSON.parse(encRaw) as Partial<StoredDirectIotaSignerTabEncV1>
+      if (
+        payload.schema === 'morgendrot.directIotaSigner.tabEnc.v1' &&
+        payload.crypto &&
+        payload.ciphertextB64
+      ) {
+        const dec = await decryptHandoffEnvUtf8(payload.crypto, b64ToBytes(payload.ciphertextB64), tabPassword)
+        if (!dec.ok) return { ok: false }
+        const j = JSON.parse(dec.envText) as { signerImportRaw?: unknown }
+        const signerImportRaw = typeof j.signerImportRaw === 'string' ? j.signerImportRaw : ''
+        if (!signerImportRaw.trim()) return { ok: false }
+        const applied = applyDirectIotaMnemonicSession(signerImportRaw, undefined, { skipTabPersist: true })
+        return applied.ok ? applied : { ok: false }
+      }
     }
-    const plain = await tabAesDecrypt(payload.ivB64, payload.ciphertextB64)
-    if (!plain) return { ok: false }
-    const j = JSON.parse(plain) as { signerImportRaw?: unknown }
-    const signerImportRaw = typeof j.signerImportRaw === 'string' ? j.signerImportRaw : ''
-    if (!signerImportRaw.trim()) return { ok: false }
-    const applied = applyDirectIotaMnemonicSession(signerImportRaw, undefined, { skipTabPersist: true })
-    return applied.ok ? applied : { ok: false }
+    return restoreDirectIotaSessionSignerFromTabSession()
   } catch {
     return { ok: false }
   }

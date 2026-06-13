@@ -23,7 +23,6 @@ import {
 } from '@/frontend/lib/handoff-local-apply'
 import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { applyMessengerGroupHandoffFromEnv } from '@/frontend/lib/messenger-group-handoff'
-import { persistApiAuthTokenFromHandoffEnv } from '@/frontend/lib/api-auth-header'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 
 const LS_FLAGS = 'morgendrot.directChain.flagsJson'
@@ -189,7 +188,6 @@ export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppli
   }
   const env = parseEnv(envText)
   saveHandoffEnvBackup(envText)
-  persistApiAuthTokenFromHandoffEnv(envText)
   const snapshot = buildLocalHandoffAppliedSnapshot(envText)
   saveLocalHandoffAppliedSnapshot(snapshot)
 

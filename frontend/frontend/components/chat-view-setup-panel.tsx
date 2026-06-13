@@ -60,23 +60,23 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
 
   return (
     <div id="chat-partner-setup-panel" className="rounded-xl border border-border bg-card p-4 scroll-mt-4">
-      <h3 className="mb-4 text-lg font-semibold text-foreground">Radio & devices</h3>
+      <h3 className="mb-4 text-lg font-semibold text-foreground">Funk & Geräte</h3>
 
       {showLora ? (
         <div className="flex flex-wrap items-center gap-2">
           {!meshtastic.bleSupported && !meshtastic.serialSupported ? (
             <span className="text-xs text-amber-600 dark:text-amber-400">
-              Web Bluetooth/Serial not available (browser/OS).
+              Web Bluetooth/Serial nicht verfügbar (Browser/OS).
             </span>
           ) : meshtastic.connected ? (
             <>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic connected</span>
+              <span className="text-xs text-emerald-600 dark:text-emerald-400">Meshtastic verbunden</span>
               <button
                 type="button"
                 onClick={() => meshtastic.disconnect()}
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent"
               >
-                Disconnect
+                Trennen
               </button>
               <a
                 href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
@@ -84,7 +84,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 rel="noopener noreferrer"
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
               >
-                Set up Meshtastic
+                Meshtastic einrichten
               </a>
             </>
           ) : (
@@ -96,8 +96,8 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 className="rounded-lg bg-muted px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
                 {meshtastic.connecting && meshtastic.transportKind === 'bluetooth'
-                  ? 'Connecting…'
-                  : 'Connect Bluetooth'}
+                  ? 'Verbinde…'
+                  : 'Bluetooth verbinden'}
               </button>
               <button
                 type="button"
@@ -106,8 +106,8 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
                 {meshtastic.connecting && meshtastic.transportKind === 'usb'
-                  ? 'Connecting USB…'
-                  : 'Connect USB'}
+                  ? 'USB verbindet…'
+                  : 'USB verbinden'}
               </button>
               <a
                 href={MESHTASTIC_WEB_DEVICE_SETTINGS_URL}
@@ -115,7 +115,7 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 rel="noopener noreferrer"
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent"
               >
-                Set up Meshtastic
+                Meshtastic einrichten
               </a>
             </>
           )}
@@ -133,18 +133,22 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
           aria-labelledby="setup-adhoc-ble"
         >
           <h4 id="setup-adhoc-ble" className="mb-2 text-sm font-semibold text-foreground">
-            Ad-hoc · BLE device (planned)
+            Ad-hoc · BLE-Gerät (geplant)
           </h4>
+          <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">
+            Vorbereitung für Smartphone-zu-Smartphone-BLE <strong className="text-foreground">ohne</strong> Heltec/Web-BT.
+            <strong className="text-foreground"> BLE-Geräte-UUID</strong> gehört hierher — nicht zum LoRa-Heltec-Pfad.
+          </p>
           <div className="space-y-2 rounded-lg border border-border bg-muted/20 p-3">
-            <label className="text-xs font-medium text-foreground">Optional IOTA/label address (0x)</label>
+            <label className="text-xs font-medium text-foreground">Optionale IOTA-/Label-Adresse (0x)</label>
             <input
               type="text"
               value={contactBleAddress}
               onChange={(e) => onContactBleAddressChange(e.target.value.trim())}
-              placeholder="0x… (64 hex) — context / future routing"
+              placeholder="0x… (64 Hex) — Kontext / späteres Routing"
               className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
             />
-            <label className="text-xs font-medium text-foreground">BLE device UUID</label>
+            <label className="text-xs font-medium text-foreground">BLE-Geräte-UUID</label>
             <input
               type="text"
               value={contactBleUuid}
@@ -165,12 +169,12 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 const addr = contactBleAddress.trim()
                 const uuid = contactBleUuid.trim()
                 if (addr.length < 66) {
-                  setMeshSyncMsg('Enter a valid 0x address (64 hex).')
+                  setMeshSyncMsg('Gültige 0x-Adresse (64 Hex) eintragen.')
                   setContactBleBusy(false)
                   return
                 }
                 if (uuid.length < 8) {
-                  setMeshSyncMsg('Enter a BLE device UUID.')
+                  setMeshSyncMsg('BLE-Geräte-UUID eintragen.')
                   setContactBleBusy(false)
                   return
                 }
@@ -180,15 +184,15 @@ export function ChatViewSetupPanel(p: ChatViewSetupPanelProps) {
                 })
                 setContactBleBusy(false)
                 if (r.ok) {
-                  setMeshSyncMsg(r.message || 'Ad-hoc/BLE contact saved.')
+                  setMeshSyncMsg(r.message || 'Ad-hoc/BLE-Kontakt gespeichert.')
                   refreshContactDirectory()
                 } else {
-                  setMeshSyncMsg(r.error || 'Save failed')
+                  setMeshSyncMsg(r.error || 'Speichern fehlgeschlagen')
                 }
               }}
               className="w-full rounded-lg border border-border py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
-              {contactBleBusy ? 'Saving…' : 'Save ad-hoc contact (0x + BLE UUID)'}
+              {contactBleBusy ? 'Speichere…' : 'Ad-hoc-Kontakt speichern (0x + BLE-UUID)'}
             </button>
           </div>
         </section>

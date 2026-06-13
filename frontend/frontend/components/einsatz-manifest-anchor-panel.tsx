@@ -119,32 +119,32 @@ export function EinsatzManifestAnchorPanel(p: {
         const pkg = mainnetPkgDraft.trim()
         const rpc = mainnetRpcDraft.trim()
         if (pkg && !/^0x[a-fA-F0-9]{64}$/i.test(pkg)) {
-            setStatus('Mainnet package: 0x + 64 hex characters.')
+            setStatus('Mainnet-Package: 0x + 64 Hex-Zeichen.')
             return
         }
         if (rpc && !rpc.startsWith('http://') && !rpc.startsWith('https://')) {
-            setStatus('Mainnet RPC: valid https:// URL.')
+            setStatus('Mainnet-RPC: gültige https://-URL.')
             return
         }
         setBusy(true)
         try {
             writeBossMainnetPackageOverride(pkg)
             writeBossMainnetRpcOverride(rpc)
-            let note = 'Mainnet settings saved on this device.'
+            let note = 'Mainnet-Einstellungen auf diesem Gerät gespeichert.'
             if (p.apiStatus?.backendOnline) {
                 if (pkg) {
                     const r = await setConfig('MAINNET_PACKAGE_ID', pkg)
-                    if (!r.ok) note += ` Package (boss): ${r.error || 'error'}.`
+                    if (!r.ok) note += ` Package (Boss): ${r.error || 'Fehler'}.`
                 }
                 if (rpc) {
                     const r = await setConfig('MAINNET_RPC_URL', rpc)
-                    if (!r.ok) note += ` RPC (boss): ${r.error || 'error'}.`
+                    if (!r.ok) note += ` RPC (Boss): ${r.error || 'Fehler'}.`
                 } else {
-                    note += ' Boss RPC unchanged.'
+                    note += ' Boss-RPC unverändert.'
                 }
                 await p.onRefreshStatus?.()
             } else {
-                note += ' Boss PC offline — local only; save on boss again at next sync.'
+                note += ' Boss-PC offline — nur lokal; beim nächsten Sync Boss erneut speichern.'
             }
             setStatus(note)
         } finally {
@@ -161,17 +161,17 @@ export function EinsatzManifestAnchorPanel(p: {
             sortedEntryHashesHex: entryHashes,
             merkleRootHex: manifest.merkle_root,
         })
-        if (!merkleSample.ok) return `Invalid Merkle tree: ${merkleSample.error}`
+        if (!merkleSample.ok) return `Merkle ungültig: ${merkleSample.error}`
 
         const inbox = await fetchInboxFromAllOwnedMailboxes({
             limit: 500,
             offset: 0,
             includePrivateMailboxes: true,
         })
-        if (!inbox.ok) return `Could not load inbox: ${inbox.error || 'error'}`
+        if (!inbox.ok) return `Posteingang nicht geladen: ${inbox.error || 'Fehler'}`
 
         const match = await matchEinsatzManifestAgainstInbox(manifest, inbox.messages)
-        if (!match.ok) return `Match failed: ${match.error}`
+        if (!match.ok) return `Abgleich fehlgeschlagen: ${match.error}`
 
         if (registryId) {
             const onMainnet = await verifyEinsatzManifestOnMainnetRegistry({
@@ -179,11 +179,11 @@ export function EinsatzManifestAnchorPanel(p: {
                 apiStatus: p.apiStatus,
             })
             if (onMainnet.ok) {
-                return `${match.matchedCount} messages match — mainnet anchor seq. ${onMainnet.row.sequence} confirmed.`
+                return `${match.matchedCount} Nachrichten stimmen überein — Mainnet-Anker Seq. ${onMainnet.row.sequence} bestätigt.`
             }
-            return `${match.matchedCount} messages match — mainnet: ${onMainnet.error}`
+            return `${match.matchedCount} Nachrichten stimmen überein — Mainnet: ${onMainnet.error}`
         }
-        return `${match.matchedCount} messages match the inbox.`
+        return `${match.matchedCount} Nachrichten stimmen mit dem Posteingang überein.`
     }
 
     const buildManifest = async () => {
@@ -207,7 +207,7 @@ export function EinsatzManifestAnchorPanel(p: {
             const verifyNote = await verifyManifest(manifest)
             setStatus(
                 verifyNote ??
-                    `${manifest.entries.length} messages (${withDigest} with chain reference) — ${estimateEinsatzManifestAnchorCostHint(manifest.entries.length)}`
+                    `${manifest.entries.length} Nachrichten (${withDigest} mit Chain-Bezug) — ${estimateEinsatzManifestAnchorCostHint(manifest.entries.length)}`
             )
         } finally {
             setBusy(false)
@@ -219,7 +219,7 @@ export function EinsatzManifestAnchorPanel(p: {
         downloadEinsatzManifestJson(preview)
         writeEinsatzManifestLastAnchoredSequence(preview.sequence)
         writeAnchoredManifestFromV1(preview)
-        setStatus('JSON file saved.')
+        setStatus('JSON-Datei gespeichert.')
     }
 
     const onImportFile = async (file: File | null) => {
@@ -237,7 +237,7 @@ export function EinsatzManifestAnchorPanel(p: {
             setPreview(null)
             writeAnchoredManifestFromV1(parsed)
             const verifyNote = await verifyManifest(parsed)
-            setStatus(verifyNote ?? `Import: ${parsed.entries.length} entries loaded.`)
+            setStatus(verifyNote ?? `Import: ${parsed.entries.length} Einträge geladen.`)
         } finally {
             setBusy(false)
         }
@@ -245,7 +245,7 @@ export function EinsatzManifestAnchorPanel(p: {
 
     const onCreateRegistry = async () => {
         if (!pkgForRegistry) {
-            setStatus('Mainnet package missing — boss .env or deploy docs.')
+            setStatus('Mainnet-Package fehlt — Boss-.env oder Deploy-Doku.')
             return
         }
         setBusy(true)
@@ -262,7 +262,7 @@ export function EinsatzManifestAnchorPanel(p: {
             const cfg = await setConfig('EINSATZ_MANIFEST_REGISTRY_ID', out.registryId)
             if (!cfg.ok) {
                 setStatus(
-                    `Registry created (${out.registryId.slice(0, 12)}…) — .env not written: ${cfg.error || 'API error'}.`
+                    `Registry angelegt (${out.registryId.slice(0, 12)}…) — .env nicht geschrieben: ${cfg.error || 'API-Fehler'}.`
                 )
                 setRegistryOverride(out.registryId)
                 return
@@ -274,8 +274,8 @@ export function EinsatzManifestAnchorPanel(p: {
             await p.onRefreshStatus?.()
             setStatus(
                 out.digest
-                    ? `Mainnet registry ready — TX ${shortTxDigestLabel(out.digest)}`
-                    : 'Mainnet registry ready — now build summary and save.'
+                    ? `Mainnet-Registry bereit — TX ${shortTxDigestLabel(out.digest)}`
+                    : 'Mainnet-Registry bereit — jetzt Zusammenfassung bauen und speichern.'
             )
         } finally {
             setBusy(false)
@@ -295,8 +295,8 @@ export function EinsatzManifestAnchorPanel(p: {
             setAnchorList(out.rows)
             setOnChainProbe(
                 out.rows.length
-                    ? `${out.rows.length} stored proofs on mainnet.`
-                    : 'No proofs on mainnet yet for this deployment.'
+                    ? `${out.rows.length} gespeicherte Beweise auf Mainnet.`
+                    : 'Noch keine Beweise auf Mainnet für diesen Einsatz.'
             )
         } finally {
             setBusy(false)
@@ -306,7 +306,7 @@ export function EinsatzManifestAnchorPanel(p: {
     const onProbeOnChain = async () => {
         const seq = activeManifest?.sequence ?? lastAnchorMeta?.sequence ?? lastSeq
         if (!seq || seq < 1) {
-            setOnChainProbe('No sequence — build summary first.')
+            setOnChainProbe('Keine Sequenz — zuerst Zusammenfassung bauen.')
             return
         }
         setBusy(true)
@@ -322,8 +322,8 @@ export function EinsatzManifestAnchorPanel(p: {
             }
             setOnChainProbe(
                 out.exists
-                    ? `Sequence ${out.sequence} is stored on mainnet.`
-                    : `Sequence ${out.sequence} not found on mainnet.`
+                    ? `Sequenz ${out.sequence} ist auf Mainnet gespeichert.`
+                    : `Sequenz ${out.sequence} auf Mainnet nicht gefunden.`
             )
         } finally {
             setBusy(false)
@@ -341,7 +341,7 @@ export function EinsatzManifestAnchorPanel(p: {
                     ? mainnetPackageId
                     : activeManifest.source_package_id.trim()
             if (!pkgForAnchor) {
-                setStatus('Mainnet package missing — set boss .env.')
+                setStatus('Mainnet-Package fehlt — Boss-.env setzen.')
                 return
             }
             const out = await tryAnchorEinsatzManifestViaDirectIota({
@@ -359,8 +359,8 @@ export function EinsatzManifestAnchorPanel(p: {
             if (out.digest) setLastAnchorDigest(out.digest)
             setStatus(
                 out.digest
-                    ? `Saved on mainnet — ${shortTxDigestLabel(out.digest)}`
-                    : 'Saved on mainnet.'
+                    ? `Auf Mainnet gespeichert — ${shortTxDigestLabel(out.digest)}`
+                    : 'Auf Mainnet gespeichert.'
             )
         } finally {
             setBusy(false)
@@ -376,36 +376,36 @@ export function EinsatzManifestAnchorPanel(p: {
                     <Anchor className="h-5 w-5" aria-hidden />
                 </div>
                 <div className="min-w-0 space-y-2">
-                    <h4 className="font-semibold text-foreground">Short proof (mainnet)</h4>
+                    <h4 className="font-semibold text-foreground">Kurz-Beweis (Mainnet)</h4>
                     <p className="text-sm text-muted-foreground">
-                        Creates a <strong className="font-medium text-foreground">summary</strong> of all messages
-                        (hashes + Merkle tree) — <em>without</em> full text on-chain. {banner.title}. Last sequence:{' '}
-                        {lastSeq}.
+                        Erstellt eine <strong className="font-medium text-foreground">Zusammenfassung</strong> aller
+                        Nachrichten (Hashes + Merkle-Baum) — <em>ohne</em> vollen Text on-chain. {banner.title}. Letzte
+                        Sequenz: {lastSeq}.
                     </p>
                     {chainMode === 'testnet-with-mainnet-anchor' ? (
                         <p className="text-xs text-amber-800 dark:text-amber-200">
-                            You send on <strong>testnet</strong> — no extra login needed. Mainnet steps here only store
-                            the proof hash; the Pulse wallet needs <strong>IOTA gas on mainnet</strong> (not testnet
-                            balance).
+                            Ihr sendet auf <strong>Testnet</strong> — kein extra Login nötig. Mainnet-Schritte hier
+                            speichern nur den Beweis-Hash; dafür braucht die Puls-Wallet{' '}
+                            <strong>IOTA-Gas auf Mainnet</strong> (nicht Testnet-Guthaben).
                         </p>
                     ) : null}
                     <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
                         <li>
-                            <strong className="font-medium text-foreground">Wallet</strong> — Settings → System
-                            &amp; Identity → &quot;Mailbox · Direct RPC · Streams Pulse&quot; → session signer (mnemonic).
-                            &quot;Pulse&quot; is an optional live monitor to the basis server, not the wallet itself.
+                            <strong className="font-medium text-foreground">Wallet</strong> — Einstellungen → System
+                            &amp; Identität → „Mailbox · Direkt-RPC · Streams-Puls“ → Session-Signer (Mnemonic). Name
+                            „Puls“ = optionaler Live-Monitor zur Basis, nicht die Wallet selbst.
                         </li>
                         <li>
-                            <strong className="font-medium text-foreground">Registry</strong> — one-time mainnet account
-                            for fingerprints.{registryId ? ' Ready.' : ' Not set up yet.'}
+                            <strong className="font-medium text-foreground">Registry</strong> — einmaliges Mainnet-Konto
+                            für Fingerabdrücke.{registryId ? ' Bereit.' : ' Noch nicht eingerichtet.'}
                         </li>
                         <li>
-                            <strong className="font-medium text-foreground">Build summary</strong> — reads the inbox and
-                            checks integrity.
+                            <strong className="font-medium text-foreground">Zusammenfassung bauen</strong> — liest den
+                            Posteingang und prüft die Integrität.
                         </li>
                         <li>
-                            <strong className="font-medium text-foreground">Save on mainnet</strong> — writes only the hash
-                            (low gas, session signer).
+                            <strong className="font-medium text-foreground">Auf Mainnet speichern</strong> — schreibt nur
+                            den Hash (wenig Gas, Session-Signer).
                         </li>
                     </ul>
                 </div>
@@ -417,25 +417,25 @@ export function EinsatzManifestAnchorPanel(p: {
                         className={cn('h-3.5 w-3.5 transition-transform', mainnetCfgOpen && 'rotate-180')}
                         aria-hidden
                     />
-                    Mainnet settings (package + RPC)
+                    Mainnet-Einstellungen (Package + RPC)
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-2 space-y-2">
                     <p className="text-xs text-muted-foreground">
-                        For registry and short proof on mainnet — set here in the messenger (saved locally; also written to
-                        boss .env when the boss PC is reachable).
+                        Für Registry und Kurz-Beweis auf Mainnet — hier im Messenger setzen (speichert lokal; bei
+                        erreichbarem Boss-PC auch in dessen .env).
                     </p>
                     <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Mainnet package ID (0x…)</Label>
+                        <Label className="text-xs text-muted-foreground">Mainnet-Package-ID (0x…)</Label>
                         <Input
                             className="h-8 font-mono text-xs"
                             value={mainnetPkgDraft}
                             onChange={(e) => setMainnetPkgDraft(e.target.value)}
-                            placeholder="0x…64 hex — Move deployed on mainnet"
+                            placeholder="0x…64 hex — Move auf Mainnet deployed"
                             spellCheck={false}
                         />
                     </div>
                     <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Mainnet RPC (optional)</Label>
+                        <Label className="text-xs text-muted-foreground">Mainnet-RPC (optional)</Label>
                         <Input
                             className="h-8 font-mono text-xs"
                             value={mainnetRpcDraft}
@@ -445,7 +445,7 @@ export function EinsatzManifestAnchorPanel(p: {
                         />
                     </div>
                     <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void saveMainnetConfig()}>
-                        Save
+                        Speichern
                     </Button>
                 </CollapsibleContent>
             </Collapsible>
@@ -460,7 +460,7 @@ export function EinsatzManifestAnchorPanel(p: {
                             disabled={!canCreateRegistry || busy}
                             onClick={() => void onCreateRegistry()}
                         >
-                            Prepare mainnet
+                            Mainnet vorbereiten
                         </Button>
                         {registryBlockReason ? (
                             <p className="w-full text-xs text-amber-800 dark:text-amber-200">{registryBlockReason}</p>
@@ -468,7 +468,7 @@ export function EinsatzManifestAnchorPanel(p: {
                     </>
                 ) : null}
                 <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => void buildManifest()}>
-                    {busy ? 'Collecting…' : 'Build summary'}
+                    {busy ? 'Sammle…' : 'Zusammenfassung bauen'}
                 </Button>
                 <Button
                     type="button"
@@ -477,7 +477,7 @@ export function EinsatzManifestAnchorPanel(p: {
                     disabled={!activeManifest || !canAnchor || busy}
                     onClick={() => void onAnchor()}
                 >
-                    Save on mainnet
+                    Auf Mainnet speichern
                 </Button>
             </div>
 
@@ -491,19 +491,19 @@ export function EinsatzManifestAnchorPanel(p: {
                         rel="noopener noreferrer"
                         className="font-medium text-primary underline-offset-2 hover:underline"
                     >
-                        Last mainnet entry:{' '}
+                        Letzter Mainnet-Eintrag:{' '}
                         {shortTxDigestLabel(lastAnchorDigest || lastAnchorMeta!.digest!)}
                     </a>
                 </p>
             ) : null}
             {chainMode === 'testnet-with-mainnet-anchor' && activeManifest ? (
                 <p className="text-xs text-amber-800 dark:text-amber-200">
-                    Messages are on testnet — only the hash is stored on mainnet.
+                    Nachrichten liegen auf Testnet — auf Mainnet wird nur der Hash gespeichert.
                 </p>
             ) : null}
             {activeManifest ? (
                 <p className="text-xs font-mono text-muted-foreground">
-                    Seq. {activeManifest.sequence} · {activeManifest.entries.length} messages · hash{' '}
+                    Seq. {activeManifest.sequence} · {activeManifest.entries.length} Nachrichten · Hash{' '}
                     {activeManifest.manifest_hash.slice(0, 12)}…
                 </p>
             ) : null}
@@ -511,12 +511,12 @@ export function EinsatzManifestAnchorPanel(p: {
             <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
                 <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
                     <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', moreOpen && 'rotate-180')} aria-hidden />
-                    More (JSON, chain query)
+                    Mehr (JSON, Chain-Abfrage)
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-2 space-y-2">
                     <div className="flex flex-wrap gap-2">
                         <Button type="button" variant="outline" size="sm" disabled={!preview} onClick={onDownload}>
-                            Export JSON
+                            JSON exportieren
                         </Button>
                         <Button
                             type="button"
@@ -525,7 +525,7 @@ export function EinsatzManifestAnchorPanel(p: {
                             disabled={busy}
                             onClick={() => fileRef.current?.click()}
                         >
-                            Import JSON
+                            JSON importieren
                         </Button>
                         <Button
                             type="button"
@@ -534,7 +534,7 @@ export function EinsatzManifestAnchorPanel(p: {
                             disabled={!registryId || busy}
                             onClick={() => void onListMainnetAnchors()}
                         >
-                            Show mainnet entries
+                            Mainnet-Einträge anzeigen
                         </Button>
                         <Button
                             type="button"
@@ -543,14 +543,14 @@ export function EinsatzManifestAnchorPanel(p: {
                             disabled={!registryId || busy}
                             onClick={() => void onProbeOnChain()}
                         >
-                            Check sequence on mainnet
+                            Sequenz auf Mainnet prüfen
                         </Button>
                     </div>
                     {anchorList.length > 0 ? (
                         <ul className="max-h-28 overflow-auto rounded border border-border bg-muted/30 p-2 text-[10px] font-mono space-y-1">
                             {anchorList.map((row) => (
                                 <li key={`${row.sequence}-${row.anchorObjectId ?? row.manifestHashHex}`}>
-                                    Seq. {row.sequence} — {row.messageCount ?? '?'} messages
+                                    Seq. {row.sequence} — {row.messageCount ?? '?'} Nachrichten
                                     {row.manifestHashHex ? ` — ${row.manifestHashHex.slice(0, 12)}…` : null}
                                 </li>
                             ))}

@@ -36,7 +36,7 @@ export type UseChatViewEinsatzExportsParams = {
 export function confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn: boolean): boolean {
   if (!deviceTimeTrustWarn || typeof window === 'undefined') return true
   return window.confirm(
-    'Note: Device clock is not verified against basis (HTTP date) or GPS. Timestamps in the export may be unreliable for analysis or attestation.\n\nExport anyway?'
+    'Hinweis: Die Geräte-Uhr ist nicht gegen Basis (HTTP-Datum) oder GPS abgesichert. Zeitstempel im Export können für Auswertung oder Attestation unzuverlässig sein.\n\nTrotzdem exportieren?'
   )
 }
 
@@ -74,23 +74,23 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     try {
-      setStatusMsg('Loading full inbox for export…')
+      setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
       downloadEinsatzberichtJson(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Message history (JSON) – ${full.length} message(s), all fields.`)
+      setStatusMsg(`Nachrichtenverlauf (JSON) – ${full.length} Nachricht(en), alle Felder.`)
       setTimeout(() => setStatus('idle'), 5000)
     } catch (e) {
       setStatus('error')
@@ -103,23 +103,23 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     try {
-      setStatusMsg('Loading full inbox for export…')
+      setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
       downloadEinsatzberichtSummaryTxt(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Message history (text) – ${full.length} message(s), ~200 character preview each.`)
+      setStatusMsg(`Nachrichtenverlauf (Text) – ${full.length} Nachricht(en), je ~200 Zeichen Vorschau.`)
       setTimeout(() => setStatus('idle'), 5000)
     } catch (e) {
       setStatus('error')
@@ -132,23 +132,23 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     try {
-      setStatusMsg('Loading full inbox for export…')
+      setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
       downloadEinsatzberichtFullTxt(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Message history (full TXT) – ${full.length} message(s), uncut.`)
+      setStatusMsg(`Nachrichtenverlauf (TXT vollständig) – ${full.length} Nachricht(en), ungekürzt.`)
       setTimeout(() => setStatus('idle'), 5000)
     } catch (e) {
       setStatus('error')
@@ -161,38 +161,38 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
     const raw = window.prompt(
-      'Optional: only these message IDs (comma-separated). Empty = full history:'
+      'Optional: nur diese Nachrichten-IDs (kommagetrennt). Leer = gesamter Verlauf:'
     )
     if (raw === null) return
     const messageIds = parseOptionalMessageIdsFromPrompt(raw)
-    const p1 = window.prompt('Password for protocol ZIP (min. 8 characters):')
+    const p1 = window.prompt('Passwort für das Protokoll-ZIP (mind. 8 Zeichen):')
     if (p1 == null) return
     if (p1.length < 8) {
       setStatus('error')
-      setStatusMsg('Password too short (at least 8 characters).')
+      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
-    const p2 = window.prompt('Repeat password:')
+    const p2 = window.prompt('Passwort wiederholen:')
     if (p1 !== p2) {
       setStatus('error')
-      setStatusMsg('Passwords do not match.')
+      setStatusMsg('Passwörter stimmen nicht überein.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     try {
-      setStatusMsg('Loading full inbox for ZIP…')
+      setStatusMsg('Lade vollständigen Posteingang für ZIP…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
@@ -201,7 +201,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       })
       setStatus('success')
       setStatusMsg(
-        `Operation report (${full.length} messages): *.zip.enc.json saved. Password set at export; open via /einsatzbericht-decrypt.html.`
+        `Einsatzbericht (${full.length} Nachrichten): *.zip.enc.json gespeichert. Passwort beim Export vergeben; zum Öffnen /einsatzbericht-decrypt.html.`
       )
       setTimeout(() => setStatus('idle'), 9000)
     } catch (e) {
@@ -215,7 +215,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
@@ -223,23 +223,23 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (typeof window === 'undefined') return
     if (
       !window.confirm(
-        'Download unencrypted ZIP? Save only on trusted devices (no password).'
+        'Unverschlüsseltes ZIP herunterladen? Nur auf vertrauenswürdigen Geräten speichern (kein Passwort).'
       )
     ) {
       return
     }
     try {
-      setStatusMsg('Loading full inbox for ZIP…')
+      setStatusMsg('Lade vollständigen Posteingang für ZIP…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
       downloadEinsatzprotokollZipPlain(full, { exportedByAddress: myAddress })
       setStatus('success')
-      setStatusMsg(`Operation report as ZIP (${full.length} messages) – directly unpackable.`)
+      setStatusMsg(`Einsatzbericht als ZIP (${full.length} Nachrichten) – direkt entpackbar.`)
       setTimeout(() => setStatus('idle'), 7000)
     } catch (e) {
       setStatus('error')
@@ -252,35 +252,35 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (protokollMarkedIds.size === 0) {
       setStatus('error')
-      setStatusMsg('No marked messages (star in row).')
+      setStatusMsg('Keine markierten Nachrichten (Stern in der Zeile).')
       setTimeout(() => setStatus('idle'), 6000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
-    const p1 = window.prompt('Password for protocol ZIP (min. 8 characters):')
+    const p1 = window.prompt('Passwort für das Protokoll-ZIP (mind. 8 Zeichen):')
     if (p1 == null) return
     if (p1.length < 8) {
       setStatus('error')
-      setStatusMsg('Password too short (at least 8 characters).')
+      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
-    const p2 = window.prompt('Repeat password:')
+    const p2 = window.prompt('Passwort wiederholen:')
     if (p1 !== p2) {
       setStatus('error')
-      setStatusMsg('Passwords do not match.')
+      setStatusMsg('Passwörter stimmen nicht überein.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     try {
-      setStatusMsg('Loading inbox for export…')
+      setStatusMsg('Lade Posteingang für Export…')
       const full = await messagesForExport()
       const ids = [...protokollMarkedIds]
       const marked = full.filter((m) => ids.includes(m.id))
       if (marked.length === 0) {
         setStatus('error')
-        setStatusMsg('None of the marked IDs found in full history (stale marking?).')
+        setStatusMsg('Keine der markierten IDs im vollständigen Verlauf gefunden (veraltete Markierung?).')
         setTimeout(() => setStatus('idle'), 7000)
         return
       }
@@ -292,7 +292,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       )
       setStatus('success')
       setStatusMsg(
-        `File *.zip.enc.json (${marked.length} marked of ${full.length} loaded). Decrypt via /einsatzbericht-decrypt.html.`
+        `Datei *.zip.enc.json (${marked.length} markierte von ${full.length} geladen). Entschlüsseln über /einsatzbericht-decrypt.html.`
       )
       setTimeout(() => setStatus('idle'), 9000)
     } catch (e) {
@@ -306,33 +306,33 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
     if (!guardExport()) return
     if (messagesLength === 0) {
       setStatus('error')
-      setStatusMsg('No messages in inbox.')
+      setStatusMsg('Keine Nachrichten im Posteingang.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     if (!confirmForensicExportIfDeviceTimeUntrusted(deviceTimeTrustWarn)) return
     if (typeof window === 'undefined') return
-    const p1 = window.prompt('Password for encrypted operation report (min. 8 characters):')
+    const p1 = window.prompt('Passwort für verschlüsselten Einsatzbericht (mind. 8 Zeichen):')
     if (p1 == null) return
     if (p1.length < 8) {
       setStatus('error')
-      setStatusMsg('Password too short (at least 8 characters).')
+      setStatusMsg('Passwort zu kurz (mindestens 8 Zeichen).')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
-    const p2 = window.prompt('Repeat password:')
+    const p2 = window.prompt('Passwort wiederholen:')
     if (p1 !== p2) {
       setStatus('error')
-      setStatusMsg('Passwords do not match.')
+      setStatusMsg('Passwörter stimmen nicht überein.')
       setTimeout(() => setStatus('idle'), 5000)
       return
     }
     try {
-      setStatusMsg('Loading full inbox for export…')
+      setStatusMsg('Lade vollständigen Posteingang für Export…')
       const full = await messagesForExport()
       if (full.length === 0) {
         setStatus('error')
-        setStatusMsg('No messages from the API.')
+        setStatusMsg('Keine Nachrichten von der API.')
         setTimeout(() => setStatus('idle'), 5000)
         return
       }
@@ -341,7 +341,7 @@ export function useChatViewEinsatzExports(p: UseChatViewEinsatzExportsParams) {
       downloadEinsatzberichtEncryptedJson(enc)
       setStatus('success')
       setStatusMsg(
-        `Encrypted full report (${full.length} messages, complete content). Open: /einsatzbericht-decrypt.html + password.`
+        `Verschlüsselter Vollbericht (${full.length} Nachrichten, kompletter Inhalt). Öffnen: /einsatzbericht-decrypt.html + Passwort.`
       )
       setTimeout(() => setStatus('idle'), 7000)
     } catch (e) {

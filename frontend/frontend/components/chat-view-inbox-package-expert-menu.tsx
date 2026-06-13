@@ -86,13 +86,19 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           Move-Package (Smart Contract)
         </DropdownMenuLabel>
+        <p className="px-2 pb-2 text-[10px] leading-snug text-muted-foreground">
+          Normalerweise leer lassen — dann lädt der Posteingang <strong>alle</strong> bekannten Package-IDs vom
+          Server (aktuell + Verlauf). Nur zum gezielten Nachschlagen einer alten ID temporär wählen.
+        </p>
         {canonical ? (
           <p className="px-2 pb-1 font-mono text-[10px] text-foreground/90" title={canonical}>
             Basis: {maskPackageIdForUi(canonical)}
           </p>
         ) : null}
         {tempActive ? (
-          <p className="px-2 pb-2 text-[10px] text-amber-800 dark:text-amber-200">Only one package ID active</p>
+          <p className="px-2 pb-2 text-[10px] leading-snug text-amber-800 dark:text-amber-200">
+            Nur diese eine ID — andere Nachrichten sind ausgeblendet. „Zurück zur Basis-ID“ für den vollen Posteingang.
+          </p>
         ) : null}
         <div className="px-2 pb-2">
           <input
@@ -117,7 +123,7 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
             applyDraft(false)
           }}
         >
-          Show temporarily
+          Temporär anzeigen
         </DropdownMenuItem>
         <DropdownMenuItem
           disabled={packageIdBusy || !normalizePackageIdHex(draft.trim() || inboxPackageFilter.trim())}
@@ -126,7 +132,7 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
             applyDraft(true)
           }}
         >
-          Switch permanently (/set-package-id)
+          Dauerhaft wechseln (/set-package-id)
         </DropdownMenuItem>
         {tempActive ? (
           <DropdownMenuItem
@@ -137,14 +143,14 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
             }}
           >
             <RotateCcw className="mr-2 h-3.5 w-3.5 opacity-80" aria-hidden />
-            Back to base ID
+            Zurück zur Basis-ID
           </DropdownMenuItem>
         ) : null}
         {packageIdSuggestions.length > 0 ? (
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-[10px] font-normal text-muted-foreground">
-              Known IDs ({packageIdSuggestions.length}) — reference only
+              Bekannte IDs ({packageIdSuggestions.length}) — nur zum Nachschlagen
             </DropdownMenuLabel>
             {packageIdSuggestions.slice(0, 8).map((id) => (
               <DropdownMenuItem
@@ -169,7 +175,7 @@ export function ChatViewInboxPackageExpertMenu(p: ChatViewInboxPackageExpertMenu
                 onOpenSettings()
               }}
             >
-              Settings → System & identity
+              Einstellungen → System & Identität
             </DropdownMenuItem>
           </>
         ) : null}

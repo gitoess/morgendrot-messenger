@@ -156,16 +156,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    if (
-                        (c === '/vault-debug-chain' || c === '/vault-list-chain') &&
-                        !CFG.ENABLE_VAULT_DEBUG_COMMANDS
-                    ) {
-                        return {
-                            ok: false,
-                            message: 'Vault-Debug-Befehle deaktiviert (ENABLE_VAULT_DEBUG_COMMANDS=false).',
-                        };
-                    }
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-show-ecdh-jwk', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-show-ecdh-jwk', '/vault-ecdh-jwk', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -354,22 +345,6 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                     if (c === '/vault-ecdh-jwk') {
                         if (!keys) {
                             return { ok: false, message: 'Tresor gesperrt. Zuerst entsperren (/vault-load oder UI-Unlock).' };
-                        }
-                        const reauthPw = String(a[0] ?? '').trim();
-                        if (CFG.VAULT_ECDH_JWK_REQUIRE_PASSWORD) {
-                            if (!reauthPw) {
-                                return {
-                                    ok: false,
-                                    message: 'Verwendung: /vault-ecdh-jwk <passwort> — Re-Auth für Chat-ECDH-Export.',
-                                };
-                            }
-                            const sessionPw = getWalletPassword();
-                            if (!sessionPw || sessionPw !== reauthPw) {
-                                return {
-                                    ok: false,
-                                    message: 'Passwort stimmt nicht mit entsperrter Sitzung überein.',
-                                };
-                            }
                         }
                         const exported = await exportEcdhKeyMaterialForBrowser(keys);
                         if (!exported.ok) return { ok: false, message: exported.message };

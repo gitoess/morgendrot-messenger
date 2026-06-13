@@ -21,17 +21,17 @@ describe('ChatViewIdentityCard (§ H.1a)', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('shows full card with copy button', () => {
+  it('zeigt volle Karte mit Kopieren-Button', () => {
     render(<ChatViewIdentityCard myAddressLine={MY_ADDR} />)
-    expect(screen.getByText(/My IOTA address/)).toBeInTheDocument()
+    expect(screen.getByText(/Meine IOTA-Adresse/)).toBeInTheDocument()
     expect(screen.getByText(MY_ADDR)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Copy address/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Adresse kopieren/i }))
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(MY_ADDR)
   })
 
-  it('shows compact variant', () => {
+  it('zeigt kompakte Variante', () => {
     render(<ChatViewIdentityCard myAddressLine={MY_ADDR} compact />)
-    expect(screen.getByText(/Your contact ID:/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Copy$/i })).toBeInTheDocument()
+    expect(screen.getByText(/Deine Kontakt-ID:/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Kopieren/i })).toBeInTheDocument()
   })
 })

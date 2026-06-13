@@ -7,7 +7,6 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import { postApplyEinsatzConfig, postUpgradeMovePackage } from '@/frontend/lib/api/einsatz-config'
 import { formatHandoffAddressShort, formatHandoffMailboxShort } from '@/frontend/lib/handoff-export-display'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
-import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { buildEinsatzQuickHandoffBody } from '@/frontend/lib/einsatz-handoff-quick-export'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import { cn } from '@/lib/utils'
@@ -51,8 +50,6 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
   const [ttlDays, setTtlDays] = useState(30)
   const [enablePurge, setEnablePurge] = useState(true)
   const [syncToServer, setSyncToServer] = useState(true)
-  const [handoffPassword, setHandoffPassword] = useState('')
-  const [handoffPasswordConfirm, setHandoffPasswordConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
 
@@ -75,7 +72,7 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
       if (apply.ok) {
         envSynced = true
       } else {
-        envWarn = apply.error || 'Boss server .env was not updated.'
+        envWarn = apply.error || 'Boss-Server-.env nicht aktualisiert.'
       }
     }
     const body = buildEinsatzQuickHandoffBody({
@@ -84,30 +81,21 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
       params: { defaultTtlDays: ttlDays, enablePurge },
       handoffLabel: p.apiStatus?.handoffLabel,
     })
-    const pwErr = validateHandoffExportPassword(handoffPassword, handoffPasswordConfirm)
-    if (pwErr) {
-      setBusy(false)
-      setStatusMsg(pwErr)
-      return
-    }
-    const dl = await downloadHandoffZipExport(body, {
-      password: handoffPassword,
-      passwordConfirm: handoffPasswordConfirm,
-    })
+    const dl = await downloadHandoffZipExport(body, {})
     setBusy(false)
     if (dl.ok) {
       if (envWarn) {
-        setStatusMsg(`ZIP saved. Boss .env: ${envWarn} (TTL/purge are in the ZIP.)`)
+        setStatusMsg(`ZIP gespeichert. Boss-.env: ${envWarn} (TTL/Purge stehen im ZIP.)`)
       } else if (envSynced) {
-        setStatusMsg('ZIP saved — boss .env updated.')
+        setStatusMsg('ZIP gespeichert — Boss-.env übernommen.')
       } else {
-        setStatusMsg('ZIP saved.')
+        setStatusMsg('ZIP gespeichert.')
       }
       if (envSynced) await p.onRefreshStatus?.()
     } else {
-      setStatusMsg(dl.error || envWarn || 'Handoff download failed.')
+      setStatusMsg(dl.error || envWarn || 'Handoff-Download fehlgeschlagen.')
     }
-  }, [syncToServer, ttlDays, enablePurge, handoffPassword, handoffPasswordConfirm, p.apiStatus, p.contactDirectory, p.onRefreshStatus])
+  }, [syncToServer, ttlDays, enablePurge, p.apiStatus, p.contactDirectory, p.onRefreshStatus])
 
   return (
     <div
@@ -120,10 +108,10 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
       {!p.inline ? (
         <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
           <SlidersHorizontal className="h-4 w-4 text-violet-600" aria-hidden />
-          Existing devices
+          Bestehende Geräte
         </p>
       ) : (
-        <p className="mb-2 text-xs font-medium text-muted-foreground">Existing devices</p>
+        <p className="mb-2 text-xs font-medium text-muted-foreground">Bestehende Geräte</p>
       )}
 
       <div className="flex flex-wrap items-end gap-3">
@@ -148,38 +136,10 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
           <input type="checkbox" checked={enablePurge} onChange={(e) => setEnablePurge(e.target.checked)} />
           Purge
         </label>
-        <label className="flex cursor-pointer items-center gap-1.5 pb-1.5 text-sm" title="Also writes TTL/purge to the boss PC .env — independent of the handoff ZIP">
+        <label className="flex cursor-pointer items-center gap-1.5 pb-1.5 text-sm" title="Schreibt TTL/Purge zusätzlich in die Boss-PC-.env — unabhängig vom Handoff-ZIP">
           <input type="checkbox" checked={syncToServer} onChange={(e) => setSyncToServer(e.target.checked)} />
-          Sync boss .env with TTL/purge
+          Boss-.env mit TTL/Purge sync
         </label>
-        <div className="w-full basis-full grid gap-2 sm:grid-cols-2 max-w-md">
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground" htmlFor="einsatz-handoff-pw">
-              Handoff password
-            </label>
-            <input
-              id="einsatz-handoff-pw"
-              type="password"
-              autoComplete="new-password"
-              value={handoffPassword}
-              onChange={(e) => setHandoffPassword(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-muted-foreground" htmlFor="einsatz-handoff-pw2">
-              Confirm
-            </label>
-            <input
-              id="einsatz-handoff-pw2"
-              type="password"
-              autoComplete="new-password"
-              value={handoffPasswordConfirm}
-              onChange={(e) => setHandoffPasswordConfirm(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input px-2 py-1.5 text-sm"
-            />
-          </div>
-        </div>
         <button
           type="button"
           disabled={busy}
@@ -197,7 +157,7 @@ export function DashboardEinsatzParameterPanel(p: EinsatzPanelProps) {
         </p>
       ) : (
         <p className="mt-2 text-xs text-muted-foreground">
-          Handoff ZIP always includes TTL/purge — &quot;Sync boss .env&quot; only updates the boss PC for server defaults.
+          Handoff-ZIP enthält TTL/Purge immer — „Boss-.env sync“ aktualisiert nur den Boss-PC für Server-Defaults.
         </p>
       )}
     </div>
@@ -221,16 +181,16 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
     moveProbed && move && (!move.teamBroadcastPurge || !move.teamBroadcastStore || !move.privateMailboxPurge)
 
   const upgradeBlockReason = !cfg?.upgradeCapConfigured
-    ? 'UpgradeCap missing — package was deployed without upgrade rights (new publish only).'
+    ? 'UpgradeCap fehlt — Package wurde ohne Upgrade-Recht deployed (nur Neu-Publish möglich).'
     : !needsMoveUpgrade && moveProbed
-      ? 'All checked Move features are active — upgrade only needed after a new code deploy.'
+      ? 'Alle geprüften Move-Funktionen sind aktiv — Upgrade nur nach neuem Code-Deploy nötig.'
       : null
 
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
 
   const onUpgrade = useCallback(async () => {
-    if (!window.confirm('Upgrade Move package? Restart the backend afterward.')) {
+    if (!window.confirm('Move-Package upgraden? Backend danach neu starten.')) {
       return
     }
     setBusy(true)
@@ -238,10 +198,10 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
     const r = await postUpgradeMovePackage()
     setBusy(false)
     if (r.ok) {
-      setStatusMsg(r.message || 'Upgrade OK — restart backend, then refresh status.')
+      setStatusMsg(r.message || 'Upgrade OK — Backend neu starten, dann Status aktualisieren.')
       await p.onRefreshStatus?.()
     } else {
-      setStatusMsg(r.error || 'Upgrade failed.')
+      setStatusMsg(r.error || 'Upgrade fehlgeschlagen.')
     }
   }, [p.onRefreshStatus])
 
@@ -259,7 +219,7 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
             className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-xs hover:bg-muted/50"
           >
             <RefreshCw className="h-3 w-3" aria-hidden />
-            Refresh
+            Aktualisieren
           </button>
         ) : null}
       </div>
@@ -275,7 +235,7 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
             packageId ? (
               <span title={packageId}>{formatHandoffAddressShort(packageId)}</span>
             ) : (
-              <span className="text-amber-700 dark:text-amber-300">PACKAGE_ID missing</span>
+              <span className="text-amber-700 dark:text-amber-300">PACKAGE_ID fehlt</span>
             )
           }
           mono
@@ -288,7 +248,7 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
                 {cfg.upgradeCapIdMasked ?? formatHandoffAddressShort(cfg.upgradeCapId ?? '')}
               </span>
             ) : (
-              <span className="text-amber-700 dark:text-amber-300">missing — new publish only</span>
+              <span className="text-amber-700 dark:text-amber-300">fehlt — nur Neu-Publish</span>
             )
           }
           mono
@@ -305,14 +265,14 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
           mono
         />
         <ConfigRow
-          label="Team mailboxes"
+          label="Team-Postfächer"
           value={
             teamLabels.length > 0 ? (
               <span>{teamLabels.join(' · ')}</span>
             ) : extraUnion.length > 0 ? (
               <span>{extraUnion.map((id) => formatHandoffMailboxShort(id)).join(' · ')}</span>
             ) : (
-              <span className="text-muted-foreground">None</span>
+              <span className="text-muted-foreground">Keine</span>
             )
           }
         />
@@ -320,27 +280,27 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
 
       <div className="mt-4 rounded-lg border border-border/70 bg-muted/15 p-3">
         {!packageId ? (
-          <p className="text-xs text-muted-foreground">Set PACKAGE_ID.</p>
+          <p className="text-xs text-muted-foreground">PACKAGE_ID setzen.</p>
         ) : !moveProbed ? (
           <p className="text-xs text-muted-foreground">
-            {move?.error ? `RPC: ${move.error}` : 'Checking Move features…'}
+            {move?.error ? `RPC: ${move.error}` : 'Move-Funktionen werden geprüft…'}
           </p>
         ) : (
           <div className="flex flex-wrap gap-2">
             <StatusPill ok={!!move?.teamBroadcastStore} label="Broadcast" />
             <StatusPill ok={!!move?.teamBroadcastPurge} label="Purge" />
-            <StatusPill ok={!!move?.privateMailboxPurge} label="Private" />
+            <StatusPill ok={!!move?.privateMailboxPurge} label="Privat" />
           </div>
         )}
         {moveProbed && move && !move.teamBroadcastPurge ? (
           <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
-            Team purge missing on-chain — after a new Move build, upgrade here, then restart the backend.
+            Team-Purge fehlt on-chain — nach neuem Move-Build hier upgraden, dann Backend neu starten.
           </p>
         ) : null}
         <p className="mt-2 text-xs text-muted-foreground">
-          <strong className="font-medium text-foreground">Upgrade Move</strong> = deploy a new Move package to the same
-          package ID (in-place). Only needed when yellow warnings or missing features appear above — not for every
-          deployment.
+          <strong className="font-medium text-foreground">Move upgraden</strong> = neues Move-Package auf dieselbe
+          Package-ID spielen (In-Place). Nur nötig, wenn oben gelbe Hinweise oder fehlende Funktionen — nicht bei
+          jedem Einsatz.
         </p>
         {upgradeBlockReason ? (
           <p className="mt-1 text-xs text-muted-foreground">{upgradeBlockReason}</p>
@@ -352,7 +312,7 @@ export function DashboardEinsatzChainPanel(p: Pick<EinsatzPanelProps, 'apiStatus
           className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-sky-600/40 bg-sky-500/15 px-3 py-2 text-xs font-semibold disabled:opacity-50"
         >
           <RefreshCw className={cn('h-3.5 w-3.5', busy && 'animate-spin')} aria-hidden />
-          {busy ? '…' : 'Upgrade Move'}
+          {busy ? '…' : 'Move upgraden'}
         </button>
       </div>
 

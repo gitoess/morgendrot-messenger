@@ -24,9 +24,9 @@ function maskMid(id: string): string {
 function formatActionError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e)
   if (/message channel closed|asynchronous response/i.test(msg)) {
-    return 'Browser extension interrupted the request (often wallet/ad-blocker). Reload the page or disable the extension temporarily — then try again.'
+    return 'Browser-Erweiterung hat die Anfrage unterbrochen (oft Wallet/Ad-Blocker). Seite neu laden oder Erweiterung testweise aus — dann erneut versuchen.'
   }
-  return msg || 'Unknown error.'
+  return msg || 'Unbekannter Fehler.'
 }
 
 export type ChatViewPrivateMailboxDeleteDialogProps = {
@@ -59,7 +59,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
     const r = await fetchPrivateMailboxContents(p.objectId, p.myAddress)
     setLoading(false)
     if (!r.ok || !r.contents) {
-      setLoadError(r.error || 'Could not load contents.')
+      setLoadError(r.error || 'Inhalt konnte nicht geladen werden.')
       setHsCount(0)
       setMsgCount(0)
       return
@@ -80,13 +80,13 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
   const runCleanup = async (): Promise<boolean> => {
     const r = await cleanupPrivateMailboxOnChain(p.objectId)
     if (!r.ok) {
-      const err = r.error || 'Cleanup failed.'
+      const err = r.error || 'Aufräumen fehlgeschlagen.'
       setActionError(err)
       p.onStatus?.(err, 'error')
       return false
     }
     await reloadContents()
-    const msg = r.message || `Cleanup OK (${r.purgedHandshakes ?? 0} HS, ${r.purgedMessages ?? 0} msg).`
+    const msg = r.message || `Aufräumen OK (${r.purgedHandshakes ?? 0} HS, ${r.purgedMessages ?? 0} Msg).`
     p.onStatus?.(msg, 'success')
     return true
   }
@@ -94,7 +94,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
   const runDelete = async (): Promise<boolean> => {
     const r = await purgePrivateMailboxOnChain(p.objectId)
     if (!r.ok) {
-      const err = r.error || 'Rebate failed.'
+      const err = r.error || 'Rebate fehlgeschlagen.'
       setActionError(err)
       p.onStatus?.(err, 'error')
       return false
@@ -102,7 +102,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
     const digest = (r.digest || '').trim()
     if (!digest) {
       const err =
-        'Rebate without TX digest — nothing confirmed on-chain. Check backend/wallet (vault, PACKAGE_ID, npm run dev).'
+        'Rebate ohne TX-Digest — nichts on-chain bestätigt. Backend/Wallet prüfen (Tresor, PACKAGE_ID, npm run dev).'
       setActionError(err)
       p.onStatus?.(err, 'error')
       return false
@@ -110,7 +110,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
     const txUrl =
       (r.explorerTxLink && r.explorerTxLink.trim()) || explorerTxUrlFromDigest(digest)
     setSuccessTx({ digest, url: txUrl })
-    p.onStatus?.(`Mailbox deleted (rebate). TX in explorer (txblock): ${txUrl}`, 'success')
+    p.onStatus?.(`Mailbox gelöscht (Rebate). TX im Explorer (txblock): ${txUrl}`, 'success')
     return true
   }
 
@@ -138,8 +138,8 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
   const onCleanupOnly = () =>
     void withBusy('cleanup', async () => {
       if (!p.walletValid) {
-        setActionError('Unlock vault.')
-        p.onStatus?.('Unlock vault.', 'error')
+        setActionError('Tresor entsperren.')
+        p.onStatus?.('Tresor entsperren.', 'error')
         return
       }
       await runCleanup()
@@ -148,11 +148,11 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
   const onDeleteRisky = () =>
     void withBusy('delete', async () => {
       if (!p.walletValid) {
-        setActionError('Unlock vault.')
-        p.onStatus?.('Unlock vault.', 'error')
+        setActionError('Tresor entsperren.')
+        p.onStatus?.('Tresor entsperren.', 'error')
         return
       }
-      if (!isEmpty && !window.confirm('Mailbox is not empty — rebate often fails. Delete anyway?')) return
+      if (!isEmpty && !window.confirm('Mailbox ist nicht leer — Rebate schlägt oft fehl. Trotzdem löschen?')) return
       if (await runDelete()) {
         /* onDone erst nach Bestätigung — Nutzer kann Explorer-Link öffnen */
       }
@@ -161,8 +161,8 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
   const onCleanupAndDelete = () =>
     void withBusy('both', async () => {
       if (!p.walletValid) {
-        setActionError('Unlock vault.')
-        p.onStatus?.('Unlock vault.', 'error')
+        setActionError('Tresor entsperren.')
+        p.onStatus?.('Tresor entsperren.', 'error')
         return
       }
       if (!isEmpty) {
@@ -171,7 +171,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
         const again = await fetchPrivateMailboxContents(p.objectId, p.myAddress)
         const left = (again.contents?.handshakeCount ?? 0) + (again.contents?.messageCount ?? 0)
         if (left > 0) {
-          const err = `Still ${left} entr${left === 1 ? 'y' : 'ies'} — clean up again or purge individually.`
+          const err = `Noch ${left} Eintrag/Einträge — erneut aufräumen oder einzeln purgen.`
           setActionError(err)
           p.onStatus?.(err, 'error')
           await reloadContents()
@@ -194,7 +194,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
     <Dialog open={p.open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Delete private mailbox</DialogTitle>
+          <DialogTitle>Private Mailbox löschen</DialogTitle>
           <DialogDescription asChild>
             <div className="space-y-2 text-left text-sm text-muted-foreground">
               <p>
@@ -203,25 +203,25 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
               {loading ? (
                 <p className="inline-flex items-center gap-1">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Loading contents…
+                  Inhalt wird geladen…
                 </p>
               ) : loadError ? (
                 <p className="text-destructive">{loadError}</p>
               ) : isEmpty ? (
                 <p className="text-emerald-800 dark:text-emerald-200">
-                  The mailbox is <strong className="text-foreground">empty</strong> — rebate can run directly.
+                  Die Mailbox ist <strong className="text-foreground">leer</strong> — Rebate kann direkt ausgeführt werden.
                 </p>
               ) : (
                 <p className="rounded-md border border-amber-600/35 bg-amber-500/10 px-2 py-1.5 text-amber-950 dark:text-amber-100">
-                  The mailbox still contains{' '}
+                  Die Mailbox enthält noch{' '}
                   <strong className="text-foreground">
-                    {msgCount} message{msgCount === 1 ? '' : 's'}
+                    {msgCount} Nachricht{msgCount === 1 ? '' : 'en'}
                   </strong>{' '}
-                  and{' '}
+                  und{' '}
                   <strong className="text-foreground">
-                    {hsCount} handshake{hsCount === 1 ? '' : 's'}
+                    {hsCount} Handshake{hsCount === 1 ? '' : 's'}
                   </strong>
-                  . Clean up before rebate.
+                  . Vor dem Rebate solltest du aufräumen.
                 </p>
               )}
               {!isEmpty ? (
@@ -232,7 +232,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
                     onChange={(e) => setCleanupFirst(e.target.checked)}
                     className="mt-0.5"
                   />
-                  <span>Clean up mailbox first (recommended)</span>
+                  <span>Mailbox vorher aufräumen (empfohlen)</span>
                 </label>
               ) : null}
               <p className="text-[10px]">
@@ -246,7 +246,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
               ) : null}
               {successTx ? (
                 <div className="rounded-md border border-emerald-600/40 bg-emerald-500/10 px-2 py-2 text-xs text-emerald-950 dark:text-emerald-100">
-                  <p className="font-medium text-foreground">Rebate confirmed on-chain</p>
+                  <p className="font-medium text-foreground">Rebate on-chain bestätigt</p>
                   <p className="mt-1 font-mono text-[10px] break-all">{maskMid(successTx.digest)}</p>
                   <a
                     href={successTx.url}
@@ -254,7 +254,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
                     rel="noopener noreferrer"
                     className="mt-2 inline-block text-[11px] font-medium text-primary underline"
                   >
-                    Open transaction in IOTA Explorer
+                    Transaktion im IOTA Explorer öffnen
                   </a>
                 </div>
               ) : null}
@@ -268,7 +268,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
               onClick={closeAfterSuccess}
               className="min-h-10 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
-              Done (remove from list)
+              Fertig (aus Liste entfernen)
             </button>
           ) : !isEmpty ? (
             <>
@@ -283,10 +283,10 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
                 {busy === 'both' ? (
                   <span className="inline-flex items-center justify-center gap-1">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Clean up + delete…
+                    Aufräumen + löschen…
                   </span>
                 ) : (
-                  'Clean up and delete now'
+                  'Jetzt aufräumen + löschen'
                 )}
               </button>
               <button
@@ -298,10 +298,10 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
                 {busy === 'cleanup' ? (
                   <span className="inline-flex items-center justify-center gap-1">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Cleaning up…
+                    Räume auf…
                   </span>
                 ) : (
-                  'Clean up only'
+                  'Nur aufräumen'
                 )}
               </button>
               <button
@@ -313,10 +313,10 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
                 {busy === 'delete' ? (
                   <span className="inline-flex items-center justify-center gap-1">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Deleting…
+                    Lösche…
                   </span>
                 ) : (
-                  'Delete anyway (risky)'
+                  'Trotzdem löschen (riskant)'
                 )}
               </button>
             </>
@@ -330,10 +330,10 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
               {busy === 'delete' ? (
                 <span className="inline-flex items-center justify-center gap-1">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Please wait (wallet may prompt to sign)…
+                  Bitte warten (Wallet kann signieren)…
                 </span>
               ) : (
-                'Delete permanently (rebate)'
+                'Endgültig löschen (Rebate)'
               )}
             </button>
           )}
@@ -343,7 +343,7 @@ export function ChatViewPrivateMailboxDeleteDialog(p: ChatViewPrivateMailboxDele
             onClick={() => handleOpenChange(false)}
             className="min-h-9 rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
           >
-            Cancel
+            Abbrechen
           </button>
         </DialogFooter>
       </DialogContent>

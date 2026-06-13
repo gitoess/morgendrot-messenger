@@ -6,13 +6,13 @@ describe('ChatViewChainPersistenceBadge (§ H.1a)', () => {
   it('zeigt Event-Pfad bei mode event', () => {
     render(<ChatViewChainPersistenceBadge mode="event" encrypted={false} />)
     const status = screen.getByRole('status')
-    expect(status).toHaveTextContent(/Plaintext · event/)
+    expect(status).toHaveTextContent(/Klartext · Event/)
     expect(status).toHaveTextContent(/send_plaintext_message/)
   })
 
   it('zeigt Mailbox-Pfad bei mode mailbox', () => {
     render(<ChatViewChainPersistenceBadge mode="mailbox" encrypted />)
-    expect(screen.getByRole('status')).toHaveTextContent(/Encrypted · mailbox/)
+    expect(screen.getByRole('status')).toHaveTextContent(/Verschlüsselt · Mailbox/)
   })
 
   it('nutzt violet-Styling für Mailbox', () => {

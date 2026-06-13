@@ -22,3 +22,20 @@ export function contactDisplayLabel(
   const lab = e?.label?.trim()
   return lab && lab.length > 0 ? lab : null
 }
+
+/** Telefonbuch-Alias → Wallet (exakter Name, case-insensitive). */
+export function lookupContactAddressByLabel(
+  directory: Record<string, ContactMeshEntryClient>,
+  label: string
+): string | null {
+  const want = label.trim().toLowerCase()
+  if (!want) return null
+  for (const [addr, e] of Object.entries(directory)) {
+    const lab = (e.label ?? '').trim().toLowerCase()
+    if (lab && lab === want) {
+      const t = addr.trim()
+      return /^0x[a-fA-F0-9]{64}$/i.test(t) ? t.toLowerCase() : null
+    }
+  }
+  return null
+}

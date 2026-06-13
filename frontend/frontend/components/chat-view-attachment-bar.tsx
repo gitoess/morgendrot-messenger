@@ -104,7 +104,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           type="button"
           disabled={compactBusy || sending || pickDisabled}
           onClick={() => compactFileRef.current?.click()}
-          title={`Image (.jpg, .png, .webp), text (.txt), Opus/Ogg. Online up to ~${Math.round(MEDIA_IOTA_AUDIO_RAW_MAX_BYTES / 1024)} KiB raw; radio up to ~${Math.round(MEDIA_LORA_AUDIO_RAW_MAX_BYTES / 1024)} KiB. Not .morg-pkg — use toolbar for that.`}
+          title={`Bild (.jpg, .png, .webp), Text (.txt), Opus/Ogg. Online bis ~${Math.round(MEDIA_IOTA_AUDIO_RAW_MAX_BYTES / 1024)} KiB Rohdaten; Funk bis ~${Math.round(MEDIA_LORA_AUDIO_RAW_MAX_BYTES / 1024)} KiB. Kein .morg-pkg – dafür Werkzeugleiste.`}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
         >
           {compactBusy ? (
@@ -112,7 +112,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           ) : (
             <Upload className="h-3.5 w-3.5" aria-hidden />
           )}
-          {compactBusy ? 'Preparing attachment…' : 'Import file'}
+          {compactBusy ? 'Anhang wird vorbereitet…' : 'Datei importieren'}
         </button>
         <button
           type="button"
@@ -120,13 +120,13 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           onClick={openCameraImport}
           title={
             prefersFileCameraCapture()
-              ? 'Camera app (phone/tablet): take a photo and attach as image.'
-              : 'Webcam: take a photo and attach as image.'
+              ? 'Kamera-App (Handy/Tablet): Foto aufnehmen und als Bild-Anhang laden.'
+              : 'Webcam: Foto aufnehmen und als Bild-Anhang laden.'
           }
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
         >
           <Camera className="h-3.5 w-3.5 shrink-0" aria-hidden />
-          From camera
+          Von Kamera
         </button>
         {trailingActions}
         {compactMeta && attachedBlobBase64 && (
@@ -158,7 +158,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
             onClick={clearCompactAttachment}
             className="text-xs font-medium text-red-400 hover:underline"
           >
-            Remove attachment
+            Anhang entfernen
           </button>
         )}
       </div>

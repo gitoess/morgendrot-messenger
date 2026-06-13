@@ -69,6 +69,8 @@ import type { MessengerBottomNavTab } from '@/frontend/components/messenger-bott
 
 const EMPTY_CONNECTED_ADDRESSES: string[] = []
 
+const VAULT_ALREADY_UNLOCKED_RE = /Bereits entsperrt/i
+
 export type UseDashboardSessionOptions = {
   /** Feature-Liste für Wiederherstellung der letzten Kachel-Ansicht aus sessionStorage. */
   restoreFeatures: readonly DashboardFeatureDef[]
@@ -102,6 +104,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [phonebookNavRequest, setPhonebookNavRequest] = useState(0)
   const [messengerNavHighlight, setMessengerNavHighlight] = useState<MessengerBottomNavTab>('messages')
   const [mainnetSignerHint, setMainnetSignerHint] = useState<string | null>(null)
+  const [sessionSignerSyncOpen, setSessionSignerSyncOpen] = useState(false)
+  const [sessionSignerSyncBusy, setSessionSignerSyncBusy] = useState(false)
+  const [sessionSignerSyncError, setSessionSignerSyncError] = useState('')
 
   const prevLockedRef = useRef(false)
   const vaultHasLocalRef = useRef(false)
@@ -284,7 +289,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
           setMainnetSignerHint(null)
         } else if (!getDirectIotaSessionSigner()) {
           setMainnetSignerHint(
-            'Mainnet direct send: unlock vault — session signer loads automatically from the vault.'
+            'Mainnet-Direkt-Send: Session-Signer fehlt im Browser — mit Vault-Passwort nachladen (Tresor ist bereits entsperrt).'
           )
         }
       }
@@ -499,19 +504,19 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
     if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
-        setUnlockError('Vault/wallet password and confirmation must match.')
+        setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
         return
       }
       if (signer === 'sdk') {
         const sa = signerImport.trim()
         const sb = signerImportConfirm.trim()
         if (!sa || normalizeSignerWords(sa) !== normalizeSignerWords(sb)) {
-          setUnlockError('Mnemonic / secret and confirmation must match.')
+          setUnlockError('Mnemonic / Secret und Wiederholung müssen übereinstimmen.')
           return
         }
         if (!isPlausibleSdkImport(sa)) {
           setUnlockError(
-            'Mnemonic: at least 12 words — or a valid Bech32/64-hex secret (see help).'
+            'Mnemonic: mindestens 12 Wörter — oder gültiges Bech32-/64-Hex-Secret (siehe Hilfe).'
           )
           return
         }
@@ -520,7 +525,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       const t = signerImport.trim()
       if (!t || !isPlausibleSdkImport(t)) {
         setUnlockError(
-          'Mnemonic / secret required (at least 12 words or Bech32/hex as in help).'
+          'Mnemonic / Secret erforderlich (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
         )
         return
       }
@@ -528,7 +533,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       const t = signerImport.trim()
       if (t && !isPlausibleSdkImport(t)) {
         setUnlockError(
-          'Mnemonic / secret appears invalid (at least 12 words or Bech32/hex as in help).'
+          'Mnemonic / Secret scheint ungültig (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
         )
         return
       }
@@ -560,7 +565,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       } else if (mnemonic) {
         if (unlockMode === 'create' && (!vaultPassword || vaultPassword !== passwordConfirm.trim())) {
           setUnlocking(false)
-          setUnlockError('New profile: password and confirmation must match (min. 8 characters).')
+          setUnlockError('Neues Profil: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).')
           return
         }
         unlockResult = await activateStandaloneHelperWallet({
@@ -569,7 +574,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         })
       } else {
         setUnlocking(false)
-        setUnlockError('Enter wallet key (mnemonic, Bech32, or 64 hex).')
+        setUnlockError('Wallet-Schlüssel eingeben (Mnemonic, Bech32 oder 64 Hex).')
         return
       }
       setUnlocking(false)
@@ -628,12 +633,32 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setUnlockMode('import')
       setShowSignerImportOpen(true)
       setUnlockError(
-        `${res.error || 'Signing material missing.'}\n\n` +
-          '→ Card "Import seed" (highlighted green): enter vault password **and** mnemonic/secret, then **"Restore profile"**.\n' +
-          'Alternatively under "Open vault": open "Add mnemonic (advanced)", enter both, **"Unlock"**.'
+        `${res.error || 'Signatur-Material fehlt.'}\n\n` +
+          '→ Karte „Seed importieren“ (grün markiert): Vault-Passwort **und** Mnemonic/Secret eintragen, dann **„Profil wiederherstellen“**.\n' +
+          'Alternativ unter „Tresor öffnen“: „Mnemonic ergänzen (erweitert)“ öffnen, beides eintragen, **„Entsperren“**.'
       )
+    } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
+      const vaultPw = password
+      const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
+        vaultPassword: vaultPw,
+        signerImport: sdkExtra,
+        apiSigner: signer,
+        expectedAddress: myAddress.trim() || undefined,
+      })
+      setMainnetSignerHint(hint)
+      vaultUnlockRequestedRef.current = false
+      sessionUnlockedStableRef.current = true
+      lockPollStreakRef.current = 0
+      setPassword('')
+      setPasswordConfirm('')
+      setSignerImport('')
+      setSignerImportConfirm('')
+      setShowSignerImportOpen(false)
+      setLocked(false)
+      setUnlockError(hint ?? '')
+      await checkStatus()
     } else {
-      setUnlockError(res.error || 'Unlock failed')
+      setUnlockError(res.error || 'Entsperren fehlgeschlagen')
     }
   }, [
     apiSnapshot?.signer,
@@ -645,6 +670,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     showSignerImportOpen,
     applyLockedFromStatusPoll,
     checkStatus,
+    myAddress,
   ])
 
   const handleSelectFeature = useCallback(
@@ -694,6 +720,48 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     navigateTo(null)
   }, [navigateTo])
 
+  /** Session-Signer nachladen — ohne Vollsperre wenn Backend-Tresor schon offen ist. */
+  const requestMainnetSessionSignerSync = useCallback(() => {
+    const backendLocked = apiSnapshot?.locked === true
+    if (backendLocked) {
+      requestVaultUnlock()
+      return
+    }
+    setSessionSignerSyncError('')
+    setSessionSignerSyncOpen(true)
+  }, [apiSnapshot?.locked, requestVaultUnlock])
+
+  const closeSessionSignerSync = useCallback(() => {
+    setSessionSignerSyncOpen(false)
+    setSessionSignerSyncError('')
+    setSessionSignerSyncBusy(false)
+  }, [])
+
+  const handleSessionSignerSync = useCallback(async () => {
+    const vaultPw = password.trim()
+    if (!vaultPw) {
+      setSessionSignerSyncError('Vault-Passwort eingeben.')
+      return
+    }
+    setSessionSignerSyncBusy(true)
+    setSessionSignerSyncError('')
+    const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
+      vaultPassword: vaultPw,
+      apiSigner: apiSnapshot?.signer,
+      expectedAddress: myAddress.trim() || undefined,
+    })
+    setSessionSignerSyncBusy(false)
+    if (hint) {
+      setSessionSignerSyncError(hint)
+      setMainnetSignerHint(hint)
+      return
+    }
+    setMainnetSignerHint(null)
+    setPassword('')
+    closeSessionSignerSync()
+    await checkStatus()
+  }, [password, apiSnapshot?.signer, myAddress, closeSessionSignerSync, checkStatus])
+
   const requestStandaloneWalletUnlock = useCallback(() => {
     vaultUnlockRequestedRef.current = true
     const readiness = getStandaloneHelperReadiness()
@@ -724,7 +792,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       onLockSession: async () => {
         if (
           !window.confirm(
-            'Lock API session? Keys are removed from the basis working memory — then unlock the vault again with your password.'
+            'API-Sitzung sperren? Schlüssel werden aus dem Arbeitsspeicher der Basis entfernt — danach den Tresor erneut mit Passwort entsperren.'
           )
         ) {
           return
@@ -746,7 +814,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     setHelpOpen(true)
     setHelpLoading(true)
     const res = await fetchHelp()
-    setHelpText(res.ok && res.helpText ? res.helpText : res.error || 'No help available.')
+    setHelpText(res.ok && res.helpText ? res.helpText : res.error || 'Keine Hilfe verfügbar.')
     setHelpLoading(false)
   }, [])
 
@@ -854,8 +922,16 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     requestStandaloneWalletUnlock,
     lockSession,
     requestVaultUnlock,
+    requestMainnetSessionSignerSync,
     mainnetSignerHint,
     setMainnetSignerHint,
+    sessionSignerSync: {
+      open: sessionSignerSyncOpen,
+      busy: sessionSignerSyncBusy,
+      error: sessionSignerSyncError,
+      close: closeSessionSignerSync,
+      handleSync: handleSessionSignerSync,
+    },
     helpOpen,
     setHelpOpen,
     helpText,

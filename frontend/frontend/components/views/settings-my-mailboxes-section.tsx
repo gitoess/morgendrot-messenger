@@ -34,9 +34,9 @@ export function SettingsMyMailboxesSection({ apiStatus, myAddress }: SettingsMyM
             <Mailbox className="h-5 w-5" aria-hidden />
           </div>
           <div>
-            <h4 className="font-semibold text-foreground">My mailboxes</h4>
+            <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Server-shared, team, and private — set active, then refresh inbox.
+              Server-Shared, Team und Private — aktiv setzen, dann Posteingang aktualisieren.
             </p>
           </div>
         </div>
@@ -44,7 +44,7 @@ export function SettingsMyMailboxesSection({ apiStatus, myAddress }: SettingsMyM
           href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#kanäle-speicher-und-mailboxen"
           className="text-xs text-primary underline hover:no-underline"
         >
-          Handbook
+          Handbuch
         </Link>
       </div>
       <div className="p-4">

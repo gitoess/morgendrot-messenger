@@ -51,10 +51,10 @@ function makeProps(overrides: Partial<ChatViewInboxListProps> = {}): ChatViewInb
 }
 
 describe('ChatViewInboxList reply action', () => {
-  it('shows Reply button when onReplyToMessage is provided', () => {
+  it('shows Antworten button when onReplyToMessage is provided', () => {
     const onReplyToMessage = vi.fn()
     render(<ChatViewInboxList {...makeProps({ onReplyToMessage })} />)
-    const btn = screen.getByRole('button', { name: /Reply/i })
+    const btn = screen.getByRole('button', { name: /Antworten/i })
     expect(btn).toBeInTheDocument()
     btn.click()
     expect(onReplyToMessage).toHaveBeenCalledTimes(1)
@@ -62,20 +62,20 @@ describe('ChatViewInboxList reply action', () => {
 
   it('hides Antworten without onReplyToMessage (§ H.1a)', () => {
     render(<ChatViewInboxList {...makeProps()} />)
-    expect(screen.queryByRole('button', { name: /Reply/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Antworten/i })).not.toBeInTheDocument()
   })
 
   it('disables Antworten while sending (§ H.1a)', () => {
     const onReplyToMessage = vi.fn()
     render(<ChatViewInboxList {...makeProps({ onReplyToMessage, sending: true })} />)
-    const btn = screen.getByRole('button', { name: /Reply/i })
+    const btn = screen.getByRole('button', { name: /Antworten/i })
     expect(btn).toBeDisabled()
   })
 
   it('shows Eingang badge for incoming message (§ H.1a)', () => {
     render(<ChatViewInboxList {...makeProps()} />)
-    expect(screen.getByText('Incoming')).toBeInTheDocument()
-    expect(screen.queryByText('Outgoing')).not.toBeInTheDocument()
+    expect(screen.getByText('Eingang')).toBeInTheDocument()
+    expect(screen.queryByText('Ausgang')).not.toBeInTheDocument()
   })
 
   it('shows visibility hint when inbox empty (§ H.1a)', () => {
@@ -101,7 +101,7 @@ describe('ChatViewInboxList reply action', () => {
         })}
       />
     )
-    expect(screen.getByText(/Offline — last messages/)).toBeInTheDocument()
-    expect(screen.getByText(/, RPC/)).toBeInTheDocument()
+    expect(screen.getByText(/Offline — letzte Nachrichten/)).toBeInTheDocument()
+    expect(screen.getByText(/zuletzt per Direkt-RPC/)).toBeInTheDocument()
   })
 })

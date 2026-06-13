@@ -12,6 +12,14 @@ const API_BASE_B = process.env.API_BASE_B || 'http://127.0.0.1:3343';
 const ADDR = process.env.MY_ADDRESS || '0x671bf669a858c97a1ca7ed3c5c31901ffb671ceea31e8fd706d0b6e2cb8a15c5';
 const PARTNER = process.env.PARTNER_ADDRESS || '0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5';
 
+const DOC_NAMES = [
+  'ENV-ERKLAERUNG.md', 'VAULT-EINRICHTEN.md', 'BROADCAST-PINNWAND.md', 'LEIHGERAETE-EINRICHTEN.md',
+  'SCHLOSS-EINRICHTEN.md', 'STREAMS-INTEGRATION.md', 'CAR-SHARING-EINRICHTEN.md', 'SENSOR-ALARME-EINRICHTEN.md',
+  'BOSS-MODUS.md', 'NOTFALL-DATENSPEICHER.md', 'FESTIVAL-TICKETS-EINRICHTEN.md', 'FAMILIEN-ZUGANG.md',
+  'CHAT-GRUPPE-EINRICHTEN.md', 'M2M-KOORDINATION-EINRICHTEN.md',
+  'OFFLINE-FAEHIGKEIT.md', 'PACKAGE-ID-NEU-DEPLOYEN.md', 'CHAT-DURCHTESTEN.md',
+];
+
 const EVENT_ID_PLACEHOLDER = '0x' + 'e'.repeat(64);
 const LOCK_ID_PLACEHOLDER = '0x' + 'd'.repeat(64);
 
@@ -75,11 +83,7 @@ async function main() {
     ['status', '/api/status'],
     ['current-ids', '/api/current-ids'],
     ['package-id-history', '/api/package-id-history'],
-    ['messenger-presets', '/api/messenger-presets'],
-    ['lan-install-urls', '/api/lan-install-urls'],
-    ['einsatz-role-templates', '/api/einsatz-role-templates'],
-    ['contact-labels', '/api/contact-labels'],
-    ['pending-handshakes', '/api/pending-handshakes'],
+    ['package-id-hints', '/api/package-id-hints'],
     ['config', '/api/config'],
     ['connect-addresses', '/api/connect-addresses'],
     ['chain-reachable', '/api/chain-reachable'],
@@ -103,9 +107,16 @@ async function main() {
       process.exit(1);
     } else record('GET', name, r.data && (r.data as any).error ? 'SKIP' : 'FAIL', r.error?.slice(0, 80));
   }
+  for (const doc of DOC_NAMES) {
+    const r = await get(base, `/api/doc?name=${encodeURIComponent(doc)}`);
+    if (r.ok) record('GET', `doc ${doc}`, 'OK');
+    else record('GET', `doc ${doc}`, (r.data as any)?.error ? 'SKIP' : 'FAIL', r.error?.slice(0, 60));
+  }
+
   // ---- Phase 2: POST Endpoints (sicher / nicht destruktiv) ----
   console.log('\n--- Phase 2: POST Endpoints ---');
   const postPayloads: [string, string, object][] = [
+    ['package-id-hints', '/api/package-id-hints', { packageId: '0x' + 'b'.repeat(64), label: 'Test' }],
     ['config LOG_VERBOSE', '/api/config', { key: 'LOG_VERBOSE', value: 'false' }],
     ['unlock (falsches Passwort)', '/api/unlock', { password: 'wrong-test' }],
     ['generate-address', '/api/generate-address', {}],

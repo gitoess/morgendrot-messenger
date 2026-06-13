@@ -31,6 +31,7 @@ export function DashboardBossQuickActions(p: {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground">{t('bossQuickActions.messages.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.messages.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-300/90">
             {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -49,6 +50,7 @@ export function DashboardBossQuickActions(p: {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground">{t('bossQuickActions.einsatzleitung.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.einsatzleitung.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-200/90">
             {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
@@ -67,6 +69,7 @@ export function DashboardBossQuickActions(p: {
           </div>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-foreground">{t('bossQuickActions.vault.title')}</p>
+            <p className="text-sm text-muted-foreground">{t('bossQuickActions.vault.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-red-300/90">
             {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />

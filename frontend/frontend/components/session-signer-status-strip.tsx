@@ -69,12 +69,12 @@ export function SessionSignerStatusStrip(p: {
       ) : (
         <div className="mt-1 space-y-2">
           <p className="text-muted-foreground">
-            Signer fehlt in dieser Browser-Sitzung. Tresor erneut entsperren — Mnemonic wird dann automatisch
-            übernommen (kein separates Feld nötig).
+            Signer fehlt in dieser Browser-Sitzung. Vault-Passwort eingeben — der Signer wird aus dem Tresor in den
+            Browser geladen (Tresor muss nicht erneut entsperrt werden).
           </p>
           {p.onRequestUnlock ? (
             <Button type="button" size="sm" variant="secondary" className="h-8 text-xs" onClick={p.onRequestUnlock}>
-              Tresor entsperren
+              Signer laden
             </Button>
           ) : null}
         </div>

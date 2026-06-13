@@ -1,7 +1,7 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import { PeeringQrActions } from '@/frontend/components/peering-qr-actions'
+import { LazyPeeringQrActions } from '@/frontend/components/lazy/messenger-scope-b'
 import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
@@ -46,7 +46,7 @@ export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecip
             onClick={() => void onHandshake?.()}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
           >
-            {status === 'awaiting_peer' ? 'Resend handshake' : 'Send handshake'}
+            {status === 'awaiting_peer' ? 'Handshake erneut senden' : 'Handshake senden'}
           </button>
         ) : null}
         {status === 'needs_accept' ? (
@@ -56,12 +56,12 @@ export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecip
             onClick={() => void onAccept?.()}
             className="rounded-md border border-emerald-600/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-50"
           >
-            Accept handshake
+            Handshake annehmen
           </button>
         ) : null}
       </div>
       {onPeeringImported ? (
-        <PeeringQrActions
+        <LazyPeeringQrActions
           className="mt-2 flex flex-wrap gap-1.5"
           myAddress={myAddress}
           disabled={sending}

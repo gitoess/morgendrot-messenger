@@ -109,17 +109,17 @@ export function useChatViewPendingHandshakes(p: {
           )
           if (r.fromCache && !opts?.silent) {
             const standalone = shouldSkipMessengerApiRelayFallback()
-            toast.info('Handshake list from cache', {
+            toast.info('Handshake-Liste aus Cache', {
               description: standalone
-                ? `State from ${r.cacheAgeMinutes ?? '?'} min ago — check direct RPC for fresh offers (handoff, full node). Accept/connect via direct RPC when pulse is complete.`
-                : `Basis unreachable — state from ${r.cacheAgeMinutes ?? '?'} min ago (TTL 30 min). Accept/dismiss requires the basis.`,
+                ? `Stand vor ${r.cacheAgeMinutes ?? '?'} Min. — für frische Angebote Direkt-RPC prüfen (Handoff, Fullnode). Annehmen/Connect per Direkt-RPC wenn Puls vollständig.`
+                : `Basis nicht erreichbar — Stand vor ${r.cacheAgeMinutes ?? '?'} Min. (TTL 30 Min.). Annehmen/Ablehnen braucht die Basis.`,
               duration: 10_000,
             })
           } else if (r.liveSource === 'rpc' && !opts?.silent && basisUnreachable) {
-            toast.info('Handshake list via direct RPC', {
+            toast.info('Handshake-Liste per Direkt-RPC', {
               description: canTryDirectConnectPeer()
-                ? 'Basis offline — offers from full node. Accept/connect without Morgendrot API possible.'
-                : 'Basis offline — offers from full node. Accept: RPC + chain IDs + signer + ECDH JWK in pulse.',
+                ? 'Basis offline — Angebote von der Fullnode. Annehmen/Connect ohne Morgendrot-API möglich.'
+                : 'Basis offline — Angebote von der Fullnode. Annehmen: RPC + Ketten-IDs + Signer + ECDH-JWK im Puls.',
               duration: 8_000,
             })
           }
@@ -128,11 +128,11 @@ export function useChatViewPendingHandshakes(p: {
             const addr = o.sender.trim().toLowerCase()
             const label =
               contactDisplayLabel(directoryRef.current, addr) || `${addr.slice(0, 10)}…`
-            toast.message('Handshake request', {
-              description: `${label} wants to connect encrypted — accept or dismiss in inbox.`,
+            toast.message('Handshake-Anfrage', {
+              description: `${label} möchte verschlüsselt verbinden — im Posteingang annehmen oder ablehnen.`,
               duration: 12_000,
               action: {
-                label: 'Inbox',
+                label: 'Posteingang',
                 onClick: () => notifyOpenMessengerInbox(),
               },
             })

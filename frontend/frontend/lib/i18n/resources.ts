@@ -12,7 +12,7 @@ import enDashboard from '../../../locales/en/dashboard.json'
 export const APP_LOCALES = ['de', 'en'] as const
 export type AppLocale = (typeof APP_LOCALES)[number]
 
-export const DEFAULT_APP_LOCALE: AppLocale = 'en'
+export const DEFAULT_APP_LOCALE: AppLocale = 'de'
 export const LOCALE_STORAGE_KEY = 'morgendrot.locale'
 
 export const i18nResources = {

@@ -140,11 +140,11 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       setErrors(local.errors)
       if (local.ok) {
         setStatusMsg(
-          'Standalone APK: preview OK — choose "Stage locally (no basis server)" below (not "Confirm import").'
+          'Standalone-APK: Vorschau OK — unten „Lokal vormerken (ohne Basis)“ wählen (nicht „Import bestätigen“).'
         )
         setStage('ready')
       } else {
-        setStatusMsg('Preview: fix errors or choose a different ZIP.')
+        setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
         setStage('idle')
       }
       return
@@ -160,11 +160,11 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
         setErrors(local.errors)
       } else setErrors([])
       if (!preview.ok && !remoteError) {
-        setStatusMsg('Preview: fix errors or choose a different ZIP.')
+        setStatusMsg('Vorschau: Bitte Fehler beheben oder andere ZIP wählen.')
         setStage('idle')
       } else {
         if (remoteError) {
-          setStatusMsg('Offline preview active (validated locally). Final apply requires a reachable basis server.')
+          setStatusMsg('Offline-Vorschau aktiv (lokal validiert). Endgültiges Anwenden benötigt erreichbare Basis.')
         } else {
           setStatusMsg('')
         }
@@ -173,7 +173,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     } catch {
       setSummary(local.summary)
       setErrors(local.errors)
-      setStatusMsg('Offline preview active (validated locally). Final apply requires a reachable basis server.')
+      setStatusMsg('Offline-Vorschau aktiv (lokal validiert). Endgültiges Anwenden benötigt erreichbare Basis.')
       setStage(local.ok ? 'ready' : 'idle')
     }
   }, [persistDraft])
@@ -184,18 +184,18 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       if ('needsPassword' in extracted && extracted.needsPassword) {
         setEnvText(null)
         setPendingEncrypted(extracted.pending)
-        setFileLabel(`${label} (password protected)`)
-        setStatusMsg('This ZIP is encrypted — enter the handoff password from the boss.')
+        setFileLabel(`${label} (passwortgeschützt)`)
+        setStatusMsg('Diese ZIP ist verschlüsselt — Handoff-Passwort vom Boss eingeben.')
         return
       }
       if (!extracted.ok) {
-        setErrors(['error' in extracted ? extracted.error : 'Could not read handoff.'])
+        setErrors(['error' in extracted ? extracted.error : 'Handoff konnte nicht gelesen werden.'])
         setEnvText(null)
         return
       }
       await applyExtractedEnv(
         extracted.envText,
-        `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (decrypted)' : ''}`,
+        `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (entschlüsselt)' : ''}`,
         extracted.runtimeConfigText
       )
     },
@@ -231,10 +231,10 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     setErrors([])
     try {
       const label = pending.meta.label?.trim()
-        ? `Inbox: ${pending.meta.label}`
-        : 'Inbox (boss handoff)'
+        ? `Posteingang: ${pending.meta.label}`
+        : 'Posteingang (Boss-Handoff)'
       await processZipBytes(pending.zipBytes, label)
-      setStatusMsg('Handoff loaded from inbox — if protected, enter password, then review preview.')
+      setStatusMsg('Handoff aus Posteingang geladen — bei Schutz Passwort eingeben, dann Vorschau prüfen.')
     } finally {
       setBusy(false)
     }
@@ -272,13 +272,13 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       if (!envText?.trim() && storedDraft?.envText) {
         void applyExtractedEnv(
           storedDraft.envText,
-          'Draft (after reconnect)',
+          'Entwurf (nach Reconnect)',
           storedDraft.runtimeConfigText ?? undefined
         )
       }
       setBasisApplyReady(true)
       setStatusMsg(
-        'Basis server reachable again — run "Confirm import" so the profile is persisted on the server (not just staged locally).'
+        'Basis wieder erreichbar — „Import bestätigen“ ausführen, damit das Profil persistent auf der Basis liegt (nicht nur lokal vorgemerkt).'
       )
     }
   }, [p.backendOnline, localAppliedOnly, envText, applyExtractedEnv])
@@ -286,7 +286,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
   const onDecrypt = async () => {
     if (!pendingEncrypted) return
     if (!handoffPassword.trim()) {
-      setErrors(['Enter the handoff password.'])
+      setErrors(['Bitte das Handoff-Passwort eingeben.'])
       return
     }
     setBusy(true)
@@ -294,13 +294,13 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     try {
       const extracted = await decryptHandoffPending(pendingEncrypted, handoffPassword)
       if (!extracted.ok) {
-        setErrors(['error' in extracted ? extracted.error : 'Could not read handoff.'])
+        setErrors(['error' in extracted ? extracted.error : 'Handoff konnte nicht gelesen werden.'])
         return
       }
       setPendingEncrypted(null)
       setHandoffPassword('')
       await applyExtractedEnv(extracted.envText, `handoff.morg.enc → ${extracted.envFileName}`)
-      setStatusMsg('Decrypted — review preview and confirm import.')
+      setStatusMsg('Entschlüsselt — Vorschau prüfen und Import bestätigen.')
     } finally {
       setBusy(false)
       setStage((prev) => (prev === 'decrypting' ? 'idle' : prev))
@@ -318,7 +318,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     const local = previewHandoffEnvImportLocal(envText, null)
     if (!local.ok) {
       setErrors(local.errors)
-      setStatusMsg('Local staging failed — fix preview errors.')
+      setStatusMsg('Lokales Vormerken fehlgeschlagen — Vorschau-Fehler beheben.')
       return
     }
     applyHandoffEnvToLocalDevice(envText)
@@ -340,7 +340,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     setDraft(null)
     notifyStandaloneHandoffApplied()
     setStatusMsg(
-      'Step 1 done — package, mailbox, and fullnode are saved. Next: "Set up seed?" (QR or entry).'
+      'Schritt 1 erledigt — Package, Mailbox und Fullnode sind gespeichert. Gleich „Seed einrichten?“ (QR oder Eingabe).'
     )
   }, [envText])
 
@@ -359,11 +359,11 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       if (r.summary) setSummary(r.summary)
       if (r.errors?.length) {
         setErrors(r.errors)
-        setStatusMsg(r.error || 'Import partially failed.')
+        setStatusMsg(r.error || 'Import teilweise fehlgeschlagen.')
         return
       }
       if (!r.ok) {
-        setErrors([r.error || 'Import failed'])
+        setErrors([r.error || 'Import fehlgeschlagen'])
         setStage('ready')
         return
       }
@@ -384,8 +384,8 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       if (r.summary) recordHandoffProfileImport(envText, r.summary)
       setStatusMsg(
         r.applied?.length
-          ? `${r.applied.length} setting(s) saved — the basis server has already applied the values. Reload the page, then unlock the vault.`
-          : 'Import OK — reload the page, then unlock the vault.'
+          ? `${r.applied.length} Einstellung(en) gespeichert — die Basis hat die Werte bereits übernommen. Seite neu laden, dann Tresor entsperren.`
+          : 'Import OK — Seite neu laden, dann Tresor entsperren.'
       )
     } finally {
       setBusy(false)
@@ -400,7 +400,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
   /** Nur Fallback: unter npm run dev beendet /api/restart oft den API-Prozess ohne Neustart durch concurrently. */
   const onHardRestart = async () => {
     setHardRestartBusy(true)
-    setStatusMsg('Restarting backend… please wait (may take up to 90 s).')
+    setStatusMsg('Backend-Neustart … bitte warten (kann bis zu 90 s dauern).')
     try {
       await restartBackend()
     } catch {
@@ -412,7 +412,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       return
     }
     setStatusMsg(
-      'Backend is not responding yet. Check the terminal: npm run start:secrets — then reload the page manually.'
+      'Backend antwortet noch nicht. Terminal prüfen: npm run start:secrets — danach Seite manuell neu laden.'
     )
     setHardRestartBusy(false)
   }
@@ -426,30 +426,30 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
         <div className="min-w-0 flex-1 space-y-3">
           {basisApplyReady && p.backendOnline === true && envText && !applied ? (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-950 dark:text-emerald-100">
-              <p className="font-medium">Basis server reachable — apply persistent profile</p>
+              <p className="font-medium">Basis erreichbar — persistentes Profil anwenden</p>
               <p className="mt-1 text-xs opacity-90">
-                Local staging is enough for offline hints. For the permanent server state, run{' '}
-                <strong>Confirm import</strong> now (below).
+                Lokal vorgemerkt reicht für Offline-Hinweise. Für den dauerhaften Stand auf dem Server jetzt{' '}
+                <strong>Import bestätigen</strong> (unten).
               </p>
             </div>
           ) : null}
 
           <div>
-            <h4 className="font-semibold text-foreground">Import handoff</h4>
+            <h4 className="font-semibold text-foreground">Handoff importieren</h4>
             <p className="mt-1 text-sm text-muted-foreground">
-              Choose a boss ZIP or use the <strong className="text-foreground">inbox</strong> (message menu) — plaintext
-              or <span className="font-mono text-xs">handoff.morg.enc</span>.
+              Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
+              Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>.
               {standaloneHandoffMode ? (
                 <>
                   {' '}
-                  On the <strong className="text-foreground">standalone APK without a PC server</strong>: after preview,
-                  choose <strong className="text-foreground">Stage locally (no basis server)</strong>, then reload the
-                  page and set the mnemonic in the unlock dialog or Pulse.
+                  Auf der <strong className="text-foreground">Standalone-APK ohne PC-Server</strong>: nach der Vorschau{' '}
+                  <strong className="text-foreground">Lokal vormerken (ohne Basis)</strong>, dann Seite neu laden und
+                  Mnemonic im Entsperren-Dialog oder Puls setzen.
                 </>
               ) : (
                 <>
                   {' '}
-                  Then <strong className="text-foreground">reload the page</strong> and unlock the vault.
+                  Danach <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
                 </>
               )}
             </p>
@@ -470,7 +470,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
               className="inline-flex items-center gap-2 rounded-lg border border-purple-400/45 bg-purple-500/10 px-4 py-2 text-sm font-medium text-foreground hover:bg-purple-500/20 disabled:opacity-50"
             >
               <FileUp className="h-4 w-4" aria-hidden />
-              {busy ? 'Reading ZIP…' : 'Choose handoff ZIP'}
+              {busy ? 'Lese ZIP…' : 'Handoff-ZIP wählen'}
             </button>
             {envText || pendingEncrypted ? (
               <button
@@ -479,7 +479,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                 onClick={reset}
                 className="rounded-lg border border-border px-3 py-2 text-sm text-muted-foreground hover:bg-muted"
               >
-                Reset
+                Zurücksetzen
               </button>
             ) : null}
           </div>
@@ -487,32 +487,33 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
           {stage !== 'idle' ? (
             <p className="text-xs text-muted-foreground" role="status">
               {stage === 'reading'
-                ? 'Progress: reading ZIP...'
+                ? 'Fortschritt: ZIP wird gelesen...'
                 : stage === 'decrypting'
-                  ? 'Progress: decrypting ZIP...'
+                  ? 'Fortschritt: ZIP wird entschlüsselt...'
                   : stage === 'previewing'
-                    ? 'Progress: preview/validation...'
+                    ? 'Fortschritt: Vorschau/Validierung...'
                     : stage === 'applying'
-                      ? 'Progress: applying values...'
+                      ? 'Fortschritt: Werte werden angewendet...'
                       : stage === 'ready'
-                        ? 'Preview ready.'
-                        : 'Import complete. Restart the app/page.'}
+                        ? 'Vorschau bereit.'
+                        : 'Import abgeschlossen. App/Seite neu starten.'}
             </p>
           ) : null}
 
           {fileLabel ? (
             <p className="text-xs text-muted-foreground">
-              File: <span className="font-mono text-foreground">{fileLabel}</span>
+              Datei: <span className="font-mono text-foreground">{fileLabel}</span>
             </p>
           ) : null}
 
           {draft && !envText ? (
             <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-950 dark:text-sky-100">
               <p>
-                Draft found ({new Date(draft.savedAtMs).toLocaleString('de-DE')}).
+                Entwurf gefunden ({new Date(draft.savedAtMs).toLocaleString('de-DE')}).
               </p>
               <p className="mt-1 text-[11px] text-sky-900/90 dark:text-sky-100/90">
-                Note: the draft only helps with preview/validation. Final apply still goes through the basis API.
+                Hinweis: Der Draft hilft nur fuer Vorschau/Validierung. Das endgueltige Anwenden schreibt weiterhin ueber
+                die Basis-API.
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
@@ -521,13 +522,13 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                   onClick={() =>
                     void applyExtractedEnv(
                       draft.envText,
-                      `Local draft (${new Date(draft.savedAtMs).toLocaleString('de-DE')})`,
+                      `Lokaler Entwurf (${new Date(draft.savedAtMs).toLocaleString('de-DE')})`,
                       draft.runtimeConfigText || undefined
                     )
                   }
                   className="rounded-lg border border-sky-500/40 bg-sky-500/15 px-3 py-1.5 text-xs font-semibold text-sky-950 hover:bg-sky-500/25 dark:text-sky-100"
                 >
-                  Restore draft
+                  Draft wiederherstellen
                 </button>
                 <button
                   type="button"
@@ -542,7 +543,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                   }}
                   className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
                 >
-                  Discard draft
+                  Draft verwerfen
                 </button>
               </div>
             </div>
@@ -552,9 +553,9 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
             <div className="rounded-lg border border-amber-600/40 bg-amber-950/25 px-3 py-3 space-y-2">
               <p className="flex items-center gap-2 text-sm font-medium text-foreground">
                 <Lock className="h-4 w-4 text-amber-400" aria-hidden />
-                Password-protected handoff
+                Passwortgeschützter Handoff
               </p>
-              <label className="block text-xs text-muted-foreground">Handoff password (from boss)</label>
+              <label className="block text-xs text-muted-foreground">Handoff-Passwort (vom Boss)</label>
               <input
                 type="password"
                 autoComplete="current-password"
@@ -571,7 +572,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                 onClick={() => void onDecrypt()}
                 className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-600/90 disabled:opacity-50"
               >
-                {busy ? 'Decrypting…' : 'Decrypt & preview'}
+                {busy ? 'Entschlüssele…' : 'Entschlüsseln & Vorschau'}
               </button>
             </div>
           ) : null}
@@ -586,16 +587,16 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
 
           {summary ? (
             <div className="rounded-lg border border-border/70 bg-muted/15 px-3 py-2 text-xs leading-relaxed">
-              <p className="font-semibold text-foreground">Preview</p>
+              <p className="font-semibold text-foreground">Vorschau</p>
               <ul className="mt-2 space-y-1 text-muted-foreground">
                 {summary.handoffLabel ? (
                   <li>
-                    Label: <strong className="text-foreground">{summary.handoffLabel}</strong>
+                    Bezeichnung: <strong className="text-foreground">{summary.handoffLabel}</strong>
                   </li>
                 ) : null}
                 {summary.role ? (
                   <li>
-                    Role: <span className="font-mono">{summary.role}</span>
+                    Rolle: <span className="font-mono">{summary.role}</span>
                     {summary.deploymentProfile ? ` · ${summary.deploymentProfile}` : ''}
                   </li>
                 ) : null}
@@ -609,12 +610,12 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                 {summary.teamMailboxIds ? (
                   <li>Team-Mailboxes: {summary.teamMailboxIds.split(',').length} ID(s)</li>
                 ) : null}
-                {summary.mailboxId ? <li>Primary mailbox: {summary.mailboxId}</li> : null}
+                {summary.mailboxId ? <li>Primäre Mailbox: {summary.mailboxId}</li> : null}
                 {summary.partnerPreview ? <li>Partner: {summary.partnerPreview}</li> : null}
                 <li className="pt-1 text-amber-900/90 dark:text-amber-100/90">{summary.pskHint}</li>
                 <li className="text-[10px]">
-                  {summary.keysToApply} of {summary.keysInFile} keys will be applied
-                  {summary.skippedKeys.length ? ` (${summary.skippedKeys.length} skipped)` : ''}.
+                  {summary.keysToApply} von {summary.keysInFile} Keys werden übernommen
+                  {summary.skippedKeys.length ? ` (${summary.skippedKeys.length} übersprungen)` : ''}.
                 </li>
               </ul>
             </div>
@@ -630,10 +631,10 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                     onClick={onApplyLocalOnly}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    Apply handoff — continue with mnemonic
+                    Handoff übernehmen — weiter mit Mnemonic
                   </button>
                   <p className="w-full text-xs text-muted-foreground">
-                    Applies package, mailbox, fullnode, and direct mode automatically. No PC server required.
+                    Übernimmt Package, Mailbox, Fullnode und Direkt-Modus automatisch. Kein PC-Server nötig.
                   </p>
                 </>
               ) : (
@@ -644,7 +645,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                     onClick={() => void onApply()}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {busy ? 'Saving…' : 'Confirm import'}
+                    {busy ? 'Speichere…' : 'Import bestätigen'}
                   </button>
                   <button
                     type="button"
@@ -652,7 +653,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                     onClick={onApplyLocalOnly}
                     className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                   >
-                    Stage locally (no basis server)
+                    Lokal vormerken (ohne Basis)
                   </button>
                 </>
               )}
@@ -670,7 +671,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                     className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-foreground hover:bg-emerald-500/25 disabled:opacity-50"
                   >
                     <RefreshCw className={`h-4 w-4 ${reloading ? 'animate-spin' : ''}`} aria-hidden />
-                    Reload page
+                    Seite neu laden
                   </button>
                   <button
                     type="button"
@@ -678,20 +679,20 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
                     onClick={() => void onHardRestart()}
                     className="rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground hover:bg-muted disabled:opacity-50"
                   >
-                    {hardRestartBusy ? 'Waiting for backend…' : 'Hard restart backend (only if needed)'}
+                    {hardRestartBusy ? 'Warte auf Backend…' : 'Backend hart neu starten (nur wenn nötig)'}
                   </button>
                 </>
               ) : (
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-100">
-                  Handoff applied — &quot;Set up seed?&quot; will appear next (scan QR).
+                  Handoff übernommen — gleich erscheint „Seed einrichten?“ (QR scannen).
                 </p>
               )}
               <p className="w-full text-xs text-amber-900/90 dark:text-amber-100/90">
                 {standaloneHandoffMode
-                  ? 'No restart needed — scan the boss seed QR or enter the mnemonic.'
-                  : 'After handoff import, restart the app/page so profile/capabilities are active consistently.'}
+                  ? 'Kein Neustart nötig — Seed-QR vom Boss scannen oder Mnemonic eingeben.'
+                  : 'Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.'}
                 {localAppliedOnly && !standaloneHandoffMode
-                  ? ' Local mode remains a fallback; for persistent apply, later run "Confirm import" when connected to the basis server.'
+                  ? ' Lokaler Modus bleibt ein Fallback; fuer persistentes Anwenden bitte spaeter mit Basisverbindung "Import bestätigen".'
                   : ''}
               </p>
             </div>

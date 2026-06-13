@@ -40,17 +40,17 @@ export type TangleInventoryScope = 'anchored' | 'all'
 type TextResult = { text: string; source?: RecoverTangleTextSource } | { error: string }
 
 function typeLabel(t: TangleInventoryItem['type']): string {
-  if (t === 'image') return 'Image'
+  if (t === 'image') return 'Bild'
   if (t === 'text') return 'Text'
-  if (t === 'protocol-hash') return 'Protocol hash'
-  if (t === 'protocol-full') return 'Protocol full'
-  return 'Other'
+  if (t === 'protocol-hash') return 'Protokoll-Hash'
+  if (t === 'protocol-full') return 'Protokoll-voll'
+  return 'Sonstiges'
 }
 
 function sourceHint(source: RecoverTangleTextSource): string {
-  if (source === 'preview') return 'Stored locally'
-  if (source === 'local-inbox') return 'From loaded inbox'
-  return 'Reloaded from chain/API'
+  if (source === 'preview') return 'Lokal gespeichert'
+  if (source === 'local-inbox') return 'Aus geladenem Posteingang'
+  return 'Von Chain/API nachgeladen'
 }
 
 function digestKey(d: string): string {
@@ -102,7 +102,7 @@ export function ChatViewTangleInventoryButton(p?: {
       status: inventoryScope === 'anchored' ? 'anchored' : 'all',
     })
   }, [refreshTick, inventoryScope])
-  const defaultTriggerLabel = txCount > 0 ? `IOTA transactions (${txCount})` : 'IOTA transactions'
+  const defaultTriggerLabel = txCount > 0 ? `IOTA-Transaktionen (${txCount})` : 'IOTA-Transaktionen'
   const triggerLabel = p?.triggerLabel ?? defaultTriggerLabel
   const [busyId, setBusyId] = useState<string | null>(null)
   const [resultById, setResultById] = useState<Record<string, TextResult>>({})
@@ -205,8 +205,8 @@ export function ChatViewTangleInventoryButton(p?: {
     }
     refresh()
     setUiMsg(
-      `${ok} evidence item(s) saved locally` +
-        (withText < ok ? ` (${withText} with text, ${ok - withText} IOTA data only).` : '.')
+      `${ok} Beweis(e) lokal gesichert` +
+        (withText < ok ? ` (${withText} mit Text, ${ok - withText} nur IOTA-Daten).` : '.')
     )
     setBatchBusy(false)
   }
@@ -217,13 +217,13 @@ export function ChatViewTangleInventoryButton(p?: {
       packageId: p?.packageId,
       getText: (it) => textForItem(it, resultById),
     })
-    setUiMsg(`${actionTargets.length} evidence item(s) exported as JSON.`)
+    setUiMsg(`${actionTargets.length} Beweis(e) als JSON exportiert.`)
   }
 
   const batchLoadText = async () => {
     const targets = actionTargets.filter(canRecoverTangleInventoryText)
     if (targets.length === 0) {
-      setUiMsg('No entries with loadable text.')
+      setUiMsg('Keine Einträge mit ladbarem Text.')
       return
     }
     setBatchBusy(true)
@@ -231,14 +231,14 @@ export function ChatViewTangleInventoryButton(p?: {
     for (const it of targets) {
       if (await loadText(it)) ok++
     }
-    setUiMsg(`Text loaded: ${ok}/${targets.length}.`)
+    setUiMsg(`Text geladen: ${ok}/${targets.length}.`)
     setBatchBusy(false)
   }
 
   const batchSaveToVault = async () => {
     const targets = actionTargets.filter((it) => !isInVault(it.digest))
     if (targets.length === 0) {
-      setUiMsg('Selection is already in the vault.')
+      setUiMsg('Auswahl liegt bereits im Tresor.')
       return
     }
     setBatchBusy(true)
@@ -248,7 +248,7 @@ export function ChatViewTangleInventoryButton(p?: {
       if (r.ok) ok++
     }
     await refreshVaultDigests()
-    setUiMsg(`${ok} saved to vault.`)
+    setUiMsg(`${ok} im Tresor gespeichert.`)
     setBatchBusy(false)
   }
 
@@ -256,20 +256,20 @@ export function ChatViewTangleInventoryButton(p?: {
     for (const it of actionTargets.slice(0, 12)) {
       window.open(explorerTxUrlFromDigest(it.digest), '_blank', 'noopener,noreferrer')
     }
-    if (actionTargets.length > 12) setUiMsg('Explorer: max. 12 tabs opened.')
+    if (actionTargets.length > 12) setUiMsg('Explorer: max. 12 Tabs geöffnet.')
   }
 
   const batchRemoveFromList = () => {
     for (const it of actionTargets) removeTangleInventoryItem(it.id)
     setSelectedIds(new Set())
     refresh()
-    setUiMsg(`${actionTargets.length} removed from list.`)
+    setUiMsg(`${actionTargets.length} aus Liste entfernt.`)
   }
 
   const batchRemoveFromVault = async () => {
     const inVault = actionTargets.filter((it) => isInVault(it.digest))
     if (inVault.length === 0) {
-      setUiMsg('No vault entries in selection.')
+      setUiMsg('Keine Tresor-Einträge in der Auswahl.')
       return
     }
     setBatchBusy(true)
@@ -279,7 +279,7 @@ export function ChatViewTangleInventoryButton(p?: {
       if (r.ok) removed += r.removed ?? 0
     }
     await refreshVaultDigests()
-    setUiMsg(`${removed} removed from vault.`)
+    setUiMsg(`${removed} aus Tresor entfernt.`)
     setBatchBusy(false)
   }
 
@@ -304,7 +304,7 @@ export function ChatViewTangleInventoryButton(p?: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>IOTA transactions — evidence</DialogTitle>
+            <DialogTitle>IOTA-Transaktionen — Beweissicherung</DialogTitle>
           </DialogHeader>
 
           <p className="text-xs text-muted-foreground">
@@ -317,17 +317,17 @@ export function ChatViewTangleInventoryButton(p?: {
           <div className="flex flex-wrap gap-2 rounded-lg border border-border/70 bg-muted/15 p-2">
             <Button type="button" size="sm" disabled={batchBusy || items.length === 0} onClick={() => void batchSecureEvidence()}>
               <Save className="mr-1.5 h-3.5 w-3.5" />
-              Save evidence locally
-              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (all)' : ''}
+              Beweis lokal sichern
+              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (alle)' : ''}
             </Button>
             <Button type="button" size="sm" variant="outline" disabled={items.length === 0} onClick={batchExportJson}>
               <Download className="mr-1.5 h-3.5 w-3.5" />
-              Export JSON
-              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (all)' : ''}
+              JSON exportieren
+              {someSelected ? ` (${selectedIds.size})` : items.length > 0 ? ' (alle)' : ''}
             </Button>
             <Button type="button" size="sm" variant="outline" disabled={batchBusy || items.length === 0} onClick={() => void batchLoadText()}>
               <RefreshCw className={cn('mr-1.5 h-3.5 w-3.5', batchBusy && 'animate-spin')} />
-              Reload text
+              Text nachladen
             </Button>
           </div>
 
@@ -336,7 +336,7 @@ export function ChatViewTangleInventoryButton(p?: {
             className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
             onClick={() => setShowTresorOpts((v) => !v)}
           >
-            {showTresorOpts ? '▾ Hide vault options' : '▸ Optional: copy in wallet vault'}
+            {showTresorOpts ? '▾ Tresor-Optionen ausblenden' : '▸ Optional: Kopie im Wallet-Tresor'}
           </button>
           {showTresorOpts ? (
             <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border/80 px-2 py-2">
@@ -347,24 +347,24 @@ export function ChatViewTangleInventoryButton(p?: {
                 onClick={async () => {
                   const r = await importDigestsFromVault()
                   if (!r.ok) {
-                    setUiMsg(r.error ?? 'Vault import failed.')
+                    setUiMsg(r.error ?? 'Tresor-Import fehlgeschlagen.')
                     return
                   }
                   addManyTangleInventoryItems(r.items ?? [])
                   await refreshVaultDigests()
                   refresh()
-                  setUiMsg(`${(r.items ?? []).length} imported from vault.`)
+                  setUiMsg(`${(r.items ?? []).length} aus Tresor übernommen.`)
                 }}
               >
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
-                Load from vault
+                Aus Tresor laden
               </Button>
               <Button type="button" size="sm" variant="outline" disabled={batchBusy} onClick={() => void batchSaveToVault()}>
-                Save to vault
+                Im Tresor speichern
               </Button>
               {selectedInVaultCount > 0 ? (
                 <Button type="button" size="sm" variant="outline" disabled={batchBusy} onClick={() => void batchRemoveFromVault()}>
-                  Remove from vault ({selectedInVaultCount})
+                  Aus Tresor löschen ({selectedInVaultCount})
                 </Button>
               ) : null}
               <label className="inline-flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -376,7 +376,7 @@ export function ChatViewTangleInventoryButton(p?: {
                     setTangleInventoryAutoVaultSaveEnabled(e.target.checked)
                   }}
                 />
-                Auto-save new sends to vault
+                Neue Sends automatisch im Tresor
               </label>
             </div>
           ) : null}
@@ -385,7 +385,7 @@ export function ChatViewTangleInventoryButton(p?: {
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border/70 px-3 py-2">
               <label className="inline-flex items-center gap-2 text-xs font-medium">
                 <input type="checkbox" checked={allVisibleSelected} onChange={toggleSelectAll} />
-                All ({items.length})
+                Alle ({items.length})
               </label>
               {someSelected ? (
                 <div className="flex flex-wrap gap-2">
@@ -394,7 +394,7 @@ export function ChatViewTangleInventoryButton(p?: {
                     Explorer
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={batchRemoveFromList}>
-                    From list
+                    Aus Liste
                   </Button>
                 </div>
               ) : null}
@@ -406,7 +406,7 @@ export function ChatViewTangleInventoryButton(p?: {
           <div className="space-y-2">
             {items.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No IOTA transactions yet — they appear after online send, path-4 mirror, or protocol anchoring.
+                Noch keine IOTA-Transaktionen — entstehen nach Online-Sendung, Pfad-4-Spiegel oder Protokoll-Verankerung.
               </p>
             ) : (
               items.map((it) => {
@@ -439,8 +439,8 @@ export function ChatViewTangleInventoryButton(p?: {
                           {tangleInventoryOriginLabel(it.origin, it.type)}
                         </p>
                         <p className="mt-0.5 text-xs text-muted-foreground">
-                          {secured ? '✓ Evidence saved locally' : 'Not secured yet'}
-                          {inVault ? ' · In vault' : ''}
+                          {secured ? '✓ Beweis lokal gesichert' : 'Noch nicht gesichert'}
+                          {inVault ? ' · Im Tresor' : ''}
                           {it.nonce ? ` · Nonce ${it.nonce}` : ''}
                         </p>
                         <p className="mt-0.5 break-all font-mono text-[11px] text-muted-foreground">{it.digest}</p>
@@ -467,8 +467,8 @@ export function ChatViewTangleInventoryButton(p?: {
                             refresh()
                             setUiMsg(
                               r.textSaved
-                                ? 'Evidence saved locally (text + IOTA data).'
-                                : 'Evidence saved locally (IOTA data; text unavailable).'
+                                ? 'Beweis lokal gesichert (Text + IOTA-Daten).'
+                                : 'Beweis lokal gesichert (IOTA-Daten; Text nicht verfügbar).'
                             )
                           } else {
                             setUiMsg(r.error)
@@ -476,7 +476,7 @@ export function ChatViewTangleInventoryButton(p?: {
                         }}
                       >
                         <Save className="mr-1.5 h-3.5 w-3.5" />
-                        Save evidence locally
+                        Beweis lokal sichern
                       </Button>
                       {recoverable ? (
                         <Button
@@ -486,7 +486,7 @@ export function ChatViewTangleInventoryButton(p?: {
                           disabled={busyId === it.id || batchBusy}
                           onClick={() => void loadText(it)}
                         >
-                          {busyId === it.id ? 'Loading…' : 'Reload text'}
+                          {busyId === it.id ? 'Lädt…' : 'Text nachladen'}
                         </Button>
                       ) : null}
                       {!inVault && showTresorOpts ? (
@@ -497,10 +497,10 @@ export function ChatViewTangleInventoryButton(p?: {
                           onClick={async () => {
                             const r = await saveDigestToVault(itemToVaultPayload(it))
                             if (r.ok) await refreshVaultDigests()
-                            setUiMsg(r.ok ? 'In vault.' : (r.error ?? 'Error'))
+                            setUiMsg(r.ok ? 'Im Tresor.' : (r.error ?? 'Fehler'))
                           }}
                         >
-                          In vault
+                          Im Tresor
                         </Button>
                       ) : null}
                       {inVault && showTresorOpts ? (
@@ -511,10 +511,10 @@ export function ChatViewTangleInventoryButton(p?: {
                           onClick={async () => {
                             const r = await removeDigestFromVault(it.digest)
                             if (r.ok) await refreshVaultDigests()
-                            setUiMsg(r.ok ? 'Removed from vault.' : (r.error ?? 'Error'))
+                            setUiMsg(r.ok ? 'Aus Tresor entfernt.' : (r.error ?? 'Fehler'))
                           }}
                         >
-                          Remove from vault
+                          Aus Tresor löschen
                         </Button>
                       ) : null}
                       <Button
@@ -528,7 +528,7 @@ export function ChatViewTangleInventoryButton(p?: {
                         }}
                       >
                         <X className="mr-1 h-3 w-3" />
-                        Remove
+                        Entfernen
                       </Button>
                     </div>
                     {(it.contentPreview && !result) || result ? (
@@ -562,11 +562,11 @@ export function ChatViewTangleInventoryButton(p?: {
                 setResultById({})
                 setSelectedIds(new Set())
                 refresh()
-                setUiMsg('List cleared.')
+                setUiMsg('Liste geleert.')
               }}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Clear list
+              Liste leeren
             </Button>
             <Button type="button" onClick={() => setOpen(false)}>
               Schließen

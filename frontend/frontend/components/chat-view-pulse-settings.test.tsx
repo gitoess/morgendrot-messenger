@@ -38,20 +38,20 @@ describe('ChatViewPulseSettings (§ H.1a)', () => {
 
   it('zeigt eingeklappten Trigger im Chat', () => {
     render(<ChatViewPulseSettings apiStatus={baseApiStatus()} />)
-    expect(screen.getByRole('button', { name: /Copy IDs/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /IDs zum Kopieren/i })).toBeInTheDocument()
   })
 
   it('zeigt Einstellungs-Trigger wenn embedded', () => {
     render(<ChatViewPulseSettings apiStatus={baseApiStatus()} settingsEmbedded />)
-    expect(screen.getByRole('button', { name: /Mailbox · direct RPC · streams pulse/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Mailbox · Direkt-RPC · Streams-Puls/i })).toBeInTheDocument()
   })
 
   it('klappt auf und lädt current-ids', async () => {
     render(<ChatViewPulseSettings apiStatus={baseApiStatus()} />)
-    fireEvent.click(screen.getByRole('button', { name: /Copy IDs/i }))
+    fireEvent.click(screen.getByRole('button', { name: /IDs zum Kopieren/i }))
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/current-ids', expect.any(Object))
+      expect(global.fetch).toHaveBeenCalledWith('/api/current-ids')
     })
-    expect(await screen.findByText(/Streams anchor/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Explorer \/ Prüfen/)).toBeInTheDocument()
   })
 })

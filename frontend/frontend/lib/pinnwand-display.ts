@@ -20,9 +20,9 @@ export function pinnwandSenderDisplayLabel(
   contactDirectory?: Record<string, ContactMeshEntryClient>
 ): string {
   const from = fromAddress.trim()
-  if (!from) return 'Command post'
+  if (!from) return 'Einsatzleitung'
   if (shouldMaskPinnwandSender(role, status)) {
-    return canAccessEinsatzleitung(role) ? contactDisplayLabel(contactDirectory ?? {}, from) || 'Command post' : 'Command post'
+    return canAccessEinsatzleitung(role) ? contactDisplayLabel(contactDirectory ?? {}, from) || 'Einsatzleitung' : 'Einsatzleitung'
   }
   return contactDisplayLabel(contactDirectory ?? {}, from) || `${from.slice(0, 10)}…${from.slice(-4)}`
 }

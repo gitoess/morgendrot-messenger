@@ -33,8 +33,8 @@ describe('deployment-profile-theme', () => {
   })
 
   it('roleDisplayDe', () => {
-    expect(roleDisplayDe('arbeiter')).toBe('Worker')
-    expect(roleDisplayDe('messenger')).toBe('Helper')
+    expect(roleDisplayDe('arbeiter')).toBe('Arbeiter')
+    expect(roleDisplayDe('messenger')).toBe('Helfer')
   })
 })
 
@@ -46,6 +46,6 @@ describe('formatActiveProfileTitle', () => {
         role: 'arbeiter',
         deploymentProfile: 'einsatz',
       })
-    ).toBe('THW Einsatz Süd – Worker')
+    ).toBe('THW Einsatz Süd – Arbeiter')
   })
 })

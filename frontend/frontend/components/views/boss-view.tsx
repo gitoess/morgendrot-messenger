@@ -23,7 +23,6 @@ import {
 } from '@/frontend/lib/api'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { API_BASE } from '@/frontend/lib/api/api-base'
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import { MeshFunkPanel } from '@/frontend/components/mesh-funk-panel'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
@@ -90,7 +89,7 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
     let cancelled = false
     void (async () => {
       try {
-        const r = await fetchWithApiAuth(`${API_BASE}/api/current-ids`)
+        const r = await fetch(`${API_BASE}/api/current-ids`)
         const j = (await r.json()) as {
           mailboxId?: string
           commandRegistryId?: string

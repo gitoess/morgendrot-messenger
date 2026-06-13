@@ -289,24 +289,32 @@ async function testApiEndpoints() {
     console.log('  (Backend nicht erreichbar – überspringe API-Tests)');
     return;
   }
-  const endpoints: [string, string, (j: Record<string, unknown>) => void][] = [
-    ['/api/status', 'GET', (j) => assert(j.backendRunning === true || j.ok === true, 'status body')],
-    ['/api/current-ids', 'GET', (j) => assert(typeof j.myAddress === 'string' || j.ok === true, 'current-ids')],
-    ['/api/messenger-presets', 'GET', (j) => assert(j.ok === true, 'messenger-presets ok')],
-    ['/api/lan-install-urls', 'GET', (j) => assert(j.ok === true, 'lan-install-urls ok')],
-    ['/api/einsatz-role-templates', 'GET', (j) => assert(Array.isArray(j.templates), 'templates array')],
-    ['/api/contact-labels', 'GET', (j) => assert(j.labels != null || j.ok === true, 'contact-labels')],
-    ['/api/pending-handshakes', 'GET', (j) => assert(j.ok === true, 'pending-handshakes ok')],
+  const endpoints: [string, string][] = [
+    ['/api/status', 'GET'],
+    ['/api/profiles', 'GET'],
+    ['/api/current-ids', 'GET'],
+    ['/api/provision-vault', 'GET'],
   ];
-  for (const [ep, method, check] of endpoints) {
+  for (const [ep, method] of endpoints) {
     try {
       const r = await fetch(base + ep, { method, signal: AbortSignal.timeout(3000) });
-      const j = (await r.json().catch(() => ({}))) as Record<string, unknown>;
+      const j = await r.json().catch(() => ({})) as { ok?: boolean };
       assert(r.status === 200, 'status 200');
-      check(j);
+      if (ep === '/api/profiles') assert(Array.isArray((j as { profiles?: unknown[] }).profiles), 'profiles array');
       ok(`api ${method} ${ep}`);
     } catch (e) {
       fail(`api ${ep}`, e);
+    }
+    if (passed + failed >= LIMIT) return;
+  }
+  for (let id = 0; id < 64; id += 8) {
+    try {
+      const r = await fetch(`${base}/api/profiles/id-${String(id).padStart(2, '0')}`, { signal: AbortSignal.timeout(2000) });
+      const j = await r.json().catch(() => ({})) as { ok?: boolean; template?: Record<string, unknown> };
+      assert(r.status === 200 && j.ok && j.template, 'template');
+      ok(`api profile id-${id}`);
+    } catch (e) {
+      fail(`api profile id-${id}`, e);
     }
     if (passed + failed >= LIMIT) return;
   }

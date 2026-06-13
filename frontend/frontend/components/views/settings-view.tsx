@@ -10,7 +10,7 @@ import {
   type ApiStatus,
 } from '@/frontend/lib/api'
 import Link from 'next/link'
-import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
+import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
@@ -100,7 +100,7 @@ export function SettingsView({
   const handleRevealSignerImport = async () => {
     setRecoveryErr('')
     if (!recoveryPw.trim()) {
-      setRecoveryErr('Enter vault password.')
+      setRecoveryErr('Vault-Passwort eingeben.')
       return
     }
     setRecoveryBusy(true)
@@ -110,7 +110,7 @@ export function SettingsView({
         setRevealedSigner(res.signerImport)
         setRecoveryPw('')
       } else {
-        setRecoveryErr(res.error || res.message || 'Could not reveal.')
+        setRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
       }
     } finally {
       setRecoveryBusy(false)
@@ -126,6 +126,9 @@ export function SettingsView({
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
+          <p className="text-sm text-muted-foreground">
+            {slimMessengerEinsatz ? t('settings.subtitleSlim') : t('settings.subtitleDefault')}
+          </p>
         </div>
       </div>
 
@@ -169,7 +172,7 @@ export function SettingsView({
       <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
 
       {(!slimMessengerEinsatz || !isBossRole) ? (
-        <HandoffImportPanel backendOnline={backendOnline} />
+        <LazyHandoffImportPanel backendOnline={backendOnline} />
       ) : null}
 
       {!slimMessengerEinsatz && status?.backendOnline ? (
@@ -187,13 +190,13 @@ export function SettingsView({
             <>
               {!status.vaultHasLocal ? (
                 <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  No local vault file — in Vault <strong className="font-medium">save locally</strong> (optional
-                  signer import) or load from chain.
+                  Keine lokale Vault-Datei — im Tresor <strong className="font-medium">lokal sichern</strong> (optional
+                  Signer-Import) oder von der Chain laden.
                 </p>
               ) : null}
               <div className="space-y-3">
                 <label className="block text-sm">
-                  <span className="text-muted-foreground">Vault password (re-enter)</span>
+                  <span className="text-muted-foreground">Vault-Passwort (erneut eingeben)</span>
                   <input
                     type="password"
                     autoComplete="off"
@@ -211,7 +214,7 @@ export function SettingsView({
                     onClick={() => void handleRevealSignerImport()}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {recoveryBusy ? 'Loading…' : 'Show recovery / signer import'}
+                    {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
                   </button>
                   {revealedSigner ? (
                     <button
@@ -222,14 +225,14 @@ export function SettingsView({
                       }}
                       className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
                     >
-                      Hide
+                      Ausblenden
                     </button>
                   ) : null}
                 </div>
                 {revealedSigner ? (
                   <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                     <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-                      Write down only in a secure place — do not share or save screenshots to untrusted clouds.
+                      Nur an einem sicheren Ort notieren — nicht teilen, nicht Screenshots in unsichere Clouds.
                     </p>
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
                       {revealedSigner}
@@ -244,7 +247,7 @@ export function SettingsView({
                       className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                     >
                       {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      Copy to clipboard
+                      In Zwischenablage kopieren
                     </button>
                   </div>
                 ) : null}
@@ -252,14 +255,14 @@ export function SettingsView({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — vault mnemonic display only with{' '}
-              <span className="font-mono">sdk</span>. For <span className="font-mono">cli</span> /{' '}
+              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — Vault-Mnemonic-Anzeige nur bei{' '}
+              <span className="font-mono">sdk</span>. Bei <span className="font-mono">cli</span> /{' '}
               <span className="font-mono">remote</span>:{' '}
               <Link
                 href="/handbook?file=RECOVERY-PHRASE-BACKUP.md"
                 className="text-primary underline underline-offset-2 hover:text-primary/90"
               >
-                Handbook
+                Handbuch
               </Link>
               .
             </p>
@@ -274,15 +277,15 @@ export function SettingsView({
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h4 className="font-semibold text-foreground">Full UI</h4>
+              <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                Show all feature tiles (same as “All features” on the dashboard). Saved in this browser.
+                Alle Funktions-Kacheln anzeigen (wie nach „Alle Funktionen“ auf dem Dashboard). Wird in diesem Browser gespeichert.
               </p>
             </div>
             <Switch
               checked={showAllTiles}
               onCheckedChange={onShowAllTilesChange}
-              aria-label="Show all tiles"
+              aria-label="Alle Kacheln anzeigen"
             />
           </div>
         </div>

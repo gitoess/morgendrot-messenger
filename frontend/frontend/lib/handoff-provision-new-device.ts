@@ -45,11 +45,10 @@ export async function provisionNewHandoffDevice(
   }
 
   const body = input.buildBody(mnemonic.address)
-  const zipPw = (input.zipPassword?.trim() || input.masterPassword.trim())
-  const zip = await downloadHandoffZipExport(body, {
-    password: zipPw,
-    passwordConfirm: zipPw,
-  })
+  const zip = await downloadHandoffZipExport(
+    body,
+    input.zipPassword ? { password: input.zipPassword } : {}
+  )
   if (!zip.ok) {
     return { ok: false, error: zip.error }
   }
@@ -77,6 +76,6 @@ export async function provisionNewHandoffDevice(
     entryId: added.entry.id,
     qrDataUrl,
     qrSeconds: HANDOFF_SEED_QR_SECONDS,
-    zipPasswordProtected: true,
+    zipPasswordProtected: Boolean(input.zipPassword),
   }
 }

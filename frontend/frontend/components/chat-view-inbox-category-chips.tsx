@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 
 const CHIP_LABELS: Record<InboxOverviewCategory, string> = {
-  alle: 'All',
+  alle: 'Alle',
   lagebild: 'Pinnwand',
-  direkt: 'Direct',
-  funk: 'Radio',
+  direkt: 'Direkt',
+  funk: 'Funk',
 }
 
 const CHIP_ORDER: InboxOverviewCategory[] = ['alle', 'lagebild', 'direkt', 'funk']
@@ -24,7 +24,7 @@ export function ChatViewInboxCategoryChips(p: {
     <div
       className="flex flex-wrap gap-1.5 border-b border-border px-3 py-2"
       role="tablist"
-      aria-label="Inbox categories"
+      aria-label="Posteingang Kategorien"
     >
       {chips.map((id) => {
         const active = p.category === id
@@ -52,7 +52,7 @@ export function ChatViewInboxCategoryChips(p: {
             {showBadge ? (
               <span
                 className="min-w-[1.1rem] rounded-full bg-red-500 px-1 text-center text-[10px] font-semibold leading-4 text-white"
-                aria-label={`${unread} unread`}
+                aria-label={`${unread} ungelesen`}
               >
                 {unread > 99 ? '99+' : unread}
               </span>

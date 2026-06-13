@@ -12,7 +12,6 @@ import {
     prepareForensicBatchFromMessages,
     type ForensicBatchMessageInput,
     type ForensicBatchTxPlan,
-    encryptForensicWireToMailboxItem,
 } from '@morgendrot/core/forensic-batch'
 import {
     readForensicBatchCanonicalRefSetServer,
@@ -21,14 +20,9 @@ import {
 import { forensicBatchModeFromEnv, type ForensicBatchArchiveMode } from './forensic-batch-mode.js'
 import { getEffectiveForensicBatchMode } from './forensic-batch-auto-config.js'
 import { loadForensicBatchEcdhMaterialForSelfArchive } from './forensic-batch-ecdh.js'
+import { encryptForensicWireToMailboxItem } from '@morgendrot/core/forensic-batch'
 import { releaseForensicBatchRunLock, tryAcquireForensicBatchRunLock } from './forensic-batch-run-lock.js'
 import { logger } from '../logger.js'
-import {
-    FORENSIC_BATCH_NONCE_MS_FACTOR,
-    FORENSIC_INBOX_FETCH_MAX_MESSAGES,
-    FORENSIC_INBOX_FETCH_MAX_PAGES,
-    FORENSIC_INBOX_FETCH_PAGE_SIZE,
-} from './forensic-batch-runner-constants.js'
 
 export type ForensicBatchRunResult =
     | {
@@ -42,8 +36,6 @@ export type ForensicBatchRunResult =
           mode: ForensicBatchArchiveMode
       }
     | { ok: false; error: string; partialDigests?: string[]; mode?: ForensicBatchArchiveMode }
-
-const IOTA_ADDR_RE = /^0x[a-fA-F0-9]{64}$/
 
 function mapFetchedToInput(m: FetchedMessage, idx: number): ForensicBatchMessageInput {
     return {
@@ -59,18 +51,16 @@ function mapFetchedToInput(m: FetchedMessage, idx: number): ForensicBatchMessage
     }
 }
 
-async function fetchServerInboxMessages(limit = FORENSIC_INBOX_FETCH_MAX_MESSAGES): Promise<FetchedMessage[]> {
+async function fetchServerInboxMessages(limit = 500): Promise<FetchedMessage[]> {
     const myAddr = (CFG.MY_ADDRESS || '').trim()
-    if (!IOTA_ADDR_RE.test(myAddr)) {
+    if (!/^0x[a-fA-F0-9]{64}$/.test(myAddr)) {
         throw new Error('MY_ADDRESS fehlt oder ungültig.')
     }
     const out: FetchedMessage[] = []
     let offset = 0
-    let pages = 0
-    const pageSize = Math.min(FORENSIC_INBOX_FETCH_PAGE_SIZE, limit)
-    while (pages < FORENSIC_INBOX_FETCH_MAX_PAGES) {
-        pages += 1
-        const { messages, hasMore } = await fetchLastMessages(myAddr, null, null, pageSize, undefined, undefined, {
+    const page = Math.min(500, limit)
+    for (;;) {
+        const { messages, hasMore } = await fetchLastMessages(myAddr, null, null, page, undefined, undefined, {
             offset,
             skipMessagingEvents: true,
         })
@@ -83,49 +73,46 @@ async function fetchServerInboxMessages(limit = FORENSIC_INBOX_FETCH_MAX_MESSAGE
 }
 
 function nextBatchNonceBase(): bigint {
-    return BigInt(Date.now()) * FORENSIC_BATCH_NONCE_MS_FACTOR
+    return BigInt(Date.now()) * 1000n
 }
 
-async function submitEncryptedPlan(
+async function submitPlan(
     plan: ForensicBatchTxPlan,
     archiveRecipient: string,
     senderAddress: string,
     walletPassword: string | undefined,
-    startNonce: bigint
+    mode: ForensicBatchArchiveMode
 ): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-    const ecdh = await loadForensicBatchEcdhMaterialForSelfArchive(archiveRecipient)
-    if (!ecdh.ok) return { ok: false, error: ecdh.error }
-    let nonce = startNonce
-    const encItems = []
-    for (const item of plan.items) {
-        const enc = await encryptForensicWireToMailboxItem(item.wireUtf8, nonce, ecdh.material)
-        nonce += 1n
-        if ('error' in enc) return { ok: false, error: enc.error }
-        encItems.push(enc)
+    let nonce = nextBatchNonceBase()
+    if (mode === 'encrypted') {
+        const ecdh = await loadForensicBatchEcdhMaterialForSelfArchive(archiveRecipient)
+        if (!ecdh.ok) return { ok: false, error: ecdh.error }
+        const encItems = []
+        for (const item of plan.items) {
+            const n = nonce
+            nonce = nonce + 1n
+            const enc = await encryptForensicWireToMailboxItem(
+                item.wireUtf8,
+                n,
+                ecdh.material
+            )
+            if ('error' in enc) return { ok: false, error: enc.error }
+            encItems.push(enc)
+        }
+        const res = await storeForensicEncryptedMailboxBatch(
+            archiveRecipient,
+            senderAddress,
+            encItems,
+            walletPassword
+        )
+        if (!res.digest && res.status !== 'success') {
+            return { ok: false, error: `Chain-Status: ${res.status ?? 'unbekannt'}` }
+        }
+        return { ok: true, digest: res.digest }
     }
-    const res = await storeForensicEncryptedMailboxBatch(
-        archiveRecipient,
-        senderAddress,
-        encItems,
-        walletPassword
-    )
-    if (!res.digest && res.status !== 'success') {
-        return { ok: false, error: `Chain-Status: ${res.status ?? 'unbekannt'}` }
-    }
-    return { ok: true, digest: res.digest }
-}
-
-async function submitPlainPlan(
-    plan: ForensicBatchTxPlan,
-    archiveRecipient: string,
-    senderAddress: string,
-    walletPassword: string | undefined,
-    startNonce: bigint
-): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-    let nonce = startNonce
     const items = plan.items.map((item) => {
         const n = nonce
-        nonce += 1n
+        nonce = nonce + 1n
         return { wireUtf8: item.wireUtf8, nonce: n }
     })
     const res = await storeForensicPlaintextMailboxBatch(
@@ -140,37 +127,6 @@ async function submitPlainPlan(
     return { ok: true, digest: res.digest }
 }
 
-async function submitPlan(
-    plan: ForensicBatchTxPlan,
-    archiveRecipient: string,
-    senderAddress: string,
-    walletPassword: string | undefined,
-    mode: ForensicBatchArchiveMode,
-    startNonce: bigint
-): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
-    if (mode === 'encrypted') {
-        return submitEncryptedPlan(plan, archiveRecipient, senderAddress, walletPassword, startNonce)
-    }
-    return submitPlainPlan(plan, archiveRecipient, senderAddress, walletPassword, startNonce)
-}
-
-function emptyBatchSuccess(
-    alreadyBatched: number,
-    skipped: number,
-    mode: ForensicBatchArchiveMode
-): ForensicBatchRunResult {
-    return {
-        ok: true,
-        preparedCount: 0,
-        alreadyBatched,
-        skippedCount: skipped,
-        txCount: 0,
-        digests: [],
-        messageCount: 0,
-        mode,
-    }
-}
-
 export async function runServerForensicBatchArchive(opts?: {
     onlyNew?: boolean
     inboxLimit?: number
@@ -178,6 +134,7 @@ export async function runServerForensicBatchArchive(opts?: {
 }): Promise<ForensicBatchRunResult> {
     const mode = opts?.mode ?? getEffectiveForensicBatchMode()
     const archiveRecipient = (CFG.MY_ADDRESS || '').trim().toLowerCase()
+    const senderAddress = archiveRecipient
     if (!/^0x[a-f0-9]{64}$/.test(archiveRecipient)) {
         return { ok: false, error: 'MY_ADDRESS fehlt — Boss-.env prüfen.', mode }
     }
@@ -189,7 +146,7 @@ export async function runServerForensicBatchArchive(opts?: {
         }
     }
     try {
-        const fetched = await fetchServerInboxMessages(opts?.inboxLimit ?? FORENSIC_INBOX_FETCH_MAX_MESSAGES)
+        const fetched = await fetchServerInboxMessages(opts?.inboxLimit ?? 500)
         const inputs = fetched.map(mapFetchedToInput)
         const skipCanonicalRefs =
             opts?.onlyNew !== false ? readForensicBatchCanonicalRefSetServer() : undefined
@@ -199,17 +156,19 @@ export async function runServerForensicBatchArchive(opts?: {
         )
         if (!plans.length) {
             if (prepared.length === 0 && alreadyBatched > 0) {
-                return emptyBatchSuccess(alreadyBatched, skipped.length, mode)
+                return {
+                    ok: false,
+                    error: `Keine neuen Nachrichten — ${alreadyBatched} bereits batch-archiviert.`,
+                    mode,
+                }
             }
             return { ok: false, error: 'Keine archivierbaren Nachrichten.', mode }
         }
         const digests: string[] = []
         let messageCount = 0
-        let nonce = nextBatchNonceBase()
         const pw = getWalletPassword()
         for (const plan of plans) {
-            const out = await submitPlan(plan, archiveRecipient, archiveRecipient, pw, mode, nonce)
-            nonce += BigInt(plan.items.length)
+            const out = await submitPlan(plan, archiveRecipient, senderAddress, pw, mode)
             if (!out.ok) {
                 return {
                     ok: false,
@@ -248,6 +207,7 @@ export async function runServerForensicBatchArchive(opts?: {
     }
 }
 
+/** Wie `runServerForensicBatchArchive`, aber mit globalem Mutex (Scheduler + POST /run). */
 export async function runServerForensicBatchArchiveWithLock(opts?: {
     onlyNew?: boolean
     inboxLimit?: number

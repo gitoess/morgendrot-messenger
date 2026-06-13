@@ -12,8 +12,6 @@ type Product = {
   configured: boolean
 }
 
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
-
 function ShopContent() {
   const sp = useSearchParams()
   const paid = sp.get('paid')
@@ -33,7 +31,7 @@ function ShopContent() {
     let cancelled = false
     ;(async () => {
       try {
-        const r = await fetchWithApiAuth('/api/shop/products')
+        const r = await fetch('/api/shop/products')
         const j = (await r.json()) as { ok?: boolean; products?: Product[]; error?: string }
         if (!r.ok || !j.ok) {
           setLoadError(j.error || `HTTP ${r.status}`)
@@ -53,7 +51,7 @@ function ShopContent() {
     setClaimPending(true)
     setClaimError(null)
     for (let i = 0; i < 15; i++) {
-      const r = await fetchWithApiAuth('/api/shop/session-claim', {
+      const r = await fetch('/api/shop/session-claim', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId: sid }),
@@ -97,7 +95,7 @@ function ShopContent() {
     setCheckoutLoading(productId)
     setLoadError(null)
     try {
-      const r = await fetchWithApiAuth('/api/shop/checkout-session', {
+      const r = await fetch('/api/shop/checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

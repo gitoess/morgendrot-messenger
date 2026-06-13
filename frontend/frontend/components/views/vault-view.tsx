@@ -90,11 +90,11 @@ export function VaultView({ variant }: VaultViewProps) {
       })
       toast.success(
         r.paths.length
-          ? `${r.paths.length} vault file(s) found.`
-          : 'No .morgendrot-vault* files in server working directory.'
+          ? `${r.paths.length} Vault-Datei(en) gefunden.`
+          : 'Keine .morgendrot-vault*-Dateien im Server-Arbeitsverzeichnis.'
       )
     } else {
-      toast.error(r.error || r.message || 'Could not load file list.')
+      toast.error(r.error || r.message || 'Dateiliste konnte nicht geladen werden.')
     }
   }, [])
 
@@ -132,9 +132,9 @@ export function VaultView({ variant }: VaultViewProps) {
     })
     const okMsg = res.ok
       ? includeSigner
-        ? 'Saved locally — incl. signer import (next time only vault password to unlock).'
-        : 'Data saved!'
-      : res.error || res.message || 'Save failed'
+        ? 'Lokal gesichert — inkl. Signer-Import (nächstes Mal nur Vault-Passwort zum Entsperren).'
+        : 'Daten gesichert!'
+      : res.error || res.message || 'Fehler beim Speichern'
     showStatus(res.ok, okMsg)
     if (res.ok) toast.success(okMsg)
     else if (!res.ok) toast.error(okMsg)
@@ -150,13 +150,13 @@ export function VaultView({ variant }: VaultViewProps) {
     if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
       const n = typeof res.notes === 'string' ? res.notes.trim() : ''
-      const unchangedHint = n.length === 0 ? ' (No notes in file.)' : ''
-      const msg = `Vault file loaded.${unchangedHint}`
+      const unchangedHint = n.length === 0 ? ' (Keine Notizen in der Datei.)' : ''
+      const msg = `Tresor-Datei eingelesen.${unchangedHint}`
       showStatus(true, msg)
       toast.success(msg)
       refreshVaultStatus()
     } else {
-      const err = res.error || res.message || 'Load failed'
+      const err = res.error || res.message || 'Fehler beim Laden'
       showStatus(false, err)
       toast.error(err)
     }
@@ -168,12 +168,12 @@ export function VaultView({ variant }: VaultViewProps) {
     const res = await vaultLoadFromChain()
     if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
-      const msg = 'Vault loaded from chain.'
+      const msg = 'Tresor von Chain geladen.'
       showStatus(true, msg)
       toast.success(msg)
       refreshVaultStatus()
     } else {
-      const err = res.error || res.message || 'Load from chain failed'
+      const err = res.error || res.message || 'Von Chain laden fehlgeschlagen'
       showStatus(false, err)
       toast.error(err)
     }
@@ -186,21 +186,21 @@ export function VaultView({ variant }: VaultViewProps) {
       includeIotaMnemonic:
         includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true,
     })
-    showStatus(res.ok, res.ok ? 'Vault saved on chain.' : res.error || 'On-chain save failed')
+    showStatus(res.ok, res.ok ? 'Tresor auf Chain gesichert.' : res.error || 'On-Chain-Speichern fehlgeschlagen')
     if (res.ok) {
       refreshVaultStatus()
       const wantDelete = window.confirm(
-        'On-chain backup successful.\n\n' +
-          'Delete local vault file on this server? Only makes sense if you want to unlock from chain only from now on.\n\n' +
-          'The file is deleted only if an on-chain entry exists for your address.'
+        'On-Chain-Backup erfolgreich.\n\n' +
+          'Lokale Vault-Datei auf diesem Server löschen? Nur sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.\n\n' +
+          'Die Datei wird nur gelöscht, wenn ein On-Chain-Eintrag für deine Adresse existiert.'
       )
       if (wantDelete) {
         const del = await vaultDeleteLocal()
         if (del.ok) {
-          toast.success(typeof del.message === 'string' ? del.message : 'Local vault file deleted.')
+          toast.success(typeof del.message === 'string' ? del.message : 'Lokale Vault-Datei gelöscht.')
           void refreshVaultFileList()
         } else {
-          toast.error(del.error || del.message || 'Could not delete local file.')
+          toast.error(del.error || del.message || 'Lokale Datei konnte nicht gelöscht werden.')
         }
       }
     }
@@ -209,27 +209,27 @@ export function VaultView({ variant }: VaultViewProps) {
 
   const handleChangePassword = async () => {
     if (!changePwCurrent.trim() || !changePwNew.trim()) {
-      showStatus(false, 'Enter current and new password.')
+      showStatus(false, 'Aktuelles und neues Passwort eingeben.')
       return
     }
     if (changePwNew !== changePwConfirm) {
-      showStatus(false, 'New password and confirmation do not match.')
+      showStatus(false, 'Neues Passwort und Wiederholung stimmen nicht überein.')
       return
     }
     if (changePwNew.length < 8) {
-      showStatus(false, 'New password: at least 8 characters.')
+      showStatus(false, 'Neues Passwort: mindestens 8 Zeichen.')
       return
     }
     setChangePwBusy(true)
     const res = await vaultChangePassword(changePwCurrent.trim(), changePwNew.trim())
     if (res.ok) {
-      showStatus(true, res.message || 'Password changed.')
-      toast.success(res.message || 'Password changed.')
+      showStatus(true, res.message || 'Passwort geändert.')
+      toast.success(res.message || 'Passwort geändert.')
       setChangePwCurrent('')
       setChangePwNew('')
       setChangePwConfirm('')
     } else {
-      const err = res.error || res.message || 'Password change failed'
+      const err = res.error || res.message || 'Passwort ändern fehlgeschlagen'
       showStatus(false, err)
       toast.error(err)
     }
@@ -242,7 +242,7 @@ export function VaultView({ variant }: VaultViewProps) {
     try {
       if (purgeScope === 'full') {
         const res = await emergencyPurge()
-        showStatus(res.ok, res.ok ? 'Vault emergency-deleted on chain + local inbox cache shredded.' : res.error || 'Error')
+        showStatus(res.ok, res.ok ? 'Vault on-chain notfall-gelöscht + lokaler Inbox-Cache geschreddert.' : res.error || 'Fehler')
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
@@ -251,7 +251,7 @@ export function VaultView({ variant }: VaultViewProps) {
         const res = await clearLocalHistory({ shred: true })
         showStatus(
           res.ok,
-          res.ok ? res.message || 'Local plaintext inbox cache removed (chain/vault file unchanged).' : res.error || 'Error'
+          res.ok ? res.message || 'Lokaler Klartext-Inbox-Cache entfernt (Chain/Vault-Datei unverändert).' : res.error || 'Fehler'
         )
         if (res.ok) {
           setConfirmPurge(false)
@@ -259,7 +259,7 @@ export function VaultView({ variant }: VaultViewProps) {
         }
       } else {
         const res = await vaultLockCommand()
-        showStatus(res.ok, res.ok ? res.message || 'Vault locked, keys cleared from RAM.' : res.error || res.message || 'Error')
+        showStatus(res.ok, res.ok ? res.message || 'Tresor gesperrt, Keys aus RAM.' : res.error || res.message || 'Fehler')
         if (res.ok) {
           setConfirmPurge(false)
           setConfirmText('')
@@ -273,14 +273,14 @@ export function VaultView({ variant }: VaultViewProps) {
   const handleClearLocalInboxOnly = async () => {
     if (
       !window.confirm(
-        'Shred local plaintext inbox cache (.inbox.enc) on this device? Vault file and chain stay intact.'
+        'Lokalen Klartext-Inbox-Cache (.inbox.enc) auf diesem Gerät schreddern? Vault-Datei und Chain bleiben.'
       )
     ) {
       return
     }
     setSessionBusy(true)
     const res = await clearLocalHistory({ shred: true })
-    showStatus(res.ok, res.ok ? res.message || 'Local inbox cache removed.' : res.error || 'Error')
+    showStatus(res.ok, res.ok ? res.message || 'Lokaler Inbox-Cache entfernt.' : res.error || 'Fehler')
     setSessionBusy(false)
   }
 
@@ -288,8 +288,8 @@ export function VaultView({ variant }: VaultViewProps) {
     setProcessing(true)
     const imp = await importVaultFileFromDevice(file)
     if (!imp.ok) {
-      showStatus(false, imp.error || 'Import failed')
-      toast.error(imp.error || 'Import failed')
+      showStatus(false, imp.error || 'Import fehlgeschlagen')
+      toast.error(imp.error || 'Import fehlgeschlagen')
       setProcessing(false)
       return
     }
@@ -297,20 +297,20 @@ export function VaultView({ variant }: VaultViewProps) {
     const loadRes = await vaultLoad(undefined, loadPath)
     if (loadRes.ok && typeof loadRes.notes === 'string') setNotes(loadRes.notes)
     const ok = loadRes.ok
-    showStatus(ok, ok ? imp.message || 'Vault imported and loaded.' : loadRes.error || 'Load after import failed')
+    showStatus(ok, ok ? imp.message || 'Vault importiert und geladen.' : loadRes.error || 'Laden nach Import fehlgeschlagen')
     if (ok) {
-      toast.success(imp.message || 'Vault imported and loaded into session.')
+      toast.success(imp.message || 'Vault importiert und in die Sitzung geladen.')
       void refreshVaultFileList()
       void refreshVaultStatus()
     } else if (imp.ok) {
       toast.message(
         loadRes.error ||
-          'File saved — unlock vault on home page, then vault loads into session.'
+          'Datei gespeichert — Startseite „Tresor entsperren“, dann wird die Vault in die Sitzung geladen.'
       )
       void refreshVaultFileList()
       void refreshVaultStatus()
     } else {
-      toast.error(loadRes.error || 'After import: could not load into session.')
+      toast.error(loadRes.error || 'Nach Import: Laden in die Sitzung fehlgeschlagen.')
     }
     setProcessing(false)
   }
@@ -318,7 +318,7 @@ export function VaultView({ variant }: VaultViewProps) {
   const handleVaultLock = async () => {
     if (
       !window.confirm(
-        'Lock vault? Keys and password leave server RAM; inbox cache is shredded. Unlock dialog follows.'
+        'Tresor sperren? Keys und Passwort verlassen den Server-RAM; Inbox-Cache wird geschreddert. Danach Entsperr-Dialog.'
       )
     ) {
       return
@@ -327,11 +327,11 @@ export function VaultView({ variant }: VaultViewProps) {
     const res = await vaultLockCommand()
     showStatus(
       res.ok,
-      res.ok ? res.message || 'Vault locked.' : res.error || res.message || 'Error'
+      res.ok ? res.message || 'Tresor gesperrt.' : res.error || res.message || 'Fehler'
     )
     if (res.ok) {
-      toast.message('Unlock dialog should appear now', {
-        description: 'Enter password there. If not visible: go back to home or reload the page.',
+      toast.message('Entsperr-Dialog sollte jetzt erscheinen', {
+        description: 'Passwort dort eingeben. Falls nicht sichtbar: zur Startseite zurück oder Seite neu laden.',
         duration: 12_000,
       })
     }
@@ -361,17 +361,17 @@ export function VaultView({ variant }: VaultViewProps) {
         </div>
         <div className="flex flex-1 flex-wrap items-center justify-between gap-2">
           <h2 className="text-xl font-bold text-foreground">
-            {variant === 'local-vault' ? 'Vault & security' : 'Emergency deletion'}
+            {variant === 'local-vault' ? 'Tresor & Sicherheit' : 'Notfall-Löschung'}
           </h2>
           {variant === 'local-vault' ? (
             <Link
               href="/handbook?file=VAULT-EINRICHTEN.md"
               className="text-sm text-primary underline underline-offset-2 hover:text-primary/90"
             >
-              Handbook
+              Handbuch
             </Link>
           ) : (
-            <span className="text-sm text-muted-foreground">Irreversible on-chain</span>
+            <span className="text-sm text-muted-foreground">Unwiderruflich on-chain</span>
           )}
         </div>
       </div>
@@ -395,21 +395,21 @@ export function VaultView({ variant }: VaultViewProps) {
         <div className="space-y-4">
           {vaultLocked ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-              Vault is <strong className="font-medium">locked</strong>. The{' '}
-              <strong className="font-medium">unlock dialog</strong> (fullscreen) should overlay this page — enter
-              password there. If you do not see it: go <strong className="font-medium">Back</strong> to home or reload
-              the page (F5).
+              Tresor ist <strong className="font-medium">gesperrt</strong>. Der{' '}
+              <strong className="font-medium">Entsperr-Dialog</strong> (Vollbild) sollte über dieser Seite liegen — dort
+              Passwort eingeben. Siehst du ihn nicht: <strong className="font-medium">Zurück</strong> zur Startseite oder
+              Seite neu laden (F5).
             </p>
           ) : null}
 
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-3 flex items-center gap-2">
               <Lock className="h-5 w-5 text-primary" />
-              <h4 className="font-semibold text-foreground">Change password</h4>
+              <h4 className="font-semibold text-foreground">Passwort ändern</h4>
             </div>
             <div className="grid max-w-md gap-3">
               <label className="block text-sm">
-                <span className="text-muted-foreground">Current password</span>
+                <span className="text-muted-foreground">Aktuelles Passwort</span>
                 <input
                   type="password"
                   autoComplete="current-password"
@@ -419,7 +419,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-muted-foreground">New password (min. 8 characters)</span>
+                <span className="text-muted-foreground">Neues Passwort (min. 8 Zeichen)</span>
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -429,7 +429,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 />
               </label>
               <label className="block text-sm">
-                <span className="text-muted-foreground">Repeat new password</span>
+                <span className="text-muted-foreground">Neues Passwort wiederholen</span>
                 <input
                   type="password"
                   autoComplete="new-password"
@@ -444,13 +444,13 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleChangePassword()}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {changePwBusy ? 'Changing…' : 'Change password'}
+                {changePwBusy ? 'Ändere…' : 'Passwort ändern'}
               </button>
             </div>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-2 font-semibold text-foreground">Notes</h4>
+            <h4 className="mb-2 font-semibold text-foreground">Notizen</h4>
             <textarea
               value={notes}
               onChange={(e) =>
@@ -459,16 +459,16 @@ export function VaultView({ variant }: VaultViewProps) {
               maxLength={VAULT_FREETEXT_NOTES_MAX_CHARS}
               rows={5}
               disabled={!canUseVault}
-              placeholder="Notes, mnemonics, any text…"
+              placeholder="Notizen, Mnemonics, beliebiger Text…"
               className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y min-h-[100px] disabled:opacity-50"
             />
             <p className="mt-1 text-[11px] text-muted-foreground">
-              {notes.length.toLocaleString('en-US')} / {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('en-US')} characters
+              {notes.length.toLocaleString('de-DE')} / {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen
             </p>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">Backup</h4>
+            <h4 className="mb-3 font-semibold text-foreground">Sichern</h4>
             {signerKind === 'sdk' ? (
               <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
                 <input
@@ -479,13 +479,13 @@ export function VaultView({ variant }: VaultViewProps) {
                   className="mt-0.5 shrink-0"
                 />
                 <span>
-                  <span className="font-medium text-foreground">Store wallet seed in vault</span> (only{' '}
+                  <span className="font-medium text-foreground">Wallet-Seed im Vault speichern</span> (nur{' '}
                   <span className="font-mono">SIGNER=sdk</span>) —{' '}
                   <Link
                     href="/handbook?file=VAULT-EINRICHTEN.md#signer-import-sdk"
                     className="text-primary underline underline-offset-2 hover:text-primary/90"
                   >
-                    Handbook: signer import
+                    Handbuch: Signer-Import
                   </Link>
                 </span>
               </label>
@@ -498,8 +498,8 @@ export function VaultView({ variant }: VaultViewProps) {
                 className="flex flex-col items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5 text-center transition-colors hover:bg-emerald-500/10 disabled:opacity-50"
               >
                 <Download className="h-8 w-8 text-emerald-400" />
-                <span className="font-semibold text-foreground">{processing ? 'Saving…' : 'Save locally'}</span>
-                <span className="text-xs text-muted-foreground">Overwrites default vault file</span>
+                <span className="font-semibold text-foreground">{processing ? 'Speichere…' : 'Lokal sichern'}</span>
+                <span className="text-xs text-muted-foreground">Überschreibt die Standard-Vault-Datei</span>
               </button>
               <button
                 type="button"
@@ -509,9 +509,9 @@ export function VaultView({ variant }: VaultViewProps) {
               >
                 <Shield className="h-8 w-8 text-amber-400" />
                 <span className="font-semibold text-foreground">
-                  {syncingOnchain ? 'Saving…' : 'Save on chain'}
+                  {syncingOnchain ? 'Sichere…' : 'Auf Chain sichern'}
                 </span>
-                <span className="text-xs text-muted-foreground">Encrypted blob on chain</span>
+                <span className="text-xs text-muted-foreground">Verschlüsselter Blob auf der Chain</span>
               </button>
             </div>
           </div>
@@ -526,12 +526,12 @@ export function VaultView({ variant }: VaultViewProps) {
               }}
               className="text-sm font-medium text-foreground hover:text-primary"
             >
-              {showAdvanced ? '▼ Hide advanced' : '▶ Advanced: vault file / chain'}
+              {showAdvanced ? '▼ Erweitert ausblenden' : '▶ Erweitert: Vault-Datei / Chain'}
             </button>
             {showAdvanced ? (
               <div className="mt-4 space-y-4">
                 <div>
-                  <h5 className="mb-2 text-sm font-medium text-foreground">Vault file from device</h5>
+                  <h5 className="mb-2 text-sm font-medium text-foreground">Vault-Datei vom Gerät</h5>
                   <input
                     ref={vaultFileInputRef}
                     type="file"
@@ -550,14 +550,14 @@ export function VaultView({ variant }: VaultViewProps) {
                       onClick={() => vaultFileInputRef.current?.click()}
                       className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-medium hover:bg-blue-500/15 disabled:opacity-50"
                     >
-                      {processing ? 'Please wait…' : 'Choose file & load'}
+                      {processing ? 'Bitte warten…' : 'Datei wählen & laden'}
                     </button>
                     {!canUseVault && !processing ? (
                       <p className="mt-2 text-[11px] text-muted-foreground">
                         {vaultLocked
-                          ? 'Unlock vault first — then the file loads into session.'
+                          ? 'Zuerst Tresor entsperren — danach wird die Datei in die Sitzung geladen.'
                           : hasKeys !== true
-                            ? 'File can be uploaded; to decrypt into session: home → unlock vault or “Load” here after upload (if keys present).'
+                            ? 'Datei kann hochgeladen werden; zum Entschlüsseln in die Sitzung: Startseite → Tresor entsperren oder hier nach Upload „Laden“ (wenn Keys da).'
                             : null}
                       </p>
                     ) : null}
@@ -565,7 +565,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 </div>
                 {vaultPaths.length > 1 ? (
                   <div>
-                    <h5 className="mb-2 text-sm font-medium text-foreground">More files on server</h5>
+                    <h5 className="mb-2 text-sm font-medium text-foreground">Weitere Dateien auf dem Server</h5>
                     <div className="flex flex-wrap items-end gap-2">
                       <label className="min-w-[12rem] flex-1 text-sm">
                         <select
@@ -576,7 +576,7 @@ export function VaultView({ variant }: VaultViewProps) {
                           {vaultPaths.map((p) => (
                             <option key={p} value={p}>
                               {p.split(/[/\\]/).pop()}
-                              {p === defaultVaultPath ? ' (default)' : ''}
+                              {p === defaultVaultPath ? ' (Standard)' : ''}
                             </option>
                           ))}
                         </select>
@@ -587,7 +587,7 @@ export function VaultView({ variant }: VaultViewProps) {
                         onClick={() => void handleLoad(selectedVaultPath)}
                         className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
                       >
-                        Load
+                        Laden
                       </button>
                     </div>
                   </div>
@@ -600,7 +600,7 @@ export function VaultView({ variant }: VaultViewProps) {
                     className="inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium hover:bg-sky-500/15 disabled:opacity-50"
                   >
                     <Cloud className="h-4 w-4 text-sky-400" />
-                    {processing ? 'Loading…' : 'Load from chain'}
+                    {processing ? 'Lade…' : 'Von Chain laden'}
                   </button>
                 </div>
               </div>
@@ -608,7 +608,7 @@ export function VaultView({ variant }: VaultViewProps) {
           </div>
 
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
-            <h4 className="font-semibold text-foreground">Session</h4>
+            <h4 className="font-semibold text-foreground">Sitzung</h4>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -616,7 +616,7 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleClearLocalInboxOnly()}
                 className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
-                Clear inbox cache
+                Inbox-Cache leeren
               </button>
               <button
                 type="button"
@@ -624,16 +624,16 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleVaultLock()}
                 className="rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
               >
-                Lock vault
+                Tresor sperren
               </button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Difference &amp; “delete everything”:{' '}
+              Unterschied &amp; „alles löschen“:{' '}
               <Link
                 href="/handbook?file=VAULT-EINRICHTEN.md#spuren-inbox-cache-vs-tresor-sperren"
                 className="text-primary underline underline-offset-2"
               >
-                Handbook
+                Handbuch
               </Link>
             </p>
           </div>
@@ -648,7 +648,7 @@ export function VaultView({ variant }: VaultViewProps) {
             <div className="flex items-start gap-3">
               <AlertTriangle className="h-6 w-6 shrink-0 text-red-400" />
               <div>
-                <h4 className="font-semibold text-red-400">Warning: irreversible (chain part)!</h4>
+                <h4 className="font-semibold text-red-400">Achtung: Unwiderruflich (Chain-Teil)!</h4>
                 <p className="mt-1 text-sm text-red-300/80">
                   Der Umfang hängt von der gewählten Option ab (siehe unten). On-Chain gelöschte Vault-Daten sind
                   dauerhaft weg. Die lokale Vault-Datei wird vom Notfall-Purge{' '}
@@ -661,12 +661,12 @@ export function VaultView({ variant }: VaultViewProps) {
 
           {/* What gets deleted */}
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">What happens with each option?</h4>
+            <h4 className="mb-3 font-semibold text-foreground">Was passiert bei welcher Option?</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex gap-2">
                 <Trash2 className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
                 <span>
-                  <strong className="text-foreground">Full:</strong> Eine Chain-Transaktion entfernt den
+                  <strong className="text-foreground">Vollständig:</strong> Eine Chain-Transaktion entfernt den
                   Vault-Eintrag im Registry (verschlüsselter On-Chain-Backup-Inhalt). Zusätzlich wird der lokale
                   Klartext-Inbox-Cache (<code className="text-xs">.inbox.enc</code>) geschreddert. Die Datei{' '}
                   <code className="text-xs">.morgendrot-vault</code> (oder <code className="text-xs">VAULT_FILE</code>)
@@ -684,7 +684,7 @@ export function VaultView({ variant }: VaultViewProps) {
               <li className="flex gap-2">
                 <Lock className="h-4 w-4 shrink-0 text-slate-400 mt-0.5" />
                 <span>
-                  <strong className="text-foreground">Lock session only:</strong> Keys und Wallet-Passwort aus RAM;
+                  <strong className="text-foreground">Nur Sitzung sperren:</strong> Keys und Wallet-Passwort aus RAM;
                   Inbox-Cache schreddern; Vault-Datei bleibt.
                 </span>
               </li>
@@ -692,7 +692,7 @@ export function VaultView({ variant }: VaultViewProps) {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">Choose scope</h4>
+            <h4 className="mb-3 font-semibold text-foreground">Umfang wählen</h4>
             <div className="space-y-2 text-sm">
               <label className="flex cursor-pointer items-start gap-2">
                 <input
@@ -703,7 +703,7 @@ export function VaultView({ variant }: VaultViewProps) {
                   className="mt-1"
                 />
                 <span>
-                  <strong className="text-foreground">Full (vault on-chain)</strong>
+                  <strong className="text-foreground">Vollständig (Vault on-chain)</strong>
                   <span className="block text-muted-foreground">
                     Notfall-Purge auf der Chain + lokaler Inbox-Klartext-Cache. Braucht ENABLE_PURGE und Wallet.
                   </span>
@@ -718,7 +718,7 @@ export function VaultView({ variant }: VaultViewProps) {
                   className="mt-1"
                 />
                 <span>
-                  <strong className="text-foreground">Local plaintext traces only</strong>
+                  <strong className="text-foreground">Nur lokale Klartext-Spuren</strong>
                   <span className="block text-muted-foreground">
                     Schreddert nur den Server-Inbox-Cache (.inbox.enc). Keine Chain-TX, Vault-Datei bleibt.
                   </span>
@@ -733,7 +733,7 @@ export function VaultView({ variant }: VaultViewProps) {
                   className="mt-1"
                 />
                 <span>
-                  <strong className="text-foreground">Lock session / vault only</strong>
+                  <strong className="text-foreground">Nur Sitzung / Tresor sperren</strong>
                   <span className="block text-muted-foreground">
                     Keys und Wallet-Passwort aus RAM; Inbox-Cache schreddern. Vault-Datei auf Disk bleibt.
                   </span>
@@ -748,13 +748,13 @@ export function VaultView({ variant }: VaultViewProps) {
               onClick={() => setConfirmPurge(true)}
               className="w-full rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-center transition-colors hover:bg-red-500/20"
             >
-              <span className="font-semibold text-red-400">Start emergency deletion</span>
+              <span className="font-semibold text-red-400">Notfall-Löschung starten</span>
             </button>
           ) : (
             <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4 space-y-4">
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">
-                  Type <span className="font-mono text-red-400">LÖSCHEN</span> to confirm
+                  Tippe <span className="font-mono text-red-400">LÖSCHEN</span> zum Bestätigen
                 </label>
                 <input
                   type="text"
@@ -772,14 +772,14 @@ export function VaultView({ variant }: VaultViewProps) {
                   }}
                   className="flex-1 rounded-lg border border-border bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground hover:bg-accent/80"
                 >
-                  Cancel
+                  Abbrechen
                 </button>
                 <button
                   onClick={handlePurge}
                   disabled={processing || confirmText !== 'LÖSCHEN'}
                   className="flex-1 rounded-lg bg-red-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
                 >
-                  {processing ? 'Deleting...' : 'Delete permanently'}
+                  {processing ? 'Lösche...' : 'Endgültig löschen'}
                 </button>
               </div>
             </div>

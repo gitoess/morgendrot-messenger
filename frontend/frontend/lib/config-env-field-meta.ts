@@ -13,13 +13,13 @@ export type ConfigFieldMeta = {
 }
 
 const ROLE_OPTIONS = [
-  { value: 'boss', label: 'Boss (command post)' },
-  { value: 'kommandant', label: 'Commander' },
-  { value: 'arbeiter', label: 'Worker / helper' },
-  { value: 'messenger', label: 'Messenger (default)' },
-  { value: 'lock', label: 'Lock (M2M lock)' },
+  { value: 'boss', label: 'Boss (Einsatzleitung)' },
+  { value: 'kommandant', label: 'Kommandant' },
+  { value: 'arbeiter', label: 'Arbeiter / Helfer' },
+  { value: 'messenger', label: 'Messenger (Standard)' },
+  { value: 'lock', label: 'Lock (M2M-Schloss)' },
   { value: 'monitor', label: 'Monitor' },
-  { value: 'waerter', label: 'Guardian' },
+  { value: 'waerter', label: 'Wächter' },
 ] as const
 
 const SIGNER_OPTIONS = [
@@ -29,25 +29,25 @@ const SIGNER_OPTIONS = [
 ] as const
 
 const TRUST_TIER_OPTIONS = [
-  { value: '1', label: '1 — public RPC nodes' },
-  { value: '2', label: '2 — curated list' },
-  { value: '3', label: '3 — own node' },
+  { value: '1', label: '1 — öffentliche RPC-Nodes' },
+  { value: '2', label: '2 — kuratierte Liste' },
+  { value: '3', label: '3 — eigener Node' },
 ] as const
 
 const UI_VARIANT_OPTIONS = [
-  { value: 'messenger', label: 'messenger (compact)' },
-  { value: 'full', label: 'full (more panels)' },
+  { value: 'messenger', label: 'messenger (schlank)' },
+  { value: 'full', label: 'full (mehr Panels)' },
 ] as const
 
 const TRANSPORT_PROFILE_OPTIONS = [
-  { value: 'mesh-first', label: 'mesh-first (radio first)' },
+  { value: 'mesh-first', label: 'mesh-first (Funk zuerst)' },
   { value: 'iota-anchored', label: 'iota-anchored' },
   { value: 'iota-full', label: 'iota-full' },
 ] as const
 
 const MESSENGER_EDITION_OPTIONS = [
   { value: 'standalone', label: 'standalone' },
-  { value: 'sales', label: 'sales (customer UI)' },
+  { value: 'sales', label: 'sales (Kunden-UI)' },
 ] as const
 
 /** Keys, die im Messenger oben schon als eigene Zeile stehen. */
@@ -465,7 +465,7 @@ export function getConfigFieldMeta(envKey: string): ConfigFieldMeta {
   const known = META[envKey]
   if (known) return known
   return {
-    description: `Configuration key ${envKey}. Handbook: ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`,
+    description: `Konfigurationsschlüssel ${envKey}. Handbuch: ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`,
   }
 }
 

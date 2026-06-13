@@ -5,7 +5,6 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
-import { parseVaultContentFields, parseVaultKeysPayload } from './vault-payload-guards.js';
 
 const subtle = crypto.webcrypto.subtle;
 const CURVE = 'P-256';
@@ -126,7 +125,7 @@ function keysToPayload(
 }
 
 async function payloadToKeys(payload: string): Promise<VaultKeys> {
-    const { pkcs8, pubRaw } = parseVaultKeysPayload(payload);
+    const { pkcs8, pubRaw } = JSON.parse(payload) as { pkcs8: string; pubRaw: string };
     const privateKey = await subtle.importKey(
         'pkcs8',
         Buffer.from(pkcs8, 'base64'),
@@ -135,9 +134,6 @@ async function payloadToKeys(payload: string): Promise<VaultKeys> {
         ['deriveBits', 'deriveKey']
     );
     const pubRawBytes = new Uint8Array(Buffer.from(pubRaw, 'base64'));
-    if (pubRawBytes.length < 65) {
-        throw new Error('Vault-Payload: pubRaw zu kurz.');
-    }
     return { privateKey, pubRaw: pubRawBytes };
 }
 
@@ -151,14 +147,26 @@ export type VaultContent = {
 };
 
 function payloadToContent(payload: string): Promise<VaultContent> {
-    const parsed = parseVaultKeysPayload(payload);
-    const full = JSON.parse(payload) as Record<string, unknown>;
-    const fields = parseVaultContentFields(full);
-    return payloadToKeys(JSON.stringify(parsed)).then((keys) => ({
+    const parsed = JSON.parse(payload) as {
+        pkcs8?: string;
+        pubRaw?: string;
+        notes?: string;
+        iotaMnemonic?: string;
+        iotaSdkSignerImport?: string;
+        personalSecrets?: unknown;
+    };
+    const merged =
+        (typeof parsed.iotaSdkSignerImport === 'string' && parsed.iotaSdkSignerImport.trim()
+            ? parsed.iotaSdkSignerImport.trim()
+            : '') ||
+        (typeof parsed.iotaMnemonic === 'string' && parsed.iotaMnemonic.trim() ? parsed.iotaMnemonic.trim() : '') ||
+        undefined;
+    const personalSecrets = sanitizePersonalSecrets(parsed.personalSecrets);
+    return payloadToKeys(JSON.stringify({ pkcs8: parsed.pkcs8, pubRaw: parsed.pubRaw })).then((keys) => ({
         keys,
-        notes: fields.notes,
-        iotaSdkSignerImport: fields.iotaSdkSignerImport,
-        personalSecrets: sanitizePersonalSecrets(fields.personalSecrets),
+        notes: typeof parsed.notes === 'string' ? parsed.notes : '',
+        iotaSdkSignerImport: merged,
+        personalSecrets,
     }));
 }
 
@@ -209,10 +217,19 @@ export async function saveVaultLocal(
         iotaSdkSignerImport,
         personalSecrets ?? []
     );
-    const out = await encryptUtf8ToPayload(payload, password);
+    const salt = crypto.randomBytes(SALT_LEN);
+    const key = await deriveKeyFromPassword(password, salt);
+    const iv = crypto.randomBytes(IV_LEN);
+    const encoded = new TextEncoder().encode(payload);
+    const ciphertext = await subtle.encrypt(
+        { name: 'AES-GCM', iv, tagLength: 128 },
+        key,
+        encoded
+    );
+    const out = Buffer.concat([salt, iv, Buffer.from(ciphertext)]);
     const dir = path.dirname(filePath);
     if (dir && !fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(filePath, Buffer.from(out));
+    fs.writeFileSync(filePath, out);
     try { fs.chmodSync(filePath, 0o600); } catch {} // Nur Eigentümer lesbar/schreibbar (Unix)
 }
 
@@ -386,7 +403,16 @@ export async function encryptVaultPayloadForChain(
         iotaSdkSignerImport,
         personalSecrets ?? []
     );
-    return encryptUtf8ToPayload(payload, password);
+    const salt = crypto.randomBytes(SALT_LEN);
+    const key = await deriveKeyFromPassword(password, salt);
+    const iv = crypto.randomBytes(IV_LEN);
+    const encoded = new TextEncoder().encode(payload);
+    const ciphertext = await subtle.encrypt(
+        { name: 'AES-GCM', iv, tagLength: 128 },
+        key,
+        encoded
+    );
+    return new Uint8Array(Buffer.concat([salt, iv, Buffer.from(ciphertext)]));
 }
 
 /**

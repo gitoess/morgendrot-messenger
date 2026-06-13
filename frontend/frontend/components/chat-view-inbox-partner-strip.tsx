@@ -73,7 +73,7 @@ function PartnerChipSection(p: {
             : 'border-border bg-background text-muted-foreground hover:bg-muted'
         )}
       >
-        All
+        Alle
       </button>
       <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
         {visible.map((o) => {
@@ -105,21 +105,21 @@ function PartnerChipSection(p: {
                 <button
                   type="button"
                   className="shrink-0 border-l border-border/80 px-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  title={`Remove “${o.label}” from quick list`}
-                  aria-label={`${title}: remove ${o.label} from quick list`}
+                  title={`„${o.label}“ aus Schnellliste entfernen`}
+                  aria-label={`${title}: ${o.label} aus Schnellliste entfernen`}
                   onClick={(e) => {
                     e.preventDefault()
                     e.stopPropagation()
                     const ok1 = window.confirm(
-                      `Remove “${o.label}” from the partner quick list?\n\nDevice-only. A blocklist prevents the inbox from suggesting this address again automatically.`
+                      `„${o.label}“ aus der Partner-Schnellliste entfernen?\n\nNur auf diesem Gerät. Eine Blockliste verhindert, dass der Posteingang die Adresse erneut automatisch vorschlägt.`
                     )
                     if (!ok1) return
                     const ok2 = window.confirm(
                       stripTransport === 'all'
-                        ? 'Also hide all visible inbox rows with this contact locally? (this session only)'
+                        ? 'Zusätzlich alle sichtbaren Posteingangs-Zeilen mit diesem Gegenüber lokal ausblenden? (nur diese Session)'
                         : stripTransport === 'mesh'
-                          ? 'Also hide all visible rows with this contact that use radio/mesh? (local, this session only)'
-                          : 'Also hide all visible rows with this contact that use IOTA/mailbox? (local, this session only)'
+                          ? 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die Funk/Mesh nutzen? (nur lokal, diese Session)'
+                          : 'Zusätzlich alle sichtbaren Zeilen mit diesem Gegenüber ausblenden, die IOTA/Mailbox nutzen? (nur lokal, diese Session)'
                     )
                     onRemoveFromQuickList(o.address, {
                       hideMatchingMessages: ok2,
@@ -218,13 +218,13 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
       <div className="space-y-1.5">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            Inbox (content)
+            Posteingang (Inhalt)
           </span>
           {(
             [
-              ['all', 'All'],
-              ['encrypted', 'Encrypted'],
-              ['plaintext', 'Plaintext'],
+              ['all', 'Alles'],
+              ['encrypted', 'Verschlüsselt'],
+              ['plaintext', 'Klartext'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -249,12 +249,12 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           <div className="flex flex-wrap items-center gap-2">
             {myAddressKnown ? (
               <>
-                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Direction</span>
+                <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Richtung</span>
                 {(
                   [
-                    ['all', 'All'],
-                    ['in', 'Incoming'],
-                    ['out', 'Outgoing'],
+                    ['all', 'Alle'],
+                    ['in', 'Eingang'],
+                    ['out', 'Ausgang'],
                   ] as const
                 ).map(([id, label]) => (
                   <button
@@ -273,11 +273,11 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
                 ))}
               </>
             ) : (
-              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Channel</span>
+              <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Kanal</span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Source</span>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Quelle</span>
             {sourceOptions.map((id) => {
               const sourceOk = inboxSourceFilterReadAllowed(apiStatus, id)
               const deniedTitle = inboxSourceFilterDeniedReason(apiStatus, id)
@@ -306,7 +306,8 @@ export function ChatViewInboxPartnerStrip(p: ChatViewInboxPartnerStripProps) {
           </div>
           {sourceFilter !== 'all' || direction !== 'all' ? (
             <p className="text-xs text-muted-foreground" role="status">
-              Channel filter active — for full inbox set source and direction to “All” or turn off channel filter.
+              Kanal-Filter aktiv — zum vollen Posteingang Quelle und Richtung auf „Alle“ setzen oder Kanal-Filter
+              ausschalten.
             </p>
           ) : null}
         </div>

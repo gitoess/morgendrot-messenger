@@ -14,6 +14,10 @@ import {
     TeamMailboxShareQrDialog,
 } from '@/frontend/components/team-mailbox-qr-dialog'
 import {
+  MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN,
+} from '@/components/messenger-handbook-link'
+import {
   clearActiveSendMailbox,
   readActiveSendMailbox,
   setActivePrivateMailboxObjectId,
@@ -56,7 +60,7 @@ function TypeBadge(p: { kind: 'server' | 'team' | 'private' }) {
       : p.kind === 'team'
         ? 'bg-amber-500/25 text-amber-950 dark:text-amber-100'
         : 'bg-violet-500/20 text-violet-950 dark:text-violet-100'
-  const label = p.kind === 'server' ? 'Server' : p.kind === 'team' ? 'Team' : 'Private'
+  const label = p.kind === 'server' ? 'Server' : p.kind === 'team' ? 'Team' : 'Privat'
   return (
     <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${cls}`}>{label}</span>
   )
@@ -171,21 +175,21 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
     if (kind === 'team') setActiveTeamMailboxObjectId(objectId)
     else setActivePrivateMailboxObjectId(objectId)
     reload()
-    p.onStatus?.(`Active: ${kind === 'team' ? 'team' : 'private'} mailbox ${maskMid(objectId)}.`, 'success')
+    p.onStatus?.(`Aktiv: ${kind === 'team' ? 'Team' : 'Private'}-Mailbox ${maskMid(objectId)}.`, 'success')
     p.onMailboxActivated?.()
   }
 
   const deactivateSendFocus = () => {
     clearActiveSendMailbox()
     reload()
-    p.onStatus?.('Send + inbox focus: server shared only (.env).', 'success')
+    p.onStatus?.('Senden + Posteingang-Fokus: nur Server-Shared (.env).', 'success')
     p.onMailboxActivated?.()
   }
 
   const handleTeamJoined = (raw: string, label?: string) => {
     joinMyTeamMailbox(raw, label)
     reload()
-    p.onStatus?.(`Joined team mailbox ${maskMid(raw)}.`, 'success')
+    p.onStatus?.(`Team-Mailbox ${maskMid(raw)} beigetreten.`, 'success')
     p.onMailboxActivated?.()
   }
 
@@ -196,7 +200,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
   const assignToContact = () => {
     const mb = assignMbId.trim()
     if (!/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
-      p.onStatus?.('Choose a mailbox first.', 'error')
+      p.onStatus?.('Zuerst eine Mailbox wählen.', 'error')
       return
     }
     const kind = teamList.some((e) => e.objectId.toLowerCase() === mb.toLowerCase()) ? 'team' : 'private'
@@ -239,14 +243,14 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
               activeRow ? 'bg-emerald-600 text-white' : 'border border-border hover:bg-accent'
             }`}
           >
-            {activeRow ? '● Active' : 'Set as focus'}
+            {activeRow ? '● Aktiv' : 'Als Fokus wählen'}
           </button>
           <TypeBadge kind={kind} />
           <input
             type="text"
             defaultValue={entry.label ?? ''}
-            placeholder={kind === 'team' ? 'Team mailbox name' : 'Your private mailbox name'}
-            aria-label="Display name"
+            placeholder={kind === 'team' ? 'Name der Team-Mailbox' : 'Name deiner privaten Mailbox'}
+            aria-label="Anzeigename"
             onBlur={(e) => {
               if (kind === 'team') updateMyTeamMailboxLabel(entry.objectId, e.target.value)
               else updateMyPrivateMailboxLabel(entry.objectId, e.target.value)
@@ -265,17 +269,44 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
     active.kind === 'team'
       ? `Team · ${maskMid(active.objectId)}`
       : active.kind === 'private'
-        ? `Private · ${maskMid(active.objectId)}`
-        : 'Server shared (default)'
+        ? `Privat · ${maskMid(active.objectId)}`
+        : 'Server-Shared (Standard)'
 
   return (
     <div className="space-y-3">
+      <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="font-medium text-foreground">Kurz erklärt</p>
+        <ul className="mt-1.5 list-disc space-y-1 pl-4">
+          <li>
+            <strong className="text-foreground">Server-Postfach</strong> — gemeinsames Einsatz-Postfach des Betriebs, immer
+            sichtbar.
+          </li>
+          <li>
+            <strong className="text-foreground">Team</strong> — geteiltes Postfach; du trittst per ID/QR bei (erstellt meist
+            die Leitung, nicht du).
+          </li>
+          <li>
+            <strong className="text-foreground">Privat</strong> — nur dein Wallet; du erstellst sie selbst.
+          </li>
+          <li>
+            <strong className="text-foreground">Genau eine „Fokus“-Mailbox</strong> steuert Senden + welcher Posteingang
+            zuerst geladen wird (Team oder Privat). Ohne Fokus gilt das Server-Postfach.
+          </li>
+        </ul>
+        <p className="mt-2">
+          <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN} className="text-[10px]" />
+        </p>
+      </div>
+
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5">
-        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Active focus (send + inbox)</p>
+        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Dein Fokus (Senden + Posteingang)</p>
         <p className="mt-1 text-sm font-medium text-foreground">{activeLabel}</p>
+        <p className="mt-1 text-[10px] text-muted-foreground">
+          Nach Wechsel im Posteingang <strong className="text-foreground">Aktualisieren</strong> tippen.
+        </p>
         {active.kind !== 'none' ? (
           <button type="button" onClick={deactivateSendFocus} className="mt-2 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent">
-            Clear focus → server mailbox only
+            Fokus aufheben → nur Server-Postfach
           </button>
         ) : null}
       </div>
@@ -283,22 +314,22 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
       <section className="rounded-lg border border-sky-500/35 bg-sky-500/8 px-3 py-2.5 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
           <TypeBadge kind="server" />
-          <span className="text-[11px] font-semibold text-foreground">Server mailbox (ops)</span>
+          <span className="text-[11px] font-semibold text-foreground">Server-Postfach (Einsatz)</span>
           <span className="rounded bg-sky-600/25 px-1.5 py-0.5 text-[9px] font-semibold text-sky-950 dark:text-sky-100">
-            Always on
+            Immer an
           </span>
         </div>
         {serverAvailable ? (
           <MailboxIdRow objectId={serverId} copiedId={copiedId} onCopy={copyId} />
         ) : (
-          <p className="text-[10px] text-amber-800 dark:text-amber-200">Server mailbox ID not configured yet.</p>
+          <p className="text-[10px] text-amber-800 dark:text-amber-200">Server-Postfach-ID noch nicht konfiguriert.</p>
         )}
-        <p className="text-[10px] text-muted-foreground">Set by operations</p>
+        <p className="text-[10px] text-muted-foreground">Vom Betrieb vorgegeben — hier nicht umschaltbar.</p>
       </section>
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-[11px] font-semibold text-foreground">Team mailboxes</h4>
+          <h4 className="text-[11px] font-semibold text-foreground">Team-Mailboxen</h4>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -306,7 +337,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
               className="inline-flex items-center gap-1 rounded-md border border-amber-500/45 bg-amber-500/10 px-2 py-1 text-[10px] font-medium hover:bg-amber-500/15"
             >
               <UserRoundPlus className="h-3 w-3" />
-              Join (ID/QR)
+              Beitreten (ID/QR)
             </button>
             {p.teamMailboxCreateAllowed ? (
               <ChatViewTeamMailboxCreateButton
@@ -322,11 +353,16 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             ) : null}
           </div>
         </div>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Geteiltes Postfach für mehrere Personen. Du <strong className="text-foreground">beitrittst</strong> per ID/QR —
+          Erstellung liegt bei der Leitung (oder „Team-Mailbox erstellen“, falls erlaubt). „Aus Liste“ entfernt nur deinen
+          Eintrag, nicht das Postfach auf der Kette.
+        </p>
         {teamList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">
             {p.teamMailboxCreateAllowed
-              ? 'No team mailbox yet — create one or enter an ID.'
-              : 'No team mailbox yet — join via ID/QR when leadership shares one.'}
+              ? 'Noch keine Team-Mailbox — erstellen oder ID eintragen.'
+              : 'Noch keine Team-Mailbox — per ID/QR beitreten, wenn die Leitung eine teilt.'}
           </p>
         ) : (
           <ul className="space-y-1.5">
@@ -341,19 +377,19 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     onClick={() => {
                       if (
                         !window.confirm(
-                          `Remove team mailbox “${entry.label || maskMid(entry.objectId)}” from the local list?\n\nThe on-chain shared mailbox remains.`
+                          `Team-Mailbox „${entry.label || maskMid(entry.objectId)}“ aus der lokalen Liste entfernen?\n\nOn-chain bleibt das Shared-Postfach bestehen.`
                         )
                       ) {
                         return
                       }
                       archiveMyTeamMailbox(entry.objectId)
                       reload()
-                      p.onStatus?.('Team mailbox removed locally (on-chain unchanged).', 'success')
+                      p.onStatus?.('Team-Mailbox lokal entfernt (on-chain unverändert).', 'success')
                     }}
                     className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive hover:bg-destructive/15"
                   >
                     <Trash2 className="h-3 w-3" />
-                    Remove from list
+                    Aus Liste
                   </button>
                   <button
                     type="button"
@@ -361,7 +397,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <QrCode className="h-3 w-3" />
-                    Share QR
+                    QR teilen
                   </button>
                   <button
                     type="button"
@@ -370,7 +406,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <UserPlus className="h-3 w-3" />
-                    Add to phonebook
+                    Ins Telefonbuch
                   </button>
                 </>
               ),
@@ -383,7 +419,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
       <section className="space-y-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h4 className="text-[11px] font-semibold text-foreground">Private mailboxes</h4>
+          <h4 className="text-[11px] font-semibold text-foreground">Private Mailboxen</h4>
           <ChatViewPrivateMailboxCreateButton
             walletValid={walletValid}
             onObjectId={(id) => {
@@ -393,6 +429,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             onStatus={p.onStatus}
           />
         </div>
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Nur für dein Wallet — du erstellst sie selbst. „On-chain löschen“ entfernt das Postfach dauerhaft von der Kette.
+        </p>
         {privateList.length === 0 ? (
           <p className="text-[10px] text-muted-foreground">Noch keine private Mailbox.</p>
         ) : (
@@ -405,12 +444,12 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     onClick={() => {
                       archiveMyPrivateMailbox(entry.objectId)
                       reload()
-                      p.onStatus?.('Moved to removed.', 'success')
+                      p.onStatus?.('In „Entfernt“.', 'success')
                     }}
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <Trash2 className="h-3 w-3" />
-                    Remove from list
+                    Aus Liste
                   </button>
                   <button
                     type="button"
@@ -418,9 +457,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     onClick={() => {
                       if (
                         !window.confirm(
-                          `Delete private mailbox “${entry.label || maskMid(entry.objectId)}” on-chain?\n\nMessages and handshakes will be removed.`
+                          `Private Mailbox „${entry.label || maskMid(entry.objectId)}“ on-chain löschen?\n\nNachrichten und Handshakes werden entfernt.`
                         ) ||
-                        !window.confirm('Final confirmation?')
+                        !window.confirm('Letzte Bestätigung?')
                       ) {
                         return
                       }
@@ -428,7 +467,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     }}
                     className="inline-flex items-center gap-1 rounded border border-destructive/45 bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive"
                   >
-                    Delete on-chain
+                    On-chain löschen
                   </button>
                   <button
                     type="button"
@@ -437,7 +476,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
                     className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[10px] hover:bg-accent"
                   >
                     <UserPlus className="h-3 w-3" />
-                    Add to phonebook
+                    Ins Telefonbuch
                   </button>
                 </>
               ))
@@ -448,12 +487,12 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
       {(teamArchived.length > 0 || privateArchived.length > 0) && (
         <div className="rounded-md border border-dashed border-border/80 px-2 py-2 text-[10px]">
-          <p className="font-medium text-muted-foreground mb-1">Removed</p>
+          <p className="font-medium text-muted-foreground mb-1">Entfernt</p>
           {teamArchived.map((e) => (
             <div key={e.objectId} className="flex flex-wrap gap-2 py-0.5">
               <code>{maskMid(e.objectId)}</code>
               <button type="button" onClick={() => { restoreMyTeamMailbox(e.objectId); reload() }} className="underline">
-                Restore team
+                Team wiederherstellen
               </button>
             </div>
           ))}
@@ -461,7 +500,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             <div key={e.objectId} className="flex flex-wrap gap-2 py-0.5">
               <code>{maskMid(e.objectId)}</code>
               <button type="button" onClick={() => { restoreMyPrivateMailbox(e.objectId); reload() }} className="underline">
-                Restore private
+                Privat wiederherstellen
               </button>
             </div>
           ))}
@@ -470,7 +509,8 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
       {(privateList.length > 0 || teamList.length > 0) && (
         <div className="rounded-md border border-border/70 bg-muted/15 px-2 py-2 space-y-1.5 text-[10px]">
-          <p className="font-medium">Assign mailbox to contact</p>
+          <p className="font-medium">Mailbox einem Kontakt zuordnen</p>
+          <p className="text-muted-foreground">Mailbox wählen → Speichern öffnet die Telefonbuch-Zuordnung (bestehender oder neuer Kontakt).</p>
           <div className="flex flex-wrap gap-2">
             <select
               value={assignMbId}
@@ -495,7 +535,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
               onClick={() => assignToContact()}
               className="rounded-md bg-primary px-2 py-1 font-medium text-primary-foreground disabled:opacity-50"
             >
-              Assign…
+              Zuordnen…
             </button>
           </div>
         </div>
@@ -513,7 +553,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
           directory={p.contactDirectory ?? {}}
           onSaved={() => {
             p.onContactsChanged?.()
-            p.onStatus?.('Mailbox saved in phonebook.', 'success')
+            p.onStatus?.('Mailbox im Telefonbuch gespeichert.', 'success')
             setPhonebookAssign(null)
           }}
         />
@@ -572,7 +612,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
           className="inline-flex min-h-9 items-center gap-1 rounded-md border border-border px-3 py-1.5 text-xs hover:bg-accent"
         >
           <QrCode className="h-3.5 w-3.5" />
-          {qrCopied ? 'Profile QR copied' : 'Profile QR (active mailbox)'}
+          {qrCopied ? 'Profil-QR kopiert' : 'Profil-QR (aktive Mailbox)'}
         </button>
       ) : null}
     </div>

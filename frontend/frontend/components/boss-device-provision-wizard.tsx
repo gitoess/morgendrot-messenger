@@ -21,7 +21,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
 import { API_BASE } from '@/frontend/lib/api/api-base'
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { buildWizardHandoffExportBody } from '@/frontend/lib/handoff-export-defaults'
@@ -100,7 +99,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   const [revealEntryId, setRevealEntryId] = useState<string | null>(null)
   const [revealSeed, setRevealSeed] = useState('')
   const [revealBusy, setRevealBusy] = useState(false)
-  const [protectHandoffZip, setProtectHandoffZip] = useState(true)
+  const [protectHandoffZip, setProtectHandoffZip] = useState(false)
   const [handoffZipPassword, setHandoffZipPassword] = useState('')
   const [handoffZipPasswordConfirm, setHandoffZipPasswordConfirm] = useState('')
   const [registryFilter, setRegistryFilter] = useState<'all' | 'open'>('all')
@@ -132,7 +131,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     })()
     void (async () => {
       try {
-        const res = await fetchWithApiAuth(`${API_BASE}/api/current-ids`)
+        const res = await fetch(`${API_BASE}/api/current-ids`)
         const j = (await res.json()) as {
           mailboxId?: string
           commandRegistryId?: string
@@ -186,8 +185,8 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     }
     setStatusMsg(
       applied.hasFullSnapshot
-        ? `Template "${t.label}" loaded (including capabilities).`
-        : `Template "${t.label}" loaded.`
+        ? `Vorlage „${t.label}" geladen (Capabilities inkl.).`
+        : `Vorlage „${t.label}" geladen.`
     )
   }
 
@@ -197,7 +196,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       setExportTuning(merged.tuning)
       setCapabilitiesOverride(merged.override)
       setCapabilityPresetId(capPreset.id)
-      setStatusMsg(`Special role "${capPreset.label}" — ${capPreset.hint}`)
+      setStatusMsg(`Sonderrolle „${capPreset.label}" — ${capPreset.hint}`)
     },
     [presetId, exportTuning]
   )
@@ -223,11 +222,11 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     if (registryUnlocked) return true
     if (!registryExists) {
       if (masterPassword.length < 8) {
-        setStatusMsg('Boss registry master password: at least 8 characters.')
+        setStatusMsg('Master-Passwort für die Boss-Registry: mindestens 8 Zeichen.')
         return false
       }
       if (masterPassword !== masterPasswordConfirm) {
-        setStatusMsg('Master password and confirmation do not match.')
+        setStatusMsg('Master-Passwort und Wiederholung stimmen nicht überein.')
         return false
       }
       const init = await initializeBossProvisionRegistry(masterPassword, masterPasswordConfirm)
@@ -240,7 +239,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       return true
     }
     if (!unlockPassword.trim()) {
-      setStatusMsg('Registry is locked — enter master password to unlock.')
+      setStatusMsg('Registry ist gesperrt — Master-Passwort zum Entsperren eingeben.')
       return false
     }
     const unlock = await unlockBossProvisionRegistry(unlockPassword)
@@ -257,7 +256,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
   const onUnlockRegistry = async () => {
     setStatusMsg('')
     if (!unlockPassword.trim()) {
-      setStatusMsg('Enter master password.')
+      setStatusMsg('Master-Passwort eingeben.')
       return
     }
     setBusy(true)
@@ -270,7 +269,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     rememberMasterPassword(unlockPassword)
     setRegistryReady(true)
     setUnlockPassword('')
-    setStatusMsg('Registry unlocked.')
+    setStatusMsg('Registry entsperrt.')
   }
 
   const onGenerateAndExport = async () => {
@@ -351,8 +350,8 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       refreshRegistryState()
       setStatusMsg(
         protectHandoffZip
-          ? 'Password-protected ZIP — tell the helper the handoff password verbally (not in the ZIP). Seed QR: 60 seconds.'
-          : 'ZIP downloaded — show the helper the seed QR (60 seconds).'
+          ? 'Passwortgeschütztes ZIP — Handoff-Passwort dem Helfer mündlich mitteilen (nicht in der ZIP). Seed-QR: 60 Sekunden.'
+          : 'ZIP heruntergeladen — Seed-QR dem Helfer zeigen (60 Sekunden).'
       )
     } finally {
       setBusy(false)
@@ -375,7 +374,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
 
   const onRevealSeed = async (id: string) => {
     if (!registryUnlocked) {
-      setStatusMsg('Unlock the registry first.')
+      setStatusMsg('Registry zuerst entsperren.')
       return
     }
     setRevealBusy(true)
@@ -384,13 +383,13 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     const entry = getBossProvisionRegistryEntries().find((e) => e.id === id)
     if (!entry) {
       setRevealBusy(false)
-      setStatusMsg('Entry not found.')
+      setStatusMsg('Eintrag nicht gefunden.')
       return
     }
     const password = activeMasterPassword()
     if (!password) {
       setRevealBusy(false)
-      setStatusMsg('Enter master password and unlock the registry.')
+      setStatusMsg('Master-Passwort eingeben und Registry entsperren.')
       return
     }
     const revealed = await revealBossProvisionSeed(entry, password)
@@ -405,7 +404,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
 
   const onExportRegistryBackup = () => {
     const r = downloadBossProvisionRegistryBackup()
-    setStatusMsg(r.ok ? 'Registry backup downloaded (still encrypted).' : r.error)
+    setStatusMsg(r.ok ? 'Registry-Sicherung heruntergeladen (weiterhin verschlüsselt).' : r.error)
   }
 
   const onImportRegistryBackup = async (file: File) => {
@@ -418,12 +417,12 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     }
     const password = activeMasterPassword()
     if (!password) {
-      setStatusMsg('Unlock the registry with the master password before importing (password must match the backup).')
+      setStatusMsg('Zum Importieren Registry zuerst mit Master-Passwort entsperren (Passwort muss zur Sicherung passen).')
       return
     }
     if (
       !window.confirm(
-        'Replace the local boss registry with this backup? Continue only if the file is trusted.'
+        'Lokale Boss-Registry durch diese Sicherung ersetzen? Nur fortfahren, wenn die Datei vertrauenswürdig ist.'
       )
     ) {
       return
@@ -438,7 +437,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
     rememberMasterPassword(password)
     setRegistryReady(true)
     refreshRegistryState()
-    setStatusMsg(`Registry imported (${r.entryCount} ${r.entryCount === 1 ? 'entry' : 'entries'}).`)
+    setStatusMsg(`Registry importiert (${r.entryCount} Eintrag/Einträge).`)
   }
 
   const preset = useMemo(() => getHandoffPreset(presetId), [presetId])
@@ -462,10 +461,10 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Smartphone className="h-4 w-4 text-amber-500" aria-hidden />
-            {p.companionSeedBlock ? 'New device' : 'Provision new device'}
+            {p.companionSeedBlock ? 'Neues Gerät' : 'Neues Gerät provisionieren'}
           </p>
           <Button type="button" size="sm" onClick={() => setOpen(true)}>
-            {p.companionSeedBlock ? 'Seed + QR' : 'Open wizard'}
+            {p.companionSeedBlock ? 'Seed + QR' : 'Wizard öffnen'}
           </Button>
         </div>
 
@@ -473,7 +472,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
           <div className="mt-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground" key={registryTick}>
               <span>
-                {entryStats.total} · {entryStats.open} open · {entryStats.handedOver} handed over
+                {entryStats.total} · {entryStats.open} offen · {entryStats.handedOver} übergeben
               </span>
               <div className="flex flex-wrap gap-1">
                 <button
@@ -484,7 +483,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   )}
                   onClick={() => setRegistryFilter('all')}
                 >
-                  All
+                  Alle
                 </button>
                 <button
                   type="button"
@@ -494,7 +493,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   )}
                   onClick={() => setRegistryFilter('open')}
                 >
-                  Not yet handed over ({entryStats.open})
+                  Noch nicht übergeben ({entryStats.open})
                 </button>
               </div>
             </div>
@@ -502,9 +501,9 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
             <table className="w-full min-w-[32rem] text-left text-xs">
               <thead className="bg-muted/40 text-muted-foreground">
                 <tr>
-                  <th className="px-3 py-2 font-medium">Label</th>
-                  <th className="px-3 py-2 font-medium">Address</th>
-                  <th className="px-3 py-2 font-medium">Profile</th>
+                  <th className="px-3 py-2 font-medium">Bezeichnung</th>
+                  <th className="px-3 py-2 font-medium">Adresse</th>
+                  <th className="px-3 py-2 font-medium">Profil</th>
                   <th className="px-3 py-2 font-medium">Status</th>
                   <th className="px-3 py-2 font-medium" />
                 </tr>
@@ -516,7 +515,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                     <td className="px-3 py-2 font-mono">{formatHandoffAddressShort(e.address)}</td>
                     <td className="px-3 py-2">{getHandoffPreset(e.presetId).label}</td>
                     <td className="px-3 py-2 text-muted-foreground">
-                      {e.handedOverAtIso ? 'Handed over' : e.seedShownAtIso ? 'Seed shown' : 'Created'}
+                      {e.handedOverAtIso ? 'Übergeben' : e.seedShownAtIso ? 'Seed gezeigt' : 'Erzeugt'}
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
@@ -533,7 +532,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                             className="rounded border border-border px-2 py-0.5 hover:bg-muted"
                             onClick={() => void onMarkHandedOver(e.id)}
                           >
-                            Hand over
+                            Übergeben
                           </button>
                         ) : null}
                       </div>
@@ -549,7 +548,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                 className="rounded-lg border border-border px-3 py-1.5 text-xs hover:bg-muted"
                 onClick={onExportRegistryBackup}
               >
-                Back up
+                Sichern
               </button>
               <button
                 type="button"
@@ -577,27 +576,27 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Provision device</DialogTitle>
+            <DialogTitle>Gerät provisionieren</DialogTitle>
             <DialogDescription>
-              Choose label and profile — the system generates seed, handoff ZIP, and QR for the helper.
+              Bezeichnung und Profil wählen — System erzeugt Seed, Handoff-ZIP und QR für den Helfer.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-muted-foreground">
-              <strong className="text-foreground">Security:</strong> The registry is stored in this browser&apos;s{' '}
-              <span className="font-mono">localStorage</span>. Treat the boss PC as a{' '}
-              <strong className="text-foreground">high-security device</strong> (full-disk encryption, no untrusted
-              access). While the registry is <strong className="text-foreground">unlocked</strong>, decrypted seeds
-              remain in RAM — if the laptop is compromised, all entries are at risk. After deployment:{' '}
-              <strong className="text-foreground">lock the registry</strong> or close the browser.
+              <strong className="text-foreground">Sicherheit:</strong> Registry liegt in{' '}
+              <span className="font-mono">localStorage</span> dieses Browsers. Behandeln Sie den Boss-PC als{' '}
+              <strong className="text-foreground">High-Security-Gerät</strong> (Vollverschlüsselung, kein
+              Fremdzugriff). Ist die Registry <strong className="text-foreground">entsperrt</strong>, liegen
+              entschlüsselte Seeds im RAM — bei Kompromittierung des Laptops sind alle Einträge gefährdet. Nach
+              Einsatz: <strong className="text-foreground">Registry sperren</strong> oder Browser schließen.
             </div>
 
             {registryReady ? (
               <div className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-3 py-2 text-xs">
-                <strong className="text-foreground">Registry unlocked (browser session).</strong> You do not need to
-                re-enter the master password for each device — only until you click &quot;Lock registry&quot; or close
-                the tab. Seeds are visible again only after unlocking.
+                <strong className="text-foreground">Registry entsperrt (Browser-Sitzung).</strong> Master-Passwort
+                muss nicht bei jedem Gerät erneut eingegeben werden — nur bis Sie „Registry sperren“ klicken oder den
+                Tab schließen. Seeds dann nur noch mit erneutem Entsperren sichtbar.
               </div>
             ) : null}
 
@@ -605,47 +604,47 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               <div className="space-y-2 rounded-lg border border-amber-500/35 bg-amber-500/10 p-3">
                 <p className="flex items-center gap-2 text-sm font-medium">
                   <KeyRound className="h-4 w-4" aria-hidden />
-                  Unlock boss registry
+                  Boss-Registry entsperren
                 </p>
                 <Input
                   type="password"
                   value={unlockPassword}
                   onChange={(e) => setUnlockPassword(e.target.value)}
-                  placeholder="Master password"
+                  placeholder="Master-Passwort"
                   autoComplete="current-password"
                 />
                 <Button type="button" size="sm" disabled={busy} onClick={() => void onUnlockRegistry()}>
-                  Unlock
+                  Entsperren
                 </Button>
               </div>
             ) : null}
 
             {!registryExists ? (
               <div className="space-y-2 rounded-lg border border-border p-3">
-                <p className="text-sm font-medium">Master password (new — custody B)</p>
+                <p className="text-sm font-medium">Master-Passwort (neu — Custody B)</p>
                 <p className="text-xs text-muted-foreground">
-                  Encrypts the seed history in this browser (AES-GCM). Without the password, seeds cannot be shown again.
-                  Per browser profile — not cross-device. Backup: use &quot;Back up registry&quot; after the first device.
+                  Verschlüsselt die Seed-Historie in diesem Browser (AES-GCM). Ohne Passwort keine Wiederanzeige.
+                  Pro Browser-Profil — nicht geräteübergreifend. Backup: „Registry sichern“ nach dem ersten Gerät.
                 </p>
                 <Input
                   type="password"
                   value={masterPassword}
                   onChange={(e) => setMasterPassword(e.target.value)}
-                  placeholder="Master password (8+ characters)"
+                  placeholder="Master-Passwort (8+ Zeichen)"
                   autoComplete="new-password"
                 />
                 <Input
                   type="password"
                   value={masterPasswordConfirm}
                   onChange={(e) => setMasterPasswordConfirm(e.target.value)}
-                  placeholder="Confirm"
+                  placeholder="Wiederholen"
                   autoComplete="new-password"
                 />
               </div>
             ) : null}
 
             <div>
-              <Label htmlFor="prov-bezeichnung">Label</Label>
+              <Label htmlFor="prov-bezeichnung">Bezeichnung</Label>
               <Input
                 id="prov-bezeichnung"
                 value={bezeichnung}
@@ -653,14 +652,14 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   labelEdited.current = true
                   setBezeichnung(e.target.value)
                 }}
-                placeholder="e.g. Anna – helper south track"
+                placeholder="z. B. Anna – Helfer Zug Süd"
                 className="mt-1"
               />
             </div>
 
             {savedTemplates.length > 0 ? (
               <label className="block text-sm">
-                <span className="text-muted-foreground">Optional: load template</span>
+                <span className="text-muted-foreground">Optional: Vorlage laden</span>
                 <select
                   className="mt-1 w-full rounded-lg border border-border bg-input px-2 py-2 text-sm"
                   defaultValue=""
@@ -671,7 +670,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                     if (t) applyTemplate(t)
                   }}
                 >
-                  <option value="">— none —</option>
+                  <option value="">— keine —</option>
                   {savedTemplates.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.label}
@@ -682,7 +681,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
             ) : null}
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profile</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Profil</p>
               <div className="grid gap-2 sm:grid-cols-3">
                 {HANDOFF_EINSATZ_PRESETS.map((item) => {
                   const vis = HANDOFF_PRESET_VISUAL[item.id]
@@ -713,7 +712,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
 
             <div>
               <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Special role (optional)
+                Sonderrolle (optional)
               </p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {wizardCapabilityPresets.map((cap) => {
@@ -742,13 +741,13 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   className="mt-2 text-xs text-primary underline hover:no-underline"
                   onClick={clearCapabilityPreset}
                 >
-                  Reset special role
+                  Sonderrolle zurücksetzen
                 </button>
               ) : (
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  More permissions (partner, all channels, password ZIP):{' '}
+                  Weitere Rechte (Partner, alle Kanäle, Passwort-ZIP):{' '}
                   <Link href="#einsatz-erweitert" className="text-primary underline hover:no-underline">
-                    Advanced → export assistant
+                    Erweitert → Export-Assistent
                   </Link>
                 </p>
               )}
@@ -764,7 +763,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               ) : null}
               <span className="text-muted-foreground"> · ROLE_ID={resolvedParams.roleId}</span>
               {capabilitiesOverride ? (
-                <span className="text-muted-foreground"> · Capabilities customized</span>
+                <span className="text-muted-foreground"> · Capabilities angepasst</span>
               ) : null}
             </div>
 
@@ -777,10 +776,10 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   className="mt-1"
                 />
                 <span>
-                  <strong className="text-foreground">Password-protected handoff ZIP</strong>
+                  <strong className="text-foreground">Handoff-ZIP mit Passwort</strong>
                   <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Default: plaintext ZIP (fast handoff). Optional, like the export assistant — tell the helper the
-                    password verbally.
+                    Standard: Klartext-ZIP (schnelle Übergabe). Optional wie Export-Assistent — Passwort mündlich
+                    zum Helfer.
                   </span>
                 </span>
               </label>
@@ -790,14 +789,14 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                     type="password"
                     value={handoffZipPassword}
                     onChange={(e) => setHandoffZipPassword(e.target.value)}
-                    placeholder="Handoff password (8+ characters)"
+                    placeholder="Handoff-Passwort (8+ Zeichen)"
                     autoComplete="new-password"
                   />
                   <Input
                     type="password"
                     value={handoffZipPasswordConfirm}
                     onChange={(e) => setHandoffZipPasswordConfirm(e.target.value)}
-                    placeholder="Confirm handoff password"
+                    placeholder="Handoff-Passwort wiederholen"
                     autoComplete="new-password"
                   />
                 </div>
@@ -811,7 +810,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               onClick={() => void onGenerateAndExport()}
             >
               <Download className="mr-2 h-4 w-4" aria-hidden />
-              {busy ? 'Generating…' : 'Generate & export'}
+              {busy ? 'Generiere…' : 'Generieren & Exportieren'}
             </Button>
 
             {statusMsg ? (
@@ -831,7 +830,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   refreshRegistryState()
                 }}
               >
-                Lock registry
+                Registry sperren
               </button>
             ) : null}
           </div>
@@ -847,10 +846,10 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Seed & ZIP ready</DialogTitle>
+            <DialogTitle>Seed & ZIP bereit</DialogTitle>
             <DialogDescription>
-              ZIP has been downloaded{protectHandoffZip ? ' (password protected)' : ''}. Seed only via QR or registry —
-              never in the ZIP.
+              ZIP wurde heruntergeladen{protectHandoffZip ? ' (passwortgeschützt)' : ''}. Seed nur über QR oder
+              Registry — nie in der ZIP.
             </DialogDescription>
           </DialogHeader>
 
@@ -863,14 +862,14 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                   <QrCode className="h-4 w-4" aria-hidden />
                   Seed-QR ({qrSecondsLeft}s)
                 </p>
-                <img src={qrDataUrl} alt="Seed QR for helper" className="mx-auto rounded-lg border border-border" />
+                <img src={qrDataUrl} alt="Seed-QR für Helfer" className="mx-auto rounded-lg border border-border" />
                 <p className="mt-2 text-[10px] text-muted-foreground">
-                  Helper: after ZIP import, choose &quot;Set up seed?&quot; → scan QR.
+                  Helfer: nach ZIP-Import „Seed einrichten?“ → QR scannen.
                 </p>
               </div>
             ) : (
               <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                QR expired. Show seed again via boss registry (master password).
+                QR abgelaufen. Seed über Boss-Registry (Master-Passwort) erneut anzeigen.
               </p>
             )}
 
@@ -884,11 +883,11 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
                 }}
                 className="mt-1"
               />
-              <span>Seed shown to helper / handed over securely</span>
+              <span>Seed dem Helfer gezeigt / sicher übergeben</span>
             </label>
 
             <Button type="button" variant="outline" className="w-full" onClick={() => setResultOpen(false)}>
-              Close
+              Schließen
             </Button>
           </div>
         </DialogContent>
@@ -898,10 +897,10 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Seed (Custody B)</DialogTitle>
-            <DialogDescription>Boss only — do not forward or screenshot.</DialogDescription>
+            <DialogDescription>Nur Boss — nicht weiterleiten oder screenshotten.</DialogDescription>
           </DialogHeader>
           {revealBusy ? (
-            <p className="text-sm text-muted-foreground">Decrypting…</p>
+            <p className="text-sm text-muted-foreground">Entschlüssele…</p>
           ) : (
             <div className="space-y-3">
               <textarea
@@ -911,7 +910,7 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
               />
               <Button type="button" variant="outline" onClick={() => setRevealEntryId(null)}>
                 <EyeOff className="mr-2 h-4 w-4" aria-hidden />
-                Close
+                Schließen
               </Button>
             </div>
           )}

@@ -72,6 +72,7 @@ export function DashboardPwaInstallCard({
           </div>
           <span className="text-[11px] font-semibold leading-tight text-foreground">{t('cards.pwaShort')}</span>
         </div>
+        <p className="mt-1 text-[9px] leading-snug text-muted-foreground">{t('pwa.offlineHint')}</p>
         {deferredPwaPrompt ? (
           <button
             type="button"

@@ -40,7 +40,7 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
       />
     )
     expect(screen.queryByText(/Policy:/i)).not.toBeInTheDocument()
-    screen.getByRole('button', { name: /Radio.*devices/i }).click()
+    screen.getByRole('button', { name: /Funk.*Geräte/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })
 
@@ -59,8 +59,9 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         onOpenPartnerSetup={onOpenPartnerSetup}
       />
     )
-    expect(screen.getByText(/Ad-hoc: not available/)).toBeInTheDocument()
-    screen.getByRole('button', { name: /^Setup$/i }).click()
+    expect(screen.getByText(/Ad-hoc BLE/)).toBeInTheDocument()
+    expect(screen.getByText(/bleUuid/)).toBeInTheDocument()
+    screen.getByRole('button', { name: /Setup öffnen/i }).click()
     expect(onOpenPartnerSetup).toHaveBeenCalledTimes(1)
   })
 
@@ -73,7 +74,7 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /^Encrypted$/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Verschlüsselt$/i })).toBeDisabled()
   })
 
   it('warnt vor Klartext-Wechsel per Dialog (§ H.1a)', () => {
@@ -87,9 +88,9 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
         })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Plaintext/i }))
-    expect(screen.getByText(/Send without encryption/i)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Understood, continue/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Unverschlüsselt/i }))
+    expect(screen.getByText(/Unverschlüsselt senden/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Verstanden, fortfahren/i }))
     expect(onEncryptedChange).toHaveBeenCalledWith(false)
   })
 

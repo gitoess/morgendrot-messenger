@@ -3,38 +3,16 @@
  * Voraussetzung: Backend läuft (z. B. npm run start:secrets, Port 3342).
  *
  *   API_BASE=http://127.0.0.1:3342 npx tsx scripts/test-vault-load-save.ts
- *   Optional (nur Laufzeit-Env, nicht in .env committen):
- *     VAULT_PASSWORD / UNLOCK_PASSWORD / WALLET_PASSWORD
- *   Oder: In der UI entsperren — überspringt nur POST /api/unlock; für /vault-save
- *   und /vault-load nach /vault-lock brauchst du trotzdem VAULT_PASSWORD (Laufzeit-Env).
- *   API_AUTH_TOKEN=… wenn LAN-Hardening aktiv.
+ *   (Optional: VAULT_PASSWORD=123)
  */
-import 'dotenv/config';
-import { apiTestJsonHeaders } from './api-test-headers.js';
 
 const API_BASE = (process.env.API_BASE || process.env.API_URL || 'http://127.0.0.1:3342').replace(/\/$/, '');
-const PASSWORD = (
-  process.env.VAULT_PASSWORD ||
-  process.env.UNLOCK_PASSWORD ||
-  process.env.WALLET_PASSWORD ||
-  ''
-).trim();
-
-function requireVaultPassword(context: string): string {
-  if (PASSWORD) return PASSWORD;
-  console.error(
-    `${context}\n` +
-      '  Vault-Passwort nicht in .env speichern — nur Laufzeit-Env:\n' +
-      '    PowerShell: $env:VAULT_PASSWORD="…"; npm run test:vault\n' +
-      '  Oder zuerst in der UI entsperren und dasselbe Passwort als Env setzen.'
-  );
-  process.exit(1);
-}
+const PASSWORD = process.env.VAULT_PASSWORD || '123';
 
 async function post(path: string, body: object): Promise<{ ok?: boolean; message?: string; error?: string; notes?: string }> {
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
-    headers: apiTestJsonHeaders(),
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   const text = await res.text();
@@ -47,36 +25,21 @@ async function main() {
   console.log('API_BASE:', API_BASE);
   console.log('Passwort: ', PASSWORD ? '***' : '(leer)');
 
-  const status = (await fetch(`${API_BASE}/api/status`).then((r) => (r.ok ? r.json() : null)).catch(() => null)) as {
-    locked?: boolean;
-  } | null;
+  const status = await fetch(`${API_BASE}/api/status`).then((r) => r.ok ? r.json() : null).catch(() => null);
   if (!status) {
     console.error('Backend nicht erreichbar. Bitte starten: npm run start:secrets');
     process.exit(1);
   }
 
-  const vaultPassword = requireVaultPassword(
-    status.locked !== false
-      ? 'Wallet ist gesperrt — Passwort für /api/unlock und Vault-Zyklus fehlt.'
-      : 'Wallet entsperrt — für /vault-save und /vault-load nach /vault-lock fehlt das Passwort.'
-  );
-
-  if (status.locked !== false) {
-    try {
-      await post('/api/unlock', { password: vaultPassword });
-    } catch (e: unknown) {
-      const msg = String((e as Error)?.message ?? e);
-      if (!msg.includes('Bereits entsperrt')) throw e;
-    }
-    console.log('Unlock: OK');
-  } else {
-    console.log('Unlock: übersprungen (Wallet bereits entsperrt)');
+  try {
+    await post('/api/unlock', { password: PASSWORD });
+  } catch (e: unknown) {
+    const msg = String((e as Error)?.message ?? e);
+    if (!msg.includes('Bereits entsperrt')) throw e;
   }
+  console.log('Unlock: OK');
 
-  const saveRes = await post('/api/command', {
-    cmd: '/vault-save',
-    args: [vaultPassword, 'test-notes-' + Date.now()],
-  });
+  const saveRes = await post('/api/command', { cmd: '/vault-save', args: [PASSWORD, 'test-notes-' + Date.now()] });
   if (!saveRes.ok) {
     console.error('vault-save fehlgeschlagen:', saveRes.message || saveRes.error);
     process.exit(1);
@@ -90,13 +53,9 @@ async function main() {
   }
   console.log('vault-lock: OK');
 
-  const loadRes = await post('/api/command', { cmd: '/vault-load', args: [vaultPassword] });
+  const loadRes = await post('/api/command', { cmd: '/vault-load', args: [PASSWORD] });
   if (!loadRes.ok) {
-    const msg = loadRes.message || loadRes.error || 'unbekannt';
-    console.error('vault-load fehlgeschlagen:', msg);
-    if (msg.includes('Entschlüsselung fehlgeschlagen')) {
-      console.error('Hinweis: Backend neu starten (tsx src/start-with-secrets.ts) — läuft evtl. alter Code ohne aktuelle Vault-Krypto.');
-    }
+    console.error('vault-load fehlgeschlagen:', loadRes.message || loadRes.error);
     process.exit(1);
   }
   const notes = (loadRes as { notes?: string }).notes;

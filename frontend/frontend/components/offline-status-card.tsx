@@ -16,14 +16,14 @@ import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 
 function modeLabel(mode: OfflineStatusSnapshot['mode']): string {
   if (mode === 'online') return 'Online'
-  if (mode === 'cache') return 'Cache mode'
+  if (mode === 'cache') return 'Cache-Modus'
   return 'Offline'
 }
 
 function compactHeadline(mode: OfflineStatusSnapshot['mode']): string {
-  if (mode === 'online') return 'Connection to base: online'
-  if (mode === 'cache') return 'Connection to base: cache (limited)'
-  return 'Connection to base: offline'
+  if (mode === 'online') return 'Verbindung zur Basis: Online'
+  if (mode === 'cache') return 'Verbindung zur Basis: Cache (eingeschränkt)'
+  return 'Verbindung zur Basis: Offline'
 }
 
 export function OfflineStatusCard(p: {
@@ -80,20 +80,20 @@ export function OfflineStatusCard(p: {
     }
     const base = getApiBase()
     if (!base) {
-      setProbeLine('No base URL — enter the server address in settings.')
+      setProbeLine('Keine Basis-URL — bitte in den Einstellungen die Adresse des Servers eintragen.')
       setBusy(false)
       return
     }
     try {
       const res = await fetchStatus()
       if ('pollClockHint' in res && res.backendRunning !== false) {
-        setProbeLine('Connection restored.')
+        setProbeLine('Verbindung wiederhergestellt.')
         await p.onResync?.()
         await p.onTestConnection?.()
       } else {
         const err =
           ('error' in res && typeof res.error === 'string' && res.error) ||
-          'Base unreachable — check network or server.'
+          'Basis nicht erreichbar — Netzwerk oder Server prüfen.'
         setProbeLine(err)
       }
     } catch (e) {
@@ -139,7 +139,7 @@ export function OfflineStatusCard(p: {
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-background/80 px-3 py-2 text-xs font-medium hover:bg-muted disabled:opacity-60"
             >
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-              Reconnect
+              Verbindung wiederherstellen
             </button>
           ) : null}
         </div>
@@ -150,7 +150,7 @@ export function OfflineStatusCard(p: {
           <p
             className={cn(
               'mt-2 text-xs',
-              probeLine.includes('restored') ? 'text-emerald-700 dark:text-emerald-200' : 'text-red-800 dark:text-red-200'
+              probeLine.includes('wiederhergestellt') ? 'text-emerald-700 dark:text-emerald-200' : 'text-red-800 dark:text-red-200'
             )}
           >
             {probeLine}
@@ -160,7 +160,7 @@ export function OfflineStatusCard(p: {
           <p
             className={cn(
               'mt-2 text-xs',
-              autarkyLine.includes('complete')
+              autarkyLine.includes('vollständig')
                 ? 'text-emerald-800 dark:text-emerald-200'
                 : 'text-amber-900 dark:text-amber-100'
             )}
@@ -176,10 +176,10 @@ export function OfflineStatusCard(p: {
           </ul>
         ) : null}
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Last sync:{' '}
+          Letzte Synchronisation:{' '}
           {!hydrated ? '…' : formatRelativeMinutes(p.status.lastSuccessfulSyncMinutes)}
           {hydrated && p.status.queuePending > 0
-            ? ` · ${p.status.queuePending} message(s) queued`
+            ? ` · ${p.status.queuePending} Nachricht(en) in der Warteschlange`
             : ''}
         </p>
         {p.status.localHandoffOnly && p.onOpenHandoffImport ? (
@@ -188,7 +188,7 @@ export function OfflineStatusCard(p: {
             onClick={() => p.onOpenHandoffImport?.()}
             className="mt-2 text-xs font-medium text-amber-700 underline-offset-2 hover:underline dark:text-amber-200"
           >
-            Open handoff import
+            Handoff-Import öffnen
           </button>
         ) : null}
       </div>
@@ -200,7 +200,7 @@ export function OfflineStatusCard(p: {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           {icon}
-          <p className="text-sm font-semibold text-foreground">Offline status: {modeLabel(p.status.mode)}</p>
+          <p className="text-sm font-semibold text-foreground">Offline-Status: {modeLabel(p.status.mode)}</p>
         </div>
         {p.status.mode !== 'online' ? (
           <button
@@ -210,7 +210,7 @@ export function OfflineStatusCard(p: {
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-60"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : null}
-            Reconnect
+            Verbindung wiederherstellen
           </button>
         ) : null}
       </div>
@@ -223,7 +223,7 @@ export function OfflineStatusCard(p: {
         <p
           className={cn(
             'mt-2 rounded-md px-2 py-1.5 text-xs',
-            probeLine.includes('restored')
+            probeLine.includes('wiederhergestellt')
               ? 'border border-emerald-500/35 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
               : 'border border-red-500/30 bg-red-500/10 text-red-900 dark:text-red-100'
           )}
@@ -235,7 +235,7 @@ export function OfflineStatusCard(p: {
         <p
           className={cn(
             'mt-2 rounded-md border px-2 py-1.5 text-xs',
-            autarkyLine.includes('complete')
+            autarkyLine.includes('vollständig')
               ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
               : 'border-amber-500/35 bg-amber-500/10 text-amber-950 dark:text-amber-50'
           )}
@@ -251,16 +251,16 @@ export function OfflineStatusCard(p: {
         </ul>
       ) : null}
       <p className="mt-1 text-xs text-muted-foreground">
-        Last sync: {!hydrated ? '…' : formatRelativeMinutes(p.status.lastSuccessfulSyncMinutes)}
+        Letzte Synchronisation: {!hydrated ? '…' : formatRelativeMinutes(p.status.lastSuccessfulSyncMinutes)}
       </p>
       <p className="mt-1 text-xs text-muted-foreground">
-        Queue: {p.status.queuePending} waiting
-        {hydrated && !p.status.queueEnabled ? ' (opt-in off)' : ''}.
+        Queue: {p.status.queuePending} wartend
+        {hydrated && !p.status.queueEnabled ? ' (Opt-in aus)' : ''}.
       </p>
       {hydrated && !p.status.queueEnabled ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <p className="text-[11px] text-muted-foreground">
-            Outbox opt-in: buffer failed sends locally.
+            Outbox-Opt-in: fehlgeschlagene Sends lokal puffern.
           </p>
           {p.onEnableQueueOptIn ? (
             <button
@@ -268,7 +268,7 @@ export function OfflineStatusCard(p: {
               onClick={() => p.onEnableQueueOptIn?.()}
               className="min-h-9 touch-manipulation rounded-md border border-border px-2.5 py-1 text-xs hover:bg-muted"
             >
-              Enable queue
+              Queue aktivieren
             </button>
           ) : null}
         </div>
@@ -276,7 +276,7 @@ export function OfflineStatusCard(p: {
       {p.status.localHandoffOnly ? (
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <p className="text-xs text-amber-900/90 dark:text-amber-100/90">
-            Handoff local only — when the base is reachable, confirm import.
+            Handoff nur lokal — bei erreichbarer Basis „Import bestätigen“.
           </p>
           {p.onOpenHandoffImport ? (
             <button
@@ -284,14 +284,14 @@ export function OfflineStatusCard(p: {
               onClick={() => p.onOpenHandoffImport?.()}
               className="min-h-9 touch-manipulation rounded-md border border-amber-500/40 px-2.5 py-1 text-xs hover:bg-amber-500/10"
             >
-              Handoff import
+              Handoff-Import
             </button>
           ) : null}
         </div>
       ) : null}
       {p.status.restrictedFeatures.length > 0 ? (
         <p className="mt-1 text-xs text-muted-foreground">
-          Restricted: {p.status.restrictedFeatures.join(', ')}.
+          Eingeschränkt: {p.status.restrictedFeatures.join(', ')}.
         </p>
       ) : null}
     </div>

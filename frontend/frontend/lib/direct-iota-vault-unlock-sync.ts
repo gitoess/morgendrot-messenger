@@ -8,8 +8,6 @@ import { fetchSessionEcdhPrivateJwk, revealVaultEcdhPrivateJwk } from '@/fronten
 import {
   applyDirectChatEcdhVaultMaterial,
   getDirectChatEcdhPrivateKey,
-  persistDirectChatEcdhEncrypted,
-  restoreDirectChatEcdhFromEncryptedStorage,
   restoreDirectChatEcdhPrivateFromLocalStorage,
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
@@ -215,18 +213,15 @@ export async function syncDirectIotaSessionSignerAfterVaultUnlock(opts: {
   })
 }
 
-async function applyVaultEcdhMaterialFromApi(
-  res: {
-    ecdhPrivateJwk?: string
-    ecdhPrivatePkcs8Base64?: string
-    ecdhPubRawBase64?: string
-  },
-  persistPassword?: string
-): Promise<{ ok: true } | { ok: false; error: string }> {
+async function applyVaultEcdhMaterialFromApi(res: {
+  ecdhPrivateJwk?: string
+  ecdhPrivatePkcs8Base64?: string
+  ecdhPubRawBase64?: string
+}): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!res.ecdhPrivateJwk?.trim() && !res.ecdhPrivatePkcs8Base64?.trim()) {
     return { ok: false, error: 'Vault-Antwort ohne ECDH-Privatkey.' }
   }
-  return applyDirectChatEcdhVaultMaterial({ ...res, persistPassword })
+  return applyDirectChatEcdhVaultMaterial(res)
 }
 
 async function restoreDirectChatEcdhPrivateKey(opts?: {
@@ -235,22 +230,15 @@ async function restoreDirectChatEcdhPrivateKey(opts?: {
 }): Promise<{ ok: true } | { ok: false; error?: string }> {
   if (getDirectChatEcdhPrivateKey()) return { ok: true }
   const pw = opts?.vaultPassword?.trim()
-  if (pw && pw.length >= 8) {
-    const enc = await restoreDirectChatEcdhFromEncryptedStorage({ password: pw })
-    if (enc.ok) return { ok: true }
-  }
-  const ls = await restoreDirectChatEcdhPrivateFromLocalStorage({ password: pw })
+  const ls = await restoreDirectChatEcdhPrivateFromLocalStorage()
   if (ls.ok) return { ok: true }
 
   if (opts?.trySession !== false && pw) {
     try {
       const session = await fetchSessionEcdhPrivateJwk(pw)
       if (session.ok) {
-        const applied = await applyVaultEcdhMaterialFromApi(session, pw)
-        if (applied.ok) {
-          await persistDirectChatEcdhEncrypted(pw)
-          return { ok: true }
-        }
+        const applied = await applyVaultEcdhMaterialFromApi(session)
+        if (applied.ok) return { ok: true }
       }
     } catch {
       /* Basis offline */
@@ -261,11 +249,8 @@ async function restoreDirectChatEcdhPrivateKey(opts?: {
     try {
       const revealed = await revealVaultEcdhPrivateJwk(pw)
       if (revealed.ok) {
-        const applied = await applyVaultEcdhMaterialFromApi(revealed, pw)
-        if (applied.ok) {
-          await persistDirectChatEcdhEncrypted(pw)
-          return { ok: true }
-        }
+        const applied = await applyVaultEcdhMaterialFromApi(revealed)
+        if (applied.ok) return { ok: true }
         return { ok: false, error: 'Chat-ECDH aus Vault nicht anwendbar.' }
       }
       return { ok: false, error: revealed.error || revealed.message || 'Chat-ECDH aus Vault nicht lesbar.' }

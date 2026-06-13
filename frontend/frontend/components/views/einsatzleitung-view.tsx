@@ -2,8 +2,10 @@
 
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
-import { EinsatzleitungErweitertPanel } from '@/frontend/components/einsatzleitung-erweitert-panel'
-import { BossHelferEinrichtenPanel } from '@/frontend/components/boss-helfer-einrichten-panel'
+import {
+  LazyBossHelferEinrichtenPanel,
+  LazyEinsatzleitungErweitertPanel,
+} from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { EinsatzChainModeBanner } from '@/frontend/components/einsatz-chain-mode-banner'
 
@@ -25,12 +27,12 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
 
       {isBoss ? (
         <>
-          <BossHelferEinrichtenPanel
+          <LazyBossHelferEinrichtenPanel
             apiStatus={p.apiSnapshot ?? null}
             contactDirectory={p.contactDirectory}
             onRefreshStatus={p.onRefreshStatus}
           />
-          <EinsatzleitungErweitertPanel
+          <LazyEinsatzleitungErweitertPanel
             apiStatus={p.apiSnapshot ?? null}
             onRefreshStatus={p.onRefreshStatus}
           />

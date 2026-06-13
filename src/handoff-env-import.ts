@@ -33,8 +33,6 @@ export const HANDOFF_IMPORT_ALLOWLIST = new Set([
     'API_KILL_PREVIOUS_INSTANCE',
     'HANDOFF_LABEL',
     'MESSENGER_GROUP_HANDOFF',
-    /** LAN-API-Token (öffentlich operational, kein Wallet-Secret). */
-    'API_AUTH_TOKEN',
 ]);
 
 const HANDOFF_VALUE_DENY = [
@@ -43,7 +41,6 @@ const HANDOFF_VALUE_DENY = [
     /password/i,
     /private.?key/i,
     /seed phrase/i,
-    /\bsk_[a-z0-9]+\b/i,
 ];
 
 export type HandoffImportSummary = {

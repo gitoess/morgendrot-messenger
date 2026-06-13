@@ -61,7 +61,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
 
   const hexToBytes = (hex: string): Uint8Array => {
     const h = hex.trim().toLowerCase()
-    if (!/^[a-f0-9]+$/.test(h) || h.length % 2 !== 0) throw new Error('Invalid hex.')
+    if (!/^[a-f0-9]+$/.test(h) || h.length % 2 !== 0) throw new Error('Ungültiges Hex.')
     const out = new Uint8Array(h.length / 2)
     for (let i = 0; i < out.length; i++) out[i] = Number.parseInt(h.slice(i * 2, i * 2 + 2), 16)
     return out
@@ -78,22 +78,22 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     setMsg(null)
     const sender = builderSender.trim()
     if (!/^0x[a-fA-F0-9]{64}$/.test(sender)) {
-      setMsg('Builder: sender must be a valid 0x address.')
+      setMsg('Builder: sender muss eine gültige 0x-Adresse sein.')
       return
     }
     const recipient = builderRecipient.trim()
     if (recipient && !/^0x[a-fA-F0-9]{64}$/.test(recipient)) {
-      setMsg('Builder: recipient must be empty or a valid 0x address.')
+      setMsg('Builder: Empfängeradresse muss leer oder gültige 0x-Adresse sein.')
       return
     }
     const payload = builderPayload.trim()
     if (!payload) {
-      setMsg('Builder: message is required.')
+      setMsg('Builder: Nachricht fehlt.')
       return
     }
     const senderSig = builderSenderSig.trim()
     if (!senderSig && !allowUnsignedDraft) {
-      setMsg('Run "Sign digest" first (or explicitly allow an unsigned draft).')
+      setMsg('Bitte zuerst „Digest signieren“ ausführen (oder Entwurf explizit als unsigniert erlauben).')
       return
     }
     const ttlMin = Math.min(1440, Math.max(1, Number.parseInt(builderTtlMinutes, 10) || 120))
@@ -122,15 +122,15 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       updateRelayQueueReport(item.id, {
         rpcStatus: 'error',
         errorCode: 'DRAFT_UNSIGNED',
-        note: 'Self-draft without signature: for transport/review; submit only after signing.',
+        note: 'Eigenentwurf ohne Signatur: für Transport/Review, Submit erst nach Signierung.',
         statusOverride: 'draft_unsigned',
       })
       refresh()
-      setMsg('Package created and added to the local queue as a draft.')
+      setMsg('Paket erzeugt und automatisch als Entwurf in die lokale Warteliste übernommen.')
       return
     }
     refresh()
-    setMsg('Package created and added to the local queue.')
+    setMsg('Paket erzeugt und automatisch in die lokale Warteliste übernommen.')
   }
 
   const markSubmittedByEnvelope = (rawEnvelopeJson: string, noteSuffix: string) => {
@@ -159,41 +159,41 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
   const sendEnvelopeAsText = async () => {
     const rec = builderRecipient.trim()
     if (!/^0x[a-fA-F0-9]{64}$/.test(rec)) {
-      setMsg('Set a valid recipient address for event/mailbox test.')
+      setMsg('Für Event/Mailbox-Test bitte eine gültige Empfängeradresse setzen.')
       return
     }
     if (!rawText.trim()) {
-      setMsg('Create a package first.')
+      setMsg('Bitte zuerst ein Paket erzeugen.')
       return
     }
     const r = await sendMessage(rec, rawText, false, { messagingPersistenceMode: transportMode })
     if (r.ok) {
       markSubmittedByEnvelope(
         rawText,
-        `Auto: forwarded via expert transport (${transportMode === 'mailbox' ? 'mailbox' : 'event'}).`
+        `Auto: weitergegeben über Experten-Transport (${transportMode === 'mailbox' ? 'Mailbox' : 'Event'}).`
       )
       setMsg(
         transportMode === 'mailbox'
-          ? 'Package sent as plaintext via mailbox.'
-          : 'Package sent as plaintext event.'
+          ? 'Paket als Klartext über Mailbox gesendet.'
+          : 'Paket als Klartext-Event gesendet.'
       )
     } else {
-      setMsg(r.error || r.message || 'Send failed.')
+      setMsg(r.error || r.message || 'Senden fehlgeschlagen.')
     }
   }
 
   const sendToLoraShortcut = async () => {
     if (!rawText.trim()) {
-      setMsg('Create a package first.')
+      setMsg('Bitte zuerst ein Paket erzeugen.')
       return
     }
     try {
       await navigator.clipboard.writeText(rawText)
       setMsg(
-        'Package prepared for LoRa: JSON is in the clipboard. In chat, choose "funk" and send as plaintext.'
+        'Paket für LoRa vorbereitet: JSON ist in der Zwischenablage. Jetzt im normalen Chat „funk“ wählen und als Klartext senden.'
       )
     } catch {
-      setMsg('Clipboard unavailable. Copy JSON manually and send via radio.')
+      setMsg('Zwischenablage nicht verfügbar. JSON manuell kopieren und über Funk senden.')
     }
   }
 
@@ -202,12 +202,12 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     setSessionSignerAddr(getDirectIotaSessionSignerAddress())
     const sender = builderSender.trim().toLowerCase()
     if (!/^0x[a-fA-F0-9]{64}$/.test(sender)) {
-      setMsg('Set a valid sender address first.')
+      setMsg('Bitte zuerst eine gültige sender-Adresse setzen.')
       return
     }
     const payload = builderPayload.trim()
     if (!payload) {
-      setMsg('Enter a message first.')
+      setMsg('Bitte zuerst eine Nachricht eingeben.')
       return
     }
     let signer = getDirectIotaSessionSigner() as unknown as {
@@ -215,7 +215,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     } | null
     if ((!signer || typeof signer.signPersonalMessage !== 'function') && signerMode === 'cli' && !mnemoInput.trim()) {
       const m =
-        'SIGNER=cli active: automatic vault import is disabled. Open "Use another signer" or continue as an unsigned draft.'
+        'SIGNER=cli aktiv: Automatischer Tresor-Import ist deaktiviert. Bitte „Anderen Signer verwenden“ öffnen oder als unsignierten Entwurf fortfahren.'
       setMsg(m)
       setSignerHint(m)
       return
@@ -231,27 +231,27 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
         }
         setSessionSignerAddr(applied.address)
         setMnemoInput('')
-        setSignerHint(`Signer loaded: ${applied.address.slice(0, 10)}…`)
+        setSignerHint(`Signer geladen: ${applied.address.slice(0, 10)}…`)
         signer = getDirectIotaSessionSigner() as unknown as {
           signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
         } | null
       } else {
         const wantVault = window.confirm(
-          'No active signer in this session.\n\nLoad from vault now and sign immediately?'
+          'Kein aktiver Signer in dieser Session.\n\nJetzt aus dem Tresor laden und danach direkt signieren?'
         )
         if (!wantVault) {
           const m =
-            'No active signer found. Click "Load signer from vault" or optionally use "Use another signer".'
+            'Kein aktiver Signer gefunden. Klicke „Signer aus Tresor laden“ oder nutze optional „Anderen Signer verwenden“.'
           setMsg(m)
           setSignerHint(m)
           return
         }
-        const pw = window.prompt('Vault password:')
+        const pw = window.prompt('Vault-Passwort:')
         if (!pw) return
         const r = await revealVaultSignerImport(pw)
         if (!r.ok || !r.signerImport?.trim()) {
-          const base = r.error || r.message || 'Could not load signer from vault.'
-          const m = `${base} Open "Use another signer" below and enter mnemonic/secret.`
+          const base = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+          const m = `${base} Bitte unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.`
           setMsg(m)
           setSignerHint(m)
           setShowManualSignerInput(true)
@@ -264,20 +264,20 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
           return
         }
         setSessionSignerAddr(applied.address)
-        setSignerHint(`Signer loaded: ${applied.address.slice(0, 10)}…`)
+        setSignerHint(`Signer geladen: ${applied.address.slice(0, 10)}…`)
         signer = getDirectIotaSessionSigner() as unknown as {
           signPersonalMessage?: (msg: Uint8Array) => Promise<{ signature?: string }>
         } | null
       }
       if (!signer || typeof signer.signPersonalMessage !== 'function') {
-        setMsg('Could not load signer.')
-        setSignerHint('Could not load signer.')
+        setMsg('Signer konnte nicht geladen werden.')
+        setSignerHint('Signer konnte nicht geladen werden.')
         return
       }
     }
     const signerAddr = (getDirectIotaSessionSignerAddress() || '').trim().toLowerCase()
     if (signerAddr && signerAddr !== sender) {
-      setMsg(`Signer address does not match sender.\nSigner: ${signerAddr}\nSender: ${sender}`)
+      setMsg(`Signer-Adresse passt nicht zum Sender.\nSigner: ${signerAddr}\nSender: ${sender}`)
       return
     }
     try {
@@ -286,12 +286,12 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       const res = await signer.signPersonalMessage(digestBytes)
       const sig = String(res?.signature ?? '').trim()
       if (!sig) {
-        setMsg('Signing failed.')
+        setMsg('Signatur fehlgeschlagen.')
         return
       }
       setBuilderSenderSig(sig)
       setAllowUnsignedDraft(false)
-      setMsg('Digest signed. senderSig will be used when creating the package.')
+      setMsg('Digest signiert. Beim Erzeugen wird senderSig genutzt.')
     } catch (e) {
       setMsg(e instanceof Error ? e.message : String(e))
     }
@@ -300,17 +300,17 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
   const loadSignerFromVault = async () => {
     if (signerMode === 'cli') {
       const m =
-        'Signer mode is CLI. "Load signer from vault" only works with SIGNER=sdk. Use "Use another signer" or allow an unsigned draft.'
+        'Signer-Modus ist CLI. „Signer aus Tresor laden“ geht nur mit SIGNER=sdk. Bitte „Anderen Signer verwenden“ nutzen oder unsignierten Entwurf erlauben.'
       setMsg(m)
       setSignerHint(m)
       return
     }
-    const pw = window.prompt('Enter vault password to load the signer into this session:')
+    const pw = window.prompt('Vault-Passwort eingeben, um den Signer in diese Session zu laden:')
     if (!pw) return
     const r = await revealVaultSignerImport(pw)
     if (!r.ok || !r.signerImport?.trim()) {
-      const base = r.error || r.message || 'Could not load signer from vault.'
-      const m = `${base} Open "Use another signer" below and enter mnemonic/secret.`
+      const base = r.error || r.message || 'Signer konnte nicht aus dem Tresor geladen werden.'
+      const m = `${base} Bitte unten „Anderen Signer verwenden“ öffnen und Mnemonic/Secret eintragen.`
       setMsg(m)
       setSignerHint(m)
       setShowManualSignerInput(true)
@@ -324,7 +324,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     }
     setSessionSignerAddr(applied.address)
     setMnemoInput('')
-    const okMsg = `Signer loaded: ${applied.address.slice(0, 10)}…`
+    const okMsg = `Signer geladen: ${applied.address.slice(0, 10)}…`
     setMsg(okMsg)
     setSignerHint(okMsg)
   }
@@ -379,7 +379,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     try {
       parsed = JSON.parse(rawText)
     } catch {
-      setMsg('Invalid JSON.')
+      setMsg('Ungültiges JSON.')
       return
     }
     const v = validateRelayEnvelope(parsed)
@@ -388,7 +388,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       return
     }
     if (v.envelope.mode !== 'submit_ready') {
-      setMsg('This package format is not supported yet (only the R1 standard package is active).')
+      setMsg('Dieses Paketformat wird aktuell noch nicht unterstützt (nur R1-Standardpaket ist aktiv).')
       return
     }
     const item = enqueueRelayEnvelope(v.envelope)
@@ -401,34 +401,34 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       updateRelayQueueReport(item.id, {
         rpcStatus: 'error',
         errorCode: 'DRAFT_UNSIGNED',
-        note: 'Self-draft without signature: for transport/review; submit only after signing.',
+        note: 'Eigenentwurf ohne Signatur: für Transport/Review, Submit erst nach Signierung.',
         statusOverride: 'draft_unsigned',
       })
       refresh()
-      setMsg('Package imported as draft (unsigned). This is expected in auto mode.')
+      setMsg('Paket als Entwurf übernommen (ohne Signatur). Das ist im Auto-Modus erwartet.')
       return
     }
     refresh()
-    setMsg(`Package imported. Local status: ${item.status}.`)
+    setMsg(`Paket übernommen. Lokaler Status: ${item.status}.`)
   }
 
   const markAnchored = async (it: TxRelayQueueItem) => {
     const fromReport = (it.relayReport?.note || '').match(/0x[a-fA-F0-9]{64}/)?.[0]
     let digest = (fromReport || it.txDigest || '').trim()
     if (!digest) {
-      const asked = window.prompt('Paste proof (txDigest) (0x...)')
+      const asked = window.prompt('Nachweis (txDigest) einfügen (0x...)')
       if (!asked) return
       digest = asked.trim()
     } else {
-      const ok = window.confirm(`Use the found txDigest?\n\n${digest}`)
+      const ok = window.confirm(`Gefundenen txDigest verwenden?\n\n${digest}`)
       if (!ok) {
-        const asked = window.prompt('Paste a different txDigest (0x...)', digest)
+        const asked = window.prompt('Anderen txDigest einfügen (0x...)', digest)
         if (!asked) return
         digest = asked.trim()
       }
     }
     if (!/^0x[a-fA-F0-9]{64}$/.test(digest)) {
-      setMsg('Invalid txDigest. Expected: 0x + 64 hex characters.')
+      setMsg('Ungültiger txDigest. Erwartet: 0x + 64 Hex.')
       return
     }
     markRelayQueueAnchored(it.id, digest)
@@ -442,24 +442,24 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
     addTangleInventoryItem(inv)
     await maybeAutoSaveDigestToVault(inv)
     refresh()
-    setMsg('Marked as anchored and digest added to inventory.')
+    setMsg('Als anchored markiert und Digest ins Inventory übernommen.')
   }
 
   const updateReportSimple = (it: TxRelayQueueItem, rpcStatus: 'submitted' | 'reject' | 'error') => {
     const needsDetail = rpcStatus === 'reject' || rpcStatus === 'error'
     let note = needsDetail
-      ? (window.prompt('Brief reason (optional):', it.relayReport?.note ?? '') ?? '').trim()
+      ? (window.prompt('Kurzgrund (optional):', it.relayReport?.note ?? '') ?? '').trim()
       : (it.relayReport?.note || '').trim()
     if (rpcStatus === 'submitted') {
       const digestInput =
         window.prompt(
-          'Optional: paste txDigest if the relayer already returned one (0x...).',
+          'Optional: txDigest einfügen, falls der Relayer ihn bereits geliefert hat (0x...).',
           it.txDigest || ''
         ) ?? ''
       const digest = digestInput.trim()
       if (digest) {
         if (!/^0x[a-fA-F0-9]{64}$/.test(digest)) {
-          setMsg('Invalid txDigest. Expected: 0x + 64 hex characters.')
+          setMsg('Ungültiger txDigest. Erwartet: 0x + 64 Hex.')
           return
         }
         note = note ? `${note}\n${digest}` : digest
@@ -471,7 +471,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
       note: note || undefined,
     })
     refresh()
-    setMsg(`Relay log: ${rpcStatus}.`)
+    setMsg(`Relay-Protokoll: ${rpcStatus}.`)
   }
 
   return (
@@ -482,26 +482,26 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
           onClick={openR1Dialog}
           className="w-full rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
         >
-          R1 courier package (beta)
+          R1 Kurier-Paket (Beta)
         </button>
       )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>R1 courier package (offline {'->'} relayer {'->'} submit)</DialogTitle>
-            <DialogDescription>Courier package for the offline/relay workflow.</DialogDescription>
+            <DialogTitle>R1 Kurier-Paket (Offline {'->'} Relayer {'->'} Submit)</DialogTitle>
+            <DialogDescription>Kurier-Paket für den Offline/Relay-Workflow.</DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border border-border/70 bg-muted/10 p-3 text-xs">
-            <p className="font-medium text-foreground">Workflow</p>
+            <p className="font-medium text-foreground">Ablauf</p>
             <ol className="mt-1 list-decimal space-y-1 pl-4 text-muted-foreground">
-              <li>Create package (and sign digest if needed).</li>
-              <li>Import locally (queue) and set relayer result.</li>
-              <li>Add proof to the tangle.</li>
-              <li>Optionally forward package (LoRa/copy/export).</li>
+              <li>Paket erzeugen (und bei Bedarf Digest signieren).</li>
+              <li>Paket lokal übernehmen (Queue) und Relayer-Ergebnis setzen.</li>
+              <li>Nachweis in den Tangle übernehmen.</li>
+              <li>Paket optional weitergeben (LoRa/Copy/Export).</li>
             </ol>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Step 1: Create package</p>
+            <p className="text-xs font-medium text-foreground">Schritt 1: Paket erzeugen</p>
             <div className="grid gap-2 md:grid-cols-2">
               <input
                 value={builderSender}
@@ -517,20 +517,20 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                 onClick={() => {
                   const addr = (getDirectIotaSessionSignerAddress() || '').trim()
                   if (!addr) {
-                    setMsg('No active signer available.')
+                    setMsg('Kein aktiver Signer vorhanden.')
                     return
                   }
                   setBuilderSender(addr)
-                  setMsg('Sender set to active signer address.')
+                  setMsg('Sender auf aktive Signer-Adresse gesetzt.')
                 }}
               >
-                Sender = active signer
+                Sender = aktiver Signer
               </Button>
               <input
                 value={builderRecipient}
                 onChange={(e) => setBuilderRecipient(e.target.value)}
                 list="r1-known-addresses"
-                placeholder="Recipient (optional 0x...)"
+                placeholder="Empfänger (optional 0x...)"
                 className="rounded-md border border-border bg-background px-2 py-1.5 text-xs font-mono"
               />
               <datalist id="r1-known-addresses">
@@ -545,51 +545,51 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                   onChange={(e) => setBuilderTtlMinutes(e.target.value)}
                   className="mt-1 w-full rounded-md border border-border bg-background px-2 py-1 text-xs"
                 >
-                  <option value="30">30 minutes (short)</option>
-                  <option value="120">2 hours (recommended)</option>
-                  <option value="360">6 hours</option>
-                  <option value="720">12 hours</option>
-                  <option value="1440">24 hours (max)</option>
+                  <option value="30">30 Minuten (kurz)</option>
+                  <option value="120">2 Stunden (empfohlen)</option>
+                  <option value="360">6 Stunden</option>
+                  <option value="720">12 Stunden</option>
+                  <option value="1440">24 Stunden (maximal)</option>
                 </select>
               </label>
               <div className="rounded-md border border-border bg-muted/40 px-2 py-1.5 text-xs">
-                Sender signature is set automatically (sign digest) or taken from an imported package.
+                Sender-Signatur wird automatisch gesetzt (Digest-Signieren) oder aus importiertem Paket übernommen.
               </div>
             </div>
             <textarea
               value={builderPayload}
               onChange={(e) => setBuilderPayload(e.target.value)}
               rows={3}
-              placeholder="Message text (stored internally as submit-ready data block)"
+              placeholder="Nachrichtentext (wird intern als submit-ready Datenblock gespeichert)"
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
-              <p className="text-xs font-medium text-foreground">Session signer (RAM only)</p>
+              <p className="text-xs font-medium text-foreground">Session-Signer (nur RAM)</p>
               <div className="mt-1 inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-[11px] text-foreground">
-                Signer mode: {signerMode === 'cli' ? 'Legacy CLI' : signerMode === 'sdk' ? 'SDK (recommended)' : 'unknown'}
+                Signer-Modus: {signerMode === 'cli' ? 'Legacy CLI' : signerMode === 'sdk' ? 'SDK (empfohlen)' : 'unbekannt'}
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Source: {signerConfigSource === 'runtime' ? 'Runtime config' : signerConfigSource === 'env' ? '.env' : 'unknown'}
+                Quelle: {signerConfigSource === 'runtime' ? 'Runtime-Konfig' : signerConfigSource === 'env' ? '.env' : 'unbekannt'}
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Default: active session signer is used automatically. Only enter manually below if signing for another address.
+                Standard: aktiver Session-Signer wird automatisch genutzt. Nur falls für eine andere Adresse signiert werden soll, unten manuell eingeben.
               </p>
               {signerMode === 'cli' ? (
                 <p className="mt-1 text-[11px] text-amber-600">
-                  This instance runs with SIGNER=cli. Vault import for the signer is not available here.
+                  Diese Instanz läuft mit SIGNER=cli. Tresor-Import für den Signer ist hier nicht verfügbar.
                 </p>
               ) : null}
               {sessionSignerAddr ? (
-                <p className="mt-1 font-mono text-[11px] text-emerald-600">Active signer: {sessionSignerAddr}</p>
+                <p className="mt-1 font-mono text-[11px] text-emerald-600">Aktiver Signer: {sessionSignerAddr}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-amber-600">No session signer active.</p>
+                <p className="mt-1 text-[11px] text-amber-600">Kein Session-Signer aktiv.</p>
               )}
               <button
                 type="button"
                 className="mt-2 text-[11px] text-muted-foreground underline underline-offset-2"
                 onClick={() => setShowManualSignerInput((v) => !v)}
               >
-                {showManualSignerInput ? 'Hide manual signer input' : 'Use another signer (optional)'}
+                {showManualSignerInput ? 'Manuelle Signer-Eingabe ausblenden' : 'Anderen Signer verwenden (optional)'}
               </button>
               {showManualSignerInput ? (
                 <textarea
@@ -598,13 +598,13 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                   spellCheck={false}
                   autoComplete="off"
                   rows={2}
-                  placeholder="Mnemonic / Bech32 secret / 64-char hex (32 bytes)"
+                  placeholder="Mnemonic / Bech32-Secret / 64-Hex (32 Byte)"
                   className="mt-2 w-full rounded-md border border-border bg-background px-2 py-1.5 font-mono text-[11px]"
                 />
               ) : null}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Button type="button" size="sm" variant="default" onClick={() => void signDigestMerged()}>
-                  Sign digest
+                  Digest signieren
                 </Button>
                 <Button
                   type="button"
@@ -613,7 +613,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                   onClick={() => void loadSignerFromVault()}
                   disabled={signerMode === 'cli'}
                 >
-                  Load signer from vault
+                  Signer aus Tresor laden
                 </Button>
                 <Button
                   type="button"
@@ -622,13 +622,13 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                   onClick={() => {
                     clearDirectIotaSessionSigner()
                     setSessionSignerAddr(null)
-                    setMsg('Session signer cleared.')
+                    setMsg('Session-Signer gelöscht.')
                   }}
                 >
-                  Clear signer
+                  Signer löschen
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  {builderSenderSig ? `senderSig set (${builderSenderSig.slice(0, 12)}…)` : 'No signature yet.'}
+                  {builderSenderSig ? `senderSig gesetzt (${builderSenderSig.slice(0, 12)}…)` : 'Noch keine Signatur.'}
                 </span>
                 <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <input
@@ -636,7 +636,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                     checked={allowUnsignedDraft}
                     onChange={(e) => setAllowUnsignedDraft(e.target.checked)}
                   />
-                  allow unsigned draft
+                  unsignierten Entwurf erlauben
                 </label>
               </div>
               {signerHint ? (
@@ -648,14 +648,14 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={() => void buildEnvelope()}>
                 <WandSparkles className="mr-2 h-3.5 w-3.5" />
-                Create package
+                Paket erzeugen
               </Button>
             </div>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Step 2: Import into local workflow</p>
+            <p className="text-xs font-medium text-foreground">Schritt 2: Paket im lokalen Ablauf übernehmen</p>
             <p className="text-[11px] text-muted-foreground">
-                Created or received packages land in the local R1 queue here.
+                Hier landet das erzeugte oder empfangene Paket in der lokalen R1-Warteliste.
             </p>
             <div className="rounded-md border border-border/70 bg-muted/20 p-2 text-xs">
               <button
@@ -664,52 +664,52 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                 onClick={() => setShowExpertTransport((v) => !v)}
               >
                 {showExpertTransport
-                  ? 'Hide expert transport'
-                  : 'Show expert transport (debug only: send package as chat text)'}
+                  ? 'Experten-Transport ausblenden'
+                  : 'Experten-Transport anzeigen (nur Debug: Paket als Chat-Text)'}
               </button>
               {showExpertTransport ? (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="font-medium text-foreground">Debug/bypass only: send package as plaintext chat:</span>
+                  <span className="font-medium text-foreground">Nur Debug/Bypass: Paket als Klartext-Chat senden:</span>
                   <select
                     value={transportMode}
                     onChange={(e) => setTransportMode((e.target.value as MessagingPersistenceMode) || 'event')}
                     className="rounded-md border border-border bg-background px-2 py-1"
                   >
-                    <option value="event">Event (ephemeral)</option>
-                    <option value="mailbox">Mailbox (persistent)</option>
+                    <option value="event">Event (flüchtig)</option>
+                    <option value="mailbox">Mailbox (persistenter)</option>
                   </select>
                   <Button type="button" size="sm" variant="outline" onClick={() => void sendEnvelopeAsText()}>
-                    Send package as text
+                    Paket als Text senden
                   </Button>
                 </div>
               ) : null}
             </div>
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Optional: import package from radio/relayer</p>
+            <p className="text-xs font-medium text-foreground">Optional: Paket von Funk/Relayer uebernehmen</p>
             <textarea
               value={rawText}
               onChange={(e) => setRawText(e.target.value)}
               rows={6}
-              placeholder='Import courier package JSON (e.g. from relayer/radio path)'
+              placeholder='Kurier-Paket JSON importieren (z. B. vom Relayer/Funkweg)'
               className="w-full rounded-md border border-border bg-background px-2 py-2 text-xs font-mono"
             />
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm" variant="outline" onClick={onImport}>
                 <Upload className="mr-2 h-3.5 w-3.5" />
-                Check & import external package
+                Externes Paket prüfen & übernehmen
               </Button>
             </div>
             {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-medium text-foreground">Step 3: Proof / tangle</p>
+            <p className="text-xs font-medium text-foreground">Schritt 3: Nachweis / Tangle</p>
             <p className="text-[11px] text-muted-foreground">
               Erst „Relayer: erfolgreich gesendet“ setzen, wenn dein Paket den Relayer wirklich verlassen hat. Danach
               bei vorhandener TX den Button „In Tangle uebernehmen“ nutzen.
             </p>
             {items.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No R1 packages in the local queue yet.</p>
+              <p className="text-sm text-muted-foreground">Noch keine R1-Pakete in der lokalen Warteliste.</p>
             ) : (
               items.map((it) => (
                 <div key={it.id} className="rounded-lg border border-border/70 bg-muted/10 p-3">
@@ -720,24 +720,24 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                     {it.envelope.sender} {'->'} {it.envelope.networkId}
                   </p>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Expires: {new Date(it.envelope.expiresAt).toLocaleString('de-DE')}
+                    Ablauf: {new Date(it.envelope.expiresAt).toLocaleString('de-DE')}
                     {it.txDigest ? ` · tx ${it.txDigest}` : ''}
                   </p>
                   {it.relayReport ? (
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      Relayer status: {it.relayReport.rpcStatus ?? '—'}
+                      Relayer-Status: {it.relayReport.rpcStatus ?? '—'}
                       {it.relayReport.errorCode ? ` · ${it.relayReport.errorCode}` : ''}
                       {it.relayReport.note ? ` · ${it.relayReport.note}` : ''}
                     </p>
                   ) : null}
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'submitted')}>
-                      Relayer: submitted successfully
+                      Relayer: erfolgreich gesendet
                     </Button>
                     {it.status !== 'anchored' ? (
                       <Button type="button" size="sm" variant="outline" onClick={() => void markAnchored(it)}>
                         <CheckCircle2 className="mr-2 h-3.5 w-3.5" />
-                        Add to tangle
+                        In Tangle uebernehmen
                       </Button>
                     ) : null}
                     <Button
@@ -745,14 +745,14 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        if (!window.confirm('Delete this entry from the local relay queue?')) return
+                        if (!window.confirm('Diesen Eintrag aus der lokalen Relay-Warteliste löschen?')) return
                         removeRelayQueueItem(it.id)
                         refresh()
-                        setMsg('Entry removed from the local queue.')
+                        setMsg('Eintrag aus der lokalen Warteliste gelöscht.')
                       }}
                     >
                       <Trash2 className="mr-2 h-3.5 w-3.5" />
-                      Delete entry
+                      Eintrag löschen
                     </Button>
                   </div>
                   <button
@@ -760,15 +760,15 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                     className="mt-2 text-xs text-muted-foreground underline underline-offset-2"
                     onClick={() => setExpertQueueItemId((cur) => (cur === it.id ? null : it.id))}
                   >
-                    {expertQueueItemId === it.id ? 'Hide expert actions' : 'Show expert actions'}
+                    {expertQueueItemId === it.id ? 'Expertenaktionen ausblenden' : 'Expertenaktionen anzeigen'}
                   </button>
                   {expertQueueItemId === it.id ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'reject')}>
-                        Relayer: rejected
+                        Relayer: abgelehnt (reject)
                       </Button>
                       <Button type="button" size="sm" variant="outline" onClick={() => updateReportSimple(it, 'error')}>
-                        Relayer: error
+                        Relayer: Fehler (error)
                       </Button>
                       <span className="text-xs text-muted-foreground">
                         Expertenmodus: nur nutzen, wenn der Relayer ein reject/error gemeldet hat. Wenn in der Notiz ein
@@ -781,9 +781,9 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
             )}
           </div>
           <div className="space-y-2 rounded-lg border border-border/70 bg-muted/10 p-3">
-            <p className="text-xs font-medium text-foreground">Step 4: Forward package (optional)</p>
+            <p className="text-xs font-medium text-foreground">Schritt 4: Paket weitergeben (optional)</p>
             <p className="text-[11px] text-muted-foreground">
-              For LoRa, email, SD, or other handoff paths: copy the finished package once.
+              Für LoRa, E-Mail, SD oder andere Übergabewege: fertig erzeugtes Paket einmal kopieren.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button
@@ -792,19 +792,19 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
                 variant="outline"
                 onClick={async () => {
                   if (!rawText.trim()) {
-                    setMsg('Create or import a package first.')
+                    setMsg('Bitte zuerst ein Paket erzeugen oder importieren.')
                     return
                   }
                   try {
                     await navigator.clipboard.writeText(rawText)
-                    setMsg('Package copied to clipboard for forwarding.')
+                    setMsg('Paket für Weitergabe in Zwischenablage kopiert.')
                   } catch {
-                    setMsg('Copy failed.')
+                    setMsg('Kopieren fehlgeschlagen.')
                   }
                 }}
               >
                 <Copy className="mr-2 h-3.5 w-3.5" />
-                Copy package (forward)
+                Paket kopieren (Weitergabe)
               </Button>
             </div>
             <button
@@ -812,12 +812,12 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
               className="text-xs text-muted-foreground underline underline-offset-2"
               onClick={() => setShowExpertForwarding((v) => !v)}
             >
-              {showExpertForwarding ? 'Hide expert forwarding' : 'Show expert forwarding'}
+              {showExpertForwarding ? 'Experten-Weitergabe ausblenden' : 'Experten-Weitergabe anzeigen'}
             </button>
             {showExpertForwarding ? (
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="outline" onClick={() => void sendToLoraShortcut()}>
-                  LoRa forward hint
+                  LoRa-Weitergabe Hinweis
                 </Button>
               </div>
             ) : null}
@@ -825,7 +825,7 @@ export function ChatViewRelaySubmitButton(p?: { hideMenuTrigger?: boolean }) {
           <DialogFooter>
             <Button type="button" onClick={() => setOpen(false)}>
               <ArrowUpCircle className="mr-2 h-4 w-4" />
-              Close
+              Schließen
             </Button>
           </DialogFooter>
         </DialogContent>

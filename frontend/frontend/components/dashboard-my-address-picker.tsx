@@ -111,7 +111,7 @@ export function DashboardMyAddressPicker({ apiSnapshot, onAfterSet }: DashboardM
                           size="sm"
                           className="h-7 px-2"
                           onClick={() => void copyAddr(addr)}
-                          title="Copy"
+                          title="Kopieren"
                         >
                           {copied === addr ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                         </Button>

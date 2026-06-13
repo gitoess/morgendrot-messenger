@@ -22,13 +22,6 @@ import { fetch as undiciFetch, ProxyAgent } from 'undici';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 import { getSelfPaidMessengerTxCount, recordSelfPaidMessengerTxSuccess } from './messenger-gas-milestone.js';
 import { createSignerProvider, resolveSignerMode } from './signer/signer-provider.js';
-import {
-    assertForensicBatchItemCount,
-    forensicEncryptedBatchFallbackReason,
-    forensicPlaintextBatchFallbackReason,
-    logForensicBatchSequentialFallback,
-} from './chain-forensic-batch-submit.js';
-import { fetchReferenceGasPrice } from './chain-iota-gas-price.js';
 
 /**
  * Messenger-Nachricht als Klartext-String (UTF-8), vor AES-GCM. Muss mit Ciphertext-`vector<u8>` in eure PTB passen.
@@ -2129,19 +2122,16 @@ export async function storeForensicPlaintextMailboxBatch(
     options?: { signOptions?: SignAndExecuteOptions }
 ): Promise<SignAndExecuteResult> {
     if (!items.length) throw new Error('Forensic-Batch: mindestens ein Eintrag nötig.');
-    assertForensicBatchItemCount(items.length);
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
-    const plainFallback = forensicPlaintextBatchFallbackReason(
-        useMailboxForPlaintext,
-        mailboxStoresPlaintext,
-        messengerCreditsObjectIdForTx
-    );
+    const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
+    const useMailbox = useMailboxForPlaintext() && mailboxIdValid;
+    const creditsId = messengerCreditsObjectIdForTx();
+    const storePlain = mailboxStoresPlaintext();
     const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
     const privateMb = isPrivateMailboxObjectIdOverrideActive();
-    if (plainFallback) {
-        logForensicBatchSequentialFallback('plain', plainFallback, items.length);
+    if (!useMailbox || !storePlain || creditsId) {
         let last: SignAndExecuteResult = {};
         for (const item of items) {
             last = await storePlaintextMessage(
@@ -2181,15 +2171,15 @@ export async function storeForensicEncryptedMailboxBatch(
     options?: { signOptions?: SignAndExecuteOptions }
 ): Promise<SignAndExecuteResult> {
     if (!items.length) throw new Error('Forensic-Batch: mindestens ein Eintrag nötig.');
-    assertForensicBatchItemCount(items.length);
     assertSafeAddress(recipient);
     assertSafeAddress(senderAddress);
     if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
-    const encFallback = forensicEncryptedBatchFallbackReason(messengerCreditsObjectIdForTx);
+    const mailboxIdValid = CFG.MAILBOX_ID && CFG.MAILBOX_ID.trim() !== (CFG.PACKAGE_ID || '').trim();
+    const useMailbox = isMessengerMailboxModeActive() && mailboxIdValid;
+    const creditsId = messengerCreditsObjectIdForTx();
     const { isPrivateMailboxObjectIdOverrideActive } = await import('./mailbox-object-id-scope.js');
     const privateMb = isPrivateMailboxObjectIdOverrideActive();
-    if (encFallback) {
-        logForensicBatchSequentialFallback('encrypted', encFallback, items.length);
+    if (!useMailbox || creditsId) {
         let last: SignAndExecuteResult = {};
         for (const item of items) {
             last = await storeEncryptedMessage(
@@ -4527,7 +4517,9 @@ export async function getBalanceInMist(owner: string): Promise<bigint> {
  * Wird für Echtzeit-Veto benötigt: Rebate vs. Gas-Kosten.
  */
 export async function getReferenceGasPrice(): Promise<bigint> {
-    return fetchReferenceGasPrice(getClient());
+    const client = getClient();
+    const price = await (client as any).getReferenceGasPrice();
+    return BigInt(String(price ?? '1000'));
 }
 
 /**

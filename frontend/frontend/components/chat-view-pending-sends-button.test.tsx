@@ -17,20 +17,20 @@ describe('ChatViewPendingSendsButton (§ H.1a)', () => {
     vi.mocked(loadTxRelayQueue).mockReturnValue([])
   })
 
-  it('shows Pending without count when queue empty', () => {
+  it('zeigt Ausstehend ohne Zähler bei leerer Queue', () => {
     render(<ChatViewPendingSendsButton offlineMailboxQueuePending={0} />)
-    expect(screen.getByRole('button', { name: /^Pending$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Ausstehend$/i })).toBeInTheDocument()
   })
 
-  it('shows Pending (n) for mailbox queue', () => {
+  it('zeigt Ausstehend (n) bei Mailbox-Warteschlange', () => {
     render(<ChatViewPendingSendsButton offlineMailboxQueuePending={3} />)
-    expect(screen.getByRole('button', { name: /Pending \(3\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ausstehend \(3\)/i })).toBeInTheDocument()
   })
 
-  it('dialog: nothing pending when empty', async () => {
+  it('Dialog: Nichts ausstehend wenn leer', async () => {
     render(<ChatViewPendingSendsButton offlineMailboxQueuePending={0} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Pending$/i }))
-    expect(await screen.findByText(/Nothing pending/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /^Ausstehend$/i }))
+    expect(await screen.findByText(/Nichts ausstehend/i)).toBeInTheDocument()
   })
 
   it('Dialog: Mailbox-Einträge und Fehlerhinweis', async () => {
@@ -50,13 +50,13 @@ describe('ChatViewPendingSendsButton (§ H.1a)', () => {
         onManualRefresh={vi.fn()}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Pending \(1\)/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Ausstehend \(1\)/i }))
     expect(await screen.findByText(/Mailbox \(1\)/i)).toBeInTheDocument()
     expect(screen.getByText(/rpc timeout/)).toBeInTheDocument()
     expect(screen.getByText(/Basis offline/)).toBeInTheDocument()
   })
 
-  it('calls onManualRefresh on Send now', async () => {
+  it('ruft onManualRefresh bei Jetzt senden auf', async () => {
     const onManualRefresh = vi.fn(async () => {})
     render(
       <ChatViewPendingSendsButton
@@ -72,12 +72,12 @@ describe('ChatViewPendingSendsButton (§ H.1a)', () => {
         onManualRefresh={onManualRefresh}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Pending \(1\)/i }))
-    fireEvent.click(await screen.findByRole('button', { name: /Send now/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Ausstehend \(1\)/i }))
+    fireEvent.click(await screen.findByRole('button', { name: /Jetzt senden/i }))
     await waitFor(() => expect(onManualRefresh).toHaveBeenCalledTimes(1))
   })
 
-  it('removes selected queue entries', async () => {
+  it('Entfernen markierter Queue-Einträge', async () => {
     const onRemove = vi.fn()
     render(
       <ChatViewPendingSendsButton
@@ -93,10 +93,10 @@ describe('ChatViewPendingSendsButton (§ H.1a)', () => {
         onRemoveOfflineMailboxQueueItems={onRemove}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Pending \(1\)/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Ausstehend \(1\)/i }))
     const checkbox = await screen.findByRole('checkbox')
     fireEvent.click(checkbox)
-    fireEvent.click(screen.getByRole('button', { name: /Remove \(1\)/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Entfernen \(1\)/i }))
     expect(onRemove).toHaveBeenCalledWith(['q-del'])
   })
 })

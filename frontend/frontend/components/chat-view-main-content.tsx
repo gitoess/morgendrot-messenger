@@ -40,7 +40,6 @@ import {
   type ChatViewEncryptedPartnerPanelProps,
 } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
-import { ChatViewMorgPkgImportsSheet } from '@/frontend/components/chat-view-morg-pkg-imports-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
@@ -53,7 +52,10 @@ import {
   getMessengerUiCapabilities,
 } from '@/frontend/lib/messenger-role-capabilities'
 import { canCreateGroupCapability } from '@/frontend/lib/messenger-capability-gates'
-import { ChatViewRelaySubmitButton } from '@/frontend/components/chat-view-relay-submit-button'
+import {
+  LazyChatViewMorgPkgImportsSheet,
+  LazyChatViewRelaySubmitButton,
+} from '@/frontend/components/lazy/messenger-scope-b'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
@@ -441,15 +443,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         })
         p.dismissLocal()
         if (purge.ok && purge.onChain) {
-          toast.success(`Handshake with ${p.label} deleted (on-chain + local).`)
+          toast.success(`Handshake mit ${p.label} gelöscht (on-chain + lokal).`)
         } else if (purge.ok && !purge.onChain) {
           const hint =
             purge.reason === 'event-only'
-              ? 'Hidden locally only — event-only (mailbox purge not possible).'
-              : 'Hidden locally only — purge/mailbox not available.'
+              ? 'Nur lokal ausgeblendet — Event-only (kein Mailbox-Purge möglich).'
+              : 'Nur lokal ausgeblendet — Purge/Mailbox nicht verfügbar.'
           toast.info(hint)
         } else {
-          toast.warning(`Hidden locally. On-chain purge failed: ${purge.error}`)
+          toast.warning(`Lokal ausgeblendet. On-chain-Purge fehlgeschlagen: ${purge.error}`)
         }
         window.setTimeout(() => void reloadPendingHandshakes(), 2500)
       } finally {
@@ -463,7 +465,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     async (sender: string, nonce: string, source: HandshakeOfferSource) => {
       const me = myAddress.trim()
       if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
-        toast.error('Your address missing — purge not possible.')
+        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
         return
       }
       const label =
@@ -483,7 +485,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     async (recipient: string, nonce: string, source: HandshakeOfferSource) => {
       const me = myAddress.trim()
       if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
-        toast.error('Your address missing — purge not possible.')
+        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
         return
       }
       const label =
@@ -504,7 +506,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       const t = sender.trim()
       setPartner(t)
       setRecipient(t)
-      toast.info('Partner address applied.')
+      toast.info('Partner-Adresse übernommen.')
     },
     [setPartner, setRecipient, setComposerDelivery]
   )
@@ -532,10 +534,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setStatus('success')
       setStatusMsg(
         variant.hint
-          ? `Reply: ${variant.label} — ${variant.hint}`
-          : `Reply: ${variant.label} — add message and send.`
+          ? `Antworten: ${variant.label} — ${variant.hint}`
+          : `Antworten: ${variant.label} — Nachricht ergänzen und senden.`
       )
-      toast.success(`Reply: ${variant.label}`)
+      toast.success(`Antworten: ${variant.label}`)
       requestAnimationFrame(() => {
         document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       })
@@ -569,7 +571,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         activeGroup,
       })
       if (!result) {
-        toast.error('Reply: no matching channel for this row.')
+        toast.error('Antworten: Kein passender Kanal für diese Zeile.')
         return
       }
       if (result.kind === 'choice') {
@@ -586,13 +588,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       const a = address.trim()
       if (!a.startsWith('0x') || a.length < 66) {
         setStatus('error')
-        setStatusMsg('Not a valid 0x sender address.')
+        setStatusMsg('Keine gültige 0x-Absenderadresse.')
         setTimeout(() => setStatus('idle'), 4000)
         return
       }
       if (myAddress.trim() && addressMatchesIdentity(a, myAddress)) {
         setStatus('error')
-        setStatusMsg('That is your own address — not needed in the phonebook.')
+        setStatusMsg('Das ist deine eigene Adresse — nicht ins Telefonbuch nötig.')
         setTimeout(() => setStatus('idle'), 4000)
         return
       }
@@ -615,11 +617,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         refreshContactDirectory()
         recordContactLastContacted(contactAliasDialog.address)
         setStatus('success')
-        setStatusMsg(r.message || 'Contact saved.')
+        setStatusMsg(r.message || 'Kontakt gespeichert.')
         setContactAliasDialog(null)
       } else {
         setStatus('error')
-        setStatusMsg(r.error || 'Failed to save contact.')
+        setStatusMsg(r.error || 'Kontakt speichern fehlgeschlagen.')
       }
       setTimeout(() => setStatus('idle'), 5000)
     },
@@ -665,7 +667,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       if (applied.meshNodeId) parts.push('Meshtastic')
       if (applied.mailboxObjectId) parts.push('Mailbox')
       toast.success(
-        `${applied.label}: ${parts.length ? parts.join(', ') : 'contact'} applied — choose transport and send.`
+        `${applied.label}: ${parts.length ? parts.join(', ') : 'Kontakt'} übernommen — Transport wählen und senden.`
       )
       requestAnimationFrame(() => {
         document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -753,12 +755,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const applyPartnerAsSendRecipient = useCallback(() => {
     const a = partner.trim().toLowerCase()
     if (!/^0x[a-f0-9]{64}$/.test(a)) {
-      toast.error('Enter a valid recipient wallet: 0x + 64 hex.')
+      toast.error('Gültige Empfänger-Wallet eingeben: 0x + 64 Hex.')
       return
     }
     setRecipient(a)
     selectInboxPartnerForSend(a)
-    toast.success('Recipient applied — see "Encryption & partner" above.')
+    toast.success('Empfänger übernommen — siehe „Verschlüsselung & Partner“ oben.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
   const inboxPanelProps = {
@@ -1057,8 +1059,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         myAddress: myAddress.trim(),
         onPeeringStatus: (msg) => {
           setStatusMsg(msg)
-          if (msg.includes('saved') || msg.includes('applied')) toast.success(msg)
-          else if (msg.includes('fail') || msg.includes('No ')) toast.message(msg)
+          if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
+          else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
           else toast.info(msg)
         },
       }
@@ -1152,7 +1154,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {isGroup && encryptedPartnerPanelProps ? (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <p className="text-sm font-medium text-foreground">Handshake — group members</p>
+          <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
           <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
         </div>
       ) : null}
@@ -1267,7 +1269,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           />
           <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
             <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
-              Post to pinboard
+              An Pinnwand senden
             </h2>
             <ChatViewSendPanel {...sendPanelProps} />
           </section>
@@ -1276,7 +1278,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <>
           <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
             <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
-              Compose message
+              Nachricht verfassen
             </h2>
             <ChatViewSendPanel {...sendPanelProps} />
           </section>
@@ -1295,14 +1297,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         </>
       )}
 
-      <ChatViewMorgPkgImportsSheet
-        open={morgPkgImportsOpen}
-        onOpenChange={setMorgPkgImportsOpen}
-        records={morgPkgImports}
-        contactDirectory={directory}
-        onRemove={removeMorgPkgImport}
-        onForwardItem={onForwardMorgPkgItem}
-      />
+      {morgPkgImportsOpen ? (
+        <LazyChatViewMorgPkgImportsSheet
+          open={morgPkgImportsOpen}
+          onOpenChange={setMorgPkgImportsOpen}
+          records={morgPkgImports}
+          contactDirectory={directory}
+          onRemove={removeMorgPkgImport}
+          onForwardItem={onForwardMorgPkgItem}
+        />
+      ) : null}
 
       {(isPrivate || isGroup) ? (
         <ChatViewPhonebookSheet
@@ -1323,12 +1327,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {uiCaps.expertTools ? <ChatViewRelaySubmitButton hideMenuTrigger /> : null}
+      {uiCaps.expertTools ? <LazyChatViewRelaySubmitButton hideMenuTrigger /> : null}
 
       <Dialog open={replyPathChoice != null} onOpenChange={(open) => !open && setReplyPathChoice(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Reply — choose path</DialogTitle>
+            <DialogTitle>Antworten — Sendeweg wählen</DialogTitle>
             <DialogDescription>
               Diese Nachricht kam über mehrere Wege an. Welchen Pfad soll der Composer übernehmen?
             </DialogDescription>

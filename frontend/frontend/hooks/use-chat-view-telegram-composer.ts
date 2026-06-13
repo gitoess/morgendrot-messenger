@@ -114,7 +114,7 @@ export function useChatViewTelegramComposer(p: {
         : notifyRecipientTargets
     if (targets.length === 0 || !p.onStatusFeedback) return
     setTelegramOnlyBusy(true)
-    p.onStatusFeedback('Sending Telegram notification…', 'idle')
+    p.onStatusFeedback('Sende Telegram-Hinweis…', 'idle')
     const myLabel =
       p.contactDirectory[p.myAddress.trim().toLowerCase()]?.label ||
       (p.myAddress.trim() ? `${p.myAddress.trim().slice(0, 10)}…` : 'Morgendrot')
@@ -145,12 +145,12 @@ export function useChatViewTelegramComposer(p: {
       p.clearAttachments()
       p.onStatusFeedback(
         delivered === 1
-          ? 'Telegram sent — see outbox in inbox.'
-          : `Telegram sent to ${delivered} recipient(s).`,
+          ? 'Telegram gesendet — siehe Ausgang im Posteingang.'
+          : `Telegram an ${delivered} Empfänger gesendet.`,
         'success'
       )
     } else {
-      p.onStatusFeedback(lastError || 'Telegram notification failed', 'error')
+      p.onStatusFeedback(lastError || 'Telegram-Hinweis fehlgeschlagen', 'error')
     }
     setTelegramOnlyBusy(false)
   }

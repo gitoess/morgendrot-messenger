@@ -7,18 +7,17 @@ describe('i18n', () => {
     await setAppLocale('de')
   })
 
-  it('liefert englische Standalone-Texte als Default', async () => {
-    await setAppLocale('en')
-    expect(i18n.t('firstStart.title', { ns: 'standalone' })).toMatch(/Welcome/)
-    expect(getAppLocale()).toBe('en')
+  it('liefert deutsche Standalone-Texte als Default', () => {
+    expect(i18n.t('firstStart.title', { ns: 'standalone' })).toMatch(/Willkommen/)
+    expect(getAppLocale()).toBe('de')
   })
 
-  it('wechselt nach de für migrierte Namespaces', async () => {
-    await setAppLocale('de')
-    expect(getAppLocale()).toBe('de')
-    expect(i18n.t('firstStart.title', { ns: 'standalone' })).toMatch(/Willkommen/)
+  it('wechselt nach en für migrierte Namespaces', async () => {
+    await setAppLocale('en')
+    expect(getAppLocale()).toBe('en')
+    expect(i18n.t('firstStart.title', { ns: 'standalone' })).toMatch(/Welcome/)
     expect(i18n.t('brand.messenger', { ns: 'dashboard' })).toBe('Morgendrot Messenger')
-    expect(i18n.t('connection.chatConnected', { ns: 'dashboard' })).toBe('Chat verbunden')
+    expect(i18n.t('connection.chatConnected', { ns: 'dashboard' })).toBe('Chat connected')
     await setAppLocale('de')
   })
 })

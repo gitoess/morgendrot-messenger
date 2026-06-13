@@ -595,7 +595,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       if (!msg.chainNonce || !msg.chainPurgeable) {
         setStatus('error')
         setStatusMsg(
-          'On-chain purge not possible (radio/event only or missing nonce). See ENABLE_PURGE / MAILBOX_ID.'
+          'On-chain Purge nicht möglich (nur Funk/Event oder fehlende Nonce). Siehe ENABLE_PURGE / MAILBOX_ID.'
         )
         setTimeout(() => setStatus('idle'), 8000)
         return
@@ -616,12 +616,12 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           })
           setMessages((prev) => prev.filter((m) => m.id !== msg.id))
           setStatus('success')
-          setStatusMsg(r.message || 'Message deleted on chain (storage rebate).')
+          setStatusMsg(r.message || 'Nachricht auf der Chain gelöscht (Storage-Rebate).')
           void loadMessages('reset', undefined, { silent: true })
         } else {
           setStatus('error')
           const hint = teamBroadcastPurgeHint(msg, myAddress)
-          setStatusMsg(r.error || hint || r.message || 'Purge failed')
+          setStatusMsg(r.error || hint || r.message || 'Purge fehlgeschlagen')
         }
       } finally {
         setSending(false)
@@ -670,13 +670,13 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           /* ignore */
         }
         setStatus('success')
-        setStatusMsg('Hidden messages shown again (this browser only).')
+        setStatusMsg('Ausgeblendete Nachrichten wieder eingeblendet (nur dieser Browser).')
         setTimeout(() => setStatus('idle'), 4000)
         return new Set()
       }
       if (visible.length === 0) {
         setStatus('error')
-        setStatusMsg('No visible rows — check "All" / partner filters.')
+        setStatusMsg('Keine sichtbaren Zeilen — Filter „Alles“ / Partner prüfen.')
         setTimeout(() => setStatus('idle'), 5000)
         return prev
       }
@@ -688,7 +688,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         /* ignore */
       }
       setStatus('success')
-      setStatusMsg(`${visible.length} row(s) hidden locally (chain unchanged).`)
+      setStatusMsg(`${visible.length} Zeile(n) lokal ausgeblendet (Chain unverändert).`)
       setTimeout(() => setStatus('idle'), 4000)
       return n
     })
@@ -715,7 +715,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     )
     if (list.length === 0) {
       setStatus('error')
-      setStatusMsg('No purge-eligible messages selected (chain entry required).')
+      setStatusMsg('Keine purge-fähigen Nachrichten ausgewählt (Chain-Eintrag nötig).')
       setTimeout(() => setStatus('idle'), 7000)
       return
     }
@@ -725,7 +725,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         const r = await purgeMailboxMessageHybrid(msg, { backendReachable: true })
         if (!r.ok) {
           setStatus('error')
-          setStatusMsg(r.error || r.message || 'Purge failed')
+          setStatusMsg(r.error || r.message || 'Purge fehlgeschlagen')
           setTimeout(() => setStatus('idle'), 8000)
           return
         }
@@ -733,7 +733,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         setMessages((prev) => prev.filter((x) => x.id !== msg.id))
       }
       setStatus('success')
-      setStatusMsg(`${list.length} message(s) deleted on chain (rebate).`)
+      setStatusMsg(`${list.length} Nachricht(en) auf der Chain gelöscht (Rebate).`)
       void loadMessages('reset', undefined, { silent: true })
     } finally {
       setSending(false)
@@ -765,32 +765,32 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
     const hiddenLocal = inboxMessages.filter((m) => hiddenInboxIds.has(m.id)).length
     const reasons: string[] = []
-    if (hiddenLocal > 0) reasons.push(`${hiddenLocal} hidden locally`)
-    if (inboxPartnerFiltersArmed && inboxPartnerKey) reasons.push('partner filter')
+    if (hiddenLocal > 0) reasons.push(`${hiddenLocal} lokal ausgeblendet`)
+    if (inboxPartnerFiltersArmed && inboxPartnerKey) reasons.push('Partner-Filter')
     if (inboxChannelFiltersArmed && inboxDirectionFilter !== 'all') {
-      reasons.push(`channel "${inboxDirectionFilter === 'in' ? 'Inbox' : 'Outbox'}"`)
+      reasons.push(`Kanal „${inboxDirectionFilter === 'in' ? 'Eingang' : 'Ausgang'}“`)
     }
     if (inboxChannelFiltersArmed && inboxSourceFilter !== 'all') {
-      reasons.push(`source "${inboxSourceFilter}"`)
+      reasons.push(`Quelle „${inboxSourceFilter}“`)
     }
-    if (inboxWireFilter === 'encrypted') reasons.push('content "Encrypted"')
-    if (inboxWireFilter === 'plaintext') reasons.push('content "Plaintext"')
+    if (inboxWireFilter === 'encrypted') reasons.push('Inhalt „Verschlüsselt“')
+    if (inboxWireFilter === 'plaintext') reasons.push('Inhalt „Klartext“')
 
     const encLoaded = inboxMessages.filter((m) => m.encrypted === true).length
     const encVisible = filteredDisplayMessages.filter((m) => m.encrypted === true).length
     if (encLoaded > 0 && encVisible === 0 && inboxWireFilter === 'plaintext') {
-      reasons.push(`${encLoaded} encrypted (hidden under "Plaintext")`)
+      reasons.push(`${encLoaded} verschlüsselt (unter „Klartext“ ausgeblendet)`)
     }
     const plainLoaded = inboxMessages.filter((m) => m.encrypted !== true).length
     const plainVisible = filteredDisplayMessages.filter((m) => m.encrypted !== true).length
     if (plainLoaded > 0 && plainVisible === 0 && inboxWireFilter === 'encrypted') {
-      reasons.push(`${plainLoaded} plaintext (hidden under "Encrypted")`)
+      reasons.push(`${plainLoaded} Klartext (unter „Verschlüsselt“ ausgeblendet)`)
     }
 
     if (reasons.length === 0) {
-      return `${inboxMessages.length} messages loaded, display empty — check filters under Partner / Channel / Inbox.`
+      return `${inboxMessages.length} Nachrichten geladen, Anzeige leer — Filter unter Partner / Kanal / Posteingang prüfen.`
     }
-    return `${inboxMessages.length} loaded, none visible: ${reasons.join(' · ')}.`
+    return `${inboxMessages.length} geladen, keine sichtbar: ${reasons.join(' · ')}.`
   }, [
     messages,
     filteredDisplayMessages,

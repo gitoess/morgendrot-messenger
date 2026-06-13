@@ -42,7 +42,6 @@ import {
 import {
   sendEncryptedMailboxHybrid,
   sendPlaintextMailboxHybrid,
-  sendTeamPlaintextBroadcastHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { findPeerHandshake } from '@/frontend/lib/api/package-connect'
@@ -60,7 +59,18 @@ import {
   hasDirectChatEcdhPeerPubForRecipient,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
-import { publishStreamsAnchor } from '@/frontend/lib/api/streams'
+import {
+  applyGroupOptimisticInboxMerge,
+  attemptGroupTeamBroadcast,
+  buildGroupTeamBroadcastOptimisticRows,
+  getGroupSendPreSendError,
+  GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG,
+  GROUP_TEAM_MAILBOX_REQUIRED_MSG,
+  inboxReloadDelaysMs,
+  isGroupMailboxInternetChainSend,
+  publishGroupStreamsAnchorAfterSend,
+  resolveSingleWireSuccessMessage,
+} from '@/frontend/features/send/chat-view-handle-send-group'
 import {
   isForensicImageMailboxAttestationEnabled,
   runForensicMailboxAttestationAfterSend,
@@ -87,18 +97,6 @@ import {
   resolveTelegramNotifyRecipientAddress,
 } from '@/frontend/lib/telegram-notify-pref'
 import { resolveOutboundMailboxObjectId } from '@/frontend/lib/outbound-mailbox-routing'
-import { readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
-import {
-  GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG,
-  GROUP_TEAM_MAILBOX_REQUIRED_MSG,
-  isGroupMailboxInternetChainSend,
-  resolveGroupTeamMailboxObjectId,
-  shouldSendGroupTeamBroadcast,
-} from '@/frontend/lib/group-team-broadcast'
-import {
-  buildGroupMailboxOptimisticInboxRows,
-  mergeOptimisticGroupInboxRows,
-} from '@/frontend/lib/group-inbox-optimistic'
 import {
   isWrongNetworkPackageError,
   isMainnetDirectSendBlockedError,
@@ -109,10 +107,10 @@ import {
 } from '@/frontend/lib/active-network-chain-sync'
 
 /** Gleiche Meldung: Klartext-Mesh und verschlüsselter Mesh-Pfad bei fehlendem Heltec. */
-const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth not connected (Heltec).'
+const MESH_BT_NOT_CONNECTED_MSG = 'Meshtastic/Web Bluetooth nicht verbunden (Heltec).'
 
 /** Abbruch-Button / `throwIfCancelled` — eine kanonische Meldung für `isUserCancelError`. */
-const CHAT_SEND_CANCELLED_MSG = 'Transfer cancelled.'
+const CHAT_SEND_CANCELLED_MSG = 'Übertragung abgebrochen.'
 
 function isUserCancelError(e: unknown): boolean {
   return e instanceof Error && e.message === CHAT_SEND_CANCELLED_MSG
@@ -170,7 +168,7 @@ function mailboxHybridErr(res: { error?: unknown; message?: unknown }): string {
   if (typeof res.message === 'string' && res.message.trim()) return res.message.trim()
   if (res.error !== undefined && res.error !== null) return formatUnknownError(res.error)
   if (res.message !== undefined && res.message !== null) return formatUnknownError(res.message)
-  return 'Error'
+  return 'Fehler'
 }
 
 const ADDR_64_LOWER = /^0x[a-f0-9]{64}$/
@@ -239,7 +237,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
   const cancelSend = useCallback(() => {
     cancelRequestedRef.current = true
-    setStatusMsg('Cancel requested — stops after the current step …')
+    setStatusMsg('Abbruch angefordert — stoppt nach dem laufenden Schritt …')
   }, [setStatusMsg])
 
   const handleSend = useCallback(async (opts?: ChatSendHandleOptions) => {
@@ -269,22 +267,23 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport,
     })
 
-    if (groupMailboxInternetChain && encrypted) {
+    const groupPreSendErr = getGroupSendPreSendError({
+      isGroupChannel,
+      messagingPersistenceMode,
+      forcedTransport,
+      encrypted,
+      activeGroup,
+    })
+    if (groupPreSendErr) {
       setStatus('error')
-      setStatusMsg(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG)
-      return
-    }
-
-    if (groupMailboxInternetChain && !resolveGroupTeamMailboxObjectId(activeGroup)) {
-      setStatus('error')
-      setStatusMsg(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
+      setStatusMsg(groupPreSendErr)
       return
     }
 
     if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
       setStatus('error')
       setStatusMsg(
-        'Encrypted: enter a valid 0x recipient address in the composer or partner (handshake).'
+        'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
       )
       return
     }
@@ -298,10 +297,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     ): Promise<{ ok: true } | { ok: false; message: string }> => {
       const target = targetRaw.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(target)) {
-        return { ok: false, message: 'Recipient: valid 0x address (64 hex) required for encrypted send.' }
+        return { ok: false, message: 'Empfänger: gültige 0x-Adresse (64 Hex) für verschlüsselten Versand.' }
       }
       if (apiStatus?.locked) {
-        return { ok: false, message: 'Wallet is locked — unlock first.' }
+        return { ok: false, message: 'Wallet ist gesperrt — zuerst entsperren.' }
       }
       const connected = (apiStatus?.connectedAddresses ?? []).map((a) => a.toLowerCase())
       const cachedHs = readCachedHandshakeOffers()
@@ -317,7 +316,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return {
             ok: false,
             message:
-              'Handshake to your own address: accept in the partner panel ("Accept handshake" / Connect) — or send unencrypted for testing.',
+              'Handshake an deine eigene Adresse: im Partner-Panel „Handshake annehmen“ (Connect) — oder zum Test unverschlüsselt senden.',
           }
         }
         return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_AWAITING_PEER_MSG }
@@ -328,13 +327,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return {
             ok: false,
             message:
-              'Your own handshake is pending — accept in the partner panel (Connect), then send encrypted.',
+              'Eigener Handshake wartet — im Partner-Panel „Handshake annehmen“ (Connect), dann verschlüsselt senden.',
           }
         }
         return {
           ok: false,
           message:
-            'Partner sent a handshake — first "Accept handshake" (Connect), then send encrypted.',
+            'Der Partner hat einen Handshake gesendet — zuerst „Handshake annehmen“ (Connect), dann verschlüsselt senden.',
         }
       }
       if (connected.includes(target)) return { ok: true }
@@ -347,14 +346,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           return {
             ok: false,
             message:
-              'Multiple connected partners: choose the target address in "Partner (handshake)", then send encrypted.',
+              'Mehrere verbundene Partner: im Feld „Partner (Handshake)“ die Zieladresse wählen, dann verschlüsselt senden.',
           }
         }
         if (!connected.includes(partnerNorm)) {
           return {
             ok: false,
             message:
-              'Partner address is not connected. Complete handshake/connect for this address or fix the partner field.',
+              'Partner-Adresse ist nicht verbunden. Erst Handshake/Connect für diese Adresse durchführen oder Partnerfeld korrigieren.',
           }
         }
         return { ok: true }
@@ -373,13 +372,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             return {
               ok: false,
               message:
-                'Handshake found, but chat ECDH private key is missing in the browser. Set the P-256 ECDH JWK in pulse settings or "Accept handshake" (Connect) for this 0x address.',
+                'Handshake gefunden, aber Chat-ECDH-Privatkey fehlt im Browser. In den Puls-Einstellungen den P-256-ECDH-JWK setzen oder „Handshake annehmen“ (Connect) für diese 0x-Adresse.',
             }
           }
           return {
             ok: false,
             message:
-              'Handshake found on chain — please "Accept handshake" (Connect) for this exact 0x address until status shows "connected". Sending a handshake alone is not enough.',
+              'Handshake auf der Chain gefunden — bitte „Handshake annehmen“ (Connect) für genau diese 0x-Adresse, bis der Status „verbunden“ zeigt. Nur Handshake senden reicht nicht.',
           }
         }
       } catch {
@@ -401,23 +400,22 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     const singleWireSuccessMsg = (delivery?: 'team-broadcast' | 'pairwise'): string => {
-      if (isGroupChannel && delivery === 'team-broadcast') {
-        return 'Team broadcast sent (1× chain). Inbox: channel "All" or "Outbox".'
-      }
-      if (!isPrivate) return 'Sent!'
+      const groupMsg = resolveSingleWireSuccessMessage(isGroupChannel, delivery)
+      if (groupMsg) return groupMsg
+      if (!isPrivate) return 'Gesendet!'
       if (path4SelfArchiveActive) {
-        return 'Plaintext sent over LoRa; then your own tangle copy (mailbox to you).'
+        return 'Klartext über LoRa gesendet; anschließend eigene Tangle-Kopie (Mailbox an dich).'
       }
       if (!encrypted) {
-        if (forcedTransport === 'internet') return 'Plaintext sent over IOTA (/send-plain).'
+        if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
         if (forcedTransport === 'mesh') {
           return meshSelfArchiveAfterLoRa && isPrivate
-            ? 'Plaintext over LoRa (Meshtastic text); then your own tangle copy (mailbox to you).'
-            : 'Plaintext over LoRa (Meshtastic text) sent.'
+            ? 'Klartext über LoRa (Meshtastic-Text); anschließend eigene Tangle-Kopie (Mailbox an dich).'
+            : 'Klartext über LoRa (Meshtastic-Text) gesendet.'
         }
       }
-      if (forcedTransport === 'internet') return 'Sent online (IOTA/mailbox).'
-      return 'Sent.'
+      if (forcedTransport === 'internet') return 'Online (IOTA/Mailbox) gesendet.'
+      return 'Gesendet.'
     }
 
     const shouldLoadMessagesAfterSend = (): boolean => {
@@ -432,8 +430,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     /** Nach Mailbox-Send: gestaffelte Reloads (Chain-Index braucht oft >1 s). */
     const scheduleInboxReloadAfterSend = () => {
-      const delays = isGroupChannel ? [1200, 4000, 9000] : [1200]
-      for (const ms of delays) {
+      for (const ms of inboxReloadDelaysMs(isGroupChannel)) {
         setTimeout(() => void loadMessages('reset', undefined, { silent: true }), ms)
       }
     }
@@ -447,14 +444,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     const publishGroupStreamsAfterSend = (textSnap: string, toAddr: string, multicast: boolean) => {
-      if (!isGroupChannel || !activeGroup?.streamsAnchorId) return
-      void publishStreamsAnchor(activeGroup.streamsAnchorId, {
-        type: 'group_message',
-        groupId: activeGroup.id,
-        from: myAddress.trim(),
-        to: multicast ? `@group:${activeGroup.id}` : toAddr,
-        preview: multicast ? `${textSnap.slice(0, 180)} [team-broadcast]` : textSnap.slice(0, 240),
-        ts: Date.now(),
+      publishGroupStreamsAnchorAfterSend({
+        isGroupChannel,
+        activeGroup,
+        myAddress,
+        textSnap,
+        toAddr,
+        multicast,
       })
     }
 
@@ -472,10 +468,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     ): Promise<Path4MirrorDispatch> => {
       const selfAddr = myAddress.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(selfAddr)) {
-        return { status: 'failed', note: 'Self-archive: MY_ADDRESS invalid — no mailbox copy.' }
+        return { status: 'failed', note: 'Eigen-Archiv: MY_ADDRESS ungültig — keine Mailbox-Kopie.' }
       }
       if (apiStatus?.locked) {
-        return { status: 'failed', note: 'Self-archive: vault locked — mailbox copy skipped.' }
+        return { status: 'failed', note: 'Eigen-Archiv: Tresor gesperrt — Mailbox-Kopie übersprungen.' }
       }
       const res = await sendPlaintextMailboxHybrid(selfAddr, payload, messageNonceU64, mailboxOptsFor(selfAddr))
       if (res.ok) {
@@ -498,12 +494,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         return {
           status: 'anchored',
-          note: 'Self-archive: plaintext mailbox sent to you.',
+          note: 'Eigen-Archiv: Klartext-Mailbox an dich gesendet.',
           txDigest,
         }
       }
       const err = mailboxHybridErr(res)
-      if (!isOfflineMailboxQueueEnabled()) return { status: 'failed', note: `Self-archive (mailbox): ${err}` }
+      if (!isOfflineMailboxQueueEnabled()) return { status: 'failed', note: `Eigen-Archiv (Mailbox): ${err}` }
       const msgIdTag = loraMsgId ? `|msgId=${loraMsgId}` : ''
       const priority =
         kind === 'text' ? 20 : kind === 'image_luma' ? 50 : kind === 'image_chroma' ? 60 : 100
@@ -520,9 +516,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         priority,
       })
       onOfflineMailboxQueueChanged?.()
-      if (!en.ok) return { status: 'failed', note: `Self-archive (queue): ${en.reason}` }
-      if (en.queued) return { status: 'queued', note: 'Self-archive: queued offline (opt-in).' }
-      return { status: 'duplicate', note: 'Self-archive: already in offline queue (dedup).' }
+      if (!en.ok) return { status: 'failed', note: `Eigen-Archiv (Queue): ${en.reason}` }
+      if (en.queued) return { status: 'queued', note: 'Eigen-Archiv: in Offline-Warteschlange (Opt-in).' }
+      return { status: 'duplicate', note: 'Eigen-Archiv: bereits in Offline-Warteschlange (Dedup).' }
     }
 
     const runPath4SelfMirrorForLoraImage = async (
@@ -558,13 +554,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           secondary: { payloadUtf8: w2, messageNonceU64: n2 },
           imageContentSha256Hex: null,
           deviceTimeTrustWarn: !!deviceTimeTrustWarn,
-          baseSuccessMsg: 'Self-archive: image anchored in your mailbox.',
+          baseSuccessMsg: 'Eigen-Archiv: Bild in eigener Mailbox verankert.',
           setStatusMsg,
           mailboxTxDigest: mbTx,
           silent: true,
         })
       }
-      return ` Self-archive anchored.${formatTxDigestStatusSuffix(mbTx)}`
+      return ` Eigen-Archiv verankert.${formatTxDigestStatusSuffix(mbTx)}`
     }
 
     /** Ohne Pfad 4: verschlüsselter „Funk“-Modus + LUMA — nicht unterstützt (Pfad 4 = Klartext-Luft). */
@@ -603,23 +599,23 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (!rTrim) {
           setStatus('error')
           setStatusMsg(
-            'Encrypted (LoRa→online): enter 0x recipient in the composer or partner (0x…) in setup.'
+            'Verschlüsselt (LoRa→Online): 0x-Empfänger im Composer oder Partner (0x…) im Setup eintragen.'
           )
           setSending(false)
           return
         }
         const n1 = nextChainMessageNonceU64()
         const w1 = prependMailboxOutNonceMarker(lumaText, n1)
-        setStatusMsg('Online: LUMA (IOTA/mailbox)…')
+        setStatusMsg('Online: LUMA (IOTA/Mailbox)…')
         const r1 = await sendEncryptedMailboxHybrid(rTrim, w1, mailboxOptsFor(rTrim))
-        if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA failed.')
+        if (!r1.ok) throw new Error(r1.error || r1.message || 'LUMA fehlgeschlagen.')
         throwIfCancelled()
         const n2 = n1 + 1n
         const w2 = prependMailboxOutNonceMarker(chromaText, n2)
-        setStatusMsg('Online: CHROMA (IOTA/mailbox)…')
+        setStatusMsg('Online: CHROMA (IOTA/Mailbox)…')
         const r2 = await sendEncryptedMailboxHybrid(rTrim, w2, mailboxOptsFor(rTrim))
-        if (!r2.ok) throw new Error(r2.error || r2.message || 'CHROMA failed.')
-        const baseSuccess = 'Online (IOTA/mailbox): LUMA + CHROMA sent.'
+        if (!r2.ok) throw new Error(r2.error || r2.message || 'CHROMA fehlgeschlagen.')
+        const baseSuccess = 'Online (IOTA/Mailbox): LUMA + CHROMA gesendet.'
         setStatus('success')
         const mbTx = (r2.ok === true ? r2.txDigest : undefined) ?? (r1.ok === true ? r1.txDigest : undefined)
         if (isForensicImageMailboxAttestationEnabled()) {
@@ -665,7 +661,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         {
           ok: false,
           message:
-            'Image (LUMA+CHROMA) over "online": enable lock / encryption — two IOTA mailbox messages. Alternative: transport "radio" with "Images over radio" (air stays plaintext).',
+            'Bild (LUMA+CHROMA) über „online“: Schloss / Verschlüsselung aktivieren — zwei IOTA-Mailbox-Nachrichten. Alternative: Transport „funk“ mit „Bilder über Funk“ (Luft bleibt Klartext).',
           idleMs: 12_000,
         },
         setStatus,
@@ -679,7 +675,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (dest === null) {
         setStatus('error')
         setStatusMsg(
-          'Radio plaintext to node: enter a valid node ID (e.g. !1a2b3c4d) — or disable "to node ID" for broadcast.'
+          'Funk-Klartext an Node: gültige Node-ID (z. B. !1a2b3c4d) eintragen — oder Haken „an Node-ID“ deaktivieren für Broadcast.'
         )
         setTimeout(() => setStatus('idle'), 6000)
         return
@@ -714,13 +710,13 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         setStatus('success')
         setStatusMsg(
-          `Ephemeral (LoRa): image sent (${segResult.plan.totalSegments} segments).${mirrorNote || ''}`
+          `Flüchtig (LoRa): Bild gesendet (${segResult.plan.totalSegments} Segmente).${mirrorNote || ''}`
         )
         const cap = message.trim()
         recordMeshOutgoingPlaintext(
           appendMeshMessage,
           myAddress,
-          `[LoRa image ephemeral] ${segResult.plan.luma.n}+${segResult.plan.chroma.n} segments${cap ? `: ${cap}` : ''}`,
+          `[LoRa-Bild Flüchtig] ${segResult.plan.luma.n}+${segResult.plan.chroma.n} Segmente${cap ? `: ${cap}` : ''}`,
           dest,
           true
         )
@@ -738,7 +734,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           setStatus('error')
           setStatusMsg(
             /NO_RESPONSE|\"error\":\s*8\b|error:\s*8\b/i.test(raw)
-              ? 'LoRa (radio) did not respond (NO_RESPONSE / error 8). Please send again or connect closer/more reliably.'
+              ? 'LoRa (Funk) hat nicht geantwortet (NO_RESPONSE / error 8). Bitte erneut senden oder näher/stabiler verbinden.'
               : raw
           )
         }
@@ -757,7 +753,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              'SOS voice: no audio data in composer — use recording and send again.',
+              'SOS-Sprache: keine Audiodaten im Composer – bitte Aufnahme nutzen und erneut senden.',
             idleMs: 7000,
           },
           setStatus,
@@ -773,7 +769,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              'SOS text: not together with attachments. Remove attachment or use "SOS now over LoRa" for the voice variant.',
+              'SOS-Text: nicht zusammen mit Anhängen. Anhang entfernen oder „SOS jetzt über LoRa“ für die Sprachvariante.',
             idleMs: 9000,
           },
           setStatus,
@@ -823,7 +819,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              'Plaintext: enter recipient address (0x…) — or for "radio" without target node connect Heltec and use broadcast ("to node ID" unchecked). With checkbox: valid node ID e.g. !1a2b3c4d.',
+              'Klartext: Empfänger-Adresse (0x…) angeben — oder bei „funk“ ohne Ziel-Knoten das Heltec verbinden und Broadcast nutzen (Haken „an Node-ID“ aus). Mit Haken: gültige Node-ID z. B. !1a2b3c4d.',
             idleMs: 9000,
           },
           setStatus,
@@ -843,7 +839,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         {
           ok: false,
           message:
-            'Online/IOTA: recipient address must be 0x + 64 hex (e.g. 0x1234…abcd). Send or queue only after that.',
+            'Online/IOTA: Empfängeradresse muss 0x + 64 Hex sein (z. B. 0x1234…abcd). Erst danach wird gesendet oder gequeued.',
           idleMs: 9000,
         },
         setStatus,
@@ -880,7 +876,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              'Unencrypted radio: short text only. LoRa image only with active "Images over radio".',
+              'Unverschlüsselter Funk: erlaubt nur Kurztext. LoRa-Bild nur mit aktivem „Bilder über Funk“.',
             idleMs: 9000,
           },
           setStatus,
@@ -900,8 +896,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             {
               ok: false,
               message: attachedAudioBase64
-                ? `Unencrypted LoRa voice memo does not fit in one Meshtastic text frame (${charCount} characters, max. ${plaintextMaxChars}). Voice: choose "online". Unencrypted voice over LoRa needs chunking+ACK (roadmap).`
-                : `Unencrypted LoRa text max. ${plaintextMaxChars} characters (currently ${charCount}). Shorten, send multiple short messages, or use "online" with encryption for longer content.`,
+                ? `Unverschlüsseltes LoRa-Sprachmemo passt nicht in einen Meshtastic-Text-Frame (${charCount} Zeichen, max. ${plaintextMaxChars}). Sprache: „online“ wählen. Unverschlüsselte Sprache über LoRa braucht Chunking+ACK (Roadmap).`
+                : `Unverschlüsselter LoRa-Text maximal ${plaintextMaxChars} Zeichen (aktuell ${charCount}). Kürzen, mehrere Kurznachrichten, oder für längere Inhalte „online“ mit Verschlüsselung.`,
               idleMs: 9000,
             },
             setStatus,
@@ -918,7 +914,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         {
           ok: false,
           message: !isPrivate
-            ? 'LoRa image (LUMA+CHROMA) is only available in private chat. Bulletin board: short text — or image over "online" with encryption.'
+            ? 'LoRa-Bild (LUMA+CHROMA) gibt es nur im privaten Chat. Pinnwand: Kurztext — oder Bild über „online“ mit Verschlüsselung.'
             : CHAT_LORA_DUAL_IMAGE_POLICY_MSG,
           idleMs: 12_000,
         },
@@ -935,7 +931,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         {
           ok: false,
           message:
-            'Voice message is currently enabled for online/IOTA only. For radio use SOS text (dictation) or short text.',
+            'Sprachnachricht ist derzeit nur für Online/IOTA freigeschaltet. Für Funk bitte SOS-Text (Diktat) oder Kurztext senden.',
           idleMs: 9000,
         },
         setStatus,
@@ -950,7 +946,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              '"Anchor on chain" only in private chat with transport "radio". Otherwise disable the option.',
+              '„Auf Chain verankern“ nur im privaten Chat mit Transport „funk“. Sonst Option deaktivieren.',
             idleMs: 9000,
           },
           setStatus,
@@ -963,7 +959,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              '"Anchor on chain": MY_ADDRESS (0x + 64 hex) must be set — otherwise no mailbox copy to you is possible.',
+              '„Auf Chain verankern“: MY_ADDRESS (0x + 64 Hex) muss gesetzt sein — sonst keine Mailbox-Kopie an dich möglich.',
             idleMs: 9000,
           },
           setStatus,
@@ -976,7 +972,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           {
             ok: false,
             message:
-              '"Anchor on chain": unlock vault — the mailbox copy requires wallet/signature.',
+              '„Auf Chain verankern“: Tresor entsperren — die Mailbox-Kopie braucht Wallet/Signatur.',
             idleMs: 9000,
           },
           setStatus,
@@ -993,7 +989,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     setSending(true)
     setStatus('idle')
     if (textSnaps.length > 1) {
-      setStatusMsg(`Splitting file into ${textSnaps.length} parts…`)
+      setStatusMsg(`Datei wird in ${textSnaps.length} Teile aufgeteilt…`)
     }
 
     const allowOfflineMailboxQueue =
@@ -1017,17 +1013,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     ): Promise<QueueMailboxOutcome> => {
       if (!allowOfflineMailboxQueue) return 'skipped'
       if (isMainnetDirectSendBlockedError(lastErr) || isWrongNetworkPackageError(lastErr)) {
-        return { reject: 'Mainnet direct send not ready — not queued (§ H.12).' }
+        return { reject: 'Mainnet-Direkt-Send nicht bereit — nicht in Warteschlange (§ H.12).' }
       }
       if (apiStatus?.locked || /tresor gesperrt/i.test(lastErr)) {
         return {
           reject:
-            'Vault locked — please unlock first. Not queued again.',
+            'Tresor gesperrt — bitte zuerst entsperren. Nicht erneut in die Warteschlange gelegt.',
         }
       }
       const recipientTrim = encrypted ? encryptedMailboxRecipient : plainMailboxRecipient.trim().toLowerCase()
       if (!ADDR_64_LOWER.test(recipientTrim)) {
-        return { reject: 'Invalid recipient address; not saved to mailbox queue.' }
+        return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
       }
       const en = await enqueueOfflineMailboxFailure({
         kind,
@@ -1105,7 +1101,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
         throwIfCancelled()
         const target = sendTo.trim().toLowerCase()
-        if (!ADDR_64_LOWER.test(target)) return failPart('Invalid recipient wallet (0x + 64 hex).')
+        if (!ADDR_64_LOWER.test(target)) return failPart('Ungültige Empfänger-Wallet (0x + 64 Hex).')
         if (enc) {
           const ready = await ensureEncryptedPeerReady(target)
           if (!ready.ok) return failPart(ready.message)
@@ -1152,55 +1148,38 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         )
         if (qm === 'queued') {
           return failPart(
-            `${errText} — buffered; retry when the basis is reachable again (opt-in "mailbox queue").`
+            `${errText} — zwischengespeichert; erneuter Versuch, sobald die Basis wieder erreichbar ist (Opt-in „Mailbox-Warteschlange“).`
           )
         }
         if (qm === 'duplicate') {
           return failPart(
-            `${errText} — same message is already in the mailbox queue (dedup / § H.12).`
+            `${errText} — dieselbe Nachricht steht bereits in der Mailbox-Warteschlange (Dedup / § H.12).`
           )
         }
         if (typeof qm === 'object' && 'reject' in qm) {
-          return failPart(`Queue: ${qm.reject}`)
+          return failPart(`Warteschlange: ${qm.reject}`)
         }
         return failPart(`${target.slice(0, 10)}…: ${errText}`)
       }
 
       const tryGroupTeamBroadcast = async (textSnap: string, enc: boolean): Promise<PartOk | null> => {
-        if (
-          !shouldSendGroupTeamBroadcast({
-            activeGroup,
-            encrypted: enc,
-            messagingPersistenceMode,
-            forcedTransport,
-            sendAllMembers: readGroupMailboxSendAll(),
-            isGroupChannel,
-          })
-        ) {
-          return null
+        const tb = await attemptGroupTeamBroadcast({
+          textSnap,
+          encrypted: enc,
+          activeGroup,
+          isGroupChannel,
+          messagingPersistenceMode,
+          forcedTransport,
+          payloadText: payloadWithoutOutNonce(textSnap),
+        })
+        if (tb.kind === 'not-applicable') return null
+        if (tb.kind === 'failure') return failSend(tb.message)
+        publishGroupStreamsAfterSend(textSnap, tb.teamMailboxObjectId, true)
+        return {
+          ok: true,
+          groupDelivery: 'team-broadcast',
+          mailboxCapture: tb.mailboxCapture,
         }
-        const teamMb = resolveGroupTeamMailboxObjectId(activeGroup)
-        if (!teamMb) return null
-        const body = payloadWithoutOutNonce(textSnap)
-        const messageNonceU64 = nextChainMessageNonceU64()
-        const res = await sendTeamPlaintextBroadcastHybrid(teamMb, body, messageNonceU64)
-        if (res.ok) {
-          publishGroupStreamsAfterSend(textSnap, teamMb, true)
-          return {
-            ok: true,
-            groupDelivery: 'team-broadcast',
-            mailboxCapture: {
-              payloadUtf8: body,
-              messageNonceU64,
-              encrypted: false,
-              txDigest: res.txDigest,
-            },
-          }
-        }
-        const errText = res.error || res.message || 'Team broadcast failed.'
-        return failSend(
-          `${errText} — team mailbox must match the current Move package (recreate after deploy).`
-        )
       }
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
@@ -1217,14 +1196,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (forcedTransport === 'mesh') {
           if (encrypted) {
             return failSend(
-              'Public channel: encrypted radio requires private chat with handshake and /connect. Choose plaintext + "radio" or switch to private chat.'
+              'Öffentlicher Kanal: verschlüsselter Funk braucht privaten Chat mit Handshake und /connect. Wähle Klartext + „funk“ oder wechsle in den privaten Chat.'
             )
           }
           if (!meshtastic.connected) return failSend(MESH_BT_NOT_CONNECTED_MSG)
           const dest = meshPlaintextDest()
           if (dest === null) {
             return failSend(
-              'Radio plaintext to node: enter a valid node ID (e.g. !1a2b3c4d) — or disable "to node ID" for broadcast.'
+              'Funk-Klartext an Node: gültige Node-ID (z. B. !1a2b3c4d) eintragen — oder Haken „an Node-ID“ deaktivieren für Broadcast.'
             )
           }
           try {
@@ -1253,7 +1232,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           const dest = meshPlaintextDest()
           if (dest === null) {
             return failSend(
-              'Radio plaintext: valid node ID (e.g. !1a2b3c4d) or disable "to node ID" for broadcast.'
+              'Funk-Klartext: gültige Node-ID (z. B. !1a2b3c4d) oder Haken „an Node-ID“ aus für Broadcast.'
             )
           }
           if (isEmergencySend) {
@@ -1277,7 +1256,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
                 if (attempt + 1 >= max) break
                 const delay = sosMeshRetryDelayMs(attempt)
                 setStatusMsg(
-                  `SOS: radio failed — retry ${attempt + 2}/${max} in ~${Math.round(delay / 1000)} s …`
+                  `SOS: Funk fehlgeschlagen — Wiederholung ${attempt + 2}/${max} in ca. ${Math.round(delay / 1000)} s …`
                 )
                 await new Promise((r) => setTimeout(r, delay))
                 throwIfCancelled()
@@ -1308,8 +1287,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         setStatus('error')
         setStatusMsg(
           forcedTransport === 'adhoc'
-            ? 'Ad-hoc: not implemented. Choose "online" or "radio" (plaintext) or encrypted.'
-            : 'Unknown plaintext path.'
+            ? 'Ad-hoc: nicht implementiert. Wähle „online“ oder „funk“ (Klartext) bzw. verschlüsselt.'
+            : 'Unbekannter Klartext-Pfad.'
         )
         return { ok: false }
       }
@@ -1317,7 +1296,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (forcedTransport === 'adhoc') {
         setStatus('error')
         setStatusMsg(
-          'Layer 3 (smartphone direct): not implemented — BLE advertising/scan is concept only (bleUuid in vault).'
+          'Layer 3 (Smartphone-Direct): nicht implementiert – BLE-Advertising/Scan nur als Konzept (bleUuid im Vault).'
         )
         return { ok: false }
       }
@@ -1333,7 +1312,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
 
       setStatus('error')
-      setStatusMsg('Unknown send path.')
+      setStatusMsg('Unbekannter Sendepfad.')
       return { ok: false }
     }
 
@@ -1348,7 +1327,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         if (!r.ok) {
           if (textSnaps.length > 1 && i > 0) {
             setStatusMsg(
-              `Part ${i + 1}/${textSnaps.length} failed (earlier parts may already have arrived).`
+              `Teil ${i + 1}/${textSnaps.length} fehlgeschlagen (vorherige Teile können bereits angekommen sein).`
             )
           }
           return
@@ -1360,7 +1339,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       const successTail = path4Footnotes.join('')
       let successMsg: string
       if (textSnaps.length > 1) {
-        successMsg = `All ${textSnaps.length} parts sent.${successTail}`
+        successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
       } else {
         successMsg = singleWireSuccessMsg(lastOk?.groupDelivery) + successTail
       }
@@ -1407,10 +1386,10 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               (attachedTxtFile
                 ? attachedTxtFile.text.slice(0, 200) || `[${attachedTxtFile.name}]`
                 : attachedBlobBase64
-                  ? '[Image attachment]'
+                  ? '[Bild-Anhang]'
                   : attachedAudioBase64
-                    ? '[Audio attachment]'
-                    : textSnaps[0]?.slice(0, 200) || 'New Morgendrot message')
+                    ? '[Audio-Anhang]'
+                    : textSnaps[0]?.slice(0, 200) || 'Neue Morgendrot-Nachricht')
             const myLabel =
               contactDirectory[myAddress.trim().toLowerCase()]?.label ||
               `${myAddress.trim().slice(0, 10)}…`
@@ -1421,7 +1400,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
               skipJournal: true,
             }).then((r) => {
               if (r.delivered) {
-                setStatusMsg(`${statusLine} · Telegram notification sent to contact.`)
+                setStatusMsg(`${statusLine} · Telegram-Hinweis an Kontakt gesendet.`)
               } else if (r.error) {
                 setStatusMsg(`${statusLine} · Telegram: ${r.error}`)
               }
@@ -1460,20 +1439,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         forcedTransport === 'internet' &&
         messagingPersistenceMode === 'mailbox'
       ) {
-        const previewText =
-          lastOk.mailboxCapture.payloadUtf8?.trim() ||
-          textSnaps[textSnaps.length - 1]?.trim() ||
-          message.trim()
-        const optimistic = buildGroupMailboxOptimisticInboxRows({
+        const optimistic = buildGroupTeamBroadcastOptimisticRows({
+          isGroupChannel,
+          forcedTransport,
+          messagingPersistenceMode,
           myAddress,
-          text: previewText,
-          encrypted: lastOk.mailboxCapture.encrypted,
-          messageNonceU64: lastOk.mailboxCapture.messageNonceU64,
-          mode: 'team-broadcast',
-          teamMailboxObjectId: resolveGroupTeamMailboxObjectId(activeGroup),
+          activeGroup,
+          mailboxCapture: lastOk.mailboxCapture,
+          previewFallback: textSnaps[textSnaps.length - 1]?.trim() || message.trim(),
         })
         if (optimistic.length > 0) {
-          setMessages((prev) => mergeOptimisticGroupInboxRows(prev, optimistic))
+          setMessages((prev) => applyGroupOptimisticInboxMerge(prev, optimistic))
         }
       }
 

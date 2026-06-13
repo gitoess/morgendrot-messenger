@@ -10,7 +10,7 @@ describe('pinnwand-display', () => {
     expect(shouldMaskPinnwandSender('arbeiter', { simpleMode: false })).toBe(true)
     expect(
       pinnwandSenderDisplayLabel('arbeiter', null, '0x' + 'a'.repeat(64))
-    ).toBe('Command post')
+    ).toBe('Einsatzleitung')
   })
 
   it('Tab-Label Pinnwand für alle Rollen', () => {

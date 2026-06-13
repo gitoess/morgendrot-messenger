@@ -21,8 +21,7 @@
     "test:unit:watch": "vitest"
   },
   "dependencies": {
-    "@iota/iota-sdk": "^1.12.0",
-    "@morgendrot/shared": "file:../../src/shared"
+    "@iota/iota-sdk": "^1.11.0"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

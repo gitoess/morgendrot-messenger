@@ -14,9 +14,9 @@ export function getAutarkyStatusLine(): string | null {
   if (!isAutarkyModeEnabled()) return null
   const open = getAutarkyChecklistItems().filter((i) => !i.ok)
   if (open.length === 0) {
-    return 'Autarky: checklist complete — direct RPC usable without base (RPC + IDs + signer).'
+    return 'Autarkie: Checkliste vollständig — Direkt-RPC ohne Basis nutzbar (RPC + IDs + Signer).'
   }
-  return `Autarky: still open — ${open[0]!.label}`
+  return `Autarkie: noch offen — ${open[0]!.label}`
 }
 
 /** Alle offenen Direkt-Schritte (Puls-Checkliste). */
@@ -32,8 +32,8 @@ export function getDirectIotaHeaderStatusLine(): string | null {
   if (autarky) return autarky
   const gaps = getDirectIotaSetupGapLabels()
   if (gaps.length === 0) return null
-  if (gaps.length === 1) return `Direct: ${gaps[0]} — Pulse`
+  if (gaps.length === 1) return `Direkt: ${gaps[0]} — Puls`
   const first = gaps[0]!
   const short = first.length > 52 ? `${first.slice(0, 49)}…` : first
-  return `Direct: ${gaps.length} open — e.g. ${short} — Pulse`
+  return `Direkt: ${gaps.length} offen — z. B. ${short} — Puls`
 }

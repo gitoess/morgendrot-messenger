@@ -47,20 +47,20 @@ export function ChatViewVoiceRecord(p: ChatViewVoiceRecordProps) {
     slot === 'emergency'
       ? encoding
         ? emergencySosOnline
-          ? 'Preparing SOS voice for online (IOTA)…'
-          : 'Preparing SOS voice for radio…'
+          ? 'SOS-Sprache wird für Online (IOTA) vorbereitet…'
+          : 'SOS-Sprache wird für Funk vorbereitet…'
         : starting
-          ? 'Starting microphone…'
+          ? 'Mikrofon wird gestartet…'
           : recording
-            ? `Stop (${elapsed} / ${maxSeconds}s) — emergency`
-            : `SOS voice (emergency, max. ${maxSeconds}s)`
+            ? `Stoppen (${elapsed} / ${maxSeconds}s) – Notfall`
+            : `SOS-Sprache (Notfall, max. ${maxSeconds}s)`
       : encoding
-        ? 'Encoding Opus…'
+        ? 'Opus wird erzeugt…'
         : starting
-          ? 'Starting microphone…'
+          ? 'Mikrofon wird gestartet…'
           : recording
-            ? `Stop (${elapsed} / ${maxSeconds}s)`
-            : 'Record voice message'
+            ? `Stoppen (${elapsed} / ${maxSeconds}s)`
+            : 'Sprachnachricht aufnehmen'
 
   const isEmergency = slot === 'emergency'
 
@@ -100,7 +100,7 @@ export function ChatViewVoiceRecord(p: ChatViewVoiceRecordProps) {
           <Mic className={cn('shrink-0', compact ? 'h-4 w-4' : 'h-6 w-6')} aria-hidden />
         )}
         <span className={cn('leading-snug', compact ? 'text-left' : 'text-center')}>
-          {compact && slot === 'normal' && !recording && !encoding && !starting ? 'Voice memo' : label}
+          {compact && slot === 'normal' && !recording && !encoding && !starting ? 'Sprachmemo' : label}
         </span>
       </button>
       {(recording || starting) && isThisSlot && (

@@ -273,7 +273,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           const cached = readInboxCache(cacheKey)
           if (cached && mode !== 'append') {
             if (!silent) {
-              setLoadError('Offline: showing last known messages. Only LoRa/queue actions are available now.')
+              setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
             }
             console.info('[inbox] Live-Fetch fehlgeschlagen, nutze Cache-Fallback.', {
               error: res.error,
@@ -287,7 +287,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           }
           if (!silent) {
             setLoadError(
-              res.error || 'Could not load inbox.'
+              res.error || 'Posteingang konnte nicht geladen werden.'
             )
           }
           if (mode === 'append') applyLocalOverlayFallback()
@@ -295,7 +295,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           const cached = readInboxCache(cacheKey)
           if (cached && mode !== 'append') {
             if (!silent) {
-              setLoadError('Offline: showing last known messages. Only LoRa/queue actions are available now.')
+              setLoadError('Offline: letzte bekannte Nachrichten aktiv. Aktuell sind nur LoRa/Queue-Aktionen moeglich.')
             }
             console.info('[inbox] Live-Fetch ohne gueltige Liste, nutze Cache-Fallback.', {
               ageMinutes: cached.cacheAgeMinutes,
@@ -306,7 +306,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             applyMappedToState(cached.messages, Math.min(cached.messages.length, pageSize), false)
             return
           }
-          if (!silent) setLoadError('Inbox: response without a valid message list (data/messages).')
+          if (!silent) setLoadError('Posteingang: Antwort ohne gültige Nachrichtenliste (data/messages).')
           if (mode === 'append') applyLocalOverlayFallback()
         }
       } finally {

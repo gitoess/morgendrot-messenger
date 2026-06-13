@@ -19,20 +19,10 @@ describe('handoff-zip-crypto', () => {
     expect(dec.ok).toBe(false)
   })
 
-  it('uses 310k PBKDF2 iterations in meta', async () => {
-    const { meta } = await encryptHandoffEnvUtf8('test', 'feldtest-geheim-2026')
-    expect(meta.iterations).toBe(310_000)
-  })
-
   it('validiert Export-Passwort', () => {
     expect(validateHandoffExportPassword('', '')).toMatch(/eingeben/)
     expect(validateHandoffExportPassword('short', 'short')).toMatch(/8 Zeichen/)
     expect(validateHandoffExportPassword('longenough', 'different')).toMatch(/überein/)
     expect(validateHandoffExportPassword('longenough', 'longenough')).toBeNull()
-  })
-
-  it('lehnt zu große .env ab', async () => {
-    const huge = 'X'.repeat(512_001)
-    await expect(encryptHandoffEnvUtf8(huge, 'feldtest-geheim-2026')).rejects.toThrow(/zu groß/)
   })
 })

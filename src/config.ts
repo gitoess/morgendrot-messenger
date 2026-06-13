@@ -1350,19 +1350,6 @@ export const CFG = {
      */
     API_BIND_HOST: (process.env.API_BIND_HOST || '0.0.0.0').trim() || '0.0.0.0',
     /**
-     * Optional: Bearer/X-Morgendrot-Api-Token für LAN-Mutationen (Secret-Befehle, Config, Vault-Import).
-     * Ohne Token: nur localhost; bei 0.0.0.0-Bind beim Start Warnung im Log.
-     */
-    API_AUTH_TOKEN: (process.env.API_AUTH_TOKEN || '').trim(),
-    /** false = /api/unlock ohne prüfbaren Vault ablehnen (Fail-Closed). */
-    ALLOW_UNLOCK_WITHOUT_VAULT: envBool('ALLOW_UNLOCK_WITHOUT_VAULT', false),
-    /** true = CORS nur gleiche Host-IP wie API (blockiert Cross-LAN evil.html). Default true. */
-    API_STRICT_CORS: envBool('API_STRICT_CORS', true),
-    /** /vault-debug-chain, /vault-list-chain — nur bei true (Default false). */
-    ENABLE_VAULT_DEBUG_COMMANDS: envBool('ENABLE_VAULT_DEBUG_COMMANDS', false),
-    /** /vault-ecdh-jwk verlangt Passwort-Re-Auth (Default true). */
-    VAULT_ECDH_JWK_REQUIRE_PASSWORD: envBool('VAULT_ECDH_JWK_REQUIRE_PASSWORD', true),
-    /**
      * Vor dem Listen: ggf. laufende Morgendrot-API auf demselben Port per /restart beenden.
      * Bei zweiter Instanz auf demselben PC auf false setzen, sonst wird die erste API neu gestartet.
      */
@@ -1417,8 +1404,8 @@ export const CFG = {
     LITE_PRESET_PACKAGE_ID: process.env.MORGENDROT_LITE_PACKAGE_ID?.trim() || '',
     /** Lite-RPC; leer → /api/messenger-presets liefert CFG.RPC_URL als Fallback-Anzeige. */
     LITE_PRESET_RPC_URL: process.env.MORGENDROT_LITE_RPC_URL?.trim() || '',
-    /** Rate-Limit für POST /api/command (Anfragen pro Minute pro IP). 0 = aus. Default 30. */
-    API_RATE_LIMIT_COMMANDS_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_COMMANDS_PER_MINUTE', 30)),
+    /** Rate-Limit für POST /api/command (Anfragen pro Minute pro IP). 0 = aus. Default 0. */
+    API_RATE_LIMIT_COMMANDS_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_COMMANDS_PER_MINUTE', 0)),
     /** Rate-Limit POST /api/unlock pro IP/Minute. 0 = aus. Default 15. */
     API_RATE_LIMIT_UNLOCK_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_UNLOCK_PER_MINUTE', 15)),
     /** Rate-Limit Forensic-Batch-Mutationen pro IP/Minute. 0 = aus. Default 30. */

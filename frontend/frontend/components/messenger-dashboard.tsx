@@ -16,12 +16,11 @@ import {
 import { cn } from '@/lib/utils'
 import type { ProjectType } from '@/frontend/lib/types'
 import { ChatView } from './views/chat-view'
-import { BossView } from './views/boss-view'
+import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
 import { VaultView } from './views/vault-view'
 import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
-import { ConfigView } from './views/config-view'
 import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-messenger-boss-header'
 import { TresorSessionBadge } from '@/frontend/components/chat-view-chat-header'
 import { DashboardMessengerBossHome } from '@/frontend/components/dashboard-messenger-boss-home'
@@ -53,6 +52,7 @@ import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
 import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
+import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
@@ -140,6 +140,15 @@ function MessengerDashboardBody({
         onHelpOpenChange={s.setHelpOpen}
         helpLoading={s.helpLoading}
         helpText={s.helpText}
+        sessionSignerSync={{
+          open: s.sessionSignerSync.open,
+          busy: s.sessionSignerSync.busy,
+          error: s.sessionSignerSync.error,
+          password: s.unlock.password,
+          onPasswordChange: s.unlock.setPassword,
+          onClose: s.sessionSignerSync.close,
+          onSync: s.sessionSignerSync.handleSync,
+        }}
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
       />
       <HelperSeedSetupDialog
@@ -203,9 +212,9 @@ function MessengerDashboardBody({
                 <button
                   type="button"
                   className="rounded px-2 py-1 text-xs font-medium text-amber-900 underline hover:no-underline dark:text-amber-100"
-                  onClick={() => s.requestVaultUnlock()}
+                  onClick={() => s.requestMainnetSessionSignerSync()}
                 >
-                  Unlock vault
+                  Signer laden
                 </button>
                 <button
                   type="button"
@@ -226,10 +235,10 @@ function MessengerDashboardBody({
               canToggleFullTiles={s.role === 'arbeiter' || s.role === 'lock'}
               slimMessengerEinsatz={isEinsatzLeadHome}
               vaultLocked={vaultSessionLocked}
-              onRequestVaultUnlock={s.requestVaultUnlock}
+              onRequestVaultUnlock={s.requestMainnetSessionSignerSync}
             />
           )}
-          {s.activeView.type === 'config' && <ConfigView messengerMode />}
+          {s.activeView.type === 'config' && <LazyConfigView messengerMode />}
           {s.activeView.type === 'chat' && s.activeView.variant && (
             <ChatView
               variant={s.activeView.variant as 'private-chat' | 'pinnwand'}
@@ -251,7 +260,7 @@ function MessengerDashboardBody({
             />
           )}
           {s.activeView.type === 'boss' && s.activeView.variant && (
-            <BossView
+            <LazyBossView
               variant={s.activeView.variant as 'boss-signer' | 'pinnwand-admin'}
               apiSnapshot={s.apiSnapshot && !('error' in s.apiSnapshot && s.apiSnapshot.error) ? s.apiSnapshot : null}
             />
@@ -311,7 +320,14 @@ function MessengerDashboardBody({
                 ) : null}
               </p>
               <div className="mt-1">
-                <MeshStatus mode={s.meshPathMode} />
+                <MeshStatus
+                  mode={s.meshPathMode}
+                  subtitle={
+                    s.rpcProxyActive
+                      ? t('network.meshProxySubtitle')
+                      : t('network.meshDefaultSubtitle')
+                  }
+                />
               </div>
               {!s.locked && s.backendReachable ? (
                 <div className="mt-2">
@@ -531,13 +547,15 @@ function MessengerDashboardBody({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-foreground">{t('welcomeEinsatz.title')}</p>
+                    <p className="text-sm text-muted-foreground">{t('welcomeEinsatz.subtitle')}</p>
                   </div>
                   <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
                 </button>
               </div>
             ) : null}
             <div className="mb-8 text-center">
-              <h2 className="text-2xl font-bold text-foreground">What would you like to do?</h2>
+              <h2 className="text-2xl font-bold text-foreground">Was möchtest du tun?</h2>
+              <p className="mt-1 text-muted-foreground">Wähle eine Funktion, um loszulegen</p>
             </div>
 
             {/* Feature Cards */}
@@ -565,12 +583,13 @@ function MessengerDashboardBody({
                     {feature.id === 'chat' && s.pendingHandshakeCount > 0 ? (
                       <span
                         className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
-                        title={`${s.pendingHandshakeCount} handshake request(s)`}
+                        title={`${s.pendingHandshakeCount} Handshake-Anfrage(n) — in Nachrichten → Posteingang`}
                       >
                         {s.pendingHandshakeCount}
                       </span>
                     ) : null}
                   </h3>
+                  <p className="text-sm text-muted-foreground">{feature.subtitle}</p>
                 </div>
               </div>
 
@@ -584,6 +603,7 @@ function MessengerDashboardBody({
                   >
                     <div>
                       <span className="block font-medium text-foreground">{variant.title}</span>
+                      <span className="block text-sm text-muted-foreground">{variant.hint}</span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </button>
@@ -595,6 +615,12 @@ function MessengerDashboardBody({
           </>
         )}
 
+        {/* Quick Hint: nur wenn Backend wirklich nicht erreichbar */}
+        {s.backendReachable === false && (
+          <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
+            <MessengerDashboardOfflineHint />
+          </div>
+        )}
       </main>
     </div>
     </DeploymentProfileBackdrop>

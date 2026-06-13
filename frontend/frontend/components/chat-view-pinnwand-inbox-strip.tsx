@@ -26,15 +26,15 @@ export function ChatViewPinnwandInboxStrip(p: {
   return (
     <section
       className="mb-4 rounded-xl border-2 border-orange-500/50 bg-gradient-to-br from-orange-500/15 to-red-500/10 px-3 py-3 shadow-sm"
-      aria-label="Official bulletin board"
+      aria-label="Offizielle Pinnwand"
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2 text-sm font-bold text-foreground">
           <Megaphone className="h-4 w-4 shrink-0 text-orange-600 dark:text-orange-300" aria-hidden />
-          Official bulletin board
+          Offizielle Pinnwand
           {unread > 0 ? (
             <span className="rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-sm">
-              {unread > 99 ? '99+' : unread} new
+              {unread > 99 ? '99+' : unread} neu
             </span>
           ) : null}
         </div>
@@ -44,15 +44,18 @@ export function ChatViewPinnwandInboxStrip(p: {
             onClick={p.onOpenFullPinnwand}
             className="shrink-0 rounded-md border border-orange-500/40 bg-background/80 px-2 py-1 text-[11px] font-semibold text-orange-800 hover:bg-orange-500/10 dark:text-orange-100"
           >
-            Show all
+            Alle anzeigen
           </button>
         ) : null}
       </div>
+      <p className="mb-2 text-[11px] text-muted-foreground">
+        Meldungen der Führung — nur lesen.
+      </p>
       <ul className="space-y-2">
         {recent.map((m) => {
           const from = (m.from ?? '').trim()
           const label = pinnwandSenderDisplayLabel(p.role, p.apiStatus ?? null, from, p.contactDirectory)
-          const preview = (m.content ?? '').trim().slice(0, 160) || '(attachment)'
+          const preview = (m.content ?? '').trim().slice(0, 160) || '(Anhang)'
           const time = formatPinnwandMessageTime(m.timestamp)
           return (
             <li

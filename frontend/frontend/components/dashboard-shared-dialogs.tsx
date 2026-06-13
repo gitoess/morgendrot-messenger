@@ -10,6 +10,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
 
 export function DashboardSharedDialogs(p: {
@@ -19,6 +22,15 @@ export function DashboardSharedDialogs(p: {
   onHelpOpenChange: (open: boolean) => void
   helpLoading: boolean
   helpText: string
+  sessionSignerSync?: {
+    open: boolean
+    busy: boolean
+    error: string
+    password: string
+    onPasswordChange: (v: string) => void
+    onClose: () => void
+    onSync: () => void | Promise<void>
+  }
   unlock: {
     unlockMode: DashboardUnlockMode
     onUnlockModeChange: (m: DashboardUnlockMode) => void
@@ -89,6 +101,50 @@ export function DashboardSharedDialogs(p: {
         standaloneHelperUnlock={u.standaloneHelperUnlock}
         onUnlock={() => void u.handleUnlock()}
       />
+
+      {p.sessionSignerSync ? (
+        <Dialog open={p.sessionSignerSync.open} onOpenChange={(open) => !open && p.sessionSignerSync?.onClose()}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Session-Signer laden</DialogTitle>
+              <DialogDescription>
+                Der Tresor ist bereits entsperrt. Mit dem Vault-Passwort wird der Session-Signer für Mainnet-Direkt-Send
+                in diesen Browser geladen.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="session-signer-vault-password">Vault-Passwort</Label>
+                <Input
+                  id="session-signer-vault-password"
+                  type="password"
+                  value={p.sessionSignerSync.password}
+                  onChange={(e) => p.sessionSignerSync?.onPasswordChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !p.sessionSignerSync?.busy) void p.sessionSignerSync?.onSync()
+                  }}
+                  autoComplete="current-password"
+                />
+              </div>
+              {p.sessionSignerSync.error ? (
+                <p className="whitespace-pre-wrap text-sm text-destructive">{p.sessionSignerSync.error}</p>
+              ) : null}
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button type="button" variant="outline" disabled={p.sessionSignerSync.busy} onClick={p.sessionSignerSync.onClose}>
+                  Abbrechen
+                </Button>
+                <Button
+                  type="button"
+                  disabled={p.sessionSignerSync.busy || !p.sessionSignerSync.password.trim()}
+                  onClick={() => void p.sessionSignerSync?.onSync()}
+                >
+                  {p.sessionSignerSync.busy ? 'Lade …' : 'Signer laden'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </>
   )
 }

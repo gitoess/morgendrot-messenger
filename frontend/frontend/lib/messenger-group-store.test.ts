@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest'
 import {
   createMessengerGroupId,
   parseGroupMemberInput,
+  formatGroupMembersDisplay,
   readMessengerGroups,
   upsertMessengerGroup,
   writeActiveGroupId,
@@ -12,6 +13,23 @@ import {
 describe('messenger-group-store', () => {
   beforeEach(() => {
     localStorage.clear()
+  })
+
+  it('parseGroupMemberInput resolves phonebook labels', () => {
+    const a = '0x' + 'a'.repeat(64)
+    const directory = {
+      [a]: { label: 'Anna Einsatz', address: a },
+    } as Record<string, { label: string; address: string }>
+    expect(parseGroupMemberInput('Anna Einsatz', directory)).toEqual([a.toLowerCase()])
+    expect(formatGroupMembersDisplay(directory, [a])).toBe('Anna Einsatz')
+  })
+
+  it('parseGroupMemberInput supports names with spaces per line', () => {
+    const a = '0x' + 'c'.repeat(64)
+    const directory = {
+      [a]: { label: 'Team Alpha', address: a },
+    } as Record<string, { label: string; address: string }>
+    expect(parseGroupMemberInput('Team Alpha\n', directory)).toEqual([a.toLowerCase()])
   })
 
   it('parseGroupMemberInput deduplicates', () => {

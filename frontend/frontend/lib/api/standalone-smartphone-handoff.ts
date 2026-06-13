@@ -1,5 +1,4 @@
 import { API_BASE } from '@/frontend/lib/api/api-base'
-import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 export type StandaloneHandoffPackageSource = 'boss' | 'custom' | 'history'
@@ -65,7 +64,7 @@ export async function fetchStandaloneSmartphoneHandoffParts(
   body: StandaloneSmartphoneHandoffZipBody
 ): Promise<StandaloneSmartphoneHandoffPartsResult> {
   try {
-    const res = await fetchWithApiAuth(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'parts' }),
@@ -100,7 +99,7 @@ export async function downloadStandaloneSmartphoneHandoffZip(
   body: StandaloneSmartphoneHandoffZipBody
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   try {
-    const res = await fetchWithApiAuth(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'zip' }),

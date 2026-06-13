@@ -2,7 +2,9 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, Fahrplan Nachtrag 2026-04-20 (verschlüsselter LoRa-Versand aus).
+**Stand:** 2026-06-02 — Gruppenchat M2c (Team-Broadcast), Mitglieder per Telefonbuch-Name, Meshtastic-Kanalindex in Gruppe, Posteingang **Antworten**, Peering-QR eingeklappt, Session-Signer-Banner.
+
+**Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.
 
 ---
 
@@ -14,6 +16,8 @@
 
 **Unverschlüsselt · funk:** Meshtastic-**Klartext** (LongFast). Für **Ende-zu-Ende** den Transport **online** wählen (oder Verschlüsselung aktivieren — wechselt bei Bedarf automatisch zu online).
 
+**Schloss im Composer:** Gilt für **Sendepfad online** (Morgendrot-E2E). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+
 ---
 
 ## Sendepfad: Online (IOTA/Mailbox) vs. Funk (LoRa/Meshtastic)
@@ -21,7 +25,7 @@
 | Kanal | Online (IOTA) | Funk (Meshtastic) | Ad-hoc | Telegram |
 |-------|---------------|-------------------|--------|----------|
 | **1:1** | ✓ | ✓ (DM an Node oder Klartext) | ✓ (Platzhalter) | ✓ (mehrere Chat-IDs) |
-| **Gruppe** | ✓ | ✓ (Secondary Channel, PSK — siehe unten) | — | — (Boss-Alarm: Roadmap § B4) |
+| **Gruppe** | ✓ (Team-Broadcast, siehe unten) | ✓ (Secondary Channel, PSK) | — | — (Boss-Alarm: Roadmap § B4) |
 | **Pinnwand** | ✓ | — | — | — |
 
 In der App sind nur sinnvolle Kombinationen wählbar (z. B. kein Ad-hoc + Pinnwand).
@@ -38,7 +42,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 **Pinnwand** in Morgendrot = IOTA-Broadcast mit **BROADCAST_AUTHORIZED_SENDERS** — das gibt es auf LoRa nicht 1:1. Funk-Gruppenchat = **Secondary Channel** in der Meshtastic-App anlegen und PSK mit dem Team teilen (QR).
 
-**Ist (App):** Funk-Senden nutzt den **Primary-Kanal** des verbundenen Heltec (Klartext). Volle Secondary-Channel-Anbindung (Kanal-Index pro Messenger-Gruppe) → **Roadmap § H.3o**.
+**Ist (App, § H.3o):** Funk-Senden nutzt standardmäßig den **Primary-Kanal** des verbundenen Heltec (Klartext). Im **Gruppen-Panel** kann pro Gruppe **Kanalindex 0–7**, **Kanalname** und **PSK-Ref** gespeichert werden; im Composer (Expert) optional derselbe Index. PSK/Frequenz bleiben in der **Meshtastic-App** — Morgendrot sendet auf dem vorkonfigurierten Index. **Offen:** Feldtest mit random PSK (Roadmap § H.3o.6 Schritt 4).
 
 #### LoRa „An alle“ — nicht Pinnwand
 
@@ -54,8 +58,6 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 **Gruppe + Funk** = Meshtastic **Secondary Channel** (PSK, geschlossenes Team) — wieder **nicht** „An alle“.
 
 **Kritische Grenzen „An alle“:** Kein Sender-Whitelist, kein IOTA-Archiv, Inhalt für jeden mit Default-Key mitlesbar — nur für kurze Lage/SOS im offenen Mesh, nicht für vertrauliche Einsatzinfos.
-
-**Ist (UI):** Composer zeigt bei Funk ohne Node-ID **„An alle“**; Pinnwand-Tab bleibt **online-only**. Secondary-Channel-Anbindung für Gruppe → **§ H.3o**.
 
 **Strikt getrennt:** **IOTA/Mailbox** läuft nur über das **Backend** und die **Chain** — hier ist **Verschlüsselung** möglich. **LoRa/Meshtastic** sendet **Klartext** (Meshtastic-Text / **Pfad 4**) — **ohne** IOTA-Transaktion für denselben Funk-Klick.
 
@@ -106,12 +108,12 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 ## Einstellungen: System & Identität
 
 - **IOTA-RPC (Node):** kleiner Status in der Kopfzeile von „System & Identität“ (Erreichbar / nicht erreichbar) — Check beim Öffnen und über **Aktualisieren**.
-- **Backend & Offline:** Verbindung zur **Basis** siehst du auf der **Startseite** (grüne Karte „Verbindung zur Basis“) — nicht als eigene Liste in den Einstellungen.
+- **Backend & Offline:** Verbindung zur **Basis** siehst du auf der **Startseite** (Karte „Verbindung zur Basis“) — nicht als eigene Liste in den Einstellungen.
 - **Meine Adresse:** vollständige `0x`-Wallet oben in „System & Identität“ (kopierbar) — nicht noch einmal maskiert im Puls-Panel.
 - **Package-ID / RPC_URL:** je ein Bearbeitungsfeld oben; in **Erweiterte Konfiguration (.env)** nicht doppelt.
 - **`.env` vs. Move-Deploy:** Die meisten Keys betreffen nur die laufende Node (Runtime sofort, sonst Neustart). **Neues Move-Deploy** nur bei geändertem Smart-Contract — dann neue **PACKAGE_ID** und ggf. **MAILBOX_ID** nach `create_globals`.
 - **Erweiterte Konfiguration (.env):** Im **Messenger** nur Chat-/Mailbox-/Einsatz-relevante Keys (kein Shop/Tickets, Lock, Monitor, Stripe). Im **Morgendrot Projekt** alle Keys.
-- **PARTNER_ADDRESS** in `.env`: Legacy für Lite-UI **`/connect`** — im Messenger **Telefonbuch + Handshake**, nicht mehr als fester Partner-Button.
+- **PARTNER_ADDRESS** in `.env`: Legacy für Lite-UI **`/connect`** — im Messenger **Telefonbuch + Handshake**, nicht mehr als fester Partner-Button in der Chat-UI.
 - **Streams-Anchor:** nur **Puls/Monitor** (Gerät lebt), nicht der Chat-Posteingang (Mailbox).
 
 ### Mailbox · Direkt-RPC · Streams-Puls
@@ -120,21 +122,25 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 **Direkt-IOTA ohne dauernd erreichbare Basis:** Package-ID, Mailbox-ID und Absender-Adresse manuell eintragen und im Browser **`localStorage`** speichern (**Ketten-IDs speichern**). Optional **Optimistische Flags**, wenn `/api/status` zuletzt nicht verfügbar war. Siehe Architektur **§ H.15**.
 
+**Session-Signer (Mainnet-Direkt-Send):** Für Direkt-RPC braucht der Browser einen **Session-Signer** (Mnemonic nur im RAM). Normalerweise wird er beim **Tresor entsperren** geladen. Ist der Tresor auf dem Server schon offen, fehlt aber der Signer im Browser, erscheint ein Banner **„Signer laden“** — Vault-Passwort eingeben (Dialog ist schließbar). Details: Puls-Panel unter **Mailbox · Direkt-RPC · Streams-Puls** (Expert).
+
 **Checkliste Direkt-Pfad** (Einstellungen → System & Identität → „Mailbox · Direkt-RPC · Streams-Puls“):
 
 1. **Fullnode-URL** eintragen und speichern  
 2. **„Direkt-Mailbox-Drain“** einschalten  
-3. **Session-Signer (Mnemonic)** anwenden (nur RAM)  
+3. **Session-Signer (Mnemonic)** anwenden (nur RAM) — oder **Signer laden** nach Entsperren  
 4. **Package, Mailbox, Absender** speichern (von Basis übernehmen oder manuell)  
 5. Ggf. Basis einmal verbinden für `/api/status`-Flags — oder **Optimistische Flags**
 
-**Partner-Adresse austauschen (QR):** Tauscht Partner-**Wallet** (`0x`) und optional **ECDH-Pub** für **verschlüsselten Online-Chat** — nicht für LoRa/Mesh. Anschließend **Handshake** im Posteingang oder Telefonbuch. Siehe auch **§ H.16** unten.
+**Partner-Adresse austauschen (QR):** Tauscht Partner-**Wallet** (`0x`) und optional **ECDH-Pub** für **verschlüsselten Online-Chat** — nicht für LoRa/Mesh. Anschließend **Handshake** im Posteingang oder Telefonbuch. Siehe **Peering-QR** unten.
 
 ---
 
 ## Peering-QR (§ H.16)
 
 **Mein Peering-QR** / **Peering-QR scannen** / **QR-Text einfügen:** Partner-**Wallet-Adresse** (`0x…`) und optional **ECDH-Pub** (Verschlüsselung) **lokal** austauschen — **ohne** laufende Morgendrot-Basis und **ohne** 64 Hex-Zeichen abtippen. Optional im QR: **Fullnode-URL** und **Package-ID** (Mini-Konfiguration).
+
+**Wo in der UI:** Unter **Verschlüsselt** → aufklappbar **„Peering-QR (Adresse tauschen)“**; zusätzlich in der **Handshake-Leiste** am Composer, wenn verschlüsseltes Senden noch blockiert ist. Im Puls-Panel (Expert) ebenfalls verfügbar.
 
 **Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
 
@@ -151,8 +157,8 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 | Situation | Stattdessen |
 |-----------|-------------|
-| **Normaler Einsatz-Helfer** mit **Handoff-ZIP** — Boss/Partner schon in `.env` | **Mit Einsatz-Partner verbinden** oder Telefonbuch |
-| Nur **Pinnwand**, **Gruppe** oder **Funk/LoRa** (Klartext) | Kein Peering-QR nötig |
+| **Normaler Einsatz-Helfer** mit **Handoff-ZIP** — Boss/Partner schon in `.env` | Posteingang **Annehmen** oder Telefonbuch |
+| Nur **Pinnwand**, **Gruppe** (Klartext-Team-Broadcast) oder **Funk/LoRa** | Kein Peering-QR nötig |
 | Erwartung: *„QR scannen → danach ohne Netz IOTA senden“* | **Geht nicht** — Mesh/Funk ist ein anderer Kanal |
 | Boss hat Helfer schon per **Export / Telefonbuch-QR** eingerichtet | Handoff reicht |
 
@@ -164,18 +170,25 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 3. Verschlüsselt senden   →  on-chain (Internet nötig)
 ```
 
-Danach optional **Handshake** im Posteingang oder Telefonbuch. Siehe Fahrplan **§ H.16**, **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Variante B).
+Weiter: Fahrplan **§ H.16**, **`docs/WANDERER-STANDALONE-BUNDLE.md`** (Variante B).
 
 ---
 
-## Handshake annehmen vs. Einsatz-Partner
+## Handshake und Connect (Ist-UI)
 
-| Aktion | Bedeutung |
-|--------|-----------|
-| **Handshake annehmen** | Braucht die **`0x`-Adresse des Partners** im Feld oben (64 Hex). Wartet auf einen Handshake dieser Adresse (Einsatz-Mailbox oder Event auf der Chain) und antwortet automatisch mit deinem Schlüssel. **Ignoriert** `.env`-Partner — nur die eingetragene Adresse. |
-| **Mit Einsatz-Partner verbinden** | Nutzt **`PARTNER_ADDRESS`**, **`PARTNER_ADDRESSES`** oder Hierarchie aus der Server-**`.env`** — unabhängig vom Feld oben. Typisch: erster Kontakt zum Einsatzleiter/Boss, wenn du seine `0x` noch nicht kennst. |
+| Ort | Aktion | Bedeutung |
+|-----|--------|-----------|
+| **Verschlüsselt** (Setup/Transport) | **Handshake starten** | Sendet Handshake an die eingetragene **Partner-`0x`** (64 Hex). |
+| **Posteingang** (grüner Streifen) | **Annehmen** / **Als Partner** | Eingehende Handshake-Anfrage von der Chain/Mailbox annehmen. |
+| **Composer** (Handshake-Leiste) | **Handshake senden** / **annehmen** | Erscheint, wenn verschlüsseltes Senden blockiert ist (Partner noch nicht verbunden). |
+| **Gruppe → Verschlüsselt** | **Senden** / **Annehmen** pro Mitglied | Je Gruppenmitglied separater Handshake. |
+| **Terminal / Lite-UI** | **`/connect 0x…`** | Connect mit expliziter Adresse; **`/connect`** ohne Adresse nutzt **`PARTNER_ADDRESS`** aus der Server-**`.env`**. |
 
-Beide Seiten warten auf einen Handshake und antworten ggf. automatisch (Hintergrund-Connect). Ausführlicher Ablauf: Abschnitt **Schnell verbinden und /connect** unten.
+**Hybrid Connect:** Läuft über Morgendrot-API **oder** Direkt-RPC (Peer-Pub aus Chain lokal). Nach Erfolg Status **„verbunden“** abwarten — erst dann verschlüsselt über Online/Mailbox (Funk bleibt Klartext).
+
+**Adresse prüfen:** Vor Handshake die **Partner-`0x`-Adresse** verifizieren (Tippfehler, Phishing, falsches Clipboard). Falscher Handshake = ECDH mit dem Falschen.
+
+Weiter: **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, Abschnitt **Handshake Vertrauen und Risiken** unten.
 
 ---
 
@@ -185,19 +198,19 @@ Beide Seiten warten auf einen Handshake und antworten ggf. automatisch (Hintergr
 
 **Senden (Persistent, online):** Kontakt-Mailbox im Telefonbuch → aktiv gesetzte Team- oder Private-Mailbox → Server-`MAILBOX_ID`.
 
-**Posteingang:** immer Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox (nicht alle Team-Listen auf einmal).
+**Posteingang:** Server-Shared (`.env`) + optional die **aktive** Team- oder Private-Mailbox + Team-Broadcast-Postfächer verknüpfter Gruppen. Gruppen-Filter zeigt Nachrichten **aller Mitglieder** (Union).
 
 **Speicher auf der Chain (online):** **Flüchtig (Event)** = kein Mailbox-Eintrag. **Persistent (Mailbox)** = Ziel unter **Einstellungen → Meine Mailboxen** (Server immer mitgelesen; Team oder Privat **aktiv** setzen), dann Posteingang **Aktualisieren**. Klartext vs. verschlüsselt steuert das Schloss oben.
 
 | Kanal / Ziel | Persistenz | Wer sieht was? |
 |--------------|------------|----------------|
 | **1:1 Privat** | Event oder Mailbox | Nur Gesprächspartner (`0x`) |
-| **Gruppenchat** | Team-Broadcast (Mailbox) | **1× TX** in Team-Mailbox; Posteingang aller Mitglieder mit gleicher Team-Object-ID |
+| **Gruppenchat** | Team-Broadcast (Mailbox) | **1× TX** in Team-Mailbox; alle mit gleicher Team-Object-ID |
 | **Pinnwand** | meist Klartext | Alle mit gleicher `PACKAGE_ID`; Schreiben nur autorisierte `0x` |
 | **Server · Einsatz** | Mailbox | Alle auf diesem Knoten (`MAILBOX_ID`) |
 | **Team / Privat** | Mailbox | Object-ID kennen; **aktiv** unter **Einstellungen → Meine Mailboxen** |
 
-Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`.
+Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `docs/MAILBOX-BEGRIFFE-UND-NUTZUNG.md`, `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`.
 
 **Auf Chain löschen (Rebate):** Posteingang → Zeile **⋯** → **Auf Chain löschen (Rebate)** — nur bei Mailbox-Zeilen (Badge **Mailbox** oder **Team-Broadcast**). Entfernt den Dynamic-Field-Eintrag on-chain und gibt Storage-Gas zurück.
 
@@ -208,15 +221,33 @@ Doku: `docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`, `docs/TEAM-MAILBOXES.md`, `d
 
 Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräumen / `purge_private_mailbox`. Team-Mailbox als Ganzes wird on-chain **nicht** zerstört — nur einzelne Broadcasts purgen.
 
-**Voraussetzung:** Neues Move-Package mit `purge_team_plaintext_broadcast` (siehe `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`).
+**Voraussetzung:** Move-Package mit `purge_team_plaintext_broadcast` (siehe `docs/DEPLOY-MOVE-M2c-TEAM-BROADCAST.md`).
 
 **Ziel-Postfach (Kontakt):** Im Composer kann pro Kontakt ein anderes Postfach gewählt werden; die **Empfänger-Wallet** (`0x`) bleibt unverändert — es ändert sich nur die Mailbox-Object-ID für den Submit.
 
 ---
 
+## Posteingang
+
+**Navigation:** Unten **Nachrichten** → Posteingang-Tab. Optional **Telefonbuch** in der unteren Leiste.
+
+| Funktion | Beschreibung |
+|----------|--------------|
+| **Kategorien / Filter** | z. B. Direkt, Klartext (Pinnwand), Gruppe — je nach Kanal und Rolle. |
+| **Antworten** | Menü an der Zeile — übernimmt **Kanal** und **Sendepfad** in den Composer (1:1, Gruppe, Funk, Pinnwand, Telegram). |
+| **Anheften** | Pinnwand-Posts lokal oben halten (`sessionStorage`). |
+| **Handshake-Anfragen** | Grüner Streifen oben: **Annehmen**, **Als Partner**, **Löschen**. |
+| **Badges** | **Mailbox**, **Team-Broadcast** — unterscheidet Speicherart on-chain. |
+| **Pakete** (Dropdown) | ECDH-**.morg-pkg** Import/Export und **Paket-Archiv** — Inhalt landet **nicht** im normalen Posteingang, sondern im Archiv-Sheet. |
+| **Export** | Nachrichten-Forensik (JSON/TXT/ZIP) über Posteingang-Menü. |
+
+**Offline-Warteschlange:** Bei fehlender Basis werden Sends lokal gequeued; Status-Streifen im Chat.
+
+---
+
 ## Kontakte (Import und Export, JSON)
 
-**Telefonbuch** (Navigation unten) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt).
+**Telefonbuch** (Navigation unten) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt). Namen aus dem Telefonbuch erscheinen auch im **Gruppen-Panel** (Anzeige und Eingabe der Mitglieder).
 
 **Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
 
@@ -248,8 +279,6 @@ Optional auf Root-Ebene: `deploymentChannelTag`, `offlineBriefing`, `validUntil`
 - **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): nur über **verschl. Kontakt-Backup** oder manuell im Telefonbuch — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
 - **Handoff-ZIP** für Helfer: **Einsatzleitung → Helfer einrichten** — Profil, Rechte, Partner, Team (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
 - **`npm run bundle:messenger`:** Entwickler-Standalone-Ordner — **kein** Ersatz für Handoff-ZIP.
-
-**Nachrichten-Forensik** (Verlauf JSON/TXT, verschl. Bericht, Protokoll-ZIP): **Posteingang** → Menü Export — nicht in der Einsatzleitung dupliziert.
 
 ---
 
@@ -320,9 +349,48 @@ Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 ## Gruppenchat
 
-Gemeinsamer **Posteingang** für alle Gruppenmitglieder (`0x…`). **Senden:** pairwise (N× IOTA bei „Mailbox an alle“) — **kein** gemeinsamer Chain-Raum. **Echtzeit:** Funk Secondary. **Zielbild:** **`docs/GRUPPENCHAT-ZIELBILD.md`**, Move-Backlog **`docs/TEAM-MAILBOX-BROADCAST-1TX-KONZEPT.md`**.
+**Kurz:** Lokale **Gruppenliste** + gefilterter **Posteingang** (Union aller Mitglieder) + **Hybrid** aus IOTA-Archiv und Funk-Echtzeit. Kein Telegram-Gruppenraum — bewusst anderes Modell (`docs/GRUPPENCHAT-ZIELBILD.md`).
 
-Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüsselt**.
+### Gruppen-Panel einrichten
+
+Kanal **Gruppe** im Chat-Header wählen → violettes **Gruppen-Panel**:
+
+1. **Gruppe wählen** oder **Neue Gruppe** (leere Mitgliederliste).
+2. **Gruppenname** (z. B. „Einsatz Alpha“).
+3. **Mitglieder** — je Zeile oder Komma:
+   - **Name aus Telefonbuch** (wird intern als `0x` gespeichert), oder
+   - **`0x` + 64 Hex** direkt.
+   - Button **Mitglieder aus Telefonbuch** — mehrere Kontakte übernehmen.
+4. **Team-Postfach (Pflicht für Chain):** Team-Mailbox **wählen** oder (Boss) **neu erstellen**. Die **Object-ID** an alle Mitglieder weitergeben (Handoff, Kopieren, QR). Ohne Team-Postfach: kein Team-Broadcast on-chain.
+5. Optional **Funk-Gruppenkanal (Meshtastic Secondary):** Kanalindex **0–7**, Kanalname, PSK-Ref — muss zur Meshtastic-App passen.
+6. **Gruppe speichern**.
+
+**Handoff:** Beim Boss-Export kann **`MESSENGER_GROUP_HANDOFF`** (Gruppe + Team-Postfach) in der ZIP liegen — siehe `docs/EXPORT-ASSISTENT-REFERENZ.md`.
+
+### Posteingang
+
+Alle Mitglieder sehen Nachrichten der Gruppe im gefilterten Posteingang (1:1-Dialoge der Mitglieder **plus** Team-Broadcast-Zeilen mit Badge **Team-Broadcast**).
+
+### Senden (Composer)
+
+| Modus | Sendepfad | Persistenz | Verhalten |
+|-------|-----------|------------|-----------|
+| **Unverschlüsselt** | **online** | **Mailbox** | **1× Team-Broadcast** in Team-Postfach (günstig; früheres N× pairwise entfernt) |
+| **Unverschlüsselt** | **funk** | — | Klartext an Gruppe (Secondary-Kanal / Mitglieder im Mesh) |
+| **Verschlüsselt** | **online** | Mailbox | **Noch kein** Team-Broadcast — je Mitglied Handshake nötig; Hinweis in UI |
+| **Verschlüsselt** | **funk** | — | **Deaktiviert** — Verschlüsselung nur über online |
+
+**Verschlüsselung umschalten:** Im Gruppen-Panel **Verschlüsselt** / **Unverschlüsselt**. Wechsel zu Unverschlüsselt bei aktivem Schloss: Warnhinweis (Klartext on-chain).
+
+### Handshake in der Gruppe
+
+Unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). Peering-QR wie bei 1:1 (aufklappbar).
+
+### Was Gruppenchat **nicht** ist
+
+- **Kein** gemeinsamer Chain-Thread ohne Team-Postfach (ohne M2c war es N× pairwise — **ersetzt** durch Team-Broadcast).
+- **Kein** Ersatz für **Pinnwand** (Brett mit autorisierten Sendern).
+- **Verschlüsselter Team-Broadcast** on-chain: Backlog § H.22 / Gruppen-E2EE.
 
 ---
 
@@ -330,7 +398,7 @@ Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüss
 
 **Gemeinsam** braucht ihr dieselbe Move-Instanz (`PACKAGE_ID`). Online-Klartext: Empfänger = **Broadcast-Adresse** aus `/api/status` (wenn `ENABLE_BROADCAST_PINNWAND` + `BROADCAST_PINNWAND_ADDRESS` gesetzt). **Sendepfad:** Pinnwand läuft über **Online (IOTA)** — Meshtastic-Primary-Broadcast ist kein Ersatz (keine Sender-Autorisierung, anderer Kanal). Für Funk-Gruppenchat: Kanal **Gruppe** + Secondary Channel in der Meshtastic-App (Handbuch § Sendepfad).
 
-**Posteingang:** Filter **„Klartext“** für Pinnwand-Ketten; **Anheften** über Menü ⋯ an der Nachricht (lokal, `sessionStorage`). Spezifikation: `docs/BROADCAST-PINNWAND.md`, Handbuch `BROADCAST-PINNWAND.md`.
+**Posteingang:** Filter **„Klartext“** für Pinnwand-Ketten; **Anheften** über Menü ⋯ an der Nachricht (lokal, `sessionStorage`). Spezifikation: `docs/BROADCAST-PINNWAND.md`.
 
 ---
 
@@ -350,11 +418,11 @@ Gruppe im Gruppen-Panel wählen; Handshake ggf. pro Mitglied unter **Verschlüss
 
 **Nur Klartext + „funk“:** **Verschlüsselung** läuft über den **Online/IOTA-Pfad** — nicht über den Funk-Composer (bei aktivem Schloss wechselt die UI entsprechend).
 
-**Expert-Option Kanalindex (0-7):** Im Composer kann optional ein **Meshtastic-Kanalindex** gesetzt werden. **Leer** = Geräte-Default (typisch Primary). Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen; daher nur nutzen, wenn der Kanal in der Meshtastic-App/QR-Handoff eindeutig abgestimmt ist.
+**Expert-Option Kanalindex (0–7):** Im Composer kann optional ein **Meshtastic-Kanalindex** gesetzt werden. **Leer** = Geräte-Default (typisch Primary). In **Gruppe** kann der Index aus dem Gruppen-Panel übernommen werden. Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen.
 
-**Policy (UI):** Verschlüsselter LoRa-Funk ist in Morgendrot **deaktiviert**. Für Ende-zu-Ende: Sendepfad **online** mit verbundenem Partner (Handshake/`/connect`). Das **Schloss** gilt nur für **online** (Morgendrot-E2E). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+**Policy (UI):** Verschlüsselter LoRa-Funk ist in Morgendrot **deaktiviert**. Für Ende-zu-Ende: Sendepfad **online** mit verbundenem Partner (Handshake/`/connect`).
 
-**Heltec koppeln:** Unter **Funk & Geräte** (Setup) **Web Bluetooth** — der Browser zeigt die Geräteliste. Kein Web Bluetooth: Chrome/Edge; bei Brave ggf. `brave://flags`.
+**Heltec koppeln:** Unter **Funk & Geräte** (Setup) **Bluetooth verbinden** / **USB verbinden** — der Browser zeigt die Geräteliste. Kein Web Bluetooth: Chrome/Edge; bei Brave ggf. `brave://flags`.
 
 ---
 
@@ -385,22 +453,27 @@ Bei mehreren Package-IDs in `.env` und **package-id-history** liest der Posteing
 
 ---
 
-## Schnell verbinden und /connect
+## .morg-pkg (Paket-Archiv)
 
-**Kein** separater **„Handshake annehmen“**-Knopf: **Schnell verbinden** führt intern **`/connect`** aus: Die Kette/Mailbox wird abgefragt. Kommt der Handshake deines Partners zuerst, antwortet das Backend automatisch mit deinem Handshake; sonst wird einmal dein Handshake gesendet und auf die Gegenpartei gewartet.
+**Posteingang → Pakete:** ECDH-verschlüsselte **`.morg-pkg`**-Dateien für Sneakernet / Offline-Übergabe.
 
-**Typischer Ablauf:** A trägt B ein und startet Handshake; B führt **Schnell verbinden** aus (nutzt **`PARTNER_ADDRESS`** / Kommandant aus **`.env`**) oder im Terminal **`/connect 0x…`** mit der Adresse von A. Ist links eine gültige **`0x`+64-Hex** eingetragen, verwendet Schnell verbinden genau diese Adresse (hilfreich z. B. beim Test mit dir selbst).
+| Aktion | Bedeutung |
+|--------|-----------|
+| **Import: .morg-pkg → Archiv** | Entschlüsselt (Tresor + Handshake zum Absender) → **Paket-Archiv**, nicht Posteingang |
+| **Export: Dateien → .morg-pkg** | Mehrere Dateien zu einem Paket bündeln und herunterladen |
+| **Paket-Archiv** | Sheet mit importierten Bundles; Einzeldateien öffnen/weiterleiten |
+| **Aus Nachricht exportieren** | Kontextmenü an Mailbox-Zeile (wenn implementiert) |
 
-**Wichtig:** Nach dem Klick dauert die echte Verbindung oft noch Sekunden — erst wenn der Status **„verbunden“** zeigt, klappt **verschlüsselt über Online/Mailbox** (Funk = Klartext, kein App-Mesh-v2-Versand).
+Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
 ## Heltec, Web Bluetooth und Mesh-Posteingang
 
-**Verbindung:** **Heltec (Web Bluetooth) verbinden** nutzt die Meshtastic-Bibliothek (**`TransportWebBluetooth`**) — der Browser zeigt die System-**Bluetooth-Geräteliste** (kein eigener „Gerät suchen“-Dialog in Morgendrot). **USB am PC** lädt ggf. nur Strom/Firmware-Serial; der Messenger-Pfad hier geht per **BLE** vom Rechner zum Heltec (PC-Bluetooth an, Heltec sendet im Mesh-Kanal). **Brave** hat Web Bluetooth oft standardmäßig aus — **`brave://flags`** aktivieren oder **Chrome/Edge** nutzen; **sicheren Kontext** beachten (HTTPS oder `localhost` — siehe auch die gelbe Warnung in der UI bei unsicherem Kontext).
+**Verbindung:** **Bluetooth verbinden** nutzt die Meshtastic-Bibliothek (**`TransportWebBluetooth`**) — der Browser zeigt die System-**Bluetooth-Geräteliste**. **USB am PC** optional über **USB verbinden** (Serial). **Brave** hat Web Bluetooth oft standardmäßig aus — **`brave://flags`** aktivieren oder **Chrome/Edge** nutzen; **sicheren Kontext** beachten (HTTPS oder `localhost`).
 
 **Eingehende** Texte und **`PRIVATE_APP`** Binary v2 erscheinen im **Posteingang** (Zuordnung über Adress-Fingerprint). **Export/Import:** Mesh-Metadaten inkl. **`bleUuid`**-Reserve.
 
 ---
 
-*Stand: UI-Kürzung 2026-05; Kanäle/Mailboxen/Gruppe/Pinnwand ins Handbuch.*
+*Stand: 2026-06-02 — Gruppenchat M2c, Telefonbuch-Namen in Gruppen, H.3o Kanalindex, Posteingang Antworten/Pakete, Session-Signer, Peering-QR UI.*

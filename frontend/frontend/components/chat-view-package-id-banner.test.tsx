@@ -16,7 +16,7 @@ describe('ChatViewPackageIdBanner (§ H.1a)', () => {
     render(
       <ChatViewPackageIdBanner visible serverPackageId={PKG} busy={false} onSyncToServer={vi.fn()} />
     )
-    expect(screen.getByRole('status')).toHaveTextContent(/New protocol version/)
+    expect(screen.getByRole('status')).toHaveTextContent(/Neue Protokoll-Version/)
     expect(screen.getByText(/0xffffffff…ffffff/)).toBeInTheDocument()
   })
 
@@ -25,7 +25,7 @@ describe('ChatViewPackageIdBanner (§ H.1a)', () => {
     render(
       <ChatViewPackageIdBanner visible serverPackageId={PKG} busy={false} onSyncToServer={onSyncToServer} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Update now/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Jetzt updaten/i }))
     expect(onSyncToServer).toHaveBeenCalledTimes(1)
   })
 

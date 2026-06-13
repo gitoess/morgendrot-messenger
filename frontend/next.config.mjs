@@ -105,20 +105,13 @@ const nextConfig = {
   },
   /** Nur **Client**-Bundle: echtes Node-`util` bleibt auf dem Server. Dafür Dev mit `next dev --webpack`. */
   webpack: (config, { isServer }) => {
-    const prev = config.resolve.alias
-    const alias =
-      typeof prev === 'object' && prev && !Array.isArray(prev) ? { ...prev } : {}
-    try {
-      alias['@iota/iota-sdk'] = path.dirname(
-        require.resolve('@iota/iota-sdk/package.json', { paths: [__dirname] })
-      )
-    } catch {
-      /* frontend/node_modules fehlt — npm install in frontend/ */
-    }
     if (!isServer) {
-      alias.util = nodeUtilClientShim
+      const prev = config.resolve.alias
+      config.resolve.alias = {
+        ...(typeof prev === 'object' && prev && !Array.isArray(prev) ? prev : {}),
+        util: nodeUtilClientShim,
+      }
     }
-    config.resolve.alias = alias
     return config
   },
   ...(!isCapacitorExport
@@ -131,26 +124,12 @@ const nextConfig = {
             },
           ]
         },
-        /** SW-Updates + Baseline-Security-Headers (Messenger/PWA). */
+        /** SW-Updates: Browser sollen neue sw.js schnell ziehen. */
         async headers() {
-          const securityHeaders = [
-            { key: 'X-Content-Type-Options', value: 'nosniff' },
-            { key: 'X-Frame-Options', value: 'DENY' },
-            { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-            {
-              key: 'Content-Security-Policy',
-              value:
-                "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' http: https: ws: wss: capacitor:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'",
-            },
-          ]
           return [
             {
               source: '/sw.js',
               headers: [{ key: 'Cache-Control', value: 'public, max-age=0, must-revalidate' }],
-            },
-            {
-              source: '/:path*',
-              headers: securityHeaders,
             },
           ]
         },

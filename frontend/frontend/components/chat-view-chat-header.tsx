@@ -12,10 +12,17 @@ import type { ReactNode } from 'react'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
+import Link from 'next/link'
 import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import { showPinnwandChannelTab } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import { pinnwandChannelTabLabel } from '@/frontend/lib/pinnwand-display'
 import { channelDisabledReason } from '@/frontend/lib/messenger-channel-send-path'
+import {
+  MessengerGuideHint,
+  MessengerHandbookChatLink,
+  MESSENGER_HB_ANCHOR_GRUPPENCHAT,
+  MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST,
+} from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
@@ -100,16 +107,16 @@ export function TresorSessionBadge({
   )
   const passiveTitle =
     ui === 'locked'
-      ? 'Vault locked — open unlock dialog.'
+      ? 'Tresor gesperrt — Entsperr-Dialog öffnen.'
       : ui === 'no-keys'
-        ? 'Keys missing in session — unlock again or Vault → load file.'
-        : 'Keys loaded — signing and mailbox send available.'
+        ? 'Schlüssel fehlen in der Sitzung — erneut entsperren oder Tresor → Datei laden.'
+        : 'Schlüssel geladen — Signieren und Mailbox senden möglich.'
   const activeTitle =
     ui === 'locked'
-      ? 'Open “Unlock vault” dialog.'
+      ? 'Dialog „Tresor entsperren“ öffnen.'
       : ui === 'no-keys'
-        ? 'Unlock vault again (loads keys into session).'
-        : 'Lock API session — remove keys from backend memory.'
+        ? 'Tresor erneut entsperren (lädt Keys in die Sitzung).'
+        : 'API-Sitzung sperren — Schlüssel aus dem Arbeitsspeicher der Basis.'
 
   const icon =
     ui === 'ready' ? (
@@ -119,7 +126,7 @@ export function TresorSessionBadge({
     )
   const label = (
     <span className="truncate font-medium">
-      {ui === 'locked' ? 'Vault: locked' : ui === 'no-keys' ? 'Vault: keys missing' : 'Vault: ready'}
+      {ui === 'locked' ? 'Tresor: gesperrt' : ui === 'no-keys' ? 'Tresor: Keys fehlen' : 'Tresor: bereit'}
     </span>
   )
 
@@ -139,7 +146,7 @@ export function TresorSessionBadge({
       disabled={busy}
       title={activeTitle}
       aria-label={
-        ui === 'locked' || ui === 'no-keys' ? 'Unlock vault' : 'Lock API session'
+        ui === 'locked' || ui === 'no-keys' ? 'Tresor entsperren' : 'API-Sitzung sperren'
       }
       onClick={() => {
         if (ui === 'locked' || ui === 'no-keys') {
@@ -187,18 +194,27 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
 
   const channelTitle =
     channelMode === 'group'
-      ? 'Group chat'
+      ? 'Gruppenchat'
       : channelMode === 'pinnwand'
         ? pinnwandChannelTabLabel(role, apiStatus)
-        : '1:1 Private'
+        : '1:1 Privat'
 
-  const sendPathPanelMinH = 'min-h-[2.75rem]'
+  const handbookSubline =
+    channelMode === 'group' ? (
+      <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_GRUPPENCHAT} className="text-[10px]" />
+    ) : channelMode != null && isPinnwandChannel(channelMode) ? (
+      <Link href="/handbook?file=BROADCAST-PINNWAND.md" className="text-primary underline-offset-2 hover:underline">
+        Handbuch: Pinnwand
+      </Link>
+    ) : null
+
+  const sendPathPanelMinH = 'min-h-[6.5rem]'
 
   return (
     <>
       <section
         className="rounded-xl border border-border/60 bg-card/30 p-3 sm:p-4"
-        aria-label="Chat header"
+        aria-label="Chat-Kopf"
       >
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,22rem)] lg:items-start lg:gap-5">
           {/* Links: Modus + Kanal-Umschalter */}
@@ -222,14 +238,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                 <div
                   className="grid w-full max-w-[15.5rem] grid-cols-3 gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5"
                   role="group"
-                  aria-label="Channel"
+                  aria-label="Kanal"
                 >
                   {channelModes.map((mode) => {
                     const tabLabel =
                       mode === 'private'
                         ? '1:1'
                         : mode === 'group'
-                          ? 'Group'
+                          ? 'Gruppe'
                           : pinnwandChannelTabLabel(role, apiStatus)
                     const tabUnread = mode === 'pinnwand' ? pinnwandTabUnreadCount : 0
                     const disabledReason =
@@ -273,25 +289,54 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   })}
                 </div>
               ) : null}
+              <div className="min-h-[1.125rem] text-[10px] text-muted-foreground">{handbookSubline}</div>
             </div>
           </div>
 
-          {/* Rechts: Status + Sendepfad */}
+          {/* Rechts: Status + Sendepfad (feste Mindesthöhe gegen Springen) */}
           <div className="flex min-w-0 flex-col gap-2">
-            {isPrivate && apiStatus ? (
-              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 border-b border-border/40 pb-2">
-                <TresorSessionBadge
-                  sessionLocked={!!apiStatus.locked}
-                  hasKeys={apiStatus.hasKeys}
-                  actions={vaultBannerActions}
+            {isPrivate ? (
+              <div className="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 border-b border-border/40 pb-2 text-[10px] text-muted-foreground">
+                <MessengerGuideHint
+                  ariaLabel="Messenger Risiken und Vertrauen"
+                  teaser="Risiken"
+                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
                 />
+                <span className="hidden text-border/80 sm:inline" aria-hidden>
+                  ·
+                </span>
+                <MessengerHandbookChatLink
+                  anchor={MESSENGER_HB_ANCHOR_HANDSHAKE_TRUST}
+                  className="text-[10px] font-normal text-muted-foreground hover:text-foreground"
+                />
+                {apiStatus ? (
+                  <>
+                    <span className="hidden text-border/80 sm:inline" aria-hidden>
+                      ·
+                    </span>
+                    <TresorSessionBadge
+                      sessionLocked={!!apiStatus.locked}
+                      hasKeys={apiStatus.hasKeys}
+                      actions={vaultBannerActions}
+                    />
+                  </>
+                ) : null}
               </div>
             ) : null}
             <div className={sendPathPanelMinH}>
               {sendPath?.visible ? (
                 <ChatViewSendPathCompact {...sendPath} className="h-full w-full" />
               ) : (
-                <div className={cn('h-full w-full', sendPathPanelMinH)} aria-hidden />
+                <div
+                  className={cn(
+                    'flex h-full items-center rounded-lg border border-border/40 bg-muted/15 px-3 py-2 text-[10px] leading-snug text-muted-foreground',
+                    sendPathPanelMinH
+                  )}
+                >
+                  {channelMode === 'pinnwand'
+                    ? 'Pinnwand — nur Online (IOTA), Klartext. Senden unten im Bereich „An Pinnwand senden“.'
+                    : '\u00A0'}
+                </div>
               )}
             </div>
           </div>
@@ -303,35 +348,46 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
       {isPrivate && offlineStatus && (offlineStatus.mode !== 'online' || offlineStatus.queuePending > 0) ? (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
           <p>
-            <strong className="font-semibold">Offline status:</strong>{' '}
-            {offlineStatus.mode === 'cache' ? 'Cache mode' : offlineStatus.mode === 'offline' ? 'Offline' : 'Online'} ·
+            <strong className="font-semibold">Offline-Status:</strong>{' '}
+            {offlineStatus.mode === 'cache' ? 'Cache-Modus' : offlineStatus.mode === 'offline' ? 'Offline' : 'Online'} ·
             Queue: {offlineStatus.queuePending}
           </p>
           <p className="mt-0.5 text-amber-900/90 dark:text-amber-100/90">
             {offlineStatus.lastSuccessfulSyncMinutes == null
-              ? 'Last sync unknown.'
-              : `Last sync ${Math.max(0, offlineStatus.lastSuccessfulSyncMinutes)} min ago.`}
+              ? 'Letzte Synchronisation unbekannt.'
+              : `Letzte Synchronisation vor ${Math.max(0, offlineStatus.lastSuccessfulSyncMinutes)} Min.`}
           </p>
         </div>
       ) : null}
 
       {isPrivate && apiStatus?.fromCache === true ? (
         <div className="rounded-lg border border-amber-500/45 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          <strong className="font-semibold">Offline (cache mode):</strong> Last live status{' '}
-          <strong>{Math.max(0, Number(statusCacheAgeMinutes ?? 0))} min</strong> ago (TTL 30 min.). Display may be
-          outdated.
+          <strong className="font-semibold">Offline (Cache-Modus):</strong> Letzter Live-Status vor{' '}
+          <strong>{Math.max(0, Number(statusCacheAgeMinutes ?? 0))} Min.</strong> (TTL 30 Min.). Anzeigen koennen
+          veraltet sein.
         </div>
       ) : null}
 
       {isPrivate && deviceTimeTrustWarn && (
         <div className="rounded-lg border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-sm text-sky-950 dark:text-sky-100">
-          <strong className="font-semibold">Device clock not secured</strong>
+          <strong className="font-semibold">Geräte-Uhr:</strong> Keine abgesicherte Referenzzeit (frischer{' '}
+          <span className="font-mono text-xs">Date</span>-Header der Basis oder GPS-UTC). Zeitstempel in Export,
+          Protokoll und Attestation können <strong>abweichen</strong> — siehe{' '}
+          <span className="font-mono text-[11px]">docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md</span> §6 / Fahrplan §
+          H.6c.
         </div>
       )}
 
       {isPrivate && apiStatus?.locked === true && (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-          <strong className="font-semibold">Vault locked</strong>
+          <strong className="font-semibold">Tresor gesperrt (API-Sitzung).</strong> Normalerweise blockiert die
+          Startseite den Messenger mit dem Dialog <strong>Tresor entsperren</strong>, bis die Sitzung offen ist — ohne
+          entsperrten Tresor sind Signieren und zuverlässiges Senden/Empfangen nicht möglich. Dieser Hinweis gilt vor
+          allem, wenn die Sitzung <strong>während</strong> du im Chat warst gesperrt wurde (anderes Tab, manuelles
+          Sperren, PWA-Hintergrund) oder der Status kurz hinterherhinkt: <strong>Startseite</strong> (Badge „Tresor:
+          gesperrt“ antippen) und erneut entsperren; in der Lite-UI ggf.{' '}
+          <span className="font-mono text-xs">/vault-load</span>. Diese Oberfläche hat <strong>keinen geführten
+          Erststart</strong> — Einrichtung über Konfiguration, Tresor und Partner verbinden.
         </div>
       )}
 

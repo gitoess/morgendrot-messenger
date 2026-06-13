@@ -2,6 +2,9 @@
  * M2a: lokale Gruppen-Definition (Mitgliederliste 0x…) — kein Move-Gruppenobjekt.
  */
 
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import { contactDisplayLabel, lookupContactAddressByLabel } from '@/frontend/lib/contact-display'
+
 export type MessengerGroupDefinition = {
   id: string
   name: string
@@ -147,13 +150,55 @@ export function deleteMessengerGroup(id: string): void {
   if (readActiveGroupId() === id) writeActiveGroupId(null)
 }
 
-/** Komma-/Zeilen-getrennte 0x-Adressen → normalisierte Liste. */
-export function parseGroupMemberInput(text: string): string[] {
-  const parts = text.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean)
+/** Anzeige in Gruppen-Editor: Alias aus Telefonbuch, sonst 0x-Adresse (je Zeile). */
+export function formatGroupMembersDisplay(
+  directory: Record<string, ContactMeshEntryClient>,
+  addresses: string[]
+): string {
+  return addresses.map((a) => contactDisplayLabel(directory, a) || a).join('\n')
+}
+
+function tokenizeGroupMemberInput(text: string): string[] {
+  const tokens: string[] = []
+  for (const line of text.split(/\n/)) {
+    const t = line.trim()
+    if (!t) continue
+    if (/[,;]/.test(t)) {
+      tokens.push(...t.split(/[,;]+/).map((s) => s.trim()).filter(Boolean))
+      continue
+    }
+    const addrMatches = t.match(/0x[a-fA-F0-9]{64}/g)
+    if (addrMatches && addrMatches.length > 1 && /\s/.test(t)) {
+      tokens.push(...addrMatches.map((s) => s.trim()))
+      continue
+    }
+    tokens.push(t)
+  }
+  if (tokens.length === 0 && text.trim()) {
+    tokens.push(...text.split(/[\s,;]+/).map((s) => s.trim()).filter(Boolean))
+  }
+  return tokens
+}
+
+function resolveGroupMemberToken(
+  raw: string,
+  directory?: Record<string, ContactMeshEntryClient>
+): string | null {
+  const direct = normalizeGroupMemberAddress(raw)
+  if (direct) return direct
+  if (!directory) return null
+  return lookupContactAddressByLabel(directory, raw)
+}
+
+/** Zeilen/Komma: 0x-Adressen oder Telefonbuch-Namen → normalisierte Adressliste. */
+export function parseGroupMemberInput(
+  text: string,
+  directory?: Record<string, ContactMeshEntryClient>
+): string[] {
   const out: string[] = []
   const seen = new Set<string>()
-  for (const p of parts) {
-    const n = normalizeGroupMemberAddress(p)
+  for (const p of tokenizeGroupMemberInput(text)) {
+    const n = resolveGroupMemberToken(p, directory)
     if (!n || seen.has(n)) continue
     seen.add(n)
     out.push(n)

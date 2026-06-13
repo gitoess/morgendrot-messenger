@@ -145,11 +145,6 @@ import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-in
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
-import {
-    denyUnlessLoopbackClient,
-    denyUnlessTrustedApiClient,
-    isApiExternallyReachable,
-} from './api/routes/api-security.js';
 import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
 import { applyTelegramIntegrationToMonitorWebhook } from './integrations/telegram-integration.js';
 import { restartTelegramInbound } from './integrations/telegram-inbound-poll.js';
@@ -499,7 +494,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/shadow-sweep' && req.method === 'POST') {
-            if (denyUnlessLoopbackClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => {
                 body += chunk;
@@ -545,7 +539,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/config' && req.method === 'POST') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', () => {
@@ -595,7 +588,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         /** Helfer: Handoff-ZIP-Inhalt (.env) prüfen oder in lokale .env mergen — nur öffentliche Keys. */
         if (url === '/api/apply-handoff-env' && req.method === 'POST') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => {
                 body += chunk;
@@ -886,21 +878,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         }
                     }
                     const resolve = _resolvePassword;
-                    const hasSdkSignerProof = CFG.SIGNER === 'sdk' && Boolean(signerPost);
-                    if (!vaultChecked && !CFG.ALLOW_UNLOCK_WITHOUT_VAULT && !hasSdkSignerProof) {
-                        sendJson(
-                            res,
-                            403,
-                            {
-                                ok: false,
-                                code: 'VAULT_NOT_FOUND',
-                                error:
-                                    'Kein lokaler oder On-Chain-Vault zum Prüfen — Entsperren abgelehnt (ALLOW_UNLOCK_WITHOUT_VAULT=false).',
-                            },
-                            cors
-                        );
-                        return;
-                    }
                     _resolvePassword = null;
                     if (resolve) resolve(password);
                     let okMessage = vaultChecked
@@ -920,7 +897,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         /** KeePass-ähnlicher Safe: Einträge nur im entsperrten Backend-RAM; optional sofort in Vault-Datei schreiben. */
         if (url === '/api/vault-personal-secrets' && req.method === 'GET') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             try {
                 if (!_vaultPersonalSecretsBridge) {
                     sendJson(res, 503, { ok: false, error: 'Safe-API nicht initialisiert.' }, cors);
@@ -939,7 +915,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/vault-personal-secrets' && req.method === 'POST') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => {
                 body += chunk;
@@ -969,7 +944,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         /** Vault-Datei vom Browser hochladen → Server-Arbeitsverzeichnis (für /vault-load). */
         if (url === '/api/vault-import' && req.method === 'POST') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => {
                 body += chunk;
@@ -1484,7 +1458,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/restart' && req.method === 'POST') {
-            if (denyUnlessLoopbackClient(req, res, cors, sendJson)) return;
             try {
                 const child = spawn(process.argv[0], process.argv.slice(1), {
                     detached: true,
@@ -2590,7 +2563,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/import-config' && req.method === 'POST') {
-            if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             let body = '';
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', async () => {
@@ -2892,11 +2864,6 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     ? `Morgendrot API: ${statusUrl}  Lite-UI: http://127.0.0.1:${p}/`
                     : `Morgendrot API: ${statusUrl}  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
             );
-            if (isApiExternallyReachable() && !CFG.API_AUTH_TOKEN) {
-                logger.warn(
-                    'API lauscht im LAN ohne API_AUTH_TOKEN — Secret-Befehle und Mutationen nur von localhost. Für Handy/LAN: API_AUTH_TOKEN setzen und im Client übergeben (X-Morgendrot-Api-Token).'
-                );
-            }
             startForensicBatchScheduler();
         };
         const onError = (err: NodeJS.ErrnoException) => {

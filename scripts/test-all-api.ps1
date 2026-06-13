@@ -1,6 +1,5 @@
 # Vollstandiger API- und Funktions-Test fur Morgendrot
 # Voraussetzung: Server lauft (npm run dev), API z.B. http://127.0.0.1:3342
-# Hinweis: /api/doc, /api/package-id-hints, /api/profiles entfernt — Handbuch via PWA /handbook; Profile via /api/einsatz-role-templates
 $base = if ($env:API_BASE) { $env:API_BASE } else { "http://127.0.0.1:3342" }
 $addr = if ($env:MY_ADDRESS) { $env:MY_ADDRESS } else { "0x671bf669a858c97a1ca7ed3c5c31901ffb671ceea31e8fd706d0b6e2cb8a15c5" }
 $partner = if ($env:PARTNER_ADDRESS) { $env:PARTNER_ADDRESS } else { "0x0748329ee31e531f5f13fa56b8f42f5173f5518c4dc00e9a090132b1d3c495c5" }
@@ -11,7 +10,7 @@ $skipped = 0
 function Test-Get($name, $url) {
     try {
         $r = Invoke-RestMethod -Uri "$base$url" -Method GET -TimeoutSec 15
-        if ($r.ok -eq $true -or $r.backendRunning -eq $true -or $r.reachable -ne $null -or $r.addresses -ne $null -or $r.config -ne $null -or $r.helpText -ne $null -or $r.html -ne $null -or $r.tickets -ne $null -or $r.keys -ne $null -or $r.history -ne $null -or $r.hints -ne $null -or $r.current -ne $null -or $r.devices -ne $null -or $r.templates -ne $null -or $r.labels -ne $null -or $r.liteRpcUrl -ne $null -or $r.dashboardPort -ne $null -or $r.pending -ne $null) {
+        if ($r.ok -eq $true -or $r.backendRunning -eq $true -or $r.reachable -ne $null -or $r.addresses -ne $null -or $r.config -ne $null -or $r.helpText -ne $null -or $r.html -ne $null -or $r.tickets -ne $null -or $r.keys -ne $null -or $r.history -ne $null -or $r.hints -ne $null -or $r.current -ne $null -or $r.devices -ne $null) {
             Write-Host "  OK   GET $url" -ForegroundColor Green
             $script:ok++; return $true
         }
@@ -53,12 +52,9 @@ Write-Host "--- GET Endpoints ---" -ForegroundColor Cyan
 Test-Get "status" "/api/status"
 Test-Get "current-ids" "/api/current-ids"
 Test-Get "package-id-history" "/api/package-id-history"
-Test-Get "messenger-presets" "/api/messenger-presets"
-Test-Get "lan-install-urls" "/api/lan-install-urls"
-Test-Get "einsatz-role-templates" "/api/einsatz-role-templates"
-Test-Get "contact-labels" "/api/contact-labels"
-Test-Get "pending-handshakes" "/api/pending-handshakes"
+Test-Get "package-id-hints" "/api/package-id-hints"
 Test-Get "config" "/api/config"
+Test-Get "doc" "/api/doc?name=ENV-ERKLAERUNG.md"
 Test-Get "connect-addresses" "/api/connect-addresses"
 Test-Get "chain-reachable" "/api/chain-reachable"
 Test-Get "help" "/api/help"
@@ -72,6 +68,7 @@ Test-Get "audit-export" "/api/audit-export?format=csv"
 
 # --- POST Endpoints (ohne Passwort/Destruktiv) ---
 Write-Host "`n--- POST Endpoints ---" -ForegroundColor Cyan
+Test-Post "package-id-hints" "/api/package-id-hints" @{ packageId = "0x" + ("b"*64); label = "Test" }
 Test-Post "config (safe key)" "/api/config" @{ key = "LOG_VERBOSE"; value = "false" }
 
 # --- Commands (alle Reiter / Befehle) ---
@@ -96,6 +93,13 @@ try { $r = Invoke-RestMethod -Uri "$base/api/command" -Method POST -Body $body -
 $lockId = "0x" + ("c"*64)
 $body = @{ cmd = "/create-key"; args = @($lockId, $partner, "1") } | ConvertTo-Json
 try { $r = Invoke-RestMethod -Uri "$base/api/command" -Method POST -Body $body -ContentType "application/json" -TimeoutSec 25; if ($r.ok) { $script:ok++; Write-Host "  OK   /create-key" -ForegroundColor Green } else { $script:skipped++; Write-Host "  SKIP /create-key $($r.message)" -ForegroundColor Yellow } } catch { $script:skipped++; Write-Host "  SKIP /create-key" -ForegroundColor Yellow }
+
+# --- Alle Doc-Anleitungen (TREE-Reiter) ---
+Write-Host "`n--- Docs (alle Reiter-Links) ---" -ForegroundColor Cyan
+$docs = @("ENV-ERKLAERUNG.md","VAULT-EINRICHTEN.md","BROADCAST-PINNWAND.md","LEIHGERAETE-EINRICHTEN.md","SCHLOSS-EINRICHTEN.md","STREAMS-INTEGRATION.md","CAR-SHARING-EINRICHTEN.md","SENSOR-ALARME-EINRICHTEN.md","BOSS-MODUS.md","NOTFALL-DATENSPEICHER.md","FESTIVAL-TICKETS-EINRICHTEN.md","FAMILIEN-ZUGANG.md","CHAT-GRUPPE-EINRICHTEN.md","M2M-KOORDINATION-EINRICHTEN.md")
+foreach ($d in $docs) {
+    Test-Get "doc $d" ("/api/doc?name=" + [Uri]::EscapeDataString($d))
+}
 
 # --- Weitere POST ---
 Write-Host "`n--- POST unlock (falsches Passwort = erwarteter Fehler) ---" -ForegroundColor Cyan

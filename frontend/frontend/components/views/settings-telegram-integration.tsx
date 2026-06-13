@@ -57,8 +57,8 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
     } else {
       const hint =
         res.error?.includes('404') || res.error?.includes('Not Found')
-          ? `${res.error} — restart backend (npm run dev) so /api/integrations/telegram is loaded.`
-          : res.error || 'Load failed'
+          ? `${res.error} — Backend neu starten (npm run dev), damit /api/integrations/telegram geladen wird.`
+          : res.error || 'Laden fehlgeschlagen'
       setFeedback({ kind: 'err', text: hint })
     }
     setBusy(null)
@@ -73,7 +73,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
     Boolean(adminChatId.trim() || pub?.adminChatId)
 
   const handleSave = async () => {
-    setFeedback({ kind: 'info', text: 'Saving…' })
+    setFeedback({ kind: 'info', text: 'Speichere…' })
     setBusy('save')
     const tokenToSave = botTokenDraft.trim() || savedBotToken.trim()
     const body: {
@@ -106,42 +106,42 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
       setFeedback({
         kind: 'ok',
         text: res.botTokenConfigured
-          ? `Saved. Chat ID: ${res.adminChatId || '—'}.`
-          : 'Saved (no token).',
+          ? `Gespeichert. Chat-ID: ${res.adminChatId || '—'}.`
+          : 'Gespeichert (ohne Token).',
       })
     } else {
       setFeedback({
         kind: 'err',
         text:
           res.error ||
-          'Save failed. Enter token; for monitor alerts also chat ID — or leave “System alerts” off.',
+          'Speichern fehlgeschlagen. Token eintragen; für Monitor-Alarme zusätzlich Chat-ID — oder „System-Alarme“ aus lassen.',
       })
     }
     setBusy(null)
   }
 
   const handleTestNotify = async () => {
-    setFeedback({ kind: 'info', text: 'Sending contact test…' })
+    setFeedback({ kind: 'info', text: 'Sende Kontakt-Test…' })
     setBusy('testNotify')
     const res = await testTelegramNotify(testNotifyChatId.trim())
     setFeedback({
       kind: res.ok ? 'ok' : 'err',
       text: res.ok
-        ? `${res.message || 'Sent.'} Check recipient in Telegram (bot must be started).`
-        : res.error || 'Test failed',
+        ? `${res.message || 'Gesendet.'} Beim Empfänger in Telegram prüfen (Bot muss gestartet haben).`
+        : res.error || 'Test fehlgeschlagen',
     })
     setBusy(null)
   }
 
   const handleTest = async () => {
-    setFeedback({ kind: 'info', text: 'Sending test… (appears in Telegram app, not here in Morgendrot)' })
+    setFeedback({ kind: 'info', text: 'Sende Test… (erscheint in der Telegram-App, nicht hier in Morgendrot)' })
     setBusy('test')
     const res = await testTelegramAlarm()
     setFeedback({
       kind: res.ok ? 'ok' : 'err',
       text: res.ok
-        ? `${res.message || 'Sent.'} Open Telegram app (chat with your bot).`
-        : res.error || 'Test failed',
+        ? `${res.message || 'Gesendet.'} Telegram-App öffnen (Chat mit deinem Bot).`
+        : res.error || 'Test fehlgeschlagen',
     })
     setBusy(null)
     if (res.ok) void load()
@@ -169,29 +169,29 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
         </div>
         <div className="min-w-0 flex-1 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="font-semibold text-foreground">Integrations · Telegram</h4>
+            <h4 className="font-semibold text-foreground">Integrationen · Telegram</h4>
             <Link
               href="/handbook?file=TELEGRAM-INTEGRATION-EINRICHTUNG.md"
               className="text-xs text-primary underline hover:no-underline"
             >
-              Handbook
+              Handbuch
             </Link>
           </div>
 
           {!backendOnline ? (
             <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-              Backend offline — start <span className="font-mono">npm run dev</span> first.
+              Backend offline — zuerst <span className="font-mono">npm run dev</span> starten.
             </p>
           ) : null}
 
           <div className="flex items-center justify-between gap-4">
             <Label htmlFor="tg-enabled" className="text-sm text-foreground">
-              System alerts (monitor)
+              System-Alarme (Monitor)
             </Label>
             <Switch id="tg-enabled" checked={enabled} onCheckedChange={setEnabled} disabled={formDisabled} />
           </div>
           <p className="-mt-2 text-[11px] text-muted-foreground">
-            Monitor/sensor only. Chat send/receive needs bot token + long polling below — switch can stay off.
+            Nur Monitor/Sensor. Chat Senden/Empfang braucht Bot-Token + Long Polling unten — Schalter kann aus bleiben.
           </p>
 
           <div className="space-y-3">
@@ -207,7 +207,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
                       variant="outline"
                       className="h-8 w-8 shrink-0"
                       onClick={() => void copySavedToken()}
-                      aria-label="Copy bot token"
+                      aria-label="Bot-Token kopieren"
                     >
                       {tokenCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
                     </Button>
@@ -221,19 +221,19 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
                       setBotTokenDraft('')
                     }}
                   >
-                    Replace token
+                    Token ersetzen
                   </button>
                 </div>
               ) : (
                 <>
                   {displayToken && tokenReplaceOpen ? (
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Fill in only if @BotFather issued a <strong className="text-foreground">new</strong> token
-                      — then save.
+                      Nur ausfüllen, wenn @BotFather einen <strong className="text-foreground">neuen</strong> Token
+                      ausgegeben hat — danach Speichern.
                     </p>
                   ) : (
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Paste token from @BotFather, then save.
+                      Token von @BotFather einfügen, dann Speichern.
                     </p>
                   )}
                   <Input
@@ -255,7 +255,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
                         setBotTokenDraft('')
                       }}
                     >
-                      Cancel — keep saved token
+                      Abbrechen — gespeicherten Token behalten
                     </button>
                   ) : null}
                 </>
@@ -263,13 +263,13 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
             </div>
             <div>
               <Label htmlFor="tg-chat" className="text-xs text-muted-foreground">
-                Your personal chat ID (alerts & “test to me”)
+                Deine persönliche Chat-ID (Alarme & „Test an mich“)
               </Label>
               <Input
                 id="tg-chat"
                 value={adminChatId}
                 onChange={(e) => setAdminChatId(e.target.value)}
-                placeholder="e.g. 1156058618 from @userinfobot"
+                placeholder="z. B. 1156058618 von @userinfobot"
                 disabled={formDisabled}
                 className="mt-1 font-mono text-xs"
               />
@@ -281,7 +281,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
             </div>
             <div>
               <Label htmlFor="tg-relay" className="text-xs text-muted-foreground">
-                Relay URL (optional, for monitor)
+                Relay-URL (optional, für Monitor)
               </Label>
               <Input
                 id="tg-relay"
@@ -295,7 +295,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
 
           <div className="space-y-2">
             <Label htmlFor="tg-inbound" className="text-xs text-muted-foreground">
-              Incoming partner replies (inbox)
+              Eingehende Partner-Antworten (Posteingang)
             </Label>
             <select
               id="tg-inbound"
@@ -306,9 +306,9 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               disabled={formDisabled}
               className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
             >
-              <option value="longPoll">Long polling (no tunnel — recommended locally)</option>
-              <option value="webhook">Webhook (public HTTPS URL required)</option>
-              <option value="off">Off (send only, no replies in Morgendrot)</option>
+              <option value="longPoll">Long Polling (ohne Tunnel — empfohlen lokal)</option>
+              <option value="webhook">Webhook (öffentliche HTTPS-URL nötig)</option>
+              <option value="off">Aus (nur Senden, keine Antworten in Morgendrot)</option>
             </select>
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               Long Polling läuft im API-Server (<span className="font-mono">npm run dev</span>). Nur Chats aus dem{' '}
@@ -316,12 +316,12 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               neu starten, wenn der Poll nicht startet.
               {pub?.inboundPollActive ? (
                 <span className="mt-1 block text-emerald-600 dark:text-emerald-400">
-                  Poll active — partner replies appear in inbox (filter “Inbox”), about every 20 s.
+                  Poll aktiv — Partner-Antworten erscheinen im Posteingang (Filter „Eingang“), alle ~20 s.
                 </span>
               ) : inboundMode === 'longPoll' && (pub?.botTokenConfigured || botTokenDraft.trim()) ? (
                 <span className="mt-1 block text-amber-700 dark:text-amber-300">
-                  Poll not active yet — <strong className="text-foreground">Save</strong> below, then restart API (
-                  <span className="font-mono">npm run dev</span>).
+                  Poll noch nicht aktiv — unten <strong className="text-foreground">Speichern</strong>, dann API neu
+                  starten (<span className="font-mono">npm run dev</span>).
                 </span>
               ) : null}
             </p>
@@ -329,21 +329,21 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
 
           {pub ? (
             <p className="text-xs text-muted-foreground">
-              Relay: {pub.relayReachable ? 'reachable' : 'unreachable (test often works directly anyway)'} ·
-              Monitor webhook: {pub.monitorWebhookActive ? 'active' : 'inactive'}
+              Relay: {pub.relayReachable ? 'erreichbar' : 'nicht erreichbar (Test geht oft trotzdem direkt)'} ·
+              Monitor-Webhook: {pub.monitorWebhookActive ? 'aktiv' : 'inaktiv'}
             </p>
           ) : null}
 
           <div className="space-y-2 rounded-lg border border-border/80 bg-muted/10 p-3">
             <Label htmlFor="tg-test-notify" className="text-xs text-muted-foreground">
-              Test to contact (partner chat ID)
+              Test an Kontakt (Chat-ID des Partners)
             </Label>
             <div className="flex flex-wrap gap-2">
               <Input
                 id="tg-test-notify"
                 value={testNotifyChatId}
                 onChange={(e) => setTestNotifyChatId(e.target.value)}
-                placeholder="Partner chat ID"
+                placeholder="Partner-Chat-ID"
                 disabled={formDisabled}
                 className="max-w-xs font-mono text-xs"
               />
@@ -353,7 +353,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
                 onClick={() => void handleTestNotify()}
                 className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
-                {busy === 'testNotify' ? '…' : 'Test to contact'}
+                {busy === 'testNotify' ? '…' : 'Test an Kontakt'}
               </button>
             </div>
           </div>
@@ -365,20 +365,20 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               onClick={() => void handleSave()}
               className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {busy === 'save' ? 'Saving…' : 'Save'}
+              {busy === 'save' ? 'Speichere…' : 'Speichern'}
             </button>
             <button
               type="button"
               disabled={formDisabled || !canTest}
               title={
                 canTest
-                  ? 'Sends test to your Telegram app'
-                  : 'Enter token + chat ID and save first'
+                  ? 'Sendet Test in deine Telegram-App'
+                  : 'Zuerst Token + Chat-ID eintragen und speichern'
               }
               onClick={() => void handleTest()}
               className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
-              {busy === 'test' ? 'Sending…' : 'Test to me'}
+              {busy === 'test' ? 'Sende…' : 'Test an mich'}
             </button>
             <button
               type="button"
@@ -386,7 +386,7 @@ export function SettingsTelegramIntegration({ backendOnline }: SettingsTelegramI
               onClick={() => void load()}
               className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
             >
-              Reload
+              Neu laden
             </button>
           </div>
 

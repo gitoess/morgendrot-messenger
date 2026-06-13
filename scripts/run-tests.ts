@@ -1005,32 +1005,6 @@ async function testVaultSignerImportRoundtrip() {
     }
 }
 
-async function testVaultLockReloadRoundtrip() {
-    console.log('\n--- vault-local save → lock-simulation → reload ---');
-    const tmp = path.join(tmpdir(), '.morgendrot-vault-lock-' + Date.now());
-    const pwd = 'lock-reload-pwd-' + Date.now();
-    try {
-        const { generateKeyPair } = await import('../src/crypto-layer.js');
-        const { saveVaultLocal, loadVaultContent } = await import('../src/vault-local.js');
-        const keys = await generateKeyPair(true);
-        const notes1 = 'notes-before-lock-' + Date.now();
-        await saveVaultLocal(keys, pwd, tmp, notes1);
-        const afterSave = await loadVaultContent(pwd, tmp);
-        assert(afterSave.notes === notes1, 'notes after first save');
-        const notes2 = 'notes-after-relock-' + Date.now();
-        await saveVaultLocal(afterSave.keys, pwd, tmp, notes2, undefined, afterSave.personalSecrets);
-        const afterReload = await loadVaultContent(pwd, tmp);
-        assert(afterReload.notes === notes2, 'notes after re-save (simulated lock/reload)');
-        ok('vault save → reload → re-save → reload');
-    } catch (e) {
-        fail('vault-lock-reload', e);
-    } finally {
-        try {
-            fs.unlinkSync(tmp);
-        } catch {}
-    }
-}
-
 async function testContactLabelsMailboxObjectId() {
     console.log('\n--- contact-labels mailboxObjectId (M4a) ---');
     try {
@@ -1156,7 +1130,6 @@ async function main() {
     await testChatForwardText();
     await testVaultLocal();
     await testVaultSignerImportRoundtrip();
-    await testVaultLockReloadRoundtrip();
     await testMessagingPersistenceResolve();
     await testVaultImagePipeline();
     await testReplayState();

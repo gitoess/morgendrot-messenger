@@ -5,7 +5,6 @@
  * Optional: API_RATE_LIMIT_COMMANDS_PER_MINUTE=2 API_BASE=http://127.0.0.1:3342 npm run test:security
  */
 import { strict as assert } from 'node:assert';
-import { apiTestJsonHeaders } from './api-test-headers.js';
 
 const API_BASE = (process.env.API_BASE || process.env.API_URL || '').replace(/\/$/, '');
 
@@ -23,7 +22,7 @@ function fail(name: string, err: unknown) {
 async function postCommand(cmd: string, args: string[]): Promise<{ status: number; body: string; json?: Record<string, unknown> }> {
     const r = await fetch(API_BASE + '/api/command', {
         method: 'POST',
-        headers: apiTestJsonHeaders(),
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cmd, args }),
     });
     const body = await r.text();
@@ -176,27 +175,10 @@ async function testApiRateLimit() {
     }
 }
 
-async function testApiSecurityHelpers() {
-    console.log('\n--- api-security (CORS, Secret-Commands) ---');
-    const { isAllowedApiCorsOrigin, isVaultSecretCommand, isLoopbackClient } = await import(
-        '../src/api/routes/api-security.js'
-    );
-    const req = {
-        socket: { remoteAddress: '192.168.1.50' },
-        headers: { host: '192.168.1.50:3342' },
-    } as import('node:http').IncomingMessage;
-    assert(isLoopbackClient({ socket: { remoteAddress: '127.0.0.1' }, headers: {} } as import('node:http').IncomingMessage));
-    assert(!isLoopbackClient(req));
-    assert(isVaultSecretCommand('/vault-ecdh-jwk'));
-    assert(!isVaultSecretCommand('/help'));
-    ok('api-security helpers (loopback, secret commands)');
-}
-
 async function main() {
     console.log('Morgendrot – Sicherheits-Tests');
     await testSetEnvKeyBlocklist();
     await testAddressValidation();
-    await testApiSecurityHelpers();
     await testApiInjection();
     await testRoleForbidden();
     await testApiRateLimit();

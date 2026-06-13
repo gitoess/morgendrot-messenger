@@ -14,9 +14,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-      '@morgendrot/shared': path.resolve(__dirname, '../src/shared'),
-      '@morgendrot/shared/bytes-base64': path.resolve(__dirname, '../src/shared/bytes-base64.ts'),
-      '@morgendrot/shared/morgendrot-crypto': path.resolve(__dirname, '../src/shared/morgendrot-crypto.ts'),
     },
   },
 })

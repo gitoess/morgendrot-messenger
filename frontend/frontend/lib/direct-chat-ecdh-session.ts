@@ -6,19 +6,10 @@
  */
 
 import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
-import {
-  decryptHandoffEnvUtf8,
-  encryptHandoffEnvUtf8,
-  type HandoffCryptoMetaJson,
-} from '@/frontend/lib/handoff-zip-crypto'
 
 const LS_PEER_PUB = 'morgendrot.directChatEcdh.peerPubB64ByRecipient.v1'
-/** Max. Peers in localStorage (DoS-Schutz). */
-const MAX_ECDH_PEER_ENTRIES = 500
-/** Legacy Klartext-JWK — wird bei Restore gelöscht. */
+/** P-256-ECDH-Privatkey als JWK (Gerät) — für Standalone-APK nach Puls „JWK anwenden“. */
 const LS_PRIVATE_JWK = 'morgendrot.directChatEcdh.privateJwk.v1'
-/** Passwortgeschützter P-256-ECDH-Privatkey (JWK JSON). */
-const LS_PRIVATE_JWK_ENC = 'morgendrot.directChatEcdh.privateJwk.enc.v1'
 /** Eigenes P-256-Pub (65 B raw, Base64) — aus Vault, für Handshake ohne exportKey. */
 const LS_OWN_PUB = 'morgendrot.directChatEcdh.ownPubRawB64.v1'
 
@@ -55,12 +46,10 @@ function readPeerMap(): Record<string, string> {
 }
 
 function writePeerMap(m: Record<string, string>): void {
-  const entries = Object.entries(m).filter(([addr, b64]) => /^0x[a-f0-9]{64}$/.test(addr) && typeof b64 === 'string' && b64.trim())
-  const capped = entries.slice(0, MAX_ECDH_PEER_ENTRIES)
-  peerMapCache = Object.fromEntries(capped)
+  peerMapCache = { ...m }
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(LS_PEER_PUB, JSON.stringify(peerMapCache))
+    window.localStorage.setItem(LS_PEER_PUB, JSON.stringify(m))
   } catch {
     /* ignore */
   }
@@ -71,74 +60,14 @@ export function getDirectChatEcdhPrivateKey(): CryptoKey | null {
 }
 
 /**
- * Importiert einen P-256-ECDH-Privatkey aus JWK (Web Crypto), **nur RAM** (optional verschlüsselt persistieren).
+ * Importiert einen P-256-ECDH-Privatkey aus JWK (Web Crypto), **nur RAM**.
  */
-type StoredEcdhEncV1 = {
-  schema: 'morgendrot.directChatEcdh.privateJwk.enc.v1'
-  crypto: HandoffCryptoMetaJson
-  ciphertextB64: string
-}
-
-async function persistPrivateJwkEncrypted(jwkJson: string, password: string): Promise<void> {
-  if (typeof window === 'undefined') return
-  const pw = password.trim()
-  if (!pw || pw.length < 8) return
-  try {
-    const { meta, ciphertext } = await encryptHandoffEnvUtf8(jwkJson, pw)
-    const payload: StoredEcdhEncV1 = {
-      schema: 'morgendrot.directChatEcdh.privateJwk.enc.v1',
-      crypto: meta,
-      ciphertextB64: uint8ToBase64(ciphertext),
-    }
-    window.localStorage.setItem(LS_PRIVATE_JWK_ENC, JSON.stringify(payload))
-    window.localStorage.removeItem(LS_PRIVATE_JWK)
-  } catch {
-    /* ignore */
-  }
-}
-
-function clearLegacyPlaintextPrivateJwk(): void {
+function persistPrivateJwkJson(jwkJson: string): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.removeItem(LS_PRIVATE_JWK)
+    window.localStorage.setItem(LS_PRIVATE_JWK, jwkJson)
   } catch {
     /* ignore */
-  }
-}
-
-export async function persistDirectChatEcdhEncrypted(password: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!ecdhPrivateKey) return { ok: false, error: 'Kein Chat-ECDH im RAM.' }
-  try {
-    const subtle = globalThis.crypto?.subtle
-    if (!subtle) return { ok: false, error: 'Web Crypto fehlt.' }
-    const jwk = await subtle.exportKey('jwk', ecdhPrivateKey)
-    await persistPrivateJwkEncrypted(JSON.stringify(jwk), password)
-    return { ok: true }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
-  }
-}
-
-export async function restoreDirectChatEcdhFromEncryptedStorage(opts: {
-  password: string
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (typeof window === 'undefined') return { ok: false, error: 'Kein Browser.' }
-  clearLegacyPlaintextPrivateJwk()
-  const pw = opts.password.trim()
-  if (pw.length < 8) return { ok: false, error: 'Passwort zu kurz.' }
-  try {
-    const raw = window.localStorage.getItem(LS_PRIVATE_JWK_ENC)?.trim()
-    if (!raw) return { ok: false, error: 'Kein verschlüsselter Chat-ECDH gespeichert.' }
-    const payload = JSON.parse(raw) as Partial<StoredEcdhEncV1>
-    if (payload.schema !== 'morgendrot.directChatEcdh.privateJwk.enc.v1' || !payload.crypto || !payload.ciphertextB64) {
-      return { ok: false, error: 'Ungültiges ECDH-Speicherformat.' }
-    }
-    const dec = await decryptHandoffEnvUtf8(payload.crypto, base64ToUint8(payload.ciphertextB64), pw)
-    if (!dec.ok) return { ok: false, error: dec.error }
-    const applied = await applyDirectChatEcdhPrivateJwk(dec.envText, { skipPersist: true })
-    return applied.ok ? { ok: true } : applied
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
 }
 
@@ -146,7 +75,6 @@ export function clearPersistedDirectChatEcdhPrivateJwk(): void {
   if (typeof window === 'undefined') return
   try {
     window.localStorage.removeItem(LS_PRIVATE_JWK)
-    window.localStorage.removeItem(LS_PRIVATE_JWK_ENC)
     window.localStorage.removeItem(LS_OWN_PUB)
   } catch {
     /* ignore */
@@ -198,22 +126,18 @@ export function getDirectChatEcdhOwnPubRawBase64(): string | null {
   }
 }
 
-/** Letzten ECDH aus verschlüsselter Ablage wiederherstellen (Standalone / nach App-Neustart). */
-export async function restoreDirectChatEcdhPrivateFromLocalStorage(opts?: {
-  password?: string
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+/** Letzten JWK aus Puls wiederherstellen (Standalone / nach App-Neustart). */
+export async function restoreDirectChatEcdhPrivateFromLocalStorage(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
   if (typeof window === 'undefined') return { ok: false, error: 'Kein Browser.' }
-  clearLegacyPlaintextPrivateJwk()
-  const legacy = window.localStorage.getItem(LS_PRIVATE_JWK)?.trim()
-  if (legacy) {
-    clearLegacyPlaintextPrivateJwk()
-    return { ok: false, error: 'Legacy-Klartext-ECDH entfernt — Tresor erneut entsperren.' }
+  try {
+    const raw = window.localStorage.getItem(LS_PRIVATE_JWK)?.trim() ?? ''
+    if (!raw) return { ok: false, error: 'Kein gespeicherter Chat-ECDH-JWK.' }
+    return applyDirectChatEcdhPrivateJwk(raw)
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
   }
-  const pw = opts?.password?.trim()
-  if (pw && pw.length >= 8) {
-    return restoreDirectChatEcdhFromEncryptedStorage({ password: pw })
-  }
-  return { ok: false, error: 'Kein gespeicherter Chat-ECDH (Passwort für Entschlüsselung nötig).' }
 }
 
 /** Standalone-Helfer: ECDH automatisch erzeugen, wenn noch keiner da ist (Peering-QR später). */
@@ -242,8 +166,7 @@ export async function ensureStandaloneChatEcdhKeypair(): Promise<
 }
 
 export async function applyDirectChatEcdhPrivateJwk(
-  jwkJson: string,
-  opts?: { skipPersist?: boolean; persistPassword?: string }
+  jwkJson: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const raw = String(jwkJson || '').trim()
   if (!raw) {
@@ -270,12 +193,7 @@ export async function applyDirectChatEcdhPrivateJwk(
       true,
       ['deriveBits', 'deriveKey']
     )
-    if (!opts?.skipPersist) {
-      const pw = opts?.persistPassword?.trim()
-      if (pw && pw.length >= 8) {
-        await persistPrivateJwkEncrypted(raw, pw)
-      }
-    }
+    persistPrivateJwkJson(raw)
     return { ok: true }
   } catch (e) {
     ecdhPrivateKey = null
@@ -298,26 +216,24 @@ export async function applyDirectChatEcdhVaultMaterial(opts: {
   ecdhPrivateJwk?: string
   ecdhPrivatePkcs8Base64?: string
   ecdhPubRawBase64?: string
-  persistPassword?: string
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   if (opts.ecdhPubRawBase64?.trim()) {
     const pub = setDirectChatEcdhOwnPubRawBase64(opts.ecdhPubRawBase64)
     if (!pub.ok) return pub
   }
   if (opts.ecdhPrivateJwk?.trim()) {
-    return applyDirectChatEcdhPrivateJwk(opts.ecdhPrivateJwk, { persistPassword: opts.persistPassword })
+    return applyDirectChatEcdhPrivateJwk(opts.ecdhPrivateJwk)
   }
   const pkcs8B64 = opts.ecdhPrivatePkcs8Base64?.trim()
   if (pkcs8B64) {
-    return applyDirectChatEcdhPrivatePkcs8(pkcs8B64, { persistPassword: opts.persistPassword })
+    return applyDirectChatEcdhPrivatePkcs8(pkcs8B64)
   }
   return { ok: false, error: 'Kein Chat-ECDH-Material aus Vault.' }
 }
 
 /** PKCS#8 (Base64) — Fallback wenn JWK-Export auf dem Server blockiert ist. */
 export async function applyDirectChatEcdhPrivatePkcs8(
-  pkcs8Base64: string,
-  opts?: { persistPassword?: string }
+  pkcs8Base64: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const b64 = String(pkcs8Base64 || '').trim().replace(/\s+/g, '')
   if (!b64) {
@@ -336,10 +252,7 @@ export async function applyDirectChatEcdhPrivatePkcs8(
       ['deriveBits', 'deriveKey']
     )
     const jwk = await subtle.exportKey('jwk', ecdhPrivateKey)
-    const pw = opts?.persistPassword?.trim()
-    if (pw && pw.length >= 8) {
-      await persistPrivateJwkEncrypted(JSON.stringify(jwk), pw)
-    }
+    persistPrivateJwkJson(JSON.stringify(jwk))
     return { ok: true }
   } catch (e) {
     ecdhPrivateKey = null
@@ -368,9 +281,6 @@ export function setDirectChatEcdhPeerPubBase64(recipientHex: string, peerPubRawB
     return { ok: false, error: `Peer-Pub raw muss ${P256_RAW_PUB_LEN} Byte sein (P-256 uncompressed), ist ${raw.length}.` }
   }
   const m = readPeerMap()
-  if (Object.keys(m).length >= MAX_ECDH_PEER_ENTRIES && !m[addr]) {
-    return { ok: false, error: `Max. ${MAX_ECDH_PEER_ENTRIES} ECDH-Peers — alte Einträge entfernen.` }
-  }
   m[addr] = b64
   writePeerMap(m)
   return { ok: true }

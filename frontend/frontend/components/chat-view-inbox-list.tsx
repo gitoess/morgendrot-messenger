@@ -186,8 +186,17 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
           <div className="mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-5 text-center dark:bg-amber-950/25">
             <p className="text-base font-semibold text-amber-950 dark:text-amber-100">{formatted.headline}</p>
             {showOfflineDetail ? (
+              <p className="mt-2 text-sm leading-snug text-amber-900/90 dark:text-amber-100/90">
+                Posteingang von der Basis nicht lesbar. Bereits empfangene Funk-Nachrichten erscheinen weiter unten, sobald
+                vorhanden. Technische Meldung:
+              </p>
+            ) : null}
+            {showOfflineDetail ? (
               <p className="mt-2 break-all text-sm text-muted-foreground">{formatted.detail}</p>
             ) : null}
+            <p className="mt-4 text-xs text-muted-foreground">
+              Wenn nicht alle Nachrichten sichtbar sind, bitte „Aktualisieren“.
+            </p>
           </div>
         </div>
       )
@@ -199,8 +208,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-3 pb-0">
         <div className="mx-auto max-w-3xl rounded-xl border border-amber-500/45 bg-amber-500/[0.08] px-4 py-3 text-amber-950 dark:text-amber-100">
           <p className="text-sm font-semibold">
-            Offline — last messages ({Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} min ago
-            {inboxLiveSource === 'rpc' ? ', RPC' : ''})
+            Offline — letzte Nachrichten (vor {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL 30 Min.
+            {inboxLiveSource === 'rpc' ? ', zuletzt per Direkt-RPC' : ''})
+          </p>
+          <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
+            Live-Aktualisierung ist derzeit nicht möglich. Jetzt kannst du mit Funk (LoRa) weiterarbeiten; Online-Inhalte
+            folgen automatisch, sobald die Basis wieder erreichbar ist.
           </p>
         </div>
       </div>
@@ -211,7 +224,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-3 pb-0">
         <div className="mx-auto max-w-3xl rounded-xl border border-emerald-500/35 bg-emerald-500/[0.08] px-4 py-2.5 text-emerald-950 dark:text-emerald-100">
           <p className="text-xs font-medium">
-            Inbox live via <strong className="font-semibold">Direct-RPC</strong>
+            Posteingang live per <strong className="font-semibold">Direkt-RPC</strong> (Fullnode) — Morgendrot-Basis ist
+            für diesen Abruf optional.
           </p>
         </div>
       </div>
@@ -228,8 +242,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
           <div className="mx-auto max-w-lg rounded-xl border border-amber-500/40 bg-amber-500/[0.08] px-4 py-5 text-center dark:bg-amber-950/25">
             <p className="text-base font-semibold text-amber-950 dark:text-amber-100">{INBOX_BASIS_OFFLINE_HEADLINE}</p>
             <p className="mt-2 text-sm text-amber-900/90 dark:text-amber-100/90">
-              The backend is not providing status right now — likely no network to the server. Radio receive may still
-              show messages.
+              Die Basis liefert derzeit keinen Status – vermutlich kein Netz zum Backend. Funk-Empfang kann trotzdem
+              Nachrichten einblenden.
             </p>
           </div>
         </div>
@@ -238,7 +252,8 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
     return (
       <div className="p-8 text-center">
         <MessageCircle className="mx-auto mb-3 h-12 w-12 text-muted-foreground/50" />
-        <p className="text-muted-foreground">No messages yet</p>
+        <p className="text-muted-foreground">Noch keine Nachrichten</p>
+        <p className="mt-1 text-xs text-muted-foreground">Mailbox/On-Chain – bei Tests: „Aktualisieren“ klicken.</p>
       </div>
     )
   }
@@ -259,7 +274,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1 space-y-1.5">
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-800 dark:text-sky-200">
-                  Radio · Receive
+                  Funk · Empfang
                 </p>
                 {row.fromAddr ? (
                   <p className="font-mono text-[10px] text-muted-foreground">
@@ -303,6 +318,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
               </time>
             </div>
             <SlideShowCrossfade frames={row.frames} />
+            <p className="mt-2 text-[11px] text-muted-foreground">MORG_SLIDE_V1 · CSS-Überblendung</p>
           </li>
         ) : (
           <li
@@ -337,7 +353,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   className="mt-1 h-4 w-4 shrink-0 rounded border-border"
                   checked={selectedInboxIds.has(row.msg.id)}
                   onChange={() => toggleInboxSelection(row.msg.id)}
-                  aria-label="Select message"
+                  aria-label="Nachricht auswählen"
                 />
               )}
               <div className="min-w-0 flex-1 space-y-1.5">
@@ -371,14 +387,14 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     </span>
                   ) : null}
                   {isMeshVerifiedForAddress(row.msg.from) && (
-                    <span className="inline-flex items-center text-emerald-500" title="Mesh in contact directory">
+                    <span className="inline-flex items-center text-emerald-500" title="Mesh im Kontaktverzeichnis">
                       <ShieldCheck className="h-3.5 w-3.5" />
                     </span>
                   )}
                   {row.msg.encrypted && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-400">
                       <Lock className="h-3 w-3" aria-hidden />
-                      Encrypted
+                      Verschlüsselt
                     </span>
                   )}
                   {row.msg.chainPurgeable && (
@@ -397,13 +413,13 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   {protokollMarkedIds.has(row.msg.id) && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-900 dark:text-amber-100">
                       <Star className="h-3 w-3 fill-amber-400 text-amber-600 dark:text-amber-300" aria-hidden />
-                      Protocol
+                      Protokoll
                     </span>
                   )}
                   {pinnedPinnwandIds.has(row.msg.id) && (
                     <span className="inline-flex items-center gap-0.5 rounded-full bg-sky-500/20 px-2 py-0.5 text-[10px] font-semibold text-sky-900 dark:text-sky-100">
                       <Pin className="h-3 w-3 text-sky-600 dark:text-sky-300" aria-hidden />
-                      Pinned
+                      Angeheftet
                     </span>
                   )}
                 </div>
@@ -420,14 +436,14 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                           : 'bg-emerald-500/15 text-emerald-800 dark:text-emerald-200'
                       )}
                     >
-                      {isMessageOutgoing(row.msg, myAddress) ? 'Outgoing' : 'Incoming'}
+                      {isMessageOutgoing(row.msg, myAddress) ? 'Ausgang' : 'Eingang'}
                     </span>
                   ) : null}
                   {row.msg.recipient ? (
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
                       {myAddress && addressMatchesIdentity(row.msg.recipient, myAddress)
-                        ? 'To me'
-                        : `To ${row.msg.recipient.slice(0, 8)}…${row.msg.recipient.slice(-4)}`}
+                        ? 'An mich'
+                        : `An ${row.msg.recipient.slice(0, 8)}…${row.msg.recipient.slice(-4)}`}
                     </span>
                   ) : null}
                 </div>
@@ -439,10 +455,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     disabled={sending}
                     onClick={() => onReplyToMessage(row.msg)}
                     className="inline-flex h-8 items-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2.5 text-[11px] font-semibold text-primary hover:bg-primary/20 disabled:opacity-50"
-                    title="Reply — channel and send path are taken over"
+                    title="Antworten — Kanal und Sendepfad werden übernommen"
                   >
                     <Reply className="h-3.5 w-3.5" aria-hidden />
-                    Reply
+                    Antworten
                   </button>
                 ) : null}
                 <DropdownMenu>
@@ -450,7 +466,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   <button
                     type="button"
                     className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
-                    aria-label="Actions for this message"
+                    aria-label="Aktionen für diese Nachricht"
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </button>
@@ -461,7 +477,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     title={
                       canAddContact
                         ? undefined
-                        : 'Only for incoming rows with valid 0x sender address (not your own outgoing).'
+                        : 'Nur bei eingehenden Zeilen mit gültiger 0x-Absenderadresse (nicht eigene Ausgänge).'
                     }
                     onClick={() => {
                       if (!canAddContact || !onAddSenderToContactBook) return
@@ -469,7 +485,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     }}
                   >
                     <UserPlus className="mr-2 h-4 w-4" />
-                    Add to phonebook
+                    Ins Telefonbuch
                   </DropdownMenuItem>
                   {showPinnwandPinActions && onTogglePinnedPinnwand ? (
                     <DropdownMenuItem onClick={() => onTogglePinnedPinnwand(row.msg.id)}>
@@ -479,7 +495,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                           pinnedPinnwandIds.has(row.msg.id) ? 'text-sky-600 dark:text-sky-300' : ''
                         )}
                       />
-                      {pinnedPinnwandIds.has(row.msg.id) ? 'Unpin' : 'Pin to bulletin board'}
+                      {pinnedPinnwandIds.has(row.msg.id) ? 'Anheftung lösen' : 'An Pinnwand anheften'}
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem onClick={() => toggleProtokollMark(row.msg.id)}>
@@ -489,17 +505,17 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         protokollMarkedIds.has(row.msg.id) ? 'fill-amber-400 text-amber-500' : ''
                       )}
                     />
-                    {protokollMarkedIds.has(row.msg.id) ? 'Remove protocol mark' : 'Mark for protocol'}
+                    {protokollMarkedIds.has(row.msg.id) ? 'Protokoll-Markierung entfernen' : 'Für Protokoll markieren'}
                   </DropdownMenuItem>
                   {onForwardMessage ? (
                     <>
                       <DropdownMenuItem onClick={() => onForwardMessage(row.msg, true)}>
                         <Forward className="mr-2 h-4 w-4" />
-                        Forward (with sender line)
+                        Weiterleiten (mit Absenderzeile)
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onForwardMessage(row.msg, false)}>
                         <Forward className="mr-2 h-4 w-4" />
-                        Forward (without sender address)
+                        Weiterleiten (ohne Absenderadresse)
                       </DropdownMenuItem>
                     </>
                   ) : null}
@@ -509,25 +525,25 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         onClick={() => {
                           openR1CourierDialogFromPrefill(buildR1CourierPrefillFromMessage(row.msg, myAddress))
                         }}
-                        title="R1 courier: prefill text and 0x addresses from this radio row (signature and package created in dialog)."
+                        title="R1-Kurier: Text und 0x-Adressen aus dieser Funk-Zeile vorfüllen (Signatur und Paket erzeugen im Dialog)."
                       >
                         <Package className="mr-2 h-4 w-4 opacity-80" />
-                        Share package
+                        Paket teilen
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => {
                           openProtokollAnchorDialogFromPrefill({ messageIds: [row.msg.id], variant: 'hash' })
                         }}
-                        title="Protocol hash anchor: this message ID only, variant A (hash only)."
+                        title="Protokoll-Hash-Verankerung: nur diese Nachrichten-ID, Variante A (nur Hash)."
                       >
                         <Link2 className="mr-2 h-4 w-4 opacity-80" />
-                        Write package to tangle
+                        Paket in den Tangle schreiben
                       </DropdownMenuItem>
                     </>
                   ) : null}
                   <DropdownMenuItem onClick={() => onHideInboxMessageLocal(row.msg.id)}>
                     <MessageCircle className="mr-2 h-4 w-4 opacity-60" />
-                    Hide locally
+                    Lokal ausblenden
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={!row.msg.chainPurgeable}
@@ -535,7 +551,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     onClick={() => void onPurgeInboxMessageChain(row.msg)}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete on chain (rebate)
+                    Auf Chain löschen (Rebate)
                   </DropdownMenuItem>
                   {parseHandoffZipWire(row.msg.content ?? '') ? (
                     <DropdownMenuItem
@@ -544,19 +560,19 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                         if (!parsed) return
                         queueHandoffZipFromInbox(parsed.zipBytes, parsed.meta)
                       }}
-                      title="Import handoff ZIP via Settings → Handoff"
+                      title="Handoff-ZIP in Einstellungen → Handoff importieren übernehmen"
                     >
                       <Inbox className="mr-2 h-4 w-4" />
-                      Import handoff
+                      Handoff importieren
                     </DropdownMenuItem>
                   ) : null}
                   <DropdownMenuItem onClick={() => void exportEcdhMorgPkgForMessage(row.msg)}>
                     <Lock className="mr-2 h-4 w-4" />
-                    Save ECDH .morg-pkg
+                    ECDH .morg-pkg speichern
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => downloadSneakernetPackage(row.msg)}>
                     <Download className="mr-2 h-4 w-4" />
-                    JSON (plaintext snapshot)
+                    JSON (Klartext-Snapshot)
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -583,7 +599,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             onClick={loadMoreInbox}
             className="rounded-lg border border-border bg-muted/40 px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted disabled:opacity-60"
           >
-            {loadingMore ? 'Loading older messages…' : 'Load more messages'}
+            {loadingMore ? 'Lade ältere Nachrichten…' : 'Weitere Nachrichten laden'}
           </button>
         </div>
       ) : null}

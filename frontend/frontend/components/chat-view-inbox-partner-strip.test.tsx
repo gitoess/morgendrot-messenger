@@ -34,14 +34,14 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
   it('schaltet Wire-Filter um', () => {
     const onWireFilterChange = vi.fn()
     render(<ChatViewInboxPartnerStrip {...makeProps({ onWireFilterChange })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Encrypted$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Verschlüsselt$/i }))
     expect(onWireFilterChange).toHaveBeenCalledWith('encrypted')
   })
 
   it('schaltet Richtung Eingang/Ausgang', () => {
     const onDirectionChange = vi.fn()
     render(<ChatViewInboxPartnerStrip {...makeProps({ onDirectionChange })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Incoming$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Eingang$/i }))
     expect(onDirectionChange).toHaveBeenCalledWith('in')
   })
 
@@ -54,7 +54,7 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('status')).toHaveTextContent(/Channel filter active/)
+    expect(screen.getByRole('status')).toHaveTextContent(/Kanal-Filter aktiv/)
   })
 
   it('deaktiviert Telegram-Quelle ohne Lese-Recht', () => {
@@ -95,7 +95,7 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
         })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^All$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Alle$/i }))
     expect(onPartnerKeyChange).toHaveBeenCalledWith(null)
   })
 
@@ -114,7 +114,7 @@ describe('ChatViewInboxPartnerStrip (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.queryByText(/Inbox \(content\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Posteingang \(Inhalt\)/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/^Partner$/i)).not.toBeInTheDocument()
   })
 })

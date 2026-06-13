@@ -3,19 +3,15 @@
  * ZIP: handoff.morg.enc + handoff.crypto.json + minimales README (kein Passwort, keine IDs).
  */
 
-import { MORGENDROT_PBKDF2_ITERATIONS } from '@/frontend/lib/crypto-pbkdf2-iterations'
-
 export const HANDOFF_ENV_ENC_SCHEMA = 'morgendrot.handoff.env.enc.v1' as const
 export const HANDOFF_ENV_ENC_FILENAME = 'handoff.morg.enc'
 /** Abwärtskompatibel mit Doku-Entwurf */
 export const HANDOFF_ENV_ENC_FILENAME_LEGACY = 'handoff.env.enc'
 export const HANDOFF_CRYPTO_JSON_FILENAME = 'handoff.crypto.json'
 
-const PBKDF2_ITERATIONS = MORGENDROT_PBKDF2_ITERATIONS
+const PBKDF2_ITERATIONS = 210_000
 const SALT_BYTES = 16
 const IV_BYTES = 12
-/** Max. Klartext (.env) — verhindert DoS via Riesen-Handoff in Browser/Node. */
-export const HANDOFF_ENV_MAX_UTF8_BYTES = 512_000
 
 export type HandoffCryptoMetaJson = {
   schema: typeof HANDOFF_ENV_ENC_SCHEMA
@@ -58,18 +54,13 @@ function b64ToBytes(b64: string): Uint8Array {
   return out
 }
 
-async function deriveAesGcmKey(
-  password: string,
-  salt: Uint8Array,
-  iterations: number,
-  decrypt: boolean
-): Promise<CryptoKey> {
+async function deriveAesGcmKey(password: string, salt: Uint8Array, decrypt: boolean): Promise<CryptoKey> {
   const enc = new TextEncoder()
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, [
     'deriveKey',
   ])
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -89,15 +80,11 @@ export async function encryptHandoffEnvUtf8(
   password: string
 ): Promise<{ meta: HandoffCryptoMetaJson; ciphertext: Uint8Array }> {
   const enc = new TextEncoder()
-  const plainBytes = enc.encode(plainUtf8)
-  if (plainBytes.length > HANDOFF_ENV_MAX_UTF8_BYTES) {
-    throw new Error(`Handoff-.env zu groß (max. ${HANDOFF_ENV_MAX_UTF8_BYTES} Byte UTF-8).`)
-  }
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
-  const aesKey = await deriveAesGcmKey(password, salt, PBKDF2_ITERATIONS, false)
+  const aesKey = await deriveAesGcmKey(password, salt, false)
   const ciphertext = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, plainBytes)
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, enc.encode(plainUtf8))
   )
   return {
     meta: {
@@ -127,11 +114,8 @@ export async function decryptHandoffEnvUtf8(
   try {
     const salt = b64ToBytes(meta.saltB64)
     const iv = b64ToBytes(meta.ivB64)
-    const aesKey = await deriveAesGcmKey(password, salt, meta.iterations || PBKDF2_ITERATIONS, true)
+    const aesKey = await deriveAesGcmKey(password, salt, true)
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext)
-    if (plain.byteLength > HANDOFF_ENV_MAX_UTF8_BYTES) {
-      return { ok: false, error: 'Entschlüsselter Handoff-Inhalt zu groß.' }
-    }
     return { ok: true, envText: new TextDecoder().decode(plain) }
   } catch {
     return { ok: false, error: 'Passwort falsch oder Datei beschädigt.' }

@@ -28,7 +28,7 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
     <div className="border-b border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5 dark:bg-emerald-950/20">
       <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
         <KeyRound className="h-4 w-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
-        Incoming handshake requests
+        Handshake-Anfragen (eingehend)
         {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-hidden /> : null}
       </div>
       <ul className="space-y-2">
@@ -41,7 +41,7 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
               className="flex flex-wrap items-center gap-2 rounded-md border border-border/80 bg-background/70 px-2.5 py-2"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-foreground">{label || 'Unknown contact'}</p>
+                <p className="text-sm font-medium text-foreground">{label || 'Unbekannter Kontakt'}</p>
                 <p className="font-mono text-[10px] text-muted-foreground" title={o.sender}>
                   {maskWalletAddress(o.sender, 10, 8)}
                   <span className="ml-1.5 text-[10px] text-muted-foreground/80">
@@ -55,7 +55,7 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
                 onClick={() => onUseAsPartner(o.sender)}
                 className="rounded-md border border-border px-2 py-1 text-[11px] hover:bg-muted"
               >
-                As partner
+                Als Partner
               </button>
               <button
                 type="button"
@@ -63,7 +63,7 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
                 onClick={() => onAccept(o.sender)}
                 className="rounded-md bg-primary px-2.5 py-1 text-[11px] font-medium text-primary-foreground disabled:opacity-50"
               >
-                {sending ? '…' : 'Accept'}
+                {sending ? '…' : 'Annehmen'}
               </button>
               {onDelete ? (
                 <button
@@ -72,13 +72,18 @@ export function ChatViewInboxHandshakeRequests(p: ChatViewInboxHandshakeRequests
                   onClick={() => void onDelete(o.sender, o.nonce, o.source)}
                   className="rounded-md border border-destructive/40 px-2.5 py-1 text-[11px] text-destructive hover:bg-destructive/10 disabled:opacity-50"
                 >
-                  {sending ? '…' : 'Delete'}
+                  {sending ? '…' : 'Löschen'}
                 </button>
               ) : null}
             </li>
           )
         })}
       </ul>
+      <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+        „Annehmen“ = Handshake verbinden. „Löschen“ = lokal ausblenden; bei Mailbox-Einträgen zusätzlich{' '}
+        <code className="text-[10px]">/purge-handshake</code> on-chain (wenn Purge + MAILBOX_ID aktiv).
+        Event-only-Anfragen nur lokal ausblendbar.
+      </p>
     </div>
   )
 }

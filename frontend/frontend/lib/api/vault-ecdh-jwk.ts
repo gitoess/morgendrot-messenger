@@ -27,8 +27,8 @@ function parseVaultEcdhJwkResponse(r: VaultEcdhJwkResponse): {
   }
 }
 
-/** Entsperrte Boss-Sitzung: P-256-ECDH aus Vault (JWK oder PKCS#8 + Own-Pub) — Re-Auth mit Passwort. */
-export async function fetchSessionEcdhPrivateJwk(vaultPassword: string): Promise<{
+/** Entsperrte Boss-Sitzung: P-256-ECDH aus Vault (JWK oder PKCS#8 + Own-Pub). */
+export async function fetchSessionEcdhPrivateJwk(): Promise<{
   ok: boolean
   ecdhPrivateJwk?: string
   ecdhPrivatePkcs8Base64?: string
@@ -36,9 +36,7 @@ export async function fetchSessionEcdhPrivateJwk(vaultPassword: string): Promise
   message?: string
   error?: string
 }> {
-  const pw = vaultPassword.trim()
-  if (!pw) return { ok: false, error: 'Vault-Passwort fehlt für ECDH-Export.' }
-  const r = await executeCommand<VaultEcdhJwkResponse>('/vault-ecdh-jwk', [pw])
+  const r = await executeCommand<VaultEcdhJwkResponse>('/vault-ecdh-jwk', [])
   return parseVaultEcdhJwkResponse(r as VaultEcdhJwkResponse)
 }
 

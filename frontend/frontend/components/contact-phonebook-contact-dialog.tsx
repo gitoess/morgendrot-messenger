@@ -75,7 +75,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
   const [resolveOwnerHint, setResolveOwnerHint] = useState('')
   const openSnapshotRef = useRef<Partial<ContactPhonebookFormValues> | undefined>(undefined)
   const myMailboxes = open ? readMyPrivateMailboxes() : []
-  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Scan contact QR' })
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Kontakt-QR scannen' })
   const editKey = editStorageKey.trim().toLowerCase()
   const walletLocked = mode === 'edit' && isIotaWalletAddress(editKey)
   const telegramOnlyEdit = mode === 'edit' && isTelegramDirectoryKey(editKey)
@@ -127,7 +127,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Add new contact' : 'Edit contact'}</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Neuen Kontakt anlegen' : 'Kontakt bearbeiten'}</DialogTitle>
           <DialogDescription>
             Mindestens IOTA-Adresse (0x…) oder Telegram Chat-ID. Ohne Wallet reicht Name + Chat-ID für Telegram-Hinweise;
             Online-Send auf IOTA braucht später eine Adresse.
@@ -141,26 +141,26 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           <QrCode className="h-5 w-5" aria-hidden />
-          Scan QR code
+          QR-Code scannen
         </button>
 
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground">Name / call sign</label>
+            <label className="text-xs font-medium text-muted-foreground">Name / Rufname</label>
             <input
               type="text"
               value={form.label}
               onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
-              placeholder="e.g. Anna Schmidt"
+              placeholder="z. B. Anna Schmidt"
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
               autoFocus={mode === 'create'}
             />
           </div>
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-muted-foreground">
-              IOTA address (0x…){' '}
+              IOTA-Adresse (0x…){' '}
               {!form.address.trim() && !telegramOnlyEdit ? (
-                <span className="text-muted-foreground">(optional for Telegram)</span>
+                <span className="text-muted-foreground">(optional bei Telegram)</span>
               ) : !telegramOnlyEdit ? (
                 <span className="text-destructive">*</span>
               ) : null}
@@ -175,11 +175,11 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             />
             {walletLocked ? (
               <p className="text-[10px] text-muted-foreground">
-                Wallet key is fixed. Different address = create new contact.
+                Wallet-Schlüssel ist fest. Andere Adresse = neuen Kontakt anlegen.
               </p>
             ) : telegramOnlyEdit ? (
               <p className="text-[10px] text-muted-foreground">
-                Telegram-only contact: optionally add IOTA wallet here (new directory entry).
+                Nur-Telegram-Kontakt: hier optional IOTA-Wallet ergänzen (neuer Verzeichnis-Eintrag).
               </p>
             ) : null}
           </div>
@@ -189,7 +189,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
               type="text"
               value={form.meshNodeId}
               onChange={(e) => setForm((f) => ({ ...f, meshNodeId: e.target.value }))}
-              placeholder="e.g. THW-47-B or !a1b2c3d4"
+              placeholder="z. B. THW-47-B oder !a1b2c3d4"
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
             />
           </div>
@@ -201,12 +201,12 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
               type="text"
               value={form.telegramChatId}
               onChange={(e) => setForm((f) => ({ ...f, telegramChatId: e.target.value }))}
-              placeholder="Number from @userinfobot — savable without IOTA address too"
+              placeholder="Zahl von @userinfobot — auch ohne IOTA-Adresse speicherbar"
               className="w-full rounded-lg border border-border bg-input px-3 py-2.5 font-mono text-xs"
             />
           </div>
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Contact target mailboxes (optional, M4e)</p>
+            <p className="text-xs font-medium text-muted-foreground">Ziel-Mailboxen des Kontakts (optional, M4e)</p>
             {CONTACT_MAILBOX_SLOT_IDS.map((slotId) => (
               <div key={slotId} className="space-y-1">
                 <label className="text-[10px] font-medium text-muted-foreground">
@@ -218,7 +218,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                     onChange={(e) => setForm((f) => ({ ...f, mailboxPrivateId: e.target.value }))}
                     className="mb-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-xs"
                   >
-                    <option value="">— manual / QR —</option>
+                    <option value="">— manuell / QR —</option>
                     {myMailboxes.map((m) => (
                       <option key={m.objectId} value={m.objectId}>
                         {(m.label ? `${m.label} · ` : '') + m.objectId.slice(0, 10)}…{m.objectId.slice(-6)}
@@ -254,12 +254,12 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                       return
                     }
                     setForm((f) => ({ ...f, address: r.owner }))
-                    setResolveOwnerHint(`Adopted mailbox owner wallet (${r.owner.slice(0, 10)}…).`)
+                    setResolveOwnerHint(`Wallet des Mailbox-Owners übernommen (${r.owner.slice(0, 10)}…).`)
                   })()
                 }}
                 className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 text-[10px] font-medium hover:bg-primary/15 disabled:opacity-50"
               >
-                {resolveOwnerBusy ? 'Loading owner…' : 'Wallet from chain (private mailbox)'}
+                {resolveOwnerBusy ? 'Lade Owner…' : 'Wallet aus Chain (Privat-Mailbox)'}
               </button>
             </div>
             {resolveOwnerHint ? (
@@ -278,7 +278,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             onClick={() => onOpenChange(false)}
             className="min-h-11 rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
           >
-            Cancel
+            Abbrechen
           </button>
           <button
             type="button"
@@ -286,7 +286,7 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
             onClick={() => void onSave(form)}
             className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? 'Speichere…' : 'Speichern'}
           </button>
         </DialogFooter>
       </DialogContent>
