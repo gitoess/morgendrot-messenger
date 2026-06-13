@@ -43,7 +43,10 @@ import {
   readMessagingPersistenceModeFromStorage,
   type MessagingPersistenceMode,
 } from '@/frontend/lib/messaging-persistence-mode'
-import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import {
+  tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectIotaSessionSignerAsync,
+} from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 export { DIRECT_IOTA_UI_CHANGED, notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 

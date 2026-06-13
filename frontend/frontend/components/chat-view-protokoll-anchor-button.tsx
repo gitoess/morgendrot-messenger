@@ -48,7 +48,7 @@ export function ChatViewProtokollAnchorButton(p: {
     setStatus,
     setStatusMsg,
     triggerClassName,
-    triggerLabel = 'Auf Chain verankern',
+    triggerLabel = 'Anchor on chain',
     onOpenPartnerSetup,
   } = p
   const [open, setOpen] = useState(false)
@@ -70,8 +70,8 @@ export function ChatViewProtokollAnchorButton(p: {
   const copyAnchorField = useCallback((label: string, value: string) => {
     if (!value.trim()) return
     void navigator.clipboard?.writeText(value.trim()).then(
-      () => setDialogMsg(`${label} in Zwischenablage kopiert.`),
-      () => setDialogMsg(`${label}: Kopieren fehlgeschlagen.`)
+      () => setDialogMsg(`${label} copied to clipboard.`),
+      () => setDialogMsg(`${label}: copy failed.`)
     )
   }, [])
 
@@ -102,15 +102,15 @@ export function ChatViewProtokollAnchorButton(p: {
         .split(/[\s,]+/)
         .map((x) => x.trim())
         .filter(Boolean)
-      if (!ids.length) return { error: 'Mindestens eine Nachrichten-ID angeben.' }
+      if (!ids.length) return { error: 'Enter at least one message ID.' }
       return { kind: 'ids', ids }
     }
     const a = rangeFrom ? Date.parse(rangeFrom) : NaN
     const b = rangeTo ? Date.parse(rangeTo) : NaN
     if (!Number.isFinite(a) || !Number.isFinite(b)) {
-      return { error: 'Zeitraum: gültiges Von- und Bis-Datum wählen.' }
+      return { error: 'Time range: choose valid from and to dates.' }
     }
-    if (a > b) return { error: '„Von“ muss vor „Bis“ liegen.' }
+    if (a > b) return { error: '“From” must be before “To”.' }
     return { kind: 'range', fromMs: a, toMs: b }
   }
 
@@ -125,17 +125,17 @@ export function ChatViewProtokollAnchorButton(p: {
       return
     }
     if (variant === 'full' && !ackFull) {
-      setDialogMsg('Variante B: bitte die Checkbox bestätigen.')
+      setDialogMsg('Variant B: please confirm the checkbox.')
       setStatus('error')
-      setStatusMsg('Variante B: bitte die Checkbox bestätigen.')
+      setStatusMsg('Variant B: please confirm the checkbox.')
       setTimeout(() => setStatus('idle'), 6000)
       return
     }
     const rec = recipient.trim() || myAddress.trim()
     if (variant === 'hash' && !rec) {
-      setDialogMsg('Für Hash-Anker: Empfänger-Adresse setzen (oder eigene Adresse).')
+      setDialogMsg('For hash anchor: set recipient address (or your own address).')
       setStatus('error')
-      setStatusMsg('Für Hash-Anker: Empfänger-Adresse setzen (oder eigene Adresse).')
+      setStatusMsg('For hash anchor: set recipient address (or your own address).')
       setTimeout(() => setStatus('idle'), 7000)
       return
     }
@@ -193,23 +193,23 @@ export function ChatViewProtokollAnchorButton(p: {
           contentSha256: r.contentSha256,
         })
         setDialogMsg(
-          'Verankert. Digest/Nonce/Hash unten kopieren oder unter „Gespeicherte IOTA-Transaktionen“ suchen.'
+          'Anchored. Copy digest/nonce/hash below or find under “Saved IOTA transactions”.'
         )
         setStatus('success')
         setStatusMsg(
           variant === 'hash'
-            ? 'Hash-Anker per /send-plain gesendet (Explorer).'
+            ? 'Hash anchor sent via /send-plain (explorer).'
             : r.chunksSent && r.chunksSent > 1
-              ? `Vollbericht in ${r.chunksSent} verschlüsselten Transaktionen verankert. Digests unter „Gespeicherte IOTA-Transaktionen“.`
-              : 'Vollbericht verschlüsselt (/send) verarbeitet.'
+              ? `Full report anchored in ${r.chunksSent} encrypted transactions. Digests under “Saved IOTA transactions”.`
+              : 'Full report encrypted (/send) processed.'
         )
         setTimeout(() => setStatus('idle'), 7000)
       } else {
         setStatus('error')
-        const baseErr = r.error || 'Verankern fehlgeschlagen.'
+        const baseErr = r.error || 'Anchor failed.'
         const partial =
           r.chunksSent && r.chunksSent > 0
-            ? ` (${r.chunksSent} Teil(e) bereits gesendet — Digests in „Gespeicherte IOTA-Transaktionen“.)`
+            ? ` (${r.chunksSent} part(s) already sent — digests in “Saved IOTA transactions”.)`
             : ''
         setDialogMsg(`${baseErr}${partial}`)
         setStatusMsg(`${baseErr}${partial}`)
@@ -229,10 +229,10 @@ export function ChatViewProtokollAnchorButton(p: {
   const anchorDisabled = messageCount === 0 || vaultLocked
   const anchorTitle =
     messageCount === 0
-      ? 'Keine Nachrichten im Posteingang.'
+      ? 'No messages in inbox.'
       : vaultLocked
-        ? 'Tresor entsperren — Verankern ist ein normaler Mailbox-Send mit deiner Wallet.'
-        : 'Nachrichtenverlauf als IOTA-Mailbox-Nachricht veröffentlichen (Hash oder Volltext)'
+        ? 'Unlock vault — anchoring is a normal mailbox send with your wallet.'
+        : 'Publish message history as IOTA mailbox message (hash or full text)'
 
   return (
     <>
@@ -253,22 +253,12 @@ export function ChatViewProtokollAnchorButton(p: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Auf Chain verankern</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Eine vorbereitete <strong className="text-foreground">IOTA-Mailbox-Nachricht</strong> an eine 0x-Adresse —
-              wie beim normalen Senden, mit festem Inhalt (Prüfsumme oder ganzer Verlauf).
-            </p>
+            <DialogTitle>Anchor on chain</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 text-sm">
-            <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground">
+            <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-xs text-muted-foreground">
               <p>
-                <strong className="text-foreground">Voraussetzungen:</strong> Tresor entsperrt
-                {vaultLocked ? ' (noch gesperrt)' : ' ✓'}. Empfänger-0x im Composer
-                {recipientOk ? ' ✓' : ' — bitte eintragen'}.
-              </p>
-              <p className="mt-2">
-                Handshake/„Connect“ ist vor allem für verschlüsselte Partner-Chats — für Variante A (nur Hash) reicht
-                meist Tresor + Ziel-Adresse.
+                Vault{vaultLocked ? ' — locked' : ' ✓'} · Recipient{recipientOk ? ' ✓' : ' — missing'}
               </p>
               {onOpenPartnerSetup ? (
                 <button
@@ -279,12 +269,12 @@ export function ChatViewProtokollAnchorButton(p: {
                     onOpenPartnerSetup()
                   }}
                 >
-                  → Partner &amp; Verbindung (Handshake)
+                  Partner &amp; connection
                 </button>
               ) : null}
             </div>
             <div>
-              <Label className="mb-2 block text-foreground">Variante</Label>
+              <Label className="mb-2 block text-foreground">Variant</Label>
               <div className="grid gap-2 sm:grid-cols-2">
                 <button
                   type="button"
@@ -299,11 +289,7 @@ export function ChatViewProtokollAnchorButton(p: {
                       : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40'
                   )}
                 >
-                  <span className="font-semibold text-foreground">A — Nur Hash</span>
-                  <span className="mt-1 block text-[11px] leading-snug">
-                    Empfohlen: SHA-256 über den Auszug, öffentlich per /send-plain. Günstig, manipulationssicherer
-                    Existenznachweis.
-                  </span>
+                  <span className="font-semibold text-foreground">A — Hash only</span>
                 </button>
                 <button
                   type="button"
@@ -315,11 +301,7 @@ export function ChatViewProtokollAnchorButton(p: {
                       : 'border-border bg-muted/20 text-muted-foreground hover:bg-muted/40'
                   )}
                 >
-                  <span className="font-semibold text-foreground">B — Vollbericht</span>
-                  <span className="mt-1 block text-[11px] leading-snug">
-                    Gesamtes JSON (verschlüsselt /send). Große Berichte werden automatisch in mehrere
-                    Transaktionen geteilt.
-                  </span>
+                  <span className="font-semibold text-foreground">B — Full report</span>
                 </button>
               </div>
             </div>
@@ -348,21 +330,21 @@ export function ChatViewProtokollAnchorButton(p: {
             )}
 
             <div>
-              <Label className="text-foreground">Umfang</Label>
+              <Label className="text-foreground">Scope</Label>
               <select
                 className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-foreground"
                 value={scopeMode}
                 onChange={(e) => setScopeMode(e.target.value as ScopeMode)}
               >
-                <option value="all">Gesamter Posteingang</option>
-                <option value="ids">Nur bestimmte Nachrichten-IDs</option>
-                <option value="range">Zeitraum (lokal)</option>
+                <option value="all">Entire inbox</option>
+                <option value="ids">Specific message IDs only</option>
+                <option value="range">Time range (local)</option>
               </select>
             </div>
 
             {scopeMode === 'ids' && (
               <div>
-                <Label className="text-foreground">IDs (kommagetrennt)</Label>
+                <Label className="text-foreground">IDs (comma-separated)</Label>
                 <textarea
                   className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 font-mono text-xs text-foreground"
                   rows={3}
@@ -376,7 +358,7 @@ export function ChatViewProtokollAnchorButton(p: {
             {scopeMode === 'range' && (
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
-                  <Label className="text-foreground">Von</Label>
+                  <Label className="text-foreground">From</Label>
                   <input
                     type="datetime-local"
                     className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-foreground"
@@ -385,7 +367,7 @@ export function ChatViewProtokollAnchorButton(p: {
                   />
                 </div>
                 <div>
-                  <Label className="text-foreground">Bis</Label>
+                  <Label className="text-foreground">To</Label>
                   <input
                     type="datetime-local"
                     className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-foreground"
@@ -398,28 +380,28 @@ export function ChatViewProtokollAnchorButton(p: {
 
             {variant === 'hash' && (
               <p className="text-[11px] text-muted-foreground">
-                Empfänger für /send-plain:{' '}
-                <span className="font-mono">{recipient.trim() || myAddress || '(—)'}</span> – leer = eigene Adresse.
+                Recipient for /send-plain:{' '}
+                <span className="font-mono">{recipient.trim() || myAddress || '(—)'}</span> — empty = your address.
               </p>
             )}
             {anchorReceipt ? (
               <div className="space-y-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs">
-                <p className="font-medium text-foreground">Verankert — für Suche/Wiederherstellung speichern:</p>
+                <p className="font-medium text-foreground">Anchored — save for search/recovery:</p>
                 {anchorReceipt.anchorHashHex ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-muted-foreground">Bericht-Hash (Variante A):</span>
+                    <span className="text-muted-foreground">Report hash (variant A):</span>
                     <code className="break-all font-mono text-[10px]">{anchorReceipt.anchorHashHex}</code>
-                    <Button type="button" size="sm" variant="outline" onClick={() => copyAnchorField('Bericht-Hash', anchorReceipt.anchorHashHex!)}>
-                      Kopieren
+                    <Button type="button" size="sm" variant="outline" onClick={() => copyAnchorField('Report hash', anchorReceipt.anchorHashHex!)}>
+                      Copy
                     </Button>
                   </div>
                 ) : null}
                 {anchorReceipt.contentSha256 ? (
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-muted-foreground">Vollbericht SHA-256 (Chunks):</span>
+                    <span className="text-muted-foreground">Full report SHA-256 (chunks):</span>
                     <code className="break-all font-mono text-[10px]">{anchorReceipt.contentSha256}</code>
                     <Button type="button" size="sm" variant="outline" onClick={() => copyAnchorField('Chunk-Hash', anchorReceipt.contentSha256!)}>
-                      Kopieren
+                      Copy
                     </Button>
                   </div>
                 ) : null}
@@ -427,7 +409,7 @@ export function ChatViewProtokollAnchorButton(p: {
                   <div key={`${rec.digest ?? 'x'}-${rec.nonce ?? idx}`} className="space-y-1 border-t border-border/50 pt-2">
                     {rec.chunkPart ? (
                       <p className="font-medium text-foreground">
-                        Teil {rec.chunkPart}
+                        Part {rec.chunkPart}
                         {rec.chunkTotal ? `/${rec.chunkTotal}` : ''}
                       </p>
                     ) : null}
@@ -436,7 +418,7 @@ export function ChatViewProtokollAnchorButton(p: {
                         <span className="text-muted-foreground">TX-Digest:</span>
                         <code className="break-all font-mono text-[10px]">{rec.digest}</code>
                         <Button type="button" size="sm" variant="outline" onClick={() => copyAnchorField('TX-Digest', rec.digest!)}>
-                          Kopieren
+                          Copy
                         </Button>
                       </div>
                     ) : null}
@@ -445,14 +427,14 @@ export function ChatViewProtokollAnchorButton(p: {
                         <span className="text-muted-foreground">Nonce:</span>
                         <code className="break-all font-mono text-[10px]">{rec.nonce}</code>
                         <Button type="button" size="sm" variant="outline" onClick={() => copyAnchorField('Nonce', rec.nonce!)}>
-                          Kopieren
+                          Copy
                         </Button>
                       </div>
                     ) : null}
                   </div>
                 ))}
                 <p className="text-[10px] text-muted-foreground">
-                  Alle Werte sind auch unter „Nachrichtenverlauf → Gespeicherte IOTA-Transaktionen“ gespeichert.
+                  All values are also saved under “Message history → Saved IOTA transactions”.
                 </p>
               </div>
             ) : null}
@@ -479,11 +461,11 @@ export function ChatViewProtokollAnchorButton(p: {
               }}
               disabled={busy}
             >
-              {anchorReceipt ? 'Schließen' : 'Abbrechen'}
+              {anchorReceipt ? 'Close' : 'Cancel'}
             </Button>
             {!anchorReceipt ? (
               <Button type="button" onClick={() => void runAnchor()} disabled={busy}>
-                {busy ? '…' : 'Verankern'}
+                {busy ? '…' : 'Anchor'}
               </Button>
             ) : null}
           </DialogFooter>

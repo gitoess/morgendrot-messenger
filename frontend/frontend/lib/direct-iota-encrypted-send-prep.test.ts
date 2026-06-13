@@ -67,15 +67,18 @@ describe('direct-iota-encrypted-send-prep', () => {
     expect(findPeerHandshakeMock).toHaveBeenCalledWith(peer)
   })
 
-  it('JWK aus Puls wird in localStorage persistiert', async () => {
+  it('JWK wird passwortgeschützt persistiert', async () => {
     const pair = await globalThis.crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, [
       'deriveBits',
       'deriveKey',
     ])
     const jwk = await globalThis.crypto.subtle.exportKey('jwk', pair.privateKey)
-    const imp = await applyDirectChatEcdhPrivateJwk(JSON.stringify(jwk))
+    const imp = await applyDirectChatEcdhPrivateJwk(JSON.stringify(jwk), {
+      persistPassword: 'feldtest-geheim-2026',
+    })
     expect(imp.ok).toBe(true)
     expect(getDirectChatEcdhPrivateKey()).not.toBeNull()
-    expect(store['morgendrot.directChatEcdh.privateJwk.v1']).toBeTruthy()
+    expect(store['morgendrot.directChatEcdh.privateJwk.v1']).toBeUndefined()
+    expect(store['morgendrot.directChatEcdh.privateJwk.enc.v1']).toBeTruthy()
   })
 })

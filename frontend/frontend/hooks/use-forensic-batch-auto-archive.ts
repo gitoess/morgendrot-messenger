@@ -59,13 +59,13 @@ export function useForensicBatchAutoArchive(p: {
         setBossSchedulerActive(cfg.config.autoEnabled)
         if (cfg.config.autoEnabled) {
           setBossSchedulerHint(
-            `Boss-PC Scheduler aktiv (${cfg.config.autoIntervalMin} Min, Modus ${cfg.config.mode}).` +
+            `Boss PC scheduler active (${cfg.config.autoIntervalMin} min, mode ${cfg.config.mode}).` +
               (cfg.config.lastStatus ? ` ${cfg.config.lastStatus}` : '')
           )
           if (cfg.config.lastRunAt) setLastRunAt(cfg.config.lastRunAt)
         } else {
           setBossSchedulerHint(
-            'Boss-API online — Auto-Batch aus. Checkbox im Panel steuert den Boss-Scheduler.'
+            'Boss API online — auto-batch off. Use the checkbox in the panel to control the boss scheduler.'
           )
         }
       })
@@ -95,11 +95,11 @@ export function useForensicBatchAutoArchive(p: {
           if (out.ok) {
             setLastStatus(
               out.messageCount > 0
-                ? `Auto-Batch (PWA): ${out.messageCount} Nachricht(en) in ${out.txCount} TX (${out.mode}).`
-                : 'Auto-Batch (PWA): nichts Neues.'
+                ? `Auto-batch (PWA): ${out.messageCount} message(s) in ${out.txCount} TX (${out.mode}).`
+                : 'Auto-batch (PWA): nothing new.'
             )
           } else if (!out.error.includes('Keine neuen') && !out.error.includes('läuft bereits')) {
-            setLastStatus(`Auto-Batch (PWA): ${out.error}`)
+            setLastStatus(`Auto-batch (PWA): ${out.error}`)
           }
         })
         .finally(() => {

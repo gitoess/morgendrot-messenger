@@ -1,5 +1,6 @@
 import { executeCommand } from '@/frontend/lib/api/execute-command'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import {
   cacheHandshakeOffers,
   readCachedHandshakeOffers,
@@ -70,7 +71,7 @@ export async function fetchHandshakeOffers(): Promise<HandshakeOffersFetchResult
   const ids = readClientMailboxIdsForHandshakeScan()
   const q = ids.length ? `?mailboxIds=${encodeURIComponent(ids.join(','))}` : ''
   try {
-    const r = await fetch(`${API_BASE}/api/pending-handshakes${q}`)
+    const r = await fetchWithApiAuth(`${API_BASE}/api/pending-handshakes${q}`)
     const j = (await r.json()) as {
       ok?: boolean
       offers?: PendingHandshakeOffer[]
@@ -155,7 +156,7 @@ export async function findPeerHandshake(peer?: string): Promise<{
   }
 
   const q = peerTrim && /^0x[a-fA-F0-9]{64}$/.test(peerTrim) ? `?peer=${encodeURIComponent(peerTrim)}` : ''
-  const r = await fetch(`${API_BASE}/api/find-peer-handshake` + q)
+  const r = await fetchWithApiAuth(`${API_BASE}/api/find-peer-handshake` + q)
   const j = (await r.json()) as {
     ok?: boolean
     found?: boolean

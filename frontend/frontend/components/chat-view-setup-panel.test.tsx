@@ -51,8 +51,8 @@ describe('ChatViewSetupPanel (§ H.1b)', () => {
 
   it('zeigt Funk & Geräte bei Meshtastic-Sendepfad', () => {
     render(<ChatViewSetupPanel {...baseProps({ forcedTransport: 'mesh' })} />)
-    expect(screen.getByRole('heading', { name: /Funk & Geräte/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Bluetooth verbinden/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Radio & devices/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Connect Bluetooth/i })).toBeInTheDocument()
   })
 
   it('zeigt Meshtastic verbunden mit Trennen', () => {
@@ -65,14 +65,14 @@ describe('ChatViewSetupPanel (§ H.1b)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Meshtastic verbunden/i)).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Trennen/i }))
+    expect(screen.getByText(/Meshtastic connected/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Disconnect/i }))
     expect(disconnect).toHaveBeenCalledOnce()
   })
 
   it('zeigt Ad-hoc BLE-Sektion', () => {
     render(<ChatViewSetupPanel {...baseProps({ forcedTransport: 'adhoc' })} />)
-    expect(screen.getByRole('heading', { name: /Ad-hoc · BLE-Gerät/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Ad-hoc · BLE device/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/64 Hex/i)).toBeInTheDocument()
   })
 

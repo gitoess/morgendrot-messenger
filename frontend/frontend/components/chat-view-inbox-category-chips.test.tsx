@@ -13,10 +13,10 @@ describe('ChatViewInboxCategoryChips (§ H.1a)', () => {
         unreadCounts={emptyCounts}
       />
     )
-    expect(screen.getByRole('tab', { name: /^Alle$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^All$/i })).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: /^Pinnwand$/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^Direkt$/i })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: /^Funk$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Direct$/i })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: /^Radio$/i })).toBeInTheDocument()
   })
 
   it('blendet Pinnwand aus wenn showLagebild=false', () => {
@@ -40,7 +40,7 @@ describe('ChatViewInboxCategoryChips (§ H.1a)', () => {
         unreadCounts={emptyCounts}
       />
     )
-    fireEvent.click(screen.getByRole('tab', { name: /^Funk$/i }))
+    fireEvent.click(screen.getByRole('tab', { name: /^Radio$/i }))
     expect(onCategoryChange).toHaveBeenCalledWith('funk')
   })
 
@@ -53,7 +53,7 @@ describe('ChatViewInboxCategoryChips (§ H.1a)', () => {
         unreadCounts={{ alle: 0, lagebild: 0, direkt: 3, funk: 0 }}
       />
     )
-    expect(screen.getByLabelText('3 ungelesen')).toBeInTheDocument()
+    expect(screen.getByLabelText('3 unread')).toBeInTheDocument()
     rerender(
       <ChatViewInboxCategoryChips
         category="direkt"
@@ -61,7 +61,7 @@ describe('ChatViewInboxCategoryChips (§ H.1a)', () => {
         unreadCounts={{ alle: 0, lagebild: 0, direkt: 3, funk: 0 }}
       />
     )
-    expect(screen.queryByLabelText('3 ungelesen')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('3 unread')).not.toBeInTheDocument()
   })
 
   it('kürzt Unread >99 als 99+', () => {
@@ -72,6 +72,6 @@ describe('ChatViewInboxCategoryChips (§ H.1a)', () => {
         unreadCounts={{ alle: 0, lagebild: 0, direkt: 0, funk: 120 }}
       />
     )
-    expect(screen.getByRole('tab', { name: /Funk/ })).toHaveTextContent('99+')
+    expect(screen.getByRole('tab', { name: /Radio/ })).toHaveTextContent('99+')
   })
 })

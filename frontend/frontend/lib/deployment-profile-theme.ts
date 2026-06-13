@@ -60,7 +60,7 @@ const THEMES: Record<DeploymentThemeId, DeploymentProfileTheme> = {
   consumer: {
     id: 'consumer',
     watermark: 'PRIVAT',
-    label: 'Privat',
+    label: 'Private',
     badgeClass: 'border-teal-600/40 bg-teal-600/10 text-teal-950 dark:text-teal-100',
     backdropClass: 'from-teal-600/[0.06] via-background to-background',
     accentVar: 'teal',
@@ -68,7 +68,7 @@ const THEMES: Record<DeploymentThemeId, DeploymentProfileTheme> = {
   boss: {
     id: 'boss',
     watermark: 'BOSS',
-    label: 'Einsatzleitung',
+    label: 'Command post',
     badgeClass: 'border-violet-600/45 bg-violet-600/12 text-violet-950 dark:text-violet-100',
     backdropClass: 'from-violet-600/[0.07] via-background to-background',
     accentVar: 'violet',
@@ -76,7 +76,7 @@ const THEMES: Record<DeploymentThemeId, DeploymentProfileTheme> = {
   einsatz: {
     id: 'einsatz',
     watermark: 'EINSATZ',
-    label: 'Einsatz',
+    label: 'Ops',
     badgeClass: 'border-sky-600/40 bg-sky-600/10 text-sky-950 dark:text-sky-100',
     backdropClass: 'from-sky-600/[0.06] via-background to-background',
     accentVar: 'sky',
@@ -119,12 +119,12 @@ export function resolveDeploymentProfileTheme(status: Pick<
 
 export function roleDisplayDe(role?: string): string {
   const r = norm(role || '')
-  if (r === 'arbeiter') return 'Arbeiter'
-  if (r === 'kommandant') return 'Kommandant'
+  if (r === 'arbeiter') return 'Worker'
+  if (r === 'kommandant') return 'Commander'
   if (r === 'boss') return 'Boss'
-  if (r === 'messenger') return 'Helfer'
-  if (r === 'waerter') return 'Wächter'
-  if (r === 'lock') return 'Schloss'
+  if (r === 'messenger') return 'Helper'
+  if (r === 'waerter') return 'Guardian'
+  if (r === 'lock') return 'Lock'
   if (r === 'monitor') return 'Monitor'
   return role?.trim() || '—'
 }

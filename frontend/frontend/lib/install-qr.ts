@@ -4,6 +4,7 @@
  */
 
 import { API_BASE_OVERRIDE_KEY, getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 
 export const LAN_INSTALL_HOST_KEY = 'morgendrot.lanInstallHost'
 
@@ -234,7 +235,7 @@ export async function fetchLanInstallCandidates(): Promise<LanInstallCandidates 
   const base = getApiBase()
   if (!base) return null
   try {
-    const r = await fetch(`${base}/api/lan-install-urls`, { cache: 'no-store' })
+    const r = await fetchWithApiAuth(`${base}/api/lan-install-urls`, { cache: 'no-store' })
     if (!r.ok) return null
     const j = (await r.json()) as {
       ok?: boolean

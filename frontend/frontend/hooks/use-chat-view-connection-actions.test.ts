@@ -68,7 +68,7 @@ describe('useChatViewConnectionActions / handshake autofill', () => {
     expect(findPeerHandshakeMock).toHaveBeenCalledWith('0x' + 'ab'.repeat(32))
     expect(setPeerPubMock).toHaveBeenCalledTimes(1)
     expect(h.result.current.status).toBe('success')
-    expect(h.result.current.statusMsg).toContain('Peer-Pub automatisch aus Handshake übernommen')
+    expect(h.result.current.statusMsg).toContain('Peer pub automatically applied from handshake')
   })
 
   it('rejects handshake when partner is not a 0x wallet', async () => {

@@ -67,37 +67,37 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
     async (rawAddress: string, opts?: { closeSetup?: boolean }) => {
       const addr = rawAddress.trim()
       if (!addr) {
-        toast.error('Partner-Adresse fehlt — 0x-Wallet eintragen.')
+        toast.error('Partner address missing — enter 0x wallet.')
         return
       }
       if (!ADDR_64_HEX.test(addr)) {
-        toast.error('Gültige Empfänger-Wallet: 0x + 64 Hex.')
+        toast.error('Valid recipient wallet required: 0x + 64 hex.')
         return
       }
       setSending(true)
       const res = await sendHandshakeHybrid(addr, { backendReachable })
       if (res.ok) {
         setStatus('success')
-        const base = res.message || 'Handshake gesendet.'
+        const base = res.message || 'Handshake sent.'
         let extra = ''
         const p = addr.toLowerCase()
         try {
           const hs = await findPeerHandshake(p)
           if (hs.ok && hs.found && hs.peerPubRawBase64) {
             const saved = setDirectChatEcdhPeerPubBase64(p, hs.peerPubRawBase64)
-            if (saved.ok) extra = ' Peer-Pub automatisch aus Handshake übernommen.'
+            if (saved.ok) extra = ' Peer pub automatically applied from handshake.'
           }
         } catch {
           /* optional */
         }
         const pathNote =
           res.path === 'direct'
-            ? ' (Direkt-RPC — ohne Morgendrot-/handshake-API).'
+            ? ' (Direct RPC — without Morgendrot /handshake API).'
             : res.path === 'api'
-              ? ' (über Morgendrot-API).'
+              ? ' (via Morgendrot API).'
               : ''
         setStatusMsg(
-          `${base}${pathNote} Handshake bleibt on-chain (§ H.23: Double Ratchet später). Nach Entsperren: Partner aus Vault-Cache — einmalig Connect nur wenn Status nicht „verbunden“. Siehe docs/HANDSHAKE-PERSISTENZ-UND-H23.md.${extra}`
+          `${base}${pathNote} Handshake stays on-chain (§ H.23: Double Ratchet later). After unlock: partner from vault cache — one-time Connect only if status is not "connected". See docs/HANDSHAKE-PERSISTENZ-UND-H23.md.${extra}`
         )
         if (opts?.closeSetup !== false) setShowSetup(false)
         notifyHandshakeOffersRefresh()
@@ -105,7 +105,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
         offerLocalVaultSave('handshake')
       } else {
         setStatus('error')
-        setStatusMsg(res.error || 'Fehler')
+        setStatusMsg(res.error || 'Error')
       }
       setSending(false)
       setTimeout(() => setStatus('idle'), 5000)
@@ -115,7 +115,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
 
   const handleHandshake = useCallback(async () => {
     if (!partner.trim()) {
-      toast.error('Partner-Adresse fehlt — im Setup-Panel „Partner (0x…)“ eintragen (nicht nur „An:“ im Composer).')
+      toast.error('Partner address missing — enter "Partner (0x…)" in the setup panel (not just "To:" in the composer).')
       return
     }
     await runHandshakeForAddress(partner)
@@ -133,12 +133,12 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
       if (mode === 'partner') {
         const addr = (explicitAddress ?? partner).trim()
         if (!ADDR_64_HEX.test(addr)) {
-          toast.error('Gültige Partner-Wallet (0x + 64 Hex) eintragen — nur für „Handshake annehmen“.')
+          toast.error('Valid partner wallet (0x + 64 hex) required — for "Accept handshake" only.')
           return
         }
       } else if (backendReachable === false) {
-        toast.error('Einsatz-Partner-Connect braucht die Morgendrot-Basis', {
-          description: 'PARTNER_ADDRESS aus der Server-.env ist nur mit erreichbarer API verfügbar.',
+        toast.error('Deployment partner connect requires the Morgendrot basis', {
+          description: 'PARTNER_ADDRESS from server .env is only available with a reachable API.',
           duration: 12_000,
         })
         return
@@ -150,24 +150,24 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
           : await connectDeploymentHybrid({ backendReachable })
       if (res.ok) {
         setStatus('success')
-        const base = res.message || 'Connect gestartet.'
+        const base = res.message || 'Connect started.'
         const pathNote =
           res.path === 'direct'
-            ? ' (Direkt-RPC — Peer-Pub lokal, ohne Server-peerMap).'
+            ? ' (Direct RPC — peer pub local, without server peerMap).'
             : res.path === 'api'
-              ? ' (Morgendrot-API / Hintergrund-Connect).'
+              ? ' (Morgendrot API / background connect).'
               : ''
         const modeHint =
           mode === 'partner'
-            ? ' Partner-Handshake aus Chain übernommen; verschlüsselter Direkt-Versand nutzt lokales ECDH-Material.'
-            : ' Nutzt PARTNER_ADDRESS aus der Server-.env.'
+            ? ' Partner handshake applied from chain; encrypted direct send uses local ECDH material.'
+            : ' Uses PARTNER_ADDRESS from server .env.'
         setStatusMsg(`${base}${pathNote}${modeHint}`)
         scheduleStatusRefresh()
         notifyHandshakeOffersRefresh()
         offerLocalVaultSave('connect')
       } else {
         setStatus('error')
-        setStatusMsg(res.error || 'Fehler')
+        setStatusMsg(res.error || 'Error')
       }
       setSending(false)
       setTimeout(() => setStatus('idle'), 6000)
@@ -207,7 +207,7 @@ export function useChatViewConnectionActions(p: UseChatViewConnectionActionsPara
   const openPartnerSetupPanel = useCallback(() => {
     setShowSetup(true)
     scrollPartnerSetupIntoView()
-    toast.info('Partner-Setup geöffnet — Funk: „Heltec (Web Bluetooth) verbinden“ im Abschnitt Mesh.')
+    toast.info('Partner setup opened — radio: connect "Heltec (Web Bluetooth)" in the Mesh section.')
   }, [setShowSetup])
 
   return {

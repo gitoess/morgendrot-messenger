@@ -5,6 +5,8 @@
 
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import type { CommandResponse } from '@/frontend/lib/api/command-response-types'
+import { withApiAuthHeaders } from '@/frontend/lib/api-auth-header'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 
 export type ConfigItem = {
   key: string
@@ -20,7 +22,7 @@ export type ConfigResponse = {
 
 export async function getConfig(): Promise<ConfigResponse> {
   try {
-    const response = await fetch(`${getApiBase()}/api/config`)
+    const response = await fetchWithApiAuth(`${getApiBase()}/api/config`)
     return await response.json()
   } catch (error) {
     return {
@@ -32,11 +34,14 @@ export async function getConfig(): Promise<ConfigResponse> {
 
 export async function setConfig(key: string, value: string): Promise<CommandResponse> {
   try {
-    const response = await fetch(`${getApiBase()}/api/config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
-    })
+    const response = await fetch(
+      `${getApiBase()}/api/config`,
+      withApiAuthHeaders({
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      })
+    )
     return await response.json()
   } catch (error) {
     return {
@@ -48,7 +53,7 @@ export async function setConfig(key: string, value: string): Promise<CommandResp
 
 export async function getCurrentIds(): Promise<{ ok: boolean; myAddress?: string; packageId?: string }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/current-ids`)
+    const response = await fetchWithApiAuth(`${getApiBase()}/api/current-ids`)
     return await response.json()
   } catch {
     return { ok: false }
@@ -63,7 +68,7 @@ export async function getPackageIdHistory(): Promise<{
   hints?: Record<string, { label?: string; peer?: string; note?: string }>
 }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/package-id-history`)
+    const response = await fetchWithApiAuth(`${getApiBase()}/api/package-id-history`)
     return await response.json()
   } catch {
     return { ok: false }
@@ -72,7 +77,7 @@ export async function getPackageIdHistory(): Promise<{
 
 export async function getConnectAddresses(): Promise<{ ok: boolean; addresses?: string[] }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/connect-addresses`)
+    const response = await fetchWithApiAuth(`${getApiBase()}/api/connect-addresses`)
     return await response.json()
   } catch {
     return { ok: false }
@@ -81,7 +86,7 @@ export async function getConnectAddresses(): Promise<{ ok: boolean; addresses?: 
 
 export async function checkChainReachable(): Promise<{ ok: boolean; reachable?: boolean }> {
   try {
-    const response = await fetch(`${getApiBase()}/api/chain-reachable`)
+    const response = await fetchWithApiAuth(`${getApiBase()}/api/chain-reachable`)
     return await response.json()
   } catch {
     return { ok: false, reachable: false }

@@ -25,17 +25,17 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
 
   it('zeigt Gruppen-Überschrift', () => {
     render(<ChatViewGroupPanel contactDirectory={{}} />)
-    expect(screen.getByRole('heading', { name: /^Gruppe$/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /^Group$/i })).toBeInTheDocument()
   })
 
   it('speichert Gruppe mit gültigen Mitgliedern', () => {
     render(<ChatViewGroupPanel contactDirectory={{}} onEncryptedChange={vi.fn()} />)
-    fireEvent.change(screen.getByPlaceholderText(/Einsatz Alpha/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Operation Alpha/i), {
       target: { value: 'Alpha Team' },
     })
     fireEvent.change(document.querySelector('textarea')!, { target: { value: MEMBER_A } })
-    fireEvent.click(screen.getByRole('button', { name: /Gruppe speichern/i }))
-    expect(screen.getByText(/Gruppe gespeichert/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Save group/i }))
+    expect(screen.getByText(/Group saved/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Alpha Team \(1\)/i })).toBeInTheDocument()
   })
 
@@ -48,7 +48,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} forcedTransport="mesh" onEncryptedChange={vi.fn()} encrypted />
     )
-    expect(screen.getByRole('button', { name: /^Verschlüsselt$/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /^Encrypted$/i })).toBeDisabled()
   })
 
   it('warnt vor Klartext per Dialog', () => {
@@ -56,14 +56,14 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
     render(
       <ChatViewGroupPanel contactDirectory={{}} encrypted onEncryptedChange={onEncryptedChange} />
     )
-    fireEvent.click(screen.getByRole('button', { name: /^Unverschlüsselt$/i }))
-    fireEvent.click(screen.getByRole('button', { name: /Verstanden, fortfahren/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Plaintext$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Understood, continue/i }))
     expect(onEncryptedChange).toHaveBeenCalledWith(false)
   })
 
   it('blockiert Neue Gruppe ohne Berechtigung', () => {
     render(<ChatViewGroupPanel contactDirectory={{}} groupCreateAllowed={false} />)
-    expect(screen.getByRole('button', { name: /Neue Gruppe/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /New group/i })).toBeDisabled()
   })
 
   it('wechselt zwischen gespeicherten Gruppen', () => {

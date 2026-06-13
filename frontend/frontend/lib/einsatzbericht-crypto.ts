@@ -2,9 +2,11 @@
 
 /** Passwortgeschützter Einsatzbericht (Web Crypto). Öffnen: /einsatzbericht-decrypt.html */
 
+import { MORGENDROT_PBKDF2_ITERATIONS } from '@/frontend/lib/crypto-pbkdf2-iterations'
+
 const SCHEMA = 'morgendrot.einsatzbericht.enc.v1'
 const SCHEMA_PROTOKOLL_ZIP = 'morgendrot.einsatzprotokoll.zip.enc.v1' as const
-const PBKDF2_ITERATIONS = 210_000
+const PBKDF2_ITERATIONS = MORGENDROT_PBKDF2_ITERATIONS
 const SALT_BYTES = 16
 const IV_BYTES = 12
 

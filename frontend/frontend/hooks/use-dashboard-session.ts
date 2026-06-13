@@ -284,7 +284,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
           setMainnetSignerHint(null)
         } else if (!getDirectIotaSessionSigner()) {
           setMainnetSignerHint(
-            'Mainnet-Direkt-Send: Tresor entsperren — Session-Signer wird automatisch aus dem Vault geladen.'
+            'Mainnet direct send: unlock vault — session signer loads automatically from the vault.'
           )
         }
       }
@@ -499,19 +499,19 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
     if (unlockMode === 'create') {
       if (!password.trim() || password !== passwordConfirm) {
-        setUnlockError('Tresor-/Wallet-Passwort und Wiederholung müssen übereinstimmen.')
+        setUnlockError('Vault/wallet password and confirmation must match.')
         return
       }
       if (signer === 'sdk') {
         const sa = signerImport.trim()
         const sb = signerImportConfirm.trim()
         if (!sa || normalizeSignerWords(sa) !== normalizeSignerWords(sb)) {
-          setUnlockError('Mnemonic / Secret und Wiederholung müssen übereinstimmen.')
+          setUnlockError('Mnemonic / secret and confirmation must match.')
           return
         }
         if (!isPlausibleSdkImport(sa)) {
           setUnlockError(
-            'Mnemonic: mindestens 12 Wörter — oder gültiges Bech32-/64-Hex-Secret (siehe Hilfe).'
+            'Mnemonic: at least 12 words — or a valid Bech32/64-hex secret (see help).'
           )
           return
         }
@@ -520,7 +520,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       const t = signerImport.trim()
       if (!t || !isPlausibleSdkImport(t)) {
         setUnlockError(
-          'Mnemonic / Secret erforderlich (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
+          'Mnemonic / secret required (at least 12 words or Bech32/hex as in help).'
         )
         return
       }
@@ -528,7 +528,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       const t = signerImport.trim()
       if (t && !isPlausibleSdkImport(t)) {
         setUnlockError(
-          'Mnemonic / Secret scheint ungültig (mindestens 12 Wörter oder Bech32/Hex wie in der Hilfe).'
+          'Mnemonic / secret appears invalid (at least 12 words or Bech32/hex as in help).'
         )
         return
       }
@@ -560,7 +560,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       } else if (mnemonic) {
         if (unlockMode === 'create' && (!vaultPassword || vaultPassword !== passwordConfirm.trim())) {
           setUnlocking(false)
-          setUnlockError('Neues Profil: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).')
+          setUnlockError('New profile: password and confirmation must match (min. 8 characters).')
           return
         }
         unlockResult = await activateStandaloneHelperWallet({
@@ -569,7 +569,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         })
       } else {
         setUnlocking(false)
-        setUnlockError('Wallet-Schlüssel eingeben (Mnemonic, Bech32 oder 64 Hex).')
+        setUnlockError('Enter wallet key (mnemonic, Bech32, or 64 hex).')
         return
       }
       setUnlocking(false)
@@ -628,12 +628,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setUnlockMode('import')
       setShowSignerImportOpen(true)
       setUnlockError(
-        `${res.error || 'Signatur-Material fehlt.'}\n\n` +
-          '→ Karte „Seed importieren“ (grün markiert): Vault-Passwort **und** Mnemonic/Secret eintragen, dann **„Profil wiederherstellen“**.\n' +
-          'Alternativ unter „Tresor öffnen“: „Mnemonic ergänzen (erweitert)“ öffnen, beides eintragen, **„Entsperren“**.'
+        `${res.error || 'Signing material missing.'}\n\n` +
+          '→ Card "Import seed" (highlighted green): enter vault password **and** mnemonic/secret, then **"Restore profile"**.\n' +
+          'Alternatively under "Open vault": open "Add mnemonic (advanced)", enter both, **"Unlock"**.'
       )
     } else {
-      setUnlockError(res.error || 'Entsperren fehlgeschlagen')
+      setUnlockError(res.error || 'Unlock failed')
     }
   }, [
     apiSnapshot?.signer,
@@ -724,7 +724,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       onLockSession: async () => {
         if (
           !window.confirm(
-            'API-Sitzung sperren? Schlüssel werden aus dem Arbeitsspeicher der Basis entfernt — danach den Tresor erneut mit Passwort entsperren.'
+            'Lock API session? Keys are removed from the basis working memory — then unlock the vault again with your password.'
           )
         ) {
           return
@@ -746,7 +746,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     setHelpOpen(true)
     setHelpLoading(true)
     const res = await fetchHelp()
-    setHelpText(res.ok && res.helpText ? res.helpText : res.error || 'Keine Hilfe verfügbar.')
+    setHelpText(res.ok && res.helpText ? res.helpText : res.error || 'No help available.')
     setHelpLoading(false)
   }, [])
 

@@ -10,20 +10,20 @@ describe('ChatViewOfflineQueueStrip', () => {
 
   it('zeigt Idle-Hinweis bei alwaysVisible', () => {
     render(<ChatViewOfflineQueueStrip pending={0} alwaysVisible />)
-    expect(screen.getByText(/Offline-Warteschlange/)).toBeInTheDocument()
+    expect(screen.getByText(/Offline queue/)).toBeInTheDocument()
   })
 
   it('zeigt Einzahl und Erneut-versuchen', () => {
     const onRefresh = vi.fn()
     render(<ChatViewOfflineQueueStrip pending={1} errorHint="rpc timeout" onManualRefresh={onRefresh} />)
-    expect(screen.getByText(/1 Nachricht wartet/)).toBeInTheDocument()
+    expect(screen.getByText(/1 message waiting/)).toBeInTheDocument()
     expect(screen.getByText(/rpc timeout/)).toBeInTheDocument()
-    screen.getByRole('button', { name: /Erneut versuchen/i }).click()
+    screen.getByRole('button', { name: /Retry/i }).click()
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
   it('zeigt Mehrzahl', () => {
     render(<ChatViewOfflineQueueStrip pending={3} />)
-    expect(screen.getByText(/3 Nachrichten warten/)).toBeInTheDocument()
+    expect(screen.getByText(/3 messages waiting/)).toBeInTheDocument()
   })
 })

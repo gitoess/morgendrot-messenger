@@ -82,11 +82,12 @@ export function recordForensicBatchRegistryEntries(
   const byRef = new Map(prev.map((e) => [e.canonicalMsgRef.toLowerCase(), e]))
   for (const e of records) {
     const ref = e.canonicalMsgRef.trim().toLowerCase()
-    if (!ref || !e.batchDigest.trim()) continue
+    const digest = e.batchDigest.trim()
+    if (!CANONICAL_REF_HEX.test(ref) || !BATCH_DIGEST.test(digest)) continue
     byRef.set(ref, {
       canonicalMsgRef: ref,
       messageId: e.messageId,
-      batchDigest: e.batchDigest.trim(),
+      batchDigest: digest,
       batchedAtMs: now,
       encrypted: e.encrypted,
       batchIndex: e.batchIndex,

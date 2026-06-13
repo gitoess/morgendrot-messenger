@@ -173,8 +173,8 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         setStatus('success')
         const base =
           r.sent === 1
-            ? 'Delayed Upload: 1 Eintrag aus Warteschlange nach IOTA übertragen.'
-            : `Delayed Upload: ${r.sent} Einträge aus Warteschlange nach IOTA übertragen.`
+            ? 'Delayed upload: 1 item transferred from queue to IOTA.'
+            : `Delayed upload: ${r.sent} items transferred from queue to IOTA.`
         let msg = base + formatTxDigestStatusSuffix(lastDigest)
         const snd = senderAddress.trim()
         if (snd && isForensicImageMailboxAttestationEnabled() && mirrorSuccesses.length > 0) {
@@ -221,7 +221,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         refreshOfflineMailboxQueueCount()
         setStatus('success')
         setStatusMsg(
-          `${purged} veraltete Warteschlangen-Einträge verworfen (falsche Testnet-Package-ID). Bitte Nachricht neu senden.`
+          `${purged} stale queue entries discarded (wrong testnet package ID). Please send the message again.`
         )
         setTimeout(() => setStatus('idle'), 8000)
         if (getOfflineMailboxQueueCount() === 0) return
@@ -252,8 +252,8 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         setStatus('success')
         setStatusMsg(
           r.sent === 1
-            ? 'Mailbox-Warteschlange: 1 Eintrag übertragen.'
-            : `Mailbox-Warteschlange: ${r.sent} Einträge übertragen.`
+            ? 'Mailbox queue: 1 item transferred.'
+            : `Mailbox queue: ${r.sent} items transferred.`
         )
         setTimeout(() => setStatus('idle'), 6000)
         void loadMessages('poll', undefined, { silent: true })
@@ -261,8 +261,8 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         setStatus('error')
         setStatusMsg(
           r.failed === 1
-            ? `Mailbox-Warteschlange: ${r.sent} übertragen, 1 Eintrag erneut fehlgeschlagen (Backoff § H.12 / SYNC §8.1).`
-            : `Mailbox-Warteschlange: ${r.sent} übertragen, ${r.failed} erneut fehlgeschlagen (Backoff).`
+            ? `Mailbox queue: ${r.sent} transferred, 1 item failed again (backoff § H.12 / SYNC §8.1).`
+            : `Mailbox queue: ${r.sent} transferred, ${r.failed} failed again (backoff).`
         )
         setTimeout(() => setStatus('idle'), 9000)
         void loadMessages('poll', undefined, { silent: true })
@@ -277,18 +277,18 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
           setStatus('error')
           setStatusMsg(
             n > 0
-              ? `Warteschlange geleert (${n}) — alte Testnet-Einträge. Header: „Produktion · Mainnet“ prüfen, dann neu senden.`
-              : 'Package existiert auf dieser Kette nicht — Netzwerk in Einstellungen prüfen (Mainnet vs. Testnet).'
+              ? `Queue cleared (${n}) — old testnet entries. Check header "Production · Mainnet", then send again.`
+              : 'Package does not exist on this chain — check network in settings (mainnet vs. testnet).'
           )
           setTimeout(() => setStatus('idle'), 12000)
           return
         }
         setStatus('error')
-        const tail = hint ? ` Letzte Meldung: ${hint.replace(/\s+/g, ' ').trim().slice(0, 120)}` : ''
+        const tail = hint ? ` Last message: ${hint.replace(/\s+/g, ' ').trim().slice(0, 120)}` : ''
         setStatusMsg(
           r.failed === 1
-            ? `Mailbox-Warteschlange: erneuter Versand für 1 Eintrag fehlgeschlagen.${tail}`
-            : `Mailbox-Warteschlange: erneuter Versand für ${r.failed} Einträge fehlgeschlagen.${tail}`
+            ? `Mailbox queue: resend failed for 1 item.${tail}`
+            : `Mailbox queue: resend failed for ${r.failed} items.${tail}`
         )
         setTimeout(() => setStatus('idle'), 10000)
       }
@@ -322,7 +322,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         if (r.ok) {
           mirrorDedupRef.current.add(dedup)
           setStatus('success')
-          const baseOk = 'Delayed Upload: Inhalt zusätzlich per IOTA gespeichert.'
+          const baseOk = 'Delayed upload: content also saved via IOTA.'
           const snd = senderAddress.trim()
           if (snd && isForensicImageMailboxAttestationEnabled()) {
             const parsed = parseMailboxOutNonceMarker(wire)
@@ -356,8 +356,8 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
           setStatus('error')
           setStatusMsg(
             en.queued
-              ? `Delayed Upload: zwischengespeichert (${getMirrorQueueCount()} in Warteschlange). Wird bei Verbindung nachgeliefert.`
-              : en.reason || r.error || r.message || 'Mirror fehlgeschlagen.'
+              ? `Delayed upload: buffered (${getMirrorQueueCount()} in queue). Will deliver when connected.`
+              : en.reason || r.error || r.message || 'Mirror failed.'
           )
           setTimeout(() => setStatus('idle'), 8000)
           void runMirrorDrain()
@@ -367,7 +367,7 @@ export function useChatViewMirrorDelay(p: UseChatViewMirrorDelayParams) {
         enqueueMirrorFailure({ wireBody: body, fromAddress, lastError: msg })
         setMirrorQueuePending(getMirrorQueueCount())
         setStatus('error')
-        setStatusMsg(`Delayed Upload: zwischengespeichert (${msg.slice(0, 100)})`)
+        setStatusMsg(`Delayed upload: buffered (${msg.slice(0, 100)})`)
         setTimeout(() => setStatus('idle'), 8000)
         void runMirrorDrain()
       }

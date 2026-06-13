@@ -46,7 +46,7 @@ export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecip
             onClick={() => void onHandshake?.()}
             className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
           >
-            {status === 'awaiting_peer' ? 'Handshake erneut senden' : 'Handshake senden'}
+            {status === 'awaiting_peer' ? 'Resend handshake' : 'Send handshake'}
           </button>
         ) : null}
         {status === 'needs_accept' ? (
@@ -56,7 +56,7 @@ export function ChatViewEncryptedRecipientHandshakeBar(p: ChatViewEncryptedRecip
             onClick={() => void onAccept?.()}
             className="rounded-md border border-emerald-600/40 bg-emerald-500/10 px-3 py-1.5 text-xs font-medium text-foreground disabled:opacity-50"
           >
-            Handshake annehmen
+            Accept handshake
           </button>
         ) : null}
       </div>

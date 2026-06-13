@@ -17,7 +17,7 @@ describe('formatUnknownError', () => {
     const e = new Error()
     e.message = ''
     e.name = ''
-    expect(formatUnknownError(e)).toBe('Fehler')
+    expect(formatUnknownError(e)).toBe('Error')
   })
 
   it('String durchreichen', () => {

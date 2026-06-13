@@ -35,12 +35,12 @@ describe('autarky-status-line', () => {
   it('nennt erstes offenes Item', () => {
     store['morgendrot.autarkyMode'] = '1'
     const line = getAutarkyStatusLine()
-    expect(line).toMatch(/Autarkie: noch offen/)
+    expect(line).toMatch(/Autarky: still open/)
   })
 
   it('Header ohne Autarkie: nennt erste Lücke oder Anzahl', () => {
     const line = getDirectIotaHeaderStatusLine()
-    expect(line).toMatch(/Direkt:/)
+    expect(line).toMatch(/Direct:/)
     expect(line).toMatch(/Puls/)
   })
 })

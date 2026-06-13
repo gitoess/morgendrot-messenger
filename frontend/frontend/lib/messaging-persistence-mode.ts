@@ -37,24 +37,24 @@ export function describeChainPersistenceRoute(
 ): { label: string; detail: string } {
   if (encrypted && mode === 'event') {
     return {
-      label: 'Verschlüsseltes Event',
-      detail: 'send_encrypted_message — schneller, nicht in der Einsatz-Mailbox gespeichert (Handshake/ECDH bleibt).',
+      label: 'Encrypted · event',
+      detail: 'send_encrypted_message — faster, not stored in the ops mailbox (handshake/ECDH still applies).',
     }
   }
   if (encrypted && mode === 'mailbox') {
     return {
-      label: 'Verschlüsselt · Mailbox',
-      detail: 'store_encrypted_message — persistent im Postamt-Objekt (TTL/Purge nach Policy).',
+      label: 'Encrypted · mailbox',
+      detail: 'store_encrypted_message — persistent in the mailbox object (TTL/purge per policy).',
     }
   }
   if (!encrypted && mode === 'event') {
     return {
-      label: 'Klartext · Event',
-      detail: 'send_plaintext_message — schnell, öffentlich einsehbar, flüchtiger Event-Pfad.',
+      label: 'Plaintext · event',
+      detail: 'send_plaintext_message — fast, publicly visible, ephemeral event path.',
     }
   }
   return {
-    label: 'Klartext · Mailbox',
-    detail: 'store_plaintext_message — Klartext persistent in der Mailbox (öffentlich einsehbar).',
+    label: 'Plaintext · mailbox',
+    detail: 'store_plaintext_message — plaintext persisted in the mailbox (publicly visible).',
   }
 }

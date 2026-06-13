@@ -12,7 +12,7 @@ import type {
 import { cn } from '@/lib/utils'
 
 const PRIMARY_CHANNELS: { key: TransportChannel; label: string }[] = [
-  { key: 'lora', label: 'Funk' },
+  { key: 'lora', label: 'Radio' },
   { key: 'telegram', label: 'Telegram' },
   { key: 'iota', label: 'IOTA' },
 ]
@@ -119,7 +119,7 @@ export function HandoffCapabilitiesMatrixPicker(p: HandoffCapabilitiesMatrixPick
       <table className="w-full text-xs">
         <thead>
           <tr className="text-muted-foreground">
-            <th className="pb-1 text-left font-medium">Kanal</th>
+            <th className="pb-1 text-left font-medium">Channel</th>
             <th className="pb-1 w-14 text-center font-medium">L</th>
             <th className="pb-1 w-14 text-center font-medium">S</th>
           </tr>
@@ -130,7 +130,7 @@ export function HandoffCapabilitiesMatrixPicker(p: HandoffCapabilitiesMatrixPick
       </table>
 
       <details className="text-xs">
-        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Mehr</summary>
+        <summary className="cursor-pointer text-muted-foreground hover:text-foreground">More</summary>
         <div className="mt-2 space-y-2">
           <table className="w-full text-xs">
             <tbody>

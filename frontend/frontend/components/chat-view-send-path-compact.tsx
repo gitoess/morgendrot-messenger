@@ -15,7 +15,6 @@ import {
 } from '@/frontend/lib/messenger-channel-send-path'
 import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
-import { getComposerEncryptionContextHint } from '@/frontend/lib/composer-encryption-context-hint'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import {
   composerSendPathWriteDeniedReason,
@@ -88,7 +87,7 @@ function selectCleartextTransport(
   if (target === 'mesh') {
     if (encrypted) {
       const ok = window.confirm(
-        '„funk“ = Meshtastic-Klartext (LongFast), nicht Ende-zu-Ende verschlüsselt.\n\nFortfahren? (Verschlüsselung wird ausgeschaltet.)'
+        '"radio" = Meshtastic plaintext (LongFast), not end-to-end encrypted.\n\nContinue? (Encryption will be turned off.)'
       )
       if (!ok) return
     }
@@ -98,11 +97,11 @@ function selectCleartextTransport(
   if (target === 'adhoc') {
     if (encrypted) {
       const ok = window.confirm(
-        '„adhoc“ ist für Klartext nahe BLE vorgesehen — nicht verschlüsselt.\n\nVerschlüsselung ausschalten und „adhoc“ wählen?'
+        '"adhoc" is intended for plaintext near BLE — not encrypted.\n\nTurn off encryption and choose "adhoc"?'
       )
       if (!ok) return
       if (!onEncryptedChange) {
-        window.alert('Bitte zuerst „Verschlüsselung“ unten auf Klartext stellen, dann „adhoc“ wählen.')
+        window.alert('First set "Encryption" below to plaintext, then choose "adhoc".')
         return
       }
       onEncryptedChange(false)
@@ -159,12 +158,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   const showTelegram =
     showTelegramDeliveryInHeader({ channelMode }) && Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
-  const encryptionHint =
-    chainActive
-      ? getComposerEncryptionContextHint({ forcedTransport, encrypted })
-      : composerDelivery === 'telegram'
-        ? 'Telegram — Zustellung über Bot/API, nicht IOTA-Mailbox.'
-        : null
 
   const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
@@ -184,13 +177,13 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   return (
     <div
       className={cn(
-        'flex h-full min-h-[6.5rem] w-full flex-col rounded-lg border border-border/60 bg-muted/25 px-2.5 py-2',
+        'flex w-full flex-col rounded-lg border border-border/60 bg-muted/25 px-2.5 py-2',
         className
       )}
     >
       <div className="flex flex-nowrap items-center gap-1 overflow-x-auto">
         <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Sendepfad
+          Send path
         </span>
         <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
         <PathButton
@@ -274,20 +267,11 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           </>
         ) : null}
       </div>
-      <div className="mt-1.5 min-h-[2.75rem] flex-1 space-y-0.5">
-        {encryptionHint ? (
-          <p role="note" className="line-clamp-2 text-[10px] leading-snug text-muted-foreground">
-            {encryptionHint}
-          </p>
-        ) : (
-          <div className="min-h-[2.25rem]" aria-hidden />
-        )}
-        {chainActive && myAddressLine?.trim() ? (
+      {chainActive && myAddressLine?.trim() ? (
+        <div className="mt-1.5">
           <ChatViewMyWalletIdInline myAddressLine={myAddressLine} />
-        ) : (
-          <div className="min-h-[1.25rem]" aria-hidden />
-        )}
-      </div>
+        </div>
+      ) : null}
     </div>
   )
 }

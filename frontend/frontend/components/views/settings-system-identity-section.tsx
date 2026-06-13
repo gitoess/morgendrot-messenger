@@ -144,7 +144,7 @@ export function SettingsSystemIdentitySection({
         setRpcUrl(localSnap.rpcUrl)
       }
     } catch {
-      setMsg('Status konnte nicht geladen werden.')
+      setMsg('Could not load status.')
     }
     if (opts?.withSpinner !== false) setLoading(false)
   }, [])
@@ -175,11 +175,11 @@ export function SettingsSystemIdentitySection({
     try {
       const res = await setPackageIdCommand(next)
       if (res.ok) {
-        setMsg(res.message || 'Package-ID gesetzt.')
+        setMsg(res.message || 'Package ID set.')
         await load({ withSpinner: false })
         onApplied?.()
       } else {
-        setMsg(res.error || res.message || 'Package-ID konnte nicht gesetzt werden.')
+        setMsg(res.error || res.message || 'Could not set package ID.')
       }
     } finally {
       setSettingPackageId(false)
@@ -192,11 +192,11 @@ export function SettingsSystemIdentitySection({
     try {
       const res = await setConfig('RPC_URL', rpcUrl.trim())
       if (res.ok) {
-        setMsg('RPC_URL gespeichert.')
+        setMsg('RPC_URL saved.')
         await load({ withSpinner: false })
         onApplied?.()
       } else {
-        setMsg(res.error || 'RPC konnte nicht gespeichert werden.')
+        setMsg(res.error || 'Could not save RPC.')
       }
     } finally {
       setSavingRpc(false)
@@ -207,12 +207,12 @@ export function SettingsSystemIdentitySection({
     chainReachable === null ? null : chainReachable ? (
       <span className="inline-flex items-center gap-1 text-xs text-emerald-500">
         <CheckCircle className="h-3.5 w-3.5" aria-hidden />
-        IOTA-RPC erreichbar
+        IOTA RPC reachable
       </span>
     ) : (
       <span className="inline-flex items-center gap-1 text-xs text-destructive">
         <XCircle className="h-3.5 w-3.5" aria-hidden />
-        IOTA-RPC nicht erreichbar
+        IOTA RPC unreachable
       </span>
     )
 
@@ -220,9 +220,9 @@ export function SettingsSystemIdentitySection({
     <div className="rounded-xl border border-border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
         <div>
-          <h4 className="font-semibold text-foreground">System & Identität</h4>
+          <h4 className="font-semibold text-foreground">System & identity</h4>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            {managedNetwork ? 'Adresse · Direkt-Send' : 'Adresse, Package-ID, IOTA/Mailbox, .env'}
+            {managedNetwork ? 'Address · direct send' : 'Address, package ID, IOTA/mailbox, .env'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -232,10 +232,10 @@ export function SettingsSystemIdentitySection({
             onClick={() => void load({ withSpinner: true })}
             disabled={loading}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-            aria-label="Aktualisieren"
+            aria-label="Refresh"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Aktualisieren
+            Refresh
           </button>
         </div>
       </div>
@@ -248,7 +248,7 @@ export function SettingsSystemIdentitySection({
         <div className="space-y-4 p-4">
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2.5">
             <div>
-              <p className="text-xs text-muted-foreground">Meine Adresse</p>
+              <p className="text-xs text-muted-foreground">My address</p>
               <p className="break-all font-mono text-sm" title={address}>
                 {address || '—'}
               </p>
@@ -267,7 +267,7 @@ export function SettingsSystemIdentitySection({
                   }}
                 >
                   <Copy className="h-3 w-3" />
-                  {copied ? 'Kopiert' : 'Kopieren'}
+                  {copied ? 'Copied' : 'Copy'}
                 </button>
               ) : null}
             </div>
@@ -277,7 +277,7 @@ export function SettingsSystemIdentitySection({
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label className="text-sm">Package-ID (Move)</Label>
             <p className="text-[11px] text-muted-foreground">
-              Nur nach neuem Move-Deploy ändern — dann ggf. MAILBOX_ID in .env anpassen.
+              Change only after a new Move deploy — then adjust MAILBOX_ID in .env if needed.
             </p>
             {packageOptions.length > 0 ? (
               <Select
@@ -288,10 +288,10 @@ export function SettingsSystemIdentitySection({
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Aus Verlauf wählen" />
+                  <SelectValue placeholder="Pick from history" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__manual__">Manuell eingeben</SelectItem>
+                  <SelectItem value="__manual__">Enter manually</SelectItem>
                   {packageOptions.map((id) => (
                     <SelectItem key={id} value={id}>
                       {maskId(id)}
@@ -317,12 +317,12 @@ export function SettingsSystemIdentitySection({
               disabled={!canApplyPackageId}
               onClick={() => void applyPackageId()}
             >
-              {settingPackageId ? 'Setze…' : 'Package-ID setzen'}
+              {settingPackageId ? 'Applying…' : 'Set package ID'}
             </Button>
           </div>
           ) : (
             <p className="text-xs text-muted-foreground rounded-lg border border-border/60 px-3 py-2">
-              Package & RPC: Schalter <strong className="font-medium text-foreground">Wo senden?</strong> oben.
+              Package & RPC: use the <strong className="font-medium text-foreground">Where to send?</strong> switch above.
             </p>
           )}
 
@@ -367,7 +367,7 @@ export function SettingsSystemIdentitySection({
           <Collapsible open={configOpen} onOpenChange={setConfigOpen}>
             <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2.5 text-sm font-medium hover:bg-accent/50">
               <span>
-                Erweiterte Konfiguration (.env)
+                Advanced configuration (.env)
                 <span className="ml-2 text-xs font-normal text-muted-foreground">
                   —{' '}
                   <a
@@ -375,7 +375,7 @@ export function SettingsSystemIdentitySection({
                     className="text-primary underline hover:no-underline"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    alle Keys im Handbuch
+                    all keys in handbook
                   </a>
                 </span>
               </span>
@@ -386,7 +386,7 @@ export function SettingsSystemIdentitySection({
               <div className="space-y-2 rounded-lg border border-border p-3">
                 <Label className="text-sm">RPC_URL</Label>
                 <p className="text-[11px] text-muted-foreground">
-                  Primäre Fullnode — hier bearbeiten; in der Liste unten nicht noch einmal (RPC_URLS = Fallback-URLs).
+                  Primary fullnode — edit here; not again in the list below (RPC_URLS = fallback URLs).
                 </p>
                 <Input
                   placeholder="https://…"
@@ -395,12 +395,12 @@ export function SettingsSystemIdentitySection({
                   className="font-mono text-sm"
                 />
                 <Button type="button" variant="outline" size="sm" disabled={savingRpc} onClick={() => void applyRpc()}>
-                  {savingRpc ? 'Speichere…' : 'RPC speichern'}
+                  {savingRpc ? 'Saving…' : 'Save RPC'}
                 </Button>
               </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  RPC-URL wird über <strong className="font-medium text-foreground">Wo senden?</strong> gesetzt.
+                  RPC URL is set via <strong className="font-medium text-foreground">Where to send?</strong>.
                 </p>
               )}
               <ConfigView embedded messengerMode />

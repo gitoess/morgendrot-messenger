@@ -23,7 +23,7 @@ export function ChatComposerEmojiPicker({ onPick, disabled, compact = false }: C
               ? 'inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50'
               : 'inline-flex h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg border border-border bg-muted/30 px-2.5 text-sm text-foreground hover:bg-muted disabled:opacity-50'
           }
-          aria-label="Emoji einfügen (Telegram)"
+          aria-label="Insert emoji (Telegram)"
           data-testid="chat-composer-emoji-trigger"
         >
           <Smile className="h-4 w-4 shrink-0" aria-hidden />
@@ -31,11 +31,11 @@ export function ChatComposerEmojiPicker({ onPick, disabled, compact = false }: C
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-auto max-w-[min(20rem,calc(100vw-2rem))] p-2">
-        <p className="mb-2 px-1 text-[11px] text-muted-foreground">Für Telegram &amp; Nachrichtentext</p>
+        <p className="mb-2 px-1 text-[11px] text-muted-foreground">For Telegram &amp; message text</p>
         <div
           className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto"
           role="listbox"
-          aria-label="Emoji-Auswahl"
+          aria-label="Emoji picker"
         >
           {TELEGRAM_EMOJI_QUICK_PICK.map((emoji) => (
             <button

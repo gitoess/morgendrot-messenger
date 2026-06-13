@@ -59,7 +59,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     onEncryptedChange,
   } = p
   const showMeshtasticSecondary = forcedTransport === 'mesh'
-  const groupCreateBlockedTitle = 'Keine Berechtigung zum Anlegen neuer Gruppen (Handoff-Rechte).'
+  const groupCreateBlockedTitle = 'No permission to create new groups (handoff rights).'
   const [plainWarnOpen, setPlainWarnOpen] = useState(false)
   const [groups, setGroups] = useState<MessengerGroupDefinition[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -160,8 +160,8 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   )
 
   const saveGroup = useCallback(() => {
-    if (!persistGroupDefinition({ successMsg: 'Gruppe gespeichert.' })) {
-      setMsg('Mindestens eine gültige Mitglieder-Adresse (0x + 64 Hex) eintragen.')
+    if (!persistGroupDefinition({ successMsg: 'Group saved.' })) {
+      setMsg('Enter at least one valid member address (0x + 64 hex).')
     }
   }, [persistGroupDefinition])
 
@@ -183,13 +183,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     setSecondaryChannelName('')
     setSecondaryPskRef('')
     setTeamMailboxObjectId('')
-    setMsg('Neue Gruppe — Name und Mitglieder eintragen, dann speichern.')
+    setMsg('New group — enter name and members, then save.')
   }, [directoryAddrs])
 
   const removeGroup = useCallback(() => {
     if (!activeId) return
     deleteMessengerGroup(activeId)
-    setMsg('Gruppe gelöscht.')
+    setMsg('Group deleted.')
     reload()
     onGroupsChanged?.()
   }, [activeId, onGroupsChanged, reload])
@@ -198,7 +198,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     (picked: string[]) => {
       const merged = parseGroupMemberInput([membersText, ...picked].join('\n'))
       setMembersText(merged.join('\n'))
-      setMsg(`${picked.length} Kontakt(e) übernommen — „Gruppe speichern“ nicht vergessen.`)
+      setMsg(`${picked.length} contact(s) added — don't forget to save the group.`)
     },
     [membersText]
   )
@@ -212,7 +212,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       if (!/^0x[a-fA-F0-9]{64}$/i.test(id)) return
       setTeamMailboxObjectId(id)
       if (persistGroupDefinition({ teamMbOverride: id, successMsg })) return
-      setMsg('Team-Postfach erstellt — zuerst Mitglieder eintragen, dann „Gruppe speichern“.')
+      setMsg('Team mailbox created — enter members first, then save group.')
     },
     [persistGroupDefinition]
   )
@@ -221,13 +221,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     if (!teamMailboxCreateAllowed || teamMbBusy) return
     const label =
       typeof window !== 'undefined'
-        ? window.prompt('Name des Team-Postfachs:', suggestNextTeamMailboxLabel())?.trim()
+        ? window.prompt('Team mailbox name:', suggestNextTeamMailboxLabel())?.trim()
         : ''
     setTeamMbBusy(true)
     try {
       const r = await createTeamMailboxOnChain()
       if (!r.ok || !r.objectId) {
-        setMsg(r.error || r.message || 'Team-Postfach konnte nicht erstellt werden.')
+        setMsg(r.error || r.message || 'Team mailbox could not be created.')
         return
       }
       addMyTeamMailbox({
@@ -237,7 +237,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       })
       linkTeamMailboxToGroup(
         r.objectId,
-        'Team-Postfach erstellt und mit Gruppe verknüpft — Object-ID unten kopieren und an Mitglieder weitergeben.'
+        'Team mailbox created and linked to group — copy the object ID below and share with members.'
       )
     } finally {
       setTeamMbBusy(false)
@@ -250,7 +250,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       setCopiedTeamMbId(true)
       window.setTimeout(() => setCopiedTeamMbId(false), 2000)
     } catch {
-      setMsg('Kopieren fehlgeschlagen — Object-ID manuell markieren.')
+      setMsg('Copy failed — select the object ID manually.')
     }
   }, [])
 
@@ -265,19 +265,19 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         <AlertDialog open={plainWarnOpen} onOpenChange={setPlainWarnOpen}>
           <AlertDialogContent className="border-orange-500/40 bg-orange-950/20 sm:max-w-md">
             <AlertDialogHeader>
-              <AlertDialogTitle className="text-orange-100">Unverschlüsselt in der Gruppe?</AlertDialogTitle>
+              <AlertDialogTitle className="text-orange-100">Plaintext in the group?</AlertDialogTitle>
               <AlertDialogDescription className="text-orange-50/95">
                 Die Nachricht wird unverschlüsselt auf der Chain gespeichert und ist für jeden einsehbar. Team-Broadcast
                 (1× Nachricht für alle) funktioniert nur unverschlüsselt.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-orange-600 text-white hover:bg-orange-500"
                 onClick={() => onEncryptedChange(false)}
               >
-                Verstanden, fortfahren
+                Understood, continue
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -286,11 +286,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Users className="h-4 w-4 text-violet-400" aria-hidden />
-          <h3 className="text-sm font-semibold text-foreground">Gruppe</h3>
+          <h3 className="text-sm font-semibold text-foreground">Group</h3>
           {active ? (
-            <span className="text-[10px] text-muted-foreground">
-              · {active.memberAddresses.length} Mitglieder — Nachrichten gehen an alle
-            </span>
+            <span className="text-[10px] text-muted-foreground">· {active.memberAddresses.length} members</span>
           ) : null}
         </div>
         {onEncryptedChange ? (
@@ -300,14 +298,14 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               encrypted && 'ring-1 ring-emerald-500/30'
             )}
             role="group"
-            aria-label="Verschlüsselung"
+            aria-label="Encryption"
           >
             <button
               type="button"
               disabled={forcedTransport === 'mesh'}
               title={
                 forcedTransport === 'mesh'
-                  ? 'Verschlüsselung nur über Sendepfad online. Funk = Klartext.'
+                  ? 'Encryption only via send path online. Radio = plaintext.'
                   : undefined
               }
               onClick={() => onEncryptedChange(true)}
@@ -318,7 +316,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Lock className="h-3 w-3" aria-hidden />
-              Verschlüsselt
+              Encrypted
             </button>
             <button
               type="button"
@@ -331,17 +329,11 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               )}
             >
               <Unlock className="h-3 w-3" aria-hidden />
-              Unverschlüsselt
+              Plaintext
             </button>
           </div>
         ) : null}
       </div>
-      {encrypted && forcedTransport === 'internet' ? (
-        <p className="mb-2 text-[10px] text-muted-foreground">
-          Verschlüsselt: je Mitglied eine Chain-Nachricht (Handshake unten). Team-Broadcast nur bei{' '}
-          <strong className="text-foreground">Unverschlüsselt</strong>.
-        </p>
-      ) : null}
       {groups.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-2">
           {groups.map((g) => (
@@ -361,16 +353,16 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         </div>
       ) : null}
       <div className="space-y-2">
-        <label className="block text-[10px] font-medium text-muted-foreground">Gruppenname</label>
+        <label className="block text-[10px] font-medium text-muted-foreground">Group name</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="z. B. Einsatz Alpha"
+          placeholder="e.g. Operation Alpha"
           className="w-full max-w-md rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
         />
         <label className="block text-[10px] font-medium text-muted-foreground">
-          Mitglieder (je Zeile oder Komma, 0x + 64 Hex)
+          Members (one per line or comma-separated, 0x + 64 hex)
         </label>
         <textarea
           value={membersText}
@@ -382,7 +374,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         {showMeshtasticSecondary ? (
           <>
             <label className="block text-[10px] font-medium text-muted-foreground">
-              Funk-Gruppenkanal (Meshtastic Secondary)
+              Radio group channel (Meshtastic secondary)
             </label>
             <div className="grid max-w-lg gap-2 sm:grid-cols-3">
               <input
@@ -399,7 +391,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 type="text"
                 value={secondaryChannelName}
                 onChange={(e) => setSecondaryChannelName(e.target.value)}
-                placeholder="Kanalname"
+                placeholder="Channel name"
                 className="w-full rounded-md border border-border bg-input px-2 py-1.5 text-[11px]"
               />
               <input
@@ -413,12 +405,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           </>
         ) : null}
         <div className="rounded-md border border-sky-500/25 bg-sky-500/5 px-2.5 py-2">
-          <p className="text-[10px] font-medium text-foreground">Team-Postfach (Pflicht für Chain)</p>
-          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Internet + Mailbox: nur <em>1× Team-Broadcast</em> pro Nachricht (günstiger, kein pairwise mehr).
-            Verschlüsselter Team-Broadcast folgt später (§ H.22, ggf. Handshakes pro Mitglied).
-            Nach Move-Deploy: neues Postfach anlegen — alte Object-IDs vom vorherigen Package funktionieren nicht.
-          </p>
+          <p className="text-[10px] font-medium text-foreground">Team mailbox (chain)</p>
           <div className="mt-2 flex max-w-lg flex-wrap gap-2">
             <select
               value={teamMailboxObjectId}
@@ -426,12 +413,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 const next = e.target.value
                 if (!next) return
                 setTeamMailboxObjectId(next)
-                linkTeamMailboxToGroup(next, 'Team-Postfach mit Gruppe verknüpft und gespeichert.')
+                linkTeamMailboxToGroup(next, 'Team mailbox linked to group and saved.')
               }}
               className="min-w-[12rem] flex-1 rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
             >
               <option value="">
-                {teamMailboxOptions.length > 0 ? '— Team-Postfach wählen —' : '— zuerst Team-Postfach erstellen —'}
+                {teamMailboxOptions.length > 0 ? '— choose team mailbox —' : '— create a team mailbox first —'}
               </option>
               {teamMailboxOptions.map((t) => (
                 <option key={t.objectId} value={t.objectId}>
@@ -447,7 +434,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 onClick={() => void createTeamMailboxForGroup()}
                 className="rounded-md border border-sky-600/45 bg-sky-600/15 px-2 py-1.5 text-xs text-sky-950 disabled:opacity-50 dark:text-sky-100"
               >
-                {teamMbBusy ? '…' : 'Neu erstellen'}
+                {teamMbBusy ? '…' : 'Create new'}
               </button>
             ) : null}
             {onOpenSettings ? (
@@ -456,7 +443,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 onClick={onOpenSettings}
                 className="rounded-md border border-border px-2 py-1.5 text-xs hover:bg-muted"
               >
-                Meine Mailboxen…
+                My mailboxes…
               </button>
             ) : null}
           </div>
@@ -471,12 +458,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 className="inline-flex items-center gap-1 rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-accent"
               >
                 {copiedTeamMbId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                {copiedTeamMbId ? 'Kopiert' : 'ID kopieren'}
+                {copiedTeamMbId ? 'Copied' : 'Copy ID'}
               </button>
               {savedTeamMbId && !teamMbDirty ? (
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-300">✓ in Gruppe gespeichert</span>
+                <span className="text-[10px] text-emerald-700 dark:text-emerald-300">✓ saved in group</span>
               ) : teamMbDirty ? (
-                <span className="text-[10px] text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
+                <span className="text-[10px] text-amber-700 dark:text-amber-300">not saved yet</span>
               ) : null}
             </div>
           ) : null}
@@ -492,7 +479,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               groupCreateBlocked && 'cursor-not-allowed opacity-40'
             )}
           >
-            Gruppe speichern
+            Save group
           </button>
           <button
             type="button"
@@ -504,14 +491,14 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               !groupCreateAllowed && 'cursor-not-allowed opacity-40'
             )}
           >
-            Neue Gruppe
+            New group
           </button>
           <button
             type="button"
             onClick={() => setPhonebookPickerOpen(true)}
             className="rounded-md border border-border px-3 py-1.5 text-xs"
           >
-            Aus Telefonbuch…
+            From phonebook…
           </button>
           {onOpenPhonebook ? (
             <button
@@ -519,7 +506,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               onClick={onOpenPhonebook}
               className="rounded-md border border-border px-3 py-1.5 text-xs"
             >
-              Telefonbuch öffnen
+              Open phonebook
             </button>
           ) : null}
           {activeId ? (
@@ -528,13 +515,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               onClick={removeGroup}
               className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive"
             >
-              Aktive Gruppe löschen
+              Delete active group
             </button>
           ) : null}
         </div>
         {!active ? (
           <p className="text-[10px] text-amber-700 dark:text-amber-300">
-            Gruppe speichern oder aus der Liste wählen, dann unten Nachricht schreiben und Senden.
+            Save the group or pick one from the list, then write a message below and send.
           </p>
         ) : null}
         {msg ? <p className="text-[10px] text-foreground">{msg}</p> : null}
@@ -543,9 +530,9 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         open={phonebookPickerOpen}
         onOpenChange={setPhonebookPickerOpen}
         directory={contactDirectory}
-        title="Mitglieder aus Telefonbuch"
-        description="Kontakte auswählen — sie werden der Mitgliederliste hinzugefügt (Duplikate werden ignoriert)."
-        confirmLabel="Zur Gruppe hinzufügen"
+        title="Members from phonebook"
+        description="Select contacts — they are added to the member list (duplicates are ignored)."
+        confirmLabel="Add to group"
         onConfirm={applyPhonebookSelection}
       />
     </section>

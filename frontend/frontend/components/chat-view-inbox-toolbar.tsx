@@ -98,20 +98,20 @@ function morgPkgImportDisabled(apiStatus: ApiStatus | null): boolean {
 }
 
 function morgPkgImportTitle(apiStatus: ApiStatus | null): string {
-  if (apiStatus?.locked) return 'Tresor entsperren, um .morg-pkg zu öffnen.'
+  if (apiStatus?.locked) return 'Unlock vault to open .morg-pkg.'
   if (apiStatus?.connected !== true) {
-    return 'Import starten: Tresor offen. Zum Entschlüsseln brauchst du Handshake/Connect mit dem Absender der Datei.'
+    return 'Start import: vault open. To decrypt you need handshake/connect with the file sender.'
   }
-  return 'Verschlüsseltes .morg-pkg vom Partner in den lokalen Posteingang importieren.'
+  return 'Import encrypted .morg-pkg from partner into local inbox.'
 }
 
 function morgPkgDeviceTitle(apiStatus: ApiStatus | null, busy: boolean): string {
-  if (busy) return 'Paket wird erstellt…'
-  if (apiStatus?.locked) return 'Tresor entsperren.'
+  if (busy) return 'Building package…'
+  if (apiStatus?.locked) return 'Unlock vault.'
   if (!apiStatus?.connectedAddresses?.length) {
-    return 'Zuerst Partner verbinden (Handshake) — Export verschlüsselt für verbundenen 0x-Partner.'
+    return 'Connect partner first (handshake) — export encrypts for connected 0x partner.'
   }
-  return 'Dateien vom Gerät zu einem verschlüsselten .morg-pkg bündeln (Sneakernet).'
+  return 'Bundle device files into encrypted .morg-pkg (sneakernet).'
 }
 
 export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
@@ -189,7 +189,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       return
     }
     setStatus('error')
-    setStatusMsg(exportDenied ?? 'Export nicht erlaubt.')
+    setStatusMsg(exportDenied ?? 'Export not allowed.')
     setTimeout(() => setStatus('idle'), 6000)
   }
 
@@ -198,11 +198,11 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
       <div className="flex flex-wrap items-center justify-between gap-2 p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Inbox className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold text-foreground">Posteingang</h3>
+          <h3 className="font-semibold text-foreground">Inbox</h3>
           {pendingHandshakeCount > 0 ? (
             <span
               className="inline-flex min-h-6 items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/15 px-2.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200"
-              title={`${pendingHandshakeCount} ausstehende Handshake-Anfrage(n) — unten im Posteingang`}
+              title={`${pendingHandshakeCount} pending handshake request(s) — below in inbox`}
             >
               <KeyRound className="h-3.5 w-3.5" aria-hidden />
               {pendingHandshakeCount}
@@ -226,7 +226,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary hover:bg-primary/15"
             >
               <BookUser className="h-4 w-4 shrink-0" aria-hidden />
-              Telefonbuch
+              Phonebook
             </button>
           ) : null}
           <a
@@ -234,14 +234,14 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) hier entpacken."
+            title="Unpack password-protected message history exports (.json) here."
           >
             <KeyRound className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-            Entschlüsseln
+            Decrypt
           </a>
           {inboxRowCount !== messageCount && messageCount > 0 ? (
-            <span className="text-xs text-muted-foreground" title="Filter aktiv">
-              {inboxRowCount} von {messageCount} sichtbar
+            <span className="text-xs text-muted-foreground" title="Filter active">
+              {inboxRowCount} of {messageCount} visible
             </span>
           ) : null}
         </div>
@@ -274,19 +274,15 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 <Package className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                Pakete
+                Packages
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[18rem]">
-              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                ECDH-verschlüsselt für einen Handshake-Partner. Import → <strong className="text-foreground">Paket-Archiv</strong>{' '}
-                (nicht Posteingang).
-              </p>
               {morgPkgExportPartnerOptions.length > 0 && onMorgPkgExportRecipientChange ? (
                 <div className="space-y-1 border-b border-border px-2 py-2">
                   <label htmlFor="morg-pkg-export-recipient" className="text-[10px] font-medium text-foreground">
-                    Empfänger für Export
+                    Export recipient
                   </label>
                   <select
                     id="morg-pkg-export-recipient"
@@ -295,7 +291,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     className="h-9 w-full rounded-md border border-border bg-background px-2 text-xs text-foreground"
                   >
                     {morgPkgExportPartnerOptions.length > 1 ? (
-                      <option value="">— Partner wählen —</option>
+                      <option value="">— Select partner —</option>
                     ) : null}
                     {morgPkgExportPartnerOptions.map((o) => (
                       <option key={o.address} value={o.address}>
@@ -306,7 +302,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 </div>
               ) : (
                 <p className="px-2 py-1.5 text-[10px] text-amber-700 dark:text-amber-200">
-                  Export: zuerst Handshake/Connect — dann Empfänger wählbar.
+                  Export: handshake/connect first — then recipient selectable.
                 </p>
               )}
               {onOpenMorgPkgArchive ? (
@@ -316,7 +312,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                     onOpenMorgPkgArchive()
                   }}
                 >
-                  Paket-Archiv{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
+                  Package archive{morgPkgImportCount > 0 ? ` (${morgPkgImportCount})` : ''}
                 </DropdownMenuItem>
               ) : null}
               <DropdownMenuItem
@@ -333,7 +329,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   triggerHiddenFileInput(morgPkgFileRef)
                 }}
               >
-                Import: .morg-pkg → Archiv
+                Import: .morg-pkg → archive
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={pkgDeviceDisabled}
@@ -349,7 +345,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                   void onMorgPkgDeviceExportPick()
                 }}
               >
-                {morgPkgDeviceBusy ? 'Export: Paket wird gebaut…' : 'Export: Dateien → .morg-pkg Download'}
+                {morgPkgDeviceBusy ? 'Export: building package…' : 'Export: files → .morg-pkg download'}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -363,7 +359,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <FileDown className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                Nachrichtenverlauf
+                Message history
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-70" aria-hidden />
               </button>
             </DropdownMenuTrigger>
@@ -371,53 +367,49 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               align="end"
               className="max-h-[min(70vh,28rem)] w-[min(100vw-2rem,20rem)] overflow-y-auto"
             >
-              <p className="px-2 py-1.5 text-[10px] leading-snug text-muted-foreground">
-                Vollständig: JSON, TXT vollständig, verschlüsseltes Passwort-JSON oder ZIP. TXT kurz = ~200 Zeichen pro
-                Nachricht.
-              </p>
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => onExportEinsatzberichtJson())}
               >
-                Als JSON (vollständig, Klartext)
+                As JSON (full, plaintext)
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => void onExportEinsatzberichtTxtFull())}
               >
-                Als Text (vollständig, Klartext)
+                As text (full, plaintext)
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => onExportEinsatzberichtTxt())}
               >
-                Als Text (kurz, ~200 Zeichen)
+                As text (short, ~200 chars)
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => void onExportEinsatzberichtEncrypted())}
               >
                 <Lock className="mr-2 h-4 w-4 opacity-80" aria-hidden />
-                Verschlüsselt (vollständig, Passwort-JSON)
+                Encrypted (full, password JSON)
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => void onExportEinsatzprotokoll())}
               >
-                ZIP + HTML (verschlüsselt)
+                ZIP + HTML (encrypted)
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={messageCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => void onExportEinsatzprotokollPlainZip())}
               >
-                ZIP Klartext
+                ZIP plaintext
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={protokollMarkedCount === 0 || exportBlocked}
                 onSelect={() => blockExportAction(() => void onExportEinsatzprotokollMarked())}
               >
-                ZIP nur markiert (★ {protokollMarkedCount})
+                ZIP marked only (★ {protokollMarkedCount})
               </DropdownMenuItem>
               {showIotaExpertInboxActions ? (
                 <>
@@ -434,7 +426,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                       setStatusMsg={setStatusMsg}
                       onOpenPartnerSetup={onOpenPartnerSetup}
                       triggerClassName="w-full justify-start rounded-md border-0 bg-transparent px-2 py-1.5 text-left text-sm hover:bg-accent"
-                      triggerLabel="Auf Chain verankern"
+                      triggerLabel="Anchor on chain"
                     />
                   </div>
                   <div className="px-2 py-1">
@@ -464,10 +456,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onClick={onRefresh}
             disabled={loading}
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:opacity-50"
-            title="Posteingang und Kontakte neu laden"
+            title="Reload inbox and contacts"
           >
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
-            Aktualisieren
+            Refresh
           </button>
         </div>
       </div>
@@ -478,7 +470,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             onClick={() => setInboxSelectMode((v) => !v)}
             className="rounded-md border border-border bg-muted/40 px-2 py-1 font-medium text-foreground hover:bg-muted"
           >
-            {inboxSelectMode ? 'Auswahl beenden' : 'Auswahl'}
+            {inboxSelectMode ? 'End selection' : 'Select'}
           </button>
           <button
             type="button"
@@ -488,7 +480,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               showWireControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
             )}
           >
-            Posteingang (Inhalt)
+            Inbox (content)
           </button>
           <button
             type="button"
@@ -498,7 +490,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               showChannelControls ? 'border-primary bg-primary/15 text-primary' : 'border-border hover:bg-muted'
             )}
           >
-            Kanal
+            Channel
           </button>
           <button
             type="button"
@@ -514,10 +506,10 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
             <button
               type="button"
               onClick={onToggleHideAllVisibleLocal}
-              title="Lokal ausgeblendete Zeilen wieder anzeigen"
+              title="Show locally hidden rows again"
               className="rounded-md border border-border px-2 py-1 hover:bg-muted"
             >
-              Wieder einblenden
+              Show again
             </button>
           ) : null}
         </div>
@@ -528,14 +520,14 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               onClick={onSelectAllVisible}
               className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
             >
-              Alle anwählen
+              Select all
             </button>
             <button
               type="button"
               onClick={onClearInboxSelection}
               className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted"
             >
-              Keine
+              None
             </button>
             <button
               type="button"
@@ -543,7 +535,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               onClick={onBulkHideSelected}
               className="rounded-md border border-border px-2 py-1 text-left hover:bg-muted disabled:opacity-50"
             >
-              Ausgewählte lokal ausblenden ({selectedInboxCount})
+              Hide selected locally ({selectedInboxCount})
             </button>
             <button
               type="button"
@@ -552,12 +544,12 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
                 const count = selectedInboxCount
                 if (
                   !window.confirm(
-                    `Ausgewählte Nachrichten wirklich auf Chain löschen?\n\n` +
-                      `- Anzahl: ${count}\n` +
-                      `- Wirkung auf Chain: Purge der ausgewählten Mailbox-Einträge (sofern purge-fähig, mit Storage-Rebate)\n` +
-                      `- Lokal: Die ausgewählten Zeilen verschwinden zusätzlich aus deiner Inbox-Ansicht\n` +
-                      `- Nicht betroffen: andere lokale Daten wie Telefonbuch/Kontakte\n\n` +
-                      `Das ist kein reines UI-Ausblenden. Fortfahren?`
+                    `Really delete selected messages on chain?\n\n` +
+                      `- Count: ${count}\n` +
+                      `- On chain: purge selected mailbox entries (if purge-capable, with storage rebate)\n` +
+                      `- Locally: selected rows also disappear from your inbox view\n` +
+                      `- Not affected: other local data such as phonebook/contacts\n\n` +
+                      `This is not plain UI hiding. Continue?`
                   )
                 ) {
                   return
@@ -566,7 +558,7 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               }}
               className="rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-left text-destructive hover:bg-destructive/20 disabled:opacity-50"
             >
-              Ausgewählte auf Chain löschen
+              Delete selected on chain
             </button>
           </div>
         ) : null}

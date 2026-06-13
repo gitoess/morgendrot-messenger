@@ -1,5 +1,6 @@
 import { toAppError } from '@/frontend/lib/app-error'
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { withApiAuthHeaders } from '@/frontend/lib/api-auth-header'
 
 const NETWORKISH =
   /failed to fetch|network|load failed|Connection refused|aborted|AbortError|message channel closed|asynchronous response/i
@@ -53,7 +54,7 @@ export async function fetchApiText(
 > {
   try {
     const url = joinApiUrl(apiBase || getApiBase(), path)
-    const response = await fetch(url, init)
+    const response = await fetch(url, withApiAuthHeaders(init))
     const text = await response.text()
     return { ok: true, response, text }
   } catch (e) {

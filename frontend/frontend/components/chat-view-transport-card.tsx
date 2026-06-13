@@ -70,8 +70,8 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
 
   const plainWarningText =
     forcedTransport === 'internet'
-      ? 'Diese Nachricht wird unverschlüsselt auf der öffentlichen Blockchain gespeichert und ist für jeden einsehbar.'
-      : 'Diese Nachricht wird unverschlüsselt gesendet und kann von allen in Reichweite mitgehört und gefälscht werden.'
+      ? 'This message will be stored unencrypted on the public blockchain and visible to everyone.'
+      : 'This message will be sent unencrypted and can be overheard and forged by anyone in range.'
 
   const creditsPercent = useMemo(() => {
     const mc = apiStatus?.messengerCredits
@@ -102,23 +102,23 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       <AlertDialog open={plainWarnOpen} onOpenChange={setPlainWarnOpen}>
         <AlertDialogContent className="border-orange-500/40 bg-orange-950/20 sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-orange-100">Unverschlüsselt senden?</AlertDialogTitle>
+            <AlertDialogTitle className="text-orange-100">Send without encryption?</AlertDialogTitle>
             <AlertDialogDescription className="text-orange-50/95">{plainWarningText}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-orange-600 text-white hover:bg-orange-500"
               onClick={() => onEncryptedChange(false)}
             >
-              Verstanden, fortfahren
+              Understood, continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <p className="text-sm font-medium text-foreground">Verschlüsselung &amp; Partner</p>
+        <p className="text-sm font-medium text-foreground">Encryption &amp; partner</p>
         <div
           className={cn(
             'flex w-full min-w-0 flex-wrap rounded-lg border border-border bg-background p-1',
@@ -130,7 +130,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             disabled={forcedTransport === 'mesh'}
             title={
               forcedTransport === 'mesh'
-                ? 'Verschlüsselung nur über „online“. Bei „funk“ ist LongFast-Klartext aktiv.'
+                ? 'Encryption only via "online". With "radio", LongFast plaintext is active.'
                 : undefined
             }
             onClick={() => onEncryptedChange(true)}
@@ -141,7 +141,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             )}
           >
             <Lock className="h-4 w-4 shrink-0" />
-            Verschlüsselt
+            Encrypted
           </button>
           <button
             type="button"
@@ -154,14 +154,14 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             )}
           >
             <Unlock className="h-4 w-4 shrink-0" />
-            Unverschlüsselt
+            Plaintext
           </button>
         </div>
         {encryptedPartner ? <ChatViewEncryptedPartnerPanel {...encryptedPartner} /> : null}
       </div>
 
       {(isPrivate || !encrypted) && !encrypted && forcedTransport !== 'mesh' ? (
-        <span className="sr-only">Klartext-Online nutzt den IOTA-Pfad; Funk nutzt Meshtastic-Klartext.</span>
+        <span className="sr-only">Plaintext online uses the IOTA path; radio uses Meshtastic plaintext.</span>
       ) : null}
 
       {(isPrivate || !encrypted) && forcedTransport === 'mesh' && !meshBleConnected && onOpenPartnerSetup ? (
@@ -171,7 +171,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
             onClick={onOpenPartnerSetup}
             className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-medium text-primary hover:bg-primary/15"
           >
-            Funk &amp; Geräte
+            Radio &amp; devices
           </button>
         </div>
       ) : null}
@@ -192,24 +192,20 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
         </p>
       ) : null}
 
-      {(isPrivate || !encrypted) && forcedTransport === 'adhoc' && (
+      {(isPrivate || !encrypted) && forcedTransport === 'adhoc' ? (
         <div className="rounded-xl border border-border bg-card p-4">
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] leading-relaxed text-amber-900 dark:text-amber-100/90">
-            <strong>Ad-hoc BLE</strong> ist noch <strong>nicht implementiert</strong> (nur Platzhalter). Kontakt-<strong>bleUuid</strong> und
-            zukünftiges Advertising siehe Setup unter „Kontakt &amp; Verbindung“. Bitte auf <strong>funk</strong> oder{' '}
-            <strong>online</strong> wechseln zum Senden.
-            {onOpenPartnerSetup ? (
-              <button
-                type="button"
-                onClick={onOpenPartnerSetup}
-                className="ml-2 font-medium text-primary underline-offset-2 hover:underline"
-              >
-                Setup öffnen
-              </button>
-            ) : null}
-          </div>
+          <p className="text-[11px] font-medium text-amber-900 dark:text-amber-100">Ad-hoc: not available</p>
+          {onOpenPartnerSetup ? (
+            <button
+              type="button"
+              onClick={onOpenPartnerSetup}
+              className="mt-2 text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Setup
+            </button>
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       {isPrivate && apiStatus?.messengerCreditsConfigured && apiStatus.messengerCredits && (
         <div className="rounded-xl border border-border bg-card p-4 space-y-2">
@@ -229,7 +225,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       )}
       {isPrivate && apiStatus?.messengerCreditsFetchFailed && (
         <p className="text-xs text-amber-600 dark:text-amber-400">
-          Messenger-Credits-Objekt nicht lesbar (RPC oder MESSENGER_CREDITS_OBJECT_ID prüfen).
+          Messenger credits object not readable (check RPC or MESSENGER_CREDITS_OBJECT_ID).
         </p>
       )}
       {(() => {

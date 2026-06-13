@@ -57,15 +57,15 @@ export function encryptedHandshakeBlocksSend(status: EncryptedRecipientHandshake
 export function encryptedHandshakeStatusLabel(status: EncryptedRecipientHandshakeStatus): string {
   switch (status) {
     case 'ready':
-      return 'Handshake aktiv — verschlüsselt senden möglich.'
+      return 'Handshake active — encrypted send is available.'
     case 'needs_handshake':
-      return 'Noch kein Schlüsselaustausch mit dieser Adresse — zuerst Handshake senden.'
+      return 'No key exchange with this address yet — send a handshake first.'
     case 'awaiting_peer':
-      return 'Handshake von dir gesendet — der Partner muss noch antworten (öffentlicher Schlüssel). Danach verschlüsselt senden.'
+      return 'Handshake sent by you — the partner must still respond (public key). Then send encrypted.'
     case 'needs_accept':
-      return 'Partner hat Handshake gesendet — zuerst annehmen (Connect), dann senden.'
+      return 'Partner sent a handshake — accept (connect) first, then send.'
     case 'checking':
-      return 'Prüfe Handshake auf der Chain…'
+      return 'Checking handshake on chain…'
     default:
       return ''
   }

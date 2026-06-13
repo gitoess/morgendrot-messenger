@@ -26,7 +26,6 @@ import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-noti
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
 import { ChatViewChainPersistenceBadge } from '@/frontend/components/chat-view-chain-persistence-badge'
 import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
@@ -59,7 +58,7 @@ import {
   activeSendPathWriteDeniedReason,
   plaintextSendBlockedByCapabilitiesReason,
 } from '@/frontend/lib/messenger-capability-gates'
-const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
+const MESSAGE_PLACEHOLDER = 'Optional: caption for image/.txt or regular text …'
 
 /** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
 function dataTransferLooksLikeFileDrag(dt: DataTransfer | null): boolean {
@@ -345,29 +344,29 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     plaintextCapabilityBlocked
 
   const sendDisableReason = useMemo(() => {
-    if (sending) return 'Senden läuft bereits…'
-    if (vaultLocked) return 'Tresor gesperrt — bitte zuerst entsperren.'
+    if (sending) return 'Send already in progress…'
+    if (vaultLocked) return 'Vault locked — unlock first.'
     if (onlineChainNeedsKeys && !sessionKeysReady) {
-      return 'Wallet-Keys fehlen — unten „Tresor entsperren“ oder Badge „Tresor: Keys fehlen“ im Header.'
+      return 'Wallet keys missing — unlock vault below or use the “Vault: keys missing” badge in the header.'
     }
-    if (loraOnlineFallbackOffer != null) return 'LoRa-Online-Fallback offen — zuerst bestätigen oder abbrechen.'
-    if (hasNoPayload) return 'Text oder Anhang eingeben.'
+    if (loraOnlineFallbackOffer != null) return 'LoRa online fallback pending — confirm or dismiss first.'
+    if (hasNoPayload) return 'Enter text or an attachment.'
     if (isPinnwandChannel && !canPostPinnwand) {
-      return 'Nur autorisierte Führungs-Adressen dürfen auf die Pinnwand schreiben.'
+      return 'Only authorized command addresses may post to the pinboard.'
     }
     if (encrypted && groupMailboxInternetChain) {
-      return 'Gruppe verschlüsselt auf der Chain folgt mit Team-E2EE (§ H.22) — bis dahin Klartext + Team-Postfach.'
+      return 'Encrypted group on chain with team E2EE (§ H.22) — until then use plaintext + team mailbox.'
     }
     if (!encrypted && !meshKlartextRecipientOk) {
       if (isGroupChannel && groupMailboxInternetChain && !groupTeamBroadcastReady) {
-        return 'Gruppe: Team-Postfach im Gruppenpanel verknüpfen oder neu erstellen (1× Broadcast).'
+        return 'Group: link or create team mailbox in the group panel (1× broadcast).'
       }
       return isGroupChannel && groupMemberCount === 0
-        ? 'Gruppe: Mitglieder eintragen und speichern — dann geht Senden ohne Empfängerfeld.'
-        : 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
+        ? 'Group: add members and save — then you can send without a recipient field.'
+        : 'Recipient (0x…) missing — check partner address or enter in the recipient field.'
     }
-    if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
-    if (meshPath4Blocked) return 'Funk-Optionen passen nicht zur aktuellen Anhang-Auswahl.'
+    if (meshPlaintextBlocked) return 'Message too long or attachment not allowed for radio plaintext.'
+    if (meshPath4Blocked) return 'Radio options do not match the current attachment selection.'
     const capReason = activeSendPathWriteDeniedReason(apiStatus, forcedTransport, composerDelivery ?? 'chain')
     if (capReason) return capReason
     const plainCapReason = plaintextSendBlockedByCapabilitiesReason(apiStatus, encrypted, forcedTransport)
@@ -562,17 +561,17 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     composer?.focus()
     composer?.click()
     window.alert(
-      'Sprach-zu-Text: OS-Diktat jetzt manuell starten.\n\n' +
-        'Windows: Win+H manuell drücken\n' +
-        'Android: Mikrofon in der Tastaturleiste manuell tippen'
+      'Speech-to-text: start OS dictation manually.\n\n' +
+        'Windows: press Win+H manually\n' +
+        'Android: tap the microphone in the keyboard bar manually'
     )
   }
 
 
   const loraRetryDetails = useMemo(() => {
     const reason = (loraOnlineFallbackOffer?.reasonLabel || '').toLowerCase()
-    const luma = reason.includes('luma') && !reason.includes('chroma') ? 'fehlgeschlagen' : 'ok/gesendet'
-    const chroma = reason.includes('chroma') ? 'fehlgeschlagen' : reason.includes('luma') ? 'ausstehend' : 'unklar'
+    const luma = reason.includes('luma') && !reason.includes('chroma') ? 'failed' : 'ok/sent'
+    const chroma = reason.includes('chroma') ? 'failed' : reason.includes('luma') ? 'pending' : 'unclear'
     return { luma, chroma }
   }, [loraOnlineFallbackOffer?.reasonLabel])
 
@@ -584,7 +583,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             {showTelegramField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Empfänger · Telegram (Chat-ID, mehrere mit Komma)
+                  Recipient · Telegram (chat ID, comma-separated)
                 </label>
                 <input
                   type="text"
@@ -602,7 +601,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     setTelegramDraft(raw)
                     onRecipientChange(raw)
                   }}
-                  placeholder="1156058618, 987654321 — aus Telefonbuch oder @userinfobot"
+                  placeholder="1156058618, 987654321 — from phonebook or @userinfobot"
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <datalist id="chat-telegram-recipients">
@@ -610,16 +609,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     <option key={id} value={id} />
                   ))}
                 </datalist>
-                {composerTelegramIds.length > 1 ? (
-                  <p className="mt-1 text-[10px] text-muted-foreground">
-                    {composerTelegramIds.length} Empfänger — Senden geht an alle.
-                  </p>
-                ) : null}
               </>
             ) : isPinnwandChannel && pinnwandBroadcastAddress ? null : showIotaField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Empfänger · Wallet (0x)
+                  Recipient · wallet (0x)
                 </label>
                 <input
                   type="text"
@@ -679,7 +673,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onChange={(e) => onMeshPlaintextToNodeEnabledChange(e.target.checked)}
                 className="mt-1 border-border"
               />
-              <span>An Node-ID senden (statt „An alle“)</span>
+              <span>Send to node ID (instead of “to all”)</span>
             </label>
             {meshPlaintextToNodeEnabled ? (
               <div>
@@ -693,14 +687,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   spellCheck={false}
                 />
                 {meshPlaintextNodeId.trim() && parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) === null ? (
-                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Format: Ausrufezeichen + 1–8 Hex-Ziffern.</p>
+                  <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Format: exclamation mark + 1–8 hex digits.</p>
                 ) : null}
               </div>
             ) : null}
             {showMeshtasticChannelIndexInput ? (
               <div>
                 <label htmlFor="chat-mesh-channel-index" className="mb-1 block text-xs font-medium text-foreground">
-                  Kanalindex (0–7, optional)
+                  Channel index (0–7, optional)
                 </label>
                 <input
                   id="chat-mesh-channel-index"
@@ -712,7 +706,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   onChange={(e) => {
                     onMeshtasticChannelIndexChange?.(normalizeMeshtasticChannelIndex(e.target.value))
                   }}
-                  placeholder="leer = Primary"
+                  placeholder="empty = primary"
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
                   inputMode="numeric"
                 />
@@ -732,7 +726,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           )}
         >
           <label htmlFor="chat-composer-message" className="mb-2 block text-sm font-medium text-foreground">
-            Nachricht
+            Message
           </label>
           <ChatViewAttachmentBar
             {...attachmentBarProps}
@@ -747,9 +741,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                       disabled={sending || voiceLocksComposer || telegramBusy}
                       onClick={prepareSttDictation}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
-                      title="Sprach-zu-Text über Betriebssystem-Diktat"
+                      title="Speech-to-text via OS dictation"
                     >
-                      STT diktieren
+                      Dictate
                     </button>
                   )}
                   {forcedTransport === 'internet' && !isTelegramDelivery ? (
@@ -772,10 +766,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                       disabled={sending || voiceLocksComposer}
                       onClick={onOpenPhonebook}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
-                      title="Telefonbuch"
+                      title="Phonebook"
                     >
                       <BookUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      Telefonbuch
+                      Phonebook
                     </button>
                   ) : null}
                   {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
@@ -791,7 +785,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           data-testid="mesh-lora-images-enabled"
                           className="border-border"
                         />
-                        Bilder über Funk
+                        Images over radio
                       </label>
                       <label
                         className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-950/35"
@@ -804,18 +798,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                           data-testid="mesh-path4-self-archive"
                           className="border-border"
                         />
-                        Auf Chain verankern
+                        Anchor on chain
                       </label>
                     </>
                   ) : null}
                 </>
               ) : null
             }
-          />
-          <ChatViewEncryptionContextHint
-            forcedTransport={forcedTransport}
-            encrypted={encrypted}
-            className="mb-2"
           />
           {!isTelegramDelivery &&
           forcedTransport === 'internet' &&
@@ -828,13 +817,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
-              <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
-              Zeichen
+              <span className="font-semibold">Plaintext radio</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
+              characters
               {attachmentBarProps.attachedBlobBase64 ||
               attachmentBarProps.attachedAudioBase64 ||
               attachmentBarProps.attachedTxtFile != null ||
               attachmentBarProps.attachedLora != null
-                ? ' · keine Anhänge'
+                ? ' · no attachments'
                 : null}
             </div>
           )}
@@ -859,7 +848,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
         {loraOnlineFallbackOffer ? (
           <div className="mb-3 rounded-lg border border-amber-600/45 bg-amber-950/30 p-3 space-y-2 dark:bg-amber-950/20">
             <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">
-              Funk (LoRa/Mesh) hat nicht gesendet
+              Radio (LoRa/Mesh) did not send
             </p>
             <p className="text-xs text-amber-900/85 dark:text-amber-100/90">{loraOnlineFallbackOffer.reasonLabel}</p>
             <p className="text-xs text-muted-foreground">
@@ -873,7 +862,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => void onSend()}
                 className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
-                Fehlende Teile nochmal senden
+                Retry missing parts
               </button>
               <button
                 type="button"
@@ -881,7 +870,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => void onConfirmLoraOnline()}
                 className="rounded-lg bg-primary px-4 py-2 text-xs font-medium text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Trotzdem über Online (IOTA) senden
+                Send via online (IOTA) anyway
               </button>
               <button
                 type="button"
@@ -889,7 +878,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={onDismissLoraOnlineFallback}
                 className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
-                Abbrechen
+                Cancel
               </button>
               <button
                 type="button"
@@ -897,12 +886,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => setShowLoraChunkDetails((v) => !v)}
                 className="rounded-lg border border-border bg-background px-4 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
               >
-                {showLoraChunkDetails ? 'Details ausblenden' : 'Details'}
+                {showLoraChunkDetails ? 'Hide details' : 'Details'}
               </button>
             </div>
             {showLoraChunkDetails ? (
               <div className="rounded-md border border-border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-                <div className="font-medium text-foreground">Chunk-Status (heuristisch)</div>
+                <div className="font-medium text-foreground">Chunk status (heuristic)</div>
                 <div className="mt-1 font-mono">LUMA: {loraRetryDetails.luma}</div>
                 <div className="font-mono">CHROMA: {loraRetryDetails.chroma}</div>
               </div>
@@ -930,7 +919,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               )}
             >
               <ListOrdered className="h-3.5 w-3.5 shrink-0" aria-hidden />
-              Mailbox-Warteschlange
+              Mailbox queue
             </span>
             <span
               className={cn(
@@ -939,7 +928,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   ? 'bg-red-600/90 dark:bg-red-500/90'
                   : 'bg-amber-600/90 dark:bg-amber-500/90'
               )}
-              title="Lokal zwischengespeicherte Sendeversuche (Opt-in: localStorage morgendrot.offlineMailboxQueue = 1)"
+              title="Locally queued send attempts (opt-in: localStorage morgendrot.offlineMailboxQueue = 1)"
             >
               {offlineMailboxQueuePending}
             </span>
@@ -961,16 +950,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) : (
               <span className="text-amber-900/90 dark:text-amber-100/90">
                 {offlineMailboxQueuePending === 1
-                  ? 'Eine Nachricht wartet auf die Basis — wird mit dem Status-Takt erneut versucht.'
-                  : `${offlineMailboxQueuePending} Nachrichten warten auf die Basis — werden mit dem Status-Takt erneut versucht.`}
+                  ? 'One message is waiting for the backend — will retry on the status tick.'
+                  : `${offlineMailboxQueuePending} messages waiting for the backend — will retry on the status tick.`}
               </span>
             )}
             {offlineMailboxQueueUntrustedTimeCount > 0 ? (
               <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
-                Bei {offlineMailboxQueueUntrustedTimeCount}{' '}
-                {offlineMailboxQueueUntrustedTimeCount === 1 ? 'Eintrag' : 'Einträgen'} war die Gerätezeit beim
-                Einreihen nicht verifiziert (§ H.6c — weder frischer Server-Zeitstempel noch GPS-UTC); für spätere
-                Attestation/Export gespeichert als <span className="font-mono">timeIsTrusted: false</span>.
+                {offlineMailboxQueueUntrustedTimeCount}{' '}
+                {offlineMailboxQueueUntrustedTimeCount === 1 ? 'entry' : 'entries'}: device time not verified
               </span>
             ) : null}
             {offlineMailboxQueueBackoffCount > 0 &&
@@ -981,16 +968,16 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) ? (
               <span className="w-full text-[11px] leading-snug text-amber-900/85 dark:text-amber-100/85">
                 {offlineMailboxQueueBackoffCount === 1
-                  ? '1 Eintrag wartet im Backoff-Zeitfenster vor dem nächsten Versuch.'
-                  : `${offlineMailboxQueueBackoffCount} Einträge warten im Backoff vor dem nächsten Versuch.`}
+                  ? '1 entry waiting in backoff before the next attempt.'
+                  : `${offlineMailboxQueueBackoffCount} entries waiting in backoff before the next attempt.`}
               </span>
             ) : null}
             {offlineMailboxQueueErrorHint ? (
               <span
                 className="w-full font-mono text-[10px] leading-snug text-amber-900/80 dark:text-amber-100/80"
-                title="Letzte gespeicherte Fehlermeldung aus einem Warteschlangen-Versuch"
+                title="Last stored error message from a queue attempt"
               >
-                Letzte Meldung: {offlineMailboxQueueErrorHint}
+                Last message: {offlineMailboxQueueErrorHint}
               </span>
             ) : null}
             {(!sessionKeysReady || vaultLocked) && onNavigateHomeWhenLocked ? (
@@ -999,7 +986,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={onNavigateHomeWhenLocked}
                 className="inline-flex items-center gap-1 rounded-md border border-red-700/50 bg-red-100/80 px-2 py-1 text-[11px] font-semibold text-red-950 hover:bg-red-100 dark:border-red-400/40 dark:bg-red-900/50 dark:text-red-50"
               >
-                Tresor entsperren
+                Unlock vault
               </button>
             ) : null}
             {onManualRefresh ? (
@@ -1007,10 +994,10 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 type="button"
                 onClick={() => void onManualRefresh()}
                 className="inline-flex items-center gap-1 rounded-md border border-amber-700/40 bg-amber-100/70 px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/55"
-                title="Status neu holen und Warteschlangen sofort erneut anstoßen"
+                title="Refresh status and retry queue immediately"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                Aktualisieren
+                Refresh
               </button>
             ) : null}
             {onRemoveOfflineMailboxQueueItems && offlineMailboxQueueItems.length > 0 ? (
@@ -1019,7 +1006,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 onClick={() => onRemoveOfflineMailboxQueueItems(offlineMailboxQueueItems.map((q) => q.id))}
                 className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium hover:bg-muted"
               >
-                Warteschlange leeren
+                Clear queue
               </button>
             ) : null}
             {offlineMailboxQueueItems.length > 0 ? (
@@ -1029,7 +1016,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                   onClick={() => setShowQueueItems((v) => !v)}
                   className="inline-flex items-center gap-1 rounded-md border border-amber-700/40 bg-amber-100/70 px-2 py-1 text-[11px] font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-300/30 dark:bg-amber-900/40 dark:text-amber-100 dark:hover:bg-amber-900/55"
                 >
-                  {showQueueItems ? 'Auswahl schließen' : 'Einträge auswählen'}
+                  {showQueueItems ? 'Close selection' : 'Select entries'}
                 </button>
                 {showQueueItems ? (
                   <div className="w-full rounded-md border border-amber-700/30 bg-amber-100/40 p-2 text-[11px] dark:bg-amber-900/30">
@@ -1039,14 +1026,14 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                         onClick={() => setSelectedQueueIds(offlineMailboxQueueItems.map((q) => q.id))}
                         className="rounded border border-amber-700/35 px-2 py-1"
                       >
-                        Alle
+                        All
                       </button>
                       <button
                         type="button"
                         onClick={() => setSelectedQueueIds([])}
                         className="rounded border border-amber-700/35 px-2 py-1"
                       >
-                        Keine
+                        None
                       </button>
                       <button
                         type="button"
@@ -1057,7 +1044,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                         }}
                         className="rounded border border-red-700/40 bg-red-100/70 px-2 py-1 font-medium text-red-900 disabled:opacity-50 dark:bg-red-900/35 dark:text-red-100"
                       >
-                        Ausgewählte löschen
+                        Delete selected
                       </button>
                     </div>
                     <div className="max-h-40 space-y-1 overflow-auto">
@@ -1105,13 +1092,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 )}
                 title={
                   isTelegramDelivery
-                    ? 'Telegram-Hinweis senden'
+                    ? 'Send Telegram notification'
                     : primarySendDisabled && sendDisableReason
                       ? sendDisableReason
                       : encryptedOnlineSendBlocked
                         ? encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)
                         : forcedTransport === 'internet' && !onlineConnected
-                          ? 'Online-Verbindung derzeit nicht bestätigt'
+                          ? 'Online connection not currently confirmed'
                           : undefined
                 }
               >
@@ -1120,12 +1107,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 ) : (
                   <Send className="h-4 w-4" />
                 )}
-                {sending || telegramBusy ? 'Wird gesendet…' : 'Senden'}
+                {sending || telegramBusy ? 'Sending…' : 'Send'}
               </button>
             ) : null}
             {primarySendDisabled && sendDisableReason && !sending && !telegramBusy ? (
               <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
-                Senden blockiert: {sendDisableReason}
+                Send blocked: {sendDisableReason}
               </p>
             ) : null}
             {encryptedOnlineSendBlocked && !primarySendDisabled ? (
@@ -1137,7 +1124,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               <button
                 type="button"
                 disabled={sending}
-                title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
+                title="SOS — distress call (text), MORG_EMERGENCY_V1. Does not call 112 automatically."
                 onClick={() => {
                   if (!message.trim()) {
                     prepareSttDictation()
@@ -1157,7 +1144,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 }}
                 className="rounded-lg border-2 border-red-600/70 bg-red-600/95 px-3 py-2 text-xs font-bold tracking-tight text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                SOS — Hilferuf
+                SOS — distress call
               </button>
             ) : null}
             {sending ? (
@@ -1167,7 +1154,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 data-testid="chat-composer-cancel-send"
                 className="rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted"
               >
-                Übertragung abbrechen
+                Cancel transmission
               </button>
             ) : null}
           </div>

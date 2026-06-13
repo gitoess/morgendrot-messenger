@@ -16,9 +16,9 @@ describe('ChatViewInboxHandshakeRequests', () => {
         onDelete={vi.fn()}
       />
     )
-    expect(screen.getByText(/Handshake-Anfragen \(eingehend\)/i)).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /Annehmen/i })).toHaveLength(2)
-    expect(screen.getAllByRole('button', { name: /Löschen/i })).toHaveLength(2)
+    expect(screen.getByText(/Incoming handshake requests/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Accept/i })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: /Delete/i })).toHaveLength(2)
   })
 
   it('blendet sich aus ohne Angebote', () => {

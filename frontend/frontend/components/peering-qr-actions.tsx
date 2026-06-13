@@ -57,8 +57,8 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
   const { startScan, cameraDialog } = useMeshQrCameraScan({
-    title: 'Peering-QR scannen',
-    description: 'Partner-QR in den Rahmen halten.',
+    title: 'Scan peering QR',
+    description: 'Hold the partner QR in the frame.',
   })
 
   const addrOk = /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim())
@@ -68,7 +68,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
     setQrText('')
     setQrDataUrl('')
     if (!addrOk) {
-      setBuildErr('Eigene 0x-Adresse fehlt (Status / Ketten-IDs).')
+      setBuildErr('Your 0x address is missing (status / chain IDs).')
       return
     }
     const snap = getDirectMailboxChainSnapshot()
@@ -119,7 +119,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
   const handleScan = async () => {
     const s = await startScan()
     if ('error' in s) {
-      if (s.error !== 'Scan abgebrochen.') {
+      if (s.error !== 'Scan cancelled.') {
         setPasteOpen(true)
         onStatus?.(s.error)
       }
@@ -131,7 +131,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
   const applyRaw = (raw: string) => {
     const parsed = parsePeeringQrPayload(raw)
     if (!parsed) {
-      onStatus?.('Kein Peering- oder Kontakt-QR erkannt.')
+      onStatus?.('No peering or contact QR recognized.')
       return
     }
     let applyNetwork = false
@@ -140,7 +140,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       if (parsed.rpcUrl) parts.push(`RPC: ${parsed.rpcUrl}`)
       if (parsed.packageId) parts.push(`Package: ${parsed.packageId.slice(0, 14)}…`)
       applyNetwork = window.confirm(
-        `Netzwerk aus QR übernehmen?\n${parts.join('\n')}\nNur von vertrauenswürdigem Partner scannen.`
+        `Apply network from QR?\n${parts.join('\n')}\nOnly scan from a trusted partner.`
       )
     }
     const r = applyPeeringQrImport(parsed, { applyNetworkHints: applyNetwork })
@@ -156,16 +156,16 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       networkApplied: r.networkApplied,
     })
     const netNote =
-      r.networkApplied?.length ? ` Netzwerk: ${r.networkApplied.join(', ')}.` : ''
+      r.networkApplied?.length ? ` Network: ${r.networkApplied.join(', ')}.` : ''
     const hint = r.peerPubStored
-      ? `Peering übernommen: ${maskWalletAddress(r.address)} + Peer-Pub gespeichert.${netNote}`
-      : `Adresse übernommen: ${maskWalletAddress(r.address)} (ohne ECDH-Pub im QR).${netNote}`
+      ? `Peering applied: ${maskWalletAddress(r.address)} + peer pub stored.${netNote}`
+      : `Address applied: ${maskWalletAddress(r.address)} (no ECDH pub in QR).${netNote}`
     onStatus?.(hint)
   }
 
   const hintLine = useMemo(() => {
-    if (!addrOk) return 'Adresse aus Status nötig.'
-    return 'Für verschlüsselten Online-Chat: Partner-Adresse austauschen (QR oder nur 0x).'
+    if (!addrOk) return 'Address required from status.'
+    return 'For encrypted online chat: exchange partner address (QR or 0x only).'
   }, [addrOk])
 
   return (
@@ -180,7 +180,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
           onClick={() => setShowOpen(true)}
         >
           <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-          Mein Peering-QR
+          My peering QR
         </Button>
         <Button
           type="button"
@@ -190,7 +190,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
           disabled={disabled}
           onClick={() => void handleScan()}
         >
-          Peering-QR scannen
+          Scan peering QR
         </Button>
         <Button
           type="button"
@@ -200,7 +200,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
           disabled={disabled}
           onClick={() => setPasteOpen(true)}
         >
-          QR-Text einfügen
+          Paste QR text
         </Button>
       </div>
 
@@ -225,7 +225,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
             <img src={qrDataUrl} alt="Peering QR" className="mx-auto rounded-lg border border-border" />
           ) : null}
           <details className="rounded-lg border border-border/60 bg-muted/20 px-2 py-1.5">
-            <summary className="cursor-pointer text-[10px] font-medium text-muted-foreground">Technischer QR-Text</summary>
+            <summary className="cursor-pointer text-[10px] font-medium text-muted-foreground">Technical QR text</summary>
             <textarea
               readOnly
               value={qrText}
@@ -241,8 +241,8 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
       <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Peering-QR einfügen</DialogTitle>
-            <DialogDescription>Wallet-JSON aus QR oder nur die 0x-Adresse einfügen.</DialogDescription>
+            <DialogTitle>Paste peering QR</DialogTitle>
+            <DialogDescription>Paste wallet JSON from QR or the 0x address only.</DialogDescription>
           </DialogHeader>
           <textarea
             value={pasteText}
@@ -252,7 +252,7 @@ export function PeeringQrActions(p: PeeringQrActionsProps) {
             placeholder='{"v":2,"k":"mp","a":"0x…","e":"BAA…"}'
           />
           <Button type="button" className="w-full" onClick={() => applyRaw(pasteText)}>
-            Übernehmen
+            Apply
           </Button>
         </DialogContent>
       </Dialog>

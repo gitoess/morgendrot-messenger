@@ -58,12 +58,12 @@ describe('ChatViewInboxToolbar counter', () => {
 
   it('shows visible count hint when filtered rows differ', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 12, inboxRowCount: 4 })} />)
-    expect(screen.getByText(/4 von 12 sichtbar/)).toBeInTheDocument()
+    expect(screen.getByText(/4 of 12 visible/)).toBeInTheDocument()
   })
 
   it('hides visible count hint when all rows are visible', () => {
     render(<ChatViewInboxToolbar {...makeProps({ messageCount: 3, inboxRowCount: 3 })} />)
-    expect(screen.queryByText(/\d+ von \d+ sichtbar/)).toBeNull()
+    expect(screen.queryByText(/\d+ of \d+ visible/)).toBeNull()
   })
 })
 
@@ -77,7 +77,7 @@ describe('ChatViewInboxToolbar Simple Mode', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /Ausstehend \(2\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Pending \(2\)/i })).toBeInTheDocument()
   })
 
   it('blendet Wartende Sendungen aus wenn pending=0 und kein Expert-Menü', () => {
@@ -89,32 +89,32 @@ describe('ChatViewInboxToolbar Simple Mode', () => {
         })}
       />
     )
-    expect(screen.queryByRole('button', { name: /Ausstehend/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Pending/i })).not.toBeInTheDocument()
   })
 })
 
 describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
   it('zeigt Handshake-Badge bei pendingHandshakeCount', () => {
     render(<ChatViewInboxToolbar {...makeProps({ pendingHandshakeCount: 3 })} />)
-    expect(screen.getByTitle(/3 ausstehende Handshake-Anfrage/i)).toHaveTextContent('3')
+    expect(screen.getByTitle(/3 pending handshake request/i)).toHaveTextContent('3')
   })
 
   it('ruft onRefresh bei Aktualisieren auf', () => {
     const onRefresh = vi.fn()
     render(<ChatViewInboxToolbar {...makeProps({ onRefresh })} />)
-    fireEvent.click(screen.getByRole('button', { name: /Aktualisieren/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Refresh/i }))
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
   it('deaktiviert Aktualisieren während loading', () => {
     render(<ChatViewInboxToolbar {...makeProps({ loading: true })} />)
-    expect(screen.getByRole('button', { name: /Aktualisieren/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Refresh/i })).toBeDisabled()
   })
 
   it('schaltet Auswahl-Modus um', () => {
     const setInboxSelectMode = vi.fn()
     render(<ChatViewInboxToolbar {...makeProps({ setInboxSelectMode, inboxSelectMode: false })} />)
-    fireEvent.click(screen.getByRole('button', { name: /^Auswahl$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Select$/i }))
     expect(setInboxSelectMode).toHaveBeenCalledTimes(1)
     const updater = setInboxSelectMode.mock.calls[0]?.[0]
     expect(typeof updater).toBe('function')
@@ -128,7 +128,7 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         {...makeProps({ showPhonebookButton: true, onOpenPhonebook })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Telefonbuch/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Phonebook/i }))
     expect(onOpenPhonebook).toHaveBeenCalledTimes(1)
   })
 
@@ -149,6 +149,6 @@ describe('ChatViewInboxToolbar actions (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('button', { name: /Nachrichtenverlauf/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Message history/i })).toBeDisabled()
   })
 })

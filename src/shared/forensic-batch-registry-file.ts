@@ -10,6 +10,7 @@ import {
   type ForensicBatchRegistryEntry,
   FORENSIC_BATCH_REGISTRY_MAX_ENTRIES,
 } from '@morgendrot/core/forensic-batch'
+import { logger } from '../logger.js'
 import {
   atomicWriteFileSync,
   enqueueForensicBatchRegistryOp,
@@ -32,7 +33,11 @@ function readForensicBatchRegistryFileUnlocked(): ForensicBatchRegistryEntry[] {
     const arr = JSON.parse(raw) as unknown
     if (!Array.isArray(arr)) return []
     return filterValidForensicBatchRegistryEntries(arr)
-  } catch {
+  } catch (err) {
+    logger.warn('Forensic-Batch-Registry: Lesefehler oder korruptes JSON — leere Liste.', {
+      path: p,
+      err: String((err as Error)?.message ?? err),
+    })
     return []
   }
 }

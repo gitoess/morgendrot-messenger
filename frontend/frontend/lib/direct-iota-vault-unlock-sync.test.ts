@@ -2,6 +2,21 @@
  * @vitest-environment node
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/frontend/lib/tab-crypto-idb', () => {
+  let lastPlain = ''
+  return {
+    clearTabAesKey: vi.fn(async () => {
+      lastPlain = ''
+    }),
+    tabAesEncrypt: vi.fn(async (plain: string) => {
+      lastPlain = plain
+      return { ivB64: 'dGVzdA==', ciphertextB64: 'dGVzdA==' }
+    }),
+    tabAesDecrypt: vi.fn(async () => lastPlain || null),
+  }
+})
+
 import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
@@ -230,7 +245,7 @@ describe('syncDirectChatEcdhAfterVaultUnlock', () => {
 
     const r = await syncDirectChatEcdhAfterVaultUnlock({ vaultPassword: 'vault-pass' })
     expect(r.ok).toBe(true)
-    expect(fetchSessionEcdhPrivateJwk).toHaveBeenCalled()
+    expect(fetchSessionEcdhPrivateJwk).toHaveBeenCalledWith('vault-pass')
     expect(revealVaultEcdhPrivateJwk).not.toHaveBeenCalled()
   })
 

@@ -802,8 +802,8 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       clearCompactAttachmentAndSos()
       setMessage(buildForwardComposerPayload(msg, includeSender))
       setStatus('success')
-      setStatusMsg('Text ins Eingabefeld übernommen – Empfänger prüfen und senden.')
-      toast.success('Weiterleiten: Text im Nachrichtenfeld — Empfänger prüfen und senden.')
+      setStatusMsg('Text copied to input — check recipient and send.')
+      toast.success('Forward: text in message field — check recipient and send.')
       requestAnimationFrame(() => {
         document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       })
@@ -834,9 +834,9 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       setMorgPkgImportsOpen(false)
       setStatus('success')
       const kindLabel =
-        r.kind === 'image' ? 'Bild' : r.kind === 'audio' ? 'Audio' : r.kind === 'text_file' ? 'Textdatei' : 'Text'
-      setStatusMsg(`${kindLabel} im Composer — Empfänger prüfen und senden.`)
-      toast.success(`Weiterleiten: ${kindLabel} als Anhang — Empfänger prüfen.`)
+        r.kind === 'image' ? 'Image' : r.kind === 'audio' ? 'Audio' : r.kind === 'text_file' ? 'Text file' : 'Text'
+      setStatusMsg(`${kindLabel} in composer — check recipient and send.`)
+      toast.success(`Forward: ${kindLabel} as attachment — check recipient.`)
       requestAnimationFrame(() => {
         document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       })

@@ -23,9 +23,9 @@ export function formatContactLastSeen(ts: number | undefined): string {
 export type PhonebookFilterId = 'all' | 'lora' | 'online' | 'mailbox' | 'recent'
 
 export const PHONEBOOK_FILTER_LABELS: Record<PhonebookFilterId, string> = {
-  all: 'Alle',
+  all: 'All',
   lora: 'LoRa',
   online: 'Online',
-  mailbox: 'Private Mailbox',
-  recent: 'Zuletzt',
+  mailbox: 'Private mailbox',
+  recent: 'Recent',
 }

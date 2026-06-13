@@ -23,18 +23,18 @@ export function SettingsTelegramNotifyOnSend() {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-foreground">Nach Online-Send: Telegram-Hinweis</p>
+            <p className="text-sm font-semibold text-foreground">Telegram notice after online send</p>
             <Switch
               checked={on}
               onCheckedChange={(v) => {
                 writeTelegramNotifyOnSend(v)
                 setOn(v)
               }}
-              aria-label="Telegram-Hinweis nach erfolgreichem Online-Send"
+              aria-label="Telegram notice after successful online send"
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Aus = kein Telegram-Hinweis nach IOTA-Send. Tab „telegram“ im Composer ist unabhängig davon.
+            Off = no Telegram notice after IOTA send. Composer “telegram” tab is independent.
           </p>
         </div>
       </div>

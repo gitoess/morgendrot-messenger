@@ -64,6 +64,7 @@ Empfohlene Reihenfolge ohne Chain:
 5. **Credits vs. MIST (kein Vermischen):** **`MESSENGER_CREDITS_OBJECT_ID`** bezieht sich auf **Messenger-Credits** (Tarif/Kontingent als Move-Objekt), **nicht** auf natives **Gas-Guthaben** (MIST) auf der Wallet. Kurz: **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** §8. Smoke: **`GET /api/status`** (3342) — wenn Credits gesetzt und lesbar: Anzeige/Hinweise plausibel; in Support/UI nicht „Credits = IOTA“ gleichsetzen.
 6. **Onboarding / Unlock (manuell):** Verifikations-Checkliste und Backlog **L1–L6** in **`docs/ONBOARDING-WALLET-UX-SPEC.md`** §3 und §6 — z. B. `locked` bis `/api/unlock`, bei **`SIGNER=sdk`** Mnemonic-Feld sichtbar; Shop-Adressfeld mit erwartbarem Verhalten bei **mit/ohne** `recipientIotaAddress` (Mint vs. Claim-Token).
 7. **Recovery / Signer-Backup (optional):** Mit **`SIGNER=sdk`**, lokaler Vault **mit** gespeichertem Signer-Import — Einstellungen → **Wallet & Backup** → Passwort → Anzeige; API-Befehl **`/vault-show-signer-import`** (siehe **`docs/RECOVERY-PHRASE-BACKUP.md`**).
+8. **Vault load/save (`npm run test:vault`):** Backend läuft (`npm run start:secrets`, Port 3342). **`VAULT_PASSWORD` / `UNLOCK_PASSWORD` nicht in `.env` speichern** — nur Laufzeit-Env, z. B. PowerShell: `$env:VAULT_PASSWORD="…"; npm run test:vault`. UI-Unlock überspringt nur `POST /api/unlock`; der Testzyklus `/vault-save` → `/vault-lock` → `/vault-load` braucht trotzdem das Vault-Passwort. Siehe **`docs/SECRETS-OPTIONS.md`**.
 
 ### Next-Messenger Chat – manuelle Checkliste (Port 3341)
 

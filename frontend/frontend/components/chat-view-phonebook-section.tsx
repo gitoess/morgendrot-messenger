@@ -147,7 +147,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     async (values: ContactPhonebookFormValues) => {
       const storageKey = resolveContactStorageKey(values.address, values.telegramChatId)
       if (!storageKey) {
-        setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID nötig.')
+        setStatusMsg('IOTA address (0x + 64 hex) or Telegram chat ID required.')
         return
       }
       const previousKey = (dialog?.editStorageKey ?? '').trim().toLowerCase()
@@ -172,7 +172,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           recordContactLastContacted(storageKey)
           bumpMeta()
           refreshContactDirectory()
-          setStatusMsg(r.message || 'Kontakt gespeichert.')
+          setStatusMsg(r.message || 'Contact saved.')
           setDialog(null)
           if (onSelectContact && storageKey.startsWith('0x')) {
             onSelectContact(storageKey, {
@@ -189,7 +189,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           }
           return
         }
-        setStatusMsg(r.error || 'Speichern fehlgeschlagen.')
+        setStatusMsg(r.error || 'Save failed.')
       } finally {
         setBusy(false)
       }
@@ -199,14 +199,14 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   const removeContact = useCallback(
     async (address: string) => {
-      if (!window.confirm('Kontakt aus der Telefonbuch-Ansicht entfernen? (Server-Eintrag bleibt minimal erhalten.)')) {
+      if (!window.confirm('Remove contact from phonebook view? (Minimal server entry remains.)')) {
         return
       }
       hideContactFromPhonebook(address)
       await saveContactEntry({ address, clearMesh: true, label: 'Partner' })
       bumpMeta()
       refreshContactDirectory()
-      setStatusMsg('Kontakt ausgeblendet.')
+      setStatusMsg('Contact hidden.')
     },
     [refreshContactDirectory, setStatusMsg]
   )
@@ -271,16 +271,16 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     <div className="space-y-4">
       {showMailboxes && p.onOpenSettings ? (
         <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
+          <p className="text-sm font-semibold text-foreground mb-1">My mailboxes</p>
           <p className="text-[11px] text-muted-foreground mb-2">
-            Server-Shared, Team und Private Mailboxen verwaltest du unter Einstellungen.
+            Manage server shared, team, and private mailboxes in Settings.
           </p>
           <button
             type="button"
             onClick={p.onOpenSettings}
             className="text-xs font-medium text-primary underline hover:no-underline"
           >
-            Einstellungen → Meine Mailboxen
+            Settings → My mailboxes
           </button>
         </div>
       ) : null}
@@ -295,13 +295,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       ) : null}
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {embedded ? (
-          <p className="text-xs leading-relaxed text-muted-foreground sm:max-w-[55%]">
-            Kontakte für Posteingang, Gruppe und Senden — deine Wallet-ID steht oben unter „Meine IOTA-Adresse“.
-          </p>
-        ) : (
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonbuch</h2>
-        )}
+        {!embedded ? (
+          <h2 className="text-2xl font-bold tracking-tight text-foreground">Phonebook</h2>
+        ) : null}
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
@@ -309,7 +305,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground shadow hover:bg-primary/90"
           >
             <Plus className="h-5 w-5" aria-hidden />
-            Neuer Kontakt
+            New contact
           </button>
         </div>
       </div>
@@ -320,7 +316,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, Adresse oder Meshtastic suchen…"
+          placeholder="Search name, address, or Meshtastic…"
           className="min-h-12 w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground"
         />
       </div>
@@ -328,7 +324,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       <div
         className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
-        aria-label="Kontaktfilter"
+        aria-label="Contact filter"
       >
         {filterIds.map((id) => (
           <button
@@ -351,9 +347,9 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
       {visibleDirectoryCount > 0 ? (
         <p className="text-xs text-muted-foreground">
-          {visibleDirectoryCount} {visibleDirectoryCount === 1 ? 'Kontakt' : 'Kontakte'} gespeichert
+          {visibleDirectoryCount} {visibleDirectoryCount === 1 ? 'contact' : 'contacts'} saved
           {rows.length !== visibleDirectoryCount
-            ? ` · ${rows.length} angezeigt (Filter „${PHONEBOOK_FILTER_LABELS[filter]}“)`
+            ? ` · ${rows.length} shown (filter “${PHONEBOOK_FILTER_LABELS[filter]}”)`
             : ''}
         </p>
       ) : null}
@@ -361,17 +357,17 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-8 text-center text-sm text-muted-foreground">
           {visibleDirectoryCount > 0 && filter === 'recent'
-            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat „Zuletzt kontaktiert“. Filter „Alle“ wählen oder einen Kontakt öffnen/speichern.`
+            ? `${visibleDirectoryCount} contact(s) saved, but none have “Recently contacted”. Select filter “All” or open/save a contact.`
             : visibleDirectoryCount > 0 && filter !== 'all'
-              ? `Keine Treffer für „${PHONEBOOK_FILTER_LABELS[filter]}“${search.trim() ? ' und diese Suche' : ''}. Filter „Alle“ probieren.`
-              : `Keine Kontakte${search.trim() ? ' für diese Suche' : ''}. „Neuer Kontakt“ oder QR-Scan nutzen.`}
+              ? `No matches for “${PHONEBOOK_FILTER_LABELS[filter]}”${search.trim() ? ' with this search' : ''}. Try filter “All”.`
+              : `No contacts${search.trim() ? ' for this search' : ''}. Use “New contact” or QR scan.`}
         </p>
       ) : (
         <div className="space-y-6">
           {favoriteRows.length > 0 ? (
             <section className="space-y-3">
               <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-600 dark:text-amber-400">
-                Favoriten
+                Favorites
               </h3>
               <ul className="space-y-3">{favoriteRows.map(renderCard)}</ul>
             </section>
@@ -379,7 +375,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           {listRows.length > 0 ? (
             <section className="space-y-3">
               {favoriteRows.length > 0 ? (
-                <h3 className="text-sm font-semibold text-muted-foreground">Alle Kontakte</h3>
+                <h3 className="text-sm font-semibold text-muted-foreground">All contacts</h3>
               ) : null}
               <ul className="space-y-3">{listRows.map(renderCard)}</ul>
             </section>

@@ -31,7 +31,7 @@ export function SettingsIotaDirectCard({ backendOnline, embedded = false }: Sett
   const body = (
     <>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <span className="text-sm text-foreground">Direkt mit IOTA verbinden</span>
+        <span className="text-sm text-foreground">Connect directly to IOTA</span>
         <Switch
           checked={getIotaSubmitMode() === 'client'}
           onCheckedChange={(on) => {
@@ -43,11 +43,11 @@ export function SettingsIotaDirectCard({ backendOnline, embedded = false }: Sett
             }
             refresh()
           }}
-          aria-label="Direkt mit IOTA verbinden"
+          aria-label="Connect directly to IOTA"
         />
       </div>
       <p className="text-[11px] leading-relaxed text-muted-foreground">
-        Signatur im Browser; API nur Fallback. Kurzstatus im Chat-Kopf.
+        Sign in browser; API is fallback only. Short status in chat header.
       </p>
       {iotaPathUi ? (
         <div className="rounded-lg border border-border/80 bg-muted/15 px-3 py-2 text-xs">
@@ -61,7 +61,7 @@ export function SettingsIotaDirectCard({ backendOnline, embedded = false }: Sett
   if (embedded) {
     return (
       <div className="space-y-2 rounded-lg border border-border p-3">
-        <p className="text-sm font-medium text-foreground">IOTA auf diesem Gerät</p>
+        <p className="text-sm font-medium text-foreground">IOTA on this device</p>
         {body}
       </div>
     )
@@ -74,7 +74,7 @@ export function SettingsIotaDirectCard({ backendOnline, embedded = false }: Sett
           <Zap className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1 space-y-3">
-          <h4 className="font-semibold text-foreground">IOTA auf diesem Gerät</h4>
+          <h4 className="font-semibold text-foreground">IOTA on this device</h4>
           {body}
         </div>
       </div>

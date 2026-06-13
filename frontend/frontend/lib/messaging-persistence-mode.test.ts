@@ -18,8 +18,8 @@ describe('normalizeMessagingPersistenceMode', () => {
 
 describe('describeChainPersistenceRoute', () => {
   it('trennt Verschlüsselung und Persistenz', () => {
-    expect(describeChainPersistenceRoute(true, 'event').label).toContain('Event')
-    expect(describeChainPersistenceRoute(true, 'mailbox').label).toContain('Mailbox')
-    expect(describeChainPersistenceRoute(false, 'event').label).toContain('Klartext')
+    expect(describeChainPersistenceRoute(true, 'event').label).toContain('event')
+    expect(describeChainPersistenceRoute(true, 'mailbox').label).toContain('mailbox')
+    expect(describeChainPersistenceRoute(false, 'event').label).toContain('Plaintext')
   })
 })

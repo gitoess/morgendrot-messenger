@@ -53,7 +53,6 @@ import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
 import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
-import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
@@ -206,7 +205,7 @@ function MessengerDashboardBody({
                   className="rounded px-2 py-1 text-xs font-medium text-amber-900 underline hover:no-underline dark:text-amber-100"
                   onClick={() => s.requestVaultUnlock()}
                 >
-                  Tresor entsperren
+                  Unlock vault
                 </button>
                 <button
                   type="button"
@@ -312,14 +311,7 @@ function MessengerDashboardBody({
                 ) : null}
               </p>
               <div className="mt-1">
-                <MeshStatus
-                  mode={s.meshPathMode}
-                  subtitle={
-                    s.rpcProxyActive
-                      ? t('network.meshProxySubtitle')
-                      : t('network.meshDefaultSubtitle')
-                  }
-                />
+                <MeshStatus mode={s.meshPathMode} />
               </div>
               {!s.locked && s.backendReachable ? (
                 <div className="mt-2">
@@ -539,15 +531,13 @@ function MessengerDashboardBody({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-foreground">{t('welcomeEinsatz.title')}</p>
-                    <p className="text-sm text-muted-foreground">{t('welcomeEinsatz.subtitle')}</p>
                   </div>
                   <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
                 </button>
               </div>
             ) : null}
             <div className="mb-8 text-center">
-              <h2 className="text-2xl font-bold text-foreground">Was möchtest du tun?</h2>
-              <p className="mt-1 text-muted-foreground">Wähle eine Funktion, um loszulegen</p>
+              <h2 className="text-2xl font-bold text-foreground">What would you like to do?</h2>
             </div>
 
             {/* Feature Cards */}
@@ -575,13 +565,12 @@ function MessengerDashboardBody({
                     {feature.id === 'chat' && s.pendingHandshakeCount > 0 ? (
                       <span
                         className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white"
-                        title={`${s.pendingHandshakeCount} Handshake-Anfrage(n) — in Nachrichten → Posteingang`}
+                        title={`${s.pendingHandshakeCount} handshake request(s)`}
                       >
                         {s.pendingHandshakeCount}
                       </span>
                     ) : null}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{feature.subtitle}</p>
                 </div>
               </div>
 
@@ -595,7 +584,6 @@ function MessengerDashboardBody({
                   >
                     <div>
                       <span className="block font-medium text-foreground">{variant.title}</span>
-                      <span className="block text-sm text-muted-foreground">{variant.hint}</span>
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </button>
@@ -607,12 +595,6 @@ function MessengerDashboardBody({
           </>
         )}
 
-        {/* Quick Hint: nur wenn Backend wirklich nicht erreichbar */}
-        {s.backendReachable === false && (
-          <div className="mt-8 rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-center">
-            <MessengerDashboardOfflineHint />
-          </div>
-        )}
       </main>
     </div>
     </DeploymentProfileBackdrop>

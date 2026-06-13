@@ -1,6 +1,6 @@
 /** Für UI-Statuszeilen: niemals `[object Object]`. */
 export function formatUnknownError(e: unknown): string {
-  if (e instanceof Error) return e.message || e.name || 'Fehler'
+  if (e instanceof Error) return e.message || e.name || 'Error'
   if (typeof e === 'string') return e
   if (e && typeof e === 'object') {
     const o = e as Record<string, unknown>

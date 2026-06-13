@@ -100,7 +100,7 @@ export function SettingsView({
   const handleRevealSignerImport = async () => {
     setRecoveryErr('')
     if (!recoveryPw.trim()) {
-      setRecoveryErr('Vault-Passwort eingeben.')
+      setRecoveryErr('Enter vault password.')
       return
     }
     setRecoveryBusy(true)
@@ -110,7 +110,7 @@ export function SettingsView({
         setRevealedSigner(res.signerImport)
         setRecoveryPw('')
       } else {
-        setRecoveryErr(res.error || res.message || 'Anzeige fehlgeschlagen.')
+        setRecoveryErr(res.error || res.message || 'Could not reveal.')
       }
     } finally {
       setRecoveryBusy(false)
@@ -126,9 +126,6 @@ export function SettingsView({
         </div>
         <div>
           <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
-          <p className="text-sm text-muted-foreground">
-            {slimMessengerEinsatz ? t('settings.subtitleSlim') : t('settings.subtitleDefault')}
-          </p>
         </div>
       </div>
 
@@ -190,13 +187,13 @@ export function SettingsView({
             <>
               {!status.vaultHasLocal ? (
                 <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Keine lokale Vault-Datei — im Tresor <strong className="font-medium">lokal sichern</strong> (optional
-                  Signer-Import) oder von der Chain laden.
+                  No local vault file — in Vault <strong className="font-medium">save locally</strong> (optional
+                  signer import) or load from chain.
                 </p>
               ) : null}
               <div className="space-y-3">
                 <label className="block text-sm">
-                  <span className="text-muted-foreground">Vault-Passwort (erneut eingeben)</span>
+                  <span className="text-muted-foreground">Vault password (re-enter)</span>
                   <input
                     type="password"
                     autoComplete="off"
@@ -214,7 +211,7 @@ export function SettingsView({
                     onClick={() => void handleRevealSignerImport()}
                     className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
                   >
-                    {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
+                    {recoveryBusy ? 'Loading…' : 'Show recovery / signer import'}
                   </button>
                   {revealedSigner ? (
                     <button
@@ -225,14 +222,14 @@ export function SettingsView({
                       }}
                       className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
                     >
-                      Ausblenden
+                      Hide
                     </button>
                   ) : null}
                 </div>
                 {revealedSigner ? (
                   <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
                     <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-                      Nur an einem sicheren Ort notieren — nicht teilen, nicht Screenshots in unsichere Clouds.
+                      Write down only in a secure place — do not share or save screenshots to untrusted clouds.
                     </p>
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
                       {revealedSigner}
@@ -247,7 +244,7 @@ export function SettingsView({
                       className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
                     >
                       {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      In Zwischenablage kopieren
+                      Copy to clipboard
                     </button>
                   </div>
                 ) : null}
@@ -255,14 +252,14 @@ export function SettingsView({
             </>
           ) : (
             <p className="text-sm text-muted-foreground">
-              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — Vault-Mnemonic-Anzeige nur bei{' '}
-              <span className="font-mono">sdk</span>. Bei <span className="font-mono">cli</span> /{' '}
+              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — vault mnemonic display only with{' '}
+              <span className="font-mono">sdk</span>. For <span className="font-mono">cli</span> /{' '}
               <span className="font-mono">remote</span>:{' '}
               <Link
                 href="/handbook?file=RECOVERY-PHRASE-BACKUP.md"
                 className="text-primary underline underline-offset-2 hover:text-primary/90"
               >
-                Handbuch
+                Handbook
               </Link>
               .
             </p>
@@ -277,15 +274,15 @@ export function SettingsView({
         <div className="rounded-xl border border-border bg-card p-4">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
+              <h4 className="font-semibold text-foreground">Full UI</h4>
               <p className="mt-1 text-sm text-muted-foreground">
-                Alle Funktions-Kacheln anzeigen (wie nach „Alle Funktionen“ auf dem Dashboard). Wird in diesem Browser gespeichert.
+                Show all feature tiles (same as “All features” on the dashboard). Saved in this browser.
               </p>
             </div>
             <Switch
               checked={showAllTiles}
               onCheckedChange={onShowAllTilesChange}
-              aria-label="Alle Kacheln anzeigen"
+              aria-label="Show all tiles"
             />
           </div>
         </div>

@@ -54,15 +54,15 @@ export function sendPathDisabledReason(
   if (isSendPathAllowedForChannel(channel, path)) return null
   switch (path) {
     case 'adhoc':
-      return 'Ad-hoc nur im Kanal 1:1.'
+      return 'Ad-hoc only in the 1:1 channel.'
     case 'telegram':
-      return 'Telegram nur im Kanal 1:1 (Gruppen-Alarm: Roadmap).'
+      return 'Telegram only in the 1:1 channel (group alert: roadmap).'
     case 'mesh':
       return channel === 'pinnwand'
-        ? 'Funk „An alle“ nur im Kanal 1:1 (Klartext). Pinnwand = Online (IOTA).'
-        : 'Funk für diesen Kanal nicht verfügbar.'
+        ? 'Radio “broadcast to all” only in 1:1 + plaintext. Pinnwand = online (IOTA).'
+        : 'Radio is not available for this channel.'
     default:
-      return 'Für diesen Kanal nicht verfügbar.'
+      return 'Not available for this channel.'
   }
 }
 
@@ -75,19 +75,19 @@ export function channelDisabledReason(
   const path = resolveActiveSendPath(composerDelivery, forcedTransport)
   switch (channel) {
     case 'group':
-      if (path === 'adhoc') return 'Gruppenchat nicht per Ad-hoc.'
-      if (path === 'telegram') return 'Gruppenchat nicht per Telegram — nur 1:1.'
+      if (path === 'adhoc') return 'Group chat is not available via ad-hoc.'
+      if (path === 'telegram') return 'Group chat is not available via Telegram — 1:1 only.'
       break
     case 'pinnwand':
       if (path === 'mesh')
-        return 'Pinnwand = IOTA-Brett — Funk „An alle“ nur unter 1:1 + Klartext.'
-      if (path === 'adhoc') return 'Pinnwand nicht per Ad-hoc.'
-      if (path === 'telegram') return 'Pinnwand nicht per Telegram.'
+        return 'Pinnwand = IOTA board — radio “broadcast to all” only under 1:1 + plaintext.'
+      if (path === 'adhoc') return 'Pinnwand is not available via ad-hoc.'
+      if (path === 'telegram') return 'Pinnwand is not available via Telegram.'
       break
     default:
       break
   }
-  return 'Kanal mit aktuellem Sendepfad nicht kombinierbar.'
+  return 'Channel cannot be combined with the current send path.'
 }
 
 /** Erzwingt kompatible Kombination (z. B. nach Profil-Wechsel). */

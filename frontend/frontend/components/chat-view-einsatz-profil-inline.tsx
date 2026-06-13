@@ -188,19 +188,6 @@ export function ChatViewEinsatzProfilInline(p?: ChatViewEinsatzProfilInlineProps
   const bossBody = (
     <div className={compact ? 'space-y-2' : 'space-y-3 px-1 pb-1 pt-0'}>
       {!compact ? (
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          JSON vom Boss-Export (Handoff-ZIP oder Provisioning): enthält die{' '}
-          <strong className="text-foreground">Kontaktliste</strong> für dieses Gerät. Datei wählen → Kurzübersicht →{' '}
-          <strong className="text-foreground">Kontakte übernehmen</strong> → Einträge landen im{' '}
-          <strong className="text-foreground">Telefonbuch</strong> (Name + Adresse + Tags — keine Mailbox-Slots).
-        </p>
-      ) : (
-        <p className="text-[11px] leading-snug text-muted-foreground">
-          Erwartet <code className="text-[10px]">initialProfile</code> oder{' '}
-          <code className="text-[10px]">{`{ version: 1, contacts: [...] }`}</code> — nicht die volle Telefonbuch-Struktur.
-        </p>
-      )}
-      {!compact ? (
         <details className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-[11px] text-muted-foreground">
           <summary className="cursor-pointer font-medium text-foreground">JSON-Beispiel</summary>
           <pre className="mt-2 overflow-x-auto rounded bg-muted/40 p-2 font-mono text-[10px] text-foreground">{`{
@@ -214,7 +201,7 @@ export function ChatViewEinsatzProfilInline(p?: ChatViewEinsatzProfilInlineProps
       ) : null}
       {offlineBriefingDisplay ? (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Ops note</p>
           <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
         </div>
       ) : null}
@@ -271,7 +258,7 @@ export function ChatViewEinsatzProfilInline(p?: ChatViewEinsatzProfilInlineProps
       </p>
       {offlineBriefingDisplay ? (
         <div className="rounded-lg border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Einsatz-Notiz</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/90">Ops note</p>
           <p className="mt-1 whitespace-pre-wrap text-amber-50/95">{offlineBriefingDisplay}</p>
         </div>
       ) : null}

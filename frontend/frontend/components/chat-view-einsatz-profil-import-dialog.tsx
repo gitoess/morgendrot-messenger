@@ -20,7 +20,7 @@ export function ChatViewEinsatzProfilImportDialog(p: ChatViewEinsatzProfilImport
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Kontaktliste importieren</DialogTitle>
+          <DialogTitle>Import contacts</DialogTitle>
           <DialogDescription>
             Schreibt ins <strong className="text-foreground">Telefonbuch</strong> (Backend-Kontaktdatei). Format:{' '}
             <strong className="text-foreground">initialProfile</strong> — nicht die volle Telefonbuch-Struktur mit

@@ -149,7 +149,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(screen.getByRole('button', { name: /adhoc/i })).toBeDisabled()
   })
 
-  it('zeigt Verschlüsselungs-Hinweis bei Online + Schloss (§ H.1a)', () => {
+  it('zeigt keinen Verschlüsselungs-Hinweis bei Online + Schloss', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -159,7 +159,7 @@ describe('ChatViewSendPathCompact', () => {
         onForcedTransportChange={noop}
       />
     )
-    expect(screen.getByRole('note')).toHaveTextContent(/Verschlüsselung/)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
   it('Online-Klick setzt forcedTransport internet (§ H.1a)', () => {
@@ -194,7 +194,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(onTransport).toHaveBeenCalledWith('mesh')
   })
 
-  it('Telegram-Modus zeigt Zustell-Hinweis (§ H.1a)', () => {
+  it('Telegram-Modus zeigt keinen Zustell-Hinweis', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -206,6 +206,6 @@ describe('ChatViewSendPathCompact', () => {
         onComposerDeliveryChange={noop}
       />
     )
-    expect(screen.getByRole('note')).toHaveTextContent(/Telegram/)
+    expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 })

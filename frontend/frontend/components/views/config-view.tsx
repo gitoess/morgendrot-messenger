@@ -93,8 +93,8 @@ export function ConfigView({
             <Settings className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-foreground">Konfiguration</h2>
-            <p className="text-sm text-muted-foreground">Keys anzeigen und setzen.</p>
+            <h2 className="text-xl font-bold text-foreground">Configuration</h2>
+            <p className="text-sm text-muted-foreground">View and set keys.</p>
           </div>
         </div>
       ) : messengerMode ? (
@@ -104,14 +104,14 @@ export function ConfigView({
             href="/handbook?file=ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md"
             className="text-primary underline hover:no-underline"
           >
-            Handbuch: alle Messenger-.env-Keys
+            Handbook: all messenger .env keys
           </a>
-          . Nur Messenger-relevante Keys — Shop, Lock, Monitor und Server-Ports siehst du im{' '}
-          <strong className="text-foreground">Morgendrot Projekt</strong>.
+          . Messenger-relevant keys only — shop, lock, monitor, and server ports are in{' '}
+          <strong className="text-foreground">Morgendrot Project</strong>.
         </p>
       ) : (
         <p className="text-xs text-muted-foreground">
-          Alle Keys vom Backend. Runtime-Keys gelten sofort; andere oft nach Neustart.
+          All keys from backend. Runtime keys apply immediately; others often after restart.
         </p>
       )}
 
@@ -119,7 +119,7 @@ export function ConfigView({
         <div className="flex items-center justify-between">
           <Button variant="outline" size="sm" onClick={load} disabled={loading}>
             {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
-            <span className="ml-2">Aktualisieren</span>
+            <span className="ml-2">Refresh</span>
           </Button>
         </div>
       ) : null}
@@ -132,7 +132,7 @@ export function ConfigView({
         <div className="space-y-3">
           {visibleItems.length === 0 ? (
             <p className="rounded-lg border border-border bg-card p-4 text-center text-sm text-muted-foreground">
-              Keine weiteren Keys — oder Backend nicht erreichbar.
+              No more keys — or backend unreachable.
             </p>
           ) : (
             visibleItems.map((item) => (
@@ -150,7 +150,7 @@ export function ConfigView({
           {messengerMode && legacyItems.length > 0 ? (
             <Collapsible open={showLegacy} onOpenChange={setShowLegacy}>
               <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-dashed border-border px-3 py-2 text-xs text-muted-foreground hover:bg-accent/30">
-                <span>Veraltet (Lite-UI /connect — im Messenger Telefonbuch nutzen)</span>
+                <span>Deprecated (Lite UI /connect — use phonebook in messenger)</span>
                 <ChevronDown className={cn('h-4 w-4', showLegacy && 'rotate-180')} />
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2 space-y-2">
@@ -228,7 +228,7 @@ function ConfigRow({
           <Collapsible open={open} onOpenChange={setOpen}>
             <CollapsibleTrigger className="mt-1 flex items-center gap-1 text-[11px] text-primary hover:underline">
               <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
-              Erklärung
+              Explanation
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
               {meta.description}
@@ -245,9 +245,9 @@ function ConfigRow({
         {isBool ? (
           <>
             <Switch checked={edit === 'true'} onCheckedChange={() => void save(edit === 'true' ? 'false' : 'true')} />
-            <span className="text-xs text-muted-foreground">{edit === 'true' ? 'an' : 'aus'}</span>
+            <span className="text-xs text-muted-foreground">{edit === 'true' ? 'on' : 'off'}</span>
             <Button size="sm" variant="secondary" onClick={() => save()} disabled={saving}>
-              {saving ? '…' : 'Setzen'}
+              {saving ? '…' : 'Apply'}
             </Button>
           </>
         ) : isSelect ? (
@@ -265,7 +265,7 @@ function ConfigRow({
               </SelectContent>
             </Select>
             <Button size="sm" variant="secondary" onClick={() => save()} disabled={saving || edit === value}>
-              {saving ? '…' : 'Setzen'}
+              {saving ? '…' : 'Apply'}
             </Button>
           </>
         ) : (
@@ -276,7 +276,7 @@ function ConfigRow({
               onChange={(e) => setEdit(e.target.value)}
             />
             <Button size="sm" variant="secondary" onClick={() => save()} disabled={saving || edit === value}>
-              {saving ? '…' : 'Setzen'}
+              {saving ? '…' : 'Apply'}
             </Button>
           </>
         )}

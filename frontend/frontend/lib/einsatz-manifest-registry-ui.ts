@@ -18,7 +18,7 @@ export function describeCreateEinsatzManifestRegistryBlockReason(opts: {
     if (HEX64.test((opts.registryObjectId ?? '').trim())) return null
 
     if (!getDirectIotaSessionSigner() || !getDirectIotaSessionSignerAddress()) {
-        return 'Puls-Wallet: Einstellungen → System & Identität → „Mailbox · Direkt-RPC · Streams-Puls“ → Session-Signer (Mnemonic). Dieselbe Wallet für Testnet und Mainnet — für Mainnet-TX brauchst du IOTA-Gas auf Mainnet.'
+        return 'Puls wallet: Settings → System & Identity → "Mailbox · Direct RPC · Streams Pulse" → session signer (mnemonic). Same wallet for testnet and mainnet — mainnet transactions require IOTA gas on mainnet.'
     }
 
     const pkg =
@@ -27,9 +27,9 @@ export function describeCreateEinsatzManifestRegistryBlockReason(opts: {
 
     if (!HEX64.test(pkg)) {
         if (opts.chainMode === 'testnet-with-mainnet-anchor') {
-            return 'Mainnet-Package fehlt — Einstellungen → Netzwerk → Mainnet-Profil ausfüllen.'
+            return 'Mainnet package missing — Settings → Network → fill in mainnet profile.'
         }
-        return 'Package-ID fehlt — Handoff importieren.'
+        return 'Package ID missing — import handoff.'
     }
 
     return null

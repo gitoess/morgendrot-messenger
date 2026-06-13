@@ -34,18 +34,14 @@ export function ChatViewOfflineQueueStrip(p: {
       {p.pending > 0 ? (
         <>
           <span className="font-semibold text-amber-950 dark:text-amber-50">
-            {p.pending === 1 ? '1 Nachricht wartet' : `${p.pending} Nachrichten warten`}
+            {p.pending === 1 ? '1 message waiting' : `${p.pending} messages waiting`}
           </span>
-          <span className="text-xs text-amber-900/90 dark:text-amber-100/90">
-            — wird gesendet, sobald die Basis wieder erreichbar ist.
-          </span>
+          <span className="text-xs text-amber-900/90 dark:text-amber-100/90">— backend offline</span>
         </>
       ) : (
         <span className="text-xs leading-snug">
-          <strong className="text-foreground">Offline-Warteschlange</strong>
-          {optIn
-            ? ' — aktiv. Fehlgeschlagene Online-Sends werden lokal zwischengespeichert und erneut versucht.'
-            : ' — optional: in der Browser-Konsole `localStorage.setItem(\'morgendrot.offlineMailboxQueue\',\'1\')`, dann Seite neu laden.'}
+          <strong className="text-foreground">Offline queue</strong>
+          {optIn ? ' — active' : ' — off'}
         </span>
       )}
       {p.errorHint ? (
@@ -58,7 +54,7 @@ export function ChatViewOfflineQueueStrip(p: {
           className="ml-auto inline-flex items-center gap-1 rounded-md border border-amber-700/40 bg-amber-100/80 px-2.5 py-1 text-xs font-medium text-amber-900 hover:bg-amber-100 dark:border-amber-400/30 dark:bg-amber-900/50 dark:text-amber-100"
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-          Erneut versuchen
+          Retry
         </button>
       ) : null}
     </div>

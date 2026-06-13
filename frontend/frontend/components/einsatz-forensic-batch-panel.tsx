@@ -96,7 +96,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
     if (!preferBossApi) return true
     const out = await postForensicBatchAutoConfig(patch)
     if (!out.ok) {
-      setStatus(`Boss-Scheduler: ${out.error}`)
+      setStatus(`Boss scheduler: ${out.error}`)
       return false
     }
     setAutoOn(out.autoEnabled)
@@ -113,11 +113,11 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
 
   const onArchive = async () => {
     if (!/^0x[a-f0-9]{64}$/.test(myAddress)) {
-      setStatus('Adresse fehlt — zuerst Handoff importieren oder Basis verbinden.')
+      setStatus('Address missing — import handoff or connect to basis server first.')
       return
     }
     setBusy(true)
-    setStatus('Prüfe Posteingang…')
+    setStatus('Checking inbox…')
     try {
       const preview = await previewForensicBatchArchiveFromInbox({ onlyNew: true, mode })
       if (!preview.ok) {
@@ -127,13 +127,13 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
       if (preview.preview.preparedCount === 0) {
         setStatus(
           preview.preview.alreadyBatched
-            ? `Alle ${preview.preview.alreadyBatched} Nachrichten sind bereits archiviert.`
-            : 'Keine neuen Nachrichten zum Archivieren.'
+            ? `All ${preview.preview.alreadyBatched} messages are already archived.`
+            : 'No new messages to archive.'
         )
         return
       }
       setStatus(
-        `${preview.preview.preparedCount} Nachrichten in ${preview.preview.plans.length} Transaktion(en) — schreibe auf Mainnet…`
+        `${preview.preview.preparedCount} messages in ${preview.preview.plans.length} transaction(s) — writing to mainnet…`
       )
       const out = await runForensicBatchArchiveFromInbox({
         archiveRecipient: myAddress,
@@ -145,7 +145,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
       if (!out.ok) {
         setStatus(
           out.partialDigests?.length
-            ? `${out.error} (${out.partialDigests.length} TX(s) bereits gesendet.)`
+            ? `${out.error} (${out.partialDigests.length} TX(s) already sent.)`
             : out.error
         )
         return
@@ -156,9 +156,9 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
         .slice(0, 3)
         .join(', ')
       setStatus(
-        `${out.messageCount} Nachrichten auf Mainnet archiviert.` +
+        `${out.messageCount} messages archived on mainnet.` +
           (digestNote ? ` TX: ${digestNote}` : '') +
-          (out.alreadyBatched ? ` (${out.alreadyBatched} waren schon archiviert.)` : '')
+          (out.alreadyBatched ? ` (${out.alreadyBatched} were already archived.)` : '')
       )
     } finally {
       setBusy(false)
@@ -183,11 +183,11 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
           const sync = await importForensicBatchRegistryToBossApi(readForensicBatchRegistry(), 'merge')
           setStatus(
             sync.ok
-              ? `Liste importiert (+${out.merged} lokal, +${sync.merged} Boss-PC).`
-              : `Lokal +${out.merged}; Boss-PC: ${sync.error}`
+              ? `Registry imported (+${out.merged} local, +${sync.merged} boss PC).`
+              : `Local +${out.merged}; boss PC: ${sync.error}`
           )
         } else {
-          setStatus(`Liste importiert (+${out.merged}, gesamt ${out.total}).`)
+          setStatus(`Registry imported (+${out.merged}, total ${out.total}).`)
         }
       })
     }
@@ -201,11 +201,11 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
           <Layers className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 space-y-2">
-          <h4 className="font-semibold text-foreground">Volles Archiv (Mainnet)</h4>
+          <h4 className="font-semibold text-foreground">Full archive (mainnet)</h4>
           <p className="text-sm text-muted-foreground">
-            Schreibt den <strong className="font-medium text-foreground">kompletten Nachrichtentext</strong> on-chain
-            (bis zu 50 Nachrichten pro Transaktion). Teurer als der Kurz-Beweis unten, dafür im Explorer lesbar.
-            Bereits archiviert: {registryCount} Nachrichten auf diesem Gerät bekannt.
+            Writes the <strong className="font-medium text-foreground">complete message text</strong> on-chain (up to 50
+            messages per transaction). More expensive than the short proof below, but readable in the explorer. Already
+            archived: {registryCount} messages known on this device.
           </p>
         </div>
       </div>
@@ -213,14 +213,14 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={autoOn} onCheckedChange={(v) => onAutoToggle(v === true)} />
-          <span>Automatisch{useBossPath ? ' (Boss-PC)' : ''}</span>
+          <span>Automatic{useBossPath ? ' (boss PC)' : ''}</span>
         </label>
         <label className="flex items-center gap-2">
-          <span className="text-muted-foreground">Intervall</span>
+          <span className="text-muted-foreground">Interval</span>
           <select
             className="rounded-md border border-input bg-background px-2 py-1 text-sm"
             value={intervalMin}
-            aria-label="Intervall"
+            aria-label="Interval"
             onChange={(e) => {
               const v = Number(e.target.value) as ForensicBatchAutoIntervalMin
               setIntervalMin(v)
@@ -230,7 +230,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
           >
             {FORENSIC_BATCH_AUTO_INTERVAL_OPTIONS_MIN.map((m) => (
               <option key={m} value={m}>
-                alle {m} Min
+                every {m} min
               </option>
             ))}
           </select>
@@ -238,7 +238,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
         <select
           className="rounded-md border border-input bg-background px-2 py-1 text-sm"
           value={mode}
-          aria-label="Archiv-Modus"
+          aria-label="Archive mode"
           onChange={(e) => {
             const v = e.target.value === 'encrypted' ? 'encrypted' : 'plaintext'
             setMode(v)
@@ -246,14 +246,14 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
             if (autoOn) void pushBossAutoConfig({ autoEnabled: autoOn, intervalMin, mode: v })
           }}
         >
-          <option value="plaintext">Klartext</option>
-          <option value="encrypted">Verschlüsselt</option>
+          <option value="plaintext">Plaintext</option>
+          <option value="encrypted">Encrypted</option>
         </select>
       </div>
       <p className="text-xs text-muted-foreground">
         {autoOn
-          ? `Auto-Batch aktiv — alle ${intervalMin} Min${useBossPath ? ' auf dem Boss-PC' : ' in der PWA'}.`
-          : 'Auto-Batch aus — nur manuell archivieren.'}
+          ? `Auto-batch active — every ${intervalMin} min${useBossPath ? ' on the boss PC' : ' in the PWA'}.`
+          : 'Auto-batch off — archive manually only.'}
       </p>
 
       <Button
@@ -263,7 +263,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
         disabled={busy || !myAddress}
         onClick={() => void onArchive()}
       >
-        {busy ? 'Archiviere…' : 'Neue Nachrichten archivieren'}
+        {busy ? 'Archiving…' : 'Archive new messages'}
       </Button>
 
       {bossSchedulerHint ? <p className="text-xs text-muted-foreground">{bossSchedulerHint}</p> : null}
@@ -273,7 +273,7 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
       <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
         <CollapsibleTrigger className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
           <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', moreOpen && 'rotate-180')} aria-hidden />
-          Geräte-Sync (Liste import/export)
+          Device sync (import/export list)
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-2 flex flex-wrap gap-2">
           <Button
@@ -286,10 +286,10 @@ export function EinsatzForensicBatchPanel(p: { apiStatus?: ApiStatus | null }) {
               refreshRegistryCount()
             }}
           >
-            Liste exportieren
+            Export list
           </Button>
           <Button type="button" variant="outline" size="sm" disabled={busy} onClick={onImportRegistry}>
-            Liste importieren
+            Import list
           </Button>
         </CollapsibleContent>
       </Collapsible>

@@ -37,7 +37,7 @@ function IncompleteMediaBadge({ title }: { title: string }) {
       title={title}
       role="status"
     >
-      Unvollständig
+      Incomplete
     </span>
   )
 }
@@ -86,12 +86,12 @@ function CollapsiblePlainText({
           {open ? (
             <>
               <ChevronUp className="h-3.5 w-3.5" aria-hidden />
-              Weniger
+              Less
             </>
           ) : (
             <>
               <ChevronDown className="h-3.5 w-3.5" aria-hidden />
-              Volltext ({text.length.toLocaleString('de-DE')} Zeichen)
+              Full text ({text.length.toLocaleString('en-US')} characters)
             </>
           )}
         </button>
@@ -147,10 +147,10 @@ function TextToSpeechButton({ text }: { text: string }) {
       type="button"
       onClick={onToggle}
       className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-1 text-xs font-medium text-foreground hover:bg-muted"
-      title={speaking ? 'Vorlesen stoppen' : 'Text vorlesen'}
+      title={speaking ? 'Stop reading aloud' : 'Read text aloud'}
     >
       {speaking ? <Square className="h-3.5 w-3.5" aria-hidden /> : <Volume2 className="h-3.5 w-3.5" aria-hidden />}
-      {speaking ? 'Stopp' : 'Vorlesen'}
+      {speaking ? 'Stop' : 'Read aloud'}
     </button>
   )
 }
@@ -169,7 +169,7 @@ function MorgAudioPlayer({ blobBase64 }: { blobBase64: string }) {
       const u8 = new Uint8Array(bin.length)
       for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i)
       if (u8.length < 4 || String.fromCharCode(u8[0]!, u8[1]!, u8[2]!, u8[3]!) !== 'OggS') {
-        if (alive) setErr('Kein Ogg-Container (erwartet Magic „OggS“).')
+        if (alive) setErr('Not an Ogg container (expected “OggS” magic).')
         return
       }
       const blob = new Blob([u8], { type: 'audio/ogg' })
@@ -180,7 +180,7 @@ function MorgAudioPlayer({ blobBase64 }: { blobBase64: string }) {
         URL.revokeObjectURL(u)
       }
     } catch {
-      if (alive) setErr('Base64/Ogg-Daten ungültig.')
+      if (alive) setErr('Invalid Base64/Ogg data.')
     }
     return () => {
       alive = false
@@ -192,12 +192,12 @@ function MorgAudioPlayer({ blobBase64 }: { blobBase64: string }) {
   }
 
   if (!url) {
-    return <p className="text-xs text-muted-foreground">Audio wird vorbereitet…</p>
+    return <p className="text-xs text-muted-foreground">Preparing audio…</p>
   }
 
   return (
     <audio controls className="h-10 w-full max-w-md rounded-md" src={url} preload="metadata">
-      Dein Browser unterstützt kein HTML-Audio.
+      Your browser does not support HTML audio.
     </audio>
   )
 }
@@ -305,7 +305,7 @@ function LoRaProgressiveLumaBody({
 
   if (!lumaJpeg || !msgId) {
     return (
-      <p className="text-xs text-muted-foreground">LoRa Luma-Wire ungültig.</p>
+      <p className="text-xs text-muted-foreground">Invalid LoRa luma wire.</p>
     )
   }
 
@@ -314,12 +314,12 @@ function LoRaProgressiveLumaBody({
       {decErr && <p className="text-xs text-red-400">{decErr}</p>}
       {imgSurfaceErr && <p className="text-xs text-amber-700 dark:text-amber-300">{imgSurfaceErr}</p>}
       {!displayUrl && !decErr && !imgSurfaceErr && (
-        <p className="text-xs text-muted-foreground">Bild wird dekodiert…</p>
+        <p className="text-xs text-muted-foreground">Decoding image…</p>
       )}
       {displayUrl ? (
         <div className="relative inline-block max-w-full">
           {!hasChroma ? (
-            <IncompleteMediaBadge title="Nur S/W (Luma); Farbphase (Chroma) fehlt oder steht noch aus." />
+            <IncompleteMediaBadge title="Grayscale only (luma); color phase (chroma) missing or pending." />
           ) : null}
           <img
             src={displayUrl}
@@ -331,18 +331,18 @@ function LoRaProgressiveLumaBody({
                 return null
               })
               setImgSurfaceErr(
-                'JPEG-Anzeige fehlgeschlagen (Datei beschädigt oder kein gültiges Bild). S/W-Export unten bleibt möglich.'
+                'JPEG display failed (file corrupt or not a valid image). Grayscale export below still works.'
               )
             }}
           />
         </div>
       ) : null}
       {displayUrl && !hasChroma && !chromaTimedOut ? (
-        <p className="text-xs text-muted-foreground">Farbübertragung läuft…</p>
+        <p className="text-xs text-muted-foreground">Color transfer in progress…</p>
       ) : null}
       {displayUrl && chromaTimedOut && !hasChroma ? (
         <p className="text-xs text-amber-700 dark:text-amber-300">
-          Farbübertragung fehlgeschlagen – S/W-Bild angezeigt.
+          Color transfer failed — showing grayscale image.
         </p>
       ) : null}
       <div className="flex flex-wrap gap-2">
@@ -351,7 +351,7 @@ function LoRaProgressiveLumaBody({
           onClick={() => downloadUint8AsFile(lumaJpeg, `lora-${msgId}-luma.jpg`)}
           className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
         >
-          S/W-Bild speichern/exportieren
+          Save/export grayscale image
         </button>
       </div>
       {caption ? (
@@ -362,7 +362,7 @@ function LoRaProgressiveLumaBody({
         onClick={() => void copyRaw()}
         className="text-xs font-medium text-primary hover:underline"
       >
-        {copiedRaw ? 'Kopiert' : 'Wire kopieren'}
+        {copiedRaw ? 'Copied' : 'Copy wire'}
       </button>
     </div>
   )
@@ -395,12 +395,12 @@ function LoRaChromaOrphanBody({
     return () => revokeObjectUrlSafe(u)
   }, [content])
   if (!parsed || parsed.kind !== 'chroma') {
-    return <p className="text-xs text-muted-foreground">LoRa Chroma-Wire ungültig.</p>
+    return <p className="text-xs text-muted-foreground">Invalid LoRa chroma wire.</p>
   }
   return (
     <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
       <p className="text-xs text-amber-700 dark:text-amber-300">
-        LoRa Farbphase ohne zugehöriges S/W (msgId {msgId}) – nur Chroma-JPEG.
+        LoRa color phase without matching grayscale (msgId {msgId}) — chroma JPEG only.
       </p>
       {imgSurfaceErr ? <p className="text-xs text-amber-700 dark:text-amber-300">{imgSurfaceErr}</p> : null}
       {url ? (
@@ -413,7 +413,7 @@ function LoRaChromaOrphanBody({
               revokeBlobUrlIfNeeded(prev)
               return null
             })
-            setImgSurfaceErr('Chroma-JPEG-Anzeige fehlgeschlagen — Export unten bleibt möglich.')
+            setImgSurfaceErr('Chroma JPEG display failed — export below still works.')
           }}
         />
       ) : null}
@@ -422,14 +422,14 @@ function LoRaChromaOrphanBody({
         onClick={() => downloadUint8AsFile(parsed.jpeg, `lora-${msgId}-chroma.jpg`)}
         className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
       >
-        Chroma-JPEG speichern
+        Save chroma JPEG
       </button>
       <button
         type="button"
         onClick={() => void copyRaw()}
         className="text-xs font-medium text-primary hover:underline"
       >
-        {copiedRaw ? 'Kopiert' : 'Wire kopieren'}
+        {copiedRaw ? 'Copied' : 'Copy wire'}
       </button>
     </div>
   )
@@ -534,15 +534,15 @@ export function ChatMessageBody({
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
         {err && <p className="text-xs text-red-400">{err}</p>}
-        {!imgUrl && !err && <p className="text-xs text-muted-foreground">Bild wird dekodiert…</p>}
+        {!imgUrl && !err && <p className="text-xs text-muted-foreground">Decoding image…</p>}
         {imgUrl ? (
           <div className="relative inline-block max-w-full">
             {imgIncomplete ? (
-              <IncompleteMediaBadge title="Nur Graustufen-WebP oder abgeschnittener Blob; Farbe/Chroma fehlt oder war defekt." />
+              <IncompleteMediaBadge title="Grayscale WebP only or truncated blob; color/chroma missing or defective." />
             ) : null}
             <img
               src={imgUrl}
-              alt={imgIncomplete ? 'Kompaktes Bild (Luma, unvollständig)' : 'Kompaktes Bild (Luma+Chroma)'}
+              alt={imgIncomplete ? 'Compact image (luma, incomplete)' : 'Compact image (luma+chroma)'}
               className="max-h-96 max-w-full rounded-lg border border-border object-contain"
             />
           </div>
@@ -557,7 +557,7 @@ export function ChatMessageBody({
               onClick={() => downloadDataUrlAsFile(imgUrl, 'morg-compact-img.jpg')}
               className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
             >
-              Bild speichern
+              Save image
             </button>
           ) : null}
           <button
@@ -565,7 +565,7 @@ export function ChatMessageBody({
             onClick={() => void copyRaw()}
             className="rounded-md border border-border bg-transparent px-2.5 py-1.5 text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
+            {copied === 'raw' ? 'Copied' : 'Copy wire'}
           </button>
         </div>
       </div>
@@ -576,7 +576,7 @@ export function ChatMessageBody({
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
         <div className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground">
-          <span className="rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Sprache</span>
+          <span className="rounded bg-primary/15 px-2 py-0.5 text-xs text-primary">Voice</span>
           <span className="text-muted-foreground">Opus/Ogg</span>
         </div>
         <MorgAudioPlayer blobBase64={parsedAudio.blobBase64} />
@@ -588,7 +588,7 @@ export function ChatMessageBody({
           onClick={() => void copyRaw()}
           className="text-xs font-medium text-primary hover:underline"
         >
-          {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
+          {copied === 'raw' ? 'Copied' : 'Copy wire'}
         </button>
       </div>
     )
@@ -605,7 +605,7 @@ export function ChatMessageBody({
           <FileText className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden />
           <span className="break-all text-sm font-medium text-foreground">{parsedFile.fileName}</span>
           <span className="text-xs text-muted-foreground">
-            .txt · {parsedFile.text.length.toLocaleString('de-DE')} Zeichen · {lines} Zeilen
+            .txt · {parsedFile.text.length.toLocaleString('en-US')} characters · {lines} lines
           </span>
         </div>
         <CollapsiblePlainText text={parsedFile.text} />
@@ -615,7 +615,7 @@ export function ChatMessageBody({
             onClick={() => downloadTextFile(parsedFile.fileName, parsedFile.text)}
             className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
           >
-            Datei speichern…
+            Save file…
           </button>
           <TextToSpeechButton text={speakText} />
         </div>
@@ -628,14 +628,14 @@ export function ChatMessageBody({
             onClick={() => void copyRaw()}
             className="text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
+            {copied === 'raw' ? 'Copied' : 'Copy wire'}
           </button>
           <button
             type="button"
             onClick={() => void copyPlainTxt()}
             className="text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'plain' ? 'Kopiert' : 'Inhalt kopieren'}
+            {copied === 'plain' ? 'Copied' : 'Copy content'}
           </button>
         </div>
       </div>
@@ -648,7 +648,7 @@ export function ChatMessageBody({
       : parsedTxt.text
     return (
       <div className="space-y-2 rounded-lg border border-border/80 bg-muted/20 p-3">
-        <div className="text-xs font-medium text-muted-foreground">Eingebetteter Text (MORG_TXT_V1)</div>
+        <div className="text-xs font-medium text-muted-foreground">Embedded text (MORG_TXT_V1)</div>
         <CollapsiblePlainText text={parsedTxt.text} />
         {parsedTxt.caption ? (
           <p className="whitespace-pre-wrap break-words text-sm text-foreground">{parsedTxt.caption}</p>
@@ -660,14 +660,14 @@ export function ChatMessageBody({
             onClick={() => void copyRaw()}
             className="text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'raw' ? 'Kopiert' : 'Wire kopieren'}
+            {copied === 'raw' ? 'Copied' : 'Copy wire'}
           </button>
           <button
             type="button"
             onClick={() => void copyPlainTxt()}
             className="text-xs font-medium text-primary hover:underline"
           >
-            {copied === 'plain' ? 'Kopiert' : 'Klartext kopieren'}
+            {copied === 'plain' ? 'Copied' : 'Copy plain text'}
           </button>
         </div>
       </div>
@@ -754,7 +754,7 @@ export function ChatMessageBody({
           onClick={() => void copyRaw()}
           className="text-xs font-medium text-primary hover:underline"
         >
-          {copied === 'raw' ? 'Kopiert' : 'Text kopieren'}
+          {copied === 'raw' ? 'Copied' : 'Copy text'}
         </button>
       </div>
     </div>

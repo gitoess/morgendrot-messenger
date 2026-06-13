@@ -419,7 +419,7 @@ export async function handleStatusRoutes(
                 const owner = (CFG.MY_ADDRESS || '').trim();
                 if (/^0x[a-fA-F0-9]{64}$/i.test(owner)) {
                     try {
-                        discovered = await getPackageIdsForOwner(owner);
+                        discovered = await getPackageIdsForOwner(getClient(), owner);
                     } catch {
                         discovered = [];
                     }

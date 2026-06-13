@@ -44,7 +44,7 @@ export function LanInstallQrPanel({
   const [pasteText, setPasteText] = useState('')
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pendingApi, setPendingApi] = useState('')
-  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Install-QR scannen' })
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Scan install QR' })
 
   const renderQrForHost = useCallback(async (host: string, uiPort: number, apiPort: number) => {
     setBuildErr('')
@@ -96,7 +96,7 @@ export function LanInstallQrPanel({
   const onApplyManualHost = () => {
     const h = manualHost.trim()
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(h)) {
-      setBuildErr('IPv4 eingeben (z. B. 192.168.0.10).')
+      setBuildErr('Enter IPv4 (e.g. 192.168.0.10).')
       return
     }
     setBuildErr('')
@@ -116,12 +116,12 @@ export function LanInstallQrPanel({
       onStatus?.(r.error)
       return
     }
-    onStatus?.(`Basis-URL gespeichert: ${pendingApi}`)
+    onStatus?.(`Base URL saved: ${pendingApi}`)
   }
 
   const applyParsed = (parsed: NonNullable<ReturnType<typeof parseInstallQrPayload>>) => {
     if (parsed.pwaUrl && typeof window !== 'undefined') {
-      const open = window.confirm(`PWA öffnen?\n\n${parsed.pwaUrl}`)
+      const open = window.confirm(`Open PWA?\n\n${parsed.pwaUrl}`)
       if (open) window.open(parsed.pwaUrl, '_blank', 'noopener,noreferrer')
     }
     if (parsed.apiBaseUrl) {
@@ -129,14 +129,14 @@ export function LanInstallQrPanel({
       return
     }
     if (!parsed.pwaUrl) {
-      onStatus?.('QR ohne PWA-URL und ohne API-Basis.')
+      onStatus?.('QR has no PWA URL and no API base.')
     }
   }
 
   const applyRaw = (raw: string) => {
     const parsed = parseInstallQrPayload(raw)
     if (!parsed) {
-      onStatus?.('Kein Installations-QR (mi) oder http(s)-Link erkannt.')
+      onStatus?.('Not an install QR (mi) or http(s) link.')
       return
     }
     applyParsed(parsed)
@@ -145,7 +145,7 @@ export function LanInstallQrPanel({
   const handleScan = async () => {
     const s = await startScan()
     if ('error' in s) {
-      if (s.error !== 'Scan abgebrochen.') {
+      if (s.error !== 'Scan cancelled.') {
         setPasteOpen(true)
         onStatus?.(s.error)
       }
@@ -200,9 +200,9 @@ export function LanInstallQrPanel({
     if (!qrText) return
     try {
       await navigator.clipboard.writeText(qrText)
-      onStatus?.('Link kopiert — im Browser mit http:// öffnen (nicht https).')
+      onStatus?.('Link copied — open in browser with http:// (not https).')
     } catch {
-      onStatus?.('Kopieren fehlgeschlagen — Link unten manuell markieren.')
+      onStatus?.('Copy failed — select the link below manually.')
     }
   }
 
@@ -211,7 +211,7 @@ export function LanInstallQrPanel({
       <Dialog open={showBossQr} onOpenChange={setShowBossQr}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>WLAN-QR</DialogTitle>
+            <DialogTitle>WLAN QR</DialogTitle>
           </DialogHeader>
           <p className="text-xs text-muted-foreground">
             Helfer: Handy-Kamera → Link antippen → Messenger im Browser → „Zum Home-Bildschirm“. Gleiches WLAN
@@ -239,10 +239,10 @@ export function LanInstallQrPanel({
                 value={qrText}
                 rows={2}
                 className="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 font-mono text-[10px]"
-                aria-label="Installations-Link"
+                aria-label="Install link"
               />
               <Button type="button" size="sm" variant="secondary" className="w-full" onClick={() => void copyInstallLink()}>
-                Link kopieren
+                Copy link
               </Button>
             </>
           ) : null}
@@ -252,7 +252,7 @@ export function LanInstallQrPanel({
       <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Install-QR einfügen</DialogTitle>
+            <DialogTitle>Paste install QR</DialogTitle>
           </DialogHeader>
           <textarea
             value={pasteText}
@@ -262,7 +262,7 @@ export function LanInstallQrPanel({
             placeholder='{"v":2,"k":"mi","w":"http://192.168.0.10:3341","b":"http://192.168.0.10:3342"}'
           />
           <Button type="button" className="w-full" onClick={() => applyRaw(pasteText)}>
-            Übernehmen
+            Apply
           </Button>
         </DialogContent>
       </Dialog>
@@ -270,15 +270,15 @@ export function LanInstallQrPanel({
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>API-Basis übernehmen?</DialogTitle>
+            <DialogTitle>Apply API base?</DialogTitle>
           </DialogHeader>
           <p className="break-all font-mono text-xs text-foreground">{pendingApi}</p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmOpen(false)}>
-              Abbrechen
+              Cancel
             </Button>
             <Button type="button" className="flex-1" onClick={confirmApply}>
-              Speichern
+              Save
             </Button>
           </div>
         </DialogContent>
@@ -296,7 +296,7 @@ export function LanInstallQrPanel({
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-violet-500/45 bg-violet-500/15 px-5 py-3 text-sm font-semibold text-foreground hover:bg-violet-500/25 sm:w-auto"
         >
           <QrCode className="h-4 w-4 shrink-0" aria-hidden />
-          WLAN-QR
+          WLAN QR
         </button>
         {dialogs}
       </>
@@ -314,7 +314,7 @@ export function LanInstallQrPanel({
         </div>
         <div className="min-w-0 flex-1 space-y-3">
           <h4 className="font-semibold text-foreground">
-            {isEmbedded ? 'WLAN-QR' : 'Boss-LAN: PWA per QR'}
+            {isEmbedded ? 'WLAN QR' : 'Boss LAN: PWA via QR'}
           </h4>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -325,7 +325,7 @@ export function LanInstallQrPanel({
               onClick={() => setShowBossQr(true)}
             >
               <QrCode className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-              QR anzeigen
+              Show QR
             </Button>
             <Button
               type="button"
@@ -334,7 +334,7 @@ export function LanInstallQrPanel({
               className="h-9 text-xs"
               onClick={() => void handleScan()}
             >
-              QR scannen
+              Scan QR
             </Button>
             <Button
               type="button"
@@ -343,7 +343,7 @@ export function LanInstallQrPanel({
               className="h-9 text-xs"
               onClick={() => setPasteOpen(true)}
             >
-              Link einfügen
+              Paste link
             </Button>
           </div>
         </div>

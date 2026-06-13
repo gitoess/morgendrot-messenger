@@ -2,6 +2,22 @@
  * @vitest-environment node
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('@/frontend/lib/tab-crypto-idb', () => {
+  let lastPlain = ''
+  return {
+    clearTabAesKey: vi.fn(async () => {
+      lastPlain = ''
+    }),
+    getOrCreateTabAesKey: vi.fn(async () => null),
+    tabAesEncrypt: vi.fn(async (plain: string) => {
+      lastPlain = plain
+      return { ivB64: 'dGVzdA==', ciphertextB64: 'dGVzdA==' }
+    }),
+    tabAesDecrypt: vi.fn(async () => lastPlain || null),
+  }
+})
+
 import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
@@ -103,23 +119,18 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     if (restored.ok) expect(restored.address).toBe(applied.address)
     expect(getDirectIotaSessionSignerAddress()).not.toBeNull()
     expect(sessionStore['morgendrot.directIotaSigner.tab.v1']).toBeUndefined()
-    expect(sessionStore['morgendrot.directIotaSigner.tabEnc.v1']).toBeTruthy()
+    expect(sessionStore['morgendrot.directIotaSigner.tabEnc.v2']).toBeTruthy()
   })
 
-  it('restores signer from legacy plaintext tab session', () => {
-    const applied = applyDirectIotaMnemonicSession(rawHexSecret)
-    expect(applied.ok).toBe(true)
-    if (!applied.ok) return
+  it('discards legacy plaintext tab session without restoring signer', () => {
     sessionStore['morgendrot.directIotaSigner.tab.v1'] = rawHexSecret
-    delete sessionStore['morgendrot.directIotaSigner.tabEnc.v1']
-    delete sessionStore['morgendrot.directIotaSigner.tabKey.v1']
     clearDirectIotaSessionSigner()
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
 
     const restored = restoreDirectIotaSessionSignerFromTabSession()
-    expect(restored.ok).toBe(true)
-    if (restored.ok) expect(restored.address).toBe(applied.address)
-    expect(getDirectIotaSessionSignerAddress()).not.toBeNull()
+    expect(restored.ok).toBe(false)
+    expect(sessionStore['morgendrot.directIotaSigner.tab.v1']).toBeUndefined()
+    expect(getDirectIotaSessionSignerAddress()).toBeNull()
   })
 
   it('clears persisted signer blob', async () => {

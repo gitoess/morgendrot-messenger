@@ -43,4 +43,16 @@ describe('forensic-batch registry (core)', () => {
     expect(next).toHaveLength(1)
     expect(next[0]?.batchDigest).toBe(digestB)
   })
+
+  it('recordForensicBatchRegistryEntries ignoriert ungültige ref/digest', () => {
+    const next = recordForensicBatchRegistryEntries(
+      [],
+      [
+        { canonicalMsgRef: 'not-hex', batchDigest: digestA, encrypted: false },
+        { canonicalMsgRef: refA, batchDigest: 'tx-batch', encrypted: true },
+      ],
+      500
+    )
+    expect(next).toHaveLength(0)
+  })
 })

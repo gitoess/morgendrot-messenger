@@ -23,14 +23,14 @@ describe('ChatViewEncryptedRecipientHandshakeBar (§ H.1a)', () => {
         onHandshake={onHandshake}
       />
     )
-    expect(screen.getByRole('status')).toHaveTextContent(/Handshake senden/)
-    fireEvent.click(screen.getByRole('button', { name: /Handshake senden/i }))
+    expect(screen.getByRole('status')).toHaveTextContent(/Send handshake/)
+    fireEvent.click(screen.getByRole('button', { name: /Send handshake/i }))
     expect(onHandshake).toHaveBeenCalledTimes(1)
   })
 
   it('zeigt erneut senden bei awaiting_peer', () => {
     render(<ChatViewEncryptedRecipientHandshakeBar status="awaiting_peer" onHandshake={vi.fn()} />)
-    expect(screen.getByRole('button', { name: /Handshake erneut senden/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Resend handshake/i })).toBeInTheDocument()
   })
 
   it('zeigt Annehmen bei needs_accept', () => {
@@ -41,7 +41,7 @@ describe('ChatViewEncryptedRecipientHandshakeBar (§ H.1a)', () => {
         onAccept={onAccept}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Handshake annehmen/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Accept handshake/i }))
     expect(onAccept).toHaveBeenCalledTimes(1)
   })
 
@@ -53,6 +53,6 @@ describe('ChatViewEncryptedRecipientHandshakeBar (§ H.1a)', () => {
         onHandshake={vi.fn()}
       />
     )
-    expect(screen.getByRole('button', { name: /Handshake senden/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Send handshake/i })).toBeDisabled()
   })
 })

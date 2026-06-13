@@ -11,6 +11,7 @@ import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download
 import { sendHandoffZipViaIota } from '@/frontend/lib/handoff-iota-send'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import {
   buildTeamMailboxOptions,
@@ -111,7 +112,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
   const [partnersManual, setPartnersManual] = useState('')
   const [iotaTargetInput, setIotaTargetInput] = useState('')
   const [includeIotaArchivReadme, setIncludeIotaArchivReadme] = useState(true)
-  const [protectWithPassword, setProtectWithPassword] = useState(false)
+  const [protectWithPassword, setProtectWithPassword] = useState(true)
   const [handoffPassword, setHandoffPassword] = useState('')
   const [handoffPasswordConfirm, setHandoffPasswordConfirm] = useState('')
   const [lastDownloadPresetId, setLastDownloadPresetId] = useState<HandoffEinsatzPresetId | null>(() =>
@@ -235,7 +236,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
   const onSaveHandoffTemplate = useCallback(async () => {
     if (!canSaveTemplates) {
-      setStatusMsg('Vorlagen speichern nur für Boss (configChange).')
+      setStatusMsg('Saving templates requires Boss role (configChange).')
       return
     }
     const handoffSnapshot = buildHandoffTemplateSnapshotFromExport({
@@ -277,13 +278,13 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     try {
       const res = await saveEinsatzRoleTemplates(validated.templates)
       if (!res.ok) {
-        setStatusMsg(res.error || 'Speichern fehlgeschlagen.')
+        setStatusMsg(res.error || 'Save failed.')
         return
       }
       setSavedTemplates(res.templates ?? validated.templates)
       setSaveTemplateOpen(false)
       setStatusMsg(
-        `Vorlage „${built.label}" gespeichert (Profil, Rechte, Partner/Team) — im Dropdown wählbar.`
+        `Template “${built.label}" saved (profile, rights, partners/team) — selectable in dropdown.`
       )
     } finally {
       setTemplateSaveBusy(false)
@@ -342,8 +343,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     }
     setStatusMsg(
       applied.hasFullSnapshot
-        ? `Vorlage „${t.label}" geladen (voller Handoff-Snapshot).`
-        : `Vorlage „${t.label}" geladen (Legacy — nur Profil/ROLE_ID).`
+        ? `Template “${t.label}" loaded (full handoff snapshot).`
+        : `Template “${t.label}" loaded (legacy — profile/ROLE_ID only).`
     )
   }, [applyPreset])
 
@@ -371,7 +372,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     let cancelled = false
     void (async () => {
       try {
-        const r = await fetch(`${API_BASE}/api/current-ids`)
+        const r = await fetchWithApiAuth(`${API_BASE}/api/current-ids`)
         const j = (await r.json()) as {
           mailboxId?: string
           commandRegistryId?: string
@@ -429,7 +430,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     if (!raw) return
     const parsed = parsePartnerAddressCsv(raw)
     if (!parsed.length) {
-      setStatusMsg('Keine gültigen Adressen.')
+      setStatusMsg('No valid addresses.')
       return
     }
     setSelectedPartnerAddrs((prev) => {
@@ -543,14 +544,16 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     setStatusMsg('')
     const r = await downloadHandoffZipExport(
       buildExportBody(activePresetId),
-      protectWithPassword ? { password: handoffPassword } : {}
+      protectWithPassword
+        ? { password: handoffPassword, passwordConfirm: handoffPasswordConfirm }
+        : {}
     )
     setHandoffBusy(false)
     if (r.ok) {
       writeHandoffLastPresetId(activePresetId)
       setLastDownloadPresetId(activePresetId)
     }
-    setStatusMsg(r.ok ? (protectWithPassword ? 'ZIP gespeichert (Passwort).' : 'ZIP gespeichert.') : r.error || 'Download fehlgeschlagen.')
+    setStatusMsg(r.ok ? (protectWithPassword ? 'ZIP saved (password).' : 'ZIP saved.') : r.error || 'Download failed.')
   }
 
   const onDownload = () => downloadHandoffZip(presetId)
@@ -615,7 +618,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     if (!validatePasswordIfNeeded()) return
     const recipients = resolveIotaPartnerAddresses()
     if (recipients.length === 0) {
-      setStatusMsg('IOTA-Ziel: Partner ankreuzen oder 0x-Adresse eingeben (verschlüsselt, Handshake nötig).')
+      setStatusMsg('IOTA target: select a partner or enter a 0x address (encrypted; handshake required).')
       return
     }
     setHandoffBusy(true)
@@ -639,8 +642,8 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     }
     writeHandoffLastPresetId(presetId)
     setLastDownloadPresetId(presetId)
-    const failHint = r.failures.length > 0 ? ` (${r.failures.length} fehlgeschlagen)` : ''
-    setStatusMsg(`An ${r.sent} Partner gesendet.${failHint}`)
+    const failHint = r.failures.length > 0 ? ` (${r.failures.length} failed)` : ''
+    setStatusMsg(`Sent to ${r.sent} partner(s).${failHint}`)
   }
 
   return (
@@ -685,7 +688,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 labelEdited.current = true
                 setBezeichnung(e.target.value)
               }}
-              placeholder="Einsatzname"
+              placeholder="Ops name"
               className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
             />
           </div>
@@ -696,7 +699,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 <select
                   className="min-w-[10rem] flex-1 rounded-lg border border-border bg-input px-2 py-1.5 text-sm"
                   defaultValue=""
-                  aria-label="Vorlage"
+                  aria-label="Template"
                   onChange={(e) => {
                     const id = e.target.value
                     e.target.value = ''
@@ -704,7 +707,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     if (t) applySavedTemplate(t)
                   }}
                 >
-                  <option value="">Vorlage</option>
+                  <option value="">Template</option>
                   {savedTemplates.map((t) => (
                     <option key={t.id} value={t.id}>
                       {t.label}
@@ -843,7 +846,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                 type="text"
                 value={iotaTargetInput}
                 onChange={(e) => setIotaTargetInput(e.target.value.trim())}
-                placeholder="0x…64hex — Helfer-Wallet"
+                placeholder="0x…64hex — helper wallet"
                 className="w-full rounded-lg border border-border bg-input px-3 py-2 font-mono text-xs"
                 spellCheck={false}
                 autoComplete="off"
@@ -882,7 +885,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   autoComplete="new-password"
                   value={handoffPassword}
                   onChange={(e) => setHandoffPassword(e.target.value)}
-                  placeholder="Passwort"
+                  placeholder="Password"
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
                 />
                 <input
@@ -890,7 +893,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                   autoComplete="new-password"
                   value={handoffPasswordConfirm}
                   onChange={(e) => setHandoffPasswordConfirm(e.target.value)}
-                  placeholder="Wiederholen"
+                  placeholder="Repeat"
                   className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
                 />
               </div>
@@ -1035,7 +1038,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                     className="flex items-center gap-1.5 text-xs font-medium text-foreground"
                   >
                     <Save className="h-3.5 w-3.5" aria-hidden />
-                    {saveTemplateOpen ? 'Abbrechen' : 'Als Vorlage speichern'}
+                    {saveTemplateOpen ? 'Cancel' : 'Save as template'}
                   </button>
                   {saveTemplateOpen ? (
                     <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -1045,7 +1048,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                           setTemplateSaveLabel(e.target.value)
                           setTemplateSaveId(slugifyHandoffTemplateId(e.target.value))
                         }}
-                        placeholder="Anzeigename"
+                        placeholder="Display name"
                         className="rounded-lg border border-border bg-input px-2 py-2"
                       />
                       <input
@@ -1060,7 +1063,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
                         onClick={() => void onSaveHandoffTemplate()}
                         className="sm:col-span-2 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
                       >
-                        {templateSaveBusy ? 'Speichere…' : 'Speichern'}
+                        {templateSaveBusy ? 'Saving…' : 'Save'}
                       </button>
                     </div>
                   ) : null}

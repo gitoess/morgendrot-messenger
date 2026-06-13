@@ -20,10 +20,10 @@ export type OfflineMailboxQueueListItem = {
 }
 
 function relayStatusLabel(s: TxRelayQueueItem['status']): string {
-  if (s === 'pending') return 'Relay — bereit'
-  if (s === 'draft_unsigned') return 'Entwurf'
-  if (s === 'expired_local_proof') return 'Abgelaufen'
-  if (s === 'invalid') return 'Ungültig'
+  if (s === 'pending') return 'Relay — ready'
+  if (s === 'draft_unsigned') return 'Draft'
+  if (s === 'expired_local_proof') return 'Expired'
+  if (s === 'invalid') return 'Invalid'
   return s
 }
 
@@ -54,7 +54,7 @@ export function ChatViewPendingSendsButton(p: {
   const offlineCount = p.offlineMailboxQueuePending ?? offlineItems.length
   const totalPending = relayPending.length + offlineCount
 
-  const triggerLabel = totalPending > 0 ? `Ausstehend (${totalPending})` : 'Ausstehend'
+  const triggerLabel = totalPending > 0 ? `Pending (${totalPending})` : 'Pending'
 
   const refresh = () => setRefreshTick((x) => x + 1)
 
@@ -85,7 +85,7 @@ export function ChatViewPendingSendsButton(p: {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Ausstehende Sendungen</DialogTitle>
+            <DialogTitle>Pending sends</DialogTitle>
           </DialogHeader>
 
           {offlineCount > 0 ? (
@@ -97,7 +97,7 @@ export function ChatViewPendingSendsButton(p: {
                 {p.onManualRefresh ? (
                   <Button type="button" size="sm" disabled={submitting} onClick={() => void runOfflineSubmit()}>
                     <Send className="mr-2 h-3.5 w-3.5" />
-                    {submitting ? 'Sende…' : 'Jetzt senden'}
+                    {submitting ? 'Sending…' : 'Send now'}
                   </Button>
                 ) : null}
               </div>
@@ -139,7 +139,7 @@ export function ChatViewPendingSendsButton(p: {
                     refresh()
                   }}
                 >
-                  Entfernen ({selectedOfflineIds.length})
+                  Remove ({selectedOfflineIds.length})
                 </Button>
               ) : null}
             </section>
@@ -158,7 +158,7 @@ export function ChatViewPendingSendsButton(p: {
                   }}
                 >
                   <Send className="mr-2 h-3.5 w-3.5" />
-                  Jetzt absenden
+                  Submit now
                 </Button>
               </div>
               <ul className="max-h-32 space-y-1 overflow-y-auto text-xs text-muted-foreground">
@@ -172,16 +172,16 @@ export function ChatViewPendingSendsButton(p: {
           ) : null}
 
           {totalPending === 0 ? (
-            <p className="text-sm text-muted-foreground">Nichts ausstehend.</p>
+            <p className="text-sm text-muted-foreground">Nothing pending.</p>
           ) : null}
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={refresh}>
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
-              Aktualisieren
+              Refresh
             </Button>
             <Button type="button" onClick={() => setOpen(false)}>
-              Schließen
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>

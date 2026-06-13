@@ -50,15 +50,15 @@ export function messageMatchesInboxSourceFilter(
 export function inboxSourceFilterLabel(filter: InboxSourceFilter): string {
   switch (filter) {
     case 'all':
-      return 'Alle Quellen'
+      return 'All sources'
     case 'mailbox':
       return 'Mailbox'
     case 'group':
-      return 'Gruppe'
+      return 'Group'
     case 'telegram':
       return 'Telegram'
     case 'funk':
-      return 'Funk'
+      return 'Radio'
     case 'lagebild':
       return 'Pinnwand'
   }

@@ -27,7 +27,8 @@ vi.mock('@/frontend/lib/direct-iota-encrypted-submit', () => ({
 }))
 
 vi.mock('@/frontend/lib/direct-iota-vault-unlock-sync', () => ({
-  tryAutoRestoreDirectIotaSessionSigner: vi.fn(),
+  tryAutoRestoreDirectIotaSessionSigner: vi.fn(() => ({ ok: false })),
+  tryAutoRestoreDirectIotaSessionSignerAsync: vi.fn(async () => ({ ok: false })),
   tryAutoRestoreDirectChatEcdhPrivateKey: vi.fn(async () => ({ ok: false })),
 }))
 

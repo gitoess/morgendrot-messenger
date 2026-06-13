@@ -14,10 +14,10 @@ export type ContactMailboxSlots = Partial<Record<ContactMailboxSlotId, string>>
 const HEX_64 = /^0x[a-f0-9]{64}$/
 
 export const CONTACT_MAILBOX_SLOT_LABELS: Record<ContactMailboxSlotId, string> = {
-  shared: 'Einsatz (Shared)',
-  private: 'Privat',
-  team: 'Team / Gruppe',
-  buffer: 'Puffer',
+  shared: 'Ops (shared)',
+  private: 'Private',
+  team: 'Team / group',
+  buffer: 'Buffer',
 }
 
 export function normalizeMailboxObjectId(id: string): string | undefined {
@@ -117,7 +117,7 @@ export function buildSendMailboxTargetOptions(
 ): { value: ContactSendMailboxTarget; label: string; objectId?: string }[] {
   const slots = readContactMailboxSlots(entry)
   const opts: { value: ContactSendMailboxTarget; label: string; objectId?: string }[] = [
-    { value: 'event', label: 'Nur Wallet-Adresse (Event auf Chain)' },
+    { value: 'event', label: 'Wallet address only (on-chain event)' },
   ]
   for (const id of CONTACT_MAILBOX_SLOT_IDS) {
     const oid = slots[id]
@@ -128,12 +128,12 @@ export function buildSendMailboxTargetOptions(
       objectId: oid,
     })
   }
-  opts.push({ value: 'own', label: 'Meine aktive Mailbox (Team/Privat)' })
+  opts.push({ value: 'own', label: 'My active mailbox (team/private)' })
   const srv = serverMailboxId?.trim()
   if (srv && HEX_64.test(srv.toLowerCase())) {
     opts.push({
       value: 'server',
-      label: `Server-Einsatz (Shared) · ${srv.slice(0, 10)}…`,
+      label: `Server ops (shared) · ${srv.slice(0, 10)}…`,
       objectId: srv.toLowerCase(),
     })
   }

@@ -29,8 +29,8 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
 
   it('zeigt Titel und Neuer-Kontakt-Button', () => {
     render(<ChatViewPhonebookSection {...baseProps()} />)
-    expect(screen.getByRole('heading', { name: /Telefonbuch/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Neuer Kontakt/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Phonebook/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /New contact/i })).toBeInTheDocument()
   })
 
   it('listet Kontakte und zählt sichtbare Einträge', () => {
@@ -41,7 +41,7 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
     render(<ChatViewPhonebookSection {...baseProps({ directory })} />)
     expect(screen.getByText('Alpha')).toBeInTheDocument()
     expect(screen.getByText('Bravo')).toBeInTheDocument()
-    expect(screen.getByText(/2 Kontakte gespeichert/)).toBeInTheDocument()
+    expect(screen.getByText(/2 contacts saved/)).toBeInTheDocument()
   })
 
   it('filtert per Suche', () => {
@@ -50,7 +50,7 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
       [WALLET_B]: { label: 'Bravo' },
     }
     render(<ChatViewPhonebookSection {...baseProps({ directory })} />)
-    fireEvent.change(screen.getByPlaceholderText(/Name, Adresse oder Meshtastic/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search name, address, or Meshtastic/i), {
       target: { value: 'Alpha' },
     })
     expect(screen.getByText('Alpha')).toBeInTheDocument()
@@ -82,7 +82,7 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
         })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Einstellungen → Meine Mailboxen/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Settings → My mailboxes/i }))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 })
