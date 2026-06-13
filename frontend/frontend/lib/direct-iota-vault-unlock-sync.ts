@@ -235,7 +235,7 @@ async function restoreDirectChatEcdhPrivateKey(opts?: {
 
   if (opts?.trySession !== false && pw) {
     try {
-      const session = await fetchSessionEcdhPrivateJwk(pw)
+      const session = await fetchSessionEcdhPrivateJwk()
       if (session.ok) {
         const applied = await applyVaultEcdhMaterialFromApi(session)
         if (applied.ok) return { ok: true }

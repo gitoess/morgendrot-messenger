@@ -8,6 +8,7 @@ import {
   clearPersistedDirectIotaSessionSigner,
   getDirectIotaSessionSignerAddress,
   persistDirectIotaSessionSignerEncrypted,
+  whenDirectIotaTabSessionPersistIdle,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
   syncDirectChatEcdhAfterVaultUnlock,
@@ -160,8 +161,8 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
   it('tab session restore after RAM clear', async () => {
     const applied = applyDirectIotaMnemonicSession(rawHexSecret)
     expect(applied.ok).toBe(true)
+    await whenDirectIotaTabSessionPersistIdle()
     clearDirectIotaSessionSigner()
-    await new Promise((r) => setTimeout(r, 50))
     const auto = await tryAutoRestoreDirectIotaSessionSignerAsync()
     expect(auto.ok).toBe(true)
     if (auto.ok) expect(auto.source).toBe('tab')

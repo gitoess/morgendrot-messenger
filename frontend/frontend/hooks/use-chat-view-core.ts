@@ -35,7 +35,8 @@ import {
   writeMessagingPersistenceModeToStorage,
 } from '@/frontend/lib/messaging-persistence-mode'
 import { inferMessagingPersistenceModeFromComposer } from '@/frontend/lib/infer-composer-persistence-mode'
-import { readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
+import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
+import { useChatViewMessengerGroup } from '@/frontend/hooks/use-chat-view-messenger-group'
 import {
   readComposerMailboxObjectId,
   writeComposerMailboxObjectId,
@@ -51,11 +52,6 @@ import { buildForwardComposerPayload } from '@/frontend/lib/chat-forward-text'
 import { applyMorgPkgItemToComposer } from '@/frontend/lib/apply-morg-pkg-item-to-composer'
 import type { MorgPkgImportItem } from '@/frontend/lib/morg-pkg-import-store'
 import { toast } from 'sonner'
-import {
-  getActiveMessengerGroup,
-  type MessengerGroupDefinition,
-} from '@/frontend/lib/messenger-group-store'
-import { resolveGroupTeamMailboxObjectId } from '@/frontend/lib/group-team-broadcast'
 import {
   isDialogChannel,
   isGroupChannel,
@@ -96,17 +92,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
   const { channelMode, role, myAddress } = p
   const isPrivate = isDialogChannel(channelMode)
   const isGroup = isGroupChannel(channelMode)
-  const [groupsRevision, setGroupsRevision] = useState(0)
-  const activeGroup: MessengerGroupDefinition | null = useMemo(() => {
-    if (!isGroup) return null
-    void groupsRevision
-    return getActiveMessengerGroup()
-  }, [isGroup, groupsRevision])
-  const groupTeamMailboxId = useMemo(
-    () => resolveGroupTeamMailboxObjectId(activeGroup),
-    [activeGroup]
-  )
-  const refreshMessengerGroups = useCallback(() => setGroupsRevision((n) => n + 1), [])
+  const { activeGroup, groupTeamMailboxId, refreshMessengerGroups } = useChatViewMessengerGroup(isGroup)
 
   const [message, setMessage] = useState('')
   const [recipient, setRecipient] = useState('')
@@ -305,6 +291,16 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     [recipient, partner, encrypted]
   )
 
+  const groupSendPanelContext = useMemo(
+    () =>
+      buildGroupSendPanelContext({
+        isGroupChannel: isGroup,
+        activeGroup,
+        myAddress,
+      }),
+    [isGroup, activeGroup, myAddress]
+  )
+
   const messagingPersistenceMode = useMemo(
     () =>
       inferMessagingPersistenceModeFromComposer({
@@ -316,7 +312,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
         composerMailboxObjectId,
         contactDirectory: directory,
         isGroupChannel: isGroup,
-        groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
+        groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
       }),
     [
       recipient,
@@ -327,6 +323,7 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
       composerMailboxObjectId,
       directory,
       isGroup,
+      groupSendPanelContext.groupMailboxSendAll,
     ]
   )
 

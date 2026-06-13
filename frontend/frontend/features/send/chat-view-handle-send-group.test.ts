@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import {
   applyGroupOptimisticInboxMerge,
+  attemptGroupInternetChainMailbox,
+  attemptGroupPairwiseMailboxSend,
   attemptGroupTeamBroadcast,
-  buildGroupTeamBroadcastOptimisticRows,
+  buildGroupOptimisticRowsAfterSend,
   getGroupSendPreSendError,
+  groupPairwiseWireSuccessMessage,
   groupTeamBroadcastWireSuccessMessage,
   inboxReloadDelaysMs,
   publishGroupStreamsAnchorAfterSend,
@@ -32,9 +35,13 @@ vi.mock('@/frontend/lib/api/streams', () => ({
   publishStreamsAnchor: vi.fn(),
 }))
 
-vi.mock('@/frontend/lib/group-mailbox-pairwise-send', () => ({
-  readGroupMailboxSendAll: vi.fn(() => true),
-}))
+vi.mock('@/frontend/lib/group-mailbox-pairwise-send', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/frontend/lib/group-mailbox-pairwise-send')>()
+  return {
+    ...actual,
+    readGroupMailboxSendAll: vi.fn(() => true),
+  }
+})
 
 import { sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { publishStreamsAnchor } from '@/frontend/lib/api/streams'
@@ -75,10 +82,11 @@ describe('chat-view-handle-send-group', () => {
     ).toBeNull()
   })
 
-  it('resolveSingleWireSuccessMessage nur für team-broadcast', () => {
+  it('resolveSingleWireSuccessMessage für team-broadcast und pairwise', () => {
     expect(resolveSingleWireSuccessMessage(true, 'team-broadcast')).toBe(
       groupTeamBroadcastWireSuccessMessage()
     )
+    expect(resolveSingleWireSuccessMessage(true, 'pairwise', 3)).toBe(groupPairwiseWireSuccessMessage(3))
     expect(resolveSingleWireSuccessMessage(true, 'pairwise')).toBeNull()
     expect(resolveSingleWireSuccessMessage(false, 'team-broadcast')).toBeNull()
   })
@@ -148,13 +156,84 @@ describe('chat-view-handle-send-group', () => {
     })
   })
 
-  it('buildGroupTeamBroadcastOptimisticRows nur für Gruppen-Mailbox-Internet', () => {
-    const rows = buildGroupTeamBroadcastOptimisticRows({
+  it('attemptGroupPairwiseMailboxSend sammelt Teilerfolge', async () => {
+    const peer = '0x' + 'b'.repeat(64)
+    const res = await attemptGroupPairwiseMailboxSend({
+      targets: [peer, '0x' + 'c'.repeat(64)],
+      sendToMember: async (target) =>
+        target === peer
+          ? {
+              ok: true,
+              mailboxCapture: {
+                payloadUtf8: 'hi',
+                messageNonceU64: 1n,
+                encrypted: false,
+              },
+            }
+          : { ok: false, error: 'fail' },
+    })
+    expect(res.kind).toBe('success')
+    if (res.kind === 'success') {
+      expect(res.targetCount).toBe(2)
+      expect(res.partialFailure).toContain('1/2')
+    }
+  })
+
+  it('attemptGroupInternetChainMailbox fällt auf pairwise zurück', async () => {
+    vi.mocked(sendTeamPlaintextBroadcastHybrid).mockResolvedValue({ ok: false, error: 'skip tb' })
+    const res = await attemptGroupInternetChainMailbox({
+      textSnap: 'ping',
+      encrypted: false,
+      activeGroup: { ...group, useTeamBroadcast: false, teamMailboxObjectId: undefined },
+      isGroupChannel: true,
+      messagingPersistenceMode: 'mailbox',
+      forcedTransport: 'internet',
+      myAddress: '0x' + 'c'.repeat(64),
+      composerRecipient: '',
+      sendToMember: async () => ({
+        ok: true,
+        mailboxCapture: {
+          payloadUtf8: 'ping',
+          messageNonceU64: 9n,
+          encrypted: false,
+        },
+      }),
+    })
+    expect(res.kind).toBe('success')
+    if (res.kind === 'success') {
+      expect(res.delivery).toBe('pairwise')
+    }
+  })
+
+  it('buildGroupOptimisticRowsAfterSend unterstützt pairwise', () => {
+    const peer = '0x' + 'b'.repeat(64)
+    const rows = buildGroupOptimisticRowsAfterSend({
       isGroupChannel: true,
       messagingPersistenceMode: 'mailbox',
       forcedTransport: 'internet',
       myAddress: '0x' + 'c'.repeat(64),
       activeGroup: group,
+      delivery: 'pairwise',
+      mailboxCapture: {
+        payloadUtf8: 'Hallo',
+        messageNonceU64: 42n,
+        encrypted: false,
+      },
+      previewFallback: '',
+      pairwiseTargets: [peer],
+    })
+    expect(rows.length).toBe(1)
+    expect(rows[0]?.id).toContain('pairwise')
+  })
+
+  it('buildGroupTeamBroadcastOptimisticRows nur für Gruppen-Mailbox-Internet', () => {
+    const rows = buildGroupOptimisticRowsAfterSend({
+      isGroupChannel: true,
+      messagingPersistenceMode: 'mailbox',
+      forcedTransport: 'internet',
+      myAddress: '0x' + 'c'.repeat(64),
+      activeGroup: group,
+      delivery: 'team-broadcast',
       mailboxCapture: {
         payloadUtf8: 'Hallo',
         messageNonceU64: 42n,
@@ -164,12 +243,13 @@ describe('chat-view-handle-send-group', () => {
     })
     expect(rows.length).toBeGreaterThan(0)
     expect(
-      buildGroupTeamBroadcastOptimisticRows({
+      buildGroupOptimisticRowsAfterSend({
         isGroupChannel: true,
         messagingPersistenceMode: 'mailbox',
         forcedTransport: 'mesh',
         myAddress: '0x' + 'c'.repeat(64),
         activeGroup: group,
+        delivery: 'team-broadcast',
         mailboxCapture: {
           payloadUtf8: 'Hallo',
           messageNonceU64: 42n,

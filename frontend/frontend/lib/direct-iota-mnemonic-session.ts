@@ -105,8 +105,16 @@ async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw
   }
 }
 
-function persistDirectIotaSessionSignerTabSession(signerImportRaw: string): void {
-  void persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw)
+/** Wartet auf fire-and-forget Tab-Persist (applyDirectIotaMnemonicSession) — Tests/Reload-Gates. */
+let tabSessionPersistIdle: Promise<void> = Promise.resolve()
+function scheduleDirectIotaTabSessionPersist(signerImportRaw: string): void {
+  tabSessionPersistIdle = tabSessionPersistIdle
+    .catch(() => {})
+    .then(() => persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw))
+}
+
+export function whenDirectIotaTabSessionPersistIdle(): Promise<void> {
+  return tabSessionPersistIdle
 }
 
 /** Sync: nur Legacy-Klartext-Tab (verschlüsselte Tab-Session → async Restore). */
@@ -279,7 +287,7 @@ export function applyDirectIotaMnemonicSession(
       persistDirectChainFieldIds({ senderAddress: addr })
     }
     if (!opts?.skipTabPersist) {
-      persistDirectIotaSessionSignerTabSession(t)
+      scheduleDirectIotaTabSessionPersist(t)
     }
     return { ok: true, address: addr }
   } catch (e) {

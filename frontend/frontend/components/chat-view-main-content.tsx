@@ -71,8 +71,7 @@ import {
   type PendingHandshakesPollState,
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
-import { groupMailboxTargetCount, readGroupMailboxSendAll } from '@/frontend/lib/group-mailbox-pairwise-send'
-import { resolveGroupTeamMailboxObjectId } from '@/frontend/lib/group-team-broadcast'
+import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
 import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
@@ -309,6 +308,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } = c
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
+
+  const groupSendPanelContext = useMemo(
+    () =>
+      buildGroupSendPanelContext({
+        isGroupChannel: isGroup,
+        activeGroup,
+        myAddress,
+      }),
+    [isGroup, activeGroup, myAddress]
+  )
 
   const [contactAliasDialog, setContactAliasDialog] = useState<{
     address: string
@@ -1000,9 +1009,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     },
     contactDirectory: directory,
     isGroupChannel: isGroup,
-    groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
-    groupMemberCount: isGroup && activeGroup ? groupMailboxTargetCount(activeGroup, myAddress) : 0,
-    groupTeamBroadcastReady: isGroup && !!resolveGroupTeamMailboxObjectId(activeGroup),
+    groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
+    groupMemberCount: groupSendPanelContext.groupMemberCount,
+    groupTeamBroadcastReady: groupSendPanelContext.groupTeamBroadcastReady,
     partner,
     onPartnerChange: syncPartnerAndRecipient,
     myAddress,

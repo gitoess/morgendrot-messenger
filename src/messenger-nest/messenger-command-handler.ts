@@ -274,6 +274,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 sessionState,
                                 setSessionStatus
                             );
+                            setSessionStatus({ hasKeys: true });
                             const hsRestoreNote =
                                 n > 0 ? ` Handshake-Cache: ${n} Partner (Status „verbunden“).` : '';
                             return {
@@ -544,6 +545,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 sessionState,
                                 setSessionStatus
                             );
+                            setSessionStatus({ hasKeys: true });
                             const hsRestoreChainNote =
                                 nChain > 0 ? ` Handshake-Cache: ${nChain} Partner (Status „verbunden“).` : '';
                             return {

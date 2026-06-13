@@ -1,10 +1,27 @@
 'use client'
 
 import { fetchStatus } from '@/frontend/lib/api'
+import { vaultLoad } from '@/frontend/lib/api/vault-commands'
 import {
   syncDirectChatEcdhAfterVaultUnlock,
   syncDirectIotaSessionSignerAfterVaultUnlock,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+
+/** Nach Entsperren: Messaging-Keys in die API-Sitzung (hasKeys), falls /vault-load beim Unlock fehlte. */
+export async function ensureBackendVaultKeysInSession(vaultPassword: string): Promise<boolean> {
+  const pw = vaultPassword.trim()
+  if (!pw) return false
+  try {
+    const snap = await fetchStatus()
+    if (!('pollClockHint' in snap)) return false
+    if (snap.locked || snap.hasKeys === true) return snap.hasKeys === true
+    if (!snap.vaultStatus?.hasLocal) return false
+    const r = await vaultLoad(pw)
+    return r.ok === true
+  } catch {
+    return false
+  }
+}
 
 export async function syncMainnetKeysAfterBackendUnlock(opts: {
   vaultPassword: string

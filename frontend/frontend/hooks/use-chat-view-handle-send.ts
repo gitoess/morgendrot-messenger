@@ -61,15 +61,16 @@ import {
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import {
   applyGroupOptimisticInboxMerge,
-  attemptGroupTeamBroadcast,
-  buildGroupTeamBroadcastOptimisticRows,
+  attemptGroupInternetChainMailbox,
+  buildGroupOptimisticRowsAfterSend,
   getGroupSendPreSendError,
-  GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG,
   GROUP_TEAM_MAILBOX_REQUIRED_MSG,
   inboxReloadDelaysMs,
   isGroupMailboxInternetChainSend,
   publishGroupStreamsAnchorAfterSend,
+  resolveGroupTargetsForInternetSend,
   resolveSingleWireSuccessMessage,
+  type GroupMailboxSingleResult,
 } from '@/frontend/features/send/chat-view-handle-send-group'
 import {
   isForensicImageMailboxAttestationEnabled,
@@ -273,6 +274,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport,
       encrypted,
       activeGroup,
+      myAddress,
+      composerRecipient: plainMailboxRecipient,
     })
     if (groupPreSendErr) {
       setStatus('error')
@@ -399,8 +402,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
     }
 
-    const singleWireSuccessMsg = (delivery?: 'team-broadcast' | 'pairwise'): string => {
-      const groupMsg = resolveSingleWireSuccessMessage(isGroupChannel, delivery)
+    const singleWireSuccessMsg = (
+      delivery?: 'team-broadcast' | 'pairwise',
+      pairwiseTargetCount?: number
+    ): string => {
+      const groupMsg = resolveSingleWireSuccessMessage(isGroupChannel, delivery, pairwiseTargetCount)
       if (groupMsg) return groupMsg
       if (!isPrivate) return 'Gesendet!'
       if (path4SelfArchiveActive) {
@@ -1062,6 +1068,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
           mailboxCapture?: MailboxSendCapture
           path4Footnote?: string
           groupDelivery?: 'team-broadcast' | 'pairwise'
+          pairwiseTargetCount?: number
         }
       | { ok: false }
 
@@ -1162,31 +1169,44 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return failPart(`${target.slice(0, 10)}…: ${errText}`)
       }
 
-      const tryGroupTeamBroadcast = async (textSnap: string, enc: boolean): Promise<PartOk | null> => {
-        const tb = await attemptGroupTeamBroadcast({
-          textSnap,
-          encrypted: enc,
-          activeGroup,
-          isGroupChannel,
-          messagingPersistenceMode,
-          forcedTransport,
-          payloadText: payloadWithoutOutNonce(textSnap),
-        })
-        if (tb.kind === 'not-applicable') return null
-        if (tb.kind === 'failure') return failSend(tb.message)
-        publishGroupStreamsAfterSend(textSnap, tb.teamMailboxObjectId, true)
-        return {
-          ok: true,
-          groupDelivery: 'team-broadcast',
-          mailboxCapture: tb.mailboxCapture,
+      const mapMailboxPartToGroupSingle = (part: MailboxPartResult): GroupMailboxSingleResult => {
+        if (part.ok && part.mailboxCapture) {
+          return { ok: true, mailboxCapture: part.mailboxCapture }
         }
+        const err =
+          !part.ok && 'error' in part && typeof part.error === 'string'
+            ? part.error
+            : 'Mailbox-Send fehlgeschlagen.'
+        return { ok: false, error: err }
       }
 
       const tryMailbox = async (enc: boolean): Promise<PartOk> => {
         if (groupMailboxInternetChain) {
-          if (enc) return failSend(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG)
-          const tb = await tryGroupTeamBroadcast(textSnap, false)
-          return tb ?? failSend(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
+          const attempt = await attemptGroupInternetChainMailbox({
+            textSnap,
+            encrypted: enc,
+            activeGroup,
+            isGroupChannel,
+            messagingPersistenceMode,
+            forcedTransport,
+            payloadText: payloadWithoutOutNonce(textSnap),
+            myAddress,
+            composerRecipient: plainMailboxRecipient,
+            sendToMember: (target) =>
+              sendMailboxSingle(target, enc, textSnap, { suppressStatus: true }).then(mapMailboxPartToGroupSingle),
+          })
+          if (attempt.kind === 'failure') return failSend(attempt.message)
+          if (attempt.kind === 'success') {
+            publishGroupStreamsAfterSend(textSnap, attempt.streamsToAddr, attempt.streamsMulticast)
+            if (attempt.partialFailure) return failSend(attempt.partialFailure)
+            return {
+              ok: true,
+              groupDelivery: attempt.delivery,
+              mailboxCapture: attempt.mailboxCapture,
+              pairwiseTargetCount: attempt.pairwiseTargetCount,
+            }
+          }
+          return failSend(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
         }
         const sendTo = enc && isPrivate ? encryptedMailboxRecipient : plainMailboxRecipient
         return sendMailboxSingle(sendTo, enc, textSnap)
@@ -1341,7 +1361,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
       } else {
-        successMsg = singleWireSuccessMsg(lastOk?.groupDelivery) + successTail
+        successMsg = singleWireSuccessMsg(lastOk?.groupDelivery, lastOk?.pairwiseTargetCount) + successTail
       }
 
       const forensicGate =
@@ -1436,17 +1456,28 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         isGroupChannel &&
         lastOk?.ok &&
         lastOk.mailboxCapture &&
+        lastOk.groupDelivery &&
         forcedTransport === 'internet' &&
         messagingPersistenceMode === 'mailbox'
       ) {
-        const optimistic = buildGroupTeamBroadcastOptimisticRows({
+        const pairwiseTargets =
+          lastOk.groupDelivery === 'pairwise'
+            ? resolveGroupTargetsForInternetSend({
+                activeGroup,
+                myAddress,
+                composerRecipient: plainMailboxRecipient,
+              })
+            : undefined
+        const optimistic = buildGroupOptimisticRowsAfterSend({
           isGroupChannel,
           forcedTransport,
           messagingPersistenceMode,
           myAddress,
           activeGroup,
+          delivery: lastOk.groupDelivery,
           mailboxCapture: lastOk.mailboxCapture,
           previewFallback: textSnaps[textSnaps.length - 1]?.trim() || message.trim(),
+          pairwiseTargets,
         })
         if (optimistic.length > 0) {
           setMessages((prev) => applyGroupOptimisticInboxMerge(prev, optimistic))

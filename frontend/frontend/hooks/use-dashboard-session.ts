@@ -51,7 +51,7 @@ import {
   tryAutoRestoreDirectChatEcdhPrivateKey,
   shouldAutoRestoreSessionSignerForMainnet,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
-import { syncMainnetKeysAfterBackendUnlock } from '@/frontend/lib/dashboard-vault-key-sync'
+import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   isStandaloneEinsatzPath,
@@ -600,6 +600,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     if (res.ok) {
       const vaultPw = password
       await checkStatus()
+      const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
+      if (vaultKeysLoaded) {
+        setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
+      }
       const { mainnetSignerHint } = await syncMainnetKeysAfterBackendUnlock({
         vaultPassword: vaultPw,
         signerImport: sdkExtra,
@@ -617,6 +621,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setShowSignerImportOpen(false)
       setLocked(false)
       await checkStatus()
+      if (vaultKeysLoaded) {
+        setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
+      }
       for (let i = 0; i < 10; i++) {
         await new Promise((r) => setTimeout(r, 1500))
         const s = await fetchStatus()
@@ -639,6 +646,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       )
     } else if (VAULT_ALREADY_UNLOCKED_RE.test(res.error || '')) {
       const vaultPw = password
+      const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
+      if (vaultKeysLoaded) {
+        setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
+      }
       const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
         vaultPassword: vaultPw,
         signerImport: sdkExtra,
@@ -657,6 +668,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setLocked(false)
       setUnlockError(hint ?? '')
       await checkStatus()
+      if (vaultKeysLoaded) {
+        setApiSnapshot((prev) => (prev ? { ...prev, hasKeys: true, locked: false } : prev))
+      }
     } else {
       setUnlockError(res.error || 'Entsperren fehlgeschlagen')
     }
