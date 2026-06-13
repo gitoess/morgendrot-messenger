@@ -107,7 +107,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         }).then((out) => {
             if (out.ok) notifyNetworkProfilesChanged()
         })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- einmal beim ersten Boss-Status
     }, [p.backendOnline, p.apiStatus?.packageId])
 
     useEffect(() => {
@@ -123,7 +122,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         }).then((out) => {
             if (out.ok) notifyNetworkProfilesChanged()
         })
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- einmal beim Laden wenn Mainnet aktiv
     }, [])
 
     const senderAddress =
