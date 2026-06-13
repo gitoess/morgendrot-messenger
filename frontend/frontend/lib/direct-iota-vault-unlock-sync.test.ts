@@ -12,7 +12,7 @@ import {
 import {
   syncDirectChatEcdhAfterVaultUnlock,
   syncDirectIotaSessionSignerAfterVaultUnlock,
-  tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectIotaSessionSignerAsync,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 vi.mock('@/frontend/lib/api/vault-signer-import', () => ({
@@ -157,11 +157,12 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
     expect(revealVaultSignerImport).not.toHaveBeenCalled()
   })
 
-  it('tab session restore after RAM clear', () => {
+  it('tab session restore after RAM clear', async () => {
     const applied = applyDirectIotaMnemonicSession(rawHexSecret)
     expect(applied.ok).toBe(true)
     clearDirectIotaSessionSigner()
-    const auto = tryAutoRestoreDirectIotaSessionSigner()
+    await new Promise((r) => setTimeout(r, 50))
+    const auto = await tryAutoRestoreDirectIotaSessionSignerAsync()
     expect(auto.ok).toBe(true)
     if (auto.ok) expect(auto.source).toBe('tab')
   })

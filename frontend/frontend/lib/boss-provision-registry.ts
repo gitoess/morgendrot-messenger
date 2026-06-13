@@ -87,7 +87,7 @@ async function persistUnlocked(password: string): Promise<{ ok: true } | { ok: f
     unlockedPassword = password
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: 'Registry speichern fehlgeschlagen.' }
   }
 }
 
@@ -181,7 +181,7 @@ export async function addBossProvisionRegistryEntry(opts: {
     if (!saved.ok) return saved
     return { ok: true, entry }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: 'Registry speichern fehlgeschlagen.' }
   }
 }
 
@@ -246,7 +246,7 @@ export function downloadBossProvisionRegistryBackup(): { ok: true } | { ok: fals
     URL.revokeObjectURL(url)
     return { ok: true }
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+    return { ok: false, error: 'Registry speichern fehlgeschlagen.' }
   }
 }
 

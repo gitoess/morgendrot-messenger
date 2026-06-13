@@ -29,7 +29,7 @@ import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-ma
 import { isDirectMailboxDrainEnabled, isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 import { getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
 import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { tryAutoRestoreDirectIotaSessionSigner, tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 const MESSAGING_MAX_PLAINTEXT_UTF8_BYTES = 16000
 
@@ -86,6 +86,7 @@ async function resolveEncryptedDirectSubmitContext(
   recipient: string,
   mode: EncryptedPersistenceMode
 ): Promise<EncryptedSubmitContext> {
+  await tryAutoRestoreDirectIotaSessionSignerAsync()
   const base = resolveDirectIotaSubmitContext({
     relayBlockedMessage:
       'Modus „Nur Morgendrot-API“: direkter IOTA-Upload (verschlüsselt) ist aus — in den Puls-Einstellungen auf „Direkt“ stellen.',

@@ -11,6 +11,7 @@ import {
   persistDirectIotaSessionSignerEncrypted,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
   restoreDirectIotaSessionSignerFromTabSession,
+  restoreDirectIotaSessionSignerFromTabSessionAsync,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 describe('direct-iota-mnemonic-session encrypted local storage', () => {
@@ -88,10 +89,30 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
   })
 
-  it('restores signer from tab session after RAM clear', () => {
+  it('restores signer from encrypted tab session after RAM clear', async () => {
     const applied = applyDirectIotaMnemonicSession(rawHexSecret)
     expect(applied.ok).toBe(true)
     if (!applied.ok) return
+    clearDirectIotaSessionSigner()
+    expect(getDirectIotaSessionSignerAddress()).toBeNull()
+
+    await new Promise((r) => setTimeout(r, 50))
+
+    const restored = await restoreDirectIotaSessionSignerFromTabSessionAsync()
+    expect(restored.ok).toBe(true)
+    if (restored.ok) expect(restored.address).toBe(applied.address)
+    expect(getDirectIotaSessionSignerAddress()).not.toBeNull()
+    expect(sessionStore['morgendrot.directIotaSigner.tab.v1']).toBeUndefined()
+    expect(sessionStore['morgendrot.directIotaSigner.tabEnc.v1']).toBeTruthy()
+  })
+
+  it('restores signer from legacy plaintext tab session', () => {
+    const applied = applyDirectIotaMnemonicSession(rawHexSecret)
+    expect(applied.ok).toBe(true)
+    if (!applied.ok) return
+    sessionStore['morgendrot.directIotaSigner.tab.v1'] = rawHexSecret
+    delete sessionStore['morgendrot.directIotaSigner.tabEnc.v1']
+    delete sessionStore['morgendrot.directIotaSigner.tabKey.v1']
     clearDirectIotaSessionSigner()
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
 

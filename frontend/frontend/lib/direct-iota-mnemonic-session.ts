@@ -16,8 +16,17 @@ import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-con
 let sessionSigner: Signer | null = null
 let sessionAddress: string | null = null
 const LS_DIRECT_IOTA_SIGNER_ENC = 'morgendrot.directIotaSigner.enc.v1'
-/** Browser-Tab: Signer-Import über Reload (wie RAM, Tab-Ende gelöscht). */
+/** Legacy: Klartext-Signer in sessionStorage (Migration → tabEnc). */
 const SS_DIRECT_IOTA_SIGNER_TAB = 'morgendrot.directIotaSigner.tab.v1'
+/** Tab-Session: zufälliges Tab-Passwort + verschlüsselter Signer-Import. */
+const SS_DIRECT_IOTA_SIGNER_TAB_KEY = 'morgendrot.directIotaSigner.tabKey.v1'
+const SS_DIRECT_IOTA_SIGNER_TAB_ENC = 'morgendrot.directIotaSigner.tabEnc.v1'
+
+type StoredDirectIotaSignerTabEncV1 = {
+  schema: 'morgendrot.directIotaSigner.tabEnc.v1'
+  crypto: HandoffCryptoMetaJson
+  ciphertextB64: string
+}
 
 function countMnemonicWords(s: string): number {
   return String(s || '')
@@ -49,30 +58,96 @@ export function clearDirectIotaSessionSignerTabSession(): void {
   if (typeof window === 'undefined') return
   try {
     window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
+    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)
+    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC)
+  } catch {
+    /* ignore */
+  }
+}
+
+function randomTabSessionPassword(): string {
+  const u = new Uint8Array(32)
+  crypto.getRandomValues(u)
+  return bytesToB64(u)
+}
+
+function getOrCreateTabSessionPassword(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const existing = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)?.trim()
+    if (existing) return existing
+    const created = randomTabSessionPassword()
+    window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY, created)
+    return created
+  } catch {
+    return null
+  }
+}
+
+async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw: string): Promise<void> {
+  if (typeof window === 'undefined') return
+  const raw = String(signerImportRaw || '').trim()
+  if (!raw) return
+  const tabPassword = getOrCreateTabSessionPassword()
+  if (!tabPassword) return
+  try {
+    const plain = JSON.stringify({ signerImportRaw: raw })
+    const { meta, ciphertext } = await encryptHandoffEnvUtf8(plain, tabPassword)
+    const payload: StoredDirectIotaSignerTabEncV1 = {
+      schema: 'morgendrot.directIotaSigner.tabEnc.v1',
+      crypto: meta,
+      ciphertextB64: bytesToB64(ciphertext),
+    }
+    window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC, JSON.stringify(payload))
+    window.sessionStorage.removeItem(SS_DIRECT_IOTA_SIGNER_TAB)
   } catch {
     /* ignore */
   }
 }
 
 function persistDirectIotaSessionSignerTabSession(signerImportRaw: string): void {
-  if (typeof window === 'undefined') return
-  const raw = String(signerImportRaw || '').trim()
-  if (!raw) return
-  try {
-    window.sessionStorage.setItem(SS_DIRECT_IOTA_SIGNER_TAB, raw)
-  } catch {
-    /* ignore */
-  }
+  void persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw)
 }
 
-/** Nach Reload: Signer aus sessionStorage (Tab-Session) wiederherstellen. */
+/** Sync: nur Legacy-Klartext-Tab (verschlüsselte Tab-Session → async Restore). */
 export function restoreDirectIotaSessionSignerFromTabSession(): { ok: true; address: string } | { ok: false } {
   if (typeof window === 'undefined') return { ok: false }
   try {
-    const raw = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB)?.trim()
-    if (!raw) return { ok: false }
-    const applied = applyDirectIotaMnemonicSession(raw)
+    const legacy = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB)?.trim()
+    if (!legacy) return { ok: false }
+    const applied = applyDirectIotaMnemonicSession(legacy, undefined, { skipTabPersist: true })
+    if (applied.ok) void persistDirectIotaSessionSignerTabSessionEncrypted(legacy)
     return applied.ok ? applied : { ok: false }
+  } catch {
+    return { ok: false }
+  }
+}
+
+/** Nach Reload: verschlüsselte Tab-Session oder Legacy-Migration. */
+export async function restoreDirectIotaSessionSignerFromTabSessionAsync(): Promise<
+  { ok: true; address: string } | { ok: false }
+> {
+  if (typeof window === 'undefined') return { ok: false }
+  try {
+    const encRaw = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_ENC)?.trim()
+    const tabPassword = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB_KEY)?.trim()
+    if (encRaw && tabPassword) {
+      const payload = JSON.parse(encRaw) as Partial<StoredDirectIotaSignerTabEncV1>
+      if (
+        payload.schema === 'morgendrot.directIotaSigner.tabEnc.v1' &&
+        payload.crypto &&
+        payload.ciphertextB64
+      ) {
+        const dec = await decryptHandoffEnvUtf8(payload.crypto, b64ToBytes(payload.ciphertextB64), tabPassword)
+        if (!dec.ok) return { ok: false }
+        const j = JSON.parse(dec.envText) as { signerImportRaw?: unknown }
+        const signerImportRaw = typeof j.signerImportRaw === 'string' ? j.signerImportRaw : ''
+        if (!signerImportRaw.trim()) return { ok: false }
+        const applied = applyDirectIotaMnemonicSession(signerImportRaw, undefined, { skipTabPersist: true })
+        return applied.ok ? applied : { ok: false }
+      }
+    }
+    return restoreDirectIotaSessionSignerFromTabSession()
   } catch {
     return { ok: false }
   }
@@ -166,7 +241,8 @@ export async function restoreDirectIotaSessionSignerFromEncryptedStorage(opts: {
 
 export function applyDirectIotaMnemonicSession(
   raw: string,
-  derivationPath?: string
+  derivationPath?: string,
+  opts?: { skipTabPersist?: boolean }
 ): { ok: true; address: string } | { ok: false; error: string } {
   const t = String(raw || '').trim()
   if (!t) {
@@ -202,7 +278,9 @@ export function applyDirectIotaMnemonicSession(
     if (addr) {
       persistDirectChainFieldIds({ senderAddress: addr })
     }
-    persistDirectIotaSessionSignerTabSession(t)
+    if (!opts?.skipTabPersist) {
+      persistDirectIotaSessionSignerTabSession(t)
+    }
     return { ok: true, address: addr }
   } catch (e) {
     clearDirectIotaSessionSigner()

@@ -168,10 +168,24 @@ function seedPartnersFromHandoffEnv(env: Record<string, string>): void {
   }
 }
 
+const HANDOFF_SECRET_DENY = [/mnemonic/i, /secret/i, /password/i, /private.?key/i, /seed phrase/i]
+
+function handoffEnvTextContainsDeniedSecret(text: string): boolean {
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    if (HANDOFF_SECRET_DENY.some((p) => p.test(trimmed))) return true
+  }
+  return false
+}
+
 /**
  * Handoff-.env lokal vormerken inkl. Direkt-RPC und Ketten-IDs (APK ohne Basis).
  */
 export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppliedSnapshot {
+  if (handoffEnvTextContainsDeniedSecret(envText)) {
+    throw new Error('Handoff enthält verbotene Secret-Muster — nur öffentliche Keys lokal vormerken.')
+  }
   const env = parseEnv(envText)
   saveHandoffEnvBackup(envText)
   const snapshot = buildLocalHandoffAppliedSnapshot(envText)

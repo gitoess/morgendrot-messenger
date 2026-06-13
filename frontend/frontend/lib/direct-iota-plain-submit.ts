@@ -43,7 +43,7 @@ import {
   readMessagingPersistenceModeFromStorage,
   type MessagingPersistenceMode,
 } from '@/frontend/lib/messaging-persistence-mode'
-import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 export { DIRECT_IOTA_UI_CHANGED, notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 
@@ -258,6 +258,7 @@ export async function trySubmitPlaintextMailboxViaDirectIota(opts: {
     requireRecipient: opts.recipient,
   })
   if (!ctx.ok) return ctx
+  await tryAutoRestoreDirectIotaSessionSignerAsync()
   if (!canTryLivePlaintextDirectMailbox()) {
     return { ok: false, error: 'Direkt-Klartext-Send ist nicht bereit (Modus, Drain, RPC, Signer oder Ketten-IDs prüfen).' }
   }

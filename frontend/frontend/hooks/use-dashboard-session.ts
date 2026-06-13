@@ -47,6 +47,7 @@ import {
 import {
   syncDirectIotaSessionSignerAfterVaultUnlock,
   tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectIotaSessionSignerAsync,
   tryAutoRestoreDirectChatEcdhPrivateKey,
   shouldAutoRestoreSessionSignerForMainnet,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
@@ -278,7 +279,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
 
       if (!res.locked && res.signer === 'sdk' && shouldAutoRestoreSessionSignerForMainnet()) {
-        const restored = tryAutoRestoreDirectIotaSessionSigner()
+        const restored = await tryAutoRestoreDirectIotaSessionSignerAsync()
         if (restored.ok) {
           setMainnetSignerHint(null)
         } else if (!getDirectIotaSessionSigner()) {

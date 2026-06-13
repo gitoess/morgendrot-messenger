@@ -20,8 +20,9 @@ import {
 import { forensicBatchModeFromEnv, type ForensicBatchArchiveMode } from './forensic-batch-mode.js'
 import { getEffectiveForensicBatchMode } from './forensic-batch-auto-config.js'
 import { loadForensicBatchEcdhMaterialForSelfArchive } from './forensic-batch-ecdh.js'
-import { encryptForensicBatchWireToMailboxItemServer } from './forensic-batch-encrypt.js'
+import { encryptForensicWireToMailboxItem } from '@morgendrot/core/forensic-batch'
 import { releaseForensicBatchRunLock, tryAcquireForensicBatchRunLock } from './forensic-batch-run-lock.js'
+import { logger } from '../logger.js'
 
 export type ForensicBatchRunResult =
     | {
@@ -90,7 +91,7 @@ async function submitPlan(
         for (const item of plan.items) {
             const n = nonce
             nonce = nonce + 1n
-            const enc = await encryptForensicBatchWireToMailboxItemServer(
+            const enc = await encryptForensicWireToMailboxItem(
                 item.wireUtf8,
                 n,
                 ecdh.material
@@ -201,7 +202,8 @@ export async function runServerForensicBatchArchive(opts?: {
             mode,
         }
     } catch (e) {
-        return { ok: false, error: e instanceof Error ? e.message : String(e), mode }
+        logger.warn('Forensic batch archive failed', e)
+        return { ok: false, error: 'Batch-Archiv fehlgeschlagen — Details im Server-Log.', mode }
     }
 }
 

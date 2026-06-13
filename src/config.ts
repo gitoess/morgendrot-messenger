@@ -1406,6 +1406,24 @@ export const CFG = {
     LITE_PRESET_RPC_URL: process.env.MORGENDROT_LITE_RPC_URL?.trim() || '',
     /** Rate-Limit für POST /api/command (Anfragen pro Minute pro IP). 0 = aus. Default 0. */
     API_RATE_LIMIT_COMMANDS_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_COMMANDS_PER_MINUTE', 0)),
+    /** Rate-Limit POST /api/unlock pro IP/Minute. 0 = aus. Default 15. */
+    API_RATE_LIMIT_UNLOCK_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_UNLOCK_PER_MINUTE', 15)),
+    /** Rate-Limit Forensic-Batch-Mutationen pro IP/Minute. 0 = aus. Default 30. */
+    API_RATE_LIMIT_FORENSIC_BATCH_PER_MINUTE: Math.max(0, envInt('API_RATE_LIMIT_FORENSIC_BATCH_PER_MINUTE', 30)),
+    /** Rate-Limit Vault-Secret-Befehle (/vault-show-*) pro IP/Minute. 0 = aus. Default 10. */
+    API_RATE_LIMIT_VAULT_SECRET_COMMANDS_PER_MINUTE: Math.max(
+        0,
+        envInt('API_RATE_LIMIT_VAULT_SECRET_COMMANDS_PER_MINUTE', 10)
+    ),
+    /** Max. POST-Body für /api/command (Byte). */
+    API_MAX_COMMAND_BODY_BYTES: Math.max(1024, envInt('API_MAX_COMMAND_BODY_BYTES', 2 * 1024 * 1024)),
+    /**
+     * Optional: Token für Forensic-Batch-Mutationen (POST run/auto-config/registry replace/scheduler).
+     * Header: X-Morgendrot-Forensic-Token oder Authorization: Bearer …
+     */
+    FORENSIC_BATCH_API_TOKEN: (process.env.FORENSIC_BATCH_API_TOKEN || '').trim(),
+    /** true = Forensic-Mutationen nur von 127.0.0.1/::1 (LAN-Clients dürfen lesen, nicht mutieren). */
+    FORENSIC_BATCH_API_LOOPBACK_ONLY: envBool('FORENSIC_BATCH_API_LOOPBACK_ONLY', false),
     /**
      * Öffentlicher Claim-Token-Endpunkt POST /api/voucher-claim (Shop-E-Mail, Idempotenz-Datei).
      * Default false — bewusst aktivieren auf Fulfillment-Hosts.

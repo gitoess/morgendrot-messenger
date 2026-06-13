@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { CheckCircle, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
-import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { tryAutoRestoreDirectIotaSessionSigner, tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 
@@ -18,7 +18,9 @@ export function SessionSignerStatusStrip(p: {
 
   const refresh = useCallback(() => {
     tryAutoRestoreDirectIotaSessionSigner()
-    setAddr(getDirectIotaSessionSignerAddress())
+    void tryAutoRestoreDirectIotaSessionSignerAsync().then(() => {
+      setAddr(getDirectIotaSessionSignerAddress())
+    })
   }, [])
 
   useEffect(() => {

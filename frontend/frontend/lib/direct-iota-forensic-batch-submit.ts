@@ -25,7 +25,7 @@ import { nextChainMessageNonceU64 } from '@/frontend/lib/api/offline-queue'
 import type { ForensicBatchTxPlan } from '@/frontend/lib/einsatz-forensic-batch-entry'
 import { getDirectChatEcdhMaterialForRecipient, ensureSelfForensicEcdhMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
 import { canTryLiveEncryptedDirectMailbox } from '@/frontend/lib/direct-iota-encrypted-submit'
-import { encryptForensicBatchWireToMailboxItem } from '@/frontend/lib/forensic-batch-encrypt'
+import { encryptForensicWireToMailboxItem } from '@morgendrot/core/forensic-batch'
 
 export type SubmitForensicBatchTxResult =
   | { ok: true; digest?: string; messageCount: number }
@@ -104,7 +104,7 @@ export async function trySubmitForensicBatchTxViaDirectIota(opts: {
       for (const item of opts.plan.items) {
         const n = nonce
         nonce = nonce + 1n
-        const enc = await encryptForensicBatchWireToMailboxItem(item.wireUtf8, n, material)
+        const enc = await encryptForensicWireToMailboxItem(item.wireUtf8, n, material)
         if ('error' in enc) return { ok: false, error: enc.error }
         encItems.push(enc)
       }

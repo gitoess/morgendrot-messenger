@@ -144,6 +144,7 @@ import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
 import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
+import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
 import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
 import { applyTelegramIntegrationToMonitorWebhook } from './integrations/telegram-integration.js';
 import { restartTelegramInbound } from './integrations/telegram-inbound-poll.js';
@@ -157,6 +158,7 @@ import {
 
 /** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
 let lastVaultOnchainSuccessAt: number | undefined;
+const unlockRateLimit = createIpRateLimiter(CFG.API_RATE_LIMIT_UNLOCK_PER_MINUTE);
 
 export type ApiStatus = {
     backendRunning: boolean;
@@ -382,7 +384,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (await handleContactRoutes(req, res, url, cors, sendJson, routeCtx)) return;
         if (await handleTelegramIntegrationRoutes(req, res, url, cors, sendJson)) return;
         if (await handleEinsatzManifestRoutes(req, res, url, cors, sendJson)) return;
-        if (await handleForensicBatchRoutes(req, res, url, cors, sendJson)) return;
+        if (await handleForensicBatchRoutes(req, res, url, cors, sendJson, routeCtx)) return;
 
         /** Öffentlicher Claim-Token-Schritt (Idempotenz); Burn/Mint folgt später im selben Flow. */
         if (url === '/api/voucher-claim' && req.method === 'POST') {
@@ -671,10 +673,16 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         }
 
         if (url === '/api/unlock' && req.method === 'POST') {
+            const unlockIp = normalizeApiClientIp(req);
+            if (CFG.API_RATE_LIMIT_UNLOCK_PER_MINUTE > 0 && !unlockRateLimit.check(unlockIp)) {
+                sendJson(res, 429, { ok: false, error: 'Rate-Limit Entsperren überschritten.' }, cors);
+                return;
+            }
             let body = '';
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', async () => {
                 try {
+                    if (CFG.API_RATE_LIMIT_UNLOCK_PER_MINUTE > 0) unlockRateLimit.record(unlockIp);
                     const data = JSON.parse(body || '{}');
                     const password = String(data.password ?? '');
                     if (!_resolvePassword) {

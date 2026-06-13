@@ -3,6 +3,7 @@
 import { FORENSIC_BATCH_CHANGED } from '@/frontend/lib/forensic-batch-config'
 import {
   filterValidForensicBatchRegistryEntries,
+  FORENSIC_BATCH_REGISTRY_MAX_ENTRIES,
   mergeForensicBatchRegistryEntries,
   recordForensicBatchRegistryEntries,
   type ForensicBatchRegistryEntry,
@@ -11,7 +12,6 @@ import {
 export type { ForensicBatchRegistryEntry }
 
 const LS_KEY = 'morgendrot.forensicBatchRegistry.v1'
-const MAX_ENTRIES = 2_000
 
 export function readForensicBatchRegistry(): ForensicBatchRegistryEntry[] {
   if (typeof window === 'undefined') return []
@@ -29,7 +29,7 @@ export function readForensicBatchRegistry(): ForensicBatchRegistryEntry[] {
 function saveForensicBatchRegistry(entries: ForensicBatchRegistryEntry[]): void {
   if (typeof window === 'undefined') return
   try {
-    window.localStorage.setItem(LS_KEY, JSON.stringify(entries.slice(0, MAX_ENTRIES)))
+    window.localStorage.setItem(LS_KEY, JSON.stringify(entries.slice(0, FORENSIC_BATCH_REGISTRY_MAX_ENTRIES)))
     window.dispatchEvent(new CustomEvent(FORENSIC_BATCH_CHANGED))
   } catch {
     /* ignore */
@@ -59,7 +59,7 @@ export function recordForensicBatchEntries(
     readForensicBatchRegistry(),
     entries,
     Date.now(),
-    MAX_ENTRIES
+    FORENSIC_BATCH_REGISTRY_MAX_ENTRIES
   )
   saveForensicBatchRegistry(next)
 }
@@ -80,7 +80,7 @@ export function mergeForensicBatchRegistryImport(
     readForensicBatchRegistry(),
     incoming,
     mode,
-    { maxEntries: MAX_ENTRIES }
+    { maxEntries: FORENSIC_BATCH_REGISTRY_MAX_ENTRIES }
   )
   saveForensicBatchRegistry(entries)
   return { merged, total }

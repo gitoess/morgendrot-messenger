@@ -133,6 +133,9 @@ export function readLocalHandoffAppliedSnapshot(): LocalHandoffAppliedSnapshot |
       broadcastPinnwandAuthorizedSenders: Array.isArray(parsed.broadcastPinnwandAuthorizedSenders)
         ? parsed.broadcastPinnwandAuthorizedSenders.filter((v): v is string => typeof v === 'string')
         : undefined,
+      einsatzChainMode: parseEinsatzChainMode(
+        typeof parsed.einsatzChainMode === 'string' ? parsed.einsatzChainMode : undefined
+      ),
     }
   } catch {
     return null

@@ -24,7 +24,7 @@ import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
 import { syncActiveNetworkChainSnapshot, formatMainnetDirectSendBlockedMessage } from '@/frontend/lib/active-network-chain-sync'
-import { tryAutoRestoreDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { shouldSkipMessengerApiRelayFallback } from '@/frontend/lib/messenger-standalone-relay'
 import { prepareEncryptedDirectSend } from '@/frontend/lib/direct-iota-encrypted-send-prep'
@@ -79,7 +79,7 @@ export async function sendPlaintextMailboxHybrid(
   opts?: { messagingPersistenceMode?: MessagingPersistenceMode; mailboxObjectId?: string }
 ): Promise<MailboxHybridSendResult> {
   syncActiveNetworkChainSnapshot()
-  tryAutoRestoreDirectIotaSessionSigner()
+  await tryAutoRestoreDirectIotaSessionSignerAsync()
   let directErr: string | undefined
   if (canTryLivePlaintextDirectMailbox()) {
     const dr = await trySubmitPlaintextMailboxViaDirectIota({
@@ -156,7 +156,7 @@ export async function sendEncryptedMailboxHybrid(
   }
 ): Promise<MailboxHybridSendResult> {
   syncActiveNetworkChainSnapshot()
-  tryAutoRestoreDirectIotaSessionSigner()
+  await tryAutoRestoreDirectIotaSessionSignerAsync()
   const rTrim = recipient.trim()
   const mode = resolvePersistenceMode(opts)
   let directErr: string | undefined

@@ -6,8 +6,17 @@ import { explorerTxUrlFromDigest } from '../../chain-access.js';
 import { CFG, getHierarchyPermissions } from '../../config.js';
 import type { CommandApiOptions } from '../../messenger-nest/command-api-options.js';
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
+import { createIpRateLimiter, normalizeApiClientIp } from './api-ip-rate-limit.js';
+import { readHttpBodyWithLimit } from './api-body-limit.js';
 
 const commandRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
+const vaultSecretCommandRateLimit = createIpRateLimiter(CFG.API_RATE_LIMIT_VAULT_SECRET_COMMANDS_PER_MINUTE);
+
+const VAULT_SECRET_COMMANDS = new Set([
+    '/vault-show-signer-import',
+    '/vault-show-ecdh-jwk',
+    '/vault-ecdh-jwk',
+]);
 
 function checkCommandRateLimit(ip: string): boolean {
     const limit = CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE;
@@ -65,20 +74,29 @@ export function handleCommandRoute(
 ): boolean {
     if (url !== '/api/command' || req.method !== 'POST') return false;
 
-    const ip = (req.socket?.remoteAddress || 'unknown').replace(/^::ffff:/, '');
+    const ip = normalizeApiClientIp(req);
     if (CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE > 0 && !checkCommandRateLimit(ip)) {
         sendJson(res, 429, { ok: false, error: 'Rate-Limit überschritten (API_RATE_LIMIT_COMMANDS_PER_MINUTE).' }, cors);
         return true;
     }
-    let body = '';
-    req.on('data', (chunk) => {
-        body += chunk;
-    });
-    req.on('end', async () => {
+    void (async () => {
         try {
-            const data = JSON.parse(body || '{}');
+            const bodyRead = await readHttpBodyWithLimit(req, CFG.API_MAX_COMMAND_BODY_BYTES);
+            if (!bodyRead.ok) {
+                sendJson(res, 413, { ok: false, error: bodyRead.error }, cors);
+                return;
+            }
+            const data = JSON.parse(bodyRead.text || '{}');
             let cmd = String(data.cmd ?? data.command ?? '').trim();
             let args = Array.isArray(data.args) ? data.args.map(String) : [];
+            const cmdLower = cmd.toLowerCase();
+            if (VAULT_SECRET_COMMANDS.has(cmdLower)) {
+                if (!vaultSecretCommandRateLimit.check(ip)) {
+                    sendJson(res, 429, { ok: false, error: 'Rate-Limit Vault-Secret-Befehle überschritten.' }, cors);
+                    return;
+                }
+                vaultSecretCommandRateLimit.record(ip);
+            }
             const userMessage = typeof data.userMessage === 'string' ? data.userMessage.trim() : '';
             if (cmd === '/transfer-coins' && args.length < 2 && userMessage) {
                 const addr = userMessage.match(/0x[a-fA-F0-9]{64}/);
@@ -156,9 +174,9 @@ export function handleCommandRoute(
                 outRec.explorerTxLink = explorerTxUrlFromDigest(txDig);
             }
             sendJson(res, 200, outRec ?? out, cors);
-        } catch (e: unknown) {
-            sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+        } catch {
+            sendJson(res, 500, { ok: false, error: 'Interner Fehler beim Befehl.' }, cors);
         }
-    });
+    })();
     return true;
 }

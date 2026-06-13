@@ -4,12 +4,7 @@
 import { logger } from '../logger.js';
 import { CFG, isMessengerMailboxModeActive, readMailboxIdHistory, readPackageIdHistory, readTeamMailboxIds } from '../config.js';
 import { isPrivateMailboxObjectIdOverrideActive } from '../mailbox-object-id-scope.js';
-import {
-    getClient,
-    typeName,
-    getHandshakeFromMailbox,
-    findPeerHandshakeFrom,
-} from '../chain-access.js';
+import { getClient, getHandshakeFromMailbox, findPeerHandshakeFrom } from '../chain-access.js';
 import {
     loadHandshakeCache,
     saveHandshakeCache,
@@ -20,7 +15,24 @@ import { deriveSharedSecret, deriveAesGcmKey, decryptMessage } from '../crypto-l
 import { normalizeAddress, toEventBytes } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
-import { chainMessageLogicalDedupKey } from '@morgendrot/core/iota';
+import {
+    chainMessageLogicalDedupKey,
+    fetchMailboxInboxRpcRows,
+    fetchMessagingEventInboxRpcRows,
+    fetchTeamPlainBroadcastRpcRows,
+    mailboxEncryptedInboxKey,
+    mailboxPlainInboxKey,
+    type MailboxInboxRpcRow,
+    type MessagingEventInboxRpcRow,
+    type TeamPlainBroadcastRpcRow,
+} from '@morgendrot/core/iota';
+
+/** Boss-`getClient()` und Core-`IotaClient` — getrennte SDK-Installationspfade, zur Laufzeit kompatibel. */
+type CoreIotaClient = Parameters<typeof fetchMailboxInboxRpcRows>[0];
+
+function coreRpcClient(): CoreIotaClient {
+    return getClient() as unknown as CoreIotaClient;
+}
 
 function pushUniqueMsgItem(items: MsgItem[], keySeen: Set<string>, item: MsgItem): void {
     if (item.key && keySeen.has(item.key)) return;
@@ -45,17 +57,6 @@ export function isRebasedStorageEnabled(): boolean {
     return isMessengerMailboxModeActive();
 }
 
-/** Dynamic-Field-Typ: nach Package-Upgrade steht in der Kette oft noch die alte `0x…::messaging::MsgKey`. */
-function typeMatchesMsgKey(typeStr: unknown): boolean {
-    const t = String(typeStr ?? '');
-    return t === typeName('MsgKey') || t.endsWith('::messaging::MsgKey');
-}
-
-function typeMatchesTeamPlainBroadcastKey(typeStr: unknown): boolean {
-    const t = String(typeStr ?? '');
-    return t === typeName('TeamPlainBroadcastKey') || t.endsWith('::messaging::TeamPlainBroadcastKey');
-}
-
 type MsgItem = {
     nonce: bigint;
     sender: string;
@@ -74,38 +75,6 @@ type MsgItem = {
     /** Gruppen-Klartext (TeamPlainBroadcastKey) — kein recipient. */
     teamBroadcast?: boolean;
 };
-
-/** Chain-Zeit: Sekunden (<1e12) → ms; ungültig → undefined. */
-function parseChainTimeMs(raw: unknown): number | undefined {
-    if (raw == null) return undefined;
-    const n =
-        typeof raw === 'bigint'
-            ? Number(raw)
-            : typeof raw === 'string'
-              ? parseInt(raw, 10)
-              : Number(raw);
-    if (!Number.isFinite(n) || n <= 0) return undefined;
-    if (n < 1_000_000_000_000) return n * 1000;
-    return n;
-}
-
-/** MsgKey: Sendezeit = ms-Nonce; sonst created_at_ms; sonst expires_at_ms − TTL (Move store). */
-function resolveMailboxTsMs(
-    rawCreated: unknown,
-    rawExpires: unknown,
-    nonce: bigint,
-    ttlDays = 30
-): number | undefined {
-    const n = Number(nonce);
-    if (Number.isFinite(n) && n >= 1_000_000_000_000) return n;
-    const created = parseChainTimeMs(rawCreated);
-    const expires = parseChainTimeMs(rawExpires);
-    if (expires != null && expires > 1_000_000_000_000) {
-        const approx = expires - ttlDays * 86_400_000;
-        if (approx > 1_000_000_000_000) return approx;
-    }
-    return created;
-}
 
 /** Sort-/Anzeige-Zeit: Chain-ts, sonst ms-artige Nonce (Events ohne `timestampMs`). */
 function effectiveInboxTsMs(m: { tsMs?: number; nonce: bigint }): number {
@@ -131,36 +100,108 @@ function fetchedChainMeta(m: MsgItem): Pick<FetchedMessage, 'chainPurgeable' | '
     };
 }
 
-function resolveEventTsMs(tsMs: number | undefined, nonce: bigint): number | undefined {
+function inboxTsFromRow(tsMs: number | undefined, nonce: bigint): number | undefined {
     if (tsMs != null && Number.isFinite(tsMs) && tsMs > 0) return tsMs;
     const n = Number(nonce);
     if (Number.isFinite(n) && n >= 1_000_000_000_000) return n;
     return undefined;
 }
 
-function eventStableId(msg: { id?: unknown }): string {
-    const id = msg.id;
-    if (id == null) return '';
-    if (typeof id === 'string') return id.trim();
-    try {
-        return JSON.stringify(id);
-    } catch {
-        return String(id);
-    }
+function rowMatchesPeerFilters(
+    sender: string,
+    recipient: string,
+    myNorm: string,
+    matchesPeer: (s: string) => boolean,
+    matchesCounterparty: (peerAddr: string | undefined) => boolean
+): boolean {
+    const incoming = normalizeAddress(recipient) === myNorm;
+    const outgoing = normalizeAddress(sender) === myNorm;
+    if (!incoming && !outgoing) return false;
+    const peerAddr = incoming ? sender : recipient;
+    if (!peerAddr?.trim()) return false;
+    return matchesPeer(peerAddr) && matchesCounterparty(peerAddr);
 }
 
-/** Eindeutiger Posteingang-Schlüssel — Event-ID bevorzugt (gleiche nonce=1 kommt oft vor). */
-function inboxDedupKey(parts: {
-    eventId?: string;
-    channel: 'ev' | 'plain' | 'mb' | 'mbp';
-    sender: string;
-    recipient: string;
-    nonce: string | number | bigint;
-    tsMs?: number;
-}): string {
-    const eid = (parts.eventId || '').trim();
-    if (eid) return `evid:${eid}`;
-    return `${parts.channel}:${normalizeAddress(parts.sender)}:${normalizeAddress(parts.recipient)}:${parts.nonce}:${parts.tsMs ?? 0}`;
+function mailboxRpcRowToMsgItem(row: MailboxInboxRpcRow): MsgItem {
+    const nonce = BigInt(row.nonce);
+    const tsMs = inboxTsFromRow(row.ts, nonce);
+    if (row.kind === 'plain') {
+        return {
+            nonce,
+            sender: row.sender,
+            recipient: row.recipient,
+            key: mailboxPlainInboxKey({
+                sender: row.sender,
+                recipient: row.recipient,
+                nonce: row.nonce,
+                tsMs,
+            }),
+            isPlain: true,
+            text: new TextEncoder().encode(row.text),
+            tsMs,
+            chainPurgeable: true,
+        };
+    }
+    return {
+        nonce,
+        sender: row.sender,
+        recipient: row.recipient,
+        key: mailboxEncryptedInboxKey({
+            sender: row.sender,
+            recipient: row.recipient,
+            nonce: row.nonce,
+            tsMs,
+        }),
+        isPlain: false,
+        iv: row.iv,
+        cipher: row.ciphertext,
+        tag: row.tag,
+        tsMs,
+        chainPurgeable: true,
+    };
+}
+
+function eventRpcRowToMsgItem(row: MessagingEventInboxRpcRow): MsgItem {
+    if (row.kind === 'plain') {
+        return {
+            nonce: row.nonce,
+            sender: row.sender,
+            recipient: row.recipient,
+            key: row.inboxKey,
+            isPlain: true,
+            text: new TextEncoder().encode(row.text),
+            tsMs: row.tsMs,
+            chainPurgeable: false,
+        };
+    }
+    return {
+        nonce: row.nonce,
+        sender: row.sender,
+        recipient: row.recipient,
+        key: row.inboxKey,
+        isPlain: false,
+        iv: row.iv,
+        cipher: row.ciphertext,
+        tag: row.tag,
+        tsMs: row.tsMs,
+        chainPurgeable: false,
+    };
+}
+
+function teamRpcRowToMsgItem(row: TeamPlainBroadcastRpcRow, parentId: string): MsgItem {
+    const nonce = BigInt(row.nonce);
+    const tsMs = inboxTsFromRow(row.ts, nonce);
+    return {
+        nonce,
+        sender: row.sender,
+        recipient: parentId,
+        key: `team:${parentId}:${normalizeAddress(row.sender)}:${nonce}`,
+        isPlain: true,
+        text: new TextEncoder().encode(row.text),
+        tsMs,
+        chainPurgeable: true,
+        teamBroadcast: true,
+    };
 }
 
 /** Einzelne angezeigte Nachricht (für UI/API). */
@@ -188,125 +229,74 @@ function maxEventPagesForInboxFetch(inboxLimit: number, isPrimaryPackage: boolea
     return 4;
 }
 
-async function appendMessagingEventsForPackage(
+async function appendMailboxInboxFromCoreRpc(
+    parentId: string,
     packageId: string,
     myAddress: string,
+    myNorm: string,
     items: MsgItem[],
     matchesPeer: (s: string) => boolean,
     matchesCounterparty: (peerAddr: string | undefined) => boolean,
     keySeen: Set<string>,
+    fetchWindow: number
+): Promise<void> {
+    const pkg = packageId.trim();
+    if (!PACKAGE_ID_HEX.test(pkg)) return;
+    const client = coreRpcClient();
+    const includePlain = Boolean(CFG.MAILBOX_STORE_PLAINTEXT);
+    const rows = await fetchMailboxInboxRpcRows(client, {
+        mailboxObjectId: parentId,
+        packageId: pkg,
+        myAddress,
+        includePlaintext: includePlain,
+        includeEncrypted: true,
+        limit: fetchWindow,
+        offset: 0,
+    });
+    for (const row of rows) {
+        if (!rowMatchesPeerFilters(row.sender, row.recipient, myNorm, matchesPeer, matchesCounterparty)) {
+            continue;
+        }
+        pushUniqueMsgItem(items, keySeen, mailboxRpcRowToMsgItem(row));
+    }
+    const teamRows = await fetchTeamPlainBroadcastRpcRows(client, {
+        teamMailboxObjectId: parentId,
+        packageId: pkg,
+        limit: fetchWindow,
+        offset: 0,
+    });
+    for (const row of teamRows) {
+        if (!matchesCounterparty(row.sender)) continue;
+        pushUniqueMsgItem(items, keySeen, teamRpcRowToMsgItem(row, parentId));
+    }
+}
+
+async function appendMessagingEventsFromCoreRpc(
+    packageId: string,
+    myAddress: string,
+    myNorm: string,
+    items: MsgItem[],
+    matchesPeer: (s: string) => boolean,
+    matchesCounterparty: (peerAddr: string | undefined) => boolean,
+    keySeen: Set<string>,
+    fetchWindow: number,
     opts?: { maxEventPages?: number }
 ): Promise<void> {
-    const eventQuery = { MoveModule: { package: packageId, module: 'messaging' } };
-    let eventCursor: string | null = null;
-    const allEventData: any[] = [];
-    const maxEventPages = opts?.maxEventPages ?? 15;
-    for (let p = 0; p < maxEventPages; p++) {
-        const events = await getClient().queryEvents({
-            query: eventQuery,
-            limit: 1000,
-            order: 'descending',
-            ...(eventCursor != null ? { cursor: eventCursor } : {}),
-        } as any);
-        const data = (events.data ?? []) as any[];
-        allEventData.push(...data);
-        const next = (events as any).nextCursor;
-        if (next == null || next === eventCursor) break;
-        eventCursor = next;
-    }
-    const data = allEventData;
-    const encIn = data.filter(
-        (e: any) =>
-            e.type?.endsWith('::messaging::EncryptedMessage') &&
-            normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-            matchesPeer(e.parsedJson?.sender) &&
-            matchesCounterparty(e.parsedJson?.sender)
-    );
-    const encOut = data.filter(
-        (e: any) =>
-            e.type?.endsWith('::messaging::EncryptedMessage') &&
-            normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
-            matchesPeer(e.parsedJson?.recipient) &&
-            matchesCounterparty(e.parsedJson?.recipient)
-    );
-    for (const msg of [...encIn, ...encOut]) {
-        const d = msg.parsedJson as any;
-        const ivBytes = toEventBytes(d.iv);
-        const cipherBytes = toEventBytes(d.ciphertext);
-        const tagBytes = toEventBytes(d.tag);
-        const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
-        const tsRaw =
-            typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
-        const nonce = BigInt(d.nonce ?? 0);
-        const tsMs = resolveEventTsMs(tsRaw, nonce);
-        if (eventAlreadyInMailbox(keySeen, d.sender, d.recipient, nonce)) continue;
-        if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
-            const key = inboxDedupKey({
-                eventId: eventStableId(msg),
-                channel: 'ev',
-                sender: d.sender,
-                recipient: d.recipient,
-                nonce: d.nonce ?? nonce,
-                tsMs,
-            });
-            if (keySeen.has(key)) continue;
-            keySeen.add(key);
-            items.push({
-                nonce,
-                sender: d.sender,
-                recipient: d.recipient,
-                key,
-                isPlain: false,
-                iv: ivBytes,
-                cipher: cipherBytes,
-                tag: tagBytes,
-                tsMs,
-                chainPurgeable: false,
-            });
-        }
-    }
-    const plainInEv = data.filter(
-        (e: any) =>
-            e.type?.endsWith('::messaging::PlaintextMessage') &&
-            normalizeAddress(e.parsedJson?.recipient) === normalizeAddress(myAddress) &&
-            matchesPeer(e.parsedJson?.sender) &&
-            matchesCounterparty(e.parsedJson?.sender)
-    );
-    const plainOutEv2 = data.filter(
-        (e: any) =>
-            e.type?.endsWith('::messaging::PlaintextMessage') &&
-            normalizeAddress(e.parsedJson?.sender) === normalizeAddress(myAddress) &&
-            matchesPeer(e.parsedJson?.recipient) &&
-            matchesCounterparty(e.parsedJson?.recipient)
-    );
-    for (const msg of [...plainInEv, ...plainOutEv2]) {
-        const d = msg.parsedJson as any;
-        const tRaw = (msg as { timestampMs?: bigint | number }).timestampMs;
-        const tsRaw =
-            typeof tRaw === 'bigint' ? Number(tRaw) : typeof tRaw === 'number' ? tRaw : undefined;
-        const nonce = BigInt(d.nonce ?? 0);
-        const tsMs = resolveEventTsMs(tsRaw, nonce);
-        if (eventAlreadyInMailbox(keySeen, d.sender, d.recipient, nonce)) continue;
-        const key = inboxDedupKey({
-            eventId: eventStableId(msg),
-            channel: 'plain',
-            sender: d.sender,
-            recipient: d.recipient,
-            nonce: d.nonce ?? nonce,
-            tsMs,
-        });
-        if (keySeen.has(key)) continue;
-        keySeen.add(key);
-        items.push({
-            nonce,
-            sender: d.sender,
-            recipient: d.recipient,
-            key,
-            isPlain: true,
-            text: toEventBytes(d.text),
-            tsMs,
-            chainPurgeable: false,
-        });
+    const pkg = packageId.trim();
+    if (!PACKAGE_ID_HEX.test(pkg)) return;
+    const rows = await fetchMessagingEventInboxRpcRows(coreRpcClient(), {
+        packageId: pkg,
+        myAddress,
+        limit: fetchWindow,
+        offset: 0,
+        maxEventPages: opts?.maxEventPages,
+    });
+    for (const row of rows) {
+        const peerAddr = normalizeAddress(row.sender) === myNorm ? row.recipient : row.sender;
+        if (!matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
+        if (eventAlreadyInMailbox(keySeen, row.sender, row.recipient, row.nonce)) continue;
+        if (keySeen.has(row.inboxKey)) continue;
+        pushUniqueMsgItem(items, keySeen, eventRpcRowToMsgItem(row));
     }
 }
 
@@ -327,187 +317,6 @@ function mailboxIdsForInboxUnion(): string[] {
     for (const h of readMailboxIdHistory()) add(h);
     for (const h of readTeamMailboxIds()) add(h);
     return out;
-}
-
-async function appendMailboxDynamicFieldsToItems(
-    parentId: string,
-    items: MsgItem[],
-    myNorm: string,
-    matchesPeer: (s: string) => boolean,
-    matchesCounterparty: (peerAddr: string | undefined) => boolean,
-    keySeen: Set<string>
-): Promise<void> {
-    let cursor: string | null = null;
-    const allEntries: any[] = [];
-    const maxPages = 20;
-    for (let pageNum = 0; pageNum < maxPages; pageNum++) {
-        const page = await getClient().getDynamicFields({
-            parentId,
-            limit: 500,
-            ...(cursor ? { cursor } : {}),
-        } as any);
-        const entries = (page as any)?.data ?? [];
-        allEntries.push(...entries);
-        const hasNext = (page as any)?.hasNextPage === true;
-        const nextCursor = (page as any)?.nextCursor;
-        if (!hasNext || !nextCursor) break;
-        cursor = nextCursor;
-    }
-    const msgKeyIn = allEntries.filter((e: any) => {
-        const r = e?.name?.value?.recipient;
-        return typeMatchesMsgKey(e?.name?.type) && r != null && normalizeAddress(String(r)) === myNorm;
-    });
-    const msgKeyOut = allEntries.filter((e: any) => {
-        const s = e?.name?.value?.sender;
-        return typeMatchesMsgKey(e?.name?.type) && s != null && normalizeAddress(String(s)) === myNorm;
-    });
-    const ids = [...new Set([...msgKeyIn, ...msgKeyOut].map((e: any) => e.objectId).filter(Boolean))] as string[];
-    if (ids.length) {
-        const BATCH = 50;
-        const objs: any[] = [];
-        for (let i = 0; i < ids.length; i += BATCH) {
-            const chunk = ids.slice(i, i + BATCH);
-            const part = await getClient().multiGetObjects({ ids: chunk, options: { showContent: true } } as any);
-            objs.push(...(part ?? []));
-        }
-        for (const o of objs) {
-            const f = o?.data?.content?.fields;
-            if (!f) continue;
-            const sender = f.sender as string;
-            const recipient = f.recipient as string;
-            const incoming = recipient != null && normalizeAddress(String(recipient)) === myNorm;
-            const outgoing = sender != null && normalizeAddress(String(sender)) === myNorm;
-            if (!incoming && !outgoing) continue;
-            const peerAddr = incoming ? sender : recipient;
-            if (!peerAddr || !matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
-            const nonce = BigInt(f.nonce ?? 0);
-            const ivBytes = toEventBytes(f.iv);
-            const cipherBytes = toEventBytes(f.ciphertext);
-            const tagBytes = toEventBytes(f.tag);
-            const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
-            if (ivBytes.length >= 12 && cipherBytes.length > 0 && tagBytes.length === 16) {
-                    pushUniqueMsgItem(items, keySeen, {
-                        nonce,
-                        sender,
-                        recipient,
-                        key: inboxDedupKey({
-                            channel: 'mb',
-                            sender,
-                            recipient,
-                            nonce,
-                            tsMs,
-                        }),
-                        isPlain: false,
-                        iv: ivBytes,
-                        cipher: cipherBytes,
-                        tag: tagBytes,
-                        tsMs,
-                        chainPurgeable: true,
-                    });
-            }
-        }
-    }
-    if (CFG.MAILBOX_STORE_PLAINTEXT) {
-        const plainKeyIn = allEntries.filter((e: any) => {
-            const r = e?.name?.value?.recipient;
-            const t = String(e?.name?.type ?? '');
-            return (
-                (t === typeName('PlainMsgKey') || t.endsWith('::messaging::PlainMsgKey')) &&
-                r != null &&
-                normalizeAddress(String(r)) === myNorm
-            );
-        });
-        const plainKeyOut = allEntries.filter((e: any) => {
-            const s = e?.name?.value?.sender;
-            const t = String(e?.name?.type ?? '');
-            return (
-                (t === typeName('PlainMsgKey') || t.endsWith('::messaging::PlainMsgKey')) &&
-                s != null &&
-                normalizeAddress(String(s)) === myNorm
-            );
-        });
-        const plainIds = [...new Set([...plainKeyIn, ...plainKeyOut].map((e: any) => e.objectId).filter(Boolean))] as string[];
-        if (plainIds.length) {
-            const BATCH = 50;
-            const plainObjs: any[] = [];
-            for (let i = 0; i < plainIds.length; i += BATCH) {
-                const chunk = plainIds.slice(i, i + BATCH);
-                const part = await getClient().multiGetObjects({ ids: chunk, options: { showContent: true } } as any);
-                plainObjs.push(...(part ?? []));
-            }
-            for (const o of plainObjs) {
-                const f = o?.data?.content?.fields;
-                if (!f) continue;
-                const sender = f.sender as string;
-                const recipient = f.recipient as string;
-                const incoming = recipient != null && normalizeAddress(String(recipient)) === myNorm;
-                const outgoing = sender != null && normalizeAddress(String(sender)) === myNorm;
-                if (!incoming && !outgoing) continue;
-                const peerAddr = incoming ? sender : recipient;
-                if (!peerAddr || !matchesPeer(peerAddr) || !matchesCounterparty(peerAddr)) continue;
-                const nonce = BigInt(f.nonce ?? 0);
-                const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
-                const textBytes = toEventBytes(f.text);
-                if (textBytes.length === 0) continue;
-                    pushUniqueMsgItem(items, keySeen, {
-                        nonce,
-                        sender,
-                        recipient,
-                        key: inboxDedupKey({
-                            channel: 'mbp',
-                            sender,
-                            recipient,
-                            nonce,
-                            tsMs,
-                        }),
-                        isPlain: true,
-                        text: textBytes,
-                        tsMs,
-                        chainPurgeable: true,
-                    });
-            }
-        }
-    }
-
-    const teamBcIds = [
-        ...new Set(
-            allEntries
-                .filter((e: any) => typeMatchesTeamPlainBroadcastKey(e?.name?.type))
-                .map((e: any) => e.objectId)
-                .filter(Boolean)
-        ),
-    ] as string[];
-    if (teamBcIds.length) {
-        const BATCH = 50;
-        const teamObjs: any[] = [];
-        for (let i = 0; i < teamBcIds.length; i += BATCH) {
-            const chunk = teamBcIds.slice(i, i + BATCH);
-            const part = await getClient().multiGetObjects({ ids: chunk, options: { showContent: true } } as any);
-            teamObjs.push(...(part ?? []));
-        }
-        for (const o of teamObjs) {
-            const f = o?.data?.content?.fields;
-            if (!f) continue;
-            const sender = f.sender as string;
-            if (!sender?.trim()) continue;
-            if (!matchesCounterparty(sender)) continue;
-            const nonce = BigInt(f.nonce ?? 0);
-            const tsMs = resolveMailboxTsMs(f.created_at_ms, f.expires_at_ms, nonce);
-            const textBytes = toEventBytes(f.text);
-            if (textBytes.length === 0) continue;
-            items.push({
-                nonce,
-                sender,
-                recipient: parentId,
-                key: `team:${parentId}:${normalizeAddress(sender)}:${nonce}`,
-                isPlain: true,
-                text: textBytes,
-                tsMs,
-                chainPurgeable: true,
-                teamBroadcast: true,
-            });
-        }
-    }
 }
 
 function packageIdsForInboxUnion(primaryPackageId: string): string[] {
@@ -584,6 +393,9 @@ export async function fetchLastMessages(
 
     const items: MsgItem[] = [];
     const myNorm = normalizeAddress(myAddress);
+    const skip = Math.max(0, Math.floor(opts?.offset ?? 0));
+    const fetchWindow = skip + count + 1;
+    const mailboxPackageId = packageIdForQuery || CFG.PACKAGE_ID || '';
 
     if (isRebasedStorageEnabled()) {
         const mailboxParents = isPrivateMailboxObjectIdOverrideActive()
@@ -592,42 +404,49 @@ export async function fetchLastMessages(
         const keySeen = new Set<string>();
         for (const parentId of mailboxParents) {
             if (!MAILBOX_ID_HEX.test(String(parentId || '').trim())) continue;
-            await appendMailboxDynamicFieldsToItems(
+            await appendMailboxInboxFromCoreRpc(
                 parentId.trim(),
-                items,
+                mailboxPackageId,
+                myAddress,
                 myNorm,
+                items,
                 matchesPeer,
                 matchesCounterparty,
-                keySeen
+                keySeen,
+                fetchWindow
             );
         }
         if (!opts?.skipMessagingEvents) {
-            const primaryPkg = (packageIdForQuery || CFG.PACKAGE_ID || '').trim().toLowerCase();
+            const primaryPkg = mailboxPackageId.trim().toLowerCase();
             for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
                 const isPrimary = pkg.trim().toLowerCase() === primaryPkg;
-                await appendMessagingEventsForPackage(
+                await appendMessagingEventsFromCoreRpc(
                     pkg,
                     myAddress,
+                    myNorm,
                     items,
                     matchesPeer,
                     matchesCounterparty,
                     keySeen,
+                    fetchWindow,
                     { maxEventPages: maxEventPagesForInboxFetch(count, isPrimary) }
                 );
             }
         }
     } else if (!opts?.skipMessagingEvents) {
         const keySeen = new Set<string>();
-        const primaryPkg = (packageIdForQuery || CFG.PACKAGE_ID || '').trim().toLowerCase();
+        const primaryPkg = mailboxPackageId.trim().toLowerCase();
         for (const pkg of packageIdsForInboxUnion(packageIdForQuery)) {
             const isPrimary = pkg.trim().toLowerCase() === primaryPkg;
-            await appendMessagingEventsForPackage(
+            await appendMessagingEventsFromCoreRpc(
                 pkg,
                 myAddress,
+                myNorm,
                 items,
                 matchesPeer,
                 matchesCounterparty,
                 keySeen,
+                fetchWindow,
                 { maxEventPages: maxEventPagesForInboxFetch(count, isPrimary) }
             );
         }
@@ -670,7 +489,6 @@ export async function fetchLastMessages(
         if (tb !== ta) return tb - ta;
         return a.nonce > b.nonce ? -1 : a.nonce < b.nonce ? 1 : 0;
     });
-    const skip = Math.max(0, Math.floor(opts?.offset ?? 0));
     const hasMore = items.length > skip + count;
     const toShow = items.slice(skip, skip + count);
 

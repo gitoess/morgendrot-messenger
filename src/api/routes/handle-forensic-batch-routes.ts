@@ -3,7 +3,9 @@
  */
 import type http from 'node:http'
 import { CFG } from '../../config.js'
-import type { SendJsonFn } from './api-route-types.js'
+import type { ApiRouteContext, SendJsonFn } from './api-route-types.js'
+import { denyForensicBatchMutate } from './forensic-batch-api-auth.js'
+import { createIpRateLimiter, normalizeApiClientIp } from './api-ip-rate-limit.js'
 import { runServerForensicBatchArchiveWithLock } from '../../shared/forensic-batch-runner.js'
 import {
   exportForensicBatchRegistryJson,
@@ -14,8 +16,6 @@ import {
 import {
   getForensicBatchSchedulerStatus,
   restartForensicBatchScheduler,
-  startForensicBatchScheduler,
-  stopForensicBatchScheduler,
 } from '../../shared/forensic-batch-scheduler.js'
 import {
   forensicBatchModeFromEnv,
@@ -34,6 +34,22 @@ import {
 } from '@morgendrot/core/forensic-batch'
 
 const FORENSIC_BATCH_MAX_BODY_BYTES = 2 * 1024 * 1024
+const forensicMutateRateLimit = createIpRateLimiter(CFG.API_RATE_LIMIT_FORENSIC_BATCH_PER_MINUTE)
+
+function denyForensicMutateRateLimit(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  cors: Record<string, string>,
+  sendJson: SendJsonFn
+): boolean {
+  const ip = normalizeApiClientIp(req)
+  if (!forensicMutateRateLimit.check(ip)) {
+    sendJson(res, 429, { ok: false, error: 'Rate-Limit Forensic-Batch überschritten.' }, cors)
+    return true
+  }
+  forensicMutateRateLimit.record(ip)
+  return false
+}
 
 function canReadForensicBatchApi(): boolean {
   const role = CFG.ROLE
@@ -95,7 +111,8 @@ export async function handleForensicBatchRoutes(
   res: http.ServerResponse,
   url: string,
   cors: Record<string, string>,
-  sendJson: SendJsonFn
+  sendJson: SendJsonFn,
+  ctx: ApiRouteContext
 ): Promise<boolean> {
   if (!url.startsWith('/api/forensic-batch')) return false
   if (denyIfUnauthorized(res, cors, sendJson)) return true
@@ -126,6 +143,8 @@ export async function handleForensicBatchRoutes(
 
   if (url === '/api/forensic-batch/auto-config' && req.method === 'POST') {
     if (denyIfUnauthorized(res, cors, sendJson, true)) return true
+    if (denyForensicMutateRateLimit(req, res, cors, sendJson)) return true
+    if (denyForensicBatchMutate(req, res, cors, sendJson, ctx)) return true
     try {
       const body = (await readJsonBody(req)) as {
         autoEnabled?: unknown
@@ -158,13 +177,8 @@ export async function handleForensicBatchRoutes(
         },
         cors
       )
-    } catch (e) {
-      sendJson(
-        res,
-        400,
-        { ok: false, error: e instanceof Error ? e.message : 'Ungültiger JSON-Body.' },
-        cors
-      )
+    } catch {
+      sendJson(res, 400, { ok: false, error: 'Ungültiger JSON-Body.' }, cors)
     }
     return true
   }
@@ -189,6 +203,8 @@ export async function handleForensicBatchRoutes(
 
   if (url === '/api/forensic-batch/run' && req.method === 'POST') {
     if (denyIfUnauthorized(res, cors, sendJson, true)) return true
+    if (denyForensicMutateRateLimit(req, res, cors, sendJson)) return true
+    if (denyForensicBatchMutate(req, res, cors, sendJson, ctx)) return true
     let mode = getEffectiveForensicBatchMode()
     try {
       const body = (await readJsonBody(req)) as { mode?: unknown }
@@ -213,13 +229,15 @@ export async function handleForensicBatchRoutes(
   }
 
   if (url === '/api/forensic-batch/registry' && req.method === 'POST') {
+    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
+    if (denyForensicMutateRateLimit(req, res, cors, sendJson)) return true
+    if (denyForensicBatchMutate(req, res, cors, sendJson, ctx)) return true
     try {
       const body = (await readJsonBody(req)) as {
         entries?: ForensicBatchRegistryEntry[]
         mode?: 'merge' | 'replace'
       }
       const mode = body.mode === 'replace' ? 'replace' : 'merge'
-      if (mode === 'replace' && denyIfUnauthorized(res, cors, sendJson, true)) return true
       const rawEntries = Array.isArray(body.entries) ? body.entries : []
       if (rawEntries.length > FORENSIC_BATCH_REGISTRY_MAX_ENTRIES) {
         sendJson(
@@ -237,13 +255,8 @@ export async function handleForensicBatchRoutes(
       }
       const result = await mergeForensicBatchRegistryImport(entries, mode)
       sendJson(res, 200, { ok: true, ...result }, cors)
-    } catch (e) {
-      sendJson(
-        res,
-        400,
-        { ok: false, error: e instanceof Error ? e.message : 'Ungültiger JSON-Body.' },
-        cors
-      )
+    } catch {
+      sendJson(res, 400, { ok: false, error: 'Ungültiger JSON-Body.' }, cors)
     }
     return true
   }
@@ -255,20 +268,6 @@ export async function handleForensicBatchRoutes(
       'Content-Disposition': 'attachment; filename="morgendrot-forensic-batch-registry.json"',
     })
     res.end(exportForensicBatchRegistryJson())
-    return true
-  }
-
-  if (url === '/api/forensic-batch/scheduler/start' && req.method === 'POST') {
-    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
-    startForensicBatchScheduler()
-    sendJson(res, 200, { ok: true, ...getForensicBatchSchedulerStatus() }, cors)
-    return true
-  }
-
-  if (url === '/api/forensic-batch/scheduler/stop' && req.method === 'POST') {
-    if (denyIfUnauthorized(res, cors, sendJson, true)) return true
-    stopForensicBatchScheduler()
-    sendJson(res, 200, { ok: true, stopped: true }, cors)
     return true
   }
 
