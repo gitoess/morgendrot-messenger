@@ -3,14 +3,16 @@ import { afterEach, beforeEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 
 /**
- * Kein globales Drain/Reset für direct-iota-mnemonic-session:
- * - pool:forks isoliert Testdateien (Singleton-Leaks zwischen Dateien unmöglich)
- * - Tab-Persist ist in Vitest standardmäßig aus
- * - Session-Tests räumen lokal in afterEach auf (siehe direct-iota-*-session.test.ts)
- * Globales dynamisches Importieren nach jedem Test verursachte CI-Flakes (Suite rot, Tests grün).
+ * jsdom-Setup: nur wenn document vorhanden (@vitest-environment node überspringt).
+ * Kein globales Drain für direct-iota-mnemonic-session — Fork-Isolation + lokales afterEach.
  */
 
+function isDomTestEnv(): boolean {
+  return typeof document !== 'undefined'
+}
+
 beforeEach(() => {
+  if (!isDomTestEnv()) return
   vi.stubGlobal(
     'matchMedia',
     vi.fn((query: string) => ({
@@ -27,6 +29,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  if (!isDomTestEnv()) return
   cleanup()
   vi.unstubAllGlobals()
 })

@@ -13,7 +13,7 @@ function createMatchMedia(query: string) {
   }
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   Object.defineProperty(window, 'localStorage', {
     configurable: true,
     value: {
@@ -49,5 +49,7 @@ if (typeof window !== 'undefined') {
 
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 
-ensureI18nInitialized()
-void i18n.changeLanguage('de')
+if (typeof document !== 'undefined') {
+  ensureI18nInitialized()
+  void i18n.changeLanguage('de')
+}
