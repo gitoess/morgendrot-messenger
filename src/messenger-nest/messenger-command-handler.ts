@@ -687,7 +687,14 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         try {
-                            const enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);
+                            let enc: Uint8Array | null = null;
+                            for (let attempt = 0; attempt < 6; attempt++) {
+                                enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);
+                                if (enc && enc.length > 0) break;
+                                if (attempt < 5) {
+                                    await new Promise((r) => setTimeout(r, 2000));
+                                }
+                            }
                             if (!enc || enc.length === 0) {
                                 return {
                                     ok: false,

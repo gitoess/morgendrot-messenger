@@ -52,6 +52,10 @@ import {
   shouldAutoRestoreSessionSignerForMainnet,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
+import {
+  getIncludeSdkMnemonicInBackup,
+  setIncludeSdkMnemonicInBackup as persistIncludeSdkMnemonicInBackup,
+} from '@/frontend/lib/vault-sdk-mnemonic-preference'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   isStandaloneEinsatzPath,
@@ -89,6 +93,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [signerImportConfirm, setSignerImportConfirm] = useState('')
   const [unlockMode, setUnlockMode] = useState<DashboardUnlockMode>('vault')
   const [showSignerImportOpen, setShowSignerImportOpen] = useState(false)
+  const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackupState] = useState(false)
   const [unlockError, setUnlockError] = useState('')
   const [unlocking, setUnlocking] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
@@ -149,6 +154,15 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     },
     []
   )
+
+  useEffect(() => {
+    setIncludeSdkMnemonicInBackupState(getIncludeSdkMnemonicInBackup())
+  }, [])
+
+  const setIncludeSdkMnemonicInBackup = useCallback((value: boolean) => {
+    setIncludeSdkMnemonicInBackupState(value)
+    persistIncludeSdkMnemonicInBackup(value)
+  }, [])
 
   useEffect(() => {
     const prev = prevLockedRef.current
@@ -970,6 +984,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setSignerImportConfirm,
       showSignerImportOpen,
       setShowSignerImportOpen,
+      includeSdkMnemonicInBackup,
+      setIncludeSdkMnemonicInBackup,
       unlockError,
       unlocking,
       unlockButtonDisabled,

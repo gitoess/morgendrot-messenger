@@ -10,10 +10,20 @@ import {
   Check,
   AlertCircle,
   Lock,
+  Upload,
 } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import {
   vaultSave,
   vaultLoad,
@@ -34,7 +44,11 @@ import {
 } from '@/frontend/lib/api'
 import type { VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
 import { VaultNotesPanel } from '@/frontend/components/vault-notes-panel'
-import { clearAllInboxCaches } from '@/frontend/lib/clear-inbox-caches'
+import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic-preference'
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms))
+}
 
 interface VaultViewProps {
   variant: 'local-vault' | 'emergency-purge'
@@ -64,10 +78,10 @@ export function VaultView({ variant }: VaultViewProps) {
   const [rpcHint, setRpcHint] = useState<string | undefined>(undefined)
   const [sessionBusy, setSessionBusy] = useState(false)
   const [chainSyncBusy, setChainSyncBusy] = useState(false)
-  /** cli | sdk | remote — aus GET /api/status (SIGNER=sdk: optional Mnemonic in Backup). */
+  /** cli | sdk | remote — aus GET /api/status (SIGNER=sdk). */
   const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
-  const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackup] = useState(false)
-  const [showAdvanced, setShowAdvanced] = useState(true)
+  const [deleteLocalDialogOpen, setDeleteLocalDialogOpen] = useState(false)
+  const [deleteLocalBusy, setDeleteLocalBusy] = useState(false)
   const notesHydratedRef = useRef(false)
   const [vaultPaths, setVaultPaths] = useState<string[]>([])
   const [defaultVaultPath, setDefaultVaultPath] = useState('.morgendrot-vault')
@@ -161,7 +175,7 @@ export function VaultView({ variant }: VaultViewProps) {
       return
     }
     const includeSigner =
-      includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true
+      getIncludeSdkMnemonicInBackup() && signerKind === 'sdk' && hasKeys === true
     const res = await vaultSave(undefined, undefined, {
       includeIotaMnemonic: includeSigner,
     })
@@ -288,7 +302,7 @@ export function VaultView({ variant }: VaultViewProps) {
     }
     const res = await vaultOnchain(undefined, undefined, {
       includeIotaMnemonic:
-        includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true,
+        getIncludeSdkMnemonicInBackup() && signerKind === 'sdk' && hasKeys === true,
     })
     showStatus(
       res.ok,
@@ -301,22 +315,39 @@ export function VaultView({ variant }: VaultViewProps) {
     if (res.ok) {
       refreshVaultStatus()
       setNotesDirty(false)
-      const wantDelete = window.confirm(
-        'On-Chain-Backup erfolgreich.\n\n' +
-          'Lokale Vault-Datei auf diesem Server löschen? Nur sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.\n\n' +
-          'Die Datei wird nur gelöscht, wenn ein On-Chain-Eintrag für deine Adresse existiert.'
-      )
-      if (wantDelete) {
-        const del = await vaultDeleteLocal()
-        if (del.ok) {
-          toast.success(typeof del.message === 'string' ? del.message : 'Lokale Vault-Datei gelöscht.')
-          void refreshVaultFileList()
-        } else {
-          toast.error(del.error || del.message || 'Lokale Datei konnte nicht gelöscht werden.')
+      let chainReady = false
+      for (let i = 0; i < 6; i++) {
+        const check = await fetchVaultOnchainPreflight()
+        if (check.preflight?.vaultOnChain) {
+          chainReady = true
+          break
         }
+        if (i < 5) await sleep(2000)
+      }
+      if (chainReady) {
+        setDeleteLocalDialogOpen(true)
+      } else {
+        toast.message('On-Chain gesichert — Chain-Index braucht ggf. 1–2 Min.', {
+          description:
+            'Lokale Vault-Datei kannst du später löschen, wenn „Von Chain laden“ funktioniert.',
+          duration: 12_000,
+        })
       }
     }
     setSyncingOnchain(false)
+  }
+
+  const handleConfirmDeleteLocalVault = async () => {
+    setDeleteLocalBusy(true)
+    const del = await vaultDeleteLocal()
+    setDeleteLocalBusy(false)
+    setDeleteLocalDialogOpen(false)
+    if (del.ok) {
+      toast.success(typeof del.message === 'string' ? del.message : 'Lokale Vault-Datei gelöscht.')
+      void refreshVaultFileList()
+    } else {
+      toast.error(del.error || del.message || 'Lokale Datei konnte nicht gelöscht werden.')
+    }
   }
 
   const handleChangePassword = async () => {
@@ -380,25 +411,6 @@ export function VaultView({ variant }: VaultViewProps) {
     } finally {
       setProcessing(false)
     }
-  }
-
-  const handleClearLocalInboxOnly = async () => {
-    if (
-      !window.confirm(
-        'Lokalen Inbox-Cache leeren?\n\n' +
-          '• Browser-Cache + Server-Datei .inbox.enc\n' +
-          '• Posteingang in der App wird geleert (bis zum nächsten „Aktualisieren“)\n' +
-          '• Chain/Mailbox-Nachrichten können danach wieder geladen werden'
-      )
-    ) {
-      return
-    }
-    setSessionBusy(true)
-    const res = await clearAllInboxCaches()
-    showStatus(res.ok, res.message || res.error || 'Fertig')
-    if (res.ok) toast.success(res.message || 'Inbox-Cache geleert.')
-    else toast.error(res.error || res.message || 'Fehler')
-    setSessionBusy(false)
   }
 
   const handleImportVaultFromDevice = async (file: File) => {
@@ -535,9 +547,20 @@ export function VaultView({ variant }: VaultViewProps) {
           ) : null}
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Lock className="h-5 w-5 text-primary" />
-              <h4 className="font-semibold text-foreground">Passwort ändern</h4>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Lock className="h-5 w-5 text-primary" />
+                <h4 className="font-semibold text-foreground">Passwort ändern</h4>
+              </div>
+              <button
+                type="button"
+                disabled={sessionBusy}
+                onClick={() => void handleVaultLock()}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
+              >
+                <Lock className="h-3.5 w-3.5" />
+                Tresor sperren
+              </button>
             </div>
             <div className="grid max-w-md gap-3">
               <label className="block text-sm">
@@ -634,9 +657,13 @@ export function VaultView({ variant }: VaultViewProps) {
                 onClick={() => void handleSaveNotesOnly()}
                 className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
               >
-                Notizen lokal sichern
+                In Vault-Datei schreiben
               </button>
             </div>
+            <p className="mb-3 text-[11px] text-muted-foreground">
+              Notizen und Anhänge werden mit „Lokal sichern“ bzw. „Auf Chain sichern“ mitgesichert — On-Chain sinnvoll
+              für Backup/Recovery, aber große Anhänge erhöhen Blob-Größe und Gas.
+            </p>
             <VaultNotesPanel
               unlocked={canUseVault}
               notes={vaultNotes}
@@ -648,28 +675,18 @@ export function VaultView({ variant }: VaultViewProps) {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-3 font-semibold text-foreground">Sichern</h4>
-            {signerKind === 'sdk' ? (
-              <label className="mb-3 flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={includeSdkMnemonicInBackup}
-                  onChange={(e) => setIncludeSdkMnemonicInBackup(e.target.checked)}
-                  disabled={!canUseVault}
-                  className="mt-0.5 shrink-0"
-                />
-                <span>
-                  <span className="font-medium text-foreground">Wallet-Seed im Vault speichern</span> (nur{' '}
-                  <span className="font-mono">SIGNER=sdk</span>) —{' '}
-                  <Link
-                    href="/handbook?file=VAULT-EINRICHTEN.md#signer-import-sdk"
-                    className="text-primary underline underline-offset-2 hover:text-primary/90"
-                  >
-                    Handbuch: Signer-Import
-                  </Link>
-                </span>
-              </label>
-            ) : null}
+            <h4 className="mb-3 font-semibold text-foreground">Sichern &amp; Laden</h4>
+            <input
+              ref={vaultFileInputRef}
+              type="file"
+              className="hidden"
+              accept="*"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                e.target.value = ''
+                if (f) void handleImportVaultFromDevice(f)
+              }}
+            />
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
@@ -693,130 +710,104 @@ export function VaultView({ variant }: VaultViewProps) {
                 </span>
                 <span className="text-xs text-muted-foreground">Verschlüsselter Blob auf der Chain</span>
               </button>
+              <button
+                type="button"
+                disabled={processing}
+                onClick={() => vaultFileInputRef.current?.click()}
+                className="flex flex-col items-center gap-2 rounded-xl border border-blue-500/20 bg-blue-500/5 p-5 text-center transition-colors hover:bg-blue-500/10 disabled:opacity-50"
+              >
+                <Upload className="h-8 w-8 text-blue-400" />
+                <span className="font-semibold text-foreground">
+                  {processing ? 'Bitte warten…' : 'Datei wählen & laden'}
+                </span>
+                <span className="text-xs text-muted-foreground">Vault-Datei vom Gerät importieren</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleLoadFromChain()}
+                disabled={processing || !canUseVault}
+                className="flex flex-col items-center gap-2 rounded-xl border border-sky-500/20 bg-sky-500/5 p-5 text-center transition-colors hover:bg-sky-500/10 disabled:opacity-50"
+              >
+                <Cloud className="h-8 w-8 text-sky-400" />
+                <span className="font-semibold text-foreground">
+                  {processing ? 'Lade…' : 'Von Chain laden'}
+                </span>
+                <span className="text-xs text-muted-foreground">On-Chain-Backup in die Sitzung</span>
+              </button>
             </div>
-          </div>
-
-          <div className="rounded-xl border border-dashed border-border bg-muted/20 p-4">
-            <button
-              type="button"
-              onClick={() => {
-                const next = !showAdvanced
-                setShowAdvanced(next)
-                if (next) void refreshVaultFileList()
-              }}
-              className="text-sm font-medium text-foreground hover:text-primary"
-            >
-              {showAdvanced ? '▼ Erweitert ausblenden' : '▶ Erweitert: Vault-Datei / Chain'}
-            </button>
-            {showAdvanced ? (
-              <div className="mt-4 space-y-4">
-                <div>
-                  <h5 className="mb-2 text-sm font-medium text-foreground">Vault-Datei vom Gerät</h5>
-                  <input
-                    ref={vaultFileInputRef}
-                    type="file"
-                    className="hidden"
-                    accept="*"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      e.target.value = ''
-                      if (f) void handleImportVaultFromDevice(f)
-                    }}
-                  />
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      disabled={processing}
-                      onClick={() => vaultFileInputRef.current?.click()}
-                      className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-medium hover:bg-blue-500/15 disabled:opacity-50"
+            {!canUseVault && !processing ? (
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                {vaultLocked
+                  ? 'Zuerst Tresor entsperren — danach können Datei/Chain in die Sitzung geladen werden.'
+                  : hasKeys !== true
+                    ? 'Datei kann hochgeladen werden; zum Entschlüsseln: Tresor entsperren.'
+                    : null}
+              </p>
+            ) : null}
+            {vaultPaths.length > 1 ? (
+              <div className="mt-4 border-t border-border/60 pt-4">
+                <h5 className="mb-2 text-sm font-medium text-foreground">Weitere Dateien auf dem Server</h5>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="min-w-[12rem] flex-1 text-sm">
+                    <select
+                      value={selectedVaultPath}
+                      onChange={(e) => setSelectedVaultPath(e.target.value)}
+                      className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
                     >
-                      {processing ? 'Bitte warten…' : 'Datei wählen & laden'}
-                    </button>
-                    {!canUseVault && !processing ? (
-                      <p className="mt-2 text-[11px] text-muted-foreground">
-                        {vaultLocked
-                          ? 'Zuerst Tresor entsperren — danach wird die Datei in die Sitzung geladen.'
-                          : hasKeys !== true
-                            ? 'Datei kann hochgeladen werden; zum Entschlüsseln in die Sitzung: Startseite → Tresor entsperren oder hier nach Upload „Laden“ (wenn Keys da).'
-                            : null}
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-                {vaultPaths.length > 1 ? (
-                  <div>
-                    <h5 className="mb-2 text-sm font-medium text-foreground">Weitere Dateien auf dem Server</h5>
-                    <div className="flex flex-wrap items-end gap-2">
-                      <label className="min-w-[12rem] flex-1 text-sm">
-                        <select
-                          value={selectedVaultPath}
-                          onChange={(e) => setSelectedVaultPath(e.target.value)}
-                          className="mt-1 w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
-                        >
-                          {vaultPaths.map((p) => (
-                            <option key={p} value={p}>
-                              {p.split(/[/\\]/).pop()}
-                              {p === defaultVaultPath ? ' (Standard)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <button
-                        type="button"
-                        disabled={processing || !selectedVaultPath || !canUseVault}
-                        onClick={() => void handleLoad(selectedVaultPath)}
-                        className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-                      >
-                        Laden
-                      </button>
-                    </div>
-                  </div>
-                ) : null}
-                <div>
+                      {vaultPaths.map((p) => (
+                        <option key={p} value={p}>
+                          {p.split(/[/\\]/).pop()}
+                          {p === defaultVaultPath ? ' (Standard)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <button
                     type="button"
-                    onClick={() => void handleLoadFromChain()}
-                    disabled={processing || !canUseVault}
-                    className="inline-flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs font-medium hover:bg-sky-500/15 disabled:opacity-50"
+                    disabled={processing || !selectedVaultPath || !canUseVault}
+                    onClick={() => void handleLoad(selectedVaultPath)}
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
                   >
-                    <Cloud className="h-4 w-4 text-sky-400" />
-                    {processing ? 'Lade…' : 'Von Chain laden'}
+                    Server-Datei laden
                   </button>
                 </div>
               </div>
             ) : null}
           </div>
 
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-3">
-            <h4 className="font-semibold text-foreground">Sitzung</h4>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                disabled={sessionBusy}
-                onClick={() => void handleClearLocalInboxOnly()}
-                className="rounded-lg border border-border bg-background px-3 py-2 text-xs font-medium hover:bg-accent disabled:opacity-50"
-              >
-                Inbox-Cache leeren
-              </button>
-              <button
-                type="button"
-                disabled={sessionBusy}
-                onClick={() => void handleVaultLock()}
-                className="rounded-lg border border-amber-600/40 bg-amber-500/15 px-3 py-2 text-xs font-medium text-amber-900 hover:bg-amber-500/25 disabled:opacity-50 dark:text-amber-200"
-              >
-                Tresor sperren
-              </button>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              Unterschied &amp; „alles löschen“:{' '}
-              <Link
-                href="/handbook?file=VAULT-EINRICHTEN.md#spuren-inbox-cache-vs-tresor-sperren"
-                className="text-primary underline underline-offset-2"
-              >
-                Handbuch
-              </Link>
-            </p>
-          </div>
+          <Dialog open={deleteLocalDialogOpen} onOpenChange={setDeleteLocalDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>On-Chain-Backup erfolgreich</DialogTitle>
+                <DialogDescription className="space-y-2 pt-1 text-left text-sm">
+                  <span className="block">
+                    Lokale Vault-Datei auf diesem Server löschen? Sinnvoll, wenn du künftig nur noch von der Chain
+                    entsperren willst.
+                  </span>
+                  <span className="block text-muted-foreground">
+                    Die Datei wird nur gelöscht, wenn der On-Chain-Eintrag für deine Adresse bestätigt ist.
+                  </span>
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={deleteLocalBusy}
+                  onClick={() => setDeleteLocalDialogOpen(false)}
+                >
+                  Nein, behalten
+                </Button>
+                <Button
+                  type="button"
+                  disabled={deleteLocalBusy}
+                  onClick={() => void handleConfirmDeleteLocalVault()}
+                >
+                  {deleteLocalBusy ? 'Prüfe…' : 'Ja, lokale Datei löschen'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
         </div>
       )}

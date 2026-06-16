@@ -46,6 +46,8 @@ export function DashboardSharedDialogs(p: {
     setSignerImportConfirm: (v: string) => void
     showSignerImportOpen: boolean
     setShowSignerImportOpen: (v: boolean) => void
+    includeSdkMnemonicInBackup: boolean
+    setIncludeSdkMnemonicInBackup: (v: boolean) => void
     unlockError: string
     unlocking: boolean
     unlockButtonDisabled: boolean
@@ -92,9 +94,11 @@ export function DashboardSharedDialogs(p: {
         onSignerImportChange={u.setSignerImport}
         signerImportConfirm={u.signerImportConfirm}
         onSignerImportConfirmChange={u.setSignerImportConfirm}
-        showSignerImportOpen={u.showSignerImportOpen}
-        onShowSignerImportOpenChange={u.setShowSignerImportOpen}
-        unlockError={u.unlockError}
+    showSignerImportOpen={u.showSignerImportOpen}
+    onShowSignerImportOpenChange={u.setShowSignerImportOpen}
+    includeSdkMnemonicInBackup={u.includeSdkMnemonicInBackup}
+    onIncludeSdkMnemonicInBackupChange={u.setIncludeSdkMnemonicInBackup}
+    unlockError={u.unlockError}
         unlocking={u.unlocking}
         unlockButtonDisabled={u.unlockButtonDisabled}
         importMnemonicRequired={u.importMnemonicRequired}

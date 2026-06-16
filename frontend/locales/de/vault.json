@@ -57,6 +57,10 @@
     "creating": "Wird angelegt…",
     "create": "Profil anlegen"
   },
+  "sdkMnemonicPref": {
+    "label": "Wallet-Seed im Vault speichern",
+    "hint": "Verschlüsselt in der Vault-Datei — beim nächsten Start reicht meist nur das Passwort (SIGNER=sdk)."
+  },
   "techNotes": {
     "toggle": "Technische Hinweise",
     "sessionLocal": "lokale Wallet-Sitzung",

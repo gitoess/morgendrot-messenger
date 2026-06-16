@@ -45,6 +45,8 @@ export type VaultUnlockDialogProps = {
   unlockButtonDisabled: boolean
   importMnemonicRequired: boolean
   standaloneHelperUnlock?: boolean
+  includeSdkMnemonicInBackup?: boolean
+  onIncludeSdkMnemonicInBackupChange?: (v: boolean) => void
   onUnlock: () => void
 }
 
@@ -424,6 +426,20 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
             <p className="whitespace-pre-wrap rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {p.unlockError}
             </p>
+          ) : null}
+          {p.signerKind === 'sdk' && p.onIncludeSdkMnemonicInBackupChange ? (
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-border/80 bg-muted/30 p-3 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={p.includeSdkMnemonicInBackup === true}
+                onChange={(e) => p.onIncludeSdkMnemonicInBackupChange?.(e.target.checked)}
+                className="mt-0.5 shrink-0"
+              />
+              <span>
+                <span className="font-medium text-foreground">{t('sdkMnemonicPref.label')}</span>
+                <span className="mt-0.5 block">{t('sdkMnemonicPref.hint')}</span>
+              </span>
+            </label>
           ) : null}
             </>
           )}
