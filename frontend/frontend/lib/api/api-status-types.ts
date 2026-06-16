@@ -17,6 +17,8 @@ export type HierarchyPermissions = {
 export type VaultStatus = {
   hasLocal: boolean
   lastSavedToChainAt?: number
+  lastLocalSavedAt?: number
+  network?: 'testnet' | 'mainnet' | 'unknown'
 }
 
 /** Backend-Status (GET /api/status): backendRunning, locked, connected, role, roleId, vaultStatus, … */

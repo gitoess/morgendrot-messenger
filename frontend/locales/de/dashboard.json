@@ -46,7 +46,7 @@
   "lock": {
     "button": "Abmelden",
     "buttonTitle": "Tresor sperren — zum Weitermachen erneut entsperren",
-    "confirm": "Tresor sperren? Schlüssel werden aus dem Arbeitsspeicher entfernt — danach erneut mit Passwort entsperren."
+    "confirm": "Tresor sperren?\n\n• Keys und Wallet-Passwort verlassen den Server-RAM\n• Lokaler Inbox-Klartext-Cache wird geschreddert\n• Vault-Datei bleibt — Entsperren mit Vault-Passwort\n• Bei SIGNER=sdk: Seed/Mnemonic ggf. erneut eingeben"
   },
   "mesh": {
     "internet": "Internet",

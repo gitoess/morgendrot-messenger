@@ -110,9 +110,14 @@ import {
     loadVaultFromChainPayload,
     purgeInboxCache,
     sanitizePersonalSecrets,
+    sanitizeVaultNotes,
+    vaultNotesToLegacyString,
     type PersonalSecretEntry,
+    type VaultNoteEntry,
 } from './vault-local.js';
 import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
+import { runVaultOnchainPreflight } from './vault-onchain-preflight.js';
+import { syncVaultChainConfig } from './vault-sync-chain-config.js';
 import { setWalletPassword } from './messenger-nest/messenger-session-password.js';
 import {
     saveContactLabel,
@@ -158,6 +163,8 @@ import {
 
 /** Nach erfolgreichem /vault-onchain: Zeitstempel für Sync-Status („Auf Chain gesichert“). */
 let lastVaultOnchainSuccessAt: number | undefined;
+/** Nach erfolgreichem /vault-save oder persistLocal: lokale Änderung für Dirty-Hinweis. */
+let lastVaultLocalSaveAt: number | undefined;
 const unlockRateLimit = createIpRateLimiter(CFG.API_RATE_LIMIT_UNLOCK_PER_MINUTE);
 
 export type ApiStatus = {
@@ -175,6 +182,9 @@ export type ApiStatus = {
     vaultStatus?: {
         hasLocal: boolean;
         lastSavedToChainAt?: number;
+        lastLocalSavedAt?: number;
+        /** testnet | mainnet | unknown — aus RPC_URL abgeleitet */
+        network?: 'testnet' | 'mainnet' | 'unknown';
     };
     /** Lite-UI: full oder messenger (nur Nachrichten-Fluss). */
     uiVariant?: 'full' | 'messenger';
@@ -330,6 +340,29 @@ export function setVaultPersonalSecretsBridge(b: VaultPersonalSecretsBridge | nu
     _vaultPersonalSecretsBridge = b;
 }
 
+/** Optional: strukturierte Notizen (vaultNotes) im entsperrten Vault-RAM. */
+export type VaultNotesBridge = {
+    getNotes: () => VaultNoteEntry[] | null;
+    setNotes: (
+        notes: VaultNoteEntry[],
+        opts?: { persistLocal?: boolean }
+    ) => Promise<{ ok: boolean; error?: string; message?: string }>;
+};
+
+let _vaultNotesBridge: VaultNotesBridge | null = null;
+
+export function setVaultNotesBridge(b: VaultNotesBridge | null): void {
+    _vaultNotesBridge = b;
+}
+
+export function getLastVaultLocalSaveAt(): number | undefined {
+    return lastVaultLocalSaveAt;
+}
+
+export function setLastVaultLocalSaveAt(at: number | undefined): void {
+    lastVaultLocalSaveAt = at;
+}
+
 /** Setzt Callback für Passwort aus UI. Wird von wallet-bridge aufgerufen, bevor UI startet. */
 export function setPasswordResolver(resolve: (pw: string) => void): void {
     _resolvePassword = resolve;
@@ -367,6 +400,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         getLastVaultOnchainAt: () => lastVaultOnchainSuccessAt,
         setLastVaultOnchainAt: (t) => {
             lastVaultOnchainSuccessAt = t;
+        },
+        getLastVaultLocalSaveAt: () => lastVaultLocalSaveAt,
+        setLastVaultLocalSaveAt: (t) => {
+            lastVaultLocalSaveAt = t;
         },
         getActualApiPort,
     };
@@ -935,6 +972,94 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         return;
                     }
                     sendJson(res, 200, { ok: true, message: result.message, entries: sanitized }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/vault-notes' && req.method === 'GET') {
+            try {
+                if (!_vaultNotesBridge) {
+                    sendJson(res, 503, { ok: false, error: 'Notizen-API nicht initialisiert.' }, cors);
+                    return;
+                }
+                const notes = _vaultNotesBridge.getNotes();
+                if (notes === null) {
+                    sendJson(res, 200, { ok: true, unlocked: false, notes: [] }, cors);
+                    return;
+                }
+                sendJson(res, 200, { ok: true, unlocked: true, notes }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/vault-notes' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    if (!_vaultNotesBridge) {
+                        sendJson(res, 503, { ok: false, error: 'Notizen-API nicht initialisiert.' }, cors);
+                        return;
+                    }
+                    const data = JSON.parse(body || '{}') as { notes?: unknown; persistLocal?: boolean };
+                    const sanitized = sanitizeVaultNotes(data.notes);
+                    const result = await _vaultNotesBridge.setNotes(sanitized, {
+                        persistLocal: data.persistLocal === true,
+                    });
+                    if (!result.ok) {
+                        sendJson(res, 400, { ok: false, error: result.error || 'Fehler' }, cors);
+                        return;
+                    }
+                    if (data.persistLocal === true) setLastVaultLocalSaveAt(Date.now());
+                    sendJson(res, 200, { ok: true, message: result.message, notes: sanitized }, cors);
+                } catch (e: unknown) {
+                    sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/vault-onchain-preflight' && req.method === 'GET') {
+            try {
+                const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                const pre = await runVaultOnchainPreflight(myAddr);
+                sendJson(res, 200, { ok: pre.ok, preflight: pre }, cors);
+            } catch (e: unknown) {
+                sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
+            }
+            return;
+        }
+
+        if (url === '/api/vault-sync-chain-config' && req.method === 'POST') {
+            let body = '';
+            req.on('data', (chunk) => {
+                body += chunk;
+            });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { apply?: boolean; dryRun?: boolean };
+                    const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+                    const sync = await syncVaultChainConfig(myAddr, {
+                        apply: data.dryRun === true ? false : data.apply !== false,
+                    });
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: sync.preflight.ok || sync.applied.length > 0,
+                            applied: sync.applied,
+                            skipped: sync.skipped,
+                            preflight: sync.preflight,
+                        },
+                        cors
+                    );
                 } catch (e: unknown) {
                     sendJson(res, 500, { ok: false, error: String((e as Error)?.message ?? e) }, cors);
                 }

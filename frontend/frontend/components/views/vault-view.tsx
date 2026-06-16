@@ -27,8 +27,14 @@ import {
   vaultListLocalFiles,
   vaultDeleteLocal,
   importVaultFileFromDevice,
+  fetchVaultNotes,
+  saveVaultNotes,
+  fetchVaultOnchainPreflight,
+  syncVaultChainConfig,
 } from '@/frontend/lib/api'
-import { VAULT_FREETEXT_NOTES_MAX_CHARS } from '../../lib/vault-limits'
+import type { VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
+import { VaultNotesPanel } from '@/frontend/components/vault-notes-panel'
+import { clearAllInboxCaches } from '@/frontend/lib/clear-inbox-caches'
 
 interface VaultViewProps {
   variant: 'local-vault' | 'emergency-purge'
@@ -50,8 +56,14 @@ export function VaultView({ variant }: VaultViewProps) {
   const [hasKeys, setHasKeys] = useState<boolean | undefined>(undefined)
   /** GET /api/status locked — wartet auf Entsperr-Dialog (nicht dasselbe wie hasKeys). */
   const [vaultLocked, setVaultLocked] = useState(false)
-  const [notes, setNotes] = useState('')
+  const [vaultNotes, setVaultNotes] = useState<VaultNoteEntry[]>([])
+  const [notesDirty, setNotesDirty] = useState(false)
+  const [vaultNetwork, setVaultNetwork] = useState<string | undefined>(undefined)
+  const [lastLocalSavedAt, setLastLocalSavedAt] = useState<number | undefined>(undefined)
+  const [lastSavedToChainAt, setLastSavedToChainAt] = useState<number | undefined>(undefined)
+  const [rpcHint, setRpcHint] = useState<string | undefined>(undefined)
   const [sessionBusy, setSessionBusy] = useState(false)
+  const [chainSyncBusy, setChainSyncBusy] = useState(false)
   /** cli | sdk | remote — aus GET /api/status (SIGNER=sdk: optional Mnemonic in Backup). */
   const [signerKind, setSignerKind] = useState<string | undefined>(undefined)
   const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackup] = useState(false)
@@ -62,6 +74,14 @@ export function VaultView({ variant }: VaultViewProps) {
   const [selectedVaultPath, setSelectedVaultPath] = useState('')
   const vaultFileInputRef = useRef<HTMLInputElement>(null)
 
+  const hydrateNotesFromApi = useCallback(async () => {
+    const r = await fetchVaultNotes()
+    if (r.ok && r.unlocked && Array.isArray(r.notes)) {
+      setVaultNotes(r.notes)
+      setNotesDirty(false)
+    }
+  }, [])
+
   const refreshVaultStatus = useCallback(async () => {
     try {
       const s = await fetchStatus()
@@ -69,6 +89,10 @@ export function VaultView({ variant }: VaultViewProps) {
         setHasKeys(s.hasKeys)
         setVaultLocked(!!s.locked)
         setSignerKind(typeof s.signer === 'string' ? s.signer : undefined)
+        setVaultNetwork(s.vaultStatus?.network)
+        setLastLocalSavedAt(s.vaultStatus?.lastLocalSavedAt)
+        setLastSavedToChainAt(s.vaultStatus?.lastSavedToChainAt)
+        setRpcHint(s.rpcUrlLabel || s.network)
       }
     } catch {
       setHasKeys(undefined)
@@ -112,22 +136,33 @@ export function VaultView({ variant }: VaultViewProps) {
   useEffect(() => {
     if (variant !== 'local-vault' || hasKeys !== true || notesHydratedRef.current) return
     notesHydratedRef.current = true
-    void vaultLoad().then((res) => {
-      if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
-    })
-  }, [variant, hasKeys])
+    void hydrateNotesFromApi()
+  }, [variant, hasKeys, hydrateNotesFromApi])
 
-  const showStatus = (success: boolean, msg: string) => {
-    setStatus(success ? 'success' : 'error')
-    setStatusMsg(msg)
-    setTimeout(() => setStatus('idle'), 5000)
+  const syncNotesToRam = async (): Promise<boolean> => {
+    const r = await saveVaultNotes(vaultNotes, false)
+    if (!r.ok) {
+      toast.error(r.error || 'Notizen konnten nicht in die Sitzung geschrieben werden.')
+      return false
+    }
+    setNotesDirty(false)
+    return true
   }
+
+  const chainDirty =
+    notesDirty ||
+    (lastLocalSavedAt != null &&
+      (lastSavedToChainAt == null || lastLocalSavedAt > lastSavedToChainAt))
 
   const handleSave = async () => {
     setProcessing(true)
+    if (!(await syncNotesToRam())) {
+      setProcessing(false)
+      return
+    }
     const includeSigner =
       includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true
-    const res = await vaultSave(undefined, notes, {
+    const res = await vaultSave(undefined, undefined, {
       includeIotaMnemonic: includeSigner,
     })
     const okMsg = res.ok
@@ -140,6 +175,27 @@ export function VaultView({ variant }: VaultViewProps) {
     else if (!res.ok) toast.error(okMsg)
     if (res.ok) {
       refreshVaultStatus()
+      setNotesDirty(false)
+    }
+    setProcessing(false)
+  }
+
+  const showStatus = (success: boolean, msg: string) => {
+    setStatus(success ? 'success' : 'error')
+    setStatusMsg(msg)
+    setTimeout(() => setStatus('idle'), 5000)
+  }
+
+  const handleSaveNotesOnly = async () => {
+    setProcessing(true)
+    const r = await saveVaultNotes(vaultNotes, true)
+    if (r.ok) {
+      if (r.notes) setVaultNotes(r.notes)
+      setNotesDirty(false)
+      toast.success(r.message || 'Notizen lokal gespeichert.')
+      refreshVaultStatus()
+    } else {
+      toast.error(r.error || 'Speichern fehlgeschlagen.')
     }
     setProcessing(false)
   }
@@ -147,11 +203,11 @@ export function VaultView({ variant }: VaultViewProps) {
   const handleLoad = async (filePath?: string) => {
     setProcessing(true)
     const res = await vaultLoad(undefined, filePath)
-    if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
-      const n = typeof res.notes === 'string' ? res.notes.trim() : ''
-      const unchangedHint = n.length === 0 ? ' (Keine Notizen in der Datei.)' : ''
-      const msg = `Tresor-Datei eingelesen.${unchangedHint}`
+      if (Array.isArray(res.vaultNotes)) setVaultNotes(res.vaultNotes)
+      else await hydrateNotesFromApi()
+      setNotesDirty(false)
+      const msg = 'Tresor-Datei eingelesen.'
       showStatus(true, msg)
       toast.success(msg)
       refreshVaultStatus()
@@ -166,8 +222,10 @@ export function VaultView({ variant }: VaultViewProps) {
   const handleLoadFromChain = async () => {
     setProcessing(true)
     const res = await vaultLoadFromChain()
-    if (res.ok && typeof res.notes === 'string') setNotes(res.notes)
     if (res.ok) {
+      if (Array.isArray(res.vaultNotes)) setVaultNotes(res.vaultNotes)
+      else await hydrateNotesFromApi()
+      setNotesDirty(false)
       const msg = 'Tresor von Chain geladen.'
       showStatus(true, msg)
       toast.success(msg)
@@ -180,15 +238,69 @@ export function VaultView({ variant }: VaultViewProps) {
     setProcessing(false)
   }
 
+  const handleSyncChainConfig = async () => {
+    setChainSyncBusy(true)
+    const sync = await syncVaultChainConfig({ apply: true })
+    setChainSyncBusy(false)
+    if (sync.ok) {
+      const msg = [
+        sync.applied?.length ? `Übernommen: ${sync.applied.join('; ')}` : null,
+        sync.skipped?.length ? `Offen: ${sync.skipped.join('; ')}` : null,
+        sync.preflight?.ok ? `Chain bereit (${sync.preflight.network}).` : sync.preflight?.issues?.[0],
+      ]
+        .filter(Boolean)
+        .join(' ')
+      showStatus(true, msg || 'Chain-Konfiguration geprüft.')
+      toast.success(msg || 'Chain-Konfiguration synchronisiert.')
+      void refreshVaultStatus()
+    } else {
+      const err =
+        sync.error ||
+        sync.preflight?.issues?.join(' ') ||
+        sync.message ||
+        'Chain-Sync fehlgeschlagen'
+      showStatus(false, err)
+      toast.error(err)
+    }
+  }
+
   const handleOnchain = async () => {
+    if (chainDirty) {
+      const go = window.confirm(
+        'Lokale Änderungen sind noch nicht auf der Chain.\n\nJetzt auf Chain sichern?'
+      )
+      if (!go) return
+    }
     setSyncingOnchain(true)
-    const res = await vaultOnchain(undefined, notes, {
+    await syncVaultChainConfig({ apply: true })
+    const pre = await fetchVaultOnchainPreflight()
+    if (!pre.ok || !pre.preflight?.ok) {
+      const issues = pre.preflight?.issues?.join(' ') || pre.error || 'Chain-Konfiguration unvollständig.'
+      const hints = pre.preflight?.hints?.[0]
+      showStatus(false, hints ? `${issues} — ${hints}` : issues)
+      toast.error(issues)
+      setSyncingOnchain(false)
+      return
+    }
+    if (!(await syncNotesToRam())) {
+      setSyncingOnchain(false)
+      return
+    }
+    const res = await vaultOnchain(undefined, undefined, {
       includeIotaMnemonic:
         includeSdkMnemonicInBackup && signerKind === 'sdk' && hasKeys === true,
     })
-    showStatus(res.ok, res.ok ? 'Tresor auf Chain gesichert.' : res.error || 'On-Chain-Speichern fehlgeschlagen')
+    showStatus(
+      res.ok,
+      res.ok
+        ? typeof res.message === 'string'
+          ? res.message
+          : 'Tresor auf Chain gesichert.'
+        : res.error || res.message || 'On-Chain-Speichern fehlgeschlagen'
+    )
     if (res.ok) {
       refreshVaultStatus()
+      setNotesDirty(false)
       const wantDelete = window.confirm(
         'On-Chain-Backup erfolgreich.\n\n' +
           'Lokale Vault-Datei auf diesem Server löschen? Nur sinnvoll, wenn du künftig nur noch von der Chain entsperren willst.\n\n' +
@@ -273,14 +385,19 @@ export function VaultView({ variant }: VaultViewProps) {
   const handleClearLocalInboxOnly = async () => {
     if (
       !window.confirm(
-        'Lokalen Klartext-Inbox-Cache (.inbox.enc) auf diesem Gerät schreddern? Vault-Datei und Chain bleiben.'
+        'Lokalen Inbox-Cache leeren?\n\n' +
+          '• Browser-Cache + Server-Datei .inbox.enc\n' +
+          '• Posteingang in der App wird geleert (bis zum nächsten „Aktualisieren“)\n' +
+          '• Chain/Mailbox-Nachrichten können danach wieder geladen werden'
       )
     ) {
       return
     }
     setSessionBusy(true)
-    const res = await clearLocalHistory({ shred: true })
-    showStatus(res.ok, res.ok ? res.message || 'Lokaler Inbox-Cache entfernt.' : res.error || 'Fehler')
+    const res = await clearAllInboxCaches()
+    showStatus(res.ok, res.message || res.error || 'Fertig')
+    if (res.ok) toast.success(res.message || 'Inbox-Cache geleert.')
+    else toast.error(res.error || res.message || 'Fehler')
     setSessionBusy(false)
   }
 
@@ -295,7 +412,11 @@ export function VaultView({ variant }: VaultViewProps) {
     }
     const loadPath = imp.path
     const loadRes = await vaultLoad(undefined, loadPath)
-    if (loadRes.ok && typeof loadRes.notes === 'string') setNotes(loadRes.notes)
+    if (loadRes.ok) {
+      if (Array.isArray(loadRes.vaultNotes)) setVaultNotes(loadRes.vaultNotes)
+      else await hydrateNotesFromApi()
+      setNotesDirty(false)
+    }
     const ok = loadRes.ok
     showStatus(ok, ok ? imp.message || 'Vault importiert und geladen.' : loadRes.error || 'Laden nach Import fehlgeschlagen')
     if (ok) {
@@ -316,9 +437,17 @@ export function VaultView({ variant }: VaultViewProps) {
   }
 
   const handleVaultLock = async () => {
+    const sdkHint =
+      signerKind === 'sdk'
+        ? '\n\nBei SIGNER=sdk: Seed/Mnemonic wurde aus dem RAM entfernt — beim Entsperren ggf. erneut eingeben (sofern nicht dauerhaft in der Vault-Datei gespeichert).'
+        : ''
     if (
       !window.confirm(
-        'Tresor sperren? Keys und Passwort verlassen den Server-RAM; Inbox-Cache wird geschreddert. Danach Entsperr-Dialog.'
+        'Tresor sperren?\n\n' +
+          '• Messaging-Keys + Wallet-Passwort verlassen den Server-RAM\n' +
+          '• Lokaler Klartext-Inbox-Cache (.inbox.enc) wird geschreddert\n' +
+          '• Vault-Datei auf der Platte bleibt — Entsperren mit Vault-Passwort' +
+          sdkHint
       )
     ) {
       return
@@ -330,9 +459,12 @@ export function VaultView({ variant }: VaultViewProps) {
       res.ok ? res.message || 'Tresor gesperrt.' : res.error || res.message || 'Fehler'
     )
     if (res.ok) {
-      toast.message('Entsperr-Dialog sollte jetzt erscheinen', {
-        description: 'Passwort dort eingeben. Falls nicht sichtbar: zur Startseite zurück oder Seite neu laden.',
-        duration: 12_000,
+      toast.message('Entsperr-Dialog — Vault-Passwort eingeben', {
+        description:
+          signerKind === 'sdk'
+            ? 'Falls der Seed nicht in der Vault liegt: Mnemonic/Secret erneut eingeben.'
+            : 'Falls der Dialog fehlt: Startseite oder F5.',
+        duration: 14_000,
       })
     }
     await refreshVaultStatus()
@@ -449,22 +581,70 @@ export function VaultView({ variant }: VaultViewProps) {
             </div>
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-4">
-            <h4 className="mb-2 font-semibold text-foreground">Notizen</h4>
-            <textarea
-              value={notes}
-              onChange={(e) =>
-                setNotes(e.target.value.slice(0, VAULT_FREETEXT_NOTES_MAX_CHARS))
-              }
-              maxLength={VAULT_FREETEXT_NOTES_MAX_CHARS}
-              rows={5}
-              disabled={!canUseVault}
-              placeholder="Notizen, Mnemonics, beliebiger Text…"
-              className="w-full rounded-lg border border-border bg-input px-4 py-2.5 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none resize-y min-h-[100px] disabled:opacity-50"
-            />
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {notes.length.toLocaleString('de-DE')} / {VAULT_FREETEXT_NOTES_MAX_CHARS.toLocaleString('de-DE')} Zeichen
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <h4 className="font-semibold text-foreground">Sync &amp; Netzwerk</h4>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              <li>
+                RPC:{' '}
+                <span className="font-mono text-foreground">{rpcHint || '—'}</span>
+                {vaultNetwork ? (
+                  <span className="ml-2 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide">
+                    {vaultNetwork}
+                  </span>
+                ) : null}
+              </li>
+              <li>
+                Lokal zuletzt:{' '}
+                {lastLocalSavedAt
+                  ? new Date(lastLocalSavedAt).toLocaleString('de-DE')
+                  : '—'}
+              </li>
+              <li>
+                Chain zuletzt:{' '}
+                {lastSavedToChainAt
+                  ? new Date(lastSavedToChainAt).toLocaleString('de-DE')
+                  : 'noch nie'}
+              </li>
+            </ul>
+            {chainDirty ? (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+                Lokale Änderungen sind noch nicht auf der Chain gesichert — „Auf Chain sichern“ ausführen.
+              </p>
+            ) : null}
+            <button
+              type="button"
+              disabled={chainSyncBusy || processing}
+              onClick={() => void handleSyncChainConfig()}
+              className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-3 py-1.5 text-xs font-medium hover:bg-sky-500/15 disabled:opacity-50"
+            >
+              {chainSyncBusy ? 'Prüfe…' : 'Chain-Konfiguration automatisch prüfen & übernehmen'}
+            </button>
+            <p className="text-[11px] text-muted-foreground">
+              Übernimmt RPC, PACKAGE_ID und Registry-IDs aus lokalen Deploy-Dateien (.morgendrot-package-id,
+              .morgendrot-globals-ids.json) und prüft Testnet/Mainnet auf der Chain.
             </p>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-semibold text-foreground">Notizen</h4>
+              <button
+                type="button"
+                disabled={processing || !canUseVault}
+                onClick={() => void handleSaveNotesOnly()}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-accent disabled:opacity-50"
+              >
+                Notizen lokal sichern
+              </button>
+            </div>
+            <VaultNotesPanel
+              unlocked={canUseVault}
+              notes={vaultNotes}
+              onNotesChange={(next) => {
+                setVaultNotes(next)
+                setNotesDirty(true)
+              }}
+            />
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4">

@@ -31,7 +31,10 @@ import {
     saveHandshakeCache,
     writeVaultPackageId,
     writeVaultAnchorId,
+    sanitizeVaultNotes,
+    vaultNotesToLegacyString,
     type PersonalSecretEntry,
+    type VaultNoteEntry,
 } from './vault-local.js';
 import { generateKeyPair } from './crypto-layer.js';
 import * as readline from 'node:readline/promises';
@@ -220,6 +223,7 @@ async function main() {
         type VaultState = {
             keys: { privateKey: CryptoKey; pubRaw: Uint8Array };
             notes: string;
+            vaultNotes: VaultNoteEntry[];
             personalSecrets: PersonalSecretEntry[];
         };
         const vaultStateRef: { current: VaultState | null } = { current: null };
@@ -238,6 +242,7 @@ async function main() {
                         vaultStateRef.current = {
                             keys: myKeys,
                             notes: vaultBlob.notes ?? '',
+                            vaultNotes: vaultBlob.vaultNotes,
                             personalSecrets: vaultBlob.personalSecrets ?? [],
                         };
                         if (CFG.SIGNER === 'sdk' && (vaultBlob.iotaSdkSignerImport || '').trim()) {
@@ -264,6 +269,7 @@ async function main() {
                     vaultStateRef.current = {
                         keys: myKeys,
                         notes: vaultBlob.notes ?? '',
+                        vaultNotes: vaultBlob.vaultNotes,
                         personalSecrets: vaultBlob.personalSecrets ?? [],
                     };
                     if (CFG.SIGNER === 'sdk' && (vaultBlob.iotaSdkSignerImport || '').trim()) {
@@ -311,6 +317,7 @@ async function main() {
                             vaultStateRef.current = {
                                 keys: content.keys,
                                 notes: content.notes,
+                                vaultNotes: content.vaultNotes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
                             if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
@@ -337,6 +344,7 @@ async function main() {
                         vaultStateRef.current = {
                             keys: content.keys,
                             notes: content.notes,
+                            vaultNotes: content.vaultNotes,
                             personalSecrets: content.personalSecrets ?? [],
                         };
                         if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
@@ -358,11 +366,11 @@ async function main() {
                 logger.info('Keys aus On-Chain-Vault geladen (kein lokales VAULT_FILE).');
             } else {
                 myKeys = await generateKeyPair(true);
-                vaultStateRef.current = { keys: myKeys, notes: '', personalSecrets: [] };
+                vaultStateRef.current = { keys: myKeys, notes: '', vaultNotes: [], personalSecrets: [] };
             }
         } else {
             myKeys = await generateKeyPair(true);
-            vaultStateRef.current = { keys: myKeys, notes: '', personalSecrets: [] };
+            vaultStateRef.current = { keys: myKeys, notes: '', vaultNotes: [], personalSecrets: [] };
         }
 
         if (!CFG.PACKAGE_ID) {
@@ -382,6 +390,7 @@ async function main() {
             setSessionStatus,
             setPurgeAfterLieferungHandler,
             setVaultPersonalSecretsBridge,
+            setVaultNotesBridge,
         } = await import('./api-server.js');
         const { appendAuditEvent } = await import('./audit-log.js');
         const { tryRestoreHandshakeSessionFromVault } = await import('./messenger-nest/messenger-connect.js');
@@ -438,6 +447,7 @@ async function main() {
                 vaultStateRef.current = {
                     keys: vaultStateRef.current.keys,
                     notes: vaultStateRef.current.notes,
+                    vaultNotes: vaultStateRef.current.vaultNotes,
                     personalSecrets: sanitized,
                 };
                 if (opts?.persistLocal) {
@@ -451,7 +461,8 @@ async function main() {
                             savePath,
                             vaultStateRef.current.notes,
                             undefined,
-                            sanitized
+                            sanitized,
+                            vaultStateRef.current.vaultNotes
                         );
                         if (CFG.PACKAGE_ID) writeVaultPackageId(savePath, CFG.PACKAGE_ID);
                         if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(savePath, CFG.STREAMS_ANCHOR_ID, pw);
@@ -461,6 +472,46 @@ async function main() {
                     }
                 }
                 return { ok: true, message: 'Safe nur im RAM aktualisiert.' };
+            },
+        });
+
+        setVaultNotesBridge({
+            getNotes: () =>
+                vaultStateRef.current?.keys ? (vaultStateRef.current.vaultNotes ?? []) : null,
+            setNotes: async (notes, opts) => {
+                if (!vaultStateRef.current?.keys) {
+                    return { ok: false, error: 'Tresor gesperrt (keine Keys im RAM).' };
+                }
+                const sanitized = sanitizeVaultNotes(notes);
+                const legacyNotes = vaultNotesToLegacyString(sanitized);
+                vaultStateRef.current = {
+                    keys: vaultStateRef.current.keys,
+                    notes: legacyNotes,
+                    vaultNotes: sanitized,
+                    personalSecrets: vaultStateRef.current.personalSecrets ?? [],
+                };
+                if (opts?.persistLocal) {
+                    const pw = getWalletPassword();
+                    if (!pw) return { ok: false, error: 'Kein Wallet-Passwort – zuerst entsperren.' };
+                    const savePath = CFG.VAULT_FILE || '.morgendrot-vault';
+                    try {
+                        await saveVaultLocal(
+                            vaultStateRef.current.keys,
+                            pw,
+                            savePath,
+                            legacyNotes,
+                            undefined,
+                            vaultStateRef.current.personalSecrets ?? [],
+                            sanitized
+                        );
+                        if (CFG.PACKAGE_ID) writeVaultPackageId(savePath, CFG.PACKAGE_ID);
+                        if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(savePath, CFG.STREAMS_ANCHOR_ID, pw);
+                        return { ok: true, message: 'Notizen in Vault-Datei gespeichert.' };
+                    } catch (e) {
+                        return { ok: false, error: String((e as Error)?.message ?? e) };
+                    }
+                }
+                return { ok: true, message: 'Notizen nur im RAM aktualisiert.' };
             },
         });
 
@@ -612,7 +663,8 @@ async function main() {
                             vaultPath,
                             vaultStateRef.current?.notes ?? '',
                             undefined,
-                            vaultStateRef.current?.personalSecrets ?? []
+                            vaultStateRef.current?.personalSecrets ?? [],
+                            vaultStateRef.current?.vaultNotes ?? []
                         );
                         if (CFG.PACKAGE_ID) writeVaultPackageId(vaultPath, CFG.PACKAGE_ID);
                         logger.info(`Vault gespeichert unter ${vaultPath}.`);

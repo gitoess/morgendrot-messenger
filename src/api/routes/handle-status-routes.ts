@@ -35,6 +35,7 @@ import { getClient } from '../../chain-access.js';
 import { resolveUpgradeCapId } from '../../move-package-deploy.js';
 import { HELP_START, HELP_CHAT, HELP_UI_INTRO } from '../../wallet-bridge.js';
 import { vaultFileExists } from '../../vault-local.js';
+import { inferNetworkFromRpcUrl } from '../../vault-onchain-preflight.js';
 import { HEARTBEAT_INTERVAL_PRESETS_MS, isAllowedHeartbeatIntervalMs } from '../../shared/heartbeat-presets.js';
 import {
     readCapabilitiesOverrideFromRuntimeRaw,
@@ -144,6 +145,8 @@ export async function handleStatusRoutes(
             }
         }
         const lastVaultOnchainSuccessAt = ctx.getLastVaultOnchainAt();
+        const lastVaultLocalSaveAt = ctx.getLastVaultLocalSaveAt();
+        const vaultNetwork = inferNetworkFromRpcUrl(CFG.RPC_URL || '');
         const defaultTtlDays = Number(CFG.DEFAULT_TTL_DAYS ?? 30n);
         const vaultRegTrim = (CFG.VAULT_REGISTRY_ID || '').trim();
         const cmdRegTrim = (CFG.COMMAND_REGISTRY_ID || '').trim();
@@ -248,7 +251,9 @@ export async function handleStatusRoutes(
             },
             vaultStatus: {
                 hasLocal: vaultFileExists(vaultFileResolved),
+                network: vaultNetwork,
                 ...(lastVaultOnchainSuccessAt != null && { lastSavedToChainAt: lastVaultOnchainSuccessAt }),
+                ...(lastVaultLocalSaveAt != null && { lastLocalSavedAt: lastVaultLocalSaveAt }),
             },
             uiVariant: CFG.UI_VARIANT === 'messenger' ? 'messenger' : 'full',
             serveLiteUiStatic: CFG.SERVE_LITE_UI_STATIC,

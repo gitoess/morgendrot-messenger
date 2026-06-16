@@ -102,6 +102,12 @@ export { fetchMonitorStatus, fetchAuditEvents } from '@/frontend/lib/api/monitor
 export type { PersonalSecretEntry } from '@/frontend/lib/api/vault-personal-secrets'
 export { fetchVaultPersonalSecrets, saveVaultPersonalSecrets } from '@/frontend/lib/api/vault-personal-secrets'
 
+export type { VaultNoteAttachment, VaultNoteAttachmentKind, VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
+export { fetchVaultNotes, saveVaultNotes } from '@/frontend/lib/api/vault-notes'
+export { fetchVaultOnchainPreflight } from '@/frontend/lib/api/vault-onchain-preflight'
+export type { VaultOnchainPreflight } from '@/frontend/lib/api/vault-onchain-preflight'
+export { syncVaultChainConfig } from '@/frontend/lib/api/vault-sync-chain-config'
+
 export {
   vaultSave,
   vaultLoad,

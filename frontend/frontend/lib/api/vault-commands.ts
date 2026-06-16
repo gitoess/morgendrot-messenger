@@ -1,5 +1,6 @@
 import { executeCommand } from '@/frontend/lib/api/execute-command'
 import type { PersonalSecretEntry } from '@/frontend/lib/api/vault-personal-secrets'
+import type { VaultNoteEntry } from '@/frontend/lib/api/vault-notes'
 
 // Vault commands (notes = eigene Texte/Notizen, werden mitverschlüsselt)
 export type VaultSaveOptions = {
@@ -24,6 +25,7 @@ export async function vaultLoad(password?: string, filePath?: string): Promise<{
   ok: boolean
   message?: string
   notes?: string
+  vaultNotes?: VaultNoteEntry[]
   personalSecrets?: PersonalSecretEntry[]
   error?: string
 }> {
@@ -36,6 +38,7 @@ export async function vaultLoad(password?: string, filePath?: string): Promise<{
     ok: boolean
     message?: string
     notes?: string
+    vaultNotes?: VaultNoteEntry[]
     personalSecrets?: PersonalSecretEntry[]
     error?: string
   }
@@ -64,6 +67,7 @@ export async function vaultLoadFromChain(password?: string): Promise<{
   ok: boolean
   message?: string
   notes?: string
+  vaultNotes?: VaultNoteEntry[]
   personalSecrets?: PersonalSecretEntry[]
   error?: string
 }> {
@@ -72,6 +76,7 @@ export async function vaultLoadFromChain(password?: string): Promise<{
     ok: boolean
     message?: string
     notes?: string
+    vaultNotes?: VaultNoteEntry[]
     personalSecrets?: PersonalSecretEntry[]
     error?: string
   }

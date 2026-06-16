@@ -32,5 +32,7 @@ export type ApiRouteContext = {
     getPurgeAfterLieferungHandler: () => PurgeAfterLieferungFn | null;
     getLastVaultOnchainAt: () => number | undefined;
     setLastVaultOnchainAt: (at: number | undefined) => void;
+    getLastVaultLocalSaveAt: () => number | undefined;
+    setLastVaultLocalSaveAt: (at: number | undefined) => void;
     getActualApiPort: () => number;
 };

@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { IotaClient } from '@iota/iota-sdk/client';
 import { CFG, savePackageIdToFile, setEnvKey } from './config.js';
+import { writeStoredGlobalsIds } from './vault-sync-chain-config.js';
 
 const HEX64 = /^0x[a-fA-F0-9]{64}$/i;
 
@@ -250,7 +251,15 @@ export async function createGlobalsCli(packageId: string): Promise<GlobalsCreate
         '50000000',
         '--json',
     ]);
-    return parseGlobalsCreatedFromCliOutput(stdout);
+    const ids = parseGlobalsCreatedFromCliOutput(stdout);
+    writeStoredGlobalsIds({
+        packageId: pkg,
+        vaultRegistryId: ids.vaultRegistryId,
+        mailboxId: ids.mailboxId,
+        commandRegistryId: ids.commandRegistryId,
+        rpcUrl: (CFG.RPC_URL || process.env.RPC_URL || '').trim() || undefined,
+    });
+    return ids;
 }
 
 export function applyMainnetPublishResultToEnv(result: MovePackagePublishResult): {

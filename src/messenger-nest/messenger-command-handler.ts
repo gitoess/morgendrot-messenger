@@ -62,7 +62,10 @@ import {
     loadVaultFromChainPayload,
     saveHandshakeCache,
     purgeInboxCache,
+    sanitizeVaultNotes,
+    vaultNotesToLegacyString,
     type PersonalSecretEntry,
+    type VaultNoteEntry,
 } from '../vault-local.js';
 import { preFlightCheck } from './messenger-preflight.js';
 import { HELP_START, HELP_CHAT } from './messenger-help.js';
@@ -104,6 +107,8 @@ import { tryHandleMailboxCommand } from './commands/mailbox-commands.js';
 import { tryHandleMailboxLifecycleCommand } from './commands/mailbox-lifecycle-commands.js';
 import { tryHandleSendCommand } from './commands/send-commands.js';
 import type { MessengerCommandContext } from './commands/command-types.js';
+import { runVaultOnchainPreflight } from '../vault-onchain-preflight.js';
+import { syncVaultChainConfig } from '../vault-sync-chain-config.js';
 
 export type MessengerCommandDeps = {
     getMyAddress: () => string;
@@ -111,6 +116,7 @@ export type MessengerCommandDeps = {
         current: {
             keys: { privateKey: CryptoKey; pubRaw: Uint8Array };
             notes: string;
+            vaultNotes: VaultNoteEntry[];
             personalSecrets?: PersonalSecretEntry[];
         } | null;
     };
@@ -144,7 +150,10 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         return {
                             ok: true,
                             message:
-                                'Tresor gesperrt: Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) geschreddert. Vault-Datei unverändert – im UI Entsperr-Dialog (Vollbild) erneut Passwort eingeben.',
+                                'Tresor gesperrt: Keys + Wallet-Passwort aus RAM; lokaler Klartext-Inbox-Cache (.inbox.enc) geschreddert. Vault-Datei unverändert. ' +
+                                (CFG.SIGNER === 'sdk'
+                                    ? 'Beim Entsperren: Vault-Passwort — und bei erneutem SDK-Setup ggf. Seed/Mnemonic erneut eingeben (wurde aus dem RAM entfernt).'
+                                    : 'Beim Entsperren: Vault-Passwort im Entsperr-Dialog eingeben.'),
                         };
                     }
                     if (c === '/cancel-connect') {
@@ -156,7 +165,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         };
                     }
                     const keys = vaultStateRef.current?.keys ?? null;
-                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-show-ecdh-jwk', '/vault-ecdh-jwk', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
+                    const needKeys = !['/help', '/set-package-id', '/vault-save', '/vault-load', '/vault-load-from-chain', '/vault-delete-local', '/vault-show-signer-import', '/vault-show-ecdh-jwk', '/vault-ecdh-jwk', '/vault-debug-chain', '/vault-list-chain', '/vault-list', '/vault-lock', '/vault-onchain', '/vault-notes-get', '/vault-sync-chain-config', '/emergency-purge', '/list-keys', '/list-tickets', '/list-assets', '/inbox', '/fetch', '/generate-address', '/publish-package', '/check-chain', '/gas-station-topup', '/cancel-connect', '/shadow-sweep', '/rpc-rotate', '/resolve-iota-name', '/iota-name-lookup', '/clear-local-history', '/create-private-mailbox', '/create-team-mailbox', '/private-mailbox-contents'].includes(c);
                     if (needKeys && !keys) return { ok: false, message: 'Tresor gesperrt. Bitte /vault-load mit Passwort (oder Backend mit Vault neu starten).' };
                     const needPeer = ['/purge-handshake', '/purge-msg', '/purge-message', '/morg-pkg-export', '/morg-pkg-import'].includes(
                         c
@@ -216,8 +225,12 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         const pw = getWalletPassword() || raw[0];
                         if (!pw) return { ok: false, message: 'Kein Passwort (eingeben oder Wallet entsperren).' };
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load (oder von Chain laden).' };
-                        const notes =
+                        const notesArg =
                             raw[1] !== undefined && raw[1] !== null ? String(raw[1]) : (vaultStateRef.current?.notes ?? '');
+                        const vaultNotes =
+                            vaultStateRef.current?.vaultNotes ??
+                            sanitizeVaultNotes([], notesArg);
+                        const notes = vaultNotesToLegacyString(vaultNotes);
                         const phrase = includeIotaMnemonic ? getSessionIotaMnemonic() : undefined;
                         if (includeIotaMnemonic && !phrase) {
                             return {
@@ -227,11 +240,12 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         const psecrets = vaultStateRef.current?.personalSecrets ?? [];
-                        await saveVaultLocal(keys, pw, savePath, notes, phrase, psecrets);
+                        await saveVaultLocal(keys, pw, savePath, notes, phrase, psecrets, vaultNotes);
                         if (vaultStateRef.current) {
                             vaultStateRef.current = {
                                 keys: vaultStateRef.current.keys,
                                 notes,
+                                vaultNotes,
                                 personalSecrets: psecrets,
                             };
                         }
@@ -255,6 +269,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             vaultStateRef.current = {
                                 keys: content.keys,
                                 notes: content.notes,
+                                vaultNotes: content.vaultNotes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
                             if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
@@ -284,6 +299,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                     (restoredAnchor ? ' Streams Anchor-ID wiederhergestellt.' : '') +
                                     hsRestoreNote,
                                 notes: content.notes,
+                                vaultNotes: content.vaultNotes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
                         } catch (e) {
@@ -398,9 +414,80 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                     }
+                    if (c === '/vault-notes-get') {
+                        if (!keys) {
+                            return { ok: true, unlocked: false, notes: [] as VaultNoteEntry[] };
+                        }
+                        const vaultNotes =
+                            vaultStateRef.current?.vaultNotes ??
+                            sanitizeVaultNotes([], vaultStateRef.current?.notes ?? '');
+                        return { ok: true, unlocked: true, notes: vaultNotes };
+                    }
+                    if (c === '/vault-notes-set') {
+                        if (!keys) return { ok: false, message: 'Tresor gesperrt.' };
+                        const rawArgs = [...a].map((x) => String(x ?? ''));
+                        const persistLocal =
+                            rawArgs.includes('persistLocal') ||
+                            rawArgs[rawArgs.length - 1] === '1' ||
+                            rawArgs[rawArgs.length - 1]?.toLowerCase() === 'true';
+                        const b64 = rawArgs.find((x) => x && x !== 'persistLocal' && x !== '1' && x.toLowerCase() !== 'true') ?? '';
+                        let parsed: unknown = [];
+                        if (b64.trim()) {
+                            try {
+                                parsed = JSON.parse(Buffer.from(b64.trim(), 'base64url').toString('utf8'));
+                            } catch {
+                                return { ok: false, message: 'Notizen-Payload ungültig (base64url/JSON).' };
+                            }
+                        }
+                        const vaultNotes = sanitizeVaultNotes(parsed);
+                        const notes = vaultNotesToLegacyString(vaultNotes);
+                        const psecrets = vaultStateRef.current?.personalSecrets ?? [];
+                        vaultStateRef.current = {
+                            keys: vaultStateRef.current!.keys,
+                            notes,
+                            vaultNotes,
+                            personalSecrets: psecrets,
+                        };
+                        if (persistLocal) {
+                            const pw = getWalletPassword();
+                            if (!pw) return { ok: false, message: 'Kein Wallet-Passwort — zuerst entsperren.' };
+                            const savePath = CFG.VAULT_FILE || '.morgendrot-vault';
+                            await saveVaultLocal(keys, pw, savePath, notes, undefined, psecrets, vaultNotes);
+                            if (CFG.PACKAGE_ID) writeVaultPackageId(savePath, CFG.PACKAGE_ID);
+                            if (CFG.STREAMS_ANCHOR_ID) await writeVaultAnchorId(savePath, CFG.STREAMS_ANCHOR_ID, pw);
+                            return { ok: true, message: 'Notizen in Vault-Datei gespeichert.', notes: vaultNotes };
+                        }
+                        return { ok: true, message: 'Notizen im RAM aktualisiert.', notes: vaultNotes };
+                    }
+                    if (c === '/vault-sync-chain-config') {
+                        const apply = !a.includes('dry-run') && a[a.length - 1] !== '0';
+                        const sync = await syncVaultChainConfig(MY_ADDR, { apply });
+                        const parts = [
+                            sync.applied.length ? `Übernommen: ${sync.applied.join('; ')}` : 'Nichts automatisch übernommen.',
+                            sync.skipped.length ? `Offen: ${sync.skipped.join('; ')}` : '',
+                            sync.preflight.ok
+                                ? `Chain-Check OK (${sync.preflight.network}).`
+                                : sync.preflight.issues.join(' '),
+                        ].filter(Boolean);
+                        return {
+                            ok: sync.preflight.ok || sync.applied.length > 0,
+                            message: parts.join(' '),
+                            applied: sync.applied,
+                            skipped: sync.skipped,
+                            preflight: sync.preflight,
+                        };
+                    }
                     if (c === '/vault-onchain') {
                         if (!keys) return { ok: false, message: 'Tresor gesperrt. Zuerst /vault-load.' };
                         if (!CFG.VAULT_REGISTRY_ID) return { ok: false, message: 'VAULT_REGISTRY_ID nicht gesetzt.' };
+                        const pre = await runVaultOnchainPreflight(MY_ADDR);
+                        if (!pre.ok) {
+                            return {
+                                ok: false,
+                                message: pre.issues.join(' '),
+                                preflight: pre,
+                            };
+                        }
                         const rawOn = [...a].map((x) => String(x ?? ''));
                         let includeMnOnChain = false;
                         if (rawOn.length > 0) {
@@ -416,10 +503,14 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         const pw = getWalletPassword() || rawOn[0];
                         if (!pw) return { ok: false, message: 'Kein Wallet-Passwort.' };
-                        const notes =
+                        const notesArgOn =
                             rawOn[1] !== undefined && rawOn[1] !== null
                                 ? String(rawOn[1])
                                 : (vaultStateRef.current?.notes ?? '');
+                        const vaultNotesOn =
+                            vaultStateRef.current?.vaultNotes ??
+                            sanitizeVaultNotes([], notesArgOn);
+                        const notes = vaultNotesToLegacyString(vaultNotesOn);
                         const phraseOnChain = includeMnOnChain ? getSessionIotaMnemonic() : undefined;
                         if (includeMnOnChain && !phraseOnChain) {
                             return {
@@ -428,16 +519,31 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             };
                         }
                         const psecretsOn = vaultStateRef.current?.personalSecrets ?? [];
-                        const enc = await encryptVaultPayloadForChain(keys, pw, notes, phraseOnChain, psecretsOn);
+                        const enc = await encryptVaultPayloadForChain(
+                            keys,
+                            pw,
+                            notes,
+                            phraseOnChain,
+                            psecretsOn,
+                            vaultNotesOn
+                        );
                         await createVaultOnChain(enc, CFG.DEFAULT_TTL_DAYS);
                         if (vaultStateRef.current) {
                             vaultStateRef.current = {
                                 keys: vaultStateRef.current.keys,
                                 notes,
+                                vaultNotes: vaultNotesOn,
                                 personalSecrets: psecretsOn,
                             };
                         }
-                        return { ok: true, message: 'On-Chain-Vault erstellt.' };
+                        const chainMsg = pre.vaultOnChain
+                            ? 'On-Chain-Vault aktualisiert.'
+                            : 'On-Chain-Vault erstellt.';
+                        return {
+                            ok: true,
+                            message: chainMsg,
+                            preflight: pre,
+                        };
                     }
                     if (c === '/vault-change-password') {
                         const currentPw = String(a[0] ?? '').trim();
@@ -467,14 +573,17 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                         }
                         try {
                             const content = await loadVaultContent(currentPw, path);
-                            const notes = vaultStateRef.current?.notes ?? content.notes;
+                            const vaultNotes =
+                                vaultStateRef.current?.vaultNotes ?? content.vaultNotes;
+                            const notes = vaultNotesToLegacyString(vaultNotes);
                             const psecrets = vaultStateRef.current?.personalSecrets ?? content.personalSecrets ?? [];
                             const phrase = (content.iotaSdkSignerImport || '').trim() || undefined;
-                            await saveVaultLocal(keys, newPw, path, notes, phrase, psecrets);
+                            await saveVaultLocal(keys, newPw, path, notes, phrase, psecrets, vaultNotes);
                             if (vaultStateRef.current) {
                                 vaultStateRef.current = {
                                     keys: vaultStateRef.current.keys,
                                     notes,
+                                    vaultNotes,
                                     personalSecrets: psecrets,
                                 };
                             }
@@ -531,6 +640,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                             vaultStateRef.current = {
                                 keys: content.keys,
                                 notes: content.notes,
+                                vaultNotes: content.vaultNotes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
                             if (CFG.SIGNER === 'sdk' && (content.iotaSdkSignerImport || '').trim()) {
@@ -552,6 +662,7 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 ok: true,
                                 message: 'Vault von Chain geladen.' + hsRestoreChainNote,
                                 notes: content.notes,
+                                vaultNotes: content.vaultNotes,
                                 personalSecrets: content.personalSecrets ?? [],
                             };
                         } catch (e) {

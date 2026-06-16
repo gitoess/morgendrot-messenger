@@ -46,7 +46,7 @@
   "lock": {
     "button": "Sign out",
     "buttonTitle": "Lock vault — unlock again to continue",
-    "confirm": "Lock vault? Keys are removed from memory — unlock again with your password."
+    "confirm": "Lock vault?\n\n• Keys and wallet password leave server RAM\n• Local plaintext inbox cache is shredded\n• Vault file on disk remains — unlock with vault password\n• With SIGNER=sdk: re-enter seed/mnemonic if not stored in vault file"
   },
   "mesh": {
     "internet": "Internet",

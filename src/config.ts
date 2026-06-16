@@ -78,7 +78,7 @@ export function dedupeStreamAnchorIds(ids: string[]): string[] {
     return [...map.values()];
 }
 
-function readPackageIdFromFile(): string {
+export function readPackageIdFromFile(): string {
     try {
         const p = path.resolve(process.cwd(), PACKAGE_ID_FILE);
         if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8').trim();

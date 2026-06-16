@@ -5,6 +5,11 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import {
+    sanitizeVaultNoteAttachments,
+    type VaultNoteAttachment,
+    type VaultNoteAttachmentKind,
+} from './vault-note-attachments.js';
 
 const subtle = crypto.webcrypto.subtle;
 const CURVE = 'P-256';
@@ -35,6 +40,83 @@ const PS_MAX_TITLE = 256;
 const PS_MAX_USER = 256;
 const PS_MAX_SECRET = 16_384;
 const PS_MAX_NOTE = 50_000;
+
+export type { VaultNoteAttachment, VaultNoteAttachmentKind };
+export { sanitizeVaultNoteAttachments };
+
+/** Strukturierte Notizen (Tresor) — mehrere benannte Einträge, optional Ordner. */
+export type VaultNoteEntry = {
+    id: string;
+    title: string;
+    /** Leer = ohne Ordner */
+    folder?: string;
+    body: string;
+    attachments?: VaultNoteAttachment[];
+    updatedAt?: number;
+};
+
+const VN_MAX_ENTRIES = 200;
+const VN_MAX_TITLE = 120;
+const VN_MAX_FOLDER = 64;
+const VN_MAX_BODY = 50_000;
+const VN_ID_RE = /^[a-zA-Z0-9_-]{1,80}$/;
+
+/** Normalisiert Notizen aus Vault-JSON (Migration aus Legacy-Freitext `notes`). */
+export function sanitizeVaultNotes(raw: unknown, legacyNotes?: string): VaultNoteEntry[] {
+    const out: VaultNoteEntry[] = [];
+    if (Array.isArray(raw)) {
+        for (const item of raw.slice(0, VN_MAX_ENTRIES)) {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+            const o = item as Record<string, unknown>;
+            const rawId = typeof o.id === 'string' ? o.id.trim() : '';
+            const id = VN_ID_RE.test(rawId) ? rawId : crypto.randomUUID();
+            const title = String(o.title ?? '').trim().slice(0, VN_MAX_TITLE) || 'Ohne Titel';
+            const folder =
+                o.folder !== undefined && o.folder !== null
+                    ? String(o.folder).trim().slice(0, VN_MAX_FOLDER)
+                    : undefined;
+            const body = String(o.body ?? '').slice(0, VN_MAX_BODY);
+            const attachments = sanitizeVaultNoteAttachments(o.attachments);
+            const updatedAt =
+                typeof o.updatedAt === 'number' && Number.isFinite(o.updatedAt) ? Math.floor(o.updatedAt) : Date.now();
+            out.push({
+                id,
+                title,
+                ...(folder ? { folder } : {}),
+                body,
+                ...(attachments.length ? { attachments } : {}),
+                updatedAt,
+            });
+        }
+    }
+    if (out.length > 0) return out;
+    const legacy = (legacyNotes ?? '').trim();
+    if (!legacy) return [];
+    return [
+        {
+            id: 'legacy-general',
+            title: 'Allgemein',
+            body: legacy.slice(0, VN_MAX_BODY),
+            updatedAt: Date.now(),
+        },
+    ];
+}
+
+/** Legacy-Feld `notes` für ältere Reader (Zusammenfassung). */
+export function vaultNotesToLegacyString(vaultNotes: VaultNoteEntry[]): string {
+    if (!vaultNotes.length) return '';
+    return vaultNotes
+        .map((n) => {
+            const head = n.folder?.trim() ? `[${n.folder.trim()}] ${n.title}` : n.title;
+            const attHint =
+                n.attachments?.length && n.attachments.length > 0
+                    ? `\n[${n.attachments.length} Anhang/Anhänge]`
+                    : '';
+            return `# ${head}\n${n.body}${attHint}`;
+        })
+        .join('\n\n')
+        .slice(0, VAULT_FREETEXT_NOTES_MAX_CHARS);
+}
 
 /** Freitext-Notizen im Vault-JSON (nicht Passwortmanager). Begrenzt Blob-Größe / Chain-Kosten; große Journale extern lagern. */
 export const VAULT_FREETEXT_NOTES_MAX_CHARS = 500_000;
@@ -103,17 +185,20 @@ function keysToPayload(
     pubRaw: Uint8Array,
     notes?: string,
     iotaSdkSignerImport?: string,
-    personalSecrets?: PersonalSecretEntry[]
+    personalSecrets?: PersonalSecretEntry[],
+    vaultNotes?: VaultNoteEntry[]
 ): Promise<string> {
     return subtle.exportKey('pkcs8', privateKey).then((pkcs8) => {
         const a = Buffer.from(pkcs8).toString('base64');
         const b = Buffer.from(pubRaw).toString('base64');
         const imp = (iotaSdkSignerImport ?? '').trim();
-        const notesTrim = typeof notes === 'string' ? notes.slice(0, VAULT_FREETEXT_NOTES_MAX_CHARS) : '';
+        const sanitizedNotes = sanitizeVaultNotes(vaultNotes, notes);
+        const notesTrim = vaultNotesToLegacyString(sanitizedNotes);
         const base: Record<string, unknown> = {
             pkcs8: a,
             pubRaw: b,
             notes: notesTrim,
+            vaultNotes: sanitizedNotes,
             personalSecrets: personalSecrets ?? [],
         };
         if (imp) {
@@ -139,7 +224,9 @@ async function payloadToKeys(payload: string): Promise<VaultKeys> {
 
 export type VaultContent = {
     keys: VaultKeys;
+    /** Legacy-Zusammenfassung (abgeleitet aus vaultNotes). */
     notes: string;
+    vaultNotes: VaultNoteEntry[];
     /** Mnemonic (12+ Wörter) oder IOTA Bech32-Secret (`getSecretKey()` / generate-mnemonic), verschlüsselt im Vault. */
     iotaSdkSignerImport?: string;
     /** Strukturierte Geheimnisse (KeePass-ähnlich), verschlüsselt im selben Blob. */
@@ -151,6 +238,7 @@ function payloadToContent(payload: string): Promise<VaultContent> {
         pkcs8?: string;
         pubRaw?: string;
         notes?: string;
+        vaultNotes?: unknown;
         iotaMnemonic?: string;
         iotaSdkSignerImport?: string;
         personalSecrets?: unknown;
@@ -162,9 +250,12 @@ function payloadToContent(payload: string): Promise<VaultContent> {
         (typeof parsed.iotaMnemonic === 'string' && parsed.iotaMnemonic.trim() ? parsed.iotaMnemonic.trim() : '') ||
         undefined;
     const personalSecrets = sanitizePersonalSecrets(parsed.personalSecrets);
+    const vaultNotes = sanitizeVaultNotes(parsed.vaultNotes, parsed.notes);
+    const notes = vaultNotesToLegacyString(vaultNotes);
     return payloadToKeys(JSON.stringify({ pkcs8: parsed.pkcs8, pubRaw: parsed.pubRaw })).then((keys) => ({
         keys,
-        notes: typeof parsed.notes === 'string' ? parsed.notes : '',
+        notes,
+        vaultNotes,
         iotaSdkSignerImport: merged,
         personalSecrets,
     }));
@@ -208,14 +299,16 @@ export async function saveVaultLocal(
     filePath: string,
     notes?: string,
     iotaSdkSignerImport?: string,
-    personalSecrets?: PersonalSecretEntry[]
+    personalSecrets?: PersonalSecretEntry[],
+    vaultNotes?: VaultNoteEntry[]
 ): Promise<void> {
     const payload = await keysToPayload(
         keys.privateKey,
         keys.pubRaw,
         notes ?? '',
         iotaSdkSignerImport,
-        personalSecrets ?? []
+        personalSecrets ?? [],
+        vaultNotes
     );
     const salt = crypto.randomBytes(SALT_LEN);
     const key = await deriveKeyFromPassword(password, salt);
@@ -394,14 +487,16 @@ export async function encryptVaultPayloadForChain(
     password: string,
     notes?: string,
     iotaSdkSignerImport?: string,
-    personalSecrets?: PersonalSecretEntry[]
+    personalSecrets?: PersonalSecretEntry[],
+    vaultNotes?: VaultNoteEntry[]
 ): Promise<Uint8Array> {
     const payload = await keysToPayload(
         keys.privateKey,
         keys.pubRaw,
         notes ?? '',
         iotaSdkSignerImport,
-        personalSecrets ?? []
+        personalSecrets ?? [],
+        vaultNotes
     );
     const salt = crypto.randomBytes(SALT_LEN);
     const key = await deriveKeyFromPassword(password, salt);

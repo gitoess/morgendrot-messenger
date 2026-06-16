@@ -151,7 +151,10 @@ export function handleCommandRoute(
             if (data.mailboxKeysOnly === true) commandApiOptions.mailboxKeysOnly = true;
             const result = await commandHandler(cmd, args, commandApiOptions);
             if (cmd === '/vault-onchain' && result?.ok) ctx.setLastVaultOnchainAt(Date.now());
-            if (cmd === '/vault-save' && result?.ok) ctx.setLastVaultOnchainAt(undefined);
+            if (cmd === '/vault-save' && result?.ok) {
+                ctx.setLastVaultOnchainAt(undefined);
+                ctx.setLastVaultLocalSaveAt(Date.now());
+            }
             const out = result && typeof result === 'object' ? { ...result } : result;
             const outRec = out && typeof out === 'object' ? (out as Record<string, unknown>) : null;
             if (outRec && Array.isArray(outRec.createdObjectIds)) {
