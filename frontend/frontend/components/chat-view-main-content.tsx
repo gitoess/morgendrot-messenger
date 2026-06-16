@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
   asInboxFeedRead,
-  asSendTransportChoice,
 } from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
@@ -27,12 +26,12 @@ import {
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   ChatViewTransportCard,
-  type ChatViewTransportCardProps,
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
 import { ChatViewEncryptedPartnerPanel } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import { useChatViewEncryptedPartnerPanelProps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
+import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -948,15 +947,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     (forcedTransport === 'mesh' || forcedTransport === 'adhoc') &&
     (channelMode === 'private' || isGroup)
 
-  const transportCardProps = {
-    ...asSendTransportChoice(
-      encrypted,
-      setEncrypted,
-      forcedTransport,
-      setForcedTransport,
-      messagingPersistenceMode,
-      setMessagingPersistenceMode
-    ),
+  const transportCardProps = useChatViewTransportCardProps({
+    encrypted,
+    setEncrypted,
+    forcedTransport,
+    setForcedTransport,
+    messagingPersistenceMode,
+    setMessagingPersistenceMode,
     isPrivate,
     apiStatus,
     partner,
@@ -964,18 +961,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,
     channelMode,
-    myAddressLine: isPrivate ? myAddress : undefined,
-    contactDirectory: directory,
-    onContactsChanged: refreshContactDirectory,
-    onRefreshApiStatus: refreshApiStatus,
-    onMailboxStatus: (msg: string, kind: 'success' | 'error') => {
-      setStatus(kind)
-      setStatusMsg(msg)
-      if (kind === 'success') toast.success(msg)
-      else toast.error(msg)
-    },
-    encryptedPartner: encryptedPartnerPanelProps ?? undefined,
-  } satisfies ChatViewTransportCardProps
+    myAddress,
+    directory,
+    refreshContactDirectory,
+    refreshApiStatus,
+    setStatus,
+    setStatusMsg,
+    encryptedPartnerPanelProps,
+  })
 
   return (
     <div className="space-y-8">
