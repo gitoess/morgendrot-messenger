@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { BookUser, Plus, Search, Users } from 'lucide-react'
+import { useMemo } from 'react'
+import { BookUser, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -28,6 +28,7 @@ export type ChatViewContactSidebarProps = {
   onSelectGroup: (groupId: string) => void
   onOpenContactDetail: (address: string, entry?: ContactMeshEntryClient) => void
   onOpenPhonebook?: () => void
+  searchQuery?: string
   className?: string
 }
 
@@ -75,12 +76,9 @@ function SidebarRow(p: {
 }
 
 export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
-  const [search, setSearch] = useState('')
-  const [metaTick] = useState(0)
-
-  const favorites = useMemo(() => readContactFavorites(), [metaTick])
-  const lastContacted = useMemo(() => readContactLastContacted(), [metaTick])
-  const hidden = useMemo(() => readHiddenContacts(), [metaTick])
+  const favorites = useMemo(() => readContactFavorites(), [])
+  const lastContacted = useMemo(() => readContactLastContacted(), [])
+  const hidden = useMemo(() => readHiddenContacts(), [])
 
   const contacts = useMemo(
     () =>
@@ -96,7 +94,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
 
   const groups = useMemo(() => buildConversationSidebarGroups(readMessengerGroups()), [])
 
-  const q = search.trim().toLowerCase()
+  const q = (p.searchQuery ?? '').trim().toLowerCase()
   const filterItem = (item: ConversationSidebarItem) => {
     if (!q) return true
     if (item.kind === 'group') {
@@ -121,30 +119,9 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
       aria-label="Konversationen"
     >
       <div className="border-b border-border px-3 py-3">
-        <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Chats</h2>
-          {p.onOpenPhonebook ? (
-            <button
-              type="button"
-              onClick={p.onOpenPhonebook}
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="Telefonbuch öffnen"
-              aria-label="Telefonbuch öffnen"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          ) : null}
         </div>
-        <label className="relative block">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Suchen…"
-            className="w-full rounded-lg border border-border bg-background py-2 pl-8 pr-2 text-xs"
-          />
-        </label>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">

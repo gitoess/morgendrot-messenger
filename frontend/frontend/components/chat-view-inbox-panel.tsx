@@ -24,6 +24,9 @@ import type { Message } from '@/frontend/lib/types'
 import type { OutgoingHandshakeOffer, PendingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
+import { messageMatchesInboxSearch } from '@/frontend/lib/inbox-unified-search'
+import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
+import { ChatViewConversationMenu } from '@/frontend/components/chat-view-conversation-menu'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -99,6 +102,16 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     /** Sidebar ersetzt Partner-Chips (Telegram-Layout). */
     hidePartnerStrip?: boolean
     showInboxIotaFilter?: boolean
+    inboxSearchQuery?: string
+    conversationMenu?: {
+      title: string
+      subtitle?: string
+      canClearHistory: boolean
+      canExport: boolean
+      onViewProfile?: () => void
+      onExportHistory?: () => void
+      onClearHistory?: () => void
+    }
     showIotaExpertInboxActions?: boolean
     showInboxPackageExpertMenu?: boolean
     inboxPackageExpertMenu?: React.ReactNode
@@ -182,6 +195,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onSarqNakWire,
     showInboxIotaFilter = true,
     hidePartnerStrip = false,
+    inboxSearchQuery = '',
+    conversationMenu,
     showIotaExpertInboxActions = true,
     showInboxPackageExpertMenu = false,
     inboxPackageExpertMenu,
@@ -195,8 +210,26 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     ...toolbarProps
   } = props
 
+  const searchQ = inboxSearchQuery.trim()
+  const filteredInboxRows: ChatInboxRow[] = searchQ
+    ? inboxRows.filter((row) => {
+        if (row.kind === 'msg') {
+          return messageMatchesInboxSearch(row.msg, searchQ, myAddress, contactDirectory)
+        }
+        if (row.kind === 'meshInbound') {
+          const hay = `${row.hint ?? ''} ${row.error ?? ''} ${row.fromAddr ?? ''}`.toLowerCase()
+          return hay.includes(searchQ.toLowerCase())
+        }
+        if (row.kind === 'slide') {
+          return row.frames.some((f) => f.toLowerCase().includes(searchQ.toLowerCase()))
+        }
+        return true
+      })
+    : [...inboxRows]
+
   return (
     <div className="rounded-xl border border-border bg-card">
+      {conversationMenu ? <ChatViewConversationMenu {...conversationMenu} /> : null}
       <ChatViewInboxToolbar
         {...toolbarProps}
         messages={messages}
@@ -289,7 +322,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         inboxCacheAgeMinutes={inboxCacheAgeMinutes}
           basisUnreachable={basisUnreachable}
           messages={messages}
-          inboxRows={inboxRows}
+          inboxRows={filteredInboxRows}
           myAddress={myAddress}
           contactDirectory={contactDirectory}
           isMeshVerifiedForAddress={isMeshVerifiedForAddress}

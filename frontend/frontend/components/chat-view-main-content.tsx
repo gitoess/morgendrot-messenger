@@ -34,6 +34,10 @@ import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat
 import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
 import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
 import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
+import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
+import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import type { InboxSearchMessageHit } from '@/frontend/lib/inbox-unified-search'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
@@ -147,6 +151,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [contactDetailAddress, setContactDetailAddress] = useState<string | null>(null)
   const [contactDetailOpen, setContactDetailOpen] = useState(false)
   const [sidebarMetaTick, setSidebarMetaTick] = useState(0)
+  const [messengerSearchQuery, setMessengerSearchQuery] = useState('')
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
@@ -425,6 +430,29 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactDetailOpen(true)
   }, [])
 
+  const handleSelectMessageHit = useCallback(
+    (hit: InboxSearchMessageHit) => {
+      if (hit.counterpartyAddress) {
+        handleSelectSidebarContact(hit.counterpartyAddress)
+      }
+      setMessengerSearchQuery(messengerSearchQuery.trim() || hit.snippet.slice(0, 40))
+      requestAnimationFrame(() => {
+        document.getElementById(`inbox-msg-${hit.messageId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    },
+    [handleSelectSidebarContact, messengerSearchQuery]
+  )
+
+  const activeConversationTitle = useMemo(() => {
+    if (inboxConversationGroupId) {
+      return readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.name ?? 'Gruppe'
+    }
+    if (inboxPartnerKey) {
+      return resolveContactSidebarDisplayName(directory, inboxPartnerKey)
+    }
+    return null
+  }, [inboxConversationGroupId, inboxPartnerKey, directory])
+
   const inboxMessages = panelMessengerPorts.inboxFeedRead.messages
 
   const showAllConversationsActive =
@@ -480,13 +508,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {showConversationSidebar ? (
         <ChatViewContactSidebar
-          key={sidebarMetaTick}
+          key={`sidebar-mobile-${sidebarMetaTick}`}
           className="lg:hidden"
           directory={directory}
           partnerOptions={inboxPartnerOptions}
           activePartnerKey={inboxPartnerKey}
           activeGroupId={inboxConversationGroupId}
           showAllActive={showAllConversationsActive}
+          searchQuery={messengerSearchQuery}
           onSelectAll={handleSelectSidebarAll}
           onSelectContact={handleSelectSidebarContact}
           onSelectGroup={handleSelectSidebarGroup}
@@ -531,7 +560,28 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
           ) : null}
 
-          <ChatViewInboxPanel {...inboxPanelProps} hidePartnerStrip={showConversationSidebar} />
+          <ChatViewInboxPanel
+            {...inboxPanelProps}
+            hidePartnerStrip={showConversationSidebar}
+            inboxSearchQuery={messengerSearchQuery}
+            conversationMenu={
+              showConversationSidebar && inboxPartnerFiltersArmed && activeConversationTitle
+                ? {
+                    title: activeConversationTitle,
+                    subtitle: inboxConversationGroupId
+                      ? `${readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.memberAddresses.length ?? 0} Mitglieder`
+                      : inboxPartnerKey ?? undefined,
+                    canClearHistory: true,
+                    canExport: true,
+                    onViewProfile: inboxPartnerKey
+                      ? () => handleOpenContactDetail(inboxPartnerKey)
+                      : undefined,
+                    onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
+                    onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+                  }
+                : undefined
+            }
+          />
         </>
       )}
 
@@ -558,7 +608,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         ) : null}
 
         {showConversationSidebar ? (
-          <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
+          <div className="space-y-3">
+            <ChatViewMessengerSearch
+              directory={directory}
+              partnerOptions={inboxPartnerOptions}
+              messages={inboxMessages}
+              myAddress={myAddress}
+              query={messengerSearchQuery}
+              onQueryChange={setMessengerSearchQuery}
+              onSelectContact={handleSelectSidebarContact}
+              onSelectGroup={handleSelectSidebarGroup}
+              onSelectMessageHit={handleSelectMessageHit}
+            />
+            <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
             <ChatViewContactSidebar
               key={`sidebar-desktop-${sidebarMetaTick}`}
               className="hidden lg:flex"
@@ -567,6 +629,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               activePartnerKey={inboxPartnerKey}
               activeGroupId={inboxConversationGroupId}
               showAllActive={showAllConversationsActive}
+              searchQuery={messengerSearchQuery}
               onSelectAll={handleSelectSidebarAll}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
@@ -574,6 +637,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onOpenPhonebook={() => setPhonebookOpen(true)}
             />
             <div className="min-w-0 space-y-8">{conversationBody}</div>
+            </div>
           </div>
         ) : (
           <div className="space-y-8">{conversationBody}</div>

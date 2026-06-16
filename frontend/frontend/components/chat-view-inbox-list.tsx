@@ -323,6 +323,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
         ) : (
           <li
             key={row.msg.id}
+            id={`inbox-msg-${row.msg.id}`}
             className={cn(
               'rounded-xl border border-border bg-card/80 p-4 shadow-sm transition-colors hover:bg-accent/30',
               isPinnwandInboxMessage?.(row.msg) &&
