@@ -16,6 +16,8 @@ export type SendPartOk =
       path4Footnote?: string
       groupDelivery?: GroupSendDelivery
       pairwiseTargetCount?: number
+      /** 1:1 „Alle“-Broadcast: Anzahl IOTA-Empfänger. */
+      broadcastTargetCount?: number
     }
   | { ok: false }
 

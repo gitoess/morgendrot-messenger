@@ -7,7 +7,10 @@ import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports
 import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
-import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
+import {
+  parseComposerIotaRecipientAddresses,
+  resolveComposerIotaAddress,
+} from '@/frontend/lib/composer-recipient-fields'
 import {
   contactHandshakeBadgeKind,
   resolveContactHandshakeStatus,
@@ -69,6 +72,23 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       }),
     [composerSendPath.isGroup, deps.activeGroup, inboxFeedRead.myAddress]
   )
+
+  const iotaBroadcastTargets = useMemo(
+    () =>
+      parseComposerIotaRecipientAddresses(
+        composerDraft.recipient,
+        composerPartner.partner,
+        sendTransportRead.encrypted
+      ),
+    [composerDraft.recipient, composerPartner.partner, sendTransportRead.encrypted]
+  )
+
+  const isIotaBroadcastAll =
+    composerSendPath.isPrivate &&
+    composerSendPath.composerDelivery === 'chain' &&
+    sendTransportRead.forcedTransport === 'internet' &&
+    deps.activeConversation?.inboxPartnerFiltersArmed === false &&
+    iotaBroadcastTargets.length > 1
 
   const composerEncryptedRecipient = useMemo(
     () =>
@@ -170,6 +190,16 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     composerSendPath.composerDelivery === 'chain'
 
   const activeConversationBar: ChatViewActiveConversationBarProps | undefined = useMemo(() => {
+    if (isIotaBroadcastAll) {
+      return {
+        displayName: `Alle · ${iotaBroadcastTargets.length} Empfänger`,
+        addressLine: `${iotaBroadcastTargets.length} IOTA-Adressen — pro Empfänger eine Transaktion`,
+        handshakeBadge: 'none',
+        encrypted: sendTransportRead.encrypted,
+        forcedTransport: sendTransportRead.forcedTransport,
+        onEncryptedChange: sendTransportChoice.onEncryptedChange,
+      }
+    }
     if (!hasActiveDirectConversation || !deps.activeConversation) return undefined
     const handshakeStatus = resolveContactHandshakeStatus({
       address: activePartnerKey,
@@ -193,6 +223,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
     }
   }, [
+    isIotaBroadcastAll,
+    iotaBroadcastTargets.length,
     hasActiveDirectConversation,
     deps.activeConversation,
     activePartnerKey,
@@ -250,11 +282,12 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onPartnerChange: syncPartnerAndRecipient,
     myAddress: inboxFeedRead.myAddress,
     hideComposerIotaRecipient:
-      hasActiveDirectConversation ||
+      (hasActiveDirectConversation && !isIotaBroadcastAll) ||
       (composerSendPath.isPrivate &&
         sendTransportRead.encrypted &&
         sendTransportRead.forcedTransport === 'internet' &&
-        composerSendPath.composerDelivery === 'chain'),
+        composerSendPath.composerDelivery === 'chain' &&
+        !isIotaBroadcastAll),
     activeConversationBar,
     onStatusFeedback: sendActions.onStatusFeedback,
     composerDelivery: composerSendPath.composerDelivery,

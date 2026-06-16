@@ -19,9 +19,10 @@ import {
 import { contactReachableOnSendPath } from '@/frontend/lib/contact-send-path'
 import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import {
+  parseComposerIotaRecipientAddresses,
   resolveComposerIotaAddress,
-  resolveComposerKlartextIotaAddress,
   resolveComposerIotaFieldValue,
+  resolveComposerKlartextIotaAddress,
   resolveComposerTelegramChatIds,
 } from '@/frontend/lib/composer-recipient-fields'
 import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-notify-pref'
@@ -452,6 +453,11 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     () => resolveComposerIotaAddress(recipient, partner ?? '', encrypted),
     [recipient, partner, encrypted]
   )
+  const composerIotaTargets = useMemo(
+    () => parseComposerIotaRecipientAddresses(recipient, partner ?? '', encrypted),
+    [recipient, partner, encrypted]
+  )
+  const composerIotaBroadcast = composerIotaTargets.length > 1
 
   const composerIotaField = useMemo(
     () => resolveComposerIotaFieldValue(recipient, partner ?? '', encrypted),
@@ -641,7 +647,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
             ) : isPinnwandChannel && pinnwandBroadcastAddress ? null : showIotaField ? (
               <>
                 <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                  Empfänger · Wallet (0x)
+                  Empfänger · Wallet (0x{composerIotaBroadcast ? ', mehrere mit Komma' : ''})
                 </label>
                 <input
                   type="text"
@@ -652,7 +658,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     onPartnerChange?.(v)
                     onRecipientChange(v)
                   }}
-                  placeholder="0x…"
+                  placeholder={composerIotaBroadcast ? '0x…, 0x…' : '0x…'}
                   className="w-full rounded-lg border border-border bg-input px-4 py-2.5 font-mono text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
                 <datalist id="chat-recipient-addresses">
@@ -660,7 +666,13 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                     <option key={addr} value={addr} />
                   ))}
                 </datalist>
-                {encrypted && forcedTransport === 'internet' ? (
+                {composerIotaBroadcast ? (
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    {composerIotaTargets.length} Empfänger — Verschlüsselt/Klartext oben wählen; Senden erzeugt pro
+                    Empfänger eine Transaktion (PTB, sonst Event).
+                  </p>
+                ) : null}
+                {encrypted && forcedTransport === 'internet' && !composerIotaBroadcast ? (
                   <ChatViewEncryptedRecipientHandshakeBar
                     status={encryptedRecipientHandshakeStatus}
                     sending={sending}

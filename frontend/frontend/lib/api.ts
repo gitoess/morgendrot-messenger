@@ -18,7 +18,7 @@ export type {
   ApiStatusFetchOk,
   ApiStatusFetchResult,
 } from '@/frontend/lib/api/status'
-export { fetchStatus, unlockBackend } from '@/frontend/lib/api/status'
+export { fetchStatus, readBootstrapCachedApiStatus, unlockBackend } from '@/frontend/lib/api/status'
 
 export {
   sendMessage,

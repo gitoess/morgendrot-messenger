@@ -517,7 +517,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     if (activeSendPath === 'telegram') {
       toast.success(`${contacts.length} Telegram-Empfänger eingetragen.`)
     } else if (activeSendPath === 'internet') {
-      toast.success(`${contacts.length} IOTA-Adressen eingetragen — Senden erzeugt pro Empfänger eine PTB.`)
+      toast.success(
+        `${contacts.length} IOTA-Adressen eingetragen — Verschlüsselt/Klartext im Composer wählen, Senden pro Empfänger.`
+      )
     } else if (activeSendPath === 'mesh') {
       toast.success(`${contacts.length} Funk-Kontakte — Broadcast ohne Ziel-Node.`)
     } else {

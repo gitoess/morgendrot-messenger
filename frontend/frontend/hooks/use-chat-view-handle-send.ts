@@ -45,6 +45,7 @@ import { readCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache
 import { resolveEncryptedRecipientHandshakeStatusSync } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { prependPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 import {
+  parseComposerIotaRecipientAddresses,
   resolveComposerKlartextIotaAddress,
   resolveEncryptedMailboxRecipient,
 } from '@/frontend/lib/composer-recipient-fields'
@@ -677,7 +678,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
 
     if (!encrypted && !plainMailboxRecipient && !groupMailboxInternetChain) {
-      if (!meshKlartextOkWithoutZeroXRecipient) {
+      const broadcastTargets = parseComposerIotaRecipientAddresses(recipient, partner, false)
+      if (broadcastTargets.length === 0 && !meshKlartextOkWithoutZeroXRecipient) {
         applyValidationError(
           {
             ok: false,
@@ -691,10 +693,30 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return
       }
     }
+    const iotaSendTargets = parseComposerIotaRecipientAddresses(recipient, partner, encrypted)
+    if (
+      encrypted &&
+      forcedTransport === 'internet' &&
+      !groupMailboxInternetChain &&
+      iotaSendTargets.length === 0
+    ) {
+      applyValidationError(
+        {
+          ok: false,
+          message:
+            'Verschlüsselt: mindestens eine gültige Empfänger-0x (64 Hex) — bei „Alle“ im Telefonbuch eintragen.',
+          idleMs: 9000,
+        },
+        setStatus,
+        setStatusMsg
+      )
+      return
+    }
     const recipientTrimLower = plainMailboxRecipient.trim().toLowerCase()
     if (
       !encrypted &&
       forcedTransport === 'internet' &&
+      iotaSendTargets.length === 0 &&
       !ADDR_64_LOWER.test(recipientTrimLower) &&
       !groupMailboxInternetChain
     ) {
@@ -883,6 +905,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         myAddress,
         encryptedMailboxRecipient,
         plainMailboxRecipient,
+        composerRecipient: recipient,
+        composerPartner: partner,
         apiStatus,
         deviceTimeTrustWarn,
         allowOfflineMailboxQueue,
@@ -931,6 +955,8 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       let successMsg: string
       if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
+      } else if (lastOk?.broadcastTargetCount != null && lastOk.broadcastTargetCount > 1) {
+        successMsg = `An ${lastOk.broadcastTargetCount} Empfänger gesendet.${successTail}`
       } else {
         successMsg = singleWireSuccessMsg(lastOk?.groupDelivery, lastOk?.pairwiseTargetCount) + successTail
       }

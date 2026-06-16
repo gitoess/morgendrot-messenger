@@ -30,6 +30,7 @@ import {
   sendPlaintextMailboxHybrid,
 } from '@/frontend/lib/mailbox-send-hybrid'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import { parseComposerIotaRecipientAddresses } from '@/frontend/lib/composer-recipient-fields'
 import { prependPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 
@@ -60,6 +61,8 @@ export type ChatViewMailboxSendContext = {
   myAddress: string
   encryptedMailboxRecipient: string
   plainMailboxRecipient: string
+  composerRecipient: string
+  composerPartner: string
   apiStatus?: { locked?: boolean } | null
   deviceTimeTrustWarn?: boolean
   allowOfflineMailboxQueue: boolean
@@ -229,7 +232,32 @@ export function createChatViewMailboxSendHandlers(ctx: ChatViewMailboxSendContex
       }
       return ctx.failSend(GROUP_TEAM_MAILBOX_REQUIRED_MSG)
     }
-    const sendTo = enc && ctx.isPrivate ? ctx.encryptedMailboxRecipient : ctx.plainMailboxRecipient
+    const targets = parseComposerIotaRecipientAddresses(ctx.composerRecipient, ctx.composerPartner, enc)
+    if (targets.length > 1) {
+      let lastCapture: MailboxSendCapture | undefined
+      const failures: string[] = []
+      for (const target of targets) {
+        const part = await sendMailboxSingle(target, enc, textSnap, { suppressStatus: true })
+        if (!part.ok) {
+          failures.push(`${target.slice(0, 10)}…: ${'error' in part ? part.error : 'Senden fehlgeschlagen'}`)
+          continue
+        }
+        if (part.mailboxCapture) lastCapture = part.mailboxCapture
+      }
+      if (!lastCapture) {
+        return ctx.failSend(
+          failures[0] ?? 'Broadcast an alle Empfänger fehlgeschlagen.'
+        )
+      }
+      if (failures.length > 0) {
+        return ctx.failSend(
+          `${targets.length - failures.length}/${targets.length} Empfänger OK. Fehler: ${failures.slice(0, 2).join(' · ')}`
+        )
+      }
+      return { ok: true, mailboxCapture: lastCapture, broadcastTargetCount: targets.length }
+    }
+    const sendTo =
+      targets[0] ?? (enc && ctx.isPrivate ? ctx.encryptedMailboxRecipient : ctx.plainMailboxRecipient)
     return sendMailboxSingle(sendTo, enc, textSnap)
   }
 

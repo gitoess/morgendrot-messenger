@@ -158,6 +158,33 @@ describe('useChatViewSendPanelProps', () => {
     expect(result.current.sendPanelProps.groupMemberCount).toBe(1)
   })
 
+  it('zeigt Verschlüsselt/Klartext-Leiste bei IOTA „Alle“-Broadcast', () => {
+    const a = '0x' + 'a'.repeat(64)
+    const b = '0x' + 'b'.repeat(64)
+    const { result } = renderHook(() =>
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({
+            encrypted: true,
+            forcedTransport: 'internet',
+            composerDelivery: 'chain',
+            isPrivate: true,
+            partner: a,
+            recipient: `${a}, ${b}`,
+          }),
+          activeConversation: {
+            inboxPartnerKey: null,
+            inboxPartnerFiltersArmed: false,
+            directory: {},
+          },
+        })
+      )
+    )
+    expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(false)
+    expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Alle · 2 Empfänger')
+    expect(result.current.sendPanelProps.activeConversationBar?.onEncryptedChange).toBeDefined()
+  })
+
   it('spiegelt attachmentBar aus messengerPorts', () => {
     const clearCompactAttachment = vi.fn()
     const { result } = renderHook(() =>

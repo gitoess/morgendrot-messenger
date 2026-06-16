@@ -91,6 +91,17 @@ export async function sendPlaintextMailboxHybrid(
     })
     if (dr.ok) return { ok: true, txDigest: dr.digest }
     directErr = dr.error
+    if (resolvePersistenceMode(opts) === 'mailbox') {
+      const ev = await trySubmitPlaintextMailboxViaDirectIota({
+        recipient: recipient.trim(),
+        payloadUtf8: wireForApi,
+        nonce: messageNonceU64,
+        mailboxObjectId: opts?.mailboxObjectId,
+        messagingPersistenceMode: 'event',
+      })
+      if (ev.ok) return { ok: true, txDigest: ev.digest }
+      directErr = mergeDirectThenRelayErrors(dr.error, ev.error)
+    }
   }
   if (!shouldUseMailboxApiRelayFallback()) {
     return {
@@ -161,25 +172,29 @@ export async function sendEncryptedMailboxHybrid(
   const mode = resolvePersistenceMode(opts)
   let directErr: string | undefined
   if (rTrim) {
-    const prep = await prepareEncryptedDirectSend(rTrim, mode)
-    if (!prep.ok) {
-      directErr = prep.error
-    } else {
+    const attemptDirect = async (persistenceMode: MessagingPersistenceMode) => {
+      const prep = await prepareEncryptedDirectSend(rTrim, persistenceMode)
+      if (!prep.ok) return { ok: false as const, error: prep.error }
       const mat = getDirectChatEcdhMaterialForRecipient(rTrim)
       if (!mat) {
-        directErr = 'ECDH-Material für Empfänger fehlt nach Vorbereitung.'
-      } else {
-        const er = await trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
-          recipient: rTrim,
-          plaintextUtf8: wireForApi,
-          peerPubRaw: mat.peerPubRaw,
-          ecdhPrivateKey: mat.ecdhPrivateKey,
-          mailboxObjectId: opts?.mailboxObjectId,
-          messagingPersistenceMode: mode,
-        })
-        if (er.ok) return { ok: true, txDigest: er.digest }
-        directErr = er.error
+        return { ok: false as const, error: 'ECDH-Material für Empfänger fehlt nach Vorbereitung.' }
       }
+      return trySubmitEncryptedMailboxViaDirectIotaFromPlaintext({
+        recipient: rTrim,
+        plaintextUtf8: wireForApi,
+        peerPubRaw: mat.peerPubRaw,
+        ecdhPrivateKey: mat.ecdhPrivateKey,
+        mailboxObjectId: opts?.mailboxObjectId,
+        messagingPersistenceMode: persistenceMode,
+      })
+    }
+    const er = await attemptDirect(mode)
+    if (er.ok) return { ok: true, txDigest: er.digest }
+    directErr = er.error
+    if (mode === 'mailbox') {
+      const ev = await attemptDirect('event')
+      if (ev.ok) return { ok: true, txDigest: ev.digest }
+      directErr = mergeDirectThenRelayErrors(er.error, ev.error)
     }
   }
   if (!shouldUseMailboxApiRelayFallback()) {

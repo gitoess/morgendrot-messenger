@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
-import { fetchStatus, type ApiStatus, type ApiStatusFetchOk } from '@/frontend/lib/api'
+import { fetchStatus, readBootstrapCachedApiStatus, type ApiStatus, type ApiStatusFetchOk } from '@/frontend/lib/api'
 import { shouldShowPackageIdMismatchBanner } from '@/frontend/lib/package-id-compare'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
 import {
@@ -16,7 +16,6 @@ import {
   inferDeviceTimeTrust,
   shouldWarnUntrustedDeviceTime,
 } from '@/frontend/lib/device-time-trust'
-import { apiStatusPollSignature } from '@/frontend/lib/api-status-signature'
 import {
   syncDirectMailboxFlagsFromApiStatus,
 } from '@/frontend/lib/direct-iota-chain-context'
@@ -48,6 +47,9 @@ export type UseChatViewApiStatusPollParams = {
   onReconnectNow?: () => void | Promise<void>
 }
 
+/** GPS erst nach erstem UI-Paint — nicht parallel zum kritischen Start-Pfad. */
+const GPS_PROBE_DELAY_MS = 3000
+
 export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const {
     runMirrorDrain,
@@ -58,38 +60,67 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     probeGeolocationForDeviceTime = true,
     onReconnectNow,
   } = p
-  const [apiStatus, setApiStatus] = useState<ApiStatus | null>(null)
+  const [apiStatus, setApiStatus] = useState<ApiStatus | null>(() => {
+    if (typeof window === 'undefined') return null
+    const boot = readBootstrapCachedApiStatus()
+    return boot ?? null
+  })
   /** Letzter erfolgreicher Status-Poll (HTTP `Date`, § H.6c). */
-  const [pollClockHint, setPollClockHint] = useState<StatusPollClockHint | null>(null)
+  const [pollClockHint, setPollClockHint] = useState<StatusPollClockHint | null>(() => {
+    if (typeof window === 'undefined') return null
+    return readBootstrapCachedApiStatus()?.pollClockHint ?? null
+  })
   /** `GeolocationPosition.timestamp` plausibel (Satelliten-/Hybridzeit), § H.6c. */
   const [hasTrustedGpsUtcFix, setHasTrustedGpsUtcFix] = useState(false)
   /** GET /api/status fehlgeschlagen (Netzwerk, Backend aus). */
   const [basisUnreachable, setBasisUnreachable] = useState(false)
+  /** Erster Live-Poll abgeschlossen — Geräte-Uhr-Warnung erst danach (kein Cold-Start-Flash). */
+  const [statusPollAttempted, setStatusPollAttempted] = useState(false)
   /** Einmal Toast, wenn die Basis nach Ausfall wieder erreichbar ist. */
   const hadBasisUnreachable = useRef(false)
   const gpsProbeStartedRef = useRef(false)
+  const bootstrapAppliedRef = useRef(false)
+
+  useEffect(() => {
+    if (bootstrapAppliedRef.current) return
+    bootstrapAppliedRef.current = true
+    const boot = readBootstrapCachedApiStatus()
+    if (!boot) return
+    setPollClockHint(boot.pollClockHint)
+    setApiStatus(boot)
+    syncDirectMailboxFlagsFromApiStatus(boot)
+    applyDirectChainSnapshotFromStatusOrNetworkProfile({
+      packageId: boot.packageId,
+      mailboxId: boot.mailboxId,
+      myAddress: boot.myAddress,
+      myAddressFull: boot.myAddressFull,
+    })
+  }, [])
 
   useEffect(() => {
     if (!probeGeolocationForDeviceTime) return
     if (typeof navigator === 'undefined' || !navigator.geolocation) return
     if (gpsProbeStartedRef.current) return
     gpsProbeStartedRef.current = true
-    void (async () => {
-      try {
-        const perm = await navigator.permissions?.query({ name: 'geolocation' as PermissionName })
-        if (perm?.state === 'denied') return
-      } catch {
-        /* Permissions API optional */
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const ts = pos.timestamp
-          if (Number.isFinite(ts) && ts > 1_600_000_000_000) setHasTrustedGpsUtcFix(true)
-        },
-        () => {},
-        { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 }
-      )
-    })()
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const perm = await navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+          if (perm?.state === 'denied') return
+        } catch {
+          /* Permissions API optional */
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const ts = pos.timestamp
+            if (Number.isFinite(ts) && ts > 1_600_000_000_000) setHasTrustedGpsUtcFix(true)
+          },
+          () => {},
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 600_000 }
+        )
+      })()
+    }, GPS_PROBE_DELAY_MS)
+    return () => window.clearTimeout(timer)
   }, [probeGeolocationForDeviceTime])
 
   useEffect(() => {
@@ -136,6 +167,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
 
   const refreshApiStatus = useCallback(async () => {
     const s = await fetchStatus()
+    setStatusPollAttempted(true)
     if (!('pollClockHint' in s)) {
       setBasisUnreachable(true)
       setApiStatus(null)
@@ -152,6 +184,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
       const s = await fetchStatus()
       if (!alive) return
+      setStatusPollAttempted(true)
       if (!('pollClockHint' in s)) {
         setBasisUnreachable(true)
         setApiStatus(null)
@@ -161,8 +194,8 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       setBasisUnreachable(s.backendOnline === false)
       applyStatusOk(s)
       if (s.backendOnline !== false) {
-        await runMirrorDrain()
-        await runOfflineMailboxDrain?.()
+        void runMirrorDrain()
+        void runOfflineMailboxDrain?.()
       }
     }
     void tick()
@@ -188,13 +221,15 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   /** Jeder Render: `Date.now()` gegen `okAtMs` — kein `useMemo`, sonst veraltet die Warnung nach 15 min ohne Re-Render. */
   const navOnline = typeof navigator !== 'undefined' && navigator.onLine
   const hadServerTime = hadRecentPlausibleServerTimeFromPoll(pollClockHint, Date.now())
-  const deviceTimeTrustWarn = shouldWarnUntrustedDeviceTime(
-    inferDeviceTimeTrust({
-      navigatorOnline: navOnline,
-      hadRecentPlausibleServerOrChainTime: hadServerTime,
-      hasTrustedGpsUtcFix,
-    })
-  )
+  const deviceTimeTrustWarn =
+    statusPollAttempted &&
+    shouldWarnUntrustedDeviceTime(
+      inferDeviceTimeTrust({
+        navigatorOnline: navOnline,
+        hadRecentPlausibleServerOrChainTime: hadServerTime,
+        hasTrustedGpsUtcFix,
+      })
+    )
 
   const packageIdMismatch = useMemo(
     () => shouldShowPackageIdMismatchBanner(localPackageId, apiStatus?.packageId, basisUnreachable),

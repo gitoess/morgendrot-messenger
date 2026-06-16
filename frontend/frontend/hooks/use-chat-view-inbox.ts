@@ -171,15 +171,18 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (inboxLoadInFlightRef.current && (mode === 'poll' || silent)) return
       const loadEpoch = inboxLoadEpochRef.current
       inboxLoadInFlightRef.current = true
-      if (!silent) {
-        if (mode === 'append') setLoadingMore(true)
-        else setLoading(true)
-        setLoadError(null)
-      }
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
       const cacheKey = inboxCacheKey(pkg, readActiveSendMailboxObjectId())
+      if (!silent) {
+        if (mode === 'append') setLoadingMore(true)
+        else {
+          const hasWarmCache = mode === 'reset' && readInboxCache(cacheKey) != null
+          if (!hasWarmCache) setLoading(true)
+        }
+        setLoadError(null)
+      }
       /** Shared-Posteingang: immer Backend-MAILBOX_ID — kein Manifest-Override (sonst leer/falsch). */
       const pageSize =
         mode === 'reset' ? RESET_PAGE_SIZE : mode === 'poll' ? POLL_PAGE_SIZE : PAGE_SIZE
@@ -191,10 +194,28 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
       }
+      if (!silent && mode === 'reset') {
+        const cached = readInboxCache(cacheKey)
+        if (cached) {
+          setInboxFromCache(true)
+          setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
+          setInboxLiveSource(cached.liveSource ?? null)
+          setMessages((prev) => {
+            const next = mergeAllMessages([
+              ...cached.messages,
+              ...pickInboxOverlayRowsForMerge(prev, cached.messages),
+            ])
+            if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+            return next
+          })
+        }
+      }
       try {
         if (mode === 'reset') {
-          await whenDirectIotaTabSessionPersistIdle()
-          await tryAutoRestoreDirectIotaSessionSignerAsync()
+          void (async () => {
+            await whenDirectIotaTabSessionPersistIdle()
+            await tryAutoRestoreDirectIotaSessionSignerAsync()
+          })()
         }
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
           if (loadEpoch !== inboxLoadEpochRef.current) return

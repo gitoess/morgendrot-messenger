@@ -54,6 +54,13 @@ function cacheStatusSnapshot(status: ApiStatus): void {
   }
 }
 
+/** Sofort-Hydration beim Chat-Start (Pinnwand, Rolle, Package) — ohne Netzwerk. */
+export function readBootstrapCachedApiStatus(): (ApiStatus & { pollClockHint: StatusPollClockHint }) | null {
+  const cached = readCachedStatusSnapshot()
+  if (!cached) return null
+  return { ...cached.status, pollClockHint: cached.pollClockHint }
+}
+
 function readCachedStatusSnapshot():
   | { status: ApiStatus; pollClockHint: StatusPollClockHint }
   | null {

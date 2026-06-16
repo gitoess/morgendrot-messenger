@@ -5,12 +5,49 @@ import {
   parseTelegramRecipientChatIds,
 } from '@/frontend/lib/telegram-notify-pref'
 
+const IOTA_ADDR = /^0x[a-f0-9]{64}$/i
+
+function collectIotaAddressesFromField(raw: string, seen: Set<string>, out: string[]): void {
+  for (const part of raw.split(/[,;\n]+/)) {
+    const a = part.trim().toLowerCase()
+    if (!IOTA_ADDR.test(a) || seen.has(a)) continue
+    seen.add(a)
+    out.push(a)
+  }
+}
+
+/** Alle 0x-Empfänger aus Composer (Komma-Liste bei „Alle“ / Broadcast). */
+export function parseComposerIotaRecipientAddresses(
+  recipient: string,
+  partner: string,
+  encrypted: boolean
+): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  collectIotaAddressesFromField(recipient, seen, out)
+  if (partner.trim() && (encrypted || out.length === 0)) {
+    collectIotaAddressesFromField(partner, seen, out)
+  }
+  return out
+}
+
+export function isComposerIotaBroadcast(
+  recipient: string,
+  partner: string,
+  encrypted: boolean
+): boolean {
+  return parseComposerIotaRecipientAddresses(recipient, partner, encrypted).length > 1
+}
+
 /** Rohes IOTA-Feld im Composer (auch unfertige Eingabe). */
 export function resolveComposerIotaFieldValue(
   recipient: string,
   partner: string,
   encrypted: boolean
 ): string {
+  if (isComposerIotaBroadcast(recipient, partner, encrypted)) {
+    return parseComposerIotaRecipientAddresses(recipient, partner, encrypted).join(', ')
+  }
   const r = recipient.trim().toLowerCase()
   if (r.startsWith('tg:')) return encrypted ? partner.trim().toLowerCase() : ''
   if (r.startsWith('0x')) return r
@@ -23,6 +60,8 @@ export function resolveComposerIotaAddress(
   partner: string,
   encrypted: boolean
 ): string {
+  const addrs = parseComposerIotaRecipientAddresses(recipient, partner, encrypted)
+  if (addrs.length > 0) return addrs[0]!
   const r = recipient.trim().toLowerCase()
   if (isIotaWalletAddress(r)) return r
   if (encrypted) {
@@ -43,6 +82,8 @@ export function resolveComposerKlartextIotaAddress(
   partner: string,
   isPrivate: boolean
 ): string {
+  const addrs = parseComposerIotaRecipientAddresses(recipient, partner, false)
+  if (addrs.length > 0) return addrs[0]!
   const direct = resolveComposerIotaAddress(recipient, partner, false)
   if (direct) return direct
   if (isPrivate) return resolveComposerIotaAddress(recipient, partner, true)
