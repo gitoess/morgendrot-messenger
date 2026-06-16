@@ -286,7 +286,6 @@ export function VaultNotesPanel({ unlocked, notes, onNotesChange }: VaultNotesPa
                         </button>
                       </div>
                       {att.kind === 'image' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={vaultNoteAttachmentDataUrl(att)}
                           alt={att.name}
