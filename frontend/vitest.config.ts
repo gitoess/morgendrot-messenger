@@ -22,7 +22,8 @@ const sharedPool = {
   teardownTimeout: isCi ? 60_000 : 30_000,
   hookTimeout: isCi ? 60_000 : 30_000,
   testTimeout: isCi ? 30_000 : 10_000,
-  globalTeardown: ['./tests/vitest-global-teardown.ts'],
+  /** CI jsdom: leichtgewichtig (kein @iota/sdk-Import beim Prozess-Exit). */
+  globalTeardown: isCi ? ['./tests/vitest-global-teardown-jsdom.ts'] : undefined,
   reporters: isCi ? (['default', 'github-actions'] as ['default', 'github-actions']) : (['default'] as ['default']),
 }
 
@@ -54,6 +55,7 @@ export default defineConfig({
           name: 'frontend-node',
           environment: 'node',
           include: nodeUnitTests,
+          setupFiles: ['./tests/vitest-node-teardown.ts'],
         },
       },
     ],

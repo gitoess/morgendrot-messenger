@@ -53,10 +53,25 @@ jobs:
           CI: 'true'
           NODE_OPTIONS: '--max-old-space-size=4096'
         run: |
-          npx vitest run --project frontend-jsdom || {
-            echo "::warning::jsdom Vitest failed — one retry with verbose (Linux teardown flake)"
-            npx vitest run --project frontend-jsdom --reporter=verbose
-          }
+          set +e
+          npx vitest run --project frontend-jsdom \
+            --reporter=default --reporter=github-actions \
+            --reporter=json --outputFile=vitest-jsdom-report.json
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            if node scripts/vitest-jsdom-teardown-flake-guard.mjs vitest-jsdom-report.json; then
+              exit 0
+            fi
+            echo "::warning::jsdom Vitest failed (exit $rc) — one retry with JSON report (Linux teardown flake)"
+            npx vitest run --project frontend-jsdom \
+              --reporter=default --reporter=github-actions \
+              --reporter=json --outputFile=vitest-jsdom-retry.json
+            rc=$?
+            if [ "$rc" -ne 0 ]; then
+              node scripts/vitest-jsdom-teardown-flake-guard.mjs vitest-jsdom-retry.json && exit 0
+            fi
+          fi
+          exit $rc
 
       - name: Frontend Vitest (node)
         env:

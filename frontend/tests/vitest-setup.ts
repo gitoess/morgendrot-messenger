@@ -32,5 +32,7 @@ beforeEach(() => {
 afterEach(() => {
   if (!isDomTestEnv()) return
   cleanup()
+  vi.useRealTimers()
+  vi.clearAllTimers()
   vi.unstubAllGlobals()
 })
