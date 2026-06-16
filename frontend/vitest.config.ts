@@ -19,7 +19,6 @@ export default defineConfig({
     hookTimeout: isCi ? 60_000 : 30_000,
     testTimeout: isCi ? 30_000 : 10_000,
     setupFiles: ['./tests/vitest-setup.ts', './tests/i18n-vitest-setup.ts'],
-    globalTeardown: isCi ? ['./tests/vitest-global-teardown.ts'] : undefined,
   },
   resolve: {
     alias: {

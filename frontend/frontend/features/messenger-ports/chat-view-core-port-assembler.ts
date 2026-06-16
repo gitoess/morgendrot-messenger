@@ -39,7 +39,7 @@ import {
   type VoiceRecordSendPanelPort,
 } from './voice-record-send-panel-port'
 import type { ChangeEvent, RefObject } from 'react'
-import type { MorgPkgExportPartnerOption } from '@/frontend/components/chat-view-inbox-toolbar'
+import type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'

@@ -9,6 +9,7 @@ import { BookUser, ChevronDown, FileDown, Inbox, KeyRound, Lock, Package, Refres
 import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { exportDataDeniedReason } from '@/frontend/lib/messenger-capability-gates'
+import type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
 import {
   LazyChatViewProtokollAnchorButton,
   LazyChatViewTangleInventoryButton,
@@ -28,10 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-export type MorgPkgExportPartnerOption = {
-  address: string
-  label: string
-}
+export type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
 
 export type ChatViewInboxToolbarProps = InboxFeedReadPort & {
   messageCount: number

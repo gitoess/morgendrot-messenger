@@ -1,5 +1,5 @@
 import type { ChangeEvent, RefObject } from 'react'
-import type { MorgPkgExportPartnerOption } from '@/frontend/components/chat-view-inbox-toolbar'
+import type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
