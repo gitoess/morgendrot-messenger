@@ -292,7 +292,7 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.6f** | **Android** — Foreground Service + **ehrliche** Nutzererwartung; **kein** Modul-Zoo; PWA bleibt ohne FG — **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`** |
 | **§ H.7** | Standalone Smartphone + **§ H.7b** Backpack-Feldarchitektur — **Produkt-Matrix** (Gesamtüberblick) |
 | **§ H.8** | Dienst vs. privat (Doku, zwei Installationen) |
-| **§ H.9** | ATAK/CoT Backlog |
+| **§ H.9** | ATAK/CoT Backlog — **§ 6** Schichtmodell (**§ H.35**) |
 | **§ H.10** | Sicherheit/Schlankheit + **§ H.10b** Boss/Arbeiter-Seed-Custody |
 | **§ H.11** | Offline-Karten Backlog |
 | **§ H.12** | Sync / Source of Truth (mit B verzahnen) |
@@ -311,6 +311,8 @@ Die Nummern **1–8** bezeichnen weiterhin die **klassische** technische Liste (
 | **§ H.28** | **Discord- & Matrix-API-Bot-Anbindung** — Runtime-Integration (Alarme, optionale Kontakt-Hinweise); **sehr spätes Backlog** (nach stabiler Phase B und nach H.24/H.25/H.15-Feldabschluss) — **`docs/DISCORD-MATRIX-INTEGRATION-ZIELBILD.md`** |
 | **§ H.31** | **Multi-Pinnwand** — mehrere Bretter pro Einsatz (Boss schreibt, alle lesen); **Backlog ganz hinten** — **`docs/BROADCAST-PINNWAND.md`** |
 | **§ H.32** | **Posteingang „Antworten“** + **„Einsatz beenden“** (nur **Cache/lokale IDs**, keine Chain) — **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`**, **§ H.7** |
+| **§ H.34** | **Messenger P10-Light** — Composer-Bindings-Hook, README (optional, nach P9) |
+| **§ H.35** | **ATAK Schichtmodell** — **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md` § 6** (Ideenspec, ggf. nicht umsetzen) |
 | **§ H.22 M4e** | **Kontakt: 4 Mailbox-Slots + Send-Zielwahl** — **✓ 2026-05-20** — **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** |
 
 *Übergeordnete Leitplanke:* **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** (Phasen **A → B → C**).
@@ -1298,7 +1300,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | Aspekt | Hinweis |
 |--------|---------|
 | **Priorität** | **Nach** Phase-A-Robustheit und **Phase B** (LoRa/IOTA-MVP), sofern kein dringender Kundenauftrag — kein Parallel-Sprint zu **§ H.0–H.2**. |
-| **Spec** | **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md`** (Zielbild, Sicherheit, Mapper/Gateway — **ohne** Implementationspflicht). |
+| **Spec** | **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md`** (Zielbild § 1–5; **§ 6** Schichtmodell P0–P3 = **Ideenspec**, ggf. **nicht** umsetzen). |
 | **Verwechslung vermeiden** | „Direkt zu IOTA“ vs. lokaler Node: **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**. |
 | **Offline-Karten** | **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`** (**§ H.11**) — Basiskarte vs. Einsatzpaket; ergänzt Lage/CoT, **ersetzt** keine UDP/TAK-Spec. |
 
@@ -2264,6 +2266,51 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 ### H.32b — Einsatz-Abschluss-Ritual (**am Schluss**, Verweis)
 
 **Kurz:** Button **„Einsatz beenden“** → lokaler Cache-Wipe → neues Handoff. **Vollspec:** Abschnitt **§ H.32 → H.32b** oben. **Ist 2026-06-02.**
+
+---
+
+### H.34 — Messenger Frontend: Port-Refactoring Nachlese & P10-Light (**optional**)
+
+**Kontext:** Refactoring **P1–P9** (Ports, Shell-Orchestration, Final Polish) — **Ist 2026-06-16** (`main`, Commit `b633af7`). Post-Review: Core `{ messengerPorts }` stabil; **kein** `useChatViewCoreV2` nötig.
+
+#### Architektur-Urteil (Review 2026-06)
+
+| Aspekt | Bewertung |
+|--------|-----------|
+| **Core / Ports** | **Stark** — testbar, erweiterbar; `messengerPorts` vs. `panelMessengerPorts` klar |
+| **Verbleibender Schmerz** | **`chat-view-main-content.tsx`** (~540 Zeilen) — Binding-Glue + Layout, letzter „God Component“-Rest |
+| **Naming** | `on*Change` (Ports) vs. `set*` (Slices/Reply) — **mittel**, dokumentierbar |
+| **Duplikat** | `shellRouting` + `composerSendPath` (channel/isGroup) — **akzeptabel**, README reicht vorerst |
+| **Assembler** | ~700 Zeilen — **normal** bei Feature-Dichte; kein Split-Zwang |
+
+**Gesamt:** ~**8/10** — deutlich besser als vor P1; P10-Light ist **Hygiene**, kein Architektur-Bruch.
+
+#### P10-Light — vorgeschlagener Scope (1–2 Tage, **optional**)
+
+| # | Inhalt | Nutzen |
+|---|--------|--------|
+| 1 | **`useChatViewComposerBindings(ports)`** — Aliase (`setMessage`, `setPartner`, …) aus Main-Content extrahieren | Main-Content lesbar |
+| 2 | **`buildComposeReplyTargets(...)`** — Reply-Bundle für `inbox-reply-context` zentral | Weniger manuelles Wiring |
+| 3 | **`messenger-ports/README.md`** — Stubs (`handshakeOffersRead`), `shellRouting` vs. `shellOrchestration`, Naming-Glossar | Onboarding |
+
+**Priorität:** **Nach** Phase-B-Kern oder **parallel** in kleiner Scheibe — **blockiert keine Features**. Bei Kapazitätsmangel: **überspringen**; Architektur bleibt tragfähig.
+
+**Nicht-Ziele P10:** Kein Port-Splitting „aus Prinzip“, kein `sendTransportChoice`-Rename, kein `inboxActions`-Zerlegen ohne konkreten Schmerz.
+
+---
+
+### H.35 — ATAK/CoT Schichtmodell (**Ideenspec**, Verweis § H.9)
+
+**Status:** **Dokumentiert 2026-06-16** — **`docs/ATAK-COT-INTEGRATION-ZIELBILD.md` § 6**. **Keine Implementierungszusage.**
+
+| Stufe | Inhalt | Go/No-Go |
+|-------|--------|----------|
+| **P0** | CoT-Adapter-Spec, Lab (ATAK-CIV + TAK/UDP), Datenklassifizierung | Nur bei **Kundenbedarf** oder nach **Phase B** |
+| **P1–P3** | Mesh-Koexistenz, optionales ATAK-Plugin, Rückkanäle | Explizite Entscheidung pro Stufe |
+
+**Explizit nicht:** ATAK-Ersatz, GeoChat↔E2EE-Merge, CoT-XML über LoRa, Meshtastic-Plugin-Nachbau in PWA.
+
+**Verknüpfung:** § **H.9**, **`docs/POSITIONING.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**.
 
 ---
 
