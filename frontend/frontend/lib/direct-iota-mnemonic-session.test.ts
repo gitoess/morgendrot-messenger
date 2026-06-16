@@ -12,6 +12,7 @@ import {
   restoreDirectIotaSessionSignerFromEncryptedStorage,
   restoreDirectIotaSessionSignerFromTabSession,
   restoreDirectIotaSessionSignerFromTabSessionAsync,
+  whenDirectIotaTabSessionPersistIdle,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 describe('direct-iota-mnemonic-session encrypted local storage', () => {
@@ -96,7 +97,7 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     clearDirectIotaSessionSigner()
     expect(getDirectIotaSessionSignerAddress()).toBeNull()
 
-    await new Promise((r) => setTimeout(r, 50))
+    await whenDirectIotaTabSessionPersistIdle()
 
     const restored = await restoreDirectIotaSessionSignerFromTabSessionAsync()
     expect(restored.ok).toBe(true)
