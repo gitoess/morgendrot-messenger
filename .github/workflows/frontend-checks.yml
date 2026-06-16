@@ -46,10 +46,15 @@ jobs:
 
       - run: npx tsc --noEmit
 
-      - name: Frontend Vitest
+      - name: Frontend Vitest (jsdom)
         env:
           CI: 'true'
-        run: npm run test:unit
+        run: npx vitest run --project frontend-jsdom
+
+      - name: Frontend Vitest (node)
+        env:
+          CI: 'true'
+        run: npx vitest run --project frontend-node
 
       - name: Next build (Morgendrot Projekt)
         run: npm run build

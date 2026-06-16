@@ -4,7 +4,8 @@ import react from '@vitejs/plugin-react'
 
 const isCi = Boolean(process.env.CI)
 
-/** Node-Unit-Tests: kein jsdom/RTL/i18n-Setup (CI-Hook-Konflikt mit direct-iota-Session). */
+/** Node-Unit-Tests: kein jsdom/RTL/i18n-Setup (CI-Hook-Konflikt mit direct-iota-Session).
+ *  CI: Workflow führt jsdom- und node-Projekt getrennt aus (sauberer Prozess-Exit). */
 const nodeUnitTests = [
   'frontend/lib/direct-iota-mnemonic-session.test.ts',
   'frontend/lib/direct-iota-vault-unlock-sync.test.ts',
