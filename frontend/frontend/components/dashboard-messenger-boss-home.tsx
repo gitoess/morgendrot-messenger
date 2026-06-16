@@ -14,7 +14,6 @@ export function DashboardMessengerBossHome(p: {
   addressSuggestions: string[]
   onOpenMessages: () => void
   onOpenEinsatzleitung: () => void
-  onOpenVault: () => void
 }) {
   const showPwa = shouldShowDashboardPwaInstallCard()
 
@@ -43,7 +42,6 @@ export function DashboardMessengerBossHome(p: {
       <DashboardBossQuickActions
         onOpenMessages={p.onOpenMessages}
         onOpenEinsatzleitung={p.onOpenEinsatzleitung}
-        onOpenVault={p.onOpenVault}
       />
     </div>
   )

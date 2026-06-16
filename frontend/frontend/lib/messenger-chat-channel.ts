@@ -2,7 +2,11 @@
  * Kanal in der „Nachrichten“-Kachel (Dashboard → ein Eintrag).
  * @see docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md M2
  */
-export type MessengerChatChannel = 'private' | 'group' | 'pinnwand'
+export type MessengerChatChannel = 'private' | 'group' | 'pinnwand' | 'notes'
+
+export function isNotesChannel(c: MessengerChatChannel): boolean {
+  return c === 'notes'
+}
 
 export function isPinnwandChannel(c: MessengerChatChannel): boolean {
   return c === 'pinnwand'

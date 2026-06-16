@@ -472,7 +472,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [openMessengerChatView])
 
   const openVaultView = useCallback(() => {
-    navigateTo({ type: 'vault', variant: 'local-vault' })
+    navigateTo({ type: 'settings' })
   }, [navigateTo])
 
   const openBossModeView = useCallback(() => {

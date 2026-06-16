@@ -21,7 +21,6 @@ import { LockView } from './views/lock-view'
 import { MonitorView } from './views/monitor-view'
 import { BossView } from './views/boss-view'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
-import { VaultView } from './views/vault-view'
 import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { ConfigView } from './views/config-view'
@@ -126,6 +125,8 @@ export function ProjektDashboard() {
               showAllTiles={s.showAllTiles}
               onShowAllTilesChange={s.setShowAllTilesPersist}
               canToggleFullTiles={s.role === 'arbeiter' || s.role === 'lock'}
+              vaultLocked={!!(s.locked || s.apiSnapshot?.locked)}
+              onRequestVaultUnlock={s.requestMainnetSessionSignerSync}
             />
           )}
           {s.activeView.type === 'config' && <ConfigView />}
@@ -159,9 +160,6 @@ export function ProjektDashboard() {
               variant={s.activeView.variant as 'boss-signer' | 'pinnwand-admin'}
               apiSnapshot={s.apiSnapshot && !('error' in s.apiSnapshot && s.apiSnapshot.error) ? s.apiSnapshot : null}
             />
-          )}
-          {s.activeView.type === 'vault' && s.activeView.variant && (
-            <VaultView variant={s.activeView.variant as 'local-vault' | 'emergency-purge'} />
           )}
         </main>
         {s.showMessengerBottomNav ? (

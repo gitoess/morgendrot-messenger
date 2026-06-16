@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageSquare, Lock, Eye, Crown, Shield } from 'lucide-react'
+import { MessageSquare, Lock, Eye, Crown } from 'lucide-react'
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 import type { DashboardFeatureDef } from '@/frontend/lib/dashboard-active-view'
 
@@ -70,17 +70,6 @@ export const projektFeatures: DashboardFeature[] = [
     variants: [
       { id: 'boss-signer', title: 'Boss-Modus', hint: 'Befehle an Geräte' },
       { id: 'pinnwand-admin', title: 'Admin', hint: 'Kanäle verwalten' },
-    ],
-  },
-  {
-    id: 'vault',
-    title: 'Tresor & Sicherheit',
-    subtitle: 'Keys & Notizen sichern',
-    icon: <Shield className="h-6 w-6" />,
-    color: 'bg-red-500/10 text-red-400 border-red-500/20',
-    variants: [
-      { id: 'local-vault', title: 'Backup & Notizen', hint: 'Lokal / On-Chain' },
-      { id: 'emergency-purge', title: 'Notfall', hint: 'Alles löschen' },
     ],
   },
 ]

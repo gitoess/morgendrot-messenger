@@ -9,7 +9,7 @@ import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilit
 /** Entspricht `WorkspaceTileSet` in `workspace-projects-panel.tsx` (`morgendrot_workspace_tile_set`). */
 export type DashboardWorkspaceTileSet = 'full' | 'messenger'
 
-const MESSENGER_CORE_TILE_IDS = new Set<ProjectType>(['chat', 'vault'])
+const MESSENGER_CORE_TILE_IDS = new Set<ProjectType>(['chat'])
 
 export function projectTypeVisibleInMessengerWorkspace(
   id: ProjectType,

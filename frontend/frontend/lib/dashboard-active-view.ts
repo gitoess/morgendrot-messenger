@@ -33,6 +33,10 @@ export function parseDashboardActiveView(
     if (o.type === 'settings' || o.type === 'config') {
       return { type: o.type }
     }
+    /** Tresor-Kachel entfernt — Inhalt liegt unter Einstellungen. */
+    if (o.type === 'vault') {
+      return { type: 'settings' }
+    }
     if (typeof o.type !== 'string' || typeof o.variant !== 'string') return null
     const feat = features.find((f) => f.id === o.type)
     if (!feat) return null

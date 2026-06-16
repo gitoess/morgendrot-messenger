@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, Crown, MessageSquare, Shield } from 'lucide-react'
+import { ArrowRight, Crown, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
@@ -10,14 +10,13 @@ const cardBase =
 export function DashboardBossQuickActions(p: {
   onOpenMessages: () => void
   onOpenEinsatzleitung: () => void
-  onOpenVault: () => void
 }) {
   const { t } = useAppTranslation('dashboard')
 
   return (
     <section aria-label={t('bossQuickActions.aria')}>
       <h2 className="sr-only">{t('bossQuickActions.aria')}</h2>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
           onClick={p.onOpenMessages}
@@ -53,25 +52,6 @@ export function DashboardBossQuickActions(p: {
             <p className="text-sm text-muted-foreground">{t('bossQuickActions.einsatzleitung.subtitle')}</p>
           </div>
           <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-200/90">
-            {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          </span>
-        </button>
-        <button
-          type="button"
-          onClick={p.onOpenVault}
-          className={cn(
-            cardBase,
-            'border-red-500/35 bg-gradient-to-br from-red-500/12 to-transparent'
-          )}
-        >
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/15 text-red-400">
-            <Shield className="h-6 w-6" aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold text-foreground">{t('bossQuickActions.vault.title')}</p>
-            <p className="text-sm text-muted-foreground">{t('bossQuickActions.vault.subtitle')}</p>
-          </div>
-          <span className="inline-flex items-center gap-1 text-xs font-medium text-red-300/90">
             {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </span>
         </button>

@@ -36,7 +36,6 @@ import {
 import { shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { ConfigView } from '@/frontend/components/views/config-view'
 import { SettingsIotaDirectCard } from '@/frontend/components/views/settings-iota-direct-card'
-import { LazyChatViewPulseSettings } from '@/frontend/components/lazy/messenger-scope-b'
 import { SessionSignerStatusStrip } from '@/frontend/components/session-signer-status-strip'
 import { isIotaTransportUiVisible } from '@/frontend/lib/messenger-role-capabilities'
 
@@ -345,16 +344,6 @@ export function SettingsSystemIdentitySection({
                   onRequestUnlock={onRequestVaultUnlock}
                 />
               )}
-              {!managedNetwork ? (
-                <div className="rounded-lg border border-border/80 p-3">
-                  <LazyChatViewPulseSettings
-                    apiStatus={apiStatus}
-                    allowDevExpertTools={false}
-                    settingsEmbedded
-                    networkManaged={false}
-                  />
-                </div>
-              ) : null}
             </>
           ) : null}
 

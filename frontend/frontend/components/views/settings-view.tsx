@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Settings, Copy, Check, KeyRound } from 'lucide-react'
+import { Settings, Copy, Check, KeyRound, Radio, Send, Globe } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import {
   getStatus,
@@ -18,19 +18,22 @@ import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settin
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
 import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
+import { SettingsVaultBackupSection } from '@/frontend/components/views/settings-vault-backup-section'
+import { SettingsVaultPasswordSection } from '@/frontend/components/views/settings-vault-password-section'
+import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
+import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsLanguageSection } from '@/frontend/components/settings-language-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
+import { SettingsSectionHeading } from '@/frontend/components/settings-section-heading'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 interface SettingsViewProps {
   onOpenConfig?: () => void
-  /** Arbeiter/Lock: Kachel-Ansicht dauerhaft (localStorage). */
   showAllTiles?: boolean
   onShowAllTilesChange?: (value: boolean) => void
   canToggleFullTiles?: boolean
-  /** Messenger Boss/Kommandant: nur was nicht auf Startseite / Einsatzleitung / Tresor liegt. */
   slimMessengerEinsatz?: boolean
   vaultLocked?: boolean
   onRequestVaultUnlock?: () => void
@@ -57,13 +60,10 @@ export function SettingsView({
     role?: string
   } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
-  
-  /** Recovery phrase / SDK-Import aus Vault (SIGNER=sdk). */
   const [recoveryPw, setRecoveryPw] = useState('')
   const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [recoveryErr, setRecoveryErr] = useState('')
   const [revealedSigner, setRevealedSigner] = useState<string | null>(null)
-
   const [advancedIotaStatus, setAdvancedIotaStatus] = useState<ApiStatus | null>(null)
 
   const isBossRole =
@@ -79,9 +79,7 @@ export function SettingsView({
 
   const loadStatus = async () => {
     const res = await getStatus()
-    if (res.ok && res.data) {
-      setStatus(res.data)
-    }
+    if (res.ok && res.data) setStatus(res.data)
     const adv = await fetchStatus()
     if ('pollClockHint' in adv) setAdvancedIotaStatus(adv)
     else setAdvancedIotaStatus(null)
@@ -90,12 +88,6 @@ export function SettingsView({
   useEffect(() => {
     void loadStatus()
   }, [])
-
-  const copyToClipboard = (text: string, key: string) => {
-    navigator.clipboard.writeText(text)
-    setCopied(key)
-    setTimeout(() => setCopied(null), 2000)
-  }
 
   const handleRevealSignerImport = async () => {
     setRecoveryErr('')
@@ -118,8 +110,7 @@ export function SettingsView({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8">
       <div className="flex items-center gap-3">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
           <Settings className="h-6 w-6" />
@@ -132,165 +123,157 @@ export function SettingsView({
         </div>
       </div>
 
-      <SettingsLanguageSection />
+      <section className="space-y-4">
+        <SettingsSectionHeading
+          title="Allgemein"
+          description="Sprache, Profil, Gerät und Import — unabhängig vom Sendeweg."
+          icon={<Globe className="h-5 w-5" />}
+        />
+        <SettingsLanguageSection />
+        <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
+        <ActiveProfilePanel status={advancedIotaStatus} />
+        <CapacitorApiBaseCard />
+        {(!slimMessengerEinsatz || !isBossRole) ? (
+          <LazyHandoffImportPanel backendOnline={backendOnline} />
+        ) : null}
+        <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
+        {canToggleFullTiles && onShowAllTilesChange ? (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Alle Funktions-Kacheln anzeigen — wird in diesem Browser gespeichert.
+                </p>
+              </div>
+              <Switch checked={showAllTiles} onCheckedChange={onShowAllTilesChange} aria-label="Alle Kacheln anzeigen" />
+            </div>
+          </div>
+        ) : null}
+      </section>
 
-      <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
-
-      <ActiveProfilePanel status={advancedIotaStatus} />
-
-      {managedNetwork ? (
-        <SettingsNetworkProfilesSection
+      <section className="space-y-4">
+        <SettingsSectionHeading
+          title="IOTA (Online / Chain)"
+          description="Netzwerk, Package, Mailbox, Tresor sichern/laden — Testnet/Mainnet wird automatisch aus Deploy-Dateien übernommen."
+          icon={<Send className="h-5 w-5" />}
+        />
+        {managedNetwork ? (
+          <SettingsNetworkProfilesSection
+            apiStatus={advancedIotaStatus}
+            backendOnline={backendOnline}
+            onApplied={() => void loadStatus()}
+          />
+        ) : null}
+        <SettingsSystemIdentitySection
           apiStatus={advancedIotaStatus}
-          backendOnline={backendOnline}
+          managedNetwork={managedNetwork}
+          vaultLocked={vaultLocked}
+          onRequestVaultUnlock={onRequestVaultUnlock}
           onApplied={() => void loadStatus()}
         />
-      ) : null}
-
-      <SettingsSystemIdentitySection
-        apiStatus={advancedIotaStatus}
-        managedNetwork={managedNetwork}
-        vaultLocked={vaultLocked}
-        onRequestVaultUnlock={onRequestVaultUnlock}
-        onApplied={() => void loadStatus()}
-      />
-
-      <SettingsMyMailboxesSection
-        apiStatus={advancedIotaStatus}
-        myAddress={
-          (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
-        }
-      />
-
-      {backendOnline ? (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <ChatViewShadowSweep />
-        </div>
-      ) : null}
-
-      <CapacitorApiBaseCard />
-
-      <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
-
-      {(!slimMessengerEinsatz || !isBossRole) ? (
-        <LazyHandoffImportPanel backendOnline={backendOnline} />
-      ) : null}
-
-      {!slimMessengerEinsatz && status?.backendOnline ? (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="mb-3 flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <KeyRound className="h-5 w-5" aria-hidden />
-            </div>
-            <div className="min-w-0 space-y-1">
-              <h4 className="font-semibold text-foreground">Wallet & Backup</h4>
-            </div>
+        <SettingsVaultPasswordSection vaultLocked={vaultLocked} />
+        <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
+        <SettingsMyMailboxesSection
+          apiStatus={advancedIotaStatus}
+          myAddress={
+            (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
+          }
+        />
+        {backendOnline ? (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <ChatViewShadowSweep />
           </div>
-
-          {status.signer === 'sdk' ? (
-            <>
-              {!status.vaultHasLocal ? (
-                <p className="mb-3 rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
-                  Keine lokale Vault-Datei — im Tresor <strong className="font-medium">lokal sichern</strong> (optional
-                  Signer-Import) oder von der Chain laden.
-                </p>
-              ) : null}
-              <div className="space-y-3">
-                <label className="block text-sm">
-                  <span className="text-muted-foreground">Vault-Passwort (erneut eingeben)</span>
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    value={recoveryPw}
-                    onChange={(e) => setRecoveryPw(e.target.value)}
-                    className="mt-1 w-full max-w-md rounded-lg border border-border bg-input px-3 py-2 text-foreground"
-                    placeholder="••••••••"
-                  />
-                </label>
-                {recoveryErr ? <p className="text-sm text-destructive">{recoveryErr}</p> : null}
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    disabled={recoveryBusy || !status.vaultHasLocal}
-                    onClick={() => void handleRevealSignerImport()}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-                  >
-                    {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
-                  </button>
-                  {revealedSigner ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRevealedSigner(null)
-                        setRecoveryErr('')
-                      }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm hover:bg-accent"
-                    >
-                      Ausblenden
-                    </button>
-                  ) : null}
-                </div>
-                {revealedSigner ? (
-                  <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
-                    <p className="text-xs font-medium text-emerald-800 dark:text-emerald-200">
-                      Nur an einem sicheren Ort notieren — nicht teilen, nicht Screenshots in unsichere Clouds.
-                    </p>
-                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs text-foreground">
-                      {revealedSigner}
-                    </pre>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void navigator.clipboard.writeText(revealedSigner)
-                        setCopied('signerImport')
-                        setTimeout(() => setCopied(null), 2000)
-                      }}
-                      className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-                    >
-                      {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                      In Zwischenablage kopieren
-                    </button>
-                  </div>
-                ) : null}
+        ) : null}
+        {!slimMessengerEinsatz && status?.backendOnline && status.signer === 'sdk' ? (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="mb-3 flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <KeyRound className="h-5 w-5" aria-hidden />
               </div>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              <span className="font-mono">SIGNER={status.signer ?? '?'}</span> — Vault-Mnemonic-Anzeige nur bei{' '}
-              <span className="font-mono">sdk</span>. Bei <span className="font-mono">cli</span> /{' '}
-              <span className="font-mono">remote</span>:{' '}
-              <Link
-                href="/handbook?file=RECOVERY-PHRASE-BACKUP.md"
-                className="text-primary underline underline-offset-2 hover:text-primary/90"
-              >
-                Handbuch
-              </Link>
-              .
-            </p>
-          )}
-        </div>
-      ) : null}
-
-      <SettingsTelegramNotifyOnSend />
-      <SettingsTelegramIntegration backendOnline={backendOnline} />
-
-      {canToggleFullTiles && onShowAllTilesChange && (
-        <div className="rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Alle Funktions-Kacheln anzeigen (wie nach „Alle Funktionen“ auf dem Dashboard). Wird in diesem Browser gespeichert.
-              </p>
+              <div>
+                <h4 className="font-semibold text-foreground">Wallet-Recovery (SIGNER=sdk)</h4>
+                <p className="text-sm text-muted-foreground">Signer-Import aus der Vault-Datei anzeigen.</p>
+              </div>
             </div>
-            <Switch
-              checked={showAllTiles}
-              onCheckedChange={onShowAllTilesChange}
-              aria-label="Alle Kacheln anzeigen"
-            />
+            {!status.vaultHasLocal ? (
+              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Vault-Datei — zuerst unter „Lokal sichern“.</p>
+            ) : null}
+            <div className="space-y-3">
+              <label className="block text-sm">
+                <span className="text-muted-foreground">Vault-Passwort</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={recoveryPw}
+                  onChange={(e) => setRecoveryPw(e.target.value)}
+                  className="mt-1 w-full max-w-md rounded-lg border border-border bg-input px-3 py-2"
+                />
+              </label>
+              {recoveryErr ? <p className="text-sm text-destructive">{recoveryErr}</p> : null}
+              <button
+                type="button"
+                disabled={recoveryBusy || !status.vaultHasLocal}
+                onClick={() => void handleRevealSignerImport()}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              >
+                {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
+              </button>
+              {revealedSigner ? (
+                <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs">
+                  {revealedSigner}
+                </pre>
+              ) : null}
+              {revealedSigner ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(revealedSigner)
+                    setCopied('signerImport')
+                    setTimeout(() => setCopied(null), 2000)
+                  }}
+                  className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
+                >
+                  {copied === 'signerImport' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  Kopieren
+                </button>
+              ) : null}
+            </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </section>
 
+      <section className="space-y-4">
+        <SettingsSectionHeading
+          title="Funk (Meshtastic)"
+          description="Puls, Heartbeat und Funk-Geräte — getrennt von IOTA/Online."
+          icon={<Radio className="h-5 w-5" />}
+        />
+        <SettingsFunkSection apiStatus={advancedIotaStatus} managedNetwork={managedNetwork} />
+      </section>
+
+      <section className="space-y-4">
+        <SettingsSectionHeading
+          title="Telegram"
+          description="Bot, Relay und Benachrichtigung beim Senden — nur für den Telegram-Sendeweg im Chat."
+        />
+        <SettingsTelegramNotifyOnSend />
+        <SettingsTelegramIntegration backendOnline={backendOnline} />
+      </section>
+
+      <section className="space-y-4">
+        <SettingsSectionHeading title="Sicherheit & Notfall" description="Unwiderrufliche Chain-Löschung und Sitzung sperren." />
+        <SettingsEmergencyPurgeSection />
+      </section>
+
+      {onOpenConfig ? (
+        <p className="text-xs text-muted-foreground">
+          Erweiterte .env-Konfiguration:{' '}
+          <button type="button" className="text-primary underline" onClick={onOpenConfig}>
+            Konfiguration öffnen
+          </button>
+        </p>
+      ) : null}
     </div>
   )
 }

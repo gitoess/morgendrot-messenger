@@ -28,6 +28,7 @@ const MATRIX: Record<MessengerChatChannel, ReadonlySet<ActiveSendPath>> = {
   private: new Set(['internet', 'mesh', 'adhoc', 'telegram']),
   group: new Set(['internet', 'mesh']),
   pinnwand: new Set(['internet']),
+  notes: new Set(['internet', 'mesh', 'adhoc', 'telegram']),
 }
 
 export function isChannelSendPathCompatible(
@@ -71,6 +72,7 @@ export function channelDisabledReason(
   composerDelivery: ComposerDeliveryChannel,
   forcedTransport: ForcedTransport
 ): string | null {
+  if (channel === 'notes') return null
   if (isChannelSendPathCompatible(channel, composerDelivery, forcedTransport)) return null
   const path = resolveActiveSendPath(composerDelivery, forcedTransport)
   switch (channel) {

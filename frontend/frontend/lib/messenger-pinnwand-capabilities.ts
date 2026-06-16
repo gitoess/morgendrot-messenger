@@ -1,5 +1,6 @@
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import type { Message } from '@/frontend/lib/types'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import {
   canAccessEinsatzleitung,
@@ -50,7 +51,7 @@ export function showPinnwandChannelTab(
 export function showPinnwandInboxStrip(
   status: ApiStatus | null | undefined,
   role: string | null | undefined,
-  channelMode: 'private' | 'group' | 'pinnwand' | null | undefined
+  channelMode: MessengerChatChannel | null | undefined
 ): boolean {
   if (channelMode != null && channelMode !== 'private') return false
   if (!isPinnwandBroadcastConfigured(status)) return false
@@ -196,7 +197,7 @@ export function buildPinnwandMatchContext(
 export function getMessengerPinnwandCapabilities(
   status: ApiStatus | null | undefined,
   role: string | null | undefined,
-  channelMode: 'private' | 'group' | 'pinnwand' | null | undefined,
+  channelMode: MessengerChatChannel | null | undefined,
   myAddressLine?: string
 ): MessengerPinnwandCapabilities {
   const broadcastAddress = getPinnwandBroadcastAddress(status)

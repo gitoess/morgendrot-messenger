@@ -15,10 +15,10 @@ const rows = [
 ]
 
 describe('projectTypeVisibleInMessengerWorkspace', () => {
-  it('Messenger-Produkt: chat + vault; Boss + Steuerung; Kommandant + Einsatzleitung', () => {
+  it('Messenger-Produkt: chat; Boss + Steuerung; Kommandant + Einsatzleitung', () => {
     const boss = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: true, isBossRole: true, role: 'boss' }
     expect(projectTypeVisibleInMessengerWorkspace('chat', boss)).toBe(true)
-    expect(projectTypeVisibleInMessengerWorkspace('vault', boss)).toBe(true)
+    expect(projectTypeVisibleInMessengerWorkspace('vault', boss)).toBe(false)
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', boss)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('boss', boss)).toBe(true)
     expect(projectTypeVisibleInMessengerWorkspace('lock', boss)).toBe(false)
@@ -45,9 +45,10 @@ describe('projectTypeVisibleInMessengerWorkspace', () => {
     expect(projectTypeVisibleInMessengerWorkspace('einsatzleitung', p)).toBe(false)
   })
 
-  it('Morgendrot Projekt + Messenger-Vorschau: nur chat + vault', () => {
+  it('Morgendrot Projekt + Messenger-Vorschau: nur chat', () => {
     const p = { workspaceTileSet: 'messenger' as const, liteMessengerFromApi: false, isBossRole: true, role: 'boss' }
     expect(projectTypeVisibleInMessengerWorkspace('chat', p)).toBe(true)
+    expect(projectTypeVisibleInMessengerWorkspace('vault', p)).toBe(false)
     expect(projectTypeVisibleInMessengerWorkspace('boss', p)).toBe(false)
     expect(projectTypeVisibleInMessengerWorkspace('lock', p)).toBe(false)
   })
@@ -71,6 +72,6 @@ describe('filterFeaturesByMessengerWorkspaceTileSet', () => {
   it('Messenger-Produkt Boss: kein lock/monitor', () => {
     const p = { workspaceTileSet: 'full' as const, liteMessengerFromApi: true, isBossRole: true, role: 'boss' }
     const out = filterFeaturesByMessengerWorkspaceTileSet(rows, p)
-    expect(out.map((x) => x.id).sort()).toEqual(['boss', 'chat', 'einsatzleitung', 'vault'])
+    expect(out.map((x) => x.id).sort()).toEqual(['boss', 'chat', 'einsatzleitung'])
   })
 })

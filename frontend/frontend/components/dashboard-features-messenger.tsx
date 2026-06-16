@@ -1,6 +1,6 @@
 'use client'
 
-import { MessageSquare, Crown, Shield } from 'lucide-react'
+import { MessageSquare, Crown } from 'lucide-react'
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 import type { DashboardFeatureDef } from '@/frontend/lib/dashboard-active-view'
 
@@ -37,12 +37,6 @@ export const messengerFeatureShells: MessengerFeatureShell[] = [
     icon: <Crown className="h-6 w-6" />,
     color: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
     variants: [{ id: 'boss-signer' }, { id: 'pinnwand-admin' }],
-  },
-  {
-    id: 'vault',
-    icon: <Shield className="h-6 w-6" />,
-    color: 'bg-red-500/10 text-red-400 border-red-500/20',
-    variants: [{ id: 'local-vault' }, { id: 'emergency-purge' }],
   },
 ]
 

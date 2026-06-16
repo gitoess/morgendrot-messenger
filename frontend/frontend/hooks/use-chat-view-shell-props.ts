@@ -56,7 +56,9 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       channelMode: shellRouting.channelMode,
       onChannelModeChange: shellRouting.onChannelModeChange,
       sendPath: {
-        visible: shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted,
+        visible:
+          shellRouting.channelMode !== 'notes' &&
+          (shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted),
         channelMode: shellRouting.channelMode,
         encrypted: sendTransportChoice.encrypted,
         forcedTransport: sendTransportChoice.forcedTransport,

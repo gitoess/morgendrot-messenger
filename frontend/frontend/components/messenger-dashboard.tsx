@@ -18,7 +18,6 @@ import type { ProjectType } from '@/frontend/lib/types'
 import { ChatView } from './views/chat-view'
 import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
-import { VaultView } from './views/vault-view'
 import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-messenger-boss-header'
@@ -265,9 +264,6 @@ function MessengerDashboardBody({
               apiSnapshot={s.apiSnapshot && !('error' in s.apiSnapshot && s.apiSnapshot.error) ? s.apiSnapshot : null}
             />
           )}
-          {s.activeView.type === 'vault' && s.activeView.variant && (
-            <VaultView variant={s.activeView.variant as 'local-vault' | 'emergency-purge'} />
-          )}
         </main>
         {s.showMessengerBottomNav ? (
           <MessengerBottomNav
@@ -455,7 +451,6 @@ function MessengerDashboardBody({
             addressSuggestions={s.dashboardTransferAddressSuggestions}
             onOpenMessages={s.openMessengerChatView}
             onOpenEinsatzleitung={s.openEinsatzleitungView}
-            onOpenVault={s.openVaultView}
           />
         ) : null}
         {!s.locked && !isEinsatzLeadHome ? (

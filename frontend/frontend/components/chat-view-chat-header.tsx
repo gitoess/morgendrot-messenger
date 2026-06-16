@@ -188,16 +188,21 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     pinnwandTabUnreadCount = 0,
   } = p
 
-  const channelModes: MessengerChatChannel[] = (['private', 'group', 'pinnwand'] as const).filter(
-    (mode) => mode !== 'pinnwand' || showPinnwandChannelTab(apiStatus, role)
-  )
+  const channelModes: MessengerChatChannel[] = (
+    ['private', 'group', 'pinnwand', 'notes'] as const
+  ).filter((mode) => {
+    if (mode === 'pinnwand') return showPinnwandChannelTab(apiStatus, role)
+    return true
+  })
 
   const channelTitle =
     channelMode === 'group'
       ? 'Gruppenchat'
       : channelMode === 'pinnwand'
         ? pinnwandChannelTabLabel(role, apiStatus)
-        : '1:1 Privat'
+        : channelMode === 'notes'
+          ? 'Notizen'
+          : '1:1 Privat'
 
   const handbookSubline =
     channelMode === 'group' ? (
@@ -236,7 +241,10 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
               </div>
               {channelMode != null && onChannelModeChange ? (
                 <div
-                  className="grid w-full max-w-[15.5rem] grid-cols-3 gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5"
+                  className={cn(
+                    'grid w-full max-w-[20rem] gap-0.5 rounded-lg border border-border bg-muted/40 p-0.5',
+                    channelModes.length >= 4 ? 'grid-cols-4' : 'grid-cols-3'
+                  )}
                   role="group"
                   aria-label="Kanal"
                 >
@@ -246,7 +254,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                         ? '1:1'
                         : mode === 'group'
                           ? 'Gruppe'
-                          : pinnwandChannelTabLabel(role, apiStatus)
+                          : mode === 'notes'
+                            ? 'Notizen'
+                            : pinnwandChannelTabLabel(role, apiStatus)
                     const tabUnread = mode === 'pinnwand' ? pinnwandTabUnreadCount : 0
                     const disabledReason =
                       sendPath && mode !== channelMode
@@ -272,7 +282,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                               ? 'bg-violet-600 text-white'
                               : mode === 'pinnwand'
                                 ? 'bg-orange-600 text-white'
-                                : 'bg-primary text-primary-foreground'
+                                : mode === 'notes'
+                                  ? 'bg-slate-600 text-white'
+                                  : 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
                         )}
                       >
@@ -335,7 +347,9 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                 >
                   {channelMode === 'pinnwand'
                     ? 'Pinnwand — nur Online (IOTA), Klartext. Senden unten im Bereich „An Pinnwand senden“.'
-                    : '\u00A0'}
+                    : channelMode === 'notes'
+                      ? 'Notizen — Tresor-Inhalt lokal im Vault; kein Sendeweg.'
+                      : '\u00A0'}
                 </div>
               )}
             </div>

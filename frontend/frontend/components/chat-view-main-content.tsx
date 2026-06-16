@@ -31,6 +31,7 @@ import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-tr
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
+import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
@@ -252,6 +253,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   /** Kanal-Tab „Pinnwand“ — eigener Feed, kein gemischter Posteingang. */
   const onPinnwandTab =
     channelMode != null && isPinnwandChannel(channelMode) && pinnwandCaps.configured
+  const onNotesTab = channelMode === 'notes'
 
   useEffect(() => {
     if (!onChannelModeChange || channelMode == null) return
@@ -372,7 +374,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
       ) : null}
 
-      {isGroup ? (
+      {!onNotesTab && isGroup ? (
         <ChatViewGroupPanel
           contactDirectory={groupPanelDirectory}
           forcedTransport={forcedTransport}
@@ -386,14 +388,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {isGroup && encryptedPartnerPanelProps ? (
+      {!onNotesTab && isGroup && encryptedPartnerPanelProps ? (
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
           <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
         </div>
       ) : null}
 
-      {pinnwandCaps.showInboxStrip ? (
+      {!onNotesTab && pinnwandCaps.showInboxStrip ? (
         <ChatViewPinnwandInboxStrip
           messages={[...pinnwandPreviewMessages]}
           role={role}
@@ -418,7 +420,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       <ContactAddAliasDialog {...contactAliasDialog} />
 
-      {onPinnwandTab ? (
+      {onNotesTab ? (
+        <ChatViewNotesTabPanel />
+      ) : onPinnwandTab ? (
         <>
           <ChatViewPinnwandFeedPanel
             {...pinnwandFeedPanelProps}
