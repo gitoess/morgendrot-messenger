@@ -11,8 +11,6 @@ vi.mock('@/frontend/components/chat-view-inbox-package-expert-menu', () => ({
 function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInboxPanelPropsDeps {
   return {
     messengerPorts: over.messengerPorts ?? testPanelMessengerPorts(),
-    inboxTotalCount: 0,
-    inboxRows: [],
     showPinnwandPinActions: false,
     onOpenPhonebook: vi.fn(),
     showInboxIotaFilter: false,
@@ -25,11 +23,19 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
 
 describe('useChatViewInboxPanelProps', () => {
   it('setzt messageCount und inboxRowCount', () => {
+    const ports = testPanelMessengerPorts()
+    const messengerPorts = {
+      ...ports,
+      inboxPanelRead: {
+        ...ports.inboxPanelRead,
+        inboxTotalCount: 42,
+        inboxRows: [{ id: '1' } as never],
+      },
+    }
     const { result } = renderHook(() =>
       useChatViewInboxPanelProps(
         baseDeps({
-          inboxTotalCount: 42,
-          inboxRows: [{ id: '1' } as never],
+          messengerPorts,
         })
       )
     )

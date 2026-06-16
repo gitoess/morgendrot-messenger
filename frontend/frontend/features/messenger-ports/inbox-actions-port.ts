@@ -1,5 +1,6 @@
 import type { ChangeEvent, RefObject } from 'react'
 import type { MorgPkgExportPartnerOption } from '@/frontend/lib/morg-pkg-export-partners'
+import type { AppendMeshMessageFn } from '@/frontend/lib/append-mesh-message-fn'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
@@ -39,6 +40,7 @@ export type InboxActionsPort = {
   readonly morgPkgImportCount: number
   readonly onOpenMorgPkgArchive: () => void
   readonly openPartnerSetupPanel: () => void
+  readonly appendMeshMessage: AppendMeshMessageFn
 }
 
 export function asInboxActions(actions: InboxActionsPort): InboxActionsPort {

@@ -5,10 +5,34 @@
 import { assembleChatViewMessengerPorts, type ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import {
+  buildPinnwandMatchContext,
+  getMessengerPinnwandCapabilities,
+  messageBelongsToPinnwand,
+} from '@/frontend/lib/messenger-pinnwand-capabilities'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import type { Message } from '@/frontend/lib/types'
+import type { ApiStatus } from '@/frontend/lib/api'
 import type { ChatViewComposerTransportState } from '@/frontend/hooks/use-chat-view-composer-transport-state'
 import type { ChatViewInboxOrchestration } from '@/frontend/hooks/use-chat-view-inbox-orchestration'
 import type { ChatViewSendOrchestration } from '@/frontend/hooks/use-chat-view-send-orchestration'
+
+function computePinnwandStripPreviewMessages(
+  messages: readonly Message[],
+  apiStatus: ApiStatus | null,
+  role: string,
+  channelMode: MessengerChatChannel,
+  myAddress: string
+): Message[] {
+  const caps = getMessengerPinnwandCapabilities(apiStatus, role, channelMode, myAddress)
+  if (!caps.showInboxStrip) return []
+  const match = buildPinnwandMatchContext(apiStatus, myAddress)
+  if (!match) return []
+  return messages
+    .filter((m) => messageBelongsToPinnwand(m, match))
+    .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
+    .slice(0, 3)
+}
 
 export type BuildChatViewCoreStateInput = {
   channelMode: MessengerChatChannel
@@ -28,7 +52,8 @@ export function buildChatViewCoreMessengerPorts(
   send: ChatViewSendOrchestration,
   myAddress: string,
   channelMode: MessengerChatChannel,
-  isGroup: boolean
+  isGroup: boolean,
+  role: string
 ): ChatViewMessengerPorts {
   const connectedAddresses = resolveConnectedAddresses({
     fromStatus: inbox.apiStatus?.connectedAddresses,
@@ -71,9 +96,32 @@ export function buildChatViewCoreMessengerPorts(
       messages: inbox.displayMessages,
       myAddress,
     },
+    inboxPanelRead: {
+      inboxRows: inbox.inboxRows,
+      inboxTotalCount: inbox.filteredDisplayMessages.length,
+      inboxUnreadThreadOptions: inbox.inboxUnreadThreadOptions,
+      resetInboxViewFilters: inbox.resetInboxViewFilters,
+    },
+    inboxPreviewRead: {
+      pinnwandStripMessages: computePinnwandStripPreviewMessages(
+        inbox.displayMessages,
+        inbox.apiStatus,
+        role,
+        channelMode,
+        myAddress
+      ),
+    },
+    morgPkgArchive: {
+      records: send.morgPkgImports,
+      open: send.morgPkgImportsOpen,
+      setOpen: send.setMorgPkgImportsOpen,
+      remove: send.removeMorgPkgImport,
+      onForwardItem: send.onForwardMorgPkgItem,
+    },
     contactDirectory: {
       directory: inbox.directory,
       isMeshVerifiedForAddress: inbox.isMeshVerifiedForAddress,
+      refreshContactDirectory: inbox.refreshContactDirectory,
     },
     connectionStatus: {
       apiStatus: inbox.apiStatus,
@@ -82,6 +130,7 @@ export function buildChatViewCoreMessengerPorts(
       packageIdMismatch: inbox.packageIdMismatch,
       deviceTimeTrustWarn: inbox.deviceTimeTrustWarn,
       connectedAddresses,
+      refreshApiStatus: inbox.refreshApiStatus,
     },
     attachmentBar: {
       sending: composer.sending,
@@ -217,6 +266,7 @@ export function buildChatViewCoreMessengerPorts(
       morgPkgImportCount: send.morgPkgImports.length,
       onOpenMorgPkgArchive: () => send.setMorgPkgImportsOpen(true),
       openPartnerSetupPanel: send.openPartnerSetupPanel,
+      appendMeshMessage: inbox.appendMeshMessage,
     },
     inboxExportActions: {
       exportEcdhMorgPkgForMessage: send.exportEcdhMorgPkgForMessage,
@@ -236,6 +286,7 @@ export function buildChatViewCoreMessengerPorts(
       refreshPackageIdSuggestions: inbox.refreshPackageIdSuggestions,
       applyPackageIdBackend: inbox.applyPackageIdBackend,
       loadMessages: inbox.loadMessages,
+      syncCanonicalPackageIdFromServer: inbox.syncCanonicalPackageIdFromServer,
     },
     meshDevice: {
       bleSupported: send.meshtastic.bleSupported,
@@ -274,7 +325,15 @@ export function buildChatViewCoreMessengerPorts(
 export function buildChatViewCoreState(input: BuildChatViewCoreStateInput) {
   const { channelMode, role, myAddress, isGroup, activeGroup, refreshMessengerGroups, composer, inbox, send } =
     input
-  const messengerPorts = buildChatViewCoreMessengerPorts(composer, inbox, send, myAddress, channelMode, isGroup)
+  const messengerPorts = buildChatViewCoreMessengerPorts(
+    composer,
+    inbox,
+    send,
+    myAddress,
+    channelMode,
+    isGroup,
+    role
+  )
 
   return {
     channelMode,
@@ -287,27 +346,7 @@ export function buildChatViewCoreState(input: BuildChatViewCoreStateInput) {
     messengerPorts,
     sending: composer.sending,
     setSending: composer.setSending,
-    refreshApiStatus: inbox.refreshApiStatus,
-    syncCanonicalPackageIdFromServer: inbox.syncCanonicalPackageIdFromServer,
-    mirrorQueuePending: inbox.mirrorQueuePending,
-    applyInboxPackageFilterOnly: inbox.applyInboxPackageFilterOnly,
     composerMailboxObjectId: composer.composerMailboxObjectId,
     setComposerMailboxObjectId: composer.setComposerMailboxObjectId,
-    refreshContactDirectory: inbox.refreshContactDirectory,
-    inboxTotalCount: inbox.filteredDisplayMessages.length,
-    messages: inbox.displayMessages,
-    setMessages: inbox.setMessages,
-    loadMessages: inbox.loadMessages,
-    appendMeshMessage: inbox.appendMeshMessage,
-    clearInboxRam: inbox.clearInboxRam,
-    slideSequences: inbox.slideSequences,
-    inboxRows: inbox.inboxRows,
-    morgPkgImports: send.morgPkgImports,
-    morgPkgImportsOpen: send.morgPkgImportsOpen,
-    setMorgPkgImportsOpen: send.setMorgPkgImportsOpen,
-    removeMorgPkgImport: send.removeMorgPkgImport,
-    onForwardMorgPkgItem: send.onForwardMorgPkgItem,
-    inboxUnreadThreadOptions: inbox.inboxUnreadThreadOptions,
-    resetInboxViewFilters: inbox.resetInboxViewFilters,
   }
 }

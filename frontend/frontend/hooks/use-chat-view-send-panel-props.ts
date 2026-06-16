@@ -11,21 +11,13 @@ import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fi
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
-import type { AppendMeshMessageFn } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
   activeGroup: MessengerGroupDefinition | null
-  refreshApiStatus?: () => void | Promise<void>
-  loadMessages: (
-    mode?: 'reset' | 'append' | 'poll',
-    overridePackageId?: unknown,
-    opts?: { silent?: boolean }
-  ) => void | Promise<void>
   composerMailboxObjectId?: string
   setComposerMailboxObjectId: (id: string) => void
-  appendMeshMessage: AppendMeshMessageFn
   expertTools: boolean
   pinnwandBroadcastAddress?: string
   canPostToPinnwand: boolean
@@ -52,6 +44,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     handshakeActions,
     handshakeOffersRead,
     sendActions,
+    inboxActions,
   } = deps.messengerPorts
 
   const groupSendPanelContext = useMemo(
@@ -108,14 +101,14 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     composerPartner.onPartnerChange(addr)
     await handshakeActions.onConnectAcceptForAddress(addr)
     encryptedRecipientHandshake.refresh()
-    await deps.refreshApiStatus?.()
+    await connectionStatusRead.refreshApiStatus()
     window.setTimeout(() => void handshakeOffersRead.reload(), 4000)
   }, [
     composerEncryptedRecipient,
     composerPartner,
     handshakeActions,
     encryptedRecipientHandshake,
-    deps.refreshApiStatus,
+    connectionStatusRead.refreshApiStatus,
     handshakeOffersRead,
   ])
 
@@ -138,7 +131,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     clearAttachments: attachmentBar.clearCompactAttachment,
     onStatusFeedback: sendActions.onStatusFeedback,
     onTelegramDelivered: ({ recipientKey, text }) => {
-      recordTelegramOutgoing(deps.appendMeshMessage, inboxFeedRead.myAddress, recipientKey, text)
+      recordTelegramOutgoing(inboxActions.appendMeshMessage, inboxFeedRead.myAddress, recipientKey, text)
     },
   })
 
@@ -185,8 +178,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onMeshtasticChannelIndexChange: meshSendOptions.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
     onManualRefresh: async () => {
-      await deps.refreshApiStatus?.()
-      await deps.loadMessages('reset')
+      await connectionStatusRead.refreshApiStatus()
+      await inboxActions.loadMessages('reset')
     },
     contactDirectory: contactDirectoryRead.directory,
     isGroupChannel: composerSendPath.isGroup,

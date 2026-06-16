@@ -143,9 +143,26 @@ export function testMessengerPorts(over: {
       messages: [],
       myAddress,
     },
+    inboxPanelRead: {
+      inboxRows: [],
+      inboxTotalCount: 0,
+      inboxUnreadThreadOptions: [],
+      resetInboxViewFilters: vi.fn(),
+    },
+    inboxPreviewRead: {
+      pinnwandStripMessages: [],
+    },
+    morgPkgArchive: {
+      records: [],
+      open: false,
+      setOpen: vi.fn(),
+      remove: vi.fn(),
+      onForwardItem: vi.fn(),
+    },
     contactDirectory: {
       directory: over.directory ?? {},
       isMeshVerifiedForAddress: over.isMeshVerifiedForAddress ?? (() => false),
+      refreshContactDirectory: vi.fn(),
     },
     connectionStatus: {
       apiStatus: over.apiStatus ?? TEST_API_STATUS_SEND_READY,
@@ -154,6 +171,7 @@ export function testMessengerPorts(over: {
       packageIdMismatch: over.packageIdMismatch ?? false,
       deviceTimeTrustWarn: false,
       connectedAddresses: over.connectedAddresses ?? [],
+      refreshApiStatus: vi.fn(async () => {}),
     },
     attachmentBar: { ...defaultAttachmentBarSlice(), ...over.attachmentBar },
     inboxViewUi: {
@@ -257,6 +275,7 @@ export function testMessengerPorts(over: {
       morgPkgImportCount: 0,
       onOpenMorgPkgArchive: vi.fn(),
       openPartnerSetupPanel: vi.fn(),
+      appendMeshMessage: vi.fn(),
     },
     inboxExportActions: {
       exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
@@ -276,6 +295,7 @@ export function testMessengerPorts(over: {
       refreshPackageIdSuggestions: vi.fn(async () => {}),
       applyPackageIdBackend: vi.fn(async () => {}),
       loadMessages: vi.fn(),
+      syncCanonicalPackageIdFromServer: vi.fn(async () => {}),
     },
     meshDevice: defaultMeshDeviceSlice(over.meshDevice),
     meshSetup: defaultMeshSetupSlice(over.meshSetup),

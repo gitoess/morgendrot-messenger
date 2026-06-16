@@ -12,6 +12,9 @@ import { asContactDirectoryRead, type ContactDirectoryReadPort } from './contact
 import { asHandshakeActions, type HandshakeActionsPort } from './handshake-actions-port'
 import { asHandshakeOffersRead, type HandshakeOffersReadPort } from './handshake-offers-read-port'
 import { asInboxFeedRead, type InboxFeedReadPort } from './inbox-feed-read-port'
+import { asInboxPanelRead, type InboxPanelReadPort } from './inbox-panel-read-port'
+import { asInboxPreviewRead, type InboxPreviewReadPort } from './inbox-preview-read-port'
+import { asMorgPkgArchive, type MorgPkgArchivePort } from './morg-pkg-archive-port'
 import {
   asOfflineMailboxQueueRead,
   type OfflineMailboxQueueItem,
@@ -53,6 +56,8 @@ import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partn
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
+import type { MorgPkgImportItem, MorgPkgImportRecord } from '@/frontend/lib/morg-pkg-import-store'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import type { Message } from '@/frontend/lib/types'
 
@@ -97,6 +102,25 @@ export type ChatViewInboxFeedSlice = {
   myAddress: string
 }
 
+export type ChatViewInboxPanelReadSlice = {
+  inboxRows: readonly ChatInboxRow[]
+  inboxTotalCount: number
+  inboxUnreadThreadOptions: readonly InboxUnreadThreadOption[]
+  resetInboxViewFilters: () => void
+}
+
+export type ChatViewInboxPreviewReadSlice = {
+  pinnwandStripMessages: readonly Message[]
+}
+
+export type ChatViewMorgPkgArchiveSlice = {
+  records: readonly MorgPkgImportRecord[]
+  open: boolean
+  setOpen: (open: boolean) => void
+  remove: (id: string) => void
+  onForwardItem: (sender: string, item: MorgPkgImportItem) => void
+}
+
 export type ChatViewAttachmentBarSlice = {
   sending: boolean
   pickDisabled?: boolean
@@ -122,6 +146,7 @@ export type ChatViewAttachmentBarSlice = {
 export type ChatViewContactDirectorySlice = {
   directory: Record<string, ContactMeshEntryClient>
   isMeshVerifiedForAddress: (address: string) => boolean
+  refreshContactDirectory: () => void
 }
 
 export type ChatViewConnectionStatusSlice = {
@@ -131,6 +156,7 @@ export type ChatViewConnectionStatusSlice = {
   packageIdMismatch: boolean
   deviceTimeTrustWarn: boolean
   connectedAddresses: readonly string[]
+  refreshApiStatus: () => void | Promise<void>
 }
 
 export type ChatViewInboxViewUiSlice = {
@@ -245,6 +271,7 @@ export type ChatViewInboxActionsSlice = {
   morgPkgImportCount: number
   onOpenMorgPkgArchive: () => void
   openPartnerSetupPanel: () => void
+  appendMeshMessage: InboxActionsPort['appendMeshMessage']
 }
 
 export type ChatViewInboxExportActionsSlice = {
@@ -266,6 +293,7 @@ export type ChatViewPackageExpertSlice = {
   refreshPackageIdSuggestions: (extraUnionIds?: string[]) => void | Promise<void>
   applyPackageIdBackend: (packageId: string) => void | Promise<void>
   loadMessages: InboxActionsPort['loadMessages']
+  syncCanonicalPackageIdFromServer: () => void | Promise<void>
 }
 
 export type ChatViewMeshDeviceSlice = {
@@ -315,6 +343,9 @@ export type ChatViewMessengerPorts = {
   sendTransportRead: SendTransportReadPort
   sendMeshFunkOptions: SendMeshFunkOptionsPort
   inboxFeedRead: InboxFeedReadPort
+  inboxPanelRead: InboxPanelReadPort
+  inboxPreviewRead: InboxPreviewReadPort
+  morgPkgArchive: MorgPkgArchivePort
   contactDirectoryRead: ContactDirectoryReadPort
   connectionStatusRead: ConnectionStatusReadPort
   attachmentBar: AttachmentBarPort
@@ -397,6 +428,18 @@ export function assembleInboxFeedReadPort(slice: ChatViewInboxFeedSlice): InboxF
   return asInboxFeedRead(slice.messages, slice.myAddress)
 }
 
+export function assembleInboxPanelReadPort(slice: ChatViewInboxPanelReadSlice): InboxPanelReadPort {
+  return asInboxPanelRead(slice)
+}
+
+export function assembleInboxPreviewReadPort(slice: ChatViewInboxPreviewReadSlice): InboxPreviewReadPort {
+  return asInboxPreviewRead(slice.pinnwandStripMessages)
+}
+
+export function assembleMorgPkgArchivePort(slice: ChatViewMorgPkgArchiveSlice): MorgPkgArchivePort {
+  return asMorgPkgArchive(slice)
+}
+
 export function assembleVoiceRecordSendPanelPort(
   fromHook: VoiceRecordFromHook,
   sosVoiceAwaitingSend: boolean
@@ -411,7 +454,11 @@ export function assembleAttachmentBarPort(slice: ChatViewAttachmentBarSlice): At
 export function assembleContactDirectoryReadPort(
   slice: ChatViewContactDirectorySlice
 ): ContactDirectoryReadPort {
-  return asContactDirectoryRead(slice.directory, slice.isMeshVerifiedForAddress)
+  return asContactDirectoryRead(
+    slice.directory,
+    slice.isMeshVerifiedForAddress,
+    slice.refreshContactDirectory
+  )
 }
 
 export function assembleConnectionStatusReadPort(
@@ -423,7 +470,8 @@ export function assembleConnectionStatusReadPort(
     slice.statusCacheAgeMinutes,
     slice.packageIdMismatch,
     slice.deviceTimeTrustWarn,
-    slice.connectedAddresses
+    slice.connectedAddresses,
+    slice.refreshApiStatus
   )
 }
 
@@ -507,6 +555,7 @@ export function assembleInboxActionsPort(slice: ChatViewInboxActionsSlice): Inbo
     morgPkgImportCount: slice.morgPkgImportCount,
     onOpenMorgPkgArchive: slice.onOpenMorgPkgArchive,
     openPartnerSetupPanel: slice.openPartnerSetupPanel,
+    appendMeshMessage: slice.appendMeshMessage,
   })
 }
 
@@ -531,6 +580,7 @@ export function assemblePackageExpertPort(slice: ChatViewPackageExpertSlice): Pa
       await slice.loadMessages('reset')
     },
     applyPackageIdBackend: slice.applyPackageIdBackend,
+    syncCanonicalPackageIdFromServer: slice.syncCanonicalPackageIdFromServer,
   })
 }
 
@@ -564,6 +614,9 @@ export function assembleChatViewMessengerPorts(input: {
   transport: ChatViewTransportSlice
   meshFunk: ChatViewMeshFunkSlice
   inboxFeed: ChatViewInboxFeedSlice
+  inboxPanelRead: ChatViewInboxPanelReadSlice
+  inboxPreviewRead: ChatViewInboxPreviewReadSlice
+  morgPkgArchive: ChatViewMorgPkgArchiveSlice
   contactDirectory: ChatViewContactDirectorySlice
   connectionStatus: ChatViewConnectionStatusSlice
   attachmentBar: ChatViewAttachmentBarSlice
@@ -591,6 +644,9 @@ export function assembleChatViewMessengerPorts(input: {
     sendTransportRead: assembleSendTransportReadPort(input.transport),
     sendMeshFunkOptions: assembleSendMeshFunkOptionsPort(input.meshFunk),
     inboxFeedRead: assembleInboxFeedReadPort(input.inboxFeed),
+    inboxPanelRead: assembleInboxPanelReadPort(input.inboxPanelRead),
+    inboxPreviewRead: assembleInboxPreviewReadPort(input.inboxPreviewRead),
+    morgPkgArchive: assembleMorgPkgArchivePort(input.morgPkgArchive),
     contactDirectoryRead: assembleContactDirectoryReadPort(input.contactDirectory),
     connectionStatusRead: assembleConnectionStatusReadPort(input.connectionStatus),
     attachmentBar: assembleAttachmentBarPort(input.attachmentBar),

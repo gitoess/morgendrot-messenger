@@ -1,6 +1,6 @@
 import type { ApiStatus } from '@/frontend/lib/api'
 
-/** API-/Verbindungs-Snapshot (readonly) für Header, Send und Inbox. */
+/** API-/Verbindungs-Snapshot für Header, Send und Inbox (P8: inkl. Refresh-Aktion). */
 export type ConnectionStatusReadPort = {
   readonly apiStatus: ApiStatus | null
   readonly basisUnreachable: boolean | undefined
@@ -9,6 +9,7 @@ export type ConnectionStatusReadPort = {
   readonly deviceTimeTrustWarn: boolean
   /** Peers für Handshake-UI (Status + Offline-Cache). */
   readonly connectedAddresses: readonly string[]
+  readonly refreshApiStatus: () => void | Promise<void>
 }
 
 export function asConnectionStatusRead(
@@ -17,7 +18,8 @@ export function asConnectionStatusRead(
   statusCacheAgeMinutes: number | null,
   packageIdMismatch: boolean,
   deviceTimeTrustWarn: boolean,
-  connectedAddresses: readonly string[]
+  connectedAddresses: readonly string[],
+  refreshApiStatus: () => void | Promise<void>
 ): ConnectionStatusReadPort {
   return {
     apiStatus,
@@ -26,5 +28,6 @@ export function asConnectionStatusRead(
     packageIdMismatch,
     deviceTimeTrustWarn,
     connectedAddresses,
+    refreshApiStatus,
   }
 }

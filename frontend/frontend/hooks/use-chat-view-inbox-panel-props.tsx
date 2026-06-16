@@ -10,6 +10,7 @@ export type ChatViewInboxPanelPropsDeps = {
   messengerPorts: Pick<
     ChatViewPanelMessengerPorts,
     | 'inboxFeedRead'
+    | 'inboxPanelRead'
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
     | 'inboxViewUi'
@@ -24,8 +25,6 @@ export type ChatViewInboxPanelPropsDeps = {
     | 'inboxHandshakePanelActions'
     | 'inboxPanelLocalActions'
   >
-  inboxTotalCount: number
-  inboxRows: ChatViewInboxPanelProps['inboxRows']
   showPinnwandPinActions: boolean
   onOpenPhonebook: () => void
   showInboxIotaFilter: boolean
@@ -38,6 +37,7 @@ export type ChatViewInboxPanelPropsDeps = {
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): ChatViewInboxPanelProps {
   const {
     inboxFeedRead,
+    inboxPanelRead,
     contactDirectoryRead,
     connectionStatusRead,
     inboxViewUi,
@@ -101,8 +101,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
 
   const inboxPanelProps = {
     ...inboxFeedRead,
-    messageCount: deps.inboxTotalCount,
-    inboxRowCount: deps.inboxRows.length,
+    messageCount: inboxPanelRead.inboxTotalCount,
+    inboxRowCount: inboxPanelRead.inboxRows.length,
     morgPkgFileRef: inboxActions.morgPkgFileRef,
     morgPkgDeviceFilesRef: inboxActions.morgPkgDeviceFilesRef,
     onMorgPkgImportFile: inboxActions.onMorgPkgImportFile,
@@ -168,7 +168,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     pinnedPinnwandIds: inboxViewUi.pinnedPinnwandIds,
     onTogglePinnedPinnwand: inboxViewUi.togglePinnedPinnwand,
     toggleProtokollMark: inboxViewUi.toggleProtokollMark,
-    inboxRows: deps.inboxRows,
+    inboxRows: [...inboxPanelRead.inboxRows],
     contactDirectory: contactDirectoryRead.directory,
     isMeshVerifiedForAddress: contactDirectoryRead.isMeshVerifiedForAddress,
     exportEcdhMorgPkgForMessage: inboxExportActions.exportEcdhMorgPkgForMessage,

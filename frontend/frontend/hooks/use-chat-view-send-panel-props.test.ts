@@ -36,10 +36,7 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
   return {
     messengerPorts,
     activeGroup: null,
-    refreshApiStatus: vi.fn(),
-    loadMessages: vi.fn(),
     setComposerMailboxObjectId: vi.fn(),
-    appendMeshMessage: vi.fn(),
     expertTools: false,
     canPostToPinnwand: false,
     ...over,

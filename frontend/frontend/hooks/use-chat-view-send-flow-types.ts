@@ -9,9 +9,9 @@ import type { ComposerDraftSendFlowPort } from '@/frontend/features/messenger-po
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import type { AppendMeshMessageFn } from '@/frontend/lib/append-mesh-message-fn'
 
-/** Nach erfolgreichem Funk-Versand: lokale Echo-Zeile + `localStorage`-Archiv (siehe `mesh-local-archive`). */
-export type AppendMeshMessageFn = (msg: Message) => void
+export type { AppendMeshMessageFn } from '@/frontend/lib/append-mesh-message-fn'
 
 export type UseChatViewSendFlowParams = ComposerDraftSendFlowPort & {
   isPrivate: boolean

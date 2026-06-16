@@ -18,6 +18,7 @@ export type ChatViewShellPropsDeps = {
     | 'inboxViewUi'
     | 'offlineMailboxQueueRead'
     | 'meshDevice'
+    | 'packageExpert'
   >
   isPrivate: boolean
   isGroup: boolean
@@ -26,10 +27,7 @@ export type ChatViewShellPropsDeps = {
   onChannelModeChange?: (c: MessengerChatChannel) => void
   vaultBannerActions?: ChatViewVaultBannerActions
   offlineStatus?: OfflineStatusSnapshot
-  refreshApiStatus?: () => void | Promise<void>
   showAdhocTransport: boolean
-  packageIdBusy: boolean
-  syncCanonicalPackageIdFromServer: () => void | Promise<void>
   showPackageIdBanner: boolean
 }
 
@@ -43,6 +41,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     inboxViewUi,
     offlineMailboxQueueRead,
     meshDevice,
+    packageExpert,
   } = deps.messengerPorts
 
   const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
@@ -50,7 +49,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       isPrivate: deps.isPrivate,
       encrypted: sendTransportChoice.encrypted,
       apiStatus: connectionStatusRead.apiStatus,
-      onRefreshStatus: deps.refreshApiStatus,
+      onRefreshStatus: connectionStatusRead.refreshApiStatus,
       basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
       statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
       offlineStatus: deps.offlineStatus,
@@ -85,7 +84,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       deps.vaultBannerActions,
       deps.offlineStatus,
       meshDevice.connected,
-      deps.refreshApiStatus,
+      connectionStatusRead.refreshApiStatus,
       deps.showAdhocTransport,
       connectionStatusRead,
       composerSendPath,
@@ -99,10 +98,10 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     () => ({
       pending: offlineMailboxQueueRead.pending,
       errorHint: offlineMailboxQueueRead.errorHint,
-      onManualRefresh: deps.refreshApiStatus,
+      onManualRefresh: connectionStatusRead.refreshApiStatus,
       alwaysVisible: true as const,
     }),
-    [offlineMailboxQueueRead.pending, offlineMailboxQueueRead.errorHint, deps.refreshApiStatus]
+    [offlineMailboxQueueRead.pending, offlineMailboxQueueRead.errorHint, connectionStatusRead.refreshApiStatus]
   )
 
   const packageIdBannerProps = useMemo(
@@ -112,13 +111,13 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
         connectionStatusRead.packageIdMismatch &&
         !!connectionStatusRead.apiStatus?.packageId?.trim(),
       serverPackageId: connectionStatusRead.apiStatus?.packageId?.trim() ?? '',
-      busy: deps.packageIdBusy,
-      onSyncToServer: () => void deps.syncCanonicalPackageIdFromServer(),
+      busy: packageExpert.packageIdBusy,
+      onSyncToServer: () => void packageExpert.syncCanonicalPackageIdFromServer(),
     }),
     [
       deps.showPackageIdBanner,
-      deps.packageIdBusy,
-      deps.syncCanonicalPackageIdFromServer,
+      packageExpert.packageIdBusy,
+      packageExpert.syncCanonicalPackageIdFromServer,
       connectionStatusRead.packageIdMismatch,
       connectionStatusRead.apiStatus?.packageId,
     ]

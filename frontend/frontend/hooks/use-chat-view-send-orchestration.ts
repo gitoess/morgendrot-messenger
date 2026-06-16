@@ -24,7 +24,7 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
-import type { AppendMeshMessageFn } from '@/frontend/hooks/use-chat-view-send-flow-types'
+import type { AppendMeshMessageFn } from '@/frontend/lib/append-mesh-message-fn'
 
 export type UseChatViewSendOrchestrationParams = {
   channelMode: MessengerChatChannel

@@ -24,8 +24,9 @@ export type UseChatViewCoreParams = {
 }
 
 /**
- * Rückgabe `messages` ist die gefilterte Posteingangs-Anzeige (`displayMessages`).
- * `messengerPorts` bündelt Phase-2-Schnittstellen für Panel-Hooks (`features/messenger-ports`).
+ * Chat-View-Orchestrierung: drei Sub-Hooks (Composer, Inbox, Send) + Port-Assembler.
+ * Meshtastic-First: Funk über `useMeshtasticBle` in der Send-Schicht.
+ * Rückgabe: `messengerPorts` + schlanke Orchestrator-Felder (P8).
  */
 export function useChatViewCore(p: UseChatViewCoreParams) {
   const { channelMode, role, myAddress } = p

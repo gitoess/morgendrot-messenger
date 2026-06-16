@@ -37,6 +37,12 @@ export type { PinnwandFeedReadPort } from './pinnwand-feed-read-port'
 export { asPinnwandFeedRead } from './pinnwand-feed-read-port'
 export type { ChatViewShellOrchestrationPort } from './shell-orchestration-port'
 export { assembleShellOrchestrationPort } from './shell-orchestration-port'
+export type { InboxPreviewReadPort } from './inbox-preview-read-port'
+export { asInboxPreviewRead } from './inbox-preview-read-port'
+export type { InboxPanelReadPort } from './inbox-panel-read-port'
+export { asInboxPanelRead } from './inbox-panel-read-port'
+export type { MorgPkgArchivePort } from './morg-pkg-archive-port'
+export { asMorgPkgArchive } from './morg-pkg-archive-port'
 export type { PackageExpertPort } from './package-expert-port'
 export { asPackageExpert } from './package-expert-port'
 export type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
@@ -68,6 +74,9 @@ export {
   assembleComposerPartnerPort,
   assembleComposerSendPathPort,
   assembleInboxFeedReadPort,
+  assembleInboxPanelReadPort,
+  assembleInboxPreviewReadPort,
+  assembleMorgPkgArchivePort,
   assembleInboxViewUiPort,
   assembleMeshSendOptionsPort,
   assembleOfflineMailboxQueueReadPort,
@@ -92,6 +101,9 @@ export {
   type ChatViewComposerPartnerSlice,
   type ChatViewComposerSendPathSlice,
   type ChatViewInboxFeedSlice,
+  type ChatViewInboxPanelReadSlice,
+  type ChatViewInboxPreviewReadSlice,
+  type ChatViewMorgPkgArchiveSlice,
   type ChatViewInboxViewUiSlice,
   type ChatViewMeshSendOptionsSlice,
   type ChatViewOfflineMailboxQueueSlice,

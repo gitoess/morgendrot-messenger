@@ -140,9 +140,26 @@ describe('assembleChatViewMessengerPorts', () => {
         messages: [{ id: '1', from: '0xa', content: '', timestamp: 1 }],
         myAddress: '0xb',
       },
+      inboxPanelRead: {
+        inboxRows: [],
+        inboxTotalCount: 0,
+        inboxUnreadThreadOptions: [],
+        resetInboxViewFilters: vi.fn(),
+      },
+      inboxPreviewRead: {
+        pinnwandStripMessages: [],
+      },
+      morgPkgArchive: {
+        records: [],
+        open: false,
+        setOpen: vi.fn(),
+        remove: vi.fn(),
+        onForwardItem: vi.fn(),
+      },
       contactDirectory: {
         directory: {},
         isMeshVerifiedForAddress: () => false,
+        refreshContactDirectory: vi.fn(),
       },
       connectionStatus: {
         apiStatus: null,
@@ -151,6 +168,7 @@ describe('assembleChatViewMessengerPorts', () => {
         packageIdMismatch: false,
         deviceTimeTrustWarn: false,
         connectedAddresses: [],
+        refreshApiStatus: vi.fn(async () => {}),
       },
       inboxViewUi: {
         inboxPartnerOptions: [],
@@ -252,6 +270,7 @@ describe('assembleChatViewMessengerPorts', () => {
         morgPkgImportCount: 0,
         onOpenMorgPkgArchive: vi.fn(),
         openPartnerSetupPanel: vi.fn(),
+        appendMeshMessage: vi.fn(),
       },
       inboxExportActions: {
         exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
@@ -271,6 +290,7 @@ describe('assembleChatViewMessengerPorts', () => {
         refreshPackageIdSuggestions: vi.fn(async () => {}),
         applyPackageIdBackend: vi.fn(async () => {}),
         loadMessages: vi.fn(),
+        syncCanonicalPackageIdFromServer: vi.fn(async () => {}),
       },
       meshDevice: {
         bleSupported: false,
@@ -372,7 +392,25 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         setMeshSelfArchiveAfterLoRa: vi.fn(),
       },
       inboxFeed: { messages: [], myAddress: '0xa' },
-      contactDirectory: { directory: {}, isMeshVerifiedForAddress: () => false },
+      inboxPanelRead: {
+        inboxRows: [],
+        inboxTotalCount: 0,
+        inboxUnreadThreadOptions: [],
+        resetInboxViewFilters: vi.fn(),
+      },
+      inboxPreviewRead: { pinnwandStripMessages: [] },
+      morgPkgArchive: {
+        records: [],
+        open: false,
+        setOpen: vi.fn(),
+        remove: vi.fn(),
+        onForwardItem: vi.fn(),
+      },
+      contactDirectory: {
+        directory: {},
+        isMeshVerifiedForAddress: () => false,
+        refreshContactDirectory: vi.fn(),
+      },
       connectionStatus: {
         apiStatus: null,
         basisUnreachable: false,
@@ -380,6 +418,7 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         packageIdMismatch: false,
         deviceTimeTrustWarn: false,
         connectedAddresses: [],
+        refreshApiStatus: vi.fn(async () => {}),
       },
       inboxViewUi: {
         inboxPartnerOptions: [],
@@ -481,6 +520,7 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         morgPkgImportCount: 0,
         onOpenMorgPkgArchive: vi.fn(),
         openPartnerSetupPanel: vi.fn(),
+        appendMeshMessage: vi.fn(),
       },
       inboxExportActions: {
         exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
@@ -500,6 +540,7 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         refreshPackageIdSuggestions: vi.fn(async () => {}),
         applyPackageIdBackend: vi.fn(async () => {}),
         loadMessages: vi.fn(),
+        syncCanonicalPackageIdFromServer: vi.fn(async () => {}),
       },
       meshDevice: {
         bleSupported: false,

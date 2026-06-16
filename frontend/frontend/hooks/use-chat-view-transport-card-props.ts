@@ -18,8 +18,6 @@ export type ChatViewTransportCardPropsDeps = {
     | 'meshDevice'
   >
   onOpenPartnerSetup?: () => void
-  refreshContactDirectory: () => void
-  refreshApiStatus?: () => void | Promise<void>
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
   encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null
@@ -61,8 +59,8 @@ export function useChatViewTransportCardProps(
         channelMode: composerSendPath.channelMode,
         myAddressLine: composerSendPath.isPrivate ? inboxFeedRead.myAddress : undefined,
         contactDirectory: contactDirectoryRead.directory,
-        onContactsChanged: deps.refreshContactDirectory,
-        onRefreshApiStatus: deps.refreshApiStatus,
+        onContactsChanged: contactDirectoryRead.refreshContactDirectory,
+        onRefreshApiStatus: connectionStatusRead.refreshApiStatus,
         onMailboxStatus,
         encryptedPartner: deps.encryptedPartnerPanelProps ?? undefined,
       }) satisfies ChatViewTransportCardProps,
@@ -77,8 +75,8 @@ export function useChatViewTransportCardProps(
       deps.onOpenPartnerSetup,
       inboxFeedRead.myAddress,
       contactDirectoryRead.directory,
-      deps.refreshContactDirectory,
-      deps.refreshApiStatus,
+      contactDirectoryRead.refreshContactDirectory,
+      connectionStatusRead.refreshApiStatus,
       deps.encryptedPartnerPanelProps,
       onMailboxStatus,
     ]

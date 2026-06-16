@@ -1,6 +1,6 @@
 'use client'
 
-import type { AppendMeshMessageFn } from '@/frontend/hooks/use-chat-view-send-flow-types'
+import type { AppendMeshMessageFn } from '@/frontend/lib/append-mesh-message-fn'
 import type { SendPartOk } from '@/frontend/features/send/chat-view-handle-send-part-types'
 import type { MeshtasticBleSendApi } from '@/frontend/lib/chat-view-messenger-transport'
 import { formatMeshtasticNodeIdFromNum } from '@/frontend/lib/meshtastic-node-id'

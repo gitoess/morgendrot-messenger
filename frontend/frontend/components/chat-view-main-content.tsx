@@ -18,8 +18,6 @@ import { ChatViewInboxUnreadThreadsStrip } from '@/frontend/components/chat-view
 import {
   canPostToPinnwand,
   getMessengerPinnwandCapabilities,
-  buildPinnwandMatchContext,
-  messageBelongsToPinnwand,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
@@ -85,27 +83,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     role,
     myAddress,
     messengerPorts,
-    sending,
     setSending,
-    refreshApiStatus,
-    syncCanonicalPackageIdFromServer,
-    applyInboxPackageFilterOnly,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
-    refreshContactDirectory,
-    inboxTotalCount,
-    messages,
-    setMessages,
-    loadMessages,
-    appendMeshMessage,
-    clearInboxRam,
-    inboxRows,
-    morgPkgImports,
-    morgPkgImportsOpen,
-    setMorgPkgImportsOpen,
-    removeMorgPkgImport,
-    onForwardMorgPkgItem,
-    resetInboxViewFilters,
     vaultBannerActions,
     channelMode,
     onChannelModeChange,
@@ -113,13 +93,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenEinsatzleitung,
     phonebookNavRequest,
     onOpenSettings,
-    inboxUnreadThreadOptions,
   } = c
 
   const {
     connectionStatusRead,
     contactDirectoryRead,
     inboxViewUi,
+    inboxPanelRead,
+    inboxPreviewRead,
+    morgPkgArchive,
     meshSendOptions,
     composerDraft,
     composerPartner,
@@ -139,7 +121,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     deviceTimeTrustWarn,
     connectedAddresses: handshakeConnectedAddresses,
   } = connectionStatusRead
-  const { directory, isMeshVerifiedForAddress } = contactDirectoryRead
+  const { directory, isMeshVerifiedForAddress, refreshContactDirectory } = contactDirectoryRead
   const {
     meshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
@@ -293,15 +275,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     () => getMessengerPinnwandCapabilities(apiStatus, role, channelMode, myAddress),
     [apiStatus, role, channelMode, myAddress]
   )
-  const pinnwandPreviewMessages = useMemo(() => {
-    if (!pinnwandCaps.showInboxStrip) return []
-    const match = buildPinnwandMatchContext(apiStatus, myAddress)
-    if (!match) return []
-    return messages
-      .filter((m) => messageBelongsToPinnwand(m, match))
-      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0))
-      .slice(0, 3)
-  }, [messages, pinnwandCaps.showInboxStrip, apiStatus, myAddress])
+  const pinnwandPreviewMessages = inboxPreviewRead.pinnwandStripMessages
   const showInboxPackageExpert = uiCaps.showInboxPackageExpertMenu(clientExpertMode)
   /** Kanal-Tab „Pinnwand“ — eigener Feed, kein gemischter Posteingang. */
   const onPinnwandTab =
@@ -369,17 +343,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onChannelModeChange,
     vaultBannerActions,
     offlineStatus,
-    refreshApiStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
-    packageIdBusy: packageExpert.packageIdBusy,
-    syncCanonicalPackageIdFromServer,
     showPackageIdBanner: uiCaps.showPackageIdBanner,
   })
 
   const inboxPanelProps = useChatViewInboxPanelProps({
     messengerPorts: panelMessengerPorts,
-    inboxTotalCount,
-    inboxRows,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
     onOpenPhonebook: () => setPhonebookOpen(true),
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
@@ -392,11 +361,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const { sendPanelProps } = useChatViewSendPanelProps({
     messengerPorts: panelMessengerPorts,
     activeGroup,
-    refreshApiStatus,
-    loadMessages,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
-    appendMeshMessage,
     expertTools: uiCaps.expertTools,
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
@@ -406,7 +372,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
-    sending,
+    sending: messengerPorts.attachmentBar.sending,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
     setStatusMsg,
   })
@@ -420,8 +386,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const transportCardProps = useChatViewTransportCardProps({
     messengerPorts: panelMessengerPorts,
     onOpenPartnerSetup: inboxActions.openPartnerSetupPanel,
-    refreshContactDirectory,
-    refreshApiStatus,
     setStatus,
     setStatusMsg,
     encryptedPartnerPanelProps,
@@ -467,7 +431,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {pinnwandCaps.showInboxStrip ? (
         <ChatViewPinnwandInboxStrip
-          messages={pinnwandPreviewMessages}
+          messages={[...pinnwandPreviewMessages]}
           role={role}
           apiStatus={pinnwandInboxStripProps.apiStatus}
           contactDirectory={pinnwandInboxStripProps.contactDirectory}
@@ -512,9 +476,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             <ChatViewSendPanel {...sendPanelProps} />
           </section>
 
-          {inboxOverviewChipsVisible && (inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+          {inboxOverviewChipsVisible && (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
             <ChatViewInboxUnreadThreadsStrip
-              threads={inboxUnreadThreadOptions ?? []}
+              threads={[...(inboxPanelRead.inboxUnreadThreadOptions ?? [])]}
               onOpenThread={(address) => {
                 setInboxOverviewCategory('direkt')
                 selectInboxPartnerForSend(address)
@@ -526,14 +490,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         </>
       )}
 
-      {morgPkgImportsOpen ? (
+      {morgPkgArchive.open ? (
         <LazyChatViewMorgPkgImportsSheet
-          open={morgPkgImportsOpen}
-          onOpenChange={setMorgPkgImportsOpen}
-          records={morgPkgImports}
+          open={morgPkgArchive.open}
+          onOpenChange={morgPkgArchive.setOpen}
+          records={[...morgPkgArchive.records]}
           contactDirectory={contactDirectoryRead.directory}
-          onRemove={removeMorgPkgImport}
-          onForwardItem={onForwardMorgPkgItem}
+          onRemove={morgPkgArchive.remove}
+          onForwardItem={morgPkgArchive.onForwardItem}
         />
       ) : null}
 

@@ -17,7 +17,6 @@ function baseDeps(over: Partial<ChatViewTransportCardPropsDeps> = {}): ChatViewT
   return {
     messengerPorts,
     onOpenPartnerSetup: vi.fn(),
-    refreshContactDirectory: vi.fn(),
     setStatus: vi.fn(),
     setStatusMsg: vi.fn(),
     encryptedPartnerPanelProps: null,
