@@ -15,9 +15,8 @@ export type ChatViewTransportCardPropsDeps = {
     | 'inboxFeedRead'
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
+    | 'meshDevice'
   >
-  meshBleSupported?: boolean
-  meshBleConnected?: boolean
   onOpenPartnerSetup?: () => void
   refreshContactDirectory: () => void
   refreshApiStatus?: () => void | Promise<void>
@@ -36,6 +35,7 @@ export function useChatViewTransportCardProps(
     inboxFeedRead,
     contactDirectoryRead,
     connectionStatusRead,
+    meshDevice,
   } = deps.messengerPorts
 
   const onMailboxStatus = useCallback(
@@ -55,8 +55,8 @@ export function useChatViewTransportCardProps(
         isPrivate: composerSendPath.isPrivate,
         apiStatus: connectionStatusRead.apiStatus,
         partner: composerPartner.partner,
-        meshBleSupported: deps.meshBleSupported,
-        meshBleConnected: deps.meshBleConnected,
+        meshBleSupported: meshDevice.bleSupported,
+        meshBleConnected: meshDevice.connected,
         onOpenPartnerSetup: deps.onOpenPartnerSetup,
         channelMode: composerSendPath.channelMode,
         myAddressLine: composerSendPath.isPrivate ? inboxFeedRead.myAddress : undefined,
@@ -72,8 +72,8 @@ export function useChatViewTransportCardProps(
       composerSendPath.channelMode,
       connectionStatusRead.apiStatus,
       composerPartner.partner,
-      deps.meshBleSupported,
-      deps.meshBleConnected,
+      meshDevice.bleSupported,
+      meshDevice.connected,
       deps.onOpenPartnerSetup,
       inboxFeedRead.myAddress,
       contactDirectoryRead.directory,

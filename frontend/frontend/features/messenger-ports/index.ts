@@ -29,6 +29,12 @@ export type { InboxActionsPort, InboxLoadMode } from './inbox-actions-port'
 export { asInboxActions } from './inbox-actions-port'
 export type { InboxExportActionsPort } from './inbox-export-actions-port'
 export { asInboxExportActions } from './inbox-export-actions-port'
+export type { MeshDevicePort } from './mesh-device-port'
+export { asMeshDevice } from './mesh-device-port'
+export type { MeshSetupPort } from './mesh-setup-port'
+export { asMeshSetup } from './mesh-setup-port'
+export type { PinnwandFeedReadPort } from './pinnwand-feed-read-port'
+export { asPinnwandFeedRead } from './pinnwand-feed-read-port'
 export type { PackageExpertPort } from './package-expert-port'
 export { asPackageExpert } from './package-expert-port'
 export type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
@@ -69,6 +75,9 @@ export {
   assembleInboxActionsPort,
   assembleInboxExportActionsPort,
   assemblePackageExpertPort,
+  assembleMeshDevicePort,
+  assembleMeshSetupPort,
+  assemblePinnwandFeedReadPort,
   assembleSendMeshFunkOptionsPort,
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
@@ -89,6 +98,9 @@ export {
   type ChatViewInboxActionsSlice,
   type ChatViewInboxExportActionsSlice,
   type ChatViewPackageExpertSlice,
+  type ChatViewMeshDeviceSlice,
+  type ChatViewMeshSetupSlice,
+  type ChatViewPinnwandFeedSlice,
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
   type ChatViewPanelMessengerPorts,

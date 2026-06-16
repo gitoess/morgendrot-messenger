@@ -23,6 +23,9 @@ import type { InboxPanelLocalActionsPort } from './inbox-panel-local-actions-por
 import { asInboxExportActions, type InboxExportActionsPort } from './inbox-export-actions-port'
 import { asPackageExpert, type PackageExpertPort } from './package-expert-port'
 import { asSendActions, type SendActionsPort, type SendComposerStatus } from './send-actions-port'
+import { asMeshDevice, type MeshDevicePort } from './mesh-device-port'
+import { asMeshSetup, type MeshSetupPort } from './mesh-setup-port'
+import { asPinnwandFeedRead, type PinnwandFeedReadPort } from './pinnwand-feed-read-port'
 import { asMeshSendOptions, type MeshSendOptionsPort } from './mesh-send-options-port'
 import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
 import {
@@ -49,6 +52,7 @@ import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partn
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
+import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewComposerDraftSlice = {
@@ -263,6 +267,44 @@ export type ChatViewPackageExpertSlice = {
   loadMessages: InboxActionsPort['loadMessages']
 }
 
+export type ChatViewMeshDeviceSlice = {
+  bleSupported: boolean
+  serialSupported: boolean
+  transportKind: 'bluetooth' | 'usb'
+  setTransportKind: (kind: 'bluetooth' | 'usb') => void
+  connected: boolean
+  connecting: boolean
+  error: string | null
+  lastRxDebug: string | null
+  meshRxSubscriptions: string | null
+  connect: () => Promise<void>
+  connectBluetooth: () => Promise<void>
+  connectUsb: () => Promise<void>
+  disconnect: () => void
+  sendMeshText: (
+    text: string,
+    destination?: number | 'broadcast',
+    channelIndex?: number
+  ) => Promise<number>
+}
+
+export type ChatViewMeshSetupSlice = {
+  contactBleAddress: string
+  setContactBleAddress: (v: string) => void
+  contactBleUuid: string
+  setContactBleUuid: (v: string) => void
+  contactBleBusy: boolean
+  setContactBleBusy: (v: boolean) => void
+  meshSyncMsg: string | null
+  setMeshSyncMsg: (v: string | null) => void
+  refreshContactDirectory: () => void
+}
+
+export type ChatViewPinnwandFeedSlice = {
+  feedMessages: readonly Message[]
+  feedInboxRows: readonly ChatInboxRow[]
+}
+
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
@@ -285,6 +327,9 @@ export type ChatViewMessengerPorts = {
   inboxActions: InboxActionsPort
   inboxExportActions: InboxExportActionsPort
   packageExpert: PackageExpertPort
+  meshDevice: MeshDevicePort
+  meshSetup: MeshSetupPort
+  pinnwandFeedRead: PinnwandFeedReadPort
 }
 
 /** Panel-Ports = Core-Ports plus in main-content angereicherte Inbox-Aktionen (P5b). */
@@ -484,6 +529,28 @@ export function assemblePackageExpertPort(slice: ChatViewPackageExpertSlice): Pa
   })
 }
 
+export function assembleMeshDevicePort(slice: ChatViewMeshDeviceSlice): MeshDevicePort {
+  return asMeshDevice(slice)
+}
+
+export function assembleMeshSetupPort(slice: ChatViewMeshSetupSlice): MeshSetupPort {
+  return asMeshSetup({
+    contactBleAddress: slice.contactBleAddress,
+    onContactBleAddressChange: slice.setContactBleAddress,
+    contactBleUuid: slice.contactBleUuid,
+    onContactBleUuidChange: slice.setContactBleUuid,
+    contactBleBusy: slice.contactBleBusy,
+    setContactBleBusy: slice.setContactBleBusy,
+    meshSyncMsg: slice.meshSyncMsg,
+    setMeshSyncMsg: slice.setMeshSyncMsg,
+    refreshContactDirectory: slice.refreshContactDirectory,
+  })
+}
+
+export function assemblePinnwandFeedReadPort(slice: ChatViewPinnwandFeedSlice): PinnwandFeedReadPort {
+  return asPinnwandFeedRead(slice.feedMessages, slice.feedInboxRows)
+}
+
 /** Alle Standard-Ports aus den Core-Slices. */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
@@ -504,6 +571,9 @@ export function assembleChatViewMessengerPorts(input: {
   inboxActions: ChatViewInboxActionsSlice
   inboxExportActions: ChatViewInboxExportActionsSlice
   packageExpert: ChatViewPackageExpertSlice
+  meshDevice: ChatViewMeshDeviceSlice
+  meshSetup: ChatViewMeshSetupSlice
+  pinnwandFeed: ChatViewPinnwandFeedSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -530,6 +600,9 @@ export function assembleChatViewMessengerPorts(input: {
     inboxActions: assembleInboxActionsPort(input.inboxActions),
     inboxExportActions: assembleInboxExportActionsPort(input.inboxExportActions),
     packageExpert: assemblePackageExpertPort(input.packageExpert),
+    meshDevice: assembleMeshDevicePort(input.meshDevice),
+    meshSetup: assembleMeshSetupPort(input.meshSetup),
+    pinnwandFeedRead: assemblePinnwandFeedReadPort(input.pinnwandFeed),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)

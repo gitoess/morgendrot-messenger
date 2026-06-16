@@ -68,27 +68,6 @@ const PACKAGE_ID = `0x${'f'.repeat(64)}`
 const noop = vi.fn()
 const asyncNoop = vi.fn(async () => {})
 
-function meshtasticStub() {
-  return {
-    bleSupported: false,
-    serialSupported: false,
-    transportKind: null,
-    setTransportKind: noop,
-    connected: false,
-    connecting: false,
-    error: null,
-    lastRxDebug: null,
-    meshRxSubscriptions: null,
-    device: null,
-    connect: noop,
-    connectBluetooth: noop,
-    connectUsb: noop,
-    disconnect: noop,
-    sendBinaryV2: vi.fn(async () => 0),
-    sendMeshText: vi.fn(async () => 0),
-  }
-}
-
 function buildMainContentProps(
   over: Partial<ChatViewMainContentProps> & {
     apiStatus?: ApiStatus | null
@@ -110,8 +89,6 @@ function buildMainContentProps(
     myAddress: MY_ADDR,
     sending: false,
     setSending: noop,
-    showSetup: false,
-    toggleShowSetup: noop,
     refreshApiStatus: asyncNoop,
     syncCanonicalPackageIdFromServer: asyncNoop,
     applyInboxPackageFilterOnly: asyncNoop,
@@ -125,17 +102,6 @@ function buildMainContentProps(
     appendMeshMessage: noop,
     clearInboxRam: noop,
     inboxRows: [],
-    pinnwandFeedMessages: [],
-    pinnwandInboxRows: [],
-    meshtastic: meshtasticStub(),
-    meshSyncMsg: '',
-    setMeshSyncMsg: noop,
-    contactBleAddress: '',
-    setContactBleAddress: noop,
-    contactBleUuid: '',
-    setContactBleUuid: noop,
-    contactBleBusy: false,
-    setContactBleBusy: noop,
     morgPkgImports: [],
     morgPkgImportsOpen: false,
     setMorgPkgImportsOpen: noop,
@@ -253,12 +219,8 @@ describe('ChatViewMainContent (§ H.1a)', () => {
             encrypted: true,
             composerDelivery: 'chain',
             isPrivate: true,
+            meshDevice: { bleSupported: true, transportKind: 'bluetooth' },
           }),
-          meshtastic: {
-            ...meshtasticStub(),
-            bleSupported: true,
-            transportKind: 'bluetooth',
-          },
         })}
       />
     )

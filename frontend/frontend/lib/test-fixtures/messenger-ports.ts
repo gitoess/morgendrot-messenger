@@ -4,6 +4,9 @@ import {
   asInboxHandshakePanelActions,
   asInboxPanelLocalActions,
   type ChatViewAttachmentBarSlice,
+  type ChatViewMeshDeviceSlice,
+  type ChatViewMeshSetupSlice,
+  type ChatViewPinnwandFeedSlice,
   type ChatViewMessengerPorts,
   type ChatViewPanelMessengerPorts,
 } from '@/frontend/features/messenger-ports'
@@ -32,6 +35,49 @@ function defaultAttachmentBarSlice(): ChatViewAttachmentBarSlice {
   }
 }
 
+function defaultMeshDeviceSlice(over: Partial<ChatViewMeshDeviceSlice> = {}): ChatViewMeshDeviceSlice {
+  return {
+    bleSupported: false,
+    serialSupported: false,
+    transportKind: 'bluetooth',
+    setTransportKind: vi.fn(),
+    connected: false,
+    connecting: false,
+    error: null,
+    lastRxDebug: null,
+    meshRxSubscriptions: null,
+    connect: vi.fn(async () => {}),
+    connectBluetooth: vi.fn(async () => {}),
+    connectUsb: vi.fn(async () => {}),
+    disconnect: vi.fn(),
+    sendMeshText: vi.fn(async () => 0),
+    ...over,
+  }
+}
+
+function defaultMeshSetupSlice(over: Partial<ChatViewMeshSetupSlice> = {}): ChatViewMeshSetupSlice {
+  return {
+    contactBleAddress: '',
+    setContactBleAddress: vi.fn(),
+    contactBleUuid: '',
+    setContactBleUuid: vi.fn(),
+    contactBleBusy: false,
+    setContactBleBusy: vi.fn(),
+    meshSyncMsg: null,
+    setMeshSyncMsg: vi.fn(),
+    refreshContactDirectory: vi.fn(),
+    ...over,
+  }
+}
+
+function defaultPinnwandFeedSlice(over: Partial<ChatViewPinnwandFeedSlice> = {}): ChatViewPinnwandFeedSlice {
+  return {
+    feedMessages: [],
+    feedInboxRows: [],
+    ...over,
+  }
+}
+
 /** Minimale messengerPorts für Panel-Hook-Tests (Vitest). */
 export function testMessengerPorts(over: {
   message?: string
@@ -54,6 +100,9 @@ export function testMessengerPorts(over: {
   packageIdMismatch?: boolean
   connectedAddresses?: readonly string[]
   isMeshVerifiedForAddress?: (address: string) => boolean
+  meshDevice?: Partial<ChatViewMeshDeviceSlice>
+  meshSetup?: Partial<ChatViewMeshSetupSlice>
+  pinnwandFeed?: Partial<ChatViewPinnwandFeedSlice>
 } = {}): ChatViewMessengerPorts {
   const myAddress = over.myAddress ?? `0x${'a'.repeat(64)}`
   return assembleChatViewMessengerPorts({
@@ -226,6 +275,9 @@ export function testMessengerPorts(over: {
       applyPackageIdBackend: vi.fn(async () => {}),
       loadMessages: vi.fn(),
     },
+    meshDevice: defaultMeshDeviceSlice(over.meshDevice),
+    meshSetup: defaultMeshSetupSlice(over.meshSetup),
+    pinnwandFeed: defaultPinnwandFeedSlice(over.pinnwandFeed),
     voiceFromHook: {
       voicePhase: 'idle',
       voiceActiveKind: null,

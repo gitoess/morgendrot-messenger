@@ -59,6 +59,8 @@ import {
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
+import { useChatViewSetupPanelProps } from '@/frontend/hooks/use-chat-view-setup-panel-props'
+import { useChatViewPinnwandFeedPanelProps } from '@/frontend/hooks/use-chat-view-pinnwand-feed-panel-props'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
 import {
   asHandshakeOffersRead,
@@ -119,17 +121,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     appendMeshMessage,
     clearInboxRam,
     inboxRows,
-    pinnwandFeedMessages,
-    pinnwandInboxRows,
-    meshtastic,
-    meshSyncMsg,
-    setMeshSyncMsg,
-    contactBleAddress,
-    setContactBleAddress,
-    contactBleUuid,
-    setContactBleUuid,
-    contactBleBusy,
-    setContactBleBusy,
     morgPkgImports,
     morgPkgImportsOpen,
     setMorgPkgImportsOpen,
@@ -159,8 +150,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sendMeshFunkOptions,
     sendActions,
     inboxActions,
-    inboxExportActions,
     packageExpert,
+    meshDevice,
+    meshSetup,
   } = messengerPorts
   const {
     apiStatus,
@@ -206,15 +198,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxOverviewCategory,
     setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
-    isInboxMessageUnread,
-    isPinnwandInboxMessage,
-    inboxSelectMode,
-    selectedInboxIds,
-    toggleInboxSelection,
-    protokollMarkedIds,
-    pinnedPinnwandIds,
-    togglePinnedPinnwand,
-    toggleProtokollMark,
   } = inboxViewUi
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
@@ -482,18 +465,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const onSarqNakWire = useCallback(
     async (wire: string) => {
-      if (!meshtastic.connected) return
+      if (!meshDevice.connected) return
       const resolved = meshPlaintextToNodeEnabled
         ? resolveMeshtasticPlaintextDestination(true, meshPlaintextNodeId)
         : 'broadcast'
       const dest = resolved === null ? 'broadcast' : resolved
       try {
-        await meshtastic.sendMeshText(wire, dest)
+        await meshDevice.sendMeshText(wire, dest)
       } catch {
         /* NAK optional; Chat bleibt bedienbar */
       }
     },
-    [meshtastic, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
+    [meshDevice, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
   )
 
   const panelMessengerPorts = useMemo(
@@ -544,7 +527,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         setRecipient,
         setMeshPlaintextNodeId,
         setMeshPlaintextToNodeEnabled,
-        setContactBleUuid,
+        setContactBleUuid: meshSetup.onContactBleUuidChange,
         selectInboxPartnerForSend,
       })
       recordContactLastContacted(applied.storageKey)
@@ -571,7 +554,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setRecipient,
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
-      setContactBleUuid,
+      meshSetup.onContactBleUuidChange,
       selectInboxPartnerForSend,
       setComposerDelivery,
     ]
@@ -658,7 +641,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onChannelModeChange,
     vaultBannerActions,
     offlineStatus,
-    meshBleConnected: meshtastic.connected,
     refreshApiStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
     packageIdBusy: packageExpert.packageIdBusy,
@@ -709,14 +691,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const transportCardProps = useChatViewTransportCardProps({
     messengerPorts: panelMessengerPorts,
-    meshBleSupported: meshtastic.bleSupported,
-    meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: inboxActions.openPartnerSetupPanel,
     refreshContactDirectory,
     refreshApiStatus,
     setStatus,
     setStatusMsg,
     encryptedPartnerPanelProps,
+  })
+
+  const setupPanelProps = useChatViewSetupPanelProps({ messengerPorts: panelMessengerPorts })
+
+  const pinnwandFeedPanelProps = useChatViewPinnwandFeedPanelProps({
+    messengerPorts: panelMessengerPorts,
+    role,
+    canPost: pinnwandCaps.canPost,
+    unreadCount: inboxOverviewUnreadCounts?.lagebild ?? 0,
   })
 
   return (
@@ -769,34 +758,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewTransportCard {...transportCardProps} />
       ) : null}
 
-      {showPartnerSetupPanel ? (
-        <ChatViewSetupPanel
-          forcedTransport={forcedTransport}
-          meshtastic={{
-            bleSupported: meshtastic.bleSupported,
-            serialSupported: meshtastic.serialSupported,
-            transportKind: meshtastic.transportKind,
-            connected: meshtastic.connected,
-            connecting: meshtastic.connecting,
-            error: meshtastic.error,
-            lastRxDebug: meshtastic.lastRxDebug,
-            meshRxSubscriptions: meshtastic.meshRxSubscriptions,
-            connect: meshtastic.connect,
-            connectBluetooth: meshtastic.connectBluetooth,
-            connectUsb: meshtastic.connectUsb,
-            disconnect: meshtastic.disconnect,
-          }}
-          refreshContactDirectory={refreshContactDirectory}
-          contactBleAddress={contactBleAddress}
-          onContactBleAddressChange={setContactBleAddress}
-          contactBleUuid={contactBleUuid}
-          onContactBleUuidChange={setContactBleUuid}
-          contactBleBusy={contactBleBusy}
-          setContactBleBusy={setContactBleBusy}
-          meshSyncMsg={meshSyncMsg}
-          setMeshSyncMsg={setMeshSyncMsg}
-        />
-      ) : null}
+      {showPartnerSetupPanel ? <ChatViewSetupPanel {...setupPanelProps} /> : null}
 
       <ContactAddAliasDialog
         open={contactAliasDialog != null}
@@ -812,42 +774,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       {onPinnwandTab ? (
         <>
           <ChatViewPinnwandFeedPanel
-            apiStatus={connectionStatusRead.apiStatus}
-            role={role}
-            canPost={pinnwandCaps.canPost}
-            unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
-            loading={inboxActions.loading}
-            onRefresh={() => void inboxActions.loadMessages('reset')}
-            loadError={inboxActions.loadError}
-            inboxFromCache={inboxActions.inboxFromCache}
-            inboxCacheAgeMinutes={inboxActions.inboxCacheAgeMinutes}
-            basisUnreachable={connectionStatusRead.basisUnreachable ?? false}
-            messages={pinnwandFeedMessages}
-            inboxRows={pinnwandInboxRows}
-            myAddress={myAddress}
-            contactDirectory={contactDirectoryRead.directory}
-            isMeshVerifiedForAddress={contactDirectoryRead.isMeshVerifiedForAddress}
-            exportEcdhMorgPkgForMessage={inboxExportActions.exportEcdhMorgPkgForMessage}
-            onHideInboxMessageLocal={inboxActions.onHideInboxMessageLocal}
-            onPurgeInboxMessageChain={inboxActions.onPurgeInboxMessageChain}
-            onForwardMessage={inboxActions.onForwardMessage}
-            onReplyToMessage={handleReplyToInboxMessage}
-            toggleProtokollMark={toggleProtokollMark}
-            protokollMarkedIds={protokollMarkedIds}
-            pinnedPinnwandIds={pinnedPinnwandIds}
-            onTogglePinnedPinnwand={togglePinnedPinnwand}
+            {...pinnwandFeedPanelProps}
             showPinnwandPinActions={pinnwandCaps.configured && pinnwandCaps.canPost}
-            inboxSelectMode={inboxSelectMode}
-            selectedInboxIds={selectedInboxIds}
-            toggleInboxSelection={toggleInboxSelection}
-            loadingMore={inboxActions.loadingMore}
-            loadMoreInbox={inboxActions.loadMoreInbox}
-            inboxHasMore={inboxActions.inboxHasMore}
-            onAddSenderToContactBook={addInboxSenderToContactBook}
-            onSarqNakWire={onSarqNakWire}
-            isInboxMessageUnread={isInboxMessageUnread}
-            isPinnwandInboxMessage={isPinnwandInboxMessage}
-            sending={sending}
           />
           <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
             <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">

@@ -269,6 +269,37 @@ describe('assembleChatViewMessengerPorts', () => {
         applyPackageIdBackend: vi.fn(async () => {}),
         loadMessages: vi.fn(),
       },
+      meshDevice: {
+        bleSupported: false,
+        serialSupported: false,
+        transportKind: 'bluetooth',
+        setTransportKind: vi.fn(),
+        connected: false,
+        connecting: false,
+        error: null,
+        lastRxDebug: null,
+        meshRxSubscriptions: null,
+        connect: vi.fn(async () => {}),
+        connectBluetooth: vi.fn(async () => {}),
+        connectUsb: vi.fn(async () => {}),
+        disconnect: vi.fn(),
+        sendMeshText: vi.fn(async () => 0),
+      },
+      meshSetup: {
+        contactBleAddress: '',
+        setContactBleAddress: vi.fn(),
+        contactBleUuid: '',
+        setContactBleUuid: vi.fn(),
+        contactBleBusy: false,
+        setContactBleBusy: vi.fn(),
+        meshSyncMsg: null,
+        setMeshSyncMsg: vi.fn(),
+        refreshContactDirectory: vi.fn(),
+      },
+      pinnwandFeed: {
+        feedMessages: [],
+        feedInboxRows: [],
+      },
       attachmentBar: {
         sending: false,
         compactFileRef: { current: null },
@@ -298,6 +329,8 @@ describe('assembleChatViewMessengerPorts', () => {
     expect(ports.handshakeOffersRead.pendingOffers).toEqual([])
     expect(ports.inboxActions.loading).toBe(false)
     expect(ports.packageExpert.packageIdBusy).toBe(false)
+    expect(ports.meshDevice.connected).toBe(false)
+    expect(ports.pinnwandFeedRead.feedMessages).toEqual([])
     expect(ports.voiceRecordSendPanel).toBeNull()
   })
 })

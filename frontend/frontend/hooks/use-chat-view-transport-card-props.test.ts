@@ -16,8 +16,6 @@ function baseDeps(over: Partial<ChatViewTransportCardPropsDeps> = {}): ChatViewT
     })
   return {
     messengerPorts,
-    meshBleSupported: true,
-    meshBleConnected: false,
     onOpenPartnerSetup: vi.fn(),
     refreshContactDirectory: vi.fn(),
     setStatus: vi.fn(),

@@ -17,6 +17,7 @@ export type ChatViewShellPropsDeps = {
     | 'inboxFeedRead'
     | 'inboxViewUi'
     | 'offlineMailboxQueueRead'
+    | 'meshDevice'
   >
   isPrivate: boolean
   isGroup: boolean
@@ -25,7 +26,6 @@ export type ChatViewShellPropsDeps = {
   onChannelModeChange?: (c: MessengerChatChannel) => void
   vaultBannerActions?: ChatViewVaultBannerActions
   offlineStatus?: OfflineStatusSnapshot
-  meshBleConnected: boolean
   refreshApiStatus?: () => void | Promise<void>
   showAdhocTransport: boolean
   packageIdBusy: boolean
@@ -42,6 +42,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     inboxFeedRead,
     inboxViewUi,
     offlineMailboxQueueRead,
+    meshDevice,
   } = deps.messengerPorts
 
   const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
@@ -53,7 +54,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
       statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
       offlineStatus: deps.offlineStatus,
-      meshBleConnected: deps.meshBleConnected,
+      meshBleConnected: meshDevice.connected,
       role: deps.role,
       deviceTimeTrustWarn: connectionStatusRead.deviceTimeTrustWarn,
       vaultBannerActions: deps.vaultBannerActions,
@@ -83,7 +84,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       deps.onChannelModeChange,
       deps.vaultBannerActions,
       deps.offlineStatus,
-      deps.meshBleConnected,
+      meshDevice.connected,
       deps.refreshApiStatus,
       deps.showAdhocTransport,
       connectionStatusRead,
