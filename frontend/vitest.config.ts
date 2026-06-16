@@ -12,11 +12,11 @@ export default defineConfig({
     include: ['**/*.test.{ts,tsx}'],
     passWithNoTests: true,
     pool: 'forks',
-    /** CI: keine parallelen Dateien pro Worker — vermeidet Singleton-Races (Tab-Persist). */
+    /** CI: sequentiell — vermeidet Singleton-Races (Tab-Persist) in Fork-Workern. */
     fileParallelism: !isCi,
-    maxWorkers: isCi ? 2 : undefined,
-    teardownTimeout: 15_000,
-    hookTimeout: 15_000,
+    maxWorkers: isCi ? 1 : undefined,
+    teardownTimeout: 30_000,
+    hookTimeout: 30_000,
     setupFiles: ['./tests/vitest-setup.ts', './tests/i18n-vitest-setup.ts'],
   },
   resolve: {

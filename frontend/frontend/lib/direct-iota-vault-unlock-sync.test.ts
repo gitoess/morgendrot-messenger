@@ -6,7 +6,9 @@ import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
   clearPersistedDirectIotaSessionSigner,
+  disableDirectIotaTabSessionPersistForVitest,
   drainDirectIotaTabSessionPersistForTests,
+  enableDirectIotaTabSessionPersistForVitest,
   getDirectIotaSessionSignerAddress,
   persistDirectIotaSessionSignerEncrypted,
   resetDirectIotaMnemonicSessionModuleForTests,
@@ -57,6 +59,7 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
   beforeEach(async () => {
     await drainDirectIotaTabSessionPersistForTests()
     resetDirectIotaMnemonicSessionModuleForTests()
+    enableDirectIotaTabSessionPersistForVitest()
     Object.keys(sessionStore).forEach((k) => delete sessionStore[k])
     Object.keys(store).forEach((k) => delete store[k])
     clearDirectIotaSessionSigner()
@@ -92,6 +95,7 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
 
   afterEach(async () => {
     await drainDirectIotaTabSessionPersistForTests()
+    disableDirectIotaTabSessionPersistForVitest()
     resetDirectIotaMnemonicSessionModuleForTests()
     vi.unstubAllGlobals()
     clearDirectIotaSessionSigner()

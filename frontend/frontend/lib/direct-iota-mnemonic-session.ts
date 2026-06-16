@@ -114,7 +114,26 @@ async function persistDirectIotaSessionSignerTabSessionEncrypted(
 let tabSessionPersistIdle: Promise<void> = Promise.resolve()
 /** Erhöht bei Test-Reset — verhindert Persist nach teardown (CI-Flake). */
 let tabSessionPersistEpoch = 0
+/** Vitest: Tab-Persist standardmäßig aus — nur in dedizierten Session-Tests aktivieren. */
+let tabSessionPersistEnabledInVitest = false
+
+export function enableDirectIotaTabSessionPersistForVitest(): void {
+  tabSessionPersistEnabledInVitest = true
+}
+
+export function disableDirectIotaTabSessionPersistForVitest(): void {
+  tabSessionPersistEnabledInVitest = false
+}
+
+function shouldScheduleTabSessionPersist(): boolean {
+  if (typeof process !== 'undefined' && process.env.VITEST === 'true') {
+    return tabSessionPersistEnabledInVitest
+  }
+  return true
+}
+
 function scheduleDirectIotaTabSessionPersist(signerImportRaw: string): void {
+  if (!shouldScheduleTabSessionPersist()) return
   const epochAtSchedule = tabSessionPersistEpoch
   tabSessionPersistIdle = tabSessionPersistIdle
     .catch(() => {})
@@ -134,6 +153,7 @@ export function resetDirectIotaMnemonicSessionModuleForTests(): void {
   clearDirectIotaSessionSigner()
   tabSessionPersistEpoch++
   tabSessionPersistIdle = Promise.resolve()
+  tabSessionPersistEnabledInVitest = false
 }
 
 export async function drainDirectIotaTabSessionPersistForTests(): Promise<void> {

@@ -6,7 +6,9 @@ import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
   clearPersistedDirectIotaSessionSigner,
+  disableDirectIotaTabSessionPersistForVitest,
   drainDirectIotaTabSessionPersistForTests,
+  enableDirectIotaTabSessionPersistForVitest,
   getDirectIotaSessionSignerAddress,
   hasPersistedDirectIotaSessionSigner,
   persistDirectIotaSessionSignerEncrypted,
@@ -25,6 +27,7 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
   beforeEach(async () => {
     await drainDirectIotaTabSessionPersistForTests()
     resetDirectIotaMnemonicSessionModuleForTests()
+    enableDirectIotaTabSessionPersistForVitest()
     Object.keys(store).forEach((k) => delete store[k])
     Object.keys(sessionStore).forEach((k) => delete sessionStore[k])
     clearDirectIotaSessionSigner()
@@ -55,6 +58,7 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
 
   afterEach(async () => {
     await drainDirectIotaTabSessionPersistForTests()
+    disableDirectIotaTabSessionPersistForVitest()
     vi.unstubAllGlobals()
   })
 
