@@ -34,8 +34,7 @@ import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phoneboo
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
-import { saveContactEntry, type ContactMeshEntryClient } from '@/frontend/lib/api'
-import { contactDisplayLabel } from '@/frontend/lib/contact-display'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
 import {
   canAccessEinsatzleitung,
@@ -49,35 +48,15 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
-import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
-import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
-import {
-  useChatViewPendingHandshakes,
-  type PendingHandshakesPollState,
-} from '@/frontend/hooks/use-chat-view-pending-handshakes'
+import type { PendingHandshakesPollState } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import { useChatViewSetupPanelProps } from '@/frontend/hooks/use-chat-view-setup-panel-props'
 import { useChatViewPinnwandFeedPanelProps } from '@/frontend/hooks/use-chat-view-pinnwand-feed-panel-props'
+import { useChatViewPanelMessengerPorts } from '@/frontend/hooks/use-chat-view-panel-messenger-ports'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
-import {
-  asHandshakeOffersRead,
-  asInboxHandshakePanelActions,
-  asInboxPanelLocalActions,
-} from '@/frontend/features/messenger-ports'
-import type { ChatViewPanelMessengerPorts } from '@/frontend/features/messenger-ports'
-import {
-  tryPurgeHandshakeOfferOnChain,
-  type HandshakeOfferSource,
-} from '@/frontend/lib/handshake-offer-delete'
-import {
-  applyReplyContextVariant,
-  resolveReplyContextFromInboxMessage,
-  type ReplyContextVariant,
-} from '@/frontend/lib/inbox-reply-context'
-import type { Message } from '@/frontend/lib/types'
 import {
   Dialog,
   DialogContent,
@@ -151,7 +130,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sendActions,
     inboxActions,
     packageExpert,
-    meshDevice,
     meshSetup,
   } = messengerPorts
   const {
@@ -202,11 +180,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
-  const [contactAliasDialog, setContactAliasDialog] = useState<{
-    address: string
-    defaultLabel: string
-  } | null>(null)
-  const [contactAliasBusy, setContactAliasBusy] = useState(false)
   const [phonebookOpen, setPhonebookOpen] = useState(false)
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
@@ -218,167 +191,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const pendingHandshakeRefreshKey = `${[...handshakeConnectedAddresses].join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
-  const internalPendingHandshakes = useChatViewPendingHandshakes({
-    enabled:
-      !c.pendingHandshakes &&
-      /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) &&
-      (basisUnreachable !== true || hasCachedHandshakeOffers() || canFetchHandshakesViaDirectIota()),
-    connectedAddresses: [...handshakeConnectedAddresses],
-    refreshToken: pendingHandshakeRefreshKey,
-    contactDirectory: directory,
-    vaultLocked: apiStatus?.locked === true,
-    basisUnreachable: basisUnreachable === true,
-  })
-
-  const {
-    offers: pendingHandshakeOffers,
-    outgoingOffers: outgoingHandshakeOffers,
-    loading: pendingHandshakesLoading,
-    reload: reloadPendingHandshakes,
-    dismissOffer: dismissPendingHandshake,
-    dismissOutgoingOffer: dismissOutgoingPendingHandshake,
-  } = c.pendingHandshakes ?? internalPendingHandshakes
-
-  const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
-
-  const { handshakeActions } = messengerPorts
-
-  const handleResendOutgoingHandshake = useCallback(
-    async (recipient: string) => {
-      await handshakeActions.onHandshakeForAddress(recipient)
-      window.setTimeout(() => void reloadPendingHandshakes(), 3000)
-    },
-    [handshakeActions, reloadPendingHandshakes]
-  )
-
-  const handleAcceptHandshakeFromInbox = useCallback(
-    async (sender: string) => {
-      setPartner(sender.trim())
-      await handshakeActions.onConnectAcceptForAddress(sender)
-      window.setTimeout(() => void reloadPendingHandshakes(), 4000)
-    },
-    [setPartner, handshakeActions, reloadPendingHandshakes]
-  )
-
-  const purgeAndDismissHandshake = useCallback(
-    async (p: {
-      recipient: string
-      sender: string
-      source: HandshakeOfferSource
-      dismissLocal: () => void
-      label: string
-    }) => {
-      setSending(true)
-      try {
-        const purge = await tryPurgeHandshakeOfferOnChain({
-          recipient: p.recipient,
-          sender: p.sender,
-          source: p.source,
-          apiStatus,
-        })
-        p.dismissLocal()
-        if (purge.ok && purge.onChain) {
-          toast.success(`Handshake mit ${p.label} gelöscht (on-chain + lokal).`)
-        } else if (purge.ok && !purge.onChain) {
-          const hint =
-            purge.reason === 'event-only'
-              ? 'Nur lokal ausgeblendet — Event-only (kein Mailbox-Purge möglich).'
-              : 'Nur lokal ausgeblendet — Purge/Mailbox nicht verfügbar.'
-          toast.info(hint)
-        } else {
-          toast.warning(`Lokal ausgeblendet. On-chain-Purge fehlgeschlagen: ${purge.error}`)
-        }
-        window.setTimeout(() => void reloadPendingHandshakes(), 2500)
-      } finally {
-        setSending(false)
-      }
-    },
-    [apiStatus, reloadPendingHandshakes, setSending]
-  )
-
-  const handleDeleteIncomingHandshake = useCallback(
-    async (sender: string, nonce: string, source: HandshakeOfferSource) => {
-      const me = myAddress.trim()
-      if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
-        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
-        return
-      }
-      const label =
-        contactDisplayLabel(directory, sender.trim().toLowerCase()) || sender.slice(0, 12)
-      await purgeAndDismissHandshake({
-        recipient: me,
-        sender: sender.trim(),
-        source,
-        dismissLocal: () => dismissPendingHandshake(sender, nonce),
-        label,
-      })
-    },
-    [myAddress, directory, purgeAndDismissHandshake, dismissPendingHandshake]
-  )
-
-  const handleDeleteOutgoingHandshake = useCallback(
-    async (recipient: string, nonce: string, source: HandshakeOfferSource) => {
-      const me = myAddress.trim()
-      if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) {
-        toast.error('Eigene Adresse fehlt — Purge nicht möglich.')
-        return
-      }
-      const label =
-        contactDisplayLabel(directory, recipient.trim().toLowerCase()) || recipient.slice(0, 12)
-      await purgeAndDismissHandshake({
-        recipient: recipient.trim(),
-        sender: me,
-        source,
-        dismissLocal: () => dismissOutgoingPendingHandshake(recipient, nonce),
-        label,
-      })
-    },
-    [myAddress, directory, purgeAndDismissHandshake, dismissOutgoingPendingHandshake]
-  )
-
-  const handleUseSenderAsPartnerFromInbox = useCallback(
-    (sender: string) => {
-      const t = sender.trim()
-      setPartner(t)
-      setRecipient(t)
-      toast.info('Partner-Adresse übernommen.')
-    },
-    [setPartner, setRecipient, setComposerDelivery]
-  )
-
-  const [replyPathChoice, setReplyPathChoice] = useState<ReplyContextVariant[] | null>(null)
-
-  const applyInboxReplyVariant = useCallback(
-    (variant: ReplyContextVariant) => {
-      messengerPorts.attachmentBar.clearCompactAttachment()
-      applyReplyContextVariant(variant, {
-        onChannelModeChange,
-        setForcedTransport,
-        setComposerDelivery,
-        setPartner,
-        setRecipient,
-        setEncrypted,
-        setComposerMailboxObjectId,
-        setMeshtasticChannelIndex,
-        setMeshPlaintextNodeId,
-        setMeshPlaintextToNodeEnabled,
-        selectInboxPartnerForSend,
-        setMessage,
-        refreshMessengerGroups,
-      })
-      setStatus('success')
-      setStatusMsg(
-        variant.hint
-          ? `Antworten: ${variant.label} — ${variant.hint}`
-          : `Antworten: ${variant.label} — Nachricht ergänzen und senden.`
-      )
-      toast.success(`Antworten: ${variant.label}`)
-      requestAnimationFrame(() => {
-        document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      })
-    },
-    [
-      messengerPorts.attachmentBar.clearCompactAttachment,
+  const composeReply = useMemo(
+    () => ({
       onChannelModeChange,
       setForcedTransport,
       setComposerDelivery,
@@ -392,133 +206,47 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       selectInboxPartnerForSend,
       setMessage,
       refreshMessengerGroups,
-      setStatus,
-      setStatusMsg,
-    ]
-  )
-
-  const handleReplyToInboxMessage = useCallback(
-    (msg: Message) => {
-      const result = resolveReplyContextFromInboxMessage(msg, {
-        myAddress,
-        contactDirectory: directory,
-        pinnwandBoardAddress: apiStatus?.broadcastPinnwand?.address,
-        activeGroup,
-      })
-      if (!result) {
-        toast.error('Antworten: Kein passender Kanal für diese Zeile.')
-        return
-      }
-      if (result.kind === 'choice') {
-        setReplyPathChoice(result.variants)
-        return
-      }
-      applyInboxReplyVariant(result.variant)
-    },
-    [myAddress, directory, apiStatus?.broadcastPinnwand?.address, activeGroup, applyInboxReplyVariant]
-  )
-
-  const addInboxSenderToContactBook = useCallback(
-    (address: string) => {
-      const a = address.trim()
-      if (!a.startsWith('0x') || a.length < 66) {
-        setStatus('error')
-        setStatusMsg('Keine gültige 0x-Absenderadresse.')
-        setTimeout(() => setStatus('idle'), 4000)
-        return
-      }
-      if (myAddress.trim() && addressMatchesIdentity(a, myAddress)) {
-        setStatus('error')
-        setStatusMsg('Das ist deine eigene Adresse — nicht ins Telefonbuch nötig.')
-        setTimeout(() => setStatus('idle'), 4000)
-        return
-      }
-      const suggest = contactDisplayLabel(directory, a) || `${a.slice(0, 10)}…${a.slice(-4)}`
-      setContactAliasDialog({ address: a, defaultLabel: suggest })
-    },
-    [directory, myAddress, setStatus, setStatusMsg]
-  )
-
-  const saveContactAliasFromDialog = useCallback(
-    async (label: string) => {
-      if (!contactAliasDialog) return
-      setContactAliasBusy(true)
-      const r = await saveContactEntry({
-        address: contactAliasDialog.address,
-        label: label || undefined,
-      })
-      setContactAliasBusy(false)
-      if (r.ok) {
-        refreshContactDirectory()
-        recordContactLastContacted(contactAliasDialog.address)
-        setStatus('success')
-        setStatusMsg(r.message || 'Kontakt gespeichert.')
-        setContactAliasDialog(null)
-      } else {
-        setStatus('error')
-        setStatusMsg(r.error || 'Kontakt speichern fehlgeschlagen.')
-      }
-      setTimeout(() => setStatus('idle'), 5000)
-    },
-    [contactAliasDialog, refreshContactDirectory, setStatus, setStatusMsg]
-  )
-
-  const onSarqNakWire = useCallback(
-    async (wire: string) => {
-      if (!meshDevice.connected) return
-      const resolved = meshPlaintextToNodeEnabled
-        ? resolveMeshtasticPlaintextDestination(true, meshPlaintextNodeId)
-        : 'broadcast'
-      const dest = resolved === null ? 'broadcast' : resolved
-      try {
-        await meshDevice.sendMeshText(wire, dest)
-      } catch {
-        /* NAK optional; Chat bleibt bedienbar */
-      }
-    },
-    [meshDevice, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
-  )
-
-  const panelMessengerPorts = useMemo(
-    (): ChatViewPanelMessengerPorts => ({
-      ...messengerPorts,
-      handshakeOffersRead: asHandshakeOffersRead(
-        pendingHandshakeOffers,
-        outgoingHandshakeOffers,
-        reloadPendingHandshakes
-      ),
-      inboxHandshakePanelActions: asInboxHandshakePanelActions({
-        pendingHandshakesLoading,
-        pendingHandshakeCount,
-        onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
-        onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
-        onReplyToMessage: handleReplyToInboxMessage,
-        onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
-        onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
-        onResendOutgoingHandshake: handleResendOutgoingHandshake,
-      }),
-      inboxPanelLocalActions: asInboxPanelLocalActions({
-        onAddSenderToContactBook: addInboxSenderToContactBook,
-        onSarqNakWire,
-      }),
     }),
     [
-      messengerPorts,
-      pendingHandshakeOffers,
-      outgoingHandshakeOffers,
-      reloadPendingHandshakes,
-      pendingHandshakesLoading,
-      pendingHandshakeCount,
-      handleAcceptHandshakeFromInbox,
-      handleUseSenderAsPartnerFromInbox,
-      handleReplyToInboxMessage,
-      handleDeleteIncomingHandshake,
-      handleDeleteOutgoingHandshake,
-      handleResendOutgoingHandshake,
-      addInboxSenderToContactBook,
-      onSarqNakWire,
+      onChannelModeChange,
+      setForcedTransport,
+      setComposerDelivery,
+      setPartner,
+      setRecipient,
+      setEncrypted,
+      setComposerMailboxObjectId,
+      setMeshtasticChannelIndex,
+      setMeshPlaintextNodeId,
+      setMeshPlaintextToNodeEnabled,
+      selectInboxPartnerForSend,
+      setMessage,
+      refreshMessengerGroups,
     ]
   )
+
+  const { panelMessengerPorts, contactAliasDialog, replyPathChoiceDialog } = useChatViewPanelMessengerPorts({
+    messengerPorts,
+    myAddress,
+    activeGroup,
+    apiStatus,
+    contactDirectory: directory,
+    pendingHandshakes: c.pendingHandshakes,
+    pendingHandshakesPoll: {
+      enabled:
+        !c.pendingHandshakes &&
+        /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) &&
+        (basisUnreachable !== true || hasCachedHandshakeOffers() || canFetchHandshakesViaDirectIota()),
+      connectedAddresses: handshakeConnectedAddresses,
+      refreshToken: pendingHandshakeRefreshKey,
+      vaultLocked: apiStatus?.locked === true,
+      basisUnreachable: basisUnreachable === true,
+    },
+    setSending,
+    setStatus,
+    setStatusMsg,
+    refreshContactDirectory,
+    composeReply,
+  })
 
   const applyPhonebookContact = useCallback(
     (storageKey: string, entry: ContactMeshEntryClient) => {
@@ -760,16 +488,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {showPartnerSetupPanel ? <ChatViewSetupPanel {...setupPanelProps} /> : null}
 
-      <ContactAddAliasDialog
-        open={contactAliasDialog != null}
-        onOpenChange={(open) => {
-          if (!open) setContactAliasDialog(null)
-        }}
-        address={contactAliasDialog?.address ?? ''}
-        defaultLabel={contactAliasDialog?.defaultLabel ?? ''}
-        busy={contactAliasBusy}
-        onSave={saveContactAliasFromDialog}
-      />
+      <ContactAddAliasDialog {...contactAliasDialog} />
 
       {onPinnwandTab ? (
         <>
@@ -839,7 +558,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {uiCaps.expertTools ? <LazyChatViewRelaySubmitButton hideMenuTrigger /> : null}
 
-      <Dialog open={replyPathChoice != null} onOpenChange={(open) => !open && setReplyPathChoice(null)}>
+      <Dialog open={replyPathChoiceDialog.open} onOpenChange={(open) => !open && replyPathChoiceDialog.onClose()}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Antworten — Sendeweg wählen</DialogTitle>
@@ -848,16 +567,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-2 pt-1">
-            {(replyPathChoice ?? []).map((variant) => (
+            {replyPathChoiceDialog.variants.map((variant) => (
               <Button
                 key={variant.id}
                 type="button"
                 variant="outline"
                 className="h-auto justify-start px-3 py-2.5 text-left"
-                onClick={() => {
-                  setReplyPathChoice(null)
-                  applyInboxReplyVariant(variant)
-                }}
+                onClick={() => replyPathChoiceDialog.onSelect(variant)}
               >
                 <span className="font-semibold">{variant.label}</span>
               </Button>

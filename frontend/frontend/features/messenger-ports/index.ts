@@ -35,6 +35,8 @@ export type { MeshSetupPort } from './mesh-setup-port'
 export { asMeshSetup } from './mesh-setup-port'
 export type { PinnwandFeedReadPort } from './pinnwand-feed-read-port'
 export { asPinnwandFeedRead } from './pinnwand-feed-read-port'
+export type { ChatViewShellOrchestrationPort } from './shell-orchestration-port'
+export { assembleShellOrchestrationPort } from './shell-orchestration-port'
 export type { PackageExpertPort } from './package-expert-port'
 export { asPackageExpert } from './package-expert-port'
 export type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
@@ -75,6 +77,7 @@ export {
   assembleInboxActionsPort,
   assembleInboxExportActionsPort,
   assemblePackageExpertPort,
+  assembleChatViewPanelMessengerPorts,
   assembleMeshDevicePort,
   assembleMeshSetupPort,
   assemblePinnwandFeedReadPort,

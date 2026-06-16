@@ -20,6 +20,7 @@ import {
 import { asInboxActions, type InboxActionsPort } from './inbox-actions-port'
 import type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
 import type { InboxPanelLocalActionsPort } from './inbox-panel-local-actions-port'
+import type { ChatViewShellOrchestrationPort } from './shell-orchestration-port'
 import { asInboxExportActions, type InboxExportActionsPort } from './inbox-export-actions-port'
 import { asPackageExpert, type PackageExpertPort } from './package-expert-port'
 import { asSendActions, type SendActionsPort, type SendComposerStatus } from './send-actions-port'
@@ -332,10 +333,14 @@ export type ChatViewMessengerPorts = {
   pinnwandFeedRead: PinnwandFeedReadPort
 }
 
-/** Panel-Ports = Core-Ports plus in main-content angereicherte Inbox-Aktionen (P5b). */
-export type ChatViewPanelMessengerPorts = ChatViewMessengerPorts & {
-  inboxHandshakePanelActions: InboxHandshakePanelActionsPort
-  inboxPanelLocalActions: InboxPanelLocalActionsPort
+/** Panel-Ports = Core-Ports plus Shell-Orchestration (Handshake-Poll + Inbox-Aktionen, P7). */
+export type ChatViewPanelMessengerPorts = ChatViewMessengerPorts & ChatViewShellOrchestrationPort
+
+export function assembleChatViewPanelMessengerPorts(
+  base: ChatViewMessengerPorts,
+  shell: ChatViewShellOrchestrationPort
+): ChatViewPanelMessengerPorts {
+  return { ...base, ...shell }
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {

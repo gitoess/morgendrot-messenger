@@ -1,7 +1,7 @@
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import type { Message } from '@/frontend/lib/types'
 
-/** Handshake- und Antwort-Aktionen im Posteingang (in main-content angereichert, P5b). */
+/** Handshake- und Antwort-Aktionen im Posteingang (Shell-Orchestration, P7). */
 export type InboxHandshakePanelActionsPort = {
   readonly pendingHandshakesLoading: boolean
   readonly pendingHandshakeCount: number

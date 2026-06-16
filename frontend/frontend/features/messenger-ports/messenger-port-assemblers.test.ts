@@ -9,7 +9,10 @@ import {
 } from './send-transport-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
-import { assembleChatViewMessengerPorts } from './chat-view-core-port-assembler'
+import { assembleChatViewMessengerPorts, assembleChatViewPanelMessengerPorts } from './chat-view-core-port-assembler'
+import { asHandshakeOffersRead } from './handshake-offers-read-port'
+import { asInboxHandshakePanelActions } from './inbox-handshake-panel-actions-port'
+import { asInboxPanelLocalActions } from './inbox-panel-local-actions-port'
 
 describe('asInboxFeedRead', () => {
   it('behält Referenzen für messages und myAddress', () => {
@@ -332,5 +335,237 @@ describe('assembleChatViewMessengerPorts', () => {
     expect(ports.meshDevice.connected).toBe(false)
     expect(ports.pinnwandFeedRead.feedMessages).toEqual([])
     expect(ports.voiceRecordSendPanel).toBeNull()
+  })
+})
+
+describe('assembleChatViewPanelMessengerPorts', () => {
+  it('fuegt Shell-Orchestration auf Core-Ports', () => {
+    const reload = vi.fn()
+    const onReply = vi.fn()
+    const base = assembleChatViewMessengerPorts({
+      composerDraft: {
+        message: '',
+        recipient: '',
+        setMessage: vi.fn(),
+        setRecipient: vi.fn(),
+      },
+      composerPartner: { partner: '', setPartner: vi.fn() },
+      composerSendPath: {
+        composerDelivery: 'chain',
+        setComposerDelivery: vi.fn(),
+        channelMode: 'private',
+        isGroup: false,
+        isPrivate: true,
+      },
+      transport: {
+        encrypted: true,
+        setEncrypted: vi.fn(),
+        forcedTransport: 'internet',
+        setForcedTransport: vi.fn(),
+        messagingPersistenceMode: 'mailbox',
+        setMessagingPersistenceMode: vi.fn(),
+      },
+      meshFunk: {
+        meshLoRaImagesEnabled: false,
+        setMeshLoRaImagesEnabled: vi.fn(),
+        meshSelfArchiveAfterLoRa: false,
+        setMeshSelfArchiveAfterLoRa: vi.fn(),
+      },
+      inboxFeed: { messages: [], myAddress: '0xa' },
+      contactDirectory: { directory: {}, isMeshVerifiedForAddress: () => false },
+      connectionStatus: {
+        apiStatus: null,
+        basisUnreachable: false,
+        statusCacheAgeMinutes: null,
+        packageIdMismatch: false,
+        deviceTimeTrustWarn: false,
+        connectedAddresses: [],
+      },
+      inboxViewUi: {
+        inboxPartnerOptions: [],
+        inboxPartnerKey: null,
+        setInboxPartnerKey: vi.fn(),
+        inboxDirectionFilter: 'all',
+        setInboxDirectionFilter: vi.fn(),
+        inboxSourceFilter: 'all',
+        setInboxSourceFilter: vi.fn(),
+        inboxChannelFiltersArmed: false,
+        setInboxChannelFiltersArmed: vi.fn(),
+        inboxWireFiltersArmed: false,
+        setInboxWireFiltersArmed: vi.fn(),
+        inboxPartnerFiltersArmed: false,
+        setInboxPartnerFiltersArmed: vi.fn(),
+        inboxWireFilter: 'all',
+        setInboxWireFilter: vi.fn(),
+        selectInboxPartnerForSend: vi.fn(),
+        removeInboxPartnerFromQuickList: vi.fn(),
+        inboxVisibilityHint: null,
+        inboxOverviewChipsVisible: false,
+        inboxOverviewCategory: 'direkt',
+        setInboxOverviewCategory: vi.fn(),
+        inboxOverviewUnreadCounts: { alle: 0, lagebild: 0, direkt: 0, funk: 0 },
+        isInboxMessageUnread: () => false,
+        isPinnwandInboxMessage: () => false,
+        inboxSelectMode: false,
+        setInboxSelectMode: vi.fn(),
+        selectedInboxIds: new Set(),
+        hiddenInboxCount: 0,
+        toggleInboxSelection: vi.fn(),
+        selectAllVisibleInbox: vi.fn(),
+        clearInboxSelection: vi.fn(),
+        protokollMarkedIds: new Set(),
+        toggleProtokollMark: vi.fn(),
+        pinnedPinnwandIds: new Set(),
+        togglePinnedPinnwand: vi.fn(),
+      },
+      meshSendOptions: {
+        meshPlaintextToNodeEnabled: false,
+        setMeshPlaintextToNodeEnabled: vi.fn(),
+        meshPlaintextNodeId: '',
+        setMeshPlaintextNodeId: vi.fn(),
+        meshtasticChannelIndex: undefined,
+        setMeshtasticChannelIndex: vi.fn(),
+      },
+      offlineMailboxQueue: {
+        pending: 0,
+        untrustedTimeCount: 0,
+        backoffCount: 0,
+        items: [],
+        removeItems: vi.fn(),
+      },
+      handshakeActions: {
+        onHandshake: vi.fn(),
+        onHandshakeForAddress: vi.fn(),
+        onConnectAcceptPartner: vi.fn(),
+        onConnectAcceptForAddress: vi.fn(),
+        onConnectDeployment: vi.fn(),
+      },
+      sendActions: {
+        status: 'idle',
+        statusMsg: '',
+        setStatus: vi.fn(),
+        setStatusMsg: vi.fn(),
+        handleSend: vi.fn(async () => {}),
+        cancelSend: vi.fn(),
+        loraOnlineFallbackOffer: null,
+        confirmLoraSendViaOnline: vi.fn(async () => {}),
+        dismissLoraOnlineFallback: vi.fn(),
+      },
+      inboxActions: {
+        loading: false,
+        loadingMore: false,
+        loadError: null,
+        inboxFromCache: false,
+        inboxCacheAgeMinutes: null,
+        inboxLiveSource: null,
+        inboxHasMore: false,
+        loadMessages: vi.fn(),
+        loadMoreInbox: vi.fn(),
+        refreshContactDirectory: vi.fn(),
+        onHideInboxMessageLocal: vi.fn(),
+        onPurgeInboxMessageChain: vi.fn(async () => {}),
+        onForwardMessage: vi.fn(),
+        onHideAllVisibleLocal: vi.fn(),
+        onBulkHideSelected: vi.fn(),
+        onBulkPurgeSelected: vi.fn(),
+        localPurgeBusy: false,
+        morgPkgFileRef: { current: null },
+        morgPkgDeviceFilesRef: { current: null },
+        onMorgPkgImportFile: vi.fn(),
+        onMorgPkgDeviceFiles: vi.fn(),
+        onMorgPkgDeviceExportPick: vi.fn(async () => {}),
+        morgPkgDeviceBusy: false,
+        morgPkgExportRecipient: '',
+        setMorgPkgExportRecipient: vi.fn(),
+        morgPkgExportPartnerOptions: [],
+        morgPkgImportCount: 0,
+        onOpenMorgPkgArchive: vi.fn(),
+        openPartnerSetupPanel: vi.fn(),
+      },
+      inboxExportActions: {
+        exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
+        onExportEinsatzberichtJson: vi.fn(),
+        onExportEinsatzberichtTxt: vi.fn(),
+        onExportEinsatzberichtTxtFull: vi.fn(),
+        onExportEinsatzberichtEncrypted: vi.fn(async () => {}),
+        onExportEinsatzprotokoll: vi.fn(async () => {}),
+        onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
+        onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+      },
+      packageExpert: {
+        inboxPackageFilter: '',
+        setInboxPackageFilter: vi.fn(),
+        packageIdSuggestions: [],
+        packageIdBusy: false,
+        refreshPackageIdSuggestions: vi.fn(async () => {}),
+        applyPackageIdBackend: vi.fn(async () => {}),
+        loadMessages: vi.fn(),
+      },
+      meshDevice: {
+        bleSupported: false,
+        serialSupported: false,
+        transportKind: 'bluetooth',
+        setTransportKind: vi.fn(),
+        connected: false,
+        connecting: false,
+        error: null,
+        lastRxDebug: null,
+        meshRxSubscriptions: null,
+        connect: vi.fn(async () => {}),
+        connectBluetooth: vi.fn(async () => {}),
+        connectUsb: vi.fn(async () => {}),
+        disconnect: vi.fn(),
+        sendMeshText: vi.fn(async () => 0),
+      },
+      meshSetup: {
+        contactBleAddress: '',
+        setContactBleAddress: vi.fn(),
+        contactBleUuid: '',
+        setContactBleUuid: vi.fn(),
+        contactBleBusy: false,
+        setContactBleBusy: vi.fn(),
+        meshSyncMsg: null,
+        setMeshSyncMsg: vi.fn(),
+        refreshContactDirectory: vi.fn(),
+      },
+      pinnwandFeed: { feedMessages: [], feedInboxRows: [] },
+      attachmentBar: {
+        sending: false,
+        compactFileRef: { current: null },
+        compactBusy: false,
+        attachmentPipelineHint: null,
+        onFileChange: vi.fn(),
+        ingestChatAttachmentFile: vi.fn(async () => {}),
+        compactMeta: null,
+        attachedBlobBase64: null,
+        attachedLora: null,
+        attachedTxtFile: null,
+        attachedAudioBase64: null,
+        clearCompactAttachment: vi.fn(),
+        compactPreviewUrl: null,
+        loraPreviewUrl: null,
+        loraMeshProgressLine: null,
+      },
+    })
+    const panel = assembleChatViewPanelMessengerPorts(base, {
+      handshakeOffersRead: asHandshakeOffersRead([], [], reload),
+      inboxHandshakePanelActions: asInboxHandshakePanelActions({
+        pendingHandshakesLoading: false,
+        pendingHandshakeCount: 0,
+        onAcceptPendingHandshake: vi.fn(),
+        onUseSenderAsPartnerFromInbox: vi.fn(),
+        onReplyToMessage: onReply,
+        onDeleteIncomingHandshake: vi.fn(),
+        onDeleteOutgoingHandshake: vi.fn(),
+        onResendOutgoingHandshake: vi.fn(),
+      }),
+      inboxPanelLocalActions: asInboxPanelLocalActions({
+        onAddSenderToContactBook: vi.fn(),
+        onSarqNakWire: vi.fn(),
+      }),
+    })
+    expect(panel.inboxHandshakePanelActions.onReplyToMessage).toBe(onReply)
+    expect(panel.handshakeOffersRead.reload).toBe(reload)
+    expect(panel.composerDraft.message).toBe('')
   })
 })

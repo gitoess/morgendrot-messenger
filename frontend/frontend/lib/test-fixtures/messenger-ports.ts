@@ -1,6 +1,8 @@
 import { vi } from 'vitest'
 import {
   assembleChatViewMessengerPorts,
+  assembleChatViewPanelMessengerPorts,
+  asHandshakeOffersRead,
   asInboxHandshakePanelActions,
   asInboxPanelLocalActions,
   type ChatViewAttachmentBarSlice,
@@ -301,8 +303,8 @@ export function testPanelMessengerPorts(
   over: Parameters<typeof testMessengerPorts>[0] = {}
 ): ChatViewPanelMessengerPorts {
   const ports = testMessengerPorts(over)
-  return {
-    ...ports,
+  return assembleChatViewPanelMessengerPorts(ports, {
+    handshakeOffersRead: asHandshakeOffersRead([], [], vi.fn()),
     inboxHandshakePanelActions: asInboxHandshakePanelActions({
       pendingHandshakesLoading: false,
       pendingHandshakeCount: 0,
@@ -317,5 +319,5 @@ export function testPanelMessengerPorts(
       onAddSenderToContactBook: vi.fn(),
       onSarqNakWire: vi.fn(),
     }),
-  }
+  })
 }
