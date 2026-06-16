@@ -151,6 +151,7 @@ export function whenDirectIotaTabSessionPersistIdle(): Promise<void> {
 /** Vitest: RAM-Signer + Tab-Persist-Kette zurücksetzen (Worker teilen Modul-Singleton). */
 export function resetDirectIotaMnemonicSessionModuleForTests(): void {
   clearDirectIotaSessionSigner()
+  clearDirectIotaSessionSignerTabSession()
   tabSessionPersistEpoch++
   tabSessionPersistIdle = Promise.resolve()
   tabSessionPersistEnabledInVitest = false
