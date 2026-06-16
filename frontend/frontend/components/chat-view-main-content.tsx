@@ -53,6 +53,8 @@ import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import { useChatViewSetupPanelProps } from '@/frontend/hooks/use-chat-view-setup-panel-props'
 import { useChatViewPinnwandFeedPanelProps } from '@/frontend/hooks/use-chat-view-pinnwand-feed-panel-props'
+import { buildComposeReplyTargets } from '@/frontend/hooks/build-compose-reply-targets'
+import { useChatViewComposerBindings } from '@/frontend/hooks/use-chat-view-composer-bindings'
 import { useChatViewPanelMessengerPorts } from '@/frontend/hooks/use-chat-view-panel-messenger-ports'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
 import {
@@ -85,26 +87,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } = c
 
   const {
-    shellRouting,
-    connectionStatusRead,
-    contactDirectoryRead,
-    inboxViewUi,
-    inboxPanelRead,
-    inboxPreviewRead,
-    morgPkgArchive,
-    meshSendOptions,
-    composerDraft,
-    composerPartner,
-    composerSendPath,
-    sendTransportRead,
-    sendTransportChoice,
-    sendMeshFunkOptions,
-    sendActions,
-    inboxActions,
-    packageExpert,
-    meshSetup,
-  } = messengerPorts
-  const {
     channelMode,
     isPrivate,
     isGroup,
@@ -112,52 +94,42 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     refreshMessengerGroups,
     role,
     myAddress,
-  } = shellRouting
-  const {
     apiStatus,
     basisUnreachable,
-    statusCacheAgeMinutes,
-    deviceTimeTrustWarn,
-    connectedAddresses: handshakeConnectedAddresses,
-  } = connectionStatusRead
-  const { directory, isMeshVerifiedForAddress, refreshContactDirectory } = contactDirectoryRead
-  const {
-    meshPlaintextToNodeEnabled,
-    meshPlaintextNodeId,
+    handshakeConnectedAddresses,
+    directory,
+    refreshContactDirectory,
     setMeshPlaintextNodeId,
     setMeshPlaintextToNodeEnabled,
     setMeshtasticChannelIndex,
-  } = meshSendOptions
-  const { message, recipient, onMessageChange: setMessage, onRecipientChange: setRecipient } = composerDraft
-  const { partner, onPartnerChange: setPartner } = composerPartner
-  const { encrypted, forcedTransport } = sendTransportRead
-  const { onEncryptedChange: setEncrypted, onForcedTransportChange: setForcedTransport } = sendTransportChoice
-  const {
+    setMessage,
+    setRecipient,
+    partner,
+    setPartner,
+    encrypted,
+    forcedTransport,
+    setEncrypted,
+    setForcedTransport,
     composerDelivery,
-    onComposerDeliveryChange: setComposerDelivery,
-  } = composerSendPath
-  const { messagingPersistenceMode } = sendTransportChoice
-  const { meshLoRaImagesEnabled, onMeshLoRaImagesEnabledChange: setMeshLoRaImagesEnabled } = sendMeshFunkOptions
-  const { meshSelfArchiveAfterLoRa, onMeshSelfArchiveAfterLoRaChange: setMeshSelfArchiveAfterLoRa } =
-    sendMeshFunkOptions
-  const {
+    setComposerDelivery,
     status,
     statusMsg,
-    onStatusChange: setStatus,
-    onStatusMsgChange: setStatusMsg,
-    onConfirmLoraSendViaOnline: confirmLoraSendViaOnline,
-    onDismissLoraOnlineFallback: dismissLoraOnlineFallback,
-    onSend: handleSend,
-    onCancelSend: cancelSend,
-    loraOnlineFallbackOffer,
-  } = sendActions
-  const {
+    setStatus,
+    setStatusMsg,
     selectInboxPartnerForSend,
     inboxOverviewChipsVisible,
-    inboxOverviewCategory,
     setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
-  } = inboxViewUi
+    composerSendPath,
+    connectionStatusRead,
+    contactDirectoryRead,
+    inboxPanelRead,
+    inboxPreviewRead,
+    morgPkgArchive,
+    meshSetup,
+    inboxActions,
+    packageExpert,
+  } = useChatViewComposerBindings(messengerPorts)
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
@@ -173,21 +145,22 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const pendingHandshakeRefreshKey = `${[...handshakeConnectedAddresses].join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
   const composeReply = useMemo(
-    () => ({
-      onChannelModeChange,
-      setForcedTransport,
-      setComposerDelivery,
-      setPartner,
-      setRecipient,
-      setEncrypted,
-      setComposerMailboxObjectId: composerSendPath.onComposerMailboxObjectIdChange,
-      setMeshtasticChannelIndex,
-      setMeshPlaintextNodeId,
-      setMeshPlaintextToNodeEnabled,
-      selectInboxPartnerForSend,
-      setMessage,
-      refreshMessengerGroups,
-    }),
+    () =>
+      buildComposeReplyTargets({
+        onChannelModeChange,
+        setForcedTransport,
+        setComposerDelivery,
+        setPartner,
+        setRecipient,
+        setEncrypted,
+        onComposerMailboxObjectIdChange: composerSendPath.onComposerMailboxObjectIdChange,
+        setMeshtasticChannelIndex,
+        setMeshPlaintextNodeId,
+        setMeshPlaintextToNodeEnabled,
+        selectInboxPartnerForSend,
+        setMessage,
+        refreshMessengerGroups,
+      }),
     [
       onChannelModeChange,
       setForcedTransport,
