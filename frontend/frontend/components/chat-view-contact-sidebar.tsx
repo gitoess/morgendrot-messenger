@@ -163,6 +163,17 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
       <div className="border-b border-border px-3 py-3">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-semibold text-foreground">Chats</h2>
+          {p.onOpenPhonebook ? (
+            <button
+              type="button"
+              onClick={p.onOpenPhonebook}
+              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border bg-muted/40 px-2 py-1 text-[11px] font-medium text-foreground transition-colors hover:bg-muted/60"
+              title="Telefonbuch"
+            >
+              <BookUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
+              Telefonbuch
+            </button>
+          ) : null}
         </div>
       </div>
 

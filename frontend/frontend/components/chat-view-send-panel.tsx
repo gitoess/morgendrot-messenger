@@ -405,13 +405,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     canPostPinnwand,
   ])
 
-  const canOfferSosText =
-    (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
-    !attachmentBarProps.attachedBlobBase64 &&
-    !attachmentBarProps.attachedAudioBase64 &&
-    !attachmentBarProps.attachedTxtFile &&
-    !attachmentBarProps.attachedLora &&
-    loraOnlineFallbackOffer == null
   const onlineConnected = !!apiStatus?.connected
   const showTelegramField = needsComposerTelegramId({
     deliveryChannel: composerDelivery,
@@ -1152,33 +1145,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
                 {encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)}
               </p>
-            ) : null}
-            {canOfferSosText && !isTelegramDelivery ? (
-              <button
-                type="button"
-                disabled={sending}
-                title="SOS — Hilferuf (Text), MORG_EMERGENCY_V1. Kein automatischer 112-Ruf."
-                onClick={() => {
-                  if (!message.trim()) {
-                    prepareSttDictation()
-                    return
-                  }
-                  if (
-                    !window.confirm(
-                      'Echten Hilferuf (SOS) senden?\n\n' +
-                        'Die Nachricht geht an deinen Chat-Empfänger (Funk oder Online — wie eingestellt), mit Notfall-Kennzeichnung MORG_EMERGENCY_V1. ' +
-                        'Kein automatischer 112-Ruf.\n\n' +
-                        'Nur nutzen, wenn wirklich Hilfe nötig ist.'
-                    )
-                  ) {
-                    return
-                  }
-                  void onSend({ emergencyWire: 'text' })
-                }}
-                className="rounded-lg border-2 border-red-600/70 bg-red-600/95 px-3 py-2 text-xs font-bold tracking-tight text-white shadow-sm transition-colors hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                SOS — Hilferuf
-              </button>
             ) : null}
             {sending ? (
               <button

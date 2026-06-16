@@ -127,6 +127,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setMeshPlaintextNodeId,
     setMeshPlaintextToNodeEnabled,
     setMeshtasticChannelIndex,
+    message,
     setMessage,
     setRecipient,
     partner,
@@ -402,7 +403,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
     vaultBannerActions,
-    onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
+    onOpenPhonebook:
+      (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
     activeConversation:
       showConversationSidebar && isPrivate
         ? {
@@ -412,6 +414,41 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           }
         : undefined,
   })
+
+  const mergedChatHeaderProps = useMemo(() => {
+    const { attachmentBar, sendActions } = messengerPorts
+    const isTelegramDelivery = composerDelivery === 'telegram'
+    const canOfferSos =
+      isPrivate &&
+      channelMode === 'private' &&
+      !isTelegramDelivery &&
+      (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
+      !attachmentBar.attachedBlobBase64 &&
+      !attachmentBar.attachedAudioBase64 &&
+      !attachmentBar.attachedTxtFile &&
+      !attachmentBar.attachedLora &&
+      sendActions.loraOnlineFallbackOffer == null
+
+    return {
+      ...chatHeaderProps,
+      sosEmergency: canOfferSos
+        ? {
+            visible: true,
+            sending: attachmentBar.sending,
+            message,
+            onSend: sendActions.onSend,
+          }
+        : undefined,
+    }
+  }, [
+    chatHeaderProps,
+    messengerPorts,
+    isPrivate,
+    channelMode,
+    composerDelivery,
+    forcedTransport,
+    message,
+  ])
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
@@ -782,7 +819,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   return (
     <>
       <div className="space-y-6">
-        <ChatViewChatHeader {...chatHeaderProps} />
+        <ChatViewChatHeader {...mergedChatHeaderProps} />
 
         {uiCaps.showProminentOfflineQueueBanner ? (
           <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />

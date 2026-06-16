@@ -25,6 +25,10 @@ import {
 } from '@/components/messenger-handbook-link'
 import { ActiveProfileBadge } from '@/frontend/components/active-profile-badge'
 import { ChatNetworkBadge } from '@/frontend/components/chat-network-badge'
+import {
+  ChatViewSosEmergencyButton,
+  type ChatViewSosEmergencyButtonProps,
+} from '@/frontend/components/chat-view-sos-emergency-button'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 
 /** Optional: Tresor-Badge wird klickbar (Sperren / zur Startseite bei gesperrter Sitzung). */
@@ -74,6 +78,8 @@ export type ChatViewChatHeaderProps = {
   offlineStatus?: OfflineStatusSnapshot
   /** Ungelesene Lagebild-Meldungen — Badge am Tab. */
   pinnwandTabUnreadCount?: number
+  /** Großer SOS-Button unter Kanal-Tabs (1:1). */
+  sosEmergency?: ChatViewSosEmergencyButtonProps
 }
 
 type TresorSessionUi = 'locked' | 'no-keys' | 'ready'
@@ -186,6 +192,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     basisUnreachable,
     role = '',
     pinnwandTabUnreadCount = 0,
+    sosEmergency,
   } = p
 
   const channelModes: MessengerChatChannel[] = (
@@ -301,7 +308,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                   })}
                 </div>
               ) : null}
-              <div className="min-h-[1.125rem] text-[10px] text-muted-foreground">{handbookSubline}</div>
+              <div className="mt-2 space-y-2">
+                {channelMode === 'private' && sosEmergency?.visible ? (
+                  <ChatViewSosEmergencyButton {...sosEmergency} variant="hero" />
+                ) : null}
+                {handbookSubline ? (
+                  <div className="min-h-[1.125rem] text-[10px] text-muted-foreground">{handbookSubline}</div>
+                ) : null}
+              </div>
             </div>
           </div>
 
