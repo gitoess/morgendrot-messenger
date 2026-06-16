@@ -1,16 +1,14 @@
 import { cleanup } from '@testing-library/react'
-import { afterAll, afterEach, beforeEach, vi } from 'vitest'
+import { afterEach, beforeEach, vi } from 'vitest'
 import '@testing-library/jest-dom/vitest'
 
-async function resetDirectIotaMnemonicSessionForVitest(): Promise<void> {
-  try {
-    const mod = await import('@/frontend/lib/direct-iota-mnemonic-session')
-    await mod.drainDirectIotaTabSessionPersistForTests()
-    mod.resetDirectIotaMnemonicSessionModuleForTests()
-  } catch {
-    /* Modul-Graph in isolierten Tests optional */
-  }
-}
+/**
+ * Kein globales Drain/Reset für direct-iota-mnemonic-session:
+ * - pool:forks isoliert Testdateien (Singleton-Leaks zwischen Dateien unmöglich)
+ * - Tab-Persist ist in Vitest standardmäßig aus
+ * - Session-Tests räumen lokal in afterEach auf (siehe direct-iota-*-session.test.ts)
+ * Globales dynamisches Importieren nach jedem Test verursachte CI-Flakes (Suite rot, Tests grün).
+ */
 
 beforeEach(() => {
   vi.stubGlobal(
@@ -28,12 +26,7 @@ beforeEach(() => {
   )
 })
 
-afterEach(async () => {
-  await resetDirectIotaMnemonicSessionForVitest()
+afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
-})
-
-afterAll(async () => {
-  await resetDirectIotaMnemonicSessionForVitest()
 })

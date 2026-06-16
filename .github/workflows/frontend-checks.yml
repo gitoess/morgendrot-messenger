@@ -18,8 +18,7 @@ on:
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+    timeout-minutes: 25
     defaults:
       run:
         working-directory: frontend
@@ -37,6 +36,8 @@ jobs:
 
       - name: "@morgendrot/core unit tests"
         working-directory: packages/morgendrot-core
+        env:
+          CI: 'true'
         run: npm ci && npm run test:unit
 
       - run: npm run lint
@@ -45,7 +46,10 @@ jobs:
 
       - run: npx tsc --noEmit
 
-      - run: npm run test:unit
+      - name: Frontend Vitest
+        env:
+          CI: 'true'
+        run: npm run test:unit
 
       - name: Next build (Morgendrot Projekt)
         run: npm run build

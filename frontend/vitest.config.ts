@@ -18,6 +18,8 @@ export default defineConfig({
     teardownTimeout: isCi ? 60_000 : 30_000,
     hookTimeout: isCi ? 60_000 : 30_000,
     testTimeout: isCi ? 30_000 : 10_000,
+    /** CI: klarere Annotations; bei Hang → hanging-process temporär ergänzen. */
+    reporters: isCi ? ['default', 'github-actions'] : ['default'],
     setupFiles: ['./tests/vitest-setup.ts', './tests/i18n-vitest-setup.ts'],
   },
   resolve: {
