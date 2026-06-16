@@ -17,8 +17,9 @@ import {
   type OfflineMailboxQueueItem,
   type OfflineMailboxQueueReadPort,
 } from './offline-mailbox-queue-read-port'
-import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
+import { asSendActions, type SendActionsPort, type SendComposerStatus } from './send-actions-port'
 import { asMeshSendOptions, type MeshSendOptionsPort } from './mesh-send-options-port'
+import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
 import {
   asSendMeshFunkOptions,
   asSendTransportChoice,
@@ -53,10 +54,12 @@ export type ChatViewComposerDraftSlice = {
 
 export type ChatViewComposerPartnerSlice = {
   partner: string
+  setPartner: (v: string) => void
 }
 
 export type ChatViewComposerSendPathSlice = {
   composerDelivery: import('@/frontend/lib/composer-delivery-channel').ComposerDeliveryChannel
+  setComposerDelivery: (d: import('@/frontend/lib/composer-delivery-channel').ComposerDeliveryChannel) => void
   channelMode?: import('@/frontend/lib/messenger-chat-channel').MessengerChatChannel
   isGroup: boolean
   isPrivate: boolean
@@ -189,6 +192,18 @@ export type ChatViewHandshakeOffersSlice = {
   reload: () => void
 }
 
+export type ChatViewSendActionsSlice = {
+  status: SendComposerStatus
+  statusMsg: string
+  setStatus: (v: SendComposerStatus) => void
+  setStatusMsg: (v: string) => void
+  handleSend: (opts?: import('@/frontend/features/send/chat-send-handle-options').ChatSendHandleOptions) => void | Promise<void>
+  cancelSend?: () => void
+  loraOnlineFallbackOffer: { reasonLabel: string } | null
+  confirmLoraSendViaOnline: () => void | Promise<void>
+  dismissLoraOnlineFallback: () => void
+}
+
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
@@ -207,14 +222,21 @@ export type ChatViewMessengerPorts = {
   offlineMailboxQueueRead: OfflineMailboxQueueReadPort
   handshakeActions: HandshakeActionsPort
   handshakeOffersRead: HandshakeOffersReadPort
+  sendActions: SendActionsPort
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
-  return asComposerPartner(slice.partner)
+  return asComposerPartner(slice.partner, slice.setPartner)
 }
 
 export function assembleComposerSendPathPort(slice: ChatViewComposerSendPathSlice): ComposerSendPathPort {
-  return asComposerSendPath(slice.composerDelivery, slice.channelMode, slice.isGroup, slice.isPrivate)
+  return asComposerSendPath(
+    slice.composerDelivery,
+    slice.setComposerDelivery,
+    slice.channelMode,
+    slice.isGroup,
+    slice.isPrivate
+  )
 }
 
 export function assembleComposerDraftPort(slice: ChatViewComposerDraftSlice): ComposerDraftPort {
@@ -318,6 +340,24 @@ export function assembleHandshakeOffersReadPort(
   return asHandshakeOffersRead(slice.pendingOffers, slice.outgoingOffers, slice.reload)
 }
 
+export function assembleSendActionsPort(slice: ChatViewSendActionsSlice): SendActionsPort {
+  return asSendActions({
+    status: slice.status,
+    statusMsg: slice.statusMsg,
+    onStatusChange: slice.setStatus,
+    onStatusMsgChange: slice.setStatusMsg,
+    onStatusFeedback: (msg, st = 'success') => {
+      slice.setStatus(st)
+      slice.setStatusMsg(msg)
+    },
+    onSend: slice.handleSend,
+    onCancelSend: slice.cancelSend,
+    loraOnlineFallbackOffer: slice.loraOnlineFallbackOffer,
+    onConfirmLoraSendViaOnline: slice.confirmLoraSendViaOnline,
+    onDismissLoraOnlineFallback: slice.dismissLoraOnlineFallback,
+  })
+}
+
 /** Alle Standard-Ports aus den Core-Slices. */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
@@ -334,6 +374,7 @@ export function assembleChatViewMessengerPorts(input: {
   offlineMailboxQueue: ChatViewOfflineMailboxQueueSlice
   handshakeActions: ChatViewHandshakeActionsSlice
   handshakeOffers?: ChatViewHandshakeOffersSlice
+  sendActions: ChatViewSendActionsSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -356,6 +397,7 @@ export function assembleChatViewMessengerPorts(input: {
     handshakeOffersRead: assembleHandshakeOffersReadPort(
       input.handshakeOffers ?? { pendingOffers: [], outgoingOffers: [], reload: () => {} }
     ),
+    sendActions: assembleSendActionsPort(input.sendActions),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)

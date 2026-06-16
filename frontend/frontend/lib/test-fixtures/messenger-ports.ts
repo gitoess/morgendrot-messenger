@@ -62,9 +62,11 @@ export function testMessengerPorts(over: {
     },
     composerPartner: {
       partner: over.partner ?? '',
+      setPartner: vi.fn(),
     },
     composerSendPath: {
       composerDelivery: over.composerDelivery ?? 'chain',
+      setComposerDelivery: vi.fn(),
       channelMode: over.channelMode ?? 'private',
       isGroup: over.isGroup ?? false,
       isPrivate: over.isPrivate ?? true,
@@ -159,6 +161,17 @@ export function testMessengerPorts(over: {
       onConnectAcceptPartner: vi.fn(),
       onConnectAcceptForAddress: vi.fn(),
       onConnectDeployment: vi.fn(),
+    },
+    sendActions: {
+      status: 'idle',
+      statusMsg: '',
+      setStatus: vi.fn(),
+      setStatusMsg: vi.fn(),
+      handleSend: vi.fn(async () => {}),
+      cancelSend: vi.fn(),
+      loraOnlineFallbackOffer: null,
+      confirmLoraSendViaOnline: vi.fn(async () => {}),
+      dismissLoraOnlineFallback: vi.fn(),
     },
     voiceFromHook: {
       voicePhase: 'idle',

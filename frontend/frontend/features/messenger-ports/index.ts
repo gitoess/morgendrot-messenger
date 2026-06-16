@@ -23,6 +23,8 @@ export type { HandshakeActionsPort } from './handshake-actions-port'
 export { asHandshakeActions } from './handshake-actions-port'
 export type { HandshakeOffersReadPort } from './handshake-offers-read-port'
 export { asHandshakeOffersRead } from './handshake-offers-read-port'
+export type { SendActionsPort, SendComposerStatus } from './send-actions-port'
+export { asSendActions } from './send-actions-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
 export { asInboxFeedRead } from './inbox-feed-read-port'
 export type { ComposerDraftPort, ComposerDraftSendFlowPort } from './composer-draft-port'
@@ -53,6 +55,7 @@ export {
   assembleOfflineMailboxQueueReadPort,
   assembleHandshakeActionsPort,
   assembleHandshakeOffersReadPort,
+  assembleSendActionsPort,
   assembleSendMeshFunkOptionsPort,
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
@@ -69,6 +72,7 @@ export {
   type ChatViewOfflineMailboxQueueSlice,
   type ChatViewHandshakeActionsSlice,
   type ChatViewHandshakeOffersSlice,
+  type ChatViewSendActionsSlice,
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
   type ChatViewTransportSlice,

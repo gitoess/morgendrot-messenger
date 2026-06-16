@@ -100,20 +100,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     role,
     myAddress,
     messengerPorts,
-    message,
-    setMessage,
-    recipient,
-    setRecipient,
-    partner,
-    setPartner,
     sending,
     setSending,
-    status,
-    statusMsg,
-    setStatus,
-    setStatusMsg,
-    encrypted,
-    setEncrypted,
     refreshApiStatus,
     syncCanonicalPackageIdFromServer,
     inboxPackageFilter,
@@ -123,12 +111,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     applyPackageIdBackend,
     applyInboxPackageFilterOnly,
     packageIdBusy,
-    forcedTransport,
-    setForcedTransport,
-    composerDelivery,
-    setComposerDelivery,
-    messagingPersistenceMode,
-    setMessagingPersistenceMode,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
     morgPkgDeviceBusy,
@@ -163,7 +145,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    loraOnlineFallbackOffer,
     exportEcdhMorgPkgForMessage,
     onMorgPkgDeviceFiles,
     onMorgPkgImportFile,
@@ -176,10 +157,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     morgPkgExportRecipient,
     setMorgPkgExportRecipient,
     morgPkgExportPartnerOptions,
-    confirmLoraSendViaOnline,
-    handleSend,
-    cancelSend,
-    dismissLoraOnlineFallback,
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -188,10 +165,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
-    meshLoRaImagesEnabled,
-    setMeshLoRaImagesEnabled,
-    meshSelfArchiveAfterLoRa,
-    setMeshSelfArchiveAfterLoRa,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
@@ -209,7 +182,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxUnreadThreadOptions,
   } = c
 
-  const { connectionStatusRead, contactDirectoryRead, inboxViewUi, meshSendOptions } = messengerPorts
+  const {
+    connectionStatusRead,
+    contactDirectoryRead,
+    inboxViewUi,
+    meshSendOptions,
+    composerDraft,
+    composerPartner,
+    composerSendPath,
+    sendTransportRead,
+    sendTransportChoice,
+    sendMeshFunkOptions,
+    sendActions,
+  } = messengerPorts
   const {
     apiStatus,
     basisUnreachable,
@@ -225,6 +210,29 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setMeshPlaintextToNodeEnabled,
     setMeshtasticChannelIndex,
   } = meshSendOptions
+  const { message, recipient, onMessageChange: setMessage, onRecipientChange: setRecipient } = composerDraft
+  const { partner, onPartnerChange: setPartner } = composerPartner
+  const { encrypted, forcedTransport } = sendTransportRead
+  const { onEncryptedChange: setEncrypted, onForcedTransportChange: setForcedTransport } = sendTransportChoice
+  const {
+    composerDelivery,
+    onComposerDeliveryChange: setComposerDelivery,
+  } = composerSendPath
+  const { messagingPersistenceMode } = sendTransportChoice
+  const { meshLoRaImagesEnabled, onMeshLoRaImagesEnabledChange: setMeshLoRaImagesEnabled } = sendMeshFunkOptions
+  const { meshSelfArchiveAfterLoRa, onMeshSelfArchiveAfterLoRaChange: setMeshSelfArchiveAfterLoRa } =
+    sendMeshFunkOptions
+  const {
+    status,
+    statusMsg,
+    onStatusChange: setStatus,
+    onStatusMsgChange: setStatusMsg,
+    onConfirmLoraSendViaOnline: confirmLoraSendViaOnline,
+    onDismissLoraOnlineFallback: dismissLoraOnlineFallback,
+    onSend: handleSend,
+    onCancelSend: cancelSend,
+    loraOnlineFallbackOffer,
+  } = sendActions
   const {
     selectInboxPartnerForSend,
     inboxOverviewChipsVisible,
@@ -625,14 +633,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   /** Inbox-Cache ≠ offline: Composer-Status nicht mit Posteingang-Fallback verwechseln. */
   useEffect(() => {
     if (basisUnreachable === true) return
-    setStatus((cur) => {
-      if (cur !== 'error') return cur
-      return 'idle'
-    })
-    setStatusMsg((msg) =>
-      /Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(msg) ? '' : msg
-    )
-  }, [basisUnreachable, inboxFromCache])
+    if (status === 'error') {
+      setStatus('idle')
+      if (/Offline — (letzte Nachrichten|Basis nicht erreichbar)/.test(statusMsg)) {
+        setStatusMsg('')
+      }
+    }
+  }, [basisUnreachable, inboxFromCache, status, statusMsg, setStatus, setStatusMsg])
 
   useEffect(() => {
     if (!uiCaps.showAdhocTransport && forcedTransport === 'adhoc') {
@@ -663,13 +670,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     messengerPorts: panelMessengerPorts,
     isPrivate,
     isGroup,
-    encrypted,
     role,
-    forcedTransport,
-    setForcedTransport,
-    setEncrypted,
-    composerDelivery,
-    setComposerDelivery,
     channelMode,
     onChannelModeChange,
     vaultBannerActions,
@@ -754,19 +755,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setRecipient,
   })
 
-  const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
+  const { sendPanelProps } = useChatViewSendPanelProps({
     messengerPorts: panelMessengerPorts,
-    setPartner,
     activeGroup,
-    loraOnlineFallbackOffer,
-    confirmLoraSendViaOnline,
-    dismissLoraOnlineFallback,
-    handleSend,
-    cancelSend,
-    status,
-    statusMsg,
-    setStatus,
-    setStatusMsg,
     refreshApiStatus,
     loadMessages,
     composerMailboxObjectId,
@@ -781,7 +772,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
-    onPartnerChange: syncPartnerAndRecipient,
     sending,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
     setStatusMsg,

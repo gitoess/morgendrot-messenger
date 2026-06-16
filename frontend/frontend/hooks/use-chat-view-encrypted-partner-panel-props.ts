@@ -16,7 +16,6 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
     | 'connectionStatusRead'
     | 'handshakeActions'
   >
-  onPartnerChange: (v: string) => void
   sending: boolean
   activeGroupMemberAddresses?: string[]
   setStatusMsg: (v: string) => void
@@ -64,7 +63,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
   const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
     ? {
         partner: composerPartner.partner,
-        onPartnerChange: deps.onPartnerChange,
+        onPartnerChange: composerPartner.onPartnerChange,
         sending: deps.sending,
         onHandshake: handshakeActions.onHandshake,
         onConnectAcceptPartner: handshakeActions.onConnectAcceptPartner,

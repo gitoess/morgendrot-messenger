@@ -5,8 +5,6 @@ import type { ChatViewChatHeaderProps } from '@/frontend/components/chat-view-ch
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 
 export type ChatViewShellPropsDeps = {
@@ -15,7 +13,6 @@ export type ChatViewShellPropsDeps = {
     | 'connectionStatusRead'
     | 'contactDirectoryRead'
     | 'composerSendPath'
-    | 'sendTransportRead'
     | 'sendTransportChoice'
     | 'inboxFeedRead'
     | 'inboxViewUi'
@@ -23,13 +20,7 @@ export type ChatViewShellPropsDeps = {
   >
   isPrivate: boolean
   isGroup: boolean
-  encrypted: boolean
   role: string
-  forcedTransport: ForcedTransport
-  setForcedTransport: (t: ForcedTransport) => void
-  setEncrypted: (v: boolean) => void
-  composerDelivery: ComposerDeliveryChannel
-  setComposerDelivery: (d: ComposerDeliveryChannel) => void
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
   vaultBannerActions?: ChatViewVaultBannerActions
@@ -47,7 +38,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     connectionStatusRead,
     contactDirectoryRead,
     composerSendPath,
-    sendTransportRead,
+    sendTransportChoice,
     inboxFeedRead,
     inboxViewUi,
     offlineMailboxQueueRead,
@@ -56,7 +47,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
   const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
     () => ({
       isPrivate: deps.isPrivate,
-      encrypted: deps.encrypted,
+      encrypted: sendTransportChoice.encrypted,
       apiStatus: connectionStatusRead.apiStatus,
       onRefreshStatus: deps.refreshApiStatus,
       basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
@@ -69,16 +60,16 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       channelMode: deps.channelMode,
       onChannelModeChange: deps.onChannelModeChange,
       sendPath: {
-        visible: deps.isPrivate || deps.isGroup || !deps.encrypted,
+        visible: deps.isPrivate || deps.isGroup || !sendTransportChoice.encrypted,
         channelMode: deps.channelMode ?? 'private',
-        encrypted: deps.encrypted,
-        forcedTransport: deps.forcedTransport,
-        onForcedTransportChange: deps.setForcedTransport,
-        onEncryptedChange: deps.setEncrypted,
+        encrypted: sendTransportChoice.encrypted,
+        forcedTransport: sendTransportChoice.forcedTransport,
+        onForcedTransportChange: sendTransportChoice.onForcedTransportChange,
+        onEncryptedChange: sendTransportChoice.onEncryptedChange,
         myAddressLine: deps.isPrivate ? inboxFeedRead.myAddress : undefined,
         showAdhocTransport: deps.showAdhocTransport,
-        composerDelivery: deps.composerDelivery,
-        onComposerDeliveryChange: deps.setComposerDelivery,
+        composerDelivery: composerSendPath.composerDelivery,
+        onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
         apiStatus: connectionStatusRead.apiStatus,
       },
       pinnwandTabUnreadCount:
@@ -87,13 +78,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     [
       deps.isPrivate,
       deps.isGroup,
-      deps.encrypted,
       deps.role,
-      deps.forcedTransport,
-      deps.setForcedTransport,
-      deps.setEncrypted,
-      deps.composerDelivery,
-      deps.setComposerDelivery,
       deps.channelMode,
       deps.onChannelModeChange,
       deps.vaultBannerActions,
@@ -102,6 +87,8 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       deps.refreshApiStatus,
       deps.showAdhocTransport,
       connectionStatusRead,
+      composerSendPath,
+      sendTransportChoice,
       inboxFeedRead.myAddress,
       inboxViewUi.inboxOverviewUnreadCounts,
     ]

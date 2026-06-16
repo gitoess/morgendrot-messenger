@@ -110,9 +110,11 @@ describe('assembleChatViewMessengerPorts', () => {
       },
       composerPartner: {
         partner: '0xp',
+        setPartner: vi.fn(),
       },
       composerSendPath: {
         composerDelivery: 'chain',
+        setComposerDelivery: vi.fn(),
         channelMode: 'private',
         isGroup: false,
         isPrivate: true,
@@ -205,6 +207,17 @@ describe('assembleChatViewMessengerPorts', () => {
         onConnectAcceptPartner: vi.fn(),
         onConnectAcceptForAddress: vi.fn(),
         onConnectDeployment: vi.fn(),
+      },
+      sendActions: {
+        status: 'idle',
+        statusMsg: '',
+        setStatus: vi.fn(),
+        setStatusMsg: vi.fn(),
+        handleSend: vi.fn(async () => {}),
+        cancelSend: vi.fn(),
+        loraOnlineFallbackOffer: null,
+        confirmLoraSendViaOnline: vi.fn(async () => {}),
+        dismissLoraOnlineFallback: vi.fn(),
       },
       attachmentBar: {
         sending: false,

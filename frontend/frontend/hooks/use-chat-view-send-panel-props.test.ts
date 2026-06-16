@@ -35,17 +35,7 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
     })
   return {
     messengerPorts,
-    setPartner: vi.fn(),
     activeGroup: null,
-    loraOnlineFallbackOffer: null,
-    confirmLoraSendViaOnline: vi.fn(),
-    dismissLoraOnlineFallback: vi.fn(),
-    handleSend: vi.fn(),
-    cancelSend: vi.fn(),
-    status: 'idle',
-    statusMsg: '',
-    setStatus: vi.fn(),
-    setStatusMsg: vi.fn(),
     refreshApiStatus: vi.fn(),
     loadMessages: vi.fn(),
     setComposerMailboxObjectId: vi.fn(),
@@ -77,11 +67,14 @@ describe('useChatViewSendPanelProps', () => {
     const setPartner = vi.fn()
     const setRecipient = vi.fn()
     const addr = '0x' + 'd'.repeat(64)
+    const ports = testMessengerPorts({ isPrivate: true, setRecipient })
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
         baseDeps({
-          setPartner,
-          messengerPorts: testMessengerPorts({ isPrivate: true, setRecipient }),
+          messengerPorts: {
+            ...ports,
+            composerPartner: { ...ports.composerPartner, onPartnerChange: setPartner },
+          },
         })
       )
     )
@@ -95,8 +88,24 @@ describe('useChatViewSendPanelProps', () => {
   it('onStatusFeedback aktualisiert Status im Core', () => {
     const setStatus = vi.fn()
     const setStatusMsg = vi.fn()
+    const ports = testMessengerPorts()
     const { result } = renderHook(() =>
-      useChatViewSendPanelProps(baseDeps({ setStatus, setStatusMsg }))
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: {
+            ...ports,
+            sendActions: {
+              ...ports.sendActions,
+              onStatusChange: setStatus,
+              onStatusMsgChange: setStatusMsg,
+              onStatusFeedback: (msg, st = 'success') => {
+                setStatus(st)
+                setStatusMsg(msg)
+              },
+            },
+          },
+        })
+      )
     )
     act(() => {
       result.current.sendPanelProps.onStatusFeedback?.('Gesendet', 'success')

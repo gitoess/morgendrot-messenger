@@ -5,7 +5,6 @@ import type { ChatViewSendPanelProps } from '@/frontend/components/chat-view-sen
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
-import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
@@ -17,17 +16,7 @@ import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-st
 
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
-  setPartner: (v: string) => void
   activeGroup: MessengerGroupDefinition | null
-  loraOnlineFallbackOffer: { reasonLabel: string } | null
-  confirmLoraSendViaOnline: () => void | Promise<void>
-  dismissLoraOnlineFallback: () => void
-  handleSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
-  cancelSend?: () => void
-  status: 'idle' | 'success' | 'error'
-  statusMsg: string
-  setStatus: (v: 'idle' | 'success' | 'error') => void
-  setStatusMsg: (v: string) => void
   refreshApiStatus?: () => void | Promise<void>
   loadMessages: (
     mode?: 'reset' | 'append' | 'poll',
@@ -62,6 +51,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     offlineMailboxQueueRead,
     handshakeActions,
     handshakeOffersRead,
+    sendActions,
   } = deps.messengerPorts
 
   const groupSendPanelContext = useMemo(
@@ -100,13 +90,13 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   const handleEncryptedHandshakeForComposerRecipient = useCallback(async () => {
     const addr = composerEncryptedRecipient.trim().toLowerCase()
     if (!isValidRecipient0x(addr)) return
-    deps.setPartner(addr)
+    composerPartner.onPartnerChange(addr)
     await handshakeActions.onHandshakeForAddress(addr)
     encryptedRecipientHandshake.refresh()
     window.setTimeout(() => void handshakeOffersRead.reload(), 3000)
   }, [
     composerEncryptedRecipient,
-    deps.setPartner,
+    composerPartner,
     handshakeActions,
     encryptedRecipientHandshake,
     handshakeOffersRead,
@@ -115,14 +105,14 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   const handleEncryptedAcceptForComposerRecipient = useCallback(async () => {
     const addr = composerEncryptedRecipient.trim().toLowerCase()
     if (!isValidRecipient0x(addr)) return
-    deps.setPartner(addr)
+    composerPartner.onPartnerChange(addr)
     await handshakeActions.onConnectAcceptForAddress(addr)
     encryptedRecipientHandshake.refresh()
     await deps.refreshApiStatus?.()
     window.setTimeout(() => void handshakeOffersRead.reload(), 4000)
   }, [
     composerEncryptedRecipient,
-    deps.setPartner,
+    composerPartner,
     handshakeActions,
     encryptedRecipientHandshake,
     deps.refreshApiStatus,
@@ -146,10 +136,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     hasLoraAttachment: attachmentBar.attachedLora != null,
     onMessageChange: composerDraft.onMessageChange,
     clearAttachments: attachmentBar.clearCompactAttachment,
-    onStatusFeedback: (msg, st = 'success') => {
-      deps.setStatus(st)
-      deps.setStatusMsg(msg)
-    },
+    onStatusFeedback: sendActions.onStatusFeedback,
     onTelegramDelivered: ({ recipientKey, text }) => {
       recordTelegramOutgoing(deps.appendMeshMessage, inboxFeedRead.myAddress, recipientKey, text)
     },
@@ -158,10 +145,10 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   const syncPartnerAndRecipient = useCallback(
     (v: string) => {
       const t = v.trim().toLowerCase()
-      deps.setPartner(t)
+      composerPartner.onPartnerChange(t)
       if (composerSendPath.isPrivate) composerDraft.onRecipientChange(t)
     },
-    [composerSendPath.isPrivate, deps.setPartner, composerDraft.onRecipientChange]
+    [composerSendPath.isPrivate, composerPartner, composerDraft.onRecipientChange]
   )
 
   const voicePort = deps.messengerPorts.voiceRecordSendPanel
@@ -176,14 +163,14 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     ...voicePort,
     ...attachmentBar,
     isPrivate: composerSendPath.isPrivate,
-    loraOnlineFallbackOffer: deps.loraOnlineFallbackOffer,
-    onConfirmLoraOnline: deps.confirmLoraSendViaOnline,
-    onDismissLoraOnlineFallback: deps.dismissLoraOnlineFallback,
+    loraOnlineFallbackOffer: sendActions.loraOnlineFallbackOffer,
+    onConfirmLoraOnline: sendActions.onConfirmLoraSendViaOnline,
+    onDismissLoraOnlineFallback: sendActions.onDismissLoraOnlineFallback,
     apiStatus: connectionStatusRead.apiStatus,
-    onSend: deps.handleSend,
-    onCancelSend: deps.cancelSend,
-    status: deps.status,
-    statusMsg: deps.statusMsg,
+    onSend: sendActions.onSend,
+    onCancelSend: sendActions.onCancelSend,
+    status: sendActions.status,
+    statusMsg: sendActions.statusMsg,
     offlineMailboxQueuePending: offlineMailboxQueueRead.pending,
     offlineMailboxQueueUntrustedTimeCount: offlineMailboxQueueRead.untrustedTimeCount,
     offlineMailboxQueueBackoffCount: offlineMailboxQueueRead.backoffCount,
@@ -214,10 +201,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       sendTransportRead.encrypted &&
       sendTransportRead.forcedTransport === 'internet' &&
       composerSendPath.composerDelivery === 'chain',
-    onStatusFeedback: (msg, st = 'success') => {
-      deps.setStatus(st)
-      deps.setStatusMsg(msg)
-    },
+    onStatusFeedback: sendActions.onStatusFeedback,
     composerDelivery: composerSendPath.composerDelivery,
     messagingPersistenceMode: sendTransportChoice.messagingPersistenceMode,
     onTelegramSend: telegramComposer.handleTelegramOnly,
