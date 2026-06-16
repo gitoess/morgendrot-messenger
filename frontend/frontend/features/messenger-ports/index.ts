@@ -25,6 +25,16 @@ export type { HandshakeOffersReadPort } from './handshake-offers-read-port'
 export { asHandshakeOffersRead } from './handshake-offers-read-port'
 export type { SendActionsPort, SendComposerStatus } from './send-actions-port'
 export { asSendActions } from './send-actions-port'
+export type { InboxActionsPort, InboxLoadMode } from './inbox-actions-port'
+export { asInboxActions } from './inbox-actions-port'
+export type { InboxExportActionsPort } from './inbox-export-actions-port'
+export { asInboxExportActions } from './inbox-export-actions-port'
+export type { PackageExpertPort } from './package-expert-port'
+export { asPackageExpert } from './package-expert-port'
+export type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
+export { asInboxHandshakePanelActions } from './inbox-handshake-panel-actions-port'
+export type { InboxPanelLocalActionsPort } from './inbox-panel-local-actions-port'
+export { asInboxPanelLocalActions } from './inbox-panel-local-actions-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
 export { asInboxFeedRead } from './inbox-feed-read-port'
 export type { ComposerDraftPort, ComposerDraftSendFlowPort } from './composer-draft-port'
@@ -56,6 +66,9 @@ export {
   assembleHandshakeActionsPort,
   assembleHandshakeOffersReadPort,
   assembleSendActionsPort,
+  assembleInboxActionsPort,
+  assembleInboxExportActionsPort,
+  assemblePackageExpertPort,
   assembleSendMeshFunkOptionsPort,
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
@@ -73,7 +86,11 @@ export {
   type ChatViewHandshakeActionsSlice,
   type ChatViewHandshakeOffersSlice,
   type ChatViewSendActionsSlice,
+  type ChatViewInboxActionsSlice,
+  type ChatViewInboxExportActionsSlice,
+  type ChatViewPackageExpertSlice,
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
+  type ChatViewPanelMessengerPorts,
   type ChatViewTransportSlice,
 } from './chat-view-core-port-assembler'

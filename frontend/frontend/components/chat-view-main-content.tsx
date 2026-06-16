@@ -60,8 +60,12 @@ import {
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
-import { asHandshakeOffersRead } from '@/frontend/features/messenger-ports'
-import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
+import {
+  asHandshakeOffersRead,
+  asInboxHandshakePanelActions,
+  asInboxPanelLocalActions,
+} from '@/frontend/features/messenger-ports'
+import type { ChatViewPanelMessengerPorts } from '@/frontend/features/messenger-ports'
 import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
@@ -104,31 +108,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setSending,
     refreshApiStatus,
     syncCanonicalPackageIdFromServer,
-    inboxPackageFilter,
-    setInboxPackageFilter,
-    packageIdSuggestions,
-    refreshPackageIdSuggestions,
-    applyPackageIdBackend,
     applyInboxPackageFilterOnly,
-    packageIdBusy,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
-    morgPkgDeviceBusy,
-    morgPkgFileRef,
-    morgPkgDeviceFilesRef,
     refreshContactDirectory,
     inboxTotalCount,
     messages,
     setMessages,
-    loading,
-    loadingMore,
-    loadError,
-    inboxFromCache,
-    inboxCacheAgeMinutes,
-    inboxLiveSource,
     loadMessages,
-    loadMoreInbox,
-    inboxHasMore,
     appendMeshMessage,
     clearInboxRam,
     inboxRows,
@@ -137,40 +124,17 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     meshtastic,
     meshSyncMsg,
     setMeshSyncMsg,
-    localPurgeBusy,
-    setLocalPurgeBusy,
     contactBleAddress,
     setContactBleAddress,
     contactBleUuid,
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    exportEcdhMorgPkgForMessage,
-    onMorgPkgDeviceFiles,
-    onMorgPkgImportFile,
-    onMorgPkgDeviceExportPick,
     morgPkgImports,
     morgPkgImportsOpen,
     setMorgPkgImportsOpen,
     removeMorgPkgImport,
     onForwardMorgPkgItem,
-    morgPkgExportRecipient,
-    setMorgPkgExportRecipient,
-    morgPkgExportPartnerOptions,
-    openPartnerSetupPanel,
-    onExportEinsatzberichtJson,
-    onExportEinsatzberichtTxt,
-    onExportEinsatzberichtTxtFull,
-    onExportEinsatzberichtEncrypted,
-    onExportEinsatzprotokoll,
-    onExportEinsatzprotokollPlainZip,
-    onExportEinsatzprotokollMarked,
-    onHideInboxMessageLocal,
-    onPurgeInboxMessageChain,
-    onForwardMessage,
-    onHideAllVisibleLocal,
-    onBulkHideSelected,
-    onBulkPurgeSelected,
     resetInboxViewFilters,
     vaultBannerActions,
     channelMode,
@@ -194,6 +158,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     sendTransportChoice,
     sendMeshFunkOptions,
     sendActions,
+    inboxActions,
+    inboxExportActions,
+    packageExpert,
   } = messengerPorts
   const {
     apiStatus,
@@ -291,19 +258,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
 
-  const panelMessengerPorts = useMemo(
-    (): ChatViewMessengerPorts => ({
-      ...messengerPorts,
-      handshakeOffersRead: asHandshakeOffersRead(
-        pendingHandshakeOffers,
-        outgoingHandshakeOffers,
-        reloadPendingHandshakes
-      ),
-    }),
-    [messengerPorts, pendingHandshakeOffers, outgoingHandshakeOffers, reloadPendingHandshakes]
-  )
-
-  const { handshakeActions } = panelMessengerPorts
+  const { handshakeActions } = messengerPorts
 
   const handleResendOutgoingHandshake = useCallback(
     async (recipient: string) => {
@@ -541,6 +496,47 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [meshtastic, meshPlaintextNodeId, meshPlaintextToNodeEnabled]
   )
 
+  const panelMessengerPorts = useMemo(
+    (): ChatViewPanelMessengerPorts => ({
+      ...messengerPorts,
+      handshakeOffersRead: asHandshakeOffersRead(
+        pendingHandshakeOffers,
+        outgoingHandshakeOffers,
+        reloadPendingHandshakes
+      ),
+      inboxHandshakePanelActions: asInboxHandshakePanelActions({
+        pendingHandshakesLoading,
+        pendingHandshakeCount,
+        onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
+        onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
+        onReplyToMessage: handleReplyToInboxMessage,
+        onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
+        onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
+        onResendOutgoingHandshake: handleResendOutgoingHandshake,
+      }),
+      inboxPanelLocalActions: asInboxPanelLocalActions({
+        onAddSenderToContactBook: addInboxSenderToContactBook,
+        onSarqNakWire,
+      }),
+    }),
+    [
+      messengerPorts,
+      pendingHandshakeOffers,
+      outgoingHandshakeOffers,
+      reloadPendingHandshakes,
+      pendingHandshakesLoading,
+      pendingHandshakeCount,
+      handleAcceptHandshakeFromInbox,
+      handleUseSenderAsPartnerFromInbox,
+      handleReplyToInboxMessage,
+      handleDeleteIncomingHandshake,
+      handleDeleteOutgoingHandshake,
+      handleResendOutgoingHandshake,
+      addInboxSenderToContactBook,
+      onSarqNakWire,
+    ]
+  )
+
   const applyPhonebookContact = useCallback(
     (storageKey: string, entry: ContactMeshEntryClient) => {
       const applied = applyPhonebookContactToComposer(storageKey, entry, {
@@ -609,21 +605,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   useEffect(() => {
     if (!showInboxPackageExpert) return
-    void refreshPackageIdSuggestions()
-  }, [showInboxPackageExpert, refreshPackageIdSuggestions])
-
-  const applyTemporaryInboxPackage = useCallback(
-    async (packageId: string) => {
-      setInboxPackageFilter(packageId)
-      await loadMessages('reset', packageId)
-    },
-    [loadMessages, setInboxPackageFilter]
-  )
-
-  const clearTemporaryInboxPackage = useCallback(async () => {
-    setInboxPackageFilter('')
-    await loadMessages('reset')
-  }, [loadMessages, setInboxPackageFilter])
+    void packageExpert.refreshPackageIdSuggestions()
+  }, [showInboxPackageExpert, packageExpert.refreshPackageIdSuggestions])
 
   const offlineStatus = useOfflineStatus({
     apiSnapshot: apiStatus,
@@ -639,7 +622,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         setStatusMsg('')
       }
     }
-  }, [basisUnreachable, inboxFromCache, status, statusMsg, setStatus, setStatusMsg])
+  }, [basisUnreachable, inboxActions.inboxFromCache, status, statusMsg, setStatus, setStatusMsg])
 
   useEffect(() => {
     if (!uiCaps.showAdhocTransport && forcedTransport === 'adhoc') {
@@ -678,7 +661,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     meshBleConnected: meshtastic.connected,
     refreshApiStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
-    packageIdBusy,
+    packageIdBusy: packageExpert.packageIdBusy,
     syncCanonicalPackageIdFromServer,
     showPackageIdBanner: uiCaps.showPackageIdBanner,
   })
@@ -687,72 +670,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     messengerPorts: panelMessengerPorts,
     inboxTotalCount,
     inboxRows,
-    morgPkgFileRef,
-    morgPkgDeviceFilesRef,
-    onMorgPkgImportFile,
-    onMorgPkgDeviceFiles,
-    onMorgPkgDeviceExportPick,
-    morgPkgDeviceBusy,
-    morgPkgExportRecipient,
-    setMorgPkgExportRecipient,
-    morgPkgExportPartnerOptions,
-    morgPkgImportCount: morgPkgImports.length,
-    onOpenMorgPkgArchive: () => setMorgPkgImportsOpen(true),
-    loadMessages,
-    refreshContactDirectory,
-    pendingHandshakesLoading,
-    pendingHandshakeCount,
-    sending,
-    onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
-    onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
-    onReplyToMessage: handleReplyToInboxMessage,
-    onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
-    onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
-    onResendOutgoingHandshake: handleResendOutgoingHandshake,
-    loading,
-    loadingMore,
-    loadMoreInbox,
-    inboxHasMore,
-    loadError,
-    inboxFromCache,
-    inboxCacheAgeMinutes,
-    inboxLiveSource,
-    exportEcdhMorgPkgForMessage,
-    onExportEinsatzberichtJson,
-    onExportEinsatzberichtTxt,
-    onExportEinsatzberichtTxtFull,
-    onExportEinsatzberichtEncrypted,
-    onExportEinsatzprotokoll,
-    onExportEinsatzprotokollPlainZip,
-    onExportEinsatzprotokollMarked,
-    onHideInboxMessageLocal,
-    onPurgeInboxMessageChain,
-    onForwardMessage,
-    onHideAllVisibleLocal,
-    onBulkHideSelected,
-    onBulkPurgeSelected,
-    recipient,
-    setStatus,
-    setStatusMsg,
-    addInboxSenderToContactBook,
-    onSarqNakWire,
-    localPurgeBusy,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
-    openPartnerSetupPanel,
     onOpenPhonebook: () => setPhonebookOpen(true),
-    messagingPersistenceMode,
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
     showIotaExpertInboxActions: uiCaps.expertTools,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     showInboxPackageExpertMenu: showInboxPackageExpert,
-    inboxPackageFilter,
-    packageIdSuggestions,
-    packageIdBusy,
-    applyTemporaryInboxPackage,
-    clearTemporaryInboxPackage,
-    applyPackageIdBackend,
     onOpenSettings,
-    setRecipient,
   })
 
   const { sendPanelProps } = useChatViewSendPanelProps({
@@ -787,7 +711,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     messengerPorts: panelMessengerPorts,
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
-    onOpenPartnerSetup: openPartnerSetupPanel,
+    onOpenPartnerSetup: inboxActions.openPartnerSetupPanel,
     refreshContactDirectory,
     refreshApiStatus,
     setStatus,
@@ -892,21 +816,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             role={role}
             canPost={pinnwandCaps.canPost}
             unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
-            loading={loading}
-            onRefresh={() => void loadMessages('reset')}
-            loadError={loadError}
-            inboxFromCache={inboxFromCache}
-            inboxCacheAgeMinutes={inboxCacheAgeMinutes}
+            loading={inboxActions.loading}
+            onRefresh={() => void inboxActions.loadMessages('reset')}
+            loadError={inboxActions.loadError}
+            inboxFromCache={inboxActions.inboxFromCache}
+            inboxCacheAgeMinutes={inboxActions.inboxCacheAgeMinutes}
             basisUnreachable={connectionStatusRead.basisUnreachable ?? false}
             messages={pinnwandFeedMessages}
             inboxRows={pinnwandInboxRows}
             myAddress={myAddress}
             contactDirectory={contactDirectoryRead.directory}
             isMeshVerifiedForAddress={contactDirectoryRead.isMeshVerifiedForAddress}
-            exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
-            onHideInboxMessageLocal={onHideInboxMessageLocal}
-            onPurgeInboxMessageChain={onPurgeInboxMessageChain}
-            onForwardMessage={onForwardMessage}
+            exportEcdhMorgPkgForMessage={inboxExportActions.exportEcdhMorgPkgForMessage}
+            onHideInboxMessageLocal={inboxActions.onHideInboxMessageLocal}
+            onPurgeInboxMessageChain={inboxActions.onPurgeInboxMessageChain}
+            onForwardMessage={inboxActions.onForwardMessage}
             onReplyToMessage={handleReplyToInboxMessage}
             toggleProtokollMark={toggleProtokollMark}
             protokollMarkedIds={protokollMarkedIds}
@@ -916,9 +840,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             inboxSelectMode={inboxSelectMode}
             selectedInboxIds={selectedInboxIds}
             toggleInboxSelection={toggleInboxSelection}
-            loadingMore={loadingMore}
-            loadMoreInbox={loadMoreInbox}
-            inboxHasMore={inboxHasMore}
+            loadingMore={inboxActions.loadingMore}
+            loadMoreInbox={inboxActions.loadMoreInbox}
+            inboxHasMore={inboxActions.inboxHasMore}
             onAddSenderToContactBook={addInboxSenderToContactBook}
             onSarqNakWire={onSarqNakWire}
             isInboxMessageUnread={isInboxMessageUnread}

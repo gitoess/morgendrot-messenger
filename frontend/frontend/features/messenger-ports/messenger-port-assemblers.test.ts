@@ -219,6 +219,56 @@ describe('assembleChatViewMessengerPorts', () => {
         confirmLoraSendViaOnline: vi.fn(async () => {}),
         dismissLoraOnlineFallback: vi.fn(),
       },
+      inboxActions: {
+        loading: false,
+        loadingMore: false,
+        loadError: null,
+        inboxFromCache: false,
+        inboxCacheAgeMinutes: null,
+        inboxLiveSource: 'api',
+        inboxHasMore: false,
+        loadMessages: vi.fn(),
+        loadMoreInbox: vi.fn(),
+        refreshContactDirectory: vi.fn(),
+        onHideInboxMessageLocal: vi.fn(),
+        onPurgeInboxMessageChain: vi.fn(async () => {}),
+        onForwardMessage: vi.fn(),
+        onHideAllVisibleLocal: vi.fn(),
+        onBulkHideSelected: vi.fn(),
+        onBulkPurgeSelected: vi.fn(),
+        localPurgeBusy: false,
+        morgPkgFileRef: { current: null },
+        morgPkgDeviceFilesRef: { current: null },
+        onMorgPkgImportFile: vi.fn(),
+        onMorgPkgDeviceFiles: vi.fn(),
+        onMorgPkgDeviceExportPick: vi.fn(async () => {}),
+        morgPkgDeviceBusy: false,
+        morgPkgExportRecipient: '',
+        setMorgPkgExportRecipient: vi.fn(),
+        morgPkgExportPartnerOptions: [],
+        morgPkgImportCount: 0,
+        onOpenMorgPkgArchive: vi.fn(),
+        openPartnerSetupPanel: vi.fn(),
+      },
+      inboxExportActions: {
+        exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
+        onExportEinsatzberichtJson: vi.fn(),
+        onExportEinsatzberichtTxt: vi.fn(),
+        onExportEinsatzberichtTxtFull: vi.fn(),
+        onExportEinsatzberichtEncrypted: vi.fn(async () => {}),
+        onExportEinsatzprotokoll: vi.fn(async () => {}),
+        onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
+        onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+      },
+      packageExpert: {
+        inboxPackageFilter: '',
+        setInboxPackageFilter: vi.fn(),
+        packageIdSuggestions: [],
+        packageIdBusy: false,
+        refreshPackageIdSuggestions: vi.fn(async () => {}),
+        applyPackageIdBackend: vi.fn(async () => {}),
+        loadMessages: vi.fn(),
+      },
       attachmentBar: {
         sending: false,
         compactFileRef: { current: null },
@@ -246,6 +296,8 @@ describe('assembleChatViewMessengerPorts', () => {
     expect(ports.offlineMailboxQueueRead.pending).toBe(0)
     expect(ports.handshakeActions.onHandshake).toBeDefined()
     expect(ports.handshakeOffersRead.pendingOffers).toEqual([])
+    expect(ports.inboxActions.loading).toBe(false)
+    expect(ports.packageExpert.packageIdBusy).toBe(false)
     expect(ports.voiceRecordSendPanel).toBeNull()
   })
 })

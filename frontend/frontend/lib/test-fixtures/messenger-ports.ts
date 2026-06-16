@@ -1,8 +1,11 @@
 import { vi } from 'vitest'
 import {
   assembleChatViewMessengerPorts,
+  asInboxHandshakePanelActions,
+  asInboxPanelLocalActions,
   type ChatViewAttachmentBarSlice,
   type ChatViewMessengerPorts,
+  type ChatViewPanelMessengerPorts,
 } from '@/frontend/features/messenger-ports'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
@@ -173,6 +176,56 @@ export function testMessengerPorts(over: {
       confirmLoraSendViaOnline: vi.fn(async () => {}),
       dismissLoraOnlineFallback: vi.fn(),
     },
+    inboxActions: {
+      loading: false,
+      loadingMore: false,
+      loadError: null,
+      inboxFromCache: false,
+      inboxCacheAgeMinutes: null,
+      inboxLiveSource: null,
+      inboxHasMore: false,
+      loadMessages: vi.fn(),
+      loadMoreInbox: vi.fn(),
+      refreshContactDirectory: vi.fn(),
+      onHideInboxMessageLocal: vi.fn(),
+      onPurgeInboxMessageChain: vi.fn(async () => {}),
+      onForwardMessage: vi.fn(),
+      onHideAllVisibleLocal: vi.fn(),
+      onBulkHideSelected: vi.fn(),
+      onBulkPurgeSelected: vi.fn(),
+      localPurgeBusy: false,
+      morgPkgFileRef: { current: null },
+      morgPkgDeviceFilesRef: { current: null },
+      onMorgPkgImportFile: vi.fn(),
+      onMorgPkgDeviceFiles: vi.fn(),
+      onMorgPkgDeviceExportPick: vi.fn(async () => {}),
+      morgPkgDeviceBusy: false,
+      morgPkgExportRecipient: '',
+      setMorgPkgExportRecipient: vi.fn(),
+      morgPkgExportPartnerOptions: [],
+      morgPkgImportCount: 0,
+      onOpenMorgPkgArchive: vi.fn(),
+      openPartnerSetupPanel: vi.fn(),
+    },
+    inboxExportActions: {
+      exportEcdhMorgPkgForMessage: vi.fn(async () => {}),
+      onExportEinsatzberichtJson: vi.fn(),
+      onExportEinsatzberichtTxt: vi.fn(),
+      onExportEinsatzberichtTxtFull: vi.fn(),
+      onExportEinsatzberichtEncrypted: vi.fn(async () => {}),
+      onExportEinsatzprotokoll: vi.fn(async () => {}),
+      onExportEinsatzprotokollPlainZip: vi.fn(async () => {}),
+      onExportEinsatzprotokollMarked: vi.fn(async () => {}),
+    },
+    packageExpert: {
+      inboxPackageFilter: '',
+      setInboxPackageFilter: vi.fn(),
+      packageIdSuggestions: [],
+      packageIdBusy: false,
+      refreshPackageIdSuggestions: vi.fn(async () => {}),
+      applyPackageIdBackend: vi.fn(async () => {}),
+      loadMessages: vi.fn(),
+    },
     voiceFromHook: {
       voicePhase: 'idle',
       voiceActiveKind: null,
@@ -189,4 +242,28 @@ export function testMessengerPorts(over: {
     },
     sosVoiceAwaitingSend: false,
   })
+}
+
+/** Core-Ports plus angereicherte Inbox-Panel-Aktionen für Hook-Tests. */
+export function testPanelMessengerPorts(
+  over: Parameters<typeof testMessengerPorts>[0] = {}
+): ChatViewPanelMessengerPorts {
+  const ports = testMessengerPorts(over)
+  return {
+    ...ports,
+    inboxHandshakePanelActions: asInboxHandshakePanelActions({
+      pendingHandshakesLoading: false,
+      pendingHandshakeCount: 0,
+      onAcceptPendingHandshake: vi.fn(),
+      onUseSenderAsPartnerFromInbox: vi.fn(),
+      onReplyToMessage: vi.fn(),
+      onDeleteIncomingHandshake: vi.fn(),
+      onDeleteOutgoingHandshake: vi.fn(),
+      onResendOutgoingHandshake: vi.fn(),
+    }),
+    inboxPanelLocalActions: asInboxPanelLocalActions({
+      onAddSenderToContactBook: vi.fn(),
+      onSarqNakWire: vi.fn(),
+    }),
+  }
 }

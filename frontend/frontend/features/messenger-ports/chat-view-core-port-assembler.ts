@@ -17,6 +17,11 @@ import {
   type OfflineMailboxQueueItem,
   type OfflineMailboxQueueReadPort,
 } from './offline-mailbox-queue-read-port'
+import { asInboxActions, type InboxActionsPort } from './inbox-actions-port'
+import type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
+import type { InboxPanelLocalActionsPort } from './inbox-panel-local-actions-port'
+import { asInboxExportActions, type InboxExportActionsPort } from './inbox-export-actions-port'
+import { asPackageExpert, type PackageExpertPort } from './package-expert-port'
 import { asSendActions, type SendActionsPort, type SendComposerStatus } from './send-actions-port'
 import { asMeshSendOptions, type MeshSendOptionsPort } from './mesh-send-options-port'
 import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
@@ -34,6 +39,7 @@ import {
   type VoiceRecordSendPanelPort,
 } from './voice-record-send-panel-port'
 import type { ChangeEvent, RefObject } from 'react'
+import type { MorgPkgExportPartnerOption } from '@/frontend/components/chat-view-inbox-toolbar'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
@@ -204,6 +210,59 @@ export type ChatViewSendActionsSlice = {
   dismissLoraOnlineFallback: () => void
 }
 
+export type ChatViewInboxActionsSlice = {
+  loading: boolean
+  loadingMore: boolean
+  loadError: string | null
+  inboxFromCache: boolean
+  inboxCacheAgeMinutes: number | null
+  inboxLiveSource: 'rpc' | 'api' | null
+  inboxHasMore: boolean
+  loadMessages: InboxActionsPort['loadMessages']
+  loadMoreInbox: () => void
+  refreshContactDirectory: () => void
+  onHideInboxMessageLocal: (id: string) => void
+  onPurgeInboxMessageChain: (msg: Message) => void | Promise<void>
+  onForwardMessage: (msg: Message, includeSender: boolean) => void
+  onHideAllVisibleLocal: () => void
+  onBulkHideSelected: () => void
+  onBulkPurgeSelected: () => void
+  localPurgeBusy: boolean
+  morgPkgFileRef: RefObject<HTMLInputElement | null>
+  morgPkgDeviceFilesRef: RefObject<HTMLInputElement | null>
+  onMorgPkgImportFile: (e: ChangeEvent<HTMLInputElement>) => void
+  onMorgPkgDeviceFiles: (e: ChangeEvent<HTMLInputElement>) => void
+  onMorgPkgDeviceExportPick: () => void | Promise<void>
+  morgPkgDeviceBusy: boolean
+  morgPkgExportRecipient: string
+  setMorgPkgExportRecipient: (v: string) => void
+  morgPkgExportPartnerOptions: MorgPkgExportPartnerOption[]
+  morgPkgImportCount: number
+  onOpenMorgPkgArchive: () => void
+  openPartnerSetupPanel: () => void
+}
+
+export type ChatViewInboxExportActionsSlice = {
+  exportEcdhMorgPkgForMessage: (msg: Message) => void | Promise<void>
+  onExportEinsatzberichtJson: () => void
+  onExportEinsatzberichtTxt: () => void
+  onExportEinsatzberichtTxtFull: () => void
+  onExportEinsatzberichtEncrypted: () => void | Promise<void>
+  onExportEinsatzprotokoll: () => void | Promise<void>
+  onExportEinsatzprotokollPlainZip: () => void | Promise<void>
+  onExportEinsatzprotokollMarked: () => void | Promise<void>
+}
+
+export type ChatViewPackageExpertSlice = {
+  inboxPackageFilter: string
+  setInboxPackageFilter: (v: string) => void
+  packageIdSuggestions: string[]
+  packageIdBusy: boolean
+  refreshPackageIdSuggestions: (extraUnionIds?: string[]) => void | Promise<void>
+  applyPackageIdBackend: (packageId: string) => void | Promise<void>
+  loadMessages: InboxActionsPort['loadMessages']
+}
+
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
@@ -223,6 +282,15 @@ export type ChatViewMessengerPorts = {
   handshakeActions: HandshakeActionsPort
   handshakeOffersRead: HandshakeOffersReadPort
   sendActions: SendActionsPort
+  inboxActions: InboxActionsPort
+  inboxExportActions: InboxExportActionsPort
+  packageExpert: PackageExpertPort
+}
+
+/** Panel-Ports = Core-Ports plus in main-content angereicherte Inbox-Aktionen (P5b). */
+export type ChatViewPanelMessengerPorts = ChatViewMessengerPorts & {
+  inboxHandshakePanelActions: InboxHandshakePanelActionsPort
+  inboxPanelLocalActions: InboxPanelLocalActionsPort
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
@@ -358,6 +426,64 @@ export function assembleSendActionsPort(slice: ChatViewSendActionsSlice): SendAc
   })
 }
 
+export function assembleInboxActionsPort(slice: ChatViewInboxActionsSlice): InboxActionsPort {
+  return asInboxActions({
+    loading: slice.loading,
+    loadingMore: slice.loadingMore,
+    loadError: slice.loadError,
+    inboxFromCache: slice.inboxFromCache,
+    inboxCacheAgeMinutes: slice.inboxCacheAgeMinutes,
+    inboxLiveSource: slice.inboxLiveSource,
+    inboxHasMore: slice.inboxHasMore,
+    loadMessages: slice.loadMessages,
+    loadMoreInbox: slice.loadMoreInbox,
+    refreshContactDirectory: slice.refreshContactDirectory,
+    onHideInboxMessageLocal: slice.onHideInboxMessageLocal,
+    onPurgeInboxMessageChain: slice.onPurgeInboxMessageChain,
+    onForwardMessage: slice.onForwardMessage,
+    onHideAllVisibleLocal: slice.onHideAllVisibleLocal,
+    onBulkHideSelected: slice.onBulkHideSelected,
+    onBulkPurgeSelected: slice.onBulkPurgeSelected,
+    localPurgeBusy: slice.localPurgeBusy,
+    morgPkgFileRef: slice.morgPkgFileRef,
+    morgPkgDeviceFilesRef: slice.morgPkgDeviceFilesRef,
+    onMorgPkgImportFile: slice.onMorgPkgImportFile,
+    onMorgPkgDeviceFiles: slice.onMorgPkgDeviceFiles,
+    onMorgPkgDeviceExportPick: slice.onMorgPkgDeviceExportPick,
+    morgPkgDeviceBusy: slice.morgPkgDeviceBusy,
+    morgPkgExportRecipient: slice.morgPkgExportRecipient,
+    onMorgPkgExportRecipientChange: slice.setMorgPkgExportRecipient,
+    morgPkgExportPartnerOptions: slice.morgPkgExportPartnerOptions,
+    morgPkgImportCount: slice.morgPkgImportCount,
+    onOpenMorgPkgArchive: slice.onOpenMorgPkgArchive,
+    openPartnerSetupPanel: slice.openPartnerSetupPanel,
+  })
+}
+
+export function assembleInboxExportActionsPort(
+  slice: ChatViewInboxExportActionsSlice
+): InboxExportActionsPort {
+  return asInboxExportActions(slice)
+}
+
+export function assemblePackageExpertPort(slice: ChatViewPackageExpertSlice): PackageExpertPort {
+  return asPackageExpert({
+    inboxPackageFilter: slice.inboxPackageFilter,
+    packageIdSuggestions: slice.packageIdSuggestions,
+    packageIdBusy: slice.packageIdBusy,
+    refreshPackageIdSuggestions: slice.refreshPackageIdSuggestions,
+    applyTemporaryInboxPackage: async (packageId: string) => {
+      slice.setInboxPackageFilter(packageId)
+      await slice.loadMessages('reset', packageId)
+    },
+    clearTemporaryInboxPackage: async () => {
+      slice.setInboxPackageFilter('')
+      await slice.loadMessages('reset')
+    },
+    applyPackageIdBackend: slice.applyPackageIdBackend,
+  })
+}
+
 /** Alle Standard-Ports aus den Core-Slices. */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
@@ -375,6 +501,9 @@ export function assembleChatViewMessengerPorts(input: {
   handshakeActions: ChatViewHandshakeActionsSlice
   handshakeOffers?: ChatViewHandshakeOffersSlice
   sendActions: ChatViewSendActionsSlice
+  inboxActions: ChatViewInboxActionsSlice
+  inboxExportActions: ChatViewInboxExportActionsSlice
+  packageExpert: ChatViewPackageExpertSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -398,6 +527,9 @@ export function assembleChatViewMessengerPorts(input: {
       input.handshakeOffers ?? { pendingOffers: [], outgoingOffers: [], reload: () => {} }
     ),
     sendActions: assembleSendActionsPort(input.sendActions),
+    inboxActions: assembleInboxActionsPort(input.inboxActions),
+    inboxExportActions: assembleInboxExportActionsPort(input.inboxExportActions),
+    packageExpert: assemblePackageExpertPort(input.packageExpert),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)
