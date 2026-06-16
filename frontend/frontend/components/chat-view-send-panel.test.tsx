@@ -112,15 +112,15 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Mailbox queue/)).toBeInTheDocument()
-    expect(screen.getByText(/2 messages waiting for the backend/)).toBeInTheDocument()
+    expect(screen.getByText(/Mailbox-Warteschlange/)).toBeInTheDocument()
+    expect(screen.getByText(/2 Nachrichten warten auf die Basis/)).toBeInTheDocument()
   })
 
   it('blendet Mailbox-Warteschlange aus wenn offlineMailboxQueuePending=0 (§ H.1a)', () => {
     const { container } = render(
       <ChatViewSendPanel {...baseSendPanel({ offlineMailboxQueuePending: 0 })} />
     )
-    expect(screen.queryByText(/Mailbox queue/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Mailbox-Warteschlange/)).not.toBeInTheDocument()
     expect(primarySend(container)).toBeEnabled()
   })
 
@@ -134,7 +134,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByText(/device time not verified/i)).toBeInTheDocument()
+    expect(screen.getByText(/Gerätezeit/i)).toBeInTheDocument()
   })
 
   it('zeigt Backoff- und Fehlerhinweis für Mailbox-Warteschlange (§ H.12 / SYNC)', () => {
@@ -149,7 +149,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     expect(screen.getByText(/Backoff/i)).toBeInTheDocument()
-    expect(screen.getByText(/Last message: rpc timeout/)).toBeInTheDocument()
+    expect(screen.getByText(/Letzte Meldung: rpc timeout/)).toBeInTheDocument()
   })
 
   it('deaktiviert Senden bei leerem Inhalt (verschlüsselt, ohne Anhang)', () => {
@@ -290,7 +290,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     expect(screen.getByPlaceholderText('!1a2b3c4d')).toBeInTheDocument()
-    expect(screen.queryByText(/Recipient · wallet \(0x\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Empfänger · Wallet \(0x\)/i)).not.toBeInTheDocument()
   })
 
   it('zeigt getrennte Funk-Checkboxen bei Klartext + Funk (privat)', () => {
@@ -320,7 +320,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.queryByLabelText(/Channel index \(0–7, optional\)/i)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/Kanalindex \(0–7, optional\)/i)).not.toBeInTheDocument()
 
     rerender(
       <ChatViewSendPanel
@@ -332,7 +332,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    const input = screen.getByLabelText(/Channel index \(0–7, optional\)/i)
+    const input = screen.getByLabelText(/Kanalindex \(0–7, optional\)/i)
     fireEvent.change(input, { target: { value: '3' } })
     expect(onMeshtasticChannelIndexChange).toHaveBeenLastCalledWith(3)
     fireEvent.change(input, { target: { value: '9' } })
@@ -448,9 +448,9 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Send via online/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Trotzdem über Online \(IOTA\) senden/i }))
     expect(onConfirmLoraOnline).toHaveBeenCalledTimes(1)
-    fireEvent.click(screen.getByRole('button', { name: /^Cancel$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Abbrechen$/i }))
     expect(onDismissLoraOnlineFallback).toHaveBeenCalledTimes(1)
   })
 
@@ -468,7 +468,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Recipient · Telegram/)).toBeInTheDocument()
+    expect(screen.getByText(/Empfänger · Telegram/)).toBeInTheDocument()
     fireEvent.click(primarySend(container))
     expect(onTelegramSend).toHaveBeenCalledTimes(1)
     expect(onSend).not.toHaveBeenCalled()
@@ -487,7 +487,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Encrypted · mailbox/)).toBeInTheDocument()
+    expect(screen.getByText(/Verschlüsselt · Mailbox/)).toBeInTheDocument()
   })
 
   it('zeigt Abbrechen-Button während sending und ruft onCancelSend (§ H.1a)', () => {
@@ -501,7 +501,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     const cancel = screen.getByTestId('chat-composer-cancel-send')
-    expect(cancel).toHaveTextContent(/Cancel transmission/)
+    expect(cancel).toHaveTextContent(/Übertragung abbrechen/)
     fireEvent.click(cancel)
     expect(onCancelSend).toHaveBeenCalledTimes(1)
   })
