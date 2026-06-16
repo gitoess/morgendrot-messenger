@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ChatViewSendPanelPropsDeps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 
 vi.mock('@/frontend/hooks/use-chat-view-telegram-composer', () => ({
@@ -21,20 +22,31 @@ vi.mock('@/frontend/hooks/use-encrypted-recipient-handshake-status', () => ({
 }))
 
 function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendPanelPropsDeps {
+  const message = over.message ?? 'Hallo'
+  const recipient = over.recipient ?? `0x${'a'.repeat(64)}`
+  const encrypted = over.encrypted ?? true
+  const forcedTransport = over.forcedTransport ?? 'internet'
+  const messengerPorts =
+    over.messengerPorts ??
+    testMessengerPorts({
+      message,
+      recipient,
+      encrypted,
+      forcedTransport,
+      messagingPersistenceMode: over.messagingPersistenceMode,
+      myAddress: over.myAddress,
+    })
   return {
-    message: 'Hallo',
+    messengerPorts,
+    message,
     setMessage: vi.fn(),
-    recipient: '0x' + 'a'.repeat(64),
+    recipient,
     setRecipient: vi.fn(),
-    partner: '0x' + 'b'.repeat(64),
+    partner: `0x${'b'.repeat(64)}`,
     setPartner: vi.fn(),
-    encrypted: true,
-    forcedTransport: 'internet',
-    meshLoRaImagesEnabled: false,
-    setMeshLoRaImagesEnabled: vi.fn(),
-    meshSelfArchiveAfterLoRa: false,
-    setMeshSelfArchiveAfterLoRa: vi.fn(),
-    isPrivate: true,
+    encrypted,
+    forcedTransport,
+    isPrivate: over.isPrivate ?? true,
     isGroup: false,
     activeGroup: null,
     sending: false,
@@ -58,19 +70,6 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
     meshPlaintextNodeId: '',
     setMeshPlaintextNodeId: vi.fn(),
     setMeshtasticChannelIndex: vi.fn(),
-    voicePhase: 'idle',
-    voiceActiveKind: null,
-    voiceProgress01: 0,
-    voiceMaxSeconds: 60,
-    voiceEmergencyMaxSeconds: 30,
-    sosVoiceFollowsOnline: false,
-    onVoiceToggle: vi.fn(),
-    onVoiceEmergencyToggle: vi.fn(),
-    voiceNormalBlockedStart: false,
-    voiceEmergencyBlockedStart: false,
-    voiceBusy: false,
-    voiceRecording: false,
-    sosVoiceAwaitingSend: false,
     compactFileRef: { current: null },
     compactBusy: false,
     attachmentPipelineHint: null,

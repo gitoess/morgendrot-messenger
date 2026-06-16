@@ -16,3 +16,18 @@ export {
   asSendTransportChoice,
   asSendTransportRead,
 } from './send-transport-ports'
+export {
+  assembleChatViewMessengerPorts,
+  assembleComposerDraftPort,
+  assembleComposerDraftSendFlowPort,
+  assembleInboxFeedReadPort,
+  assembleSendMeshFunkOptionsPort,
+  assembleSendTransportChoicePort,
+  assembleSendTransportReadPort,
+  assembleVoiceRecordSendPanelPort,
+  type ChatViewComposerDraftSlice,
+  type ChatViewInboxFeedSlice,
+  type ChatViewMeshFunkSlice,
+  type ChatViewMessengerPorts,
+  type ChatViewTransportSlice,
+} from './chat-view-core-port-assembler'

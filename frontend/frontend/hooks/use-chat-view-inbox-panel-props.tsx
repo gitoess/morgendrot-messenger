@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
-import { asInboxFeedRead } from '@/frontend/features/messenger-ports'
+import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import type {
@@ -20,8 +20,7 @@ import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persiste
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewInboxPanelPropsDeps = {
-  messages: Message[]
-  myAddress: string
+  messengerPorts: Pick<ChatViewMessengerPorts, 'inboxFeedRead'>
   inboxTotalCount: number
   inboxRows: ChatViewInboxPanelProps['inboxRows']
   morgPkgFileRef: RefObject<HTMLInputElement | null>
@@ -194,7 +193,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
   )
 
   const inboxPanelProps = {
-    ...asInboxFeedRead(deps.messages, deps.myAddress),
+    ...deps.messengerPorts.inboxFeedRead,
     messageCount: deps.inboxTotalCount,
     inboxRowCount: deps.inboxRows.length,
     morgPkgFileRef: deps.morgPkgFileRef,

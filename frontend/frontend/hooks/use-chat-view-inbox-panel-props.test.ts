@@ -3,15 +3,17 @@ import { describe, expect, it, vi } from 'vitest'
 import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import type { ChatViewInboxPanelPropsDeps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 
 vi.mock('@/frontend/components/chat-view-inbox-package-expert-menu', () => ({
   ChatViewInboxPackageExpertMenu: () => null,
 }))
 
 function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInboxPanelPropsDeps {
+  const myAddress = `0x${'a'.repeat(64)}`
+  const fullPorts = testMessengerPorts({ myAddress })
   return {
-    messages: [],
-    myAddress: '0x' + 'a'.repeat(64),
+    messengerPorts: over.messengerPorts ?? { inboxFeedRead: fullPorts.inboxFeedRead },
     inboxTotalCount: 0,
     inboxRows: [],
     morgPkgFileRef: { current: null },

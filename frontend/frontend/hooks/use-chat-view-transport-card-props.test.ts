@@ -2,16 +2,15 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ChatViewTransportCardPropsDeps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 
 function baseDeps(over: Partial<ChatViewTransportCardPropsDeps> = {}): ChatViewTransportCardPropsDeps {
-  return {
-    encrypted: true,
-    setEncrypted: vi.fn(),
-    forcedTransport: 'internet',
-    setForcedTransport: vi.fn(),
+  const fullPorts = testMessengerPorts({
     messagingPersistenceMode: 'mailbox',
-    setMessagingPersistenceMode: vi.fn(),
+  })
+  return {
+    messengerPorts: over.messengerPorts ?? { sendTransportChoice: fullPorts.sendTransportChoice },
     isPrivate: true,
     apiStatus: TEST_API_STATUS_SEND_READY as ChatViewTransportCardPropsDeps['apiStatus'],
     partner: '0x' + 'a'.repeat(64),

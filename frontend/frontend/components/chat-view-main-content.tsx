@@ -97,6 +97,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     refreshMessengerGroups,
     role,
     myAddress,
+    messengerPorts,
     message,
     setMessage,
     recipient,
@@ -698,8 +699,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
   const inboxPanelProps = useChatViewInboxPanelProps({
-    messages,
-    myAddress,
+    messengerPorts,
     inboxTotalCount,
     inboxRows,
     morgPkgFileRef,
@@ -813,6 +813,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   })
 
   const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
+    messengerPorts,
     message,
     setMessage,
     recipient,
@@ -821,10 +822,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setPartner,
     encrypted,
     forcedTransport,
-    meshLoRaImagesEnabled,
-    setMeshLoRaImagesEnabled,
-    meshSelfArchiveAfterLoRa,
-    setMeshSelfArchiveAfterLoRa,
     isPrivate,
     isGroup,
     activeGroup,
@@ -851,19 +848,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setMeshPlaintextNodeId,
     meshtasticChannelIndex,
     setMeshtasticChannelIndex,
-    voicePhase,
-    voiceActiveKind,
-    voiceProgress01,
-    voiceMaxSeconds,
-    voiceEmergencyMaxSeconds,
-    sosVoiceFollowsOnline,
-    onVoiceToggle,
-    onVoiceEmergencyToggle,
-    voiceNormalBlockedStart,
-    voiceEmergencyBlockedStart,
-    voiceBusy,
-    voiceRecording,
-    sosVoiceAwaitingSend,
     compactFileRef,
     compactBusy,
     attachmentPipelineHint,
@@ -928,12 +912,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     (channelMode === 'private' || isGroup)
 
   const transportCardProps = useChatViewTransportCardProps({
-    encrypted,
-    setEncrypted,
-    forcedTransport,
-    setForcedTransport,
-    messagingPersistenceMode,
-    setMessagingPersistenceMode,
+    messengerPorts,
     isPrivate,
     apiStatus,
     partner,

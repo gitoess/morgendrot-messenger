@@ -3,12 +3,7 @@
 import { useCallback, useMemo, type ChangeEvent, type RefObject } from 'react'
 import type { ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
-import {
-  asComposerDraft,
-  asSendMeshFunkOptions,
-  asSendTransportRead,
-  asVoiceRecordSendPanel,
-} from '@/frontend/features/messenger-ports'
+import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
@@ -30,6 +25,7 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 
 export type ChatViewSendPanelPropsDeps = {
+  messengerPorts: ChatViewMessengerPorts
   message: string
   setMessage: (v: string) => void
   recipient: string
@@ -38,10 +34,6 @@ export type ChatViewSendPanelPropsDeps = {
   setPartner: (v: string) => void
   encrypted: boolean
   forcedTransport: ForcedTransport
-  meshLoRaImagesEnabled: boolean
-  setMeshLoRaImagesEnabled: (v: boolean) => void
-  meshSelfArchiveAfterLoRa: boolean
-  setMeshSelfArchiveAfterLoRa: (v: boolean) => void
   isPrivate: boolean
   isGroup: boolean
   activeGroup: MessengerGroupDefinition | null
@@ -68,19 +60,6 @@ export type ChatViewSendPanelPropsDeps = {
   setMeshPlaintextNodeId: (v: string) => void
   meshtasticChannelIndex?: number
   setMeshtasticChannelIndex: (v: number | undefined) => void
-  voicePhase: ChatViewSendPanelProps['voicePhase']
-  voiceActiveKind: ChatViewSendPanelProps['voiceActiveKind']
-  voiceProgress01: number
-  voiceMaxSeconds: number
-  voiceEmergencyMaxSeconds: number
-  sosVoiceFollowsOnline: boolean
-  onVoiceToggle: () => void
-  onVoiceEmergencyToggle: () => void
-  voiceNormalBlockedStart: boolean
-  voiceEmergencyBlockedStart: boolean
-  voiceBusy: boolean
-  voiceRecording: boolean
-  sosVoiceAwaitingSend: boolean
   compactFileRef: RefObject<HTMLInputElement | null>
   compactBusy: boolean
   attachmentPipelineHint: string | null
@@ -221,15 +200,16 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     [deps.isPrivate, deps.setPartner, deps.setRecipient]
   )
 
+  const voicePort = deps.messengerPorts.voiceRecordSendPanel
+  if (!voicePort) {
+    throw new Error('useChatViewSendPanelProps: messengerPorts.voiceRecordSendPanel fehlt')
+  }
+
   const sendPanelProps = {
-    ...asComposerDraft(deps.message, deps.recipient, deps.setMessage, deps.setRecipient),
-    ...asSendTransportRead(deps.encrypted, deps.forcedTransport),
-    ...asSendMeshFunkOptions(
-      deps.meshLoRaImagesEnabled,
-      deps.setMeshLoRaImagesEnabled,
-      deps.meshSelfArchiveAfterLoRa,
-      deps.setMeshSelfArchiveAfterLoRa
-    ),
+    ...deps.messengerPorts.composerDraft,
+    ...deps.messengerPorts.sendTransportRead,
+    ...deps.messengerPorts.sendMeshFunkOptions,
+    ...voicePort,
     isPrivate: deps.isPrivate,
     sending: deps.sending,
     loraOnlineFallbackOffer: deps.loraOnlineFallbackOffer,
@@ -253,23 +233,6 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     meshtasticChannelIndex: deps.meshtasticChannelIndex,
     onMeshtasticChannelIndexChange: deps.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
-    ...asVoiceRecordSendPanel(
-      {
-        voicePhase: deps.voicePhase,
-        voiceActiveKind: deps.voiceActiveKind,
-        voiceProgress01: deps.voiceProgress01,
-        voiceMaxSeconds: deps.voiceMaxSeconds,
-        voiceEmergencyMaxSeconds: deps.voiceEmergencyMaxSeconds,
-        sosVoiceFollowsOnline: deps.sosVoiceFollowsOnline,
-        onVoiceToggle: deps.onVoiceToggle,
-        onVoiceEmergencyToggle: deps.onVoiceEmergencyToggle,
-        voiceNormalBlockedStart: deps.voiceNormalBlockedStart,
-        voiceEmergencyBlockedStart: deps.voiceEmergencyBlockedStart,
-        voiceBusy: deps.voiceBusy,
-        voiceRecording: deps.voiceRecording,
-      },
-      deps.sosVoiceAwaitingSend
-    ),
     forcedTransport: deps.forcedTransport,
     compactFileRef: deps.compactFileRef,
     compactBusy: deps.compactBusy,

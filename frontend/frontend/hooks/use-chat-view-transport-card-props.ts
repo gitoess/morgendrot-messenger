@@ -4,19 +4,12 @@ import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { ChatViewTransportCardProps } from '@/frontend/components/chat-view-transport-card'
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
-import { asSendTransportChoice } from '@/frontend/features/messenger-ports'
+import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
-import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 
 export type ChatViewTransportCardPropsDeps = {
-  encrypted: boolean
-  setEncrypted: (v: boolean) => void
-  forcedTransport: ForcedTransport
-  setForcedTransport: (v: ForcedTransport) => void
-  messagingPersistenceMode: MessagingPersistenceMode
-  setMessagingPersistenceMode: (v: MessagingPersistenceMode) => void
+  messengerPorts: Pick<ChatViewMessengerPorts, 'sendTransportChoice'>
   isPrivate: boolean
   apiStatus: ApiStatus | null
   partner: string
@@ -49,14 +42,7 @@ export function useChatViewTransportCardProps(
   return useMemo(
     () =>
       ({
-        ...asSendTransportChoice(
-          deps.encrypted,
-          deps.setEncrypted,
-          deps.forcedTransport,
-          deps.setForcedTransport,
-          deps.messagingPersistenceMode,
-          deps.setMessagingPersistenceMode
-        ),
+        ...deps.messengerPorts.sendTransportChoice,
         isPrivate: deps.isPrivate,
         apiStatus: deps.apiStatus,
         partner: deps.partner,
@@ -72,12 +58,7 @@ export function useChatViewTransportCardProps(
         encryptedPartner: deps.encryptedPartnerPanelProps ?? undefined,
       }) satisfies ChatViewTransportCardProps,
     [
-      deps.encrypted,
-      deps.setEncrypted,
-      deps.forcedTransport,
-      deps.setForcedTransport,
-      deps.messagingPersistenceMode,
-      deps.setMessagingPersistenceMode,
+      deps.messengerPorts.sendTransportChoice,
       deps.isPrivate,
       deps.apiStatus,
       deps.partner,

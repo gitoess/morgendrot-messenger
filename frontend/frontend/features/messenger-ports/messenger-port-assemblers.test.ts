@@ -9,6 +9,7 @@ import {
 } from './send-transport-ports'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
+import { assembleChatViewMessengerPorts } from './chat-view-core-port-assembler'
 
 describe('asInboxFeedRead', () => {
   it('behält Referenzen für messages und myAddress', () => {
@@ -88,5 +89,47 @@ describe('asSendTransportChoice', () => {
     expect(p.encrypted).toBe(false)
     expect(p.forcedTransport).toBe('internet')
     expect(p.messagingPersistenceMode).toBe('event')
+  })
+})
+
+describe('assembleChatViewMessengerPorts', () => {
+  it('bündelt Composer-, Transport- und Inbox-Ports', () => {
+    const onMsg = vi.fn()
+    const onRec = vi.fn()
+    const onEnc = vi.fn()
+    const onTr = vi.fn()
+    const onPersist = vi.fn()
+    const onLora = vi.fn()
+    const onArchive = vi.fn()
+    const ports = assembleChatViewMessengerPorts({
+      composerDraft: {
+        message: 'hi',
+        recipient: '0xr',
+        setMessage: onMsg,
+        setRecipient: onRec,
+      },
+      transport: {
+        encrypted: true,
+        setEncrypted: onEnc,
+        forcedTransport: 'internet',
+        setForcedTransport: onTr,
+        messagingPersistenceMode: 'mailbox',
+        setMessagingPersistenceMode: onPersist,
+      },
+      meshFunk: {
+        meshLoRaImagesEnabled: true,
+        setMeshLoRaImagesEnabled: onLora,
+        meshSelfArchiveAfterLoRa: false,
+        setMeshSelfArchiveAfterLoRa: onArchive,
+      },
+      inboxFeed: {
+        messages: [{ id: '1', from: '0xa', content: '', timestamp: 1 }],
+        myAddress: '0xb',
+      },
+    })
+    expect(ports.composerDraft.message).toBe('hi')
+    expect(ports.sendTransportRead.forcedTransport).toBe('internet')
+    expect(ports.inboxFeedRead.myAddress).toBe('0xb')
+    expect(ports.voiceRecordSendPanel).toBeNull()
   })
 })

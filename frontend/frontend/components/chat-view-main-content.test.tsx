@@ -3,6 +3,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ChatViewMainContent, type ChatViewMainContentProps } from '@/frontend/components/chat-view-main-content'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
@@ -98,6 +99,7 @@ function buildMainContentProps(
     refreshMessengerGroups: noop,
     role: 'consumer',
     myAddress: MY_ADDR,
+    messengerPorts: testMessengerPorts({ myAddress: MY_ADDR }),
     message: '',
     setMessage: noop,
     recipient: '',
