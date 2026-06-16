@@ -18,7 +18,6 @@ import type { ProjectType } from '@/frontend/lib/types'
 import { ChatView } from './views/chat-view'
 import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
-import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { DashboardMessengerBossHeader } from '@/frontend/components/dashboard-messenger-boss-header'
 import { TresorSessionBadge } from '@/frontend/components/chat-view-chat-header'
@@ -184,7 +183,7 @@ function MessengerDashboardBody({
         </header>
 
         {/* View Content */}
-        <main className={cn('mx-auto max-w-5xl p-4', s.showMessengerBottomNav && 'pb-24')}>
+        <main className="mx-auto max-w-5xl p-4">
           {s.initialProfileBanner ? (
             <div
               className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
@@ -265,20 +264,6 @@ function MessengerDashboardBody({
             />
           )}
         </main>
-        {s.showMessengerBottomNav ? (
-          <MessengerBottomNav
-            active={s.messengerBottomNavActive}
-            showEinsatzleitung={canAccessEinsatzleitung(s.role)}
-            pendingIncomingHandshakes={s.pendingHandshakes.offers.length}
-            onMessages={s.openMessengerChatView}
-            onEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
-            onPhonebook={() => {
-              s.setMessengerNavHighlight('phonebook')
-              if (s.activeView?.type !== 'chat') s.openMessengerChatView()
-              s.setPhonebookNavRequest((n) => n + 1)
-            }}
-          />
-        ) : null}
       </div>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot} hideWatermark={isEinsatzLeadHome}>

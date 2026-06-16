@@ -69,7 +69,6 @@ import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewPendingHandshakes, OPEN_MESSENGER_INBOX_EVENT } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
-import type { MessengerBottomNavTab } from '@/frontend/components/messenger-bottom-nav'
 
 const EMPTY_CONNECTED_ADDRESSES: string[] = []
 
@@ -109,7 +108,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [initialProfileBanner, setInitialProfileBanner] = useState<string | null>(null)
   const [firstStepsVisible, setFirstStepsVisible] = useState(true)
   const [phonebookNavRequest, setPhonebookNavRequest] = useState(0)
-  const [messengerNavHighlight, setMessengerNavHighlight] = useState<MessengerBottomNavTab>('messages')
   const [mainnetSignerHint, setMainnetSignerHint] = useState<string | null>(null)
   const [sessionSignerSyncOpen, setSessionSignerSyncOpen] = useState(false)
   const [sessionSignerSyncBusy, setSessionSignerSyncBusy] = useState(false)
@@ -459,12 +457,10 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
   const openEinsatzleitungView = useCallback(() => {
     navigateTo({ type: 'einsatzleitung', variant: 'einsatzleitung-hub' })
-    setMessengerNavHighlight('einsatzleitung')
   }, [navigateTo])
 
   const openMessengerChatView = useCallback(() => {
     navigateTo({ type: 'chat', variant: 'private-chat' })
-    setMessengerNavHighlight('messages')
   }, [navigateTo])
 
   useEffect(() => {
@@ -707,8 +703,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     (featureId: ProjectType, variant: ProjectVariant) => {
       const next: DashboardActiveView = { type: featureId, variant }
       navigateTo(next)
-      if (featureId === 'chat') setMessengerNavHighlight('messages')
-      if (featureId === 'einsatzleitung') setMessengerNavHighlight('einsatzleitung')
     },
     [navigateTo]
   )
@@ -889,15 +883,6 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         !!signerImport.trim() &&
         !isPlausibleSdkImport(signerImport.trim()))
 
-  const showMessengerBottomNav =
-    activeView != null && (activeView.type === 'chat' || activeView.type === 'einsatzleitung')
-
-  const messengerBottomNavActive: MessengerBottomNavTab =
-    messengerNavHighlight === 'phonebook'
-      ? 'phonebook'
-      : activeView?.type === 'einsatzleitung'
-        ? 'einsatzleitung'
-        : 'messages'
 
   const onUnlockModeChange = useCallback((m: DashboardUnlockMode) => {
     setUnlockMode(m)
@@ -967,11 +952,8 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     helpText,
     helpLoading,
     chatVaultBannerActions,
-    showMessengerBottomNav,
-    messengerBottomNavActive,
     phonebookNavRequest,
     setPhonebookNavRequest,
-    setMessengerNavHighlight,
     unlock: {
       unlockMode,
       onUnlockModeChange,

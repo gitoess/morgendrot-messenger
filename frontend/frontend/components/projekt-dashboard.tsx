@@ -21,7 +21,6 @@ import { LockView } from './views/lock-view'
 import { MonitorView } from './views/monitor-view'
 import { BossView } from './views/boss-view'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
-import { MessengerBottomNav } from '@/frontend/components/messenger-bottom-nav'
 import { SettingsView } from './views/settings-view'
 import { ConfigView } from './views/config-view'
 import { WorkerActionCenterView } from './views/worker-action-center-view'
@@ -102,7 +101,7 @@ export function ProjektDashboard() {
         </header>
 
         {/* View Content */}
-        <main className={cn('mx-auto max-w-5xl p-4', s.showMessengerBottomNav && 'pb-24')}>
+        <main className="mx-auto max-w-5xl p-4">
           {s.initialProfileBanner ? (
             <div
               className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-emerald-500/35 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100"
@@ -162,20 +161,6 @@ export function ProjektDashboard() {
             />
           )}
         </main>
-        {s.showMessengerBottomNav ? (
-          <MessengerBottomNav
-            active={s.messengerBottomNavActive}
-            showEinsatzleitung={canAccessEinsatzleitung(s.role)}
-            pendingIncomingHandshakes={s.pendingHandshakes.offers.length}
-            onMessages={s.openMessengerChatView}
-            onEinsatzleitung={canAccessEinsatzleitung(s.role) ? s.openEinsatzleitungView : undefined}
-            onPhonebook={() => {
-              s.setMessengerNavHighlight('phonebook')
-              if (s.activeView?.type !== 'chat') s.openMessengerChatView()
-              s.setPhonebookNavRequest((n) => n + 1)
-            }}
-          />
-        ) : null}
       </div>
       ) : (
     <DeploymentProfileBackdrop status={s.apiSnapshot}>
