@@ -8,15 +8,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import {
-  asComposerDraft,
   asInboxFeedRead,
-  asSendMeshFunkOptions,
   asSendTransportChoice,
-  asSendTransportRead,
-  asVoiceRecordSendPanel,
 } from '@/frontend/features/messenger-ports'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
-import { ChatViewSendPanel, type ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
+import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import { ChatViewOfflineQueueStrip } from '@/frontend/components/chat-view-offline-queue-strip'
 import { ChatViewPinnwandFeedPanel } from '@/frontend/components/chat-view-pinnwand-feed-panel'
@@ -35,10 +31,8 @@ import {
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
-import {
-  ChatViewEncryptedPartnerPanel,
-  type ChatViewEncryptedPartnerPanelProps,
-} from '@/frontend/components/chat-view-encrypted-partner-panel'
+import { ChatViewEncryptedPartnerPanel } from '@/frontend/components/chat-view-encrypted-partner-panel'
+import { useChatViewEncryptedPartnerPanelProps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
 import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phonebook-sheet'
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -58,8 +52,6 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
-import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
-import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
@@ -71,14 +63,11 @@ import {
   type PendingHandshakesPollState,
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
-import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-group-send-context'
+import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
 } from '@/frontend/lib/handshake-offer-delete'
-import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
-import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
-import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import {
   applyReplyContextVariant,
   resolveReplyContextFromInboxMessage,
@@ -309,16 +298,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
-  const groupSendPanelContext = useMemo(
-    () =>
-      buildGroupSendPanelContext({
-        isGroupChannel: isGroup,
-        activeGroup,
-        myAddress,
-      }),
-    [isGroup, activeGroup, myAddress]
-  )
-
   const [contactAliasDialog, setContactAliasDialog] = useState<{
     address: string
     defaultLabel: string
@@ -366,56 +345,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } = c.pendingHandshakes ?? internalPendingHandshakes
 
   const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
-
-  const composerEncryptedRecipient = useMemo(
-    () => resolveComposerIotaAddress(recipient, partner, encrypted),
-    [recipient, partner, encrypted]
-  )
-
-  const encryptedRecipientHandshake = useEncryptedRecipientHandshakeStatus({
-    enabled:
-      isPrivate &&
-      encrypted &&
-      forcedTransport === 'internet' &&
-      composerDelivery === 'chain' &&
-      isValidRecipient0x(composerEncryptedRecipient),
-    recipient: composerEncryptedRecipient,
-    connectedAddresses: handshakeConnected.addresses,
-    incomingOffers: pendingHandshakeOffers,
-    outgoingOffers: outgoingHandshakeOffers,
-  })
-
-  const handleEncryptedHandshakeForComposerRecipient = useCallback(async () => {
-    const addr = composerEncryptedRecipient.trim().toLowerCase()
-    if (!isValidRecipient0x(addr)) return
-    setPartner(addr)
-    await handleHandshakeForAddress(addr)
-    encryptedRecipientHandshake.refresh()
-    window.setTimeout(() => void reloadPendingHandshakes(), 3000)
-  }, [
-    composerEncryptedRecipient,
-    setPartner,
-    handleHandshakeForAddress,
-    encryptedRecipientHandshake,
-    reloadPendingHandshakes,
-  ])
-
-  const handleEncryptedAcceptForComposerRecipient = useCallback(async () => {
-    const addr = composerEncryptedRecipient.trim().toLowerCase()
-    if (!isValidRecipient0x(addr)) return
-    setPartner(addr)
-    await handleConnectAcceptForAddress(addr)
-    encryptedRecipientHandshake.refresh()
-    await refreshApiStatus?.()
-    window.setTimeout(() => void reloadPendingHandshakes(), 4000)
-  }, [
-    composerEncryptedRecipient,
-    setPartner,
-    handleConnectAcceptForAddress,
-    encryptedRecipientHandshake,
-    refreshApiStatus,
-    reloadPendingHandshakes,
-  ])
 
   const handleResendOutgoingHandshake = useCallback(
     async (recipient: string) => {
@@ -904,95 +833,62 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     ) : null,
   } satisfies ChatViewInboxPanelProps
 
-  const telegramComposer = useChatViewTelegramComposer({
-    isPrivate,
-    composerDelivery,
-    recipient,
-    partner,
-    encrypted,
+  const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
     message,
-    apiStatus,
-    contactDirectory: directory,
-    myAddress,
-    sending,
-    attachedTxtFile,
-    attachedBlobBase64,
-    attachedAudioBase64,
-    hasLoraAttachment: attachedLora != null,
-    onMessageChange: setMessage,
-    clearAttachments: clearCompactAttachment,
-    onStatusFeedback: (msg, st = 'success') => {
-      setStatus(st)
-      setStatusMsg(msg)
-    },
-    onTelegramDelivered: ({ recipientKey, text }) => {
-      recordTelegramOutgoing(appendMeshMessage, myAddress, recipientKey, text)
-    },
-  })
-
-  const syncPartnerAndRecipient = useCallback(
-    (v: string) => {
-      const t = v.trim().toLowerCase()
-      setPartner(t)
-      if (isPrivate) setRecipient(t)
-    },
-    [isPrivate, setPartner, setRecipient]
-  )
-
-  const sendPanelProps = {
-    ...asComposerDraft(message, recipient, setMessage, setRecipient),
-    ...asSendTransportRead(encrypted, forcedTransport),
-    ...asSendMeshFunkOptions(
-      meshLoRaImagesEnabled,
-      setMeshLoRaImagesEnabled,
-      meshSelfArchiveAfterLoRa,
-      setMeshSelfArchiveAfterLoRa
-    ),
+    setMessage,
+    recipient,
+    setRecipient,
+    partner,
+    setPartner,
+    encrypted,
+    forcedTransport,
+    meshLoRaImagesEnabled,
+    setMeshLoRaImagesEnabled,
+    meshSelfArchiveAfterLoRa,
+    setMeshSelfArchiveAfterLoRa,
     isPrivate,
+    isGroup,
+    activeGroup,
     sending,
     loraOnlineFallbackOffer,
-    onConfirmLoraOnline: confirmLoraSendViaOnline,
-    onDismissLoraOnlineFallback: dismissLoraOnlineFallback,
+    confirmLoraSendViaOnline,
+    dismissLoraOnlineFallback,
     apiStatus,
-    onSend: handleSend,
-    onCancelSend: cancelSend,
+    handleSend,
+    cancelSend,
     status,
     statusMsg,
+    setStatus,
+    setStatusMsg,
     offlineMailboxQueuePending,
     offlineMailboxQueueUntrustedTimeCount,
     offlineMailboxQueueBackoffCount,
     offlineMailboxQueueErrorHint,
     offlineMailboxQueueItems,
-    onRemoveOfflineMailboxQueueItems: removeOfflineMailboxQueueItems,
+    removeOfflineMailboxQueueItems,
     meshPlaintextToNodeEnabled,
-    onMeshPlaintextToNodeEnabledChange: setMeshPlaintextToNodeEnabled,
+    setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId,
-    onMeshPlaintextNodeIdChange: setMeshPlaintextNodeId,
+    setMeshPlaintextNodeId,
     meshtasticChannelIndex,
-    onMeshtasticChannelIndexChange: setMeshtasticChannelIndex,
-    showMeshtasticChannelIndexInput: uiCaps.expertTools,
-    ...asVoiceRecordSendPanel(
-      {
-        voicePhase,
-        voiceActiveKind,
-        voiceProgress01,
-        voiceMaxSeconds,
-        voiceEmergencyMaxSeconds,
-        sosVoiceFollowsOnline,
-        onVoiceToggle,
-        onVoiceEmergencyToggle,
-        voiceNormalBlockedStart,
-        voiceEmergencyBlockedStart,
-        voiceBusy,
-        voiceRecording,
-      },
-      sosVoiceAwaitingSend
-    ),
-    forcedTransport,
+    setMeshtasticChannelIndex,
+    voicePhase,
+    voiceActiveKind,
+    voiceProgress01,
+    voiceMaxSeconds,
+    voiceEmergencyMaxSeconds,
+    sosVoiceFollowsOnline,
+    onVoiceToggle,
+    onVoiceEmergencyToggle,
+    voiceNormalBlockedStart,
+    voiceEmergencyBlockedStart,
+    voiceBusy,
+    voiceRecording,
+    sosVoiceAwaitingSend,
     compactFileRef,
     compactBusy,
     attachmentPipelineHint,
-    onFileChange: handleCompactAttachmentPick,
+    handleCompactAttachmentPick,
     ingestChatAttachmentFile,
     compactMeta,
     attachedBlobBase64,
@@ -1003,77 +899,54 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     compactPreviewUrl,
     loraPreviewUrl,
     loraMeshProgressLine,
-    onManualRefresh: async () => {
-      await refreshApiStatus()
-      await loadMessages('reset')
-    },
-    contactDirectory: directory,
-    isGroupChannel: isGroup,
-    groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
-    groupMemberCount: groupSendPanelContext.groupMemberCount,
-    groupTeamBroadcastReady: groupSendPanelContext.groupTeamBroadcastReady,
-    partner,
-    onPartnerChange: syncPartnerAndRecipient,
+    refreshApiStatus,
+    loadMessages,
+    directory,
     myAddress,
-    hideComposerIotaRecipient:
-      isPrivate && encrypted && forcedTransport === 'internet' && composerDelivery === 'chain',
-    onStatusFeedback: (msg, st = 'success') => {
-      setStatus(st)
-      setStatusMsg(msg)
-    },
     composerDelivery,
     messagingPersistenceMode,
-    onTelegramSend: telegramComposer.handleTelegramOnly,
-    canSendTelegram: telegramComposer.canSendTelegramOnly,
-    telegramBusy: telegramComposer.telegramOnlyBusy,
-    onNavigateHomeWhenLocked: vaultBannerActions?.onNavigateHomeWhenLocked,
     composerMailboxObjectId,
-    onComposerMailboxObjectIdChange: setComposerMailboxObjectId,
-    encryptedRecipientHandshakeStatus: encryptedRecipientHandshake.status,
-    encryptedHandshakeBlocksSend: encryptedRecipientHandshake.blocksSend,
-    onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,
-    onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
-    showPath4Checkbox: uiCaps.expertTools,
-    onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
-    isPinnwandChannel: channelMode != null && isPinnwandChannel(channelMode),
+    setComposerMailboxObjectId,
+    appendMeshMessage,
+    handleHandshakeForAddress,
+    handleConnectAcceptForAddress,
+    expertTools: uiCaps.expertTools,
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
-  } satisfies ChatViewSendPanelProps
+    channelMode,
+    vaultBannerActions,
+    onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
+    handshakeConnectedAddresses: handshakeConnected.addresses,
+    pendingHandshakeOffers,
+    outgoingHandshakeOffers,
+    reloadPendingHandshakes,
+  })
 
-  const showEncryptedPartnerPanel =
-    (channelMode === 'private' || isGroup) &&
-    composerDelivery === 'chain' &&
-    encrypted &&
-    forcedTransport === 'internet'
+  const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
+    channelMode,
+    isGroup,
+    composerDelivery,
+    encrypted,
+    forcedTransport,
+    partner,
+    onPartnerChange: syncPartnerAndRecipient,
+    sending,
+    onHandshake: handleHandshake,
+    onConnectAcceptPartner: handleConnectAcceptPartner,
+    onConnectDeployment: handleConnectDeployment,
+    onConnectAcceptForAddress: handleConnectAcceptForAddress,
+    directory,
+    activeGroupMemberAddresses: activeGroup?.memberAddresses,
+    connectedAddresses: apiStatus?.connectedAddresses ?? [],
+    onHandshakeForAddress: handleHandshakeForAddress,
+    myAddress,
+    setStatusMsg,
+  })
 
   const showPartnerSetupPanel =
     composerDelivery === 'chain' &&
     (forcedTransport === 'mesh' || forcedTransport === 'adhoc') &&
     (channelMode === 'private' || isGroup)
-
-  const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
-    ? {
-        partner,
-        onPartnerChange: syncPartnerAndRecipient,
-        sending,
-        onHandshake: handleHandshake,
-        onConnectAcceptPartner: handleConnectAcceptPartner,
-        onConnectDeployment: handleConnectDeployment,
-        onConnectAcceptForAddress: handleConnectAcceptForAddress,
-        directory,
-        isGroupMode: isGroup,
-        groupMemberAddresses: activeGroup?.memberAddresses ?? [],
-        connectedAddresses: apiStatus?.connectedAddresses ?? [],
-        onHandshakeForAddress: handleHandshakeForAddress,
-        myAddress: myAddress.trim(),
-        onPeeringStatus: (msg) => {
-          setStatusMsg(msg)
-          if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
-          else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
-          else toast.info(msg)
-        },
-      }
-    : null
 
   const transportCardProps = {
     ...asSendTransportChoice(
