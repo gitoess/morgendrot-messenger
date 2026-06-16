@@ -22,11 +22,6 @@ function baseDeps(over: Partial<ChatViewEncryptedPartnerPanelPropsDeps> = {}): C
     messengerPorts,
     onPartnerChange: vi.fn(),
     sending: false,
-    onHandshake: vi.fn(),
-    onConnectAcceptPartner: vi.fn(),
-    onConnectDeployment: vi.fn(),
-    onConnectAcceptForAddress: vi.fn(),
-    onHandshakeForAddress: vi.fn(),
     setStatusMsg: vi.fn(),
     ...over,
   }

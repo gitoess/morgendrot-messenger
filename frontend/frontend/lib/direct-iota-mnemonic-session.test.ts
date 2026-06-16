@@ -112,7 +112,7 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     expect(sessionStore['morgendrot.directIotaSigner.tabEnc.v1']).toBeTruthy()
   })
 
-  it('restores signer from legacy plaintext tab session', () => {
+  it('restores signer from legacy plaintext tab session', async () => {
     const applied = applyDirectIotaMnemonicSession(rawHexSecret)
     expect(applied.ok).toBe(true)
     if (!applied.ok) return
@@ -126,6 +126,7 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     expect(restored.ok).toBe(true)
     if (restored.ok) expect(restored.address).toBe(applied.address)
     expect(getDirectIotaSessionSignerAddress()).not.toBeNull()
+    await whenDirectIotaTabSessionPersistIdle()
   })
 
   it('clears persisted signer blob', async () => {

@@ -59,6 +59,9 @@ import {
 } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
+import { useChatViewShellProps } from '@/frontend/hooks/use-chat-view-shell-props'
+import { asHandshakeOffersRead } from '@/frontend/features/messenger-ports'
+import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import {
   tryPurgeHandshakeOfferOnChain,
   type HandshakeOfferSource,
@@ -113,12 +116,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setEncrypted,
     refreshApiStatus,
     syncCanonicalPackageIdFromServer,
-    offlineMailboxQueueUntrustedTimeCount,
-    offlineMailboxQueueBackoffCount,
-    offlineMailboxQueueErrorHint,
-    offlineMailboxQueueItems,
-    removeOfflineMailboxQueueItems,
-    offlineMailboxQueuePending,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,
@@ -182,11 +179,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     confirmLoraSendViaOnline,
     handleSend,
     cancelSend,
-    handleHandshake,
-    handleHandshakeForAddress,
-    handleConnectAcceptPartner,
-    handleConnectAcceptForAddress,
-    handleConnectDeployment,
     dismissLoraOnlineFallback,
     openPartnerSetupPanel,
     onExportEinsatzberichtJson,
@@ -222,7 +214,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     apiStatus,
     basisUnreachable,
     statusCacheAgeMinutes,
-    packageIdMismatch,
     deviceTimeTrustWarn,
     connectedAddresses: handshakeConnectedAddresses,
   } = connectionStatusRead
@@ -292,21 +283,35 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const pendingHandshakeCount = pendingHandshakeOffers.length + outgoingHandshakeOffers.length
 
+  const panelMessengerPorts = useMemo(
+    (): ChatViewMessengerPorts => ({
+      ...messengerPorts,
+      handshakeOffersRead: asHandshakeOffersRead(
+        pendingHandshakeOffers,
+        outgoingHandshakeOffers,
+        reloadPendingHandshakes
+      ),
+    }),
+    [messengerPorts, pendingHandshakeOffers, outgoingHandshakeOffers, reloadPendingHandshakes]
+  )
+
+  const { handshakeActions } = panelMessengerPorts
+
   const handleResendOutgoingHandshake = useCallback(
     async (recipient: string) => {
-      await handleHandshakeForAddress(recipient)
+      await handshakeActions.onHandshakeForAddress(recipient)
       window.setTimeout(() => void reloadPendingHandshakes(), 3000)
     },
-    [handleHandshakeForAddress, reloadPendingHandshakes]
+    [handshakeActions, reloadPendingHandshakes]
   )
 
   const handleAcceptHandshakeFromInbox = useCallback(
     async (sender: string) => {
       setPartner(sender.trim())
-      await handleConnectAcceptForAddress(sender)
+      await handshakeActions.onConnectAcceptForAddress(sender)
       window.setTimeout(() => void reloadPendingHandshakes(), 4000)
     },
-    [setPartner, handleConnectAcceptForAddress, reloadPendingHandshakes]
+    [setPartner, handshakeActions, reloadPendingHandshakes]
   )
 
   const purgeAndDismissHandshake = useCallback(
@@ -647,8 +652,38 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     toast.success('Empfänger übernommen — siehe „Verschlüsselung & Partner“ oben.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
+  const {
+    chatHeaderProps,
+    offlineQueueStripProps,
+    packageIdBannerProps,
+    pinnwandInboxStripProps,
+    phonebookShellProps,
+    groupPanelDirectory,
+  } = useChatViewShellProps({
+    messengerPorts: panelMessengerPorts,
+    isPrivate,
+    isGroup,
+    encrypted,
+    role,
+    forcedTransport,
+    setForcedTransport,
+    setEncrypted,
+    composerDelivery,
+    setComposerDelivery,
+    channelMode,
+    onChannelModeChange,
+    vaultBannerActions,
+    offlineStatus,
+    meshBleConnected: meshtastic.connected,
+    refreshApiStatus,
+    showAdhocTransport: uiCaps.showAdhocTransport,
+    packageIdBusy,
+    syncCanonicalPackageIdFromServer,
+    showPackageIdBanner: uiCaps.showPackageIdBanner,
+  })
+
   const inboxPanelProps = useChatViewInboxPanelProps({
-    messengerPorts,
+    messengerPorts: panelMessengerPorts,
     inboxTotalCount,
     inboxRows,
     morgPkgFileRef,
@@ -664,9 +699,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenMorgPkgArchive: () => setMorgPkgImportsOpen(true),
     loadMessages,
     refreshContactDirectory,
-    reloadPendingHandshakes,
-    pendingHandshakeOffers,
-    outgoingHandshakeOffers,
     pendingHandshakesLoading,
     pendingHandshakeCount,
     sending,
@@ -723,7 +755,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   })
 
   const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
-    messengerPorts,
+    messengerPorts: panelMessengerPorts,
     setPartner,
     activeGroup,
     loraOnlineFallbackOffer,
@@ -735,39 +767,23 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     statusMsg,
     setStatus,
     setStatusMsg,
-    offlineMailboxQueuePending,
-    offlineMailboxQueueUntrustedTimeCount,
-    offlineMailboxQueueBackoffCount,
-    offlineMailboxQueueErrorHint,
-    offlineMailboxQueueItems,
-    removeOfflineMailboxQueueItems,
     refreshApiStatus,
     loadMessages,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
     appendMeshMessage,
-    handleHandshakeForAddress,
-    handleConnectAcceptForAddress,
     expertTools: uiCaps.expertTools,
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
     vaultBannerActions,
     onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
-    pendingHandshakeOffers,
-    outgoingHandshakeOffers,
-    reloadPendingHandshakes,
   })
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
-    messengerPorts,
+    messengerPorts: panelMessengerPorts,
     onPartnerChange: syncPartnerAndRecipient,
     sending,
-    onHandshake: handleHandshake,
-    onConnectAcceptPartner: handleConnectAcceptPartner,
-    onConnectDeployment: handleConnectDeployment,
-    onConnectAcceptForAddress: handleConnectAcceptForAddress,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
-    onHandshakeForAddress: handleHandshakeForAddress,
     setStatusMsg,
   })
 
@@ -778,7 +794,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     (messengerPorts.composerSendPath.channelMode === 'private' || messengerPorts.composerSendPath.isGroup)
 
   const transportCardProps = useChatViewTransportCardProps({
-    messengerPorts,
+    messengerPorts: panelMessengerPorts,
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,
@@ -791,53 +807,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   return (
     <div className="space-y-8">
-      <ChatViewChatHeader
-        isPrivate={isPrivate}
-        encrypted={encrypted}
-        apiStatus={apiStatus}
-        onRefreshStatus={refreshApiStatus}
-        basisUnreachable={basisUnreachable ?? false}
-        statusCacheAgeMinutes={statusCacheAgeMinutes}
-        offlineStatus={offlineStatus}
-        meshBleConnected={meshtastic.connected}
-        role={role}
-        deviceTimeTrustWarn={deviceTimeTrustWarn}
-        vaultBannerActions={vaultBannerActions}
-        channelMode={channelMode}
-        onChannelModeChange={onChannelModeChange}
-        sendPath={{
-          visible: isPrivate || isGroup || !encrypted,
-          channelMode: channelMode ?? 'private',
-          encrypted,
-          forcedTransport,
-          onForcedTransportChange: setForcedTransport,
-          onEncryptedChange: setEncrypted,
-          myAddressLine: isPrivate ? myAddress : undefined,
-          showAdhocTransport: uiCaps.showAdhocTransport,
-          composerDelivery,
-          onComposerDeliveryChange: setComposerDelivery,
-          apiStatus,
-        }}
-        pinnwandTabUnreadCount={
-          channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
-        }
-      />
+      <ChatViewChatHeader {...chatHeaderProps} />
 
       {uiCaps.showProminentOfflineQueueBanner ? (
-        <ChatViewOfflineQueueStrip
-          pending={offlineMailboxQueuePending}
-          errorHint={offlineMailboxQueueErrorHint}
-          onManualRefresh={refreshApiStatus}
-          alwaysVisible
-        />
+        <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
       ) : null}
 
       {isGroup ? (
         <ChatViewGroupPanel
-          contactDirectory={directory}
+          contactDirectory={groupPanelDirectory}
           forcedTransport={forcedTransport}
-          teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
-          groupCreateAllowed={canCreateGroupCapability(apiStatus)}
+          teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
+          groupCreateAllowed={canCreateGroupCapability(connectionStatusRead.apiStatus)}
           onGroupsChanged={refreshMessengerGroups}
           onOpenPhonebook={() => setPhonebookOpen(true)}
           onOpenSettings={onOpenSettings}
@@ -857,11 +838,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewPinnwandInboxStrip
           messages={pinnwandPreviewMessages}
           role={role}
-          apiStatus={apiStatus}
-          contactDirectory={directory}
-          unreadCount={
-            channelMode !== 'pinnwand' ? inboxOverviewUnreadCounts?.lagebild ?? 0 : 0
-          }
+          apiStatus={pinnwandInboxStripProps.apiStatus}
+          contactDirectory={pinnwandInboxStripProps.contactDirectory}
+          unreadCount={pinnwandInboxStripProps.unreadCount}
           onOpenFullPinnwand={
             onChannelModeChange ? () => onChannelModeChange('pinnwand') : undefined
           }
@@ -869,12 +848,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ) : null}
 
       {isPrivate && uiCaps.showPackageIdBanner ? (
-        <ChatViewPackageIdBanner
-          visible={packageIdMismatch && !!apiStatus?.packageId?.trim()}
-          serverPackageId={apiStatus?.packageId?.trim() ?? ''}
-          busy={packageIdBusy}
-          onSyncToServer={() => void syncCanonicalPackageIdFromServer()}
-        />
+        <ChatViewPackageIdBanner {...packageIdBannerProps} />
       ) : null}
 
       {channelMode === 'private' && composerDelivery === 'chain' ? (
@@ -924,7 +898,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       {onPinnwandTab ? (
         <>
           <ChatViewPinnwandFeedPanel
-            apiStatus={apiStatus}
+            apiStatus={connectionStatusRead.apiStatus}
             role={role}
             canPost={pinnwandCaps.canPost}
             unreadCount={inboxOverviewUnreadCounts?.lagebild ?? 0}
@@ -933,12 +907,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             loadError={loadError}
             inboxFromCache={inboxFromCache}
             inboxCacheAgeMinutes={inboxCacheAgeMinutes}
-            basisUnreachable={basisUnreachable ?? false}
+            basisUnreachable={connectionStatusRead.basisUnreachable ?? false}
             messages={pinnwandFeedMessages}
             inboxRows={pinnwandInboxRows}
             myAddress={myAddress}
-            contactDirectory={directory}
-            isMeshVerifiedForAddress={isMeshVerifiedForAddress}
+            contactDirectory={contactDirectoryRead.directory}
+            isMeshVerifiedForAddress={contactDirectoryRead.isMeshVerifiedForAddress}
             exportEcdhMorgPkgForMessage={exportEcdhMorgPkgForMessage}
             onHideInboxMessageLocal={onHideInboxMessageLocal}
             onPurgeInboxMessageChain={onPurgeInboxMessageChain}
@@ -996,7 +970,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           open={morgPkgImportsOpen}
           onOpenChange={setMorgPkgImportsOpen}
           records={morgPkgImports}
-          contactDirectory={directory}
+          contactDirectory={contactDirectoryRead.directory}
           onRemove={removeMorgPkgImport}
           onForwardItem={onForwardMorgPkgItem}
         />
@@ -1006,11 +980,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewPhonebookSheet
           open={phonebookOpen}
           onOpenChange={setPhonebookOpen}
-          directory={directory}
+          directory={phonebookShellProps.directory}
           refreshContactDirectory={refreshContactDirectory}
-          connectedAddresses={[...handshakeConnectedAddresses]}
+          connectedAddresses={phonebookShellProps.connectedAddresses}
           onSelectContact={applyPhonebookContact}
-          teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+          teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
           allowInitialProfileImport={canAccessEinsatzleitung(role)}
           onOpenSettings={onOpenSettings}
           setStatusMsg={(msg) => {

@@ -14,6 +14,15 @@ export type { InboxViewUiPort } from './inbox-view-ui-port'
 export { asInboxViewUi } from './inbox-view-ui-port'
 export type { MeshSendOptionsPort } from './mesh-send-options-port'
 export { asMeshSendOptions } from './mesh-send-options-port'
+export type {
+  OfflineMailboxQueueItem,
+  OfflineMailboxQueueReadPort,
+} from './offline-mailbox-queue-read-port'
+export { asOfflineMailboxQueueRead } from './offline-mailbox-queue-read-port'
+export type { HandshakeActionsPort } from './handshake-actions-port'
+export { asHandshakeActions } from './handshake-actions-port'
+export type { HandshakeOffersReadPort } from './handshake-offers-read-port'
+export { asHandshakeOffersRead } from './handshake-offers-read-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
 export { asInboxFeedRead } from './inbox-feed-read-port'
 export type { ComposerDraftPort, ComposerDraftSendFlowPort } from './composer-draft-port'
@@ -41,6 +50,9 @@ export {
   assembleInboxFeedReadPort,
   assembleInboxViewUiPort,
   assembleMeshSendOptionsPort,
+  assembleOfflineMailboxQueueReadPort,
+  assembleHandshakeActionsPort,
+  assembleHandshakeOffersReadPort,
   assembleSendMeshFunkOptionsPort,
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
@@ -54,6 +66,9 @@ export {
   type ChatViewInboxFeedSlice,
   type ChatViewInboxViewUiSlice,
   type ChatViewMeshSendOptionsSlice,
+  type ChatViewOfflineMailboxQueueSlice,
+  type ChatViewHandshakeActionsSlice,
+  type ChatViewHandshakeOffersSlice,
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
   type ChatViewTransportSlice,

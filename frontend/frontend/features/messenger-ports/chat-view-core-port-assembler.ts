@@ -9,7 +9,14 @@ import { asComposerPartner, type ComposerPartnerPort } from './composer-partner-
 import { asComposerSendPath, type ComposerSendPathPort } from './composer-send-path-port'
 import { asConnectionStatusRead, type ConnectionStatusReadPort } from './connection-status-read-port'
 import { asContactDirectoryRead, type ContactDirectoryReadPort } from './contact-directory-read-port'
+import { asHandshakeActions, type HandshakeActionsPort } from './handshake-actions-port'
+import { asHandshakeOffersRead, type HandshakeOffersReadPort } from './handshake-offers-read-port'
 import { asInboxFeedRead, type InboxFeedReadPort } from './inbox-feed-read-port'
+import {
+  asOfflineMailboxQueueRead,
+  type OfflineMailboxQueueItem,
+  type OfflineMailboxQueueReadPort,
+} from './offline-mailbox-queue-read-port'
 import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
 import { asMeshSendOptions, type MeshSendOptionsPort } from './mesh-send-options-port'
 import {
@@ -159,6 +166,29 @@ export type ChatViewMeshSendOptionsSlice = {
   setMeshtasticChannelIndex: (v: number | undefined) => void
 }
 
+export type ChatViewOfflineMailboxQueueSlice = {
+  pending: number
+  untrustedTimeCount: number
+  backoffCount: number
+  errorHint?: string
+  items: OfflineMailboxQueueItem[]
+  removeItems: (ids: string[]) => void
+}
+
+export type ChatViewHandshakeActionsSlice = {
+  onHandshake: () => void | Promise<void>
+  onHandshakeForAddress: (address: string) => void | Promise<void>
+  onConnectAcceptPartner: () => void | Promise<void>
+  onConnectAcceptForAddress: (address: string) => void | Promise<void>
+  onConnectDeployment: () => void | Promise<void>
+}
+
+export type ChatViewHandshakeOffersSlice = {
+  pendingOffers: import('@/frontend/lib/handshake-offers-types').PendingHandshakeOffer[]
+  outgoingOffers: import('@/frontend/lib/handshake-offers-types').OutgoingHandshakeOffer[]
+  reload: () => void
+}
+
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
@@ -174,6 +204,9 @@ export type ChatViewMessengerPorts = {
   voiceRecordSendPanel: VoiceRecordSendPanelPort | null
   inboxViewUi: InboxViewUiPort
   meshSendOptions: MeshSendOptionsPort
+  offlineMailboxQueueRead: OfflineMailboxQueueReadPort
+  handshakeActions: HandshakeActionsPort
+  handshakeOffersRead: HandshakeOffersReadPort
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
@@ -262,6 +295,29 @@ export function assembleMeshSendOptionsPort(slice: ChatViewMeshSendOptionsSlice)
   return asMeshSendOptions(slice)
 }
 
+export function assembleOfflineMailboxQueueReadPort(
+  slice: ChatViewOfflineMailboxQueueSlice
+): OfflineMailboxQueueReadPort {
+  return asOfflineMailboxQueueRead(
+    slice.pending,
+    slice.untrustedTimeCount,
+    slice.backoffCount,
+    slice.errorHint,
+    slice.items,
+    slice.removeItems
+  )
+}
+
+export function assembleHandshakeActionsPort(slice: ChatViewHandshakeActionsSlice): HandshakeActionsPort {
+  return asHandshakeActions(slice)
+}
+
+export function assembleHandshakeOffersReadPort(
+  slice: ChatViewHandshakeOffersSlice
+): HandshakeOffersReadPort {
+  return asHandshakeOffersRead(slice.pendingOffers, slice.outgoingOffers, slice.reload)
+}
+
 /** Alle Standard-Ports aus den Core-Slices. */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
@@ -275,6 +331,9 @@ export function assembleChatViewMessengerPorts(input: {
   attachmentBar: ChatViewAttachmentBarSlice
   inboxViewUi: ChatViewInboxViewUiSlice
   meshSendOptions: ChatViewMeshSendOptionsSlice
+  offlineMailboxQueue: ChatViewOfflineMailboxQueueSlice
+  handshakeActions: ChatViewHandshakeActionsSlice
+  handshakeOffers?: ChatViewHandshakeOffersSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -292,6 +351,11 @@ export function assembleChatViewMessengerPorts(input: {
     attachmentBar: assembleAttachmentBarPort(input.attachmentBar),
     inboxViewUi: assembleInboxViewUiPort(input.inboxViewUi),
     meshSendOptions: assembleMeshSendOptionsPort(input.meshSendOptions),
+    offlineMailboxQueueRead: assembleOfflineMailboxQueueReadPort(input.offlineMailboxQueue),
+    handshakeActions: assembleHandshakeActionsPort(input.handshakeActions),
+    handshakeOffersRead: assembleHandshakeOffersReadPort(
+      input.handshakeOffers ?? { pendingOffers: [], outgoingOffers: [], reload: () => {} }
+    ),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)

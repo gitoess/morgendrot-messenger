@@ -10,6 +10,8 @@ export default defineConfig({
     include: ['**/*.test.{ts,tsx}'],
     passWithNoTests: true,
     pool: 'forks',
+    teardownTimeout: 15_000,
+    hookTimeout: 15_000,
     setupFiles: ['./tests/vitest-setup.ts', './tests/i18n-vitest-setup.ts'],
   },
   resolve: {

@@ -6,17 +6,17 @@ import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
-import type {
-  OutgoingHandshakeOffer,
-  PendingHandshakeOffer,
-} from '@/frontend/lib/handshake-offers-types'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewInboxPanelPropsDeps = {
   messengerPorts: Pick<
     ChatViewMessengerPorts,
-    'inboxFeedRead' | 'contactDirectoryRead' | 'connectionStatusRead' | 'inboxViewUi'
+    | 'inboxFeedRead'
+    | 'contactDirectoryRead'
+    | 'connectionStatusRead'
+    | 'inboxViewUi'
+    | 'handshakeOffersRead'
   >
   inboxTotalCount: number
   inboxRows: ChatViewInboxPanelProps['inboxRows']
@@ -37,9 +37,6 @@ export type ChatViewInboxPanelPropsDeps = {
     opts?: { silent?: boolean }
   ) => void | Promise<void>
   refreshContactDirectory: () => void
-  reloadPendingHandshakes: () => void
-  pendingHandshakeOffers: PendingHandshakeOffer[]
-  outgoingHandshakeOffers: OutgoingHandshakeOffer[]
   pendingHandshakesLoading: boolean
   pendingHandshakeCount: number
   sending: boolean
@@ -104,13 +101,14 @@ export type ChatViewInboxPanelPropsDeps = {
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): ChatViewInboxPanelProps {
-  const { inboxFeedRead, contactDirectoryRead, connectionStatusRead, inboxViewUi } = deps.messengerPorts
+  const { inboxFeedRead, contactDirectoryRead, connectionStatusRead, inboxViewUi, handshakeOffersRead } =
+    deps.messengerPorts
 
   const onRefresh = useCallback(() => {
     void deps.loadMessages('reset')
     deps.refreshContactDirectory()
-    void deps.reloadPendingHandshakes()
-  }, [deps.loadMessages, deps.refreshContactDirectory, deps.reloadPendingHandshakes])
+    void handshakeOffersRead.reload()
+  }, [deps.loadMessages, deps.refreshContactDirectory, handshakeOffersRead.reload])
 
   const onMailboxPanelStatus = useCallback((msg: string, kind: 'success' | 'error') => {
     if (kind === 'success') toast.success(msg)
@@ -169,8 +167,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     onOpenMorgPkgArchive: deps.onOpenMorgPkgArchive,
     apiStatus: connectionStatusRead.apiStatus,
     onRefresh,
-    pendingHandshakeOffers: deps.pendingHandshakeOffers,
-    outgoingHandshakeOffers: deps.outgoingHandshakeOffers,
+    pendingHandshakeOffers: [...handshakeOffersRead.pendingOffers],
+    outgoingHandshakeOffers: [...handshakeOffersRead.outgoingOffers],
     pendingHandshakesLoading: deps.pendingHandshakesLoading,
     pendingHandshakeCount: deps.pendingHandshakeCount,
     sending: deps.sending,

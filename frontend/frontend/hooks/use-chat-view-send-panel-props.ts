@@ -8,10 +8,6 @@ import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-g
 import type { ChatSendHandleOptions } from '@/frontend/features/send/chat-send-handle-options'
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
-import type {
-  OutgoingHandshakeOffer,
-  PendingHandshakeOffer,
-} from '@/frontend/lib/handshake-offers-types'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
@@ -32,12 +28,6 @@ export type ChatViewSendPanelPropsDeps = {
   statusMsg: string
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
-  offlineMailboxQueuePending: number
-  offlineMailboxQueueUntrustedTimeCount: number
-  offlineMailboxQueueBackoffCount: number
-  offlineMailboxQueueErrorHint?: string
-  offlineMailboxQueueItems: ChatViewSendPanelProps['offlineMailboxQueueItems']
-  removeOfflineMailboxQueueItems: (ids: string[]) => void
   refreshApiStatus?: () => void | Promise<void>
   loadMessages: (
     mode?: 'reset' | 'append' | 'poll',
@@ -47,16 +37,11 @@ export type ChatViewSendPanelPropsDeps = {
   composerMailboxObjectId?: string
   setComposerMailboxObjectId: (id: string) => void
   appendMeshMessage: AppendMeshMessageFn
-  handleHandshakeForAddress: (addr: string) => void | Promise<void>
-  handleConnectAcceptForAddress: (addr: string) => void | Promise<void>
   expertTools: boolean
   pinnwandBroadcastAddress?: string
   canPostToPinnwand: boolean
   vaultBannerActions?: ChatViewVaultBannerActions
   onOpenPhonebook?: () => void
-  pendingHandshakeOffers: PendingHandshakeOffer[]
-  outgoingHandshakeOffers: OutgoingHandshakeOffer[]
-  reloadPendingHandshakes: () => void
 }
 
 export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
@@ -74,6 +59,9 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     contactDirectoryRead,
     connectionStatusRead,
     meshSendOptions,
+    offlineMailboxQueueRead,
+    handshakeActions,
+    handshakeOffersRead,
   } = deps.messengerPorts
 
   const groupSendPanelContext = useMemo(
@@ -105,40 +93,40 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       isValidRecipient0x(composerEncryptedRecipient),
     recipient: composerEncryptedRecipient,
     connectedAddresses: [...connectionStatusRead.connectedAddresses],
-    incomingOffers: deps.pendingHandshakeOffers,
-    outgoingOffers: deps.outgoingHandshakeOffers,
+    incomingOffers: [...handshakeOffersRead.pendingOffers],
+    outgoingOffers: [...handshakeOffersRead.outgoingOffers],
   })
 
   const handleEncryptedHandshakeForComposerRecipient = useCallback(async () => {
     const addr = composerEncryptedRecipient.trim().toLowerCase()
     if (!isValidRecipient0x(addr)) return
     deps.setPartner(addr)
-    await deps.handleHandshakeForAddress(addr)
+    await handshakeActions.onHandshakeForAddress(addr)
     encryptedRecipientHandshake.refresh()
-    window.setTimeout(() => void deps.reloadPendingHandshakes(), 3000)
+    window.setTimeout(() => void handshakeOffersRead.reload(), 3000)
   }, [
     composerEncryptedRecipient,
     deps.setPartner,
-    deps.handleHandshakeForAddress,
+    handshakeActions,
     encryptedRecipientHandshake,
-    deps.reloadPendingHandshakes,
+    handshakeOffersRead,
   ])
 
   const handleEncryptedAcceptForComposerRecipient = useCallback(async () => {
     const addr = composerEncryptedRecipient.trim().toLowerCase()
     if (!isValidRecipient0x(addr)) return
     deps.setPartner(addr)
-    await deps.handleConnectAcceptForAddress(addr)
+    await handshakeActions.onConnectAcceptForAddress(addr)
     encryptedRecipientHandshake.refresh()
     await deps.refreshApiStatus?.()
-    window.setTimeout(() => void deps.reloadPendingHandshakes(), 4000)
+    window.setTimeout(() => void handshakeOffersRead.reload(), 4000)
   }, [
     composerEncryptedRecipient,
     deps.setPartner,
-    deps.handleConnectAcceptForAddress,
+    handshakeActions,
     encryptedRecipientHandshake,
     deps.refreshApiStatus,
-    deps.reloadPendingHandshakes,
+    handshakeOffersRead,
   ])
 
   const telegramComposer = useChatViewTelegramComposer({
@@ -196,12 +184,12 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onCancelSend: deps.cancelSend,
     status: deps.status,
     statusMsg: deps.statusMsg,
-    offlineMailboxQueuePending: deps.offlineMailboxQueuePending,
-    offlineMailboxQueueUntrustedTimeCount: deps.offlineMailboxQueueUntrustedTimeCount,
-    offlineMailboxQueueBackoffCount: deps.offlineMailboxQueueBackoffCount,
-    offlineMailboxQueueErrorHint: deps.offlineMailboxQueueErrorHint,
-    offlineMailboxQueueItems: deps.offlineMailboxQueueItems,
-    onRemoveOfflineMailboxQueueItems: deps.removeOfflineMailboxQueueItems,
+    offlineMailboxQueuePending: offlineMailboxQueueRead.pending,
+    offlineMailboxQueueUntrustedTimeCount: offlineMailboxQueueRead.untrustedTimeCount,
+    offlineMailboxQueueBackoffCount: offlineMailboxQueueRead.backoffCount,
+    offlineMailboxQueueErrorHint: offlineMailboxQueueRead.errorHint,
+    offlineMailboxQueueItems: [...offlineMailboxQueueRead.items],
+    onRemoveOfflineMailboxQueueItems: offlineMailboxQueueRead.removeItems,
     meshPlaintextToNodeEnabled: meshSendOptions.meshPlaintextToNodeEnabled,
     onMeshPlaintextToNodeEnabledChange: meshSendOptions.setMeshPlaintextToNodeEnabled,
     meshPlaintextNodeId: meshSendOptions.meshPlaintextNodeId,

@@ -145,6 +145,21 @@ export function testMessengerPorts(over: {
       meshtasticChannelIndex: undefined,
       setMeshtasticChannelIndex: vi.fn(),
     },
+    offlineMailboxQueue: {
+      pending: 0,
+      untrustedTimeCount: 0,
+      backoffCount: 0,
+      errorHint: '',
+      items: [],
+      removeItems: vi.fn(),
+    },
+    handshakeActions: {
+      onHandshake: vi.fn(),
+      onHandshakeForAddress: vi.fn(),
+      onConnectAcceptPartner: vi.fn(),
+      onConnectAcceptForAddress: vi.fn(),
+      onConnectDeployment: vi.fn(),
+    },
     voiceFromHook: {
       voicePhase: 'idle',
       voiceActiveKind: null,

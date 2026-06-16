@@ -14,15 +14,11 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
     | 'inboxFeedRead'
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
+    | 'handshakeActions'
   >
   onPartnerChange: (v: string) => void
   sending: boolean
-  onHandshake: () => void
-  onConnectAcceptPartner: () => void
-  onConnectDeployment: () => void
-  onConnectAcceptForAddress: (address: string) => void | Promise<void>
   activeGroupMemberAddresses?: string[]
-  onHandshakeForAddress: (address: string) => void | Promise<void>
   setStatusMsg: (v: string) => void
 }
 
@@ -37,6 +33,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     inboxFeedRead,
     contactDirectoryRead,
     connectionStatusRead,
+    handshakeActions,
   } = deps.messengerPorts
 
   const showEncryptedPartnerPanel = useMemo(
@@ -69,15 +66,15 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
         partner: composerPartner.partner,
         onPartnerChange: deps.onPartnerChange,
         sending: deps.sending,
-        onHandshake: deps.onHandshake,
-        onConnectAcceptPartner: deps.onConnectAcceptPartner,
-        onConnectDeployment: deps.onConnectDeployment,
-        onConnectAcceptForAddress: deps.onConnectAcceptForAddress,
+        onHandshake: handshakeActions.onHandshake,
+        onConnectAcceptPartner: handshakeActions.onConnectAcceptPartner,
+        onConnectDeployment: handshakeActions.onConnectDeployment,
+        onConnectAcceptForAddress: handshakeActions.onConnectAcceptForAddress,
         directory: contactDirectoryRead.directory,
         isGroupMode: composerSendPath.isGroup,
         groupMemberAddresses: deps.activeGroupMemberAddresses ?? [],
         connectedAddresses: [...connectionStatusRead.connectedAddresses],
-        onHandshakeForAddress: deps.onHandshakeForAddress,
+        onHandshakeForAddress: handshakeActions.onHandshakeForAddress,
         myAddress: inboxFeedRead.myAddress.trim(),
         onPeeringStatus,
       }

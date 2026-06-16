@@ -192,6 +192,20 @@ describe('assembleChatViewMessengerPorts', () => {
         meshtasticChannelIndex: undefined,
         setMeshtasticChannelIndex: vi.fn(),
       },
+      offlineMailboxQueue: {
+        pending: 0,
+        untrustedTimeCount: 0,
+        backoffCount: 0,
+        items: [],
+        removeItems: vi.fn(),
+      },
+      handshakeActions: {
+        onHandshake: vi.fn(),
+        onHandshakeForAddress: vi.fn(),
+        onConnectAcceptPartner: vi.fn(),
+        onConnectAcceptForAddress: vi.fn(),
+        onConnectDeployment: vi.fn(),
+      },
       attachmentBar: {
         sending: false,
         compactFileRef: { current: null },
@@ -216,6 +230,9 @@ describe('assembleChatViewMessengerPorts', () => {
     expect(ports.sendTransportRead.forcedTransport).toBe('internet')
     expect(ports.inboxFeedRead.myAddress).toBe('0xb')
     expect(ports.attachmentBar.sending).toBe(false)
+    expect(ports.offlineMailboxQueueRead.pending).toBe(0)
+    expect(ports.handshakeActions.onHandshake).toBeDefined()
+    expect(ports.handshakeOffersRead.pendingOffers).toEqual([])
     expect(ports.voiceRecordSendPanel).toBeNull()
   })
 })

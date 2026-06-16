@@ -107,10 +107,16 @@ async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw
 
 /** Wartet auf fire-and-forget Tab-Persist (applyDirectIotaMnemonicSession) — Tests/Reload-Gates. */
 let tabSessionPersistIdle: Promise<void> = Promise.resolve()
+/** Erhöht bei Test-Reset — verhindert Persist nach teardown (CI-Flake). */
+let tabSessionPersistEpoch = 0
 function scheduleDirectIotaTabSessionPersist(signerImportRaw: string): void {
+  const epochAtSchedule = tabSessionPersistEpoch
   tabSessionPersistIdle = tabSessionPersistIdle
     .catch(() => {})
-    .then(() => persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw))
+    .then(async () => {
+      if (epochAtSchedule !== tabSessionPersistEpoch) return
+      await persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw)
+    })
     .catch(() => {})
 }
 
@@ -121,6 +127,7 @@ export function whenDirectIotaTabSessionPersistIdle(): Promise<void> {
 /** Vitest: RAM-Signer + Tab-Persist-Kette zurücksetzen (Worker teilen Modul-Singleton). */
 export function resetDirectIotaMnemonicSessionModuleForTests(): void {
   clearDirectIotaSessionSigner()
+  tabSessionPersistEpoch++
   tabSessionPersistIdle = Promise.resolve()
 }
 
