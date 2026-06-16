@@ -36,7 +36,10 @@ export type ChatViewInboxPanelPropsDeps = {
   onOpenSettings?: () => void
 }
 
-export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & { hidePartnerStrip?: boolean }): ChatViewInboxPanelProps {
+export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
+  hidePartnerStrip?: boolean
+  hideOverviewChips?: boolean
+}): ChatViewInboxPanelProps {
   const {
     inboxFeedRead,
     inboxPanelRead,
@@ -211,6 +214,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
     showInboxPackageExpertMenu: deps.showInboxPackageExpertMenu,
     inboxPackageExpertMenu,
     hidePartnerStrip: deps.hidePartnerStrip ?? false,
+    hideOverviewChips: deps.hideOverviewChips ?? false,
   } satisfies ChatViewInboxPanelProps
 
   return inboxPanelProps

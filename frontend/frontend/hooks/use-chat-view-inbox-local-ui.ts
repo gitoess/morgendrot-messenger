@@ -11,8 +11,13 @@ import { inboxSourceFilterReadAllowed } from '@/frontend/lib/messenger-capabilit
 import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/lib/purge-message-hybrid'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
-import { resolveOverviewFilteredInboxMessages } from '@/frontend/lib/inbox-overview-filter'
-import { resolveActiveInboxDisplayMessages } from '@/frontend/lib/inbox-conversation-display'
+import {
+  filterInboxMessagesForContactConversation,
+  resolveContactConversationMatch,
+} from '@/frontend/lib/contact-conversation-filter'
+import {
+  resolveActiveInboxDisplayMessages,
+} from '@/frontend/lib/inbox-conversation-display'
 import {
   countUnreadInboxByOverviewCategory,
   inboxScopeKey,
@@ -385,7 +390,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           })
         }
       } else if (inboxPartnerKey?.trim()) {
-        rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, inboxPartnerKey, 'all')
+        const key = inboxPartnerKey.trim().toLowerCase()
+        const contactMatch = resolveContactConversationMatch(key, contactDirectory)
+        rows = filterInboxMessagesForContactConversation(rows, myAddress, key, 'all', {
+          contactMatch,
+        })
       }
     }
     if (inboxChannelFiltersArmed) {
@@ -405,6 +414,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxPartnerFiltersArmed,
     inboxConversationGroupId,
     sourceFilterCtx,
+    contactDirectory,
   ])
 
   const wireFilteredMessages = useMemo(() => {

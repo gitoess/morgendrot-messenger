@@ -101,6 +101,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onApplySendRecipient?: (walletAddress: string) => void
     /** Sidebar ersetzt Partner-Chips (Telegram-Layout). */
     hidePartnerStrip?: boolean
+    /** Aktiver 1:1-Thread: Overview-Chips ausblenden. */
+    hideOverviewChips?: boolean
     showInboxIotaFilter?: boolean
     inboxSearchQuery?: string
     conversationMenu?: ChatViewConversationMenuProps
@@ -187,6 +189,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onSarqNakWire,
     showInboxIotaFilter = true,
     hidePartnerStrip = false,
+    hideOverviewChips = false,
     inboxSearchQuery = '',
     conversationMenu,
     showIotaExpertInboxActions = true,
@@ -245,7 +248,10 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
         showInboxPackageExpertMenu={showInboxPackageExpertMenu}
         inboxPackageExpertMenu={inboxPackageExpertMenu}
       />
-      {inboxOverviewChipsVisible && onInboxOverviewCategoryChange && inboxOverviewUnreadCounts ? (
+      {!hideOverviewChips &&
+      inboxOverviewChipsVisible &&
+      onInboxOverviewCategoryChange &&
+      inboxOverviewUnreadCounts ? (
         <ChatViewInboxCategoryChips
           category={inboxOverviewCategory}
           onCategoryChange={onInboxOverviewCategoryChange}

@@ -6,6 +6,8 @@ import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 
+import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
+
 export type ChatViewShellPropsDeps = {
   messengerPorts: Pick<
     ChatViewMessengerPorts,
@@ -24,6 +26,7 @@ export type ChatViewShellPropsDeps = {
   offlineStatus?: OfflineStatusSnapshot
   showAdhocTransport: boolean
   showPackageIdBanner: boolean
+  peeringQr?: Pick<ChatViewMyWalletIdInlineProps, 'displayName' | 'onPeeringImported' | 'onPeeringStatus'>
 }
 
 export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
@@ -65,6 +68,9 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
         onForcedTransportChange: sendTransportChoice.onForcedTransportChange,
         onEncryptedChange: sendTransportChoice.onEncryptedChange,
         myAddressLine: shellRouting.isPrivate ? inboxFeedRead.myAddress : undefined,
+        peeringDisplayName: deps.peeringQr?.displayName,
+        onPeeringImported: deps.peeringQr?.onPeeringImported,
+        onPeeringStatus: deps.peeringQr?.onPeeringStatus,
         showAdhocTransport: deps.showAdhocTransport,
         composerDelivery: composerSendPath.composerDelivery,
         onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
@@ -84,6 +90,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       meshDevice.connected,
       connectionStatusRead.refreshApiStatus,
       deps.showAdhocTransport,
+      deps.peeringQr,
       connectionStatusRead,
       composerSendPath,
       sendTransportChoice,

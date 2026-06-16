@@ -61,6 +61,7 @@ vi.mock('@/frontend/components/chat-view-phonebook-sheet', () => ({
 vi.mock('@/frontend/components/lazy/messenger-scope-b', () => ({
   LazyChatViewRelaySubmitButton: () => null,
   LazyChatViewMorgPkgImportsSheet: () => null,
+  LazyPeeringQrActions: () => null,
 }))
 
 const MY_ADDR = `0x${'a'.repeat(64)}`

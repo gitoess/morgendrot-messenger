@@ -13,9 +13,9 @@ import {
   isSendPathAllowedForChannel,
   sendPathDisabledReason,
 } from '@/frontend/lib/messenger-channel-send-path'
+import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
-import { getComposerEncryptionContextHint } from '@/frontend/lib/composer-encryption-context-hint'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import {
   composerSendPathWriteDeniedReason,
@@ -31,6 +31,9 @@ export type ChatViewSendPathCompactProps = {
   onForcedTransportChange: (t: ForcedTransport) => void
   onEncryptedChange?: (encrypted: boolean) => void
   myAddressLine?: string
+  peeringDisplayName?: string
+  onPeeringImported?: ChatViewMyWalletIdInlineProps['onPeeringImported']
+  onPeeringStatus?: (msg: string) => void
   showAdhocTransport?: boolean
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
@@ -159,12 +162,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   const showTelegram =
     showTelegramDeliveryInHeader({ channelMode }) && Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
-  const encryptionHint =
-    chainActive
-      ? getComposerEncryptionContextHint({ forcedTransport, encrypted })
-      : composerDelivery === 'telegram'
-        ? 'Telegram — Zustellung über Bot/API, nicht IOTA-Mailbox.'
-        : null
 
   const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
@@ -274,16 +271,14 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           </>
         ) : null}
       </div>
-      <div className="mt-1.5 min-h-[2.75rem] flex-1 space-y-0.5">
-        {encryptionHint ? (
-          <p role="note" className="line-clamp-2 text-[10px] leading-snug text-muted-foreground">
-            {encryptionHint}
-          </p>
-        ) : (
-          <div className="min-h-[2.25rem]" aria-hidden />
-        )}
+      <div className="mt-1.5 min-h-[2.75rem] flex-1">
         {chainActive && myAddressLine?.trim() ? (
-          <ChatViewMyWalletIdInline myAddressLine={myAddressLine} />
+          <ChatViewMyWalletIdInline
+            myAddressLine={myAddressLine}
+            displayName={p.peeringDisplayName}
+            onPeeringImported={p.onPeeringImported}
+            onPeeringStatus={p.onPeeringStatus}
+          />
         ) : (
           <div className="min-h-[1.25rem]" aria-hidden />
         )}

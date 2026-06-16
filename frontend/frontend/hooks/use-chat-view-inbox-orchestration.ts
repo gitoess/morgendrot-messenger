@@ -376,7 +376,6 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     (address: string) => {
       const a = address.trim().toLowerCase()
       if (!a) return
-      setRecipient(a)
       setInboxPartnerKey(a)
       setInboxConversationGroupId(null)
       setInboxPartnerFiltersArmed(true)
@@ -384,7 +383,6 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
       setInboxSourceFilter('all')
     },
     [
-      setRecipient,
       setInboxPartnerKey,
       setInboxConversationGroupId,
       setInboxPartnerFiltersArmed,

@@ -140,8 +140,10 @@ export function filterInboxMessagesByPartnerAndDirection(
       return groupNorms.has(norm(cp))
     }
     if (!partnerAddress) return true
-    /** Selbst an eigene Adresse: nicht wegfiltern, wenn ein anderer Partner-Chip aktiv ist. */
-    if (selfToSelf) return true
+    /** Selbst an eigene Adresse: nur im eigenen Thread, nicht bei anderem Partner-Chip. */
+    if (selfToSelf) {
+      return norm(partnerAddress) === norm(myAddress)
+    }
     const cp = messageCounterpartyAddress(m, myAddress)
     if (!cp) return false
     return norm(cp) === norm(partnerAddress)

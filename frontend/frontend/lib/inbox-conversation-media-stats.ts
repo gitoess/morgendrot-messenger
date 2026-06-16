@@ -3,6 +3,7 @@ import {
   filterInboxMessagesByPartnerAndDirection,
   type InboxPartnerFilterOpts,
 } from '@/frontend/features/inbox/inbox-partner-filter'
+import { messagesForContactConversation } from '@/frontend/lib/contact-conversation-filter'
 import {
   COMPACT_FILE_TXT_PREFIX,
   COMPACT_IMG_PREFIX,
@@ -93,7 +94,11 @@ export function messagesForConversationFilter(
   messages: readonly Message[],
   myAddress: string,
   partnerAddress: string | null,
-  opts?: InboxPartnerFilterOpts
+  opts?: InboxPartnerFilterOpts,
+  entry?: import('@/frontend/lib/api').ContactMeshEntryClient
 ): Message[] {
+  if (partnerAddress?.trim() && /^0x[a-f0-9]{64}$/i.test(partnerAddress.trim())) {
+    return messagesForContactConversation(messages, myAddress, partnerAddress, entry)
+  }
   return filterInboxMessagesByPartnerAndDirection([...messages], myAddress, partnerAddress, 'all', opts)
 }

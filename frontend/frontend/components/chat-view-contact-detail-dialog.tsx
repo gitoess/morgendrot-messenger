@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   BarChart3,
   FileText,
@@ -22,9 +22,12 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { Message } from '@/frontend/lib/types'
 import {
   countConversationMediaStats,
-  messagesForConversationFilter,
   type InboxConversationMediaStats,
 } from '@/frontend/lib/inbox-conversation-media-stats'
+import { lookupContactEntry } from '@/frontend/lib/contact-display'
+import { messagesForContactConversation } from '@/frontend/lib/contact-conversation-filter'
+import { parseCompactImageMessage } from '@/frontend/lib/compact-image-wire'
+import { reconstructCompactImageToDataUrlWithMeta } from '@/frontend/lib/compact-image-canvas'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { contactHasAnyMailboxSlot } from '@/frontend/lib/contact-mailbox-slots'
 
@@ -82,17 +85,90 @@ function MediaStatsPanel({ stats }: { stats: InboxConversationMediaStats }) {
   )
 }
 
+function ConversationPhotoThumbnails(p: { messages: readonly Message[] }) {
+  const candidates = useMemo(() => {
+    const out: { id: string; dataUrl?: string; label: string }[] = []
+    for (const m of p.messages) {
+      const content = `${m.content ?? ''}`
+      const dataMatch = content.match(/data:image\/[a-z+]+;base64,[A-Za-z0-9+/=]+/i)
+      if (dataMatch) {
+        out.push({ id: m.id, dataUrl: dataMatch[0], label: 'Foto' })
+        continue
+      }
+      if (parseCompactImageMessage(content)) {
+        out.push({ id: m.id, label: 'Bild' })
+      }
+    }
+    return out.slice(0, 12)
+  }, [p.messages])
+
+  const [urls, setUrls] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    let alive = true
+    void (async () => {
+      const next: Record<string, string> = {}
+      for (const c of candidates) {
+        if (c.dataUrl) {
+          next[c.id] = c.dataUrl
+          continue
+        }
+        const msg = p.messages.find((m) => m.id === c.id)
+        if (!msg) continue
+        const parsed = parseCompactImageMessage(`${msg.content ?? ''}`)
+        if (!parsed) continue
+        try {
+          const r = await reconstructCompactImageToDataUrlWithMeta(parsed.blobBase64)
+          if (r.dataUrl) next[c.id] = r.dataUrl
+        } catch {
+          /* Vorschau optional */
+        }
+      }
+      if (alive) setUrls(next)
+    })()
+    return () => {
+      alive = false
+    }
+  }, [candidates, p.messages])
+
+  if (candidates.length === 0) return null
+
+  return (
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+      {candidates.map((c) => {
+        const src = urls[c.id]
+        return (
+          <div
+            key={c.id}
+            className="aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted/30"
+            title={c.label}
+          >
+            {src ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full items-center justify-center text-muted-foreground">
+                <ImageIcon className="h-6 w-6" />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps) {
   const address = p.address?.trim() ?? ''
-  const entry = p.entry ?? (address ? p.directory[address] : undefined)
+  const entry = p.entry ?? (address ? lookupContactEntry(p.directory, address) : undefined)
   const displayName = address
     ? resolveContactSidebarDisplayName(p.directory, address, entry)
     : ''
 
   const conversationMessages = useMemo(() => {
     if (!address || !p.myAddress.trim()) return []
-    return messagesForConversationFilter(p.messages, p.myAddress, address)
-  }, [address, p.messages, p.myAddress])
+    return messagesForContactConversation(p.messages, p.myAddress, address, entry, p.directory)
+  }, [address, p.messages, p.myAddress, entry, p.directory])
 
   const mediaStats = useMemo(() => countConversationMediaStats(conversationMessages), [conversationMessages])
 
@@ -141,8 +217,11 @@ export function ChatViewContactDetailDialog(p: ChatViewContactDetailDialogProps)
         <section className="space-y-3 border-t border-border pt-4">
           <h3 className="text-sm font-semibold text-foreground">Geteilte Medien &amp; Inhalte</h3>
           <p className="text-xs text-muted-foreground">
-            {conversationMessages.length} Nachrichten im Verlauf mit diesem Kontakt.
+            {conversationMessages.length}{' '}
+            {conversationMessages.length === 1 ? 'Nachricht' : 'Nachrichten'} in diesem 1:1-Verlauf (IOTA, Funk,
+            Telegram).
           </p>
+          <ConversationPhotoThumbnails messages={conversationMessages} />
           <MediaStatsPanel stats={mediaStats} />
         </section>
       </DialogContent>

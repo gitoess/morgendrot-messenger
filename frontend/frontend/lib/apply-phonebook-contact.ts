@@ -1,5 +1,7 @@
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { isIotaWalletAddress } from '@/frontend/lib/contact-storage-key'
+import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { inboxPartnerKeyForContact } from '@/frontend/lib/contact-send-path'
 
 export type ParsedPhonebookContact = {
   storageKey: string
@@ -49,9 +51,11 @@ export type ApplyPhonebookContactTargets = {
 export type ConfigureComposerForContactOpts = {
   handshakeReady?: boolean
   preferEncryptedWhenReady?: boolean
+  /** Aktueller Sendepfad — Transport wird nicht gewechselt. */
+  activeSendPath?: ActiveSendPath
 }
 
-/** Übernimmt alle hinterlegten Erreichbarkeiten in den Messenger-Composer. */
+/** Übernimmt Erreichbarkeiten passend zum aktiven Sendepfad in den Composer. */
 export function applyPhonebookContactToComposer(
   storageKey: string,
   entry: ContactMeshEntryClient,
@@ -59,31 +63,52 @@ export function applyPhonebookContactToComposer(
   opts?: ConfigureComposerForContactOpts
 ): ParsedPhonebookContact {
   const c = parsePhonebookContact(storageKey, entry)
+  const path: ActiveSendPath = opts?.activeSendPath ?? 'internet'
 
-  if (c.iotaAddress) {
-    targets.setPartner(c.iotaAddress)
-    targets.setRecipient(c.iotaAddress)
-    targets.selectInboxPartnerForSend?.(c.iotaAddress)
-    targets.setComposerDelivery?.('chain')
-    targets.setForcedTransport?.('internet')
-    if (opts?.preferEncryptedWhenReady !== false && opts?.handshakeReady) {
-      targets.setEncrypted?.(true)
-    }
-  } else if (c.telegramChatId) {
-    targets.setRecipient(`tg:${c.telegramChatId}`)
-    targets.setPartner('')
-  } else {
-    targets.setRecipient('')
-    targets.setPartner('')
+  targets.selectInboxPartnerForSend?.(inboxPartnerKeyForContact(storageKey, entry))
+
+  switch (path) {
+    case 'telegram':
+      if (c.telegramChatId) {
+        targets.setRecipient(`tg:${c.telegramChatId}`)
+        targets.setPartner('')
+      }
+      break
+    case 'mesh':
+      if (c.iotaAddress) targets.setPartner(c.iotaAddress)
+      targets.setRecipient('')
+      if (c.meshNodeId) {
+        targets.setMeshPlaintextNodeId(c.meshNodeId)
+        targets.setMeshPlaintextToNodeEnabled(true)
+      }
+      break
+    case 'adhoc':
+      if (c.iotaAddress) {
+        targets.setPartner(c.iotaAddress)
+        targets.setRecipient('')
+      }
+      if (c.bleUuid) targets.setContactBleUuid(c.bleUuid)
+      break
+    case 'internet':
+    default:
+      if (c.iotaAddress) {
+        targets.setPartner(c.iotaAddress)
+        targets.setRecipient(c.iotaAddress)
+        if (opts?.preferEncryptedWhenReady !== false && opts?.handshakeReady) {
+          targets.setEncrypted?.(true)
+        }
+      } else if (c.telegramChatId) {
+        targets.setRecipient(`tg:${c.telegramChatId}`)
+        targets.setPartner('')
+      } else {
+        targets.setRecipient('')
+        targets.setPartner('')
+      }
+      break
   }
 
-  if (c.meshNodeId) {
+  if (path !== 'mesh' && c.meshNodeId) {
     targets.setMeshPlaintextNodeId(c.meshNodeId)
-    targets.setMeshPlaintextToNodeEnabled(true)
-  }
-
-  if (c.bleUuid) {
-    targets.setContactBleUuid(c.bleUuid)
   }
 
   return c

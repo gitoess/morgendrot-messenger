@@ -23,6 +23,11 @@ import {
 } from '@/frontend/lib/contact-handshake-ui'
 import { ContactHandshakeBadge } from '@/frontend/components/contact-handshake-badge'
 import type { PendingHandshakeOffer, OutgoingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import {
+  collectContactsForSendPath,
+  sidebarAllSubtitleForSendPath,
+} from '@/frontend/lib/contact-send-path'
 
 export type ChatViewContactSidebarProps = {
   directory: Record<string, ContactMeshEntryClient>
@@ -36,6 +41,7 @@ export type ChatViewContactSidebarProps = {
   onOpenContactDetail: (address: string, entry?: ContactMeshEntryClient) => void
   onOpenPhonebook?: () => void
   searchQuery?: string
+  activeSendPath?: ActiveSendPath
   connectedAddresses?: readonly string[]
   incomingHandshakeOffers?: readonly PendingHandshakeOffer[]
   outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
@@ -100,8 +106,22 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         favorites,
         lastContacted,
         hidden,
+        sendPath: p.activeSendPath,
       }),
-    [p.directory, p.partnerOptions, favorites, lastContacted, hidden]
+    [p.directory, p.partnerOptions, favorites, lastContacted, hidden, p.activeSendPath]
+  )
+
+  const sendPathContactCount = useMemo(
+    () =>
+      p.activeSendPath
+        ? collectContactsForSendPath({
+            directory: p.directory,
+            partnerOptions: p.partnerOptions,
+            path: p.activeSendPath,
+            hidden,
+          }).length
+        : 0,
+    [p.directory, p.partnerOptions, p.activeSendPath, hidden]
   )
 
   const groups = useMemo(() => buildConversationSidebarGroups(readMessengerGroups()), [])
@@ -149,7 +169,11 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
         <SidebarRow
           title="Alle"
-          subtitle="Gesamter Posteingang"
+          subtitle={
+            p.activeSendPath
+              ? sidebarAllSubtitleForSendPath(p.activeSendPath, sendPathContactCount)
+              : 'Gesamter Posteingang'
+          }
           active={p.showAllActive}
           onClick={p.onSelectAll}
         />
@@ -173,7 +197,11 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         <section className="mt-2">
           <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Kontakte</p>
           {filteredContacts.length === 0 ? (
-            <p className="px-2 py-4 text-xs text-muted-foreground">Keine Kontakte — Telefonbuch öffnen und anlegen.</p>
+            <p className="px-2 py-4 text-xs text-muted-foreground">
+              {p.activeSendPath
+                ? 'Keine Kontakte mit Adresse für diesen Sendepfad — Telefonbuch ergänzen.'
+                : 'Keine Kontakte — Telefonbuch öffnen und anlegen.'}
+            </p>
           ) : (
             filteredContacts.map((c) => (
               <SidebarRow

@@ -1,7 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
-import { toast } from 'sonner'
+import { useMemo } from 'react'
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 
@@ -11,7 +10,6 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
     | 'sendTransportRead'
     | 'composerPartner'
     | 'composerSendPath'
-    | 'inboxFeedRead'
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
     | 'handshakeActions'
@@ -29,7 +27,6 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     sendTransportRead,
     composerPartner,
     composerSendPath,
-    inboxFeedRead,
     contactDirectoryRead,
     connectionStatusRead,
     handshakeActions,
@@ -51,16 +48,6 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     ]
   )
 
-  const onPeeringStatus = useCallback(
-    (msg: string) => {
-      deps.setStatusMsg(msg)
-      if (msg.includes('gespeichert') || msg.includes('übernommen')) toast.success(msg)
-      else if (msg.includes('fehl') || msg.includes('Kein')) toast.message(msg)
-      else toast.info(msg)
-    },
-    [deps.setStatusMsg]
-  )
-
   const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
     ? {
         partner: composerPartner.partner,
@@ -75,8 +62,6 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
         groupMemberAddresses: deps.activeGroupMemberAddresses ?? [],
         connectedAddresses: [...connectionStatusRead.connectedAddresses],
         onHandshakeForAddress: handshakeActions.onHandshakeForAddress,
-        myAddress: inboxFeedRead.myAddress.trim(),
-        onPeeringStatus,
       }
     : null
 

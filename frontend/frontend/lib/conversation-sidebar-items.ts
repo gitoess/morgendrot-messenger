@@ -4,6 +4,8 @@ import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import { formatContactDirectoryKey } from '@/frontend/lib/contact-storage-key'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
+import { contactReachableOnSendPath } from '@/frontend/lib/contact-send-path'
+import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 
 export type ConversationSidebarContactItem = {
   kind: 'contact'
@@ -63,6 +65,7 @@ export function buildConversationSidebarContacts(p: {
   favorites: ReadonlySet<string>
   lastContacted: Readonly<Record<string, number>>
   hidden: ReadonlySet<string>
+  sendPath?: ActiveSendPath
 }): ConversationSidebarContactItem[] {
   const byKey = new Map<string, ConversationSidebarContactItem>()
 
@@ -105,7 +108,11 @@ export function buildConversationSidebarContacts(p: {
     })
   }
 
-  return Array.from(byKey.values()).sort((a, b) => {
+  const items = Array.from(byKey.values()).filter((item) =>
+    p.sendPath ? contactReachableOnSendPath(item.address, item.entry, p.sendPath) : true
+  )
+
+  return items.sort((a, b) => {
     if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1
     if (a.unreadCount !== b.unreadCount) return b.unreadCount - a.unreadCount
     if (a.lastContactedAt !== b.lastContactedAt) return b.lastContactedAt - a.lastContactedAt

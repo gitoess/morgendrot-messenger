@@ -4,10 +4,9 @@
  * Handshake senden / annehmen / Einsatz-Partner — unter „Verschlüsselt“ (online).
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { LazyPeeringQrActions } from '@/frontend/components/lazy/messenger-scope-b'
 
 const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/
 
@@ -24,8 +23,6 @@ export type ChatViewEncryptedPartnerPanelProps = {
   connectedAddresses?: string[]
   onHandshakeForAddress?: (address: string) => void | Promise<void>
   onConnectAcceptForAddress?: (address: string) => void | Promise<void>
-  myAddress?: string
-  onPeeringStatus?: (msg: string) => void
 }
 
 export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelProps) {
@@ -40,11 +37,7 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
     connectedAddresses = [],
     onHandshakeForAddress,
     onConnectAcceptForAddress,
-    myAddress = '',
-    onPeeringStatus,
   } = p
-
-  const [peeringQrMounted, setPeeringQrMounted] = useState(false)
 
   const partnerTrim = partner.trim()
   const partnerValid = ADDR_64_HEX.test(partnerTrim)
@@ -167,26 +160,6 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
                 ? 'Handshake erneut senden'
                 : 'Handshake starten'}
           </button>
-          <details
-            className="rounded-lg border border-border/60 bg-muted/10"
-            onToggle={(e) => {
-              if ((e.target as HTMLDetailsElement).open) setPeeringQrMounted(true)
-            }}
-          >
-            <summary className="cursor-pointer px-2 py-1.5 text-xs font-medium text-foreground">
-              Peering-QR (Adresse tauschen)
-            </summary>
-            {peeringQrMounted ? (
-              <div className="px-2 pb-2">
-                <LazyPeeringQrActions
-                  myAddress={myAddress}
-                  disabled={sending}
-                  onStatus={onPeeringStatus}
-                  onImported={({ address }) => onPartnerChange(address)}
-                />
-              </div>
-            ) : null}
-          </details>
         </div>
 
       </div>

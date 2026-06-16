@@ -26,8 +26,6 @@ import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-noti
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { ChatViewEncryptionContextHint } from '@/frontend/components/chat-view-encryption-context-hint'
-import { ChatViewChainPersistenceBadge } from '@/frontend/components/chat-view-chain-persistence-badge'
 import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
 import {
@@ -820,20 +818,6 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
               ) : null
             }
           />
-          <ChatViewEncryptionContextHint
-            forcedTransport={forcedTransport}
-            encrypted={encrypted}
-            className="mb-2"
-          />
-          {!isTelegramDelivery &&
-          forcedTransport === 'internet' &&
-          (showMailboxUi || groupMailboxSendAll) ? (
-            <ChatViewChainPersistenceBadge
-              mode={messagingPersistenceMode}
-              encrypted={encrypted}
-              className="mb-2"
-            />
-          ) : null}
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}

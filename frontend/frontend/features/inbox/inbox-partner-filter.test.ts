@@ -102,7 +102,7 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r[0]!.id).toBe('in')
   })
 
-  it('Selbst-an-selbst bleibt sichtbar trotz Partner-Chip', () => {
+  it('Selbst-an-selbst nur bei eigenem Partner-Chip sichtbar', () => {
     const self = m({
       id: 'self',
       from: me,
@@ -110,8 +110,8 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
       content: 'test',
       timestamp: 1,
     })
-    const r = filterInboxMessagesByPartnerAndDirection([self], me, alice, 'all')
-    expect(r).toHaveLength(1)
+    expect(filterInboxMessagesByPartnerAndDirection([self], me, alice, 'all')).toHaveLength(0)
+    expect(filterInboxMessagesByPartnerAndDirection([self], me, me, 'all')).toHaveLength(1)
   })
 
   it('groupMemberAddresses: eigene Sendung ohne recipient bleibt sichtbar', () => {

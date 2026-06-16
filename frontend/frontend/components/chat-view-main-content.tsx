@@ -41,6 +41,13 @@ import type { InboxSearchMessageHit } from '@/frontend/lib/inbox-unified-search'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
+import { lookupContactEntry } from '@/frontend/lib/contact-display'
+import {
+  collectContactsForSendPath,
+  formatAllRecipientsForSendPath,
+  inboxPartnerKeyForContact,
+} from '@/frontend/lib/contact-send-path'
+import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import {
   contactHandshakeBadgeKind,
   contactHandshakeBadgeLabel,
@@ -58,7 +65,7 @@ import {
   LazyChatViewRelaySubmitButton,
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
-import { recordContactLastContacted, readContactFavorites, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
+import { recordContactLastContacted, readContactFavorites, readHiddenContacts, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import {
@@ -231,6 +238,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     composeReply,
   })
 
+  const activeSendPath = useMemo(
+    () => resolveActiveSendPath(composerDelivery, forcedTransport),
+    [composerDelivery, forcedTransport]
+  )
+
   const applyPhonebookContact = useCallback(
     (storageKey: string, entry: ContactMeshEntryClient) => {
       const handshakeStatus = resolveContactHandshakeStatus({
@@ -248,27 +260,20 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setMeshPlaintextNodeId,
           setMeshPlaintextToNodeEnabled,
           setContactBleUuid: meshSetup.onContactBleUuidChange,
-          selectInboxPartnerForSend,
+          selectInboxPartnerForSend: selectInboxConversationPartner,
           setEncrypted,
-          setForcedTransport,
-          setComposerDelivery,
         },
-        { handshakeReady: isContactHandshakeReady(handshakeStatus) }
+        { handshakeReady: isContactHandshakeReady(handshakeStatus), activeSendPath }
       )
       recordContactLastContacted(applied.storageKey)
       setPhonebookOpen(false)
-      if (applied.telegramChatId && !applied.iotaAddress) {
-        setComposerDelivery('telegram')
-      } else if (applied.iotaAddress) {
-        setComposerDelivery('chain')
-      }
       const parts: string[] = []
       if (applied.iotaAddress) parts.push('IOTA')
       if (applied.telegramChatId) parts.push('Telegram')
       if (applied.meshNodeId) parts.push('Meshtastic')
       if (applied.mailboxObjectId) parts.push('Mailbox')
       toast.success(
-        `${applied.label}: ${parts.length ? parts.join(', ') : 'Kontakt'} übernommen — Transport wählen und senden.`
+        `${applied.label}: ${parts.length ? parts.join(', ') : 'Kontakt'} übernommen — ${activeSendPath === 'telegram' ? 'Telegram' : activeSendPath === 'mesh' ? 'Funk' : activeSendPath === 'adhoc' ? 'Ad-hoc' : 'Online'}.`
       )
       requestAnimationFrame(() => {
         document.getElementById('chat-composer-message')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -280,13 +285,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
       meshSetup.onContactBleUuidChange,
-      selectInboxPartnerForSend,
-      setComposerDelivery,
+      selectInboxConversationPartner,
       handshakeConnectedAddresses,
       panelMessengerPorts.handshakeOffersRead.pendingOffers,
       panelMessengerPorts.handshakeOffersRead.outgoingOffers,
       setEncrypted,
-      setForcedTransport,
+      activeSendPath,
     ]
   )
 
@@ -346,7 +350,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     }
     setRecipient(a)
     selectInboxPartnerForSend(a)
-    toast.success('Empfänger übernommen — siehe „Verschlüsselung & Partner“ oben.')
+    toast.success('Empfänger übernommen — Chat-Partner gesetzt.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
   const {
@@ -362,6 +366,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     offlineStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
     showPackageIdBanner: uiCaps.showPackageIdBanner,
+    peeringQr: {
+      onPeeringImported: ({ address }) => {
+        const a = address.trim().toLowerCase()
+        setPartner(a)
+        setRecipient(a)
+        selectInboxConversationPartner(a)
+        toast.success('Peering übernommen — Partner im Chat gesetzt.')
+      },
+      onPeeringStatus: (msg) => toast.message(msg),
+    },
   })
 
   const inboxPanelProps = useChatViewInboxPanelProps({
@@ -374,6 +388,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     showInboxPackageExpertMenu: showInboxPackageExpert,
     onOpenSettings,
     hidePartnerStrip: showConversationSidebar,
+    hideOverviewChips:
+      showConversationSidebar &&
+      isPrivate &&
+      inboxPartnerFiltersArmed &&
+      Boolean(inboxPartnerKey?.trim()),
   })
 
   const { sendPanelProps } = useChatViewSendPanelProps({
@@ -426,16 +445,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const handleSelectSidebarContact = useCallback(
     (address: string) => {
       if (channelMode === 'group' && onChannelModeChange) onChannelModeChange('private')
-      selectInboxConversationPartner(address)
+      const entry = lookupContactEntry(directory, address) ?? { label: address }
+      const inboxKey = inboxPartnerKeyForContact(address, entry)
+      selectInboxConversationPartner(inboxKey)
       const handshakeStatus = resolveContactHandshakeStatus({
-        address,
+        address: inboxKey,
         connectedAddresses: handshakeConnectedAddresses,
         incomingOffers: panelMessengerPorts.handshakeOffersRead.pendingOffers,
         outgoingOffers: panelMessengerPorts.handshakeOffersRead.outgoingOffers,
       })
       applyPhonebookContactToComposer(
         address,
-        directory[address] ?? { label: address },
+        entry,
         {
           setPartner,
           setRecipient,
@@ -444,10 +465,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setContactBleUuid: meshSetup.onContactBleUuidChange,
           selectInboxPartnerForSend: selectInboxConversationPartner,
           setEncrypted,
-          setForcedTransport,
-          setComposerDelivery,
         },
-        { handshakeReady: isContactHandshakeReady(handshakeStatus) }
+        { handshakeReady: isContactHandshakeReady(handshakeStatus), activeSendPath }
       )
       recordContactLastContacted(address)
     },
@@ -465,8 +484,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       panelMessengerPorts.handshakeOffersRead.pendingOffers,
       panelMessengerPorts.handshakeOffersRead.outgoingOffers,
       setEncrypted,
-      setForcedTransport,
-      setComposerDelivery,
+      activeSendPath,
     ]
   )
 
@@ -481,7 +499,40 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const handleSelectSidebarAll = useCallback(() => {
     selectInboxConversationAll()
-  }, [selectInboxConversationAll])
+    const contacts = collectContactsForSendPath({
+      directory,
+      partnerOptions: inboxPartnerOptions,
+      path: activeSendPath,
+      hidden: readHiddenContacts(),
+    })
+    const formatted = formatAllRecipientsForSendPath(contacts, activeSendPath)
+    setPartner(formatted.partner)
+    setRecipient(formatted.recipient)
+    setMeshPlaintextNodeId(formatted.meshPlaintextNodeId)
+    setMeshPlaintextToNodeEnabled(formatted.meshPlaintextToNodeEnabled)
+    if (contacts.length === 0) {
+      toast.message('Keine Empfänger für diesen Sendepfad im Telefonbuch.')
+      return
+    }
+    if (activeSendPath === 'telegram') {
+      toast.success(`${contacts.length} Telegram-Empfänger eingetragen.`)
+    } else if (activeSendPath === 'internet') {
+      toast.success(`${contacts.length} IOTA-Adressen eingetragen — Senden erzeugt pro Empfänger eine PTB.`)
+    } else if (activeSendPath === 'mesh') {
+      toast.success(`${contacts.length} Funk-Kontakte — Broadcast ohne Ziel-Node.`)
+    } else {
+      toast.success(`${contacts.length} Ad-hoc-Kontakte vorbereitet.`)
+    }
+  }, [
+    selectInboxConversationAll,
+    directory,
+    inboxPartnerOptions,
+    activeSendPath,
+    setPartner,
+    setRecipient,
+    setMeshPlaintextNodeId,
+    setMeshPlaintextToNodeEnabled,
+  ])
 
   const handleOpenContactDetail = useCallback((address: string) => {
     setContactDetailAddress(address)
@@ -622,7 +673,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         <ChatViewPackageIdBanner {...packageIdBannerProps} />
       ) : null}
 
-      {channelMode === 'private' && composerDelivery === 'chain' ? (
+      {!showConversationSidebar && channelMode === 'private' && composerDelivery === 'chain' ? (
         <ChatViewTransportCard {...transportCardProps} />
       ) : null}
 
@@ -640,6 +691,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           activeGroupId={inboxConversationGroupId}
           showAllActive={showAllConversationsActive}
           searchQuery={messengerSearchQuery}
+          activeSendPath={activeSendPath}
           onSelectAll={handleSelectSidebarAll}
           onSelectContact={handleSelectSidebarContact}
           onSelectGroup={handleSelectSidebarGroup}
@@ -743,6 +795,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               myAddress={myAddress}
               query={messengerSearchQuery}
               onQueryChange={setMessengerSearchQuery}
+              activeSendPath={activeSendPath}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
               onSelectMessageHit={handleSelectMessageHit}
@@ -777,7 +830,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         open={contactDetailOpen}
         onOpenChange={setContactDetailOpen}
         address={contactDetailAddress}
-        entry={contactDetailAddress ? directory[contactDetailAddress] : undefined}
+        entry={contactDetailAddress ? lookupContactEntry(directory, contactDetailAddress) : undefined}
         directory={directory}
         messages={inboxMessages}
         myAddress={myAddress}

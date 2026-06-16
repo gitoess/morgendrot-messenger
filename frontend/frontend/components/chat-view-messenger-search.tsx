@@ -18,6 +18,7 @@ import {
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { searchInboxMessages, type InboxSearchMessageHit } from '@/frontend/lib/inbox-unified-search'
 import type { PendingHandshakeOffer, OutgoingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import {
   contactHandshakeBadgeKind,
   resolveContactHandshakeStatus,
@@ -35,6 +36,7 @@ export type ChatViewMessengerSearchProps = {
   onSelectContact: (address: string) => void
   onSelectGroup: (groupId: string) => void
   onSelectMessageHit: (hit: InboxSearchMessageHit) => void
+  activeSendPath?: ActiveSendPath
   connectedAddresses?: readonly string[]
   incomingHandshakeOffers?: readonly PendingHandshakeOffer[]
   outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
@@ -68,6 +70,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
       favorites,
       lastContacted,
       hidden,
+      sendPath: p.activeSendPath,
     })
     const lower = q.toLowerCase()
     return all
@@ -78,7 +81,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
           c.subtitle.toLowerCase().includes(lower)
       )
       .slice(0, 8)
-  }, [p.directory, p.partnerOptions, favorites, lastContacted, hidden, q])
+  }, [p.directory, p.partnerOptions, favorites, lastContacted, hidden, p.activeSendPath, q])
 
   const groupHits = useMemo(() => {
     if (!q) return []
