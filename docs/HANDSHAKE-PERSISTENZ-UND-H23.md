@@ -63,7 +63,7 @@ Verschlüsselt **senden** braucht weiterhin **verbunden** (oder Direkt-ECDH im B
 
 **Empfehlung in der Doku (kein Code-Zwang):**
 
-- **Kurzfristig:** Option **A** — Session Keys mit dokumentierter **Rotation** (bessere UX, kleinere Migration).
+- **Kurzfristig:** Option **A** — Session Keys mit dokumentierter **Rotation** (bessere UX, kleinere Migration). **SSOT:** **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**
 - **Mittelfristig:** Option **B** nur mit klarer Spec für **IOTA-Mailbox-Transport**, **Offline-Queue** und **Vault** — sonst Doppelprotokoll-Bruch.
 
 Bis **H.23** gilt: Persistenz = **Chain-Handshake + Vault-Cache + Session-Restore** (oben), **nicht** Double Ratchet.
@@ -72,6 +72,7 @@ Bis **H.23** gilt: Persistenz = **Chain-Handshake + Vault-Cache + Session-Restor
 
 ## Verknüpfungen
 
+- `docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md` — **Zielarchitektur Session Keys+ (H.23 Option A)**
 - `docs/ROADMAP-FAHRPLAN.md` — **§ H.23**, **§ H.24b** (Handshakes pro Package-Profil, Backlog)
 - `docs/VAULT-EINRICHTEN.md` — Vault, `/vault-save`, Neustart
 - `docs/MESSAGING-MAILBOX-SSOT-SPEC.md` — Handshake ≠ Mailbox-Persistenz

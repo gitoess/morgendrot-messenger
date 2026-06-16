@@ -1482,7 +1482,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 ### H.23 Verschlüsselung — MVP-Architektur (nächster Schwerpunkt)
 
-**Status:** **Backlog / Entscheidung offen** — **keine** klare MVP-Architektur dokumentiert und festgezogen. **Zwischenstand Persistenz (v1, vor Ratchet):** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`** — Chain-Handshake + Vault-`.handshakes` + Session-Restore nach Entsperren; **kein** Double Ratchet.
+**Status:** **Entscheidung 2026-06-16** — Option **A (Session Keys+)**; SSOT **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**. Double Ratchet = Phase 3. **Zwischenstand Persistenz (v1, vor Ratchet):** **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`** — Chain-Handshake + Vault-`.handshakes` + Session-Restore nach Entsperren; **kein** Double Ratchet.
 
 | Option | Kurz | Offene Fragen |
 |--------|------|----------------|

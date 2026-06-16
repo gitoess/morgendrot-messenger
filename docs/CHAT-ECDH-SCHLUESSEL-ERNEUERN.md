@@ -38,6 +38,8 @@
 
 **Empfehlung bis Phase 2:** Schlüssel erneuern nur bei konkretem Anlass; Verlauf vorher exportieren.
 
+**Zielarchitektur (Session Keys+, Envelope, Vault):** **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**
+
 ## Implementierung (Code)
 
 - `frontend/frontend/lib/peer-key-renewal.ts` — `renewDirectChatPeerEncryption`
