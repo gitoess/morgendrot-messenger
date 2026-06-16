@@ -23,6 +23,10 @@ export type InboxViewUiPort = {
   readonly inboxWireFilter: InboxWireFilter
   readonly setInboxWireFilter: (f: InboxWireFilter) => void
   readonly selectInboxPartnerForSend: (address: string) => void
+  readonly selectInboxConversationAll: () => void
+  readonly selectInboxConversationPartner: (address: string) => void
+  readonly selectInboxConversationGroup: (groupId: string) => void
+  readonly inboxConversationGroupId: string | null
   readonly removeInboxPartnerFromQuickList: (
     address: string,
     opts?: { hideMatchingMessages?: boolean; messageTransport?: 'mesh' | 'iota' | 'all' }

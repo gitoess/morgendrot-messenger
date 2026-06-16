@@ -96,6 +96,8 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     onContactsChanged?: () => void
     onMailboxPanelStatus?: (msg: string, kind: 'success' | 'error') => void
     onApplySendRecipient?: (walletAddress: string) => void
+    /** Sidebar ersetzt Partner-Chips (Telegram-Layout). */
+    hidePartnerStrip?: boolean
     showInboxIotaFilter?: boolean
     showIotaExpertInboxActions?: boolean
     showInboxPackageExpertMenu?: boolean
@@ -179,6 +181,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
     onAddSenderToContactBook,
     onSarqNakWire,
     showInboxIotaFilter = true,
+    hidePartnerStrip = false,
     showIotaExpertInboxActions = true,
     showInboxPackageExpertMenu = false,
     inboxPackageExpertMenu,
@@ -225,7 +228,8 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           showLagebild={pinnwandOverviewConfigured}
         />
       ) : null}
-      {inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed ? (
+      {!hidePartnerStrip &&
+      (inboxWireFiltersArmed || inboxChannelFiltersArmed || inboxPartnerFiltersArmed) ? (
         <ChatViewInboxPartnerStrip
           partnerOptions={inboxPartnerOptions}
           myAddressKnown={myAddress.trim().length > 0}

@@ -41,6 +41,7 @@ import {
   showPinnwandInboxStrip,
   buildPinnwandMatchContext,
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
+import { writeActiveGroupId } from '@/frontend/lib/messenger-group-store'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 
 export type UseChatViewInboxOrchestrationParams = {
@@ -263,6 +264,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setInboxWireFiltersArmed,
     inboxPartnerFiltersArmed,
     setInboxPartnerFiltersArmed,
+    inboxConversationGroupId,
+    setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,
@@ -310,9 +313,11 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   }, [channelMode, setInboxOverviewCategory])
 
   useEffect(() => {
-    setInboxChannelFiltersArmed(false)
-    setInboxWireFiltersArmed(false)
-    setInboxPartnerFiltersArmed(false)
+    if (channelMode === 'pinnwand' || channelMode === 'notes') {
+      setInboxChannelFiltersArmed(false)
+      setInboxWireFiltersArmed(false)
+      setInboxPartnerFiltersArmed(false)
+    }
   }, [channelMode, setInboxChannelFiltersArmed, setInboxWireFiltersArmed, setInboxPartnerFiltersArmed])
 
   useEffect(() => {
@@ -355,12 +360,55 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     apiStatus,
   })
 
+  const selectInboxConversationAll = useCallback(() => {
+    setInboxPartnerKey(null)
+    setInboxConversationGroupId(null)
+    setInboxPartnerFiltersArmed(false)
+    setInboxOverviewCategory('alle')
+  }, [
+    setInboxPartnerKey,
+    setInboxConversationGroupId,
+    setInboxPartnerFiltersArmed,
+    setInboxOverviewCategory,
+  ])
+
+  const selectInboxConversationPartner = useCallback(
+    (address: string) => {
+      const a = address.trim()
+      if (!a) return
+      setRecipient(a)
+      setInboxPartnerKey(a)
+      setInboxConversationGroupId(null)
+      setInboxPartnerFiltersArmed(true)
+      setInboxOverviewCategory('direkt')
+    },
+    [
+      setRecipient,
+      setInboxPartnerKey,
+      setInboxConversationGroupId,
+      setInboxPartnerFiltersArmed,
+      setInboxOverviewCategory,
+    ]
+  )
+
+  const selectInboxConversationGroup = useCallback(
+    (groupId: string) => {
+      const id = groupId.trim()
+      if (!id) return
+      writeActiveGroupId(id)
+      setInboxPartnerKey(null)
+      setInboxConversationGroupId(id)
+      setInboxPartnerFiltersArmed(true)
+      setInboxOverviewCategory('direkt')
+    },
+    [setInboxPartnerKey, setInboxConversationGroupId, setInboxPartnerFiltersArmed, setInboxOverviewCategory]
+  )
+
   const selectInboxPartnerForSend = useCallback(
     (address: string) => {
-      setRecipient(address.trim())
-      setInboxPartnerKey(address.trim())
+      selectInboxConversationPartner(address)
     },
-    [setRecipient, setInboxPartnerKey]
+    [selectInboxConversationPartner]
   )
 
   const slideSequences = useMemo(
@@ -476,6 +524,8 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setInboxWireFiltersArmed,
     inboxPartnerFiltersArmed,
     setInboxPartnerFiltersArmed,
+    inboxConversationGroupId,
+    setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,
@@ -502,6 +552,9 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
     selectInboxPartnerForSend,
+    selectInboxConversationAll,
+    selectInboxConversationPartner,
+    selectInboxConversationGroup,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
     onExportEinsatzberichtTxtFull,

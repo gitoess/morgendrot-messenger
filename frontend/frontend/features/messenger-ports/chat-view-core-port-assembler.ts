@@ -192,6 +192,10 @@ export type ChatViewInboxViewUiSlice = {
   inboxWireFilter: InboxWireFilter
   setInboxWireFilter: (f: InboxWireFilter) => void
   selectInboxPartnerForSend: (address: string) => void
+  selectInboxConversationAll: () => void
+  selectInboxConversationPartner: (address: string) => void
+  selectInboxConversationGroup: (groupId: string) => void
+  inboxConversationGroupId: string | null
   removeInboxPartnerFromQuickList: InboxViewUiPort['removeInboxPartnerFromQuickList']
   inboxVisibilityHint: string | null | undefined
   inboxOverviewChipsVisible: boolean

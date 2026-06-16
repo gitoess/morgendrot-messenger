@@ -44,6 +44,7 @@ import {
   MESH_INBOX_ONLY_LS,
 } from '@/frontend/lib/inbox-browser-view-state'
 import { readPinnedPinnwandIds, togglePinnedPinnwandId } from '@/frontend/lib/pinnwand-pin-store'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { sortInboxPinnwandFirst } from '@/frontend/lib/inbox-pinnwand-sort'
 import {
   messageBelongsToPinnwand,
@@ -100,6 +101,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
   const [inboxChannelFiltersArmed, setInboxChannelFiltersArmedState] = useState(false)
   const [inboxWireFiltersArmed, setInboxWireFiltersArmedState] = useState(false)
   const [inboxPartnerFiltersArmed, setInboxPartnerFiltersArmedState] = useState(false)
+  const [inboxConversationGroupId, setInboxConversationGroupIdState] = useState<string | null>(null)
 
   const [pinnedPinnwandIds, setPinnedPinnwandIds] = useState<Set<string>>(() => new Set())
   const [hiddenInboxIds, setHiddenInboxIds] = useState<Set<string>>(() => new Set())
@@ -205,6 +207,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
       setInboxChannelFiltersArmedState(false)
       setInboxWireFiltersArmedState(false)
       setInboxPartnerFiltersArmedState(false)
+      setInboxConversationGroupIdState(null)
     }
     window.addEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
     return () => window.removeEventListener(INBOX_FILTERS_CLEARED_EVENT, onCleared)
@@ -281,7 +284,14 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const setInboxPartnerFiltersArmed = useCallback((armed: boolean) => {
     setInboxPartnerFiltersArmedState(armed)
-    if (!armed) setInboxPartnerKey(null)
+    if (!armed) {
+      setInboxPartnerKey(null)
+      setInboxConversationGroupIdState(null)
+    }
+  }, [])
+
+  const setInboxConversationGroupId = useCallback((groupId: string | null) => {
+    setInboxConversationGroupIdState(groupId?.trim() || null)
   }, [])
 
   const removeInboxPartnerFromQuickList = useCallback(
@@ -364,8 +374,18 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const partnerFilteredMessages = useMemo(() => {
     let rows = displayMessages
-    if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) {
-      rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, inboxPartnerKey, 'all')
+    if (inboxPartnerFiltersArmed) {
+      if (inboxConversationGroupId) {
+        const group = readMessengerGroups().find((g) => g.id === inboxConversationGroupId)
+        if (group) {
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, 'all', {
+            groupMemberAddresses: group.memberAddresses,
+            teamMailboxObjectId: group.teamMailboxObjectId,
+          })
+        }
+      } else if (inboxPartnerKey?.trim()) {
+        rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, inboxPartnerKey, 'all')
+      }
     }
     if (inboxChannelFiltersArmed) {
       rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, null, inboxDirectionFilter)
@@ -382,6 +402,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     inboxSourceFilter,
     inboxChannelFiltersArmed,
     inboxPartnerFiltersArmed,
+    inboxConversationGroupId,
     sourceFilterCtx,
   ])
 
@@ -873,6 +894,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     setInboxWireFiltersArmed,
     inboxPartnerFiltersArmed,
     setInboxPartnerFiltersArmed,
+    inboxConversationGroupId,
+    setInboxConversationGroupId,
     inboxWireFilter,
     setInboxWireFilter,
     inboxPartnerOptions,

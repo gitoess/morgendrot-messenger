@@ -31,10 +31,11 @@ export type ChatViewInboxPanelPropsDeps = {
   showIotaExpertInboxActions: boolean
   pinnwandOverviewConfigured: boolean
   showInboxPackageExpertMenu: boolean
+  hidePartnerStrip?: boolean
   onOpenSettings?: () => void
 }
 
-export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): ChatViewInboxPanelProps {
+export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & { hidePartnerStrip?: boolean }): ChatViewInboxPanelProps {
   const {
     inboxFeedRead,
     inboxPanelRead,
@@ -208,6 +209,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     pinnwandOverviewConfigured: deps.pinnwandOverviewConfigured,
     showInboxPackageExpertMenu: deps.showInboxPackageExpertMenu,
     inboxPackageExpertMenu,
+    hidePartnerStrip: deps.hidePartnerStrip ?? false,
   } satisfies ChatViewInboxPanelProps
 
   return inboxPanelProps

@@ -32,6 +32,8 @@ import { ChatViewPhonebookSheet } from '@/frontend/components/chat-view-phoneboo
 import { ContactAddAliasDialog } from '@/frontend/components/contact-add-alias-dialog'
 import { isGroupChannel, isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { ChatViewNotesTabPanel } from '@/frontend/components/chat-view-notes-tab-panel'
+import { ChatViewContactSidebar } from '@/frontend/components/chat-view-contact-sidebar'
+import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-contact-detail-dialog'
 import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
@@ -46,7 +48,7 @@ import {
   LazyChatViewRelaySubmitButton,
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
-import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
+import { recordContactLastContacted, readContactFavorites, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import type { PendingHandshakesPollState } from '@/frontend/hooks/use-chat-view-pending-handshakes'
@@ -118,6 +120,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setStatus,
     setStatusMsg,
     selectInboxPartnerForSend,
+    selectInboxConversationAll,
+    selectInboxConversationPartner,
+    selectInboxConversationGroup,
+    inboxConversationGroupId,
+    inboxPartnerKey,
+    inboxPartnerFiltersArmed,
+    inboxPartnerOptions,
     inboxOverviewChipsVisible,
     setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
@@ -135,6 +144,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
   const [phonebookOpen, setPhonebookOpen] = useState(false)
+  const [contactDetailAddress, setContactDetailAddress] = useState<string | null>(null)
+  const [contactDetailOpen, setContactDetailOpen] = useState(false)
+  const [sidebarMetaTick, setSidebarMetaTick] = useState(0)
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
@@ -254,6 +266,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const onPinnwandTab =
     channelMode != null && isPinnwandChannel(channelMode) && pinnwandCaps.configured
   const onNotesTab = channelMode === 'notes'
+  const showConversationSidebar = !onNotesTab && !onPinnwandTab && (isPrivate || isGroup)
 
   useEffect(() => {
     if (!onChannelModeChange || channelMode == null) return
@@ -325,6 +338,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     showInboxPackageExpertMenu: showInboxPackageExpert,
     onOpenSettings,
+    hidePartnerStrip: showConversationSidebar,
   })
 
   const { sendPanelProps } = useChatViewSendPanelProps({
@@ -366,14 +380,58 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     unreadCount: inboxOverviewUnreadCounts?.lagebild ?? 0,
   })
 
-  return (
-    <div className="space-y-8">
-      <ChatViewChatHeader {...chatHeaderProps} />
+  const handleSelectSidebarContact = useCallback(
+    (address: string) => {
+      if (channelMode === 'group' && onChannelModeChange) onChannelModeChange('private')
+      selectInboxConversationPartner(address)
+      applyPhonebookContactToComposer(address, directory[address] ?? { label: address }, {
+        setPartner,
+        setRecipient,
+        setMeshPlaintextNodeId,
+        setMeshPlaintextToNodeEnabled,
+        setContactBleUuid: meshSetup.onContactBleUuidChange,
+        selectInboxPartnerForSend: selectInboxConversationPartner,
+      })
+      recordContactLastContacted(address)
+    },
+    [
+      channelMode,
+      onChannelModeChange,
+      selectInboxConversationPartner,
+      directory,
+      setPartner,
+      setRecipient,
+      setMeshPlaintextNodeId,
+      setMeshPlaintextToNodeEnabled,
+      meshSetup.onContactBleUuidChange,
+    ]
+  )
 
-      {uiCaps.showProminentOfflineQueueBanner ? (
-        <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
-      ) : null}
+  const handleSelectSidebarGroup = useCallback(
+    (groupId: string) => {
+      if (onChannelModeChange) onChannelModeChange('group')
+      selectInboxConversationGroup(groupId)
+      refreshMessengerGroups()
+    },
+    [onChannelModeChange, selectInboxConversationGroup, refreshMessengerGroups]
+  )
 
+  const handleSelectSidebarAll = useCallback(() => {
+    selectInboxConversationAll()
+  }, [selectInboxConversationAll])
+
+  const handleOpenContactDetail = useCallback((address: string) => {
+    setContactDetailAddress(address)
+    setContactDetailOpen(true)
+  }, [])
+
+  const inboxMessages = panelMessengerPorts.inboxFeedRead.messages
+
+  const showAllConversationsActive =
+    !inboxPartnerFiltersArmed || (!inboxPartnerKey && !inboxConversationGroupId)
+
+  const conversationBody = (
+    <>
       {!onNotesTab && isGroup ? (
         <ChatViewGroupPanel
           contactDirectory={groupPanelDirectory}
@@ -389,7 +447,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ) : null}
 
       {!onNotesTab && isGroup && encryptedPartnerPanelProps ? (
-        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+        <div className="space-y-3 rounded-xl border border-border bg-card p-4">
           <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
           <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
         </div>
@@ -420,6 +478,23 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       <ContactAddAliasDialog {...contactAliasDialog} />
 
+      {showConversationSidebar ? (
+        <ChatViewContactSidebar
+          key={sidebarMetaTick}
+          className="lg:hidden"
+          directory={directory}
+          partnerOptions={inboxPartnerOptions}
+          activePartnerKey={inboxPartnerKey}
+          activeGroupId={inboxConversationGroupId}
+          showAllActive={showAllConversationsActive}
+          onSelectAll={handleSelectSidebarAll}
+          onSelectContact={handleSelectSidebarContact}
+          onSelectGroup={handleSelectSidebarGroup}
+          onOpenContactDetail={handleOpenContactDetail}
+          onOpenPhonebook={() => setPhonebookOpen(true)}
+        />
+      ) : null}
+
       {onNotesTab ? (
         <ChatViewNotesTabPanel />
       ) : onPinnwandTab ? (
@@ -444,7 +519,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             <ChatViewSendPanel {...sendPanelProps} />
           </section>
 
-          {inboxOverviewChipsVisible && (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+          {!showConversationSidebar &&
+          inboxOverviewChipsVisible &&
+          (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
             <ChatViewInboxUnreadThreadsStrip
               threads={[...(inboxPanelRead.inboxUnreadThreadOptions ?? [])]}
               onOpenThread={(address) => {
@@ -454,7 +531,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
           ) : null}
 
-          <ChatViewInboxPanel {...inboxPanelProps} />
+          <ChatViewInboxPanel {...inboxPanelProps} hidePartnerStrip={showConversationSidebar} />
         </>
       )}
 
@@ -468,6 +545,67 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onForwardItem={morgPkgArchive.onForwardItem}
         />
       ) : null}
+    </>
+  )
+
+  return (
+    <>
+      <div className="space-y-6">
+        <ChatViewChatHeader {...chatHeaderProps} />
+
+        {uiCaps.showProminentOfflineQueueBanner ? (
+          <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
+        ) : null}
+
+        {showConversationSidebar ? (
+          <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
+            <ChatViewContactSidebar
+              key={`sidebar-desktop-${sidebarMetaTick}`}
+              className="hidden lg:flex"
+              directory={directory}
+              partnerOptions={inboxPartnerOptions}
+              activePartnerKey={inboxPartnerKey}
+              activeGroupId={inboxConversationGroupId}
+              showAllActive={showAllConversationsActive}
+              onSelectAll={handleSelectSidebarAll}
+              onSelectContact={handleSelectSidebarContact}
+              onSelectGroup={handleSelectSidebarGroup}
+              onOpenContactDetail={handleOpenContactDetail}
+              onOpenPhonebook={() => setPhonebookOpen(true)}
+            />
+            <div className="min-w-0 space-y-8">{conversationBody}</div>
+          </div>
+        ) : (
+          <div className="space-y-8">{conversationBody}</div>
+        )}
+      </div>
+
+      <ChatViewContactDetailDialog
+        open={contactDetailOpen}
+        onOpenChange={setContactDetailOpen}
+        address={contactDetailAddress}
+        entry={contactDetailAddress ? directory[contactDetailAddress] : undefined}
+        directory={directory}
+        messages={inboxMessages}
+        myAddress={myAddress}
+        connectedAddresses={phonebookShellProps.connectedAddresses}
+        isFavorite={
+          contactDetailAddress ? readContactFavorites().has(contactDetailAddress.trim().toLowerCase()) : false
+        }
+        onToggleFavorite={() => {
+          if (!contactDetailAddress) return
+          toggleContactFavorite(contactDetailAddress)
+          setSidebarMetaTick((n) => n + 1)
+        }}
+        onEdit={() => setPhonebookOpen(true)}
+        onShowQr={() => undefined}
+        onRemove={() => setPhonebookOpen(true)}
+        onSelectForMessenger={() => {
+          if (!contactDetailAddress) return
+          handleSelectSidebarContact(contactDetailAddress)
+          setContactDetailOpen(false)
+        }}
+      />
 
       {(isPrivate || isGroup) ? (
         <ChatViewPhonebookSheet
@@ -513,6 +651,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }
+
