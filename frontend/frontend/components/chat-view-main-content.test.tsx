@@ -284,7 +284,7 @@ function buildMainContentProps(
     inboxOverviewChipsVisible: false,
     inboxOverviewCategory: 'direkt',
     setInboxOverviewCategory: noop,
-    inboxOverviewUnreadCounts: { direkt: 0, lagebild: 0, system: 0 },
+    inboxOverviewUnreadCounts: { alle: 0, lagebild: 0, direkt: 0, funk: 0 },
     inboxUnreadThreadOptions: [],
     isInboxMessageUnread: () => false,
     isPinnwandInboxMessage: () => false,
