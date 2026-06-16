@@ -16,10 +16,9 @@ beforeEach(() => {
 
 afterEach(async () => {
   try {
-    const { drainDirectIotaTabSessionPersistForTests } = await import(
-      '@/frontend/lib/direct-iota-mnemonic-session'
-    )
-    await drainDirectIotaTabSessionPersistForTests()
+    const mod = await import('@/frontend/lib/direct-iota-mnemonic-session')
+    await mod.drainDirectIotaTabSessionPersistForTests()
+    mod.resetDirectIotaMnemonicSessionModuleForTests()
   } catch {
     /* Modul-Graph in isolierten Tests optional */
   }

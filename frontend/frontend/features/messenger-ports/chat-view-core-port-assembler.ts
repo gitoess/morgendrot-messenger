@@ -10,6 +10,8 @@ import { asComposerSendPath, type ComposerSendPathPort } from './composer-send-p
 import { asConnectionStatusRead, type ConnectionStatusReadPort } from './connection-status-read-port'
 import { asContactDirectoryRead, type ContactDirectoryReadPort } from './contact-directory-read-port'
 import { asInboxFeedRead, type InboxFeedReadPort } from './inbox-feed-read-port'
+import { asInboxViewUi, type InboxViewUiPort } from './inbox-view-ui-port'
+import { asMeshSendOptions, type MeshSendOptionsPort } from './mesh-send-options-port'
 import {
   asSendMeshFunkOptions,
   asSendTransportChoice,
@@ -28,6 +30,11 @@ import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
+import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
+import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
+import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
+import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewComposerDraftSlice = {
@@ -105,6 +112,53 @@ export type ChatViewConnectionStatusSlice = {
   connectedAddresses: readonly string[]
 }
 
+export type ChatViewInboxViewUiSlice = {
+  inboxPartnerOptions: InboxPartnerOption[]
+  inboxPartnerKey: string | null
+  setInboxPartnerKey: (k: string | null) => void
+  inboxDirectionFilter: InboxDirectionFilter
+  setInboxDirectionFilter: (d: InboxDirectionFilter) => void
+  inboxSourceFilter: InboxSourceFilter
+  setInboxSourceFilter: (f: InboxSourceFilter) => void
+  inboxChannelFiltersArmed: boolean
+  setInboxChannelFiltersArmed: (v: boolean) => void
+  inboxWireFiltersArmed: boolean
+  setInboxWireFiltersArmed: (v: boolean) => void
+  inboxPartnerFiltersArmed: boolean
+  setInboxPartnerFiltersArmed: (v: boolean) => void
+  inboxWireFilter: InboxWireFilter
+  setInboxWireFilter: (f: InboxWireFilter) => void
+  selectInboxPartnerForSend: (address: string) => void
+  removeInboxPartnerFromQuickList: InboxViewUiPort['removeInboxPartnerFromQuickList']
+  inboxVisibilityHint: string | null | undefined
+  inboxOverviewChipsVisible: boolean
+  inboxOverviewCategory: InboxOverviewCategory
+  setInboxOverviewCategory: (c: InboxOverviewCategory) => void
+  inboxOverviewUnreadCounts: Record<InboxOverviewCategory, number>
+  isInboxMessageUnread: (msg: Message) => boolean
+  isPinnwandInboxMessage: (msg: Message) => boolean
+  inboxSelectMode: boolean
+  setInboxSelectMode: (v: boolean | ((p: boolean) => boolean)) => void
+  selectedInboxIds: Set<string>
+  hiddenInboxCount: number
+  toggleInboxSelection: (id: string) => void
+  selectAllVisibleInbox: () => void
+  clearInboxSelection: () => void
+  protokollMarkedIds: Set<string>
+  toggleProtokollMark: (id: string) => void
+  pinnedPinnwandIds: Set<string>
+  togglePinnedPinnwand: (id: string) => void
+}
+
+export type ChatViewMeshSendOptionsSlice = {
+  meshPlaintextToNodeEnabled: boolean
+  setMeshPlaintextToNodeEnabled: (v: boolean) => void
+  meshPlaintextNodeId: string
+  setMeshPlaintextNodeId: (v: string) => void
+  meshtasticChannelIndex: number | undefined
+  setMeshtasticChannelIndex: (v: number | undefined) => void
+}
+
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
@@ -118,6 +172,8 @@ export type ChatViewMessengerPorts = {
   connectionStatusRead: ConnectionStatusReadPort
   attachmentBar: AttachmentBarPort
   voiceRecordSendPanel: VoiceRecordSendPanelPort | null
+  inboxViewUi: InboxViewUiPort
+  meshSendOptions: MeshSendOptionsPort
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
@@ -198,6 +254,14 @@ export function assembleConnectionStatusReadPort(
   )
 }
 
+export function assembleInboxViewUiPort(slice: ChatViewInboxViewUiSlice): InboxViewUiPort {
+  return asInboxViewUi(slice)
+}
+
+export function assembleMeshSendOptionsPort(slice: ChatViewMeshSendOptionsSlice): MeshSendOptionsPort {
+  return asMeshSendOptions(slice)
+}
+
 /** Alle Standard-Ports aus den Core-Slices. */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
@@ -209,6 +273,8 @@ export function assembleChatViewMessengerPorts(input: {
   contactDirectory: ChatViewContactDirectorySlice
   connectionStatus: ChatViewConnectionStatusSlice
   attachmentBar: ChatViewAttachmentBarSlice
+  inboxViewUi: ChatViewInboxViewUiSlice
+  meshSendOptions: ChatViewMeshSendOptionsSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -224,6 +290,8 @@ export function assembleChatViewMessengerPorts(input: {
     contactDirectoryRead: assembleContactDirectoryReadPort(input.contactDirectory),
     connectionStatusRead: assembleConnectionStatusReadPort(input.connectionStatus),
     attachmentBar: assembleAttachmentBarPort(input.attachmentBar),
+    inboxViewUi: assembleInboxViewUiPort(input.inboxViewUi),
+    meshSendOptions: assembleMeshSendOptionsPort(input.meshSendOptions),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)

@@ -135,7 +135,7 @@ export function restoreDirectIotaSessionSignerFromTabSession(): { ok: true; addr
     const legacy = window.sessionStorage.getItem(SS_DIRECT_IOTA_SIGNER_TAB)?.trim()
     if (!legacy) return { ok: false }
     const applied = applyDirectIotaMnemonicSession(legacy, undefined, { skipTabPersist: true })
-    if (applied.ok) void persistDirectIotaSessionSignerTabSessionEncrypted(legacy)
+    if (applied.ok) scheduleDirectIotaTabSessionPersist(legacy)
     return applied.ok ? applied : { ok: false }
   } catch {
     return { ok: false }

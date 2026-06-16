@@ -12,13 +12,7 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
   const myAddress = `0x${'a'.repeat(64)}`
   const fullPorts = testMessengerPorts({ myAddress })
   return {
-    messengerPorts:
-      over.messengerPorts ??
-      ({
-        inboxFeedRead: fullPorts.inboxFeedRead,
-        contactDirectoryRead: fullPorts.contactDirectoryRead,
-        connectionStatusRead: fullPorts.connectionStatusRead,
-      } satisfies ChatViewInboxPanelPropsDeps['messengerPorts']),
+    messengerPorts: over.messengerPorts ?? fullPorts,
     inboxTotalCount: 0,
     inboxRows: [],
     morgPkgFileRef: { current: null },
@@ -54,24 +48,6 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
     inboxFromCache: false,
     inboxCacheAgeMinutes: null,
     inboxLiveSource: 'api',
-    inboxVisibilityHint: null,
-    inboxPartnerOptions: [],
-    inboxPartnerKey: null,
-    setInboxPartnerKey: vi.fn(),
-    inboxDirectionFilter: 'all',
-    setInboxDirectionFilter: vi.fn(),
-    inboxSourceFilter: 'all',
-    setInboxSourceFilter: vi.fn(),
-    inboxChannelFiltersArmed: false,
-    setInboxChannelFiltersArmed: vi.fn(),
-    inboxWireFiltersArmed: false,
-    setInboxWireFiltersArmed: vi.fn(),
-    inboxPartnerFiltersArmed: false,
-    setInboxPartnerFiltersArmed: vi.fn(),
-    inboxWireFilter: 'all',
-    setInboxWireFilter: vi.fn(),
-    selectInboxPartnerForSend: vi.fn(),
-    removeInboxPartnerFromQuickList: vi.fn(),
     exportEcdhMorgPkgForMessage: vi.fn(),
     onExportEinsatzberichtJson: vi.fn(),
     onExportEinsatzberichtTxt: vi.fn(),
@@ -80,42 +56,25 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
     onExportEinsatzprotokoll: vi.fn(),
     onExportEinsatzprotokollPlainZip: vi.fn(),
     onExportEinsatzprotokollMarked: vi.fn(),
-    protokollMarkedIds: new Set(),
     onHideInboxMessageLocal: vi.fn(),
     onPurgeInboxMessageChain: vi.fn(),
     onForwardMessage: vi.fn(),
     onHideAllVisibleLocal: vi.fn(),
-    inboxSelectMode: false,
-    setInboxSelectMode: vi.fn(),
-    selectedInboxIds: new Set(),
-    hiddenInboxCount: 0,
-    toggleInboxSelection: vi.fn(),
-    selectAllVisibleInbox: vi.fn(),
-    clearInboxSelection: vi.fn(),
     onBulkHideSelected: vi.fn(),
     onBulkPurgeSelected: vi.fn(),
-    toggleProtokollMark: vi.fn(),
     recipient: '',
     setStatus: vi.fn(),
     setStatusMsg: vi.fn(),
     addInboxSenderToContactBook: vi.fn(),
     onSarqNakWire: vi.fn(),
     localPurgeBusy: false,
-    pinnedPinnwandIds: new Set(),
-    togglePinnedPinnwand: vi.fn(),
     showPinnwandPinActions: false,
     openPartnerSetupPanel: vi.fn(),
     onOpenPhonebook: vi.fn(),
     messagingPersistenceMode: 'mailbox',
     showInboxIotaFilter: false,
     showIotaExpertInboxActions: false,
-    inboxOverviewChipsVisible: false,
-    inboxOverviewCategory: 'direkt',
-    setInboxOverviewCategory: vi.fn(),
-    inboxOverviewUnreadCounts: { alle: 0, lagebild: 0, direkt: 0, funk: 0 },
     pinnwandOverviewConfigured: false,
-    isInboxMessageUnread: () => false,
-    isPinnwandInboxMessage: () => false,
     showInboxPackageExpertMenu: false,
     inboxPackageFilter: '',
     packageIdSuggestions: [],
@@ -152,13 +111,18 @@ describe('useChatViewInboxPanelProps', () => {
 
   it('onApplySendRecipient setzt Recipient und Partner-Strip', () => {
     const setRecipient = vi.fn()
-    const selectInboxPartnerForSend = vi.fn()
+    const onSelectPartner = vi.fn()
     const addr = '0x' + 'b'.repeat(64)
+    const ports = testMessengerPorts({ myAddress: `0x${'a'.repeat(64)}` })
+    const messengerPorts = {
+      ...ports,
+      inboxViewUi: { ...ports.inboxViewUi, selectInboxPartnerForSend: onSelectPartner },
+    }
     const { result } = renderHook(() =>
-      useChatViewInboxPanelProps(baseDeps({ setRecipient, selectInboxPartnerForSend }))
+      useChatViewInboxPanelProps(baseDeps({ setRecipient, messengerPorts }))
     )
     result.current.onApplySendRecipient?.(addr)
     expect(setRecipient).toHaveBeenCalledWith(addr)
-    expect(selectInboxPartnerForSend).toHaveBeenCalledWith(addr)
+    expect(onSelectPartner).toHaveBeenCalledWith(addr)
   })
 })

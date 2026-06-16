@@ -38,12 +38,6 @@ export type ChatViewSendPanelPropsDeps = {
   offlineMailboxQueueErrorHint?: string
   offlineMailboxQueueItems: ChatViewSendPanelProps['offlineMailboxQueueItems']
   removeOfflineMailboxQueueItems: (ids: string[]) => void
-  meshPlaintextToNodeEnabled: boolean
-  setMeshPlaintextToNodeEnabled: (v: boolean) => void
-  meshPlaintextNodeId: string
-  setMeshPlaintextNodeId: (v: string) => void
-  meshtasticChannelIndex?: number
-  setMeshtasticChannelIndex: (v: number | undefined) => void
   refreshApiStatus?: () => void | Promise<void>
   loadMessages: (
     mode?: 'reset' | 'append' | 'poll',
@@ -79,6 +73,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     attachmentBar,
     contactDirectoryRead,
     connectionStatusRead,
+    meshSendOptions,
   } = deps.messengerPorts
 
   const groupSendPanelContext = useMemo(
@@ -207,12 +202,12 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     offlineMailboxQueueErrorHint: deps.offlineMailboxQueueErrorHint,
     offlineMailboxQueueItems: deps.offlineMailboxQueueItems,
     onRemoveOfflineMailboxQueueItems: deps.removeOfflineMailboxQueueItems,
-    meshPlaintextToNodeEnabled: deps.meshPlaintextToNodeEnabled,
-    onMeshPlaintextToNodeEnabledChange: deps.setMeshPlaintextToNodeEnabled,
-    meshPlaintextNodeId: deps.meshPlaintextNodeId,
-    onMeshPlaintextNodeIdChange: deps.setMeshPlaintextNodeId,
-    meshtasticChannelIndex: deps.meshtasticChannelIndex,
-    onMeshtasticChannelIndexChange: deps.setMeshtasticChannelIndex,
+    meshPlaintextToNodeEnabled: meshSendOptions.meshPlaintextToNodeEnabled,
+    onMeshPlaintextToNodeEnabledChange: meshSendOptions.setMeshPlaintextToNodeEnabled,
+    meshPlaintextNodeId: meshSendOptions.meshPlaintextNodeId,
+    onMeshPlaintextNodeIdChange: meshSendOptions.setMeshPlaintextNodeId,
+    meshtasticChannelIndex: meshSendOptions.meshtasticChannelIndex,
+    onMeshtasticChannelIndexChange: meshSendOptions.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
     onManualRefresh: async () => {
       await deps.refreshApiStatus?.()

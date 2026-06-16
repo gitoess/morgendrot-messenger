@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { ChatViewMainContent, type ChatViewMainContentProps } from '@/frontend/components/chat-view-main-content'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
+import type { ApiStatus } from '@/frontend/lib/api'
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
@@ -90,8 +91,17 @@ function meshtasticStub() {
 }
 
 function buildMainContentProps(
-  over: Partial<ChatViewMainContentProps> = {}
+  over: Partial<ChatViewMainContentProps> & {
+    apiStatus?: ApiStatus | null
+    packageIdMismatch?: boolean
+  } = {}
 ): ChatViewMainContentProps {
+  const {
+    apiStatus: overApiStatus,
+    packageIdMismatch: overPackageIdMismatch,
+    messengerPorts: overPorts,
+    ...restOver
+  } = over
   const merged = {
     isPrivate: true,
     isGroup: false,
@@ -115,12 +125,7 @@ function buildMainContentProps(
     toggleShowSetup: noop,
     encrypted: true,
     setEncrypted: noop,
-    apiStatus: TEST_API_STATUS_SEND_READY,
     refreshApiStatus: asyncNoop,
-    basisUnreachable: false,
-    statusCacheAgeMinutes: null,
-    packageIdMismatch: false,
-    deviceTimeTrustWarn: false,
     offlineMailboxQueuePending: 0,
     offlineMailboxQueueUntrustedTimeCount: 0,
     offlineMailboxQueueBackoffCount: 0,
@@ -146,9 +151,7 @@ function buildMainContentProps(
     morgPkgDeviceBusy: false,
     morgPkgFileRef: createRef(),
     morgPkgDeviceFilesRef: createRef(),
-    directory: {},
     refreshContactDirectory: noop,
-    isMeshVerifiedForAddress: () => false,
     inboxTotalCount: 0,
     messages: [],
     setMessages: noop,
@@ -177,27 +180,7 @@ function buildMainContentProps(
     setContactBleUuid: noop,
     contactBleBusy: false,
     setContactBleBusy: noop,
-    meshPlaintextToNodeEnabled: false,
-    setMeshPlaintextToNodeEnabled: noop,
-    meshPlaintextNodeId: '',
-    setMeshPlaintextNodeId: noop,
-    meshtasticChannelIndex: null,
-    setMeshtasticChannelIndex: noop,
-    attachedBlobBase64: null,
-    attachedTxtFile: null,
-    attachedAudioBase64: null,
-    attachedLora: null,
-    compactMeta: null,
-    compactPreviewUrl: null,
-    loraPreviewUrl: null,
-    loraMeshProgressLine: null,
     loraOnlineFallbackOffer: null,
-    compactBusy: false,
-    attachmentPipelineHint: null,
-    compactFileRef: createRef(),
-    clearCompactAttachment: noop,
-    handleCompactAttachmentPick: noop,
-    ingestChatAttachmentFile: asyncNoop,
     exportEcdhMorgPkgForMessage: asyncNoop,
     onMorgPkgDeviceFiles: noop,
     onMorgPkgImportFile: noop,
@@ -231,54 +214,19 @@ function buildMainContentProps(
     setMeshLoRaImagesEnabled: noop,
     meshSelfArchiveAfterLoRa: false,
     setMeshSelfArchiveAfterLoRa: noop,
-    protokollMarkedIds: new Set<string>(),
-    pinnedPinnwandIds: new Set<string>(),
-    togglePinnedPinnwand: noop,
-    toggleProtokollMark: noop,
     onHideInboxMessageLocal: noop,
     onPurgeInboxMessageChain: asyncNoop,
     onForwardMessage: noop,
     onHideAllVisibleLocal: noop,
-    inboxSelectMode: false,
-    setInboxSelectMode: noop,
-    selectedInboxIds: new Set<string>(),
-    hiddenInboxCount: 0,
-    toggleInboxSelection: noop,
-    selectAllVisibleInbox: noop,
-    clearInboxSelection: noop,
     onBulkHideSelected: noop,
     onBulkPurgeSelected: asyncNoop,
-    inboxPartnerKey: '',
-    setInboxPartnerKey: noop,
-    inboxDirectionFilter: 'all',
-    setInboxDirectionFilter: noop,
-    inboxSourceFilter: 'all',
-    setInboxSourceFilter: noop,
-    inboxChannelFiltersArmed: false,
-    setInboxChannelFiltersArmed: noop,
-    inboxWireFiltersArmed: false,
-    setInboxWireFiltersArmed: noop,
-    inboxPartnerFiltersArmed: false,
-    setInboxPartnerFiltersArmed: noop,
-    inboxWireFilter: 'all',
-    setInboxWireFilter: noop,
-    inboxPartnerOptions: [],
-    selectInboxPartnerForSend: noop,
-    removeInboxPartnerFromQuickList: noop,
     resetInboxViewFilters: noop,
-    inboxVisibilityHint: null,
     channelMode: 'private',
     onChannelModeChange: noop,
-    inboxOverviewChipsVisible: false,
-    inboxOverviewCategory: 'direkt',
-    setInboxOverviewCategory: noop,
-    inboxOverviewUnreadCounts: { alle: 0, lagebild: 0, direkt: 0, funk: 0 },
     inboxUnreadThreadOptions: [],
-    isInboxMessageUnread: () => false,
-    isPinnwandInboxMessage: () => false,
-    ...over,
+    ...restOver,
   } as ChatViewMainContentProps
-  if (over.messengerPorts == null) {
+  if (overPorts == null) {
     merged.messengerPorts = testMessengerPorts({
       myAddress: merged.myAddress,
       forcedTransport: merged.forcedTransport,
@@ -289,7 +237,11 @@ function buildMainContentProps(
       isPrivate: merged.isPrivate,
       messagingPersistenceMode: merged.messagingPersistenceMode,
       partner: merged.partner,
+      apiStatus: overApiStatus ?? TEST_API_STATUS_SEND_READY,
+      packageIdMismatch: overPackageIdMismatch,
     })
+  } else {
+    merged.messengerPorts = overPorts
   }
   return merged
 }

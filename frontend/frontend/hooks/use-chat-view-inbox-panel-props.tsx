@@ -4,24 +4,19 @@ import { useCallback, useMemo, type ReactNode, type RefObject } from 'react'
 import { toast } from 'sonner'
 import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import type { ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
-import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
-import type { InboxDirectionFilter } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import type {
   OutgoingHandshakeOffer,
   PendingHandshakeOffer,
 } from '@/frontend/lib/handshake-offers-types'
-import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
-import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
-import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewInboxPanelPropsDeps = {
   messengerPorts: Pick<
     ChatViewMessengerPorts,
-    'inboxFeedRead' | 'contactDirectoryRead' | 'connectionStatusRead'
+    'inboxFeedRead' | 'contactDirectoryRead' | 'connectionStatusRead' | 'inboxViewUi'
   >
   inboxTotalCount: number
   inboxRows: ChatViewInboxPanelProps['inboxRows']
@@ -70,24 +65,6 @@ export type ChatViewInboxPanelPropsDeps = {
   inboxFromCache: boolean
   inboxCacheAgeMinutes: number | null
   inboxLiveSource: ChatViewInboxPanelProps['inboxLiveSource']
-  inboxVisibilityHint: string | null | undefined
-  inboxPartnerOptions: InboxPartnerOption[]
-  inboxPartnerKey: string | null
-  setInboxPartnerKey: (k: string | null) => void
-  inboxDirectionFilter: InboxDirectionFilter
-  setInboxDirectionFilter: (d: InboxDirectionFilter) => void
-  inboxSourceFilter: InboxSourceFilter
-  setInboxSourceFilter: (f: InboxSourceFilter) => void
-  inboxChannelFiltersArmed: boolean
-  setInboxChannelFiltersArmed: (v: boolean) => void
-  inboxWireFiltersArmed: boolean
-  setInboxWireFiltersArmed: (v: boolean) => void
-  inboxPartnerFiltersArmed: boolean
-  setInboxPartnerFiltersArmed: (v: boolean) => void
-  inboxWireFilter: InboxWireFilter
-  setInboxWireFilter: (f: InboxWireFilter) => void
-  selectInboxPartnerForSend: (address: string) => void
-  removeInboxPartnerFromQuickList: ChatViewInboxPanelProps['removeInboxPartnerFromQuickList']
   exportEcdhMorgPkgForMessage: ChatViewInboxPanelProps['exportEcdhMorgPkgForMessage']
   onExportEinsatzberichtJson: ChatViewInboxPanelProps['onExportEinsatzberichtJson']
   onExportEinsatzberichtTxt: ChatViewInboxPanelProps['onExportEinsatzberichtTxt']
@@ -96,42 +73,25 @@ export type ChatViewInboxPanelPropsDeps = {
   onExportEinsatzprotokoll: ChatViewInboxPanelProps['onExportEinsatzprotokoll']
   onExportEinsatzprotokollPlainZip: ChatViewInboxPanelProps['onExportEinsatzprotokollPlainZip']
   onExportEinsatzprotokollMarked: ChatViewInboxPanelProps['onExportEinsatzprotokollMarked']
-  protokollMarkedIds: Set<string>
   onHideInboxMessageLocal: ChatViewInboxPanelProps['onHideInboxMessageLocal']
   onPurgeInboxMessageChain: ChatViewInboxPanelProps['onPurgeInboxMessageChain']
   onForwardMessage: ChatViewInboxPanelProps['onForwardMessage']
   onHideAllVisibleLocal: () => void
-  inboxSelectMode: boolean
-  setInboxSelectMode: (v: boolean | ((p: boolean) => boolean)) => void
-  selectedInboxIds: Set<string>
-  hiddenInboxCount: number
-  toggleInboxSelection: (id: string) => void
-  selectAllVisibleInbox: () => void
-  clearInboxSelection: () => void
   onBulkHideSelected: () => void
   onBulkPurgeSelected: () => void
-  toggleProtokollMark: (id: string) => void
   recipient: string
   setStatus: (v: 'idle' | 'success' | 'error') => void
   setStatusMsg: (v: string) => void
   addInboxSenderToContactBook: (address: string) => void
   onSarqNakWire: (wire: string) => void | Promise<void>
   localPurgeBusy: boolean
-  pinnedPinnwandIds: Set<string>
-  togglePinnedPinnwand: (id: string) => void
   showPinnwandPinActions: boolean
   openPartnerSetupPanel: () => void
   onOpenPhonebook: () => void
   messagingPersistenceMode: MessagingPersistenceMode
   showInboxIotaFilter: boolean
   showIotaExpertInboxActions: boolean
-  inboxOverviewChipsVisible: boolean
-  inboxOverviewCategory: InboxOverviewCategory
-  setInboxOverviewCategory: (c: InboxOverviewCategory) => void
-  inboxOverviewUnreadCounts: Record<InboxOverviewCategory, number>
   pinnwandOverviewConfigured: boolean
-  isInboxMessageUnread: (msg: Message) => boolean
-  isPinnwandInboxMessage: (msg: Message) => boolean
   showInboxPackageExpertMenu: boolean
   inboxPackageFilter: string
   packageIdSuggestions: string[]
@@ -144,7 +104,7 @@ export type ChatViewInboxPanelPropsDeps = {
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): ChatViewInboxPanelProps {
-  const { inboxFeedRead, contactDirectoryRead, connectionStatusRead } = deps.messengerPorts
+  const { inboxFeedRead, contactDirectoryRead, connectionStatusRead, inboxViewUi } = deps.messengerPorts
 
   const onRefresh = useCallback(() => {
     void deps.loadMessages('reset')
@@ -160,9 +120,9 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
   const onApplySendRecipient = useCallback(
     (addr: string) => {
       deps.setRecipient(addr)
-      deps.selectInboxPartnerForSend(addr)
+      inboxViewUi.selectInboxPartnerForSend(addr)
     },
-    [deps.setRecipient, deps.selectInboxPartnerForSend]
+    [deps.setRecipient, inboxViewUi.selectInboxPartnerForSend]
   )
 
   const inboxPackageExpertMenu: ReactNode = useMemo(
@@ -229,24 +189,38 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     inboxCacheAgeMinutes: deps.inboxCacheAgeMinutes,
     inboxLiveSource: deps.inboxLiveSource,
     basisUnreachable: connectionStatusRead.basisUnreachable,
-    inboxVisibilityHint: deps.inboxVisibilityHint,
-    inboxPartnerOptions: deps.inboxPartnerOptions,
-    inboxPartnerKey: deps.inboxPartnerKey,
-    setInboxPartnerKey: deps.setInboxPartnerKey,
-    inboxDirectionFilter: deps.inboxDirectionFilter,
-    setInboxDirectionFilter: deps.setInboxDirectionFilter,
-    inboxSourceFilter: deps.inboxSourceFilter,
-    setInboxSourceFilter: deps.setInboxSourceFilter,
-    inboxChannelFiltersArmed: deps.inboxChannelFiltersArmed,
-    setInboxChannelFiltersArmed: deps.setInboxChannelFiltersArmed,
-    inboxWireFiltersArmed: deps.inboxWireFiltersArmed,
-    setInboxWireFiltersArmed: deps.setInboxWireFiltersArmed,
-    inboxPartnerFiltersArmed: deps.inboxPartnerFiltersArmed,
-    setInboxPartnerFiltersArmed: deps.setInboxPartnerFiltersArmed,
-    inboxWireFilter: deps.inboxWireFilter,
-    setInboxWireFilter: deps.setInboxWireFilter,
-    selectInboxPartnerForSend: deps.selectInboxPartnerForSend,
-    removeInboxPartnerFromQuickList: deps.removeInboxPartnerFromQuickList,
+    inboxPartnerOptions: [...inboxViewUi.inboxPartnerOptions],
+    inboxPartnerKey: inboxViewUi.inboxPartnerKey,
+    setInboxPartnerKey: inboxViewUi.setInboxPartnerKey,
+    inboxDirectionFilter: inboxViewUi.inboxDirectionFilter,
+    setInboxDirectionFilter: inboxViewUi.setInboxDirectionFilter,
+    inboxSourceFilter: inboxViewUi.inboxSourceFilter,
+    setInboxSourceFilter: inboxViewUi.setInboxSourceFilter,
+    inboxChannelFiltersArmed: inboxViewUi.inboxChannelFiltersArmed,
+    setInboxChannelFiltersArmed: inboxViewUi.setInboxChannelFiltersArmed,
+    inboxWireFiltersArmed: inboxViewUi.inboxWireFiltersArmed,
+    setInboxWireFiltersArmed: inboxViewUi.setInboxWireFiltersArmed,
+    inboxPartnerFiltersArmed: inboxViewUi.inboxPartnerFiltersArmed,
+    setInboxPartnerFiltersArmed: inboxViewUi.setInboxPartnerFiltersArmed,
+    inboxWireFilter: inboxViewUi.inboxWireFilter,
+    setInboxWireFilter: inboxViewUi.setInboxWireFilter,
+    selectInboxPartnerForSend: inboxViewUi.selectInboxPartnerForSend,
+    removeInboxPartnerFromQuickList: inboxViewUi.removeInboxPartnerFromQuickList,
+    inboxVisibilityHint: inboxViewUi.inboxVisibilityHint,
+    inboxOverviewChipsVisible: inboxViewUi.inboxOverviewChipsVisible,
+    inboxOverviewCategory: inboxViewUi.inboxOverviewCategory,
+    inboxOverviewUnreadCounts: inboxViewUi.inboxOverviewUnreadCounts,
+    isInboxMessageUnread: inboxViewUi.isInboxMessageUnread,
+    isPinnwandInboxMessage: inboxViewUi.isPinnwandInboxMessage,
+    inboxSelectMode: inboxViewUi.inboxSelectMode,
+    setInboxSelectMode: inboxViewUi.setInboxSelectMode,
+    selectedInboxIds: inboxViewUi.selectedInboxIds,
+    hiddenInboxCount: inboxViewUi.hiddenInboxCount,
+    toggleInboxSelection: inboxViewUi.toggleInboxSelection,
+    protokollMarkedIds: inboxViewUi.protokollMarkedIds,
+    pinnedPinnwandIds: inboxViewUi.pinnedPinnwandIds,
+    onTogglePinnedPinnwand: inboxViewUi.togglePinnedPinnwand,
+    toggleProtokollMark: inboxViewUi.toggleProtokollMark,
     inboxRows: deps.inboxRows,
     contactDirectory: contactDirectoryRead.directory,
     isMeshVerifiedForAddress: contactDirectoryRead.isMeshVerifiedForAddress,
@@ -258,30 +232,21 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     onExportEinsatzprotokoll: deps.onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip: deps.onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked: deps.onExportEinsatzprotokollMarked,
-    protokollMarkedCount: deps.protokollMarkedIds.size,
-    protokollMarkedIds: deps.protokollMarkedIds,
+    protokollMarkedCount: inboxViewUi.protokollMarkedIds.size,
     onHideInboxMessageLocal: deps.onHideInboxMessageLocal,
     onPurgeInboxMessageChain: deps.onPurgeInboxMessageChain,
     onForwardMessage: deps.onForwardMessage,
     onToggleHideAllVisibleLocal: deps.onHideAllVisibleLocal,
-    inboxSelectMode: deps.inboxSelectMode,
-    setInboxSelectMode: deps.setInboxSelectMode,
-    selectedInboxIds: deps.selectedInboxIds,
-    hiddenInboxCount: deps.hiddenInboxCount,
-    toggleInboxSelection: deps.toggleInboxSelection,
-    onSelectAllVisible: deps.selectAllVisibleInbox,
-    onClearInboxSelection: deps.clearInboxSelection,
+    onSelectAllVisible: inboxViewUi.selectAllVisibleInbox,
+    onClearInboxSelection: inboxViewUi.clearInboxSelection,
     onBulkHideSelected: deps.onBulkHideSelected,
     onBulkPurgeSelected: deps.onBulkPurgeSelected,
-    toggleProtokollMark: deps.toggleProtokollMark,
     recipient: deps.recipient,
     setStatus: deps.setStatus,
     setStatusMsg: deps.setStatusMsg,
     onAddSenderToContactBook: deps.addInboxSenderToContactBook,
     onSarqNakWire: deps.onSarqNakWire,
     localPurgeBusy: deps.localPurgeBusy,
-    pinnedPinnwandIds: deps.pinnedPinnwandIds,
-    onTogglePinnedPinnwand: deps.togglePinnedPinnwand,
     showPinnwandPinActions: deps.showPinnwandPinActions,
     showPhonebookButton: false,
     onContactsChanged: deps.refreshContactDirectory,
@@ -292,13 +257,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     messagingPersistenceMode: deps.messagingPersistenceMode,
     showInboxIotaFilter: deps.showInboxIotaFilter,
     showIotaExpertInboxActions: deps.showIotaExpertInboxActions,
-    inboxOverviewChipsVisible: deps.inboxOverviewChipsVisible,
-    inboxOverviewCategory: deps.inboxOverviewCategory,
-    onInboxOverviewCategoryChange: deps.setInboxOverviewCategory,
-    inboxOverviewUnreadCounts: deps.inboxOverviewUnreadCounts,
+    onInboxOverviewCategoryChange: inboxViewUi.setInboxOverviewCategory,
     pinnwandOverviewConfigured: deps.pinnwandOverviewConfigured,
-    isInboxMessageUnread: deps.isInboxMessageUnread,
-    isPinnwandInboxMessage: deps.isPinnwandInboxMessage,
     showInboxPackageExpertMenu: deps.showInboxPackageExpertMenu,
     inboxPackageExpertMenu,
   } satisfies ChatViewInboxPanelProps

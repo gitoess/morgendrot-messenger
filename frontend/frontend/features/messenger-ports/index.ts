@@ -10,6 +10,10 @@ export type { AttachmentBarPort } from './attachment-bar-port'
 export { asAttachmentBar } from './attachment-bar-port'
 export type { VoiceRecordFromHook, VoiceRecordSendPanelPort } from './voice-record-send-panel-port'
 export { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
+export type { InboxViewUiPort } from './inbox-view-ui-port'
+export { asInboxViewUi } from './inbox-view-ui-port'
+export type { MeshSendOptionsPort } from './mesh-send-options-port'
+export { asMeshSendOptions } from './mesh-send-options-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
 export { asInboxFeedRead } from './inbox-feed-read-port'
 export type { ComposerDraftPort, ComposerDraftSendFlowPort } from './composer-draft-port'
@@ -35,6 +39,8 @@ export {
   assembleComposerPartnerPort,
   assembleComposerSendPathPort,
   assembleInboxFeedReadPort,
+  assembleInboxViewUiPort,
+  assembleMeshSendOptionsPort,
   assembleSendMeshFunkOptionsPort,
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
@@ -46,6 +52,8 @@ export {
   type ChatViewComposerPartnerSlice,
   type ChatViewComposerSendPathSlice,
   type ChatViewInboxFeedSlice,
+  type ChatViewInboxViewUiSlice,
+  type ChatViewMeshSendOptionsSlice,
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
   type ChatViewTransportSlice,

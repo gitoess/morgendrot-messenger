@@ -9,6 +9,7 @@ export default defineConfig({
     globals: false,
     include: ['**/*.test.{ts,tsx}'],
     passWithNoTests: true,
+    pool: 'forks',
     setupFiles: ['./tests/vitest-setup.ts', './tests/i18n-vitest-setup.ts'],
   },
   resolve: {

@@ -51,7 +51,6 @@ import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-cli
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
 import { resolveMeshtasticPlaintextDestination } from '@/frontend/lib/meshtastic-node-id'
-import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import {
@@ -112,19 +111,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setStatusMsg,
     encrypted,
     setEncrypted,
-    apiStatus,
     refreshApiStatus,
-    basisUnreachable,
-    statusCacheAgeMinutes,
-    packageIdMismatch,
-    deviceTimeTrustWarn,
-    offlineMailboxQueuePending,
+    syncCanonicalPackageIdFromServer,
     offlineMailboxQueueUntrustedTimeCount,
     offlineMailboxQueueBackoffCount,
     offlineMailboxQueueErrorHint,
     offlineMailboxQueueItems,
     removeOfflineMailboxQueueItems,
-    syncCanonicalPackageIdFromServer,
+    offlineMailboxQueuePending,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,
@@ -143,9 +137,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     morgPkgDeviceBusy,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
-    directory,
     refreshContactDirectory,
-    isMeshVerifiedForAddress,
     inboxTotalCount,
     messages,
     setMessages,
@@ -174,12 +166,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactBleUuid,
     contactBleBusy,
     setContactBleBusy,
-    meshPlaintextToNodeEnabled,
-    setMeshPlaintextToNodeEnabled,
-    meshPlaintextNodeId,
-    setMeshPlaintextNodeId,
-    meshtasticChannelIndex,
-    setMeshtasticChannelIndex,
     loraOnlineFallbackOffer,
     exportEcdhMorgPkgForMessage,
     onMorgPkgDeviceFiles,
@@ -214,42 +200,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setMeshLoRaImagesEnabled,
     meshSelfArchiveAfterLoRa,
     setMeshSelfArchiveAfterLoRa,
-    protokollMarkedIds,
-    pinnedPinnwandIds,
-    togglePinnedPinnwand,
-    toggleProtokollMark,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
     onHideAllVisibleLocal,
-    inboxSelectMode,
-    setInboxSelectMode,
-    selectedInboxIds,
-    hiddenInboxCount,
-    toggleInboxSelection,
-    selectAllVisibleInbox,
-    clearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
-    inboxPartnerKey,
-    setInboxPartnerKey,
-    inboxDirectionFilter,
-    setInboxDirectionFilter,
-    inboxSourceFilter,
-    setInboxSourceFilter,
-    inboxChannelFiltersArmed,
-    setInboxChannelFiltersArmed,
-    inboxWireFiltersArmed,
-    setInboxWireFiltersArmed,
-    inboxPartnerFiltersArmed,
-    setInboxPartnerFiltersArmed,
-    inboxWireFilter,
-    setInboxWireFilter,
-    inboxPartnerOptions,
-    selectInboxPartnerForSend,
-    removeInboxPartnerFromQuickList,
     resetInboxViewFilters,
-    inboxVisibilityHint,
     vaultBannerActions,
     channelMode,
     onChannelModeChange,
@@ -257,14 +214,42 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenEinsatzleitung,
     phonebookNavRequest,
     onOpenSettings,
+    inboxUnreadThreadOptions,
+  } = c
+
+  const { connectionStatusRead, contactDirectoryRead, inboxViewUi, meshSendOptions } = messengerPorts
+  const {
+    apiStatus,
+    basisUnreachable,
+    statusCacheAgeMinutes,
+    packageIdMismatch,
+    deviceTimeTrustWarn,
+    connectedAddresses: handshakeConnectedAddresses,
+  } = connectionStatusRead
+  const { directory, isMeshVerifiedForAddress } = contactDirectoryRead
+  const {
+    meshPlaintextToNodeEnabled,
+    meshPlaintextNodeId,
+    setMeshPlaintextNodeId,
+    setMeshPlaintextToNodeEnabled,
+    setMeshtasticChannelIndex,
+  } = meshSendOptions
+  const {
+    selectInboxPartnerForSend,
     inboxOverviewChipsVisible,
     inboxOverviewCategory,
     setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
-    inboxUnreadThreadOptions,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
-  } = c
+    inboxSelectMode,
+    selectedInboxIds,
+    toggleInboxSelection,
+    protokollMarkedIds,
+    pinnedPinnwandIds,
+    togglePinnedPinnwand,
+    toggleProtokollMark,
+  } = inboxViewUi
 
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
@@ -282,23 +267,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
   }, [phonebookNavRequest])
 
-  const handshakeConnected = useMemo(
-    () =>
-      resolveConnectedAddresses({
-        fromStatus: apiStatus?.connectedAddresses,
-        preferCacheWhenEmpty: basisUnreachable,
-      }),
-    [apiStatus?.connectedAddresses, basisUnreachable]
-  )
-
-  const pendingHandshakeRefreshKey = `${handshakeConnected.addresses.join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
+  const pendingHandshakeRefreshKey = `${[...handshakeConnectedAddresses].join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
   const internalPendingHandshakes = useChatViewPendingHandshakes({
     enabled:
       !c.pendingHandshakes &&
       /^0x[a-fA-F0-9]{64}$/i.test(myAddress.trim()) &&
       (basisUnreachable !== true || hasCachedHandshakeOffers() || canFetchHandshakesViaDirectIota()),
-    connectedAddresses: handshakeConnected.addresses,
+    connectedAddresses: [...handshakeConnectedAddresses],
     refreshToken: pendingHandshakeRefreshKey,
     contactDirectory: directory,
     vaultLocked: apiStatus?.locked === true,
@@ -708,24 +684,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxFromCache,
     inboxCacheAgeMinutes,
     inboxLiveSource,
-    inboxVisibilityHint,
-    inboxPartnerOptions,
-    inboxPartnerKey,
-    setInboxPartnerKey,
-    inboxDirectionFilter,
-    setInboxDirectionFilter,
-    inboxSourceFilter,
-    setInboxSourceFilter,
-    inboxChannelFiltersArmed,
-    setInboxChannelFiltersArmed,
-    inboxWireFiltersArmed,
-    setInboxWireFiltersArmed,
-    inboxPartnerFiltersArmed,
-    setInboxPartnerFiltersArmed,
-    inboxWireFilter,
-    setInboxWireFilter,
-    selectInboxPartnerForSend,
-    removeInboxPartnerFromQuickList,
     exportEcdhMorgPkgForMessage,
     onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt,
@@ -734,42 +692,25 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
-    protokollMarkedIds,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
     onHideAllVisibleLocal,
-    inboxSelectMode,
-    setInboxSelectMode,
-    selectedInboxIds,
-    hiddenInboxCount,
-    toggleInboxSelection,
-    selectAllVisibleInbox,
-    clearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
-    toggleProtokollMark,
     recipient,
     setStatus,
     setStatusMsg,
     addInboxSenderToContactBook,
     onSarqNakWire,
     localPurgeBusy,
-    pinnedPinnwandIds,
-    togglePinnedPinnwand,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
     openPartnerSetupPanel,
     onOpenPhonebook: () => setPhonebookOpen(true),
     messagingPersistenceMode,
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
     showIotaExpertInboxActions: uiCaps.expertTools,
-    inboxOverviewChipsVisible,
-    inboxOverviewCategory,
-    setInboxOverviewCategory,
-    inboxOverviewUnreadCounts,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
-    isInboxMessageUnread,
-    isPinnwandInboxMessage,
     showInboxPackageExpertMenu: showInboxPackageExpert,
     inboxPackageFilter,
     packageIdSuggestions,
@@ -800,12 +741,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     offlineMailboxQueueErrorHint,
     offlineMailboxQueueItems,
     removeOfflineMailboxQueueItems,
-    meshPlaintextToNodeEnabled,
-    setMeshPlaintextToNodeEnabled,
-    meshPlaintextNodeId,
-    setMeshPlaintextNodeId,
-    meshtasticChannelIndex,
-    setMeshtasticChannelIndex,
     refreshApiStatus,
     loadMessages,
     composerMailboxObjectId,
@@ -861,7 +796,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         encrypted={encrypted}
         apiStatus={apiStatus}
         onRefreshStatus={refreshApiStatus}
-        basisUnreachable={basisUnreachable}
+        basisUnreachable={basisUnreachable ?? false}
         statusCacheAgeMinutes={statusCacheAgeMinutes}
         offlineStatus={offlineStatus}
         meshBleConnected={meshtastic.connected}
@@ -998,7 +933,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             loadError={loadError}
             inboxFromCache={inboxFromCache}
             inboxCacheAgeMinutes={inboxCacheAgeMinutes}
-            basisUnreachable={basisUnreachable}
+            basisUnreachable={basisUnreachable ?? false}
             messages={pinnwandFeedMessages}
             inboxRows={pinnwandInboxRows}
             myAddress={myAddress}
@@ -1073,7 +1008,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onOpenChange={setPhonebookOpen}
           directory={directory}
           refreshContactDirectory={refreshContactDirectory}
-          connectedAddresses={apiStatus?.connectedAddresses ?? []}
+          connectedAddresses={[...handshakeConnectedAddresses]}
           onSelectContact={applyPhonebookContact}
           teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
           allowInitialProfileImport={canAccessEinsatzleitung(role)}
