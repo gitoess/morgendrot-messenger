@@ -92,6 +92,7 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
 
   afterEach(async () => {
     await drainDirectIotaTabSessionPersistForTests()
+    resetDirectIotaMnemonicSessionModuleForTests()
     vi.unstubAllGlobals()
     clearDirectIotaSessionSigner()
     clearPersistedDirectIotaSessionSigner()

@@ -84,7 +84,11 @@ function getOrCreateTabSessionPassword(): string | null {
   }
 }
 
-async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw: string): Promise<void> {
+async function persistDirectIotaSessionSignerTabSessionEncrypted(
+  signerImportRaw: string,
+  epochAtSchedule: number
+): Promise<void> {
+  if (epochAtSchedule !== tabSessionPersistEpoch) return
   if (typeof window === 'undefined') return
   const raw = String(signerImportRaw || '').trim()
   if (!raw) return
@@ -93,6 +97,7 @@ async function persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw
   try {
     const plain = JSON.stringify({ signerImportRaw: raw })
     const { meta, ciphertext } = await encryptHandoffEnvUtf8(plain, tabPassword)
+    if (epochAtSchedule !== tabSessionPersistEpoch) return
     const payload: StoredDirectIotaSignerTabEncV1 = {
       schema: 'morgendrot.directIotaSigner.tabEnc.v1',
       crypto: meta,
@@ -115,7 +120,7 @@ function scheduleDirectIotaTabSessionPersist(signerImportRaw: string): void {
     .catch(() => {})
     .then(async () => {
       if (epochAtSchedule !== tabSessionPersistEpoch) return
-      await persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw)
+      await persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw, epochAtSchedule)
     })
     .catch(() => {})
 }
@@ -132,7 +137,11 @@ export function resetDirectIotaMnemonicSessionModuleForTests(): void {
 }
 
 export async function drainDirectIotaTabSessionPersistForTests(): Promise<void> {
+  const epochAtDrain = tabSessionPersistEpoch
   await tabSessionPersistIdle.catch(() => {})
+  if (epochAtDrain !== tabSessionPersistEpoch) {
+    await tabSessionPersistIdle.catch(() => {})
+  }
 }
 
 /** Sync: nur Legacy-Klartext-Tab (verschlüsselte Tab-Session → async Restore). */
