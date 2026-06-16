@@ -6,10 +6,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
-import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
-import {
-  asInboxFeedRead,
-} from '@/frontend/features/messenger-ports'
+import { ChatViewInboxPanel } from '@/frontend/components/chat-view-inbox-panel'
+import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
 import { ChatViewChatHeader, type ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
@@ -49,7 +47,6 @@ import {
   LazyChatViewMorgPkgImportsSheet,
   LazyChatViewRelaySubmitButton,
 } from '@/frontend/components/lazy/messenger-scope-b'
-import { ChatViewInboxPackageExpertMenu } from '@/frontend/components/chat-view-inbox-package-expert-menu'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordContactLastContacted } from '@/frontend/lib/contact-phonebook-meta-store'
 import { addressMatchesIdentity } from '@/frontend/features/inbox/inbox-partner-filter'
@@ -700,10 +697,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     toast.success('Empfänger übernommen — siehe „Verschlüsselung & Partner“ oben.')
   }, [partner, setRecipient, selectInboxPartnerForSend])
 
-  const inboxPanelProps = {
-    ...asInboxFeedRead(messages, myAddress),
-    messageCount: inboxTotalCount,
-    inboxRowCount: inboxRows.length,
+  const inboxPanelProps = useChatViewInboxPanelProps({
+    messages,
+    myAddress,
+    inboxTotalCount,
+    inboxRows,
     morgPkgFileRef,
     morgPkgDeviceFilesRef,
     onMorgPkgImportFile,
@@ -711,16 +709,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onMorgPkgDeviceExportPick,
     morgPkgDeviceBusy,
     morgPkgExportRecipient,
-    onMorgPkgExportRecipientChange: setMorgPkgExportRecipient,
+    setMorgPkgExportRecipient,
     morgPkgExportPartnerOptions,
     morgPkgImportCount: morgPkgImports.length,
     onOpenMorgPkgArchive: () => setMorgPkgImportsOpen(true),
     apiStatus,
-    onRefresh: () => {
-      void loadMessages('reset')
-      refreshContactDirectory()
-      void reloadPendingHandshakes()
-    },
+    loadMessages,
+    refreshContactDirectory,
+    reloadPendingHandshakes,
     pendingHandshakeOffers,
     outgoingHandshakeOffers,
     pendingHandshakesLoading,
@@ -759,8 +755,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setInboxWireFilter,
     selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList,
-    inboxRows,
-    contactDirectory: directory,
+    directory,
     isMeshVerifiedForAddress,
     exportEcdhMorgPkgForMessage,
     onExportEinsatzberichtJson,
@@ -770,67 +765,52 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onExportEinsatzprotokoll,
     onExportEinsatzprotokollPlainZip,
     onExportEinsatzprotokollMarked,
-    protokollMarkedCount: protokollMarkedIds.size,
     protokollMarkedIds,
     onHideInboxMessageLocal,
     onPurgeInboxMessageChain,
     onForwardMessage,
-    onToggleHideAllVisibleLocal: onHideAllVisibleLocal,
+    onHideAllVisibleLocal,
     inboxSelectMode,
     setInboxSelectMode,
     selectedInboxIds,
     hiddenInboxCount,
     toggleInboxSelection,
-    onSelectAllVisible: selectAllVisibleInbox,
-    onClearInboxSelection: clearInboxSelection,
+    selectAllVisibleInbox,
+    clearInboxSelection,
     onBulkHideSelected,
     onBulkPurgeSelected,
     toggleProtokollMark,
     recipient,
     setStatus,
     setStatusMsg,
-    onAddSenderToContactBook: addInboxSenderToContactBook,
+    addInboxSenderToContactBook,
     onSarqNakWire,
     localPurgeBusy,
     pinnedPinnwandIds,
-    onTogglePinnedPinnwand: togglePinnedPinnwand,
+    togglePinnedPinnwand,
     showPinnwandPinActions: pinnwandCaps.configured && pinnwandCaps.canPost,
-    showPhonebookButton: false,
-    onContactsChanged: refreshContactDirectory,
-    onMailboxPanelStatus: (msg, kind) => {
-      if (kind === 'success') toast.success(msg)
-      else toast.error(msg)
-    },
-    onApplySendRecipient: (addr) => {
-      setRecipient(addr)
-      selectInboxPartnerForSend(addr)
-    },
+    openPartnerSetupPanel,
     onOpenPhonebook: () => setPhonebookOpen(true),
-    onOpenPartnerSetup: openPartnerSetupPanel,
     messagingPersistenceMode,
     showInboxIotaFilter: uiCaps.showInboxIotaFilter,
     showIotaExpertInboxActions: uiCaps.expertTools,
     inboxOverviewChipsVisible,
     inboxOverviewCategory,
-    onInboxOverviewCategoryChange: setInboxOverviewCategory,
+    setInboxOverviewCategory,
     inboxOverviewUnreadCounts,
     pinnwandOverviewConfigured: pinnwandCaps.configured,
     isInboxMessageUnread,
     isPinnwandInboxMessage,
     showInboxPackageExpertMenu: showInboxPackageExpert,
-    inboxPackageExpertMenu: showInboxPackageExpert ? (
-      <ChatViewInboxPackageExpertMenu
-        serverPackageId={apiStatus?.packageId}
-        inboxPackageFilter={inboxPackageFilter}
-        packageIdSuggestions={packageIdSuggestions}
-        packageIdBusy={packageIdBusy}
-        onApplyTemporary={applyTemporaryInboxPackage}
-        onClearTemporary={clearTemporaryInboxPackage}
-        onApplyPermanent={applyPackageIdBackend}
-        onOpenSettings={onOpenSettings}
-      />
-    ) : null,
-  } satisfies ChatViewInboxPanelProps
+    inboxPackageFilter,
+    packageIdSuggestions,
+    packageIdBusy,
+    applyTemporaryInboxPackage,
+    clearTemporaryInboxPackage,
+    applyPackageIdBackend,
+    onOpenSettings,
+    setRecipient,
+  })
 
   const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
     message,
