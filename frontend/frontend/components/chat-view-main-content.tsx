@@ -66,7 +66,6 @@ import { Button } from '@/components/ui/button'
 
 export type ChatViewMainContentProps = ChatViewCoreState & {
   vaultBannerActions?: ChatViewVaultBannerActions
-  channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
   pendingHandshakes?: PendingHandshakesPollState
   onOpenEinsatzleitung?: () => void
@@ -76,18 +75,8 @@ export type ChatViewMainContentProps = ChatViewCoreState & {
 
 export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const {
-    isPrivate,
-    isGroup,
-    activeGroup,
-    refreshMessengerGroups,
-    role,
-    myAddress,
     messengerPorts,
-    setSending,
-    composerMailboxObjectId,
-    setComposerMailboxObjectId,
     vaultBannerActions,
-    channelMode,
     onChannelModeChange,
     pendingHandshakes,
     onOpenEinsatzleitung,
@@ -96,6 +85,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   } = c
 
   const {
+    shellRouting,
     connectionStatusRead,
     contactDirectoryRead,
     inboxViewUi,
@@ -114,6 +104,15 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     packageExpert,
     meshSetup,
   } = messengerPorts
+  const {
+    channelMode,
+    isPrivate,
+    isGroup,
+    activeGroup,
+    refreshMessengerGroups,
+    role,
+    myAddress,
+  } = shellRouting
   const {
     apiStatus,
     basisUnreachable,
@@ -181,7 +180,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setPartner,
       setRecipient,
       setEncrypted,
-      setComposerMailboxObjectId,
+      setComposerMailboxObjectId: composerSendPath.onComposerMailboxObjectIdChange,
       setMeshtasticChannelIndex,
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
@@ -196,7 +195,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setPartner,
       setRecipient,
       setEncrypted,
-      setComposerMailboxObjectId,
+      composerSendPath.onComposerMailboxObjectIdChange,
       setMeshtasticChannelIndex,
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
@@ -223,7 +222,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       vaultLocked: apiStatus?.locked === true,
       basisUnreachable: basisUnreachable === true,
     },
-    setSending,
+    onChannelModeChange,
     setStatus,
     setStatusMsg,
     refreshContactDirectory,
@@ -336,11 +335,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     groupPanelDirectory,
   } = useChatViewShellProps({
     messengerPorts: panelMessengerPorts,
-    isPrivate,
-    isGroup,
-    role,
-    channelMode,
-    onChannelModeChange,
     vaultBannerActions,
     offlineStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
@@ -361,8 +355,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const { sendPanelProps } = useChatViewSendPanelProps({
     messengerPorts: panelMessengerPorts,
     activeGroup,
-    composerMailboxObjectId,
-    setComposerMailboxObjectId,
     expertTools: uiCaps.expertTools,
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
@@ -372,7 +364,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
-    sending: messengerPorts.attachmentBar.sending,
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
     setStatusMsg,
   })

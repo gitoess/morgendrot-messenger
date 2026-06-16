@@ -20,7 +20,6 @@ function baseDeps(over: Partial<ChatViewEncryptedPartnerPanelPropsDeps> = {}): C
     })
   return {
     messengerPorts,
-    sending: false,
     setStatusMsg: vi.fn(),
     ...over,
   }

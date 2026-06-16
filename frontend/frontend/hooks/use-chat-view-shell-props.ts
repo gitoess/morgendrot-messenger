@@ -4,7 +4,6 @@ import { useMemo } from 'react'
 import type { ChatViewChatHeaderProps } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
-import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 
 export type ChatViewShellPropsDeps = {
@@ -19,12 +18,8 @@ export type ChatViewShellPropsDeps = {
     | 'offlineMailboxQueueRead'
     | 'meshDevice'
     | 'packageExpert'
+    | 'shellRouting'
   >
-  isPrivate: boolean
-  isGroup: boolean
-  role: string
-  channelMode?: MessengerChatChannel
-  onChannelModeChange?: (c: MessengerChatChannel) => void
   vaultBannerActions?: ChatViewVaultBannerActions
   offlineStatus?: OfflineStatusSnapshot
   showAdhocTransport: boolean
@@ -42,11 +37,12 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     offlineMailboxQueueRead,
     meshDevice,
     packageExpert,
+    shellRouting,
   } = deps.messengerPorts
 
   const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
     () => ({
-      isPrivate: deps.isPrivate,
+      isPrivate: shellRouting.isPrivate,
       encrypted: sendTransportChoice.encrypted,
       apiStatus: connectionStatusRead.apiStatus,
       onRefreshStatus: connectionStatusRead.refreshApiStatus,
@@ -54,33 +50,33 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
       offlineStatus: deps.offlineStatus,
       meshBleConnected: meshDevice.connected,
-      role: deps.role,
+      role: shellRouting.role,
       deviceTimeTrustWarn: connectionStatusRead.deviceTimeTrustWarn,
       vaultBannerActions: deps.vaultBannerActions,
-      channelMode: deps.channelMode,
-      onChannelModeChange: deps.onChannelModeChange,
+      channelMode: shellRouting.channelMode,
+      onChannelModeChange: shellRouting.onChannelModeChange,
       sendPath: {
-        visible: deps.isPrivate || deps.isGroup || !sendTransportChoice.encrypted,
-        channelMode: deps.channelMode ?? 'private',
+        visible: shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted,
+        channelMode: shellRouting.channelMode,
         encrypted: sendTransportChoice.encrypted,
         forcedTransport: sendTransportChoice.forcedTransport,
         onForcedTransportChange: sendTransportChoice.onForcedTransportChange,
         onEncryptedChange: sendTransportChoice.onEncryptedChange,
-        myAddressLine: deps.isPrivate ? inboxFeedRead.myAddress : undefined,
+        myAddressLine: shellRouting.isPrivate ? inboxFeedRead.myAddress : undefined,
         showAdhocTransport: deps.showAdhocTransport,
         composerDelivery: composerSendPath.composerDelivery,
         onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
         apiStatus: connectionStatusRead.apiStatus,
       },
       pinnwandTabUnreadCount:
-        deps.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
+        shellRouting.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
     }),
     [
-      deps.isPrivate,
-      deps.isGroup,
-      deps.role,
-      deps.channelMode,
-      deps.onChannelModeChange,
+      shellRouting.isPrivate,
+      shellRouting.isGroup,
+      shellRouting.role,
+      shellRouting.channelMode,
+      shellRouting.onChannelModeChange,
       deps.vaultBannerActions,
       deps.offlineStatus,
       meshDevice.connected,
@@ -128,12 +124,12 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       contactDirectory: contactDirectoryRead.directory,
       apiStatus: connectionStatusRead.apiStatus,
       unreadCount:
-        deps.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
+        shellRouting.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
     }),
     [
       contactDirectoryRead.directory,
       connectionStatusRead.apiStatus,
-      deps.channelMode,
+      shellRouting.channelMode,
       inboxViewUi.inboxOverviewUnreadCounts,
     ]
   )

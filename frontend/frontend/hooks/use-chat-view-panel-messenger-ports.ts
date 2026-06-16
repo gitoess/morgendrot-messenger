@@ -64,7 +64,7 @@ export type UseChatViewPanelMessengerPortsDeps = {
     vaultLocked: boolean
     basisUnreachable: boolean
   }
-  setSending: (v: boolean) => void
+  onChannelModeChange?: (c: MessengerChatChannel) => void
   setStatus: (v: SendComposerStatus) => void
   setStatusMsg: (v: string) => void
   refreshContactDirectory: () => void
@@ -148,7 +148,7 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
       dismissLocal: () => void
       label: string
     }) => {
-      deps.setSending(true)
+      attachmentBar.setSending?.(true)
       try {
         const purge = await tryPurgeHandshakeOfferOnChain({
           recipient: p.recipient,
@@ -170,10 +170,10 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
         }
         window.setTimeout(() => void reloadPendingHandshakes(), 2500)
       } finally {
-        deps.setSending(false)
+        attachmentBar.setSending?.(false)
       }
     },
-    [deps.apiStatus, deps.setSending, reloadPendingHandshakes]
+    [deps.apiStatus, attachmentBar.setSending, reloadPendingHandshakes]
   )
 
   const handleDeleteIncomingHandshake = useCallback(
@@ -335,29 +335,34 @@ export function useChatViewPanelMessengerPorts(deps: UseChatViewPanelMessengerPo
 
   const panelMessengerPorts = useMemo(
     () =>
-      assembleChatViewPanelMessengerPorts(messengerPorts, {
-        handshakeOffersRead: asHandshakeOffersRead(
-          pendingHandshakeOffers,
-          outgoingHandshakeOffers,
-          reloadPendingHandshakes
-        ),
-        inboxHandshakePanelActions: asInboxHandshakePanelActions({
-          pendingHandshakesLoading,
-          pendingHandshakeCount,
-          onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
-          onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
-          onReplyToMessage: handleReplyToInboxMessage,
-          onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
-          onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
-          onResendOutgoingHandshake: handleResendOutgoingHandshake,
-        }),
-        inboxPanelLocalActions: asInboxPanelLocalActions({
-          onAddSenderToContactBook: addInboxSenderToContactBook,
-          onSarqNakWire,
-        }),
-      }),
+      assembleChatViewPanelMessengerPorts(
+        messengerPorts,
+        {
+          handshakeOffersRead: asHandshakeOffersRead(
+            pendingHandshakeOffers,
+            outgoingHandshakeOffers,
+            reloadPendingHandshakes
+          ),
+          inboxHandshakePanelActions: asInboxHandshakePanelActions({
+            pendingHandshakesLoading,
+            pendingHandshakeCount,
+            onAcceptPendingHandshake: handleAcceptHandshakeFromInbox,
+            onUseSenderAsPartnerFromInbox: handleUseSenderAsPartnerFromInbox,
+            onReplyToMessage: handleReplyToInboxMessage,
+            onDeleteIncomingHandshake: handleDeleteIncomingHandshake,
+            onDeleteOutgoingHandshake: handleDeleteOutgoingHandshake,
+            onResendOutgoingHandshake: handleResendOutgoingHandshake,
+          }),
+          inboxPanelLocalActions: asInboxPanelLocalActions({
+            onAddSenderToContactBook: addInboxSenderToContactBook,
+            onSarqNakWire,
+          }),
+        },
+        deps.onChannelModeChange ? { onChannelModeChange: deps.onChannelModeChange } : undefined
+      ),
     [
       messengerPorts,
+      deps.onChannelModeChange,
       pendingHandshakeOffers,
       outgoingHandshakeOffers,
       reloadPendingHandshakes,

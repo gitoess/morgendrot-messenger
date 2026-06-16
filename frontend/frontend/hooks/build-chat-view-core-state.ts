@@ -1,5 +1,5 @@
 /**
- * Flache Core-Rückgabe + messengerPorts aus Sub-Hook-Slices (Orchestrator bleibt dünn).
+ * Core-Rückgabe: nur `messengerPorts` (P9 — Orchestrator-Felder in Ports).
  */
 
 import { assembleChatViewMessengerPorts, type ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
@@ -53,7 +53,9 @@ export function buildChatViewCoreMessengerPorts(
   myAddress: string,
   channelMode: MessengerChatChannel,
   isGroup: boolean,
-  role: string
+  role: string,
+  activeGroup: MessengerGroupDefinition | null,
+  refreshMessengerGroups: () => void
 ): ChatViewMessengerPorts {
   const connectedAddresses = resolveConnectedAddresses({
     fromStatus: inbox.apiStatus?.connectedAddresses,
@@ -77,6 +79,8 @@ export function buildChatViewCoreMessengerPorts(
       channelMode,
       isGroup,
       isPrivate: composer.isPrivate,
+      composerMailboxObjectId: composer.composerMailboxObjectId,
+      setComposerMailboxObjectId: composer.setComposerMailboxObjectId,
     },
     transport: {
       encrypted: composer.encrypted,
@@ -134,6 +138,7 @@ export function buildChatViewCoreMessengerPorts(
     },
     attachmentBar: {
       sending: composer.sending,
+      setSending: composer.setSending,
       pickDisabled: send.voiceBusy || send.voiceRecording,
       compactFileRef: send.compactFileRef,
       compactBusy: send.compactBusy,
@@ -319,6 +324,15 @@ export function buildChatViewCoreMessengerPorts(
       feedMessages: inbox.pinnwandFeedMessages,
       feedInboxRows: inbox.pinnwandInboxRows,
     },
+    shellRouting: {
+      channelMode,
+      isPrivate: composer.isPrivate,
+      isGroup,
+      activeGroup,
+      refreshMessengerGroups,
+      role,
+      myAddress,
+    },
   })
 }
 
@@ -332,21 +346,10 @@ export function buildChatViewCoreState(input: BuildChatViewCoreStateInput) {
     myAddress,
     channelMode,
     isGroup,
-    role
+    role,
+    activeGroup,
+    refreshMessengerGroups
   )
 
-  return {
-    channelMode,
-    isPrivate: composer.isPrivate,
-    isGroup,
-    activeGroup,
-    refreshMessengerGroups,
-    role,
-    myAddress,
-    messengerPorts,
-    sending: composer.sending,
-    setSending: composer.setSending,
-    composerMailboxObjectId: composer.composerMailboxObjectId,
-    setComposerMailboxObjectId: composer.setComposerMailboxObjectId,
-  }
+  return { messengerPorts }
 }

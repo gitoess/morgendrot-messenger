@@ -24,6 +24,7 @@ import { asInboxActions, type InboxActionsPort } from './inbox-actions-port'
 import type { InboxHandshakePanelActionsPort } from './inbox-handshake-panel-actions-port'
 import type { InboxPanelLocalActionsPort } from './inbox-panel-local-actions-port'
 import type { ChatViewShellOrchestrationPort } from './shell-orchestration-port'
+import { asShellRouting, type ShellRoutingPort } from './shell-routing-port'
 import { asInboxExportActions, type InboxExportActionsPort } from './inbox-export-actions-port'
 import { asPackageExpert, type PackageExpertPort } from './package-expert-port'
 import { asSendActions, type SendActionsPort, type SendComposerStatus } from './send-actions-port'
@@ -59,6 +60,8 @@ import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
 import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import type { MorgPkgImportItem, MorgPkgImportRecord } from '@/frontend/lib/morg-pkg-import-store'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewComposerDraftSlice = {
@@ -76,9 +79,21 @@ export type ChatViewComposerPartnerSlice = {
 export type ChatViewComposerSendPathSlice = {
   composerDelivery: import('@/frontend/lib/composer-delivery-channel').ComposerDeliveryChannel
   setComposerDelivery: (d: import('@/frontend/lib/composer-delivery-channel').ComposerDeliveryChannel) => void
-  channelMode?: import('@/frontend/lib/messenger-chat-channel').MessengerChatChannel
+  channelMode?: MessengerChatChannel
   isGroup: boolean
   isPrivate: boolean
+  composerMailboxObjectId: string
+  setComposerMailboxObjectId: (v: string) => void
+}
+
+export type ChatViewShellRoutingSlice = {
+  channelMode: MessengerChatChannel
+  isPrivate: boolean
+  isGroup: boolean
+  activeGroup: MessengerGroupDefinition | null
+  refreshMessengerGroups: () => void
+  role: string
+  myAddress: string
 }
 
 export type ChatViewTransportSlice = {
@@ -123,6 +138,7 @@ export type ChatViewMorgPkgArchiveSlice = {
 
 export type ChatViewAttachmentBarSlice = {
   sending: boolean
+  setSending: (v: boolean) => void
   pickDisabled?: boolean
   compactFileRef: RefObject<HTMLInputElement | null>
   compactBusy: boolean
@@ -362,16 +378,28 @@ export type ChatViewMessengerPorts = {
   meshDevice: MeshDevicePort
   meshSetup: MeshSetupPort
   pinnwandFeedRead: PinnwandFeedReadPort
+  shellRouting: ShellRoutingPort
 }
 
 /** Panel-Ports = Core-Ports plus Shell-Orchestration (Handshake-Poll + Inbox-Aktionen, P7). */
 export type ChatViewPanelMessengerPorts = ChatViewMessengerPorts & ChatViewShellOrchestrationPort
 
+export function assembleShellRoutingPort(slice: ChatViewShellRoutingSlice): ShellRoutingPort {
+  return asShellRouting(slice)
+}
+
 export function assembleChatViewPanelMessengerPorts(
   base: ChatViewMessengerPorts,
-  shell: ChatViewShellOrchestrationPort
+  shell: ChatViewShellOrchestrationPort,
+  shellRoutingOverlay?: Pick<ShellRoutingPort, 'onChannelModeChange'>
 ): ChatViewPanelMessengerPorts {
-  return { ...base, ...shell }
+  return {
+    ...base,
+    ...shell,
+    shellRouting: shellRoutingOverlay
+      ? { ...base.shellRouting, ...shellRoutingOverlay }
+      : base.shellRouting,
+  }
 }
 
 export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
@@ -384,7 +412,9 @@ export function assembleComposerSendPathPort(slice: ChatViewComposerSendPathSlic
     slice.setComposerDelivery,
     slice.channelMode,
     slice.isGroup,
-    slice.isPrivate
+    slice.isPrivate,
+    slice.composerMailboxObjectId,
+    slice.setComposerMailboxObjectId
   )
 }
 
@@ -632,6 +662,7 @@ export function assembleChatViewMessengerPorts(input: {
   meshDevice: ChatViewMeshDeviceSlice
   meshSetup: ChatViewMeshSetupSlice
   pinnwandFeed: ChatViewPinnwandFeedSlice
+  shellRouting: ChatViewShellRoutingSlice
   voiceFromHook?: VoiceRecordFromHook
   sosVoiceAwaitingSend?: boolean
 }): ChatViewMessengerPorts {
@@ -664,6 +695,7 @@ export function assembleChatViewMessengerPorts(input: {
     meshDevice: assembleMeshDevicePort(input.meshDevice),
     meshSetup: assembleMeshSetupPort(input.meshSetup),
     pinnwandFeedRead: assemblePinnwandFeedReadPort(input.pinnwandFeed),
+    shellRouting: assembleShellRoutingPort(input.shellRouting),
     voiceRecordSendPanel:
       input.voiceFromHook != null
         ? assembleVoiceRecordSendPanelPort(input.voiceFromHook, input.sosVoiceAwaitingSend ?? false)

@@ -9,6 +9,8 @@ export type AttachmentBarPort = {
   /** z. B. während Blob→LoRa auf dem Server: kurzer Text + Balken (kein Polling). */
   attachmentPipelineHint?: string | null
   sending: boolean
+  /** Nur für Shell/Panel-Orchestrierung (z. B. Handshake-Purge). */
+  setSending?: (v: boolean) => void
   /** z. B. während Sprachaufnahme / Kodierung */
   pickDisabled?: boolean
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void

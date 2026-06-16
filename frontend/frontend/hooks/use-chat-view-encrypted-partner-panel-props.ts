@@ -15,8 +15,8 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
     | 'contactDirectoryRead'
     | 'connectionStatusRead'
     | 'handshakeActions'
+    | 'attachmentBar'
   >
-  sending: boolean
   activeGroupMemberAddresses?: string[]
   setStatusMsg: (v: string) => void
 }
@@ -33,6 +33,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     contactDirectoryRead,
     connectionStatusRead,
     handshakeActions,
+    attachmentBar,
   } = deps.messengerPorts
 
   const showEncryptedPartnerPanel = useMemo(
@@ -64,7 +65,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
     ? {
         partner: composerPartner.partner,
         onPartnerChange: composerPartner.onPartnerChange,
-        sending: deps.sending,
+        sending: attachmentBar.sending,
         onHandshake: handshakeActions.onHandshake,
         onConnectAcceptPartner: handshakeActions.onConnectAcceptPartner,
         onConnectDeployment: handshakeActions.onConnectDeployment,

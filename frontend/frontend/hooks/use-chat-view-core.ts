@@ -26,7 +26,7 @@ export type UseChatViewCoreParams = {
 /**
  * Chat-View-Orchestrierung: drei Sub-Hooks (Composer, Inbox, Send) + Port-Assembler.
  * Meshtastic-First: Funk über `useMeshtasticBle` in der Send-Schicht.
- * Rückgabe: `messengerPorts` + schlanke Orchestrator-Felder (P8).
+ * Rückgabe: nur `messengerPorts` (P9).
  */
 export function useChatViewCore(p: UseChatViewCoreParams) {
   const { channelMode, role, myAddress } = p

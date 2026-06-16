@@ -37,6 +37,8 @@ export type { PinnwandFeedReadPort } from './pinnwand-feed-read-port'
 export { asPinnwandFeedRead } from './pinnwand-feed-read-port'
 export type { ChatViewShellOrchestrationPort } from './shell-orchestration-port'
 export { assembleShellOrchestrationPort } from './shell-orchestration-port'
+export type { ShellRoutingPort } from './shell-routing-port'
+export { asShellRouting } from './shell-routing-port'
 export type { InboxPreviewReadPort } from './inbox-preview-read-port'
 export { asInboxPreviewRead } from './inbox-preview-read-port'
 export type { InboxPanelReadPort } from './inbox-panel-read-port'
@@ -119,5 +121,7 @@ export {
   type ChatViewMeshFunkSlice,
   type ChatViewMessengerPorts,
   type ChatViewPanelMessengerPorts,
+  type ChatViewShellRoutingSlice,
   type ChatViewTransportSlice,
+  assembleShellRoutingPort,
 } from './chat-view-core-port-assembler'

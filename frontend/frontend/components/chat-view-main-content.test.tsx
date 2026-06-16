@@ -4,6 +4,8 @@ import { ChatViewMainContent, type ChatViewMainContentProps } from '@/frontend/c
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ApiStatus } from '@/frontend/lib/api'
+import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 
 vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
@@ -72,47 +74,70 @@ function buildMainContentProps(
   over: Partial<ChatViewMainContentProps> & {
     apiStatus?: ApiStatus | null
     packageIdMismatch?: boolean
+    /** Legacy-Overrides — werden in `messengerPorts.shellRouting` gemerged. */
+    isPrivate?: boolean
+    isGroup?: boolean
+    channelMode?: MessengerChatChannel
+    activeGroup?: MessengerGroupDefinition | null
+    role?: string
+    myAddress?: string
   } = {}
 ): ChatViewMainContentProps {
   const {
     apiStatus: overApiStatus,
     packageIdMismatch: overPackageIdMismatch,
     messengerPorts: overPorts,
+    isPrivate,
+    isGroup,
+    channelMode,
+    activeGroup,
+    role,
+    myAddress,
     ...restOver
   } = over
-  const merged = {
-    isPrivate: true,
-    isGroup: false,
-    activeGroup: null,
-    refreshMessengerGroups: noop,
-    role: 'consumer',
-    myAddress: MY_ADDR,
-    sending: false,
-    setSending: noop,
-    composerMailboxObjectId: '',
-    setComposerMailboxObjectId: noop,
-    channelMode: 'private',
-    onChannelModeChange: noop,
-    ...restOver,
-  } as unknown as ChatViewMainContentProps
-  if (overPorts == null) {
-    merged.messengerPorts = testMessengerPorts({
-      myAddress: merged.myAddress,
+  let messengerPorts =
+    overPorts ??
+    testMessengerPorts({
+      myAddress: myAddress ?? MY_ADDR,
       forcedTransport: 'internet',
       encrypted: true,
       composerDelivery: 'chain',
-      channelMode: merged.channelMode,
-      isGroup: merged.isGroup,
-      isPrivate: merged.isPrivate,
+      channelMode: channelMode ?? 'private',
+      isGroup: isGroup ?? false,
+      isPrivate: isPrivate ?? true,
       messagingPersistenceMode: 'event',
       partner: '',
       apiStatus: overApiStatus ?? TEST_API_STATUS_SEND_READY,
       packageIdMismatch: overPackageIdMismatch,
     })
-  } else {
-    merged.messengerPorts = overPorts
+
+  if (
+    isPrivate !== undefined ||
+    isGroup !== undefined ||
+    channelMode !== undefined ||
+    activeGroup !== undefined ||
+    role !== undefined ||
+    myAddress !== undefined
+  ) {
+    messengerPorts = {
+      ...messengerPorts,
+      shellRouting: {
+        ...messengerPorts.shellRouting,
+        ...(isPrivate !== undefined ? { isPrivate } : {}),
+        ...(isGroup !== undefined ? { isGroup } : {}),
+        ...(channelMode !== undefined ? { channelMode } : {}),
+        ...(activeGroup !== undefined ? { activeGroup } : {}),
+        ...(role !== undefined ? { role } : {}),
+        ...(myAddress !== undefined ? { myAddress } : {}),
+      },
+    }
   }
-  return merged
+
+  return {
+    messengerPorts,
+    onChannelModeChange: noop,
+    ...restOver,
+  } as ChatViewMainContentProps
 }
 
 describe('ChatViewMainContent (§ H.1a)', () => {

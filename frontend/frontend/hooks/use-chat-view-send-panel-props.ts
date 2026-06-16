@@ -16,8 +16,6 @@ import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-st
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
   activeGroup: MessengerGroupDefinition | null
-  composerMailboxObjectId?: string
-  setComposerMailboxObjectId: (id: string) => void
   expertTools: boolean
   pinnwandBroadcastAddress?: string
   canPostToPinnwand: boolean
@@ -201,8 +199,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     canSendTelegram: telegramComposer.canSendTelegramOnly,
     telegramBusy: telegramComposer.telegramOnlyBusy,
     onNavigateHomeWhenLocked: deps.vaultBannerActions?.onNavigateHomeWhenLocked,
-    composerMailboxObjectId: deps.composerMailboxObjectId,
-    onComposerMailboxObjectIdChange: deps.setComposerMailboxObjectId,
+    composerMailboxObjectId: composerSendPath.composerMailboxObjectId,
+    onComposerMailboxObjectIdChange: composerSendPath.onComposerMailboxObjectIdChange,
     encryptedRecipientHandshakeStatus: encryptedRecipientHandshake.status,
     encryptedHandshakeBlocksSend: encryptedRecipientHandshake.blocksSend,
     onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,

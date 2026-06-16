@@ -40,7 +40,6 @@ export function ChatView({ variant, role = '', myAddress = '', vaultBannerAction
     <ChatViewMainContent
       {...core}
       vaultBannerActions={vaultBannerActions}
-      channelMode={channel}
       onChannelModeChange={setChannel}
       pendingHandshakes={pendingHandshakes}
       onOpenEinsatzleitung={onOpenEinsatzleitung}

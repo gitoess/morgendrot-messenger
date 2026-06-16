@@ -20,6 +20,7 @@ import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel
 function defaultAttachmentBarSlice(): ChatViewAttachmentBarSlice {
   return {
     sending: false,
+    setSending: vi.fn(),
     compactFileRef: { current: null },
     compactBusy: false,
     attachmentPipelineHint: null,
@@ -124,6 +125,8 @@ export function testMessengerPorts(over: {
       channelMode: over.channelMode ?? 'private',
       isGroup: over.isGroup ?? false,
       isPrivate: over.isPrivate ?? true,
+      composerMailboxObjectId: '',
+      setComposerMailboxObjectId: vi.fn(),
     },
     transport: {
       encrypted: over.encrypted ?? true,
@@ -300,6 +303,15 @@ export function testMessengerPorts(over: {
     meshDevice: defaultMeshDeviceSlice(over.meshDevice),
     meshSetup: defaultMeshSetupSlice(over.meshSetup),
     pinnwandFeed: defaultPinnwandFeedSlice(over.pinnwandFeed),
+    shellRouting: {
+      channelMode: over.channelMode ?? 'private',
+      isPrivate: over.isPrivate ?? true,
+      isGroup: over.isGroup ?? false,
+      activeGroup: null,
+      refreshMessengerGroups: vi.fn(),
+      role: 'consumer',
+      myAddress,
+    },
     voiceFromHook: {
       voicePhase: 'idle',
       voiceActiveKind: null,

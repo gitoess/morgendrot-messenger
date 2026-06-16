@@ -36,7 +36,6 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
   return {
     messengerPorts,
     activeGroup: null,
-    setComposerMailboxObjectId: vi.fn(),
     expertTools: false,
     canPostToPinnwand: false,
     ...over,
@@ -142,6 +141,7 @@ describe('useChatViewSendPanelProps', () => {
           messengerPorts: testMessengerPorts({
             attachmentBar: {
               sending: true,
+              setSending: vi.fn(),
               compactFileRef: { current: null },
               compactBusy: true,
               attachmentPipelineHint: 'Pipeline',
