@@ -1,12 +1,15 @@
 /** Persistente UI-Präferenz: Wallet-Seed beim Vault-Sichern mit einbinden (SIGNER=sdk). */
 const STORAGE_KEY = 'morgendrot.vault.includeSdkMnemonicInBackup'
 
+/** Standard: an — Seed beim Entsperren/Anlegen verschlüsselt merken (Vault + Browser-Session). */
 export function getIncludeSdkMnemonicInBackup(): boolean {
-  if (typeof window === 'undefined') return false
+  if (typeof window === 'undefined') return true
   try {
-    return window.localStorage.getItem(STORAGE_KEY) === '1'
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (raw === null) return true
+    return raw === '1'
   } catch {
-    return false
+    return true
   }
 }
 

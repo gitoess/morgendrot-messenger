@@ -3,6 +3,20 @@
 const HEX_64 = /^0x[a-f0-9]{64}$/
 const TG_KEY = /^tg:-?\d{1,20}$/
 
+/** Platzhalter aus Tests/Events — kein echtes Gegenüber. */
+export const ZERO_IOTA_ADDRESS = `0x${'0'.repeat(64)}` as const
+
+export function isPlaceholderIotaAddress(key: string): boolean {
+  return key.trim().toLowerCase() === ZERO_IOTA_ADDRESS
+}
+
+/** Telefonbuch-/Sidebar-Schlüssel (keine Platzhalter). */
+export function isDisplayableContactStorageKey(key: string): boolean {
+  const k = key.trim().toLowerCase()
+  if (!k || isPlaceholderIotaAddress(k)) return false
+  return isIotaWalletAddress(k) || isTelegramDirectoryKey(k)
+}
+
 export function normalizeTelegramChatId(raw: string): string | null {
   const t = raw.trim()
   return /^-?\d{1,20}$/.test(t) ? t : null

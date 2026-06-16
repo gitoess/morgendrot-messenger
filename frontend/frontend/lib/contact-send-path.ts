@@ -3,6 +3,7 @@ import { parsePhonebookContact } from '@/frontend/lib/apply-phonebook-contact'
 import { lookupContactEntry } from '@/frontend/lib/contact-display'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
+import { isDisplayableContactStorageKey } from '@/frontend/lib/contact-storage-key'
 
 export function contactReachableOnSendPath(
   storageKey: string,
@@ -46,16 +47,8 @@ export function collectContactsForSendPath(p: {
 
   for (const [addr, entry] of Object.entries(p.directory)) {
     const key = addr.trim().toLowerCase()
-    if (!key || hidden.has(key)) continue
+    if (!key || hidden.has(key) || !isDisplayableContactStorageKey(key)) continue
     byKey.set(key, entry)
-  }
-
-  for (const opt of p.partnerOptions) {
-    const key = opt.address.trim().toLowerCase()
-    if (!key || hidden.has(key)) continue
-    if (!byKey.has(key)) {
-      byKey.set(key, lookupContactEntry(p.directory, key))
-    }
   }
 
   const rows: SendPathContactRow[] = []

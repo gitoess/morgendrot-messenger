@@ -2,7 +2,16 @@
  * Posteingang: Gegenüber und Richtung aus Mailbox-Zeilen (`from`, `recipient`, eigene Adresse).
  * Eingehend = Absender ist nicht ich; ausgehend = Absender bin ich (Mailbox spiegelt gesendete Zeilen so).
  */
+import { isPlaceholderIotaAddress } from '@/frontend/lib/contact-storage-key'
 import type { Message } from '@/frontend/lib/types'
+
+/** Keine Platzhalter-/Leer-Adressen als Posteingangs-Gegenüber. */
+export function isIgnoredInboxCounterpartyAddress(raw: string): boolean {
+  const a = raw.trim().toLowerCase()
+  if (!a) return true
+  if (isPlaceholderIotaAddress(a)) return true
+  return false
+}
 
 function norm(s: string): string {
   return s.trim().toLowerCase()
@@ -155,7 +164,7 @@ export function uniqueCounterpartyAddresses(messages: Message[], myAddress: stri
   const out: string[] = []
   for (const m of messages) {
     const cp = messageCounterpartyAddress(m, myAddress)
-    if (!cp) continue
+    if (!cp || isIgnoredInboxCounterpartyAddress(cp)) continue
     const k = norm(cp)
     if (seen.has(k)) continue
     seen.add(k)
@@ -198,7 +207,7 @@ export function uniqueCounterpartyAddressesWhen(
   for (const m of messages) {
     if (!messagePred(m)) continue
     const cp = messageCounterpartyAddress(m, myAddress)
-    if (!cp) continue
+    if (!cp || isIgnoredInboxCounterpartyAddress(cp)) continue
     const k = norm(cp)
     if (seen.has(k)) continue
     seen.add(k)

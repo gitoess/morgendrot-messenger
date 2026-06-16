@@ -93,7 +93,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const [signerImportConfirm, setSignerImportConfirm] = useState('')
   const [unlockMode, setUnlockMode] = useState<DashboardUnlockMode>('vault')
   const [showSignerImportOpen, setShowSignerImportOpen] = useState(false)
-  const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackupState] = useState(false)
+  const [includeSdkMnemonicInBackup, setIncludeSdkMnemonicInBackupState] = useState(() =>
+    getIncludeSdkMnemonicInBackup()
+  )
   const [unlockError, setUnlockError] = useState('')
   const [unlocking, setUnlocking] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)

@@ -58,8 +58,8 @@
     "create": "Profil anlegen"
   },
   "sdkMnemonicPref": {
-    "label": "Wallet-Seed im Vault speichern",
-    "hint": "Verschlüsselt in der Vault-Datei — beim nächsten Start reicht meist nur das Passwort (SIGNER=sdk)."
+    "label": "Wallet-Seed merken",
+    "hint": "Standard an: verschlüsselt im Vault und Browser — beim nächsten Start reicht das Passwort (Direct-RPC, Posteingang). Abwählbar."
   },
   "techNotes": {
     "toggle": "Technische Hinweise",

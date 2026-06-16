@@ -12,6 +12,7 @@ import {
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
 import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
+import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 
 let sessionSigner: Signer | null = null
 let sessionAddress: string | null = null
@@ -337,6 +338,7 @@ export function applyDirectIotaMnemonicSession(
     if (!opts?.skipTabPersist) {
       scheduleDirectIotaTabSessionPersist(t)
     }
+    notifyDirectIotaUiChanged()
     return { ok: true, address: addr }
   } catch (e) {
     clearDirectIotaSessionSigner()

@@ -5,7 +5,7 @@
  * Meshtastic-First: Funk über `useMeshtasticBle` in der Send-Schicht.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { buildChatViewCoreState } from '@/frontend/hooks/build-chat-view-core-state'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { useChatViewMessengerGroup } from '@/frontend/hooks/use-chat-view-messenger-group'
@@ -16,6 +16,8 @@ import {
   isGroupChannel,
   type MessengerChatChannel,
 } from '@/frontend/lib/messenger-chat-channel'
+import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { whenDirectIotaTabSessionPersistIdle } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 export type UseChatViewCoreParams = {
   channelMode: MessengerChatChannel
@@ -42,6 +44,13 @@ export function useChatViewCore(p: UseChatViewCoreParams) {
     myAddress,
     directory,
   })
+
+  useEffect(() => {
+    void (async () => {
+      await whenDirectIotaTabSessionPersistIdle()
+      await tryAutoRestoreDirectIotaSessionSignerAsync()
+    })()
+  }, [])
 
   const onMeshFirstTransportDefault = useCallback(
     (t: Parameters<typeof composer.setForcedTransport>[0]) => {

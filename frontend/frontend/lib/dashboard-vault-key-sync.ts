@@ -6,6 +6,7 @@ import {
   syncDirectChatEcdhAfterVaultUnlock,
   syncDirectIotaSessionSignerAfterVaultUnlock,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic-preference'
 
 /** Nach Entsperren: Messaging-Keys in die API-Sitzung (hasKeys), falls /vault-load beim Unlock fehlte. */
 export async function ensureBackendVaultKeysInSession(vaultPassword: string): Promise<boolean> {
@@ -46,6 +47,7 @@ export async function syncMainnetKeysAfterBackendUnlock(opts: {
     signerMode: statusSigner ?? opts.apiSigner,
     signerImport: opts.signerImport,
     expectedAddress: statusAddr,
+    persistEncrypted: getIncludeSdkMnemonicInBackup(),
   })
   const ecdhSync = await syncDirectChatEcdhAfterVaultUnlock({ vaultPassword: opts.vaultPassword })
   const sdkMode = statusSigner === 'sdk' || opts.apiSigner === 'sdk'

@@ -70,7 +70,7 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
       favorites,
       lastContacted,
       hidden,
-      sendPath: p.activeSendPath,
+      sendPath: p.activeSendPath ?? 'internet',
     })
     const lower = q.toLowerCase()
     return all

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
 import type { ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
@@ -18,6 +18,7 @@ import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import type { ChatViewActiveConversationBarProps } from '@/frontend/components/chat-view-active-conversation-bar'
 
 export type ChatViewActiveConversationContext = {
@@ -168,7 +169,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     isValidRecipient0x(activePartnerKey) &&
     composerSendPath.composerDelivery === 'chain'
 
-  const activeConversationBar = useMemo((): ChatViewActiveConversationBarProps | undefined => {
+  const activeConversationBar: ChatViewActiveConversationBarProps | undefined = useMemo(() => {
     if (!hasActiveDirectConversation || !deps.activeConversation) return undefined
     const handshakeStatus = resolveContactHandshakeStatus({
       address: activePartnerKey,
@@ -274,6 +275,10 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       composerSendPath.channelMode != null && isPinnwandChannel(composerSendPath.channelMode),
     pinnwandBroadcastAddress: deps.pinnwandBroadcastAddress,
     canPostToPinnwand: deps.canPostToPinnwand,
+    activeSendPath: resolveActiveSendPath(
+      composerSendPath.composerDelivery,
+      sendTransportRead.forcedTransport
+    ),
   } satisfies ChatViewSendPanelProps
 
   return { sendPanelProps, syncPartnerAndRecipient }

@@ -1,7 +1,11 @@
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
-import { formatContactDirectoryKey } from '@/frontend/lib/contact-storage-key'
+import {
+  formatContactDirectoryKey,
+  isDisplayableContactStorageKey,
+} from '@/frontend/lib/contact-storage-key'
+import { isIgnoredInboxCounterpartyAddress } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { contactReachableOnSendPath } from '@/frontend/lib/contact-send-path'
@@ -71,7 +75,7 @@ export function buildConversationSidebarContacts(p: {
 
   for (const [addr, entry] of Object.entries(p.directory)) {
     const address = addr.trim().toLowerCase()
-    if (!address || p.hidden.has(address)) continue
+    if (!address || p.hidden.has(address) || !isDisplayableContactStorageKey(address)) continue
     byKey.set(address, {
       kind: 'contact',
       key: `contact:${address}`,
@@ -85,27 +89,13 @@ export function buildConversationSidebarContacts(p: {
     })
   }
 
+  /** Nur Unread aus Posteingang — keine Adressen ohne Telefonbuch-Eintrag in der Chat-Liste. */
   for (const opt of p.partnerOptions) {
     const address = opt.address.trim().toLowerCase()
-    if (!address || p.hidden.has(address)) continue
+    if (!address || p.hidden.has(address) || isIgnoredInboxCounterpartyAddress(address)) continue
     const existing = byKey.get(address)
-    if (existing) {
-      existing.unreadCount = opt.unreadCount ?? 0
-      if (opt.label && opt.label !== existing.displayName) {
-        existing.displayName = opt.label
-      }
-      continue
-    }
-    byKey.set(address, {
-      kind: 'contact',
-      key: `contact:${address}`,
-      address,
-      displayName: opt.label || resolveContactSidebarDisplayName(p.directory, address),
-      subtitle: resolveContactSidebarSubtitle(p.directory, address),
-      unreadCount: opt.unreadCount ?? 0,
-      isFavorite: p.favorites.has(address),
-      lastContactedAt: p.lastContacted[address] ?? 0,
-    })
+    if (!existing) continue
+    existing.unreadCount = opt.unreadCount ?? 0
   }
 
   const items = Array.from(byKey.values()).filter((item) =>

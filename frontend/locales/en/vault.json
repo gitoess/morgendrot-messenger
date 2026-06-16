@@ -58,8 +58,8 @@
     "create": "Create profile"
   },
   "sdkMnemonicPref": {
-    "label": "Store wallet seed in vault",
-    "hint": "Encrypted in the vault file — on next start, password alone is usually enough (SIGNER=sdk)."
+    "label": "Remember wallet seed",
+    "hint": "On by default: encrypted in vault and browser — next start needs only your password (Direct-RPC, inbox). Can be turned off."
   },
   "techNotes": {
     "toggle": "Technical notes",

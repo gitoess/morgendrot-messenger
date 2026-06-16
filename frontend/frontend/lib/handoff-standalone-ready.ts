@@ -30,6 +30,7 @@ import {
   syncLocalHandoffSnapshotToChainContext,
 } from '@/frontend/lib/handoff-device-bootstrap'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
+import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic-preference'
 
 export const STANDALONE_HANDOFF_APPLIED_EVENT = 'morgendrot.standaloneHandoffApplied' as const
 export const HELPER_SEED_SETUP_REQUEST_EVENT = 'morgendrot.helperSeedSetupRequest' as const
@@ -161,7 +162,7 @@ export async function activateStandaloneHelperWallet(opts: {
   persistDirectChainFieldIds({ senderAddress: applied.address })
 
   const password = String(opts.password || '').trim()
-  if (password.length >= 8) {
+  if (password.length >= 8 && getIncludeSdkMnemonicInBackup()) {
     await persistDirectIotaSessionSignerEncrypted({
       signerImportRaw: mnemonic,
       password,

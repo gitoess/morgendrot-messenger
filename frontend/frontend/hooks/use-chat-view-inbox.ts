@@ -30,6 +30,12 @@ import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-tele
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { enrichInboxMessagesWithChainDigests } from '@/frontend/lib/enrich-inbox-messages-chain-digest'
+import {
+  getDirectIotaSessionSigner,
+  whenDirectIotaTabSessionPersistIdle,
+} from '@/frontend/lib/direct-iota-mnemonic-session'
+import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
+import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
@@ -51,7 +57,7 @@ async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]
 }
 
 const PAGE_SIZE = 50
-/** Erster Load / Aktualisieren: verschlüsselte liegen oft älter als Klartext-Event-Tests. */
+/** Erster Load / Aktualisieren: bis zu 300 Zeilen; ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
 const RESET_PAGE_SIZE = 300
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
@@ -129,6 +135,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   /** Erhöht bei clearInboxRam — verworfene async Loads (Poll/Telegram) landen nicht mehr im State. */
   const inboxLoadEpochRef = useRef(0)
   const inboxLoadInFlightRef = useRef(false)
+  const inboxLiveSourceRef = useRef<InboxLiveSource | null>(null)
+  inboxLiveSourceRef.current = inboxLiveSource
 
   const clearInboxRam = useCallback(() => {
     awaitingManualRefreshRef.current = true
@@ -184,6 +192,10 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
       }
       try {
+        if (mode === 'reset') {
+          await whenDirectIotaTabSessionPersistIdle()
+          await tryAutoRestoreDirectIotaSessionSignerAsync()
+        }
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
           if (loadEpoch !== inboxLoadEpochRef.current) return
           if (awaitingManualRefreshRef.current && mode !== 'reset') return
@@ -362,6 +374,19 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     window.addEventListener(EINSATZ_END_CACHE_WIPED_EVENT, onEinsatzEnd)
     return () => window.removeEventListener(EINSATZ_END_CACHE_WIPED_EVENT, onEinsatzEnd)
   }, [clearInboxRam])
+
+  /** Nach Session-Signer-Wiederherstellung: Direct-RPC-Merge nachladen (mehr Nachrichten als nur API). */
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const onDirectIotaUiChanged = () => {
+      if (!getDirectIotaSessionSigner()) return
+      if (inboxLiveSourceRef.current === 'rpc') return
+      if (inboxLoadInFlightRef.current) return
+      void loadMessagesRef.current('reset')
+    }
+    window.addEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUiChanged)
+    return () => window.removeEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUiChanged)
+  }, [])
 
   return {
     messages,

@@ -811,6 +811,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               activeGroupId={inboxConversationGroupId}
               showAllActive={showAllConversationsActive}
               searchQuery={messengerSearchQuery}
+              activeSendPath={activeSendPath}
               onSelectAll={handleSelectSidebarAll}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}

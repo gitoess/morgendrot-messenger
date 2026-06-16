@@ -291,9 +291,10 @@ describe('uniqueCounterpartyAddressesWhen', () => {
 })
 
 describe('uniqueCounterpartyAddresses', () => {
-  const me = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-  const p1 = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
-  const p2 = '0xcccccccccccccccccccccccccccccccccccccccc'
+  const me = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  const p1 = '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+  const p2 = '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+  const zero = '0x' + '0'.repeat(64)
 
   it('sammelt eindeutig und sortiert', () => {
     const messages = [
@@ -303,5 +304,13 @@ describe('uniqueCounterpartyAddresses', () => {
     ]
     const u = uniqueCounterpartyAddresses(messages, me)
     expect(u).toEqual([p1, p2].sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase())))
+  })
+
+  it('ignoriert Null-Platzhalter-Adresse', () => {
+    const messages = [
+      m({ id: '1', from: zero, recipient: me, content: '', timestamp: 1 }),
+      m({ id: '2', from: p1, recipient: me, content: '', timestamp: 2 }),
+    ]
+    expect(uniqueCounterpartyAddresses(messages, me)).toEqual([p1])
   })
 })

@@ -16,6 +16,8 @@ import {
   showComposerRecipientRow,
   type ComposerDeliveryChannel,
 } from '@/frontend/lib/composer-delivery-channel'
+import { contactReachableOnSendPath } from '@/frontend/lib/contact-send-path'
+import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import {
   resolveComposerIotaAddress,
   resolveComposerKlartextIotaAddress,
@@ -145,6 +147,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onEncryptedHandshakeForRecipient?: () => void | Promise<void>
   onEncryptedAcceptHandshakeForRecipient?: () => void | Promise<void>
   onOpenPhonebook?: () => void
+  /** Aktiver Sendepfad — filtert Empfänger-Vorschläge. */
+  activeSendPath?: import('@/frontend/lib/messenger-channel-send-path').ActiveSendPath
 }
 
 export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
@@ -515,6 +519,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   }
 
   const recipientSuggestions = useMemo(() => {
+    const path: ActiveSendPath = p.activeSendPath ?? 'internet'
     const set = new Set<string>()
     const connected = Array.isArray(apiStatus?.connectedAddresses) ? apiStatus.connectedAddresses : []
     for (const a of connected) {
@@ -524,18 +529,29 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     const own = String(apiStatus?.myAddress || '').trim()
     if (/^0x[a-fA-F0-9]{64}$/.test(own)) set.add(own)
     if (contactDirectory) {
-      for (const key of Object.keys(contactDirectory)) {
+      for (const [key, entry] of Object.entries(contactDirectory)) {
         const k = key.trim().toLowerCase()
-        if (/^0x[a-f0-9]{64}$/.test(k) || /^tg:-?\d{1,20}$/.test(k)) set.add(k)
+        if (!contactReachableOnSendPath(k, entry, path)) continue
+        if (path === 'telegram') {
+          const tid = entry.telegramChatId?.trim()
+          if (tid && /^-?\d{1,20}$/.test(tid)) {
+            set.add(tid)
+          } else if (/^tg:-?\d{1,20}$/.test(k)) {
+            set.add(k.slice(3))
+          }
+        } else if (/^0x[a-f0-9]{64}$/.test(k)) {
+          set.add(k)
+        }
       }
     }
     return Array.from(set)
-  }, [apiStatus?.connectedAddresses, apiStatus?.myAddress, contactDirectory])
+  }, [apiStatus?.connectedAddresses, apiStatus?.myAddress, contactDirectory, p.activeSendPath])
 
   const telegramContactSuggestions = useMemo(() => {
     const set = new Set<string>()
     if (contactDirectory) {
-      for (const entry of Object.values(contactDirectory)) {
+      for (const [key, entry] of Object.entries(contactDirectory)) {
+        if (!contactReachableOnSendPath(key, entry, 'telegram')) continue
         const tid = entry.telegramChatId?.trim()
         if (tid && /^-?\d{1,20}$/.test(tid)) set.add(tid)
       }

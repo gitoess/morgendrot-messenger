@@ -144,7 +144,6 @@ function ConversationPhotoThumbnails(p: { messages: readonly Message[] }) {
             title={c.label}
           >
             {src ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img src={src} alt="" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-muted-foreground">

@@ -106,7 +106,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         favorites,
         lastContacted,
         hidden,
-        sendPath: p.activeSendPath,
+        sendPath: p.activeSendPath ?? 'internet',
       }),
     [p.directory, p.partnerOptions, favorites, lastContacted, hidden, p.activeSendPath]
   )

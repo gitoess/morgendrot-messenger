@@ -26,6 +26,7 @@ import {
 } from '@/frontend/lib/inbox-overview-unread'
 import {
   filterInboxMessagesByPartnerAndDirection,
+  isIgnoredInboxCounterpartyAddress,
   messageCounterpartyAddress,
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
@@ -189,7 +190,10 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
           const unique = Array.from(
             new Map(
               arr
-                .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
+                .filter(
+                  (v): v is string =>
+                    typeof v === 'string' && v.trim().length > 0 && !isIgnoredInboxCounterpartyAddress(v)
+                )
                 .map((v) => [v.trim().toLowerCase(), v.trim()])
             ).values()
           ).filter((a) => !blockedNorms.has(a.trim().toLowerCase()))
@@ -442,7 +446,11 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
     const byNorm = new Map<string, string>()
     for (const a of inboxPartnerMemory) byNorm.set(a.trim().toLowerCase(), a.trim())
     for (const a of live) byNorm.set(a.trim().toLowerCase(), a.trim())
-    const addrs = Array.from(byNorm.values()).filter((a) => !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()))
+    const addrs = Array.from(byNorm.values()).filter(
+      (a) =>
+        !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()) &&
+        !isIgnoredInboxCounterpartyAddress(a)
+    )
     return addrs.map((address) => {
       const label = contactDisplayLabel(contactDirectory, address)
       const short =
