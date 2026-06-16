@@ -3,6 +3,7 @@
 import {
   Download,
   Eraser,
+  KeyRound,
   MoreVertical,
   UserCircle,
 } from 'lucide-react'
@@ -23,6 +24,7 @@ export type ChatViewConversationMenuProps = {
   onViewProfile?: () => void
   onExportHistory?: () => void
   onClearHistory?: () => void
+  onRenewEncryptionKeys?: () => void | Promise<void>
 }
 
 /** Telegram-ähnliches ⋮-Menü für die aktive Konversation. */
@@ -50,6 +52,12 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
             <DropdownMenuItem disabled={!p.canExport} onSelect={() => p.onExportHistory?.()}>
               <Download className="mr-2 h-4 w-4" />
               Verlauf exportieren
+            </DropdownMenuItem>
+          ) : null}
+          {p.onRenewEncryptionKeys ? (
+            <DropdownMenuItem onSelect={() => void p.onRenewEncryptionKeys?.()}>
+              <KeyRound className="mr-2 h-4 w-4" />
+              Schlüssel erneuern
             </DropdownMenuItem>
           ) : null}
           {p.onClearHistory ? (

@@ -41,13 +41,22 @@ export type ApplyPhonebookContactTargets = {
   setMeshPlaintextToNodeEnabled: (v: boolean) => void
   setContactBleUuid: (v: string) => void
   selectInboxPartnerForSend?: (address: string) => void
+  setEncrypted?: (v: boolean) => void
+  setForcedTransport?: (t: 'internet' | 'mesh' | 'adhoc') => void
+  setComposerDelivery?: (d: 'chain' | 'telegram') => void
+}
+
+export type ConfigureComposerForContactOpts = {
+  handshakeReady?: boolean
+  preferEncryptedWhenReady?: boolean
 }
 
 /** Übernimmt alle hinterlegten Erreichbarkeiten in den Messenger-Composer. */
 export function applyPhonebookContactToComposer(
   storageKey: string,
   entry: ContactMeshEntryClient,
-  targets: ApplyPhonebookContactTargets
+  targets: ApplyPhonebookContactTargets,
+  opts?: ConfigureComposerForContactOpts
 ): ParsedPhonebookContact {
   const c = parsePhonebookContact(storageKey, entry)
 
@@ -55,6 +64,11 @@ export function applyPhonebookContactToComposer(
     targets.setPartner(c.iotaAddress)
     targets.setRecipient(c.iotaAddress)
     targets.selectInboxPartnerForSend?.(c.iotaAddress)
+    targets.setComposerDelivery?.('chain')
+    targets.setForcedTransport?.('internet')
+    if (opts?.preferEncryptedWhenReady !== false && opts?.handshakeReady) {
+      targets.setEncrypted?.(true)
+    }
   } else if (c.telegramChatId) {
     targets.setRecipient(`tg:${c.telegramChatId}`)
     targets.setPartner('')

@@ -26,7 +26,7 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete'
 import { messageMatchesInboxSearch } from '@/frontend/lib/inbox-unified-search'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
-import { ChatViewConversationMenu } from '@/frontend/components/chat-view-conversation-menu'
+import { ChatViewConversationMenu, type ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -103,15 +103,7 @@ export type ChatViewInboxPanelProps = InboxFeedReadPort &
     hidePartnerStrip?: boolean
     showInboxIotaFilter?: boolean
     inboxSearchQuery?: string
-    conversationMenu?: {
-      title: string
-      subtitle?: string
-      canClearHistory: boolean
-      canExport: boolean
-      onViewProfile?: () => void
-      onExportHistory?: () => void
-      onClearHistory?: () => void
-    }
+    conversationMenu?: ChatViewConversationMenuProps
     showIotaExpertInboxActions?: boolean
     showInboxPackageExpertMenu?: boolean
     inboxPackageExpertMenu?: React.ReactNode

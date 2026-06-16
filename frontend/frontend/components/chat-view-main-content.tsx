@@ -42,6 +42,12 @@ import type { ChatViewCoreState } from '@/frontend/hooks/use-chat-view-core'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { applyPhonebookContactToComposer } from '@/frontend/lib/apply-phonebook-contact'
 import {
+  contactHandshakeBadgeKind,
+  contactHandshakeBadgeLabel,
+  isContactHandshakeReady,
+  resolveContactHandshakeStatus,
+} from '@/frontend/lib/contact-handshake-ui'
+import {
   canAccessEinsatzleitung,
   canCreateTeamMailbox,
   getMessengerUiCapabilities,
@@ -55,6 +61,11 @@ import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-cli
 import { recordContactLastContacted, readContactFavorites, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
+import {
+  PEER_KEY_RENEWAL_CONFIRM,
+  renewDirectChatPeerEncryption,
+} from '@/frontend/lib/peer-key-renewal'
+import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { PendingHandshakesPollState } from '@/frontend/hooks/use-chat-view-pending-handshakes'
 import { useOfflineStatus } from '@/frontend/hooks/use-offline-status'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
@@ -222,14 +233,28 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const applyPhonebookContact = useCallback(
     (storageKey: string, entry: ContactMeshEntryClient) => {
-      const applied = applyPhonebookContactToComposer(storageKey, entry, {
-        setPartner,
-        setRecipient,
-        setMeshPlaintextNodeId,
-        setMeshPlaintextToNodeEnabled,
-        setContactBleUuid: meshSetup.onContactBleUuidChange,
-        selectInboxPartnerForSend,
+      const handshakeStatus = resolveContactHandshakeStatus({
+        address: storageKey,
+        connectedAddresses: handshakeConnectedAddresses,
+        incomingOffers: panelMessengerPorts.handshakeOffersRead.pendingOffers,
+        outgoingOffers: panelMessengerPorts.handshakeOffersRead.outgoingOffers,
       })
+      const applied = applyPhonebookContactToComposer(
+        storageKey,
+        entry,
+        {
+          setPartner,
+          setRecipient,
+          setMeshPlaintextNodeId,
+          setMeshPlaintextToNodeEnabled,
+          setContactBleUuid: meshSetup.onContactBleUuidChange,
+          selectInboxPartnerForSend,
+          setEncrypted,
+          setForcedTransport,
+          setComposerDelivery,
+        },
+        { handshakeReady: isContactHandshakeReady(handshakeStatus) }
+      )
       recordContactLastContacted(applied.storageKey)
       setPhonebookOpen(false)
       if (applied.telegramChatId && !applied.iotaAddress) {
@@ -257,6 +282,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       meshSetup.onContactBleUuidChange,
       selectInboxPartnerForSend,
       setComposerDelivery,
+      handshakeConnectedAddresses,
+      panelMessengerPorts.handshakeOffersRead.pendingOffers,
+      panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+      setEncrypted,
+      setForcedTransport,
     ]
   )
 
@@ -354,6 +384,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     canPostToPinnwand: pinnwandCaps.canPost,
     vaultBannerActions,
     onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
+    activeConversation:
+      showConversationSidebar && isPrivate
+        ? {
+            inboxPartnerKey,
+            inboxPartnerFiltersArmed,
+            directory,
+          }
+        : undefined,
   })
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
@@ -389,14 +427,28 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     (address: string) => {
       if (channelMode === 'group' && onChannelModeChange) onChannelModeChange('private')
       selectInboxConversationPartner(address)
-      applyPhonebookContactToComposer(address, directory[address] ?? { label: address }, {
-        setPartner,
-        setRecipient,
-        setMeshPlaintextNodeId,
-        setMeshPlaintextToNodeEnabled,
-        setContactBleUuid: meshSetup.onContactBleUuidChange,
-        selectInboxPartnerForSend: selectInboxConversationPartner,
+      const handshakeStatus = resolveContactHandshakeStatus({
+        address,
+        connectedAddresses: handshakeConnectedAddresses,
+        incomingOffers: panelMessengerPorts.handshakeOffersRead.pendingOffers,
+        outgoingOffers: panelMessengerPorts.handshakeOffersRead.outgoingOffers,
       })
+      applyPhonebookContactToComposer(
+        address,
+        directory[address] ?? { label: address },
+        {
+          setPartner,
+          setRecipient,
+          setMeshPlaintextNodeId,
+          setMeshPlaintextToNodeEnabled,
+          setContactBleUuid: meshSetup.onContactBleUuidChange,
+          selectInboxPartnerForSend: selectInboxConversationPartner,
+          setEncrypted,
+          setForcedTransport,
+          setComposerDelivery,
+        },
+        { handshakeReady: isContactHandshakeReady(handshakeStatus) }
+      )
       recordContactLastContacted(address)
     },
     [
@@ -409,6 +461,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       setMeshPlaintextNodeId,
       setMeshPlaintextToNodeEnabled,
       meshSetup.onContactBleUuidChange,
+      handshakeConnectedAddresses,
+      panelMessengerPorts.handshakeOffersRead.pendingOffers,
+      panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+      setEncrypted,
+      setForcedTransport,
+      setComposerDelivery,
     ]
   )
 
@@ -429,6 +487,33 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactDetailAddress(address)
     setContactDetailOpen(true)
   }, [])
+
+  const handleRenewPeerEncryption = useCallback(async () => {
+    if (!inboxPartnerKey || !isValidRecipient0x(inboxPartnerKey)) {
+      toast.error('Schlüssel erneuern ist nur für IOTA-1:1-Chats verfügbar.')
+      return
+    }
+    if (!window.confirm(PEER_KEY_RENEWAL_CONFIRM)) return
+    setEncrypted(true)
+    setForcedTransport('internet')
+    setComposerDelivery('chain')
+    const result = await renewDirectChatPeerEncryption(inboxPartnerKey, {
+      onHandshake: (addr) => panelMessengerPorts.handshakeActions.onHandshakeForAddress(addr),
+    })
+    if (result.ok) {
+      toast.success('Neuer Handshake gesendet — Partner muss antworten, dann wieder verschlüsselt senden.')
+      window.setTimeout(() => void panelMessengerPorts.handshakeOffersRead.reload(), 3000)
+    } else {
+      toast.error(result.error)
+    }
+  }, [
+    inboxPartnerKey,
+    setEncrypted,
+    setForcedTransport,
+    setComposerDelivery,
+    panelMessengerPorts.handshakeActions,
+    panelMessengerPorts.handshakeOffersRead,
+  ])
 
   const handleSelectMessageHit = useCallback(
     (hit: InboxSearchMessageHit) => {
@@ -452,6 +537,45 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     }
     return null
   }, [inboxConversationGroupId, inboxPartnerKey, directory])
+
+  const activeConversationSubtitle = useMemo(() => {
+    if (inboxConversationGroupId) {
+      const count =
+        readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.memberAddresses.length ?? 0
+      return `${count} Mitglieder`
+    }
+    if (!inboxPartnerKey) return undefined
+    const handshakeLabel = contactHandshakeBadgeLabel(
+      contactHandshakeBadgeKind(
+        resolveContactHandshakeStatus({
+          address: inboxPartnerKey,
+          connectedAddresses: handshakeConnectedAddresses,
+          incomingOffers: panelMessengerPorts.handshakeOffersRead.pendingOffers,
+          outgoingOffers: panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+        })
+      )
+    )
+    return handshakeLabel ?? inboxPartnerKey
+  }, [
+    inboxConversationGroupId,
+    inboxPartnerKey,
+    handshakeConnectedAddresses,
+    panelMessengerPorts.handshakeOffersRead.pendingOffers,
+    panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+  ])
+
+  const sidebarHandshakeProps = useMemo(
+    () => ({
+      connectedAddresses: handshakeConnectedAddresses,
+      incomingHandshakeOffers: panelMessengerPorts.handshakeOffersRead.pendingOffers,
+      outgoingHandshakeOffers: panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+    }),
+    [
+      handshakeConnectedAddresses,
+      panelMessengerPorts.handshakeOffersRead.pendingOffers,
+      panelMessengerPorts.handshakeOffersRead.outgoingOffers,
+    ]
+  )
 
   const inboxMessages = panelMessengerPorts.inboxFeedRead.messages
 
@@ -521,6 +645,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onSelectGroup={handleSelectSidebarGroup}
           onOpenContactDetail={handleOpenContactDetail}
           onOpenPhonebook={() => setPhonebookOpen(true)}
+          {...sidebarHandshakeProps}
         />
       ) : null}
 
@@ -568,9 +693,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               showConversationSidebar && inboxPartnerFiltersArmed && activeConversationTitle
                 ? {
                     title: activeConversationTitle,
-                    subtitle: inboxConversationGroupId
-                      ? `${readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.memberAddresses.length ?? 0} Mitglieder`
-                      : inboxPartnerKey ?? undefined,
+                    subtitle: activeConversationSubtitle,
                     canClearHistory: true,
                     canExport: true,
                     onViewProfile: inboxPartnerKey
@@ -578,6 +701,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
                       : undefined,
                     onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
                     onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+                    onRenewEncryptionKeys:
+                      inboxPartnerKey && isValidRecipient0x(inboxPartnerKey)
+                        ? handleRenewPeerEncryption
+                        : undefined,
                   }
                 : undefined
             }
@@ -619,6 +746,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
               onSelectMessageHit={handleSelectMessageHit}
+              {...sidebarHandshakeProps}
             />
             <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
             <ChatViewContactSidebar
@@ -635,6 +763,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               onSelectGroup={handleSelectSidebarGroup}
               onOpenContactDetail={handleOpenContactDetail}
               onOpenPhonebook={() => setPhonebookOpen(true)}
+              {...sidebarHandshakeProps}
             />
             <div className="min-w-0 space-y-8">{conversationBody}</div>
             </div>

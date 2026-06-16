@@ -16,6 +16,13 @@ import {
   readHiddenContacts,
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import {
+  contactHandshakeBadgeKind,
+  resolveContactHandshakeStatus,
+  type ContactHandshakeBadgeKind,
+} from '@/frontend/lib/contact-handshake-ui'
+import { ContactHandshakeBadge } from '@/frontend/components/contact-handshake-badge'
+import type { PendingHandshakeOffer, OutgoingHandshakeOffer } from '@/frontend/lib/api/package-connect'
 
 export type ChatViewContactSidebarProps = {
   directory: Record<string, ContactMeshEntryClient>
@@ -29,6 +36,9 @@ export type ChatViewContactSidebarProps = {
   onOpenContactDetail: (address: string, entry?: ContactMeshEntryClient) => void
   onOpenPhonebook?: () => void
   searchQuery?: string
+  connectedAddresses?: readonly string[]
+  incomingHandshakeOffers?: readonly PendingHandshakeOffer[]
+  outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
   className?: string
 }
 
@@ -37,6 +47,7 @@ function SidebarRow(p: {
   subtitle?: string
   active: boolean
   unreadCount?: number
+  handshakeBadge?: ContactHandshakeBadgeKind
   icon?: React.ReactNode
   onClick: () => void
   onDoubleClick?: () => void
@@ -63,6 +74,7 @@ function SidebarRow(p: {
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold">{p.title}</span>
+          {p.handshakeBadge ? <ContactHandshakeBadge kind={p.handshakeBadge} compact /> : null}
           {(p.unreadCount ?? 0) > 0 ? (
             <span className="ml-auto inline-flex min-w-[1.1rem] shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1 text-[10px] font-bold leading-4 text-white">
               {p.unreadCount! > 99 ? '99+' : p.unreadCount}
@@ -109,6 +121,16 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
 
   const filteredContacts = contacts.filter(filterItem)
   const filteredGroups = groups.filter(filterItem)
+
+  const handshakeKindFor = (address: string): ContactHandshakeBadgeKind => {
+    const status = resolveContactHandshakeStatus({
+      address,
+      connectedAddresses: p.connectedAddresses ?? [],
+      incomingOffers: p.incomingHandshakeOffers,
+      outgoingOffers: p.outgoingHandshakeOffers,
+    })
+    return contactHandshakeBadgeKind(status)
+  }
 
   return (
     <aside
@@ -160,6 +182,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                 subtitle={c.subtitle}
                 active={p.activePartnerKey != null && p.activePartnerKey.toLowerCase() === c.address.toLowerCase()}
                 unreadCount={c.unreadCount}
+                handshakeBadge={handshakeKindFor(c.address)}
                 onClick={() => p.onSelectContact(c.address)}
                 onDoubleClick={() => p.onOpenContactDetail(c.address, c.entry)}
               />

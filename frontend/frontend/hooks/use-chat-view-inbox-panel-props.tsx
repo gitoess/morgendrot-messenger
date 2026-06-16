@@ -31,7 +31,8 @@ export type ChatViewInboxPanelPropsDeps = {
   showIotaExpertInboxActions: boolean
   pinnwandOverviewConfigured: boolean
   showInboxPackageExpertMenu: boolean
-  hidePartnerStrip?: boolean
+  inboxSearchQuery?: string
+  conversationMenu?: ChatViewInboxPanelProps['conversationMenu']
   onOpenSettings?: () => void
 }
 

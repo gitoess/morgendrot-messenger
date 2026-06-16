@@ -43,6 +43,31 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
 }
 
 describe('useChatViewSendPanelProps', () => {
+  it('blendet Composer-0x bei aktivem 1:1-Chat aus', () => {
+    const addr = '0x' + 'd'.repeat(64)
+    const { result } = renderHook(() =>
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({
+            encrypted: false,
+            forcedTransport: 'internet',
+            composerDelivery: 'chain',
+            isPrivate: true,
+            partner: addr,
+            recipient: addr,
+          }),
+          activeConversation: {
+            inboxPartnerKey: addr,
+            inboxPartnerFiltersArmed: true,
+            directory: { [addr]: { label: 'Alice' } },
+          },
+        })
+      )
+    )
+    expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(true)
+    expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Alice')
+  })
+
   it('blendet Composer-0x bei verschlüsseltem Online-Chain-Pfad aus', () => {
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(

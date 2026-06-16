@@ -12,6 +12,7 @@ import { purgeMailboxMessageHybrid, teamBroadcastPurgeHint } from '@/frontend/li
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import { resolveOverviewFilteredInboxMessages } from '@/frontend/lib/inbox-overview-filter'
+import { resolveActiveInboxDisplayMessages } from '@/frontend/lib/inbox-conversation-display'
 import {
   countUnreadInboxByOverviewCategory,
   inboxScopeKey,
@@ -561,16 +562,22 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   const overviewFilteredDisplayMessages = useMemo(
     () =>
-      resolveOverviewFilteredInboxMessages(sortedFilteredDisplayMessages, {
+      resolveActiveInboxDisplayMessages(sortedFilteredDisplayMessages, {
         overviewEnabled: inboxOverviewEnabled,
         category: inboxOverviewCategory,
         ctx: inboxOverviewCtx,
+        inboxPartnerFiltersArmed,
+        inboxPartnerKey,
+        inboxConversationGroupId,
       }),
     [
       sortedFilteredDisplayMessages,
       inboxOverviewEnabled,
       inboxOverviewCategory,
       inboxOverviewCtx,
+      inboxPartnerFiltersArmed,
+      inboxPartnerKey,
+      inboxConversationGroupId,
     ]
   )
 
@@ -827,6 +834,7 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
 
   /** Transport/Partner blockieren Mailbox — zurücksetzen (nicht bei bewusstem Inhalt-Filter Klartext/Verschlüsselt). */
   useEffect(() => {
+    if (inboxPartnerFiltersArmed && inboxPartnerKey?.trim()) return
     if (messages.length === 0) return
     if (displayMessages.length === 0) return
     if (inboxWireFiltersArmed && inboxWireFilter !== 'all') return

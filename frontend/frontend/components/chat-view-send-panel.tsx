@@ -31,6 +31,10 @@ import { ChatViewChainPersistenceBadge } from '@/frontend/components/chat-view-c
 import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
 import {
+  ChatViewActiveConversationBar,
+  type ChatViewActiveConversationBarProps,
+} from '@/frontend/components/chat-view-active-conversation-bar'
+import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
 } from '@/frontend/lib/encrypted-recipient-handshake-status'
@@ -133,6 +137,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   encryptedRecipientHandshakeStatus?: EncryptedRecipientHandshakeStatus
   /** 1:1 verschlüsselt online: 0x nur im Transport-Panel „Verschlüsselung & Partner“. */
   hideComposerIotaRecipient?: boolean
+  /** Aktiver Sidebar-Chat: Name, Handshake-Badge, Verschlüsselt/Klartext. */
+  activeConversationBar?: ChatViewActiveConversationBarProps
   /** Pinnwand-Kanal: Empfänger = feste Brett-0x (Server). */
   isPinnwandChannel?: boolean
   pinnwandBroadcastAddress?: string
@@ -199,6 +205,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     encryptedRecipientHandshakeStatus = 'idle',
     encryptedHandshakeBlocksSend = false,
     hideComposerIotaRecipient = false,
+    activeConversationBar,
     isPinnwandChannel = false,
     pinnwandBroadcastAddress = '',
     canPostToPinnwand: canPostPinnwand = true,
@@ -579,6 +586,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-5 md:p-6">
       <div className="space-y-4">
+        {activeConversationBar ? <ChatViewActiveConversationBar {...activeConversationBar} /> : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">
             {showTelegramField ? (

@@ -374,20 +374,22 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
 
   const selectInboxConversationPartner = useCallback(
     (address: string) => {
-      const a = address.trim()
+      const a = address.trim().toLowerCase()
       if (!a) return
       setRecipient(a)
       setInboxPartnerKey(a)
       setInboxConversationGroupId(null)
       setInboxPartnerFiltersArmed(true)
-      setInboxOverviewCategory('direkt')
+      setInboxChannelFiltersArmed(false)
+      setInboxSourceFilter('all')
     },
     [
       setRecipient,
       setInboxPartnerKey,
       setInboxConversationGroupId,
       setInboxPartnerFiltersArmed,
-      setInboxOverviewCategory,
+      setInboxChannelFiltersArmed,
+      setInboxSourceFilter,
     ]
   )
 

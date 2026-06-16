@@ -188,19 +188,29 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     ).toEqual(['tg-in', 'tg-out'])
   })
 
-  it('eingehende Funk/Mesh (0x) ignoriert Partner- und Richtungsfilter', () => {
-    const meshIn = m({
-      id: 'mx',
+  it('eingehende Funk/Mesh respektieren Partner-Filter', () => {
+    const meshInAlice = m({
+      id: 'mx-a',
       from: alice,
-      content: 'funk',
+      content: 'funk a',
       timestamp: 5,
       source: 'mesh',
       transports: ['mesh'],
     })
-    const withWrongPartner = filterInboxMessagesByPartnerAndDirection([meshIn], me, bob, 'all')
-    expect(withWrongPartner.map((x) => x.id)).toEqual(['mx'])
-    const outOnly = filterInboxMessagesByPartnerAndDirection([meshIn], me, null, 'out')
-    expect(outOnly.map((x) => x.id)).toEqual(['mx'])
+    const meshInBob = m({
+      id: 'mx-b',
+      from: bob,
+      content: 'funk b',
+      timestamp: 6,
+      source: 'mesh',
+      transports: ['mesh'],
+    })
+    const onlyAlice = filterInboxMessagesByPartnerAndDirection([meshInAlice, meshInBob], me, alice, 'all')
+    expect(onlyAlice.map((x) => x.id)).toEqual(['mx-a'])
+    const allWithoutPartner = filterInboxMessagesByPartnerAndDirection([meshInAlice, meshInBob], me, null, 'all')
+    expect(allWithoutPartner.map((x) => x.id).sort()).toEqual(['mx-a', 'mx-b'])
+    const outOnly = filterInboxMessagesByPartnerAndDirection([meshInAlice], me, null, 'out')
+    expect(outOnly.map((x) => x.id)).toEqual(['mx-a'])
   })
 })
 

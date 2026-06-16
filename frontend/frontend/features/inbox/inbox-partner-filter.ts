@@ -109,7 +109,10 @@ export function filterInboxMessagesByPartnerAndDirection(
         if (cpMesh && groupNorms.has(norm(cpMesh))) return true
         return false
       }
-      return true
+      if (!partnerAddress) return true
+      const cpMesh = messageCounterpartyAddress(m, myAddress)
+      if (!cpMesh) return false
+      return norm(cpMesh) === norm(partnerAddress)
     }
     if (direction === 'in' && isMessageOutgoing(m, myAddress) && !selfToSelf) return false
     if (direction === 'out' && !isMessageOutgoing(m, myAddress) && !selfToSelf) return false

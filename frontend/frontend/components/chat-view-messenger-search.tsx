@@ -17,6 +17,13 @@ import {
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { searchInboxMessages, type InboxSearchMessageHit } from '@/frontend/lib/inbox-unified-search'
+import type { PendingHandshakeOffer, OutgoingHandshakeOffer } from '@/frontend/lib/api/package-connect'
+import {
+  contactHandshakeBadgeKind,
+  resolveContactHandshakeStatus,
+  type ContactHandshakeBadgeKind,
+} from '@/frontend/lib/contact-handshake-ui'
+import { ContactHandshakeBadge } from '@/frontend/components/contact-handshake-badge'
 
 export type ChatViewMessengerSearchProps = {
   directory: Record<string, ContactMeshEntryClient>
@@ -28,6 +35,9 @@ export type ChatViewMessengerSearchProps = {
   onSelectContact: (address: string) => void
   onSelectGroup: (groupId: string) => void
   onSelectMessageHit: (hit: InboxSearchMessageHit) => void
+  connectedAddresses?: readonly string[]
+  incomingHandshakeOffers?: readonly PendingHandshakeOffer[]
+  outgoingHandshakeOffers?: readonly OutgoingHandshakeOffer[]
   className?: string
   compact?: boolean
   placeholder?: string
@@ -82,6 +92,16 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
     () => searchInboxMessages(q, p.messages, p.myAddress, p.directory, 12),
     [q, p.messages, p.myAddress, p.directory]
   )
+
+  const handshakeKindFor = (address: string): ContactHandshakeBadgeKind =>
+    contactHandshakeBadgeKind(
+      resolveContactHandshakeStatus({
+        address,
+        connectedAddresses: p.connectedAddresses ?? [],
+        incomingOffers: p.incomingHandshakeOffers,
+        outgoingOffers: p.outgoingHandshakeOffers,
+      })
+    )
 
   const hasHits = contactHits.length > 0 || groupHits.length > 0 || messageHits.length > 0
 
@@ -158,8 +178,11 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
                   }}
                 >
                   <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{c.displayName}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate text-sm font-medium">{c.displayName}</span>
+                      <ContactHandshakeBadge kind={handshakeKindFor(c.address)} compact />
+                    </span>
                     <span className="block truncate font-mono text-[10px] text-muted-foreground">{c.subtitle}</span>
                   </span>
                 </button>

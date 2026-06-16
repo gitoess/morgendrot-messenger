@@ -14,6 +14,11 @@ import {
   getDirectChatEcdhMaterialForRecipient,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
+import {
+  getCachedChainHandshakeProbe,
+  setCachedChainHandshakeProbe,
+  shouldRunChainHandshakeProbe,
+} from '@/frontend/lib/chain-handshake-probe-cache'
 
 export function useEncryptedRecipientHandshakeStatus(p: {
   enabled: boolean
@@ -50,26 +55,45 @@ export function useEncryptedRecipientHandshakeStatus(p: {
       return
     }
     const addr = normalizeRecipient0x(recipient)
+    const cached = getCachedChainHandshakeProbe(addr)
+    if (cached === 'found') {
+      if (getDirectChatEcdhMaterialForRecipient(addr)) {
+        setChainAugment('found_peer_key')
+      } else {
+        setChainAugment('not_found')
+      }
+      return
+    }
+    if (cached === 'not_found') {
+      setChainAugment('not_found')
+      return
+    }
+    if (!shouldRunChainHandshakeProbe(addr)) return
+
     let cancelled = false
-    setChainAugment('none')
     void (async () => {
       try {
         const hs = await findPeerHandshake(addr)
         if (cancelled) return
         if (hs.ok && hs.found && hs.peerPubRawBase64) {
           setDirectChatEcdhPeerPubBase64(addr, hs.peerPubRawBase64)
+          setCachedChainHandshakeProbe(addr, true)
           setChainAugment('found_peer_key')
         } else {
+          setCachedChainHandshakeProbe(addr, false)
           setChainAugment('not_found')
         }
       } catch {
-        if (!cancelled) setChainAugment('not_found')
+        if (!cancelled) {
+          setCachedChainHandshakeProbe(addr, false)
+          setChainAugment('not_found')
+        }
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [enabled, recipient, syncStatus, asyncChecked, incomingOffers, outgoingOffers, connectedAddresses])
+  }, [enabled, recipient, syncStatus, asyncChecked])
 
   let status: EncryptedRecipientHandshakeStatus = syncStatus
   if (

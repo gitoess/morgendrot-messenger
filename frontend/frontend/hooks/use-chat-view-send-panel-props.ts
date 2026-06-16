@@ -8,10 +8,23 @@ import { buildGroupSendPanelContext } from '@/frontend/features/send/chat-view-g
 import { useChatViewTelegramComposer } from '@/frontend/hooks/use-chat-view-telegram-composer'
 import { useEncryptedRecipientHandshakeStatus } from '@/frontend/hooks/use-encrypted-recipient-handshake-status'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
+import {
+  contactHandshakeBadgeKind,
+  resolveContactHandshakeStatus,
+} from '@/frontend/lib/contact-handshake-ui'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
+import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import type { ChatViewActiveConversationBarProps } from '@/frontend/components/chat-view-active-conversation-bar'
+
+export type ChatViewActiveConversationContext = {
+  inboxPartnerKey: string | null
+  inboxPartnerFiltersArmed: boolean
+  directory: Record<string, ContactMeshEntryClient>
+}
 
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
@@ -21,6 +34,7 @@ export type ChatViewSendPanelPropsDeps = {
   canPostToPinnwand: boolean
   vaultBannerActions?: ChatViewVaultBannerActions
   onOpenPhonebook?: () => void
+  activeConversation?: ChatViewActiveConversationContext
 }
 
 export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
@@ -147,6 +161,53 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     throw new Error('useChatViewSendPanelProps: messengerPorts.voiceRecordSendPanel fehlt')
   }
 
+  const activePartnerKey = deps.activeConversation?.inboxPartnerKey?.trim().toLowerCase() ?? ''
+  const hasActiveDirectConversation =
+    composerSendPath.isPrivate &&
+    deps.activeConversation?.inboxPartnerFiltersArmed === true &&
+    isValidRecipient0x(activePartnerKey) &&
+    composerSendPath.composerDelivery === 'chain'
+
+  const activeConversationBar = useMemo((): ChatViewActiveConversationBarProps | undefined => {
+    if (!hasActiveDirectConversation || !deps.activeConversation) return undefined
+    const handshakeStatus = resolveContactHandshakeStatus({
+      address: activePartnerKey,
+      connectedAddresses: [...connectionStatusRead.connectedAddresses],
+      incomingOffers: [...handshakeOffersRead.pendingOffers],
+      outgoingOffers: [...handshakeOffersRead.outgoingOffers],
+    })
+    return {
+      displayName: resolveContactSidebarDisplayName(deps.activeConversation.directory, activePartnerKey),
+      addressLine: activePartnerKey,
+      handshakeBadge: contactHandshakeBadgeKind(handshakeStatus),
+      encrypted: sendTransportRead.encrypted,
+      forcedTransport: sendTransportRead.forcedTransport,
+      onEncryptedChange: sendTransportChoice.onEncryptedChange,
+      encryptedRecipientHandshakeStatus: sendTransportRead.encrypted
+        ? encryptedRecipientHandshake.status
+        : undefined,
+      sending: attachmentBar.sending,
+      myAddress: inboxFeedRead.myAddress,
+      onEncryptedHandshakeForRecipient: handleEncryptedHandshakeForComposerRecipient,
+      onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
+    }
+  }, [
+    hasActiveDirectConversation,
+    deps.activeConversation,
+    activePartnerKey,
+    connectionStatusRead.connectedAddresses,
+    handshakeOffersRead.pendingOffers,
+    handshakeOffersRead.outgoingOffers,
+    sendTransportRead.encrypted,
+    sendTransportRead.forcedTransport,
+    sendTransportChoice.onEncryptedChange,
+    encryptedRecipientHandshake.status,
+    attachmentBar.sending,
+    inboxFeedRead.myAddress,
+    handleEncryptedHandshakeForComposerRecipient,
+    handleEncryptedAcceptForComposerRecipient,
+  ])
+
   const sendPanelProps = {
     ...deps.messengerPorts.composerDraft,
     ...deps.messengerPorts.sendTransportRead,
@@ -188,10 +249,12 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onPartnerChange: syncPartnerAndRecipient,
     myAddress: inboxFeedRead.myAddress,
     hideComposerIotaRecipient:
-      composerSendPath.isPrivate &&
-      sendTransportRead.encrypted &&
-      sendTransportRead.forcedTransport === 'internet' &&
-      composerSendPath.composerDelivery === 'chain',
+      hasActiveDirectConversation ||
+      (composerSendPath.isPrivate &&
+        sendTransportRead.encrypted &&
+        sendTransportRead.forcedTransport === 'internet' &&
+        composerSendPath.composerDelivery === 'chain'),
+    activeConversationBar,
     onStatusFeedback: sendActions.onStatusFeedback,
     composerDelivery: composerSendPath.composerDelivery,
     messagingPersistenceMode: sendTransportChoice.messagingPersistenceMode,
