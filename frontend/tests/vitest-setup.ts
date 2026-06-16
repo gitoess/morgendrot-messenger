@@ -14,7 +14,15 @@ beforeEach(() => {
   )
 })
 
-afterEach(() => {
+afterEach(async () => {
+  try {
+    const { drainDirectIotaTabSessionPersistForTests } = await import(
+      '@/frontend/lib/direct-iota-mnemonic-session'
+    )
+    await drainDirectIotaTabSessionPersistForTests()
+  } catch {
+    /* Modul-Graph in isolierten Tests optional */
+  }
   cleanup()
   vi.unstubAllGlobals()
 })

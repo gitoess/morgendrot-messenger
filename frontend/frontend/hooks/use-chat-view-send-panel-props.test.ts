@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewSendPanelProps } from '@/frontend/hooks/use-chat-view-send-panel-props'
-import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ChatViewSendPanelPropsDeps } from '@/frontend/hooks/use-chat-view-send-panel-props'
 
@@ -38,11 +37,9 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
     messengerPorts,
     setPartner: vi.fn(),
     activeGroup: null,
-    sending: false,
     loraOnlineFallbackOffer: null,
     confirmLoraSendViaOnline: vi.fn(),
     dismissLoraOnlineFallback: vi.fn(),
-    apiStatus: TEST_API_STATUS_SEND_READY as ChatViewSendPanelPropsDeps['apiStatus'],
     handleSend: vi.fn(),
     cancelSend: vi.fn(),
     status: 'idle',
@@ -59,29 +56,13 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
     meshPlaintextNodeId: '',
     setMeshPlaintextNodeId: vi.fn(),
     setMeshtasticChannelIndex: vi.fn(),
-    compactFileRef: { current: null },
-    compactBusy: false,
-    attachmentPipelineHint: null,
-    handleCompactAttachmentPick: vi.fn(),
-    ingestChatAttachmentFile: vi.fn(async () => {}),
-    compactMeta: null,
-    attachedBlobBase64: null,
-    attachedLora: null,
-    attachedTxtFile: null,
-    attachedAudioBase64: null,
-    clearCompactAttachment: vi.fn(),
-    compactPreviewUrl: null,
-    loraPreviewUrl: null,
-    loraMeshProgressLine: null,
     loadMessages: vi.fn(),
-    directory: {},
     setComposerMailboxObjectId: vi.fn(),
     appendMeshMessage: vi.fn(),
     handleHandshakeForAddress: vi.fn(),
     handleConnectAcceptForAddress: vi.fn(),
     expertTools: false,
     canPostToPinnwand: false,
-    handshakeConnectedAddresses: [],
     pendingHandshakeOffers: [],
     outgoingHandshakeOffers: [],
     reloadPendingHandshakes: vi.fn(),
@@ -159,5 +140,39 @@ describe('useChatViewSendPanelProps', () => {
     )
     expect(result.current.sendPanelProps.isGroupChannel).toBe(true)
     expect(result.current.sendPanelProps.groupMemberCount).toBe(1)
+  })
+
+  it('spiegelt attachmentBar aus messengerPorts', () => {
+    const clearCompactAttachment = vi.fn()
+    const { result } = renderHook(() =>
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({
+            attachmentBar: {
+              sending: true,
+              compactFileRef: { current: null },
+              compactBusy: true,
+              attachmentPipelineHint: 'Pipeline',
+              onFileChange: vi.fn(),
+              ingestChatAttachmentFile: vi.fn(async () => {}),
+              compactMeta: null,
+              attachedBlobBase64: null,
+              attachedLora: null,
+              attachedTxtFile: null,
+              attachedAudioBase64: null,
+              clearCompactAttachment,
+              compactPreviewUrl: null,
+              loraPreviewUrl: null,
+              loraMeshProgressLine: null,
+            },
+          }),
+        })
+      )
+    )
+    expect(result.current.sendPanelProps.sending).toBe(true)
+    expect(result.current.sendPanelProps.compactBusy).toBe(true)
+    expect(result.current.sendPanelProps.attachmentPipelineHint).toBe('Pipeline')
+    result.current.sendPanelProps.clearCompactAttachment()
+    expect(clearCompactAttachment).toHaveBeenCalled()
   })
 })

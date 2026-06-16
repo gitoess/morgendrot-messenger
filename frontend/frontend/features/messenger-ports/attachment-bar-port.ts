@@ -31,3 +31,7 @@ export type AttachmentBarPort = {
   /** Optional: Fortschritt beim LoRa-Bild (z. B. Retries / „Luma … · Chroma …“) — nicht an Mesh-v2-Versand gebunden. */
   loraMeshProgressLine?: string | null
 }
+
+export function asAttachmentBar(port: AttachmentBarPort): AttachmentBarPort {
+  return port
+}

@@ -2,7 +2,12 @@ export type { ComposerPartnerPort } from './composer-partner-port'
 export { asComposerPartner } from './composer-partner-port'
 export type { ComposerSendPathPort } from './composer-send-path-port'
 export { asComposerSendPath } from './composer-send-path-port'
+export type { ContactDirectoryReadPort } from './contact-directory-read-port'
+export { asContactDirectoryRead } from './contact-directory-read-port'
+export type { ConnectionStatusReadPort } from './connection-status-read-port'
+export { asConnectionStatusRead } from './connection-status-read-port'
 export type { AttachmentBarPort } from './attachment-bar-port'
+export { asAttachmentBar } from './attachment-bar-port'
 export type { VoiceRecordFromHook, VoiceRecordSendPanelPort } from './voice-record-send-panel-port'
 export { asVoiceRecordSendPanel } from './voice-record-send-panel-port'
 export type { InboxFeedReadPort } from './inbox-feed-read-port'
@@ -22,6 +27,9 @@ export {
 } from './send-transport-ports'
 export {
   assembleChatViewMessengerPorts,
+  assembleAttachmentBarPort,
+  assembleConnectionStatusReadPort,
+  assembleContactDirectoryReadPort,
   assembleComposerDraftPort,
   assembleComposerDraftSendFlowPort,
   assembleComposerPartnerPort,
@@ -31,6 +39,9 @@ export {
   assembleSendTransportChoicePort,
   assembleSendTransportReadPort,
   assembleVoiceRecordSendPanelPort,
+  type ChatViewAttachmentBarSlice,
+  type ChatViewConnectionStatusSlice,
+  type ChatViewContactDirectorySlice,
   type ChatViewComposerDraftSlice,
   type ChatViewComposerPartnerSlice,
   type ChatViewComposerSendPathSlice,

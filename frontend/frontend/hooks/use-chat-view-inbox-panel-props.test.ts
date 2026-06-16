@@ -2,7 +2,6 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import type { ChatViewInboxPanelPropsDeps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
-import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 
 vi.mock('@/frontend/components/chat-view-inbox-package-expert-menu', () => ({
@@ -13,7 +12,13 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
   const myAddress = `0x${'a'.repeat(64)}`
   const fullPorts = testMessengerPorts({ myAddress })
   return {
-    messengerPorts: over.messengerPorts ?? { inboxFeedRead: fullPorts.inboxFeedRead },
+    messengerPorts:
+      over.messengerPorts ??
+      ({
+        inboxFeedRead: fullPorts.inboxFeedRead,
+        contactDirectoryRead: fullPorts.contactDirectoryRead,
+        connectionStatusRead: fullPorts.connectionStatusRead,
+      } satisfies ChatViewInboxPanelPropsDeps['messengerPorts']),
     inboxTotalCount: 0,
     inboxRows: [],
     morgPkgFileRef: { current: null },
@@ -27,7 +32,6 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
     morgPkgExportPartnerOptions: [],
     morgPkgImportCount: 0,
     onOpenMorgPkgArchive: vi.fn(),
-    apiStatus: TEST_API_STATUS_SEND_READY as ChatViewInboxPanelPropsDeps['apiStatus'],
     loadMessages: vi.fn(),
     refreshContactDirectory: vi.fn(),
     reloadPendingHandshakes: vi.fn(),
@@ -50,7 +54,6 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
     inboxFromCache: false,
     inboxCacheAgeMinutes: null,
     inboxLiveSource: 'api',
-    basisUnreachable: false,
     inboxVisibilityHint: null,
     inboxPartnerOptions: [],
     inboxPartnerKey: null,
@@ -69,8 +72,6 @@ function baseDeps(over: Partial<ChatViewInboxPanelPropsDeps> = {}): ChatViewInbo
     setInboxWireFilter: vi.fn(),
     selectInboxPartnerForSend: vi.fn(),
     removeInboxPartnerFromQuickList: vi.fn(),
-    directory: {},
-    isMeshVerifiedForAddress: () => false,
     exportEcdhMorgPkgForMessage: vi.fn(),
     onExportEinsatzberichtJson: vi.fn(),
     onExportEinsatzberichtTxt: vi.fn(),

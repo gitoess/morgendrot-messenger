@@ -135,12 +135,42 @@ describe('assembleChatViewMessengerPorts', () => {
         messages: [{ id: '1', from: '0xa', content: '', timestamp: 1 }],
         myAddress: '0xb',
       },
+      contactDirectory: {
+        directory: {},
+        isMeshVerifiedForAddress: () => false,
+      },
+      connectionStatus: {
+        apiStatus: null,
+        basisUnreachable: false,
+        statusCacheAgeMinutes: null,
+        packageIdMismatch: false,
+        deviceTimeTrustWarn: false,
+        connectedAddresses: [],
+      },
+      attachmentBar: {
+        sending: false,
+        compactFileRef: { current: null },
+        compactBusy: false,
+        attachmentPipelineHint: null,
+        onFileChange: vi.fn(),
+        ingestChatAttachmentFile: vi.fn(async () => {}),
+        compactMeta: null,
+        attachedBlobBase64: null,
+        attachedLora: null,
+        attachedTxtFile: null,
+        attachedAudioBase64: null,
+        clearCompactAttachment: vi.fn(),
+        compactPreviewUrl: null,
+        loraPreviewUrl: null,
+        loraMeshProgressLine: null,
+      },
     })
     expect(ports.composerDraft.message).toBe('hi')
     expect(ports.composerPartner.partner).toBe('0xp')
     expect(ports.composerSendPath.composerDelivery).toBe('chain')
     expect(ports.sendTransportRead.forcedTransport).toBe('internet')
     expect(ports.inboxFeedRead.myAddress).toBe('0xb')
+    expect(ports.attachmentBar.sending).toBe(false)
     expect(ports.voiceRecordSendPanel).toBeNull()
   })
 })

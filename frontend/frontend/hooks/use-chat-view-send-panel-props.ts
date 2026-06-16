@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, type ChangeEvent, type RefObject } from 'react'
+import { useCallback, useMemo } from 'react'
 import type { ChatViewSendPanelProps } from '@/frontend/components/chat-view-send-panel'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
@@ -12,25 +12,20 @@ import type {
   OutgoingHandshakeOffer,
   PendingHandshakeOffer,
 } from '@/frontend/lib/handshake-offers-types'
-import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import type { AppendMeshMessageFn } from '@/frontend/hooks/use-chat-view-send-flow-types'
-import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
   setPartner: (v: string) => void
   activeGroup: MessengerGroupDefinition | null
-  sending: boolean
   loraOnlineFallbackOffer: { reasonLabel: string } | null
   confirmLoraSendViaOnline: () => void | Promise<void>
   dismissLoraOnlineFallback: () => void
-  apiStatus: ApiStatus | null
   handleSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
   cancelSend?: () => void
   status: 'idle' | 'success' | 'error'
@@ -49,27 +44,12 @@ export type ChatViewSendPanelPropsDeps = {
   setMeshPlaintextNodeId: (v: string) => void
   meshtasticChannelIndex?: number
   setMeshtasticChannelIndex: (v: number | undefined) => void
-  compactFileRef: RefObject<HTMLInputElement | null>
-  compactBusy: boolean
-  attachmentPipelineHint: string | null
-  handleCompactAttachmentPick: (e: ChangeEvent<HTMLInputElement>) => void
-  ingestChatAttachmentFile: (file: File, opts?: { transportOverride?: ForcedTransport }) => Promise<void>
-  compactMeta: ChatViewSendPanelProps['compactMeta']
-  attachedBlobBase64: string | null
-  attachedLora: ChatAttachedLora | null
-  attachedTxtFile: { name: string; text: string } | null
-  attachedAudioBase64: string | null
-  clearCompactAttachment: () => void
-  compactPreviewUrl: string | null
-  loraPreviewUrl: string | null
-  loraMeshProgressLine: string | null
   refreshApiStatus?: () => void | Promise<void>
   loadMessages: (
     mode?: 'reset' | 'append' | 'poll',
     overridePackageId?: unknown,
     opts?: { silent?: boolean }
   ) => void | Promise<void>
-  directory: Record<string, ContactMeshEntryClient>
   composerMailboxObjectId?: string
   setComposerMailboxObjectId: (id: string) => void
   appendMeshMessage: AppendMeshMessageFn
@@ -80,7 +60,6 @@ export type ChatViewSendPanelPropsDeps = {
   canPostToPinnwand: boolean
   vaultBannerActions?: ChatViewVaultBannerActions
   onOpenPhonebook?: () => void
-  handshakeConnectedAddresses: string[]
   pendingHandshakeOffers: PendingHandshakeOffer[]
   outgoingHandshakeOffers: OutgoingHandshakeOffer[]
   reloadPendingHandshakes: () => void
@@ -97,6 +76,9 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     inboxFeedRead,
     composerPartner,
     composerSendPath,
+    attachmentBar,
+    contactDirectoryRead,
+    connectionStatusRead,
   } = deps.messengerPorts
 
   const groupSendPanelContext = useMemo(
@@ -127,7 +109,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       composerSendPath.composerDelivery === 'chain' &&
       isValidRecipient0x(composerEncryptedRecipient),
     recipient: composerEncryptedRecipient,
-    connectedAddresses: deps.handshakeConnectedAddresses,
+    connectedAddresses: [...connectionStatusRead.connectedAddresses],
     incomingOffers: deps.pendingHandshakeOffers,
     outgoingOffers: deps.outgoingHandshakeOffers,
   })
@@ -171,16 +153,16 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     partner: composerPartner.partner,
     encrypted: sendTransportRead.encrypted,
     message: composerDraft.message,
-    apiStatus: deps.apiStatus,
-    contactDirectory: deps.directory,
+    apiStatus: connectionStatusRead.apiStatus,
+    contactDirectory: contactDirectoryRead.directory,
     myAddress: inboxFeedRead.myAddress,
-    sending: deps.sending,
-    attachedTxtFile: deps.attachedTxtFile,
-    attachedBlobBase64: deps.attachedBlobBase64,
-    attachedAudioBase64: deps.attachedAudioBase64,
-    hasLoraAttachment: deps.attachedLora != null,
+    sending: attachmentBar.sending,
+    attachedTxtFile: attachmentBar.attachedTxtFile,
+    attachedBlobBase64: attachmentBar.attachedBlobBase64,
+    attachedAudioBase64: attachmentBar.attachedAudioBase64,
+    hasLoraAttachment: attachmentBar.attachedLora != null,
     onMessageChange: composerDraft.onMessageChange,
-    clearAttachments: deps.clearCompactAttachment,
+    clearAttachments: attachmentBar.clearCompactAttachment,
     onStatusFeedback: (msg, st = 'success') => {
       deps.setStatus(st)
       deps.setStatusMsg(msg)
@@ -209,12 +191,12 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     ...deps.messengerPorts.sendTransportRead,
     ...deps.messengerPorts.sendMeshFunkOptions,
     ...voicePort,
+    ...attachmentBar,
     isPrivate: composerSendPath.isPrivate,
-    sending: deps.sending,
     loraOnlineFallbackOffer: deps.loraOnlineFallbackOffer,
     onConfirmLoraOnline: deps.confirmLoraSendViaOnline,
     onDismissLoraOnlineFallback: deps.dismissLoraOnlineFallback,
-    apiStatus: deps.apiStatus,
+    apiStatus: connectionStatusRead.apiStatus,
     onSend: deps.handleSend,
     onCancelSend: deps.cancelSend,
     status: deps.status,
@@ -232,25 +214,11 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     meshtasticChannelIndex: deps.meshtasticChannelIndex,
     onMeshtasticChannelIndexChange: deps.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
-    compactFileRef: deps.compactFileRef,
-    compactBusy: deps.compactBusy,
-    attachmentPipelineHint: deps.attachmentPipelineHint,
-    onFileChange: deps.handleCompactAttachmentPick,
-    ingestChatAttachmentFile: deps.ingestChatAttachmentFile,
-    compactMeta: deps.compactMeta,
-    attachedBlobBase64: deps.attachedBlobBase64,
-    attachedLora: deps.attachedLora,
-    attachedTxtFile: deps.attachedTxtFile,
-    attachedAudioBase64: deps.attachedAudioBase64,
-    clearCompactAttachment: deps.clearCompactAttachment,
-    compactPreviewUrl: deps.compactPreviewUrl,
-    loraPreviewUrl: deps.loraPreviewUrl,
-    loraMeshProgressLine: deps.loraMeshProgressLine,
     onManualRefresh: async () => {
       await deps.refreshApiStatus?.()
       await deps.loadMessages('reset')
     },
-    contactDirectory: deps.directory,
+    contactDirectory: contactDirectoryRead.directory,
     isGroupChannel: composerSendPath.isGroup,
     groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
     groupMemberCount: groupSendPanelContext.groupMemberCount,

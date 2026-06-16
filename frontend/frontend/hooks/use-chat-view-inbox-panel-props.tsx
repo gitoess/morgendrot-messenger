@@ -12,7 +12,6 @@ import type {
   OutgoingHandshakeOffer,
   PendingHandshakeOffer,
 } from '@/frontend/lib/handshake-offers-types'
-import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxOverviewCategory } from '@/frontend/lib/inbox-overview-filter'
 import type { InboxSourceFilter } from '@/frontend/lib/inbox-source-filter'
 import type { InboxWireFilter } from '@/frontend/lib/inbox-wire-filter'
@@ -20,7 +19,10 @@ import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persiste
 import type { Message } from '@/frontend/lib/types'
 
 export type ChatViewInboxPanelPropsDeps = {
-  messengerPorts: Pick<ChatViewMessengerPorts, 'inboxFeedRead'>
+  messengerPorts: Pick<
+    ChatViewMessengerPorts,
+    'inboxFeedRead' | 'contactDirectoryRead' | 'connectionStatusRead'
+  >
   inboxTotalCount: number
   inboxRows: ChatViewInboxPanelProps['inboxRows']
   morgPkgFileRef: RefObject<HTMLInputElement | null>
@@ -34,7 +36,6 @@ export type ChatViewInboxPanelPropsDeps = {
   morgPkgExportPartnerOptions: ChatViewInboxPanelProps['morgPkgExportPartnerOptions']
   morgPkgImportCount: number
   onOpenMorgPkgArchive: () => void
-  apiStatus: ApiStatus | null
   loadMessages: (
     mode?: 'reset' | 'append' | 'poll',
     overridePackageId?: unknown,
@@ -69,7 +70,6 @@ export type ChatViewInboxPanelPropsDeps = {
   inboxFromCache: boolean
   inboxCacheAgeMinutes: number | null
   inboxLiveSource: ChatViewInboxPanelProps['inboxLiveSource']
-  basisUnreachable: boolean | undefined
   inboxVisibilityHint: string | null | undefined
   inboxPartnerOptions: InboxPartnerOption[]
   inboxPartnerKey: string | null
@@ -88,8 +88,6 @@ export type ChatViewInboxPanelPropsDeps = {
   setInboxWireFilter: (f: InboxWireFilter) => void
   selectInboxPartnerForSend: (address: string) => void
   removeInboxPartnerFromQuickList: ChatViewInboxPanelProps['removeInboxPartnerFromQuickList']
-  directory: Record<string, ContactMeshEntryClient>
-  isMeshVerifiedForAddress: ChatViewInboxPanelProps['isMeshVerifiedForAddress']
   exportEcdhMorgPkgForMessage: ChatViewInboxPanelProps['exportEcdhMorgPkgForMessage']
   onExportEinsatzberichtJson: ChatViewInboxPanelProps['onExportEinsatzberichtJson']
   onExportEinsatzberichtTxt: ChatViewInboxPanelProps['onExportEinsatzberichtTxt']
@@ -146,6 +144,8 @@ export type ChatViewInboxPanelPropsDeps = {
 }
 
 export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): ChatViewInboxPanelProps {
+  const { inboxFeedRead, contactDirectoryRead, connectionStatusRead } = deps.messengerPorts
+
   const onRefresh = useCallback(() => {
     void deps.loadMessages('reset')
     deps.refreshContactDirectory()
@@ -169,7 +169,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     () =>
       deps.showInboxPackageExpertMenu ? (
         <ChatViewInboxPackageExpertMenu
-          serverPackageId={deps.apiStatus?.packageId}
+          serverPackageId={connectionStatusRead.apiStatus?.packageId}
           inboxPackageFilter={deps.inboxPackageFilter}
           packageIdSuggestions={deps.packageIdSuggestions}
           packageIdBusy={deps.packageIdBusy}
@@ -181,7 +181,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
       ) : null,
     [
       deps.showInboxPackageExpertMenu,
-      deps.apiStatus?.packageId,
+      connectionStatusRead.apiStatus?.packageId,
       deps.inboxPackageFilter,
       deps.packageIdSuggestions,
       deps.packageIdBusy,
@@ -193,7 +193,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
   )
 
   const inboxPanelProps = {
-    ...deps.messengerPorts.inboxFeedRead,
+    ...inboxFeedRead,
     messageCount: deps.inboxTotalCount,
     inboxRowCount: deps.inboxRows.length,
     morgPkgFileRef: deps.morgPkgFileRef,
@@ -207,7 +207,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     morgPkgExportPartnerOptions: deps.morgPkgExportPartnerOptions,
     morgPkgImportCount: deps.morgPkgImportCount,
     onOpenMorgPkgArchive: deps.onOpenMorgPkgArchive,
-    apiStatus: deps.apiStatus,
+    apiStatus: connectionStatusRead.apiStatus,
     onRefresh,
     pendingHandshakeOffers: deps.pendingHandshakeOffers,
     outgoingHandshakeOffers: deps.outgoingHandshakeOffers,
@@ -228,7 +228,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     inboxFromCache: deps.inboxFromCache,
     inboxCacheAgeMinutes: deps.inboxCacheAgeMinutes,
     inboxLiveSource: deps.inboxLiveSource,
-    basisUnreachable: deps.basisUnreachable,
+    basisUnreachable: connectionStatusRead.basisUnreachable,
     inboxVisibilityHint: deps.inboxVisibilityHint,
     inboxPartnerOptions: deps.inboxPartnerOptions,
     inboxPartnerKey: deps.inboxPartnerKey,
@@ -248,8 +248,8 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps): C
     selectInboxPartnerForSend: deps.selectInboxPartnerForSend,
     removeInboxPartnerFromQuickList: deps.removeInboxPartnerFromQuickList,
     inboxRows: deps.inboxRows,
-    contactDirectory: deps.directory,
-    isMeshVerifiedForAddress: deps.isMeshVerifiedForAddress,
+    contactDirectory: contactDirectoryRead.directory,
+    isMeshVerifiedForAddress: contactDirectoryRead.isMeshVerifiedForAddress,
     exportEcdhMorgPkgForMessage: deps.exportEcdhMorgPkgForMessage,
     onExportEinsatzberichtJson: deps.onExportEinsatzberichtJson,
     onExportEinsatzberichtTxt: deps.onExportEinsatzberichtTxt,

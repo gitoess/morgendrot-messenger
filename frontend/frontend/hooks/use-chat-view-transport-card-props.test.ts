@@ -1,7 +1,6 @@
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-transport-card-props'
-import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 import type { ChatViewTransportCardPropsDeps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 
@@ -17,11 +16,9 @@ function baseDeps(over: Partial<ChatViewTransportCardPropsDeps> = {}): ChatViewT
     })
   return {
     messengerPorts,
-    apiStatus: TEST_API_STATUS_SEND_READY as ChatViewTransportCardPropsDeps['apiStatus'],
     meshBleSupported: true,
     meshBleConnected: false,
     onOpenPartnerSetup: vi.fn(),
-    directory: {},
     refreshContactDirectory: vi.fn(),
     setStatus: vi.fn(),
     setStatusMsg: vi.fn(),

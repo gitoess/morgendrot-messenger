@@ -4,12 +4,16 @@ import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
-import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 
 export type ChatViewEncryptedPartnerPanelPropsDeps = {
   messengerPorts: Pick<
     ChatViewMessengerPorts,
-    'sendTransportRead' | 'composerPartner' | 'composerSendPath' | 'inboxFeedRead'
+    | 'sendTransportRead'
+    | 'composerPartner'
+    | 'composerSendPath'
+    | 'inboxFeedRead'
+    | 'contactDirectoryRead'
+    | 'connectionStatusRead'
   >
   onPartnerChange: (v: string) => void
   sending: boolean
@@ -17,9 +21,7 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
   onConnectAcceptPartner: () => void
   onConnectDeployment: () => void
   onConnectAcceptForAddress: (address: string) => void | Promise<void>
-  directory: Record<string, ContactMeshEntryClient>
   activeGroupMemberAddresses?: string[]
-  connectedAddresses?: string[]
   onHandshakeForAddress: (address: string) => void | Promise<void>
   setStatusMsg: (v: string) => void
 }
@@ -28,7 +30,14 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
   showEncryptedPartnerPanel: boolean
   encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null
 } {
-  const { sendTransportRead, composerPartner, composerSendPath, inboxFeedRead } = deps.messengerPorts
+  const {
+    sendTransportRead,
+    composerPartner,
+    composerSendPath,
+    inboxFeedRead,
+    contactDirectoryRead,
+    connectionStatusRead,
+  } = deps.messengerPorts
 
   const showEncryptedPartnerPanel = useMemo(
     () =>
@@ -64,10 +73,10 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
         onConnectAcceptPartner: deps.onConnectAcceptPartner,
         onConnectDeployment: deps.onConnectDeployment,
         onConnectAcceptForAddress: deps.onConnectAcceptForAddress,
-        directory: deps.directory,
+        directory: contactDirectoryRead.directory,
         isGroupMode: composerSendPath.isGroup,
         groupMemberAddresses: deps.activeGroupMemberAddresses ?? [],
-        connectedAddresses: deps.connectedAddresses ?? [],
+        connectedAddresses: [...connectionStatusRead.connectedAddresses],
         onHandshakeForAddress: deps.onHandshakeForAddress,
         myAddress: inboxFeedRead.myAddress.trim(),
         onPeeringStatus,

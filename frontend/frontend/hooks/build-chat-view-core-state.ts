@@ -3,6 +3,7 @@
  */
 
 import { assembleChatViewMessengerPorts, type ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
+import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapshot'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import type { ChatViewComposerTransportState } from '@/frontend/hooks/use-chat-view-composer-transport-state'
@@ -29,6 +30,11 @@ export function buildChatViewCoreMessengerPorts(
   channelMode: MessengerChatChannel,
   isGroup: boolean
 ): ChatViewMessengerPorts {
+  const connectedAddresses = resolveConnectedAddresses({
+    fromStatus: inbox.apiStatus?.connectedAddresses,
+    preferCacheWhenEmpty: inbox.basisUnreachable,
+  }).addresses
+
   return assembleChatViewMessengerPorts({
     composerDraft: {
       message: composer.message,
@@ -62,6 +68,36 @@ export function buildChatViewCoreMessengerPorts(
     inboxFeed: {
       messages: inbox.displayMessages,
       myAddress,
+    },
+    contactDirectory: {
+      directory: inbox.directory,
+      isMeshVerifiedForAddress: inbox.isMeshVerifiedForAddress,
+    },
+    connectionStatus: {
+      apiStatus: inbox.apiStatus,
+      basisUnreachable: inbox.basisUnreachable,
+      statusCacheAgeMinutes: inbox.statusCacheAgeMinutes,
+      packageIdMismatch: inbox.packageIdMismatch,
+      deviceTimeTrustWarn: inbox.deviceTimeTrustWarn,
+      connectedAddresses,
+    },
+    attachmentBar: {
+      sending: composer.sending,
+      pickDisabled: send.voiceBusy || send.voiceRecording,
+      compactFileRef: send.compactFileRef,
+      compactBusy: send.compactBusy,
+      attachmentPipelineHint: send.attachmentPipelineHint,
+      onFileChange: send.handleCompactAttachmentPick,
+      ingestChatAttachmentFile: send.ingestChatAttachmentFile,
+      compactMeta: send.compactMeta,
+      attachedBlobBase64: send.attachedBlobBase64,
+      attachedLora: send.attachedLora,
+      attachedTxtFile: send.attachedTxtFile,
+      attachedAudioBase64: send.attachedAudioBase64,
+      clearCompactAttachment: send.clearCompactAttachment,
+      compactPreviewUrl: send.compactPreviewUrl,
+      loraPreviewUrl: send.loraPreviewUrl,
+      loraMeshProgressLine: composer.loraMeshProgressLine,
     },
     voiceFromHook: {
       voicePhase: send.voicePhase,
@@ -273,18 +309,5 @@ export function buildChatViewCoreState(input: BuildChatViewCoreStateInput) {
     inboxOverviewCategory: inbox.inboxOverviewCategory,
     setInboxOverviewCategory: inbox.setInboxOverviewCategory,
     inboxOverviewUnreadCounts: inbox.inboxOverviewUnreadCounts,
-    voicePhase: send.voicePhase,
-    voiceActiveKind: send.voiceActiveKind,
-    voiceProgress01: send.voiceProgress01,
-    voiceBusy: send.voiceBusy,
-    voiceRecording: send.voiceRecording,
-    onVoiceToggle: send.onVoiceToggle,
-    onVoiceEmergencyToggle: send.onVoiceEmergencyToggle,
-    voiceNormalBlockedStart: send.voiceNormalBlockedStart,
-    voiceEmergencyBlockedStart: send.voiceEmergencyBlockedStart,
-    voiceMaxSeconds: send.voiceMaxSeconds,
-    voiceEmergencyMaxSeconds: send.voiceEmergencyMaxSeconds,
-    sosVoiceFollowsOnline: send.sosVoiceFollowsOnline,
-    sosVoiceAwaitingSend: send.sosVoiceAwaitingSend,
   }
 }

@@ -1,10 +1,33 @@
 import { vi } from 'vitest'
 import {
   assembleChatViewMessengerPorts,
+  type ChatViewAttachmentBarSlice,
   type ChatViewMessengerPorts,
 } from '@/frontend/features/messenger-ports'
+import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
+
+function defaultAttachmentBarSlice(): ChatViewAttachmentBarSlice {
+  return {
+    sending: false,
+    compactFileRef: { current: null },
+    compactBusy: false,
+    attachmentPipelineHint: null,
+    onFileChange: vi.fn(),
+    ingestChatAttachmentFile: vi.fn(async () => {}),
+    compactMeta: null,
+    attachedBlobBase64: null,
+    attachedLora: null,
+    attachedTxtFile: null,
+    attachedAudioBase64: null,
+    clearCompactAttachment: vi.fn(),
+    compactPreviewUrl: null,
+    loraPreviewUrl: null,
+    loraMeshProgressLine: null,
+  }
+}
 
 /** Minimale messengerPorts für Panel-Hook-Tests (Vitest). */
 export function testMessengerPorts(over: {
@@ -21,6 +44,12 @@ export function testMessengerPorts(over: {
   channelMode?: MessengerChatChannel
   isGroup?: boolean
   isPrivate?: boolean
+  attachmentBar?: Partial<ChatViewAttachmentBarSlice>
+  directory?: Record<string, ContactMeshEntryClient>
+  apiStatus?: ApiStatus | null
+  basisUnreachable?: boolean
+  connectedAddresses?: readonly string[]
+  isMeshVerifiedForAddress?: (address: string) => boolean
 } = {}): ChatViewMessengerPorts {
   const myAddress = over.myAddress ?? `0x${'a'.repeat(64)}`
   return assembleChatViewMessengerPorts({
@@ -57,6 +86,19 @@ export function testMessengerPorts(over: {
       messages: [],
       myAddress,
     },
+    contactDirectory: {
+      directory: over.directory ?? {},
+      isMeshVerifiedForAddress: over.isMeshVerifiedForAddress ?? (() => false),
+    },
+    connectionStatus: {
+      apiStatus: over.apiStatus ?? TEST_API_STATUS_SEND_READY,
+      basisUnreachable: over.basisUnreachable,
+      statusCacheAgeMinutes: null,
+      packageIdMismatch: false,
+      deviceTimeTrustWarn: false,
+      connectedAddresses: over.connectedAddresses ?? [],
+    },
+    attachmentBar: { ...defaultAttachmentBarSlice(), ...over.attachmentBar },
     voiceFromHook: {
       voicePhase: 'idle',
       voiceActiveKind: null,
