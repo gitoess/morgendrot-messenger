@@ -16,11 +16,13 @@ const nodeUnitTests = [
 
 const sharedPool = {
   pool: 'forks' as const,
+  isolate: true,
   fileParallelism: !isCi,
   maxWorkers: isCi ? 1 : undefined,
   teardownTimeout: isCi ? 60_000 : 30_000,
   hookTimeout: isCi ? 60_000 : 30_000,
   testTimeout: isCi ? 30_000 : 10_000,
+  globalTeardown: ['./tests/vitest-global-teardown.ts'],
   reporters: isCi ? (['default', 'github-actions'] as ['default', 'github-actions']) : (['default'] as ['default']),
 }
 

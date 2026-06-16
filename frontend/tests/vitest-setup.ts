@@ -4,7 +4,8 @@ import '@testing-library/jest-dom/vitest'
 
 /**
  * jsdom-Setup: nur wenn document vorhanden (@vitest-environment node überspringt).
- * Kein globales Drain für direct-iota-mnemonic-session — Fork-Isolation + lokales afterEach.
+ * Kein afterEach-Drain für direct-iota-session — bricht Standalone-/Relay-Tests (Modul-Singleton).
+ * Projekt-Ende: tests/vitest-global-teardown.ts
  */
 
 function isDomTestEnv(): boolean {

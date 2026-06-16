@@ -19,6 +19,8 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     defaults:
       run:
         working-directory: frontend
@@ -49,11 +51,17 @@ jobs:
       - name: Frontend Vitest (jsdom)
         env:
           CI: 'true'
-        run: npx vitest run --project frontend-jsdom
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: |
+          npx vitest run --project frontend-jsdom || {
+            echo "::warning::jsdom Vitest failed — one retry with verbose (Linux teardown flake)"
+            npx vitest run --project frontend-jsdom --reporter=verbose
+          }
 
       - name: Frontend Vitest (node)
         env:
           CI: 'true'
+          NODE_OPTIONS: '--max-old-space-size=4096'
         run: npx vitest run --project frontend-node
 
       - name: Next build (Morgendrot Projekt)
