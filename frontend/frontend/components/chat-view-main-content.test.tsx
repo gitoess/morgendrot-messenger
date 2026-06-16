@@ -92,14 +92,13 @@ function meshtasticStub() {
 function buildMainContentProps(
   over: Partial<ChatViewMainContentProps> = {}
 ): ChatViewMainContentProps {
-  return {
+  const merged = {
     isPrivate: true,
     isGroup: false,
     activeGroup: null,
     refreshMessengerGroups: noop,
     role: 'consumer',
     myAddress: MY_ADDR,
-    messengerPorts: testMessengerPorts({ myAddress: MY_ADDR }),
     message: '',
     setMessage: noop,
     recipient: '',
@@ -292,6 +291,20 @@ function buildMainContentProps(
     isPinnwandInboxMessage: () => false,
     ...over,
   } as ChatViewMainContentProps
+  if (over.messengerPorts == null) {
+    merged.messengerPorts = testMessengerPorts({
+      myAddress: merged.myAddress,
+      forcedTransport: merged.forcedTransport,
+      encrypted: merged.encrypted,
+      composerDelivery: merged.composerDelivery,
+      channelMode: merged.channelMode,
+      isGroup: merged.isGroup,
+      isPrivate: merged.isPrivate,
+      messagingPersistenceMode: merged.messagingPersistenceMode,
+      partner: merged.partner,
+    })
+  }
+  return merged
 }
 
 describe('ChatViewMainContent (§ H.1a)', () => {

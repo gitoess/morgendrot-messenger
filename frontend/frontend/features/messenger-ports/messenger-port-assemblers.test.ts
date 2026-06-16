@@ -108,6 +108,15 @@ describe('assembleChatViewMessengerPorts', () => {
         setMessage: onMsg,
         setRecipient: onRec,
       },
+      composerPartner: {
+        partner: '0xp',
+      },
+      composerSendPath: {
+        composerDelivery: 'chain',
+        channelMode: 'private',
+        isGroup: false,
+        isPrivate: true,
+      },
       transport: {
         encrypted: true,
         setEncrypted: onEnc,
@@ -128,6 +137,8 @@ describe('assembleChatViewMessengerPorts', () => {
       },
     })
     expect(ports.composerDraft.message).toBe('hi')
+    expect(ports.composerPartner.partner).toBe('0xp')
+    expect(ports.composerSendPath.composerDelivery).toBe('chain')
     expect(ports.sendTransportRead.forcedTransport).toBe('internet')
     expect(ports.inboxFeedRead.myAddress).toBe('0xb')
     expect(ports.voiceRecordSendPanel).toBeNull()

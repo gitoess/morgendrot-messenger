@@ -6,9 +6,11 @@ import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
   clearPersistedDirectIotaSessionSigner,
+  drainDirectIotaTabSessionPersistForTests,
   getDirectIotaSessionSignerAddress,
   hasPersistedDirectIotaSessionSigner,
   persistDirectIotaSessionSignerEncrypted,
+  resetDirectIotaMnemonicSessionModuleForTests,
   restoreDirectIotaSessionSignerFromEncryptedStorage,
   restoreDirectIotaSessionSignerFromTabSession,
   restoreDirectIotaSessionSignerFromTabSessionAsync,
@@ -20,7 +22,9 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
   const sessionStore: Record<string, string> = {}
   const rawHexSecret = '11'.repeat(32)
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await drainDirectIotaTabSessionPersistForTests()
+    resetDirectIotaMnemonicSessionModuleForTests()
     Object.keys(store).forEach((k) => delete store[k])
     Object.keys(sessionStore).forEach((k) => delete sessionStore[k])
     clearDirectIotaSessionSigner()
@@ -49,7 +53,8 @@ describe('direct-iota-mnemonic-session encrypted local storage', () => {
     )
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await drainDirectIotaTabSessionPersistForTests()
     vi.unstubAllGlobals()
   })
 

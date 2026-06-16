@@ -6,18 +6,16 @@ import type { ChatViewTransportCardProps } from '@/frontend/components/chat-view
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 
 export type ChatViewTransportCardPropsDeps = {
-  messengerPorts: Pick<ChatViewMessengerPorts, 'sendTransportChoice'>
-  isPrivate: boolean
+  messengerPorts: Pick<
+    ChatViewMessengerPorts,
+    'sendTransportChoice' | 'composerPartner' | 'composerSendPath' | 'inboxFeedRead'
+  >
   apiStatus: ApiStatus | null
-  partner: string
   meshBleSupported?: boolean
   meshBleConnected?: boolean
   onOpenPartnerSetup?: () => void
-  channelMode?: MessengerChatChannel
-  myAddress: string
   directory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
   refreshApiStatus?: () => void | Promise<void>
@@ -29,6 +27,8 @@ export type ChatViewTransportCardPropsDeps = {
 export function useChatViewTransportCardProps(
   deps: ChatViewTransportCardPropsDeps
 ): ChatViewTransportCardProps {
+  const { sendTransportChoice, composerPartner, composerSendPath, inboxFeedRead } = deps.messengerPorts
+
   const onMailboxStatus = useCallback(
     (msg: string, kind: 'success' | 'error') => {
       deps.setStatus(kind)
@@ -42,15 +42,15 @@ export function useChatViewTransportCardProps(
   return useMemo(
     () =>
       ({
-        ...deps.messengerPorts.sendTransportChoice,
-        isPrivate: deps.isPrivate,
+        ...sendTransportChoice,
+        isPrivate: composerSendPath.isPrivate,
         apiStatus: deps.apiStatus,
-        partner: deps.partner,
+        partner: composerPartner.partner,
         meshBleSupported: deps.meshBleSupported,
         meshBleConnected: deps.meshBleConnected,
         onOpenPartnerSetup: deps.onOpenPartnerSetup,
-        channelMode: deps.channelMode,
-        myAddressLine: deps.isPrivate ? deps.myAddress : undefined,
+        channelMode: composerSendPath.channelMode,
+        myAddressLine: composerSendPath.isPrivate ? inboxFeedRead.myAddress : undefined,
         contactDirectory: deps.directory,
         onContactsChanged: deps.refreshContactDirectory,
         onRefreshApiStatus: deps.refreshApiStatus,
@@ -58,15 +58,15 @@ export function useChatViewTransportCardProps(
         encryptedPartner: deps.encryptedPartnerPanelProps ?? undefined,
       }) satisfies ChatViewTransportCardProps,
     [
-      deps.messengerPorts.sendTransportChoice,
-      deps.isPrivate,
+      sendTransportChoice,
+      composerSendPath.isPrivate,
+      composerSendPath.channelMode,
       deps.apiStatus,
-      deps.partner,
+      composerPartner.partner,
       deps.meshBleSupported,
       deps.meshBleConnected,
       deps.onOpenPartnerSetup,
-      deps.channelMode,
-      deps.myAddress,
+      inboxFeedRead.myAddress,
       deps.directory,
       deps.refreshContactDirectory,
       deps.refreshApiStatus,

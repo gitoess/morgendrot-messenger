@@ -4,6 +4,8 @@
  */
 
 import { asComposerDraft, type ComposerDraftPort, type ComposerDraftSendFlowPort } from './composer-draft-port'
+import { asComposerPartner, type ComposerPartnerPort } from './composer-partner-port'
+import { asComposerSendPath, type ComposerSendPathPort } from './composer-send-path-port'
 import { asInboxFeedRead, type InboxFeedReadPort } from './inbox-feed-read-port'
 import {
   asSendMeshFunkOptions,
@@ -27,6 +29,17 @@ export type ChatViewComposerDraftSlice = {
   recipient: string
   setMessage: (v: string) => void
   setRecipient: (v: string) => void
+}
+
+export type ChatViewComposerPartnerSlice = {
+  partner: string
+}
+
+export type ChatViewComposerSendPathSlice = {
+  composerDelivery: import('@/frontend/lib/composer-delivery-channel').ComposerDeliveryChannel
+  channelMode?: import('@/frontend/lib/messenger-chat-channel').MessengerChatChannel
+  isGroup: boolean
+  isPrivate: boolean
 }
 
 export type ChatViewTransportSlice = {
@@ -53,11 +66,21 @@ export type ChatViewInboxFeedSlice = {
 export type ChatViewMessengerPorts = {
   composerDraft: ComposerDraftPort
   composerDraftSendFlow: ComposerDraftSendFlowPort
+  composerPartner: ComposerPartnerPort
+  composerSendPath: ComposerSendPathPort
   sendTransportChoice: SendTransportChoicePort
   sendTransportRead: SendTransportReadPort
   sendMeshFunkOptions: SendMeshFunkOptionsPort
   inboxFeedRead: InboxFeedReadPort
   voiceRecordSendPanel: VoiceRecordSendPanelPort | null
+}
+
+export function assembleComposerPartnerPort(slice: ChatViewComposerPartnerSlice): ComposerPartnerPort {
+  return asComposerPartner(slice.partner)
+}
+
+export function assembleComposerSendPathPort(slice: ChatViewComposerSendPathSlice): ComposerSendPathPort {
+  return asComposerSendPath(slice.composerDelivery, slice.channelMode, slice.isGroup, slice.isPrivate)
 }
 
 export function assembleComposerDraftPort(slice: ChatViewComposerDraftSlice): ComposerDraftPort {
@@ -110,6 +133,8 @@ export function assembleVoiceRecordSendPanelPort(
 /** Alle Standard-Ports aus den Core-Slices (ohne AttachmentBar — bleibt im Send-Panel-Hook). */
 export function assembleChatViewMessengerPorts(input: {
   composerDraft: ChatViewComposerDraftSlice
+  composerPartner: ChatViewComposerPartnerSlice
+  composerSendPath: ChatViewComposerSendPathSlice
   transport: ChatViewTransportSlice
   meshFunk: ChatViewMeshFunkSlice
   inboxFeed: ChatViewInboxFeedSlice
@@ -119,6 +144,8 @@ export function assembleChatViewMessengerPorts(input: {
   return {
     composerDraft: assembleComposerDraftPort(input.composerDraft),
     composerDraftSendFlow: assembleComposerDraftSendFlowPort(input.composerDraft),
+    composerPartner: assembleComposerPartnerPort(input.composerPartner),
+    composerSendPath: assembleComposerSendPathPort(input.composerSendPath),
     sendTransportChoice: assembleSendTransportChoicePort(input.transport),
     sendTransportRead: assembleSendTransportReadPort(input.transport),
     sendMeshFunkOptions: assembleSendMeshFunkOptionsPort(input.meshFunk),

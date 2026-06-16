@@ -22,32 +22,21 @@ vi.mock('@/frontend/hooks/use-encrypted-recipient-handshake-status', () => ({
 }))
 
 function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendPanelPropsDeps {
-  const message = over.message ?? 'Hallo'
-  const recipient = over.recipient ?? `0x${'a'.repeat(64)}`
-  const encrypted = over.encrypted ?? true
-  const forcedTransport = over.forcedTransport ?? 'internet'
+  const setRecipient = vi.fn()
+  const isPrivate = over.messengerPorts?.composerSendPath.isPrivate ?? true
   const messengerPorts =
     over.messengerPorts ??
     testMessengerPorts({
-      message,
-      recipient,
-      encrypted,
-      forcedTransport,
-      messagingPersistenceMode: over.messagingPersistenceMode,
-      myAddress: over.myAddress,
+      encrypted: true,
+      forcedTransport: 'internet',
+      composerDelivery: 'chain',
+      isPrivate,
+      setRecipient,
+      myAddress: '0x' + 'c'.repeat(64),
     })
   return {
     messengerPorts,
-    message,
-    setMessage: vi.fn(),
-    recipient,
-    setRecipient: vi.fn(),
-    partner: `0x${'b'.repeat(64)}`,
     setPartner: vi.fn(),
-    encrypted,
-    forcedTransport,
-    isPrivate: over.isPrivate ?? true,
-    isGroup: false,
     activeGroup: null,
     sending: false,
     loraOnlineFallbackOffer: null,
@@ -86,9 +75,6 @@ function baseDeps(over: Partial<ChatViewSendPanelPropsDeps> = {}): ChatViewSendP
     loraMeshProgressLine: null,
     loadMessages: vi.fn(),
     directory: {},
-    myAddress: '0x' + 'c'.repeat(64),
-    composerDelivery: 'chain',
-    messagingPersistenceMode: 'mailbox',
     setComposerMailboxObjectId: vi.fn(),
     appendMeshMessage: vi.fn(),
     handleHandshakeForAddress: vi.fn(),
@@ -108,10 +94,12 @@ describe('useChatViewSendPanelProps', () => {
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
         baseDeps({
-          isPrivate: true,
-          encrypted: true,
-          forcedTransport: 'internet',
-          composerDelivery: 'chain',
+          messengerPorts: testMessengerPorts({
+            encrypted: true,
+            forcedTransport: 'internet',
+            composerDelivery: 'chain',
+            isPrivate: true,
+          }),
         })
       )
     )
@@ -125,9 +113,8 @@ describe('useChatViewSendPanelProps', () => {
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
         baseDeps({
-          isPrivate: true,
           setPartner,
-          setRecipient,
+          messengerPorts: testMessengerPorts({ isPrivate: true, setRecipient }),
         })
       )
     )
@@ -156,15 +143,17 @@ describe('useChatViewSendPanelProps', () => {
     const { result } = renderHook(() =>
       useChatViewSendPanelProps(
         baseDeps({
-          isPrivate: false,
-          isGroup: true,
+          messengerPorts: testMessengerPorts({
+            isPrivate: false,
+            isGroup: true,
+            myAddress: '0x' + 'c'.repeat(64),
+          }),
           activeGroup: {
             id: 'g1',
             name: 'Team',
             memberAddresses: [groupAddr],
             teamMailboxObjectId: '0x' + 'f'.repeat(64),
           },
-          myAddress: '0x' + 'c'.repeat(64),
         })
       )
     )

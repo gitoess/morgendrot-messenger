@@ -6,19 +6,21 @@ import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports
 import type { ChatViewTransportCardPropsDeps } from '@/frontend/hooks/use-chat-view-transport-card-props'
 
 function baseDeps(over: Partial<ChatViewTransportCardPropsDeps> = {}): ChatViewTransportCardPropsDeps {
-  const fullPorts = testMessengerPorts({
-    messagingPersistenceMode: 'mailbox',
-  })
+  const myAddress = '0x' + 'b'.repeat(64)
+  const messengerPorts =
+    over.messengerPorts ??
+    testMessengerPorts({
+      messagingPersistenceMode: 'mailbox',
+      myAddress,
+      partner: '0x' + 'a'.repeat(64),
+      isPrivate: over.messengerPorts ? undefined : true,
+    })
   return {
-    messengerPorts: over.messengerPorts ?? { sendTransportChoice: fullPorts.sendTransportChoice },
-    isPrivate: true,
+    messengerPorts,
     apiStatus: TEST_API_STATUS_SEND_READY as ChatViewTransportCardPropsDeps['apiStatus'],
-    partner: '0x' + 'a'.repeat(64),
     meshBleSupported: true,
     meshBleConnected: false,
     onOpenPartnerSetup: vi.fn(),
-    channelMode: 'private',
-    myAddress: '0x' + 'b'.repeat(64),
     directory: {},
     refreshContactDirectory: vi.fn(),
     setStatus: vi.fn(),
@@ -40,7 +42,11 @@ describe('useChatViewTransportCardProps', () => {
     const addr = '0x' + 'c'.repeat(64)
     const { result, rerender } = renderHook(
       ({ isPrivate }) =>
-        useChatViewTransportCardProps(baseDeps({ isPrivate, myAddress: addr })),
+        useChatViewTransportCardProps(
+          baseDeps({
+            messengerPorts: testMessengerPorts({ myAddress: addr, isPrivate }),
+          })
+        ),
       { initialProps: { isPrivate: true } }
     )
     expect(result.current.myAddressLine).toBe(addr)

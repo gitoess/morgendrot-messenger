@@ -2,15 +2,24 @@ import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useChatViewEncryptedPartnerPanelProps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
 import type { ChatViewEncryptedPartnerPanelPropsDeps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
+import { testMessengerPorts } from '@/frontend/lib/test-fixtures/messenger-ports'
 
 function baseDeps(over: Partial<ChatViewEncryptedPartnerPanelPropsDeps> = {}): ChatViewEncryptedPartnerPanelPropsDeps {
+  const myAddress = '0x' + 'b'.repeat(64)
+  const partner = '0x' + 'a'.repeat(64)
+  const messengerPorts =
+    over.messengerPorts ??
+    testMessengerPorts({
+      partner,
+      myAddress,
+      encrypted: true,
+      forcedTransport: 'internet',
+      composerDelivery: 'chain',
+      channelMode: 'private',
+      isGroup: false,
+    })
   return {
-    channelMode: 'private',
-    isGroup: false,
-    composerDelivery: 'chain',
-    encrypted: true,
-    forcedTransport: 'internet',
-    partner: '0x' + 'a'.repeat(64),
+    messengerPorts,
     onPartnerChange: vi.fn(),
     sending: false,
     onHandshake: vi.fn(),
@@ -20,7 +29,6 @@ function baseDeps(over: Partial<ChatViewEncryptedPartnerPanelPropsDeps> = {}): C
     directory: {},
     connectedAddresses: [],
     onHandshakeForAddress: vi.fn(),
-    myAddress: '0x' + 'b'.repeat(64),
     setStatusMsg: vi.fn(),
     ...over,
   }
@@ -36,7 +44,11 @@ describe('useChatViewEncryptedPartnerPanelProps', () => {
 
   it('liefert null bei Klartext', () => {
     const { result } = renderHook(() =>
-      useChatViewEncryptedPartnerPanelProps(baseDeps({ encrypted: false }))
+      useChatViewEncryptedPartnerPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({ encrypted: false }),
+        })
+      )
     )
     expect(result.current.showEncryptedPartnerPanel).toBe(false)
     expect(result.current.encryptedPartnerPanelProps).toBeNull()
@@ -44,7 +56,11 @@ describe('useChatViewEncryptedPartnerPanelProps', () => {
 
   it('liefert null bei Funk-Transport', () => {
     const { result } = renderHook(() =>
-      useChatViewEncryptedPartnerPanelProps(baseDeps({ forcedTransport: 'mesh' }))
+      useChatViewEncryptedPartnerPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({ forcedTransport: 'mesh' }),
+        })
+      )
     )
     expect(result.current.encryptedPartnerPanelProps).toBeNull()
   })
@@ -54,8 +70,10 @@ describe('useChatViewEncryptedPartnerPanelProps', () => {
     const { result } = renderHook(() =>
       useChatViewEncryptedPartnerPanelProps(
         baseDeps({
-          channelMode: 'group',
-          isGroup: true,
+          messengerPorts: testMessengerPorts({
+            channelMode: 'group',
+            isGroup: true,
+          }),
           activeGroupMemberAddresses: [member],
         })
       )

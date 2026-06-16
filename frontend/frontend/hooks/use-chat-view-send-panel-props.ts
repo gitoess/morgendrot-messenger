@@ -15,9 +15,7 @@ import type {
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { resolveComposerIotaAddress } from '@/frontend/lib/composer-recipient-fields'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
-import { isPinnwandChannel, type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
-import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
-import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
+import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
 import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import type { AppendMeshMessageFn } from '@/frontend/hooks/use-chat-view-send-flow-types'
 import type { ChatAttachedLora } from '@/frontend/lib/chat-view-attached-types'
@@ -26,16 +24,7 @@ import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-st
 
 export type ChatViewSendPanelPropsDeps = {
   messengerPorts: ChatViewMessengerPorts
-  message: string
-  setMessage: (v: string) => void
-  recipient: string
-  setRecipient: (v: string) => void
-  partner: string
   setPartner: (v: string) => void
-  encrypted: boolean
-  forcedTransport: ForcedTransport
-  isPrivate: boolean
-  isGroup: boolean
   activeGroup: MessengerGroupDefinition | null
   sending: boolean
   loraOnlineFallbackOffer: { reasonLabel: string } | null
@@ -81,9 +70,6 @@ export type ChatViewSendPanelPropsDeps = {
     opts?: { silent?: boolean }
   ) => void | Promise<void>
   directory: Record<string, ContactMeshEntryClient>
-  myAddress: string
-  composerDelivery: ComposerDeliveryChannel
-  messagingPersistenceMode: MessagingPersistenceMode
   composerMailboxObjectId?: string
   setComposerMailboxObjectId: (id: string) => void
   appendMeshMessage: AppendMeshMessageFn
@@ -92,7 +78,6 @@ export type ChatViewSendPanelPropsDeps = {
   expertTools: boolean
   pinnwandBroadcastAddress?: string
   canPostToPinnwand: boolean
-  channelMode?: MessengerChatChannel
   vaultBannerActions?: ChatViewVaultBannerActions
   onOpenPhonebook?: () => void
   handshakeConnectedAddresses: string[]
@@ -105,27 +90,41 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   sendPanelProps: ChatViewSendPanelProps
   syncPartnerAndRecipient: (v: string) => void
 } {
+  const {
+    composerDraft,
+    sendTransportRead,
+    sendTransportChoice,
+    inboxFeedRead,
+    composerPartner,
+    composerSendPath,
+  } = deps.messengerPorts
+
   const groupSendPanelContext = useMemo(
     () =>
       buildGroupSendPanelContext({
-        isGroupChannel: deps.isGroup,
+        isGroupChannel: composerSendPath.isGroup,
         activeGroup: deps.activeGroup,
-        myAddress: deps.myAddress,
+        myAddress: inboxFeedRead.myAddress,
       }),
-    [deps.isGroup, deps.activeGroup, deps.myAddress]
+    [composerSendPath.isGroup, deps.activeGroup, inboxFeedRead.myAddress]
   )
 
   const composerEncryptedRecipient = useMemo(
-    () => resolveComposerIotaAddress(deps.recipient, deps.partner, deps.encrypted),
-    [deps.recipient, deps.partner, deps.encrypted]
+    () =>
+      resolveComposerIotaAddress(
+        composerDraft.recipient,
+        composerPartner.partner,
+        sendTransportRead.encrypted
+      ),
+    [composerDraft.recipient, composerPartner.partner, sendTransportRead.encrypted]
   )
 
   const encryptedRecipientHandshake = useEncryptedRecipientHandshakeStatus({
     enabled:
-      deps.isPrivate &&
-      deps.encrypted &&
-      deps.forcedTransport === 'internet' &&
-      deps.composerDelivery === 'chain' &&
+      composerSendPath.isPrivate &&
+      sendTransportRead.encrypted &&
+      sendTransportRead.forcedTransport === 'internet' &&
+      composerSendPath.composerDelivery === 'chain' &&
       isValidRecipient0x(composerEncryptedRecipient),
     recipient: composerEncryptedRecipient,
     connectedAddresses: deps.handshakeConnectedAddresses,
@@ -166,28 +165,28 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   ])
 
   const telegramComposer = useChatViewTelegramComposer({
-    isPrivate: deps.isPrivate,
-    composerDelivery: deps.composerDelivery,
-    recipient: deps.recipient,
-    partner: deps.partner,
-    encrypted: deps.encrypted,
-    message: deps.message,
+    isPrivate: composerSendPath.isPrivate,
+    composerDelivery: composerSendPath.composerDelivery,
+    recipient: composerDraft.recipient,
+    partner: composerPartner.partner,
+    encrypted: sendTransportRead.encrypted,
+    message: composerDraft.message,
     apiStatus: deps.apiStatus,
     contactDirectory: deps.directory,
-    myAddress: deps.myAddress,
+    myAddress: inboxFeedRead.myAddress,
     sending: deps.sending,
     attachedTxtFile: deps.attachedTxtFile,
     attachedBlobBase64: deps.attachedBlobBase64,
     attachedAudioBase64: deps.attachedAudioBase64,
     hasLoraAttachment: deps.attachedLora != null,
-    onMessageChange: deps.setMessage,
+    onMessageChange: composerDraft.onMessageChange,
     clearAttachments: deps.clearCompactAttachment,
     onStatusFeedback: (msg, st = 'success') => {
       deps.setStatus(st)
       deps.setStatusMsg(msg)
     },
     onTelegramDelivered: ({ recipientKey, text }) => {
-      recordTelegramOutgoing(deps.appendMeshMessage, deps.myAddress, recipientKey, text)
+      recordTelegramOutgoing(deps.appendMeshMessage, inboxFeedRead.myAddress, recipientKey, text)
     },
   })
 
@@ -195,9 +194,9 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     (v: string) => {
       const t = v.trim().toLowerCase()
       deps.setPartner(t)
-      if (deps.isPrivate) deps.setRecipient(t)
+      if (composerSendPath.isPrivate) composerDraft.onRecipientChange(t)
     },
-    [deps.isPrivate, deps.setPartner, deps.setRecipient]
+    [composerSendPath.isPrivate, deps.setPartner, composerDraft.onRecipientChange]
   )
 
   const voicePort = deps.messengerPorts.voiceRecordSendPanel
@@ -210,7 +209,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     ...deps.messengerPorts.sendTransportRead,
     ...deps.messengerPorts.sendMeshFunkOptions,
     ...voicePort,
-    isPrivate: deps.isPrivate,
+    isPrivate: composerSendPath.isPrivate,
     sending: deps.sending,
     loraOnlineFallbackOffer: deps.loraOnlineFallbackOffer,
     onConfirmLoraOnline: deps.confirmLoraSendViaOnline,
@@ -233,7 +232,6 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     meshtasticChannelIndex: deps.meshtasticChannelIndex,
     onMeshtasticChannelIndexChange: deps.setMeshtasticChannelIndex,
     showMeshtasticChannelIndexInput: deps.expertTools,
-    forcedTransport: deps.forcedTransport,
     compactFileRef: deps.compactFileRef,
     compactBusy: deps.compactBusy,
     attachmentPipelineHint: deps.attachmentPipelineHint,
@@ -253,24 +251,24 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       await deps.loadMessages('reset')
     },
     contactDirectory: deps.directory,
-    isGroupChannel: deps.isGroup,
+    isGroupChannel: composerSendPath.isGroup,
     groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
     groupMemberCount: groupSendPanelContext.groupMemberCount,
     groupTeamBroadcastReady: groupSendPanelContext.groupTeamBroadcastReady,
-    partner: deps.partner,
+    partner: composerPartner.partner,
     onPartnerChange: syncPartnerAndRecipient,
-    myAddress: deps.myAddress,
+    myAddress: inboxFeedRead.myAddress,
     hideComposerIotaRecipient:
-      deps.isPrivate &&
-      deps.encrypted &&
-      deps.forcedTransport === 'internet' &&
-      deps.composerDelivery === 'chain',
+      composerSendPath.isPrivate &&
+      sendTransportRead.encrypted &&
+      sendTransportRead.forcedTransport === 'internet' &&
+      composerSendPath.composerDelivery === 'chain',
     onStatusFeedback: (msg, st = 'success') => {
       deps.setStatus(st)
       deps.setStatusMsg(msg)
     },
-    composerDelivery: deps.composerDelivery,
-    messagingPersistenceMode: deps.messagingPersistenceMode,
+    composerDelivery: composerSendPath.composerDelivery,
+    messagingPersistenceMode: sendTransportChoice.messagingPersistenceMode,
     onTelegramSend: telegramComposer.handleTelegramOnly,
     canSendTelegram: telegramComposer.canSendTelegramOnly,
     telegramBusy: telegramComposer.telegramOnlyBusy,
@@ -283,7 +281,8 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
     showPath4Checkbox: deps.expertTools,
     onOpenPhonebook: deps.onOpenPhonebook,
-    isPinnwandChannel: deps.channelMode != null && isPinnwandChannel(deps.channelMode),
+    isPinnwandChannel:
+      composerSendPath.channelMode != null && isPinnwandChannel(composerSendPath.channelMode),
     pinnwandBroadcastAddress: deps.pinnwandBroadcastAddress,
     canPostToPinnwand: deps.canPostToPinnwand,
   } satisfies ChatViewSendPanelProps

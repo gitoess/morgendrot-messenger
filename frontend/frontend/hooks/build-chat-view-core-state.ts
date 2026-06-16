@@ -25,7 +25,9 @@ export function buildChatViewCoreMessengerPorts(
   composer: ChatViewComposerTransportState,
   inbox: ChatViewInboxOrchestration,
   send: ChatViewSendOrchestration,
-  myAddress: string
+  myAddress: string,
+  channelMode: MessengerChatChannel,
+  isGroup: boolean
 ): ChatViewMessengerPorts {
   return assembleChatViewMessengerPorts({
     composerDraft: {
@@ -33,6 +35,15 @@ export function buildChatViewCoreMessengerPorts(
       recipient: composer.recipient,
       setMessage: composer.setMessage,
       setRecipient: composer.setRecipient,
+    },
+    composerPartner: {
+      partner: composer.partner,
+    },
+    composerSendPath: {
+      composerDelivery: composer.composerDelivery,
+      channelMode,
+      isGroup,
+      isPrivate: composer.isPrivate,
     },
     transport: {
       encrypted: composer.encrypted,
@@ -73,7 +84,7 @@ export function buildChatViewCoreMessengerPorts(
 export function buildChatViewCoreState(input: BuildChatViewCoreStateInput) {
   const { channelMode, role, myAddress, isGroup, activeGroup, refreshMessengerGroups, composer, inbox, send } =
     input
-  const messengerPorts = buildChatViewCoreMessengerPorts(composer, inbox, send, myAddress)
+  const messengerPorts = buildChatViewCoreMessengerPorts(composer, inbox, send, myAddress, channelMode, isGroup)
 
   return {
     channelMode,

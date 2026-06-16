@@ -3,18 +3,14 @@
 import { useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import type { ChatViewEncryptedPartnerPanelProps } from '@/frontend/components/chat-view-encrypted-partner-panel'
+import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 
 export type ChatViewEncryptedPartnerPanelPropsDeps = {
-  channelMode?: MessengerChatChannel
-  isGroup: boolean
-  composerDelivery: ComposerDeliveryChannel
-  encrypted: boolean
-  forcedTransport: ForcedTransport
-  partner: string
+  messengerPorts: Pick<
+    ChatViewMessengerPorts,
+    'sendTransportRead' | 'composerPartner' | 'composerSendPath' | 'inboxFeedRead'
+  >
   onPartnerChange: (v: string) => void
   sending: boolean
   onHandshake: () => void
@@ -25,7 +21,6 @@ export type ChatViewEncryptedPartnerPanelPropsDeps = {
   activeGroupMemberAddresses?: string[]
   connectedAddresses?: string[]
   onHandshakeForAddress: (address: string) => void | Promise<void>
-  myAddress: string
   setStatusMsg: (v: string) => void
 }
 
@@ -33,13 +28,21 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
   showEncryptedPartnerPanel: boolean
   encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null
 } {
+  const { sendTransportRead, composerPartner, composerSendPath, inboxFeedRead } = deps.messengerPorts
+
   const showEncryptedPartnerPanel = useMemo(
     () =>
-      (deps.channelMode === 'private' || deps.isGroup) &&
-      deps.composerDelivery === 'chain' &&
-      deps.encrypted &&
-      deps.forcedTransport === 'internet',
-    [deps.channelMode, deps.isGroup, deps.composerDelivery, deps.encrypted, deps.forcedTransport]
+      (composerSendPath.channelMode === 'private' || composerSendPath.isGroup) &&
+      composerSendPath.composerDelivery === 'chain' &&
+      sendTransportRead.encrypted &&
+      sendTransportRead.forcedTransport === 'internet',
+    [
+      composerSendPath.channelMode,
+      composerSendPath.isGroup,
+      composerSendPath.composerDelivery,
+      sendTransportRead.encrypted,
+      sendTransportRead.forcedTransport,
+    ]
   )
 
   const onPeeringStatus = useCallback(
@@ -54,7 +57,7 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
 
   const encryptedPartnerPanelProps: ChatViewEncryptedPartnerPanelProps | null = showEncryptedPartnerPanel
     ? {
-        partner: deps.partner,
+        partner: composerPartner.partner,
         onPartnerChange: deps.onPartnerChange,
         sending: deps.sending,
         onHandshake: deps.onHandshake,
@@ -62,11 +65,11 @@ export function useChatViewEncryptedPartnerPanelProps(deps: ChatViewEncryptedPar
         onConnectDeployment: deps.onConnectDeployment,
         onConnectAcceptForAddress: deps.onConnectAcceptForAddress,
         directory: deps.directory,
-        isGroupMode: deps.isGroup,
+        isGroupMode: composerSendPath.isGroup,
         groupMemberAddresses: deps.activeGroupMemberAddresses ?? [],
         connectedAddresses: deps.connectedAddresses ?? [],
         onHandshakeForAddress: deps.onHandshakeForAddress,
-        myAddress: deps.myAddress.trim(),
+        myAddress: inboxFeedRead.myAddress.trim(),
         onPeeringStatus,
       }
     : null

@@ -6,8 +6,10 @@ import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
   clearPersistedDirectIotaSessionSigner,
+  drainDirectIotaTabSessionPersistForTests,
   getDirectIotaSessionSignerAddress,
   persistDirectIotaSessionSignerEncrypted,
+  resetDirectIotaMnemonicSessionModuleForTests,
   whenDirectIotaTabSessionPersistIdle,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
@@ -52,7 +54,9 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
   const sessionStore: Record<string, string> = {}
   const store: Record<string, string> = {}
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    await drainDirectIotaTabSessionPersistForTests()
+    resetDirectIotaMnemonicSessionModuleForTests()
     Object.keys(sessionStore).forEach((k) => delete sessionStore[k])
     Object.keys(store).forEach((k) => delete store[k])
     clearDirectIotaSessionSigner()
@@ -86,7 +90,8 @@ describe('syncDirectIotaSessionSignerAfterVaultUnlock', () => {
     )
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await drainDirectIotaTabSessionPersistForTests()
     vi.unstubAllGlobals()
     clearDirectIotaSessionSigner()
     clearPersistedDirectIotaSessionSigner()
@@ -221,7 +226,8 @@ describe('syncDirectChatEcdhAfterVaultUnlock', () => {
     )
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    await drainDirectIotaTabSessionPersistForTests()
     clearDirectChatEcdhPrivateKey()
     vi.unstubAllGlobals()
   })

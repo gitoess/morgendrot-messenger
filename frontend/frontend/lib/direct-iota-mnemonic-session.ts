@@ -111,10 +111,21 @@ function scheduleDirectIotaTabSessionPersist(signerImportRaw: string): void {
   tabSessionPersistIdle = tabSessionPersistIdle
     .catch(() => {})
     .then(() => persistDirectIotaSessionSignerTabSessionEncrypted(signerImportRaw))
+    .catch(() => {})
 }
 
 export function whenDirectIotaTabSessionPersistIdle(): Promise<void> {
   return tabSessionPersistIdle
+}
+
+/** Vitest: RAM-Signer + Tab-Persist-Kette zurücksetzen (Worker teilen Modul-Singleton). */
+export function resetDirectIotaMnemonicSessionModuleForTests(): void {
+  clearDirectIotaSessionSigner()
+  tabSessionPersistIdle = Promise.resolve()
+}
+
+export async function drainDirectIotaTabSessionPersistForTests(): Promise<void> {
+  await tabSessionPersistIdle.catch(() => {})
 }
 
 /** Sync: nur Legacy-Klartext-Tab (verschlüsselte Tab-Session → async Restore). */

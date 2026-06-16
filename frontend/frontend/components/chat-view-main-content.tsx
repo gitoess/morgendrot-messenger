@@ -814,16 +814,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   const { sendPanelProps, syncPartnerAndRecipient } = useChatViewSendPanelProps({
     messengerPorts,
-    message,
-    setMessage,
-    recipient,
-    setRecipient,
-    partner,
     setPartner,
-    encrypted,
-    forcedTransport,
-    isPrivate,
-    isGroup,
     activeGroup,
     sending,
     loraOnlineFallbackOffer,
@@ -865,9 +856,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     refreshApiStatus,
     loadMessages,
     directory,
-    myAddress,
-    composerDelivery,
-    messagingPersistenceMode,
     composerMailboxObjectId,
     setComposerMailboxObjectId,
     appendMeshMessage,
@@ -876,7 +864,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     expertTools: uiCaps.expertTools,
     pinnwandBroadcastAddress: pinnwandCaps.broadcastAddress,
     canPostToPinnwand: pinnwandCaps.canPost,
-    channelMode,
     vaultBannerActions,
     onOpenPhonebook: isPrivate || isGroup ? () => setPhonebookOpen(true) : undefined,
     handshakeConnectedAddresses: handshakeConnected.addresses,
@@ -886,12 +873,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   })
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
-    channelMode,
-    isGroup,
-    composerDelivery,
-    encrypted,
-    forcedTransport,
-    partner,
+    messengerPorts,
     onPartnerChange: syncPartnerAndRecipient,
     sending,
     onHandshake: handleHandshake,
@@ -902,25 +884,21 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     activeGroupMemberAddresses: activeGroup?.memberAddresses,
     connectedAddresses: apiStatus?.connectedAddresses ?? [],
     onHandshakeForAddress: handleHandshakeForAddress,
-    myAddress,
     setStatusMsg,
   })
 
   const showPartnerSetupPanel =
-    composerDelivery === 'chain' &&
-    (forcedTransport === 'mesh' || forcedTransport === 'adhoc') &&
-    (channelMode === 'private' || isGroup)
+    messengerPorts.composerSendPath.composerDelivery === 'chain' &&
+    (messengerPorts.sendTransportRead.forcedTransport === 'mesh' ||
+      messengerPorts.sendTransportRead.forcedTransport === 'adhoc') &&
+    (messengerPorts.composerSendPath.channelMode === 'private' || messengerPorts.composerSendPath.isGroup)
 
   const transportCardProps = useChatViewTransportCardProps({
     messengerPorts,
-    isPrivate,
     apiStatus,
-    partner,
     meshBleSupported: meshtastic.bleSupported,
     meshBleConnected: meshtastic.connected,
     onOpenPartnerSetup: openPartnerSetupPanel,
-    channelMode,
-    myAddress,
     directory,
     refreshContactDirectory,
     refreshApiStatus,
