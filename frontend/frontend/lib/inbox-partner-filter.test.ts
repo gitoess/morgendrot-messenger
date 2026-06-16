@@ -108,13 +108,18 @@ describe('filterInboxMessagesByPartnerAndDirection', () => {
     expect(r.map((m) => m.id).sort()).toEqual(['o', 's'])
   })
 
-  it('partner filter inkl. PEER, Selbst-an-selbst bleibt sichtbar', () => {
+  it('partner filter PEER: Thread ohne Selbst-an-selbst', () => {
     const r = filterInboxMessagesByPartnerAndDirection(list, ME, PEER, 'all')
-    expect(r.map((m) => m.id).sort()).toEqual(['i', 'o', 's'])
+    expect(r.map((m) => m.id).sort()).toEqual(['i', 'o'])
   })
 
-  it('partner PEER2: nur Selbst-an-selbst, keine PEER-Nachrichten', () => {
+  it('partner filter fremder Kontakt: leer (Selbst-an-selbst nur im eigenen Thread)', () => {
     const r = filterInboxMessagesByPartnerAndDirection(list, ME, PEER2, 'all')
+    expect(r.map((m) => m.id)).toEqual([])
+  })
+
+  it('partner filter eigene Adresse: nur Selbst-an-selbst', () => {
+    const r = filterInboxMessagesByPartnerAndDirection(list, ME, ME, 'all')
     expect(r.map((m) => m.id)).toEqual(['s'])
   })
 })

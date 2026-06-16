@@ -474,7 +474,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
     expect(onSend).not.toHaveBeenCalled()
   })
 
-  it('zeigt Persistenz-Badge bei Online + Mailbox-Modus (§ H.1a)', () => {
+  it('zeigt Chain-Speicher-Auswahl bei Online + Empfänger (§ H.1a)', () => {
     const partner = `0x${'d'.repeat(64)}`
     render(
       <ChatViewSendPanel
@@ -487,7 +487,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Verschlüsselt · Mailbox/)).toBeInTheDocument()
+    expect(screen.getByText(/Speicher auf der Chain/)).toBeInTheDocument()
   })
 
   it('zeigt Abbrechen-Button während sending und ruft onCancelSend (§ H.1a)', () => {
