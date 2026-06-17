@@ -1,7 +1,7 @@
 # Telegram-Integration — Zielbild (Spez)
 
 **Status:** Spezifikation + **Ist-Code** (**§ H.26** in **`docs/ROADMAP-FAHRPLAN.md`**).  
-**Stand:** **2026-06-16** (neu **§6 B4b** Boss-Gruppenalarm; zuvor 2026-05-20 Phase **B2 Long Polling**).
+**Stand:** **2026-06-17** (§6.11 Helfer-Flow Handoff-first; zuvor 2026-06-16 §6 B4b).
 
 **Zweck:** Telegram als **Hinweis-Kanal** für (A) **Systemalarme**, (B2) **Eingang**, (B3) **1:1-Notify nach Send**, (B4b) **Einsatz-Gruppenalarm** — Runtime-Konfiguration, ohne `TG_*` in Helfer-`.env`.
 
@@ -278,10 +278,11 @@ B4b ist **zusätzlicher Ausgang** neben den Morgendrot-Primärwegen — **nie** 
 | **Composer-Send + Opt-in B3** | Funk / online / … | **Nein** (1:1) | B3 bleibt **Einzel**-`telegramChatId`; Gruppe nicht pro Chat-Nachricht spammen |
 | **Boss „Team alarmieren“** | — | **Ja** | Manuell Einsatzleitung; Template wählbar |
 | **Monitor-Alarm (Kanal A)** | Relay `/alarm` → `adminChatId` | **Optional** | Separate Schalter: Admin **oder** auch Einsatz-Gruppe |
-| **Team-Member-Update (§ H.36)** | IOTA + LAN + Funk-Ping | **Optional** | Hinweis *„Neues Mitglied — bitte in App bestätigen“* — **kein** Roster im Klartext |
+| **Team-Member-Update (§ H.36)** | IOTA + LAN + Funk-Ping | **Optional** | Kurz-Hinweis in Telegram-Gruppe — **kein** Roster |
+| **Telegram-Gruppen-Link (§3.5)** | `MORG_TELEGRAM_ALARM_GROUP_V1` | **Nein** (1:1) | Systemkarte §7.4; Handoff = Primärweg §6.6 |
+| **Handoff / Provisioning** | ZIP + Extras-JSON | **Nein** (Broadcast) | Link im ZIP; Wizard Schritt 2 |
 | **Pinnwand / Broadcast** | Online IOTA | **Backlog** | **`docs/BROADCAST-PINNWAND.md`** — nicht B4b v1 |
 | **Handshake / Connect** | IOTA / API | **Nein** | **§ H.27** — Badge/Inbox, kein Telegram |
-| **Handoff / Provisioning** | ZIP / QR / WLAN-QR | **Nein** | Nur **Link-Weitergabe** im README, kein Auto-Join |
 
 **Sendepfad-UI (Composer):** Die vier Modi **funk / online / telegram / adhoc** (**`docs/TRANSPORT-AND-IOTA-LAYERS.md`**) betreffen **Nachrichteninhalt**. B4b ist **paralleler System-Hinweis** — nicht der Composer-Transport „telegram“.
 
@@ -300,30 +301,57 @@ Platzhalter: `{teamLabel}`, `{eventType}`, `{bossShort}`, `{seq}`.
 
 **Verboten im Text:** Mnemonic, Keys, volle SOS-Lage, `.env`-Inhalte, Einladungslink **nicht** in Gruppennachrichten wiederholen (Link nur onboarding-seitig).
 
-### 6.6 Helfer: der Gruppe beitreten
+### 6.6 Helfer-Flow — Übersicht (verbindlich)
 
-Die App kann **nicht** im Namen des Nutzers einer Telegram-Gruppe beitreten — nur **Telegram** (App oder Web) kann das. Morgendrot **zeigt** den Link und **öffnet** ihn.
+| Phase | Wann | Kanal | Regel |
+|-------|------|--------|--------|
+| **A — Erst-Handoff** | Boss provisioniert **vor** dem Feld | Link im ZIP/README (+ optional QR im Wizard) | **Primärweg** für neue Helfer |
+| **B — Späterer Wechsel** | Boss legt Gruppe neu an / Link rotiert | `MORG_TELEGRAM_ALARM_GROUP_V1` (**§6.7**, Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** §3.5) | IOTA + LAN + Funk-Ping; Systemkarte im Posteingang |
+| **C — Nachholen** | Helfer hat Schritt übersprungen | Einstellungen → „Telegram-Alarmgruppe“ | Link aus lokalem Cache oder neues Update |
 
-#### 6.6.1 Empfohlen: Permanenter Einladungslink
+**Immer:** Beitritt **optional** — kein Zwang. Telegram = **Hinweis-Kanal**, Inhalte in Morgendrot.
 
-| Schritt | Wer | Aktion |
-|---------|-----|--------|
-| 1 | Boss | Telegram → Gruppe → **Link einladen** → permanenten Link kopieren |
-| 2 | Boss | Link in Runtime + optional **QR** in Einsatzleitung / Handoff |
-| 3 | Helfer | Link antippen oder QR mit **Telegram-App** scannen → **Beitreten** |
+**Niemals:** Automatisches Beitreten zur Telegram-Gruppe ohne Nutzer in der **Telegram-App** (Bot-API erlaubt das nicht).
 
-**Warum best:** Schnell, keine Suche, funktioniert bei **privater** Gruppe.
+### 6.6.1 Erst-Handoff (Primärweg)
 
-**Weitergabe des Links (nach Priorität):**
+**Boss (vor oder während Export):**
+
+1. Telegram-Gruppe + Bot-Admin (§6.3).
+2. Permanenter Einladungslink in Runtime **`einsatzGroupInviteLink`**.
+3. Beim Handoff-Export: Link in **`README-HANDOFF.txt`** + maschinenlesbar in **`.morgendrot-handoff-extras.json`** (B4b.2):
+
+```json
+{
+  "telegramAlarmGroup": {
+    "label": "Einsatz Team Alpha",
+    "inviteLink": "https://t.me/+AbCdEfGh"
+  }
+}
+```
+
+**Helfer (Wizard Schritt 2 — direkt nach Handoff-Import, § H.36):**
+
+| UI | Verhalten |
+|----|-----------|
+| **Titel** | „Telegram-Alarmgruppe (empfohlen)“ |
+| **Text** | „Für wichtige Alarmierungen (SOS, Team-Update): der Einsatz-Gruppe beitreten. Nur Hinweise — Inhalte bleiben in Morgendrot.“ |
+| **QR** | Aus `inviteLink` generiert (analog Install-QR) |
+| **Button** | **„Gruppe beitreten“** → `window.open(inviteLink)` / `tg://join?invite=…` |
+| **Checkbox** | **„Link beim Öffnen dieses Schritts anzeigen“** (`morgendrot.telegramOpenInviteOnStep`, Default aus) — **nicht** „automatisch beitreten“ (technisch unmöglich) |
+| **Sekundär** | **„Später“** · **„Nicht interessiert“** → `localStorage` `morgendrot.telegramAlarmGroupDismissed` |
+
+**Skip:** Schritt ausblenden, wenn Handoff **kein** `inviteLink` enthält **und** Boss noch keine Gruppe konfiguriert hat.
+
+**Weitergabe des Links (Priorität neben Handoff):**
 
 | Kanal | Eignung | Grenze |
 |-------|---------|--------|
-| **QR in Einsatzleitung / Wizard** | **Beste** | Braucht Bildschirm oder Ausdruck |
-| **Handoff `README-HANDOFF.txt`** | **Gut** für Neulinge | ZIP kann weitergegeben werden — Link ist semi-öffentlich |
-| **Boss-LAN / QR Install** | **Gut** im WLAN | Nur vor Ort |
-| **IOTA Klartext / Mailbox** | **Möglich** | Link lang; nur wenn nötig, besser Kurztext *„Link beim Boss“* |
-| **Funk (LoRa)** | **Schlecht** | Airtime — **kein** voller `t.me/+…` Link; Funk: *„Telegram-Gruppe: Link beim Boss / QR scannen“* |
-| **Ausgedruckt am Einsatzbrief** | **Gut** | Offline-fähig |
+| **Handoff ZIP (Primär)** | **Beste** für Erststart | Link semi-öffentlich in ZIP — bei Leak Link rotieren |
+| **QR im Wizard / Einsatzleitung** | **Beste** visuell | Bildschirm oder Ausdruck |
+| **Boss-LAN / WLAN-QR** | **Gut** vor Ort | Nur im WLAN |
+| **IOTA / Team-Update Wire** | **Gut** für spätere Änderung | Vollständiger Link im Wire (≤4 KiB) |
+| **Funk (LoRa)** | **Nur Ping** | *„Neue Telegram-Gruppe — in App öffnen“* — **kein** voller Link |
 
 #### 6.6.2 Nicht empfohlen: Manuelle Suche
 
@@ -331,21 +359,41 @@ Die App kann **nicht** im Namen des Nutzers einer Telegram-Gruppe beitreten — 
 |---------|-----------|
 | Gruppe **öffentlich** suchen | ❌ Selten gewollt; OPSEC |
 | Gruppenname ohne Link | ❌ Fehleranfällig |
-| Negative **`chat_id`** an Helfer | ❌ **Nur** Boss-Runtime — Helfer brauchen die ID **nicht** |
+| Negative **`chat_id`** an Helfer | ❌ **Nur** Boss-Runtime |
 
-#### 6.6.3 UI (Boss + Helfer)
+#### 6.6.3 UI-Ort (Boss + Helfer)
 
 | Ort | Inhalt |
 |-----|--------|
-| **Einstellungen → Telegram → Einsatz-Alarmgruppe** (Boss) | Link einfügen, QR anzeigen, Test an Gruppe, `einsatzGroupAlarmEnabled` |
-| **Helfer-Wizard** (§ H.36 P0, Schritt optional) | Hinweis + QR/Link + **„In Telegram öffnen“** + **„Später“** |
-| **Handoff README** | Abschnitt *Telegram-Alarmgruppe (optional)* mit Link |
+| **Einstellungen → Telegram → Einsatz-Alarmgruppe** (Boss) | Link, QR, Test an Gruppe, Schalter `einsatzGroupAlarmEnabled`; **„In Handoff mitgeben“** (Default an wenn Link gesetzt) |
+| **Helfer-Wizard Schritt 2** (§ H.36) | §6.6.1 — nur wenn Link aus Handoff/Update |
+| **Einstellungen → Telegram** (Helfer, Expert) | Nachholen: letzter bekannter Link + „Beitreten“ |
+| **Posteingang-Systemkarte** | Späterer Link-Wechsel (§6.7) |
 
-**Copy (Helfer):** *„Nur für Benachrichtigungen — alle wichtigen Inhalte bleiben in Morgendrot.“*
+**Deep-Link:** Fallback ohne Telegram-App → Store-Hinweis, Link kopierbar.
 
-**Deep-Link:** Button ruft `window.open(inviteLink)` bzw. `tg://join?invite=…` — Fallback wenn Telegram nicht installiert: Store-Hinweis.
+### 6.7 Späterer Gruppen-Wechsel (Boss → alle Helfer)
 
-### 6.7 Eingang (B2) in der Gruppe
+Wenn Boss die Gruppe **nach** dem Erst-Handoff anlegt oder den Einladungslink **rotiert**:
+
+1. Boss speichert neuen Link in Runtime (§6.3).
+2. Boss sendet **`MORG_TELEGRAM_ALARM_GROUP_V1`** an Team-Mailbox (Wire: **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** §3.5).
+3. **Parallel:** LAN-Push wenn erreichbar; Funk nur **`MORG_TEAM_UPDATE_PING_V1`** mit Hinweis `kind: telegram_group`.
+4. Optional: B4b Kurz-Hinweis **in** die Telegram-Gruppe selbst (nur wer schon drin ist).
+
+**Empfänger — Systemkarte (Posteingang):**
+
+| Feld | Wert |
+|------|------|
+| **Titel** | `Neue Telegram-Alarmgruppe` |
+| **Text** | „Einsatzleitung hat eine Alarmgruppe eingerichtet: {label}.“ |
+| **Aktionen** | **Gruppe beitreten** · **Später erinnern** · **Nicht interessiert** |
+
+**Kein** Telefonbuch-Merge — anders als `MORG_TEAM_MEMBER_UPDATE_V1`. Link wird lokal in `morgendrot.telegramAlarmGroupPending` gecacht.
+
+**Transport:** IOTA = Persistenz; LAN = Zustellung; Funk = Ping only (**§8** in Team-Spec).
+
+### 6.8 Eingang (B2) in der Gruppe
 
 **v1 Default:** **Kein** Posteingang-Spiegel aus der Einsatz-Gruppe — nur **Boss → Gruppe** (Ausgang).
 
@@ -356,7 +404,7 @@ Die App kann **nicht** im Namen des Nutzers einer Telegram-Gruppe beitreten — 
 
 Wenn später Gruppen-Eingang: `einsatzGroupChatId` in Allowlist **zusätzlich** zu 1:1-IDs — weiterhin **kein** Vollspiegel.
 
-### 6.8 API & Code (Soll)
+### 6.9 API & Code (Soll)
 
 | Baustein | Vorschlag |
 |----------|-----------|
@@ -366,22 +414,24 @@ Wenn später Gruppen-Eingang: `einsatzGroupChatId` in Allowlist **zusätzlich** 
 | **Journal** | Richtung `out`, `chatId` = Gruppe, `kind: 'einsatz_group_hint'` |
 | **Tests** | Vitest: fehlende `einsatzGroupChatId` → skip; Fehler → Hauptsend unverändert |
 
-### 6.9 Implementierungsphasen
+### 6.10 Implementierungsphasen
 
 | Phase | Lieferumfang |
 |-------|----------------|
-| **B4b.0** | Runtime-Felder + Boss-UI (Link, QR, Test, Schalter) |
+| **B4b.0** | Runtime-Felder + Boss-UI (Link, QR, Test, Schalter, „In Handoff mitgeben“) |
 | **B4b.1** | `group-alarm` API + Templates §6.5 + manueller „Team alarmieren“ |
-| **B4b.2** | SOS-Fan-out + optional Team-Update-Hinweis; Handoff-README-Feld |
-| **B4b.3** | Helfer-Wizard-Schritt (§ H.36); Monitor → Gruppe optional |
+| **B4b.2** | Handoff: `README-HANDOFF.txt` + `.morgendrot-handoff-extras.json`; SOS-Fan-out optional |
+| **B4b.3** | Helfer-Wizard Schritt 2 (§6.6.1); Wire `MORG_TELEGRAM_ALARM_GROUP_V1` + Posteingang-Systemkarte §6.7 |
+| **B4b.4** | Monitor → Gruppe optional; Einstellungen Helfer-Nachholen |
 
-### 6.10 Offene Punkte (Freeze vor Code)
+### 6.11 Offene Punkte (Freeze vor Code)
 
 1. Kommandant im Messenger-Bundle: Gruppenalarm **nur Boss** oder auch Kommandant?  
-2. Einladungslink im verschlüsselten Handoff (`handoff.morg.enc`) — ja/nein?  
-3. Rate-Limit pro Stunde für Gruppen-Hinweise (Anti-Spam bei SOS-Retries)?
+2. Einladungslink in **`handoff.morg.enc`** — **ja** (Klartext-Metadaten im README reicht für v1; extras.json nur unverschlüsselt).  
+3. Rate-Limit pro Stunde für Gruppen-Hinweise (Anti-Spam bei SOS-Retries)?  
+4. **`tgSeq`** eigene Monotonie vs. gemeinsame `seq` mit Team-Updates? → **eigene `tgSeq`** (§3.5 Team-Spec).
 
-**Nächster Schritt:** B4b.0 Boss-UI + Runtime-Schema — ohne Änderung am B3-1:1-Pfad.
+**Nächster Schritt:** B4b.0 Boss-UI + Runtime-Schema — Handoff-Felder in B4b.2 vorbereiten (Doku-only bis Export-Code).
 
 ---
 
@@ -478,10 +528,10 @@ Wenn später Gruppen-Eingang: `einsatzGroupChatId` in Allowlist **zusätzlich** 
 
 ### 9.3 Einsatz-Alarmgruppe (B4b, Helfer)
 
-1. Boss: Gruppe + Bot-Admin + Einladungslink (§6.3).
-2. Boss: Link/QR in Runtime + optional Handoff-README.
-3. Helfer: **In Telegram öffnen** (Wizard oder Einstellungen) — **Später** möglich.
-4. **Kein** Auto-Join aus Morgendrot; Telegram-App erforderlich.
+1. **Erststart:** Link aus Handoff → Wizard Schritt 2 (§6.6.1) — **Später** / **Nicht interessiert** möglich.
+2. **Später:** Systemkarte „Neue Telegram-Alarmgruppe“ (§6.7) oder Einstellungen.
+3. **Kein** Auto-Join; Telegram-App erforderlich für Beitritt.
+4. Checkbox **„Link beim Öffnen anzeigen“** ≠ automatischer Gruppenbeitritt.
 
 ---
 

@@ -1,6 +1,6 @@
 # Team-Member-Update & Einstiegs-Wizard — Spec (P0–P2)
 
-**Stand:** 2026-06-16 (§8 Transport LAN+IOTA ergänzt)  
+**Stand:** 2026-06-17 (§3.5 Telegram-Alarmgruppe + Helfer-Wizard Schritt 2; zuvor §8 Transport)  
 **Status:** **Spec** — Implementierung startet mit **P0 Wizard-Skelett**; Wire + LAN-Zustellung **Phase P1**, Join-Request **P2**  
 **Zweck:** Geführter **linearer** Erststart (Boss / Helfer / Wanderer) + **spontaner Helfer-Zugang** mit boss-signiertem Team-Update und Empfänger-Bestätigung — **ohne** Duplikat des Handoff-Export-Assistenten.  
 **Verwandt:** `docs/EXPORT-ASSISTENT-REFERENZ.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-UND-MODUS-ZIELBILD.md`, `docs/API-INITIAL-PROFILE.md`, `docs/PROVISIONING-PAYLOAD-CRITIQUE.md`, `docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`, `docs/TRANSPORT-AND-IOTA-LAYERS.md`, `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` **§6** (Telegram-Alarmgruppe optional), `docs/ROADMAP-FAHRPLAN.md` **§ H.16** (Boss-LAN Ist), **§ H.36** (dieses Paket)
@@ -19,6 +19,7 @@
 | **Boss = Autorität** | Join nur nach Boss-Freigabe; Updates boss-signiert oder Boss-ECDH-`.morg-pkg`. |
 | **Empfänger bestätigt** | Jedes Gerät: Systemnachricht + **Ja / Nein** — kein stilles Überschreiben. |
 | **Wanderer außerhalb** | Kein zentraler Boss-Sync; Solo-Wizard + Peering, kein Join-Request an Stab. |
+| **Telegram optional** | Alarmgruppe-Beitritt **nie** Pflicht; eigener Wire **`MORG_TELEGRAM_ALARM_GROUP_V1`** — **nicht** in Member-Update mischen (**`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6). |
 
 ---
 
@@ -27,7 +28,7 @@
 | | **Handoff-ZIP** (Ist) | **Team-Member-Update** (Soll) | **Einstiegs-Wizard** (Soll P0) |
 |--|----------------------|-------------------------------|--------------------------------|
 | **Wann** | Boss provisioniert **vor** dem Feld | Helfer kommt **später** dazu oder Daten ändern sich | **Erster Start** oder „Einrichtung fortsetzen“ |
-| **Inhalt** | `.env`, Capabilities, Partner-Adressen, README | **Ein** Mitglied (+ Metadaten), `seq`, Boss-Signatur | Geführte Schritte zu Identität, IOTA, Funk, Team |
+| **Inhalt** | `.env`, Capabilities, Partner-Adressen, README + optional **`telegramAlarmGroup`** in Handoff-Extras | **Ein** Mitglied (+ Metadaten), `seq`, Boss-Signatur | Geführte Schritte zu Identität, IOTA, Funk, Team, **Telegram (optional)** |
 | **Empfänger** | **Ein** neues Gerät | **Alle** bestehenden Team-Mitglieder (mit Bestätigung) | **Derselbe** Nutzer auf **eigenem** Gerät |
 | **Transport** | ZIP / QR / optional IOTA-Handoff | IOTA Persistenz + LAN-Push + Funk-Ping | Lokal + Deep-Link; WLAN-QR → Basis-URL (§ H.16) |
 | **Kontakte** | Partner-**Adressen** im ZIP; `initialProfile` **separat** | Merge in Telefonbuch wie `initialProfile.contacts[]` | Telefonbuch/Funk am Ende des Wizards |
@@ -100,7 +101,33 @@ Präfix analog `[[MORG_EMERGENCY_V1:…]]`:
 [[MORG_TEAM_UPDATE_PING_V1:{"v":1,"seq":42,"teamId":"…","boss":"0x…"}]]
 ```
 
-Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `member`-Body über LoRa.
+Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `member`-Body über LoRa. Bei Telegram-Gruppen-Update: Ping mit `"hint":"telegram_group"` (optional P3).
+
+### 3.5 Telegram-Alarmgruppe (späterer Link-Wechsel — B4b)
+
+**Separater Wire** — **nicht** `MORG_TEAM_MEMBER_UPDATE_V1` (kein Telefonbuch-Merge, kein „Ja/Nein“ für Kontakte).
+
+```
+[[MORG_TELEGRAM_ALARM_GROUP_V1:{…json…}]]
+```
+
+| Feld | Typ | Pflicht | Beschreibung |
+|------|-----|---------|--------------|
+| `v` | `1` | ja | Schema-Version |
+| `kind` | `"invite_link"` \| `"revoke_hint"` | ja | `invite_link` = neuer/rotierter Link; `revoke_hint` = alte Gruppe ungültig (ohne neuen Link) |
+| `tgSeq` | number | ja | Monoton pro `teamId` — **eigen** von Member-`seq` |
+| `teamId` | string | ja | wie §3.1 |
+| `boss` | string | ja | Boss-IOTA-Adresse |
+| `issuedAt` | number | ja | Unix ms |
+| `label` | string | nein | Anzeigename (z. B. „Einsatz Team Alpha“) |
+| `inviteLink` | string | bei `invite_link` | `https://t.me/+…` — max. 512 Zeichen |
+| `sig` | string | nein | Boss-Signatur (Freeze P1; bis dahin Boss-`.morg-pkg`) |
+
+**Größe:** ≤ 2 KiB. **Transport:** wie §8 (IOTA Persistenz + LAN Zustellung + Funk-Ping).
+
+**Empfänger-UI:** Posteingang-Systemkarte §7.4 — **Gruppe beitreten** · **Später erinnern** · **Nicht interessiert** (kein Telefonbuch-Merge).
+
+**Handoff (Erststart):** Gleiche Felder in **`.morgendrot-handoff-extras.json`** — Wizard liest lokal, **kein** Wire nötig bis Boss später rotiert.
 
 ---
 
@@ -127,10 +154,11 @@ Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `memb
 | Schritt | Titel | Inhalt | Überspringen wenn |
 |---------|-------|--------|-------------------|
 | 1 | **Handoff** | ZIP importieren **oder** „Noch kein ZIP — Join anfragen“ | Handoff bereits angewendet |
-| 2 | **Wallet** | Seed-QR / Mnemonic (`GERAET-PROVISIONIEREN-WIZARD.md`) | Keys in Sitzung |
-| 3 | **Ich im Team** | Callsign, Node-ID; optional **Telegram-Alarmgruppe** (Link/QR, „Später“ — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6.6) | Felder gesetzt |
-| 4 | **Peering** | Boss-QR scannen / Kontakt-ID | Partner gesetzt |
-| 5 | **Fertig** | Chat öffnen | — |
+| 2 | **Telegram-Alarmgruppe** | Nur wenn `inviteLink` aus Handoff-Extras/README: QR + **Gruppe beitreten** + optional „Link beim Öffnen anzeigen“ + **Später** / **Nicht interessiert** — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6.6.1 | Kein Link im Handoff **oder** Nutzer dismissed |
+| 3 | **Wallet** | Seed-QR / Mnemonic (`GERAET-PROVISIONIEREN-WIZARD.md`) | Keys in Sitzung |
+| 4 | **Ich im Team** | Callsign, Node-ID | Felder gesetzt |
+| 5 | **Peering** | Boss-QR scannen / Kontakt-ID | Partner gesetzt |
+| 6 | **Fertig** | Chat öffnen | — |
 
 **Zweig „Spontan ohne ZIP“ (Schritt 1b):** Formular §3.3 → sendet Join-Request an Boss → „Warte auf Freigabe“.
 
@@ -197,6 +225,24 @@ Neuer Block **„Beitrittsanfragen“** (P2):
 - **Freigeben** → erzeugt §3.1 + verteilt
 - **Ablehnen** → optional kurze Antwort an Applicant (Klartext, kein neuer Wire-Typ in v1 nötig)
 
+Zusätzlich (B4b, P1): **„Telegram-Alarmgruppe aktualisieren“** → sendet §3.5 an Team (`tgSeq++`).
+
+### 7.4 Systemnachricht — Telegram-Alarmgruppe (B4b)
+
+**Auslöser:** `MORG_TELEGRAM_ALARM_GROUP_V1` (`kind: invite_link`) empfangen und verifiziert.
+
+**Titel:** `Neue Telegram-Alarmgruppe`  
+**Text:** „Einsatzleitung ({boss kurz}) hat Alarmgruppe „{label}“ eingerichtet. Nur Hinweise — Inhalte in Morgendrot.“  
+**Aktionen:**
+
+| Aktion | Verhalten |
+|--------|-----------|
+| **Gruppe beitreten** | `window.open(inviteLink)`; `tgSeq` in `appliedTelegramGroupTgSeq` merken |
+| **Später erinnern** | Karte in `snoozedTelegramGroupCards[]`; erneut nach 24 h oder App-Start |
+| **Nicht interessiert** | `dismissedTelegramGroupTgSeq[]`; keine erneute Karte für gleiches `tgSeq` |
+
+**Kein** Merge ins Telefonbuch. Link zusätzlich unter **Einstellungen → Telegram** nachholbar.
+
 ---
 
 ## 8. Transport: Persistenz vs. Zustellung
@@ -250,7 +296,7 @@ Zugestellt: Lokales Netz ✓ · IOTA ✓ · Funk-Hinweis ✓
 |-------|---------|
 | **Boss** (nach Freigabe) | Pro Kanal: OK / ausstehend / fehlgeschlagen; Retry-Button für IOTA-Queue |
 | **Empfänger** (Systemkarte §7.2) | Zeile „Empfangen über: LAN“ oder „IOTA (Mailbox)“; bei nur Ping: „Funk-Hinweis — Update wird geladen …“ |
-| **Wizard** (Helfer Schritt 1) | „Mit Boss im gleichen WLAN?“ → Basis-URL testen (bestehende Verbindungskarte) |
+| **Wizard** (Helfer Schritt 2) | Telegram-Alarmgruppe aus Handoff; Schritt 1 = WLAN/Basis-URL testen |
 
 Persistenz-Gate: **Ja/Nein** erst, wenn Payload verifiziert (Boss + `seq`) — unabhängig vom Zustellkanal.
 
@@ -269,8 +315,8 @@ Persistenz-Gate: **Ja/Nein** erst, wenn Payload verifiziert (Boss + `seq`) — u
 
 | Phase | Lieferumfang |
 |-------|----------------|
-| **P0** | Wizard-Skelett Boss / Helfer / Wanderer; Schritte + Skip-Logik; Deep-Links in bestehende Panels; kein neuer Wire |
-| **P1** | `MORG_TEAM_MEMBER_UPDATE_V1` Parser + Posteingang-Systemkarte Ja/Nein + Merge; **LAN-Push** wenn Boss erreichbar; **IOTA** parallel; UI Kanal-Feedback §8.4 |
+| **P0** | Wizard-Skelett Boss / Helfer / Wanderer; Schritte + Skip-Logik; **Helfer Schritt 2** Telegram (UI-Platzhalter wenn Link in Handoff-Extras); Deep-Links |
+| **P1** | `MORG_TEAM_MEMBER_UPDATE_V1` + §3.5 `MORG_TELEGRAM_ALARM_GROUP_V1`; Posteingang §7.2 + §7.4; LAN-Push; Handoff-Extras B4b.2 |
 | **P2** | `MORG_TEAM_JOIN_REQUEST_V1` + Boss Pending-UI + Freigabe → Update; optional mDNS |
 | **P3** | Funk-Ping + Offline-Queue-Boss; Boss-Signatur `sig` freeze |
 

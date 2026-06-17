@@ -15,7 +15,8 @@
 |----------|-------------|--------|
 | **`morgendrot-standalone-handoff.env`** | **Ja** (pro ZIP) | Öffentliche Geräte-Konfiguration — **kein** Seed/Passwort |
 | **`.morgendrot-runtime-config.json`** | **Ja** | Capabilities-Matrix (Transport LoRa/Telegram/IOTA) |
-| **`README-HANDOFF.txt`** | **Ja** | Ablauf, Kurzparameter, optional LoRa-PSK / IOTA-Archiv |
+| **`README-HANDOFF.txt`** | **Ja** | Ablauf, Kurzparameter, optional LoRa-PSK / IOTA-Archiv / **Telegram-Alarmgruppe (Link)** |
+| **`.morgendrot-handoff-extras.json`** | **Ja** (B4b.2) | Optional: `telegramAlarmGroup` — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6.6.1 |
 | **`handoff.morg.enc`** | Optional | Verschlüsselte `.env` statt Klartext (Passwort-Schutz) |
 | **Move-Deploy / neues Package** | **Nein** | `PACKAGE_ID` wird **referenziert**, nicht neu deployed |
 | **Smartphone-Bundle** | **Nein** | Separat: `npm run bundle:standalone-smartphone` auf dem Boss-PC |
