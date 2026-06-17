@@ -4,11 +4,14 @@ import { useState } from 'react'
 import { Check, Copy } from 'lucide-react'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import { LazyPeeringQrActions } from '@/frontend/components/lazy/messenger-scope-b'
+import { ChatViewMyTelegramInline } from '@/frontend/components/chat-view-my-telegram-inline'
 
 /** Meine Kontakt-ID + Peering-QR (Sidebar „Meine Daten“). */
 export type ChatViewMyWalletIdInlineProps = {
   myAddressLine: string
   displayName?: string
+  /** Eigene Telegram Chat-ID (Telefonbuch). */
+  myTelegramChatId?: string | null
   onPeeringImported?: (r: {
     address: string
     displayName?: string
@@ -87,6 +90,10 @@ export function ChatViewMyWalletIdInline(p: ChatViewMyWalletIdInlineProps) {
         onImported={p.onPeeringImported}
         onStatus={p.onPeeringStatus}
         className={panel ? 'flex flex-col gap-2 [&_button]:min-h-[2.75rem] [&_button]:text-sm [&_button]:font-semibold' : 'flex flex-wrap gap-1.5'}
+      />
+      <ChatViewMyTelegramInline
+        myTelegramChatId={p.myTelegramChatId}
+        variant={panel ? 'panel' : 'compact'}
       />
     </div>
   )

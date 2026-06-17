@@ -9,13 +9,38 @@ export type TelegramIntegrationPublic = {
   botTokenConfigured: boolean
   botToken: string
   botTokenMasked: string
+  botUserId: string
   adminChatId: string
   relayBaseUrl: string
   relayReachable: boolean
   monitorWebhookActive: boolean
   inboundMode: TelegramInboundMode
   inboundPollActive: boolean
+  einsatzGroupChatId: string
+  einsatzGroupLabel: string
+  einsatzGroupInviteLink: string
+  einsatzGroupAlarmEnabled: boolean
   error?: string
+}
+
+function emptyTelegramPublic(): TelegramIntegrationPublic {
+  return {
+    enabled: false,
+    botTokenConfigured: false,
+    botToken: '',
+    botTokenMasked: '',
+    botUserId: '',
+    adminChatId: '',
+    relayBaseUrl: 'http://127.0.0.1:8787',
+    relayReachable: false,
+    monitorWebhookActive: false,
+    inboundMode: 'off',
+    inboundPollActive: false,
+    einsatzGroupChatId: '',
+    einsatzGroupLabel: '',
+    einsatzGroupInviteLink: '',
+    einsatzGroupAlarmEnabled: false,
+  }
 }
 
 function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrationPublic & { ok: boolean; error?: string } {
@@ -23,52 +48,13 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
   try {
     body = JSON.parse(text) as typeof body
   } catch {
-    return {
-      ok: false,
-      error: 'Antwort ist kein gültiges JSON.',
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-    }
+    return { ok: false, error: 'Antwort ist kein gültiges JSON.', ...emptyTelegramPublic() }
   }
   if (httpStatus < 200 || httpStatus >= 300) {
-    return {
-      ok: false,
-      error: body.error || `HTTP ${httpStatus}`,
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-    }
+    return { ok: false, error: body.error || `HTTP ${httpStatus}`, ...emptyTelegramPublic() }
   }
   if (body.ok === false) {
-    return {
-      ok: false,
-      error: body.error || 'API-Fehler',
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-    }
+    return { ok: false, error: body.error || 'API-Fehler', ...emptyTelegramPublic() }
   }
   const inboundMode: TelegramInboundMode =
     body.inboundMode === 'longPoll' || body.inboundMode === 'webhook' ? body.inboundMode : 'off'
@@ -78,12 +64,17 @@ function parseTelegramPublic(text: string, httpStatus: number): TelegramIntegrat
     botTokenConfigured: body.botTokenConfigured === true,
     botToken: body.botToken || '',
     botTokenMasked: body.botTokenMasked || '',
+    botUserId: body.botUserId || '',
     adminChatId: body.adminChatId || '',
     relayBaseUrl: body.relayBaseUrl || 'http://127.0.0.1:8787',
     relayReachable: body.relayReachable === true,
     monitorWebhookActive: body.monitorWebhookActive === true,
     inboundMode,
     inboundPollActive: body.inboundPollActive === true,
+    einsatzGroupChatId: body.einsatzGroupChatId || '',
+    einsatzGroupLabel: body.einsatzGroupLabel || '',
+    einsatzGroupInviteLink: body.einsatzGroupInviteLink || '',
+    einsatzGroupAlarmEnabled: body.einsatzGroupAlarmEnabled === true,
   }
 }
 
@@ -91,37 +82,11 @@ export async function fetchTelegramIntegration(): Promise<TelegramIntegrationPub
   try {
     const fr = await fetchApiText(API_BASE, '/api/integrations/telegram')
     if (!fr.ok) {
-      return {
-        ok: false,
-        error: fr.error,
-        enabled: false,
-        botTokenConfigured: false,
-        botToken: '',
-        botTokenMasked: '',
-        adminChatId: '',
-        relayBaseUrl: 'http://127.0.0.1:8787',
-        relayReachable: false,
-        monitorWebhookActive: false,
-        inboundMode: 'off',
-        inboundPollActive: false,
-      }
+      return { ok: false, error: fr.error, ...emptyTelegramPublic() }
     }
     return parseTelegramPublic(fr.text, fr.response.status)
   } catch (e) {
-    return {
-      ok: false,
-      error: formatFetchFailureMessage(e),
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-    }
+    return { ok: false, error: formatFetchFailureMessage(e), ...emptyTelegramPublic() }
   }
 }
 
@@ -141,20 +106,7 @@ export async function saveTelegramIntegration(body: {
     if (!fr.ok) return { ...parseTelegramPublic('{}', 500), error: fr.error }
     return parseTelegramPublic(fr.text, fr.response.status)
   } catch (e) {
-    return {
-      ok: false,
-      error: formatFetchFailureMessage(e),
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-    }
+    return { ok: false, error: formatFetchFailureMessage(e), ...emptyTelegramPublic() }
   }
 }
 

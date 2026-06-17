@@ -365,7 +365,8 @@ Platzhalter: `{teamLabel}`, `{eventType}`, `{bossShort}`, `{seq}`.
 
 | Ort | Inhalt |
 |-----|--------|
-| **Einstellungen → Telegram → Einsatz-Alarmgruppe** (Boss) | Link, QR, Test an Gruppe, Schalter `einsatzGroupAlarmEnabled`; **„In Handoff mitgeben“** (Default an wenn Link gesetzt) |
+| **Einstellungen → Telegram → Einsatz-Alarmgruppe** (Boss) | Link, QR, Test an Gruppe, Schalter `einsatzGroupAlarmEnabled`; **„In Handoff mitgeben“** |
+| **Sidebar / Dialog „Ich“** (**Ist 2026-06-17**) | Meine Telegram Chat-ID + Boss-Bot-ID + Einsatz-Gruppen-ID + **Alarmgruppe beitreten** |
 | **Helfer-Wizard Schritt 2** (§ H.36) | §6.6.1 — nur wenn Link aus Handoff/Update |
 | **Einstellungen → Telegram** (Helfer, Expert) | Nachholen: letzter bekannter Link + „Beitreten“ |
 | **Posteingang-Systemkarte** | Späterer Link-Wechsel (§6.7) |

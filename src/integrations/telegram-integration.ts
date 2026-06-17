@@ -22,12 +22,19 @@ export type TelegramIntegrationPublic = {
     /** Vollständiger Token für lokale Einstellungs-UI (selbst gehostete Basis). */
     botToken: string;
     botTokenMasked: string;
+    /** Numerische Bot-User-ID (Teil vor „:“ im Token) — nicht mit Chat-ID verwechseln. */
+    botUserId: string;
     adminChatId: string;
     relayBaseUrl: string;
     relayReachable: boolean;
     monitorWebhookActive: boolean;
     inboundMode: TelegramInboundMode;
     inboundPollActive: boolean;
+    /** B4b — Einsatz-Alarmgruppe (öffentliche Metadaten für Helfer „Ich“). */
+    einsatzGroupChatId: string;
+    einsatzGroupLabel: string;
+    einsatzGroupInviteLink: string;
+    einsatzGroupAlarmEnabled: boolean;
 };
 
 const DEFAULT_RELAY_BASE = 'http://127.0.0.1:8787';
@@ -241,6 +248,7 @@ export async function probeTelegramRelay(relayBaseUrl: string, relaySecret: stri
 
 export function getTelegramIntegrationPublic(): TelegramIntegrationPublic {
     const cfg = readTelegramIntegrationConfig();
+    const tgRaw = integrationsTelegramRaw(readRuntimeConfigRaw());
     const enabled = cfg?.enabled === true;
     const botToken = cfg?.botToken || '';
     const adminChatId = cfg?.adminChatId || '';
@@ -248,18 +256,24 @@ export function getTelegramIntegrationPublic(): TelegramIntegrationPublic {
     const inboundMode = cfg?.inboundMode ?? 'off';
     const webhook = (CFG.MONITOR_ALARM_WEBHOOK_URL || '').trim();
     const expectedWebhook = buildTelegramAlarmWebhookUrl(relayBaseUrl);
+    const botUserId = extractTelegramBotUserIdFromToken(botToken) || '';
     return {
         ok: true,
         enabled,
         botTokenConfigured: Boolean(botToken),
         botToken,
         botTokenMasked: botToken ? maskTelegramBotToken(botToken) : '',
+        botUserId,
         adminChatId,
         relayBaseUrl,
         relayReachable: false,
         monitorWebhookActive: Boolean(webhook) && webhook === expectedWebhook,
         inboundMode,
         inboundPollActive: isTelegramInboundPollRunning(),
+        einsatzGroupChatId: String(tgRaw?.einsatzGroupChatId ?? '').trim(),
+        einsatzGroupLabel: String(tgRaw?.einsatzGroupLabel ?? '').trim(),
+        einsatzGroupInviteLink: String(tgRaw?.einsatzGroupInviteLink ?? '').trim(),
+        einsatzGroupAlarmEnabled: tgRaw?.einsatzGroupAlarmEnabled === true,
     };
 }
 

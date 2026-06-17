@@ -25,7 +25,7 @@ export function ChatViewSelfProfileDialog(p: ChatViewSelfProfileDialogProps) {
       <DialogContent className="max-w-md gap-4">
         <DialogHeader>
           <DialogTitle>Ich</DialogTitle>
-          <DialogDescription>Meine Kontakt-ID und Peering für Partner-Verbindung.</DialogDescription>
+          <DialogDescription>Meine Kontakt-ID, Peering und Telegram-IDs für Alarm-Hinweise.</DialogDescription>
         </DialogHeader>
         {valid ? <ChatViewMyWalletIdInline {...walletProps} variant="panel" /> : null}
       </DialogContent>

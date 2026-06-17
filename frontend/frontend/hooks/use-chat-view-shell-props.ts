@@ -7,6 +7,7 @@ import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
 import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import type { ChatViewSendPathCompactProps } from '@/frontend/components/chat-view-send-path-compact'
+import { lookupContactEntry } from '@/frontend/lib/contact-display'
 
 export type ChatViewShellPropsDeps = {
   messengerPorts: Pick<
@@ -180,10 +181,16 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     () => ({
       myAddressLine: inboxFeedRead.myAddress,
       displayName: deps.peeringQr?.displayName,
+      myTelegramChatId: lookupContactEntry(contactDirectoryRead.directory, inboxFeedRead.myAddress)
+        ?.telegramChatId,
       onPeeringImported: deps.peeringQr?.onPeeringImported,
       onPeeringStatus: deps.peeringQr?.onPeeringStatus,
     }),
-    [inboxFeedRead.myAddress, deps.peeringQr]
+    [
+      inboxFeedRead.myAddress,
+      contactDirectoryRead.directory,
+      deps.peeringQr,
+    ]
   )
 
   return {
