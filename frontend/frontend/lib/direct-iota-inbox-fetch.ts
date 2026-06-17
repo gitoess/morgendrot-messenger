@@ -316,6 +316,7 @@ export async function tryFetchDirectMailboxInboxViaIota(
         myAddress: my,
         limit: fetchWindow,
         offset: 0,
+        maxEventPages: fetchWindow >= 200 ? 15 : undefined,
       })
       const eventApiRows = await mapEventRowsToInboxApi(eventRows, myNorm)
       for (const row of eventApiRows) {

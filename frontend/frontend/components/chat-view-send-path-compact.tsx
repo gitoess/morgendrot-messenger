@@ -1,44 +1,54 @@
 'use client'
 
 /**
- * Kompakte Sendepfad-Auswahl (online / funk / ad-hoc / telegram) — Chat-Kopfzeile.
+ * Sendepfad (online / funk / telegram) + dynamische Empfänger-Buttons nach Pfad-Klick.
  */
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   isSendPathAllowedForChannel,
+  resolveActiveSendPath,
   sendPathDisabledReason,
 } from '@/frontend/lib/messenger-channel-send-path'
-import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
-import { ChatViewMyWalletIdInline } from '@/frontend/components/chat-view-my-wallet-id-inline'
 import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
 import type { ApiStatus } from '@/frontend/lib/api/status'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import {
   composerSendPathWriteDeniedReason,
   type ComposerSendPathKey,
 } from '@/frontend/lib/messenger-capability-gates'
-
+import {
+  collectContactsForSendPath,
+  formatAllRecipientsForSendPath,
+} from '@/frontend/lib/contact-send-path'
+import { readHiddenContacts } from '@/frontend/lib/contact-phonebook-meta-store'
+import {
+  ChatViewSendPathRecipientPicker,
+  type ChatViewSendPathRecipientPickerProps,
+} from '@/frontend/components/chat-view-send-path-recipient-picker'
 export type ChatViewSendPathCompactProps = {
-  /** Pinnwand: nur wenn Klartext; privater Chat: immer. */
   visible: boolean
   channelMode: MessengerChatChannel
   encrypted: boolean
   forcedTransport: ForcedTransport
   onForcedTransportChange: (t: ForcedTransport) => void
   onEncryptedChange?: (encrypted: boolean) => void
-  myAddressLine?: string
-  peeringDisplayName?: string
-  onPeeringImported?: ChatViewMyWalletIdInlineProps['onPeeringImported']
-  onPeeringStatus?: (msg: string) => void
   showAdhocTransport?: boolean
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
-  /** Handoff-Runtime: Transport-Schreibrechte pro Sendepfad. */
   apiStatus?: ApiStatus | null
+  role?: string
+  onChannelModeChange?: (c: MessengerChatChannel) => void
+  onRecipientChange?: (v: string) => void
+  contactDirectory?: Record<string, ContactMeshEntryClient>
+  partnerOptions?: readonly InboxPartnerOption[]
+  pinnwandTabUnreadCount?: number
   className?: string
 }
 
@@ -53,27 +63,27 @@ function sendPathCapabilityReason(
 const ONLINE = {
   id: 'internet' as const,
   icon: '🌍',
-  short: 'online',
+  short: 'Online',
   title: 'Online (IOTA/Mailbox)',
 }
 
 const FUNK = {
   id: 'mesh' as const,
   icon: '📡',
-  short: 'funk',
-  title: 'Funk (Meshtastic — 1:1 Node oder Gruppen-Secondary-Channel)',
+  short: 'Funk',
+  title: 'Funk (Meshtastic)',
 }
 
 const ADHOC = {
   id: 'adhoc' as const,
   icon: '📱',
-  short: 'adhoc',
-  title: 'Ad-hoc (1:1, BLE — Platzhalter)',
+  short: 'Ad-hoc',
+  title: 'Ad-hoc (BLE — Platzhalter)',
 }
 
 const TELEGRAM = {
-  short: 'telegram',
-  title: 'Telegram (1:1, mehrere Chat-IDs möglich)',
+  short: 'Telegram',
+  title: 'Telegram (1:1 oder Alle)',
 }
 
 function selectCleartextTransport(
@@ -91,7 +101,7 @@ function selectCleartextTransport(
   if (target === 'mesh') {
     if (encrypted) {
       const ok = window.confirm(
-        '„funk“ = Meshtastic-Klartext (LongFast), nicht Ende-zu-Ende verschlüsselt.\n\nFortfahren? (Verschlüsselung wird ausgeschaltet.)'
+        '„Funk“ = Meshtastic-Klartext (LongFast), nicht Ende-zu-Ende verschlüsselt.\n\nFortfahren? (Verschlüsselung wird ausgeschaltet.)'
       )
       if (!ok) return
     }
@@ -101,11 +111,11 @@ function selectCleartextTransport(
   if (target === 'adhoc') {
     if (encrypted) {
       const ok = window.confirm(
-        '„adhoc“ ist für Klartext nahe BLE vorgesehen — nicht verschlüsselt.\n\nVerschlüsselung ausschalten und „adhoc“ wählen?'
+        '„Ad-hoc“ ist für Klartext nahe BLE vorgesehen — nicht verschlüsselt.\n\nVerschlüsselung ausschalten und „Ad-hoc“ wählen?'
       )
       if (!ok) return
       if (!onEncryptedChange) {
-        window.alert('Bitte zuerst „Verschlüsselung“ unten auf Klartext stellen, dann „adhoc“ wählen.')
+        window.alert('Bitte zuerst „Verschlüsselung“ auf Klartext stellen, dann „Ad-hoc“ wählen.')
         return
       }
       onEncryptedChange(false)
@@ -130,11 +140,11 @@ function PathButton(p: {
       disabled={p.disabled}
       onClick={p.onClick}
       className={cn(
-        'rounded-md border px-2 py-1 text-[11px] font-medium transition-colors',
+        'flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-colors sm:text-base',
         p.disabled && 'cursor-not-allowed opacity-40',
         p.active && !p.disabled
-          ? p.activeClass ?? 'border-emerald-600/50 bg-emerald-500/15 text-foreground'
-          : 'border-transparent bg-background/80 text-muted-foreground hover:bg-muted'
+          ? p.activeClass ?? SEND_PATH_ACTIVE_CLASS.default
+          : 'border-border/70 bg-card/90 text-foreground hover:bg-muted/60'
       )}
     >
       {p.children}
@@ -150,18 +160,27 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     forcedTransport,
     onForcedTransportChange,
     onEncryptedChange,
-    myAddressLine,
     showAdhocTransport = true,
     composerDelivery = 'chain',
     onComposerDeliveryChange,
     apiStatus,
+    role = '',
+    onChannelModeChange,
+    onRecipientChange,
+    contactDirectory = {},
+    partnerOptions = [],
+    pinnwandTabUnreadCount = 0,
     className,
   } = p
+
+  const [recipientPanelOpen, setRecipientPanelOpen] = useState(false)
+
   if (!visible) return null
 
   const showTelegram =
     showTelegramDeliveryInHeader({ channelMode }) && Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
+  const activeSendPath = resolveActiveSendPath(composerDelivery, forcedTransport)
 
   const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
@@ -173,45 +192,65 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
   const adhocCapReason = sendPathCapabilityReason(apiStatus, 'adhoc')
   const telegramCapReason = sendPathCapabilityReason(apiStatus, 'telegram')
 
-  const onlineOk = onlineChannelOk && !onlineCapReason
-  const funkOk = funkChannelOk && !funkCapReason
-  const adhocOk = adhocChannelOk && !adhocCapReason
-  const telegramOk = telegramChannelOk && !telegramCapReason
+  const openPanel = () => setRecipientPanelOpen(true)
+
+  const recipientPickerProps: ChatViewSendPathRecipientPickerProps | null =
+    onChannelModeChange && recipientPanelOpen
+      ? {
+          activeSendPath,
+          channelMode,
+          role,
+          apiStatus,
+          pinnwandTabUnreadCount,
+          telegramAllActive: false,
+          onSelectChannel: (c) => onChannelModeChange(c),
+          onSelectTelegramAll: () => {
+            onChannelModeChange('private')
+            onComposerDeliveryChange?.('telegram')
+            const contacts = collectContactsForSendPath({
+              directory: contactDirectory,
+              partnerOptions,
+              path: 'telegram',
+              hidden: readHiddenContacts(),
+            })
+            const { recipient } = formatAllRecipientsForSendPath(contacts, 'telegram')
+            onRecipientChange?.(recipient)
+          },
+        }
+      : null
 
   return (
     <div
       className={cn(
-        'flex h-full min-h-[6.5rem] w-full flex-col rounded-lg border border-border/60 bg-muted/25 px-2.5 py-2',
+        'flex w-full flex-col rounded-xl border border-border/60 bg-muted/25 px-3 py-3',
         className
       )}
     >
-      <div className="flex flex-nowrap items-center gap-1 overflow-x-auto">
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Sendepfad
-        </span>
-        <span className="h-4 w-px shrink-0 bg-border" aria-hidden />
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
+      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Sendepfad">
         <PathButton
           active={chainActive && forcedTransport === ONLINE.id}
-          disabled={!onlineOk}
+          disabled={!onlineChannelOk || Boolean(onlineCapReason)}
           disabledTitle={onlineCapReason ?? sendPathDisabledReason(channelMode, 'internet')}
           title={ONLINE.title}
+          activeClass={SEND_PATH_ACTIVE_CLASS.online}
           onClick={() => {
+            openPanel()
             onComposerDeliveryChange?.('chain')
             onForcedTransportChange(ONLINE.id)
           }}
         >
-          <span className="mr-0.5" aria-hidden>
-            {ONLINE.icon}
-          </span>
+          <span aria-hidden>{ONLINE.icon}</span>
           {ONLINE.short}
         </PathButton>
         <PathButton
           active={chainActive && forcedTransport === FUNK.id}
-          disabled={!funkOk}
+          disabled={!funkChannelOk || Boolean(funkCapReason)}
           disabledTitle={funkCapReason ?? sendPathDisabledReason(channelMode, 'mesh')}
           title={FUNK.title}
-          activeClass="border-sky-600/50 bg-sky-500/15 text-foreground"
-          onClick={() =>
+          activeClass={SEND_PATH_ACTIVE_CLASS.mesh}
+          onClick={() => {
+            openPanel()
             selectCleartextTransport(
               encrypted,
               FUNK.id,
@@ -219,70 +258,51 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
               onForcedTransportChange,
               onComposerDeliveryChange
             )
-          }
+          }}
         >
-          <span className="mr-0.5" aria-hidden>
-            {FUNK.icon}
-          </span>
+          <span aria-hidden>{FUNK.icon}</span>
           {FUNK.short}
         </PathButton>
         {showAdhocTransport ? (
-          <>
-            <span className="h-4 w-px shrink-0 bg-border/80" aria-hidden />
-            <PathButton
-              active={chainActive && forcedTransport === ADHOC.id}
-              disabled={!adhocOk}
-              disabledTitle={adhocCapReason ?? sendPathDisabledReason(channelMode, 'adhoc')}
-              title={ADHOC.title}
-              activeClass="border-amber-600/45 bg-amber-500/12 text-foreground"
-              onClick={() =>
-                selectCleartextTransport(
-                  encrypted,
-                  ADHOC.id,
-                  onEncryptedChange,
-                  onForcedTransportChange,
-                  onComposerDeliveryChange
-                )
-              }
-            >
-              <span className="mr-0.5" aria-hidden>
-                {ADHOC.icon}
-              </span>
-              {ADHOC.short}
-            </PathButton>
-          </>
+          <PathButton
+            active={chainActive && forcedTransport === ADHOC.id}
+            disabled={!adhocChannelOk || Boolean(adhocCapReason)}
+            disabledTitle={adhocCapReason ?? sendPathDisabledReason(channelMode, 'adhoc')}
+            title={ADHOC.title}
+            activeClass={SEND_PATH_ACTIVE_CLASS.adhoc}
+            onClick={() => {
+              openPanel()
+              selectCleartextTransport(
+                encrypted,
+                ADHOC.id,
+                onEncryptedChange,
+                onForcedTransportChange,
+                onComposerDeliveryChange
+              )
+            }}
+          >
+            <span aria-hidden>{ADHOC.icon}</span>
+            {ADHOC.short}
+          </PathButton>
         ) : null}
         {showTelegram ? (
-          <>
-            <span className="h-4 w-px shrink-0 bg-border/80" aria-hidden />
-            <PathButton
-              active={composerDelivery === 'telegram'}
-              disabled={!telegramOk}
-              disabledTitle={telegramCapReason ?? sendPathDisabledReason(channelMode, 'telegram')}
-              title={TELEGRAM.title}
-              activeClass="border-sky-600/50 bg-sky-500/15 text-foreground"
-              onClick={() => onComposerDeliveryChange?.('telegram')}
-            >
-              <span className="mr-0.5" aria-hidden>
-                ✈️
-              </span>
-              {TELEGRAM.short}
-            </PathButton>
-          </>
+          <PathButton
+            active={composerDelivery === 'telegram'}
+            disabled={!telegramChannelOk || Boolean(telegramCapReason)}
+            disabledTitle={telegramCapReason ?? sendPathDisabledReason(channelMode, 'telegram')}
+            title={TELEGRAM.title}
+            activeClass={SEND_PATH_ACTIVE_CLASS.telegram}
+            onClick={() => {
+              openPanel()
+              onComposerDeliveryChange?.('telegram')
+            }}
+          >
+            <span aria-hidden>✈️</span>
+            {TELEGRAM.short}
+          </PathButton>
         ) : null}
       </div>
-      <div className="mt-1.5 min-h-[2.75rem] flex-1">
-        {chainActive && myAddressLine?.trim() ? (
-          <ChatViewMyWalletIdInline
-            myAddressLine={myAddressLine}
-            displayName={p.peeringDisplayName}
-            onPeeringImported={p.onPeeringImported}
-            onPeeringStatus={p.onPeeringStatus}
-          />
-        ) : (
-          <div className="min-h-[1.25rem]" aria-hidden />
-        )}
-      </div>
+      {recipientPickerProps ? <ChatViewSendPathRecipientPicker {...recipientPickerProps} /> : null}
     </div>
   )
 }

@@ -25,10 +25,10 @@ export function ChatNetworkBadge(p: { className?: string }) {
     return (
         <span
             className={cn(
-                'inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+                'inline-flex items-center rounded-md border px-2.5 py-1 text-xs font-bold tracking-wide',
                 isMainnet
-                    ? 'border-sky-500/45 bg-sky-500/15 text-sky-900 dark:text-sky-100'
-                    : 'border-amber-500/45 bg-amber-500/15 text-amber-950 dark:text-amber-100',
+                    ? 'border-sky-600/55 bg-sky-100 text-sky-950 dark:border-sky-400/50 dark:bg-sky-950/90 dark:text-sky-50'
+                    : 'border-amber-600/55 bg-amber-100 text-amber-950 dark:border-amber-400/50 dark:bg-amber-950/90 dark:text-amber-50',
                 p.className
             )}
             title={`Senden über ${networkLabel(active)}`}

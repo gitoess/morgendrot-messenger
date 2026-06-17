@@ -20,7 +20,7 @@ export function ActiveProfileBadge({ status, compact, className }: ActiveProfile
   return (
     <span
       className={cn(
-        'inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-medium leading-tight',
+        'inline-flex max-w-full items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-semibold leading-tight',
         theme.badgeClass,
         className
       )}
@@ -30,8 +30,8 @@ export function ActiveProfileBadge({ status, compact, className }: ActiveProfile
         <span className="truncate">{title}</span>
       ) : (
         <>
-          <span className="font-bold opacity-80">{theme.watermark}</span>
-          <span className="truncate opacity-90">{status?.role ? title.split(' – ').pop() : title}</span>
+          <span className="shrink-0 font-bold">{theme.watermark}</span>
+          <span className="truncate">{status?.role ? title.split(' – ').pop() : title}</span>
         </>
       )}
     </span>

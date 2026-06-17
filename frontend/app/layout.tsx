@@ -5,6 +5,7 @@ import { ChunkLoadRecovery } from '@/components/chunk-load-recovery'
 import { PwaServiceWorkerRegister } from '@/components/pwa-service-worker-register'
 import { AppToaster } from '@/components/app-toaster'
 import { I18nProvider } from '@/frontend/components/i18n-provider'
+import { MessengerAppearanceBootstrap } from '@/frontend/components/messenger-appearance-bootstrap'
 import './globals.css'
 
 const _geist = Geist({ subsets: ["latin"] });
@@ -50,9 +51,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="de">
+    <html lang="de" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var k='morgendrot.appearanceTheme';var t=localStorage.getItem(k);var ids=['standard','tactical','high-contrast','light'];if(t&&ids.indexOf(t)>=0&&t!=='standard'){document.documentElement.setAttribute('data-appearance',t);}if(t==='light'){document.documentElement.style.colorScheme='light';}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
         <I18nProvider>
+          <MessengerAppearanceBootstrap />
           <PwaServiceWorkerRegister />
           <ChunkLoadRecovery />
           <AppToaster />

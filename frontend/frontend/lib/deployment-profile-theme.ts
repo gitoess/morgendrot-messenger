@@ -69,7 +69,8 @@ const THEMES: Record<DeploymentThemeId, DeploymentProfileTheme> = {
     id: 'boss',
     watermark: 'BOSS',
     label: 'Einsatzleitung',
-    badgeClass: 'border-violet-600/45 bg-violet-600/12 text-violet-950 dark:text-violet-100',
+    badgeClass:
+      'border-violet-600/60 bg-violet-100 text-violet-950 dark:border-violet-400/55 dark:bg-violet-950/90 dark:text-violet-50',
     backdropClass: 'from-violet-600/[0.07] via-background to-background',
     accentVar: 'violet',
   },

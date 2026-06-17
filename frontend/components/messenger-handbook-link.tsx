@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { ReactNode } from 'react'
 import { CircleHelp } from 'lucide-react'
 import {
   Popover,
@@ -42,17 +43,18 @@ function handbookMessengerHref(anchor?: string) {
 export function MessengerHandbookChatLink({
   className,
   anchor,
+  children,
 }: {
   className?: string
-  /** Sprungmarke in `MESSENGER-CHAT-HANDBUCH.md` (##-Überschrift). */
   anchor?: string
+  children?: ReactNode
 }) {
   return (
     <Link
       href={handbookMessengerHref(anchor)}
       className={cn('text-xs font-medium text-primary underline-offset-2 hover:underline', className)}
     >
-      Handbuch: Messenger (Chat)
+      {children ?? 'Handbuch: Messenger (Chat)'}
     </Link>
   )
 }

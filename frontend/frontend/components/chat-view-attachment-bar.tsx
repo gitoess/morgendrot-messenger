@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Camera, RefreshCw, Upload } from 'lucide-react'
 import { MEDIA_IOTA_AUDIO_RAW_MAX_BYTES, MEDIA_LORA_AUDIO_RAW_MAX_BYTES } from '@/frontend/lib/compact-image-wire'
 import type { AttachmentBarPort } from '@/frontend/features/messenger-ports'
@@ -15,6 +15,9 @@ import { ChatViewWebcamCaptureDialog } from '@/frontend/components/chat-view-web
 export type ChatViewAttachmentBarProps = AttachmentBarPort & {
   /** z. B. STT, Sprachmemo — rechts neben „Von Kamera“. */
   trailingActions?: ReactNode
+  /** false = nur Vorschau/Pipeline (Picker im +-Menü). */
+  showImportPickers?: boolean
+  onRegisterCameraPick?: (pick: () => void) => void
 }
 
 export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
@@ -36,18 +39,24 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
     loraPreviewUrl,
     loraMeshProgressLine,
     trailingActions,
+    showImportPickers = true,
+    onRegisterCameraPick,
   } = p
 
   const cameraCaptureRef = useRef<HTMLInputElement>(null)
   const [webcamOpen, setWebcamOpen] = useState(false)
 
-  const openCameraImport = () => {
+  const openCameraImport = useCallback(() => {
     if (prefersFileCameraCapture()) {
       cameraCaptureRef.current?.click()
     } else {
       setWebcamOpen(true)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    onRegisterCameraPick?.(openCameraImport)
+  }, [onRegisterCameraPick, openCameraImport])
 
   const hasAnyAttachment =
     attachedBlobBase64 != null ||
@@ -99,6 +108,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           </div>
         </div>
       ) : null}
+      {showImportPickers ? (
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <button
           type="button"
@@ -162,6 +172,7 @@ export function ChatViewAttachmentBar(p: ChatViewAttachmentBarProps) {
           </button>
         )}
       </div>
+      ) : null}
       {fluentLoraError ? (
         <p className="mb-2 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1.5 text-xs text-destructive">
           {fluentLoraError}

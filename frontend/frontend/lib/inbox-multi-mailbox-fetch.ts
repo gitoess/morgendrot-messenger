@@ -165,11 +165,13 @@ export async function fetchInboxFromAllOwnedMailboxes(p: {
     }
   }
 
+  const messages = mergeAllMessages(mappedChunks)
+
   return {
     ok: true,
-    messages: mergeAllMessages(mappedChunks),
+    messages,
     stride: serverStride,
-    hasMore: serverHasMore,
+    hasMore: serverHasMore || messages.length >= p.limit,
     loadedViaRpc,
   }
 }

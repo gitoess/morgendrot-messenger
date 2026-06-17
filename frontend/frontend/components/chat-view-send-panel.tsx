@@ -5,9 +5,10 @@
  * Sendelogik bleibt im Hook (`useChatViewSendFlow`); dieses Panel ist reine Orchestrierung der bestehenden UI-Blöcke.
  */
 
-import { useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from 'react'
 import { AlertCircle, BookUser, Check, ListOrdered, RefreshCw, Send } from 'lucide-react'
 import { ChatComposerEmojiPicker } from '@/frontend/components/chat-composer-emoji-picker'
+import { ChatViewComposerPlusMenu } from '@/frontend/components/chat-view-composer-plus-menu'
 import { cn } from '@/lib/utils'
 import {
   needsComposerIotaAddress,
@@ -29,6 +30,10 @@ import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-noti
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import {
+  isMessengerSessionKeysReady,
+  shouldBlockSendForMissingSessionKeys,
+} from '@/frontend/lib/messenger-session-keys-ready'
 import { ChatViewContactSendMailboxSelect } from '@/frontend/components/chat-view-contact-send-mailbox-select'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
 import {
@@ -64,7 +69,7 @@ import {
   activeSendPathWriteDeniedReason,
   plaintextSendBlockedByCapabilitiesReason,
 } from '@/frontend/lib/messenger-capability-gates'
-const MESSAGE_PLACEHOLDER = 'Optional: Unterschrift zu Bild/.txt oder normaler Text …'
+const MESSAGE_PLACEHOLDER = 'Nachricht …'
 
 /** Nur echte Datei-Drags vom OS — sonst kein preventDefault auf dragOver (stört vertikales Scrollen auf dem Handy). */
 function dataTransferLooksLikeFileDrag(dt: DataTransfer | null): boolean {
@@ -87,6 +92,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   onConfirmLoraOnline: () => void | Promise<void>
   onDismissLoraOnlineFallback: () => void
   apiStatus: ApiStatus | null
+  /** Erster Live-Status-Poll abgeschlossen — verhindert „Wallet-Keys fehlen“ während Cold-Start. */
+  statusPollAttempted?: boolean
   onSend: (opts?: ChatSendHandleOptions) => void | Promise<void>
   onCancelSend?: () => void
   status: 'idle' | 'success' | 'error'
@@ -169,6 +176,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     onConfirmLoraOnline,
     onDismissLoraOnlineFallback,
     apiStatus,
+    statusPollAttempted = true,
     onSend,
     onCancelSend,
     status,
@@ -233,7 +241,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const [showLoraChunkDetails, setShowLoraChunkDetails] = useState(false)
   const [showQueueItems, setShowQueueItems] = useState(false)
   const [selectedQueueIds, setSelectedQueueIds] = useState<string[]>([])
+  const [cameraPick, setCameraPick] = useState<(() => void) | null>(null)
   const dragDepth = useRef(0)
+  const registerCameraPick = useCallback((pick: () => void) => setCameraPick(() => pick), [])
 
   const voiceLocksComposer = voiceRecording || voiceBusy
   const dropDisabled = attachmentBarProps.compactBusy || sending || voiceLocksComposer
@@ -328,7 +338,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
   const vaultLocked = apiStatus?.locked === true
-  const sessionKeysReady = apiStatus?.hasKeys === true
+  const sessionKeysReady = isMessengerSessionKeysReady(apiStatus)
+  const sessionKeysMissingBlock = shouldBlockSendForMissingSessionKeys(apiStatus, statusPollAttempted)
   const isTelegramDelivery = composerDelivery === 'telegram'
   const onlineChainNeedsKeys = !isTelegramDelivery && forcedTransport === 'internet'
 
@@ -343,7 +354,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     sending ||
     vaultLocked ||
     (isPinnwandChannel && !canPostPinnwand) ||
-    (onlineChainNeedsKeys && !sessionKeysReady) ||
+    (onlineChainNeedsKeys && sessionKeysMissingBlock) ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
     (encrypted && groupMailboxInternetChain) ||
@@ -357,7 +368,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   const sendDisableReason = useMemo(() => {
     if (sending) return 'Senden läuft bereits…'
     if (vaultLocked) return 'Tresor gesperrt — bitte zuerst entsperren.'
-    if (onlineChainNeedsKeys && !sessionKeysReady) {
+    if (onlineChainNeedsKeys && sessionKeysMissingBlock) {
       return 'Wallet-Keys fehlen — unten „Tresor entsperren“ oder Badge „Tresor: Keys fehlen“ im Header.'
     }
     if (loraOnlineFallbackOffer != null) return 'LoRa-Online-Fallback offen — zuerst bestätigen oder abbrechen.'
@@ -387,7 +398,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     sending,
     vaultLocked,
     onlineChainNeedsKeys,
-    sessionKeysReady,
+    sessionKeysMissingBlock,
     loraOnlineFallbackOffer,
     hasNoPayload,
     encrypted,
@@ -597,8 +608,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
   }, [loraOnlineFallbackOffer?.reasonLabel])
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 md:p-6">
-      <div className="space-y-4">
+    <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
+      <div className="space-y-3">
         {activeConversationBar ? <ChatViewActiveConversationBar {...activeConversationBar} /> : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">
@@ -748,97 +759,24 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         )}
 
+        <ChatViewAttachmentBar
+          {...attachmentBarProps}
+          sending={sending}
+          pickDisabled={voiceLocksComposer}
+          showImportPickers={false}
+          onRegisterCameraPick={registerCameraPick}
+        />
+
         <div
           onDragEnter={onComposerDragEnter}
           onDragLeave={onComposerDragLeave}
           onDragOver={onComposerDragOver}
           onDrop={onComposerDrop}
           className={cn(
-            'touch-pan-y rounded-xl border border-transparent p-2 transition-colors',
+            'touch-pan-y rounded-xl border border-border/60 bg-muted/20 p-2 transition-colors',
             dropHover && !dropDisabled && 'border-primary/50 bg-primary/5 ring-2 ring-primary/25'
           )}
         >
-          <label htmlFor="chat-composer-message" className="mb-2 block text-sm font-medium text-foreground">
-            Nachricht
-          </label>
-          <ChatViewAttachmentBar
-            {...attachmentBarProps}
-            sending={sending}
-            pickDisabled={voiceLocksComposer}
-            trailingActions={
-              isPrivate ? (
-                <>
-                  {(forcedTransport === 'internet' || forcedTransport === 'mesh' || isTelegramDelivery) && (
-                    <button
-                      type="button"
-                      disabled={sending || voiceLocksComposer || telegramBusy}
-                      onClick={prepareSttDictation}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
-                      title="Sprach-zu-Text über Betriebssystem-Diktat"
-                    >
-                      STT diktieren
-                    </button>
-                  )}
-                  {forcedTransport === 'internet' && !isTelegramDelivery ? (
-                    <ChatViewVoiceRecord
-                      slot="normal"
-                      density="compact"
-                      activeKind={voiceActiveKind}
-                      phase={voicePhase}
-                      progress01={voiceProgress01}
-                      maxSeconds={voiceMaxSeconds}
-                      normalIsOnline
-                      onToggle={onVoiceToggle}
-                      blockedStart={voiceNormalBlockedStart}
-                    />
-                  ) : null}
-                  <ChatComposerEmojiPicker onPick={insertEmojiIntoMessage} disabled={sending} compact />
-                  {onOpenPhonebook ? (
-                    <button
-                      type="button"
-                      disabled={sending || voiceLocksComposer}
-                      onClick={onOpenPhonebook}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/60 disabled:opacity-50"
-                      title="Telefonbuch"
-                    >
-                      <BookUser className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                      Telefonbuch
-                    </button>
-                  ) : null}
-                  {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
-                    <>
-                      <label
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-sky-600/40 bg-sky-950/20 px-3 py-1.5 text-xs font-medium text-sky-100 hover:bg-sky-950/35"
-                        title={CHAT_MESH_LORA_IMAGES_HINT}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={meshLoRaImagesEnabled}
-                          onChange={(e) => onMeshLoRaImagesEnabledChange(e.target.checked)}
-                          data-testid="mesh-lora-images-enabled"
-                          className="border-border"
-                        />
-                        Bilder über Funk
-                      </label>
-                      <label
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-600/40 bg-emerald-950/20 px-3 py-1.5 text-xs font-medium text-emerald-100 hover:bg-emerald-950/35"
-                        title={CHAT_PATH4_SELF_ARCHIVE_HINT}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={meshSelfArchiveAfterLoRa}
-                          onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
-                          data-testid="mesh-path4-self-archive"
-                          className="border-border"
-                        />
-                        Auf Chain verankern
-                      </label>
-                    </>
-                  ) : null}
-                </>
-              ) : null
-            }
-          />
           {!encrypted && forcedTransport === 'mesh' && (
             <div className="mb-2 rounded-md border border-orange-600/45 bg-orange-950/35 px-3 py-2 text-xs tabular-nums text-orange-50">
               <span className="font-semibold">Klartext-Funk</span> · {[...message].length}/{MESH_PLAINTEXT_MAX_CHARS}{' '}
@@ -851,22 +789,165 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
                 : null}
             </div>
           )}
-          <textarea
-            ref={messageRef}
-            id="chat-composer-message"
-            value={message}
-            onChange={(e) => onMessageChange(e.target.value)}
-            placeholder={MESSAGE_PLACEHOLDER}
-            rows={6}
-            className={cn(
-              'min-h-[9.5rem] w-full resize-y rounded-lg border bg-input px-4 py-3 text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
-              !encrypted &&
-                forcedTransport === 'mesh' &&
-                [...message].length > MESH_PLAINTEXT_MAX_CHARS
-                ? 'border-red-500/70 ring-1 ring-red-500/30'
-                : 'border-border'
-            )}
-          />
+
+          <div className="flex items-end gap-2">
+            {isPrivate ? (
+              <ChatViewComposerPlusMenu
+                disabled={dropDisabled}
+                onPickFile={() => attachmentBarProps.compactFileRef.current?.click()}
+                onPickCamera={() => cameraPick?.()}
+                showStt={
+                  forcedTransport === 'internet' || forcedTransport === 'mesh' || isTelegramDelivery
+                }
+                onStt={prepareSttDictation}
+                extraItems={
+                  <>
+                    <div className="px-1 py-1">
+                      <ChatComposerEmojiPicker
+                        onPick={insertEmojiIntoMessage}
+                        disabled={sending || voiceLocksComposer}
+                        compact
+                      />
+                    </div>
+                    {onOpenPhonebook ? (
+                      <button
+                        type="button"
+                        disabled={sending || voiceLocksComposer}
+                        onClick={onOpenPhonebook}
+                        className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                      >
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/70 text-muted-foreground">
+                          <BookUser className="h-4 w-4" aria-hidden />
+                        </span>
+                        Telefonbuch
+                      </button>
+                    ) : null}
+                    {showPath4Checkbox && forcedTransport === 'mesh' && !isTelegramDelivery ? (
+                      <div className="space-y-1 border-t border-border/60 px-1 py-2">
+                        <label
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-foreground hover:bg-muted/60"
+                          title={CHAT_MESH_LORA_IMAGES_HINT}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={meshLoRaImagesEnabled}
+                            onChange={(e) => onMeshLoRaImagesEnabledChange(e.target.checked)}
+                            data-testid="mesh-lora-images-enabled"
+                            className="border-border"
+                          />
+                          Bilder über Funk
+                        </label>
+                        <label
+                          className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 text-xs font-medium text-foreground hover:bg-muted/60"
+                          title={CHAT_PATH4_SELF_ARCHIVE_HINT}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={meshSelfArchiveAfterLoRa}
+                            onChange={(e) => onMeshSelfArchiveAfterLoRaChange(e.target.checked)}
+                            data-testid="mesh-path4-self-archive"
+                            className="border-border"
+                          />
+                          Auf Chain verankern
+                        </label>
+                      </div>
+                    ) : null}
+                  </>
+                }
+              />
+            ) : null}
+
+            <textarea
+              ref={messageRef}
+              id="chat-composer-message"
+              value={message}
+              onChange={(e) => onMessageChange(e.target.value)}
+              placeholder={MESSAGE_PLACEHOLDER}
+              rows={2}
+              className={cn(
+                'min-h-[2.75rem] max-h-40 flex-1 resize-y rounded-2xl border bg-input px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary',
+                !encrypted &&
+                  forcedTransport === 'mesh' &&
+                  [...message].length > MESH_PLAINTEXT_MAX_CHARS
+                  ? 'border-red-500/70 ring-1 ring-red-500/30'
+                  : 'border-border'
+              )}
+            />
+
+            {isPrivate && forcedTransport === 'internet' && !isTelegramDelivery ? (
+              <ChatViewVoiceRecord
+                slot="normal"
+                density="compact"
+                activeKind={voiceActiveKind}
+                phase={voicePhase}
+                progress01={voiceProgress01}
+                maxSeconds={voiceMaxSeconds}
+                normalIsOnline
+                onToggle={onVoiceToggle}
+                blockedStart={voiceNormalBlockedStart}
+              />
+            ) : null}
+
+            {showPrimarySendButton ? (
+              <button
+                type="button"
+                onClick={handlePrimarySend}
+                disabled={primarySendDisabled}
+                data-testid="chat-composer-primary-send"
+                aria-label={sending || telegramBusy ? 'Wird gesendet' : 'Senden'}
+                className={cn(
+                  'flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed sm:min-w-[5.5rem]',
+                  primarySendReady && !primarySendDisabled
+                    ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-500/35 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400'
+                    : primarySendDisabled
+                      ? 'bg-muted text-muted-foreground opacity-50'
+                      : isTelegramDelivery
+                        ? 'bg-sky-600/80 text-white hover:bg-sky-600/90'
+                        : 'border border-border bg-muted/80 text-muted-foreground hover:bg-muted'
+                )}
+                title={
+                  isTelegramDelivery
+                    ? 'Telegram-Hinweis senden'
+                    : primarySendDisabled && sendDisableReason
+                      ? sendDisableReason
+                      : encryptedOnlineSendBlocked
+                        ? encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)
+                        : forcedTransport === 'internet' && !onlineConnected
+                          ? 'Online-Verbindung derzeit nicht bestätigt'
+                          : undefined
+                }
+              >
+                {sending || telegramBusy ? (
+                  <RefreshCw className="h-5 w-5 animate-spin" />
+                ) : (
+                  <Send className="h-5 w-5" />
+                )}
+                <span className="hidden sm:inline">{sending || telegramBusy ? '…' : 'Senden'}</span>
+              </button>
+            ) : null}
+
+            {sending ? (
+              <button
+                type="button"
+                onClick={onCancelSend}
+                data-testid="chat-composer-cancel-send"
+                className="shrink-0 rounded-full border border-border bg-background px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+              >
+                Stop
+              </button>
+            ) : null}
+          </div>
+
+          {primarySendDisabled && sendDisableReason && !sending && !telegramBusy ? (
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" role="status">
+              {sendDisableReason}
+            </p>
+          ) : null}
+          {encryptedOnlineSendBlocked && !primarySendDisabled ? (
+            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" role="status">
+              {encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)}
+            </p>
+          ) : null}
         </div>
 
         {loraOnlineFallbackOffer ? (
@@ -1098,88 +1179,27 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            {showPrimarySendButton ? (
-              <button
-                type="button"
-                onClick={handlePrimarySend}
-                disabled={primarySendDisabled}
-                data-testid="chat-composer-primary-send"
-                className={cn(
-                  'flex items-center gap-2 rounded-lg px-6 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed',
-                  primarySendReady && !primarySendDisabled
-                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-500/35 hover:bg-emerald-500 dark:bg-emerald-500 dark:hover:bg-emerald-400'
-                    : primarySendDisabled
-                      ? 'bg-muted text-muted-foreground opacity-50'
-                      : isTelegramDelivery
-                        ? 'bg-sky-600/80 text-white hover:bg-sky-600/90'
-                        : 'border border-border bg-muted/80 text-muted-foreground hover:bg-muted'
-                )}
-                title={
-                  isTelegramDelivery
-                    ? 'Telegram-Hinweis senden'
-                    : primarySendDisabled && sendDisableReason
-                      ? sendDisableReason
-                      : encryptedOnlineSendBlocked
-                        ? encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)
-                        : forcedTransport === 'internet' && !onlineConnected
-                          ? 'Online-Verbindung derzeit nicht bestätigt'
-                          : undefined
-                }
-              >
-                {sending || telegramBusy ? (
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Send className="h-4 w-4" />
-                )}
-                {sending || telegramBusy ? 'Wird gesendet…' : 'Senden'}
-              </button>
-            ) : null}
-            {primarySendDisabled && sendDisableReason && !sending && !telegramBusy ? (
-              <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
-                Senden blockiert: {sendDisableReason}
-              </p>
-            ) : null}
-            {encryptedOnlineSendBlocked && !primarySendDisabled ? (
-              <p className="w-full text-xs text-amber-800 dark:text-amber-200" role="status">
-                {encryptedHandshakeStatusLabel(encryptedRecipientHandshakeStatus)}
-              </p>
-            ) : null}
-            {sending ? (
-              <button
-                type="button"
-                onClick={onCancelSend}
-                data-testid="chat-composer-cancel-send"
-                className="rounded-lg border border-border bg-background px-4 py-2.5 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                Übertragung abbrechen
-              </button>
-            ) : null}
-          </div>
-
-          <div
-            className="min-h-[2.5rem] w-full text-sm leading-snug"
-            aria-live="polite"
-            aria-atomic="true"
-            data-testid="chat-composer-send-status"
-          >
-            {status !== 'idle' ? (
-              <p
-                className={cn(
-                  'flex items-start gap-1.5 font-medium',
-                  status === 'success' ? 'text-emerald-400' : 'text-red-400'
-                )}
-              >
-                {status === 'success' ? (
-                  <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                ) : (
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                )}
-                <span className="min-w-0 break-words">{statusMsg}</span>
-              </p>
-            ) : null}
-          </div>
+        <div
+          className="min-h-[1.75rem] w-full text-sm leading-snug"
+          aria-live="polite"
+          aria-atomic="true"
+          data-testid="chat-composer-send-status"
+        >
+          {status !== 'idle' ? (
+            <p
+              className={cn(
+                'flex items-start gap-1.5 font-medium',
+                status === 'success' ? 'text-emerald-400' : 'text-red-400'
+              )}
+            >
+              {status === 'success' ? (
+                <Check className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              ) : (
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              )}
+              <span className="min-w-0 break-words">{statusMsg}</span>
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

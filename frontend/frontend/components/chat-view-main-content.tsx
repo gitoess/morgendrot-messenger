@@ -4,9 +4,9 @@
  * Reine Zusammenstellung der Chat-Unterkomponenten; gesamte Logik liegt in `useChatViewCore`.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import { ChatViewInboxPanel } from '@/frontend/components/chat-view-inbox-panel'
+import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
 import { ChatViewSendPanel } from '@/frontend/components/chat-view-send-panel'
@@ -25,6 +25,7 @@ import {
 } from '@/frontend/components/chat-view-transport-card'
 import { ChatViewSetupPanel } from '@/frontend/components/chat-view-setup-panel'
 import { ChatViewGroupPanel } from '@/frontend/components/chat-view-group-panel'
+import { ChatViewGroupSettingsSheet } from '@/frontend/components/chat-view-group-settings-sheet'
 import { ChatViewEncryptedPartnerPanel } from '@/frontend/components/chat-view-encrypted-partner-panel'
 import { useChatViewEncryptedPartnerPanelProps } from '@/frontend/hooks/use-chat-view-encrypted-partner-panel-props'
 import { useChatViewTransportCardProps } from '@/frontend/hooks/use-chat-view-transport-card-props'
@@ -66,6 +67,7 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordContactLastContacted, readContactFavorites, readHiddenContacts, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
+import { consumeDashboardSosPending } from '@/frontend/lib/dashboard-sos-pending'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import {
@@ -167,6 +169,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const { enabled: clientExpertMode } = useMessengerClientExpertMode()
 
   const [phonebookOpen, setPhonebookOpen] = useState(false)
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false)
   const [contactDetailAddress, setContactDetailAddress] = useState<string | null>(null)
   const [contactDetailOpen, setContactDetailOpen] = useState(false)
   const [sidebarMetaTick, setSidebarMetaTick] = useState(0)
@@ -361,12 +364,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     pinnwandInboxStripProps,
     phonebookShellProps,
     groupPanelDirectory,
+    myDataPanelProps,
   } = useChatViewShellProps({
     messengerPorts: panelMessengerPorts,
     vaultBannerActions,
     offlineStatus,
     showAdhocTransport: uiCaps.showAdhocTransport,
     showPackageIdBanner: uiCaps.showPackageIdBanner,
+    onOpenSettings,
     peeringQr: {
       onPeeringImported: ({ address }) => {
         const a = address.trim().toLowerCase()
@@ -378,6 +383,19 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onPeeringStatus: (msg) => toast.message(msg),
     },
   })
+
+  const dashboardSosHandledRef = useRef(false)
+  useEffect(() => {
+    if (dashboardSosHandledRef.current) return
+    const pending = consumeDashboardSosPending()
+    if (!pending) return
+    dashboardSosHandledRef.current = true
+    setMessage(pending)
+    void panelMessengerPorts.sendActions.onSend({
+      emergencyWire: 'text',
+      composerOverride: pending,
+    })
+  }, [panelMessengerPorts.sendActions, setMessage])
 
   const inboxPanelProps = useChatViewInboxPanelProps({
     messengerPorts: panelMessengerPorts,
@@ -414,41 +432,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           }
         : undefined,
   })
-
-  const mergedChatHeaderProps = useMemo(() => {
-    const { attachmentBar, sendActions } = messengerPorts
-    const isTelegramDelivery = composerDelivery === 'telegram'
-    const canOfferSos =
-      isPrivate &&
-      channelMode === 'private' &&
-      !isTelegramDelivery &&
-      (forcedTransport === 'mesh' || forcedTransport === 'internet') &&
-      !attachmentBar.attachedBlobBase64 &&
-      !attachmentBar.attachedAudioBase64 &&
-      !attachmentBar.attachedTxtFile &&
-      !attachmentBar.attachedLora &&
-      sendActions.loraOnlineFallbackOffer == null
-
-    return {
-      ...chatHeaderProps,
-      sosEmergency: canOfferSos
-        ? {
-            visible: true,
-            sending: attachmentBar.sending,
-            message,
-            onSend: sendActions.onSend,
-          }
-        : undefined,
-    }
-  }, [
-    chatHeaderProps,
-    messengerPorts,
-    isPrivate,
-    channelMode,
-    composerDelivery,
-    forcedTransport,
-    message,
-  ])
 
   const { encryptedPartnerPanelProps } = useChatViewEncryptedPartnerPanelProps({
     messengerPorts: panelMessengerPorts,
@@ -534,6 +517,25 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [onChannelModeChange, selectInboxConversationGroup, refreshMessengerGroups]
   )
 
+  const handleSelectSidebarSelf = useCallback(() => {
+    const a = myAddress.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(a)) {
+      toast.message('Keine eigene Wallet-Adresse — zuerst Tresor/Identität prüfen.')
+      return
+    }
+    if (channelMode === 'group' && onChannelModeChange) onChannelModeChange('private')
+    selectInboxConversationPartner(a)
+    setPartner(a)
+    setRecipient(a)
+  }, [
+    myAddress,
+    channelMode,
+    onChannelModeChange,
+    selectInboxConversationPartner,
+    setPartner,
+    setRecipient,
+  ])
+
   const handleSelectSidebarAll = useCallback(() => {
     selectInboxConversationAll()
     const contacts = collectContactsForSendPath({
@@ -618,7 +620,18 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     [handleSelectSidebarContact, messengerSearchQuery]
   )
 
+  const activeSelfSelected = useMemo(() => {
+    const me = myAddress.trim().toLowerCase()
+    if (!/^0x[a-f0-9]{64}$/.test(me)) return false
+    return (
+      inboxPartnerFiltersArmed &&
+      !inboxConversationGroupId &&
+      inboxPartnerKey?.trim().toLowerCase() === me
+    )
+  }, [myAddress, inboxPartnerKey, inboxPartnerFiltersArmed, inboxConversationGroupId])
+
   const activeConversationTitle = useMemo(() => {
+    if (activeSelfSelected) return 'Ich'
     if (inboxConversationGroupId) {
       return readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.name ?? 'Gruppe'
     }
@@ -626,9 +639,12 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       return resolveContactSidebarDisplayName(directory, inboxPartnerKey)
     }
     return null
-  }, [inboxConversationGroupId, inboxPartnerKey, directory])
+  }, [activeSelfSelected, inboxConversationGroupId, inboxPartnerKey, directory])
 
   const activeConversationSubtitle = useMemo(() => {
+    if (activeSelfSelected) {
+      return 'Nachrichten an mich selbst'
+    }
     if (inboxConversationGroupId) {
       const count =
         readMessengerGroups().find((g) => g.id === inboxConversationGroupId)?.memberAddresses.length ?? 0
@@ -647,6 +663,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     )
     return handshakeLabel ?? inboxPartnerKey
   }, [
+    activeSelfSelected,
     inboxConversationGroupId,
     inboxPartnerKey,
     handshakeConnectedAddresses,
@@ -672,9 +689,109 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const showAllConversationsActive =
     !inboxPartnerFiltersArmed || (!inboxPartnerKey && !inboxConversationGroupId)
 
+  const openGroupSettings = useCallback(() => setGroupSettingsOpen(true), [])
+
+  const groupSettingsSheetProps = useMemo(
+    () => ({
+      contactDirectory: groupPanelDirectory,
+      forcedTransport,
+      teamMailboxCreateAllowed: canCreateTeamMailbox(connectionStatusRead.apiStatus),
+      groupCreateAllowed: canCreateGroupCapability(connectionStatusRead.apiStatus),
+      onGroupsChanged: refreshMessengerGroups,
+      onOpenPhonebook: () => setPhonebookOpen(true),
+      onOpenSettings,
+      encrypted,
+      onEncryptedChange: setEncrypted,
+    }),
+    [
+      groupPanelDirectory,
+      forcedTransport,
+      connectionStatusRead.apiStatus,
+      refreshMessengerGroups,
+      onOpenSettings,
+      encrypted,
+      setEncrypted,
+    ]
+  )
+
+  const conversationMenuProps = useMemo((): ChatViewInboxPanelProps['conversationMenu'] => {
+    if (!showConversationSidebar) return undefined
+
+    if (isGroup) {
+      if (inboxConversationGroupId && activeConversationTitle) {
+        return {
+          title: activeConversationTitle,
+          subtitle: activeConversationSubtitle,
+          canClearHistory: true,
+          canExport: true,
+          onManageGroup: openGroupSettings,
+          onCreateGroup: openGroupSettings,
+          encryptionToggle: {
+            encrypted,
+            onEncryptedChange: setEncrypted,
+            forcedTransport,
+          },
+          onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
+          onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+        }
+      }
+      return {
+        title: 'Gruppenchat',
+        subtitle: 'Gruppe wählen oder anlegen',
+        canClearHistory: false,
+        canExport: false,
+        onManageGroup: openGroupSettings,
+        onCreateGroup: openGroupSettings,
+        encryptionToggle: {
+          encrypted,
+          onEncryptedChange: setEncrypted,
+          forcedTransport,
+        },
+      }
+    }
+
+    if (inboxPartnerFiltersArmed && activeConversationTitle) {
+      return {
+        title: activeConversationTitle,
+        subtitle: activeConversationSubtitle,
+        canClearHistory: true,
+        canExport: true,
+        onViewProfile: inboxPartnerKey ? () => handleOpenContactDetail(inboxPartnerKey) : undefined,
+        onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
+        onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+        onRenewEncryptionKeys:
+          inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? handleRenewPeerEncryption : undefined,
+      }
+    }
+
+    return undefined
+  }, [
+    showConversationSidebar,
+    isGroup,
+    inboxConversationGroupId,
+    activeConversationTitle,
+    activeConversationSubtitle,
+    openGroupSettings,
+    encrypted,
+    setEncrypted,
+    forcedTransport,
+    inboxPartnerFiltersArmed,
+    inboxPartnerKey,
+    handleOpenContactDetail,
+    handleRenewPeerEncryption,
+    panelMessengerPorts.inboxExportActions,
+    panelMessengerPorts.inboxActions,
+  ])
+
+  const composerBlock = (
+    <section id="chat-composer-anchor" className="space-y-3 border-t border-border pt-4" aria-label="Nachricht verfassen">
+      <ChatViewSendPanel {...sendPanelProps} />
+    </section>
+  )
+
   const conversationBody = (
     <>
-      {!onNotesTab && isGroup ? (
+      {!onNotesTab && isGroup && !showConversationSidebar ? (
         <ChatViewGroupPanel
           contactDirectory={groupPanelDirectory}
           forcedTransport={forcedTransport}
@@ -688,7 +805,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {!onNotesTab && isGroup && encryptedPartnerPanelProps ? (
+      {!onNotesTab && isGroup && !showConversationSidebar && encryptedPartnerPanelProps ? (
         <div className="space-y-3 rounded-xl border border-border bg-card p-4">
           <p className="text-sm font-medium text-foreground">Handshake — Gruppenmitglieder</p>
           <ChatViewEncryptedPartnerPanel {...encryptedPartnerPanelProps} />
@@ -732,10 +849,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           searchQuery={messengerSearchQuery}
           activeSendPath={activeSendPath}
           onSelectAll={handleSelectSidebarAll}
+          onSelectSelf={handleSelectSidebarSelf}
+          activeSelfSelected={activeSelfSelected}
           onSelectContact={handleSelectSidebarContact}
           onSelectGroup={handleSelectSidebarGroup}
+          onOpenGroupSettings={openGroupSettings}
           onOpenContactDetail={handleOpenContactDetail}
           onOpenPhonebook={() => setPhonebookOpen(true)}
+          selfProfile={myDataPanelProps}
           {...sidebarHandshakeProps}
         />
       ) : null}
@@ -748,22 +869,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             {...pinnwandFeedPanelProps}
             showPinnwandPinActions={pinnwandCaps.configured && pinnwandCaps.canPost}
           />
-          <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
-            <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
-              An Pinnwand senden
-            </h2>
-            <ChatViewSendPanel {...sendPanelProps} />
-          </section>
+          {composerBlock}
         </>
       ) : (
         <>
-          <section className="space-y-3 border-t border-border pt-6" aria-labelledby="chat-compose-heading">
-            <h2 id="chat-compose-heading" className="text-sm font-semibold tracking-tight text-foreground">
-              Nachricht verfassen
-            </h2>
-            <ChatViewSendPanel {...sendPanelProps} />
-          </section>
-
           {!showConversationSidebar &&
           inboxOverviewChipsVisible &&
           (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
@@ -780,26 +889,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             {...inboxPanelProps}
             hidePartnerStrip={showConversationSidebar}
             inboxSearchQuery={messengerSearchQuery}
-            conversationMenu={
-              showConversationSidebar && inboxPartnerFiltersArmed && activeConversationTitle
-                ? {
-                    title: activeConversationTitle,
-                    subtitle: activeConversationSubtitle,
-                    canClearHistory: true,
-                    canExport: true,
-                    onViewProfile: inboxPartnerKey
-                      ? () => handleOpenContactDetail(inboxPartnerKey)
-                      : undefined,
-                    onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
-                    onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
-                    onRenewEncryptionKeys:
-                      inboxPartnerKey && isValidRecipient0x(inboxPartnerKey)
-                        ? handleRenewPeerEncryption
-                        : undefined,
-                  }
-                : undefined
-            }
+            conversationMenu={conversationMenuProps}
           />
+
+          {composerBlock}
         </>
       )}
 
@@ -819,7 +912,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   return (
     <>
       <div className="space-y-6">
-        <ChatViewChatHeader {...mergedChatHeaderProps} />
+        <ChatViewChatHeader {...chatHeaderProps} />
 
         {uiCaps.showProminentOfflineQueueBanner ? (
           <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
@@ -852,10 +945,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               searchQuery={messengerSearchQuery}
               activeSendPath={activeSendPath}
               onSelectAll={handleSelectSidebarAll}
+              onSelectSelf={handleSelectSidebarSelf}
+              activeSelfSelected={activeSelfSelected}
               onSelectContact={handleSelectSidebarContact}
               onSelectGroup={handleSelectSidebarGroup}
+              onOpenGroupSettings={openGroupSettings}
               onOpenContactDetail={handleOpenContactDetail}
               onOpenPhonebook={() => setPhonebookOpen(true)}
+              selfProfile={myDataPanelProps}
               {...sidebarHandshakeProps}
             />
             <div className="min-w-0 space-y-8">{conversationBody}</div>
@@ -913,6 +1010,13 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       ) : null}
 
       {uiCaps.expertTools ? <LazyChatViewRelaySubmitButton hideMenuTrigger /> : null}
+
+      <ChatViewGroupSettingsSheet
+        open={groupSettingsOpen}
+        onOpenChange={setGroupSettingsOpen}
+        {...groupSettingsSheetProps}
+        encryptedPartnerPanel={encryptedPartnerPanelProps}
+      />
 
       <Dialog open={replyPathChoiceDialog.open} onOpenChange={(open) => !open && replyPathChoiceDialog.onClose()}>
         <DialogContent className="max-w-sm">

@@ -67,7 +67,7 @@ Handoff **ändert Verhalten** über `ROLE`, `SIMPLE_MODE`, `TRANSPORT_PROFILE`, 
 |--------|---------|
 | **Bundle** | `npm run bundle:standalone-smartphone` — **`docs/WANDERER-STANDALONE-BUNDLE.md`** |
 | **Start** | Nutzer konfiguriert selbst (`.env`, Tresor, Meshtastic) |
-| **Erststart** | Eigener **Solo-Wizard** (Backlog) — nicht der Boss-Export-Assistent |
+| **Erststart** | Eigener **Solo-Wizard** (Backlog) — nicht der Boss-Export-Assistent; Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** §6, Roadmap **§ H.36 P0** |
 | **Handoff** | Optional **selbst erzeugt** (Backup, Zweitgerät) — gleiches ZIP-Format, **kein** Boss |
 | **Env** | `DEPLOYMENT_PROFILE=consumer`, `SIMPLE_MODE=true`, `TRANSPORT_PROFILE=mesh-first` typisch |
 

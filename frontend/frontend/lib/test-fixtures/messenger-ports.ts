@@ -175,6 +175,7 @@ export function testMessengerPorts(over: {
       deviceTimeTrustWarn: false,
       connectedAddresses: over.connectedAddresses ?? [],
       refreshApiStatus: vi.fn(async () => {}),
+      statusPollAttempted: true,
     },
     attachmentBar: { ...defaultAttachmentBarSlice(), ...over.attachmentBar },
     inboxViewUi: {

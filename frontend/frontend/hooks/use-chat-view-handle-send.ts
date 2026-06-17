@@ -643,7 +643,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
 
-    const cap = message.trim() || undefined
+    const composerText = opts?.composerOverride ?? message
+
+    const cap = composerText.trim() || undefined
     const useTxtSplit =
       attachedTxtFile != null && !attachedBlobBase64 && !attachedAudioBase64 && !attachedLora
 
@@ -659,7 +661,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     } else {
       const single = buildChatOutgoingWireContent({
-        composerPlainText: message,
+        composerPlainText: composerText,
         attachedAudioBase64,
         attachedBlobBase64,
         attachedTxtFile,

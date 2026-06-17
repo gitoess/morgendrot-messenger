@@ -127,7 +127,8 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
         </section>
       ) : null}
 
-      <div className={isGroupMode ? 'mt-4 space-y-3' : 'space-y-3'}>
+      {!isGroupMode ? (
+      <div className="space-y-3">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <label className="block text-sm font-medium text-foreground">Wallet-Adresse des Partners</label>
@@ -163,6 +164,7 @@ export function ChatViewEncryptedPartnerPanel(p: ChatViewEncryptedPartnerPanelPr
         </div>
 
       </div>
+      ) : null}
     </div>
   )
 }

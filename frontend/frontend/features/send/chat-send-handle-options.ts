@@ -4,4 +4,6 @@
 export type ChatSendHandleOptions = {
   /** SOS: Klartext mit `MORG_EMERGENCY_V1`-Marker (vor Verschlüsselung / Mesh v2). */
   emergencyWire?: 'text' | 'voice'
+  /** Composer-Text für diesen Sendevorgang (z. B. Dashboard-SOS). */
+  composerOverride?: string
 }

@@ -173,7 +173,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     senderAddress: myAddress,
   })
 
-  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn, statusCacheAgeMinutes } =
+  const { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn, statusCacheAgeMinutes, statusPollAttempted } =
     useChatViewApiStatusPoll({
       runMirrorDrain,
       runOfflineMailboxDrain,
@@ -494,6 +494,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
     packageIdMismatch,
     deviceTimeTrustWarn,
     statusCacheAgeMinutes,
+    statusPollAttempted,
     inboxPackageFilter,
     setInboxPackageFilter,
     packageIdSuggestions,

@@ -24,6 +24,12 @@ import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib
 import { persistConnectedPeersSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-store'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
+import { enrichApiStatusWithDirectSessionSigner } from '@/frontend/lib/messenger-session-keys-ready'
+import {
+  tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectIotaSessionSignerAsync,
+} from '@/frontend/lib/direct-iota-vault-unlock-sync'
 
 export type UseChatViewApiStatusPollParams = {
   runMirrorDrain: () => Promise<void>
@@ -62,9 +68,11 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   } = p
   const [apiStatus, setApiStatus] = useState<ApiStatus | null>(() => {
     if (typeof window === 'undefined') return null
+    tryAutoRestoreDirectIotaSessionSigner()
     const boot = readBootstrapCachedApiStatus()
-    return boot ?? null
+    return enrichApiStatusWithDirectSessionSigner(boot ?? null)
   })
+  const [directSignerTick, setDirectSignerTick] = useState(0)
   /** Letzter erfolgreicher Status-Poll (HTTP `Date`, § H.6c). */
   const [pollClockHint, setPollClockHint] = useState<StatusPollClockHint | null>(() => {
     if (typeof window === 'undefined') return null
@@ -87,7 +95,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     const boot = readBootstrapCachedApiStatus()
     if (!boot) return
     setPollClockHint(boot.pollClockHint)
-    setApiStatus(boot)
+    setApiStatus(enrichApiStatusWithDirectSessionSigner(boot))
     syncDirectMailboxFlagsFromApiStatus(boot)
     applyDirectChainSnapshotFromStatusOrNetworkProfile({
       packageId: boot.packageId,
@@ -95,6 +103,22 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       myAddress: boot.myAddress,
       myAddressFull: boot.myAddressFull,
     })
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    tryAutoRestoreDirectIotaSessionSigner()
+    void tryAutoRestoreDirectIotaSessionSignerAsync().then((restored) => {
+      if (!restored.ok) return
+      setApiStatus((prev) => enrichApiStatusWithDirectSessionSigner(prev))
+      setDirectSignerTick((n) => n + 1)
+    })
+    const onDirectIotaUi = () => {
+      setApiStatus((prev) => enrichApiStatusWithDirectSessionSigner(prev))
+      setDirectSignerTick((n) => n + 1)
+    }
+    window.addEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUi)
+    return () => window.removeEventListener(DIRECT_IOTA_UI_CHANGED, onDirectIotaUi)
   }, [])
 
   useEffect(() => {
@@ -143,7 +167,7 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const applyStatusOk = useCallback((s: ApiStatusFetchOk) => {
     const { pollClockHint: hint, ...rest } = s
     setPollClockHint(hint)
-    setApiStatus(rest)
+    setApiStatus(enrichApiStatusWithDirectSessionSigner(rest))
     applyDirectChainSnapshotFromStatusOrNetworkProfile({
       packageId: rest.packageId,
       mailboxId: rest.mailboxId,
@@ -244,5 +268,13 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
     return Math.floor(ageMs / 60_000)
   }, [apiStatus?.cacheSavedAtMs])
 
-  return { apiStatus, refreshApiStatus, basisUnreachable, packageIdMismatch, deviceTimeTrustWarn, statusCacheAgeMinutes }
+  return {
+    apiStatus,
+    refreshApiStatus,
+    basisUnreachable,
+    packageIdMismatch,
+    deviceTimeTrustWarn,
+    statusCacheAgeMinutes,
+    statusPollAttempted,
+  }
 }

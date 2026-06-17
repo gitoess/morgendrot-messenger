@@ -395,10 +395,15 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         }
       } else if (inboxPartnerKey?.trim()) {
         const key = inboxPartnerKey.trim().toLowerCase()
-        const contactMatch = resolveContactConversationMatch(key, contactDirectory)
-        rows = filterInboxMessagesForContactConversation(rows, myAddress, key, 'all', {
-          contactMatch,
-        })
+        const meNorm = myAddress.trim().toLowerCase()
+        if (meNorm && key === meNorm) {
+          rows = filterInboxMessagesByPartnerAndDirection(rows, myAddress, meNorm, 'all')
+        } else {
+          const contactMatch = resolveContactConversationMatch(key, contactDirectory)
+          rows = filterInboxMessagesForContactConversation(rows, myAddress, key, 'all', {
+            contactMatch,
+          })
+        }
       }
     }
     if (inboxChannelFiltersArmed) {

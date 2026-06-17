@@ -171,6 +171,7 @@ describe('assembleChatViewMessengerPorts', () => {
         deviceTimeTrustWarn: false,
         connectedAddresses: [],
         refreshApiStatus: vi.fn(async () => {}),
+        statusPollAttempted: true,
       },
       inboxViewUi: {
         inboxPartnerOptions: [],
@@ -437,6 +438,7 @@ describe('assembleChatViewPanelMessengerPorts', () => {
         deviceTimeTrustWarn: false,
         connectedAddresses: [],
         refreshApiStatus: vi.fn(async () => {}),
+        statusPollAttempted: true,
       },
       inboxViewUi: {
         inboxPartnerOptions: [],

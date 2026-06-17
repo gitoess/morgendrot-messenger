@@ -35,7 +35,10 @@ import {
   whenDirectIotaTabSessionPersistIdle,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
-import { tryAutoRestoreDirectIotaSessionSignerAsync } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import {
+  tryAutoRestoreDirectIotaSessionSigner,
+  tryAutoRestoreDirectIotaSessionSignerAsync,
+} from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
@@ -136,6 +139,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const inboxLoadEpochRef = useRef(0)
   const inboxLoadInFlightRef = useRef(false)
   const inboxLiveSourceRef = useRef<InboxLiveSource | null>(null)
+  /** Nach Reset: bis zu 3 Auto-Append-Runden wenn hasMore (ältere Move-Pakete / Events). */
+  const autoAppendBudgetRef = useRef(0)
   inboxLiveSourceRef.current = inboxLiveSource
 
   const clearInboxRam = useCallback(() => {
@@ -190,6 +195,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (mode === 'reset') {
         awaitingManualRefreshRef.current = false
         clearInboxBrowserViewFilters()
+        autoAppendBudgetRef.current = 0
       }
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
@@ -212,10 +218,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       }
       try {
         if (mode === 'reset') {
-          void (async () => {
-            await whenDirectIotaTabSessionPersistIdle()
-            await tryAutoRestoreDirectIotaSessionSignerAsync()
-          })()
+          tryAutoRestoreDirectIotaSessionSigner()
+          await whenDirectIotaTabSessionPersistIdle()
+          await tryAutoRestoreDirectIotaSessionSignerAsync()
         }
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
           if (loadEpoch !== inboxLoadEpochRef.current) return
@@ -302,6 +307,20 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           setInboxCacheAgeMinutes(null)
           setInboxLiveSource(liveSource)
           applyMappedToState(page, mappedLength, res.hasMore === true)
+          const chainHasMore = res.hasMore === true
+          if (!silent && chainHasMore) {
+            if (mode === 'reset') autoAppendBudgetRef.current = 3
+            if ((mode === 'reset' || mode === 'append') && autoAppendBudgetRef.current > 0) {
+              autoAppendBudgetRef.current -= 1
+              const epoch = loadEpoch
+              queueMicrotask(() => {
+                if (epoch !== inboxLoadEpochRef.current) return
+                void loadMessagesRef.current('append')
+              })
+            }
+          } else if (mode === 'reset') {
+            autoAppendBudgetRef.current = 0
+          }
         } else if (!res.ok) {
           const cached = readInboxCache(cacheKey)
           if (cached && mode !== 'append') {

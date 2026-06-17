@@ -173,6 +173,7 @@ export type ChatViewConnectionStatusSlice = {
   deviceTimeTrustWarn: boolean
   connectedAddresses: readonly string[]
   refreshApiStatus: () => void | Promise<void>
+  statusPollAttempted: boolean
 }
 
 export type ChatViewInboxViewUiSlice = {
@@ -505,7 +506,8 @@ export function assembleConnectionStatusReadPort(
     slice.packageIdMismatch,
     slice.deviceTimeTrustWarn,
     slice.connectedAddresses,
-    slice.refreshApiStatus
+    slice.refreshApiStatus,
+    slice.statusPollAttempted
   )
 }
 

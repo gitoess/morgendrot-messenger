@@ -252,6 +252,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onConfirmLoraOnline: sendActions.onConfirmLoraSendViaOnline,
     onDismissLoraOnlineFallback: sendActions.onDismissLoraOnlineFallback,
     apiStatus: connectionStatusRead.apiStatus,
+    statusPollAttempted: connectionStatusRead.statusPollAttempted,
     onSend: sendActions.onSend,
     onCancelSend: sendActions.onCancelSend,
     status: sendActions.status,

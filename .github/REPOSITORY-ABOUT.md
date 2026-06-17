@@ -77,4 +77,4 @@ gh repo edit gitoess/morgendrot-messenger \
 - [ ] Beschreibung erscheint unter dem Repo-Namen auf GitHub
 - [ ] Topics sind klickbar (Discovery)
 - [ ] Website-Link öffnet README-Anker
-- [ ] README-Einstieg verweist auf `docs/DEV-START.md`, `docs/PRODUCT-MESSENGER-VS-PROJEKT.md`, **`docs/ROADMAP-FAHRPLAN.md`** § **H.3o** (Meshtastic-Verschlüsselung), § **B4** (Telegram-Backlog) (Ist-Stand 2026-05)
+- [ ] README-Einstieg verweist auf `docs/DEV-START.md`, `docs/PRODUCT-MESSENGER-VS-PROJEKT.md`, **`docs/ROADMAP-FAHRPLAN.md`** § **H.36** (Team-Member-Update & Einstiegs-Wizard), § **H.3o** (Meshtastic-Verschlüsselung), § **B4** (Telegram-Backlog) (Ist-Stand 2026-06)

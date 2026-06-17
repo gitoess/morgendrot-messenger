@@ -6,6 +6,10 @@ import { ChatViewSendPanel, type ChatViewSendPanelProps } from './chat-view-send
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 
 /** RTL-Fixture: gleiche Defaults wie Smoke-Tests, per Partial überschreibbar (§ H.1a). */
+function openComposerPlusMenu() {
+  fireEvent.click(screen.getByRole('button', { name: /Weitere Aktionen/i }))
+}
+
 function primarySend(container: HTMLElement) {
   const el = container.querySelector('[data-testid="chat-composer-primary-send"]')
   expect(el).toBeInstanceOf(HTMLButtonElement)
@@ -181,6 +185,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
 
   it('zeigt Emoji-Popup im privaten Chat', () => {
     render(<ChatViewSendPanel {...baseSendPanel({ isPrivate: true })} />)
+    openComposerPlusMenu()
     expect(screen.getByTestId('chat-composer-emoji-trigger')).toBeInTheDocument()
   })
 
@@ -195,6 +200,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
+    openComposerPlusMenu()
     fireEvent.click(screen.getByTestId('chat-composer-emoji-trigger'))
     fireEvent.click(screen.getByRole('option', { name: /Emoji 👍/ }))
     expect(onMessageChange).toHaveBeenCalledWith('👍')
@@ -304,6 +310,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
+    openComposerPlusMenu()
     expect(screen.getByTestId('mesh-lora-images-enabled')).toBeInTheDocument()
     expect(screen.getByTestId('mesh-path4-self-archive')).toBeInTheDocument()
   })
@@ -429,6 +436,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
         })}
       />
     )
+    openComposerPlusMenu()
     expect(screen.getByTestId('mesh-lora-images-enabled')).toBeChecked()
     const sendBtn = primarySend(container)
     expect(sendBtn).toBeEnabled()
@@ -501,7 +509,7 @@ describe('ChatViewSendPanel (RTL smoke)', () => {
       />
     )
     const cancel = screen.getByTestId('chat-composer-cancel-send')
-    expect(cancel).toHaveTextContent(/Übertragung abbrechen/)
+    expect(cancel).toHaveTextContent(/Stop/)
     fireEvent.click(cancel)
     expect(onCancelSend).toHaveBeenCalledTimes(1)
   })

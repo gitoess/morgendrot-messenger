@@ -133,6 +133,7 @@ export function buildChatViewCoreMessengerPorts(
       statusCacheAgeMinutes: inbox.statusCacheAgeMinutes,
       packageIdMismatch: inbox.packageIdMismatch,
       deviceTimeTrustWarn: inbox.deviceTimeTrustWarn,
+      statusPollAttempted: inbox.statusPollAttempted,
       connectedAddresses,
       refreshApiStatus: inbox.refreshApiStatus,
     },

@@ -4,7 +4,9 @@ Ziel: **schnelle Sprachnotiz** direkt im Chat – besonders für **Höhlenrettun
 
 ## SOS-Hilferuf: Text vs. Sprache — **was passiert genau?**
 
-Die UI unterscheidet **zwei Hilferufe** (beide nur bei **echtem Bedarf**; kein Ersatz für **112** und keine Garantie, dass Dritte mitlesen):
+**Produktregel (2026-06-16):** SOS = **Klartext-only** (Zivil-Default). Kein verschlüsselter SOS im Simple Mode. Kanon: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** **§9**. Ziel-UI: SOS-Sheet mit Lage-Bundle + Fan-out (**Fahrplan § H.3n B2.5**).
+
+Die UI unterscheidet **zwei Hilferufe** (beide nur bei **echtem Bedarf**; kein Ersatz für **112**; Inhalt geht **unverschlüsselt**):
 
 | Pfad | Du tust | Technisch (vereinfacht) | Was der Empfänger / die Basis sieht |
 |------|---------|---------------------------|----------------------------------------|

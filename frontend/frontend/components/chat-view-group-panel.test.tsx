@@ -34,7 +34,7 @@ describe('ChatViewGroupPanel (§ H.1a)', () => {
       target: { value: 'Alpha Team' },
     })
     fireEvent.change(document.querySelector('textarea')!, { target: { value: MEMBER_A } })
-    fireEvent.click(screen.getByRole('button', { name: /Gruppe speichern/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^Speichern$/i }))
     expect(screen.getByText(/Gruppe gespeichert/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Alpha Team \(1\)/i })).toBeInTheDocument()
   })

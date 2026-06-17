@@ -2,9 +2,23 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-06-02 — Gruppenchat M2c (Team-Broadcast), Mitglieder per Telefonbuch-Name, Meshtastic-Kanalindex in Gruppe, Posteingang **Antworten**, Peering-QR eingeklappt, Session-Signer-Banner.
+**Stand:** 2026-06-16 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**.
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.
+
+---
+
+## Oberfläche (Chat, Kurzüberblick)
+
+| Bereich | Inhalt |
+|---------|--------|
+| **Chat-Kopf** | Sendepfad (Online / Funk / …), **SOS — Hilferuf** (1:1, nicht Telegram), Kanal-Titel, Tresor, **Handbuch**, **Einstellungen** |
+| **Seitenleiste** (1:1 / Gruppe) | **Ich**, Alle, Kontakte, Gruppen; Suche oben; Doppelklick **Ich** → Profil + Peering-QR; Doppelklick **Gruppe** → Gruppe verwalten |
+| **Mitte** | **Posteingang** (Nachrichten) **über** dem Composer |
+| **Composer** | `[+]` (Anhang, Telefonbuch, Emoji, …), Text, Sprache, Senden |
+| **Konversation ⋮** | Profil, Export, Verlauf leeren, **Verschlüsselt/Klartext**, **Gruppe verwalten** |
+
+**Dashboard:** Kachel **Nachrichten** öffnet den Chat. **Telefonbuch** zusätzlich über `[+]` im Composer, Sidebar oder Kontakt-Detail.
 
 ---
 
@@ -16,7 +30,7 @@
 
 **Unverschlüsselt · funk:** Meshtastic-**Klartext** (LongFast). Für **Ende-zu-Ende** den Transport **online** wählen (oder Verschlüsselung aktivieren — wechselt bei Bedarf automatisch zu online).
 
-**Schloss im Composer:** Gilt für **Sendepfad online** (Morgendrot-E2E). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+**Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Konversations-Menü** (⋮, Verschl./Klar) oder im erweiterten Setup (**Verschlüsselt**-Karte, wenn sichtbar). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
 
 ---
 
@@ -42,7 +56,7 @@ Laut [Meshtastic Channel Configuration](https://meshtastic.org/docs/configuratio
 
 **Pinnwand** in Morgendrot = IOTA-Broadcast mit **BROADCAST_AUTHORIZED_SENDERS** — das gibt es auf LoRa nicht 1:1. Funk-Gruppenchat = **Secondary Channel** in der Meshtastic-App anlegen und PSK mit dem Team teilen (QR).
 
-**Ist (App, § H.3o):** Funk-Senden nutzt standardmäßig den **Primary-Kanal** des verbundenen Heltec (Klartext). Im **Gruppen-Panel** kann pro Gruppe **Kanalindex 0–7**, **Kanalname** und **PSK-Ref** gespeichert werden; im Composer (Expert) optional derselbe Index. PSK/Frequenz bleiben in der **Meshtastic-App** — Morgendrot sendet auf dem vorkonfigurierten Index. **Offen:** Feldtest mit random PSK (Roadmap § H.3o.6 Schritt 4).
+**Ist (App, § H.3o):** Funk-Senden nutzt standardmäßig den **Primary-Kanal** des verbundenen Heltec (Klartext). In **Gruppe verwalten** kann pro Gruppe **Kanalindex 0–7**, **Kanalname** und **PSK-Ref** gespeichert werden; im Composer (Expert, `[+]`) optional derselbe Index. PSK/Frequenz bleiben in der **Meshtastic-App** — Morgendrot sendet auf dem vorkonfigurierten Index. **Offen:** Feldtest mit random PSK (Roadmap § H.3o.6 Schritt 4).
 
 #### LoRa „An alle“ — nicht Pinnwand
 
@@ -85,9 +99,15 @@ Der frühere **Mesh-v2-/PRIVATE_APP-Versand** ist im **Produkt abgeschaltet** (n
 
 ## SOS — Hilferuf (Text)
 
-**Einsatzmodus:** Zuerst **Text eingeben** oder **diktieren**, dann **SOS senden**. Die Nachricht geht an den gewählten Chat-Empfänger (**Funk oder online** — wie eingestellt), mit Notfall-Kennzeichnung **`MORG_EMERGENCY_V1`**. **Kein** automatischer **112**-Ruf. Nur nutzen, wenn wirklich Hilfe nötig ist.
+**Wo:** Roter Button **SOS — Hilferuf** im **Chat-Kopf** (unter dem Sendepfad), nur bei **1:1 Privat** — nicht bei Telegram-only oder mit offenen Anhängen.
 
-Spezifikation und Wire: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**.
+**Produktregel (2026-06-16):** SOS ist **immer unverschlüsselt** — Hilfe und Reichweite gehen vor Diskretion. **Kein** Verschlüsselungs-Schalter beim SOS. Normaler Chat bleibt unberührt (verschlüsselt optional).
+
+**Ziel-UI (Roadmap B2.5):** Dialog/Sheet mit Lage-Text, automatisch **Name, Standort, IOTA-`0x`, Funk-Node, Telegram** (wenn konfiguriert) — Vorschau vor dem Senden; **alle erreichbaren Wege** parallel (Funk, Online, Telegram). Hinweis: *„Geht offen raus — im Funk-Netz ggf. mitlesbar.“*
+
+**Ist (minimal):** Text eingeben oder diktieren → Bestätigung → **ein** Sendepfad wie im Composer, Marker **`MORG_EMERGENCY_V1`**. **Kein** automatischer **112**-Ruf.
+
+Spezifikation: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** (**§9** Zivil-SOS).
 
 ---
 
@@ -140,7 +160,12 @@ Wenn das Backend **`ENABLE_PLAINTEXT_CHANNEL`** und/oder **`MAILBOX_STORE_PLAINT
 
 **Mein Peering-QR** / **Peering-QR scannen** / **QR-Text einfügen:** Partner-**Wallet-Adresse** (`0x…`) und optional **ECDH-Pub** (Verschlüsselung) **lokal** austauschen — **ohne** laufende Morgendrot-Basis und **ohne** 64 Hex-Zeichen abtippen. Optional im QR: **Fullnode-URL** und **Package-ID** (Mini-Konfiguration).
 
-**Wo in der UI:** Unter **Verschlüsselt** → aufklappbar **„Peering-QR (Adresse tauschen)“**; zusätzlich in der **Handshake-Leiste** am Composer, wenn verschlüsseltes Senden noch blockiert ist. Im Puls-Panel (Expert) ebenfalls verfügbar.
+**Wo in der UI:**
+
+- Sidebar **Ich** → **Doppelklick** → Dialog **Meine Kontakt-ID** (Peering-QR scannen / anzeigen)
+- **Handshake-Leiste** am Composer, wenn verschlüsseltes Senden noch blockiert ist
+- **Einstellungen → System & Identität** (Expert, Puls-Panel)
+- Legacy: aufklappbar unter **Verschlüsselt** in der Setup-Karte (wenn Expert-UI sichtbar)
 
 **Wichtig:** Der QR **ersetzt kein Internet** für IOTA. Handshake, Connect und verschlüsseltes Senden brauchen weiterhin **RPC/Fullnode**. Der QR ist **Setup vor Ort** (zwei Handys, face-to-face), **kein** Offline-Transport.
 
@@ -229,7 +254,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 ## Posteingang
 
-**Navigation:** Unten **Nachrichten** → Posteingang-Tab. Optional **Telefonbuch** in der unteren Leiste.
+**Navigation:** Dashboard-Kachel **Nachrichten** → Chat. Im **1:1-/Gruppenmodus** links die **Seitenleiste** (Kontakte/Gruppen); Mitte der **Posteingang**, darunter der **Composer**. **Telefonbuch** über `[+]` im Composer, Sidebar oder Kontakt-Detail — nicht mehr als fester unterer Tab im Chat.
 
 | Funktion | Beschreibung |
 |----------|--------------|
@@ -247,7 +272,7 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 ## Kontakte (Import und Export, JSON)
 
-**Telefonbuch** (Navigation unten) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt). Namen aus dem Telefonbuch erscheinen auch im **Gruppen-Panel** (Anzeige und Eingabe der Mitglieder).
+**Telefonbuch** (Sheet/Dialog) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt). Namen aus dem Telefonbuch erscheinen auch in **Gruppe verwalten** (Anzeige und Eingabe der Mitglieder).
 
 **Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
 
@@ -293,7 +318,7 @@ Wo welche Funktion liegt (Messenger, Boss):
 | **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |
 | **PWA im WLAN** (nur App installieren) | **Helfer einrichten** → **WLAN-QR** (neben ZIP/IOTA) |
 | **Move-Upgrade / Chain-Status** | **Einsatzleitung → Erweitert** |
-| **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (Navigation unten) |
+| **Kontakte** anlegen, Import/Export JSON, verschl. Backup | **Telefonbuch** (`[+]` im Composer, Sidebar, Kontakt-Detail) |
 | **Team-/Private-Mailboxen** aktiv setzen | **Einstellungen → Meine Mailboxen** |
 | **Nachrichten-Forensik** (Verlauf JSON/TXT, ZIP) | **Posteingang** → Export-Menü |
 | **Handoff importieren** (Helfer-Gerät) | **Einstellungen → Handoff importieren** (oder Posteingang bei IOTA-Zustellung) |
@@ -351,9 +376,14 @@ Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 **Kurz:** Lokale **Gruppenliste** + gefilterter **Posteingang** (Union aller Mitglieder) + **Hybrid** aus IOTA-Archiv und Funk-Echtzeit. Kein Telegram-Gruppenraum — bewusst anderes Modell (`docs/GRUPPENCHAT-ZIELBILD.md`).
 
-### Gruppen-Panel einrichten
+### Gruppe einrichten und verwalten
 
-Kanal **Gruppe** im Chat-Header wählen → violettes **Gruppen-Panel**:
+Kanal **Gruppe** wählen (Sendepfad im Kopf oder Sidebar) → **Gruppe verwalten**:
+
+- **⋮** (Konversations-Menü) → **Gruppe verwalten…**, oder
+- **Doppelklick** auf die Gruppe in der **Sidebar**
+
+Im Sheet **Gruppe verwalten** (blockiert den Nachrichtenfluss nicht):
 
 1. **Gruppe wählen** oder **Neue Gruppe** (leere Mitgliederliste).
 2. **Gruppenname** (z. B. „Einsatz Alpha“).
@@ -380,11 +410,11 @@ Alle Mitglieder sehen Nachrichten der Gruppe im gefilterten Posteingang (1:1-Dia
 | **Verschlüsselt** | **online** | Mailbox | **Noch kein** Team-Broadcast — je Mitglied Handshake nötig; Hinweis in UI |
 | **Verschlüsselt** | **funk** | — | **Deaktiviert** — Verschlüsselung nur über online |
 
-**Verschlüsselung umschalten:** Im Gruppen-Panel **Verschlüsselt** / **Unverschlüsselt**. Wechsel zu Unverschlüsselt bei aktivem Schloss: Warnhinweis (Klartext on-chain).
+**Verschlüsselung umschalten:** Im Sheet **Gruppe verwalten** oder im **Konversations-Menü** (⋮, Verschl./Klar). Wechsel zu Unverschlüsselt bei aktivem Schloss: Warnhinweis (Klartext on-chain).
 
 ### Handshake in der Gruppe
 
-Unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). Peering-QR wie bei 1:1 (aufklappbar).
+Im Sheet **Gruppe verwalten** unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). Peering-QR wie bei 1:1 (Sidebar **Ich** oder Handshake-Leiste).
 
 ### Was Gruppenchat **nicht** ist
 
@@ -418,7 +448,7 @@ Unter **Verschlüsselt:** Liste **Handshake pro Mitglied** (Senden / Annehmen). 
 
 **Nur Klartext + „funk“:** **Verschlüsselung** läuft über den **Online/IOTA-Pfad** — nicht über den Funk-Composer (bei aktivem Schloss wechselt die UI entsprechend).
 
-**Expert-Option Kanalindex (0–7):** Im Composer kann optional ein **Meshtastic-Kanalindex** gesetzt werden. **Leer** = Geräte-Default (typisch Primary). In **Gruppe** kann der Index aus dem Gruppen-Panel übernommen werden. Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen.
+**Expert-Option Kanalindex (0–7):** Im Composer (`[+]` → Mesh-Optionen) oder in **Gruppe verwalten** optional ein **Meshtastic-Kanalindex** setzen. **Leer** = Geräte-Default (typisch Primary). Ein falscher Index kann dazu führen, dass Empfänger im Team nichts sehen.
 
 **Policy (UI):** Verschlüsselter LoRa-Funk ist in Morgendrot **deaktiviert**. Für Ende-zu-Ende: Sendepfad **online** mit verbundenem Partner (Handshake/`/connect`).
 
@@ -476,4 +506,4 @@ Voraussetzung Import: **Handshake** zum Absender der Datei (Peer in `peerMap`).
 
 ---
 
-*Stand: 2026-06-02 — Gruppenchat M2c, Telefonbuch-Namen in Gruppen, H.3o Kanalindex, Posteingang Antworten/Pakete, Session-Signer, Peering-QR UI.*
+*Stand: 2026-06-16 — Sidebar-Chat, SOS/Sendepfad im Kopf, Gruppe-verwalten-Sheet, Peering-QR unter Ich, Inbox vor Composer.*

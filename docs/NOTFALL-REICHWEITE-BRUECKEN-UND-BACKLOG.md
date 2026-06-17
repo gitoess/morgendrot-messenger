@@ -34,6 +34,20 @@ Nach Abwägung **Reichweite (maximal viele Relays)** vs. **Kontrolle, Sicherheit
 
 Diese Ideen bleiben als **Backlog** dokumentiert (siehe § 5), **ohne** aktuelle Implementationspflicht.
 
+### 3.1 Nachtrag 2026-06-16 — dedizierter **SOS-Button** (Zivil, Klartext)
+
+**Abweichend von §3 (generischer LongFast-Chat)** gilt für den **expliziten Hilferuf** (`MORG_EMERGENCY_V1`, roter SOS-Button):
+
+| Aspekt | Entscheidung |
+|--------|--------------|
+| **Verschlüsselung** | **Immer Klartext** — kein E2E-Schalter im SOS-UI (Simple Mode / Zivil) |
+| **Ziel** | **Maximale Reichweite** — Fan-out Funk + Online (`/send-plain`) + Telegram (Notify) |
+| **Inhalt** | Lage-Bundle: Text, Ort, Name, Erreichbarkeits-IDs — **keine** Secrets |
+| **UI** | Bestätigung mit Transparenz (*„unverschlüsselt, im Funk-Netz mitlesbar“*) |
+| **Abgrenzung §3** | Kein dauerhafter „öffentlicher Chat“-Modus — nur **bewusster** Notfall-Klick |
+
+Kanon: **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`** **§9** · Fahrplan **§ H.3n** · UI-Scheibe **B2.5**.
+
 ---
 
 ## 4. Plugin vs. Firmware (Kurzreferenz)
@@ -49,8 +63,9 @@ Für **hart priorisierten** SOS ist **Firmware- oder tiefe Firmware-Integration*
 
 ## 5. Backlog (optional später, mit eigener Spec)
 
-- **Opt-in „öffentlicher SOS“:** fester Kanal/Region, **Klartext** nur nach **expliziter Zustimmung** in der UI (Warnung: lesbar/spoofbar).
+- ~~**Opt-in „öffentlicher SOS“:**~~ **→ Entschieden als Zivil-Default** für den **SOS-Button** (**§3.1**, **`MORG-EMERGENCY-SOS-WIRE-SPEC.md`** §9): Klartext nach **explizitem** Hilferuf + Warnung — **nicht** als Dauer-Chat auf LongFast.
 - **Dual-Use-Heltec:** dieselbe Hardware sendet **optional** zusätzlich Meshtastic-natives Chat — **hoher** Integrations- und Testaufwand (Airtime, Kollisionen, zwei Schichten); nur wenn **messbar** Bedarf (dünnes Mesh zu eigenen Gateways).
+- **OPSEC-SOS (verschlüsselt):** separates Einsatzprofil / Militär — **nicht** Simple Mode; Backlog.
 
 ---
 
@@ -64,4 +79,4 @@ Für **hart priorisierten** SOS ist **Firmware- oder tiefe Firmware-Integration*
 
 ---
 
-*Stand: 2026-03-28 — Abstimmung: aktuelle Linie beibehalten; Backlog für spätere Priorisierung.*
+*Stand: 2026-06-16 — §3.1 Zivil-SOS Klartext-only; §5 Backlog angepasst.*

@@ -5,8 +5,8 @@ import type { ChatViewChatHeaderProps } from '@/frontend/components/chat-view-ch
 import type { ChatViewMessengerPorts } from '@/frontend/features/messenger-ports'
 import type { OfflineStatusSnapshot } from '@/frontend/hooks/use-offline-status'
 import type { ChatViewVaultBannerActions } from '@/frontend/components/chat-view-chat-header'
-
 import type { ChatViewMyWalletIdInlineProps } from '@/frontend/components/chat-view-my-wallet-id-inline'
+import type { ChatViewSendPathCompactProps } from '@/frontend/components/chat-view-send-path-compact'
 
 export type ChatViewShellPropsDeps = {
   messengerPorts: Pick<
@@ -14,6 +14,7 @@ export type ChatViewShellPropsDeps = {
     | 'connectionStatusRead'
     | 'contactDirectoryRead'
     | 'composerSendPath'
+    | 'composerDraft'
     | 'sendTransportChoice'
     | 'inboxFeedRead'
     | 'inboxViewUi'
@@ -27,6 +28,7 @@ export type ChatViewShellPropsDeps = {
   showAdhocTransport: boolean
   showPackageIdBanner: boolean
   peeringQr?: Pick<ChatViewMyWalletIdInlineProps, 'displayName' | 'onPeeringImported' | 'onPeeringStatus'>
+  onOpenSettings?: () => void
 }
 
 export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
@@ -34,6 +36,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     connectionStatusRead,
     contactDirectoryRead,
     composerSendPath,
+    composerDraft,
     sendTransportChoice,
     inboxFeedRead,
     inboxViewUi,
@@ -43,39 +46,25 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     shellRouting,
   } = deps.messengerPorts
 
-  const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
+  const sendPathProps: ChatViewSendPathCompactProps = useMemo(
     () => ({
-      isPrivate: shellRouting.isPrivate,
-      encrypted: sendTransportChoice.encrypted,
-      apiStatus: connectionStatusRead.apiStatus,
-      onRefreshStatus: connectionStatusRead.refreshApiStatus,
-      basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
-      statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
-      offlineStatus: deps.offlineStatus,
-      meshBleConnected: meshDevice.connected,
-      role: shellRouting.role,
-      deviceTimeTrustWarn: connectionStatusRead.deviceTimeTrustWarn,
-      vaultBannerActions: deps.vaultBannerActions,
+      visible:
+        shellRouting.channelMode !== 'notes' &&
+        (shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted),
       channelMode: shellRouting.channelMode,
+      encrypted: sendTransportChoice.encrypted,
+      forcedTransport: sendTransportChoice.forcedTransport,
+      onForcedTransportChange: sendTransportChoice.onForcedTransportChange,
+      onEncryptedChange: sendTransportChoice.onEncryptedChange,
+      showAdhocTransport: deps.showAdhocTransport,
+      composerDelivery: composerSendPath.composerDelivery,
+      onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
+      apiStatus: connectionStatusRead.apiStatus,
+      role: shellRouting.role,
       onChannelModeChange: shellRouting.onChannelModeChange,
-      sendPath: {
-        visible:
-          shellRouting.channelMode !== 'notes' &&
-          (shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted),
-        channelMode: shellRouting.channelMode,
-        encrypted: sendTransportChoice.encrypted,
-        forcedTransport: sendTransportChoice.forcedTransport,
-        onForcedTransportChange: sendTransportChoice.onForcedTransportChange,
-        onEncryptedChange: sendTransportChoice.onEncryptedChange,
-        myAddressLine: shellRouting.isPrivate ? inboxFeedRead.myAddress : undefined,
-        peeringDisplayName: deps.peeringQr?.displayName,
-        onPeeringImported: deps.peeringQr?.onPeeringImported,
-        onPeeringStatus: deps.peeringQr?.onPeeringStatus,
-        showAdhocTransport: deps.showAdhocTransport,
-        composerDelivery: composerSendPath.composerDelivery,
-        onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
-        apiStatus: connectionStatusRead.apiStatus,
-      },
+      onRecipientChange: composerDraft.onRecipientChange,
+      contactDirectory: contactDirectoryRead.directory,
+      partnerOptions: inboxViewUi.inboxPartnerOptions,
       pinnwandTabUnreadCount:
         shellRouting.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
     }),
@@ -85,17 +74,51 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       shellRouting.role,
       shellRouting.channelMode,
       shellRouting.onChannelModeChange,
-      deps.vaultBannerActions,
-      deps.offlineStatus,
-      meshDevice.connected,
-      connectionStatusRead.refreshApiStatus,
       deps.showAdhocTransport,
-      deps.peeringQr,
-      connectionStatusRead,
+      connectionStatusRead.apiStatus,
       composerSendPath,
       sendTransportChoice,
-      inboxFeedRead.myAddress,
-      inboxViewUi.inboxOverviewUnreadCounts,
+      composerDraft.onRecipientChange,
+      contactDirectoryRead.directory,
+      inboxViewUi.inboxPartnerOptions,
+      inboxViewUi.inboxOverviewUnreadCounts?.lagebild,
+    ]
+  )
+
+  const chatHeaderProps: ChatViewChatHeaderProps = useMemo(
+    () => ({
+      isPrivate: shellRouting.isPrivate,
+      encrypted: sendTransportChoice.encrypted,
+      apiStatus: connectionStatusRead.apiStatus,
+      onRefreshStatus: connectionStatusRead.refreshApiStatus,
+      basisUnreachable: connectionStatusRead.basisUnreachable ?? false,
+      statusCacheAgeMinutes: connectionStatusRead.statusCacheAgeMinutes,
+      statusPollAttempted: connectionStatusRead.statusPollAttempted,
+      offlineStatus: deps.offlineStatus,
+      meshBleConnected: meshDevice.connected,
+      role: shellRouting.role,
+      deviceTimeTrustWarn: connectionStatusRead.deviceTimeTrustWarn,
+      vaultBannerActions: deps.vaultBannerActions,
+      channelMode: shellRouting.channelMode,
+      onChannelModeChange: shellRouting.onChannelModeChange,
+      sendPath: sendPathProps,
+      onOpenSettings: deps.onOpenSettings,
+      pinnwandTabUnreadCount:
+        shellRouting.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
+    }),
+    [
+      shellRouting.isPrivate,
+      shellRouting.role,
+      shellRouting.channelMode,
+      shellRouting.onChannelModeChange,
+      deps.vaultBannerActions,
+      deps.offlineStatus,
+      deps.onOpenSettings,
+      meshDevice.connected,
+      connectionStatusRead,
+      sendTransportChoice.encrypted,
+      sendPathProps,
+      inboxViewUi.inboxOverviewUnreadCounts?.lagebild,
     ]
   )
 
@@ -153,6 +176,16 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
 
   const groupPanelDirectory = contactDirectoryRead.directory
 
+  const myDataPanelProps = useMemo(
+    () => ({
+      myAddressLine: inboxFeedRead.myAddress,
+      displayName: deps.peeringQr?.displayName,
+      onPeeringImported: deps.peeringQr?.onPeeringImported,
+      onPeeringStatus: deps.peeringQr?.onPeeringStatus,
+    }),
+    [inboxFeedRead.myAddress, deps.peeringQr]
+  )
+
   return {
     chatHeaderProps,
     offlineQueueStripProps,
@@ -160,5 +193,6 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
     pinnwandInboxStripProps,
     phonebookShellProps,
     groupPanelDirectory,
+    myDataPanelProps,
   }
 }

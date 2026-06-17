@@ -6,6 +6,10 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Dokumentation
+
+- **§ H.36 Team-Member-Update & Einstiegs-Wizard:** Neue Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** — linearer Wizard (Boss/Helfer/Wanderer), Join-Request, Wire `MORG_TEAM_MEMBER_UPDATE_V1`, Transport **IOTA = Persistenz / LAN = Zustellung** (Anschluss § H.16 Boss-LAN Ist), Funk nur Ping; Roadmap **§ H.36**.
+
 ### Messenger vs. Morgendrot Projekt (Next)
 
 - **Getrennte Next-Builds:** `NEXT_PUBLIC_MORG_PRODUCT=messenger|projekt` — `messenger-dashboard.tsx` / `projekt-dashboard.tsx`, gemeinsamer Hook **`use-dashboard-session`**. Doku **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.

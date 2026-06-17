@@ -10,6 +10,8 @@ export type ConnectionStatusReadPort = {
   /** Peers für Handshake-UI (Status + Offline-Cache). */
   readonly connectedAddresses: readonly string[]
   readonly refreshApiStatus: () => void | Promise<void>
+  /** Erster Live-Status-Poll abgeschlossen (Cold-Start-Send-Gating). */
+  readonly statusPollAttempted: boolean
 }
 
 export function asConnectionStatusRead(
@@ -19,7 +21,8 @@ export function asConnectionStatusRead(
   packageIdMismatch: boolean,
   deviceTimeTrustWarn: boolean,
   connectedAddresses: readonly string[],
-  refreshApiStatus: () => void | Promise<void>
+  refreshApiStatus: () => void | Promise<void>,
+  statusPollAttempted: boolean
 ): ConnectionStatusReadPort {
   return {
     apiStatus,
@@ -29,5 +32,6 @@ export function asConnectionStatusRead(
     deviceTimeTrustWarn,
     connectedAddresses,
     refreshApiStatus,
+    statusPollAttempted,
   }
 }

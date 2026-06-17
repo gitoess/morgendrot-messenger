@@ -1,8 +1,8 @@
 # Transport, IOTA und Offline — kanonische Schichten
 
-**Stand:** 2026-05-20 (finalisiert)  
+**Stand:** 2026-06-16 (§2.1 Boss-LAN-Zustellung ergänzt)  
 **Zweck:** Ein gemeinsames Bild — **IOTA bleibt gekoppelt** (Deploy, Mailbox, E2EE online); LoRa/Telegram sind **Zustellkanäle**. **Delayed Upload** und **Offline-TX** = **Phase B**.  
-**Leitplanke:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** · Fahrplan **§ H.0-SIMPLE**, **§ H.3**, **§ H.15**
+**Leitplanke:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** · Fahrplan **§ H.0-SIMPLE**, **§ H.3**, **§ H.15**, **§ H.16**, **§ H.36**
 
 ---
 
@@ -49,6 +49,19 @@ Die **vier Modi** beschreiben, **wo** die Nachricht zuerst hingeht. **Archiv-TX*
 | **adhoc** | **Zukünftig:** BLE Handy↔Handy — **≠** Web-BT zum Radio |
 
 **Simple Mode:** nur **funk** + **online**; **adhoc** ausgeblendet (Expert/Boss).
+
+### 2.1 Boss-LAN-Relay (Zustellung) vs. IOTA (Persistenz)
+
+Für **Chat**, **Posteingang** und künftig **Team-Member-Update** (**§ H.36**) gilt eine **zweite Achse** neben den vier Nutzer-Transportmodi:
+
+| Achse | Kanal | Rolle |
+|-------|--------|--------|
+| **Zustellung** | **Boss-LAN HTTP** (`Basis-URL` → `/api/*`, Relay) | Schneller Push, wenn Helfer und Boss im gleichen WLAN (**§ H.16** Ist: WLAN-QR, `GET /api/lan-install-urls`) |
+| **Persistenz** | **IOTA Mailbox** | Authoritative Kopie, Offline/Fernhelfer, `seq`-Dedup |
+
+**Formel:** *IOTA speichert, LAN liefert schnell* — parallel, nicht entweder-oder. **Funk** nur als **Ping/Delta** (kein volles Roster). **Ad-hoc** (BLE Handy↔Handy) **≠** WLAN/LAN — siehe Sendepfad-Tabelle oben.
+
+**Spec:** **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** §8 · Roadmap **§ H.36**.
 
 ---
 
@@ -130,6 +143,8 @@ Die **vier Modi** beschreiben, **wo** die Nachricht zuerst hingeht. **Archiv-TX*
 | Sync / Queue | **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** |
 | Sendewege UI | **`docs/SENDEWEGE-KANAL-MAILBOX-UEBERSICHT.md`** |
 | Handoff importieren | **`docs/HANDOFF-IMPORT-UX.md`** |
+| Team-Member-Update (LAN+IOTA) | **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**, Roadmap **§ H.36** |
+| Boss-LAN Onboarding | Roadmap **§ H.16**, **`docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`** |
 | Aktives Profil / Theme | **`docs/HANDOFF-PROFILE-UX.md`** |
 | Handoff ZIP (~3 KB) verschlüsseln / optional IOTA | **`docs/HANDOFF-ZIP-ENCRYPTION.md`** |
 | Rollen / Status-API | **`docs/TEST-ROLLE-PROFILES.md`**, **`docs/PWA-MANUAL-CHECKS.md`** |

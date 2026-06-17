@@ -24,6 +24,7 @@ import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/setti
 import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
 import { SettingsLanguageSection } from '@/frontend/components/settings-language-section'
+import { SettingsAppearanceSection } from '@/frontend/components/settings-appearance-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
 import { SettingsSectionHeading } from '@/frontend/components/settings-section-heading'
@@ -130,6 +131,7 @@ export function SettingsView({
           icon={<Globe className="h-5 w-5" />}
         />
         <SettingsLanguageSection />
+        <SettingsAppearanceSection />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
         <CapacitorApiBaseCard />

@@ -4,6 +4,8 @@ import { ArrowRight, Crown, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
+import { DashboardSosEmergencyButton } from '@/frontend/components/dashboard-sos-emergency-button'
+
 const cardBase =
   'flex min-h-[148px] flex-col gap-3 rounded-2xl border p-5 text-left transition-colors hover:brightness-110'
 
@@ -55,6 +57,9 @@ export function DashboardBossQuickActions(p: {
             {t('bossQuickActions.open')} <ArrowRight className="h-3.5 w-3.5" aria-hidden />
           </span>
         </button>
+      </div>
+      <div className="mt-4 flex justify-center">
+        <DashboardSosEmergencyButton onOpenMessages={p.onOpenMessages} />
       </div>
     </section>
   )

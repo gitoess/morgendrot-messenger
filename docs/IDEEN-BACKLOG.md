@@ -23,3 +23,13 @@ Kurznotizen für spätere Phasen — **kein** Implementierungsversprechen.
 - Boss: wer hat gelesen (lokal zuerst, on-chain später)
 
 **Siehe:** `docs/PINNWAND-ANZEIGE-ZIELBILD.md`
+
+---
+
+## Team-Member-Update & Einstiegs-Wizard (Einsatz)
+
+**Spec:** `docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md` · Roadmap **§ H.36**
+
+Geführter Erststart + spontaner Helfer-Beitritt mit boss-signiertem Update und Empfänger-Bestätigung. Transport: IOTA speichert, LAN liefert schnell (wenn Boss erreichbar). **Nicht** Ad-hoc/BLE.
+
+**Siehe auch:** `docs/HANDOFF-UND-MODUS-ZIELBILD.md` (Wanderer außerhalb), `docs/ROADMAP-FAHRPLAN.md` § H.16 (Boss-LAN Ist)

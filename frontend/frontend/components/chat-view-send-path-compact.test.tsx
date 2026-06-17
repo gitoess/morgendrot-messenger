@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ChatViewSendPathCompact } from './chat-view-send-path-compact'
+import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 
 const noop = () => {}
 
@@ -16,9 +17,9 @@ describe('ChatViewSendPathCompact', () => {
         showAdhocTransport={false}
       />
     )
-    expect(screen.getByRole('button', { name: /funk/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /online/i })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /adhoc/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Funk/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ad-hoc/i })).not.toBeInTheDocument()
   })
 
   it('zeigt adhoc standardmäßig', () => {
@@ -31,7 +32,7 @@ describe('ChatViewSendPathCompact', () => {
         onForcedTransportChange={noop}
       />
     )
-    expect(screen.getByRole('button', { name: /adhoc/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Ad-hoc/i })).toBeInTheDocument()
   })
 
   it('zeigt keinen Verschlüsselungs-Hinweis bei funk klartext', () => {
@@ -146,7 +147,7 @@ describe('ChatViewSendPathCompact', () => {
     )
     expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
     expect(screen.queryByRole('button', { name: /telegram/i })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /adhoc/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Ad-hoc/i })).toBeDisabled()
   })
 
   it('markiert Online aktiv bei Verschlüsselung (Hinweise in Transport-Card, § H.1a)', () => {
@@ -160,7 +161,7 @@ describe('ChatViewSendPathCompact', () => {
       />
     )
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /online/i })).toHaveClass('border-emerald-600/50')
+    expect(screen.getByRole('button', { name: /online/i })).toHaveClass('send-path-active--online')
   })
 
   it('Online-Klick setzt forcedTransport internet (§ H.1a)', () => {
@@ -195,6 +196,29 @@ describe('ChatViewSendPathCompact', () => {
     expect(onTransport).toHaveBeenCalledWith('mesh')
   })
 
+  it('zeigt Empfänger-Buttons nach Sendepfad-Klick', async () => {
+    const onChannelModeChange = vi.fn()
+    render(
+      <ChatViewSendPathCompact
+        channelMode="private"
+        visible
+        encrypted={false}
+        forcedTransport="internet"
+        onForcedTransportChange={noop}
+        onChannelModeChange={onChannelModeChange}
+        role="consumer"
+        apiStatus={TEST_API_STATUS_SEND_READY}
+      />
+    )
+    expect(screen.queryByRole('button', { name: /^Gruppe$/i })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /online/i }))
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /^Gruppe$/i })).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^Gruppe$/i }))
+    expect(onChannelModeChange).toHaveBeenCalledWith('group')
+  })
+
   it('markiert Telegram-Sendepfad aktiv (Zustell-Hinweise im Composer, § H.1a)', () => {
     render(
       <ChatViewSendPathCompact
@@ -208,6 +232,6 @@ describe('ChatViewSendPathCompact', () => {
       />
     )
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /telegram/i })).toHaveClass('border-sky-600/50')
+    expect(screen.getByRole('button', { name: /telegram/i })).toHaveClass('send-path-active--telegram')
   })
 })

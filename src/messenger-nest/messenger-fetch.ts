@@ -223,7 +223,11 @@ const PACKAGE_ID_HEX = /^0x[a-fA-F0-9]{64}$/i;
 
 /** Events (verschlüsselt + Klartext) für ein Move-Paket — Posteingang-Union, unabhängig von USE_MAILBOX. */
 function maxEventPagesForInboxFetch(inboxLimit: number, isPrimaryPackage: boolean): number {
-    if (!isPrimaryPackage) return 2;
+    if (!isPrimaryPackage) {
+        if (inboxLimit >= 200) return 8;
+        if (inboxLimit >= 80) return 4;
+        return 2;
+    }
     if (inboxLimit >= 200) return 15;
     if (inboxLimit >= 80) return 8;
     return 4;

@@ -19,6 +19,11 @@ export function DashboardMessengerBossHome(p: {
 
   return (
     <div className="space-y-5">
+      <DashboardBossQuickActions
+        onOpenMessages={p.onOpenMessages}
+        onOpenEinsatzleitung={p.onOpenEinsatzleitung}
+      />
+
       <div
         className={cn(
           'flex flex-col gap-3 sm:flex-row sm:items-stretch',
@@ -38,11 +43,6 @@ export function DashboardMessengerBossHome(p: {
           />
         </div>
       </div>
-
-      <DashboardBossQuickActions
-        onOpenMessages={p.onOpenMessages}
-        onOpenEinsatzleitung={p.onOpenEinsatzleitung}
-      />
     </div>
   )
 }

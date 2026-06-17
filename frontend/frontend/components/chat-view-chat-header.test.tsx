@@ -59,37 +59,42 @@ describe('TresorSessionBadge (§ H.1a)', () => {
 })
 
 describe('ChatViewChatHeader (§ H.1a)', () => {
-  it('zeigt Kanal-Titel und Umschalter Privat/Gruppe', () => {
-    const onChannelModeChange = vi.fn()
-    render(
-      <ChatViewChatHeader
-        {...baseHeader({
-          channelMode: 'private',
-          onChannelModeChange,
-        })}
-      />
-    )
-    expect(screen.getByRole('heading', { name: /1:1 Privat/i })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /^Gruppe$/i }))
-    expect(onChannelModeChange).toHaveBeenCalledWith('group')
-  })
-
-  it('zeigt Pinnwand-Ungelesen-Badge am Tab', () => {
-    const pinnwandAddr = `0x${'c'.repeat(64)}`
+  it('zeigt Kanal-Titel und Sendepfad oben', () => {
     render(
       <ChatViewChatHeader
         {...baseHeader({
           channelMode: 'private',
           onChannelModeChange: vi.fn(),
-          pinnwandTabUnreadCount: 4,
-          apiStatus: {
-            ...TEST_API_STATUS_SEND_READY,
-            broadcastPinnwand: { enabled: true, address: pinnwandAddr },
+          sendPath: {
+            visible: true,
+            channelMode: 'private',
+            encrypted: true,
+            forcedTransport: 'internet',
+            onForcedTransportChange: vi.fn(),
           },
         })}
       />
     )
-    expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /1:1 Privat/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
+  })
+
+  it('verlinkt Handbuch direkt ins Messenger-Handbuch', () => {
+    render(<ChatViewChatHeader {...baseHeader({ channelMode: 'private' })} />)
+    const link = screen.getByRole('link', { name: /Messenger-Handbuch/i })
+    expect(link).toHaveAttribute('href', '/handbook?file=MESSENGER-CHAT-HANDBUCH.md')
+  })
+
+  it('zeigt Einstellungen-Button wenn Callback gesetzt', () => {
+    render(
+      <ChatViewChatHeader
+        {...baseHeader({
+          channelMode: 'private',
+          onOpenSettings: vi.fn(),
+        })}
+      />
+    )
+    expect(screen.getByRole('button', { name: /Einstellungen/i })).toBeInTheDocument()
   })
 
   it('warnt bei unsicherer Geräte-Uhr (§ H.6c)', () => {
@@ -97,23 +102,12 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
     expect(screen.getByText(/Geräte-Uhr:/)).toBeInTheDocument()
   })
 
-  it('zeigt Offline-Cache-Banner bei fromCache', () => {
+  it('zeigt Warteschlange nur bei echter Offline + Queue', () => {
     render(
       <ChatViewChatHeader
         {...baseHeader({
-          apiStatus: { ...TEST_API_STATUS_SEND_READY, fromCache: true },
-          statusCacheAgeMinutes: 12,
-        })}
-      />
-    )
-    expect(screen.getByText(/Offline \(Cache-Modus\)/)).toBeInTheDocument()
-    expect(screen.getByText(/12 Min\./)).toBeInTheDocument()
-  })
-
-  it('zeigt Offline-Status-Streifen mit Queue', () => {
-    render(
-      <ChatViewChatHeader
-        {...baseHeader({
+          basisUnreachable: true,
+          statusPollAttempted: true,
           offlineStatus: {
             mode: 'offline',
             queuePending: 2,
@@ -125,7 +119,8 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByText(/Offline-Status:/)).toBeInTheDocument()
-    expect(screen.getByText(/Queue: 2/)).toBeInTheDocument()
+    expect(screen.getByText(/Warteschlange:/)).toBeInTheDocument()
+    expect(screen.queryByText(/Offline-Status:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Offline \(Cache-Modus\)/)).not.toBeInTheDocument()
   })
 })

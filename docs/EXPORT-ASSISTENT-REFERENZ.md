@@ -3,7 +3,7 @@
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  
 **UI (Einsatzleitung):** **Helfer einrichten** — ein Formular (`layout=compact` in `BossHandoffExportPanel`); voller **Export-Assistent** (Schritt 1/2) nur noch außerhalb der Einsatzleitung falls eingebettet. **API:** `POST /api/standalone-smartphone-handoff-zip`  
-**Verwandt:** `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md`, **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`**
+**Verwandt:** `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-EXPORT-HYBRID.md`, `docs/HANDOFF-IMPORT-UX.md`, `docs/MESSENGER-CHAT-HANDBUCH.md`, **`docs/MOVE-MESSENGER-KONFIGURATION.md`**, **`docs/EINSATZ-BOSS-ABLAUF.md`**, **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** (Einstiegs-Wizard / Team-Sync — **kein** Duplikat dieses Exports)
 
 > **Nicht verwechseln:** Die **komplette** Liste aller `.env`-Keys in **Messenger → Einstellungen** (Erweiterte Konfiguration) steht in **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`**. **Move on-chain vs. Handoff** steht in **`docs/MOVE-MESSENGER-KONFIGURATION.md`**. Dieses Dokument hier ist nur **Handoff-Export** + ZIP-Inhalt.
 
@@ -90,7 +90,7 @@
 | `initialProfile` / Kontakte **im** ZIP | **Nein** — Telefonbuch-Export separat; Handoff nur `.env` |
 | Ein-Klick „alle Team-Postfächer“ | **Nein** — manuell anhaken |
 | **Gruppe + Team-Postfach im ZIP** | **Ja (M2c)** — `MESSENGER_GROUP_HANDOFF` bei Team-Postfach im Export |
-| Wizard Schritt 3 „Vorschau .env“ | **Backlog** |
+| Wizard Schritt 3 „Vorschau .env“ | **Backlog** → **§ H.36 P0** (`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`) |
 | Helfer-Bundle **im** ZIP mitliefern | **Nein** — Medium getrennt (Bundle + Handoff-ZIP) |
 
 ### 2.5 Entfernte / verschoben

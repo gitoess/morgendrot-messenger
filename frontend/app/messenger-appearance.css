@@ -1,0 +1,221 @@
+/**
+ * Erscheinungsbild-Presets + semantische Sendepfad-Farben.
+ * Nutzerwahl: data-appearance auf <html> (siehe messenger-appearance-theme.ts).
+ *
+ * Orientierung:
+ * - Standard: ziviles Dienst-UI (globals.css :root) — Blau-Grau + Morgendrot-Grün
+ * - Tactical: NATO/NVG-Nachtbetrieb — Oliv-Schwarz + Amber (kein Blau-Leuchten)
+ * - High-contrast: MIL-STD-1472 Sonnenlicht/Handschuhe — Schwarz/Weiß/Gelb, max. Kontrast
+ */
+
+:root {
+  --surface-2: oklch(0.18 0.012 260);
+  --path-online: #22b8e8;
+  --path-mesh: #2dd4a0;
+  --path-telegram: #f59e0b;
+  --path-adhoc: #d97706;
+  --path-sos: #ef4444;
+  --bubble-self: color-mix(in oklab, var(--path-online) 14%, transparent);
+  --bubble-other: var(--card);
+}
+
+/* ── Tactical: Oliv + Amber (NVG-kompatibel, kein Blau-Akzent) ── */
+:root[data-appearance='tactical'] {
+  --background: #070a04;
+  --foreground: #d8e2c8;
+  --card: #111808;
+  --card-foreground: #d8e2c8;
+  --popover: #111808;
+  --popover-foreground: #d8e2c8;
+  --muted: #1a2210;
+  --muted-foreground: #8f9f78;
+  --border: #3d4a28;
+  --input: #141c0c;
+  --primary: #e8a317;
+  --primary-foreground: #070a04;
+  --ring: #e8a317;
+  --secondary: #1a2210;
+  --secondary-foreground: #d8e2c8;
+  --accent: #222c14;
+  --accent-foreground: #e8a317;
+  --destructive: #c62828;
+  --destructive-foreground: #fff8e7;
+  --surface-2: #1a2210;
+  --sidebar: #0c1006;
+  --sidebar-foreground: #d8e2c8;
+  --sidebar-border: #3d4a28;
+  --sidebar-primary: #e8a317;
+  --sidebar-primary-foreground: #070a04;
+  --sidebar-ring: #e8a317;
+  --radius: 0.25rem;
+  --path-online: #e8a317;
+  --path-mesh: #6b8f3c;
+  --path-telegram: #d4840a;
+  --path-adhoc: #a06508;
+  --path-sos: #e53935;
+  --bubble-self: color-mix(in oklab, var(--path-online) 16%, transparent);
+  --bubble-other: var(--card);
+}
+
+/* ── Hoher Kontrast: Schwarz/Weiß/Gelb (Sonnenlicht, Handschuhe) ── */
+:root[data-appearance='high-contrast'] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --card: #000000;
+  --card-foreground: #ffffff;
+  --popover: #000000;
+  --popover-foreground: #ffffff;
+  --muted: #141414;
+  --muted-foreground: #f0f0f0;
+  --border: #ffffff;
+  --input: #0a0a0a;
+  --primary: #ffff00;
+  --primary-foreground: #000000;
+  --ring: #ffff00;
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ffffff;
+  --accent: #262626;
+  --accent-foreground: #ffff00;
+  --destructive: #ff0000;
+  --destructive-foreground: #ffffff;
+  --surface-2: #111111;
+  --sidebar: #000000;
+  --sidebar-foreground: #ffffff;
+  --sidebar-border: #ffffff;
+  --sidebar-primary: #ffff00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-ring: #ffff00;
+  --radius: 0.25rem;
+  --path-online: #00ffff;
+  --path-mesh: #00ff66;
+  --path-telegram: #ffcc00;
+  --path-adhoc: #ff9900;
+  --path-sos: #ff0000;
+  --bubble-self: color-mix(in oklab, var(--path-online) 28%, transparent);
+  --bubble-other: var(--card);
+}
+
+:root[data-appearance='light'] {
+  --background: oklch(0.97 0.008 260);
+  --foreground: oklch(0.2 0.02 260);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.2 0.02 260);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.2 0.02 260);
+  --muted: oklch(0.94 0.01 260);
+  --muted-foreground: oklch(0.42 0.02 260);
+  --border: oklch(0.86 0.015 260);
+  --input: oklch(0.96 0.01 260);
+  --primary: oklch(0.52 0.12 200);
+  --primary-foreground: oklch(0.99 0 0);
+  --ring: oklch(0.52 0.12 200);
+  --secondary: oklch(0.94 0.01 260);
+  --accent: oklch(0.92 0.015 260);
+  --destructive: oklch(0.55 0.2 25);
+  --surface-2: oklch(0.93 0.012 260);
+  --sidebar: oklch(0.96 0.01 260);
+  --sidebar-foreground: oklch(0.2 0.02 260);
+  --sidebar-border: oklch(0.86 0.015 260);
+  --path-online: #0e7490;
+  --path-mesh: #059669;
+  --path-telegram: #c2410c;
+  --path-adhoc: #b45309;
+  --path-sos: #dc2626;
+  --bubble-self: color-mix(in oklab, var(--path-online) 18%, white);
+}
+
+:root[data-appearance='tactical'] body {
+  letter-spacing: 0.01em;
+}
+
+:root[data-appearance='high-contrast'] body {
+  font-weight: 500;
+}
+
+/* Sendepfad — aktiver Zustand */
+.send-path-active {
+  border-width: 2px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.send-path-active--online {
+  border-color: color-mix(in oklab, var(--path-online) 65%, transparent);
+  background: color-mix(in oklab, var(--path-online) 88%, #0a0c10);
+}
+
+.send-path-active--mesh {
+  border-color: color-mix(in oklab, var(--path-mesh) 65%, transparent);
+  background: color-mix(in oklab, var(--path-mesh) 88%, #0a0c10);
+}
+
+.send-path-active--telegram {
+  border-color: color-mix(in oklab, var(--path-telegram) 65%, transparent);
+  background: color-mix(in oklab, var(--path-telegram) 88%, #0a0c10);
+}
+
+.send-path-active--adhoc {
+  border-color: color-mix(in oklab, var(--path-adhoc) 65%, transparent);
+  background: color-mix(in oklab, var(--path-adhoc) 88%, #0a0c10);
+}
+
+.send-path-active--sos {
+  border-color: color-mix(in oklab, var(--path-sos) 70%, transparent);
+  background: color-mix(in oklab, var(--path-sos) 90%, #0a0c10);
+}
+
+:root[data-appearance='tactical'] .send-path-active--online {
+  background: color-mix(in oklab, var(--path-online) 85%, #070a04);
+  border-color: var(--path-online);
+}
+
+:root[data-appearance='tactical'] .send-path-active--mesh {
+  background: color-mix(in oklab, var(--path-mesh) 80%, #070a04);
+  border-color: var(--path-mesh);
+}
+
+:root[data-appearance='high-contrast'] .send-path-active {
+  border-width: 3px;
+  border-color: #ffffff;
+  color: #000000;
+  font-weight: 800;
+}
+
+:root[data-appearance='high-contrast'] .send-path-active--online {
+  background: var(--path-online);
+}
+
+:root[data-appearance='high-contrast'] .send-path-active--mesh {
+  background: var(--path-mesh);
+}
+
+:root[data-appearance='high-contrast'] .send-path-active--telegram {
+  background: var(--path-telegram);
+}
+
+:root[data-appearance='high-contrast'] .send-path-active--adhoc {
+  background: var(--path-adhoc);
+}
+
+:root[data-appearance='high-contrast'] .send-path-active--sos {
+  background: var(--path-sos);
+  color: #ffffff;
+}
+
+:root[data-appearance='light'] .send-path-active--online,
+:root[data-appearance='light'] .send-path-active--mesh,
+:root[data-appearance='light'] .send-path-active--telegram,
+:root[data-appearance='light'] .send-path-active--adhoc,
+:root[data-appearance='light'] .send-path-active--sos {
+  color: #fff;
+}
+
+.chat-bubble-self {
+  background: var(--bubble-self);
+  border-color: color-mix(in oklab, var(--path-online) 25%, var(--border));
+}
+
+:root[data-appearance='high-contrast'] .chat-bubble-self {
+  border-width: 2px;
+  border-color: var(--path-online);
+}

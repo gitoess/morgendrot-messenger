@@ -1,7 +1,7 @@
 # MORG_EMERGENCY_V1 / SOS — Zielbild (LoRa, Priorität, Basis, IOTA)
 
 **Zweck:** Kanonisches **Zielbild** für einen **dedizierten Notfall-Sendepfad**: sofortiger SOS über LoRa/Mesh, **höchste App-Priorität**, kompaktes Wire-Format, **Basis** erkennt und **priorisiert** Verarbeitung (Queue, IOTA-Verankerung, optionale Webhooks).  
-**Stand:** 2026-03-28  
+**Stand:** 2026-06-16 (Produktentscheidung **§9** Zivil-SOS Klartext-only) · zuvor 2026-03-28  
 **Status:** **Spec / Phase B** — noch **kein** verbindliches Byte-Layout in allen Clients; Abgleich mit **`emergency-binary-wire.ts` (v2, Byte `0x02`)** bei Freeze.  
 **Abgleich § H.3n (2026-03-29, Schreibtisch):** **`EmergencyBinaryWireVersionByte = 0x02`** — **`src/shared/opcodes.ts`**; **`buildEmergencyBinaryV2` / `tryParseEmergencyBinaryV2`** — **`src/shared/emergency-binary-wire.ts`**. **Text §7:** **`prependMorgEmergencyV1Marker` / `stripLeadingMorgEmergencyV1Marker`** — **`src/shared/morg-emergency-v1-text.ts`** + Spiegel **`frontend/frontend/lib/morg-emergency-v1-text.ts`** (Präfix unverändert). **B2 Retry:** **`sosMeshRetryDelayMs`**, **`SOS_MESH_RETRY_DEFAULTS.maxAttempts: 5`**, **`initialDelayMs: 12_000`** — **`src/shared/morg-sos-mesh-retry.ts`** + **`frontend/frontend/lib/morg-sos-mesh-retry.ts`** (Vitest: **`morg-sos-mesh-retry.test.ts`**). **§8.2 Mesh-Ack:** **`buildMorgSosAckV1Wire` / `tryParseMorgSosAckV1Plaintext`** — **`frontend/frontend/lib/morg-sos-ack-wire.ts`** (Vitest: **`morg-sos-ack-wire.test.ts`**); Node-Spiegel **`src/shared/morg-sos-ack-wire.ts`**. **§ 8.1 Gateway-ACK:** Command **`/sos-gateway-ack`** — **`src/messenger-nest/messenger-command-handler.ts`** (`logger.warn`, kein Mailbox-Write); Frontend **`sosGatewayAckDigest`** — **`frontend/frontend/lib/api/chat-commands.ts`**. **Ausgehende Kennzeichnung / Logs:** **`wireKindForLog` → `emergency_v1`**, **`morg.sos.outgoing`** — **`src/messenger-nest/messenger-chain-wrap.ts`**. **UI-Send:** **`priorityFlash`** bei SOS — **`use-chat-view-handle-send`** → **`sendMeshV2WireBurst`** (**`chat-view-mesh-send.ts`**).  
 **Fahrplan:** **`docs/ROADMAP-FAHRPLAN.md`** **§ H.3n**  
@@ -59,11 +59,27 @@ So bleibt klar: **Nicht jede LoRa-Nachricht ist ein Hilferuf.**
 
 ---
 
+## 3.1 Abgrenzung: normaler Chat vs. SOS
+
+| | **Normaler Chat** | **SOS — Hilferuf** |
+|---|-------------------|---------------------|
+| **Verschlüsselung** | Optional (Online E2E mit Handshake) | **Immer Klartext** (Zivil-Default, **§9**) |
+| **Ziel** | Vertrauliche Kommunikation | **Maximale Reichweite** — gehört werden |
+| **UI** | Composer + Schloss / ⋮-Menü | **Eigener roter Button** + Bestätigungs-Dialog |
+| **Wire** | Standard-Chat-Wires | **`MORG_EMERGENCY_V1`** + Klartext-Body |
+
+Verschlüsseltes SOS ist **kein** Simple-Mode-Angebot. Optionaler **OPSEC-/Militär-Modus** (verschlüsselter Hilferuf) = **Backlog**, separates Einsatzprofil — **§9.4**.
+
+---
+
 ## 4. UI-Varianten (sinnvoll)
 
-1. **SOS Text:** Schnellauswahl („Verletzt, brauche Hilfe“) + **GPS anhängen** wenn verfügbar.  
-2. **SOS Sprache:** Aufnahme starten → **kurz** → Hash/Payload wie §2.4.  
-3. **Physische Taste:** Geräte- oder Hülle-Integration — **Backlog** Hardware; Software-API gleich **`MORG_EMERGENCY_V1`**.
+**Kanon (2026-06-16):** Details und Produktregeln in **§9**. Kurz:
+
+1. **SOS-Dialog/Sheet** (Ziel-UI): Text + automatisch **Lage-Bundle** (Name, Ort, IDs) — alles **Klartext**; Sendewege **alle erreichbaren** (Funk, Online, Telegram wenn konfiguriert); **kein** Verschlüsselungs-Schalter.
+2. **SOS Text (Ist):** Freitext + Bestätigung → ein Sendepfad wie Composer — wird durch **§9**-Dialog ersetzt.
+3. **SOS Sprache:** Kurzaufzeichnung → Opus → Notfall-Marker; Wire **§2.4**.
+4. **Physische Taste:** Backlog Hardware; Software-API = **`MORG_EMERGENCY_V1`**.
 
 ---
 
@@ -82,7 +98,8 @@ So bleibt klar: **Nicht jede LoRa-Nachricht ist ein Hilferuf.**
 | Phase | Inhalt |
 |-------|--------|
 | **B1** (**Ist, minimal**) | App: **SOS Text** + **SOS Sprache** mit Bestätigungs-Dialog; Klartext-Präfix **`[[MORG_EMERGENCY_V1:{…}]]`** (`src/shared/morg-emergency-v1-text.ts`, `MorgTextWireMarker.EMERGENCY_V1` in `opcodes.ts`); Mesh-v2-Burst mit **`priorityFlash`** (keine Inter-Packet-Pause = App-seitiges **`MacroPriorityClass.Flash`**-Äquivalent, Meshtastic priorisiert nicht von selbst). **Kein** automatisches IOTA-Mirror-Flag bei SOS (Delayed Upload wird unterdrückt). **Keine** automatische Wiederholung/Backoff. Basis: **Erkennung + `logger.warn`** beim verschlüsselten/ Klartext-Versand (`messenger-chain-wrap.ts`). **Noch keine** echte priorisierte Outbox-Queue auf dem Server. |
-| **B2** (**Ist**) | **Text-Marker eingefroren** — siehe **§7**. App: **Mesh-SOS** bei Fehlschlag **automatische Wiederholungen** mit **Backoff + Jitter** (`src/shared/morg-sos-mesh-retry.ts`, Spiegel `frontend/frontend/lib/morg-sos-mesh-retry.ts`; max. 5 Versuche). **Ack-gestoppt:** Nach jedem fehlgeschlagenen Funk-Versuch wird **`/send`** (verschlüsselte Mailbox) versucht — **gelingt die Chain-Mailbox**, gilt die Nutzlast als **Basis erreicht** und **weitere Funk-Wiederholungen** für diesen Snap **entfallen** (Airtime). **Opt-out:** `localStorage` **`morgendrot.sosRetryStopOnServerAck`** = **`0`**. Bereits per Ack gesendete Snaps werden beim **B2-Spiegel** nicht erneut eingestellt. Nach **erfolgreichem** reinem Funk-SOS (ohne Ack-Abbruch): **automatischer IOTA-Mailbox-Spiegel** wie zuvor; **Opt-out:** **`morgendrot.sosIotaMirror`** = **`0`**. **Anzeige:** **`normalizeChatMessageContentForDisplay`** — konsistentes **`[SOS]`**; Vitest deckt u. a. **Kompakt-Bild-** und **MF1-**Wires ab (keine Zerstörung der Chunk-Anzeige). **`lora-bridge`:** unverändert. |
+| **B2** (**Ist**) | **Text-Marker eingefroren** — siehe **§7**. App: **Mesh-SOS** bei Fehlschlag **automatische Wiederholungen** mit **Backoff + Jitter** (`src/shared/morg-sos-mesh-retry.ts`, Spiegel `frontend/frontend/lib/morg-sos-mesh-retry.ts`; max. 5 Versuche). **Ack-gestoppt:** Nach jedem fehlgeschlagenen Funk-Versuch wird **`/send`** (verschlüsselte Mailbox) versucht — **gelingt die Chain-Mailbox**, gilt die Nutzlast als **Basis erreicht** und **weitere Funk-Wiederholungen** für diesen Snap **entfallen** (Airtime). **Opt-out:** `localStorage` **`morgendrot.sosRetryStopOnServerAck`** = **`0`**. Bereits per Ack gesendete Snaps werden beim **B2-Spiegel** nicht erneut eingestellt. Nach **erfolgreichem** reinem Funk-SOS (ohne Ack-Abbruch): **automatischer IOTA-Mailbox-Spiegel** wie zuvor; **Opt-out:** **`morgendrot.sosIotaMirror`** = **`0`**. **Anzeige:** **`normalizeChatMessageContentForDisplay`** — konsistentes **`[SOS]`**; Vitest deckt u. a. **Kompakt-Bild-** und **MF1-**Wires ab (keine Zerstörung der Chunk-Anzeige). **`lora-bridge`:** unverändert. **Lücke vs. §9:** SOS kann noch über **verschlüsselten** Online-Pfad laufen, wenn Composer-Schloss aktiv — **Ziel:** SOS erzwingt **`encrypted=false`** + **`/send-plain`**. |
+| **B2.5** (**Ziel, UI**) | **SOS-Sheet** (§9): Lage-Bundle, **Fan-out** über alle erreichbaren Wege, Klartext-only, ein Bestätigungsdialog mit Transparenz-Hinweis. Kein Wire-v2-Zwang in der ersten Scheibe. |
 | **B3** | Basis: dedizierter Parser-Pfad + **priorisierte** Outbox + IOTA + optional Notify. |
 | **B4** | Wiederholung + Ack + Duty-Cycle-Tests im **Feld**. |
 
@@ -129,6 +146,77 @@ So bleibt klar: **Nicht jede LoRa-Nachricht ist ein Hilferuf.**
 - **UI-Anzeige:** `normalizeChatMessageContentForDisplay` → **`[SOS-Bestätigung · …<letzte8>]`**.
 - **Sender wartet auf Ack:** `localStorage` **`morgendrot.sosWaitMeshAckMs`** = Zahl in ms (**`0`** = aus; Wert wird in der App gecappt). Nach erfolgreichem Mesh-Burst kann die Erfolgsmeldung einen Zusatz **„Funk-Empfang per [SOS-Ack] bestätigt.“** enthalten.
 - **Auto-Antwort (Empfänger):** `localStorage` **`morgendrot.sosAutoMeshAckReply`** = **`1`** — bei eingehendem entschlüsseltem **`MORG_EMERGENCY_V1`** wird optional ein **`MORG_SOS_ACK_V1`**-Burst zurückgesendet (Dedup pro Digest, begrenzte Fenster).
+
+---
+
+## 9. Produktentscheidung: Zivil-SOS (**Klartext-only**, Reichweite zuerst)
+
+**Status:** **Entschieden** 2026-06-16 · **Fahrplan § H.3n** · **Backlog UI § B2.5**
+
+### 9.1 Leitprinzip
+
+Im **zivilen Notfall** (Simple Mode, Helfer, Berg, Unwetter, „brauche Hilfe“) gilt:
+
+> **SOS sendet absichtlich offen und unverschlüsselt**, über **so viele Wege wie verfügbar**, mit den **wichtigsten Erreichbarkeits-Infos** — damit möglichst **schnell und weit** Hilfe ankommt.
+
+Das widerspricht **nicht** dem normalen Chat: Verschlüsselung bleibt dort optional. SOS ist ein **eigener Modus**, kein Schloss im Composer.
+
+**Kein** automatischer **112**-Ruf — organisatorische Brücke siehe **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`**.
+
+### 9.2 Was SOS standardmäßig enthält (Lage-Bundle)
+
+Automatisch aus Session, Telefonbuch und Gerät — **Klartext**, vom Nutzer im Dialog bestätigt:
+
+| Feld | Quelle | Hinweis |
+|------|--------|---------|
+| **Freitext / Schnelltext** | Nutzer | z. B. „Verletzt, brauche Hilfe“ |
+| **Standort** | GPS (opt-in, Timeout ok) | Grob reicht; fehlend = Hinweis in Text |
+| **Anzeigename / Callsign** | Telefonbuch / Profil | |
+| **IOTA `0x`** | `MY_ADDRESS` | Auf Funk ggf. **gekürzt** (Airtime) |
+| **Meshtastic Node `!…`** | Telefonbuch / verbundenes Gerät | Für Funk-Rückruf |
+| **Telegram** | Telefonbuch / Notify-Konfig | Nur wenn Kanal aktiv |
+| **Package-ID** | Session / Handoff | Optional, v. a. Online |
+
+**Niemals** im SOS: Mnemonic, Tresor-Passwort, Private Keys, Handshake-Secrets.
+
+### 9.3 Sendewege (Fan-out)
+
+| Weg | SOS-Policy |
+|-----|------------|
+| **Funk (Meshtastic)** | **Klartext** + `MORG_EMERGENCY_V1`; **gekürztes** Lage-Bundle (Airtime §2.2); Priorität **Flash** |
+| **Online (IOTA/Mailbox)** | **Klartext** (`/send-plain` / Klartext-Mailbox) — **kein** E2E für SOS |
+| **Telegram** | **Klartext**-Hinweis (Notify-only); Kurzlage, kein Secret-Dump |
+
+**Default-Button „SOS senden“:** alle **aktuell erreichbaren** Wege **parallel** (Fan-out). Fehler pro Weg anzeigen („Funk OK, Online wartet …“).
+
+**Transparenz (Pflicht-UI):** Vor dem Senden kurzer Hinweis — *„Unverschlüsselt. Im Funk-Netz können Mitlausende den Inhalt lesen.“*
+
+### 9.4 Was bewusst **nicht** angeboten wird (v1)
+
+| Thema | Entscheidung |
+|-------|--------------|
+| **Verschlüsseltes SOS** im Simple Mode | **Nein** — würde Handshake/Keys blockieren |
+| **OPSEC / Militär-SOS** | **Backlog** — separates Einsatzprofil, ggf. nur Funk Secondary+ isolierte Gruppe |
+| **Voller Wallet-Dump auf Funk** | **Nein** — Trimmen nach §9.2 |
+| **MTProto / Telegram-Vollchat** | **Nein** — nur Notify-Lane |
+
+### 9.5 Risiken (akzeptiert vs. mitigiert)
+
+| Risiko | Einordnung |
+|--------|------------|
+| **Mitlesen** auf offenem Mesh | **Akzeptiert** für Zivil-SOS — Hilfe > Diskretion; UI warnt |
+| **Spoofing / False Alarm** | **Mitigiert:** Bestätigungsdialog, Rate-Limits (Backlog), kein stiller Send |
+| **Persistenz Online** | Klartext on-chain/Mailbox **länger sichtbar** als Funk-Ping — **bewusst** für Einsatzleitung/Forensik |
+| **Datenschutz Dritter** | Nutzer tippt keine fremden vertraulichen Daten in SOS — nicht technisch erzwingbar |
+
+### 9.6 Implementierung (Reihenfolge)
+
+1. **Doku** (diese §9) + Fahrplan **§ H.3n** — **erledigt 2026-06-16**
+2. **UI:** `ChatViewSosEmergencySheet` — Text, Vorschau Lage-Bundle, Fan-out-Status
+3. **Send-Pfad:** `isEmergencySend` → **`encrypted=false`**, Online **`/send-plain`**
+4. **Wire optional:** `MORG_EMERGENCY_V2` mit `sub`/`loc` — erst wenn v1-Dialog stabil (kein Blocker für B2.5)
+
+**Verwandt:** **`docs/MESSENGER-CHAT-HANDBUCH.md`** § SOS · **`docs/NOTFALL-REICHWEITE-BRUECKEN-UND-BACKLOG.md`** §3.1 · **`docs/INITIAL-PROFILE-METADATA-AND-FUTURE-FIELDS-CRITIQUE.md`** (SOS ≠ `initialProfile`).
 
 ---
 

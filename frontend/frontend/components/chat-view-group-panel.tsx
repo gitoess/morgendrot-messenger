@@ -45,6 +45,7 @@ export type ChatViewGroupPanelProps = {
   onOpenSettings?: () => void
   encrypted?: boolean
   onEncryptedChange?: (encrypted: boolean) => void
+  embedded?: boolean
 }
 
 export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
@@ -58,6 +59,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     onOpenSettings,
     encrypted = false,
     onEncryptedChange,
+    embedded = false,
   } = p
   const showMeshtasticSecondary = forcedTransport === 'mesh'
   const groupCreateBlockedTitle = 'Keine Berechtigung zum Anlegen neuer Gruppen (Handoff-Rechte).'
@@ -254,7 +256,13 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
     teamMailboxObjectId.trim().toLowerCase() !== savedTeamMbId.toLowerCase()
 
   return (
-    <section className="mb-4 rounded-lg border border-violet-500/25 bg-violet-500/5 px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
+    <section
+      className={cn(
+        embedded
+          ? 'space-y-3 text-sm leading-relaxed'
+          : 'mb-4 rounded-lg border border-violet-500/25 bg-violet-500/5 px-3 py-3 text-[11px] leading-relaxed text-muted-foreground'
+      )}
+    >
       {onEncryptedChange ? (
         <AlertDialog open={plainWarnOpen} onOpenChange={setPlainWarnOpen}>
           <AlertDialogContent className="border-orange-500/40 bg-orange-950/20 sm:max-w-md">
@@ -280,14 +288,14 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Users className="h-4 w-4 text-violet-400" aria-hidden />
-          <h3 className="text-sm font-semibold text-foreground">Gruppe</h3>
+          <h3 className="text-sm font-semibold text-foreground">{embedded ? 'Einstellungen' : 'Gruppe'}</h3>
           {active ? (
-            <span className="text-[10px] text-muted-foreground">
-              · {active.memberAddresses.length} Mitglieder — Nachrichten gehen an alle
+            <span className="text-xs text-muted-foreground">
+              · {active.memberAddresses.length} Mitglieder
             </span>
           ) : null}
         </div>
-        {onEncryptedChange ? (
+        {onEncryptedChange && !embedded ? (
           <div
             className={cn(
               'inline-flex rounded-md border border-border bg-background p-0.5',
@@ -330,7 +338,12 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           </div>
         ) : null}
       </div>
-      {encrypted && forcedTransport === 'internet' ? (
+      {onEncryptedChange && embedded ? (
+        <p className="text-xs text-muted-foreground">
+          Verschlüsselung im Chat-Kopf umschalten. Team-Broadcast (1× Chain) nur unverschlüsselt.
+        </p>
+      ) : null}
+      {encrypted && forcedTransport === 'internet' && !embedded ? (
         <p className="mb-2 text-[10px] text-muted-foreground">
           Verschlüsselt: je Mitglied eine Chain-Nachricht (Handshake unten). Team-Broadcast nur bei{' '}
           <strong className="text-foreground">Unverschlüsselt</strong>.
@@ -355,15 +368,15 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         </div>
       ) : null}
       <div className="space-y-2">
-        <label className="block text-[10px] font-medium text-muted-foreground">Gruppenname</label>
+        <label className="block text-xs font-medium text-muted-foreground">Gruppenname</label>
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="z. B. Einsatz Alpha"
-          className="w-full max-w-md rounded-md border border-border bg-input px-2 py-1.5 text-xs text-foreground"
+          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
-        <label className="block text-[10px] font-medium text-muted-foreground">
+        <label className="block text-xs font-medium text-muted-foreground">
           Mitglieder (je Zeile oder Komma — Name aus Telefonbuch oder 0x + 64 Hex)
         </label>
         <textarea
@@ -371,7 +384,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           onChange={(e) => setMembersText(e.target.value)}
           rows={4}
           spellCheck={false}
-          className="w-full max-w-lg rounded-md border border-border bg-input px-2 py-1.5 text-[11px] text-foreground"
+          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
         />
         {showMeshtasticSecondary ? (
           <>
@@ -406,12 +419,10 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             </div>
           </>
         ) : null}
-        <div className="rounded-md border border-sky-500/25 bg-sky-500/5 px-2.5 py-2">
-          <p className="text-[10px] font-medium text-foreground">Team-Postfach (Pflicht für Chain)</p>
-          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Internet + Mailbox: nur <em>1× Team-Broadcast</em> pro Nachricht (günstiger, kein pairwise mehr).
-            Verschlüsselter Team-Broadcast folgt später (§ H.22, ggf. Handshakes pro Mitglied).
-            Nach Move-Deploy: neues Postfach anlegen — alte Object-IDs vom vorherigen Package funktionieren nicht.
+        <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-3">
+          <p className="text-xs font-medium text-foreground">Team-Postfach (Pflicht für Chain)</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Internet + Mailbox: 1× Team-Broadcast pro Nachricht. Nach Move-Deploy neues Postfach anlegen.
           </p>
           <div className="mt-2 flex max-w-lg flex-wrap gap-2">
             <select
@@ -475,18 +486,18 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             </div>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           <button
             type="button"
             onClick={saveGroup}
             disabled={groupCreateBlocked}
             title={groupCreateBlocked ? groupCreateBlockedTitle : undefined}
             className={cn(
-              'rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground',
+              'rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground',
               groupCreateBlocked && 'cursor-not-allowed opacity-40'
             )}
           >
-            Gruppe speichern
+            Speichern
           </button>
           <button
             type="button"
@@ -494,7 +505,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             disabled={!groupCreateAllowed}
             title={!groupCreateAllowed ? groupCreateBlockedTitle : undefined}
             className={cn(
-              'rounded-md border border-border px-3 py-1.5 text-xs',
+              'rounded-lg border border-border px-4 py-2 text-sm font-medium',
               !groupCreateAllowed && 'cursor-not-allowed opacity-40'
             )}
           >
@@ -503,7 +514,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
           <button
             type="button"
             onClick={() => setPhonebookPickerOpen(true)}
-            className="rounded-md border border-border px-3 py-1.5 text-xs"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
           >
             Aus Telefonbuch…
           </button>
@@ -511,27 +522,27 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
             <button
               type="button"
               onClick={onOpenPhonebook}
-              className="rounded-md border border-border px-3 py-1.5 text-xs"
+              className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
             >
-              Telefonbuch öffnen
+              Telefonbuch
             </button>
           ) : null}
           {activeId ? (
             <button
               type="button"
               onClick={removeGroup}
-              className="rounded-md border border-destructive/40 px-3 py-1.5 text-xs text-destructive"
+              className="rounded-lg border border-destructive/50 px-4 py-2 text-sm font-medium text-destructive hover:bg-destructive/10"
             >
-              Aktive Gruppe löschen
+              Löschen
             </button>
           ) : null}
         </div>
         {!active ? (
-          <p className="text-[10px] text-amber-700 dark:text-amber-300">
-            Gruppe speichern oder aus der Liste wählen, dann unten Nachricht schreiben und Senden.
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            Gruppe speichern, dann im Chat Nachricht schreiben und senden.
           </p>
         ) : null}
-        {msg ? <p className="text-[10px] text-foreground">{msg}</p> : null}
+        {msg ? <p className="text-xs text-foreground">{msg}</p> : null}
       </div>
       <ContactPhonebookPickerDialog
         open={phonebookPickerOpen}
