@@ -9,6 +9,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 ### Dokumentation
 
 - **§ H.36 Team-Member-Update & Einstiegs-Wizard:** Neue Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** — linearer Wizard (Boss/Helfer/Wanderer), Join-Request, Wire `MORG_TEAM_MEMBER_UPDATE_V1`, Transport **IOTA = Persistenz / LAN = Zustellung** (Anschluss § H.16 Boss-LAN Ist), Funk nur Ping; Roadmap **§ H.36**.
+- **§ H.26 B4b Boss-Gruppenalarm (Telegram):** Spec **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** §6 — ein Bot + Einsatz-Gruppe, Einladungslink-Onboarding, Fan-out-Matrix Sendewege, Hinweis-only.
 
 ### Messenger vs. Morgendrot Projekt (Next)
 

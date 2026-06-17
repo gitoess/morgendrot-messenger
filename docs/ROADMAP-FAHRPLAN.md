@@ -1757,7 +1757,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | # | Lieferung | Status | Details |
 |---|-----------|--------|---------|
 | **B4a** | **Mehrfach 1:1 Telegram** | **Ist** | Composer Sendepfad Telegram: kommagetrennte Chat-IDs; Vorschläge aus Telefonbuch (`telegram-notify-pref.ts`, `chat-view-send-panel.tsx`) |
-| **B4b** | **Boss-Gruppenalarm (Telegram)** | **Backlog** | Ganze Messenger-Gruppe oder Einsatz-Gruppe per Telegram alarmieren. **Vor Umsetzung klären:** Welche Gruppen existieren (Messenger-Gruppe vs. Telegram-Gruppe vs. Einzel-IDs)? Wer darf alarmieren (Boss/Kommandant)? Wie werden Gruppen erstellt und gepflegt? UI-Ziel: **Einsatzleitung/Boss**; kein Blockieren des IOTA-Sends. |
+| **B4b** | **Boss-Gruppenalarm (Telegram)** | **Spec** | **Ein** Boss-Bot + **eine** Einsatz-Gruppe; Kurz-Hinweise (SOS, Team-Alarm); Einladungslink-Onboarding — **`docs/TELEGRAM-INTEGRATION-ZIELBILD.md`** **§6**; kein Blockieren des IOTA-/LoRa-Sends. |
 | **B4c** | **Telefonbuch Multi-Pick** | **Backlog** | Mehrere Kontakte in **einem** Schritt für Telegram (und später Funk-Gruppe) wählen — Checkbox/Multi-Select im Telefonbuch-Sheet, nicht nur manuelle Komma-Liste im Composer. Abhängigkeit: **B4b** Gruppenmodell. |
 
 **Abnahme B4 (wenn umgesetzt):** Boss wählt definierte Gruppe → N Telegram-Hinweise; Telefonbuch: 3+ Kontakte markieren → alle Chat-IDs im Composer; Fehler bei fehlender ID blockieren nicht den Haupt-Sendepfad.
