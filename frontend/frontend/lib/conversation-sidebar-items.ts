@@ -7,6 +7,7 @@ import {
 } from '@/frontend/lib/contact-storage-key'
 import { isIgnoredInboxCounterpartyAddress } from '@/frontend/features/inbox/inbox-partner-filter'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import type { TelegramAlarmGroupMembership } from '@/frontend/lib/telegram-alarm-group-prefs'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import { contactReachableOnSendPath } from '@/frontend/lib/contact-send-path'
 import type { ActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
@@ -31,7 +32,29 @@ export type ConversationSidebarGroupItem = {
   memberCount: number
 }
 
-export type ConversationSidebarItem = ConversationSidebarContactItem | ConversationSidebarGroupItem
+/** Lokale Mitgliedschaft Telegram-Einsatz-Alarmgruppe (nicht Morgendrot-Gruppenchat). */
+export type ConversationSidebarTelegramAlarmItem = {
+  kind: 'telegram-alarm'
+  key: string
+  displayName: string
+  subtitle: string
+  inviteLink: string
+  groupChatId?: string
+}
+
+export type ConversationSidebarPinnwandItem = {
+  kind: 'pinnwand'
+  key: string
+  displayName: string
+  subtitle: string
+  unreadCount: number
+}
+
+export type ConversationSidebarItem =
+  | ConversationSidebarContactItem
+  | ConversationSidebarGroupItem
+  | ConversationSidebarTelegramAlarmItem
+  | ConversationSidebarPinnwandItem
 
 export function resolveContactSidebarDisplayName(
   directory: Record<string, ContactMeshEntryClient>,
@@ -120,4 +143,34 @@ export function buildConversationSidebarGroups(
     displayName: g.name,
     memberCount: g.memberAddresses.length,
   }))
+}
+
+export function buildConversationSidebarPinnwand(p: {
+  label: string
+  unreadCount?: number
+}): ConversationSidebarPinnwandItem {
+  return {
+    kind: 'pinnwand',
+    key: 'pinnwand:board',
+    displayName: p.label,
+    subtitle: 'Team-Brett · nur Online',
+    unreadCount: p.unreadCount ?? 0,
+  }
+}
+
+export function buildConversationSidebarTelegramAlarm(
+  membership: TelegramAlarmGroupMembership | null
+): ConversationSidebarTelegramAlarmItem | null {
+  if (!membership?.inviteLink?.trim()) return null
+  const label = membership.label?.trim() || 'Einsatz-Alarmgruppe'
+  return {
+    kind: 'telegram-alarm',
+    key: 'telegram-alarm:membership',
+    displayName: label,
+    subtitle: membership.groupChatId
+      ? `Telegram · beigetreten · ${membership.groupChatId}`
+      : 'Telegram · beigetreten · Hinweise in der Telegram-App',
+    inviteLink: membership.inviteLink.trim(),
+    groupChatId: membership.groupChatId?.trim() || undefined,
+  }
 }

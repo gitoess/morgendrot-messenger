@@ -151,7 +151,10 @@ import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifes
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
 import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
-import { applyTelegramIntegrationToMonitorWebhook } from './integrations/telegram-integration.js';
+import {
+    applyTelegramIntegrationToMonitorWebhook,
+    buildHandoffExtrasFromTelegramConfig,
+} from './integrations/telegram-integration.js';
 import { restartTelegramInbound } from './integrations/telegram-inbound-poll.js';
 import {
     resolveProvisionIdempotencyKey,
@@ -2505,6 +2508,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     }
                     const createdAtIso = new Date().toISOString();
                     const readmeExtra = String(data.readmeExtra ?? '').trim() || undefined;
+                    const handoffExtras = buildHandoffExtrasFromTelegramConfig();
+                    const handoffExtrasJson = handoffExtras ? `${JSON.stringify(handoffExtras, null, 2)}\n` : '';
                     const readme = buildStandaloneSmartphoneHandoffReadme({
                         handoffLabel,
                         createdAtIso,
@@ -2513,7 +2518,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         bossAddress: normalizeAddress(bossAddress),
                         helperRole,
                         teamMailboxIds: teamMailboxIds || undefined,
-                        readmeExtra,
+                        readmeExtra:
+                            (readmeExtra ? `${readmeExtra}\n\n` : '') +
+                            (handoffExtrasJson
+                                ? 'Telegram-Alarmgruppe: siehe .morgendrot-handoff-extras.json (optional).'
+                                : ''),
                     });
                     const slug =
                         (handoffLabel || 'handoff').replace(/[^\wäöüÄÖÜß.-]/gi, '_').slice(0, 48) || 'handoff';
@@ -2528,6 +2537,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                 envContent,
                                 runtimeConfigContent,
                                 readme,
+                                handoffExtras: handoffExtras ?? undefined,
                                 handoffLabel: handoffLabel || undefined,
                                 createdAtIso,
                                 packageId: pkgRes.packageId,
@@ -2548,6 +2558,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         name: 'morgendrot-standalone-handoff.env',
                     });
                     archive.append(runtimeConfigContent, { name: HANDOFF_RUNTIME_CONFIG_FILENAME });
+                    if (handoffExtrasJson) {
+                        archive.append(Buffer.from(handoffExtrasJson, 'utf8'), {
+                            name: '.morgendrot-handoff-extras.json',
+                        });
+                    }
                     archive.append(Buffer.from(readme, 'utf8'), { name: 'README-HANDOFF.txt' });
                     archive.finalize();
                     archive.on('error', (err: Error) => {

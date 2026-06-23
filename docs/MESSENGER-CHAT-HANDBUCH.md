@@ -274,13 +274,27 @@ Ganzes Private-Mailbox-Object: **Einstellungen → Meine Mailboxen** → Aufräu
 
 **Telefonbuch** (Sheet/Dialog) ist die zentrale Oberfläche zum Anlegen, Bearbeiten und Zuordnen von Kontakten (Name, `0x`, Mesh, Mailbox-Slots pro Kontakt). Namen aus dem Telefonbuch erscheinen auch in **Gruppe verwalten** (Anzeige und Eingabe der Mitglieder).
 
+### Kontakt anlegen (Telefonbuch-Dialog)
+
+| Feld | Pflicht | Hinweis |
+|------|---------|---------|
+| **Name** | empfohlen | Anzeige in Sidebar und Posteingang |
+| **IOTA-Adresse (0x…)** | ja, außer nur Telegram | Für Online-Send und Handshake |
+| **Meshtastic Node-ID** | nein | Für Sendepfad Funk (`!…`) |
+| **Telegram Chat-ID** | ja ohne 0x | Nur Telegram-Hinweise; speicherbar ohne Wallet |
+| **Postfach-ID** | nein | Unter „Erweitert“ — ein on-chain Postfach (Privat); Team/Einsatz/Puffer nur für Experten |
+
+**QR-Code scannen** übernimmt Wallet + optional Postfach aus Peering-QR. Erklärungen zu Mailbox-Slots und Composer-Zielwahl: siehe Sendepanel „Ziel-Postfach“ beim Senden an einen Kontakt.
+
 **Telefonbuch → Kontakte verteilen** (Boss/Kommandant) bietet schnelle Datei-Aktionen oberhalb der Kontaktliste:
 
 | Aktion | Format | Hinweis |
 |--------|--------|---------|
 | **Importieren** | `initialProfile` | Schreibt ins Telefonbuch (Backend-Kontaktdatei), **nicht** die volle Telefonbuch-Struktur mit allen Mesh-Feldern |
 | **Exportieren** | `initialProfile` v1 | Gleiches Schema wie Import |
-| **Verschl. Kontakt-Backup** | Server-API, passwortgeschützt | Inkl. Mesh-Felder — für vollständige Wiederherstellung |
+| **Funk · Node-IDs sichern** | Passwort-JSON (Export/Import) | Am **Ende** des Telefonbuchs eingeklappt — verschlüsselte 0x↔Meshtastic-Zuordnung für Gerätewechsel; **nicht** dasselbe wie `initialProfile` |
+
+Details zu JSON-Formaten und Helfer-ZIP: siehe unten und **Einsatzleitung → Export-Assistent** (`docs/EXPORT-ASSISTENT-REFERENZ.md`).
 
 ### Akzeptierte Import-JSON-Formen
 
@@ -301,7 +315,7 @@ Optional auf Root-Ebene: `deploymentChannelTag`, `offlineBriefing`, `validUntil`
 
 **Abweichungen / nicht über initialProfile:**
 
-- **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): nur über **verschl. Kontakt-Backup** oder manuell im Telefonbuch — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
+- **Volles Telefonbuch** (alle Slots, Labels, versteckte Einträge): **Funk · Node-IDs sichern** (Telefonbuch, eingeklappt) oder manuell — Export „Kontakte“ erzeugt bewusst nur `initialProfile`.
 - **Handoff-ZIP** für Helfer: **Einsatzleitung → Helfer einrichten** — Profil, Rechte, Partner, Team (`docs/HANDOFF-ZIP-ENCRYPTION.md`).
 - **`npm run bundle:messenger`:** Entwickler-Standalone-Ordner — **kein** Ersatz für Handoff-ZIP.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { ChatViewSendPathCompact } from './chat-view-send-path-compact'
 import { TEST_API_STATUS_SEND_READY } from '@/frontend/lib/test-fixtures/messenger-capabilities'
 
@@ -118,23 +118,22 @@ describe('ChatViewSendPathCompact', () => {
     expect(container.firstChild).toBeNull()
   })
 
-  it('Pinnwand: funk deaktiviert, online aktiv (§ H.1a)', () => {
+  it('Pinnwand: Sendepfade bleiben sichtbar', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="pinnwand"
         visible
-        encrypted={false}
+        encrypted
         forcedTransport="internet"
         onForcedTransportChange={noop}
         onComposerDeliveryChange={noop}
       />
     )
-    expect(screen.getByRole('button', { name: /online/i })).not.toBeDisabled()
-    expect(screen.getByRole('button', { name: /funk/i })).toBeDisabled()
-    expect(screen.queryByRole('button', { name: /telegram/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /online/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /telegram/i })).toBeInTheDocument()
   })
 
-  it('Gruppe: telegram ausgeblendet, funk aktiv (§ H.1a)', () => {
+  it('Gruppe: telegram sichtbar aber deaktiviert, funk aktiv (§ H.1a)', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="group"
@@ -146,7 +145,7 @@ describe('ChatViewSendPathCompact', () => {
       />
     )
     expect(screen.getByRole('button', { name: /funk/i })).not.toBeDisabled()
-    expect(screen.queryByRole('button', { name: /telegram/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /telegram/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Ad-hoc/i })).toBeDisabled()
   })
 
@@ -196,8 +195,7 @@ describe('ChatViewSendPathCompact', () => {
     expect(onTransport).toHaveBeenCalledWith('mesh')
   })
 
-  it('zeigt Empfänger-Buttons nach Sendepfad-Klick', async () => {
-    const onChannelModeChange = vi.fn()
+  it('zeigt keine Empfänger-Buttons nach Sendepfad-Klick', () => {
     render(
       <ChatViewSendPathCompact
         channelMode="private"
@@ -205,18 +203,14 @@ describe('ChatViewSendPathCompact', () => {
         encrypted={false}
         forcedTransport="internet"
         onForcedTransportChange={noop}
-        onChannelModeChange={onChannelModeChange}
+        onChannelModeChange={vi.fn()}
         role="consumer"
         apiStatus={TEST_API_STATUS_SEND_READY}
       />
     )
-    expect(screen.queryByRole('button', { name: /^Gruppe$/i })).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /online/i }))
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /^Gruppe$/i })).toBeInTheDocument()
-    })
-    fireEvent.click(screen.getByRole('button', { name: /^Gruppe$/i }))
-    expect(onChannelModeChange).toHaveBeenCalledWith('group')
+    expect(screen.queryByRole('button', { name: /^Gruppe$/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: /Empfänger-Kanal/i })).not.toBeInTheDocument()
   })
 
   it('markiert Telegram-Sendepfad aktiv (Zustell-Hinweise im Composer, § H.1a)', () => {

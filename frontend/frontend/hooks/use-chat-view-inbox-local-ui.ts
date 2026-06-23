@@ -30,6 +30,7 @@ import {
   messageCounterpartyAddress,
   messageTouchesInternetTransport,
   messageTouchesMeshTransport,
+  messageTouchesTelegramTransport,
   uniqueCounterpartyAddresses,
   type InboxDirectionFilter,
 } from '@/frontend/features/inbox/inbox-partner-filter'
@@ -65,6 +66,7 @@ import {
 } from '@/frontend/lib/inbox-partner-unread'
 import type { InboxUnreadThreadOption } from '@/frontend/components/chat-view-inbox-unread-threads-strip'
 import { selectPinnwandFeedMessages } from '@/frontend/lib/pinnwand-feed-messages'
+import { TELEGRAM_ALARM_INBOX_PARTNER_KEY } from '@/frontend/lib/telegram-alarm-group-prefs'
 
 export type UseChatViewInboxLocalUiParams = InboxFeedReadPort & {
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>
@@ -393,6 +395,8 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
             teamMailboxObjectId: group.teamMailboxObjectId,
           })
         }
+      } else if (inboxPartnerKey?.trim().toLowerCase() === TELEGRAM_ALARM_INBOX_PARTNER_KEY) {
+        rows = rows.filter((m) => messageTouchesTelegramTransport(m))
       } else if (inboxPartnerKey?.trim()) {
         const key = inboxPartnerKey.trim().toLowerCase()
         const meNorm = myAddress.trim().toLowerCase()

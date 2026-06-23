@@ -14,6 +14,8 @@ import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-sco
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
+import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
+import { SettingsTelegramAlarmGroupJoin } from '@/frontend/components/views/settings-telegram-alarm-group-join'
 import { SettingsTelegramNotifyOnSend } from '@/frontend/components/views/settings-telegram-notify-on-send'
 import { SettingsSystemIdentitySection } from '@/frontend/components/views/settings-system-identity-section'
 import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
@@ -23,6 +25,7 @@ import { SettingsVaultPasswordSection } from '@/frontend/components/views/settin
 import { SettingsEmergencyPurgeSection } from '@/frontend/components/views/settings-emergency-purge-section'
 import { SettingsFunkSection } from '@/frontend/components/views/settings-funk-section'
 import { ChatViewShadowSweep } from '@/frontend/components/chat-view-shadow-sweep'
+import { SettingsOnboardingSection } from '@/frontend/components/views/settings-onboarding-section'
 import { SettingsLanguageSection } from '@/frontend/components/settings-language-section'
 import { SettingsAppearanceSection } from '@/frontend/components/settings-appearance-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
@@ -131,6 +134,7 @@ export function SettingsView({
           icon={<Globe className="h-5 w-5" />}
         />
         <SettingsLanguageSection />
+        <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
@@ -260,6 +264,12 @@ export function SettingsView({
           description="Bot, Relay und Benachrichtigung beim Senden — nur für den Telegram-Sendeweg im Chat."
         />
         <SettingsTelegramNotifyOnSend />
+        <SettingsTelegramAlarmGroupJoin backendOnline={backendOnline} />
+        <SettingsTelegramEinsatzGroup
+          backendOnline={backendOnline}
+          apiStatus={advancedIotaStatus}
+          isBossRole={isBossRole || isKommandant}
+        />
         <SettingsTelegramIntegration backendOnline={backendOnline} />
       </section>
 

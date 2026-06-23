@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * Sendepfad (online / funk / telegram) + dynamische Empfänger-Buttons nach Pfad-Klick.
+ * Sendepfad (Online / Funk / Telegram) — nur Transportwahl; Empfänger kommt aus der Chat-Sidebar.
  */
 
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
@@ -12,26 +12,14 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   isSendPathAllowedForChannel,
-  resolveActiveSendPath,
   sendPathDisabledReason,
 } from '@/frontend/lib/messenger-channel-send-path'
-import { showTelegramDeliveryInHeader } from '@/frontend/lib/composer-delivery-channel'
 import type { ApiStatus } from '@/frontend/lib/api/status'
-import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import {
   composerSendPathWriteDeniedReason,
   type ComposerSendPathKey,
 } from '@/frontend/lib/messenger-capability-gates'
-import {
-  collectContactsForSendPath,
-  formatAllRecipientsForSendPath,
-} from '@/frontend/lib/contact-send-path'
-import { readHiddenContacts } from '@/frontend/lib/contact-phonebook-meta-store'
-import {
-  ChatViewSendPathRecipientPicker,
-  type ChatViewSendPathRecipientPickerProps,
-} from '@/frontend/components/chat-view-send-path-recipient-picker'
+
 export type ChatViewSendPathCompactProps = {
   visible: boolean
   channelMode: MessengerChatChannel
@@ -43,12 +31,8 @@ export type ChatViewSendPathCompactProps = {
   composerDelivery?: ComposerDeliveryChannel
   onComposerDeliveryChange?: (d: ComposerDeliveryChannel) => void
   apiStatus?: ApiStatus | null
-  role?: string
+  /** Nur für Telegram in Gruppenmodus: zurück auf 1:1 wechseln. */
   onChannelModeChange?: (c: MessengerChatChannel) => void
-  onRecipientChange?: (v: string) => void
-  contactDirectory?: Record<string, ContactMeshEntryClient>
-  partnerOptions?: readonly InboxPartnerOption[]
-  pinnwandTabUnreadCount?: number
   className?: string
 }
 
@@ -83,7 +67,7 @@ const ADHOC = {
 
 const TELEGRAM = {
   short: 'Telegram',
-  title: 'Telegram (1:1 oder Alle)',
+  title: 'Telegram (1:1 oder Alarmgruppe)',
 }
 
 function selectCleartextTransport(
@@ -164,60 +148,24 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     composerDelivery = 'chain',
     onComposerDeliveryChange,
     apiStatus,
-    role = '',
     onChannelModeChange,
-    onRecipientChange,
-    contactDirectory = {},
-    partnerOptions = [],
-    pinnwandTabUnreadCount = 0,
     className,
   } = p
 
-  const [recipientPanelOpen, setRecipientPanelOpen] = useState(false)
-
   if (!visible) return null
 
-  const showTelegram =
-    showTelegramDeliveryInHeader({ channelMode }) && Boolean(onComposerDeliveryChange)
+  const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
-  const activeSendPath = resolveActiveSendPath(composerDelivery, forcedTransport)
 
   const onlineChannelOk = isSendPathAllowedForChannel(channelMode, 'internet')
   const funkChannelOk = isSendPathAllowedForChannel(channelMode, 'mesh')
   const adhocChannelOk = showAdhocTransport && isSendPathAllowedForChannel(channelMode, 'adhoc')
-  const telegramChannelOk = showTelegram && isSendPathAllowedForChannel(channelMode, 'telegram')
+  const telegramChannelOk = isSendPathAllowedForChannel(channelMode, 'telegram')
 
   const onlineCapReason = sendPathCapabilityReason(apiStatus, 'internet')
   const funkCapReason = sendPathCapabilityReason(apiStatus, 'mesh')
   const adhocCapReason = sendPathCapabilityReason(apiStatus, 'adhoc')
   const telegramCapReason = sendPathCapabilityReason(apiStatus, 'telegram')
-
-  const openPanel = () => setRecipientPanelOpen(true)
-
-  const recipientPickerProps: ChatViewSendPathRecipientPickerProps | null =
-    onChannelModeChange && recipientPanelOpen
-      ? {
-          activeSendPath,
-          channelMode,
-          role,
-          apiStatus,
-          pinnwandTabUnreadCount,
-          telegramAllActive: false,
-          onSelectChannel: (c) => onChannelModeChange(c),
-          onSelectTelegramAll: () => {
-            onChannelModeChange('private')
-            onComposerDeliveryChange?.('telegram')
-            const contacts = collectContactsForSendPath({
-              directory: contactDirectory,
-              partnerOptions,
-              path: 'telegram',
-              hidden: readHiddenContacts(),
-            })
-            const { recipient } = formatAllRecipientsForSendPath(contacts, 'telegram')
-            onRecipientChange?.(recipient)
-          },
-        }
-      : null
 
   return (
     <div
@@ -235,7 +183,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           title={ONLINE.title}
           activeClass={SEND_PATH_ACTIVE_CLASS.online}
           onClick={() => {
-            openPanel()
             onComposerDeliveryChange?.('chain')
             onForcedTransportChange(ONLINE.id)
           }}
@@ -250,7 +197,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           title={FUNK.title}
           activeClass={SEND_PATH_ACTIVE_CLASS.mesh}
           onClick={() => {
-            openPanel()
             selectCleartextTransport(
               encrypted,
               FUNK.id,
@@ -271,7 +217,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             title={ADHOC.title}
             activeClass={SEND_PATH_ACTIVE_CLASS.adhoc}
             onClick={() => {
-              openPanel()
               selectCleartextTransport(
                 encrypted,
                 ADHOC.id,
@@ -285,7 +230,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             {ADHOC.short}
           </PathButton>
         ) : null}
-        {showTelegram ? (
+        {showTelegramPath ? (
           <PathButton
             active={composerDelivery === 'telegram'}
             disabled={!telegramChannelOk || Boolean(telegramCapReason)}
@@ -293,7 +238,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
             title={TELEGRAM.title}
             activeClass={SEND_PATH_ACTIVE_CLASS.telegram}
             onClick={() => {
-              openPanel()
+              if (channelMode !== 'private') onChannelModeChange?.('private')
               onComposerDeliveryChange?.('telegram')
             }}
           >
@@ -302,7 +247,6 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           </PathButton>
         ) : null}
       </div>
-      {recipientPickerProps ? <ChatViewSendPathRecipientPicker {...recipientPickerProps} /> : null}
     </div>
   )
 }

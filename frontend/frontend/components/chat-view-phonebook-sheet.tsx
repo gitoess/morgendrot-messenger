@@ -1,7 +1,7 @@
 'use client'
 
 import { BookUser } from 'lucide-react'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ChatViewPhonebookSection } from '@/frontend/components/chat-view-phonebook-section'
 import type { ChatViewPhonebookSectionProps } from '@/frontend/components/chat-view-phonebook-section'
 
@@ -25,9 +25,6 @@ export function ChatViewPhonebookSheet(p: ChatViewPhonebookSheetProps) {
             <BookUser className="h-5 w-5 text-primary" aria-hidden />
             Telefonbuch
           </SheetTitle>
-          <SheetDescription>
-            Kontakte, Erreichbarkeit und Meshtastic — deine eigene Kontakt-ID steht weiter oben im Chat.
-          </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           <ChatViewPhonebookSection {...phonebook} embedded />

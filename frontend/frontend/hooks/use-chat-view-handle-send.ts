@@ -87,6 +87,7 @@ import {
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
+import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
 import {
   buildTelegramMessagePreview,
   readTelegramNotifyOnSend,
@@ -993,6 +994,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         })
       } else {
         setStatusMsg(statusLine)
+      }
+
+      if (isEmergencySend) {
+        void postTelegramGroupAlarm({ eventType: 'sos' }).then((r) => {
+          if (r.delivered) {
+            setStatusMsg(`${statusLine} · Telegram-Alarmgruppe benachrichtigt.`)
+          }
+        })
       }
 
       if (readTelegramNotifyOnSend() && forcedTransport === 'internet' && isPrivate) {

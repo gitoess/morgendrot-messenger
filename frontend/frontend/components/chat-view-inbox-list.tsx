@@ -208,12 +208,16 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
       <div className="p-3 pb-0">
         <div className="mx-auto max-w-3xl rounded-xl border border-amber-500/45 bg-amber-500/[0.08] px-4 py-3 text-amber-950 dark:text-amber-100">
           <p className="text-sm font-semibold">
-            Offline — letzte Nachrichten (vor {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL 30 Min.
+            Morgendrot-Basis nicht erreichbar — Posteingang aus Zwischenspeicher (vor{' '}
+            {Math.max(0, Number(inboxCacheAgeMinutes ?? 0))} Min., TTL 30 Min.
             {inboxLiveSource === 'rpc' ? ', zuletzt per Direkt-RPC' : ''})
           </p>
           <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/90">
-            Live-Aktualisierung ist derzeit nicht möglich. Jetzt kannst du mit Funk (LoRa) weiterarbeiten; Online-Inhalte
-            folgen automatisch, sobald die Basis wieder erreichbar ist.
+            Live-Aktualisierung über den Server ist gerade nicht möglich.{' '}
+            <strong className="font-semibold">IOTA senden/empfangen</strong> kann trotzdem per Direkt-RPC
+            funktionieren — neue Nachrichten erscheinen oft sofort nach dem Senden.{' '}
+            <strong className="font-semibold">Telegram</strong> und Team-Sync brauchen die erreichbare Basis.
+            Funk (LoRa) läuft parallel weiter.
           </p>
         </div>
       </div>

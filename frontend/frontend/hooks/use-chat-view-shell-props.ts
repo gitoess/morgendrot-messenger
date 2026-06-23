@@ -49,9 +49,7 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
 
   const sendPathProps: ChatViewSendPathCompactProps = useMemo(
     () => ({
-      visible:
-        shellRouting.channelMode !== 'notes' &&
-        (shellRouting.isPrivate || shellRouting.isGroup || !sendTransportChoice.encrypted),
+      visible: shellRouting.channelMode !== 'notes',
       channelMode: shellRouting.channelMode,
       encrypted: sendTransportChoice.encrypted,
       forcedTransport: sendTransportChoice.forcedTransport,
@@ -61,28 +59,19 @@ export function useChatViewShellProps(deps: ChatViewShellPropsDeps) {
       composerDelivery: composerSendPath.composerDelivery,
       onComposerDeliveryChange: composerSendPath.onComposerDeliveryChange,
       apiStatus: connectionStatusRead.apiStatus,
-      role: shellRouting.role,
       onChannelModeChange: shellRouting.onChannelModeChange,
-      onRecipientChange: composerDraft.onRecipientChange,
-      contactDirectory: contactDirectoryRead.directory,
-      partnerOptions: inboxViewUi.inboxPartnerOptions,
-      pinnwandTabUnreadCount:
-        shellRouting.channelMode !== 'pinnwand' ? inboxViewUi.inboxOverviewUnreadCounts?.lagebild ?? 0 : 0,
     }),
     [
-      shellRouting.isPrivate,
-      shellRouting.isGroup,
-      shellRouting.role,
       shellRouting.channelMode,
       shellRouting.onChannelModeChange,
       deps.showAdhocTransport,
       connectionStatusRead.apiStatus,
-      composerSendPath,
-      sendTransportChoice,
-      composerDraft.onRecipientChange,
-      contactDirectoryRead.directory,
-      inboxViewUi.inboxPartnerOptions,
-      inboxViewUi.inboxOverviewUnreadCounts?.lagebild,
+      composerSendPath.composerDelivery,
+      composerSendPath.onComposerDeliveryChange,
+      sendTransportChoice.encrypted,
+      sendTransportChoice.forcedTransport,
+      sendTransportChoice.onForcedTransportChange,
+      sendTransportChoice.onEncryptedChange,
     ]
   )
 

@@ -37,6 +37,7 @@ Vor Feldtest oder Release: dieselbe Logik wie Handbuch-Sync, ohne Install-Prompt
 
 | Datum | build:pwa-icons | sync:handbook | frontend build | Bemerkung |
 |-------|-------------------|---------------|----------------|------------|
+| 2026-06-17 | ✓ | — | — | **§ C.0b / § H.36 P3 + B4b:** `npm run check:pwa-desk` (A+B) nach Team-Sync/Telegram-Gruppenalarm-Tranche; Handbuch **`TELEGRAM-INTEGRATION-EINRICHTUNG.md`** (Einladungslink, Einsatz-Alarmgruppe) direkt in `frontend/public/handbook/`; **`check:pwa-desk:full`** vor Release; **L1–L5** am Gerät. |
 | 2026-06-02 | ✓ | ✓ (19 Dateien) | ✓ | **§ H.2:** **`npm run check:pwa-desk:full`** (A+B+C) grün — Next **16.1.6**, 7 statische Routen; nach H.1a-Tranche. **L1–L5** am Gerät separat. |
 | 2026-06-02 | ✓ | ✓ (19 Dateien) | — | **§ H.2:** **`npm run check:pwa-desk`** (A+B) grün nach H.1a-Tranche; **C**/`full` vor Release/Feldtest; **L1–L5** am Gerät separat. |
 | 2026-03-28 | ✓ | ✓ (10 Dateien) | ✓ | **§ H.2** nach Fahrplan-Reihenfolge: **`npm run check:pwa-desk:full`** (A+B+C) grün; Tranche **Mailbox-Persistent** (**`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**), SOS H.3n-Vitest-Abgleich, **`prepareImageForLoRaRobust`**; **`src/shared/*`** relative Imports ohne **`.js`-Suffix** für Turbopack (**Next 16.1.6**). **L1–L5** am Gerät separat. |

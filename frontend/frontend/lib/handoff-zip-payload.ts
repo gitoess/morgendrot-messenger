@@ -3,6 +3,11 @@ import {
   type StandaloneSmartphoneHandoffZipBody,
 } from '@/frontend/lib/api/standalone-smartphone-handoff'
 import { buildHandoffZipBytes } from '@/frontend/lib/handoff-zip-build'
+import {
+  buildHandoffExtrasJson,
+  HANDOFF_EXTRAS_FILENAME,
+  type HandoffExtras,
+} from '@/frontend/lib/handoff-extras'
 
 export const HANDOFF_RUNTIME_CONFIG_FILENAME = '.morgendrot-runtime-config.json'
 import {
@@ -19,7 +24,7 @@ export type HandoffZipPayloadResult =
 /** Handoff-ZIP-Bytes für Download oder IOTA (immer via `format=parts`, Krypto im Browser). */
 export async function buildHandoffZipPayload(
   body: StandaloneSmartphoneHandoffZipBody,
-  options: { password?: string }
+  options: { password?: string; handoffExtras?: HandoffExtras }
 ): Promise<HandoffZipPayloadResult> {
   const parts = await fetchStandaloneSmartphoneHandoffParts(body)
   if (!parts.ok) return parts
@@ -45,6 +50,10 @@ export async function buildHandoffZipPayload(
   }
   if (parts.runtimeConfigContent?.trim()) {
     zipEntries[HANDOFF_RUNTIME_CONFIG_FILENAME] = parts.runtimeConfigContent
+  }
+  const extras = options.handoffExtras ?? parts.handoffExtras
+  if (extras?.telegramAlarmGroup?.inviteLink?.trim()) {
+    zipEntries[HANDOFF_EXTRAS_FILENAME] = buildHandoffExtrasJson(extras)
   }
   const zipBytes = buildHandoffZipBytes(zipEntries)
   return {

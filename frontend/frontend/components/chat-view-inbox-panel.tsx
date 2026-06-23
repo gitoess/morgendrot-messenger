@@ -5,7 +5,7 @@
  * Ergänzt `ChatViewInboxList` (Zeileninhalt) und `ChatViewInboxToolbar` (Aktionen) – die View orchestriert nur noch Daten.
  */
 
-import type { ComponentProps } from 'react'
+import { useEffect, type ComponentProps } from 'react'
 import { ChatViewInboxList } from '@/frontend/components/chat-view-inbox-list'
 import {
   ChatViewInboxPartnerStrip,
@@ -27,6 +27,9 @@ import type { HandshakeOfferSource } from '@/frontend/lib/handshake-offer-delete
 import { messageMatchesInboxSearch } from '@/frontend/lib/inbox-unified-search'
 import type { ChatInboxRow } from '@/frontend/features/inbox/chat-view-inbox-rows'
 import { ChatViewConversationMenu, type ChatViewConversationMenuProps } from '@/frontend/components/chat-view-conversation-menu'
+import { InboxTeamSyncSystemCards } from '@/frontend/components/inbox-team-sync-system-cards'
+import { InboxTelegramAlarmGroupJoinStrip } from '@/frontend/components/inbox-telegram-alarm-group-join-strip'
+import { syncJoinRequestsFromInboxMessages } from '@/frontend/lib/team-join-request-store'
 
 type InboxListRest = Omit<ComponentProps<typeof ChatViewInboxList>, keyof InboxFeedReadPort>
 type InboxToolbarRest = Omit<
@@ -222,6 +225,13 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
       })
     : [...inboxRows]
 
+  useEffect(() => {
+    const role = (apiStatus?.role || '').trim().toLowerCase()
+    if (role !== 'boss' && role !== 'kommandant') return
+    const boss = (myAddress || apiStatus?.myAddressFull || apiStatus?.myAddress || '').trim()
+    syncJoinRequestsFromInboxMessages(messages, boss)
+  }, [messages, myAddress, apiStatus?.role, apiStatus?.myAddress, apiStatus?.myAddressFull])
+
   return (
     <div className="rounded-xl border border-border bg-card">
       {conversationMenu ? <ChatViewConversationMenu {...conversationMenu} /> : null}
@@ -286,6 +296,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
           apiStatus={apiStatus}
         />
       ) : null}
+      <InboxTelegramAlarmGroupJoinStrip />
       <div className="max-h-[min(70vh,42rem)] overflow-y-auto">
         {onAcceptPendingHandshake ? (
           <ChatViewInboxHandshakeRequests
@@ -313,6 +324,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             onDelete={onDeleteOutgoingHandshake}
           />
         ) : null}
+        <InboxTeamSyncSystemCards messages={messages} />
         <ChatViewInboxList
           loadError={loadError}
           einsatzRpcHint={apiStatus?.rpcUrlLabel || apiStatus?.network}

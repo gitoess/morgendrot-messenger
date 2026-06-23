@@ -12,6 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-06-17** | Repo lokal (Windows), **§ H.36 P3 + B4b + § C.0b** | `morg-team-update-ping-v1`, Offline-Queue, `POST /api/integrations/telegram/group-alarm`, SOS-Fan-out, Handbuch `TELEGRAM-INTEGRATION-EINRICHTUNG.md`; **`npm run check:pwa-desk`** (A+B) | **OK (Code)** — Gerät **L1–L5** separat. |
 | **2026-06-16** | Repo lokal (Doku), **§ H.36 Team-Member-Update** | Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** (Wizard, Join-Request, Wire, Transport LAN+IOTA); Roadmap **§ H.36**; CHANGELOG / IDEEN-BACKLOG / README-Verweis | **OK (Spec)** — Code **P0** folgt. |
 | **2026-06-02** | Repo lokal (Windows), **§ H.33e Mainnet-Batch-Archiv** | `buildStorePlaintextMailboxBatchTransaction` (Core); `MORG_FORENSIC_MSG_V1` + Flow + UI-Panel; Doku `docs/EINSATZ-MAINNET-BATCH-ARCHIVE-SPEC.md`; Vitest forensic-batch (2) + core batch-txb (2) | **OK (Code)** — Feldtest: Direkt-RPC + Puls-Signer; Bilder hash-only. |
 | **2026-06-02** | Repo lokal (Windows), **§ H.33 Beweiskette Testnet→Mainnet** | `buildEinsatzManifestCanonicalMsgRef` (`computeCanonicalMsgRefV1`); Manifest-Einträge: `content_sha256_hex`, `source_tx_timestamp_ms`, `evidence_status`; `finalizeEinsatzManifestWithChainEvidence` + Inbox-Digest-Enrichment; Pfad-4 LUMA/CHROMA → Tangle-Inventar; Vitest einsatz-manifest-* (12) | **OK (Code)** — Explorer-Zeitstempel braucht RPC + `source_tx_digest`; reiner Funk ohne Spiegel: `mesh_only`. |

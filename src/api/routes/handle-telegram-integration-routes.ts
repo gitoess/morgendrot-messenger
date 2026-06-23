@@ -7,9 +7,11 @@ import {
     getTelegramIntegrationPublicAsync,
     saveTelegramIntegration,
     sendTelegramContactNotify,
+    sendTelegramEinsatzGroupHint,
     sendTelegramTestAlarm,
     sendTelegramTestNotify,
     type SaveTelegramIntegrationInput,
+    type TelegramEinsatzGroupEventType,
 } from '../../integrations/telegram-integration.js';
 import { resolveContactStorageKey } from '../../contact-labels.js';
 import { ingestTelegramInboundUpdate, normalizeTelegramInboundMode } from '../../integrations/telegram-inbound.js';
@@ -62,6 +64,10 @@ export async function handleTelegramIntegrationRoutes(
         if (data.inboundMode !== undefined) {
             input.inboundMode = normalizeTelegramInboundMode(data.inboundMode);
         }
+        if (typeof data.einsatzGroupChatId === 'string') input.einsatzGroupChatId = data.einsatzGroupChatId;
+        if (typeof data.einsatzGroupLabel === 'string') input.einsatzGroupLabel = data.einsatzGroupLabel;
+        if (typeof data.einsatzGroupInviteLink === 'string') input.einsatzGroupInviteLink = data.einsatzGroupInviteLink;
+        if (data.einsatzGroupAlarmEnabled != null) input.einsatzGroupAlarmEnabled = data.einsatzGroupAlarmEnabled === true;
         const result = saveTelegramIntegration(input);
         if (!result.ok) {
             sendJson(res, 400, { ok: false, error: result.error }, cors);
@@ -162,6 +168,40 @@ export async function handleTelegramIntegrationRoutes(
         const targetChatId = String(data.target_chat_id ?? data.targetChatId ?? '').trim();
         const result = await sendTelegramTestNotify(targetChatId);
         sendJson(res, result.ok ? 200 : 400, result, cors);
+        return true;
+    }
+
+    if (url === '/api/integrations/telegram/group-alarm' && req.method === 'POST') {
+        const data = await readJsonBody(req);
+        const rawType = String(data.eventType ?? data.event_type ?? 'boss_alarm').trim().toLowerCase();
+        const allowed: TelegramEinsatzGroupEventType[] = ['sos', 'team_update', 'boss_alarm', 'monitor'];
+        const eventType = (allowed.includes(rawType as TelegramEinsatzGroupEventType)
+            ? rawType
+            : 'boss_alarm') as TelegramEinsatzGroupEventType;
+        const seqRaw = data.seq ?? data.tgSeq;
+        const seq = seqRaw != null && Number.isFinite(Number(seqRaw)) ? Number(seqRaw) : undefined;
+        const bossShort = typeof data.bossShort === 'string' ? data.bossShort : undefined;
+        const deviceLabel = typeof data.deviceLabel === 'string' ? data.deviceLabel : undefined;
+        const teamLabel = typeof data.teamLabel === 'string' ? data.teamLabel : undefined;
+        const result = await sendTelegramEinsatzGroupHint({
+            eventType,
+            seq,
+            tgSeq: seq,
+            bossShort,
+            deviceLabel,
+            teamLabel,
+        });
+        sendJson(
+            res,
+            result.ok ? 200 : 400,
+            {
+                ok: result.ok,
+                delivered: result.delivered === true,
+                skipped: result.skipped,
+                error: result.error,
+            },
+            cors
+        );
         return true;
     }
 

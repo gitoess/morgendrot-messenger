@@ -17,6 +17,7 @@ import {
   type ContactPhonebookFormValues,
 } from '@/frontend/components/contact-phonebook-contact-dialog'
 import { ContactPhonebookQrDialog } from '@/frontend/components/contact-phonebook-qr-dialog'
+import { TelegramAlarmGroupPhonebookBanner } from '@/frontend/components/telegram-alarm-group-phonebook-banner'
 import {
   maskWalletAddress,
   PHONEBOOK_FILTER_LABELS,
@@ -269,40 +270,11 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
 
   return (
     <div className="space-y-4">
-      {showMailboxes && p.onOpenSettings ? (
-        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
-          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
-          <p className="text-[11px] text-muted-foreground mb-2">
-            Server-Shared, Team und Private Mailboxen verwaltest du unter Einstellungen.
-          </p>
-          <button
-            type="button"
-            onClick={p.onOpenSettings}
-            className="text-xs font-medium text-primary underline hover:no-underline"
-          >
-            Einstellungen → Meine Mailboxen
-          </button>
-        </div>
-      ) : null}
-
-      <PhonebookMeshBackupPanel onContactsChanged={refreshContactDirectory} className="mb-3" />
-
-      {p.allowInitialProfileImport ? (
-        <PhonebookContactDistributePanel
-          directory={directory}
-          onContactsChanged={refreshContactDirectory}
-        />
-      ) : null}
-
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {embedded ? (
-          <p className="text-xs leading-relaxed text-muted-foreground sm:max-w-[55%]">
-            Kontakte für Posteingang, Gruppe und Senden — deine Wallet-ID steht oben unter „Meine IOTA-Adresse“.
-          </p>
-        ) : (
+        {!embedded ? (
           <h2 className="text-2xl font-bold tracking-tight text-foreground">Telefonbuch</h2>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
+        ) : null}
+        <div className="flex flex-wrap items-center justify-end gap-2 sm:ml-auto">
           <button
             type="button"
             onClick={() => setDialog({ mode: 'create' })}
@@ -313,6 +285,8 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           </button>
         </div>
       </div>
+
+      <TelegramAlarmGroupPhonebookBanner />
 
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
@@ -386,6 +360,28 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           ) : null}
         </div>
       )}
+
+      {showMailboxes && p.onOpenSettings ? (
+        <div className="rounded-xl border border-violet-500/25 bg-violet-500/5 p-3">
+          <p className="text-sm font-semibold text-foreground mb-1">Meine Mailboxen</p>
+          <button
+            type="button"
+            onClick={p.onOpenSettings}
+            className="text-xs font-medium text-primary underline hover:no-underline"
+          >
+            Einstellungen → Meine Mailboxen
+          </button>
+        </div>
+      ) : null}
+
+      {p.allowInitialProfileImport ? (
+        <PhonebookContactDistributePanel
+          directory={directory}
+          onContactsChanged={refreshContactDirectory}
+        />
+      ) : null}
+
+      <PhonebookMeshBackupPanel directory={directory} onContactsChanged={refreshContactDirectory} />
 
       <ContactPhonebookContactDialog
         open={dialog != null}

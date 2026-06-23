@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import Link from 'next/link'
 import { FileJson, FileUp } from 'lucide-react'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import {
@@ -96,16 +95,6 @@ export function PhonebookContactDistributePanel(p: PhonebookContactDistributePan
           }}
         />
       </div>
-      <p className="text-[11px] text-muted-foreground">
-        JSON-Formate:{' '}
-        <Link
-          href="/handbook?file=MESSENGER-CHAT-HANDBUCH.md#kontakte-import-und-export-json"
-          className="text-primary underline hover:no-underline"
-        >
-          Handbuch
-        </Link>
-        . Helfer-ZIP: Einsatzleitung → Export-Assistent.
-      </p>
       {msg ? (
         <p className="text-xs text-foreground" role="status">
           {msg}

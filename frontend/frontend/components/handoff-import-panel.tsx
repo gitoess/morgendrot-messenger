@@ -21,7 +21,7 @@ import {
 import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
 import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-preview'
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
-import { applyHandoffEnvToLocalDevice } from '@/frontend/lib/handoff-device-bootstrap'
+import { parseHandoffExtrasJson, saveHandoffExtras } from '@/frontend/lib/handoff-extras'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
@@ -128,10 +128,14 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     typeof window !== 'undefined' &&
     (!getApiBase().trim() || isStandaloneMessengerWithoutBasis())
 
-  const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string) => {
+  const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string, extrasJson?: string) => {
     setStage('previewing')
     setEnvText(text)
     setRuntimeConfigText(runtimeJson?.trim() || null)
+    if (extrasJson?.trim()) {
+      const parsed = parseHandoffExtrasJson(extrasJson)
+      if (parsed) saveHandoffExtras(parsed)
+    }
     persistDraft(text, runtimeJson)
     setFileLabel(label)
     const local = previewHandoffEnvImportLocal(text, null)
@@ -196,7 +200,8 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       await applyExtractedEnv(
         extracted.envText,
         `${label} → ${extracted.envFileName}${extracted.encrypted ? ' (entschlüsselt)' : ''}`,
-        extracted.runtimeConfigText
+        extracted.runtimeConfigText,
+        extracted.extrasText
       )
     },
     [applyExtractedEnv]

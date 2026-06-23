@@ -40,6 +40,9 @@ import { HelperSeedSetupDialog } from '@/frontend/components/helper-seed-setup-d
 import { StandaloneHandoffActivateCard } from '@/frontend/components/standalone-handoff-activate-card'
 import { StandaloneFirstStartCard } from '@/frontend/components/standalone-first-start-card'
 import { StandaloneSoloWizardCard } from '@/frontend/components/standalone-solo-wizard-card'
+import { OnboardingResumeCard } from '@/frontend/components/onboarding/onboarding-resume-card'
+import { OnboardingWizardHost } from '@/frontend/components/onboarding/onboarding-wizard-host'
+import { drainTeamSyncOfflineQueue } from '@/frontend/lib/team-sync-wire'
 import {
   getStandaloneHelperReadiness,
   HELPER_SEED_SETUP_REQUEST_EVENT,
@@ -129,6 +132,13 @@ function MessengerDashboardBody({
     }
   }, [])
 
+  useEffect(() => {
+    if (!s.backendReachable) return
+    const role = (s.role || '').trim().toLowerCase()
+    if (role !== 'boss') return
+    void drainTeamSyncOfflineQueue()
+  }, [s.backendReachable, s.role])
+
   return (
     <>
       <DashboardSharedDialogs
@@ -156,6 +166,13 @@ function MessengerDashboardBody({
           setHelperSeedSetupOpen(false)
           void s.checkStatus()
         }}
+      />
+      <OnboardingWizardHost
+        apiSnapshot={s.apiSnapshot}
+        onOpenSettings={s.openSettingsView}
+        onOpenEinsatzleitung={s.openEinsatzleitungView}
+        onActivateWallet={s.requestStandaloneWalletUnlock}
+        onOpenChat={() => s.openMessengerChatView()}
       />
       {s.activeView ? (
       <div className="min-h-screen bg-background">
@@ -423,6 +440,7 @@ function MessengerDashboardBody({
           </div>
         ) : null}
         <StandaloneFirstStartCard />
+        <OnboardingResumeCard apiSnapshot={s.apiSnapshot} />
         <StandaloneHandoffActivateCard
           onOpenHandoffImport={s.openSettingsView}
           onActivateWallet={s.requestStandaloneWalletUnlock}

@@ -101,7 +101,7 @@ describe('ChatViewInboxList reply action', () => {
         })}
       />
     )
-    expect(screen.getByText(/Offline — letzte Nachrichten/)).toBeInTheDocument()
+    expect(screen.getByText(/Morgendrot-Basis nicht erreichbar/)).toBeInTheDocument()
     expect(screen.getByText(/zuletzt per Direkt-RPC/)).toBeInTheDocument()
   })
 })

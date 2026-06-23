@@ -203,9 +203,6 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (!silent && mode === 'reset') {
         const cached = readInboxCache(cacheKey)
         if (cached) {
-          setInboxFromCache(true)
-          setInboxCacheAgeMinutes(cached.cacheAgeMinutes)
-          setInboxLiveSource(cached.liveSource ?? null)
           setMessages((prev) => {
             const next = mergeAllMessages([
               ...cached.messages,
@@ -306,6 +303,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
           setInboxFromCache(false)
           setInboxCacheAgeMinutes(null)
           setInboxLiveSource(liveSource)
+          setLoadError(null)
           applyMappedToState(page, mappedLength, res.hasMore === true)
           const chainHasMore = res.hasMore === true
           if (!silent && chainHasMore) {

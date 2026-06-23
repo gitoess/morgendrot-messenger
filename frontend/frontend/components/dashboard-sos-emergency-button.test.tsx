@@ -23,15 +23,16 @@ describe('dashboard-sos-pending', () => {
 describe('DashboardSosEmergencyButton', () => {
   beforeEach(() => {
     sessionStorage.clear()
-    vi.spyOn(window, 'prompt').mockReturnValue('Brand im Gebäude')
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
   })
 
-  it('speichert Text und öffnet Nachrichten', () => {
+  it('speichert Text aus SOS-Sheet und öffnet Nachrichten', () => {
     const onOpenMessages = vi.fn()
     render(<DashboardSosEmergencyButton onOpenMessages={onOpenMessages} />)
     fireEvent.click(screen.getByRole('button', { name: /SOS — Hilferuf/i }))
+    const textarea = screen.getByLabelText(/Was ist passiert/i)
+    fireEvent.change(textarea, { target: { value: 'Brand im Gebäude' } })
+    fireEvent.click(screen.getByRole('button', { name: /^SOS senden$/i }))
     expect(onOpenMessages).toHaveBeenCalledTimes(1)
-    expect(consumeDashboardSosPending()).toBe('Brand im Gebäude')
+    expect(consumeDashboardSosPending()).toContain('Brand im Gebäude')
   })
 })

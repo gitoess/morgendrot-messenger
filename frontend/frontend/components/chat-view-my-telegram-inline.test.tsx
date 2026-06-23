@@ -1,64 +1,41 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { ChatViewMyTelegramInline } from '@/frontend/components/chat-view-my-telegram-inline'
 
 vi.mock('@/frontend/lib/api/telegram-integrations', () => ({
-  fetchTelegramIntegration: vi.fn(),
+  fetchTelegramIntegration: vi.fn(async () => ({
+    ok: true,
+    enabled: true,
+    einsatzGroupInviteLink: '',
+    einsatzGroupLabel: '',
+    einsatzGroupChatId: '',
+    einsatzGroupAlarmEnabled: false,
+  })),
 }))
 
-import { fetchTelegramIntegration } from '@/frontend/lib/api/telegram-integrations'
+vi.mock('@/frontend/lib/handoff-extras', () => ({
+  readTelegramInviteFromHandoffExtras: () => 'https://t.me/+testjoin',
+  readTelegramLabelFromHandoffExtras: () => 'Team Alpha',
+}))
+
+vi.mock('@/frontend/lib/telegram-alarm-group-prefs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/frontend/lib/telegram-alarm-group-prefs')>()
+  return {
+    ...actual,
+    readTelegramAlarmGroupPending: () => null,
+    isTelegramAlarmGroupJoinInitiatedForLink: () => false,
+  }
+})
 
 describe('ChatViewMyTelegramInline', () => {
   beforeEach(() => {
-    vi.mocked(fetchTelegramIntegration).mockResolvedValue({
-      ok: true,
-      enabled: true,
-      botTokenConfigured: true,
-      botToken: '',
-      botTokenMasked: '',
-      botUserId: '123456789',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-      einsatzGroupChatId: '-100999',
-      einsatzGroupLabel: 'Team Alpha',
-      einsatzGroupInviteLink: 'https://t.me/+test',
-      einsatzGroupAlarmEnabled: true,
-    })
+    vi.clearAllMocks()
   })
 
-  it('zeigt eigene Chat-ID und Einsatz-Gruppe unter Ich', async () => {
-    render(<ChatViewMyTelegramInline myTelegramChatId="1156058618" variant="panel" />)
-    expect(await screen.findByText('Meine Telegram Chat-ID')).toBeInTheDocument()
-    expect(screen.getByText('1156058618')).toBeInTheDocument()
-    expect(screen.getByText('Boss-Bot-ID')).toBeInTheDocument()
-    expect(screen.getByText('123456789')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Alarmgruppe beitreten/i })).toBeInTheDocument()
-  })
-
-  it('blendet sich aus wenn keine Telegram-Daten', () => {
-    vi.mocked(fetchTelegramIntegration).mockResolvedValue({
-      ok: true,
-      enabled: false,
-      botTokenConfigured: false,
-      botToken: '',
-      botTokenMasked: '',
-      botUserId: '',
-      adminChatId: '',
-      relayBaseUrl: 'http://127.0.0.1:8787',
-      relayReachable: false,
-      monitorWebhookActive: false,
-      inboundMode: 'off',
-      inboundPollActive: false,
-      einsatzGroupChatId: '',
-      einsatzGroupLabel: '',
-      einsatzGroupInviteLink: '',
-      einsatzGroupAlarmEnabled: false,
+  it('zeigt Gruppe-beitreten aus Handoff auch ohne API-Link', async () => {
+    render(<ChatViewMyTelegramInline myTelegramChatId="12345" variant="panel" />)
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Gruppe beitreten/i })).toBeInTheDocument()
     })
-    const { container } = render(<ChatViewMyTelegramInline variant="panel" />)
-    expect(container).toBeEmptyDOMElement()
   })
 })

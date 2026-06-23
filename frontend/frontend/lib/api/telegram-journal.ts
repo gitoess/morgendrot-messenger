@@ -1,6 +1,6 @@
 import { fetchApiText, formatFetchFailureMessage } from '@/frontend/lib/api-fetch-text'
 import { parseOkEnvelopePassthrough } from '@/frontend/lib/api-simple-ok-envelope'
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
 
 export type TelegramJournalEntryClient = {
   id: string
@@ -23,7 +23,7 @@ export async function fetchTelegramJournal(opts?: {
     if (opts?.chatId?.trim()) q.set('chatId', opts.chatId.trim())
     if (opts?.limit != null) q.set('limit', String(opts.limit))
     const path = `/api/integrations/telegram/journal${q.toString() ? `?${q}` : ''}`
-    const fr = await fetchApiText(API_BASE, path)
+    const fr = await fetchApiText(getApiBase(), path)
     if (!fr.ok) return { ok: false, error: fr.error }
     const r = parseOkEnvelopePassthrough(fr.text, { falseOkFallback: 'Telegram-Journal nicht lesbar.' })
     if (!r.ok) return { ok: false, error: r.error }

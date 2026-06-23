@@ -51,6 +51,14 @@ export function pinnwandChannelTabLabel(
   role: string | null | undefined,
   status: ApiStatus | null | undefined
 ): string {
-  if (shouldMaskPinnwandSender(role, status)) return 'Pinnwand'
+  return pinnwandSidebarLabel(role, status)
+}
+
+/** Sidebar-Zeile: Helfer/Simple „Lagebild“, Führung „Pinnwand“. */
+export function pinnwandSidebarLabel(
+  role: string | null | undefined,
+  status: ApiStatus | null | undefined
+): string {
+  if (shouldMaskPinnwandSender(role, status) || isSimpleUiMode(status)) return 'Lagebild'
   return 'Pinnwand'
 }

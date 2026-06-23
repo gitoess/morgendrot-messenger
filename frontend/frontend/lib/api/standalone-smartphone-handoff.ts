@@ -1,4 +1,5 @@
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import type { HandoffExtras } from '@/frontend/lib/handoff-extras'
 import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 export type StandaloneHandoffPackageSource = 'boss' | 'custom' | 'history'
@@ -48,6 +49,8 @@ export type StandaloneSmartphoneHandoffPartsOk = {
   envContent: string
   /** `.morgendrot-runtime-config.json` — messengerCapabilities (öffentlich). */
   runtimeConfigContent?: string
+  /** B4b.2 — optionale Telegram-Alarmgruppe */
+  handoffExtras?: HandoffExtras
   readme: string
   handoffLabel?: string
   createdAtIso: string
@@ -82,6 +85,10 @@ export async function fetchStandaloneSmartphoneHandoffParts(
       ok: true,
       envContent: j.envContent,
       runtimeConfigContent: typeof j.runtimeConfigContent === 'string' ? j.runtimeConfigContent : undefined,
+      handoffExtras:
+        j.handoffExtras && typeof j.handoffExtras === 'object' && !Array.isArray(j.handoffExtras)
+          ? (j.handoffExtras as HandoffExtras)
+          : undefined,
       readme: j.readme ?? '',
       handoffLabel: j.handoffLabel,
       createdAtIso: j.createdAtIso || new Date().toISOString(),

@@ -1,12 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Download, QrCode, Upload } from 'lucide-react'
 import { toast } from 'sonner'
 import { exportContactMeshEncrypted, importContactMeshEncrypted } from '@/frontend/lib/api'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { parseMeshBundleFromQrText } from '@/frontend/lib/mesh-qr'
 import { useMeshQrCameraScan } from '@/frontend/hooks/use-mesh-qr-camera-scan'
 import { MessengerHandbookChatLink, MESSENGER_HB_ANCHOR_FUNK_KONTEXT } from '@/components/messenger-handbook-link'
+import {
+  countMeshExportCandidates,
+  meshExportSummaryLine,
+} from '@/frontend/lib/contact-mesh-export-stats'
 import {
   Dialog,
   DialogContent,
@@ -15,11 +20,15 @@ import {
 } from '@/components/ui/dialog'
 
 export type PhonebookMeshBackupPanelProps = {
+  directory: Record<string, ContactMeshEntryClient>
   onContactsChanged: () => void
   className?: string
 }
 
-/** Verschlüsseltes Mesh-Telefonbuch (0x ↔ Node-ID) — für alle Rollen im Telefonbuch. */
+/**
+ * Passwortgeschützter Export der Funk-Zuordnungen (0x ↔ Meshtastic Node-ID) — für Gerätewechsel.
+ * Gehört fachlich zum Telefonbuch, aber selten genutzt → eingeklappt am Ende der Liste.
+ */
 export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
   const [exportOpen, setExportOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
@@ -28,9 +37,17 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
   const [importJson, setImportJson] = useState('')
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState('')
-  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Mesh-Backup-QR scannen' })
+  const { startScan, cameraDialog } = useMeshQrCameraScan({ title: 'Funk-Backup-QR scannen' })
+
+  const exportStats = useMemo(() => countMeshExportCandidates(p.directory), [p.directory])
+  const exportSummary = useMemo(() => meshExportSummaryLine(exportStats), [exportStats])
+  const canExport = exportStats.withMeshData > 0
 
   const runExport = async () => {
+    if (!canExport) {
+      setStatus('Keine Funk-Daten im Telefonbuch.')
+      return
+    }
     if (exportPw.length < 8) {
       setStatus('Passwort min. 8 Zeichen.')
       return
@@ -44,9 +61,11 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
         setImportJson(json)
         try {
           await navigator.clipboard.writeText(json)
-          toast.success('Mesh-Backup in Zwischenablage — zum Import auf anderem Gerät einfügen.')
+          toast.success(
+            `Funk-Backup (${exportStats.withMeshData} Kontakt(e)) in Zwischenablage — auf anderem Gerät importieren.`
+          )
         } catch {
-          toast.success('Mesh-Backup erzeugt — JSON unten im Import-Dialog.')
+          toast.success('Funk-Backup erzeugt — JSON unten im Import-Dialog.')
         }
         setExportOpen(false)
         setImportOpen(true)
@@ -88,12 +107,18 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
   }
 
   return (
-    <div className={p.className}>
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/80 bg-muted/15 px-3 py-2">
-        <span className="text-xs font-medium text-foreground">Mesh-Backup (Node-ID)</span>
+    <details className={p.className}>
+      <summary className="cursor-pointer list-none rounded-xl border border-border/80 bg-muted/15 px-3 py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/25 [&::-webkit-details-marker]:hidden">
+        <span className="text-foreground">Funk · Node-IDs sichern</span>
+        <span className="ml-2 text-[10px] font-normal">(Export / Import)</span>
+      </summary>
+      <div className="mt-2 space-y-2 rounded-xl border border-border/60 bg-muted/10 px-3 py-2">
+        <p className="text-[11px] leading-snug text-muted-foreground">{exportSummary}</p>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
+            disabled={!canExport}
+            title={canExport ? undefined : 'Zuerst Meshtastic Node-IDs bei Kontakten eintragen'}
             onClick={() => {
               setExportOpen(true)
               setStatus('')
@@ -121,8 +146,9 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
       <Dialog open={exportOpen} onOpenChange={setExportOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Mesh-Backup exportieren</DialogTitle>
+            <DialogTitle>Funk-Backup exportieren</DialogTitle>
           </DialogHeader>
+          <p className="text-xs text-muted-foreground">{exportSummary}</p>
           <input
             type="password"
             autoComplete="new-password"
@@ -134,7 +160,7 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
           {status ? <p className="text-xs text-destructive">{status}</p> : null}
           <button
             type="button"
-            disabled={busy || exportPw.length < 8}
+            disabled={busy || exportPw.length < 8 || !canExport}
             onClick={() => void runExport()}
             className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
           >
@@ -146,7 +172,7 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Mesh-Backup importieren</DialogTitle>
+            <DialogTitle>Funk-Backup importieren</DialogTitle>
           </DialogHeader>
           <input
             type="password"
@@ -197,6 +223,6 @@ export function PhonebookMeshBackupPanel(p: PhonebookMeshBackupPanelProps) {
         </DialogContent>
       </Dialog>
       {cameraDialog}
-    </div>
+    </details>
   )
 }

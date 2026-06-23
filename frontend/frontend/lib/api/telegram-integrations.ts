@@ -96,6 +96,10 @@ export async function saveTelegramIntegration(body: {
   adminChatId?: string
   relayBaseUrl?: string
   inboundMode?: TelegramInboundMode
+  einsatzGroupChatId?: string
+  einsatzGroupLabel?: string
+  einsatzGroupInviteLink?: string
+  einsatzGroupAlarmEnabled?: boolean
 }): Promise<TelegramIntegrationPublic & { ok: boolean; error?: string }> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/integrations/telegram', {
@@ -129,6 +133,43 @@ export async function testTelegramAlarm(): Promise<{ ok: boolean; message?: stri
     }
     if (!body.ok) return { ok: false, error: body.error || 'Test fehlgeschlagen' }
     return { ok: true, message: body.message }
+  } catch (e) {
+    return { ok: false, error: formatFetchFailureMessage(e) }
+  }
+}
+
+export type TelegramGroupAlarmEventType = 'sos' | 'team_update' | 'boss_alarm' | 'monitor'
+
+export async function postTelegramGroupAlarm(body: {
+  eventType: TelegramGroupAlarmEventType
+  seq?: number
+  tgSeq?: number
+  bossShort?: string
+  deviceLabel?: string
+  teamLabel?: string
+}): Promise<{ ok: boolean; delivered?: boolean; skipped?: string; error?: string }> {
+  try {
+    const fr = await fetchApiText(API_BASE, '/api/integrations/telegram/group-alarm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (!fr.ok) return { ok: false, error: fr.error }
+    let parsed: { ok?: boolean; delivered?: boolean; skipped?: string; error?: string }
+    try {
+      parsed = JSON.parse(fr.text) as typeof parsed
+    } catch {
+      return { ok: false, error: 'Antwort ist kein JSON.' }
+    }
+    if (fr.response.status < 200 || fr.response.status >= 300) {
+      return { ok: false, error: parsed.error || `HTTP ${fr.response.status}` }
+    }
+    return {
+      ok: parsed.ok !== false,
+      delivered: parsed.delivered === true,
+      skipped: parsed.skipped,
+      error: parsed.error,
+    }
   } catch (e) {
     return { ok: false, error: formatFetchFailureMessage(e) }
   }

@@ -11,8 +11,7 @@ import { cn } from '@/lib/utils'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { isMessengerSessionKeysReady } from '@/frontend/lib/messenger-session-keys-ready'
 import type { ReactNode } from 'react'
-import type { MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
-import { pinnwandChannelTabLabel } from '@/frontend/lib/pinnwand-display'
+import { type MessengerChatChannel } from '@/frontend/lib/messenger-chat-channel'
 import {
   MessengerHandbookChatLink,
   MESSENGER_HB_ANCHOR_GRUPPENCHAT,
@@ -46,6 +45,9 @@ export type ChatViewChatHeaderProps = {
   vaultBannerActions?: ChatViewVaultBannerActions
   channelMode?: MessengerChatChannel
   onChannelModeChange?: (c: MessengerChatChannel) => void
+  /** Kontext aus Sidebar-Auswahl — ersetzt generischen Modus-Titel. */
+  conversationTitle?: string | null
+  conversationSubtitle?: string | null
   afterPulse?: ReactNode
   offlineStatus?: OfflineStatusSnapshot
   pinnwandTabUnreadCount?: number
@@ -194,16 +196,21 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
     basisUnreachable = false,
     statusPollAttempted = true,
     offlineStatus,
+    conversationTitle,
+    conversationSubtitle,
   } = p
 
   const channelTitle =
-    channelMode === 'group'
-      ? 'Gruppenchat'
+    conversationTitle?.trim() ||
+    (channelMode === 'notes'
+      ? 'Notizen'
       : channelMode === 'pinnwand'
-        ? pinnwandChannelTabLabel(p.role, apiStatus)
-        : channelMode === 'notes'
-          ? 'Notizen'
-          : '1:1 Privat'
+        ? 'Pinnwand'
+        : 'Chats')
+
+  const channelSubtitle = conversationSubtitle?.trim() || null
+  const showHandbook = channelMode !== 'notes'
+  const showTreasuryBadge = isPrivate && Boolean(apiStatus) && channelMode !== 'pinnwand'
 
   const queuePending = offlineStatus?.queuePending ?? 0
   const showQueueOnlyBanner =
@@ -234,11 +241,14 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                     <ChatNetworkBadge />
                     <ActiveProfileBadge status={apiStatus} compact />
                   </div>
+                  {channelSubtitle ? (
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{channelSubtitle}</p>
+                  ) : null}
                 </div>
               </div>
-              {(isPrivate || onOpenSettings) ? (
+              {(showHandbook || onOpenSettings) ? (
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  {isPrivate ? <MessengerHandbookLink /> : null}
+                  {showHandbook ? <MessengerHandbookLink /> : null}
                   {onOpenSettings ? (
                     <HeaderToolbarButton
                       label="Einstellungen"
@@ -246,7 +256,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       onClick={onOpenSettings}
                     />
                   ) : null}
-                  {isPrivate && apiStatus ? (
+                  {showTreasuryBadge ? (
                     <TresorSessionBadge
                       sessionLocked={!!apiStatus.locked}
                       hasKeys={isMessengerSessionKeysReady(apiStatus)}

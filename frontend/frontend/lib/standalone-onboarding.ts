@@ -18,6 +18,10 @@ import { setDirectChainOptimisticFlagsEnabled } from '@/frontend/lib/direct-iota
 import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
+import {
+  requestOpenOnboardingWizard,
+  startOnboarding,
+} from '@/frontend/lib/onboarding-progress-store'
 
 export type StandaloneOnboardingPath = 'einsatz' | 'solo'
 
@@ -97,14 +101,18 @@ function applyStandaloneDirectIotaDefaults(): void {
 /** Privat/Solo: Consumer-Profil lokal anlegen und Wallet-Dialog öffnen. */
 export function beginStandaloneSoloOnboarding(): void {
   setStandaloneOnboardingPath('solo')
+  startOnboarding('wanderer')
   const snapshot = buildStandaloneSoloProfileSnapshot()
   saveLocalHandoffAppliedSnapshot(snapshot)
   applyStandaloneDirectIotaDefaults()
   syncLocalHandoffSnapshotToChainContext(snapshot)
   requestStandaloneSoloWalletSetup()
+  requestOpenOnboardingWizard()
 }
 
 /** Einsatz: nur Pfad merken — Handoff-ZIP folgt separat. */
 export function beginStandaloneEinsatzOnboarding(): void {
   setStandaloneOnboardingPath('einsatz')
+  startOnboarding('helper')
+  requestOpenOnboardingWizard()
 }

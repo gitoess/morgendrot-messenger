@@ -291,6 +291,10 @@ export type SaveTelegramIntegrationInput = {
     adminChatId?: string;
     relayBaseUrl?: string;
     inboundMode?: TelegramInboundMode;
+    einsatzGroupChatId?: string;
+    einsatzGroupLabel?: string;
+    einsatzGroupInviteLink?: string;
+    einsatzGroupAlarmEnabled?: boolean;
 };
 
 export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
@@ -346,6 +350,31 @@ export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
         }
     }
 
+    const prevTgRaw = integrationsTelegramRaw(readRuntimeConfigRaw()) || {};
+    const einsatzGroupChatIdIn =
+        input.einsatzGroupChatId !== undefined
+            ? String(input.einsatzGroupChatId).trim()
+            : String(prevTgRaw.einsatzGroupChatId ?? '').trim();
+    const einsatzGroupLabelIn =
+        input.einsatzGroupLabel !== undefined
+            ? String(input.einsatzGroupLabel).trim()
+            : String(prevTgRaw.einsatzGroupLabel ?? '').trim();
+    const einsatzGroupInviteLinkIn =
+        input.einsatzGroupInviteLink !== undefined
+            ? String(input.einsatzGroupInviteLink).trim()
+            : String(prevTgRaw.einsatzGroupInviteLink ?? '').trim();
+    const einsatzGroupAlarmEnabled =
+        input.einsatzGroupAlarmEnabled !== undefined
+            ? input.einsatzGroupAlarmEnabled === true
+            : prevTgRaw.einsatzGroupAlarmEnabled === true;
+
+    if (einsatzGroupInviteLinkIn && !/^https:\/\/t\.me\//i.test(einsatzGroupInviteLinkIn)) {
+        return { ok: false, error: 'Einladungslink muss mit https://t.me/ beginnen.' };
+    }
+    if (einsatzGroupChatIdIn && !isValidTelegramChatId(einsatzGroupChatIdIn)) {
+        return { ok: false, error: 'Gruppen-Chat-ID ungültig (numerisch, ggf. führendes Minus).' };
+    }
+
     const merged = { ...readRuntimeConfigRaw() };
     const integrations =
         merged.integrations && typeof merged.integrations === 'object' && !Array.isArray(merged.integrations)
@@ -359,6 +388,10 @@ export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
         enabled,
         relayBaseUrl,
         inboundMode,
+        einsatzGroupChatId: einsatzGroupChatIdIn,
+        einsatzGroupLabel: einsatzGroupLabelIn,
+        einsatzGroupInviteLink: einsatzGroupInviteLinkIn,
+        einsatzGroupAlarmEnabled,
         ...(botToken ? { botToken } : {}),
         ...(adminChatId ? { adminChatId } : {}),
         ...(relaySecret ? { relaySecret } : {}),
@@ -370,6 +403,18 @@ export function saveTelegramIntegration(input: SaveTelegramIntegrationInput): {
 
     applyTelegramIntegrationToMonitorWebhook();
     return { ok: true, public: getTelegramIntegrationPublic() };
+}
+
+/** Handoff-Extras für `.morgendrot-handoff-extras.json` (B4b.2). */
+export function buildHandoffExtrasFromTelegramConfig(): Record<string, unknown> | null {
+    const pub = getTelegramIntegrationPublic();
+    if (!pub.einsatzGroupAlarmEnabled || !pub.einsatzGroupInviteLink.trim()) return null;
+    const group: Record<string, string> = {
+        inviteLink: pub.einsatzGroupInviteLink.trim(),
+    };
+    if (pub.einsatzGroupLabel.trim()) group.label = pub.einsatzGroupLabel.trim();
+    if (pub.einsatzGroupChatId.trim()) group.chatId = pub.einsatzGroupChatId.trim();
+    return { telegramAlarmGroup: group };
 }
 
 export async function sendTelegramTestAlarm(): Promise<{ ok: boolean; error?: string; message?: string }> {
@@ -538,6 +583,80 @@ export async function sendTelegramContactNotify(
         hint += ' — Empfänger muss den Bot starten; Chat-ID prüfen.';
     }
     return { ok: false, error: hint };
+}
+
+export type TelegramEinsatzGroupEventType = 'sos' | 'team_update' | 'boss_alarm' | 'monitor';
+
+export type TelegramEinsatzGroupHintInput = {
+    eventType: TelegramEinsatzGroupEventType;
+    seq?: number;
+    tgSeq?: number;
+    deviceLabel?: string;
+    bossShort?: string;
+    teamLabel?: string;
+};
+
+function readEinsatzGroupRuntimeFields(): {
+    chatId: string;
+    label: string;
+    enabled: boolean;
+} {
+    const tg = integrationsTelegramRaw(readRuntimeConfigRaw());
+    return {
+        chatId: String(tg?.einsatzGroupChatId ?? '').trim(),
+        label: String(tg?.einsatzGroupLabel ?? '').trim(),
+        enabled: tg?.einsatzGroupAlarmEnabled === true,
+    };
+}
+
+export function formatTelegramEinsatzGroupHintText(input: TelegramEinsatzGroupHintInput): string {
+    const teamLabel = (input.teamLabel || 'Einsatz-Team').trim().slice(0, 48) || 'Einsatz-Team';
+    const bossShort = (input.bossShort || 'Einsatzleitung').trim().slice(0, 24) || 'Einsatzleitung';
+    const device = (input.deviceLabel || 'Gerät').trim().slice(0, 48) || 'Gerät';
+    switch (input.eventType) {
+        case 'sos':
+            return `${teamLabel}: Hilferuf (${bossShort}). Details in Morgendrot öffnen — nicht 112.`;
+        case 'team_update':
+            return `${teamLabel}: Team-Update #${input.seq ?? '?'}. Bitte in Morgendrot bestätigen.`;
+        case 'boss_alarm':
+            return `${teamLabel}: Wichtiger Hinweis von Einsatzleitung. Morgendrot prüfen.`;
+        case 'monitor':
+            return `${teamLabel}: Systemalarm — ${device}. Morgendrot/Monitor prüfen.`;
+        default:
+            return `${teamLabel}: Morgendrot prüfen.`;
+    }
+}
+
+export type TelegramEinsatzGroupHintResult = {
+    ok: boolean;
+    delivered?: boolean;
+    skipped?: string;
+    error?: string;
+};
+
+/** B4b — Kurz-Hinweis an Einsatz-Alarmgruppe (§6.5 Templates, kein Mnemonic/Link). */
+export async function sendTelegramEinsatzGroupHint(
+    input: TelegramEinsatzGroupHintInput
+): Promise<TelegramEinsatzGroupHintResult> {
+    const cfg = readTelegramIntegrationConfig();
+    const group = readEinsatzGroupRuntimeFields();
+    if (!group.enabled) {
+        return { ok: true, skipped: 'Einsatz-Alarmgruppe ist deaktiviert.' };
+    }
+    if (!cfg?.botToken) {
+        return { ok: true, skipped: 'Telegram-Bot nicht konfiguriert.' };
+    }
+    const chatId = group.chatId;
+    if (!chatId || !isValidTelegramChatId(chatId)) {
+        return { ok: true, skipped: 'Gruppen-Chat-ID fehlt oder ungültig (Einstellungen → Telegram).' };
+    }
+    const teamLabel = (input.teamLabel || group.label || 'Einsatz-Team').trim();
+    const text = formatTelegramEinsatzGroupHintText({ ...input, teamLabel }).slice(0, 280);
+    const direct = await sendTelegramMessage(cfg.botToken, chatId, text);
+    if (direct.ok) {
+        return { ok: true, delivered: true };
+    }
+    return { ok: false, error: direct.error || 'Gruppen-Hinweis fehlgeschlagen' };
 }
 
 export async function sendTelegramTestNotify(targetChatId: string): Promise<{

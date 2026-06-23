@@ -57,7 +57,7 @@ export function sendPathDisabledReason(
     case 'adhoc':
       return 'Ad-hoc nur im Kanal 1:1.'
     case 'telegram':
-      return 'Telegram nur im Kanal 1:1 (Gruppen-Alarm: Roadmap).'
+      return 'Telegram nur im Kanal 1:1 (Alarmgruppe unter „Alle“).'
     case 'mesh':
       return channel === 'pinnwand'
         ? 'Funk „An alle“ nur im Kanal 1:1 (Klartext). Pinnwand = Online (IOTA).'

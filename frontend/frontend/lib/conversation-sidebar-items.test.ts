@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { buildConversationSidebarContacts } from '@/frontend/lib/conversation-sidebar-items'
+import {
+  buildConversationSidebarContacts,
+  buildConversationSidebarPinnwand,
+  buildConversationSidebarTelegramAlarm,
+} from '@/frontend/lib/conversation-sidebar-items'
 import { ZERO_IOTA_ADDRESS } from '@/frontend/lib/contact-storage-key'
 
 const alice = '0x' + '2'.repeat(64)
@@ -41,5 +45,32 @@ describe('buildConversationSidebarContacts', () => {
       hidden: new Set(),
     })
     expect(items.map((i) => i.address)).toEqual([alice])
+  })
+})
+
+describe('buildConversationSidebarPinnwand', () => {
+  it('liefert Kanal-Eintrag mit Unread', () => {
+    const item = buildConversationSidebarPinnwand({ label: 'Lagebild', unreadCount: 2 })
+    expect(item.kind).toBe('pinnwand')
+    expect(item.displayName).toBe('Lagebild')
+    expect(item.unreadCount).toBe(2)
+  })
+})
+
+describe('buildConversationSidebarTelegramAlarm', () => {
+  it('liefert Eintrag bei gespeicherter Mitgliedschaft', () => {
+    const item = buildConversationSidebarTelegramAlarm({
+      inviteLink: 'https://t.me/+abc',
+      label: 'Einsatz TG',
+      groupChatId: '-100123',
+      confirmedAtMs: 1,
+    })
+    expect(item?.kind).toBe('telegram-alarm')
+    expect(item?.displayName).toBe('Einsatz TG')
+    expect(item?.subtitle).toContain('beigetreten')
+  })
+
+  it('liefert null ohne Einladungslink', () => {
+    expect(buildConversationSidebarTelegramAlarm(null)).toBeNull()
   })
 })

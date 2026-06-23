@@ -8,6 +8,7 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { EinsatzChainModeBanner } from '@/frontend/components/einsatz-chain-mode-banner'
+import { EinsatzleitungJoinRequestsPanel } from '@/frontend/components/einsatzleitung-join-requests-panel'
 
 export type EinsatzleitungViewProps = {
   apiSnapshot?: ApiStatus | null
@@ -27,6 +28,7 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
 
       {isBoss ? (
         <>
+          <EinsatzleitungJoinRequestsPanel apiStatus={p.apiSnapshot ?? null} />
           <LazyBossHelferEinrichtenPanel
             apiStatus={p.apiSnapshot ?? null}
             contactDirectory={p.contactDirectory}

@@ -1,6 +1,7 @@
 /**
  * Eingehende Telegram-Nachrichten (§ H.26 B2): Webhook-Payload oder getUpdates (Long Polling).
  */
+import { readRuntimeConfigRaw } from '../config.js';
 import { loadContactDirectory } from '../contact-labels.js';
 import { logger } from '../logger.js';
 import {
@@ -31,6 +32,20 @@ export function normalizeTelegramInboundMode(raw: unknown): TelegramInboundMode 
 }
 
 /** Chat-IDs aus Telefonbuch (telegramChatId + tg:-Schlüssel). */
+/** Konfigurierte Einsatz-Alarmgruppe (B4b) — Eingang ohne Telefonbuch-Eintrag. */
+export function readEinsatzGroupInboundChatId(): string | null {
+    try {
+        const integrations = readRuntimeConfigRaw()?.integrations as Record<string, unknown> | undefined;
+        const tg = integrations?.telegram as Record<string, unknown> | undefined;
+        if (tg?.einsatzGroupAlarmEnabled !== true) return null;
+        const id = String(tg.einsatzGroupChatId ?? '').trim();
+        if (!id || !/^-?\d{1,20}$/.test(id)) return null;
+        return id;
+    } catch {
+        return null;
+    }
+}
+
 export function getPhonebookTelegramChatIds(): Set<string> {
     const set = new Set<string>();
     const dir = loadContactDirectory();
@@ -48,7 +63,9 @@ export function getPhonebookTelegramChatIds(): Set<string> {
 export function isInboundTelegramChatAllowed(chatId: string): boolean {
     const id = chatId.trim();
     if (!/^-?\d{1,20}$/.test(id)) return false;
-    return getPhonebookTelegramChatIds().has(id);
+    if (getPhonebookTelegramChatIds().has(id)) return true;
+    const einsatz = readEinsatzGroupInboundChatId();
+    return Boolean(einsatz && einsatz === id);
 }
 
 export function parseTelegramUpdateMessage(update: unknown): {

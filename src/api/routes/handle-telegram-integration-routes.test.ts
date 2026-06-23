@@ -52,4 +52,13 @@ describe('handleTelegramIntegrationRoutes', () => {
         expect(r.status).toBe(200);
         expect(r.json.ok).toBe(true);
     });
+
+    it('bearbeitet POST /api/integrations/telegram/group-alarm', async () => {
+        const r = await postJson('/api/integrations/telegram/group-alarm', {
+            eventType: 'boss_alarm',
+        });
+        expect(r.handled).toBe(true);
+        expect(r.status).toBe(200);
+        expect(r.json.ok).toBe(true);
+    });
 });

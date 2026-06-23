@@ -10,6 +10,7 @@ import {
   parseHandoffCryptoMetaJson,
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
+import { HANDOFF_EXTRAS_FILENAME, parseHandoffExtrasJson } from '@/frontend/lib/handoff-extras'
 
 const ENV_NAMES = [
   'morgendrot-standalone-handoff.env',
@@ -33,6 +34,7 @@ export type HandoffZipExtract =
       envText: string
       envFileName: string
       runtimeConfigText?: string
+      extrasText?: string
       readmeText?: string
       encrypted: boolean
     }
@@ -122,7 +124,11 @@ export function extractHandoffFromZipBytes(data: Uint8Array): HandoffZipExtract 
     p.toLowerCase().endsWith(HANDOFF_RUNTIME_CONFIG_FILENAME.toLowerCase())
   )
   const runtimeConfigText = runtimePath ? strFromU8(files[runtimePath]!) : undefined
-  return { ok: true, envText, envFileName: envEntry.name, runtimeConfigText, readmeText, encrypted: false }
+  const extrasPath = Object.keys(files).find((p) =>
+    p.toLowerCase().endsWith(HANDOFF_EXTRAS_FILENAME.toLowerCase())
+  )
+  const extrasText = extrasPath ? strFromU8(files[extrasPath]!) : undefined
+  return { ok: true, envText, envFileName: envEntry.name, runtimeConfigText, extrasText, readmeText, encrypted: false }
 }
 
 /** ZIP-Rohbytes → Klartext-.env (inkl. optional Passwort bei verschlüsseltem Paket). */

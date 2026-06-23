@@ -59,12 +59,13 @@ describe('TresorSessionBadge (§ H.1a)', () => {
 })
 
 describe('ChatViewChatHeader (§ H.1a)', () => {
-  it('zeigt Kanal-Titel und Sendepfad oben', () => {
+  it('zeigt Kontext-Titel und Sendepfad oben', () => {
     render(
       <ChatViewChatHeader
         {...baseHeader({
           channelMode: 'private',
-          onChannelModeChange: vi.fn(),
+          conversationTitle: 'Chat mit Max',
+          conversationSubtitle: '0xabc',
           sendPath: {
             visible: true,
             channelMode: 'private',
@@ -75,7 +76,8 @@ describe('ChatViewChatHeader (§ H.1a)', () => {
         })}
       />
     )
-    expect(screen.getByRole('heading', { name: /1:1 Privat/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Chat mit Max/i })).toBeInTheDocument()
+    expect(screen.getByText('0xabc')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Online/i })).toBeInTheDocument()
   })
 

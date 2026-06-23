@@ -1,15 +1,21 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { BookUser, User, Users } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { BookUser, Megaphone, MessageCircle, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
 import {
   buildConversationSidebarContacts,
   buildConversationSidebarGroups,
+  buildConversationSidebarPinnwand,
+  buildConversationSidebarTelegramAlarm,
   type ConversationSidebarItem,
 } from '@/frontend/lib/conversation-sidebar-items'
+import {
+  readTelegramAlarmGroupMembership,
+  TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT,
+} from '@/frontend/lib/telegram-alarm-group-prefs'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import {
   readContactFavorites,
@@ -37,12 +43,18 @@ export type ChatViewContactSidebarProps = {
   partnerOptions: readonly InboxPartnerOption[]
   activePartnerKey: string | null
   activeGroupId: string | null
+  activeTelegramAlarmSelected?: boolean
+  activePinnwandSelected?: boolean
+  pinnwandLabel?: string
+  pinnwandUnreadCount?: number
+  onSelectPinnwand?: () => void
   showAllActive: boolean
   onSelectAll: () => void
   onSelectSelf?: () => void
   activeSelfSelected?: boolean
   onSelectContact: (address: string) => void
   onSelectGroup: (groupId: string) => void
+  onSelectTelegramAlarmGroup?: () => void
   onOpenGroupSettings?: () => void
   onOpenContactDetail: (address: string, entry?: ContactMeshEntryClient) => void
   onOpenPhonebook?: () => void
@@ -104,9 +116,16 @@ function SidebarRow(p: {
 
 export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const [selfProfileOpen, setSelfProfileOpen] = useState(false)
+  const [joinMetaTick, setJoinMetaTick] = useState(0)
   const favorites = useMemo(() => readContactFavorites(), [])
   const lastContacted = useMemo(() => readContactLastContacted(), [])
   const hidden = useMemo(() => readHiddenContacts(), [])
+
+  useEffect(() => {
+    const sync = () => setJoinMetaTick((n) => n + 1)
+    window.addEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
+  }, [])
 
   const contacts = useMemo(
     () =>
@@ -135,6 +154,10 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   )
 
   const groups = useMemo(() => buildConversationSidebarGroups(readMessengerGroups()), [])
+  const telegramAlarm = useMemo(
+    () => buildConversationSidebarTelegramAlarm(readTelegramAlarmGroupMembership()),
+    [joinMetaTick]
+  )
 
   const selfAddress = (p.selfProfile?.myAddressLine || '').trim()
   const selfSubtitle = /^0x[a-fA-F0-9]{64}$/i.test(selfAddress)
@@ -144,8 +167,8 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const q = (p.searchQuery ?? '').trim().toLowerCase()
   const filterItem = (item: ConversationSidebarItem) => {
     if (!q) return true
-    if (item.kind === 'group') {
-      return item.displayName.toLowerCase().includes(q)
+    if (item.kind === 'group' || item.kind === 'telegram-alarm' || item.kind === 'pinnwand') {
+      return item.displayName.toLowerCase().includes(q) || item.subtitle.toLowerCase().includes(q)
     }
     return (
       item.displayName.toLowerCase().includes(q) ||
@@ -154,8 +177,24 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
     )
   }
 
+  const showPinnwandRow = Boolean(p.onSelectPinnwand && p.pinnwandLabel?.trim())
+  const pinnwandItem = useMemo(
+    () =>
+      showPinnwandRow
+        ? buildConversationSidebarPinnwand({
+            label: p.pinnwandLabel!.trim(),
+            unreadCount: p.pinnwandUnreadCount ?? 0,
+          })
+        : null,
+    [showPinnwandRow, p.pinnwandLabel, p.pinnwandUnreadCount]
+  )
+  const showPinnwandSection = pinnwandItem && (!q || filterItem(pinnwandItem))
+
   const filteredContacts = contacts.filter(filterItem)
   const filteredGroups = groups.filter(filterItem)
+  const showTelegramAlarm =
+    telegramAlarm && (!q || filterItem(telegramAlarm))
+  const showGroupsSection = filteredGroups.length > 0 || showTelegramAlarm
   const showSelfRow =
     p.selfProfile &&
     (!q ||
@@ -229,11 +268,38 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
             onClick={p.onSelectAll}
           />
 
-          {filteredGroups.length > 0 ? (
+          {showPinnwandSection && pinnwandItem ? (
+            <section className="mt-2">
+              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Kanäle
+              </p>
+              <SidebarRow
+                key={pinnwandItem.key}
+                title={pinnwandItem.displayName}
+                subtitle={pinnwandItem.subtitle}
+                active={p.activePinnwandSelected === true}
+                unreadCount={pinnwandItem.unreadCount}
+                icon={<Megaphone className="h-4 w-4" />}
+                onClick={() => p.onSelectPinnwand?.()}
+              />
+            </section>
+          ) : null}
+
+          {showGroupsSection ? (
             <section className="mt-2">
               <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 Gruppen
               </p>
+              {showTelegramAlarm && telegramAlarm ? (
+                <SidebarRow
+                  key={telegramAlarm.key}
+                  title={telegramAlarm.displayName}
+                  subtitle={telegramAlarm.subtitle}
+                  active={p.activeTelegramAlarmSelected === true}
+                  icon={<MessageCircle className="h-4 w-4" />}
+                  onClick={() => p.onSelectTelegramAlarmGroup?.()}
+                />
+              ) : null}
               {filteredGroups.map((g) => (
                 <SidebarRow
                   key={g.key}

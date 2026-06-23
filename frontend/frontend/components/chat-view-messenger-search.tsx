@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { MessageSquare, Search, User, Users, X } from 'lucide-react'
+import { MessageSquare, MessageCircle, Search, User, Users, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -9,7 +9,11 @@ import type { Message } from '@/frontend/lib/types'
 import {
   buildConversationSidebarContacts,
   buildConversationSidebarGroups,
+  buildConversationSidebarTelegramAlarm,
 } from '@/frontend/lib/conversation-sidebar-items'
+import {
+  readTelegramAlarmGroupMembership,
+} from '@/frontend/lib/telegram-alarm-group-prefs'
 import {
   readContactFavorites,
   readContactLastContacted,
@@ -35,6 +39,7 @@ export type ChatViewMessengerSearchProps = {
   onQueryChange: (q: string) => void
   onSelectContact: (address: string) => void
   onSelectGroup: (groupId: string) => void
+  onSelectTelegramAlarmGroup?: () => void
   onSelectMessageHit: (hit: InboxSearchMessageHit) => void
   activeSendPath?: ActiveSendPath
   connectedAddresses?: readonly string[]
@@ -86,9 +91,16 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
   const groupHits = useMemo(() => {
     if (!q) return []
     const lower = q.toLowerCase()
-    return buildConversationSidebarGroups(readMessengerGroups())
+    const messenger = buildConversationSidebarGroups(readMessengerGroups())
       .filter((g) => g.displayName.toLowerCase().includes(lower))
-      .slice(0, 4)
+    const telegram = buildConversationSidebarTelegramAlarm(readTelegramAlarmGroupMembership())
+    const telegramHits =
+      telegram &&
+      (telegram.displayName.toLowerCase().includes(lower) ||
+        telegram.subtitle.toLowerCase().includes(lower))
+        ? [telegram]
+        : []
+    return [...telegramHits, ...messenger].slice(0, 4)
   }, [q])
 
   const messageHits = useMemo(
@@ -153,12 +165,17 @@ export function ChatViewMessengerSearch(p: ChatViewMessengerSearchProps) {
                   className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted/70"
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => {
-                    p.onSelectGroup(g.groupId)
+                    if (g.kind === 'telegram-alarm') p.onSelectTelegramAlarmGroup?.()
+                    else p.onSelectGroup(g.groupId)
                     p.onQueryChange('')
                     setFocused(false)
                   }}
                 >
-                  <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  {g.kind === 'telegram-alarm' ? (
+                    <MessageCircle className="h-4 w-4 shrink-0 text-sky-400" />
+                  ) : (
+                    <Users className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
                   <span className="truncate">{g.displayName}</span>
                 </button>
               ))}

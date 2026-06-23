@@ -1,8 +1,9 @@
 # Gerät provisionieren — Wizard & Helfer-Flow
 
-**Stand:** 2026-06-02  
+**Stand:** 2026-06-16  
 **UI:** Einsatzleitung → **Helfer einrichten** → **Neues Gerät** → **Seed + QR** (Boss) · Helfer: Einstellungen → Handoff importieren → **Seed einrichten?**  
-**Custody:** **B** (Boss speichert Seeds verschlüsselt in lokaler Registry — Master-Passwort)
+**Custody:** **B** (Boss speichert Seeds verschlüsselt in lokaler Registry — Master-Passwort)  
+**Abgrenzung:** Dieser **Geräte-Provisionierungs-Wizard** (Seed + ZIP) ist **nicht** der geplante **Einstiegs-Wizard** für Erststart/Team-Sync — letzterer: **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**, Roadmap **§ H.36 P0**.
 
 ---
 
