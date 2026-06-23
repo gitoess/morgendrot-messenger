@@ -78,7 +78,7 @@ export function markJoinRequestStatus(requestId: string, status: JoinRequestStat
 }
 
 export function syncJoinRequestsFromInboxMessages(
-  messages: { id: string; content?: string; recipient?: string; to?: string }[],
+  messages: ReadonlyArray<{ id: string; content?: string; recipient?: string; to?: string }>,
   bossAddress: string
 ): void {
   const boss = bossAddress.trim().toLowerCase()

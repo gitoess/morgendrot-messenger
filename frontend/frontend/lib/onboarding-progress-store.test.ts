@@ -56,7 +56,7 @@ describe('onboarding-progress-store', () => {
         },
       },
       dispatchEvent: () => true,
-    } as Window & typeof globalThis)
+    } as unknown as Window & typeof globalThis)
   })
 
   afterEach(() => {

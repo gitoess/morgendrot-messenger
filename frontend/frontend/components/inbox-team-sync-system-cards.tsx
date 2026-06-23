@@ -9,8 +9,12 @@ import { applyInitialProfileProvisioning } from '@/frontend/lib/api/contacts'
 import {
   parseMorgTeamMemberUpdateV1,
   memberToInitialProfileContact,
+  type MorgTeamMemberUpdateV1,
 } from '@/frontend/lib/morg-team-member-update-v1'
-import { parseMorgTelegramAlarmGroupV1 } from '@/frontend/lib/morg-telegram-alarm-group-v1'
+import {
+  parseMorgTelegramAlarmGroupV1,
+  type MorgTelegramAlarmGroupV1,
+} from '@/frontend/lib/morg-telegram-alarm-group-v1'
 import {
   parseMorgTeamUpdatePingV1,
   type MorgTeamUpdatePingV1,
@@ -42,13 +46,13 @@ function shortBoss(addr: string): string {
 }
 
 export function InboxTeamSyncSystemCards(p: {
-  messages: Message[]
+  messages: readonly Message[]
   onApplied?: () => void
 }) {
   const [, bump] = useState(0)
   const cards = useMemo(() => {
-    const teamUpdates: ReturnType<typeof parseMorgTeamMemberUpdateV1>[] = []
-    const tgGroups: ReturnType<typeof parseMorgTelegramAlarmGroupV1>[] = []
+    const teamUpdates: MorgTeamMemberUpdateV1[] = []
+    const tgGroups: MorgTelegramAlarmGroupV1[] = []
     const funkPings: MorgTeamUpdatePingV1[] = []
     const seenTeam = new Set<number>()
     const seenTg = new Set<number>()
@@ -190,7 +194,7 @@ export function InboxTeamSyncSystemCards(p: {
                 >
                   Gruppe beitreten
                 </Button>
-                {isTelegramAlarmGroupJoinInitiatedForLink(g.inviteLink) ? (
+                {g.inviteLink && isTelegramAlarmGroupJoinInitiatedForLink(g.inviteLink) ? (
                   <Button
                     type="button"
                     size="sm"

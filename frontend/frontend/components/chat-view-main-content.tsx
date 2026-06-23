@@ -912,7 +912,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
     if (inboxPartnerFiltersArmed && (activeConversationTitle || telegramAlarmSelected)) {
       return {
-        title: activeConversationTitle,
+        title: activeConversationTitle ?? 'Einsatz-Alarmgruppe',
         subtitle: activeConversationSubtitle,
         canClearHistory: !telegramAlarmSelected,
         canExport: true,

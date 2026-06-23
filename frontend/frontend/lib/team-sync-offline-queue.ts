@@ -49,7 +49,11 @@ function writeQueue(list: TeamSyncQueueItem[]): void {
   window.dispatchEvent(new CustomEvent(TEAM_SYNC_QUEUE_CHANGED_EVENT))
 }
 
-export function enqueueTeamSyncItem(item: Omit<TeamSyncQueueItem, 'id' | 'createdAtMs'>): void {
+export type TeamSyncQueueItemInput =
+  | Omit<Extract<TeamSyncQueueItem, { kind: 'member_update' }>, 'id' | 'createdAtMs'>
+  | Omit<Extract<TeamSyncQueueItem, { kind: 'telegram_group' }>, 'id' | 'createdAtMs'>
+
+export function enqueueTeamSyncItem(item: TeamSyncQueueItemInput): void {
   const list = readQueue()
   const entry: TeamSyncQueueItem = {
     ...item,

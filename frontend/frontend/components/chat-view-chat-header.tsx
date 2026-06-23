@@ -256,7 +256,7 @@ export function ChatViewChatHeader(p: ChatViewChatHeaderProps) {
                       onClick={onOpenSettings}
                     />
                   ) : null}
-                  {showTreasuryBadge ? (
+                  {showTreasuryBadge && apiStatus ? (
                     <TresorSessionBadge
                       sessionLocked={!!apiStatus.locked}
                       hasKeys={isMessengerSessionKeysReady(apiStatus)}

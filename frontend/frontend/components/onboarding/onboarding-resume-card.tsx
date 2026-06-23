@@ -24,7 +24,6 @@ export function OnboardingResumeCard(p: {
       role: p.apiSnapshot?.role,
       hasPackageId: Boolean(p.apiSnapshot?.packageId?.trim()),
       hasMailboxId: Boolean(p.apiSnapshot?.mailboxId?.trim()),
-      hasMeshNodeId: Boolean(p.apiSnapshot?.meshNodeId?.trim()),
       hasTeamId: Boolean(p.apiSnapshot?.handoffLabel?.trim()),
     }),
     [p.apiSnapshot]

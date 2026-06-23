@@ -167,7 +167,10 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const q = (p.searchQuery ?? '').trim().toLowerCase()
   const filterItem = (item: ConversationSidebarItem) => {
     if (!q) return true
-    if (item.kind === 'group' || item.kind === 'telegram-alarm' || item.kind === 'pinnwand') {
+    if (item.kind === 'group') {
+      return item.displayName.toLowerCase().includes(q)
+    }
+    if (item.kind === 'telegram-alarm' || item.kind === 'pinnwand') {
       return item.displayName.toLowerCase().includes(q) || item.subtitle.toLowerCase().includes(q)
     }
     return (

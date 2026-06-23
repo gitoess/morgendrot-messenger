@@ -204,7 +204,6 @@ describe('ChatViewSendPathCompact', () => {
         forcedTransport="internet"
         onForcedTransportChange={noop}
         onChannelModeChange={vi.fn()}
-        role="consumer"
         apiStatus={TEST_API_STATUS_SEND_READY}
       />
     )
