@@ -5,6 +5,9 @@
  * LAN-Zustellung folgt automatisch, wenn Basis-URL auf Boss-LAN zeigt.
  */
 import { sendPlaintextMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { getApiBase } from '@/frontend/lib/api/api-base'
+import { postTeamSyncLanPush } from '@/frontend/lib/api/team-sync-lan'
+import { isBossLanApiBase } from '@/frontend/lib/is-boss-lan-api-base'
 import {
   buildMorgTeamMemberUpdateV1Marker,
   type MorgTeamMemberUpdateV1,
@@ -119,6 +122,20 @@ async function afterTeamSyncPublishSideEffects(opts: {
   return channels
 }
 
+async function tryPublishTeamSyncLanPush(
+  wire: string,
+  opts: {
+    teamMailboxAddress?: string
+    teamId?: string
+    seq?: number
+    recipientAddresses?: string[]
+  }
+): Promise<boolean | undefined> {
+  if (!isBossLanApiBase(getApiBase())) return undefined
+  const r = await postTeamSyncLanPush({ wire, ...opts })
+  return r.ok
+}
+
 export async function publishTeamMemberUpdateWire(opts: {
   teamMailboxAddress: string
   teamId: string
@@ -166,7 +183,12 @@ export async function publishTeamMemberUpdateWire(opts: {
       ? { eventType: 'team_update', seq }
       : undefined,
   })
-  return { ok: true, channels: { iota: true, meshPing: side.meshPing }, seq }
+  const lan = await tryPublishTeamSyncLanPush(wire, {
+    teamMailboxAddress: recipient,
+    teamId: opts.teamId.trim(),
+    seq,
+  })
+  return { ok: true, channels: { iota: true, ...(lan !== undefined ? { lan } : {}), meshPing: side.meshPing }, seq }
 }
 
 export async function publishTelegramAlarmGroupWire(opts: {
@@ -224,7 +246,12 @@ export async function publishTelegramAlarmGroupWire(opts: {
     },
     telegramHint: opts.telegramGroupHint ? { eventType: 'boss_alarm', tgSeq } : undefined,
   })
-  return { ok: true, channels: { iota: true, meshPing: side.meshPing }, tgSeq }
+  const lan = await tryPublishTeamSyncLanPush(wire, {
+    teamMailboxAddress: recipient,
+    teamId: opts.teamId.trim(),
+    seq: tgSeq,
+  })
+  return { ok: true, channels: { iota: true, ...(lan !== undefined ? { lan } : {}), meshPing: side.meshPing }, tgSeq }
 }
 
 export async function publishTeamJoinRequestWire(opts: {

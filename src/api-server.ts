@@ -145,6 +145,8 @@ import {
 import type { ApiRouteContext } from './api/routes/api-route-types.js';
 import { handleCommandRoute } from './api/routes/handle-command-route.js';
 import { handleContactRoutes } from './api/routes/handle-contact-routes.js';
+import { handleRosterPendingRoutes } from './api/routes/handle-roster-pending-routes.js';
+import { handleTeamSyncRoutes } from './api/routes/handle-team-sync-routes.js';
 import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
 import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
@@ -422,6 +424,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
 
         if (await handleStatusRoutes(req, res, url, cors, sendJson, routeCtx)) return;
         if (await handleContactRoutes(req, res, url, cors, sendJson, routeCtx)) return;
+        if (await handleRosterPendingRoutes(req, res, url, cors, sendJson)) return;
+        if (await handleTeamSyncRoutes(req, res, url, cors, sendJson)) return;
         if (await handleTelegramIntegrationRoutes(req, res, url, cors, sendJson)) return;
         if (await handleEinsatzManifestRoutes(req, res, url, cors, sendJson)) return;
         if (await handleForensicBatchRoutes(req, res, url, cors, sendJson, routeCtx)) return;

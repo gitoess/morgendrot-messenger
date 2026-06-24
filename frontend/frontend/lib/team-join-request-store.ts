@@ -45,7 +45,7 @@ function writeMap(map: Record<string, StoredJoinRequest>): void {
 
 export function upsertJoinRequestFromWire(
   wire: MorgTeamJoinRequestV1,
-  opts?: { messageId?: string }
+  opts?: { messageId?: string; skipServerSync?: boolean }
 ): void {
   const map = readMap()
   const prev = map[wire.requestId]
@@ -57,6 +57,18 @@ export function upsertJoinRequestFromWire(
     receivedAtMs: prev?.receivedAtMs ?? Date.now(),
   }
   writeMap(map)
+  if (!opts?.skipServerSync) {
+    void import('@/frontend/lib/roster-pending-sync').then((m) =>
+      m.syncJoinRequestToServer({
+        requestId: wire.requestId,
+        member: wire.applicant,
+        boss: wire.boss,
+        teamId: wire.teamId,
+        note: wire.note,
+        issuedAt: wire.issuedAt,
+      })
+    )
+  }
 }
 
 export function listPendingJoinRequests(): StoredJoinRequest[] {

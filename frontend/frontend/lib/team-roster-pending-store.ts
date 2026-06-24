@@ -50,6 +50,7 @@ export function listRosterPendingSuggestions(): RosterPendingSuggestion[] {
 }
 
 export function enqueueRosterPendingSuggestion(input: {
+  id?: string
   source: RosterPendingSource
   member: TeamMemberWireMember
   handoffLabel?: string
@@ -59,7 +60,7 @@ export function enqueueRosterPendingSuggestion(input: {
   const store = readStore()
   const existingIdx = store.suggestions.findIndex((s) => s.member.address.trim().toLowerCase() === addr)
   const entry: RosterPendingSuggestion = {
-    id: existingIdx >= 0 ? store.suggestions[existingIdx].id : newId(),
+    id: input.id?.trim() || (existingIdx >= 0 ? store.suggestions[existingIdx].id : newId()),
     source: input.source,
     member: input.member,
     createdAt: Date.now(),

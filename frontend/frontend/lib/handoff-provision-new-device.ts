@@ -4,6 +4,7 @@ import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { addBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
 import { enqueueRosterPendingSuggestion } from '@/frontend/lib/team-roster-pending-store'
+import { syncHandoffSuggestionToServer } from '@/frontend/lib/roster-pending-sync'
 import { buildSeedSetupQrText } from '@/frontend/lib/seed-setup-qr'
 import { writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
 import type { HandoffEinsatzPresetId } from '@/frontend/lib/handoff-export-presets'
@@ -68,13 +69,19 @@ export async function provisionNewHandoffDevice(
     return { ok: false, error: added.error }
   }
 
-  enqueueRosterPendingSuggestion({
+  const pendingEntry = enqueueRosterPendingSuggestion({
     source: 'handoff',
     member: {
       address: mnemonic.address,
       name: input.label.trim() || input.presetId,
       handoffLabel: input.label.trim() || input.presetId,
     },
+    handoffLabel: input.presetId,
+    registryEntryId: added.entry.id,
+  })
+  void syncHandoffSuggestionToServer({
+    id: pendingEntry.id,
+    member: pendingEntry.member,
     handoffLabel: input.presetId,
     registryEntryId: added.entry.id,
   })

@@ -8,7 +8,12 @@ vi.mock('@/frontend/lib/api/contacts', () => ({
   applyInitialProfileProvisioning: vi.fn(async () => ({ ok: true, applied: 1 })),
 }))
 vi.mock('@/frontend/lib/team-sync-wire', () => ({
-  publishTeamMemberUpdateWire: vi.fn(async () => ({ ok: true, channels: { iota: true } })),
+  publishTeamMemberUpdateWire: vi.fn(async () => ({ ok: true, channels: { iota: true, lan: true } })),
+}))
+vi.mock('@/frontend/lib/roster-pending-sync', () => ({
+  refreshRosterPendingFromServer: vi.fn(async () => ({ ok: true })),
+  markRosterPendingOnServer: vi.fn(async () => ({ ok: true })),
+  syncJoinRequestToServer: vi.fn(async () => ({ ok: true })),
 }))
 
 import { applyInitialProfileProvisioning } from '@/frontend/lib/api/contacts'
@@ -117,6 +122,7 @@ describe('EinsatzleitungJoinRequestsPanel (Roster P0 UI)', () => {
     expect(rosterOrder).toBeLessThan(wireOrder)
 
     expect(screen.getByText(/Freigegeben — Roster aktualisiert/i)).toBeInTheDocument()
+    expect(screen.getByText(/LAN \+ IOTA/i)).toBeInTheDocument()
   })
 
   it('zeigt Konflikt-Diff bei bestehendem Roster-Eintrag', () => {

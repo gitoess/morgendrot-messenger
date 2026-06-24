@@ -24,6 +24,18 @@ import {
   type RosterPendingSuggestion,
 } from '@/frontend/lib/team-roster-pending-store'
 import { publishTeamMemberUpdateWire } from '@/frontend/lib/team-sync-wire'
+import {
+  markRosterPendingOnServer,
+  refreshRosterPendingFromServer,
+} from '@/frontend/lib/roster-pending-sync'
+
+function formatDeliveryChannels(channels?: { iota?: boolean; lan?: boolean; meshPing?: boolean }): string {
+  const parts: string[] = []
+  if (channels?.lan) parts.push('LAN')
+  if (channels?.iota) parts.push('IOTA')
+  if (channels?.meshPing) parts.push('Funk')
+  return parts.length ? ` (${parts.join(' + ')})` : ''
+}
 
 export function EinsatzleitungJoinRequestsPanel(p: {
   apiStatus?: ApiStatus | null
@@ -33,6 +45,12 @@ export function EinsatzleitungJoinRequestsPanel(p: {
   const [, bump] = useState(0)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<string | null>(null)
+
+  useEffect(() => {
+    void refreshRosterPendingFromServer().then((r) => {
+      if (r.ok) bump((n) => n + 1)
+    })
+  }, [])
 
   useEffect(() => {
     const sync = () => bump((n) => n + 1)
@@ -78,8 +96,9 @@ export function EinsatzleitungJoinRequestsPanel(p: {
       telegramGroupHint: true,
     })
     if (r.ok) {
+      void markRosterPendingOnServer(req.requestId, 'approved')
       markJoinRequestStatus(req.requestId, 'join_approved')
-      setFeedback(`Freigegeben — Roster aktualisiert, Team-Update gesendet${r.channels?.iota ? ' (IOTA)' : ''}.`)
+      setFeedback(`Freigegeben — Roster aktualisiert, Team-Update gesendet${formatDeliveryChannels(r.channels)}.`)
       bump((n) => n + 1)
     } else {
       setFeedback(`Roster gespeichert, aber Team-Update fehlgeschlagen: ${r.error || 'unbekannt'}`)
@@ -92,6 +111,7 @@ export function EinsatzleitungJoinRequestsPanel(p: {
     setFeedback(null)
     try {
       await addToPhonebook(s.member)
+      void markRosterPendingOnServer(s.id, 'approved')
       removeRosterPendingSuggestion(s.id)
       setFeedback(`„${s.member.name}“ ins Team-Roster übernommen (Handoff-Vorschlag).`)
       bump((n) => n + 1)
@@ -102,11 +122,13 @@ export function EinsatzleitungJoinRequestsPanel(p: {
   }
 
   const dismissHandoffSuggestion = (s: RosterPendingSuggestion) => {
+    void markRosterPendingOnServer(s.id, 'dismissed')
     removeRosterPendingSuggestion(s.id)
     bump((n) => n + 1)
   }
 
   const reject = (req: StoredJoinRequest) => {
+    void markRosterPendingOnServer(req.requestId, 'rejected')
     markJoinRequestStatus(req.requestId, 'join_rejected')
     bump((n) => n + 1)
   }

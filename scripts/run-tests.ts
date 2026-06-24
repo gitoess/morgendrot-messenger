@@ -1117,6 +1117,100 @@ async function testDeviceTimeTrust() {
     }
 }
 
+async function testRosterPendingStore() {
+    console.log('\n--- roster-pending (server queue) ---');
+    const tmp = path.join(tmpdir(), 'morgendrot-rp-' + Date.now() + '.json');
+    process.env.ROSTER_PENDING_FILE = tmp;
+    try {
+        const { parseRosterPendingUpsert } = await import('../src/shared/roster-pending.js');
+        const {
+            upsertRosterPendingEntry,
+            listRosterPendingEntries,
+            setRosterPendingStatus,
+            removeRosterPendingEntry,
+        } = await import('../src/roster-pending.js');
+        const addr = '0x' + 'f'.repeat(64);
+        const addr2 = '0x' + 'e'.repeat(64);
+
+        const bad = parseRosterPendingUpsert({ kind: 'handoff', member: { address: '0x1', name: '' } });
+        assert(bad.ok === false, 'reject invalid member');
+
+        const handoff = upsertRosterPendingEntry({
+            kind: 'handoff',
+            member: { address: addr, name: 'Handoff Test' },
+            handoffLabel: 'helfer',
+        });
+        assert(handoff.status === 'pending' && handoff.kind === 'handoff', 'handoff pending');
+
+        const join = upsertRosterPendingEntry({
+            kind: 'join_request',
+            requestId: 'jr-test-1',
+            member: { address: addr2, name: 'Join Test' },
+            boss: '0x' + 'b'.repeat(64),
+        });
+        assert(join.requestId === 'jr-test-1', 'join requestId');
+
+        const pending = listRosterPendingEntries({ status: 'pending' });
+        assert(pending.length === 2, 'two pending');
+
+        const approved = setRosterPendingStatus(handoff.id, 'approved');
+        assert(approved?.status === 'approved', 'approved status');
+        assert(listRosterPendingEntries({ status: 'pending' }).length === 1, 'one pending after approve');
+
+        assert(removeRosterPendingEntry(join.id) === true, 'remove join');
+        assert(listRosterPendingEntries({ status: 'pending' }).length === 0, 'no pending');
+
+        try {
+            fs.unlinkSync(tmp);
+        } catch {}
+        delete process.env.ROSTER_PENDING_FILE;
+        ok('roster-pending store + parseRosterPendingUpsert');
+    } catch (e) {
+        fail('roster-pending', e);
+    }
+}
+
+async function testTeamSyncLanOutbox() {
+    console.log('\n--- team-sync-lan-outbox ---');
+    const tmp = path.join(tmpdir(), 'morgendrot-lan-' + Date.now() + '.json');
+    process.env.TEAM_SYNC_LAN_OUTBOX_FILE = tmp;
+    try {
+        const { pushTeamSyncLanWire, listTeamSyncLanInbox } = await import('../src/team-sync-lan-outbox.js');
+        const helper = '0x' + 'c'.repeat(64);
+        const wire = '[[MORG_TEAM_MEMBER_UPDATE_V1]]{"v":1}[[/MORG_TEAM_MEMBER_UPDATE_V1]]';
+
+        try {
+            pushTeamSyncLanWire({ wire: 'no marker' });
+            assert(false, 'should throw without marker');
+        } catch {
+            /* expected */
+        }
+
+        const entry = pushTeamSyncLanWire({
+            wire,
+            teamId: 'team-alpha',
+            seq: 3,
+            recipientAddresses: [helper],
+        });
+        assert(entry.id.startsWith('lan-'), 'entry id');
+        assert(entry.recipientAddresses.includes(helper.toLowerCase()), 'recipient normalized');
+
+        const inbox = listTeamSyncLanInbox({ recipientAddress: helper, sinceMs: 0 });
+        assert(inbox.length === 1 && inbox[0].wire === wire, 'inbox hit');
+
+        const other = listTeamSyncLanInbox({ recipientAddress: '0x' + 'd'.repeat(64), sinceMs: 0 });
+        assert(other.length === 0, 'filtered recipient');
+
+        try {
+            fs.unlinkSync(tmp);
+        } catch {}
+        delete process.env.TEAM_SYNC_LAN_OUTBOX_FILE;
+        ok('team-sync-lan-outbox push + inbox');
+    } catch (e) {
+        fail('team-sync-lan-outbox', e);
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Modultests (ohne Chain/CLI)');
     /** Vor jedem Import, der logger → config zieht (z. B. replay-state). Sonst bleibt CFG.PACKAGE_ID leer ohne .env. */
@@ -1154,6 +1248,8 @@ async function main() {
     await testInitialProfileProvision();
     await testEinsatzRoleTemplates();
     await testApplyInitialProfileToContacts();
+    await testRosterPendingStore();
+    await testTeamSyncLanOutbox();
     await testContactLabelsMailboxObjectId();
     await testMessengerExportEnv();
     await testSetEnvKeyBlocklist();
