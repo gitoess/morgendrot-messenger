@@ -3010,6 +3010,12 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             server.removeListener('error', onError);
             server.removeListener('listening', onSuccess);
             if (err.code === 'EADDRINUSE') {
+                if (process.env.MORGENDROT_DEV_STRICT_PORTS === '1') {
+                    logger.error(
+                        `API-Port ${p} belegt — kein Fallback (MORGENDROT_DEV_STRICT_PORTS). Bitte npm run dev:stop oder npm run dev:messenger:clean.`
+                    );
+                    process.exit(1);
+                }
                 logger.warn(`API-Port ${p} belegt, versuche ${p + 1}…`);
                 tryListen(p + 1);
             } else {
