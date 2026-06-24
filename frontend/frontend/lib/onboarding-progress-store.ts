@@ -17,9 +17,19 @@ import { isTelegramAlarmGroupWizardDismissed } from '@/frontend/lib/telegram-ala
 
 export type OnboardingPath = 'boss' | 'helper' | 'wanderer'
 
-export type BossStepId = 'identity' | 'iota' | 'funk' | 'team' | 'helpers' | 'done'
+export type BossStepId =
+  | 'address'
+  | 'package'
+  | 'server-mailbox'
+  | 'team'
+  | 'telegram-bot'
+  | 'telegram-group'
+  | 'meshtastic'
+  | 'helpers'
+  | 'done'
+export type WandererStepId = 'wallet' | 'address' | 'private-mailbox' | 'meshtastic' | 'done'
+/** Legacy — nicht mehr im Wizard angeboten; nur für alte localStorage-Einträge. */
 export type HelperStepId = 'handoff' | 'telegram' | 'wallet' | 'team-self' | 'peering' | 'done'
-export type WandererStepId = 'solo-intro' | 'wallet' | 'funk' | 'done'
 
 export type OnboardingStepId = BossStepId | HelperStepId | WandererStepId
 
@@ -35,11 +45,21 @@ export type OnboardingProgress = {
 export const ONBOARDING_PROGRESS_CHANGED_EVENT = 'morgendrot.onboardingProgressChanged' as const
 export const ONBOARDING_WIZARD_OPEN_REQUEST_EVENT = 'morgendrot.onboardingWizardOpenRequest' as const
 
-const LS_KEY = 'morgendrot.onboardingProgress.v1'
+const LS_KEY = 'morgendrot.onboardingProgress.v2'
 
-export const BOSS_STEP_ORDER: BossStepId[] = ['identity', 'iota', 'funk', 'team', 'helpers', 'done']
+export const BOSS_STEP_ORDER: BossStepId[] = [
+  'address',
+  'package',
+  'server-mailbox',
+  'team',
+  'telegram-bot',
+  'telegram-group',
+  'meshtastic',
+  'helpers',
+  'done',
+]
 export const HELPER_STEP_ORDER: HelperStepId[] = ['handoff', 'telegram', 'wallet', 'team-self', 'peering', 'done']
-export const WANDERER_STEP_ORDER: WandererStepId[] = ['solo-intro', 'wallet', 'funk', 'done']
+export const WANDERER_STEP_ORDER: WandererStepId[] = ['wallet', 'address', 'private-mailbox', 'meshtastic', 'done']
 
 export function stepOrderForPath(path: OnboardingPath): OnboardingStepId[] {
   if (path === 'boss') return BOSS_STEP_ORDER
@@ -56,6 +76,19 @@ export function resolveOnboardingPath(opts: {
   const role = (opts.role || '').trim().toLowerCase()
   if (role === 'boss' || role === 'kommandant') return 'boss'
   return 'helper'
+}
+
+/** Wizard nur Boss + Wanderer — Helfer bekommen Handoff-Flow. */
+export function resolveWizardOnboardingPath(opts: {
+  role?: string | null
+  standalonePath?: StandaloneOnboardingPath | null
+}): 'boss' | 'wanderer' | null {
+  const standalone = opts.standalonePath ?? readStandaloneOnboardingPath()
+  if (standalone === 'solo' || isStandaloneSoloPath()) return 'wanderer'
+  const role = (opts.role || '').trim().toLowerCase()
+  if (role === 'boss' || role === 'kommandant') return 'boss'
+  if (role === 'wanderer' || role === 'messenger') return 'wanderer'
+  return null
 }
 
 export function readOnboardingProgress(): OnboardingProgress | null {
@@ -181,14 +214,20 @@ export function shouldSkipOnboardingStep(
 
   if (path === 'boss') {
     switch (stepId as BossStepId) {
-      case 'identity':
+      case 'address':
         return Boolean(ctx.role?.trim())
-      case 'iota':
-        return Boolean(ctx.hasPackageId && ctx.hasMailboxId)
-      case 'funk':
-        return Boolean(ctx.hasMeshNodeId)
+      case 'package':
+        return Boolean(ctx.hasPackageId)
+      case 'server-mailbox':
+        return Boolean(ctx.hasMailboxId)
       case 'team':
         return Boolean(ctx.hasTeamId || handoff?.handoffLabel)
+      case 'telegram-bot':
+        return false
+      case 'telegram-group':
+        return false
+      case 'meshtastic':
+        return Boolean(ctx.hasMeshNodeId)
       case 'helpers':
         return false
       case 'done':
@@ -221,11 +260,13 @@ export function shouldSkipOnboardingStep(
   }
 
   switch (stepId as WandererStepId) {
-    case 'solo-intro':
-      return isStandaloneSoloPath()
     case 'wallet':
       return hasMnemonic
-    case 'funk':
+    case 'address':
+      return Boolean(ctx.role?.trim())
+    case 'private-mailbox':
+      return Boolean(ctx.hasMailboxId)
+    case 'meshtastic':
       return Boolean(ctx.hasMeshNodeId)
     case 'done':
       return false

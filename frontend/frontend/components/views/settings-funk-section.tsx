@@ -8,9 +8,9 @@ type SettingsFunkSectionProps = {
   managedNetwork?: boolean
 }
 
-/** Funk (Meshtastic): Puls, Heartbeat, Geräte — getrennt von IOTA-Online-Einstellungen. */
-export function SettingsFunkSection({ apiStatus, managedNetwork }: SettingsFunkSectionProps) {
-  if (!apiStatus || managedNetwork) return null
+/** Funk (Meshtastic): Puls, Heartbeat, Geräte. */
+export function SettingsFunkSection({ apiStatus }: SettingsFunkSectionProps) {
+  if (!apiStatus) return null
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <LazyChatViewPulseSettings

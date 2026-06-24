@@ -235,12 +235,6 @@ export function SettingsTelegramEinsatzGroup(p: SettingsTelegramEinsatzGroupProp
           {pub?.botUserId ? (
             <p className="text-xs text-muted-foreground">
               Bot-ID: <span className="font-mono">{pub.botUserId}</span>
-              {pub.einsatzGroupChatId ? (
-                <>
-                  {' '}
-                  · Gruppe: <span className="font-mono">{pub.einsatzGroupChatId}</span>
-                </>
-              ) : null}
             </p>
           ) : null}
 

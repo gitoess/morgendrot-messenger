@@ -169,10 +169,9 @@ function MessengerDashboardBody({
       />
       <OnboardingWizardHost
         apiSnapshot={s.apiSnapshot}
-        onOpenSettings={s.openSettingsView}
-        onOpenEinsatzleitung={s.openEinsatzleitungView}
+        backendOnline={s.apiSnapshot?.backendOnline === true || s.apiSnapshot?.backendRunning === true}
         onActivateWallet={s.requestStandaloneWalletUnlock}
-        onOpenChat={() => s.openMessengerChatView()}
+        onReloadStatus={() => void s.checkStatus()}
       />
       {s.activeView ? (
       <div className="min-h-screen bg-background">

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Settings, Copy, Check, KeyRound, Radio, Send, Globe } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Settings, Copy, Check, KeyRound, Radio, Send, Globe, Shield } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import {
   getStatus,
@@ -9,7 +9,6 @@ import {
   revealVaultSignerImport,
   type ApiStatus,
 } from '@/frontend/lib/api'
-import Link from 'next/link'
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
@@ -30,7 +29,12 @@ import { SettingsLanguageSection } from '@/frontend/components/settings-language
 import { SettingsAppearanceSection } from '@/frontend/components/settings-appearance-section'
 import { SettingsExpertModeSection } from '@/frontend/components/settings-expert-mode-section'
 import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-card'
-import { SettingsSectionHeading } from '@/frontend/components/settings-section-heading'
+import {
+  SettingsCategoryNav,
+  SettingsCollapsiblePanel,
+  type SettingsCategoryId,
+} from '@/frontend/components/settings-collapsible-section'
+import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 interface SettingsViewProps {
@@ -43,6 +47,8 @@ interface SettingsViewProps {
   onRequestVaultUnlock?: () => void
 }
 
+const LS_ACTIVE_CATEGORY = 'morgendrot.settingsActiveCategory'
+
 export function SettingsView({
   onOpenConfig,
   showAllTiles = false,
@@ -53,6 +59,11 @@ export function SettingsView({
   onRequestVaultUnlock,
 }: SettingsViewProps) {
   const { t } = useAppTranslation('dashboard')
+  const [activeCategory, setActiveCategory] = useState<SettingsCategoryId | null>(() => {
+    if (typeof window === 'undefined') return 'general'
+    const saved = sessionStorage.getItem(LS_ACTIVE_CATEGORY) as SettingsCategoryId | null
+    return saved || 'general'
+  })
   const [status, setStatus] = useState<{
     network: string
     address: string
@@ -93,6 +104,19 @@ export function SettingsView({
     void loadStatus()
   }, [])
 
+  const selectCategory = useCallback((id: SettingsCategoryId) => {
+    setActiveCategory((prev) => {
+      const next = prev === id ? null : id
+      try {
+        if (next) sessionStorage.setItem(LS_ACTIVE_CATEGORY, next)
+        else sessionStorage.removeItem(LS_ACTIVE_CATEGORY)
+      } catch {
+        /* ignore */
+      }
+      return next
+    })
+  }, [])
+
   const handleRevealSignerImport = async () => {
     setRecoveryErr('')
     if (!recoveryPw.trim()) {
@@ -113,26 +137,31 @@ export function SettingsView({
     }
   }
 
+  const categories = [
+    { id: 'general' as const, label: 'Allgemein', icon: <Globe className="h-4 w-4" /> },
+    { id: 'iota' as const, label: 'IOTA', icon: <Send className="h-4 w-4" /> },
+    { id: 'funk' as const, label: 'Funk', icon: <Radio className="h-4 w-4" /> },
+    { id: 'telegram' as const, label: 'Telegram', icon: <Send className="h-4 w-4" /> },
+    { id: 'security' as const, label: 'Sicherheit', icon: <Shield className="h-4 w-4" /> },
+  ]
+
   return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-          <Settings className="h-6 w-6" />
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+            <Settings className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
+          </div>
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-foreground">{t('views.settings')}</h2>
-          <p className="text-sm text-muted-foreground">
-            {slimMessengerEinsatz ? t('settings.subtitleSlim') : t('settings.subtitleDefault')}
-          </p>
-        </div>
+        <SettingsHandbookLink label="Handbuch" />
       </div>
 
-      <section className="space-y-4">
-        <SettingsSectionHeading
-          title="Allgemein"
-          description="Sprache, Profil, Gerät und Import — unabhängig vom Sendeweg."
-          icon={<Globe className="h-5 w-5" />}
-        />
+      <SettingsCategoryNav active={activeCategory} onSelect={selectCategory} categories={categories} />
+
+      <SettingsCollapsiblePanel open={activeCategory === 'general'} title="Allgemein" icon={<Globe className="h-5 w-5" />}>
         <SettingsLanguageSection />
         <SettingsOnboardingSection apiStatus={advancedIotaStatus} />
         <SettingsAppearanceSection />
@@ -146,24 +175,14 @@ export function SettingsView({
         {canToggleFullTiles && onShowAllTilesChange ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-4">
-              <div>
-                <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Alle Funktions-Kacheln anzeigen — wird in diesem Browser gespeichert.
-                </p>
-              </div>
+              <h4 className="font-semibold text-foreground">Volle Oberfläche</h4>
               <Switch checked={showAllTiles} onCheckedChange={onShowAllTilesChange} aria-label="Alle Kacheln anzeigen" />
             </div>
           </div>
         ) : null}
-      </section>
+      </SettingsCollapsiblePanel>
 
-      <section className="space-y-4">
-        <SettingsSectionHeading
-          title="IOTA (Online / Chain)"
-          description="Netzwerk, Package, Mailbox, Tresor sichern/laden — Testnet/Mainnet wird automatisch aus Deploy-Dateien übernommen."
-          icon={<Send className="h-5 w-5" />}
-        />
+      <SettingsCollapsiblePanel open={activeCategory === 'iota'} title="IOTA (Online / Chain)" icon={<Send className="h-5 w-5" />}>
         {managedNetwork ? (
           <SettingsNetworkProfilesSection
             apiStatus={advancedIotaStatus}
@@ -194,16 +213,11 @@ export function SettingsView({
         {!slimMessengerEinsatz && status?.backendOnline && status.signer === 'sdk' ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="mb-3 flex items-start gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <KeyRound className="h-5 w-5" aria-hidden />
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground">Wallet-Recovery (SIGNER=sdk)</h4>
-                <p className="text-sm text-muted-foreground">Signer-Import aus der Vault-Datei anzeigen.</p>
-              </div>
+              <KeyRound className="h-5 w-5 text-primary" aria-hidden />
+              <h4 className="font-semibold text-foreground">Wallet-Recovery (SIGNER=sdk)</h4>
             </div>
             {!status.vaultHasLocal ? (
-              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Vault-Datei — zuerst unter „Lokal sichern“.</p>
+              <p className="mb-3 text-sm text-muted-foreground">Keine lokale Vault-Datei.</p>
             ) : null}
             <div className="space-y-3">
               <label className="block text-sm">
@@ -223,7 +237,7 @@ export function SettingsView({
                 onClick={() => void handleRevealSignerImport()}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {recoveryBusy ? 'Lade…' : 'Recovery / Signer-Import anzeigen'}
+                {recoveryBusy ? 'Lade…' : 'Signer-Import anzeigen'}
               </button>
               {revealedSigner ? (
                 <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded border border-border bg-muted/50 p-3 font-mono text-xs">
@@ -247,40 +261,39 @@ export function SettingsView({
             </div>
           </div>
         ) : null}
-      </section>
+      </SettingsCollapsiblePanel>
 
-      <section className="space-y-4">
-        <SettingsSectionHeading
-          title="Funk (Meshtastic)"
-          description="Puls, Heartbeat und Funk-Geräte — getrennt von IOTA/Online."
-          icon={<Radio className="h-5 w-5" />}
-        />
-        <SettingsFunkSection apiStatus={advancedIotaStatus} managedNetwork={managedNetwork} />
-      </section>
+      <SettingsCollapsiblePanel open={activeCategory === 'funk'} title="Funk (Meshtastic)" icon={<Radio className="h-5 w-5" />}>
+        <SettingsFunkSection apiStatus={advancedIotaStatus} />
+      </SettingsCollapsiblePanel>
 
-      <section className="space-y-4">
-        <SettingsSectionHeading
-          title="Telegram"
-          description="Bot, Relay und Benachrichtigung beim Senden — nur für den Telegram-Sendeweg im Chat."
-        />
-        <SettingsTelegramNotifyOnSend />
-        <SettingsTelegramAlarmGroupJoin backendOnline={backendOnline} />
-        <SettingsTelegramEinsatzGroup
-          backendOnline={backendOnline}
-          apiStatus={advancedIotaStatus}
-          isBossRole={isBossRole || isKommandant}
-        />
-        <SettingsTelegramIntegration backendOnline={backendOnline} />
-      </section>
+      <SettingsCollapsiblePanel open={activeCategory === 'telegram'} title="Telegram" icon={<Send className="h-5 w-5" />}>
+        {managedNetwork ? (
+          <>
+            <SettingsTelegramIntegration backendOnline={backendOnline} />
+            <SettingsTelegramEinsatzGroup
+              backendOnline={backendOnline}
+              apiStatus={advancedIotaStatus}
+              isBossRole={isBossRole || isKommandant}
+            />
+            <SettingsTelegramNotifyOnSend />
+          </>
+        ) : (
+          <>
+            <SettingsTelegramAlarmGroupJoin backendOnline={backendOnline} />
+            <SettingsTelegramIntegration backendOnline={backendOnline} />
+            <SettingsTelegramNotifyOnSend />
+          </>
+        )}
+      </SettingsCollapsiblePanel>
 
-      <section className="space-y-4">
-        <SettingsSectionHeading title="Sicherheit & Notfall" description="Unwiderrufliche Chain-Löschung und Sitzung sperren." />
+      <SettingsCollapsiblePanel open={activeCategory === 'security'} title="Sicherheit & Notfall" icon={<Shield className="h-5 w-5" />}>
         <SettingsEmergencyPurgeSection />
-      </section>
+      </SettingsCollapsiblePanel>
 
       {onOpenConfig ? (
         <p className="text-xs text-muted-foreground">
-          Erweiterte .env-Konfiguration:{' '}
+          Erweiterte .env:{' '}
           <button type="button" className="text-primary underline" onClick={onOpenConfig}>
             Konfiguration öffnen
           </button>

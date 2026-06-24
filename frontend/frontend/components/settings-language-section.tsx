@@ -15,7 +15,6 @@ export function SettingsLanguageSection() {
         </div>
         <div className="min-w-0 flex-1">
           <h4 className="font-semibold text-foreground">{t('language.sectionTitle')}</h4>
-          <p className="mt-0.5 text-sm text-muted-foreground">{t('language.sectionDescription')}</p>
         </div>
       </div>
       <LocaleFlagSwitch showLabels size="md" />

@@ -104,11 +104,14 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
 }
 
 export const BOSS_STEP_TITLES: Record<string, string> = {
-  identity: 'Wer bin ich?',
-  iota: 'IOTA & Postfach',
-  funk: 'Funk',
-  team: 'Team',
-  helpers: 'Erste Helfer',
+  address: 'IOTA-Adresse',
+  package: 'Package & Netzwerk',
+  'server-mailbox': 'Server-Postfach',
+  team: 'Team & Postfächer',
+  'telegram-bot': 'Telegram Bot',
+  'telegram-group': 'Alarmgruppe',
+  meshtastic: 'Meshtastic',
+  helpers: 'Helfer provisionieren',
   done: 'Fertig',
 }
 
@@ -122,9 +125,10 @@ export const HELPER_STEP_TITLES: Record<string, string> = {
 }
 
 export const WANDERER_STEP_TITLES: Record<string, string> = {
-  'solo-intro': 'Privat starten',
   wallet: 'Wallet',
-  funk: 'Funk (optional)',
+  address: 'Adresse bestätigen',
+  'private-mailbox': 'Private Mailbox',
+  meshtastic: 'Funk (optional)',
   done: 'Fertig',
 }
 

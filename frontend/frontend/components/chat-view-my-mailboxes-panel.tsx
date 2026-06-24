@@ -274,29 +274,9 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
 
   return (
     <div className="space-y-3">
-      <div className="rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5 text-[11px] leading-relaxed text-muted-foreground">
-        <p className="font-medium text-foreground">Kurz erklärt</p>
-        <ul className="mt-1.5 list-disc space-y-1 pl-4">
-          <li>
-            <strong className="text-foreground">Server-Postfach</strong> — gemeinsames Einsatz-Postfach des Betriebs, immer
-            sichtbar.
-          </li>
-          <li>
-            <strong className="text-foreground">Team</strong> — geteiltes Postfach; du trittst per ID/QR bei (erstellt meist
-            die Leitung, nicht du).
-          </li>
-          <li>
-            <strong className="text-foreground">Privat</strong> — nur dein Wallet; du erstellst sie selbst.
-          </li>
-          <li>
-            <strong className="text-foreground">Genau eine „Fokus“-Mailbox</strong> steuert Senden + welcher Posteingang
-            zuerst geladen wird (Team oder Privat). Ohne Fokus gilt das Server-Postfach.
-          </li>
-        </ul>
-        <p className="mt-2">
-          <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN} className="text-[10px]" />
-        </p>
-      </div>
+      <p className="text-[10px] text-muted-foreground">
+        <MessengerHandbookChatLink anchor={MESSENGER_HB_ANCHOR_KANALE_MAILBOXEN} className="text-[10px]" />
+      </p>
 
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5">
         <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Dein Fokus (Senden + Posteingang)</p>

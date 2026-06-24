@@ -6,27 +6,27 @@ import { OnboardingWizardDialog } from '@/frontend/components/onboarding/onboard
 import {
   ONBOARDING_WIZARD_OPEN_REQUEST_EVENT,
   readOnboardingProgress,
-  resolveOnboardingPath,
+  resolveWizardOnboardingPath,
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
 
 export function OnboardingWizardHost(p: {
   apiSnapshot?: ApiStatus | null
-  onOpenSettings?: () => void
-  onOpenEinsatzleitung?: () => void
+  backendOnline?: boolean
   onActivateWallet?: () => void
-  onOpenChat?: () => void
+  onReloadStatus?: () => void
 }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const onOpen = () => {
-      if (!readOnboardingProgress()) {
-        const path = resolveOnboardingPath({
-          role: p.apiSnapshot?.role,
-          standalonePath: readStandaloneOnboardingPath(),
-        })
+      const path = resolveWizardOnboardingPath({
+        role: p.apiSnapshot?.role,
+        standalonePath: readStandaloneOnboardingPath(),
+      })
+      if (!path) return
+      if (!readOnboardingProgress() || readOnboardingProgress()?.path !== path) {
         startOnboarding(path)
       }
       setOpen(true)
@@ -40,11 +40,9 @@ export function OnboardingWizardHost(p: {
       open={open}
       onOpenChange={setOpen}
       apiSnapshot={p.apiSnapshot}
-      onOpenSettings={p.onOpenSettings}
-      onOpenEinsatzleitung={p.onOpenEinsatzleitung}
-      onOpenHandoffImport={p.onOpenSettings}
+      backendOnline={p.backendOnline}
       onActivateWallet={p.onActivateWallet}
-      onOpenChat={p.onOpenChat}
+      onReloadStatus={p.onReloadStatus}
     />
   )
 }

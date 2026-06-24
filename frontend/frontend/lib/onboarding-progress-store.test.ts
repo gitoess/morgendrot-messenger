@@ -81,7 +81,7 @@ describe('onboarding-progress-store', () => {
 
   it('markOnboardingStepComplete erhöht Index', () => {
     startOnboarding('wanderer')
-    markOnboardingStepComplete('solo-intro')
-    expect(readOnboardingProgress()?.completedSteps).toContain('solo-intro')
+    markOnboardingStepComplete('wallet')
+    expect(readOnboardingProgress()?.completedSteps).toContain('wallet')
   })
 })

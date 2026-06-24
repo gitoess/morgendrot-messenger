@@ -35,9 +35,6 @@ export function SettingsMyMailboxesSection({ apiStatus, myAddress }: SettingsMyM
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Meine Mailboxen</h4>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              Server-Shared, Team und Private — aktiv setzen, dann Posteingang aktualisieren.
-            </p>
           </div>
         </div>
         <Link
