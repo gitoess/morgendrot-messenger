@@ -39,6 +39,7 @@ export type OnboardingWizardDialogProps = {
   onOpenChange: (open: boolean) => void
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
+  contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
   onReloadStatus?: () => void
 }
@@ -74,6 +75,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   const panelProps = {
     apiSnapshot: p.apiSnapshot,
     backendOnline: p.backendOnline,
+    contactDirectory: p.contactDirectory,
     onActivateWallet: p.onActivateWallet,
     onReload: p.onReloadStatus,
   }

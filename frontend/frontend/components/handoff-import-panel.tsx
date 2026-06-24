@@ -21,6 +21,8 @@ import {
 import { recordHandoffProfileImport } from '@/frontend/lib/handoff-profile-history'
 import { previewHandoffEnvImportLocal } from '@/frontend/lib/handoff-env-local-preview'
 import { applyHandoffEnvToLocalDevice } from '@/frontend/lib/handoff-device-bootstrap'
+import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { parseHandoffExtrasJson, saveHandoffExtras } from '@/frontend/lib/handoff-extras'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
@@ -708,6 +710,10 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
             <p className="text-sm text-muted-foreground" role="status">
               {statusMsg}
             </p>
+          ) : null}
+
+          {stage === 'idle' && !envText && !applied && !readLocalHandoffAppliedSnapshot()?.bossAddress ? (
+            <HelperJoinRequestForm />
           ) : null}
         </div>
       </div>

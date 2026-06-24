@@ -77,7 +77,25 @@ Puls, Heartbeat, Node-ID und Kanal — getrennt von IOTA/Online.
 
 ---
 
-## Sicherheit & Notfall
+## Helfer einrichten (Einsatzleitung)
+
+### Drei Wege
+
+1. **Handoff-ZIP** — Boss exportiert Profil, Rechte, Team, Partner. Helfer importiert (Standard).
+2. **Spontan** — Helfer: Beitrittsanfrage (Einstellungen → Import). Boss: Einsatzleitung → Freigeben → Team-Update an alle.
+3. **Telefonbuch** — Kontakt mit Funk-ID/Telegram → initialProfile JSON oder Mesh-Backup verteilen.
+
+### Daten zurück zum Boss
+
+| Quelle | Was kommt zurück |
+|--------|------------------|
+| Team-Update (`MORG_TEAM_MEMBER_UPDATE_V1`) | meshNodeId, telegramChatId, Name — Posteingang Ja/Nein |
+| Beitrittsanfrage | Optional Funk + Telegram in der Anfrage; bei Freigabe ins Telefonbuch |
+| Registry | Nur Boss-seitig: provisionierte Geräte (Adresse, Label) — kein Live-Sync |
+
+Meshtastic-Kanal-PSK wird **nicht** in Morgendrot gespeichert — nur in der Meshtastic-App (identisch auf allen Geräten).
+
+---
 
 On-Chain-Vault-Purge ist unwiderruflich. Nur bei dokumentiertem Notfall.
 

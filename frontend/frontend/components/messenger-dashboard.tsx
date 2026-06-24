@@ -170,6 +170,7 @@ function MessengerDashboardBody({
       <OnboardingWizardHost
         apiSnapshot={s.apiSnapshot}
         backendOnline={s.apiSnapshot?.backendOnline === true || s.apiSnapshot?.backendRunning === true}
+        contactDirectory={s.contactDirectory}
         onActivateWallet={s.requestStandaloneWalletUnlock}
         onReloadStatus={() => void s.checkStatus()}
       />
@@ -271,6 +272,7 @@ function MessengerDashboardBody({
               contactDirectory={s.contactDirectory}
               refreshContactDirectory={s.refreshContactDirectory}
               onRefreshStatus={s.checkStatus}
+              onOpenSettings={s.openSettingsView}
             />
           )}
           {s.activeView.type === 'boss' && s.activeView.variant && (

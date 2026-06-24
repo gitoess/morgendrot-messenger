@@ -146,6 +146,7 @@ export function ProjektDashboard() {
               contactDirectory={s.contactDirectory}
               refreshContactDirectory={s.refreshContactDirectory}
               onRefreshStatus={s.checkStatus}
+              onOpenSettings={s.openSettingsView}
             />
           )}
           {s.activeView.type === 'lock' && s.activeView.variant && (

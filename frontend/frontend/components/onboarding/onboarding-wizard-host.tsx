@@ -14,6 +14,7 @@ import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboardi
 export function OnboardingWizardHost(p: {
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
+  contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
   onReloadStatus?: () => void
 }) {
@@ -41,6 +42,7 @@ export function OnboardingWizardHost(p: {
       onOpenChange={setOpen}
       apiSnapshot={p.apiSnapshot}
       backendOnline={p.backendOnline}
+      contactDirectory={p.contactDirectory}
       onActivateWallet={p.onActivateWallet}
       onReloadStatus={p.onReloadStatus}
     />

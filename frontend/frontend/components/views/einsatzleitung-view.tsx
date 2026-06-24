@@ -1,6 +1,7 @@
 'use client'
 
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
 import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
 import {
   LazyBossHelferEinrichtenPanel,
@@ -15,10 +16,12 @@ export type EinsatzleitungViewProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
   refreshContactDirectory: () => void
   onRefreshStatus?: () => void | Promise<void>
+  onOpenSettings?: () => void
 }
 
 export function EinsatzleitungView(p: EinsatzleitungViewProps) {
-  const isBoss = (p.apiSnapshot?.role || '').trim().toLowerCase() === 'boss'
+  const role = (p.apiSnapshot?.role || '').trim()
+  const isLead = canAccessEinsatzleitung(role)
 
   return (
     <div className="space-y-4 pb-4">
@@ -26,13 +29,18 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
 
       <EinsatzChainModeBanner rpcUrl={p.apiSnapshot?.rpcUrlLabel || p.apiSnapshot?.network} />
 
-      {isBoss ? (
+      {isLead ? (
         <>
-          <EinsatzleitungJoinRequestsPanel apiStatus={p.apiSnapshot ?? null} />
+          <EinsatzleitungJoinRequestsPanel
+            apiStatus={p.apiSnapshot ?? null}
+            onContactsChanged={p.refreshContactDirectory}
+          />
           <LazyBossHelferEinrichtenPanel
             apiStatus={p.apiSnapshot ?? null}
             contactDirectory={p.contactDirectory}
             onRefreshStatus={p.onRefreshStatus}
+            onOpenMailboxes={p.onOpenSettings}
+            onContactsChanged={p.refreshContactDirectory}
           />
           <LazyEinsatzleitungErweitertPanel
             apiStatus={p.apiSnapshot ?? null}

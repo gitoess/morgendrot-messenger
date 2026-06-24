@@ -9,11 +9,14 @@ import { SettingsSystemIdentitySection } from '@/frontend/components/views/setti
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
-import { LazyChatViewPulseSettings, LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
+import { LazyChatViewPulseSettings } from '@/frontend/components/lazy/messenger-scope-b'
+import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
+import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 
 type PanelProps = {
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
+  contactDirectory?: Record<string, ContactMeshEntryClient>
   onActivateWallet?: () => void
   onReload?: () => void
 }
@@ -152,10 +155,12 @@ export function OnboardingMeshtasticStep(p: PanelProps) {
 
 export function OnboardingBossHelpersStep(p: PanelProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Erste Helfer: Handoff-ZIP oder QR mit öffentlichen Keys exportieren.</p>
-      <LazyHandoffImportPanel backendOnline={p.backendOnline === true} />
-    </div>
+    <BossHandoffExportPanel
+      apiSnapshot={p.apiSnapshot ?? null}
+      contactDirectory={p.contactDirectory}
+      embedded
+      layout="compact"
+    />
   )
 }
 
