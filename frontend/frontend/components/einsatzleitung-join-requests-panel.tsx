@@ -2,20 +2,32 @@
 
 import { useEffect, useState } from 'react'
 import { Check, UserPlus, X } from 'lucide-react'
-import type { ApiStatus } from '@/frontend/lib/api/status'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
+import { RosterContactDiffPreview } from '@/frontend/components/roster-contact-diff-preview'
 import { applyInitialProfileProvisioning } from '@/frontend/lib/api/contacts'
 import { memberToInitialProfileContact } from '@/frontend/lib/morg-team-member-update-v1'
+import {
+  computeRosterContactDiff,
+  findDirectoryEntry,
+} from '@/frontend/lib/roster-contact-diff'
 import {
   listPendingJoinRequests,
   markJoinRequestStatus,
   TEAM_JOIN_REQUESTS_CHANGED_EVENT,
   type StoredJoinRequest,
 } from '@/frontend/lib/team-join-request-store'
+import {
+  listRosterPendingSuggestions,
+  removeRosterPendingSuggestion,
+  TEAM_ROSTER_PENDING_CHANGED_EVENT,
+  type RosterPendingSuggestion,
+} from '@/frontend/lib/team-roster-pending-store'
 import { publishTeamMemberUpdateWire } from '@/frontend/lib/team-sync-wire'
 
 export function EinsatzleitungJoinRequestsPanel(p: {
   apiStatus?: ApiStatus | null
+  contactDirectory?: Record<string, ContactMeshEntryClient>
   onContactsChanged?: () => void
 }) {
   const [, bump] = useState(0)
@@ -25,24 +37,38 @@ export function EinsatzleitungJoinRequestsPanel(p: {
   useEffect(() => {
     const sync = () => bump((n) => n + 1)
     window.addEventListener(TEAM_JOIN_REQUESTS_CHANGED_EVENT, sync)
-    return () => window.removeEventListener(TEAM_JOIN_REQUESTS_CHANGED_EVENT, sync)
+    window.addEventListener(TEAM_ROSTER_PENDING_CHANGED_EVENT, sync)
+    return () => {
+      window.removeEventListener(TEAM_JOIN_REQUESTS_CHANGED_EVENT, sync)
+      window.removeEventListener(TEAM_ROSTER_PENDING_CHANGED_EVENT, sync)
+    }
   }, [])
 
   const pending = listPendingJoinRequests()
+  const rosterPending = listRosterPendingSuggestions()
+  const directory = p.contactDirectory ?? {}
 
   const boss = (p.apiStatus?.myAddressFull || p.apiStatus?.myAddress || '').trim()
   const teamMb = (p.apiStatus?.inboxUnionMailboxIds?.[0] || p.apiStatus?.mailboxId || '').trim()
   const teamId = (p.apiStatus?.handoffLabel || 'default').trim()
 
-  const addToPhonebook = async (req: StoredJoinRequest) => {
-    const contact = memberToInitialProfileContact(req.applicant)
-    await applyInitialProfileProvisioning({ version: 1, contacts: [contact] })
+  const addToPhonebook = async (member: StoredJoinRequest['applicant']) => {
+    const contact = memberToInitialProfileContact(member)
+    const r = await applyInitialProfileProvisioning({ version: 1, contacts: [contact] })
+    if (!r.ok) throw new Error(r.error || 'Telefonbuch-Update fehlgeschlagen')
     p.onContactsChanged?.()
   }
 
-  const approve = async (req: StoredJoinRequest) => {
+  const approveJoin = async (req: StoredJoinRequest) => {
     setBusyId(req.requestId)
     setFeedback(null)
+    try {
+      await addToPhonebook(req.applicant)
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Telefonbuch-Update fehlgeschlagen')
+      setBusyId(null)
+      return
+    }
     const r = await publishTeamMemberUpdateWire({
       teamMailboxAddress: teamMb,
       teamId: req.teamId || teamId,
@@ -53,17 +79,31 @@ export function EinsatzleitungJoinRequestsPanel(p: {
     })
     if (r.ok) {
       markJoinRequestStatus(req.requestId, 'join_approved')
-      try {
-        await addToPhonebook(req)
-      } catch {
-        /* phonebook optional */
-      }
-      setFeedback(`Freigegeben — Team-Update gesendet${r.channels?.iota ? ' (IOTA)' : ''}, Telefonbuch aktualisiert.`)
+      setFeedback(`Freigegeben — Roster aktualisiert, Team-Update gesendet${r.channels?.iota ? ' (IOTA)' : ''}.`)
       bump((n) => n + 1)
     } else {
-      setFeedback(r.error || 'Freigabe fehlgeschlagen')
+      setFeedback(`Roster gespeichert, aber Team-Update fehlgeschlagen: ${r.error || 'unbekannt'}`)
     }
     setBusyId(null)
+  }
+
+  const acceptHandoffSuggestion = async (s: RosterPendingSuggestion) => {
+    setBusyId(s.id)
+    setFeedback(null)
+    try {
+      await addToPhonebook(s.member)
+      removeRosterPendingSuggestion(s.id)
+      setFeedback(`„${s.member.name}“ ins Team-Roster übernommen (Handoff-Vorschlag).`)
+      bump((n) => n + 1)
+    } catch (e) {
+      setFeedback(e instanceof Error ? e.message : 'Roster-Übernahme fehlgeschlagen')
+    }
+    setBusyId(null)
+  }
+
+  const dismissHandoffSuggestion = (s: RosterPendingSuggestion) => {
+    removeRosterPendingSuggestion(s.id)
+    bump((n) => n + 1)
   }
 
   const reject = (req: StoredJoinRequest) => {
@@ -71,54 +111,90 @@ export function EinsatzleitungJoinRequestsPanel(p: {
     bump((n) => n + 1)
   }
 
+  const showSection = pending.length > 0 || rosterPending.length > 0
+
   return (
     <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
       <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
         <UserPlus className="h-5 w-5 text-amber-400" aria-hidden />
-        Beitrittsanfragen
-        {pending.length > 0 ? (
-          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium">{pending.length}</span>
+        Beitrittsanfragen & Roster-Vorschläge
+        {pending.length + rosterPending.length > 0 ? (
+          <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium">
+            {pending.length + rosterPending.length}
+          </span>
         ) : null}
       </h3>
-      {pending.length === 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">Keine offenen Anfragen — Helfer ohne ZIP senden eine Anfrage (Einstellungen → Import).</p>
+      {!showSection ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Keine offenen Anfragen — Helfer ohne ZIP senden eine Anfrage (Einstellungen → Import). Nach Handoff erscheint
+          hier ein Roster-Vorschlag.
+        </p>
       ) : (
         <ul className="mt-4 space-y-3">
-          {pending.map((req) => (
-            <li
-              key={req.requestId}
-              className="rounded-lg border border-border/70 bg-card/80 px-3 py-3 text-sm"
-            >
-              <p className="font-medium text-foreground">{req.applicant.name}</p>
-              <p className="font-mono text-xs text-muted-foreground">{req.applicant.address}</p>
-              {req.applicant.meshNodeId ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Funk: <span className="font-mono text-foreground">{req.applicant.meshNodeId}</span>
-                </p>
-              ) : null}
-              {req.applicant.telegramChatId ? (
-                <p className="text-xs text-muted-foreground">
-                  Telegram: <span className="font-mono text-foreground">{req.applicant.telegramChatId}</span>
-                </p>
-              ) : null}
-              {req.note ? <p className="mt-1 text-muted-foreground">{req.note}</p> : null}
-              <div className="mt-2 flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busyId === req.requestId}
-                  onClick={() => void approve(req)}
-                >
-                  <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
-                  Freigeben
-                </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={() => reject(req)}>
-                  <X className="mr-1 h-3.5 w-3.5" aria-hidden />
-                  Ablehnen
-                </Button>
-              </div>
-            </li>
-          ))}
+          {rosterPending.map((s) => {
+            const existing = findDirectoryEntry(directory, s.member.address)
+            const diff = computeRosterContactDiff(existing, s.member)
+            return (
+              <li
+                key={s.id}
+                className="rounded-lg border border-border/70 bg-card/80 px-3 py-3 text-sm"
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Handoff-Vorschlag</p>
+                <p className="font-medium text-foreground">{s.member.name}</p>
+                <p className="font-mono text-xs text-muted-foreground">{s.member.address}</p>
+                {s.handoffLabel ? (
+                  <p className="mt-1 text-xs text-muted-foreground">Preset: {s.handoffLabel}</p>
+                ) : null}
+                <RosterContactDiffPreview diff={diff} />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busyId === s.id}
+                    onClick={() => void acceptHandoffSuggestion(s)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
+                    Ins Roster übernehmen
+                  </Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => dismissHandoffSuggestion(s)}>
+                    <X className="mr-1 h-3.5 w-3.5" aria-hidden />
+                    Verwerfen
+                  </Button>
+                </div>
+              </li>
+            )
+          })}
+          {pending.map((req) => {
+            const existing = findDirectoryEntry(directory, req.applicant.address)
+            const diff = computeRosterContactDiff(existing, req.applicant)
+            return (
+              <li
+                key={req.requestId}
+                className="rounded-lg border border-border/70 bg-card/80 px-3 py-3 text-sm"
+              >
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Beitrittsanfrage</p>
+                <p className="font-medium text-foreground">{req.applicant.name}</p>
+                <p className="font-mono text-xs text-muted-foreground">{req.applicant.address}</p>
+                {req.note ? <p className="mt-1 text-muted-foreground">{req.note}</p> : null}
+                <RosterContactDiffPreview diff={diff} />
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busyId === req.requestId}
+                    onClick={() => void approveJoin(req)}
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" aria-hidden />
+                    Freigeben & Roster übernehmen
+                  </Button>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => reject(req)}>
+                    <X className="mr-1 h-3.5 w-3.5" aria-hidden />
+                    Ablehnen
+                  </Button>
+                </div>
+              </li>
+            )
+          })}
         </ul>
       )}
       {feedback ? (

@@ -33,6 +33,7 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
         <>
           <EinsatzleitungJoinRequestsPanel
             apiStatus={p.apiSnapshot ?? null}
+            contactDirectory={p.contactDirectory}
             onContactsChanged={p.refreshContactDirectory}
           />
           <LazyBossHelferEinrichtenPanel

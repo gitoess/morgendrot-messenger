@@ -917,7 +917,15 @@ async function testApplyInitialProfileToContacts() {
         const { parseAndValidateInitialProfile } = await import('../src/initial-profile-provision.js');
         const raw = {
             version: 1,
-            contacts: [{ name: 'Test-Kontakt', address: addr, roleTags: ['Medic'] }],
+            contacts: [
+                {
+                    name: 'Test-Kontakt',
+                    address: addr,
+                    roleTags: ['Medic'],
+                    meshNodeId: '!deadbeef',
+                    telegramChatId: '-100123456',
+                },
+            ],
         };
         const v = parseAndValidateInitialProfile(raw);
         assert(v.ok === true, 'profile valid');
@@ -928,6 +936,8 @@ async function testApplyInitialProfileToContacts() {
         const entry = j[addr.toLowerCase()] as Record<string, unknown>;
         assert(entry && entry.label === 'Test-Kontakt', 'label written');
         assert(Array.isArray(entry.roleTags) && entry.roleTags.includes('Medic'), 'roleTags');
+        assert(entry.meshNodeId === '!deadbeef', 'meshNodeId');
+        assert(entry.telegramChatId === '-100123456', 'telegramChatId');
         try {
             fs.unlinkSync(tmp);
         } catch {}

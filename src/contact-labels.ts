@@ -4,7 +4,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import type { InitialProfile } from './initial-profile-provision.js';
+import type { InitialProfile, InitialProfileContact } from './initial-profile-provision.js';
 
 const DEFAULT_FILE = '.morgendrot-contact-labels.json';
 
@@ -362,6 +362,46 @@ export function getContactByBleUuid(uuid: string): { address: string; entry: Con
     return undefined;
 }
 
+/** Wendet optionale Mesh-/Telegram-/Mailbox-Felder auf einen Verzeichniseintrag an (ohne Schreiben). */
+export function mergeInitialProfileContactIntoEntry(prev: ContactMeshEntry, c: InitialProfileContact): ContactMeshEntry {
+    const next: ContactMeshEntry = { ...prev };
+    const label = (c.name || '').trim().slice(0, 64);
+    if (label) next.label = label;
+
+    if (c.roleTags && c.roleTags.length) {
+        const tags = c.roleTags.map((t) => String(t).trim().slice(0, 48)).filter(Boolean).slice(0, 20);
+        if (tags.length) next.roleTags = tags;
+    }
+
+    if (c.meshNodeId !== undefined) {
+        const n = normalizeMeshNodeId(c.meshNodeId);
+        if (n) next.meshNodeId = n;
+    }
+    if (c.telegramChatId !== undefined) {
+        const t = normalizeTelegramChatId(c.telegramChatId);
+        if (t) next.telegramChatId = t;
+    }
+    const applyMb = (key: 'mailboxSharedId' | 'mailboxPrivateId' | 'mailboxTeamId' | 'mailboxBufferId', raw?: string) => {
+        if (raw === undefined) return;
+        const m = normalizeMailboxObjectId(raw);
+        if (!m) return;
+        next[key] = m;
+        if (key === 'mailboxPrivateId') next.mailboxObjectId = m;
+    };
+    if (c.mailboxObjectId !== undefined) {
+        const m = normalizeMailboxObjectId(c.mailboxObjectId);
+        if (m) {
+            next.mailboxObjectId = m;
+            next.mailboxPrivateId = m;
+        }
+    }
+    applyMb('mailboxSharedId', c.mailboxSharedId);
+    applyMb('mailboxPrivateId', c.mailboxPrivateId);
+    applyMb('mailboxTeamId', c.mailboxTeamId);
+    applyMb('mailboxBufferId', c.mailboxBufferId);
+    return next;
+}
+
 /** Wendet ein validiertes `initialProfile` auf die lokale Kontaktdatei an (Merge pro Adresse). */
 export function applyInitialProfileToContacts(profile: InitialProfile): { applied: number } {
     const dir = loadContactDirectory();
@@ -370,15 +410,7 @@ export function applyInitialProfileToContacts(profile: InitialProfile): { applie
         const hex = normalizeAddress(c.address);
         if (!hex) continue;
         const prev = dir[hex] ?? { label: 'Partner' };
-        const tags =
-            c.roleTags && c.roleTags.length
-                ? c.roleTags.map((t) => String(t).trim().slice(0, 48)).filter(Boolean).slice(0, 20)
-                : undefined;
-        dir[hex] = {
-            ...prev,
-            label: (c.name || '').trim().slice(0, 64) || prev.label,
-            ...(tags?.length ? { roleTags: tags } : {}),
-        };
+        dir[hex] = mergeInitialProfileContactIntoEntry(prev, c);
         applied++;
     }
     writeDirectory(dir);

@@ -10,6 +10,9 @@ vi.mock('@/frontend/lib/handoff-export-download', () => ({
 vi.mock('@/frontend/lib/boss-provision-registry', () => ({
   addBossProvisionRegistryEntry: vi.fn(),
 }))
+vi.mock('@/frontend/lib/team-roster-pending-store', () => ({
+  enqueueRosterPendingSuggestion: vi.fn(),
+}))
 vi.mock('@/frontend/lib/handoff-last-preset', () => ({
   writeHandoffLastPresetId: vi.fn(),
 }))
@@ -20,6 +23,7 @@ vi.mock('qrcode', () => ({
 import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { addBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
+import { enqueueRosterPendingSuggestion } from '@/frontend/lib/team-roster-pending-store'
 
 const ADDR = '0x' + 'a'.repeat(64)
 
@@ -76,6 +80,13 @@ describe('provisionNewHandoffDevice', () => {
     expect(downloadHandoffZipExport).toHaveBeenCalled()
     expect(addBossProvisionRegistryEntry).toHaveBeenCalledWith(
       expect.objectContaining({ address: ADDR, masterPassword: 'boss-master-1' })
+    )
+    expect(enqueueRosterPendingSuggestion).toHaveBeenCalledWith(
+      expect.objectContaining({
+        source: 'handoff',
+        member: expect.objectContaining({ address: ADDR, name: 'Anna' }),
+        registryEntryId: 'entry-1',
+      })
     )
     expect(r.qrDataUrl).toContain('data:image')
     expect(r.entryId).toBe('entry-1')

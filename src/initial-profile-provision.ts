@@ -31,6 +31,16 @@ export type InitialProfileContact = {
     address: string;
     /** z. B. „Einsatzleiter“, „Medic“ — nur Anzeige, keine Chain-Rolle */
     roleTags?: string[];
+    /** Meshtastic Node ID, z. B. !a1b2c3d4 */
+    meshNodeId?: string;
+    /** Telegram Chat-ID (Kurz-Hinweis nach Send). */
+    telegramChatId?: string;
+    /** Optionale Mailbox-Slots (0x + 64 Hex). */
+    mailboxObjectId?: string;
+    mailboxSharedId?: string;
+    mailboxPrivateId?: string;
+    mailboxTeamId?: string;
+    mailboxBufferId?: string;
 };
 
 export type InitialProfile = {
@@ -57,6 +67,35 @@ export type InitialProfile = {
 function trimStr(s: unknown, max: number): string {
     const t = String(s ?? '').trim();
     return t.length > max ? t.slice(0, max) : t;
+}
+
+function parseOptionalMeshNodeId(raw: unknown): { ok: true; value?: string } | { ok: false; error: string } {
+    if (raw === undefined || raw === null || raw === '') return { ok: true };
+    const s = String(raw).trim();
+    if (!s.startsWith('!')) return { ok: false, error: 'muss mit ! beginnen' };
+    const hex = s.slice(1).toLowerCase();
+    if (!/^[0-9a-f]{1,64}$/.test(hex)) return { ok: false, error: 'ungültiges Hex nach !' };
+    return { ok: true, value: `!${hex}` };
+}
+
+function parseOptionalTelegramChatId(raw: unknown): { ok: true; value?: string } | { ok: false; error: string } {
+    if (raw === undefined || raw === null || raw === '') return { ok: true };
+    const t = String(raw).trim();
+    if (!/^-?\d{1,20}$/.test(t)) return { ok: false, error: 'ungültige Chat-ID' };
+    return { ok: true, value: t };
+}
+
+function parseOptionalMailboxId(
+    raw: unknown,
+    field: string,
+    index: number
+): { ok: true; value?: string } | { ok: false; error: string } {
+    if (raw === undefined || raw === null || raw === '') return { ok: true };
+    const id = String(raw).trim().toLowerCase();
+    if (!isValidIotaAddress64(id)) {
+        return { ok: false, error: 'initialProfile.contacts[' + index + '].' + field + ': gültige 0x+64Hex-Adresse erforderlich.' };
+    }
+    return { ok: true, value: id };
 }
 
 function parseMetadataField(raw: unknown): { ok: true; metadata: Record<string, string> } | { ok: false; error: string } {
@@ -174,7 +213,37 @@ export function parseAndValidateInitialProfile(raw: unknown): { ok: true; profil
             if (tags.length) roleTags = tags;
         }
 
-        contacts.push({ name, address: addr, ...(roleTags ? { roleTags } : {}) });
+        const optionalMesh = parseOptionalMeshNodeId(co.meshNodeId);
+        if (optionalMesh.ok === false) {
+            return { ok: false, error: 'initialProfile.contacts[' + i + '].meshNodeId: ' + optionalMesh.error };
+        }
+        const optionalTg = parseOptionalTelegramChatId(co.telegramChatId);
+        if (optionalTg.ok === false) {
+            return { ok: false, error: 'initialProfile.contacts[' + i + '].telegramChatId: ' + optionalTg.error };
+        }
+        const mbShared = parseOptionalMailboxId(co.mailboxSharedId, 'mailboxSharedId', i);
+        if (mbShared.ok === false) return mbShared;
+        const mbPrivate = parseOptionalMailboxId(co.mailboxPrivateId, 'mailboxPrivateId', i);
+        if (mbPrivate.ok === false) return mbPrivate;
+        const mbTeam = parseOptionalMailboxId(co.mailboxTeamId, 'mailboxTeamId', i);
+        if (mbTeam.ok === false) return mbTeam;
+        const mbBuffer = parseOptionalMailboxId(co.mailboxBufferId, 'mailboxBufferId', i);
+        if (mbBuffer.ok === false) return mbBuffer;
+        const mbObject = parseOptionalMailboxId(co.mailboxObjectId, 'mailboxObjectId', i);
+        if (mbObject.ok === false) return mbObject;
+
+        contacts.push({
+            name,
+            address: addr,
+            ...(roleTags ? { roleTags } : {}),
+            ...(optionalMesh.value ? { meshNodeId: optionalMesh.value } : {}),
+            ...(optionalTg.value ? { telegramChatId: optionalTg.value } : {}),
+            ...(mbObject.value ? { mailboxObjectId: mbObject.value } : {}),
+            ...(mbShared.value ? { mailboxSharedId: mbShared.value } : {}),
+            ...(mbPrivate.value ? { mailboxPrivateId: mbPrivate.value } : {}),
+            ...(mbTeam.value ? { mailboxTeamId: mbTeam.value } : {}),
+            ...(mbBuffer.value ? { mailboxBufferId: mbBuffer.value } : {}),
+        });
     }
 
     const profile: InitialProfile = {

@@ -3,6 +3,7 @@ import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/stan
 import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { addBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
+import { enqueueRosterPendingSuggestion } from '@/frontend/lib/team-roster-pending-store'
 import { buildSeedSetupQrText } from '@/frontend/lib/seed-setup-qr'
 import { writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
 import type { HandoffEinsatzPresetId } from '@/frontend/lib/handoff-export-presets'
@@ -66,6 +67,17 @@ export async function provisionNewHandoffDevice(
   if (!added.ok) {
     return { ok: false, error: added.error }
   }
+
+  enqueueRosterPendingSuggestion({
+    source: 'handoff',
+    member: {
+      address: mnemonic.address,
+      name: input.label.trim() || input.presetId,
+      handoffLabel: input.label.trim() || input.presetId,
+    },
+    handoffLabel: input.presetId,
+    registryEntryId: added.entry.id,
+  })
 
   const qrText = buildSeedSetupQrText({ seedImport: mnemonic.secretKey, address: mnemonic.address })
   const qrDataUrl = await QRCode.toDataURL(qrText, { width: 240, margin: 2 })
