@@ -34,6 +34,14 @@ npm run dev
 npm run dev:messenger
 ```
 
+**Empfohlen bei Port-Konflikten / nach abgebrochenem Lauf** (beendet alte Prozesse auf 3341+3342, wartet, startet mit festen Ports — API bleibt auf **3342**, kein Fallback):
+
+```bash
+npm run dev:clean    # Alias für dev:messenger:clean
+npm run dm           # Kurzform (gleich)
+npm run ds           # Nur stoppen (= dev:stop)
+```
+
 Beide öffnen dieselbe URL **http://127.0.0.1:3341/** — der Unterschied ist das geladene Dashboard (`projekt-dashboard` vs. `messenger-dashboard`). Siehe **`docs/PRODUCT-MESSENGER-VS-PROJEKT.md`**.
 
 ### Messenger: Wanderer vs. Boss — `ROLE` in `.env`
@@ -54,7 +62,7 @@ Nach Änderung in der **`.env` im Repo-Root**: **`npm run dev:stop`**, dann **`n
 
 Code: `frontend/frontend/lib/messenger-role-capabilities.ts` → `canAccessEinsatzleitung()`.
 
-**Dev wieder stoppen (Ports 3341–3344 freigeben):** **`npm run dev:stop`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
+**Dev wieder stoppen (Ports 3341–3344 freigeben):** **`npm run dev:stop`** oder **`npm run ds`** im Repo-Root — sinnvoll vor einem erneuten Start, wenn `EADDRINUSE` oder „Website nicht erreichbar“ nach einem abgebrochenen Lauf auftritt. Im laufenden Terminal reicht **Strg+C**.
 
 - **Backend (API):** http://127.0.0.1:3342  
 - **Next.js-UI:** http://127.0.0.1:3341  
