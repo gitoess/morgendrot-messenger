@@ -15,10 +15,7 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import {
   buildTeamMailboxOptions,
   defaultSelectedTeamMailboxIds,
-  formatTeamMailboxIds,
-  pickPrimaryMailboxId,
 } from '@/frontend/lib/handoff-export-autofill'
-import { resolveMessengerGroupHandoffJson } from '@/frontend/lib/messenger-group-handoff'
 import {
   formatHandoffAddressShort,
   parsePartnerAddressCsv,
@@ -50,7 +47,6 @@ import {
 } from '@/frontend/lib/handoff-export-presets'
 import { HANDOFF_PRESET_VISUAL } from '@/frontend/lib/handoff-preset-ui'
 import { readHandoffLastPresetId, writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
-import { HANDOFF_README_IOTA_ARCHIV_BLOCK } from '@/frontend/lib/handoff-lora-psk-copy'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import {
   applyEinsatzHandoffTemplate,
@@ -75,6 +71,7 @@ import {
     parseEinsatzChainMode,
 } from '@morgendrot/shared/einsatz-chain-mode'
 import { persistEinsatzChainMode } from '@/frontend/lib/einsatz-chain-mode-local'
+import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
 
 type HandoffPkgSource = 'boss' | 'custom'
 
@@ -458,53 +455,29 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
     (
       activePresetId: HandoffEinsatzPresetId,
       opts?: { helperAddress?: string }
-    ): StandaloneSmartphoneHandoffZipBody => {
-      const resolved = resolveHandoffExportParams(activePresetId, exportTuning)
-      const useTeam = handoffPresetUsesTeamMailboxes(activePresetId, resolved.omitTeamMailboxes)
-      const primaryMb = useTeam ? pickPrimaryMailboxId(selectedTeamIds) || handoffMailbox.trim() || undefined : undefined
-      const teamIds = useTeam ? formatTeamMailboxIds(selectedTeamIds) : undefined
-      const meshFirst = resolved.transportProfile === 'mesh-first'
-      const memberPool = [
-        handoffBoss.trim(),
-        opts?.helperAddress?.trim(),
-        ...partnerExportCsv.split(/[\s,;]+/),
-      ].filter((x): x is string => Boolean(x))
-      const messengerGroupHandoff = resolveMessengerGroupHandoffJson({
-        handoffLabel: bezeichnung.trim() || getHandoffPreset(activePresetId).label,
-        teamMailboxObjectId: primaryMb,
-        memberAddresses: memberPool,
-      })
-      return {
-        handoffLabel: bezeichnung.trim() || undefined,
-        rpcUrl: handoffRpc.trim() || undefined,
-        packageSource: handoffPkgSource,
-        customPackageId: handoffPkgCustom.trim() || undefined,
-        historyFromNewest: 0,
-        bossAddress: handoffBoss.trim() || undefined,
-        partnerAddresses: partnerExportCsv || undefined,
-        mailboxId: useTeam ? (primaryMb ?? '') : '',
-        teamMailboxIds: teamIds,
-        commandRegistryId: handoffCmdReg.trim() || undefined,
-        vaultRegistryId: handoffVaultReg.trim() || undefined,
-        nextPublicDirectIotaRpcUrl: handoffDirectIota.trim() || undefined,
-        helperRole: resolved.helperRole,
-        roleId: resolved.roleId,
-        deploymentProfile: resolved.deploymentProfile,
-        uiVariant: resolved.uiVariant,
-        transportProfile: resolved.transportProfile,
-        simpleMode: resolved.simpleMode,
-        capabilitiesOverride: capabilitiesOverride ?? undefined,
-        includeIotaArchivReadme: !protectWithPassword && includeIotaArchivReadme && meshFirst,
-        readmeExtra:
-          !protectWithPassword && includeIotaArchivReadme && meshFirst
-            ? HANDOFF_README_IOTA_ARCHIV_BLOCK
-            : undefined,
-        messengerGroupHandoff,
-        exportTtlDays: bossDefaultTtlDays,
-        exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
+    ): StandaloneSmartphoneHandoffZipBody =>
+      buildHandoffZipExportBody({
+        activePresetId,
+        bezeichnung,
+        exportTuning,
+        capabilitiesOverride,
+        selectedTeamIds,
+        handoffBoss,
+        handoffMailbox,
+        handoffRpc,
+        handoffPkgSource,
+        handoffPkgCustom,
+        handoffCmdReg,
+        handoffVaultReg,
+        handoffDirectIota,
+        partnerExportCsv,
+        includeIotaArchivReadme,
+        protectWithPassword,
         einsatzChainMode,
-      }
-    },
+        bossDefaultTtlDays,
+        exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
+        helperAddress: opts?.helperAddress,
+      }),
     [
       bezeichnung,
       einsatzChainMode,

@@ -1,114 +1,89 @@
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
-import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/standalone-smartphone-handoff'
-import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
+import { API_BASE } from '@/frontend/lib/api/api-base'
 import {
   buildTeamMailboxOptions,
   defaultSelectedTeamMailboxIds,
-  formatTeamMailboxIds,
-  pickPrimaryMailboxId,
-  buildDefaultPartnerAddresses,
 } from '@/frontend/lib/handoff-export-autofill'
-import {
-  resolveHandoffExportParams,
-  type HandoffExportTuning,
-} from '@/frontend/lib/handoff-export-params'
-import {
-  handoffPresetUsesTeamMailboxes,
-  getHandoffPreset,
-  type HandoffEinsatzPresetId,
-} from '@/frontend/lib/handoff-export-presets'
-import { HANDOFF_README_IOTA_ARCHIV_BLOCK } from '@/frontend/lib/handoff-lora-psk-copy'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
-import { resolveMessengerGroupHandoffJson } from '@/frontend/lib/messenger-group-handoff'
-import { getActiveMessengerGroup } from '@/frontend/lib/messenger-group-store'
+import {
+  defaultHandoffRpcForChainMode,
+  parseEinsatzChainMode,
+  type EinsatzChainMode,
+} from '@morgendrot/shared/einsatz-chain-mode'
 
-const ADDR = /^0x[a-fA-F0-9]{64}$/i
+export type HandoffExportRuntimeDefaults = {
+  handoffBoss: string
+  handoffPkgCustom: string
+  handoffMailbox: string
+  handoffCmdReg: string
+  handoffVaultReg: string
+  handoffRpc: string
+  handoffDirectIota: string
+  selectedTeamIds: string[]
+  einsatzChainMode: EinsatzChainMode
+}
 
-/** Standard-Handoff-Body für den Provision-Wizard (Boss-Defaults aus Snapshot). */
-export function buildWizardHandoffExportBody(opts: {
-  apiSnapshot: ApiStatus | null | undefined
-  contactDirectory?: Record<string, ContactMeshEntryClient>
-  presetId: HandoffEinsatzPresetId
-  bezeichnung: string
-  tuning?: HandoffExportTuning
-  ids?: {
-    rpcUrl?: string
-    mailboxId?: string
-    commandRegistryId?: string
-    vaultRegistryId?: string
-    packageId?: string
-    directIotaRpcUrl?: string
-  }
-  /** Provision-Wizard: frisch erzeugte Helfer-Adresse in Gruppenliste. */
-  helperAddress?: string
-  capabilitiesOverride?: MessengerCapabilitiesOverride | null
-}): StandaloneSmartphoneHandoffZipBody {
-  const tuning = opts.tuning ?? {}
-  const resolved = resolveHandoffExportParams(opts.presetId, tuning)
-  const useTeam = handoffPresetUsesTeamMailboxes(opts.presetId, resolved.omitTeamMailboxes)
-  const teamOpts = buildTeamMailboxOptions(opts.apiSnapshot, readMyTeamMailboxes())
-  const selectedTeamIds = defaultSelectedTeamMailboxIds(teamOpts)
-  const mailboxFromIds = opts.ids?.mailboxId?.trim()
-  const primaryMb =
-    (useTeam ? pickPrimaryMailboxId(selectedTeamIds) : undefined) ||
-    (mailboxFromIds && ADDR.test(mailboxFromIds) ? mailboxFromIds : undefined) ||
-    (opts.apiSnapshot?.mailboxId && ADDR.test(opts.apiSnapshot.mailboxId)
-      ? opts.apiSnapshot.mailboxId
-      : undefined)
-  const teamIds = useTeam ? formatTeamMailboxIds(selectedTeamIds) : undefined
-  const boss =
-    opts.apiSnapshot?.myAddressFull?.trim() ||
-    opts.apiSnapshot?.myAddress?.trim() ||
-    undefined
-  const meshFirst = resolved.transportProfile === 'mesh-first'
-  const pkg =
-    opts.ids?.packageId?.trim() ||
-    opts.apiSnapshot?.packageId?.trim() ||
-    undefined
-
-  const activeGroup = getActiveMessengerGroup()
-  const teamMbForGroup =
-    activeGroup?.teamMailboxObjectId?.trim() ||
-    (useTeam ? pickPrimaryMailboxId(selectedTeamIds) : undefined) ||
-    undefined
-  const partnerCsv = buildDefaultPartnerAddresses(opts.apiSnapshot, opts.contactDirectory, boss) || ''
-  const memberPool = [
-    boss,
-    opts.helperAddress?.trim(),
-    ...partnerCsv.split(/[\s,;]+/),
-    ...(activeGroup?.memberAddresses ?? []),
-  ].filter(Boolean) as string[]
-  const messengerGroupHandoff = resolveMessengerGroupHandoffJson({
-    handoffLabel: opts.bezeichnung.trim() || getHandoffPreset(opts.presetId).label,
-    teamMailboxObjectId: teamMbForGroup,
-    memberAddresses: memberPool,
-  })
-
+export function seedHandoffExportDefaultsFromStatus(
+  apiSnapshot?: ApiStatus | null,
+  _contactDirectory?: Record<string, ContactMeshEntryClient>
+): HandoffExportRuntimeDefaults {
+  const full = apiSnapshot?.myAddressFull?.trim() || apiSnapshot?.myAddress?.trim() || ''
+  const boss = /^0x[a-fA-F0-9]{64}$/i.test(full) ? full : ''
+  const pkg = apiSnapshot?.packageId?.trim() || ''
+  const pkgOk = /^0x[a-fA-F0-9]{64}$/i.test(pkg) ? pkg : ''
+  const teamOpts = buildTeamMailboxOptions(apiSnapshot ?? null, readMyTeamMailboxes())
+  const selectedTeamIds = teamOpts.length ? defaultSelectedTeamMailboxIds(teamOpts) : []
+  const mode = parseEinsatzChainMode(apiSnapshot?.einsatzChainMode) ?? 'mainnet-direct'
   return {
-    handoffLabel: opts.bezeichnung.trim() || undefined,
-    rpcUrl: opts.ids?.rpcUrl?.trim() || undefined,
-    packageSource: pkg ? 'custom' : 'boss',
-    customPackageId: pkg,
-    historyFromNewest: 0,
-    bossAddress: boss,
-    partnerAddresses: buildDefaultPartnerAddresses(opts.apiSnapshot, opts.contactDirectory, boss) || undefined,
-    mailboxId: useTeam ? (primaryMb ?? '') : '',
-    teamMailboxIds: teamIds,
-    commandRegistryId: opts.ids?.commandRegistryId?.trim() || undefined,
-    vaultRegistryId: opts.ids?.vaultRegistryId?.trim() || undefined,
-    nextPublicDirectIotaRpcUrl: opts.ids?.directIotaRpcUrl?.trim() || undefined,
-    helperRole: resolved.helperRole,
-    roleId: resolved.roleId,
-    deploymentProfile: resolved.deploymentProfile,
-    uiVariant: resolved.uiVariant,
-    transportProfile: resolved.transportProfile,
-    simpleMode: resolved.simpleMode,
-    includeIotaArchivReadme: meshFirst,
-    readmeExtra: meshFirst ? HANDOFF_README_IOTA_ARCHIV_BLOCK : undefined,
-    messengerGroupHandoff,
-    exportTtlDays: opts.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30,
-    exportEnablePurge: opts.apiSnapshot?.einsatzConfig?.enablePurge !== false,
-    capabilitiesOverride: opts.capabilitiesOverride ?? undefined,
+    handoffBoss: boss,
+    handoffPkgCustom: pkgOk,
+    handoffMailbox: '',
+    handoffCmdReg: '',
+    handoffVaultReg: '',
+    handoffRpc: defaultHandoffRpcForChainMode(mode),
+    handoffDirectIota: '',
+    selectedTeamIds,
+    einsatzChainMode: mode,
+  }
+}
+
+/** Ergänzt IDs/RPC aus GET /api/current-ids (wie Experten-Panel). */
+export async function fetchHandoffCurrentIdsDefaults(): Promise<Partial<HandoffExportRuntimeDefaults>> {
+  try {
+    const r = await fetch(`${API_BASE}/api/current-ids`)
+    const j = (await r.json()) as {
+      mailboxId?: string
+      commandRegistryId?: string
+      vaultRegistryId?: string
+      rpcUrl?: string
+    }
+    if (!r.ok) return {}
+    const out: Partial<HandoffExportRuntimeDefaults> = {}
+    const mb = String(j.mailboxId || '').trim()
+    const cr = String(j.commandRegistryId || '').trim()
+    const vr = String(j.vaultRegistryId || '').trim()
+    const rpc = String(j.rpcUrl || '').trim()
+    if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+      out.handoffMailbox = mb
+      out.selectedTeamIds = [mb]
+    }
+    if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) out.handoffCmdReg = cr
+    if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) out.handoffVaultReg = vr
+    if (rpc) out.handoffRpc = rpc
+    return out
+  } catch {
+    return {}
+  }
+}
+
+export function mergeHandoffExportDefaults(
+  base: HandoffExportRuntimeDefaults,
+  patch: Partial<HandoffExportRuntimeDefaults>
+): HandoffExportRuntimeDefaults {
+  return {
+    ...base,
+    ...patch,
+    selectedTeamIds: patch.selectedTeamIds?.length ? patch.selectedTeamIds : base.selectedTeamIds,
   }
 }
