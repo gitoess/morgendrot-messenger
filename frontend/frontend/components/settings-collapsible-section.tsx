@@ -3,8 +3,9 @@
 import type { ReactNode } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 
-export type SettingsCategoryId = 'general' | 'iota' | 'funk' | 'telegram' | 'security'
+export type { SettingsCategoryId }
 
 type SettingsCategoryNavProps = {
   active: SettingsCategoryId | null

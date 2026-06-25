@@ -10,6 +10,7 @@ import {
   parseDashboardActiveView,
   persistDashboardActiveView,
 } from '@/frontend/lib/dashboard-active-view'
+import { primeSettingsCategory, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 import {
   type DashboardUnlockMode,
   SIGNER_IMPORT_REQUIRED_CODE,
@@ -448,6 +449,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   }, [])
 
   const openSettingsView = useCallback(() => {
+    navigateTo({ type: 'settings' })
+  }, [navigateTo])
+
+  const openSettingsCategory = useCallback((category: SettingsCategoryId) => {
+    primeSettingsCategory(category)
     navigateTo({ type: 'settings' })
   }, [navigateTo])
 
@@ -926,6 +932,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     isBossRole,
     checkStatus,
     openSettingsView,
+    openSettingsCategory,
     openConfigView,
     openEinsatzleitungView,
     openMessengerChatView,

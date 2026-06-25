@@ -53,7 +53,7 @@ export function EinsatzleitungTeamOverviewPanel(p: {
           className="mt-3 text-xs font-medium text-primary hover:underline"
           onClick={p.onOpenMailboxes}
         >
-          Postfächer verwalten →
+          Postfächer in Einstellungen → IOTA öffnen
         </button>
       ) : null}
     </div>

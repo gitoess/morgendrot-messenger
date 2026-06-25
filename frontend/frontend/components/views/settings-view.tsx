@@ -32,8 +32,8 @@ import { CapacitorApiBaseCard } from '@/frontend/components/capacitor-api-base-c
 import {
   SettingsCategoryNav,
   SettingsCollapsiblePanel,
-  type SettingsCategoryId,
 } from '@/frontend/components/settings-collapsible-section'
+import { SETTINGS_ACTIVE_CATEGORY_KEY, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
@@ -47,7 +47,7 @@ interface SettingsViewProps {
   onRequestVaultUnlock?: () => void
 }
 
-const LS_ACTIVE_CATEGORY = 'morgendrot.settingsActiveCategory'
+const LS_ACTIVE_CATEGORY = SETTINGS_ACTIVE_CATEGORY_KEY
 
 export function SettingsView({
   onOpenConfig,

@@ -1,12 +1,25 @@
 'use client'
 
+import { useState } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
-import { EinsatzleitungHelferFlowPanel } from '@/frontend/components/einsatzleitung-helfer-flow-panel'
+import {
+  EinsatzleitungHelferFlowPanel,
+  type HelferEinrichtenWizardStep,
+} from '@/frontend/components/einsatzleitung-helfer-flow-panel'
 import { EinsatzleitungHelferOverviewPanel } from '@/frontend/components/einsatzleitung-helfer-overview-panel'
+import { EinsatzleitungHelferJoinHintPanel } from '@/frontend/components/einsatzleitung-helfer-join-hint-panel'
 import { EinsatzleitungTeamOverviewPanel } from '@/frontend/components/einsatzleitung-team-overview-panel'
 import { EinsatzleitungMeshtasticHintPanel } from '@/frontend/components/einsatzleitung-meshtastic-hint-panel'
 import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
 import { DashboardEinsatzParameterPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
+import { Button } from '@/components/ui/button'
+
+const STEP_LABELS: Record<Exclude<HelferEinrichtenWizardStep, 'choose'>, string> = {
+  handoff: 'Handoff-ZIP',
+  join: 'Spontan beitreten',
+  phonebook: 'Telefonbuch',
+}
 
 export function BossHelferEinrichtenPanel(p: {
   apiStatus?: ApiStatus | null
@@ -15,37 +28,72 @@ export function BossHelferEinrichtenPanel(p: {
   onOpenMailboxes?: () => void
   onContactsChanged?: () => void
 }) {
+  const [step, setStep] = useState<HelferEinrichtenWizardStep>('choose')
+
+  const pickStep = (next: Exclude<HelferEinrichtenWizardStep, 'choose'>) => setStep(next)
+
   return (
     <section id="helfer-einrichten" className="scroll-mt-4 space-y-4 rounded-xl border border-border bg-card p-4">
-      <p className="text-sm font-semibold text-foreground">Helfer einrichten</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">Helfer einrichten</p>
+        {step !== 'choose' ? (
+          <Button type="button" size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setStep('choose')}>
+            <ChevronLeft className="mr-1 h-3.5 w-3.5" aria-hidden />
+            Methode wechseln
+          </Button>
+        ) : null}
+      </div>
 
-      <EinsatzleitungHelferFlowPanel />
+      <EinsatzleitungHelferFlowPanel activeStep={step} onSelectStep={pickStep} />
 
-      <EinsatzleitungHelferOverviewPanel
-        contactDirectory={p.contactDirectory ?? {}}
-        onContactsChanged={p.onContactsChanged ?? (() => {})}
-      />
+      {step === 'choose' ? (
+        <p className="text-xs text-muted-foreground">
+          Wähle oben eine Methode — danach siehst du nur die passenden Schritte, nicht alles auf einmal.
+        </p>
+      ) : (
+        <p className="text-xs font-medium text-primary">
+          Schritt 2 — {STEP_LABELS[step]}
+        </p>
+      )}
 
-      <EinsatzleitungTeamOverviewPanel
-        serverMailboxId={p.apiStatus?.mailboxId}
-        onOpenMailboxes={p.onOpenMailboxes}
-      />
+      {step === 'handoff' ? (
+        <div id="helfer-handoff" className="scroll-mt-4 space-y-4">
+          <EinsatzleitungTeamOverviewPanel
+            serverMailboxId={p.apiStatus?.mailboxId}
+            onOpenMailboxes={p.onOpenMailboxes}
+          />
+          <BossHandoffExportPanel
+            apiSnapshot={p.apiStatus ?? null}
+            contactDirectory={p.contactDirectory}
+            embedded
+            layout="compact"
+          />
+        </div>
+      ) : null}
 
-      <EinsatzleitungMeshtasticHintPanel />
+      {step === 'join' ? <EinsatzleitungHelferJoinHintPanel /> : null}
 
-      <BossHandoffExportPanel
-        apiSnapshot={p.apiStatus ?? null}
-        contactDirectory={p.contactDirectory}
-        embedded
-        layout="compact"
-      />
+      {step === 'phonebook' ? (
+        <EinsatzleitungHelferOverviewPanel
+          contactDirectory={p.contactDirectory ?? {}}
+          onContactsChanged={p.onContactsChanged ?? (() => {})}
+        />
+      ) : null}
 
-      <DashboardEinsatzParameterPanel
-        apiStatus={p.apiStatus ?? null}
-        contactDirectory={p.contactDirectory}
-        onRefreshStatus={p.onRefreshStatus}
-        inline
-      />
+      {step !== 'choose' ? (
+        <details className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2 text-sm">
+          <summary className="cursor-pointer font-medium text-foreground">Erweitert (Funk, Einsatzparameter)</summary>
+          <div className="mt-3 space-y-4">
+            <EinsatzleitungMeshtasticHintPanel />
+            <DashboardEinsatzParameterPanel
+              apiStatus={p.apiStatus ?? null}
+              contactDirectory={p.contactDirectory}
+              onRefreshStatus={p.onRefreshStatus}
+              inline
+            />
+          </div>
+        </details>
+      ) : null}
     </section>
   )
 }

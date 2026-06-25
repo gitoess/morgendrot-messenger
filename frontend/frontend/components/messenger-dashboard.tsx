@@ -272,7 +272,7 @@ function MessengerDashboardBody({
               contactDirectory={s.contactDirectory}
               refreshContactDirectory={s.refreshContactDirectory}
               onRefreshStatus={s.checkStatus}
-              onOpenSettings={s.openSettingsView}
+              onOpenSettings={() => s.openSettingsCategory('iota')}
             />
           )}
           {s.activeView.type === 'boss' && s.activeView.variant && (

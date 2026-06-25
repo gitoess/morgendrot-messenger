@@ -29,6 +29,8 @@ import {
   refreshRosterPendingFromServer,
 } from '@/frontend/lib/roster-pending-sync'
 
+export const EINSATZLEITUNG_JOIN_REQUESTS_SECTION_ID = 'einsatzleitung-join-requests'
+
 function formatDeliveryChannels(channels?: { iota?: boolean; lan?: boolean; meshPing?: boolean }): string {
   const parts: string[] = []
   if (channels?.lan) parts.push('LAN')
@@ -136,7 +138,7 @@ export function EinsatzleitungJoinRequestsPanel(p: {
   const showSection = pending.length > 0 || rosterPending.length > 0
 
   return (
-    <div className="rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
+    <div id={EINSATZLEITUNG_JOIN_REQUESTS_SECTION_ID} className="scroll-mt-4 rounded-xl border border-amber-500/35 bg-amber-500/10 p-4">
       <h3 className="flex items-center gap-2 text-base font-semibold text-foreground">
         <UserPlus className="h-5 w-5 text-amber-400" aria-hidden />
         Beitrittsanfragen & Roster-Vorschläge
