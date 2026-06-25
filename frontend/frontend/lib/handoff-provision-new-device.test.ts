@@ -13,6 +13,9 @@ vi.mock('@/frontend/lib/boss-provision-registry', () => ({
 vi.mock('@/frontend/lib/team-roster-pending-store', () => ({
   enqueueRosterPendingSuggestion: vi.fn(),
 }))
+vi.mock('@/frontend/lib/roster-pending-sync', () => ({
+  syncHandoffSuggestionToServer: vi.fn(async () => ({ ok: true })),
+}))
 vi.mock('@/frontend/lib/handoff-last-preset', () => ({
   writeHandoffLastPresetId: vi.fn(),
 }))
@@ -24,6 +27,7 @@ import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { addBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
 import { enqueueRosterPendingSuggestion } from '@/frontend/lib/team-roster-pending-store'
+import { syncHandoffSuggestionToServer } from '@/frontend/lib/roster-pending-sync'
 
 const ADDR = '0x' + 'a'.repeat(64)
 
@@ -57,6 +61,14 @@ describe('provisionNewHandoffDevice', () => {
         },
       },
     })
+    vi.mocked(enqueueRosterPendingSuggestion).mockReturnValue({
+      id: 'rp-1',
+      source: 'handoff',
+      member: { address: ADDR, name: 'Anna' },
+      createdAt: Date.now(),
+      handoffLabel: 'helfer',
+      registryEntryId: 'entry-1',
+    })
   })
 
   it('erzeugt ZIP, Registry-Eintrag und QR', async () => {
@@ -84,6 +96,13 @@ describe('provisionNewHandoffDevice', () => {
     expect(enqueueRosterPendingSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({
         source: 'handoff',
+        member: expect.objectContaining({ address: ADDR, name: 'Anna' }),
+        registryEntryId: 'entry-1',
+      })
+    )
+    expect(syncHandoffSuggestionToServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'rp-1',
         member: expect.objectContaining({ address: ADDR, name: 'Anna' }),
         registryEntryId: 'entry-1',
       })
