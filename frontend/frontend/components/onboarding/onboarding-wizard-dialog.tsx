@@ -11,13 +11,20 @@ import {
   OnboardingBossTeamStep,
   OnboardingBossTelegramBotStep,
   OnboardingBossTelegramGroupStep,
+  OnboardingBossWalletStep,
   OnboardingDoneStep,
+  OnboardingHelperHandoffStep,
+  OnboardingHelperPeeringStep,
+  OnboardingHelperTeamSelfStep,
+  OnboardingHelperTelegramStep,
+  OnboardingHelperWalletStep,
   OnboardingMeshtasticStep,
   OnboardingWandererAddressStep,
   OnboardingWandererMailboxStep,
   OnboardingWandererWalletStep,
 } from '@/frontend/components/onboarding/onboarding-inline-step-panels'
 import {
+  buildOnboardingSkipContext,
   dismissOnboarding,
   finishOnboarding,
   getActiveOnboardingStep,
@@ -26,13 +33,13 @@ import {
   setOnboardingStepIndex,
   skipOnboardingStep,
   type OnboardingProgress,
-  type OnboardingSkipContext,
   type OnboardingStepId,
 } from '@/frontend/lib/onboarding-progress-store'
 import {
   OnboardingWizardShell,
   stepTitleFor,
 } from '@/frontend/components/onboarding/onboarding-wizard-shell'
+import { STANDALONE_HANDOFF_APPLIED_EVENT } from '@/frontend/lib/handoff-standalone-ready'
 
 export type OnboardingWizardDialogProps = {
   open: boolean
@@ -41,16 +48,12 @@ export type OnboardingWizardDialogProps = {
   backendOnline?: boolean
   contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
+  onOpenHandoffImport?: () => void
   onReloadStatus?: () => void
 }
 
-function skipContext(api?: ApiStatus | null): OnboardingSkipContext {
-  return {
-    role: api?.role,
-    hasPackageId: Boolean(api?.packageId?.trim()),
-    hasMailboxId: Boolean(api?.mailboxId?.trim()),
-    hasTeamId: Boolean(api?.handoffLabel?.trim()),
-  }
+function skipContext(api?: ApiStatus | null) {
+  return buildOnboardingSkipContext(api)
 }
 
 export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
@@ -64,7 +67,10 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   useEffect(() => {
     if (!p.open) return
     syncProgress()
-  }, [p.open, syncProgress])
+    const onHandoff = () => p.onReloadStatus?.()
+    window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
+    return () => window.removeEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
+  }, [p.open, p.onReloadStatus, syncProgress])
 
   const active = progress ? getActiveOnboardingStep(progress, ctx) : null
   const path = progress?.path ?? 'boss'
@@ -78,6 +84,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
     contactDirectory: p.contactDirectory,
     onActivateWallet: p.onActivateWallet,
     onReload: p.onReloadStatus,
+    onOpenHandoffImport: p.onOpenHandoffImport,
   }
 
   const advance = (action: 'complete' | 'skip') => {
@@ -100,11 +107,20 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
     p.onOpenChange(false)
   }
 
-  const pathTitle = path === 'boss' ? 'Einsatzleitung einrichten' : path === 'wanderer' ? 'Privat einrichten' : 'Einrichtung'
+  const pathTitle =
+    path === 'boss'
+      ? 'Einsatzleitung einrichten'
+      : path === 'helper'
+        ? 'Helfer einrichten'
+        : path === 'wanderer'
+          ? 'Privat einrichten'
+          : 'Einrichtung'
 
   const renderStepBody = () => {
     if (path === 'boss') {
       switch (stepId) {
+        case 'wallet':
+          return <OnboardingBossWalletStep {...panelProps} />
         case 'address':
           return <OnboardingBossAddressStep {...panelProps} />
         case 'package':
@@ -157,9 +173,34 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       }
     }
 
+    if (path === 'helper') {
+      switch (stepId) {
+        case 'handoff':
+          return <OnboardingHelperHandoffStep {...panelProps} />
+        case 'telegram':
+          return <OnboardingHelperTelegramStep />
+        case 'wallet':
+          return <OnboardingHelperWalletStep {...panelProps} />
+        case 'team-self':
+          return <OnboardingHelperTeamSelfStep {...panelProps} />
+        case 'peering':
+          return <OnboardingHelperPeeringStep {...panelProps} />
+        case 'done':
+          return (
+            <OnboardingDoneStep>
+              <Button type="button" onClick={() => p.onOpenChange(false)}>
+                Schließen
+              </Button>
+            </OnboardingDoneStep>
+          )
+        default:
+          return null
+      }
+    }
+
     return (
       <p className="text-sm text-muted-foreground">
-        Für Helfer: Handoff-ZIP vom Boss importieren (Einstellungen → Import).
+        Wizard-Pfad unbekannt — Einstellungen → Einrichtung fortsetzen.
       </p>
     )
   }

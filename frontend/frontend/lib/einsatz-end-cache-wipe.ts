@@ -15,7 +15,7 @@ import {
   INBOX_PARTNER_MEMORY_BLOCKED_LS,
   INBOX_PARTNER_MEMORY_LS,
 } from '@/frontend/lib/inbox-browser-view-state'
-import { clearActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
+import { clearTeamMemberRemoveSent } from '@/frontend/lib/team-removed-members-store'
 import { clearActivePrivateMailbox } from '@/frontend/lib/my-private-mailbox-store'
 import { saveMirrorQueue } from '@/frontend/lib/delayed-mirror-queue'
 
@@ -126,6 +126,7 @@ export function wipeEinsatzLocalBrowserState(options?: Pick<EinsatzEndCacheWipeO
   clearDirectMailboxChainSnapshot()
   clearActiveSendMailbox()
   clearActivePrivateMailbox()
+  clearTeamMemberRemoveSent()
   clearDirectChatEcdhKeyMaterial()
   clearInboxBrowserViewFilters()
 

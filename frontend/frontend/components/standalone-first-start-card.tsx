@@ -2,13 +2,14 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
-import { Compass, Package, UserRound } from 'lucide-react'
+import { Compass, Crown, Package, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
+  beginStandaloneBossOnboarding,
   beginStandaloneEinsatzOnboarding,
   beginStandaloneSoloOnboarding,
-  needsStandaloneOnboardingChoice,
+  needsFirstStartChoice,
   STANDALONE_ONBOARDING_CHANGED_EVENT,
 } from '@/frontend/lib/standalone-onboarding'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
@@ -49,16 +50,16 @@ function ModeOption({
   )
 }
 
-export function StandaloneFirstStartCard(p: { className?: string }) {
+export function StandaloneFirstStartCard(p: { className?: string; apiRole?: string | null }) {
   const { t } = useAppTranslation('standalone')
-  const [showChoice, setShowChoice] = useState(() => needsStandaloneOnboardingChoice())
+  const [showChoice, setShowChoice] = useState(() => needsFirstStartChoice(p.apiRole))
 
   useEffect(() => {
-    const sync = () => setShowChoice(needsStandaloneOnboardingChoice())
+    const sync = () => setShowChoice(needsFirstStartChoice(p.apiRole))
     sync()
     window.addEventListener(STANDALONE_ONBOARDING_CHANGED_EVENT, sync)
     return () => window.removeEventListener(STANDALONE_ONBOARDING_CHANGED_EVENT, sync)
-  }, [])
+  }, [p.apiRole])
 
   if (!showChoice) return null
 
@@ -77,6 +78,14 @@ export function StandaloneFirstStartCard(p: { className?: string }) {
             <p className="mt-1 text-sm text-muted-foreground">{t('firstStart.description')}</p>
           </div>
           <div className="space-y-2">
+            <ModeOption
+              icon={<Crown className="h-5 w-5" aria-hidden />}
+              title={t('firstStart.bossTitle')}
+              subtitle={t('firstStart.bossSubtitle')}
+              detail={t('firstStart.bossDetail')}
+              accentClass="hover:border-amber-500/40"
+              onSelect={() => beginStandaloneBossOnboarding()}
+            />
             <ModeOption
               icon={<Package className="h-5 w-5" aria-hidden />}
               title={t('firstStart.einsatzTitle')}
@@ -102,11 +111,14 @@ export function StandaloneFirstStartCard(p: { className?: string }) {
 }
 
 /** Kompakte Variante für Einstellungen / erneuter Aufruf. */
-export function StandaloneFirstStartActions() {
+export function StandaloneFirstStartActions(p: { apiRole?: string | null }) {
   const { t } = useAppTranslation('standalone')
-  if (!needsStandaloneOnboardingChoice()) return null
+  if (!needsFirstStartChoice(p.apiRole)) return null
   return (
     <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="secondary" size="sm" onClick={() => beginStandaloneBossOnboarding()}>
+        {t('firstStart.actionBoss')}
+      </Button>
       <Button type="button" variant="secondary" size="sm" onClick={() => beginStandaloneEinsatzOnboarding()}>
         {t('firstStart.actionEinsatz')}
       </Button>

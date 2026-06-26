@@ -1,4 +1,4 @@
-# Export-Assistent — vollständige Referenz
+Daniel Bitton npm# Export-Assistent — vollständige Referenz
 
 **Stand:** 2026-06-02  
 **Zweck:** Alle Einstellungen, IDs und `.env`-Keys des Boss-Handoffs — **implementiert** vs. **geplant** — an einem Ort.  

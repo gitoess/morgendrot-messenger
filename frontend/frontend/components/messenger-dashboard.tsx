@@ -172,6 +172,7 @@ function MessengerDashboardBody({
         backendOnline={s.apiSnapshot?.backendOnline === true || s.apiSnapshot?.backendRunning === true}
         contactDirectory={s.contactDirectory}
         onActivateWallet={s.requestStandaloneWalletUnlock}
+        onOpenHandoffImport={s.openSettingsView}
         onReloadStatus={() => void s.checkStatus()}
       />
       {s.activeView ? (
@@ -440,9 +441,10 @@ function MessengerDashboardBody({
             </button>
           </div>
         ) : null}
-        <StandaloneFirstStartCard />
+        <StandaloneFirstStartCard apiRole={s.role} />
         <OnboardingResumeCard apiSnapshot={s.apiSnapshot} />
         <StandaloneHandoffActivateCard
+          apiRole={s.role}
           onOpenHandoffImport={s.openSettingsView}
           onActivateWallet={s.requestStandaloneWalletUnlock}
         />

@@ -104,8 +104,9 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
 }
 
 export const BOSS_STEP_TITLES: Record<string, string> = {
+  wallet: 'Wallet einrichten',
   address: 'IOTA-Adresse',
-  package: 'Package & Netzwerk',
+  package: 'Move-Package',
   'server-mailbox': 'Server-Postfach',
   team: 'Team & Postfächer',
   'telegram-bot': 'Telegram Bot',

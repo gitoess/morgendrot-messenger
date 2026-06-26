@@ -1,11 +1,14 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { QrCode } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 import { OnboardingWizardShell } from '@/frontend/components/onboarding/onboarding-wizard-shell'
 import { HandoffProvisionResultDialog } from '@/frontend/components/handoff-provision-result-dialog'
+import { HandoffProvisionRegistryMini } from '@/frontend/components/handoff-provision-registry-mini'
+import { HandoffQuickWizardRightsStep } from '@/frontend/components/handoff-quick-wizard-rights-step'
+import { HandoffQuickWizardTeamStep } from '@/frontend/components/handoff-quick-wizard-team-step'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
@@ -15,6 +18,11 @@ import {
   seedHandoffExportDefaultsFromStatus,
   type HandoffExportRuntimeDefaults,
 } from '@/frontend/lib/handoff-export-defaults'
+import type { HandoffExportTuning } from '@/frontend/lib/handoff-export-params'
+import {
+  HANDOFF_CAPABILITY_PRESETS,
+  applyHandoffCapabilityPresetToTuning,
+} from '@/frontend/lib/handoff-capability-presets'
 import {
   HANDOFF_EINSATZ_PRESETS,
   getHandoffPreset,
@@ -25,7 +33,20 @@ import { HANDOFF_PRESET_VISUAL } from '@/frontend/lib/handoff-preset-ui'
 import { provisionNewHandoffDevice } from '@/frontend/lib/handoff-provision-new-device'
 import { useHandoffProvisionRegistryAccess } from '@/frontend/lib/handoff-provision-registry-access'
 
-const QUICK_STEPS = 2
+const STEP_WHO = 0
+const STEP_RIGHTS = 1
+const STEP_TEAM = 2
+const STEP_REGISTRY = 3
+const STEP_DELIVER = 4
+const QUICK_STEPS = 5
+
+const STEP_TITLES = [
+  'Wer soll eingerichtet werden?',
+  'Rechte (optional)',
+  'Team-Postfächer (optional)',
+  'Provision-Registry',
+  'ZIP + Seed-QR erstellen',
+] as const
 
 export function BossHandoffQuickProvisionWizard(p: {
   open: boolean
@@ -40,6 +61,9 @@ export function BossHandoffQuickProvisionWizard(p: {
   const [defaults, setDefaults] = useState<HandoffExportRuntimeDefaults>(() =>
     seedHandoffExportDefaultsFromStatus(p.apiSnapshot, p.contactDirectory)
   )
+  const [exportTuning, setExportTuning] = useState<HandoffExportTuning>({})
+  const [capabilitiesOverride, setCapabilitiesOverride] = useState<MessengerCapabilitiesOverride | null>(null)
+  const [selectedCapPresetId, setSelectedCapPresetId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [statusMsg, setStatusMsg] = useState('')
   const [provisionResultOpen, setProvisionResultOpen] = useState(false)
@@ -56,6 +80,9 @@ export function BossHandoffQuickProvisionWizard(p: {
     if (!p.open) return
     setStepIndex(0)
     setStatusMsg('')
+    setExportTuning({})
+    setCapabilitiesOverride(null)
+    setSelectedCapPresetId(null)
     const seeded = seedHandoffExportDefaultsFromStatus(p.apiSnapshot, p.contactDirectory)
     setDefaults(seeded)
     void fetchHandoffCurrentIdsDefaults().then((patch) => {
@@ -70,30 +97,40 @@ export function BossHandoffQuickProvisionWizard(p: {
     }
   }
 
-  const ensureRegistry = useCallback(async (): Promise<boolean> => {
-    if (provisionRegistry.registryUnlocked) return true
-    if (!provisionRegistry.registryExists) {
-      const init = await provisionRegistry.initRegistry()
-      if (!init.ok) {
-        setStatusMsg(init.error)
-        return false
+  const applyCapPreset = useCallback(
+    (id: string | null) => {
+      setSelectedCapPresetId(id)
+      if (!id) {
+        setExportTuning({})
+        setCapabilitiesOverride(null)
+        return
       }
-      return true
-    }
-    const unlock = await provisionRegistry.unlockRegistry()
-    if (!unlock.ok) {
-      setStatusMsg(unlock.error)
-      return false
-    }
-    return true
-  }, [provisionRegistry])
+      const cap = HANDOFF_CAPABILITY_PRESETS.find((item) => item.id === id)
+      if (!cap) return
+      const merged = applyHandoffCapabilityPresetToTuning(presetId, {}, cap.apply)
+      setExportTuning(merged.tuning)
+      setCapabilitiesOverride(merged.override)
+    },
+    [presetId]
+  )
+
+  const toggleTeamId = (id: string) => {
+    setDefaults((prev) => {
+      const ids = prev.selectedTeamIds
+      const next = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+      return { ...prev, selectedTeamIds: next }
+    })
+  }
 
   const runProvision = async () => {
     if (!bezeichnung.trim()) {
       setStatusMsg('Bezeichnung fehlt.')
       return
     }
-    if (!(await ensureRegistry())) return
+    if (!provisionRegistry.registryUnlocked) {
+      setStatusMsg('Registry ist noch gesperrt.')
+      return
+    }
     setBusy(true)
     setStatusMsg('')
     try {
@@ -102,6 +139,8 @@ export function BossHandoffQuickProvisionWizard(p: {
           buildHandoffZipExportBody({
             activePresetId: presetId,
             bezeichnung,
+            exportTuning,
+            capabilitiesOverride,
             selectedTeamIds: defaults.selectedTeamIds,
             handoffBoss: defaults.handoffBoss,
             handoffMailbox: defaults.handoffMailbox,
@@ -137,7 +176,13 @@ export function BossHandoffQuickProvisionWizard(p: {
     }
   }
 
-  const stepTitle = stepIndex === 0 ? 'Wer soll eingerichtet werden?' : 'ZIP + Seed-QR erstellen'
+  const isSkipStep = stepIndex === STEP_RIGHTS || stepIndex === STEP_TEAM
+  const isLastStep = stepIndex === STEP_DELIVER
+
+  const nextDisabled =
+    (stepIndex === STEP_WHO && !bezeichnung.trim()) ||
+    (stepIndex === STEP_REGISTRY && !provisionRegistry.registryUnlocked) ||
+    (isLastStep && busy)
 
   return (
     <>
@@ -145,23 +190,23 @@ export function BossHandoffQuickProvisionWizard(p: {
         open={p.open}
         onOpenChange={p.onOpenChange}
         title="Schnell-Assistent — Handoff"
-        description="Standardweg mit Preset-Defaults. Rechte-Matrix, Partner und IOTA-Versand: Experten-Assistent."
+        description="Standardweg mit Preset-Defaults. Volle Matrix, Partner und IOTA: Experten-Assistent."
         stepIndex={stepIndex}
         stepTotal={QUICK_STEPS}
-        stepTitle={stepTitle}
+        stepTitle={STEP_TITLES[stepIndex]}
         showBack={stepIndex > 0}
-        onBack={() => setStepIndex(0)}
+        onBack={() => setStepIndex((i) => Math.max(0, i - 1))}
+        showSkip={isSkipStep}
+        onSkip={isSkipStep ? () => setStepIndex((i) => i + 1) : undefined}
         onNext={
-          stepIndex === 0
-            ? () => setStepIndex(1)
-            : () => void runProvision()
+          isLastStep
+            ? () => void runProvision()
+            : () => setStepIndex((i) => Math.min(QUICK_STEPS - 1, i + 1))
         }
-        nextLabel={stepIndex === 0 ? 'Weiter' : busy ? '…' : 'ZIP + Seed + QR'}
-        nextDisabled={
-          stepIndex === 0 ? !bezeichnung.trim() : busy || !provisionRegistry.registryUnlocked
-        }
+        nextLabel={isLastStep ? (busy ? '…' : 'ZIP + Seed + QR') : 'Weiter'}
+        nextDisabled={nextDisabled}
       >
-        {stepIndex === 0 ? (
+        {stepIndex === STEP_WHO ? (
           <div className="space-y-4">
             <div>
               <label htmlFor="quick-handoff-label" className="mb-1 block text-xs font-medium text-muted-foreground">
@@ -207,29 +252,52 @@ export function BossHandoffQuickProvisionWizard(p: {
               </p>
             ) : null}
           </div>
-        ) : (
+        ) : null}
+
+        {stepIndex === STEP_RIGHTS ? (
+          <HandoffQuickWizardRightsStep
+            selectedPresetId={selectedCapPresetId}
+            capabilitiesOverride={capabilitiesOverride}
+            onSelectPreset={applyCapPreset}
+            onOpenExpert={p.onOpenExpert}
+          />
+        ) : null}
+
+        {stepIndex === STEP_TEAM ? (
+          <HandoffQuickWizardTeamStep
+            apiSnapshot={p.apiSnapshot}
+            presetId={presetId}
+            selectedTeamIds={defaults.selectedTeamIds}
+            onToggleTeamId={toggleTeamId}
+            onOpenExpert={p.onOpenExpert}
+          />
+        ) : null}
+
+        {stepIndex === STEP_REGISTRY ? (
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">
+              Einmalig pro Browser: verschlüsselte Seed-Historie für wiederholte Provisionierung.
+            </p>
+            <HandoffProvisionRegistryMini registry={provisionRegistry} />
+          </div>
+        ) : null}
+
+        {stepIndex === STEP_DELIVER ? (
           <div className="space-y-3 text-sm">
             <p>
               <strong className="text-foreground">{bezeichnung.trim() || preset.label}</strong> · Preset{' '}
               <strong className="text-foreground">{preset.label}</strong>
+              {selectedCapPresetId ? (
+                <>
+                  {' '}
+                  · Profil <strong className="text-foreground">{selectedCapPresetId}</strong>
+                </>
+              ) : null}
             </p>
             <p className="text-muted-foreground">
-              Es wird ein neues Wallet erzeugt, Handoff-ZIP heruntergeladen und ein Seed-QR für 60 Sekunden angezeigt.
-              Der Roster-Vorschlag erscheint oben im Panel „Beitrittsanfragen &amp; Roster-Vorschläge“.
+              Es wird ein neues Wallet erzeugt, Handoff-ZIP heruntergeladen und ein Seed-QR für 60 Sekunden
+              angezeigt. Der Roster-Vorschlag erscheint oben im Panel „Beitrittsanfragen &amp; Roster-Vorschläge“.
             </p>
-            {!provisionRegistry.registryUnlocked ? (
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Provision-Registry ist gesperrt — bitte zuerst im{' '}
-                {p.onOpenExpert ? (
-                  <button type="button" className="underline" onClick={p.onOpenExpert}>
-                    Experten-Assistent
-                  </button>
-                ) : (
-                  'Experten-Assistent'
-                )}{' '}
-                entsperren oder anlegen.
-              </p>
-            ) : null}
             {statusMsg ? (
               <p className="text-xs text-destructive" role="alert">
                 {statusMsg}
@@ -241,7 +309,7 @@ export function BossHandoffQuickProvisionWizard(p: {
               </Button>
             ) : null}
           </div>
-        )}
+        ) : null}
       </OnboardingWizardShell>
 
       <HandoffProvisionResultDialog

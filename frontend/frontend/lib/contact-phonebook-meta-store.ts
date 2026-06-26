@@ -77,3 +77,12 @@ export function hideContactFromPhonebook(address: string): void {
     writeJson(FAVORITES_KEY, [...fav])
   }
 }
+
+/** Ausgeblendeten Kontakt wieder in der Telefonbuch-Liste anzeigen. */
+export function showContactInPhonebook(address: string): void {
+  const a = norm(address)
+  const set = readHiddenContacts()
+  if (!set.has(a)) return
+  set.delete(a)
+  writeJson(HIDDEN_KEY, [...set])
+}

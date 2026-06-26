@@ -6,6 +6,9 @@ import {
   needsOnboardingResume,
   finishOnboarding,
   shouldSkipOnboardingStep,
+  resolveWizardOnboardingPath,
+  resolveOnboardingDialogPath,
+  buildOnboardingSkipContext,
 } from '@/frontend/lib/onboarding-progress-store'
 
 vi.mock('@/frontend/lib/handoff-standalone-ready', () => ({
@@ -35,10 +38,6 @@ vi.mock('@/frontend/lib/telegram-alarm-group-prefs', () => ({
   isTelegramAlarmGroupWizardDismissed: () => false,
 }))
 
-vi.mock('@/frontend/lib/standalone-onboarding', () => ({
-  readStandaloneOnboardingPath: () => 'einsatz',
-  isStandaloneSoloPath: () => false,
-}))
 
 describe('onboarding-progress-store', () => {
   const store: Record<string, string> = {}
@@ -83,5 +82,29 @@ describe('onboarding-progress-store', () => {
     startOnboarding('wanderer')
     markOnboardingStepComplete('wallet')
     expect(readOnboardingProgress()?.completedSteps).toContain('wallet')
+  })
+
+  it('boss wallet skip wenn hasWallet', () => {
+    const ctx = buildOnboardingSkipContext({ hasKeys: true, locked: false })
+    expect(shouldSkipOnboardingStep('boss', 'wallet', ctx)).toBe(true)
+    expect(shouldSkipOnboardingStep('boss', 'wallet', {})).toBe(false)
+  })
+
+  it('resolveWizardOnboardingPath boss aus Progress', () => {
+    startOnboarding('boss')
+    expect(resolveWizardOnboardingPath({ role: 'messenger' })).toBe('boss')
+  })
+
+  it('resolveOnboardingDialogPath helper bei einsatz Pfad', () => {
+    window.localStorage.setItem('morgendrot.standaloneOnboardingPath.v1', 'einsatz')
+    expect(resolveOnboardingDialogPath({ role: 'messenger' })).toBe('helper')
+  })
+
+  it('helper handoff skip mit Backend-Config', () => {
+    const ctx = buildOnboardingSkipContext({
+      packageId: '0x' + 'a'.repeat(64),
+      mailboxId: '0x' + 'b'.repeat(64),
+    })
+    expect(shouldSkipOnboardingStep('helper', 'handoff', ctx)).toBe(true)
   })
 })

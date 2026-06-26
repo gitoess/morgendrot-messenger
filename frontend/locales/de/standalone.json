@@ -1,16 +1,21 @@
 {
   "profileLabelSolo": "Privat / Solo",
+  "profileLabelBoss": "Einsatzleitung",
   "firstStart": {
     "title": "Willkommen — wie startest du?",
-    "description": "Einsatz mit Team und Boss, oder privat ohne Vorgabe. Beides läuft in derselben App — du kannst später jederzeit in den Einstellungen wechseln (neues Profil).",
-    "einsatzTitle": "Einsatz — Handoff vom Boss",
+    "description": "Einsatzleitung, Helfer mit Handoff oder privat ohne Boss. Beides läuft in derselben App — du kannst später in den Einstellungen wechseln.",
+    "bossTitle": "Einsatzleitung — ich starte den Einsatz",
+    "bossSubtitle": "Noch kein Wallet, kein Package — Schritt für Schritt einrichten.",
+    "bossDetail": "Wallet, Move-Package, Postfächer, dann erste Helfer per Handoff.",
+    "einsatzTitle": "Einsatz-Helfer — Handoff vom Boss",
     "einsatzSubtitle": "Team, Mailbox und Fullnode kommen aus dem ZIP.",
     "einsatzDetail": "Danach nur noch Seed per QR oder Mnemonic — kein PC-Server nötig.",
     "soloTitle": "Privat / Solo — ohne Boss",
     "soloSubtitle": "Wallet selbst einrichten wie am PC.",
     "soloDetail": "Seed importieren, neu anlegen oder mit App-Passwort entsperren. Netz & Postfach folgen danach.",
     "tipEmptyBasisUrl": "Tipp: Basis-URL leer lassen für Standalone ohne Morgendrot-Server.",
-    "actionEinsatz": "Einsatz (Handoff)",
+    "actionBoss": "Einsatzleitung (Boss)",
+    "actionEinsatz": "Einsatz-Helfer",
     "actionSolo": "Privat / Solo"
   },
   "handoff": {

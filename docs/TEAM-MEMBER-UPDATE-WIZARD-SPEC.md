@@ -1,6 +1,6 @@
 # Team-Member-Update & Einstiegs-Wizard — Spec (P0–P2)
 
-**Stand:** 2026-06-17 (§3.5 Telegram-Alarmgruppe + Helfer-Wizard Schritt 2; zuvor §8 Transport)  
+**Stand:** 2026-06-16 (§4 Boss bei 0 — Greenfield-Einstieg; zuvor §3.5 Telegram, §8 Transport)  
 **Status:** **Spec** — Implementierung startet mit **P0 Wizard-Skelett**; Wire + LAN-Zustellung **Phase P1**, Join-Request **P2**  
 **Zweck:** Geführter **linearer** Erststart (Boss / Helfer / Wanderer) + **spontaner Helfer-Zugang** mit boss-signiertem Team-Update und Empfänger-Bestätigung — **ohne** Duplikat des Handoff-Export-Assistenten.  
 **Verwandt:** `docs/EXPORT-ASSISTENT-REFERENZ.md`, `docs/GERAET-PROVISIONIEREN-WIZARD.md`, `docs/HANDOFF-UND-MODUS-ZIELBILD.md`, `docs/API-INITIAL-PROFILE.md`, `docs/PROVISIONING-PAYLOAD-CRITIQUE.md`, `docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`, `docs/TRANSPORT-AND-IOTA-LAYERS.md`, `docs/TELEGRAM-INTEGRATION-ZIELBILD.md` **§6** (Telegram-Alarmgruppe optional), `docs/ROADMAP-FAHRPLAN.md` **§ H.16** (Boss-LAN Ist), **§ H.36** (dieses Paket)
@@ -131,21 +131,67 @@ Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `memb
 
 ---
 
-## 4. UI — Boss-Einstiegs-Wizard (linear)
+## 4. UI — Boss-Einstiegs-Wizard (linear, **Boss bei 0**)
 
-**Einstieg:** Erster Boss-Start, oder Einstellungen → „Einrichtung fortsetzen“.  
-**Modus:** Vollbild oder mehrstufiges Sheet mit **Schritt X von Y**.
+**Leitprinzip:** Ein neuer Boss startet **ohne** Wallet, Adresse, Package-ID, Mailbox oder Team — der Wizard führt **linear** von null bis zum ersten Helfer-Handoff. Er **orchestriert** bestehende APIs/Panels; er ist **kein** zweiter Export-Assistent.
 
-| Schritt | Titel (Nutzer) | Inhalt (orchestriert) | Überspringen wenn |
-|---------|----------------|------------------------|-------------------|
-| 1 | **Wer bin ich?** | Callsign, Rolle bestätigen, Kontakt-ID anzeigen | `.env` vollständig |
-| 2 | **IOTA & Postfach** | Package-ID, Mailbox, RPC — Link „Erweitert“ | Handoff / Status grün |
-| 3 | **Funk** | Meshtastic Node-ID, Kanal, Test-Hinweis | Node-ID gespeichert |
-| 4 | **Team** | Team-Name / `teamId`, Team-Mailbox(en) | bereits in `.env` |
-| 5 | **Erste Helfer** | Kurzlink **Helfer einrichten** (bestehendes Panel) | optional „Später“ |
-| 6 | **Fertig** | Checkliste + Dashboard | — |
+**Einstieg:**
 
-**Nicht im Wizard:** Seed-Generierung für **andere** (bleibt Helfer einrichten). **Nicht:** zweite Capabilities-Matrix — nur Link „Feineinstellung“.
+| Ort | Wann |
+|-----|------|
+| **Erststart-Karte** (Dashboard) | Noch kein Profil/Handoff/Seed — drei Wege: **Einsatzleitung**, **Einsatz-Helfer**, **Privat/Solo** |
+| **Einstellungen** → Einstiegs-Wizard | „Einrichtung fortsetzen“ / „Wizard öffnen“ |
+| **Später** | Nach Handoff-Import oder vorkonfigurierter `.env` — erledigte Schritte werden **übersprungen** |
+
+**Modus:** Dialog mit **Schritt X von Y**; „Später“ / „Überspringen“ für optionale Schritte.
+
+### 4.1 Erststart — drei Wege (verbindlich)
+
+| Nutzerwahl | Wizard-Pfad | Kurz |
+|------------|-------------|------|
+| **Einsatzleitung — ich starte den Einsatz** | `boss` | Greenfield: Wallet → Chain → Postfächer → Helfer |
+| **Einsatz-Helfer — Handoff vom Boss** | `helper` (Handoff-Flow, kein linearer Wizard-Dialog) | ZIP / Join-Request |
+| **Privat / Solo** | `wanderer` | Wallet → optional Postfach |
+
+**Regel:** „Boss bei 0“ gilt nur für Pfad **`boss`**. Helfer erwarten weiterhin ein Boss-Handoff oder Join-Freigabe.
+
+### 4.2 Boss-Schritte (Soll — Code: `BOSS_STEP_ORDER`)
+
+| # | `stepId` | Titel (Nutzer) | Inhalt (orchestriert) | Überspringen wenn |
+|---|----------|----------------|------------------------|-------------------|
+| 1 | `wallet` | **Wallet** | Seed neu / importieren / Tresor entsperren (`ONBOARDING-WALLET-UX-SPEC.md` §2) | Keys in Sitzung (`hasKeys` / persistierter Signer) |
+| 2 | `address` | **IOTA-Adresse** | Adresse anzeigen & kopieren | Adresse in Status |
+| 3 | `package` | **Move-Package** | **Deploy** (`POST /api/deploy-package`) **oder** bestehende Package-ID (`/set-package-id`); RPC/Netzwerk | `PACKAGE_ID` gesetzt |
+| 4 | `server-mailbox` | **Server-Postfach** | Private Mailbox on-chain (`/create-private-mailbox`) → `MAILBOX_ID` in `.env` | `MAILBOX_ID` gesetzt |
+| 5 | `team` | **Team** | Team-Mailbox (`/create-team-mailbox`), Einsatz-Name (`HANDOFF_LABEL`) | Team-Label / Team-MB bekannt |
+| 6 | `telegram-bot` | **Telegram Bot** (optional) | Bestehendes Einstellungs-Panel | immer überspringbar |
+| 7 | `telegram-group` | **Alarmgruppe** (optional) | Bestehendes Einstellungs-Panel | immer überspringbar |
+| 8 | `meshtastic` | **Funk** (optional) | Node-ID / Kanal | Node-ID gespeichert |
+| 9 | `helpers` | **Erste Helfer** | Kurzlink **Helfer einrichten** (`HandoffProvisionEntry`) | optional „Später“ |
+| 10 | `done` | **Fertig** | Checkliste → Dashboard | — |
+
+**Vor Schritt 3 (Deploy):** Server-Rolle `ROLE=boss` setzen (`POST /api/config`), falls Backend läuft — sonst `403` bei Deploy.
+
+**Standalone ohne Basis-URL:** Schritte 3–4 nutzen Direkt-RPC / lokale Stores; Deploy nur wenn Boss-HTTP erreichbar.
+
+### 4.3 Abgrenzungen
+
+| Thema | Im Boss-Wizard? |
+|-------|-----------------|
+| Seed für **andere** Helfer generieren | **Nein** — Schritt `helpers` → bestehender Provisionierungs-Wizard |
+| Capabilities-Matrix / `ROLE_ID` fein | **Nein** — Link „Experte“ in Helfer einrichten |
+| Team-Member-Update-Wire (`add`/`remove`) | **Nein** — Posteingang / Einsatzleitung (§7) |
+| Rechte ändern an laufenden Helfern | **Nein** — neues Handoff-ZIP (`docs/EINSATZ-BOSS-ABLAUF.md`) |
+
+### 4.4 Feldtest „Boss bei 0“
+
+1. Frische Installation: kein Seed, keine IDs in `.env`
+2. Erststart → **Einsatzleitung**
+3. Wallet → Adresse sichtbar
+4. Package deployen (oder ID eintragen)
+5. Server- + Team-Postfach anlegen
+6. Ersten Helfer provisionieren
+7. Dashboard/Einsatzleitung ohne manuelles `.env`-Editieren nutzbar
 
 ---
 

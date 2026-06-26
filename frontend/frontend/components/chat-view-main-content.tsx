@@ -1177,6 +1177,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           onSelectContact={applyPhonebookContact}
           teamMailboxCreateAllowed={canCreateTeamMailbox(connectionStatusRead.apiStatus)}
           allowInitialProfileImport={canAccessEinsatzleitung(role)}
+          apiStatus={connectionStatusRead.apiStatus ?? null}
           onOpenSettings={onOpenSettings}
           setStatusMsg={(msg) => {
             setStatus('success')

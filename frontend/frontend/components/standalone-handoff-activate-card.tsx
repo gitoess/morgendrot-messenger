@@ -10,8 +10,9 @@ import {
 } from '@/frontend/lib/handoff-standalone-ready'
 import {
   beginStandaloneSoloOnboarding,
+  isStandaloneEinsatzPath,
   isStandaloneSoloPath,
-  needsStandaloneOnboardingChoice,
+  needsFirstStartChoice,
   STANDALONE_ONBOARDING_CHANGED_EVENT,
 } from '@/frontend/lib/standalone-onboarding'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
@@ -33,6 +34,7 @@ export function StandaloneHandoffActivateCard(p: {
   onOpenHandoffImport: () => void
   onActivateWallet: () => void
   className?: string
+  apiRole?: string | null
 }) {
   const { t, i18n } = useAppTranslation('standalone')
   const [, bump] = useState(0)
@@ -52,7 +54,8 @@ export function StandaloneHandoffActivateCard(p: {
 
   const r = getStandaloneHelperReadiness()
   const solo = isStandaloneSoloPath()
-  if (!r.standaloneMode || r.readyForChat || needsStandaloneOnboardingChoice()) return null
+  const einsatzHelper = isStandaloneEinsatzPath()
+  if ((!r.standaloneMode && !einsatzHelper) || r.readyForChat || needsFirstStartChoice(p.apiRole)) return null
   if (solo && !r.needsMnemonic && !r.readyForChat) return null
 
   if (!r.hasHandoff) {

@@ -1,11 +1,26 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from 'vitest'
 import {
+  beginStandaloneBossOnboarding,
+  beginStandaloneEinsatzOnboarding,
   beginStandaloneSoloOnboarding,
+  isStandaloneBossPath,
+  isStandaloneEinsatzPath,
   isStandaloneSoloPath,
+  needsFirstStartChoice,
   needsStandaloneOnboardingChoice,
   readStandaloneOnboardingPath,
   setStandaloneOnboardingPath,
 } from './standalone-onboarding'
+
+vi.mock('@/frontend/lib/onboarding-boss-bootstrap', () => ({
+  ensureBossRoleOnServer: vi.fn(async () => ({ ok: true })),
+}))
+
+vi.mock('@/frontend/lib/onboarding-progress-store', () => ({
+  startOnboarding: vi.fn(),
+  requestOpenOnboardingWizard: vi.fn(),
+  readOnboardingProgress: () => null,
+}))
 
 vi.mock('@/frontend/lib/standalone-device-mode', () => ({
   isStandaloneMessengerWithoutBasis: () => true,
@@ -61,8 +76,21 @@ describe('standalone-onboarding', () => {
     expect(readStandaloneOnboardingPath()).toBe('solo')
     expect(isStandaloneSoloPath()).toBe(true)
     expect(store['morgendrot.handoff.localApplied.v1']).toContain('consumer')
-    expect(needsStandaloneOnboardingChoice()).toBe(false)
+    expect(needsFirstStartChoice()).toBe(false)
     expect(events).toContain('morgendrot.standaloneSoloWalletSetupRequest')
+  })
+
+  it('beginStandaloneBossOnboarding setzt boss Pfad und Profil', () => {
+    beginStandaloneBossOnboarding()
+    expect(readStandaloneOnboardingPath()).toBe('boss')
+    expect(isStandaloneBossPath()).toBe(true)
+    expect(store['morgendrot.handoff.localApplied.v1']).toContain('boss')
+  })
+
+  it('beginStandaloneEinsatzOnboarding setzt einsatz Pfad', () => {
+    beginStandaloneEinsatzOnboarding()
+    expect(readStandaloneOnboardingPath()).toBe('einsatz')
+    expect(isStandaloneEinsatzPath()).toBe(true)
   })
 
   it('needsStandaloneOnboardingChoice false nach Pfadwahl', () => {

@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, type ReactNode } from 'react'
-import { Lock, MessageSquare, MoreVertical, Radio, Star, Wifi } from 'lucide-react'
+import { Lock, MessageSquare, MoreVertical, Radio, Star, Wifi, Check } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +28,11 @@ export type ContactPhonebookCardProps = {
   onEdit: () => void
   onShowQr: () => void
   onRemove: () => void
+  /** Boss/Kommandant: Team-Update kind=remove an alle Mitglieder. */
+  onRemoveFromTeam?: () => void
+  /** Entfernung bereits an Team gesendet. */
+  teamRemoveSent?: boolean
+  teamRemoveTick?: number
   onRecordContact: () => void
   /** Kontakt ins Composer übernehmen (eigener Button, nicht Kartenklick). */
   onSelectForMessenger?: () => void
@@ -71,9 +76,14 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
     onEdit,
     onShowQr,
     onRemove,
+    onRemoveFromTeam,
+    teamRemoveSent,
+    teamRemoveTick,
     onRecordContact,
     onSelectForMessenger,
   } = props
+
+  void teamRemoveTick
 
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -167,6 +177,22 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
                 >
                   Bearbeiten / Mailbox
                 </DropdownMenuItem>
+                {onRemoveFromTeam ? (
+                  <DropdownMenuItem
+                    className="text-rose-600 focus:text-rose-600 dark:text-rose-400"
+                    onSelect={(e) => {
+                      e.preventDefault()
+                      onRemoveFromTeam()
+                    }}
+                  >
+                    Aus Team entfernen
+                  </DropdownMenuItem>
+                ) : teamRemoveSent ? (
+                  <DropdownMenuItem disabled className="text-emerald-600 dark:text-emerald-400">
+                    <Check className="mr-2 h-3.5 w-3.5" aria-hidden />
+                    Aus Team entfernt
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onSelect={(e) => {

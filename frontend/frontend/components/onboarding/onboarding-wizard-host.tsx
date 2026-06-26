@@ -6,7 +6,7 @@ import { OnboardingWizardDialog } from '@/frontend/components/onboarding/onboard
 import {
   ONBOARDING_WIZARD_OPEN_REQUEST_EVENT,
   readOnboardingProgress,
-  resolveWizardOnboardingPath,
+  resolveOnboardingDialogPath,
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
@@ -16,18 +16,20 @@ export function OnboardingWizardHost(p: {
   backendOnline?: boolean
   contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
+  onOpenHandoffImport?: () => void
   onReloadStatus?: () => void
 }) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
     const onOpen = () => {
-      const path = resolveWizardOnboardingPath({
+      const path = resolveOnboardingDialogPath({
         role: p.apiSnapshot?.role,
         standalonePath: readStandaloneOnboardingPath(),
       })
       if (!path) return
-      if (!readOnboardingProgress() || readOnboardingProgress()?.path !== path) {
+      const progress = readOnboardingProgress()
+      if (!progress || progress.path !== path) {
         startOnboarding(path)
       }
       setOpen(true)
@@ -44,6 +46,7 @@ export function OnboardingWizardHost(p: {
       backendOnline={p.backendOnline}
       contactDirectory={p.contactDirectory}
       onActivateWallet={p.onActivateWallet}
+      onOpenHandoffImport={p.onOpenHandoffImport}
       onReloadStatus={p.onReloadStatus}
     />
   )

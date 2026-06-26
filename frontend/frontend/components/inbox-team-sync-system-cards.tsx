@@ -1,15 +1,17 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Check, MessageCircle, Radio, UserPlus } from 'lucide-react'
+import { Check, MessageCircle, Radio, UserMinus, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import type { Message } from '@/frontend/lib/types'
 import { applyInitialProfileProvisioning } from '@/frontend/lib/api/contacts'
+import { hideContactFromPhonebook } from '@/frontend/lib/contact-phonebook-meta-store'
 import {
   parseMorgTeamMemberUpdateV1,
   memberToInitialProfileContact,
   type MorgTeamMemberUpdateV1,
+  type TeamMemberUpdateKind,
 } from '@/frontend/lib/morg-team-member-update-v1'
 import {
   parseMorgTelegramAlarmGroupV1,
@@ -22,7 +24,6 @@ import {
 import {
   isTeamUpdateSeqRejected,
   markTeamUpdateSeqApplied,
-  readLastAppliedTeamUpdateSeq,
   rejectTeamUpdateSeq,
   shouldShowTeamMemberUpdate,
 } from '@/frontend/lib/team-update-inbox-state'
@@ -38,11 +39,70 @@ import {
   confirmTelegramAlarmGroupJoined,
 } from '@/frontend/lib/telegram-alarm-group-prefs'
 import { openTelegramAlarmGroupInvite } from '@/frontend/lib/telegram-alarm-group-invite'
+import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 
 function shortBoss(addr: string): string {
   const a = addr.trim()
   if (a.length < 12) return a
   return `${a.slice(0, 6)}…${a.slice(-4)}`
+}
+
+function teamUpdateCardTitle(kind: TeamMemberUpdateKind): string {
+  if (kind === 'remove') return 'Mitglied aus Team entfernt'
+  if (kind === 'update') return 'Team-Mitglied aktualisiert'
+  return 'Neues Team-Mitglied'
+}
+
+function teamUpdateMemberLine(u: MorgTeamMemberUpdateV1): string {
+  if (u.kind === 'remove') {
+    const name = u.member.name?.trim()
+    return name ? name : maskWalletAddress(u.member.address, 8, 6)
+  }
+  return `${u.member.name} — Funk ${u.member.meshNodeId || '—'}`
+}
+
+function TeamRemoveUpdateCard(p: {
+  update: MorgTeamMemberUpdateV1
+  onAccept: (alsoHideFromPhonebook: boolean) => void
+  onReject: () => void
+}) {
+  const [alsoHide, setAlsoHide] = useState(false)
+  const u = p.update
+  return (
+    <div className="rounded-xl border border-rose-500/35 bg-rose-500/10 px-4 py-3 text-sm">
+      <div className="flex items-start gap-2">
+        <UserMinus className="mt-0.5 h-5 w-5 shrink-0 text-rose-400" aria-hidden />
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="font-semibold text-foreground">{teamUpdateCardTitle('remove')}</p>
+          <p className="text-muted-foreground">{teamUpdateMemberLine(u)}</p>
+          <p className="text-xs text-muted-foreground">
+            Von Einsatzleitung ({shortBoss(u.boss)}) · Update #{u.seq}
+            {isTeamUpdateSeqRejected(u.seq) ? ' · abgelehnt' : ''}
+          </p>
+          <p className="text-[11px] text-muted-foreground">
+            Standard: Kontakt bleibt im Telefonbuch — nur nicht mehr im aktiven Team-Telefonbuch.
+          </p>
+          <label className="flex cursor-pointer items-start gap-2 text-xs text-foreground">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={alsoHide}
+              onChange={(e) => setAlsoHide(e.target.checked)}
+            />
+            <span>Auch aus meinem Telefonbuch ausblenden (optional)</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" onClick={() => p.onAccept(alsoHide)}>
+              Entfernung bestätigen
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={p.onReject}>
+              Ablehnen
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function InboxTeamSyncSystemCards(p: {
@@ -94,7 +154,22 @@ export function InboxTeamSyncSystemCards(p: {
 
   if (!cards.teamUpdates.length && !cards.tgGroups.length && !cards.funkPings.length) return null
 
-  const handleAcceptTeam = async (update: NonNullable<ReturnType<typeof parseMorgTeamMemberUpdateV1>>) => {
+  const handleAcceptTeam = async (
+    update: NonNullable<ReturnType<typeof parseMorgTeamMemberUpdateV1>>,
+    alsoHideFromPhonebook = false
+  ) => {
+    if (update.kind === 'remove') {
+      if (alsoHideFromPhonebook) hideContactFromPhonebook(update.member.address)
+      markTeamUpdateSeqApplied(update.seq)
+      bump((n) => n + 1)
+      toast.message(
+        alsoHideFromPhonebook
+          ? 'Entfernung bestätigt — Kontakt aus dem Telefonbuch ausgeblendet.'
+          : 'Team-Entfernung bestätigt — Kontakt bleibt im Telefonbuch.'
+      )
+      p.onApplied?.()
+      return
+    }
     const contact = memberToInitialProfileContact(update.member)
     const r = await applyInitialProfileProvisioning({ version: 1, contacts: [contact] })
     if (r.ok) {
@@ -131,21 +206,29 @@ export function InboxTeamSyncSystemCards(p: {
           </div>
         </div>
       ))}
-      {cards.teamUpdates.map((u) => (
+      {cards.teamUpdates.map((u) => {
+        if (u.kind === 'remove') {
+          return (
+            <TeamRemoveUpdateCard
+              key={`team-${u.seq}-remove`}
+              update={u}
+              onAccept={(alsoHide) => void handleAcceptTeam(u, alsoHide)}
+              onReject={() => handleRejectTeam(u.seq)}
+            />
+          )
+        }
+        return (
         <div
-          key={`team-${u.seq}`}
+          key={`team-${u.seq}-${u.kind}`}
           className="rounded-xl border border-amber-500/35 bg-amber-500/10 px-4 py-3 text-sm"
         >
           <div className="flex items-start gap-2">
             <UserPlus className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" aria-hidden />
             <div className="min-w-0 flex-1 space-y-2">
-              <p className="font-semibold text-foreground">Neues Team-Mitglied</p>
-              <p className="text-muted-foreground">
-                {u.member.name} — Funk {u.member.meshNodeId || '—'}
-              </p>
+              <p className="font-semibold text-foreground">{teamUpdateCardTitle(u.kind)}</p>
+              <p className="text-muted-foreground">{teamUpdateMemberLine(u)}</p>
               <p className="text-xs text-muted-foreground">
                 Von Einsatzleitung ({shortBoss(u.boss)}) · Update #{u.seq}
-                {u.seq <= readLastAppliedTeamUpdateSeq() ? ' · bereits übernommen' : ''}
                 {isTeamUpdateSeqRejected(u.seq) ? ' · abgelehnt' : ''}
               </p>
               <div className="flex flex-wrap gap-2">
@@ -159,7 +242,8 @@ export function InboxTeamSyncSystemCards(p: {
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
       {cards.tgGroups.map((g) => (
         <div
           key={`tg-${g.tgSeq}`}

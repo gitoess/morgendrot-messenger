@@ -1,16 +1,21 @@
 {
   "profileLabelSolo": "Private / Solo",
+  "profileLabelBoss": "Deployment lead",
   "firstStart": {
     "title": "Welcome — how do you want to start?",
-    "description": "Team deployment with a boss, or private use on your own. Same app — you can switch later in settings (new profile).",
-    "einsatzTitle": "Deployment — handoff from boss",
+    "description": "Lead a deployment, join as helper with handoff, or use privately. Same app — you can switch later in settings.",
+    "bossTitle": "Deployment lead — I'm starting the operation",
+    "bossSubtitle": "No wallet or package yet — step-by-step setup.",
+    "bossDetail": "Wallet, Move package, mailboxes, then provision helpers via handoff.",
+    "einsatzTitle": "Deployment helper — handoff from boss",
     "einsatzSubtitle": "Team, mailbox and full node come from the ZIP.",
     "einsatzDetail": "Then enter seed via QR or mnemonic — no PC server required.",
     "soloTitle": "Private / Solo — no boss",
     "soloSubtitle": "Set up your wallet yourself, like on desktop.",
     "soloDetail": "Import seed, create new, or unlock with app password. Network & mailbox come next.",
     "tipEmptyBasisUrl": "Tip: leave API base URL empty for standalone without Morgendrot server.",
-    "actionEinsatz": "Deployment (handoff)",
+    "actionBoss": "Deployment lead (boss)",
+    "actionEinsatz": "Deployment helper",
     "actionSolo": "Private / Solo"
   },
   "handoff": {

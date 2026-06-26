@@ -45,7 +45,11 @@ describe('EinsatzleitungJoinRequestsPanel (Roster P0 UI)', () => {
     const onContactsChanged = vi.fn()
     render(
       <EinsatzleitungJoinRequestsPanel
-        apiStatus={{ myAddressFull: BOSS } as never}
+        apiStatus={{
+          myAddressFull: BOSS,
+          inboxUnionMailboxIds: [`0x${'a'.repeat(64)}`],
+          handoffLabel: 'team-alpha',
+        } as never}
         contactDirectory={{}}
         onContactsChanged={onContactsChanged}
       />
@@ -64,9 +68,15 @@ describe('EinsatzleitungJoinRequestsPanel (Roster P0 UI)', () => {
           contacts: [expect.objectContaining({ address: HELPER, name: 'Anna Handoff' })],
         })
       )
+      expect(publishTeamMemberUpdateWire).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: 'add',
+          member: expect.objectContaining({ address: HELPER, name: 'Anna Handoff' }),
+        })
+      )
     })
     expect(onContactsChanged).toHaveBeenCalled()
-    expect(screen.getByText(/Handoff-Vorschlag\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Team-Update gesendet/i)).toBeInTheDocument()
   })
 
   it('verwirft Handoff-Vorschlag', () => {
@@ -99,7 +109,7 @@ describe('EinsatzleitungJoinRequestsPanel (Roster P0 UI)', () => {
       <EinsatzleitungJoinRequestsPanel
         apiStatus={{
           myAddressFull: BOSS,
-          inboxUnionMailboxIds: [`0x${'m'.repeat(64)}`],
+          inboxUnionMailboxIds: [`0x${'a'.repeat(64)}`],
           handoffLabel: 'team-alpha',
         } as never}
         contactDirectory={{}}

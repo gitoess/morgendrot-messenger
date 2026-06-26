@@ -6,7 +6,7 @@ import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { RosterContactDiffPreview } from '@/frontend/components/roster-contact-diff-preview'
 import { applyInitialProfileProvisioning } from '@/frontend/lib/api/contacts'
-import { memberToInitialProfileContact } from '@/frontend/lib/morg-team-member-update-v1'
+import { memberToInitialProfileContact, type TeamMemberWireMember } from '@/frontend/lib/morg-team-member-update-v1'
 import {
   computeRosterContactDiff,
   findDirectoryEntry,
@@ -23,21 +23,17 @@ import {
   TEAM_ROSTER_PENDING_CHANGED_EVENT,
   type RosterPendingSuggestion,
 } from '@/frontend/lib/team-roster-pending-store'
-import { publishTeamMemberUpdateWire } from '@/frontend/lib/team-sync-wire'
+import {
+  formatTeamWireDeliveryChannels,
+  publishTeamMemberAddWire,
+  resolveTeamSyncContext,
+} from '@/frontend/lib/team-roster-wire'
 import {
   markRosterPendingOnServer,
   refreshRosterPendingFromServer,
 } from '@/frontend/lib/roster-pending-sync'
 
 export const EINSATZLEITUNG_JOIN_REQUESTS_SECTION_ID = 'einsatzleitung-join-requests'
-
-function formatDeliveryChannels(channels?: { iota?: boolean; lan?: boolean; meshPing?: boolean }): string {
-  const parts: string[] = []
-  if (channels?.lan) parts.push('LAN')
-  if (channels?.iota) parts.push('IOTA')
-  if (channels?.meshPing) parts.push('Funk')
-  return parts.length ? ` (${parts.join(' + ')})` : ''
-}
 
 export function EinsatzleitungJoinRequestsPanel(p: {
   apiStatus?: ApiStatus | null
@@ -68,15 +64,20 @@ export function EinsatzleitungJoinRequestsPanel(p: {
   const rosterPending = listRosterPendingSuggestions()
   const directory = p.contactDirectory ?? {}
 
-  const boss = (p.apiStatus?.myAddressFull || p.apiStatus?.myAddress || '').trim()
-  const teamMb = (p.apiStatus?.inboxUnionMailboxIds?.[0] || p.apiStatus?.mailboxId || '').trim()
-  const teamId = (p.apiStatus?.handoffLabel || 'default').trim()
+  const teamCtx = resolveTeamSyncContext(p.apiStatus)
 
   const addToPhonebook = async (member: StoredJoinRequest['applicant']) => {
     const contact = memberToInitialProfileContact(member)
     const r = await applyInitialProfileProvisioning({ version: 1, contacts: [contact] })
     if (!r.ok) throw new Error(r.error || 'Telefonbuch-Update fehlgeschlagen')
     p.onContactsChanged?.()
+  }
+
+  const publishTeamAdd = async (member: TeamMemberWireMember, teamIdOverride?: string) => {
+    if (!teamCtx) {
+      return { ok: false as const, error: 'Team-Mailbox fehlt.' }
+    }
+    return publishTeamMemberAddWire(teamCtx, member, teamIdOverride)
   }
 
   const approveJoin = async (req: StoredJoinRequest) => {
@@ -89,18 +90,11 @@ export function EinsatzleitungJoinRequestsPanel(p: {
       setBusyId(null)
       return
     }
-    const r = await publishTeamMemberUpdateWire({
-      teamMailboxAddress: teamMb,
-      teamId: req.teamId || teamId,
-      bossAddress: boss,
-      kind: 'add',
-      member: req.applicant,
-      telegramGroupHint: true,
-    })
+    const r = await publishTeamAdd(req.applicant, req.teamId || teamCtx?.teamId)
     if (r.ok) {
       void markRosterPendingOnServer(req.requestId, 'approved')
       markJoinRequestStatus(req.requestId, 'join_approved')
-      setFeedback(`Freigegeben — Roster aktualisiert, Team-Update gesendet${formatDeliveryChannels(r.channels)}.`)
+      setFeedback(`Freigegeben — Roster aktualisiert, Team-Update gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
       bump((n) => n + 1)
     } else {
       setFeedback(`Roster gespeichert, aber Team-Update fehlgeschlagen: ${r.error || 'unbekannt'}`)
@@ -113,12 +107,21 @@ export function EinsatzleitungJoinRequestsPanel(p: {
     setFeedback(null)
     try {
       await addToPhonebook(s.member)
-      void markRosterPendingOnServer(s.id, 'approved')
-      removeRosterPendingSuggestion(s.id)
-      setFeedback(`„${s.member.name}“ ins Team-Roster übernommen (Handoff-Vorschlag).`)
-      bump((n) => n + 1)
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : 'Roster-Übernahme fehlgeschlagen')
+      setBusyId(null)
+      return
+    }
+    const r = await publishTeamAdd(s.member)
+    if (r.ok) {
+      void markRosterPendingOnServer(s.id, 'approved')
+      removeRosterPendingSuggestion(s.id)
+      setFeedback(
+        `„${s.member.name}" ins Team-Telefonbuch übernommen, Team-Update gesendet${formatTeamWireDeliveryChannels(r.channels)}.`
+      )
+      bump((n) => n + 1)
+    } else {
+      setFeedback(`Roster gespeichert, aber Team-Update fehlgeschlagen: ${r.error || 'unbekannt'}`)
     }
     setBusyId(null)
   }

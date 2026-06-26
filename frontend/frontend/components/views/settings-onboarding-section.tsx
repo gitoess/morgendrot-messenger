@@ -6,24 +6,24 @@ import { Button } from '@/components/ui/button'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import {
+  buildOnboardingSkipContext,
   needsOnboardingResume,
   ONBOARDING_PROGRESS_CHANGED_EVENT,
   readOnboardingProgress,
   requestOpenOnboardingWizard,
-  resolveWizardOnboardingPath,
+  resolveOnboardingDialogPath,
   startOnboarding,
-  type OnboardingSkipContext,
 } from '@/frontend/lib/onboarding-progress-store'
+import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
 
 export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
   const [, bump] = useState(0)
-  const wizardPath = resolveWizardOnboardingPath({ role: p.apiStatus?.role })
-  const ctx: OnboardingSkipContext = {
+  const dialogPath = resolveOnboardingDialogPath({
     role: p.apiStatus?.role,
-    hasPackageId: Boolean(p.apiStatus?.packageId?.trim()),
-    hasMailboxId: Boolean(p.apiStatus?.mailboxId?.trim()),
-    hasTeamId: Boolean(p.apiStatus?.handoffLabel?.trim()),
-  }
+    standalonePath: readStandaloneOnboardingPath(),
+  })
+  const wizardPath = dialogPath
+  const ctx = buildOnboardingSkipContext(p.apiStatus)
 
   useEffect(() => {
     const sync = () => bump((n) => n + 1)
@@ -53,7 +53,12 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
             <h4 className="font-semibold text-foreground">Einstiegs-Wizard</h4>
             {showResume && progress ? (
               <p className="text-xs text-muted-foreground">
-                Fortschritt: {progress.path === 'boss' ? 'Boss' : 'Privat'}
+                Fortschritt:{' '}
+                {progress.path === 'boss'
+                  ? 'Einsatzleitung'
+                  : progress.path === 'helper'
+                    ? 'Helfer'
+                    : 'Privat'}
               </p>
             ) : null}
           </div>
@@ -67,7 +72,7 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
           </Button>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Für Helfer: Handoff-ZIP unter Allgemein → Import laden.
+            Für Helfer ohne Wizard: Handoff-ZIP unter Allgemein → Import laden.
           </p>
         )}
       </div>

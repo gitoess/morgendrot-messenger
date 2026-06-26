@@ -6,12 +6,12 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import {
+  buildOnboardingSkipContext,
   needsOnboardingResume,
   onboardingProgressPercent,
   readOnboardingProgress,
   requestOpenOnboardingWizard,
   ONBOARDING_PROGRESS_CHANGED_EVENT,
-  type OnboardingSkipContext,
 } from '@/frontend/lib/onboarding-progress-store'
 
 export function OnboardingResumeCard(p: {
@@ -19,15 +19,7 @@ export function OnboardingResumeCard(p: {
   className?: string
 }) {
   const [, bump] = useState(0)
-  const ctx: OnboardingSkipContext = useMemo(
-    () => ({
-      role: p.apiSnapshot?.role,
-      hasPackageId: Boolean(p.apiSnapshot?.packageId?.trim()),
-      hasMailboxId: Boolean(p.apiSnapshot?.mailboxId?.trim()),
-      hasTeamId: Boolean(p.apiSnapshot?.handoffLabel?.trim()),
-    }),
-    [p.apiSnapshot]
-  )
+  const ctx = useMemo(() => buildOnboardingSkipContext(p.apiSnapshot), [p.apiSnapshot])
 
   useEffect(() => {
     const sync = () => bump((n) => n + 1)

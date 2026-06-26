@@ -2,7 +2,8 @@
 
 import { useCallback, useState } from 'react'
 import { FileJson, Users } from 'lucide-react'
-import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { EinsatzleitungTeamRosterPanel } from '@/frontend/components/einsatzleitung-team-roster-panel'
 import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
 import {
   countBossProvisionRegistryByStatus,
@@ -13,6 +14,7 @@ import {
 import { formatHandoffAddressShort } from '@/frontend/lib/handoff-export-display'
 
 export function EinsatzleitungHelferOverviewPanel(p: {
+  apiStatus?: ApiStatus | null
   contactDirectory: Record<string, ContactMeshEntryClient>
   onContactsChanged: () => void
 }) {
@@ -57,6 +59,7 @@ export function EinsatzleitungHelferOverviewPanel(p: {
       ) : registryExists ? (
         <p className="text-xs text-muted-foreground">Registry gesperrt — unter „Neues Gerät“ entsperren.</p>
       ) : null}
+      <EinsatzleitungTeamRosterPanel apiStatus={p.apiStatus} contactDirectory={p.contactDirectory} />
       <PhonebookContactDistributePanel
         directory={p.contactDirectory}
         onContactsChanged={() => {

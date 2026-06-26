@@ -8,7 +8,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { Plus, Search } from 'lucide-react'
 import { PhonebookMeshBackupPanel } from '@/frontend/components/phonebook-mesh-backup-panel'
 import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
-import type { ContactMeshEntryClient } from '@/frontend/lib/api'
+import type { ContactMeshEntryClient, ApiStatus } from '@/frontend/lib/api'
 import { saveContactEntry } from '@/frontend/lib/api'
 import { contactDisplayLabel, lookupContactEntry } from '@/frontend/lib/contact-display'
 import { ContactPhonebookCard } from '@/frontend/components/contact-phonebook-card'
@@ -18,6 +18,7 @@ import {
 } from '@/frontend/components/contact-phonebook-contact-dialog'
 import { ContactPhonebookQrDialog } from '@/frontend/components/contact-phonebook-qr-dialog'
 import { TelegramAlarmGroupPhonebookBanner } from '@/frontend/components/telegram-alarm-group-phonebook-banner'
+import { EinsatzleitungTeamRosterPanel } from '@/frontend/components/einsatzleitung-team-roster-panel'
 import {
   maskWalletAddress,
   PHONEBOOK_FILTER_LABELS,
@@ -33,6 +34,13 @@ import {
   recordContactLastContacted,
   toggleContactFavorite,
 } from '@/frontend/lib/contact-phonebook-meta-store'
+import {
+  canManageTeamRoster,
+  contactToTeamMember,
+  formatTeamWireDeliveryChannels,
+  removeTeamMemberFromRoster,
+} from '@/frontend/lib/team-roster-wire'
+import { isTeamMemberRemoveSent, markTeamMemberRemoveSent } from '@/frontend/lib/team-removed-members-store'
 import { cn } from '@/lib/utils'
 
 export type ChatViewPhonebookSectionProps = {
@@ -49,6 +57,8 @@ export type ChatViewPhonebookSectionProps = {
   teamMailboxCreateAllowed?: boolean
   /** Boss/Kommandant: initialProfile-JSON ins Telefonbuch. */
   allowInitialProfileImport?: boolean
+  /** Boss/Kommandant: Team-Telefonbuch „Aus Team entfernen“. */
+  apiStatus?: ApiStatus | null
   /** Mailbox-Verwaltung liegt unter Einstellungen. */
   onOpenSettings?: () => void
 }
@@ -80,6 +90,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     editStorageKey?: string
   } | null>(null)
   const [qrAddress, setQrAddress] = useState<string | null>(null)
+  const [teamRemoveTick, setTeamRemoveTick] = useState(0)
 
   const connectedSet = useMemo(
     () => new Set(connectedAddresses.map((a) => a.trim().toLowerCase()).filter(Boolean)),
@@ -212,6 +223,29 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     [refreshContactDirectory, setStatusMsg]
   )
 
+  const teamRosterManage = canManageTeamRoster(p.apiStatus)
+
+  const removeFromTeam = useCallback(
+    async (address: string, entry: ContactMeshEntryClient, displayName: string) => {
+      if (isTeamMemberRemoveSent(address)) return
+      const member = contactToTeamMember(directory, address, entry)
+      if (!member) return
+      const r = await removeTeamMemberFromRoster({
+        apiStatus: p.apiStatus,
+        member: { ...member, name: displayName },
+      })
+      if (r.cancelled) return
+      if (!r.ok) {
+        setStatusMsg(r.error)
+        return
+      }
+      markTeamMemberRemoveSent(address)
+      setTeamRemoveTick((n) => n + 1)
+      setStatusMsg(`„${displayName}" — Entfernung an das Team gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
+    },
+    [directory, p.apiStatus, setStatusMsg]
+  )
+
   const renderCard = (row: ContactRow) => {
     const { address, entry, displayName } = row
     const hasLora = Boolean(entry.meshNodeId?.trim())
@@ -249,6 +283,15 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         }
         onShowQr={() => setQrAddress(address)}
         onRemove={() => void removeContact(address)}
+        onRemoveFromTeam={
+          teamRosterManage && /^0x[a-fA-F0-9]{64}$/i.test(address) && !isTeamMemberRemoveSent(address)
+            ? () => void removeFromTeam(address, entry, displayName)
+            : undefined
+        }
+        teamRemoveSent={
+          teamRosterManage && /^0x[a-fA-F0-9]{64}$/i.test(address) && isTeamMemberRemoveSent(address)
+        }
+        teamRemoveTick={teamRemoveTick}
         onRecordContact={() => {
           recordContactLastContacted(address)
           bumpMeta()
@@ -375,10 +418,16 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       ) : null}
 
       {p.allowInitialProfileImport ? (
-        <PhonebookContactDistributePanel
-          directory={directory}
-          onContactsChanged={refreshContactDirectory}
-        />
+        <>
+          <EinsatzleitungTeamRosterPanel
+            apiStatus={p.apiStatus ?? null}
+            contactDirectory={directory}
+          />
+          <PhonebookContactDistributePanel
+            directory={directory}
+            onContactsChanged={refreshContactDirectory}
+          />
+        </>
       ) : null}
 
       <PhonebookMeshBackupPanel directory={directory} onContactsChanged={refreshContactDirectory} />

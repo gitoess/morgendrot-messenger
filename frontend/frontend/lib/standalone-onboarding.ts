@@ -19,13 +19,17 @@ import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import {
+  readOnboardingProgress,
   requestOpenOnboardingWizard,
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
+import { ensureBossRoleOnServer } from '@/frontend/lib/onboarding-boss-bootstrap'
 
-export type StandaloneOnboardingPath = 'einsatz' | 'solo'
+export const STANDALONE_ONBOARDING_PATH_LS_KEY = 'morgendrot.standaloneOnboardingPath.v1'
 
-const LS_ONBOARDING_PATH = 'morgendrot.standaloneOnboardingPath.v1'
+export type StandaloneOnboardingPath = 'boss' | 'einsatz' | 'solo'
+
+const LS_ONBOARDING_PATH = STANDALONE_ONBOARDING_PATH_LS_KEY
 
 export const STANDALONE_ONBOARDING_CHANGED_EVENT = 'morgendrot.standaloneOnboardingChanged' as const
 export const STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT = 'morgendrot.standaloneSoloWalletSetupRequest' as const
@@ -34,7 +38,7 @@ export function readStandaloneOnboardingPath(): StandaloneOnboardingPath | null 
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(LS_ONBOARDING_PATH)?.trim()
-    if (raw === 'einsatz' || raw === 'solo') return raw
+    if (raw === 'boss' || raw === 'einsatz' || raw === 'solo') return raw
     return null
   } catch {
     return null
@@ -55,6 +59,10 @@ export function isStandaloneSoloPath(): boolean {
   return readStandaloneOnboardingPath() === 'solo'
 }
 
+export function isStandaloneBossPath(): boolean {
+  return readStandaloneOnboardingPath() === 'boss'
+}
+
 export function isStandaloneEinsatzPath(): boolean {
   return readStandaloneOnboardingPath() === 'einsatz'
 }
@@ -70,13 +78,36 @@ export function requestStandaloneSoloWalletSetup(): void {
   window.dispatchEvent(new CustomEvent(STANDALONE_SOLO_WALLET_SETUP_REQUEST_EVENT))
 }
 
-/** Frische APK ohne Handoff, ohne gewählten Pfad, ohne gespeicherten Seed. */
-export function needsStandaloneOnboardingChoice(): boolean {
-  if (!isStandaloneMessengerWithoutBasis()) return false
+/** Noch kein gewählter Startpfad (Standalone oder Desktop ohne Einsatz-Rolle). */
+export function needsFirstStartChoice(apiRole?: string | null): boolean {
   if (readStandaloneOnboardingPath()) return false
   if (readLocalHandoffAppliedSnapshot()) return false
   if (hasPersistedDirectIotaSessionSigner()) return false
-  return true
+  if (readOnboardingProgress()?.finishedAtMs) return false
+
+  if (isStandaloneMessengerWithoutBasis()) return true
+
+  const role = (apiRole || '').trim().toLowerCase()
+  if (role === 'boss' || role === 'kommandant' || role === 'arbeiter') return false
+  return role === '' || role === 'messenger' || role === 'user'
+}
+
+/** @deprecated Nutze needsFirstStartChoice — bleibt für Standalone-Kompatibilität. */
+export function needsStandaloneOnboardingChoice(): boolean {
+  return needsFirstStartChoice()
+}
+
+export function buildStandaloneBossProfileSnapshot(): LocalHandoffAppliedSnapshot {
+  ensureI18nInitialized()
+  return {
+    savedAtMs: Date.now(),
+    handoffLabel: i18n.t('profileLabelBoss', { ns: 'standalone', defaultValue: 'Einsatzleitung' }),
+    role: 'boss',
+    deploymentProfile: 'einsatz',
+    transportProfile: 'mesh-first',
+    uiVariant: 'messenger',
+    simpleMode: false,
+  }
 }
 
 export function buildStandaloneSoloProfileSnapshot(): LocalHandoffAppliedSnapshot {
@@ -110,7 +141,18 @@ export function beginStandaloneSoloOnboarding(): void {
   requestOpenOnboardingWizard()
 }
 
-/** Einsatz: nur Pfad merken — Handoff-ZIP folgt separat. */
+/** Einsatzleitung (Boss bei 0): Profil lokal + Boss-Wizard. */
+export function beginStandaloneBossOnboarding(): void {
+  setStandaloneOnboardingPath('boss')
+  const snapshot = buildStandaloneBossProfileSnapshot()
+  saveLocalHandoffAppliedSnapshot(snapshot)
+  syncLocalHandoffSnapshotToChainContext(snapshot)
+  startOnboarding('boss')
+  void ensureBossRoleOnServer()
+  requestOpenOnboardingWizard()
+}
+
+/** Einsatz-Helfer: Pfad merken — Handoff-ZIP folgt separat. */
 export function beginStandaloneEinsatzOnboarding(): void {
   setStandaloneOnboardingPath('einsatz')
   startOnboarding('helper')

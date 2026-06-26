@@ -8,16 +8,15 @@ import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { getStandaloneHelperReadiness } from '@/frontend/lib/handoff-standalone-ready'
 import { readTelegramInviteFromHandoffExtras } from '@/frontend/lib/handoff-extras'
-import {
-  isStandaloneSoloPath,
-  readStandaloneOnboardingPath,
-  type StandaloneOnboardingPath,
-} from '@/frontend/lib/standalone-onboarding'
 import { isTelegramAlarmGroupWizardDismissed } from '@/frontend/lib/telegram-alarm-group-prefs'
+
+/** Sync mit `standalone-onboarding.ts` — bewusst inline, kein Zirkelimport. */
+const STANDALONE_ONBOARDING_PATH_LS_KEY = 'morgendrot.standaloneOnboardingPath.v1'
 
 export type OnboardingPath = 'boss' | 'helper' | 'wanderer'
 
 export type BossStepId =
+  | 'wallet'
   | 'address'
   | 'package'
   | 'server-mailbox'
@@ -48,6 +47,7 @@ export const ONBOARDING_WIZARD_OPEN_REQUEST_EVENT = 'morgendrot.onboardingWizard
 const LS_KEY = 'morgendrot.onboardingProgress.v2'
 
 export const BOSS_STEP_ORDER: BossStepId[] = [
+  'wallet',
   'address',
   'package',
   'server-mailbox',
@@ -67,24 +67,51 @@ export function stepOrderForPath(path: OnboardingPath): OnboardingStepId[] {
   return WANDERER_STEP_ORDER
 }
 
+function readStandalonePathKey(): 'boss' | 'einsatz' | 'solo' | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(STANDALONE_ONBOARDING_PATH_LS_KEY)?.trim()
+    if (raw === 'boss' || raw === 'einsatz' || raw === 'solo') return raw
+    return null
+  } catch {
+    return null
+  }
+}
+
 export function resolveOnboardingPath(opts: {
   role?: string | null
-  standalonePath?: StandaloneOnboardingPath | null
+  standalonePath?: 'boss' | 'einsatz' | 'solo' | null
 }): OnboardingPath {
-  const standalone = opts.standalonePath ?? readStandaloneOnboardingPath()
-  if (standalone === 'solo' || isStandaloneSoloPath()) return 'wanderer'
+  const standalone = opts.standalonePath ?? readStandalonePathKey()
+  if (standalone === 'solo') return 'wanderer'
+  if (standalone === 'boss') return 'boss'
   const role = (opts.role || '').trim().toLowerCase()
   if (role === 'boss' || role === 'kommandant') return 'boss'
   return 'helper'
 }
 
-/** Wizard nur Boss + Wanderer — Helfer bekommen Handoff-Flow. */
+/** Wizard-Dialog: Boss, Wanderer oder Helfer (Einsatz mit Handoff). */
+export function resolveOnboardingDialogPath(opts: {
+  role?: string | null
+  standalonePath?: 'boss' | 'einsatz' | 'solo' | null
+}): OnboardingPath | null {
+  const progress = readOnboardingProgress()
+  if (progress?.path === 'helper') return 'helper'
+  const standalone = opts.standalonePath ?? readStandalonePathKey()
+  if (standalone === 'einsatz') return 'helper'
+  return resolveWizardOnboardingPath(opts)
+}
+
+/** Wizard nur Boss + Wanderer (Einstellungen-Kachel ohne Helfer-Handoff). */
 export function resolveWizardOnboardingPath(opts: {
   role?: string | null
-  standalonePath?: StandaloneOnboardingPath | null
+  standalonePath?: 'boss' | 'einsatz' | 'solo' | null
 }): 'boss' | 'wanderer' | null {
-  const standalone = opts.standalonePath ?? readStandaloneOnboardingPath()
-  if (standalone === 'solo' || isStandaloneSoloPath()) return 'wanderer'
+  const progress = readOnboardingProgress()
+  if (progress?.path === 'boss') return 'boss'
+  const standalone = opts.standalonePath ?? readStandalonePathKey()
+  if (standalone === 'solo') return 'wanderer'
+  if (standalone === 'boss') return 'boss'
   const role = (opts.role || '').trim().toLowerCase()
   if (role === 'boss' || role === 'kommandant') return 'boss'
   if (role === 'wanderer' || role === 'messenger') return 'wanderer'
@@ -197,10 +224,41 @@ export function requestOpenOnboardingWizard(): void {
 
 export type OnboardingSkipContext = {
   role?: string | null
+  hasWallet?: boolean
+  hasAddress?: boolean
   hasPackageId?: boolean
   hasMailboxId?: boolean
-  hasMeshNodeId?: boolean
   hasTeamId?: boolean
+  hasMeshNodeId?: boolean
+  hasHandoffConfig?: boolean
+  hasBossPartner?: boolean
+}
+
+export function buildOnboardingSkipContext(api?: {
+  role?: string | null
+  myAddress?: string | null
+  myAddressFull?: string | null
+  hasKeys?: boolean
+  locked?: boolean
+  packageId?: string | null
+  mailboxId?: string | null
+  handoffLabel?: string | null
+  meshNodeId?: string | null
+  bossAddress?: string | null
+} | null): OnboardingSkipContext {
+  const addr = (api?.myAddressFull || api?.myAddress || '').trim()
+  const handoff = readLocalHandoffAppliedSnapshot()
+  return {
+    role: api?.role,
+    hasWallet: api?.hasKeys === true && api?.locked !== true,
+    hasAddress: Boolean(addr),
+    hasPackageId: Boolean(api?.packageId?.trim()),
+    hasMailboxId: Boolean(api?.mailboxId?.trim()),
+    hasTeamId: Boolean(api?.handoffLabel?.trim()),
+    hasMeshNodeId: Boolean(api?.meshNodeId?.trim()),
+    hasHandoffConfig: Boolean(handoff) || Boolean(api?.packageId?.trim() && api?.mailboxId?.trim()),
+    hasBossPartner: Boolean(handoff?.bossAddress?.trim() || api?.bossAddress?.trim()),
+  }
 }
 
 export function shouldSkipOnboardingStep(
@@ -214,8 +272,10 @@ export function shouldSkipOnboardingStep(
 
   if (path === 'boss') {
     switch (stepId as BossStepId) {
+      case 'wallet':
+        return Boolean(ctx.hasWallet || hasMnemonic)
       case 'address':
-        return Boolean(ctx.role?.trim())
+        return Boolean(ctx.hasAddress)
       case 'package':
         return Boolean(ctx.hasPackageId)
       case 'server-mailbox':
@@ -240,18 +300,18 @@ export function shouldSkipOnboardingStep(
   if (path === 'helper') {
     switch (stepId as HelperStepId) {
       case 'handoff':
-        return readiness.hasHandoff
+        return readiness.hasHandoff || Boolean(ctx.hasHandoffConfig)
       case 'telegram': {
         const invite = readTelegramInviteFromHandoffExtras()
         if (!invite) return true
         return isTelegramAlarmGroupWizardDismissed()
       }
       case 'wallet':
-        return hasMnemonic || !readiness.needsMnemonic
+        return hasMnemonic || !readiness.needsMnemonic || Boolean(ctx.hasWallet)
       case 'team-self':
         return Boolean(handoff?.handoffLabel)
       case 'peering':
-        return Boolean(handoff?.bossAddress)
+        return Boolean(handoff?.bossAddress) || Boolean(ctx.hasBossPartner)
       case 'done':
         return false
       default:
