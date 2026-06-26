@@ -178,6 +178,7 @@ export async function saveContactEntry(body: {
   mailboxBufferId?: string
   telegramChatId?: string
   clearMesh?: boolean
+  roleTags?: string[]
 }): Promise<{ ok: boolean; message?: string; error?: string }> {
   try {
     const fr = await fetchApiText(API_BASE, '/api/contact-label', {

@@ -20,7 +20,9 @@ import { ContactPhonebookQrDialog } from '@/frontend/components/contact-phoneboo
 import { TelegramAlarmGroupPhonebookBanner } from '@/frontend/components/telegram-alarm-group-phonebook-banner'
 import { EinsatzleitungTeamRosterPanel } from '@/frontend/components/einsatzleitung-team-roster-panel'
 import {
+  formatContactRoleTagsCsv,
   maskWalletAddress,
+  parseContactRoleTagsCsv,
   PHONEBOOK_FILTER_LABELS,
   type PhonebookFilterId,
 } from '@/frontend/lib/contact-phonebook-format'
@@ -165,6 +167,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       const previousKey = (dialog?.editStorageKey ?? '').trim().toLowerCase()
       setBusy(true)
       try {
+        const roleTags = parseContactRoleTagsCsv(values.roleTagsCsv)
         const r = await saveContactEntry({
           address: storageKey,
           label: values.label.trim() || undefined,
@@ -175,6 +178,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           mailboxBufferId: values.mailboxBufferId.trim(),
           mailboxObjectId: values.mailboxPrivateId.trim(),
           telegramChatId: values.telegramChatId.trim(),
+          ...(roleTags.length ? { roleTags } : {}),
         })
         if (r.ok) {
           if (previousKey && previousKey !== storageKey) {
@@ -278,6 +282,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
               label: entry.label ?? '',
               meshNodeId: entry.meshNodeId ?? '',
               telegramChatId: entry.telegramChatId ?? (address.startsWith('tg:') ? address.slice(3) : ''),
+              roleTagsCsv: formatContactRoleTagsCsv(entry.roleTags),
             },
           })
         }

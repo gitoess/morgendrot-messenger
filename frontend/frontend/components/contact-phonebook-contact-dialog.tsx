@@ -22,6 +22,7 @@ import {
   type ContactMailboxSlotId,
   slotsFromEntry,
 } from '@/frontend/lib/contact-mailbox-slots'
+import { formatContactRoleTagsCsv } from '@/frontend/lib/contact-phonebook-format'
 
 const EXTRA_MAILBOX_SLOTS: ContactMailboxSlotId[] = ['shared', 'team', 'buffer']
 
@@ -41,6 +42,7 @@ export type ContactPhonebookFormValues = {
   mailboxTeamId: string
   mailboxBufferId: string
   telegramChatId: string
+  roleTagsCsv: string
 }
 
 export type ContactPhonebookContactDialogProps = {
@@ -63,6 +65,7 @@ const empty: ContactPhonebookFormValues = {
   mailboxTeamId: '',
   mailboxBufferId: '',
   telegramChatId: '',
+  roleTagsCsv: '',
 }
 
 function hasExtraMailboxSlots(form: ContactPhonebookFormValues): boolean {
@@ -95,6 +98,13 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
       ...slotInit,
       telegramChatId:
         initial?.telegramChatId ?? (rawAddr.startsWith('tg:') ? rawAddr.slice(3) : ''),
+      roleTagsCsv:
+        initial?.roleTagsCsv ??
+        formatContactRoleTagsCsv(
+          Array.isArray((initial as { roleTags?: string[] } | undefined)?.roleTags)
+            ? (initial as { roleTags?: string[] }).roleTags
+            : undefined
+        ),
     }
     openSnapshotRef.current = snapshot
     setForm(snapshot)
@@ -179,6 +189,16 @@ export function ContactPhonebookContactDialog(p: ContactPhonebookContactDialogPr
                   Optional IOTA-Wallet ergänzen (legt einen zusätzlichen Eintrag an).
                 </p>
               ) : null}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Rollen-Tags (optional, kommagetrennt)</label>
+              <input
+                type="text"
+                value={form.roleTagsCsv}
+                onChange={(e) => setForm((f) => ({ ...f, roleTagsCsv: e.target.value }))}
+                placeholder="z. B. Medic, THW, Gruppenführer"
+                className="w-full rounded-lg border border-border bg-input px-3 py-2.5 text-sm"
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground">Meshtastic Node-ID (optional)</label>

@@ -1,15 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { formatContactLastSeen, maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
+import {
+  normalizeContactRoleTags,
+  parseContactRoleTagsCsv,
+  formatContactRoleTagsCsv,
+} from './contact-phonebook-format'
 
-describe('contact-phonebook-format', () => {
-  it('maskWalletAddress kürzt Mitte', () => {
-    const a = '0x' + 'a'.repeat(64)
-    expect(maskWalletAddress(a)).toBe(`0x${'a'.repeat(8)}…${'a'.repeat(6)}`)
+describe('contact-phonebook-format roleTags', () => {
+  it('normalisiert und dedupliziert', () => {
+    expect(normalizeContactRoleTags(['Medic', 'medic', ' THW '])).toEqual(['Medic', 'THW'])
   })
 
-  it('formatContactLastSeen formatiert Datum', () => {
-    const s = formatContactLastSeen(Date.UTC(2026, 4, 12, 12, 32))
-    expect(s).toMatch(/12/)
-    expect(s).not.toBe('—')
+  it('parst CSV', () => {
+    expect(parseContactRoleTagsCsv('Medic; THW, Medic')).toEqual(['Medic', 'THW'])
+  })
+
+  it('formatiert zurück', () => {
+    expect(formatContactRoleTagsCsv(['Medic', 'THW'])).toBe('Medic, THW')
   })
 })

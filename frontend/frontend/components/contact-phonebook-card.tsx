@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, type ReactNode } from 'react'
-import { Lock, MessageSquare, MoreVertical, Radio, Star, Wifi, Check } from 'lucide-react'
+import { Lock, MessageSquare, MoreVertical, Radio, Star, Users, Wifi, Check, UserMinus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
-import { formatContactLastSeen, maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
+import { formatContactLastSeen, maskWalletAddress, normalizeContactRoleTags } from '@/frontend/lib/contact-phonebook-format'
 
 export type ContactPhonebookCardProps = {
   address: string
@@ -101,6 +101,9 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
     }, 550)
   }, [onShowQr])
 
+  const roleTags = normalizeContactRoleTags(entry.roleTags)
+  const showTeamBadge = Boolean(onRemoveFromTeam || teamRemoveSent)
+
   return (
     <article
       className={cn(
@@ -137,7 +140,27 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <h3 className="truncate text-lg font-bold leading-tight text-foreground">{displayName}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-lg font-bold leading-tight text-foreground">{displayName}</h3>
+                {showTeamBadge ? (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-sky-500/40 bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-sky-900 dark:text-sky-100">
+                    <Users className="h-3 w-3" aria-hidden />
+                    Team
+                  </span>
+                ) : null}
+              </div>
+              {roleTags.length > 0 ? (
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {roleTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full border border-violet-500/35 bg-violet-500/10 px-2 py-0.5 text-[10px] font-medium text-violet-950 dark:text-violet-100"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
               <button
                 type="button"
                 onClick={(e) => {
@@ -265,6 +288,25 @@ export function ContactPhonebookCard(props: ContactPhonebookCardProps) {
               <MessageSquare className="h-4 w-4 shrink-0" aria-hidden />
               Im Messenger verwenden
             </button>
+          ) : null}
+
+          {onRemoveFromTeam ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemoveFromTeam()
+              }}
+              className="mt-2 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 text-sm font-medium text-rose-800 hover:bg-rose-500/15 dark:text-rose-200"
+            >
+              <UserMinus className="h-4 w-4 shrink-0" aria-hidden />
+              Aus Team entfernen
+            </button>
+          ) : teamRemoveSent ? (
+            <p className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs font-medium text-emerald-800 dark:text-emerald-200">
+              <Check className="h-3.5 w-3.5" aria-hidden />
+              Aus Team entfernt — Team wurde benachrichtigt
+            </p>
           ) : null}
         </div>
       </div>
