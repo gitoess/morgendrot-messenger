@@ -84,7 +84,14 @@ import {
     MESSAGING_MAX_PLAINTEXT_UTF8_BYTES,
     MOVE_MAX_PURE_VECTOR_U8_BYTES,
 } from './chain-access.js';
-import { applyPublishResultToEnv, resolveUpgradeCapId, upgradePackageCli } from './move-package-deploy.js';
+import {
+    applyPublishResultToEnv,
+    applyGlobalsCreatedToEnv,
+    createGlobalsCli,
+    deployTestnetMovePackage,
+    resolveUpgradeCapId,
+    upgradePackageCli,
+} from './move-package-deploy.js';
 import { invalidateMessagingMoveFeaturesCache } from './move-package-features.js';
 import { handleShopApi } from './api/shop/handle-shop-api.js';
 import { normalizeAddress } from './utils.js';
@@ -2749,11 +2756,39 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             req.on('data', (chunk) => { body += chunk; });
             req.on('end', async () => {
                 try {
-                    const data = JSON.parse(body || '{}');
+                    const data = JSON.parse(body || '{}') as {
+                        path?: string;
+                        createGlobals?: boolean;
+                        forceGlobals?: boolean;
+                    };
                     const rawPath = typeof data.path === 'string' && data.path.trim() ? data.path.trim() : 'move-test';
                     const packageDir = path.basename(rawPath) || 'move-test';
                     if (packageDir !== rawPath || /[\\/]/.test(packageDir)) {
                         sendJson(res, 400, { ok: false, error: 'path darf nur einen einzelnen Ordner-Namen enthalten (z. B. move-test).' }, cors);
+                        return;
+                    }
+                    if (data.createGlobals === true) {
+                        const result = await deployTestnetMovePackage({
+                            packageDir,
+                            createGlobals: true,
+                            forceGlobals: data.forceGlobals === true,
+                        });
+                        sendJson(
+                            res,
+                            200,
+                            {
+                                ok: true,
+                                packageId: result.packageId,
+                                upgradeCapId: result.upgradeCapId,
+                                mailboxId: result.mailboxId,
+                                vaultRegistryId: result.vaultRegistryId,
+                                commandRegistryId: result.commandRegistryId,
+                                message:
+                                    result.message ||
+                                    'Package deployt. MAILBOX_ID und Registries in .env gespeichert.',
+                            },
+                            cors
+                        );
                         return;
                     }
                     const result = await publishPackageCli(packageDir);
@@ -2762,7 +2797,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                         (applied.envPackageOk
                             ? 'Package deployt. PACKAGE_ID in .env gespeichert.'
                             : 'Package deployt. (.env PACKAGE_ID: ' + (applied.envPackageError || 'nicht aktualisiert') + ')') +
-                        (result.upgradeCapId && applied.envCapOk ? ' UPGRADE_CAP_ID gespeichert.' : '');
+                        (result.upgradeCapId && applied.envCapOk ? ' UPGRADE_CAP_ID gespeichert.' : '') +
+                        ' Optional: POST /api/create-globals für MAILBOX_ID + Registries.';
                     sendJson(
                         res,
                         200,
@@ -2776,6 +2812,63 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     );
                 } catch (e: any) {
                     const msg = String(e?.message || e);
+                    sendJson(res, 200, { ok: false, error: msg }, cors);
+                }
+            });
+            return;
+        }
+
+        if (url === '/api/create-globals' && req.method === 'POST') {
+            if (CFG.ROLE !== 'boss' && CFG.ROLE !== 'kommandant') {
+                sendJson(res, 403, { ok: false, error: 'Nur Boss oder Kommandant.' }, cors);
+                return;
+            }
+            let body = '';
+            req.on('data', (chunk) => { body += chunk; });
+            req.on('end', async () => {
+                try {
+                    const data = JSON.parse(body || '{}') as { packageId?: string; force?: boolean };
+                    const pkg = String(data.packageId || CFG.PACKAGE_ID || '').trim();
+                    if (!/^0x[a-fA-F0-9]{64}$/i.test(pkg)) {
+                        sendJson(res, 400, { ok: false, error: 'PACKAGE_ID fehlt oder ungültig.' }, cors);
+                        return;
+                    }
+                    const existingMb = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
+                    if (existingMb && /^0x[a-fA-F0-9]{64}$/i.test(existingMb) && data.force !== true) {
+                        sendJson(
+                            res,
+                            409,
+                            {
+                                ok: false,
+                                error:
+                                    'MAILBOX_ID bereits gesetzt — create_globals überschreibt Postfach/Registries. Nur bei neuem Package oder mit force:true.',
+                            },
+                            cors
+                        );
+                        return;
+                    }
+                    const globals = await createGlobalsCli(pkg);
+                    const applied = applyGlobalsCreatedToEnv(globals);
+                    if (applied.errors.length) {
+                        sendJson(res, 500, { ok: false, error: applied.errors.join(' ') }, cors);
+                        return;
+                    }
+                    sendJson(
+                        res,
+                        200,
+                        {
+                            ok: true,
+                            packageId: pkg,
+                            mailboxId: globals.mailboxId,
+                            vaultRegistryId: globals.vaultRegistryId,
+                            commandRegistryId: globals.commandRegistryId,
+                            message:
+                                'create_globals OK — MAILBOX_ID, VAULT_REGISTRY_ID und COMMAND_REGISTRY_ID in .env gespeichert.',
+                        },
+                        cors
+                    );
+                } catch (e: unknown) {
+                    const msg = e instanceof Error ? e.message : String(e);
                     sendJson(res, 200, { ok: false, error: msg }, cors);
                 }
             });

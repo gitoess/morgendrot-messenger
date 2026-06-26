@@ -18,6 +18,7 @@ import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-j
 import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
 import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
+import { BossRegistryBootstrapPanel } from '@/frontend/components/boss-registry-bootstrap-panel'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import {
   applyBossHandoffLabel,
@@ -109,6 +110,7 @@ export function OnboardingBossPackageStep(p: PanelProps) {
   const [manualId, setManualId] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [withGlobals, setWithGlobals] = useState(true)
 
   const runDeploy = async () => {
     setBusy(true)
@@ -119,7 +121,10 @@ export function OnboardingBossPackageStep(p: PanelProps) {
         setMsg(roleR.error || 'Rolle setzen fehlgeschlagen.')
         return
       }
-      const r = await deployBossMovePackage()
+      const r = await deployBossMovePackage({
+        createGlobals: withGlobals,
+        forceGlobals: false,
+      })
       if (!r.ok) {
         setMsg(r.error || 'Deploy fehlgeschlagen.')
         return
@@ -147,6 +152,23 @@ export function OnboardingBossPackageStep(p: PanelProps) {
     <div className="space-y-4">
       <StatusRow ok={hasPkg} label="Package-ID gesetzt" />
       <StatusRow ok={hasRpc} label="RPC / Netzwerk erreichbar" />
+      <BossRegistryBootstrapPanel
+        apiSnapshot={p.apiSnapshot}
+        backendOnline={p.backendOnline}
+        onReload={p.onReload}
+      />
+      <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={withGlobals}
+          onChange={(e) => setWithGlobals(e.target.checked)}
+        />
+        <span>
+          Nach Deploy <strong className="text-foreground">create_globals</strong> ausführen (MAILBOX_ID +
+          Registries — empfohlen bei neuem Package, Gas nötig)
+        </span>
+      </label>
       <div className="flex flex-wrap gap-2">
         <Button type="button" size="sm" disabled={busy || !p.backendOnline} onClick={() => void runDeploy()}>
           {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}

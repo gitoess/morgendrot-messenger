@@ -262,6 +262,88 @@ export async function createGlobalsCli(packageId: string): Promise<GlobalsCreate
     return ids;
 }
 
+export function applyGlobalsCreatedToEnv(ids: GlobalsCreatedIds): {
+    envMailboxOk: boolean;
+    envVaultOk: boolean;
+    envCommandOk: boolean;
+    envUseMailboxOk: boolean;
+    errors: string[];
+} {
+    const errors: string[] = [];
+    (CFG as { MAILBOX_ID: string }).MAILBOX_ID = ids.mailboxId;
+    process.env.MAILBOX_ID = ids.mailboxId;
+    (CFG as { VAULT_REGISTRY_ID: string }).VAULT_REGISTRY_ID = ids.vaultRegistryId;
+    process.env.VAULT_REGISTRY_ID = ids.vaultRegistryId;
+    (CFG as { COMMAND_REGISTRY_ID: string }).COMMAND_REGISTRY_ID = ids.commandRegistryId;
+    process.env.COMMAND_REGISTRY_ID = ids.commandRegistryId;
+    (CFG as { USE_MAILBOX: boolean }).USE_MAILBOX = true;
+    process.env.USE_MAILBOX = 'true';
+
+    const envMailbox = setEnvKey('MAILBOX_ID', ids.mailboxId);
+    const envVault = setEnvKey('VAULT_REGISTRY_ID', ids.vaultRegistryId);
+    const envCommand = setEnvKey('COMMAND_REGISTRY_ID', ids.commandRegistryId);
+    const envUseMailbox = setEnvKey('USE_MAILBOX', 'true');
+    if (!envMailbox.ok && envMailbox.error) errors.push(envMailbox.error);
+    if (!envVault.ok && envVault.error) errors.push(envVault.error);
+    if (!envCommand.ok && envCommand.error) errors.push(envCommand.error);
+    if (!envUseMailbox.ok && envUseMailbox.error) errors.push(envUseMailbox.error);
+
+    return {
+        envMailboxOk: envMailbox.ok,
+        envVaultOk: envVault.ok,
+        envCommandOk: envCommand.ok,
+        envUseMailboxOk: envUseMailbox.ok,
+        errors,
+    };
+}
+
+/** Testnet/Default: publish + optional create_globals → .env (MAILBOX_ID, Registries). */
+export async function deployTestnetMovePackage(opts: {
+    packageDir?: string;
+    createGlobals?: boolean;
+    forceGlobals?: boolean;
+}): Promise<{
+    packageId: string;
+    upgradeCapId?: string;
+    mailboxId?: string;
+    vaultRegistryId?: string;
+    commandRegistryId?: string;
+    message: string;
+    globalsSkipped?: string;
+}> {
+    const packageDir = opts.packageDir?.trim() || 'move-test';
+    const existingMb = (CFG.MAILBOX_ID || process.env.MAILBOX_ID || '').trim();
+    if (opts.createGlobals && existingMb && HEX64.test(existingMb) && !opts.forceGlobals) {
+        throw new Error(
+            'MAILBOX_ID ist bereits gesetzt — create_globals nur bei neuem Package. Bestehende IDs behalten oder forceGlobals nutzen.'
+        );
+    }
+    const publish = await publishPackageCli(packageDir);
+    applyPublishResultToEnv(publish);
+    let globals: GlobalsCreatedIds | undefined;
+    if (opts.createGlobals) {
+        globals = await createGlobalsCli(publish.packageId);
+        const applied = applyGlobalsCreatedToEnv(globals);
+        if (applied.errors.length) {
+            throw new Error(applied.errors.join(' '));
+        }
+    }
+    const parts = [
+        `Package: ${publish.packageId.slice(0, 10)}…`,
+        globals?.mailboxId ? `Postfach: ${globals.mailboxId.slice(0, 10)}…` : null,
+        globals?.commandRegistryId ? 'Registries gesetzt.' : null,
+    ].filter(Boolean);
+    return {
+        packageId: publish.packageId,
+        upgradeCapId: publish.upgradeCapId,
+        mailboxId: globals?.mailboxId,
+        vaultRegistryId: globals?.vaultRegistryId,
+        commandRegistryId: globals?.commandRegistryId,
+        message: parts.join(' ') || 'Package deployt.',
+        globalsSkipped: opts.createGlobals ? undefined : 'create_globals nicht ausgeführt',
+    };
+}
+
 export function applyMainnetPublishResultToEnv(result: MovePackagePublishResult): {
     envMainnetPackageOk: boolean;
     envMainnetPackageError?: string;

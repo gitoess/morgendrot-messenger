@@ -40,9 +40,19 @@ describe('onboarding-boss-bootstrap', () => {
   })
 
   it('deployBossMovePackage ruft API auf', async () => {
-    const r = await deployBossMovePackage()
+    const fetchMock = vi.fn(async () => ({
+      json: async () => ({ ok: true, packageId: '0x' + 'a'.repeat(64), message: 'ok' }),
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const r = await deployBossMovePackage({ createGlobals: true })
     expect(r.ok).toBe(true)
     expect(r.packageId).toMatch(/^0x[a-f]{64}$/i)
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/deploy-package'),
+      expect.objectContaining({
+        body: JSON.stringify({ createGlobals: true, forceGlobals: false }),
+      })
+    )
   })
 
   it('applyBossPackageId validiert Hex', async () => {

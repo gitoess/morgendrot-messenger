@@ -4,6 +4,8 @@ import { getApiBase } from '@/frontend/lib/api/api-base'
 import { setConfig } from '@/frontend/lib/api/dashboard-rest'
 import { setPackageIdCommand } from '@/frontend/lib/api/package-connect'
 
+export { createBossGlobalsRegistries, bossRegistryStatus } from '@/frontend/lib/boss-registry-bootstrap'
+
 export type BossBootstrapResult = {
   ok: boolean
   message?: string
@@ -20,7 +22,10 @@ export async function ensureBossRoleOnServer(): Promise<BossBootstrapResult> {
 }
 
 /** Move-Package deployen und PACKAGE_ID in `.env` schreiben. */
-export async function deployBossMovePackage(): Promise<BossBootstrapResult> {
+export async function deployBossMovePackage(opts?: {
+  createGlobals?: boolean
+  forceGlobals?: boolean
+}): Promise<BossBootstrapResult> {
   const base = getApiBase().trim()
   if (!base) {
     return { ok: false, error: 'Deploy braucht erreichbares Backend (Basis-URL).' }
@@ -29,21 +34,28 @@ export async function deployBossMovePackage(): Promise<BossBootstrapResult> {
     const res = await fetch(`${base}/api/deploy-package`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: '{}',
+      body: JSON.stringify({
+        ...(opts?.createGlobals ? { createGlobals: true, forceGlobals: opts.forceGlobals === true } : {}),
+      }),
     })
     const body = (await res.json()) as {
       ok?: boolean
       packageId?: string
+      mailboxId?: string
+      vaultRegistryId?: string
+      commandRegistryId?: string
       message?: string
       error?: string
     }
     if (!body.ok) {
       return { ok: false, error: body.error || body.message || 'Deploy fehlgeschlagen.' }
     }
+    const parts = [body.message || 'Package deployt.']
+    if (body.mailboxId) parts.push('MAILBOX_ID gesetzt.')
     return {
       ok: true,
       packageId: body.packageId?.trim(),
-      message: body.message || 'Package deployt.',
+      message: parts.join(' '),
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Deploy fehlgeschlagen.' }

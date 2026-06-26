@@ -201,6 +201,8 @@ export function SettingsView({
         <SettingsVaultBackupSection vaultLocked={vaultLocked} onRequestVaultUnlock={onRequestVaultUnlock} />
         <SettingsMyMailboxesSection
           apiStatus={advancedIotaStatus}
+          backendOnline={backendOnline}
+          onReload={() => void loadStatus()}
           myAddress={
             (advancedIotaStatus?.myAddressFull || advancedIotaStatus?.myAddress || status?.address || '').trim()
           }

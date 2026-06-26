@@ -5,6 +5,7 @@ import { Mailbox } from 'lucide-react'
 import Link from 'next/link'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { ChatViewMyMailboxesPanel } from '@/frontend/components/chat-view-my-mailboxes-panel'
+import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
 import { canCreateTeamMailbox } from '@/frontend/lib/messenger-role-capabilities'
 import { toast } from 'sonner'
@@ -12,9 +13,16 @@ import { toast } from 'sonner'
 type SettingsMyMailboxesSectionProps = {
   apiStatus: ApiStatus | null
   myAddress: string
+  backendOnline?: boolean
+  onReload?: () => void
 }
 
-export function SettingsMyMailboxesSection({ apiStatus, myAddress }: SettingsMyMailboxesSectionProps) {
+export function SettingsMyMailboxesSection({
+  apiStatus,
+  myAddress,
+  backendOnline,
+  onReload,
+}: SettingsMyMailboxesSectionProps) {
   const { directory, refresh: refreshContactDirectory } = useContactDirectory()
   const addr = myAddress.trim()
   const show = /^0x[a-fA-F0-9]{64}$/i.test(addr)
@@ -44,7 +52,14 @@ export function SettingsMyMailboxesSection({ apiStatus, myAddress }: SettingsMyM
           Handbuch
         </Link>
       </div>
-      <div className="p-4">
+      <div className="space-y-4 p-4">
+        {canCreateTeamMailbox(apiStatus) ? (
+          <TeamMailboxSyncStatus
+            apiSnapshot={apiStatus}
+            backendOnline={backendOnline}
+            onReload={onReload}
+          />
+        ) : null}
         <ChatViewMyMailboxesPanel
           myAddressLine={addr}
           serverMailboxIdHint={apiStatus?.mailboxId}
