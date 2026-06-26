@@ -4,9 +4,14 @@ import { useState } from 'react'
 import { Loader2, Users } from 'lucide-react'
 import { createTeamMailboxOnChain } from '@/frontend/lib/create-team-mailbox-on-chain'
 import { addMyTeamMailbox, suggestNextTeamMailboxLabel } from '@/frontend/lib/my-team-mailbox-store'
+import { mergeTeamMailboxIdOnServer } from '@/frontend/lib/team-mailbox-server-sync'
 
 export function ChatViewTeamMailboxCreateButton(p: {
   walletValid: boolean
+  /** Privates Server-MAILBOX_ID — wird nicht in TEAM_MAILBOX_IDS geschrieben. */
+  privateServerMailboxId?: string
+  /** Nach Erstellung TEAM_MAILBOX_IDS auf Server mergen (Default: an). */
+  syncToServer?: boolean
   onObjectId: (id: string, meta?: { digest?: string; label?: string }) => void
   onStatus?: (msg: string, kind: 'success' | 'error') => void
 }) {
@@ -31,9 +36,21 @@ export function ChatViewTeamMailboxCreateButton(p: {
           ...(label ? { label } : {}),
           ...(r.digest ? { digest: r.digest } : {}),
         })
+        const syncToServer = p.syncToServer !== false
+        let syncNote = ''
+        if (syncToServer) {
+          const sync = await mergeTeamMailboxIdOnServer(r.objectId, {
+            privateServerMailboxId: p.privateServerMailboxId,
+          })
+          if (!sync.ok) {
+            p.onStatus?.(sync.error || 'Server-Sync fehlgeschlagen.', 'error')
+            return
+          }
+          if (sync.message) syncNote = ` ${sync.message}`
+        }
         p.onObjectId(r.objectId, { digest: r.digest, label: label || undefined })
         p.onStatus?.(
-          `Team-Mailbox «${label || 'Team'}» erstellt — siehe Abschnitt «Team-Mailboxes» oben (Badge Team). Der Posteingang bleibt leer, bis jemand dorthin sendet; ID zum Teilen kopieren.`,
+          `Team-Mailbox «${label || 'Team'}» erstellt.${syncNote} ID zum Teilen kopieren.`,
           'success'
         )
       } else {

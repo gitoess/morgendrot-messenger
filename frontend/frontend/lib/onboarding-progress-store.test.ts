@@ -119,4 +119,21 @@ describe('onboarding-progress-store', () => {
     const back = readOnboardingProgress()!
     expect(getWizardViewStep(back).stepId).toBe('wallet')
   })
+
+  it('migriert legacy server-mailbox/team zu mailboxes', () => {
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'boss',
+        currentStepIndex: 4,
+        completedSteps: ['wallet', 'address', 'package', 'server-mailbox'],
+        skippedSteps: [],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.completedSteps).not.toContain('mailboxes')
+    expect(p.completedSteps).not.toContain('server-mailbox')
+    expect(getWizardViewStep(p).stepId).toBe('mailboxes')
+  })
 })

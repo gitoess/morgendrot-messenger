@@ -520,6 +520,9 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'UPGRADE_CAP_ID': CFG.UPGRADE_CAP_ID = v; break;
         case 'VAULT_REGISTRY_ID': CFG.VAULT_REGISTRY_ID = v; break;
         case 'MAILBOX_ID': CFG.MAILBOX_ID = v; break;
+        case 'TEAM_MAILBOX_IDS':
+            process.env.TEAM_MAILBOX_IDS = v;
+            break;
         case 'COMMAND_REGISTRY_ID': CFG.COMMAND_REGISTRY_ID = v; break;
         case 'EINSATZ_MANIFEST_REGISTRY_ID': CFG.EINSATZ_MANIFEST_REGISTRY_ID = v; break;
         case 'MAINNET_RPC_URL': CFG.MAINNET_RPC_URL = v; break;
@@ -1629,6 +1632,13 @@ export function getConfigDisplay(): Array<{ key: string; value: string; envKey: 
         { key: 'PACKAGE_ID_FILE', value: process.env.PACKAGE_ID_FILE || '.morgendrot-package-id', envKey: 'PACKAGE_ID_FILE' },
         { key: 'VAULT_REGISTRY_ID', value: CFG.VAULT_REGISTRY_ID ? mask(CFG.VAULT_REGISTRY_ID, 8) : '(leer)', envKey: 'VAULT_REGISTRY_ID' },
         { key: 'MAILBOX_ID', value: CFG.MAILBOX_ID ? mask(CFG.MAILBOX_ID, 8) : '(leer)', envKey: 'MAILBOX_ID' },
+        {
+            key: 'TEAM_MAILBOX_IDS',
+            value: readTeamMailboxIds().length
+                ? readTeamMailboxIds().map((a) => mask(a, 8)).join(', ')
+                : '(leer)',
+            envKey: 'TEAM_MAILBOX_IDS',
+        },
         { key: 'MY_ADDRESS', value: CFG.MY_ADDRESS ? mask(CFG.MY_ADDRESS, 10) : '(leer)', envKey: 'MY_ADDRESS' },
         { key: 'PARTNER_ADDRESS', value: CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS, 8) : '(leer)', envKey: 'PARTNER_ADDRESS' },
         { key: 'PARTNER_ADDRESS_FILE', value: process.env.PARTNER_ADDRESS_FILE || '.morgendrot-partner', envKey: 'PARTNER_ADDRESS_FILE' },
@@ -1799,6 +1809,7 @@ export function getConfigDisplayForWebApi(): Array<{ key: string; value: string;
         RPC_HTTP_PROXY: CFG.RPC_HTTP_PROXY || '',
         PACKAGE_ID: CFG.PACKAGE_ID || '',
         MAILBOX_ID: CFG.MAILBOX_ID || '',
+        TEAM_MAILBOX_IDS: readTeamMailboxIds().join(','),
         MY_ADDRESS: CFG.MY_ADDRESS || '',
         PARTNER_ADDRESS: CFG.PARTNER_ADDRESS || '',
         BOSS_ADDRESS: CFG.BOSS_ADDRESS || '',

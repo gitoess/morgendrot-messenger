@@ -23,6 +23,8 @@ import {
 } from '@/frontend/lib/handoff-local-apply'
 import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { applyMessengerGroupHandoffFromEnv } from '@/frontend/lib/messenger-group-handoff'
+import { joinMyTeamMailbox } from '@/frontend/lib/my-team-mailbox-store'
+import { parseTeamMailboxIdsCsv } from '@/frontend/lib/team-mailbox-server-sync'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
 
 const LS_FLAGS = 'morgendrot.directChain.flagsJson'
@@ -168,6 +170,18 @@ function seedPartnersFromHandoffEnv(env: Record<string, string>): void {
   }
 }
 
+/** TEAM_MAILBOX_IDS aus Handoff-.env in lokalen Team-Store übernehmen. */
+export function importTeamMailboxesFromHandoffEnv(env: Record<string, string>): number {
+  const label = env.HANDOFF_LABEL?.trim() || undefined
+  const ids = parseTeamMailboxIdsCsv(env.TEAM_MAILBOX_IDS)
+  let n = 0
+  for (const id of ids) {
+    joinMyTeamMailbox(id, label)
+    n++
+  }
+  return n
+}
+
 const HANDOFF_SECRET_DENY = [/mnemonic/i, /secret/i, /password/i, /private.?key/i, /seed phrase/i]
 
 function handoffEnvTextContainsDeniedSecret(text: string): boolean {
@@ -196,6 +210,7 @@ export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppli
 
   syncLocalHandoffSnapshotToChainContext(snapshot, env)
   seedPartnersFromHandoffEnv(env)
+  importTeamMailboxesFromHandoffEnv(env)
   applyMessengerGroupHandoffFromEnv(env)
   enableStandaloneDirectDefaults()
 

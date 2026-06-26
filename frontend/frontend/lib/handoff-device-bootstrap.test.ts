@@ -50,4 +50,21 @@ describe('handoff-device-bootstrap', () => {
     expect(store['morgendrot.directMailboxDrain']).toBe('1')
     expect(store['morgendrot.directChain.optimisticFlags']).toBe('1')
   })
+
+  it('importiert TEAM_MAILBOX_IDS in Team-Store', () => {
+    const teamA = '0x' + 'd'.repeat(64)
+    const teamB = '0x' + 'e'.repeat(64)
+    const env = [
+      `TEAM_MAILBOX_IDS=${teamA},${teamB}`,
+      'HANDOFF_LABEL=THW Alpha',
+      'PACKAGE_ID=0x' + 'a'.repeat(64),
+      'MAILBOX_ID=0x' + 'b'.repeat(64),
+    ].join('\n')
+    applyHandoffEnvToLocalDevice(env)
+    const raw = store['morgendrot.myTeamMailboxes.v1']
+    expect(raw).toBeTruthy()
+    const list = JSON.parse(raw!) as { objectId: string }[]
+    const ids = list.map((e) => e.objectId.toLowerCase()).sort()
+    expect(ids).toEqual([teamA, teamB].map((x) => x.toLowerCase()).sort())
+  })
 })

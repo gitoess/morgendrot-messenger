@@ -17,6 +17,7 @@ import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
 import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
 import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
+import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import {
   applyBossHandoffLabel,
@@ -179,34 +180,12 @@ export function OnboardingBossPackageStep(p: PanelProps) {
   )
 }
 
-export function OnboardingBossServerMailboxStep(p: PanelProps) {
+export function OnboardingBossMailboxesStep(p: PanelProps) {
   const hasMb = Boolean(p.apiSnapshot?.mailboxId?.trim())
-  const walletValid = p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
-  const [msg, setMsg] = useState('')
-
-  return (
-    <div className="space-y-4">
-      <StatusRow ok={hasMb} label="Server-Postfach-ID konfiguriert" />
-      <p className="text-sm text-muted-foreground">
-        Private Mailbox on-chain anlegen — wird als Server-MAILBOX_ID übernommen.
-      </p>
-      <ChatViewPrivateMailboxCreateButton
-        walletValid={walletValid}
-        onObjectId={(id) => {
-          void applyBossServerMailboxId(id).then((r) => {
-            setMsg(r.ok ? r.message || 'Postfach gespeichert.' : r.error || 'Speichern fehlgeschlagen.')
-            if (r.ok) p.onReload?.()
-          })
-        }}
-        onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
-      />
-      {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
-    </div>
+  const hasTeam = Boolean(
+    p.apiSnapshot?.handoffLabel?.trim() ||
+      (p.apiSnapshot?.inboxUnionMailboxIds?.length ?? 0) > 1
   )
-}
-
-export function OnboardingBossTeamStep(p: PanelProps) {
-  const hasTeam = Boolean(p.apiSnapshot?.handoffLabel?.trim())
   const walletValid = p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
   const [teamName, setTeamName] = useState(p.apiSnapshot?.handoffLabel?.trim() || '')
   const [busy, setBusy] = useState(false)
@@ -224,33 +203,71 @@ export function OnboardingBossTeamStep(p: PanelProps) {
   }
 
   return (
-    <div className="space-y-4">
-      <StatusRow ok={hasTeam} label="Einsatz-Name gesetzt" />
-      <div className="space-y-2">
-        <Label htmlFor="boss-team-name" className="text-xs">
-          Einsatz-Name (Handoff-Label)
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          <Input
-            id="boss-team-name"
-            className="min-w-[10rem] flex-1"
-            placeholder="z. B. THW Einsatz Alpha"
-            value={teamName}
-            onChange={(e) => setTeamName(e.target.value)}
-          />
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void saveTeamName()}>
-            Speichern
-          </Button>
-        </div>
-      </div>
-      <ChatViewTeamMailboxCreateButton
-        walletValid={walletValid}
-        onObjectId={() => setMsg('Team-Mailbox erstellt — ID unter Postfächer teilen.')}
-        onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
+    <div className="space-y-5">
+      <p className="text-sm text-muted-foreground">
+        Privates Server-Postfach (MAILBOX_ID) und Team-Postfächer (TEAM_MAILBOX_IDS) — beides fließt in den
+        Posteingang ein.
+      </p>
+      <TeamMailboxSyncStatus
+        apiSnapshot={p.apiSnapshot}
+        backendOnline={p.backendOnline}
+        onReload={p.onReload}
       />
+      <div className="space-y-3 rounded-md border border-border/60 p-3">
+        <StatusRow ok={hasMb} label="Privates Server-Postfach (MAILBOX_ID)" />
+        <ChatViewPrivateMailboxCreateButton
+          walletValid={walletValid}
+          onObjectId={(id) => {
+            void applyBossServerMailboxId(id).then((r) => {
+              setMsg(r.ok ? r.message || 'Postfach gespeichert.' : r.error || 'Speichern fehlgeschlagen.')
+              if (r.ok) p.onReload?.()
+            })
+          }}
+          onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
+        />
+      </div>
+      <div className="space-y-3 rounded-md border border-border/60 p-3">
+        <StatusRow ok={hasTeam} label="Einsatz-Name / Team-Postfächer" />
+        <div className="space-y-2">
+          <Label htmlFor="boss-team-name" className="text-xs">
+            Einsatz-Name (Handoff-Label)
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            <Input
+              id="boss-team-name"
+              className="min-w-[10rem] flex-1"
+              placeholder="z. B. THW Einsatz Alpha"
+              value={teamName}
+              onChange={(e) => setTeamName(e.target.value)}
+            />
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void saveTeamName()}>
+              Speichern
+            </Button>
+          </div>
+        </div>
+        <ChatViewTeamMailboxCreateButton
+          walletValid={walletValid}
+          privateServerMailboxId={p.apiSnapshot?.mailboxId}
+          onObjectId={() => {
+            setMsg('Team-Mailbox erstellt und auf Server übernommen.')
+            p.onReload?.()
+          }}
+          onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
+        />
+      </div>
       {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
     </div>
   )
+}
+
+/** @deprecated — nutze OnboardingBossMailboxesStep */
+export function OnboardingBossServerMailboxStep(p: PanelProps) {
+  return <OnboardingBossMailboxesStep {...p} />
+}
+
+/** @deprecated — nutze OnboardingBossMailboxesStep */
+export function OnboardingBossTeamStep(p: PanelProps) {
+  return <OnboardingBossMailboxesStep {...p} />
 }
 
 export function OnboardingBossTelegramBotStep(p: PanelProps) {

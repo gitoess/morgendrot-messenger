@@ -6,9 +6,8 @@ import { Button } from '@/components/ui/button'
 import {
   OnboardingBossAddressStep,
   OnboardingBossHelpersStep,
+  OnboardingBossMailboxesStep,
   OnboardingBossPackageStep,
-  OnboardingBossServerMailboxStep,
-  OnboardingBossTeamStep,
   OnboardingBossTelegramBotStep,
   OnboardingBossTelegramGroupStep,
   OnboardingBossWalletStep,
@@ -134,10 +133,8 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
           return <OnboardingBossAddressStep {...panelProps} />
         case 'package':
           return <OnboardingBossPackageStep {...panelProps} />
-        case 'server-mailbox':
-          return <OnboardingBossServerMailboxStep {...panelProps} />
-        case 'team':
-          return <OnboardingBossTeamStep {...panelProps} />
+        case 'mailboxes':
+          return <OnboardingBossMailboxesStep {...panelProps} />
         case 'telegram-bot':
           return <OnboardingBossTelegramBotStep {...panelProps} />
         case 'telegram-group':

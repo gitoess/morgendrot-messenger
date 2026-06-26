@@ -322,6 +322,7 @@ export function ChatViewMyMailboxesPanel(p: ChatViewMyMailboxesPanelProps) {
             {p.teamMailboxCreateAllowed ? (
               <ChatViewTeamMailboxCreateButton
                 walletValid={walletValid}
+                privateServerMailboxId={p.serverMailboxIdHint}
                 onObjectId={(id) => {
                   reload()
                   setAssignMbId(id)

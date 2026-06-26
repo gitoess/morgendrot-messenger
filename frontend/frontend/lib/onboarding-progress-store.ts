@@ -8,6 +8,7 @@ import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { getStandaloneHelperReadiness } from '@/frontend/lib/handoff-standalone-ready'
 import { readTelegramInviteFromHandoffExtras } from '@/frontend/lib/handoff-extras'
+import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import { isTelegramAlarmGroupWizardDismissed } from '@/frontend/lib/telegram-alarm-group-prefs'
 
 /** Sync mit `standalone-onboarding.ts` — bewusst inline, kein Zirkelimport. */
@@ -19,8 +20,7 @@ export type BossStepId =
   | 'wallet'
   | 'address'
   | 'package'
-  | 'server-mailbox'
-  | 'team'
+  | 'mailboxes'
   | 'telegram-bot'
   | 'telegram-group'
   | 'meshtastic'
@@ -50,8 +50,7 @@ export const BOSS_STEP_ORDER: BossStepId[] = [
   'wallet',
   'address',
   'package',
-  'server-mailbox',
-  'team',
+  'mailboxes',
   'telegram-bot',
   'telegram-group',
   'meshtastic',
@@ -118,6 +117,45 @@ export function resolveWizardOnboardingPath(opts: {
   return null
 }
 
+const LEGACY_BOSS_MAILBOX_STEPS = ['server-mailbox', 'team'] as const
+
+function migrateBossStepId(stepId: OnboardingStepId): OnboardingStepId {
+  if ((LEGACY_BOSS_MAILBOX_STEPS as readonly string[]).includes(stepId)) return 'mailboxes'
+  return stepId
+}
+
+function normalizeOnboardingProgress(o: OnboardingProgress): OnboardingProgress {
+  if (o.path !== 'boss') return o
+  const hadLegacy = o.completedSteps.some((s) => (LEGACY_BOSS_MAILBOX_STEPS as readonly string[]).includes(s))
+  if (!hadLegacy) {
+    return { ...o, currentStepIndex: Math.max(0, Math.min(o.currentStepIndex, BOSS_STEP_ORDER.length - 1)) }
+  }
+
+  const hadServer = o.completedSteps.includes('server-mailbox' as OnboardingStepId)
+  const hadTeam = o.completedSteps.includes('team' as OnboardingStepId)
+  const mailboxesDone = hadServer && hadTeam
+
+  const completed = [
+    ...new Set(
+      o.completedSteps
+        .filter((s) => !(LEGACY_BOSS_MAILBOX_STEPS as readonly string[]).includes(s as string))
+        .map(migrateBossStepId)
+        .concat(mailboxesDone ? (['mailboxes'] as OnboardingStepId[]) : [])
+    ),
+  ]
+  const skipped = [...new Set(o.skippedSteps.map(migrateBossStepId))]
+  const order = BOSS_STEP_ORDER
+  let currentStepIndex = o.currentStepIndex
+  for (let i = 0; i < order.length; i++) {
+    const sid = order[i]!
+    if (!completed.includes(sid) && !skipped.includes(sid)) {
+      currentStepIndex = i
+      break
+    }
+  }
+  return { ...o, completedSteps: completed, skippedSteps: skipped, currentStepIndex }
+}
+
 export function readOnboardingProgress(): OnboardingProgress | null {
   if (typeof window === 'undefined') return null
   try {
@@ -125,7 +163,7 @@ export function readOnboardingProgress(): OnboardingProgress | null {
     if (!raw) return null
     const o = JSON.parse(raw) as OnboardingProgress
     if (!o?.path || !Array.isArray(o.completedSteps)) return null
-    return o
+    return normalizeOnboardingProgress(o)
   } catch {
     return null
   }
@@ -245,6 +283,7 @@ export function buildOnboardingSkipContext(api?: {
   handoffLabel?: string | null
   meshNodeId?: string | null
   bossAddress?: string | null
+  inboxUnionMailboxIds?: string[] | null
 } | null): OnboardingSkipContext {
   const addr = (api?.myAddressFull || api?.myAddress || '').trim()
   const handoff = readLocalHandoffAppliedSnapshot()
@@ -254,7 +293,10 @@ export function buildOnboardingSkipContext(api?: {
     hasAddress: Boolean(addr),
     hasPackageId: Boolean(api?.packageId?.trim()),
     hasMailboxId: Boolean(api?.mailboxId?.trim()),
-    hasTeamId: Boolean(api?.handoffLabel?.trim()),
+    hasTeamId:
+      Boolean(api?.handoffLabel?.trim()) ||
+      readMyTeamMailboxes().length > 0 ||
+      (api?.inboxUnionMailboxIds?.length ?? 0) > 1,
     hasMeshNodeId: Boolean(api?.meshNodeId?.trim()),
     hasHandoffConfig: Boolean(handoff) || Boolean(api?.packageId?.trim() && api?.mailboxId?.trim()),
     hasBossPartner: Boolean(handoff?.bossAddress?.trim() || api?.bossAddress?.trim()),
@@ -278,10 +320,8 @@ export function shouldSkipOnboardingStep(
         return Boolean(ctx.hasAddress)
       case 'package':
         return Boolean(ctx.hasPackageId)
-      case 'server-mailbox':
-        return Boolean(ctx.hasMailboxId)
-      case 'team':
-        return Boolean(ctx.hasTeamId || handoff?.handoffLabel)
+      case 'mailboxes':
+        return Boolean(ctx.hasMailboxId && (ctx.hasTeamId || readMyTeamMailboxes().length > 0))
       case 'telegram-bot':
         return false
       case 'telegram-group':
