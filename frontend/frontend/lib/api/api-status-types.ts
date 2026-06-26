@@ -96,6 +96,8 @@ export type ApiStatus = {
     authorizedSenders?: string[]
     myAddressAuthorized?: boolean
   }
+  /** Aus GET /api/status — mainnet-direct | testnet-direct | … */
+  einsatzChainMode?: string
   einsatzConfig?: {
     editionLabel: string
     defaultTtlDays: number

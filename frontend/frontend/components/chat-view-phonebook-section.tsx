@@ -234,7 +234,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         apiStatus: p.apiStatus,
         member: { ...member, name: displayName },
       })
-      if (r.cancelled) return
+      if (!r.ok && r.cancelled) return
       if (!r.ok) {
         setStatusMsg(r.error)
         return

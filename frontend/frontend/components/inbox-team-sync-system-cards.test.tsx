@@ -39,7 +39,7 @@ function msgWithTeamUpdate(kind: 'add' | 'remove', seq: number): Message {
           issuedAt: Date.now(),
           member: { address: MEMBER, name: 'Nicole', meshNodeId: '!abc123' },
         })
-  return { id: `m-${seq}`, content: body, sender: BOSS, timestamp: Date.now() } as Message
+  return { id: `m-${seq}`, from: BOSS, content: body, timestamp: Date.now() }
 }
 
 describe('InboxTeamSyncSystemCards', () => {

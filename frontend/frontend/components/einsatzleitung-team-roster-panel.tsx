@@ -57,7 +57,7 @@ export function EinsatzleitungTeamRosterPanel(p: {
         ),
     })
     setBusyAddress(null)
-    if (r.cancelled) return
+    if (!r.ok && r.cancelled) return
     if (!r.ok) {
       setFeedback(r.error)
       return

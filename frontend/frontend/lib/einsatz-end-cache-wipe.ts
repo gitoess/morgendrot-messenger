@@ -17,6 +17,7 @@ import {
 } from '@/frontend/lib/inbox-browser-view-state'
 import { clearTeamMemberRemoveSent } from '@/frontend/lib/team-removed-members-store'
 import { clearActivePrivateMailbox } from '@/frontend/lib/my-private-mailbox-store'
+import { clearActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import { saveMirrorQueue } from '@/frontend/lib/delayed-mirror-queue'
 
 export const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'

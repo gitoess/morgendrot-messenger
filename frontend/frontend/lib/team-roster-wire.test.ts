@@ -61,6 +61,6 @@ describe('removeTeamMemberFromRoster', () => {
       confirm: () => false,
     })
     expect(r.ok).toBe(false)
-    expect(r.cancelled).toBe(true)
+    if (!r.ok) expect(r.cancelled).toBe(true)
   })
 })

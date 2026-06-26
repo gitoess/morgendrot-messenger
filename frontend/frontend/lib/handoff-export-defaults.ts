@@ -1,10 +1,20 @@
 import type { ApiStatus } from '@/frontend/lib/api'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
+import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/standalone-smartphone-handoff'
+import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 import { API_BASE } from '@/frontend/lib/api/api-base'
+import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
 import {
   buildTeamMailboxOptions,
   defaultSelectedTeamMailboxIds,
 } from '@/frontend/lib/handoff-export-autofill'
+import {
+  buildHandoffPartnerOptions,
+  defaultSelectedPartnerAddresses,
+  partnerAddressesToCsv,
+} from '@/frontend/lib/handoff-export-partners'
+import type { HandoffEinsatzPresetId } from '@/frontend/lib/handoff-export-presets'
+import type { HandoffExportTuning } from '@/frontend/lib/handoff-export-params'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 import {
   defaultHandoffRpcForChainMode,
@@ -86,4 +96,66 @@ export function mergeHandoffExportDefaults(
     ...patch,
     selectedTeamIds: patch.selectedTeamIds?.length ? patch.selectedTeamIds : base.selectedTeamIds,
   }
+}
+
+export type WizardHandoffExportBodyInput = {
+  apiSnapshot?: ApiStatus | null
+  contactDirectory?: Record<string, ContactMeshEntryClient>
+  presetId: HandoffEinsatzPresetId
+  bezeichnung: string
+  tuning?: HandoffExportTuning
+  ids?: {
+    rpcUrl?: string
+    mailboxId?: string
+    commandRegistryId?: string
+    vaultRegistryId?: string
+  }
+  helperAddress?: string
+  capabilitiesOverride?: MessengerCapabilitiesOverride | null
+  partnerAddresses?: string[]
+  includeIotaArchivReadme?: boolean
+  protectWithPassword?: boolean
+}
+
+/** Handoff-ZIP-Body für Boss-Wizard / Schnell-Export (Defaults + optional Wizard-IDs). */
+export function buildWizardHandoffExportBody(
+  opts: WizardHandoffExportBodyInput
+): StandaloneSmartphoneHandoffZipBody {
+  const defaults = seedHandoffExportDefaultsFromStatus(opts.apiSnapshot, opts.contactDirectory)
+  const ids = opts.ids ?? {}
+  const handoffMailbox = ids.mailboxId?.trim() || defaults.handoffMailbox
+  const handoffRpc = ids.rpcUrl?.trim() || defaults.handoffRpc
+  const handoffCmdReg = ids.commandRegistryId?.trim() || defaults.handoffCmdReg
+  const handoffVaultReg = ids.vaultRegistryId?.trim() || defaults.handoffVaultReg
+
+  const partnerOpts = buildHandoffPartnerOptions(opts.apiSnapshot, opts.contactDirectory, defaults.handoffBoss)
+  const partnerCsv = opts.partnerAddresses?.length
+    ? partnerAddressesToCsv(opts.partnerAddresses)
+    : partnerAddressesToCsv(defaultSelectedPartnerAddresses(partnerOpts))
+
+  const bossDefaultTtlDays = opts.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30
+  const exportEnablePurge = opts.apiSnapshot?.einsatzConfig?.enablePurge !== false
+
+  return buildHandoffZipExportBody({
+    activePresetId: opts.presetId,
+    bezeichnung: opts.bezeichnung,
+    exportTuning: opts.tuning,
+    capabilitiesOverride: opts.capabilitiesOverride ?? null,
+    selectedTeamIds: defaults.selectedTeamIds,
+    handoffBoss: defaults.handoffBoss,
+    handoffMailbox,
+    handoffRpc,
+    handoffPkgSource: 'boss',
+    handoffPkgCustom: defaults.handoffPkgCustom,
+    handoffCmdReg,
+    handoffVaultReg,
+    handoffDirectIota: defaults.handoffDirectIota,
+    partnerExportCsv: partnerCsv,
+    includeIotaArchivReadme: opts.includeIotaArchivReadme ?? true,
+    protectWithPassword: opts.protectWithPassword ?? false,
+    einsatzChainMode: defaults.einsatzChainMode,
+    bossDefaultTtlDays,
+    exportEnablePurge,
+    helperAddress: opts.helperAddress,
+  })
 }

@@ -32,6 +32,7 @@ import {
   markOnboardingStepComplete,
   ONBOARDING_PROGRESS_CHANGED_EVENT,
   readOnboardingProgress,
+  skipOnboardingStep,
   type OnboardingProgress,
   type OnboardingStepId,
 } from '@/frontend/lib/onboarding-progress-store'
