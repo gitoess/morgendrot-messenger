@@ -27,11 +27,11 @@ import {
   buildOnboardingSkipContext,
   dismissOnboarding,
   finishOnboarding,
-  getActiveOnboardingStep,
+  getWizardViewStep,
+  goBackOnboardingStep,
   markOnboardingStepComplete,
+  ONBOARDING_PROGRESS_CHANGED_EVENT,
   readOnboardingProgress,
-  setOnboardingStepIndex,
-  skipOnboardingStep,
   type OnboardingProgress,
   type OnboardingStepId,
 } from '@/frontend/lib/onboarding-progress-store'
@@ -68,11 +68,16 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
     if (!p.open) return
     syncProgress()
     const onHandoff = () => p.onReloadStatus?.()
+    const onProgress = () => syncProgress()
     window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
-    return () => window.removeEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
+    window.addEventListener(ONBOARDING_PROGRESS_CHANGED_EVENT, onProgress)
+    return () => {
+      window.removeEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
+      window.removeEventListener(ONBOARDING_PROGRESS_CHANGED_EVENT, onProgress)
+    }
   }, [p.open, p.onReloadStatus, syncProgress])
 
-  const active = progress ? getActiveOnboardingStep(progress, ctx) : null
+  const active = progress ? getWizardViewStep(progress) : null
   const path = progress?.path ?? 'boss'
   const stepId = active?.stepId ?? 'done'
   const stepIndex = active?.index ?? 0
@@ -93,12 +98,15 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
     else skipOnboardingStep(stepId)
     const next = readOnboardingProgress()
     setProgress(next)
-    const nextActive = next ? getActiveOnboardingStep(next, ctx) : null
-    if (!nextActive || nextActive.stepId === 'done') finishOnboarding()
+    if (action === 'complete' && next) {
+      const nextView = getWizardViewStep(next)
+      if (nextView.stepId === 'done') finishOnboarding()
+    }
   }
 
   const handleBack = () => {
-    if (stepIndex > 0) setOnboardingStepIndex(stepIndex - 1)
+    if (!progress || stepIndex <= 0) return
+    goBackOnboardingStep(stepId)
     syncProgress()
   }
 
@@ -224,7 +232,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       onNext={stepId === 'done' ? () => p.onOpenChange(false) : () => advance('complete')}
       nextLabel={stepId === 'done' ? 'Fertig' : 'Weiter'}
     >
-      <div className="max-h-[50vh] overflow-y-auto pr-1">{renderStepBody()}</div>
+      <div className="max-h-[min(60vh,32rem)] overflow-y-auto pr-1">{renderStepBody()}</div>
     </OnboardingWizardShell>
   )
 }

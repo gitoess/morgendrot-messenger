@@ -8,6 +8,8 @@ import {
   shouldSkipOnboardingStep,
   resolveWizardOnboardingPath,
   resolveOnboardingDialogPath,
+  getWizardViewStep,
+  goBackOnboardingStep,
   buildOnboardingSkipContext,
 } from '@/frontend/lib/onboarding-progress-store'
 
@@ -106,5 +108,15 @@ describe('onboarding-progress-store', () => {
       mailboxId: '0x' + 'b'.repeat(64),
     })
     expect(shouldSkipOnboardingStep('helper', 'handoff', ctx)).toBe(true)
+  })
+
+  it('getWizardViewStep zeigt currentStepIndex auch bei completed', () => {
+    startOnboarding('boss')
+    markOnboardingStepComplete('wallet')
+    const p = readOnboardingProgress()!
+    expect(getWizardViewStep(p).stepId).toBe('address')
+    goBackOnboardingStep('address')
+    const back = readOnboardingProgress()!
+    expect(getWizardViewStep(back).stepId).toBe('wallet')
   })
 })

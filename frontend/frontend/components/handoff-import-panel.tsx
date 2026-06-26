@@ -39,7 +39,9 @@ type HandoffDraftSnapshot = {
   runtimeConfigText: string | null
 }
 
-export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
+export function HandoffImportPanel(
+  p: { backendOnline?: boolean | null; embedded?: boolean; onApplied?: () => void } = {}
+) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [envText, setEnvText] = useState<string | null>(null)
@@ -130,6 +132,11 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
   const standaloneHandoffMode =
     typeof window !== 'undefined' &&
     (!getApiBase().trim() || isStandaloneMessengerWithoutBasis())
+
+  const fireHandoffApplied = useCallback(() => {
+    notifyStandaloneHandoffApplied()
+    p.onApplied?.()
+  }, [p.onApplied])
 
   const applyExtractedEnv = useCallback(async (text: string, label: string, runtimeJson?: string, extrasJson?: string) => {
     setStage('previewing')
@@ -346,11 +353,11 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       }
     }
     setDraft(null)
-    notifyStandaloneHandoffApplied()
+    fireHandoffApplied()
     setStatusMsg(
       'Schritt 1 erledigt — Package, Mailbox und Fullnode sind gespeichert. Gleich „Seed einrichten?“ (QR oder Eingabe).'
     )
-  }, [envText])
+  }, [envText, fireHandoffApplied])
 
   const onApply = async () => {
     if (!envText?.trim()) return
@@ -390,6 +397,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
       setBasisApplyReady(false)
       setLocalAppliedOnly(false)
       if (r.summary) recordHandoffProfileImport(envText, r.summary)
+      fireHandoffApplied()
       setStatusMsg(
         r.applied?.length
           ? `${r.applied.length} Einstellung(en) gespeichert — die Basis hat die Werte bereits übernommen. Seite neu laden, dann Tresor entsperren.`
@@ -425,12 +433,16 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
     setHardRestartBusy(false)
   }
 
+  const embedded = p.embedded === true
+
   return (
-    <div className="rounded-xl border border-purple-500/30 bg-card p-4">
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
-          <Package className="h-5 w-5" aria-hidden />
-        </div>
+    <div className={embedded ? 'space-y-3' : 'rounded-xl border border-purple-500/30 bg-card p-4'}>
+      <div className={embedded ? 'space-y-3' : 'flex items-start gap-3'}>
+        {!embedded ? (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-500/15 text-purple-300">
+            <Package className="h-5 w-5" aria-hidden />
+          </div>
+        ) : null}
         <div className="min-w-0 flex-1 space-y-3">
           {basisApplyReady && p.backendOnline === true && envText && !applied ? (
             <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-950 dark:text-emerald-100">
@@ -442,26 +454,32 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
             </div>
           ) : null}
 
-          <div>
-            <h4 className="font-semibold text-foreground">Handoff importieren</h4>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
-              Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>.
-              {standaloneHandoffMode ? (
-                <>
-                  {' '}
-                  Auf der <strong className="text-foreground">Standalone-APK ohne PC-Server</strong>: nach der Vorschau{' '}
-                  <strong className="text-foreground">Lokal vormerken (ohne Basis)</strong>, dann Seite neu laden und
-                  Mnemonic im Entsperren-Dialog oder Puls setzen.
-                </>
-              ) : (
-                <>
-                  {' '}
-                  Danach <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
-                </>
-              )}
+          {!embedded ? (
+            <div>
+              <h4 className="font-semibold text-foreground">Handoff importieren</h4>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Boss-ZIP wählen oder aus dem <strong className="text-foreground">Posteingang</strong> (Menü an der
+                Nachricht) — Klartext oder <span className="font-mono text-xs">handoff.morg.enc</span>.
+                {standaloneHandoffMode ? (
+                  <>
+                    {' '}
+                    Auf der <strong className="text-foreground">Standalone-APK ohne PC-Server</strong>: nach der Vorschau{' '}
+                    <strong className="text-foreground">Lokal vormerken (ohne Basis)</strong>, dann Seite neu laden und
+                    Mnemonic im Entsperren-Dialog oder Puls setzen.
+                  </>
+                ) : (
+                  <>
+                    {' '}
+                    Danach <strong className="text-foreground">Seite neu laden</strong> und Tresor entsperren.
+                  </>
+                )}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Boss-ZIP wählen — Package, Mailbox und Netzwerk werden übernommen.
             </p>
-          </div>
+          )}
 
           <input
             ref={fileRef}
@@ -712,7 +730,7 @@ export function HandoffImportPanel(p: { backendOnline?: boolean | null } = {}) {
             </p>
           ) : null}
 
-          {stage === 'idle' && !envText && !applied && !readLocalHandoffAppliedSnapshot()?.bossAddress ? (
+          {stage === 'idle' && !envText && !applied && !readLocalHandoffAppliedSnapshot()?.bossAddress && !embedded ? (
             <HelperJoinRequestForm />
           ) : null}
         </div>

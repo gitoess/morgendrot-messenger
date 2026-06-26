@@ -335,6 +335,29 @@ export function shouldSkipOnboardingStep(
   }
 }
 
+export function getWizardViewStep(
+  progress: OnboardingProgress
+): { stepId: OnboardingStepId; index: number; total: number } {
+  const order = stepOrderForPath(progress.path)
+  const index = Math.max(0, Math.min(progress.currentStepIndex, order.length - 1))
+  return { stepId: order[index]!, index, total: order.length }
+}
+
+/** Wizard „Zurück“: vorheriger Schritt anzeigen (completed/skipped am aktuellen Schritt lösen). */
+export function goBackOnboardingStep(currentStepId: OnboardingStepId): void {
+  const prev = readOnboardingProgress()
+  if (!prev) return
+  const order = stepOrderForPath(prev.path)
+  const idx = order.indexOf(currentStepId)
+  if (idx <= 0) return
+  writeOnboardingProgress({
+    ...prev,
+    currentStepIndex: idx - 1,
+    completedSteps: prev.completedSteps.filter((id) => id !== currentStepId),
+    skippedSteps: prev.skippedSteps.filter((id) => id !== currentStepId),
+  })
+}
+
 export function getActiveOnboardingStep(
   progress: OnboardingProgress,
   ctx: OnboardingSkipContext = {}

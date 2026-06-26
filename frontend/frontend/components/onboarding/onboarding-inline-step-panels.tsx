@@ -13,6 +13,7 @@ import { SettingsTelegramIntegration } from '@/frontend/components/views/setting
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
 import { LazyChatViewPulseSettings } from '@/frontend/components/lazy/messenger-scope-b'
 import { HandoffProvisionEntry } from '@/frontend/components/handoff-provision-entry'
+import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
 import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
 import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
 import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
@@ -312,12 +313,11 @@ export function OnboardingHelperHandoffStep(p: PanelProps) {
       <StatusRow ok={hasHandoff} label="Handoff übernommen (ZIP oder Server)" />
       {!hasHandoff ? (
         <>
-          <p className="text-sm text-muted-foreground">
-            ZIP vom Boss unter Einstellungen importieren — Package, Mailbox und Netzwerk werden übernommen.
-          </p>
-          <Button type="button" onClick={() => p.onOpenHandoffImport?.()}>
-            Handoff-ZIP importieren
-          </Button>
+          <HandoffImportPanel
+            backendOnline={p.backendOnline}
+            embedded
+            onApplied={() => p.onReload?.()}
+          />
           <details className="rounded-lg border border-border/70 p-3">
             <summary className="cursor-pointer text-sm font-medium">Noch kein ZIP — beim Boss anfragen</summary>
             <div className="mt-3">
