@@ -10,8 +10,10 @@ describe('getComposerEncryptionContextHint (H.3o.6)', () => {
     expect(getComposerEncryptionContextHint({ forcedTransport: 'mesh', encrypted: true })).toMatch(/Schloss/)
   })
 
-  it('online verschlüsselt: IOTA-Schloss', () => {
-    expect(getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })).toMatch(/IOTA/)
+  it('online verschlüsselt: transport-strong Hinweis', () => {
+    expect(getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })).toMatch(
+      /transport-strong/
+    )
   })
 
   it('online klartext', () => {

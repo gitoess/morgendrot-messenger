@@ -96,6 +96,8 @@ Bei Abweichung notieren: **Zeilen-Nr. · Screenshot · Modal-Label · erwartet/i
 
 **Ergebnis:** `docs/TEST-RUN-LOGBOOK.md` — PASS/FAIL · Datum · Browser · Abweichungen
 
+**CLI-Hilfe (nach Wizard, Server-Check):** `npm run feldtest:boss-readiness` — prüft `/api/status` gegen FINAL-Pflicht (ersetzt keinen UI-Wizard).
+
 ---
 
 ## Wizard ≠ gespeichert

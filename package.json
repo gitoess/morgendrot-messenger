@@ -28,6 +28,7 @@
     "dev:clean": "npm run dev:messenger:clean",
     "dev:stop": "node scripts/dev-stop.mjs",
     "dm": "npm run dev:messenger:clean",
+    "feldtest:boss-readiness": "node scripts/feldtest-boss-readiness-cli.mjs",
     "ds": "npm run dev:stop",
     "dev:lan": "npm run dev",
     "dev:messenger:lan": "npm run dev:messenger",

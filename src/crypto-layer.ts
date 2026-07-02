@@ -11,3 +11,11 @@ export {
   encryptMessage,
   decryptMessage,
 } from './shared/morgendrot-crypto.js';
+export {
+  type MorgMsgEnvelopeV2,
+  buildSessionKeyInfo,
+  deriveSessionAesGcmKey,
+  serializeMorgMsgAad,
+  encryptSessionMessage,
+  decryptSessionMessage,
+} from './shared/morgendrot-crypto-session.js';

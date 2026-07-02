@@ -111,7 +111,7 @@ tag        = GCM tag (in ciphertext bei Web Crypto oft appended — Ist-Code bei
 | **3** | Hybrid ECDH + ML-KEM-768 (PQ) | Phase 4 |
 
 Info-String HKDF (Ist): `morgendrot-aes-gcm`  
-Phase A Session-Key: `morgendrot-session-v2:{peer0x}:{epoch}` (neu, dokumentiert)
+Phase A Session-Key: `morgendrot-session-v2:{peer0}:{peer1}:{epoch}` (sortiertes Adresspaar, dokumentiert)
 
 ---
 
@@ -133,9 +133,11 @@ sharedSecret = ECDH(chatEcdhPriv, peerPubRaw)
 sessionKey   = HKDF-SHA256(
                  ikm = sharedSecret,
                  salt = 16×0x00,
-                 info = "morgendrot-session-v2:" + lower(peer0x) + ":" + epoch
+                 info = "morgendrot-session-v2:" + sort(peerA, peerB) + ":" + epoch
                ) → AES-256-GCM key
 ```
+
+**Implementierung (A1):** `sort(peerA, peerB)` = lexikographisch kleinere, dann größere `0x`-Adresse — beide Seiten leiten denselben Key ab.
 
 **Rotation (`keyEpoch` erhöhen):**
 
@@ -324,7 +326,7 @@ Partner müssen **beide** PQ-fähig sein; Fallback auf `cs=1`.
 | Phase | Deliverable | Move-Änderung? |
 |-------|-------------|----------------|
 | **A0** | Dieses Dokument + Review | Nein |
-| **A1** | Envelope v2 encode/decode in `morgendrot-crypto.ts` | Nein |
+| **A1** | Envelope v2 encode/decode in `morgendrot-crypto-session.ts` | Nein | **Ist 2026-06-16** (Tests `morgendrot-crypto-session.test.ts`; Send-Pfad noch v1) |
 | **A2** | Session-Key-Ableitung + `epoch` in Send/Decrypt (Frontend + Nest) | Nein |
 | **A3** | Vault `.session-keys.enc` + Migration | Nein |
 | **A4** | UI Rotation (ersetzt Peer-Pub-Löschung) | Nein |

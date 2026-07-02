@@ -22,7 +22,7 @@ export function getComposerEncryptionContextHint(input: ComposerEncryptionHintIn
 
   if (forcedTransport === 'internet') {
     if (encrypted) {
-      return 'Online · Schloss an: Verschlüsselung über IOTA-Mailbox (ECDH/Handshake), nicht der Funk-Kanal.'
+      return 'Online · transport-strong (ECDH): Schutz auf der Mailbox — kein Forward Secrecy pro Nachricht; Rotation unter Einstellungen (§ H.23).'
     }
     return 'Online · Klartext: unverschlüsselt auf Mailbox/IOTA — Schloss aus.'
   }
