@@ -61,6 +61,16 @@
     "label": "Wallet-Seed merken",
     "hint": "Standard an: verschlüsselt im Vault und Browser — beim nächsten Start reicht das Passwort (Direct-RPC, Posteingang). Abwählbar."
   },
+  "messengerSetup": {
+    "link": "oder Messenger einrichten",
+    "hint": "Geführter Wizard — Schritt für Schritt, jederzeit unterbrechen",
+    "linkBoss": "oder Einsatzleitung einrichten",
+    "hintBoss": "Wallet, Package, Postfächer und erste Helfer — ohne Passwort jetzt"
+  },
+  "backToWizard": {
+    "link": "Zurück zur Einrichtung",
+    "hint": "Wizard fortsetzen — Tresor jetzt oder später entsperren"
+  },
   "techNotes": {
     "toggle": "Technische Hinweise",
     "sessionLocal": "lokale Wallet-Sitzung",

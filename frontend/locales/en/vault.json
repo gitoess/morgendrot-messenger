@@ -61,6 +61,16 @@
     "label": "Remember wallet seed",
     "hint": "On by default: encrypted in vault and browser — next start needs only your password (Direct-RPC, inbox). Can be turned off."
   },
+  "messengerSetup": {
+    "link": "or set up messenger",
+    "hint": "Guided wizard — step by step, pause anytime",
+    "linkBoss": "or set up command post",
+    "hintBoss": "Wallet, package, mailboxes and first helpers — skip password for now"
+  },
+  "backToWizard": {
+    "link": "Back to setup wizard",
+    "hint": "Continue wizard — unlock vault now or later"
+  },
   "techNotes": {
     "toggle": "Technical notes",
     "sessionLocal": "local wallet session",

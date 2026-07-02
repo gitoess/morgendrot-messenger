@@ -45,6 +45,8 @@ export type OnboardingWizardShellProps = {
   stepIndex: number
   stepTotal: number
   stepTitle: string
+  /** Eine Zeile: was jetzt zu tun ist */
+  stepHint?: string
   children: ReactNode
   onBack?: () => void
   onNext?: () => void
@@ -55,6 +57,8 @@ export type OnboardingWizardShellProps = {
   showSkip?: boolean
   showLater?: boolean
   nextDisabled?: boolean
+  /** Pfeil neben Primäraktion — bei „Fertig“ aus. */
+  showNextChevron?: boolean
 }
 
 export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
@@ -66,8 +70,11 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
           {p.description ? <DialogDescription>{p.description}</DialogDescription> : null}
         </DialogHeader>
         <OnboardingStepIndicator current={p.stepIndex} total={p.stepTotal} />
-        <div className="space-y-4">
-          <h3 className="text-base font-semibold text-foreground">{p.stepTitle}</h3>
+        <div className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">{p.stepTitle}</h3>
+            {p.stepHint ? <p className="mt-1 text-sm text-muted-foreground">{p.stepHint}</p> : null}
+          </div>
           {p.children}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
@@ -93,7 +100,9 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
             {p.onNext ? (
               <Button type="button" size="sm" onClick={p.onNext} disabled={p.nextDisabled}>
                 {p.nextLabel ?? 'Weiter'}
-                <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
+                {p.showNextChevron !== false ? (
+                  <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
+                ) : null}
               </Button>
             ) : null}
           </div>
@@ -104,31 +113,32 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
 }
 
 export const BOSS_STEP_TITLES: Record<string, string> = {
-  wallet: 'Wallet einrichten',
-  address: 'IOTA-Adresse',
-  package: 'Move-Package',
-  mailboxes: 'Postfächer (Server & Team)',
-  'telegram-bot': 'Telegram Bot',
-  'telegram-group': 'Alarmgruppe',
-  meshtastic: 'Meshtastic',
-  helpers: 'Helfer provisionieren',
+  wallet: 'Wallet',
+  'network-plan': 'Wo senden?',
+  'einsatz-rules': 'Einsatz-Regeln',
+  chain: 'Chain anbinden',
+  package: 'Chain anbinden',
+  mailboxes: 'Postfächer',
+  telegram: 'Telegram',
+  meshtastic: 'Funk',
+  helpers: 'Helfer-Gerät',
   done: 'Fertig',
 }
 
 export const HELPER_STEP_TITLES: Record<string, string> = {
-  handoff: 'Handoff',
-  telegram: 'Telegram-Alarmgruppe',
+  handoff: 'Handoff importieren',
+  telegram: 'Telegram',
   wallet: 'Wallet',
-  'team-self': 'Ich im Team',
-  peering: 'Peering',
+  'team-self': 'Im Team',
+  peering: 'Boss',
   done: 'Fertig',
 }
 
 export const WANDERER_STEP_TITLES: Record<string, string> = {
   wallet: 'Wallet',
-  address: 'Adresse bestätigen',
-  'private-mailbox': 'Private Mailbox',
-  meshtastic: 'Funk (optional)',
+  address: 'Adresse',
+  'private-mailbox': 'Postfächer',
+  meshtastic: 'Funk',
   done: 'Fertig',
 }
 

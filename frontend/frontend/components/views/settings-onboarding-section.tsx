@@ -7,8 +7,10 @@ import type { ApiStatus } from '@/frontend/lib/api/status'
 import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
 import {
   buildOnboardingSkipContext,
+  isOnboardingFinished,
   needsOnboardingResume,
   ONBOARDING_PROGRESS_CHANGED_EVENT,
+  prepareOnboardingWizardOpen,
   readOnboardingProgress,
   requestOpenOnboardingWizard,
   resolveOnboardingDialogPath,
@@ -18,11 +20,10 @@ import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboardi
 
 export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
   const [, bump] = useState(0)
-  const dialogPath = resolveOnboardingDialogPath({
+  const wizardPath = resolveOnboardingDialogPath({
     role: p.apiStatus?.role,
     standalonePath: readStandaloneOnboardingPath(),
   })
-  const wizardPath = dialogPath
   const ctx = buildOnboardingSkipContext(p.apiStatus)
 
   useEffect(() => {
@@ -32,13 +33,18 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
   }, [])
 
   const progress = readOnboardingProgress()
+  const finished = isOnboardingFinished()
   const showResume = needsOnboardingResume(ctx) && wizardPath !== null
 
   const openWizard = () => {
     if (!wizardPath) return
-    if (!readOnboardingProgress() || readOnboardingProgress()?.path !== wizardPath) {
-      startOnboarding(wizardPath)
-    }
+    prepareOnboardingWizardOpen(wizardPath)
+    requestOpenOnboardingWizard()
+  }
+
+  const restartWizard = () => {
+    if (!wizardPath) return
+    startOnboarding(wizardPath)
     requestOpenOnboardingWizard()
   }
 
@@ -51,25 +57,37 @@ export function SettingsOnboardingSection(p: { apiStatus?: ApiStatus | null }) {
           </div>
           <div>
             <h4 className="font-semibold text-foreground">Einstiegs-Wizard</h4>
-            {showResume && progress ? (
+            {progress && wizardPath ? (
               <p className="text-xs text-muted-foreground">
-                Fortschritt:{' '}
-                {progress.path === 'boss'
-                  ? 'Einsatzleitung'
-                  : progress.path === 'helper'
-                    ? 'Helfer'
-                    : 'Privat'}
+                {finished
+                  ? 'Abgeschlossen — erneut öffnen oder von vorn starten.'
+                  : showResume
+                    ? `Fortschritt: ${
+                        progress.path === 'boss'
+                          ? 'Einsatzleitung'
+                          : progress.path === 'helper'
+                            ? 'Helfer'
+                            : 'Privat'
+                      }`
+                    : 'Jederzeit wieder aufrufbar.'}
               </p>
             ) : null}
           </div>
         </div>
         <SettingsHandbookLink />
       </div>
-      <div className="mt-3">
+      <div className="mt-3 flex flex-wrap gap-2">
         {wizardPath ? (
-          <Button type="button" size="sm" variant={showResume ? 'default' : 'outline'} onClick={openWizard}>
-            {showResume ? 'Einrichtung fortsetzen' : 'Wizard öffnen'}
-          </Button>
+          <>
+            <Button type="button" size="sm" variant={showResume ? 'default' : 'outline'} onClick={openWizard}>
+              {finished ? 'Wizard öffnen' : showResume ? 'Einrichtung fortsetzen' : 'Wizard öffnen'}
+            </Button>
+            {finished ? (
+              <Button type="button" size="sm" variant="outline" onClick={restartWizard}>
+                Erneut starten
+              </Button>
+            ) : null}
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             Für Helfer ohne Wizard: Handoff-ZIP unter Allgemein → Import laden.

@@ -167,8 +167,9 @@ Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `memb
 | 6 | `telegram-bot` | **Telegram Bot** (optional) | Bestehendes Einstellungs-Panel | immer überspringbar |
 | 7 | `telegram-group` | **Alarmgruppe** (optional) | Bestehendes Einstellungs-Panel | immer überspringbar |
 | 8 | `meshtastic` | **Funk** (optional) | Node-ID / Kanal | Node-ID gespeichert |
-| 9 | `helpers` | **Erste Helfer** | Kurzlink **Helfer einrichten** (`HandoffProvisionEntry`) | optional „Später“ |
-| 10 | `done` | **Fertig** | Checkliste → Dashboard | — |
+| 9 | `done` | **Fertig** | Checkliste → Dashboard | — |
+
+**Nachtrag 2026-06-16:** Schritt `helpers` (**Erste Helfer**) aus dem Boss-Wizard **entfernt** — der Einstiegs-Wizard richtet nur **diesen Messenger** ein; Helfer-Provisionierung bleibt **Einsatzleitung → Helfer einrichten** (`HandoffProvisionEntry`). Legacy-Fortschritt mit `helpers` wird beim Laden übersprungen.
 
 **Vor Schritt 3 (Deploy):** Server-Rolle `ROLE=boss` setzen (`POST /api/config`), falls Backend läuft — sonst `403` bei Deploy.
 
@@ -178,12 +179,14 @@ Nur **Hinweis** — Empfänger holt volles Update per IOTA/Queue. **Kein** `memb
 
 | Thema | Im Boss-Wizard? |
 |-------|-----------------|
-| Seed für **andere** Helfer generieren | **Nein** — Schritt `helpers` → bestehender Provisionierungs-Wizard |
+| Seed für **andere** Helfer generieren | **Nein** — **Einsatzleitung → Helfer einrichten** (eigener Flow, nicht Wizard-Schritt) |
 | Capabilities-Matrix / `ROLE_ID` fein | **Nein** — Link „Experte“ in Helfer einrichten |
 | Team-Member-Update-Wire (`add`/`remove`) | **Nein** — Posteingang / Einsatzleitung (§7) |
 | Rechte ändern an laufenden Helfern | **Nein** — neues Handoff-ZIP (`docs/EINSATZ-BOSS-ABLAUF.md`) |
 
 ### 4.4 Feldtest „Boss bei 0“
+
+**Checkliste (manuell + Playwright):** **`docs/FELDTEST-BOSS-BEI-0.md`**
 
 1. Frische Installation: kein Seed, keine IDs in `.env`
 2. Erststart → **Einsatzleitung**

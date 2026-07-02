@@ -1,7 +1,7 @@
 # Handshake-Persistenz (Ist) und § H.23 (Double Ratchet)
 
-**Roadmap:** `docs/ROADMAP-FAHRPLAN.md` **§ H.23** — Entscheidung **Session Keys (A)** vs. **Double Ratchet (B)** ist noch offen.  
-**Dieses Dokument:** Was heute gilt, was „einmalig“ bedeutet, und was **nicht** mit Double Ratchet verwechselt werden darf.
+**Roadmap:** `docs/ROADMAP-FAHRPLAN.md` **§ H.23** — **Entscheidung 2026-06-16:** Option **A (Session Keys+)**; SSOT **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**. Double Ratchet = **Phase 3** (Backlog).  
+**Dieses Dokument:** Was heute (v1) gilt, was „einmalig“ bedeutet, und was **nicht** mit Session Keys+ / Ratchet verwechselt werden darf.
 
 ---
 

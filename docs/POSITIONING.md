@@ -24,7 +24,7 @@
 
 - Kein Ersatz für **Signal**, **ATAK** oder **Meshtastic-Frontends** in deren Kern
 - Kein universelles „Alles-in-einem“-Hybrid-Produkt für Endnutzer ohne Vorbereitung
-- Kein Signal-Niveau-E2EE-Versprechen (§ H.23 — Entscheidung offen)
+- Kein Signal-Niveau-E2EE-Versprechen (§ H.23: Session Keys+ geplant, Ratchet Phase 3 — bis Umsetzung transport-strong)
 
 ## Technische Schwerpunkte (Topics / Tags)
 

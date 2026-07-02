@@ -1,7 +1,37 @@
 'use client'
 
 import type { ApiStatus } from '@/frontend/lib/api'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
 import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
+
+/** Browser-RAM-Signer (Wizard, Tresor-Badge) — Server-hasKeys allein reicht nicht. */
+export function isBrowserSessionSignerReady(uiLocked = false): boolean {
+  if (uiLocked) return false
+  return Boolean(getDirectIotaSessionSigner())
+}
+
+/**
+ * Tresor-/Login-UI offen lassen — nicht schließen nur weil der Server hasKeys meldet.
+ * Typisch Modus B: Backend-Tresor offen, Browser-Signer fehlt noch.
+ */
+export function messengerVaultUiShouldStayLocked(
+  api: { locked?: boolean; hasKeys?: boolean } | null | undefined,
+  browserSignerReady = isBrowserSessionSignerReady(false)
+): boolean {
+  if (isStandaloneMessengerWithoutBasis()) {
+    return !getDirectIotaSessionSigner()
+  }
+  if (api?.locked === true) return true
+  if (api?.hasKeys !== true) return true
+  return !browserSignerReady
+}
+
+export function isMessengerVaultSessionComplete(
+  api: { locked?: boolean; hasKeys?: boolean } | null | undefined,
+  browserSignerReady = isBrowserSessionSignerReady(false)
+): boolean {
+  return !messengerVaultUiShouldStayLocked(api, browserSignerReady)
+}
 
 /** Browser-Signer zählt als sendebereit (Direct-RPC), auch wenn /api/status noch hasKeys=false meldet. */
 export function isMessengerSessionKeysReady(apiStatus: ApiStatus | null | undefined): boolean {

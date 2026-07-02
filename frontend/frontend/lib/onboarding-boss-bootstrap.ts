@@ -94,9 +94,9 @@ export async function applyBossHandoffLabel(label: string): Promise<BossBootstra
   const t = label.trim()
   if (!t) return { ok: false, error: 'Einsatz-Name fehlt.' }
   if (!getApiBase().trim()) {
-    return { ok: true, message: 'Einsatz-Name lokal notiert.' }
+    return { ok: false, error: 'Boss-Server nicht erreichbar — HANDOFF_LABEL wird dort gespeichert.' }
   }
   const r = await setConfig('HANDOFF_LABEL', t)
   if (!r.ok) return { ok: false, error: r.error || r.message || 'HANDOFF_LABEL setzen fehlgeschlagen.' }
-  return { ok: true, message: 'Einsatz-Name gespeichert.' }
+  return { ok: true, message: 'Einsatz-Name auf dem Boss gespeichert (HANDOFF_LABEL).' }
 }

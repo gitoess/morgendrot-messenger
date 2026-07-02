@@ -48,7 +48,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-06-17):** **Feld-/Smoke zuerst** — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2/§ 4b–4f, **`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`**, Sidebar-/Telefonbuch-Flows manuell, Consumer-Retest (#1/#3/#4). **Dann Code (klein):** **§ H.36 P1** abschließen (LAN-Push + Zustell-Feedback); **§ H.3n B2.5** SOS → Klartext erzwingen; **§ H.1a** Vitest-Slices. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
+**Nächste konkrete Schritte (2026-06-16):** **Boss Greenfield zuerst** — **`docs/FELDTEST-BOSS-BEI-0.md`** (Modus A, Wizard + Readiness) → Ergebnis in **`docs/TEST-RUN-LOGBOOK.md`**. **Dann** Feld-/Smoke — **`docs/HANDY-FIRST-STAGE2-CLIENT-SUBMIT-SMOKE.md`** § 2/§ 4b–4f, **`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`**, Sidebar-/Telefonbuch-Flows. **Danach Code:** **§ H.23** Session Keys+ (Scheibe 1, nach grünem Modus A) — **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § **4 C**; **§ H.36 P1**; **§ H.3n B2.5**; **§ H.1a** Vitest-Slices. **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 
@@ -70,6 +70,7 @@ Manuelle Checks, die **nach** Handshake-UX-Fix und **Rollen-Retest** folgen — 
 | 12 | **§ H.33** **Einsatz-On-Chain** — **Mainnet direkt** \| Testnet + Anker | Dienst-Betrieb oder günstige Übung + Beweis | **Ist** (PTB + UI + Mainnet-Registry; Anker-Liste RPC/API; Export-Banner Modus A/B/C; **`docs/API-EINSATZ-MANIFEST.md`**) |
 | 13 | **§ H.32b** **Einsatz beenden** → Cache/IDs weg | Ritual **am Schluss** des Einsatz-Zyklus | **Ist 2026-06-02** |
 | 14 | **Sidebar-Navigation** (1:1/Gruppe/Pinnwand/Telegram) + **Telefonbuch** Kontakt/Funk-Export | Nach UX-Refactor **2026-06-17** | **Ist Code** — Feld retesten |
+| 15 | **Boss bei 0 — Modus A** (Wizard 8 Schritte + Readiness) | **`docs/FELDTEST-BOSS-BEI-0.md`**; Gate vor **§ H.23** | **Offen (Feld)** — Logbuch **`docs/TEST-RUN-LOGBOOK.md`** |
 
 **Tooling:** `env/roles/*`, `npm run env:role:*`, `npm run dev:role:consumer|wanderer|arbeiter|kommandant|boss`.
 
@@ -1120,7 +1121,7 @@ Zentrale Übersicht (regelmäßig aktualisieren): **`docs/OPERATIONS-SNAPSHOT-20
 | **H.3o.6** | **Umsetzungsschritte** | (1) `sendText`/`sendPacket` mit **channelIndex**; (2) Gruppe ↔ Secondary-Metadaten (Name/PSK-Ref, QR aus Handoff); (3) Composer-Hinweis „Verschlüsselung = Meshtastic-Kanal“ vs. „Schloss = Online“; (4) Feldtest mit random PSK.<br>**Stand 2026-06-02:** **(1)–(3) erledigt (Code)** — Kanalindex, Gruppen-Metadaten, Hinweis in Sendepfad-Kopf + Composer (`composer-encryption-context-hint.ts`). **(4)** offen (Feldtest random PSK). |
 | **H.3o.7** | **Freeze Bildtransport vs. Text-Chunking** | Für LoRa-Bilder gilt **§ H.25a** (LUMA/CHROMA + S-ARQ) als Kern. Text-Chunking-Konzepte aus externen Bridges nur für allgemeine Reliability-Patterns, nicht als Ersatz des Bildprotokolls. |
 
-**Verknüpfung:** Nachtrag 2026-04-20 (**Modus A/B**), **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`meshtastic/README.md`**, **§ H.16** Telefonbuch/QR.
+**Verknüpfung:** Nachtrag 2026-04-20 (**Modus A/B**), **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`meshtastic/README.md`**, **§ H.16** Telefonbuch/QR. **Offene Gesamt-Grenzziehung Morgendrot ↔ Meshtastic:** Abschnitt **„Offen — Architektur Funk“** (Ende dieses Fahrplans) + **`docs/MESHTASTIC-BUILDING-BLOCKS.md`**.
 
 **Feldtest-Checkliste H.3o.6 (4) — random PSK (MVP):**
 
@@ -1342,7 +1343,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 | **Abgleich 2026-03-31 (§ C.0b)** | **`docs/BOSS-WORKER-SEED-CUSTODY.md`** — Einleitung um **§ H.10b** / **C.0b**-Reihenfolge und **Stand** ergänzt (**parallel** zu **§ H.10**). |
 | **Frage** | Soll der **Boss** Worker-**Seeds** (Wiederherstellung) **dauerhaft** mitschreiben — oder **nur** der Arbeiter? |
 | **Doku** | **`docs/BOSS-WORKER-SEED-CUSTODY.md`** — Team-Modus (Einsatz) vs. **Dezentral-Modus** (Default-Empfehlung), E2E/Escrow-Präzisierung, Alternativen (Papier, Shamir, Neu-Identität), UX-Pflicht. |
-| **Bezug** | **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**, **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § 6. |
+| **Bezug** | **`docs/ONBOARDING-WALLET-UX-SPEC.md`**, **`docs/RECOVERY-PHRASE-BACKUP.md`**, **`docs/WANDERER-STANDALONE-BUNDLE.md`**, **`ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § 6, § **6b** (Seed-SPOF vs. getrennte Keys). |
 
 ### H.11 Offline-Karten & Geodaten (Zielbild, **Backlog**)
 
@@ -1515,7 +1516,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge (Vorschlag):** (1) **Architektur-Entscheid** + Threat-Model (1:1 MVP, Gruppe, Pinnwand ausgenommen). (2) **Spez** (Wire, Key-Storage, Rotation). (3) Implementierung **parallel** zu **§ H.22 M4d** Move, nicht Blocker für Klartext/Pinnwand.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) **Modus-A-Feldtest** (`docs/FELDTEST-BOSS-BEI-0.md`) — Wizard/Readiness vor Krypto-Migration. (3) **Implementierung Session Keys+** (Wire, Vault-Archiv, Rotation) — Priorität in **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § **4 C**; **parallel** zu Phase B möglich, nicht Blocker für Klartext/Pinnwand.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 
@@ -2354,6 +2355,55 @@ UI: **„Im Einsatz-Anker enthalten“** Badge (Modus A/B Rollup); **„On-chain
 **Wanderer:** Solo-Wizard nur Privat-Pfad — **kein** zentraler Boss-Sync (`docs/HANDOFF-UND-MODUS-ZIELBILD.md` §3).
 
 **Verknüpfung:** § **H.16** (Boss-LAN Ist), § **H.3g** (`initialProfile`), **`docs/PROVISIONING-PAYLOAD-CRITIQUE.md`**, **`docs/EXPORT-ASSISTENT-REFERENZ.md`**.
+
+---
+
+### Offen — Feldtest: Testnet-TX → Mainnet-Verankerung (**Modus A**)
+
+**Hintergrund:** Neben **Mainnet direkt** (Modus B) und **nur Testnet** gibt es den Betriebsmodus **Testnet + Mainnet-Anker** (`EINSATZ_CHAIN_MODE=testnet-with-mainnet-anchor`, **§ H.33 Modus A**): Nachrichten laufen günstig auf **Testnet**, am Einsatz-Ende (oder manuell) kann der Boss die Testnet-TXs per **Manifest/Rollup auf Mainnet verankern** — ohne jeden Chat auf Mainnet zu schreiben.
+
+**Ist (Code/Doku):** Move-Registry `store_einsatz_manifest`, Boss-UI **„Auf Mainnet ankern“**, API **`GET /api/einsatz-manifest/*`**, Netz-Profil **„Beides“** im Einstiegs-Wizard (**§ H.36**). Spez: **`docs/EINSATZ-MANIFEST-MOVE-SKIZZE.md`**, **`docs/API-EINSATZ-MANIFEST.md`**, Smoke **`docs/EINSATZ-MANIFEST-API-SMOKE.md`**.
+
+**Noch testen (Betreiber-Wunsch):**
+
+| # | Prüfpunkt | Erwartung |
+|---|-----------|-----------|
+| 1 | Mehrere Nachrichten auf **Testnet** senden | Explorer-Links zeigen Testnet-TXs |
+| 2 | Manifest bauen / **Mainnet-Anker** auslösen (Boss-Signatur) | Eine Mainnet-TX mit `manifest_hash` / Merkle-Root |
+| 3 | Verifikation (UI „Verifizieren“ / RPC-Probe) | Manifest-Hash = on-chain; `source_tx_digest` auf Testnet nachvollziehbar |
+| 4 | Netzwechsel **Testnet ↔ Mainnet** nach Anker | Testnet bleibt Alltags-Sendeprofil; Mainnet nur für Verankerung/Produktion — **`docs/DIENST-VS-PRIVAT-NETZ-PROFIL.md`** |
+
+**Status:** **Offen (Feldtest)** — Schreibtisch/Unit teils grün; **End-to-End** Testnet schreiben → Mainnet verankern → Nachweis prüfen **noch nicht abgenommen**.
+
+---
+
+### Offen — Architektur Funk: Was Morgendrot übernimmt vs. Meshtastic direkt
+
+**Hintergrund:** Der **Einstiegs-Wizard Schritt 7 (Funk)** und die aktuelle UI (Stick koppeln, Node-ID, Kanalindex, Hinweise) sind **Bootstrap für den Feldtest** — **nicht** die abschließende Funk-Architektur. Das Funk-Thema ist **bewusst noch nicht fertig**; vor weiterem Ausbau soll **produktseitig** festgehalten werden, welche Aufgaben **Morgendrot** übernimmt und welche **direkt in Meshtastic** (App, Firmware, Kanal-PSK, Routing) bleiben.
+
+**Diskussionsachsen (noch ohne Freeze):**
+
+| Bereich | Typisch **Meshtastic** (Standard nutzen) | Typisch **Morgendrot** (App/Node/Handoff) |
+|---------|------------------------------------------|-------------------------------------------|
+| Kanal / PSK / Frequenz / Modem | Meshtastic-App, Web-Client, Firmware | Nur Metadaten (Index, Name, PSK-Ref), QR aus Handoff — **§ H.3o.3 Phase 1** |
+| Routing, Store-and-Forward, Hop-Limit | Mesh-Stack Meshtastic | Kein eigenes Routing |
+| Text/Klartext auf Kanal | `sendText` / Primary & Secondary | Composer, Sendepfad, Gruppen-Kanalindex |
+| Verschlüsselung Funk | Channel-PSK, DM-PKC (Meshtastic) | **Online/IOTA** für E2E; Mesh v2 **Versand aus** — **§ H.3o.1–2** |
+| Node-ID / Team-Sichtbarkeit | Gerät liefert `!…` | Kontakte, Team-Update, Wizard Schritt 7 |
+| Bild/Sprache/Notfall-Nutzlast | LongFast + Meshtastic-Ports | LUMA/CHROMA, Pfad 4, SOS-Wires — **§ H.25**, **§ H.3n** |
+| Delayed IOTA / Gateway | MQTT/Serial-Gateway (Meshtastic-Ökosystem) | Morgendrot-Node, Queue, Manifest — **LORA-IOTA-Delayed-Upload** |
+
+**Bestehende Referenz (Arbeitsgrundlage, noch zu schärfen):**
+
+- **`docs/MESHTASTIC-BUILDING-BLOCKS.md`** — Baukasten: 1:1 Meshtastic vs. Zusatz vs. unvermeidbar eigene Entwicklung  
+- **§ H.3o** — Verschlüsselung & Steuerungsmodell (Split Meshtastic-App vs. Messenger)  
+- **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**, **`meshtastic/README.md`**
+
+**Nächster Schritt (Produkt, nicht nur Code):** Kurzes **Architektur-Memo** oder Workshop-Notiz: pro Zeile oben **Entscheidung + Begründung**; daraus Wizard Schritt 7, Einstellungen → Funk und Handbuch-Texte ableiten. Bis dahin: Wizard-Schritt **optional/überspringbar** lassen, **keine** UX so bauen, als wäre der Funk-Split final.
+
+**Verknüpfung Feldtest:** **`docs/FELDTEST-BOSS-BEI-0.md`** Schritt 7 — Checkliste für Bootstrap; Architektur-Offenheit siehe hier.
+
+**Status:** **Offen (Produkt/Architektur)** — Wizard-UX **Ist** für Feldtest; **Grenzziehung Morgendrot ↔ Meshtastic** noch **nicht** beschlossen.
 
 ---
 

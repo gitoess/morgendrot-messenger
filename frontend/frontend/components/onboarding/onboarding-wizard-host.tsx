@@ -1,25 +1,40 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { ApiStatus } from '@/frontend/lib/api/status'
+import { OnboardingBossReadinessDialog } from '@/frontend/components/onboarding/onboarding-boss-readiness-dialog'
 import { OnboardingWizardDialog } from '@/frontend/components/onboarding/onboarding-wizard-dialog'
 import {
   ONBOARDING_WIZARD_OPEN_REQUEST_EVENT,
-  readOnboardingProgress,
+  prepareOnboardingWizardOpen,
   resolveOnboardingDialogPath,
-  startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { readStandaloneOnboardingPath } from '@/frontend/lib/standalone-onboarding'
 
 export function OnboardingWizardHost(p: {
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
+  sessionLocked?: boolean
   contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
   onOpenHandoffImport?: () => void
   onReloadStatus?: () => void
+  fallbackMyAddress?: string | null
 }) {
-  const [open, setOpen] = useState(false)
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
+  const [readinessOpen, setReadinessOpen] = useState(false)
+  const controlled = p.open !== undefined
+  const open = controlled ? p.open : uncontrolledOpen
+
+  const setWizardOpen = useCallback(
+    (next: boolean) => {
+      if (!controlled) setUncontrolledOpen(next)
+      p.onOpenChange?.(next)
+    },
+    [controlled, p.onOpenChange]
+  )
 
   useEffect(() => {
     const onOpen = () => {
@@ -28,26 +43,36 @@ export function OnboardingWizardHost(p: {
         standalonePath: readStandaloneOnboardingPath(),
       })
       if (!path) return
-      const progress = readOnboardingProgress()
-      if (!progress || progress.path !== path) {
-        startOnboarding(path)
-      }
-      setOpen(true)
+      prepareOnboardingWizardOpen(path)
+      setWizardOpen(true)
     }
     window.addEventListener(ONBOARDING_WIZARD_OPEN_REQUEST_EVENT, onOpen)
     return () => window.removeEventListener(ONBOARDING_WIZARD_OPEN_REQUEST_EVENT, onOpen)
-  }, [p.apiSnapshot?.role])
+  }, [p.apiSnapshot?.role, setWizardOpen])
 
   return (
-    <OnboardingWizardDialog
-      open={open}
-      onOpenChange={setOpen}
-      apiSnapshot={p.apiSnapshot}
-      backendOnline={p.backendOnline}
-      contactDirectory={p.contactDirectory}
-      onActivateWallet={p.onActivateWallet}
-      onOpenHandoffImport={p.onOpenHandoffImport}
-      onReloadStatus={p.onReloadStatus}
-    />
+    <>
+      <OnboardingWizardDialog
+        open={open}
+        onOpenChange={setWizardOpen}
+        apiSnapshot={p.apiSnapshot}
+        backendOnline={p.backendOnline}
+        sessionLocked={p.sessionLocked}
+        contactDirectory={p.contactDirectory}
+        onActivateWallet={p.onActivateWallet}
+        onOpenHandoffImport={p.onOpenHandoffImport}
+        onReloadStatus={p.onReloadStatus}
+        fallbackMyAddress={p.fallbackMyAddress}
+        onBossSetupFinished={() => setReadinessOpen(true)}
+      />
+      <OnboardingBossReadinessDialog
+        open={readinessOpen}
+        onOpenChange={setReadinessOpen}
+        apiSnapshot={p.apiSnapshot}
+        sessionLocked={p.sessionLocked}
+        fallbackMyAddress={p.fallbackMyAddress}
+        onReloadStatus={p.onReloadStatus}
+      />
+    </>
   )
 }

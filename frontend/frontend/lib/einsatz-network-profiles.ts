@@ -31,6 +31,9 @@ import { looksLikeHttpRpcUrl } from '@/frontend/lib/einsatz-manifest-rpc'
 
 export type EinsatzNetworkId = 'testnet' | 'mainnet'
 
+/** Wizard: welche Ketten eingerichtet werden — unabhängig vom aktiven Sende-Ziel. */
+export type EinsatzNetworkSetupPlan = 'testnet-only' | 'mainnet-only' | 'both'
+
 export type EinsatzNetworkProfileFields = {
     rpcUrl: string
     packageId: string
@@ -39,6 +42,10 @@ export type EinsatzNetworkProfileFields = {
 
 export type EinsatzNetworkProfilesState = {
     active: EinsatzNetworkId
+    /** Gewählter Einsatz (Wizard Schritt „Wo senden?“). */
+    setupPlan?: EinsatzNetworkSetupPlan
+    /** true nach expliziter Wizard-Wahl oder stiller Migration aus bestehender Config. */
+    setupPlanChosen?: boolean
     testnet: EinsatzNetworkProfileFields
     mainnet: EinsatzNetworkProfileFields
 }
@@ -90,7 +97,17 @@ export function readNetworkProfilesState(): EinsatzNetworkProfilesState {
             mailboxId: j[id]?.mailboxId?.trim() || '',
         })
         const active = j.active === 'mainnet' ? 'mainnet' : 'testnet'
-        return { active, testnet: pick('testnet'), mainnet: pick('mainnet') }
+        const setupPlan =
+            j.setupPlan === 'mainnet-only' || j.setupPlan === 'both' || j.setupPlan === 'testnet-only'
+                ? j.setupPlan
+                : undefined
+        return {
+            active,
+            setupPlan,
+            setupPlanChosen: j.setupPlanChosen === true,
+            testnet: pick('testnet'),
+            mainnet: pick('mainnet'),
+        }
     } catch {
         return defaultNetworkProfilesState()
     }
@@ -321,6 +338,22 @@ export async function applyActiveNetworkProfile(opts: {
     }
 
     return { ok: true, queueCleared }
+}
+
+export function applyBossWizardNetworkSetupPlan(
+    plan: EinsatzNetworkSetupPlan,
+    current?: EinsatzNetworkProfilesState
+): EinsatzNetworkProfilesState {
+    const state = current ?? readNetworkProfilesState()
+    const active: EinsatzNetworkId = plan === 'mainnet-only' ? 'mainnet' : 'testnet'
+    const next: EinsatzNetworkProfilesState = {
+        ...state,
+        active,
+        setupPlan: plan,
+        setupPlanChosen: true,
+    }
+    writeNetworkProfilesState(next)
+    return next
 }
 
 export async function switchActiveNetwork(

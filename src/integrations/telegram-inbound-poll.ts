@@ -3,6 +3,7 @@
  */
 import { logger } from '../logger.js';
 import { readRuntimeConfigRaw, writeRuntimeConfigRaw } from '../config.js';
+import { formatNetworkFetchError, formatTelegramApiTarget } from '../network-fetch-error.js';
 import {
     ingestTelegramInboundUpdate,
     normalizeTelegramInboundMode,
@@ -107,12 +108,24 @@ async function pollLoop(generation: number): Promise<void> {
                 webhookClearedForToken = token;
                 logger.info('Telegram: Webhook entfernt — Long Polling aktiv.');
             } else {
-                logger.warn(`Telegram deleteWebhook: ${del.error || 'fehlgeschlagen'}`);
+                logger.warn(
+                    formatNetworkFetchError(del.error || 'fehlgeschlagen', {
+                        context: 'Telegram deleteWebhook',
+                        target: formatTelegramApiTarget('deleteWebhook'),
+                        hint: 'api.telegram.org erreichbar? (Firewall/VPN/Proxy)',
+                    })
+                );
             }
         }
         const res = await telegramGetUpdates(token, offset, GET_UPDATES_TIMEOUT_SEC);
         if (!res.ok) {
-            logger.warn(`Telegram getUpdates: ${res.error || 'fehlgeschlagen'}`);
+            logger.warn(
+                formatNetworkFetchError(res.error || 'fehlgeschlagen', {
+                    context: 'Telegram getUpdates',
+                    target: formatTelegramApiTarget('getUpdates'),
+                    hint: 'api.telegram.org erreichbar? (Firewall/VPN/Proxy)',
+                })
+            );
             await sleep(ERROR_BACKOFF_MS);
             continue;
         }

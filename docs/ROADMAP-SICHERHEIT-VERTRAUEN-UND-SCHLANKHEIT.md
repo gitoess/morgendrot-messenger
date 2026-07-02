@@ -3,7 +3,7 @@
 **Zweck:** Ein **realistischer**, zum Projekt passender **Fahrplan** für **stabilere**, **schlankere** und **besser erklärbare** Sicherheit — **getrennt** vom operativen Feature-Fahrplan (**`docs/ROADMAP-FAHRPLAN.md`**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**).  
 **Nicht** Ziel dieses Dokuments: Behauptung einer **zulassungsfertigen** „Regierungs-“ oder „Military-Grade“-Software **ohne** separates Budget, **TOE** (Target of Evaluation) und **Audit**.
 
-**Verknüpft:** **`SECURITY-RATING.md`**, **`docs/CONFIG-REFERENCE.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**), **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**§ H.14**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/BOSS-WORKER-SEED-CUSTODY.md`** (**§ H.10b** — Boss/Arbeiter-Seed, Team vs. dezentral), **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**.
+**Verknüpft:** **`SECURITY-RATING.md`**, **`docs/SICHERHEITS-AUDIT.md`** (§2 Schlüssel-Trennung), **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`** (**§ H.23**), **`docs/FELDTEST-BOSS-BEI-0.md`**, **`docs/CONFIG-REFERENCE.md`**, **`docs/SECRETS-OPTIONS.md`**, **`docs/MODULAR-KERN-ADAPTER-INTEROP.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (**§ H.12**), **`docs/CODE-SCHLANKHEIT-UND-HAERTUNGS-PRIORITAET.md`** (**§ H.13**), **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`** (**§ H.14**), **`docs/BACKEND-VS-DIREKT-IOTA-ERKLAERUNG.md`**, **`docs/BOSS-WORKER-SEED-CUSTODY.md`** (**§ H.10b** — Boss/Arbeiter-Seed, Team vs. dezentral), **`docs/TEST-STRATEGY.md`**, **`TESTING.md`**, **`docs/ROADMAP-FAHRPLAN.md`** § **H.10**, § **H.23**.
 
 **Einordnung § H.10:** In **`docs/ROADMAP-FAHRPLAN.md`** § **C.0b** (Phase-A-Rand) folgt **§ H.10** auf **§ H.8**; **parallel** dazu **§ H.10b** (**`BOSS-WORKER-SEED-CUSTODY.md`**). **Blockiert** Phase A/B/C **nicht** — kleines Doku-/Prozess-Budget neben **`TESTING.md`**, **`docs/PWA-MANUAL-CHECKS.md`** (§ **H.2**) und dem **Mesh-/IOTA-MVP** (**Phase B**).
 
@@ -88,14 +88,20 @@ Diese Phasen **überlagern** **nicht** **A/B/C** — sie **füttern** Entscheidu
 4. **Stufe 1:** Einmalig **SBOM** erzeugen (`npm sbom` / Tooling eurer Wahl) und **ablage** unter `docs/` oder CI-Artefakt — **Dokumentieren**, wie oft wiederholt.  
 5. **`npm audit`**: bekannte **High/Critical** gezielt abarbeiten oder **documentiert** akzeptieren (mit Begründung).
 
-**C — Nach stabilem Mesh-MVP (Phase B):**  
-6. **Stufe 2** **Spike:** ein Zielgerät mit **Keystore**-Pfad evaluieren (nur Signatur/Unlock), **ohne** komplette App-Rewrite.  
-7. **Delayed Upload** nach **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** — **Custody** und **Logs** so gestalten, dass **keine** Klartext-/Key-Leaks in Support-Logs (**bereits** in Ops-Doku angesprochen).
+**C — Messenger-Krypto (§ H.23 Session Keys+, nach Modus-A-Feldtest):**  
+6. **Voraussetzung:** **`docs/FELDTEST-BOSS-BEI-0.md`** (Modus A) einmal grün — Wizard/Readiness nicht durch Krypto-Migration blockieren.  
+7. **Erste Implementierungsscheibe:** **Session Keys+** (Entscheidung 2026-06-16, SSOT **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**) — `keyEpoch`, Vault-Key-Archiv, dokumentierte Rotation; **kein** Parallel-Experiment mit Double Ratchet.  
+8. **UI/Copy:** Stufen-Kennzeichnung im Chat (transport-strong, FS erst ab Rotation) — bis H.23-B live, kein „Signal-Niveau“-Wording.
 
-**D — Nicht parallel anfangen (Feature-Creep / Risiko):**  
-8. Kein **Voll-Rewrite** „Rust statt TS“ ohne **Stufe 2–3**-Bedarf.  
-9. Keine **Zulassungs-Narrative** nach außen ohne **Stufe 5**-Budget.  
-10. **§ I** / **Macro-Gateway** / **ATAK** erst nach **stabilem B** (**`ROADMAP`** **H.9**).
+**D — Nach stabilem Mesh-MVP (Phase B):**  
+9. **Stufe 2** **Spike:** ein Zielgerät mit **Keystore**-Pfad evaluieren (nur Signatur/Unlock), **ohne** komplette App-Rewrite.  
+10. **Delayed Upload** nach **`LORA-IOTA-DELAYED-UPLOAD-SPEC.md`** — **Custody** und **Logs** so gestalten, dass **keine** Klartext-/Key-Leaks in Support-Logs (**bereits** in Ops-Doku angesprochen).
+
+**E — Nicht parallel anfangen (Feature-Creep / Risiko):**  
+11. Kein **Voll-Rewrite** „Rust statt TS“ ohne **Stufe 2–3**-Bedarf.  
+12. Keine **Zulassungs-Narrative** nach außen ohne **Stufe 5**-Budget.  
+13. **§ I** / **Macro-Gateway** / **ATAK** erst nach **stabilem B** (**`ROADMAP`** **H.9**).  
+14. **BIP44 allein** als „SPOF gelöst“ verkaufen — mehr Derivation-Pfade vom **gleichen** Seed senken den Root-SPOF **nicht**; echter Hebel ist **§ H.23** (Rotation/FS) und getrennte Schlüssel-Domänen (§ **6b**).
 
 ---
 
@@ -117,4 +123,24 @@ Diese Phasen **überlagern** **nicht** **A/B/C** — sie **füttern** Entscheidu
 
 ---
 
-*Stand: 2026-03-29*
+## 6b. Seed-SPOF vs. getrennte Keys
+
+**Kurz:** Der **IOTA-Seed** ist bewusst **SPOF für On-Chain-Signing** — **nicht** für den gesamten Kryptostack. Externe Kritik („alles hängt am einen Seed“) trifft Morgendrot nur **teilweise** zu.
+
+| Thema | Ist Morgendrot | Bewertung |
+|-------|----------------|-----------|
+| **Signing** | Ed25519 aus Mnemonic/CLI; optional BIP44-Pfad (`WALLET_DERIVATION_PATH`) | SPOF **bewusst** — Recovery und Einsatz-Autarkie |
+| **Messenger E2E** | P-256 ECDH **eigenständig** (`generateKeyPair`), im Tresor | **Getrennt** vom IOTA-Seed |
+| **Tresor** | Eigenes Passwort (PBKDF2 + AES-GCM); ≠ Mnemonic | **Zweiter** kritischer Pfad |
+| **Optional `includeIotaMnemonic`** | Signer-Import im Tresor | Kopplung nur bei **bewusster** Wahl — im Feld eher vermeiden |
+| **Forward Secrecy** | Statisches ECDH pro Partner (v1) | **Größte echte Lücke** vs. „moderner Standard“ — **§ H.23 Session Keys+** |
+| **BIP44 „trennt Zwecke“** | Mehr Adressen, **gleicher** Root-Seed | Senkt Root-SPOF **nicht** — architektonische Trennung (Signing ≠ ECDH) ist relevanter |
+| **Hardware Wallet** | Nicht implementiert; Roadmap Stufe 2–3 | Sinnvoll für Boss-Signing; ersetzt H.23 **nicht** |
+
+**Betrieb Boss (Einsatz):** `SIGNER=remote` auf Helfer-Geräten = kein Seed im Feld; Boss-PC gehärtet halten. Siehe **`docs/BOSS-WORKER-SEED-CUSTODY.md`**.
+
+**Priorität:** Doku-Wahrheit (dieses Kapitel, **`SICHERHEITS-AUDIT.md` §2**) → Modus-A-Feldtest → **§ H.23** erste Scheibe → HW-Wallet/Keystore (Stufe 2). Double Ratchet bleibt **Phase 3** (`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`).
+
+---
+
+*Stand: 2026-06-16*

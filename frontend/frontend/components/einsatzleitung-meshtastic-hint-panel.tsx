@@ -22,7 +22,7 @@ export function EinsatzleitungMeshtasticHintPanel() {
       <ul className="mt-2 list-inside list-disc space-y-1 text-xs text-muted-foreground">
         <li>{HANDOFF_MESHTASTIC_PSK_SHORT}</li>
         <li>Kanal-PSK in der Meshtastic-App für alle Geräte identisch setzen (nicht im Handoff-ZIP).</li>
-        <li>Node-ID (`!…`) pro Helfer — im Telefonbuch oder per Team-Update zurück an alle.</li>
+        <li>Node-ID (`!…`) pro Helfer — unter Kontakte / Team-Update an alle verteilen.</li>
         <li>Morgendrot: Kanalindex 0–7, Routing, optional Pfad-4-Archiv auf IOTA.</li>
       </ul>
       {withChannel.length > 0 ? (

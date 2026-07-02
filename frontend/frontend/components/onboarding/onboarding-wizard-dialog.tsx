@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ApiStatus } from '@/frontend/lib/api/status'
-import { Button } from '@/components/ui/button'
 import {
-  OnboardingBossAddressStep,
-  OnboardingBossHelpersStep,
   OnboardingBossMailboxesStep,
-  OnboardingBossPackageStep,
-  OnboardingBossTelegramBotStep,
-  OnboardingBossTelegramGroupStep,
+  OnboardingBossChainStep,
+  OnboardingBossEinsatzRulesStep,
+  OnboardingBossNetworkPlanStep,
+  OnboardingBossTelegramStepPanel,
   OnboardingBossWalletStep,
   OnboardingDoneStep,
   OnboardingHelperHandoffStep,
@@ -39,6 +37,8 @@ import {
   OnboardingWizardShell,
   stepTitleFor,
 } from '@/frontend/components/onboarding/onboarding-wizard-shell'
+import { onboardingStepHint } from '@/frontend/lib/onboarding-wizard-copy'
+import { ensureInferredBossNetworkSetupPlan, isBossNetworkPlanStepChosen } from '@/frontend/lib/boss-wizard-network-plan'
 import { STANDALONE_HANDOFF_APPLIED_EVENT } from '@/frontend/lib/handoff-standalone-ready'
 
 export type OnboardingWizardDialogProps = {
@@ -46,19 +46,26 @@ export type OnboardingWizardDialogProps = {
   onOpenChange: (open: boolean) => void
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
+  sessionLocked?: boolean
   contactDirectory?: Record<string, import('@/frontend/lib/api').ContactMeshEntryClient>
   onActivateWallet?: () => void
   onOpenHandoffImport?: () => void
   onReloadStatus?: () => void
+  /** Boss: nach „Fertig“ Readiness-Check anzeigen. */
+  onBossSetupFinished?: () => void
+  fallbackMyAddress?: string | null
 }
 
-function skipContext(api?: ApiStatus | null) {
-  return buildOnboardingSkipContext(api)
+function skipContext(api?: ApiStatus | null, sessionLocked?: boolean) {
+  return buildOnboardingSkipContext(api, { uiLocked: sessionLocked ?? false })
 }
 
 export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   const [progress, setProgress] = useState<OnboardingProgress | null>(() => readOnboardingProgress())
-  const ctx = useMemo(() => skipContext(p.apiSnapshot), [p.apiSnapshot])
+  const ctx = useMemo(
+    () => skipContext(p.apiSnapshot, p.sessionLocked),
+    [p.apiSnapshot, p.sessionLocked]
+  )
 
   const syncProgress = useCallback(() => {
     setProgress(readOnboardingProgress())
@@ -67,6 +74,13 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   useEffect(() => {
     if (!p.open) return
     syncProgress()
+    const prog = readOnboardingProgress()
+    if (prog?.path === 'boss') {
+      ensureInferredBossNetworkSetupPlan({
+        hasPackageId: Boolean(p.apiSnapshot?.packageId?.trim()),
+        apiStatus: p.apiSnapshot ?? undefined,
+      })
+    }
     const onHandoff = () => p.onReloadStatus?.()
     const onProgress = () => syncProgress()
     window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoff)
@@ -87,20 +101,30 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
     apiSnapshot: p.apiSnapshot,
     backendOnline: p.backendOnline,
     contactDirectory: p.contactDirectory,
+    sessionLocked: p.sessionLocked,
+    fallbackMyAddress: p.fallbackMyAddress,
     onActivateWallet: p.onActivateWallet,
     onReload: p.onReloadStatus,
-    onOpenHandoffImport: p.onOpenHandoffImport,
+    onOpenHandoffImport: () => {
+      p.onOpenChange(false)
+      p.onOpenHandoffImport?.()
+    },
   }
 
   const advance = (action: 'complete' | 'skip') => {
     if (!progress) return
     if (action === 'complete') markOnboardingStepComplete(stepId)
     else skipOnboardingStep(stepId)
-    const next = readOnboardingProgress()
-    setProgress(next)
-    if (action === 'complete' && next) {
-      const nextView = getWizardViewStep(next)
-      if (nextView.stepId === 'done') finishOnboarding()
+    setProgress(readOnboardingProgress())
+  }
+
+  const handleFinish = () => {
+    finishOnboarding()
+    syncProgress()
+    p.onOpenChange(false)
+    if (path === 'boss') {
+      p.onReloadStatus?.()
+      p.onBossSetupFinished?.()
     }
   }
 
@@ -129,28 +153,21 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       switch (stepId) {
         case 'wallet':
           return <OnboardingBossWalletStep {...panelProps} />
-        case 'address':
-          return <OnboardingBossAddressStep {...panelProps} />
+        case 'network-plan':
+          return <OnboardingBossNetworkPlanStep {...panelProps} />
+        case 'einsatz-rules':
+          return <OnboardingBossEinsatzRulesStep {...panelProps} />
+        case 'chain':
         case 'package':
-          return <OnboardingBossPackageStep {...panelProps} />
+          return <OnboardingBossChainStep {...panelProps} />
         case 'mailboxes':
           return <OnboardingBossMailboxesStep {...panelProps} />
-        case 'telegram-bot':
-          return <OnboardingBossTelegramBotStep {...panelProps} />
-        case 'telegram-group':
-          return <OnboardingBossTelegramGroupStep {...panelProps} />
+        case 'telegram':
+          return <OnboardingBossTelegramStepPanel {...panelProps} />
         case 'meshtastic':
           return <OnboardingMeshtasticStep {...panelProps} />
-        case 'helpers':
-          return <OnboardingBossHelpersStep {...panelProps} />
         case 'done':
-          return (
-            <OnboardingDoneStep>
-              <Button type="button" onClick={() => p.onOpenChange(false)}>
-                Schließen
-              </Button>
-            </OnboardingDoneStep>
-          )
+          return <OnboardingDoneStep path="boss" />
         default:
           return null
       }
@@ -167,13 +184,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
         case 'meshtastic':
           return <OnboardingMeshtasticStep {...panelProps} />
         case 'done':
-          return (
-            <OnboardingDoneStep>
-              <Button type="button" onClick={() => p.onOpenChange(false)}>
-                Schließen
-              </Button>
-            </OnboardingDoneStep>
-          )
+          return <OnboardingDoneStep path="wanderer" />
         default:
           return null
       }
@@ -192,13 +203,7 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
         case 'peering':
           return <OnboardingHelperPeeringStep {...panelProps} />
         case 'done':
-          return (
-            <OnboardingDoneStep>
-              <Button type="button" onClick={() => p.onOpenChange(false)}>
-                Schließen
-              </Button>
-            </OnboardingDoneStep>
-          )
+          return <OnboardingDoneStep path="helper" />
         default:
           return null
       }
@@ -213,6 +218,9 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
 
   if (!progress) return null
 
+  const nextDisabled =
+    path === 'boss' && stepId === 'network-plan' && !isBossNetworkPlanStepChosen()
+
   return (
     <OnboardingWizardShell
       open={p.open}
@@ -221,14 +229,17 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       stepIndex={stepIndex}
       stepTotal={stepTotal}
       stepTitle={stepTitleFor(stepId as OnboardingStepId, path)}
-      showBack={stepIndex > 0 && stepId !== 'done'}
+      stepHint={onboardingStepHint(path, stepId as OnboardingStepId)}
+      showBack={stepIndex > 0}
       showSkip={stepId !== 'done'}
       showLater={stepId !== 'done'}
       onBack={handleBack}
       onSkip={() => advance('skip')}
       onLater={handleLater}
-      onNext={stepId === 'done' ? () => p.onOpenChange(false) : () => advance('complete')}
+      onNext={stepId === 'done' ? handleFinish : () => advance('complete')}
       nextLabel={stepId === 'done' ? 'Fertig' : 'Weiter'}
+      nextDisabled={nextDisabled}
+      showNextChevron={stepId !== 'done'}
     >
       <div className="max-h-[min(60vh,32rem)] overflow-y-auto pr-1">{renderStepBody()}</div>
     </OnboardingWizardShell>

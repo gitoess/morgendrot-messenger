@@ -187,12 +187,13 @@ Produkt-/Einsatz-UX kann **§ A**-Feinarbeit überholen, wenn Abgabe drängt.
 
 ## 5. Sicherheit (§ H.23 — keine Halbheiten)
 
-| Option | Entscheidung |
-|--------|--------------|
-| **A — Status quo** | ECDH + AES-GCM, **transport-strong, kein Forward Secrecy** — mit **sichtbarer Stufen-Kennzeichnung** im Chat |
-| **B — Double Ratchet** | Nur **1:1 Direct-Chat**, nicht über LoRa/Chain — **Go/No-Go** bis **2026-Q3** (Fahrplan **§ H.23**) |
+| Phase | Stand |
+|-------|--------|
+| **v1 Ist (Produktion)** | ECDH + AES-GCM, **transport-strong, kein Forward Secrecy** — Stufen-Kennzeichnung im Chat |
+| **H.23 Option A (entschieden 2026-06-16)** | **Session Keys+** mit Rotation/`keyEpoch` — SSOT **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**; Implementierung **nach** Modus-A-Feldtest (`docs/FELDTEST-BOSS-BEI-0.md`) |
+| **Phase 3 (Backlog)** | Double Ratchet — nur **1:1 Direct-Chat**, nicht über LoRa/Chain |
 
-**Bis zur Entscheidung:** Keine Marketing-Formulierung „Signal-Niveau“. Siehe **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, **`SECURITY-RATING.md`**.
+**Bis H.23-B live:** Keine Marketing-Formulierung „Signal-Niveau“. Siehe **`docs/HANDSHAKE-PERSISTENZ-UND-H23.md`**, **`SECURITY-RATING.md`**, **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § **6b**.
 
 ---
 

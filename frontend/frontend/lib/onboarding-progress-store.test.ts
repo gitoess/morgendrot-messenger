@@ -5,12 +5,18 @@ import {
   markOnboardingStepComplete,
   needsOnboardingResume,
   finishOnboarding,
+  isOnboardingFinished,
+  prepareOnboardingWizardOpen,
   shouldSkipOnboardingStep,
   resolveWizardOnboardingPath,
   resolveOnboardingDialogPath,
   getWizardViewStep,
   goBackOnboardingStep,
+  onboardingProgressPercent,
   buildOnboardingSkipContext,
+  shouldOfferMessengerSetupFromVault,
+  resolveMessengerSetupOnboardingPath,
+  dismissOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 
 vi.mock('@/frontend/lib/handoff-standalone-ready', () => ({
@@ -26,6 +32,12 @@ vi.mock('@/frontend/lib/handoff-standalone-ready', () => ({
 
 vi.mock('@/frontend/lib/direct-iota-mnemonic-session', () => ({
   hasPersistedDirectIotaSessionSigner: () => false,
+  getDirectIotaSessionSigner: () => null,
+}))
+
+const isBrowserSessionSignerReady = vi.fn(() => false)
+vi.mock('@/frontend/lib/messenger-session-keys-ready', () => ({
+  isBrowserSessionSignerReady: (uiLocked?: boolean) => isBrowserSessionSignerReady(uiLocked),
 }))
 
 vi.mock('@/frontend/lib/handoff-local-apply', () => ({
@@ -74,6 +86,24 @@ describe('onboarding-progress-store', () => {
     startOnboarding('helper')
     finishOnboarding()
     expect(needsOnboardingResume()).toBe(false)
+    expect(isOnboardingFinished()).toBe(true)
+  })
+
+  it('prepareOnboardingWizardOpen hebt Fertig-Flag für Wiederöffnen', () => {
+    startOnboarding('boss')
+    finishOnboarding()
+    expect(isOnboardingFinished()).toBe(true)
+    prepareOnboardingWizardOpen('boss')
+    expect(isOnboardingFinished()).toBe(false)
+    expect(getWizardViewStep(readOnboardingProgress()!).stepId).toBe('wallet')
+  })
+
+  it('startOnboarding setzt nach Fertig zurück auf Schritt 1', () => {
+    startOnboarding('boss')
+    finishOnboarding()
+    startOnboarding('boss')
+    expect(isOnboardingFinished()).toBe(false)
+    expect(getWizardViewStep(readOnboardingProgress()!).stepId).toBe('wallet')
   })
 
   it('shouldSkipOnboardingStep handoff wenn nicht da', () => {
@@ -86,10 +116,31 @@ describe('onboarding-progress-store', () => {
     expect(readOnboardingProgress()?.completedSteps).toContain('wallet')
   })
 
-  it('boss wallet skip wenn hasWallet', () => {
+  it('shouldOfferMessengerSetupFromVault bis Wizard fertig', () => {
+    expect(shouldOfferMessengerSetupFromVault('boss')).toBe(true)
+    startOnboarding('boss')
+    expect(shouldOfferMessengerSetupFromVault('boss')).toBe(true)
+    dismissOnboarding()
+    expect(shouldOfferMessengerSetupFromVault('boss')).toBe(true)
+    startOnboarding('boss')
+    finishOnboarding()
+    expect(shouldOfferMessengerSetupFromVault('boss')).toBe(false)
+    window.localStorage.removeItem('morgendrot.onboardingProgress.v2')
+    expect(shouldOfferMessengerSetupFromVault('messenger')).toBe(true)
+    expect(shouldOfferMessengerSetupFromVault('arbeiter')).toBe(false)
+  })
+
+  it('resolveMessengerSetupOnboardingPath', () => {
+    expect(resolveMessengerSetupOnboardingPath('boss')).toBe('boss')
+    expect(resolveMessengerSetupOnboardingPath('messenger')).toBe('wanderer')
+  })
+
+  it('boss wallet skip nur bei Browser-Signer', () => {
+    isBrowserSessionSignerReady.mockReturnValue(true)
     const ctx = buildOnboardingSkipContext({ hasKeys: true, locked: false })
     expect(shouldSkipOnboardingStep('boss', 'wallet', ctx)).toBe(true)
-    expect(shouldSkipOnboardingStep('boss', 'wallet', {})).toBe(false)
+    isBrowserSessionSignerReady.mockReturnValue(false)
+    expect(shouldSkipOnboardingStep('boss', 'wallet', { hasWallet: false })).toBe(false)
   })
 
   it('resolveWizardOnboardingPath boss aus Progress', () => {
@@ -114,10 +165,76 @@ describe('onboarding-progress-store', () => {
     startOnboarding('boss')
     markOnboardingStepComplete('wallet')
     const p = readOnboardingProgress()!
-    expect(getWizardViewStep(p).stepId).toBe('address')
-    goBackOnboardingStep('address')
+    expect(getWizardViewStep(p).stepId).toBe('network-plan')
+    goBackOnboardingStep('network-plan')
     const back = readOnboardingProgress()!
     expect(getWizardViewStep(back).stepId).toBe('wallet')
+  })
+
+  it('onboardingProgressPercent folgt Wizard-Position (nicht erledigte/auto-skip Schritte)', () => {
+    startOnboarding('boss')
+    expect(onboardingProgressPercent(readOnboardingProgress()!)).toBe(13)
+    markOnboardingStepComplete('wallet')
+    markOnboardingStepComplete('network-plan')
+    markOnboardingStepComplete('einsatz-rules')
+    expect(onboardingProgressPercent(readOnboardingProgress()!)).toBe(50)
+    goBackOnboardingStep('chain')
+    expect(onboardingProgressPercent(readOnboardingProgress()!)).toBe(38)
+    const ctx = buildOnboardingSkipContext({ packageId: '0x' + 'a'.repeat(64) })
+    expect(onboardingProgressPercent(readOnboardingProgress()!, ctx)).toBe(38)
+  })
+
+  it('goBack von Fertig löscht finishedAtMs', () => {
+    startOnboarding('boss')
+    finishOnboarding()
+    expect(isOnboardingFinished()).toBe(true)
+    goBackOnboardingStep('done')
+    expect(isOnboardingFinished()).toBe(false)
+    expect(getWizardViewStep(readOnboardingProgress()!).stepId).toBe('meshtastic')
+  })
+
+  it('migriert entfernten helpers-Schritt aus Boss-Wizard', () => {
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'boss',
+        currentStepIndex: 8,
+        completedSteps: [
+          'wallet',
+          'network-plan',
+          'einsatz-rules',
+          'chain',
+          'mailboxes',
+          'telegram',
+          'meshtastic',
+          'helpers',
+        ],
+        skippedSteps: [],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.skippedSteps).toContain('helpers')
+    expect(p.completedSteps).not.toContain('helpers')
+    expect(getWizardViewStep(p).stepId).toBe('done')
+  })
+
+  it('migriert legacy package zu chain', () => {
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'boss',
+        currentStepIndex: 2,
+        completedSteps: ['wallet', 'package'],
+        skippedSteps: [],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.completedSteps).toContain('chain')
+    expect(p.completedSteps).not.toContain('package')
+    expect(p.skippedSteps).toContain('einsatz-rules')
+    expect(getWizardViewStep(p).stepId).toBe('mailboxes')
   })
 
   it('migriert legacy server-mailbox/team zu mailboxes', () => {
@@ -132,8 +249,24 @@ describe('onboarding-progress-store', () => {
       })
     )
     const p = readOnboardingProgress()!
-    expect(p.completedSteps).not.toContain('mailboxes')
     expect(p.completedSteps).not.toContain('server-mailbox')
     expect(getWizardViewStep(p).stepId).toBe('mailboxes')
+  })
+
+  it('migriert legacy telegram-bot/group zu telegram', () => {
+    window.localStorage.setItem(
+      'morgendrot.onboardingProgress.v2',
+      JSON.stringify({
+        path: 'boss',
+        currentStepIndex: 6,
+        completedSteps: ['wallet', 'address', 'package', 'mailboxes', 'telegram-bot', 'telegram-group'],
+        skippedSteps: [],
+        dismissed: false,
+      })
+    )
+    const p = readOnboardingProgress()!
+    expect(p.completedSteps).toContain('telegram')
+    expect(p.completedSteps).not.toContain('telegram-bot')
+    expect(getWizardViewStep(p).stepId).toBe('meshtastic')
   })
 })

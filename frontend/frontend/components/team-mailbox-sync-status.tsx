@@ -15,7 +15,10 @@ export function TeamMailboxSyncStatus(p: {
   backendOnline?: boolean
   onReload?: () => void
   className?: string
+  /** Wizard: nur wenn etwas nicht stimmt */
+  variant?: 'full' | 'compact'
 }) {
+  const variant = p.variant ?? 'full'
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
 
@@ -43,6 +46,24 @@ export function TeamMailboxSyncStatus(p: {
   }
 
   const fmt = (id: string) => maskWalletAddress(id, 6, 4)
+
+  if (variant === 'compact') {
+    if (diff.missingOnServer.length === 0) return null
+    return (
+      <div className={p.className ?? 'rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-2'}>
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          {diff.missingOnServer.length} Team-Postfach/Postfächer nur auf diesem Gerät — auf den Server übernehmen.
+        </p>
+        {p.backendOnline ? (
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void runSync()}>
+            {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="mr-1.5 h-3.5 w-3.5" />}
+            Auf Server übernehmen
+          </Button>
+        ) : null}
+        {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
+      </div>
+    )
+  }
 
   return (
     <div className={p.className ?? 'rounded-md border border-border/80 bg-muted/30 p-3 space-y-2'}>

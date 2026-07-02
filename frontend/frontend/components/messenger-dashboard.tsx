@@ -1,6 +1,7 @@
 ﻿'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { flushSync } from 'react-dom'
 import Link from 'next/link'
 import {
   Crown,
@@ -44,6 +45,20 @@ import { OnboardingResumeCard } from '@/frontend/components/onboarding/onboardin
 import { OnboardingWizardHost } from '@/frontend/components/onboarding/onboarding-wizard-host'
 import { drainTeamSyncOfflineQueue } from '@/frontend/lib/team-sync-wire'
 import {
+  buildOnboardingSkipContext,
+  readOnboardingProgress,
+  clearOnboardingDismissed,
+  prepareOnboardingWizardOpen,
+  resolveMessengerSetupOnboardingPath,
+  shouldOfferMessengerSetupFromVault,
+} from '@/frontend/lib/onboarding-progress-store'
+import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
+import {
+  bossWizardVaultContextHint,
+  enrichBossWizardApiSnapshot,
+} from '@/frontend/lib/onboarding-boss-runtime'
+import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
+import {
   getStandaloneHelperReadiness,
   HELPER_SEED_SETUP_REQUEST_EVENT,
   maybeRequestHelperSeedSetup,
@@ -54,7 +69,6 @@ import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacito
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
 import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
 import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
-import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
@@ -97,10 +111,15 @@ function MessengerDashboardBody({
   visibleFeatures: DashboardFeature[]
 }) {
   const [helperSeedSetupOpen, setHelperSeedSetupOpen] = useState(false)
+  const [onboardingWizardOpen, setOnboardingWizardOpen] = useState(false)
+  const [vaultOverWizard, setVaultOverWizard] = useState(false)
   const liteMessengerFromApi = true
-  const isEinsatzLeadHome = canAccessEinsatzleitung(s.role)
+  const effectiveRole = s.role || s.apiSnapshot?.role
+  const isEinsatzLeadHome = canAccessEinsatzleitung(effectiveRole)
+  const offerMessengerSetupInVault = shouldOfferMessengerSetupFromVault(effectiveRole)
   const { t } = useAppTranslation('dashboard')
   const { t: tc } = useAppTranslation('common')
+  const { t: tv } = useAppTranslation('vault')
 
   const onLockSession = async () => {
     if (!window.confirm(t('lock.confirm'))) return
@@ -108,8 +127,109 @@ function MessengerDashboardBody({
   }
 
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
-  const vaultKeysReady = s.apiSnapshot?.hasKeys === true
-  const showHomeVaultBadge = s.backendReachable === true && (!vaultKeysReady || vaultSessionLocked)
+  const browserSignerReady = isBrowserSessionSignerReady(s.locked)
+  const vaultKeysReady = browserSignerReady
+  const showHomeVaultBadge = s.backendReachable === true
+  const backendVaultUnlocked =
+    s.apiSnapshot?.hasKeys === true && s.apiSnapshot?.locked !== true
+
+  const promptBrowserWalletUnlock = useCallback(() => {
+    if (backendVaultUnlocked && !isBrowserSessionSignerReady(false)) {
+      s.requestMainnetSessionSignerSync()
+      return
+    }
+    s.requestVaultUnlock()
+  }, [backendVaultUnlocked, s.requestMainnetSessionSignerSync, s.requestVaultUnlock])
+
+  const openVaultFromUi = useCallback(() => {
+    flushSync(() => {
+      setVaultOverWizard(false)
+      setOnboardingWizardOpen(false)
+    })
+    clearOnboardingDismissed()
+    promptBrowserWalletUnlock()
+  }, [promptBrowserWalletUnlock])
+
+  const returnToWizardFromVault = useCallback(() => {
+    setVaultOverWizard(false)
+    s.sessionSignerSync.close()
+    setOnboardingWizardOpen(true)
+  }, [s.sessionSignerSync.close])
+
+  const handleWizardActivateWallet = useCallback(() => {
+    setVaultOverWizard(true)
+    if (backendVaultUnlocked && !isBrowserSessionSignerReady(s.locked)) {
+      s.requestMainnetSessionSignerSync()
+      return
+    }
+    s.requestVaultUnlock()
+  }, [backendVaultUnlocked, s.locked, s.requestMainnetSessionSignerSync, s.requestVaultUnlock])
+
+  const openMessengerSetupFromVault = useCallback(() => {
+    const path = resolveMessengerSetupOnboardingPath(effectiveRole)
+    if (!path) return
+    setVaultOverWizard(false)
+    prepareOnboardingWizardOpen(path)
+    setOnboardingWizardOpen(true)
+  }, [effectiveRole])
+
+  const messengerSetupVaultLabel =
+    resolveMessengerSetupOnboardingPath(effectiveRole) === 'boss'
+      ? tv('messengerSetup.linkBoss')
+      : tv('messengerSetup.link')
+  const messengerSetupVaultHint =
+    resolveMessengerSetupOnboardingPath(effectiveRole) === 'boss'
+      ? tv('messengerSetup.hintBoss')
+      : tv('messengerSetup.hint')
+
+  const wizardApiSnapshot = useMemo(
+    () => enrichBossWizardApiSnapshot(s.apiSnapshot, s.myAddress),
+    [s.apiSnapshot, s.myAddress]
+  )
+  const wizardVaultContextHint = useMemo(
+    () => (vaultOverWizard ? bossWizardVaultContextHint(s.apiSnapshot) : undefined),
+    [s.apiSnapshot, vaultOverWizard]
+  )
+
+  const handleWizardOpenChange = useCallback(
+    (open: boolean) => {
+      setOnboardingWizardOpen(open)
+      if (!open) setVaultOverWizard(false)
+      if (open) return
+      queueMicrotask(() => {
+        const progress = readOnboardingProgress()
+        if (progress?.dismissed || !progress?.finishedAtMs) return
+        const ctx = buildOnboardingSkipContext(s.apiSnapshot, { uiLocked: s.locked })
+        if (ctx.hasWallet) return
+        clearOnboardingDismissed()
+        promptBrowserWalletUnlock()
+      })
+    },
+    [promptBrowserWalletUnlock, s.apiSnapshot, s.locked]
+  )
+
+  const homeVaultActions = useMemo(
+    () => ({
+      ...s.chatVaultBannerActions,
+      onNavigateHomeWhenLocked: () => {
+        openVaultFromUi()
+      },
+    }),
+    [openVaultFromUi, s.chatVaultBannerActions]
+  )
+
+  useEffect(() => {
+    if (!liteMessengerFromApi) return
+    if (browserSignerReady) setVaultOverWizard(false)
+  }, [vaultOverWizard, browserSignerReady])
+
+  const prevVaultOverWizardRef = useRef(false)
+  useEffect(() => {
+    if (prevVaultOverWizardRef.current && !vaultOverWizard && onboardingWizardOpen) {
+      void s.checkStatus()
+    }
+    prevVaultOverWizardRef.current = vaultOverWizard
+  }, [vaultOverWizard, onboardingWizardOpen, s.checkStatus])
 
   useEffect(() => {
     if (!liteMessengerFromApi) return
@@ -144,6 +264,16 @@ function MessengerDashboardBody({
       <DashboardSharedDialogs
         locked={s.locked}
         suppressVaultUnlockForHelperSeed={s.unlock.suppressVaultUnlockForHelperSeed}
+        suppressVaultUnlockForOnboardingWizard={!vaultOverWizard && onboardingWizardOpen}
+        showMessengerSetupInVault={offerMessengerSetupInVault}
+        onOpenMessengerSetupFromVault={openMessengerSetupFromVault}
+        messengerSetupVaultLabel={messengerSetupVaultLabel}
+        messengerSetupVaultHint={messengerSetupVaultHint}
+        vaultOpenedFromWizard={vaultOverWizard}
+        onBackToWizardFromVault={returnToWizardFromVault}
+        backToWizardVaultLabel={tv('backToWizard.link')}
+        backToWizardVaultHint={tv('backToWizard.hint')}
+        vaultContextHint={wizardVaultContextHint}
         helpOpen={s.helpOpen}
         onHelpOpenChange={s.setHelpOpen}
         helpLoading={s.helpLoading}
@@ -154,7 +284,7 @@ function MessengerDashboardBody({
           error: s.sessionSignerSync.error,
           password: s.unlock.password,
           onPasswordChange: s.unlock.setPassword,
-          onClose: s.sessionSignerSync.close,
+          onClose: vaultOverWizard ? returnToWizardFromVault : s.sessionSignerSync.close,
           onSync: s.sessionSignerSync.handleSync,
         }}
         unlock={{ ...s.unlock, apiSnapshot: s.apiSnapshot }}
@@ -168,10 +298,14 @@ function MessengerDashboardBody({
         }}
       />
       <OnboardingWizardHost
-        apiSnapshot={s.apiSnapshot}
+        open={onboardingWizardOpen}
+        onOpenChange={handleWizardOpenChange}
+        apiSnapshot={wizardApiSnapshot}
         backendOnline={s.apiSnapshot?.backendOnline === true || s.apiSnapshot?.backendRunning === true}
+        sessionLocked={s.locked}
         contactDirectory={s.contactDirectory}
-        onActivateWallet={s.requestStandaloneWalletUnlock}
+        fallbackMyAddress={s.myAddress}
+        onActivateWallet={handleWizardActivateWallet}
         onOpenHandoffImport={s.openSettingsView}
         onReloadStatus={() => void s.checkStatus()}
       />
@@ -293,9 +427,9 @@ function MessengerDashboardBody({
           myAddressFull={s.apiSnapshot?.myAddressFull}
           onOpenSettings={s.openSettingsView}
           onLockSession={!s.locked ? onLockSession : undefined}
-          vaultBannerActions={showHomeVaultBadge ? s.chatVaultBannerActions : undefined}
+          vaultBannerActions={showHomeVaultBadge ? homeVaultActions : undefined}
           sessionLocked={vaultSessionLocked}
-          hasKeys={s.apiSnapshot?.hasKeys}
+          hasKeys={browserSignerReady}
         />
       ) : (
       <header className="border-b border-border bg-card/90 backdrop-blur-sm">
@@ -340,8 +474,8 @@ function MessengerDashboardBody({
             {showHomeVaultBadge ? (
               <TresorSessionBadge
                 sessionLocked={vaultSessionLocked}
-                hasKeys={s.apiSnapshot?.hasKeys}
-                actions={s.chatVaultBannerActions}
+                hasKeys={browserSignerReady}
+                actions={homeVaultActions}
               />
             ) : null}
             <div
@@ -476,61 +610,6 @@ function MessengerDashboardBody({
             />
           </div>
         ) : null}
-        {!s.locked && s.firstStepsVisible && (
-          <div
-            className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2 text-xs text-muted-foreground"
-            role="region"
-            aria-label={t('firstSteps.aria')}
-          >
-            <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
-              <BookOpen className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
-              {t('firstSteps.title')}
-            </span>
-            <span className="hidden h-3 w-px bg-border sm:block" aria-hidden />
-            <span className="max-w-prose">
-              {t('firstSteps.bodyBefore')}{' '}
-              <Link
-                href="/handbook?file=DASHBOARD-ERSTE-SCHRITTE.md"
-                className="font-medium text-emerald-200 underline-offset-2 hover:underline"
-              >
-                {t('firstSteps.handbookFirstSteps')}
-              </Link>
-              {' · '}
-              <Link
-                href="/handbook?file=DASHBOARD-PORT-UND-OBERFLAECHE.md"
-                className="font-medium text-emerald-200 underline-offset-2 hover:underline"
-              >
-                {t('firstSteps.handbookPorts')}
-              </Link>
-              . {t('firstSteps.bodyAfter')}{' '}
-              <strong className="text-foreground/90">{t('nav.settings')}</strong>.
-            </span>
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => void s.openHelp()}
-                className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-medium text-emerald-100 hover:bg-emerald-500/20"
-              >
-                {t('firstSteps.help')}
-              </button>
-              <button
-                type="button"
-                onClick={s.openSettingsView}
-                className="rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-muted"
-              >
-                {t('nav.settings')}
-              </button>
-              <button
-                type="button"
-                onClick={s.dismissFirstStepsBar}
-                className="rounded px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground"
-                aria-label={t('firstSteps.hideAria')}
-              >
-                {t('firstSteps.hide')}
-              </button>
-            </div>
-          </div>
-        )}
         {/* Arbeiter/Lock im Morgendrot Projekt: Action Center. Messenger-Produkt: direkt Kacheln. */}
         {((s.role !== 'arbeiter' && s.role !== 'lock') || s.showAllTiles || liteMessengerFromApi) &&
           !isEinsatzLeadHome && (

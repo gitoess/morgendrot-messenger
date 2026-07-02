@@ -18,6 +18,17 @@ import { VaultUnlockDialog } from '@/frontend/components/vault-unlock-dialog'
 export function DashboardSharedDialogs(p: {
   locked: boolean
   suppressVaultUnlockForHelperSeed?: boolean
+  /** Wizard offen: Tresor-Modal nicht darüber legen (Wallet-Schritt: „Wallet einrichten“ schließt Wizard). */
+  suppressVaultUnlockForOnboardingWizard?: boolean
+  showMessengerSetupInVault?: boolean
+  onOpenMessengerSetupFromVault?: () => void
+  messengerSetupVaultLabel?: string
+  messengerSetupVaultHint?: string
+  vaultOpenedFromWizard?: boolean
+  onBackToWizardFromVault?: () => void
+  backToWizardVaultLabel?: string
+  backToWizardVaultHint?: string
+  vaultContextHint?: string
   helpOpen: boolean
   onHelpOpenChange: (open: boolean) => void
   helpLoading: boolean
@@ -81,7 +92,11 @@ export function DashboardSharedDialogs(p: {
       </Dialog>
 
       <VaultUnlockDialog
-        open={p.locked && !p.suppressVaultUnlockForHelperSeed}
+        open={
+          p.locked &&
+          !p.suppressVaultUnlockForHelperSeed &&
+          !p.suppressVaultUnlockForOnboardingWizard
+        }
         unlockMode={u.unlockMode}
         onUnlockModeChange={u.onUnlockModeChange}
         signerKind={u.signerKind}
@@ -104,19 +119,38 @@ export function DashboardSharedDialogs(p: {
         importMnemonicRequired={u.importMnemonicRequired}
         standaloneHelperUnlock={u.standaloneHelperUnlock}
         onUnlock={() => void u.handleUnlock()}
+        onOpenMessengerSetup={
+          !p.vaultOpenedFromWizard && p.showMessengerSetupInVault
+            ? p.onOpenMessengerSetupFromVault
+            : undefined
+        }
+        messengerSetupLabel={p.messengerSetupVaultLabel}
+        messengerSetupHint={p.messengerSetupVaultHint}
+        onBackToWizard={p.vaultOpenedFromWizard ? p.onBackToWizardFromVault : undefined}
+        backToWizardLabel={p.backToWizardVaultLabel}
+        backToWizardHint={p.backToWizardVaultHint}
+        contextHint={p.vaultContextHint}
       />
 
       {p.sessionSignerSync ? (
-        <Dialog open={p.sessionSignerSync.open} onOpenChange={(open) => !open && p.sessionSignerSync?.onClose()}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
+        <Dialog
+          open={p.sessionSignerSync.open}
+          onOpenChange={(open) => !open && p.sessionSignerSync?.onClose()}
+        >
+          <DialogContent className="flex max-h-[min(92vh,640px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-md">
+            <DialogHeader className="space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
               <DialogTitle>Session-Signer laden</DialogTitle>
               <DialogDescription>
                 Der Tresor ist bereits entsperrt. Mit dem Vault-Passwort wird der Session-Signer für Mainnet-Direkt-Send
                 in diesen Browser geladen.
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-3">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+              {p.vaultContextHint ? (
+                <p className="rounded-md border border-sky-500/35 bg-sky-500/10 px-3 py-2 text-xs leading-relaxed text-sky-950 dark:text-sky-100">
+                  {p.vaultContextHint}
+                </p>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="session-signer-vault-password">Vault-Passwort</Label>
                 <Input
@@ -146,6 +180,22 @@ export function DashboardSharedDialogs(p: {
                 </Button>
               </div>
             </div>
+            {p.vaultOpenedFromWizard && p.onBackToWizardFromVault ? (
+              <div className="shrink-0 border-t border-border/60 bg-muted/20 px-4 py-3">
+                <button
+                  type="button"
+                  className="w-full rounded-lg px-2 py-2 text-center text-sm transition-colors hover:bg-muted/50"
+                  onClick={p.onBackToWizardFromVault}
+                >
+                  <span className="font-medium text-foreground">
+                    {p.backToWizardVaultLabel ?? 'Zurück zur Einrichtung'}
+                  </span>
+                  {p.backToWizardVaultHint ? (
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{p.backToWizardVaultHint}</span>
+                  ) : null}
+                </button>
+              </div>
+            ) : null}
           </DialogContent>
         </Dialog>
       ) : null}

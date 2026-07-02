@@ -21,8 +21,7 @@ export function DashboardMessengerBossHeader(p: {
   hasKeys?: boolean
 }) {
   const { t } = useAppTranslation('dashboard')
-  const showVaultBadge =
-    p.vaultBannerActions != null && (p.sessionLocked === true || p.hasKeys !== true)
+  const showVaultBadge = p.vaultBannerActions != null
 
   return (
     <header className="border-b border-border/80 bg-card/80 backdrop-blur-sm">

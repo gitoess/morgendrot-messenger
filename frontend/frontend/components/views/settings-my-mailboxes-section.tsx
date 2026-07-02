@@ -15,6 +15,8 @@ type SettingsMyMailboxesSectionProps = {
   myAddress: string
   backendOnline?: boolean
   onReload?: () => void
+  /** Wizard: ohne Karten-Header und Sync-Panel */
+  embedded?: boolean
 }
 
 export function SettingsMyMailboxesSection({
@@ -22,6 +24,7 @@ export function SettingsMyMailboxesSection({
   myAddress,
   backendOnline,
   onReload,
+  embedded = false,
 }: SettingsMyMailboxesSectionProps) {
   const { directory, refresh: refreshContactDirectory } = useContactDirectory()
   const addr = myAddress.trim()
@@ -33,6 +36,30 @@ export function SettingsMyMailboxesSection({
   }, [])
 
   if (!show) return null
+
+  const panel = (
+    <>
+      {!embedded && canCreateTeamMailbox(apiStatus) ? (
+        <TeamMailboxSyncStatus
+          apiSnapshot={apiStatus}
+          backendOnline={backendOnline}
+          onReload={onReload}
+        />
+      ) : null}
+      <ChatViewMyMailboxesPanel
+        myAddressLine={addr}
+        serverMailboxIdHint={apiStatus?.mailboxId}
+        contactDirectory={directory}
+        onContactsChanged={() => void refreshContactDirectory()}
+        onStatus={onStatus}
+        teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
+      />
+    </>
+  )
+
+  if (embedded) {
+    return <div className="space-y-4">{panel}</div>
+  }
 
   return (
     <div className="rounded-xl border border-border bg-card">
@@ -53,21 +80,7 @@ export function SettingsMyMailboxesSection({
         </Link>
       </div>
       <div className="space-y-4 p-4">
-        {canCreateTeamMailbox(apiStatus) ? (
-          <TeamMailboxSyncStatus
-            apiSnapshot={apiStatus}
-            backendOnline={backendOnline}
-            onReload={onReload}
-          />
-        ) : null}
-        <ChatViewMyMailboxesPanel
-          myAddressLine={addr}
-          serverMailboxIdHint={apiStatus?.mailboxId}
-          contactDirectory={directory}
-          onContactsChanged={() => void refreshContactDirectory()}
-          onStatus={onStatus}
-          teamMailboxCreateAllowed={canCreateTeamMailbox(apiStatus)}
-        />
+        {panel}
       </div>
     </div>
   )

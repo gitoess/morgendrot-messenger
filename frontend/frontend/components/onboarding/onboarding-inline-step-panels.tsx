@@ -1,41 +1,62 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { Check, Copy, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { ApiStatus } from '@/frontend/lib/api/status'
-import { SettingsNetworkProfilesSection } from '@/frontend/components/settings-network-profiles-section'
 import { SettingsMyMailboxesSection } from '@/frontend/components/views/settings-my-mailboxes-section'
-import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
-import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
-import { LazyChatViewPulseSettings } from '@/frontend/components/lazy/messenger-scope-b'
-import { HandoffProvisionEntry } from '@/frontend/components/handoff-provision-entry'
+import { OnboardingBossTelegramStep } from '@/frontend/components/onboarding/onboarding-boss-telegram-step'
+import { OnboardingBossMailboxesStep } from '@/frontend/components/onboarding/onboarding-boss-mailboxes-step'
+import { OnboardingFunkStep } from '@/frontend/components/onboarding/onboarding-funk-step'
 import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
 import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
-import { ChatViewPrivateMailboxCreateButton } from '@/frontend/components/chat-view-private-mailbox-create-button'
-import { ChatViewTeamMailboxCreateButton } from '@/frontend/components/chat-view-team-mailbox-create-button'
-import { TeamMailboxSyncStatus } from '@/frontend/components/team-mailbox-sync-status'
 import { BossRegistryBootstrapPanel } from '@/frontend/components/boss-registry-bootstrap-panel'
+import { resolveBossWizardDeployNetwork } from '@/frontend/lib/boss-wizard-package-context'
+import {
+  getBossMainnetWizardStatus,
+  NETWORK_SETUP_PLAN_OPTIONS,
+  readBossWizardNetworkSetupPlan,
+  syncBossWizardNetworkProfiles,
+} from '@/frontend/lib/boss-wizard-network-plan'
+import { postDeployMainnetPackage } from '@/frontend/lib/api/einsatz-config'
+import { DEFAULT_MAINNET_RPC_URL } from '@morgendrot/shared/einsatz-chain-mode'
+import {
+  applyActiveNetworkProfile,
+  applyBossWizardNetworkSetupPlan,
+  EINSATZ_NETWORK_PROFILES_CHANGED,
+  notifyNetworkProfilesChanged,
+  readNetworkProfilesState,
+  type EinsatzNetworkSetupPlan,
+  writeNetworkProfilesState,
+} from '@/frontend/lib/einsatz-network-profiles'
+import { cn } from '@/lib/utils'
+import { postApplyEinsatzConfig } from '@/frontend/lib/api/einsatz-config'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import {
-  applyBossHandoffLabel,
   applyBossPackageId,
-  applyBossServerMailboxId,
   deployBossMovePackage,
   ensureBossRoleOnServer,
 } from '@/frontend/lib/onboarding-boss-bootstrap'
 import { getStandaloneHelperReadiness } from '@/frontend/lib/handoff-standalone-ready'
+import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
+import { buildBossOnboardingRuntime } from '@/frontend/lib/onboarding-boss-runtime'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { readTelegramInviteFromHandoffExtras } from '@/frontend/lib/handoff-extras'
+import { primeSettingsCategory } from '@/frontend/lib/settings-navigation'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
+import { toast } from 'sonner'
 
 type PanelProps = {
   apiSnapshot?: ApiStatus | null
   backendOnline?: boolean
   contactDirectory?: Record<string, ContactMeshEntryClient>
+  sessionLocked?: boolean
+  /** Dashboard-Sitzung — gleiche Adresse wie im Header. */
+  fallbackMyAddress?: string | null
   onActivateWallet?: () => void
   onReload?: () => void
   onOpenHandoffImport?: () => void
@@ -76,17 +97,37 @@ function AddressBlock(p: { address: string }) {
   )
 }
 
+function bossRuntime(p: PanelProps) {
+  return buildBossOnboardingRuntime(p.apiSnapshot, p.sessionLocked ?? false, p.fallbackMyAddress)
+}
+
 export function OnboardingBossWalletStep(p: PanelProps) {
-  const hasWallet = p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
+  const rt = bossRuntime(p)
+  const label = rt.browserWalletReady
+    ? 'Wallet bereit (Browser-Sitzung)'
+    : rt.needsNewWallet
+      ? 'Wallet fehlt — neu anlegen oder importieren'
+      : p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
+        ? 'Server-Tresor offen — Browser-Signer fehlt noch'
+        : 'Server-Wallet vorhanden — Tresor noch entsperren'
+  const actionLabel =
+    rt.needsNewWallet
+      ? 'Wallet einrichten'
+      : p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
+        ? 'Session-Signer laden'
+        : 'Tresor entsperren'
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Als Einsatzleitung brauchst du zuerst ein Wallet auf diesem Gerät — Seed neu anlegen oder importieren.
-      </p>
-      <StatusRow ok={hasWallet} label="Wallet entsperrt" />
-      {!hasWallet ? (
-        <Button type="button" onClick={() => p.onActivateWallet?.()}>
-          Wallet einrichten
+      <StatusRow ok={rt.browserWalletReady} label={label} />
+      {rt.displayAddress && !rt.browserWalletReady ? (
+        <p className="text-xs text-muted-foreground">
+          Adresse auf dem Server:{' '}
+          <span className="font-mono text-foreground/90">{maskWalletAddress(rt.displayAddress)}</span>
+        </p>
+      ) : null}
+      {!rt.browserWalletReady ? (
+        <Button type="button" className="w-full sm:w-auto" onClick={() => p.onActivateWallet?.()}>
+          {actionLabel}
         </Button>
       ) : null}
     </div>
@@ -94,26 +135,247 @@ export function OnboardingBossWalletStep(p: PanelProps) {
 }
 
 export function OnboardingBossAddressStep(p: PanelProps) {
-  const addr = (p.apiSnapshot?.myAddressFull || p.apiSnapshot?.myAddress || '').trim()
+  const rt = bossRuntime(p)
+  const addr = rt.displayAddress
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Deine IOTA-Adresse bestätigen — sie identifiziert dieses Gerät auf der Chain.</p>
       <AddressBlock address={addr} />
-      <StatusRow ok={Boolean(addr)} label="Adresse vorhanden" />
+      <StatusRow ok={Boolean(addr)} label={addr ? 'Adresse bestätigt' : 'Adresse fehlt'} />
+      {addr && !rt.browserWalletReady ? (
+        <p className="text-xs text-muted-foreground">
+          {rt.addressFromServer
+            ? 'Dieselbe Adresse wie im Header (Server) — Tresor entsperren, um hier zu signieren.'
+            : 'Adresse sichtbar — Tresor entsperren für Signieren in diesem Browser.'}
+        </p>
+      ) : null}
     </div>
   )
 }
 
-export function OnboardingBossPackageStep(p: PanelProps) {
-  const hasPkg = Boolean(p.apiSnapshot?.packageId?.trim())
-  const hasRpc = Boolean(p.apiSnapshot?.rpcUrlLabel?.trim())
-  const [manualId, setManualId] = useState('')
+export function OnboardingBossNetworkPlanStep(p: PanelProps) {
+  const [plan, setPlan] = useState<EinsatzNetworkSetupPlan>(() => readBossWizardNetworkSetupPlan())
+  const [chosen, setChosen] = useState(() => readNetworkProfilesState().setupPlanChosen === true)
+
+  const pick = (id: EinsatzNetworkSetupPlan) => {
+    applyBossWizardNetworkSetupPlan(id)
+    setPlan(id)
+    setChosen(true)
+    const label = NETWORK_SETUP_PLAN_OPTIONS.find((o) => o.id === id)?.title ?? id
+    toast.success(`${label} — gespeichert.`)
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Wähle, <strong className="font-medium text-foreground">wo du normalerweise sendest</strong> und ob du
+        Testnet und Mainnet einrichten willst. Das kannst du später unter{' '}
+        <span className="text-foreground/90">Einstellungen → Wo senden?</span> wechseln.
+      </p>
+
+      <div className="space-y-2">
+        {NETWORK_SETUP_PLAN_OPTIONS.map((opt) => {
+          const active = chosen && plan === opt.id
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => pick(opt.id)}
+              className={cn(
+                'w-full rounded-lg border p-3 text-left transition-colors',
+                active
+                  ? 'border-primary bg-primary/5 ring-1 ring-primary/25'
+                  : 'border-border hover:border-primary/35 hover:bg-muted/40'
+              )}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-medium text-foreground">{opt.title}</p>
+                  <p className="text-xs text-muted-foreground">{opt.subtitle}</p>
+                </div>
+                {active ? <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden /> : null}
+              </div>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{opt.detail}</p>
+            </button>
+          )
+        })}
+      </div>
+
+      {!chosen ? (
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          Bitte eine Option wählen — dann mit <strong>Weiter</strong>.
+        </p>
+      ) : (
+        <p className="text-xs text-emerald-800 dark:text-emerald-200">
+          Gespeichert — im nächsten Schritt richtest du Aufbewahrung und Chain-Anbindung passend ein.
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function OnboardingBossEinsatzRulesStep(p: PanelProps) {
+  const cfg = p.apiSnapshot?.einsatzConfig
+  const edition = cfg?.editionLabel?.trim() || 'Morgendrot-Standard (Purge + Rebate)'
+  const [ttlDays, setTtlDays] = useState(30)
+  const [enablePurge, setEnablePurge] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    const ttl = cfg?.defaultTtlDays
+    if (ttl != null && Number.isFinite(ttl)) setTtlDays(Math.floor(ttl))
+    if (cfg?.enablePurge != null) setEnablePurge(cfg.enablePurge !== false)
+  }, [cfg?.defaultTtlDays, cfg?.enablePurge])
+
+  const saveRules = async () => {
+    if (!p.backendOnline) {
+      setMsg('Boss-Server nicht erreichbar — Regeln werden beim Speichern auf dem PC hinterlegt.')
+      return
+    }
+    setBusy(true)
+    setMsg('')
+    const r = await postApplyEinsatzConfig({ defaultTtlDays: ttlDays, enablePurge })
+    setBusy(false)
+    if (!r.ok) {
+      setMsg(r.error || 'Speichern fehlgeschlagen.')
+      toast.error(r.error || 'Speichern fehlgeschlagen.')
+      return
+    }
+    setSaved(true)
+    setMsg('Einsatz-Regeln gespeichert — gelten für Server und künftige Helfer-Handoffs.')
+    toast.success('Einsatz-Regeln gespeichert.')
+    p.onReload?.()
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Hier legst du fest, <strong className="font-medium text-foreground">wie lange Nachrichten bleiben</strong> und
+        ob alte Einträge gelöscht werden dürfen. Das änderst du jederzeit —{' '}
+        <strong className="font-medium text-foreground">ohne neuen Contract</strong>.
+      </p>
+      <p className="text-xs text-muted-foreground">
+        Fest im Blockchain-Programm ({edition}): wer Nachrichten speichern darf und welche Sicherheitsregeln gelten —{' '}
+        <Link href="/handbook?file=MOVE-MESSENGER-KONFIGURATION.md" className="text-primary underline-offset-2 hover:underline">
+          Kurzüberblick im Handbuch
+        </Link>
+        .
+      </p>
+
+      <div className="grid gap-3 sm:grid-cols-[auto_1fr] sm:items-end">
+        <div className="space-y-1.5">
+          <Label htmlFor="boss-wizard-ttl" className="text-xs">
+            Aufbewahrung (Tage)
+          </Label>
+          <Input
+            id="boss-wizard-ttl"
+            type="number"
+            min={0}
+            max={3650}
+            className="w-24 font-mono text-sm"
+            value={ttlDays}
+            onChange={(e) => {
+              const n = parseInt(e.target.value, 10)
+              setTtlDays(Number.isFinite(n) ? Math.max(0, Math.min(3650, n)) : 0)
+              setSaved(false)
+            }}
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 pb-0.5">
+          {[7, 30, 90].map((d) => (
+            <Button
+              key={d}
+              type="button"
+              size="sm"
+              variant={ttlDays === d ? 'secondary' : 'outline'}
+              onClick={() => {
+                setTtlDays(d)
+                setSaved(false)
+              }}
+            >
+              {d} Tage
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <label className="flex cursor-pointer items-start gap-2 text-sm text-muted-foreground">
+        <input
+          type="checkbox"
+          className="mt-0.5"
+          checked={enablePurge}
+          onChange={(e) => {
+            setEnablePurge(e.target.checked)
+            setSaved(false)
+          }}
+        />
+        <span>
+          Alte Nachrichten auf der Chain löschen dürfen{' '}
+          <span className="text-xs">(empfohlen — spart Speicher und Kosten)</span>
+        </span>
+      </label>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" disabled={busy || !p.backendOnline} onClick={() => void saveRules()}>
+          {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+          Regeln speichern
+        </Button>
+        {saved ? <StatusRow ok={true} label="Gespeichert" /> : null}
+      </div>
+
+      {!p.backendOnline ? (
+        <p className="text-xs text-amber-800 dark:text-amber-200">
+          Ohne laufenden Boss-Server kannst du die Werte trotzdem wählen — Speichern erst wenn die Basis läuft.
+        </p>
+      ) : null}
+      {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
+    </div>
+  )
+}
+
+export function OnboardingBossChainStep(p: PanelProps) {
+  const plan = readBossWizardNetworkSetupPlan()
+  const hasTestnetPkg = Boolean(p.apiSnapshot?.packageId?.trim())
+  const net = resolveBossWizardDeployNetwork(p.apiSnapshot)
+  const pkgMasked = maskWalletAddress(p.apiSnapshot?.packageId || '')
+  const [profileState, setProfileState] = useState(() => syncBossWizardNetworkProfiles(p.apiSnapshot))
+  const mainnetStatus = getBossMainnetWizardStatus(p.apiSnapshot)
+  const mainnetSendReady = mainnetStatus.sendReady
+  const mainnetAnchorReady = mainnetStatus.anchorReady
+  const mainnetConfigured = mainnetSendReady || mainnetAnchorReady
+  const [manualId, setManualId] = useState('')
+  const [busy, setBusy] = useState<'testnet' | 'mainnet' | 'manual' | null>(null)
   const [msg, setMsg] = useState('')
   const [withGlobals, setWithGlobals] = useState(true)
 
-  const runDeploy = async () => {
-    setBusy(true)
+  const senderAddress =
+    p.apiSnapshot?.myAddressFull?.trim() || p.apiSnapshot?.myAddress?.trim() || undefined
+
+  useEffect(() => {
+    const refresh = () => {
+      const synced = syncBossWizardNetworkProfiles(p.apiSnapshot)
+      setProfileState(synced)
+      const prev = readNetworkProfilesState()
+      if (
+        synced.mainnet.packageId !== prev.mainnet.packageId ||
+        synced.mainnet.rpcUrl !== prev.mainnet.rpcUrl
+      ) {
+        writeNetworkProfilesState(synced)
+      }
+    }
+    refresh()
+    window.addEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, refresh)
+    return () => window.removeEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, refresh)
+  }, [p.apiSnapshot?.packageId, p.apiSnapshot?.einsatzConfig?.mainnetPackageId, p.apiSnapshot?.einsatzConfig?.mainnetRpcUrl])
+
+  const showTestnet = plan !== 'mainnet-only'
+  const showMainnet = plan === 'mainnet-only' || plan === 'both'
+  const testnetDone = hasTestnetPkg
+  const chainReady = plan === 'mainnet-only' ? mainnetConfigured : testnetDone
+
+  const runTestnetDeploy = async () => {
+    setBusy('testnet')
     setMsg('')
     try {
       const roleR = await ensureBossRoleOnServer()
@@ -126,161 +388,259 @@ export function OnboardingBossPackageStep(p: PanelProps) {
         forceGlobals: false,
       })
       if (!r.ok) {
-        setMsg(r.error || 'Deploy fehlgeschlagen.')
+        const err = r.error || 'Anlegen fehlgeschlagen.'
+        setMsg(err)
+        toast.error(err)
         return
       }
-      setMsg(r.message || 'Package deployt.')
+      const okMsg = r.message || `Messenger-Contract auf ${net.label} angelegt.`
+      setMsg(okMsg)
+      toast.success(okMsg)
       p.onReload?.()
     } finally {
-      setBusy(false)
+      setBusy(null)
+    }
+  }
+
+  const runMainnetDeploy = async () => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        'Move auf Mainnet deployen?\n\nErzeugt neues Package + Postfach auf Mainnet (Gas nötig). Testnet-IDs bleiben unverändert. Dauert einige Minuten.'
+      )
+    ) {
+      return
+    }
+    setBusy('mainnet')
+    setMsg('Mainnet-Deploy läuft — bitte warten (kann 2–5 Min. dauern)…')
+    try {
+      const rpcUrl = profileState.mainnet.rpcUrl.trim() || DEFAULT_MAINNET_RPC_URL
+      const out = await postDeployMainnetPackage({ rpcUrl })
+      if (!out.ok) {
+        setMsg(out.error)
+        toast.error(out.error)
+        return
+      }
+      const next = {
+        ...profileState,
+        active: plan === 'mainnet-only' ? ('mainnet' as const) : profileState.active,
+        mainnet: {
+          rpcUrl: out.mainnetRpcUrl || rpcUrl,
+          packageId: out.packageId,
+          mailboxId: out.mailboxId || profileState.mainnet.mailboxId,
+        },
+      }
+      setProfileState(next)
+      writeNetworkProfilesState(next)
+      notifyNetworkProfilesChanged()
+      const apply = await applyActiveNetworkProfile({
+        state: next,
+        backendOnline: p.backendOnline,
+        senderAddress,
+      })
+      if (!apply.ok) {
+        const text = `${out.message || 'Deploy OK.'} Profil speichern: ${apply.error}`
+        setMsg(text)
+        toast.error(text)
+        return
+      }
+      const okMsg = out.mailboxId
+        ? 'Mainnet — Package + Postfach angelegt.'
+        : 'Mainnet-Package deployt — Postfach fehlt (create_globals prüfen).'
+      setMsg(okMsg)
+      toast.success(okMsg)
+      p.onReload?.()
+    } catch (e) {
+      const text = e instanceof Error ? e.message : String(e)
+      setMsg(text)
+      toast.error(text)
+    } finally {
+      setBusy(null)
     }
   }
 
   const runApplyManual = async () => {
-    setBusy(true)
+    setBusy('manual')
     setMsg('')
     try {
       const r = await applyBossPackageId(manualId)
-      setMsg(r.ok ? r.message || 'Gespeichert.' : r.error || 'Speichern fehlgeschlagen.')
+      const text = r.ok ? r.message || 'Gespeichert.' : r.error || 'Speichern fehlgeschlagen.'
+      setMsg(text)
+      if (r.ok) toast.success(text)
+      else toast.error(text)
       if (r.ok) p.onReload?.()
     } finally {
-      setBusy(false)
+      setBusy(null)
     }
   }
+
+  const planHint =
+    plan === 'both'
+      ? 'Zuerst Testnet zum kostenlosen Schreiben — Mainnet optional für Verankerung.'
+      : plan === 'mainnet-only'
+        ? 'Du hast Produktion (Mainnet) gewählt — hier wird der Contract auf Mainnet angelegt.'
+        : 'Du hast Übung (Testnet) gewählt — kostenlos testen und schreiben.'
 
   return (
     <div className="space-y-4">
-      <StatusRow ok={hasPkg} label="Package-ID gesetzt" />
-      <StatusRow ok={hasRpc} label="RPC / Netzwerk erreichbar" />
-      <BossRegistryBootstrapPanel
-        apiSnapshot={p.apiSnapshot}
-        backendOnline={p.backendOnline}
-        onReload={p.onReload}
-      />
-      <label className="flex cursor-pointer items-start gap-2 text-xs text-muted-foreground">
-        <input
-          type="checkbox"
-          className="mt-0.5"
-          checked={withGlobals}
-          onChange={(e) => setWithGlobals(e.target.checked)}
-        />
-        <span>
-          Nach Deploy <strong className="text-foreground">create_globals</strong> ausführen (MAILBOX_ID +
-          Registries — empfohlen bei neuem Package, Gas nötig)
-        </span>
-      </label>
-      <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" disabled={busy || !p.backendOnline} onClick={() => void runDeploy()}>
-          {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
-          Move-Package deployen
-        </Button>
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="boss-pkg-manual" className="text-xs">
-          Oder bestehende Package-ID
-        </Label>
-        <div className="flex flex-wrap gap-2">
-          <Input
-            id="boss-pkg-manual"
-            className="min-w-[12rem] flex-1 font-mono text-xs"
-            placeholder="0x…"
-            value={manualId}
-            onChange={(e) => setManualId(e.target.value)}
-          />
-          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void runApplyManual()}>
-            Übernehmen
-          </Button>
-        </div>
-      </div>
-      {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
-      <SettingsNetworkProfilesSection
-        apiStatus={p.apiSnapshot ?? null}
-        backendOnline={p.backendOnline === true}
-        onApplied={p.onReload}
-      />
-    </div>
-  )
-}
-
-export function OnboardingBossMailboxesStep(p: PanelProps) {
-  const hasMb = Boolean(p.apiSnapshot?.mailboxId?.trim())
-  const hasTeam = Boolean(
-    p.apiSnapshot?.handoffLabel?.trim() ||
-      (p.apiSnapshot?.inboxUnionMailboxIds?.length ?? 0) > 1
-  )
-  const walletValid = p.apiSnapshot?.hasKeys === true && p.apiSnapshot?.locked !== true
-  const [teamName, setTeamName] = useState(p.apiSnapshot?.handoffLabel?.trim() || '')
-  const [busy, setBusy] = useState(false)
-  const [msg, setMsg] = useState('')
-
-  const saveTeamName = async () => {
-    setBusy(true)
-    try {
-      const r = await applyBossHandoffLabel(teamName)
-      setMsg(r.ok ? r.message || 'Gespeichert.' : r.error || 'Speichern fehlgeschlagen.')
-      if (r.ok) p.onReload?.()
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <div className="space-y-5">
-      <p className="text-sm text-muted-foreground">
-        Privates Server-Postfach (MAILBOX_ID) und Team-Postfächer (TEAM_MAILBOX_IDS) — beides fließt in den
-        Posteingang ein.
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Hier verbindest du den Messenger mit der Blockchain. Ein Klick legt den{' '}
+        <strong className="font-medium text-foreground">Morgendrot-Standard-Contract</strong> an — du brauchst keinen
+        eigenen Code.
       </p>
-      <TeamMailboxSyncStatus
-        apiSnapshot={p.apiSnapshot}
-        backendOnline={p.backendOnline}
-        onReload={p.onReload}
-      />
-      <div className="space-y-3 rounded-md border border-border/60 p-3">
-        <StatusRow ok={hasMb} label="Privates Server-Postfach (MAILBOX_ID)" />
-        <ChatViewPrivateMailboxCreateButton
-          walletValid={walletValid}
-          onObjectId={(id) => {
-            void applyBossServerMailboxId(id).then((r) => {
-              setMsg(r.ok ? r.message || 'Postfach gespeichert.' : r.error || 'Speichern fehlgeschlagen.')
-              if (r.ok) p.onReload?.()
-            })
-          }}
-          onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
-        />
-      </div>
-      <div className="space-y-3 rounded-md border border-border/60 p-3">
-        <StatusRow ok={hasTeam} label="Einsatz-Name / Team-Postfächer" />
-        <div className="space-y-2">
-          <Label htmlFor="boss-team-name" className="text-xs">
-            Einsatz-Name (Handoff-Label)
-          </Label>
-          <div className="flex flex-wrap gap-2">
-            <Input
-              id="boss-team-name"
-              className="min-w-[10rem] flex-1"
-              placeholder="z. B. THW Einsatz Alpha"
-              value={teamName}
-              onChange={(e) => setTeamName(e.target.value)}
-            />
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void saveTeamName()}>
-              Speichern
-            </Button>
-          </div>
+      <p className="text-xs text-muted-foreground">{planHint}</p>
+
+      {showTestnet ? (
+        <div className="space-y-3 rounded-md border border-sky-500/35 bg-sky-500/10 px-3 py-2.5">
+          <p className="text-sm font-medium text-foreground">Übung (Testnet)</p>
+          <p className="font-mono text-xs text-muted-foreground">{net.rpcHint}</p>
+          <StatusRow
+            ok={testnetDone}
+            label={
+              testnetDone
+                ? `Verbunden${pkgMasked ? ` (${pkgMasked})` : ''}`
+                : 'Noch nicht mit Testnet verbunden'
+            }
+          />
+          {!testnetDone ? (
+            <>
+              {!p.backendOnline ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  Basis nicht erreichbar — Wallet entsperren und Backend starten (`npm run dm`).
+                </p>
+              ) : null}
+              <label className="flex cursor-pointer items-start gap-2 text-sm text-muted-foreground">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={withGlobals}
+                  onChange={(e) => setWithGlobals(e.target.checked)}
+                />
+                <span>
+                  Server-Postfach und Registries gleich mit anlegen{' '}
+                  <span className="text-xs">(empfohlen)</span>
+                </span>
+              </label>
+              <Button
+                type="button"
+                className="w-full sm:w-auto"
+                disabled={busy !== null || !p.backendOnline}
+                onClick={() => void runTestnetDeploy()}
+              >
+                {busy === 'testnet' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                Messenger-Contract anlegen (Testnet)
+              </Button>
+            </>
+          ) : plan === 'both' ? (
+            <p className="text-xs text-emerald-800 dark:text-emerald-200">Testnet bereit — zum täglichen Schreiben.</p>
+          ) : null}
         </div>
-        <ChatViewTeamMailboxCreateButton
-          walletValid={walletValid}
-          privateServerMailboxId={p.apiSnapshot?.mailboxId}
-          onObjectId={() => {
-            setMsg('Team-Mailbox erstellt und auf Server übernommen.')
-            p.onReload?.()
-          }}
-          onStatus={(text, kind) => setMsg(kind === 'error' ? text : text)}
+      ) : null}
+
+      {showMainnet ? (
+        <div className="space-y-3 rounded-md border border-violet-500/35 bg-violet-500/10 px-3 py-2.5">
+          <p className="text-sm font-medium text-foreground">
+            Produktion (Mainnet){plan === 'both' ? ' — optional' : ''}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {plan === 'both'
+              ? 'Eigenes Package auf Mainnet — zum Verankern, wenn es fest auf der echten Chain sein soll. Später auch unter Einstellungen.'
+              : 'Gas-Kosten — Nachrichten landen direkt auf der echten Chain.'}
+          </p>
+          <StatusRow
+            ok={mainnetConfigured}
+            label={
+              mainnetSendReady
+                ? `Mainnet bereit (${maskWalletAddress(mainnetStatus.packageId)})`
+                : mainnetAnchorReady
+                  ? `Mainnet-Package verbunden (${maskWalletAddress(mainnetStatus.packageId)}) — Verankern möglich`
+                  : mainnetStatus.samePackageAsTestnet
+                    ? 'Mainnet braucht eigenes Package (nicht dieselbe ID wie Testnet)'
+                    : 'Mainnet noch nicht eingerichtet'
+            }
+          />
+          {!mainnetConfigured ? (
+            <Button
+              type="button"
+              variant={plan === 'mainnet-only' ? 'default' : 'outline'}
+              className="w-full sm:w-auto"
+              disabled={busy !== null || !p.backendOnline || (plan === 'both' && !testnetDone)}
+              onClick={() => void runMainnetDeploy()}
+            >
+              {busy === 'mainnet' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+              Messenger-Contract anlegen (Mainnet)
+            </Button>
+          ) : mainnetSendReady ? (
+            <p className="text-xs text-emerald-800 dark:text-emerald-200">Mainnet bereit — unter Einstellungen umschaltbar.</p>
+          ) : (
+            <p className="text-xs text-emerald-800 dark:text-emerald-200">
+              Mainnet-Package vom Boss übernommen — zum Senden auf Mainnet optional noch Postfach unter Einstellungen.
+            </p>
+          )}
+          {plan === 'both' && !testnetDone ? (
+            <p className="text-xs text-muted-foreground">Zuerst Testnet verbinden, dann optional Mainnet.</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {chainReady ? (
+        <p className="text-xs text-emerald-800 dark:text-emerald-200">
+          Chain-Anbindung für deinen Plan ist bereit — mit <strong>Weiter</strong> zu den Postfächern.
+          {plan === 'both' && testnetDone && !mainnetConfigured
+            ? ' Mainnet kannst du später in den Einstellungen nachholen.'
+            : null}
+        </p>
+      ) : null}
+
+      {!withGlobals && testnetDone && showTestnet ? (
+        <BossRegistryBootstrapPanel
+          apiSnapshot={p.apiSnapshot}
+          backendOnline={p.backendOnline}
+          onReload={p.onReload}
+          variant="compact"
         />
-      </div>
-      {msg ? <p className="text-xs text-muted-foreground">{msg}</p> : null}
+      ) : null}
+
+      {msg ? <p className="whitespace-pre-wrap text-xs text-muted-foreground">{msg}</p> : null}
+
+      {showTestnet ? (
+        <details className="rounded-md border border-border/60 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
+            Schon verbunden? (Testnet Package-ID eintragen)
+          </summary>
+          <div className="mt-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Nur wenn der Contract bereits auf Testnet existiert — sonst oben „anlegen“.
+            </p>
+            <Label htmlFor="boss-pkg-manual" className="text-xs">
+              Package-ID (0x…)
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                id="boss-pkg-manual"
+                className="min-w-[12rem] flex-1 font-mono text-xs"
+                placeholder="0x…"
+                value={manualId}
+                onChange={(e) => setManualId(e.target.value)}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void runApplyManual()}
+              >
+                Übernehmen
+              </Button>
+            </div>
+          </div>
+        </details>
+      ) : null}
     </div>
   )
 }
+
+export { OnboardingBossMailboxesStep }
 
 /** @deprecated — nutze OnboardingBossMailboxesStep */
 export function OnboardingBossServerMailboxStep(p: PanelProps) {
@@ -292,53 +652,41 @@ export function OnboardingBossTeamStep(p: PanelProps) {
   return <OnboardingBossMailboxesStep {...p} />
 }
 
-export function OnboardingBossTelegramBotStep(p: PanelProps) {
+export function OnboardingBossTelegramStepPanel(p: PanelProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Bot-Token und deine Admin-Chat-ID für Alarme und Tests.</p>
-      <SettingsTelegramIntegration backendOnline={p.backendOnline === true} />
-    </div>
-  )
-}
-
-export function OnboardingBossTelegramGroupStep(p: PanelProps) {
-  const isBoss = ['boss', 'kommandant'].includes((p.apiSnapshot?.role || '').toLowerCase())
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Einsatz-Alarmgruppe: Einladungslink und Gruppen-Chat-ID für Fan-out.</p>
-      <SettingsTelegramEinsatzGroup
-        backendOnline={p.backendOnline === true}
-        apiStatus={p.apiSnapshot ?? null}
-        isBossRole={isBoss}
-      />
-    </div>
-  )
-}
-
-export function OnboardingMeshtasticStep(p: PanelProps) {
-  if (!p.apiSnapshot) return null
-  return (
-    <LazyChatViewPulseSettings
-      apiStatus={p.apiSnapshot ?? null}
-      allowDevExpertTools={false}
-      settingsEmbedded
-      networkManaged={false}
+    <OnboardingBossTelegramStep
+      backendOnline={p.backendOnline}
+      onOpenSettings={() => {
+        primeSettingsCategory('telegram')
+        p.onOpenHandoffImport?.()
+      }}
     />
   )
 }
 
-export function OnboardingBossHelpersStep(p: PanelProps) {
+/** @deprecated — nutze OnboardingBossTelegramStepPanel */
+export function OnboardingBossTelegramBotStep(p: PanelProps) {
+  return <OnboardingBossTelegramStepPanel {...p} />
+}
+
+/** @deprecated — nutze OnboardingBossTelegramStepPanel */
+export function OnboardingBossTelegramGroupStep(p: PanelProps) {
+  return <OnboardingBossTelegramStepPanel {...p} />
+}
+
+export function OnboardingMeshtasticStep(p: PanelProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Helfer per Handoff provisionieren — Schnell-Assistent oder Experten-Panel (dieselbe Export-Pipeline).
-      </p>
-      <HandoffProvisionEntry
-        apiSnapshot={p.apiSnapshot ?? null}
-        contactDirectory={p.contactDirectory}
-        showTeamOverview={false}
-      />
-    </div>
+    <OnboardingFunkStep
+      layout="wizard"
+      apiSnapshot={p.apiSnapshot}
+      backendOnline={p.backendOnline}
+      contactDirectory={p.contactDirectory}
+      onReload={p.onReload}
+      onOpenSettings={() => {
+        primeSettingsCategory('funk')
+        p.onOpenHandoffImport?.()
+      }}
+    />
   )
 }
 
@@ -389,15 +737,12 @@ function StepRow({ ok, label }: { ok: boolean; label: string }) {
 export function OnboardingHelperTelegramStep() {
   const invite = readTelegramInviteFromHandoffExtras()
   if (!invite) {
-    return <p className="text-sm text-muted-foreground">Kein Telegram-Link im Handoff — Schritt überspringen.</p>
+    return <p className="text-sm text-muted-foreground">Kein Link im Handoff — überspringen.</p>
   }
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Optional: Alarmgruppe aus dem Handoff.</p>
-      <a href={invite} target="_blank" rel="noreferrer" className="text-sm text-primary underline break-all">
-        {invite}
-      </a>
-    </div>
+    <a href={invite} target="_blank" rel="noreferrer" className="text-sm text-primary underline break-all">
+      {invite}
+    </a>
   )
 }
 
@@ -407,10 +752,9 @@ export function OnboardingHelperWalletStep(p: PanelProps) {
   const ready = hasWallet || !r.needsMnemonic
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Seed per QR vom Boss scannen oder Mnemonic eingeben.</p>
       <StatusRow ok={ready} label="Wallet aktiv" />
       {!ready ? (
-        <Button type="button" onClick={() => p.onActivateWallet?.()}>
+        <Button type="button" className="w-full sm:w-auto" onClick={() => p.onActivateWallet?.()}>
           Seed einrichten
         </Button>
       ) : null}
@@ -423,9 +767,11 @@ export function OnboardingHelperTeamSelfStep(p: PanelProps) {
   const label = handoff?.handoffLabel || p.apiSnapshot?.handoffLabel?.trim()
   return (
     <div className="space-y-3">
-      <StatusRow ok={Boolean(label)} label="Einsatz / Team-Name aus Handoff" />
-      {label ? <p className="text-sm text-foreground">{label}</p> : null}
-      <OnboardingMeshtasticStep {...p} />
+      <StatusRow ok={Boolean(label)} label="Einsatz-Name" />
+      {label ? <p className="text-sm font-medium text-foreground">{label}</p> : null}
+      <p className="text-xs text-muted-foreground">
+        Funk-Stick einrichten? Im nächsten Schritt „Funk“ oder später unter Einstellungen.
+      </p>
     </div>
   )
 }
@@ -435,11 +781,11 @@ export function OnboardingHelperPeeringStep(p: PanelProps) {
   const boss = handoff?.bossAddress?.trim() || ''
   return (
     <div className="space-y-3">
-      <StatusRow ok={Boolean(boss)} label="Boss / Einsatzleitung verknüpft" />
+      <StatusRow ok={Boolean(boss)} label="Boss verknüpft" />
       {boss ? (
         <p className="font-mono text-xs text-foreground">{maskWalletAddress(boss)}</p>
       ) : (
-        <p className="text-sm text-muted-foreground">Boss-Adresse steht im Handoff — nach Import sichtbar.</p>
+        <p className="text-sm text-muted-foreground">Erscheint nach Handoff-Import.</p>
       )}
     </div>
   )
@@ -447,12 +793,9 @@ export function OnboardingHelperPeeringStep(p: PanelProps) {
 
 export function OnboardingWandererWalletStep(p: PanelProps) {
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">Wallet anlegen oder Seed importieren — Keys bleiben auf diesem Gerät.</p>
-      <Button type="button" onClick={() => p.onActivateWallet?.()}>
-        Wallet einrichten
-      </Button>
-    </div>
+    <Button type="button" className="w-full sm:w-auto" onClick={() => p.onActivateWallet?.()}>
+      Wallet einrichten
+    </Button>
   )
 }
 
@@ -469,21 +812,28 @@ export function OnboardingWandererAddressStep(p: PanelProps) {
 export function OnboardingWandererMailboxStep(p: PanelProps) {
   return (
     <SettingsMyMailboxesSection
+      embedded
       apiStatus={p.apiSnapshot ?? null}
       myAddress={(p.apiSnapshot?.myAddressFull || p.apiSnapshot?.myAddress || '').trim()}
+      backendOnline={p.backendOnline}
+      onReload={p.onReload}
     />
   )
 }
 
-export function OnboardingDoneStep(p: { children?: ReactNode }) {
+export function OnboardingDoneStep(p: { path?: 'boss' | 'helper' | 'wanderer' }) {
   return (
     <div className="space-y-3 text-sm text-muted-foreground">
-      <p className="font-medium text-foreground">Einrichtung abgeschlossen.</p>
-      <ul className="list-inside list-disc space-y-1">
-        <li>Dashboard und Nachrichten nutzen</li>
-        <li>Einstellungen → Wizard jederzeit fortsetzen</li>
-      </ul>
-      {p.children}
+      <p className="text-foreground">
+        <strong className="font-medium">Dein Messenger ist eingerichtet.</strong>
+      </p>
+      {p.path === 'boss' ? (
+        <p className="text-xs leading-relaxed">
+          Helfer-Geräte provisionierst du <strong className="font-medium text-foreground">danach</strong> in der
+          Einsatzleitung über <strong className="font-medium text-foreground">Helfer einrichten</strong> — nicht in
+          diesem Wizard.
+        </p>
+      ) : null}
     </div>
   )
 }

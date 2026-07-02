@@ -25,17 +25,44 @@ Stand: Nach vollständiger Prüfung von Struktur, Seed/Keys, Ordnern und Krypto.
 | **monitoring.ts** | Monitor-Status, Heartbeat | config, chain-access, streams-adapter |
 | **audit-log.ts** | Audit-Events, CSV/PDF-Export | config |
 
-**Fazit:** Klar getrennte Module; Seed/Keys nur in Vault bzw. IOTA-CLI-Keystore, nicht in App-Code. So schlank wie möglich ohne Sicherheitsverzicht.
+**Fazit:** Klar getrennte Module; Signing-Material nur in IOTA-CLI-Keystore oder verschlüsselt im Tresor; Messenger-ECDH separat generiert — nicht im App-Quellcode. So schlank wie möglich ohne Sicherheitsverzicht.
 
 ---
 
-## 2. SPOF = Seed
+## 2. SPOF, Schlüssel-Trennung
 
-- **Seed/Mnemonic** erscheint **nicht** im Quellcode. Entweder:
-  - **IOTA-CLI-Keystore** (Rebased): Seed liegt in der Wallet des Nutzers (CLI), Passwort optional per stdin.
-  - **VAULT_FILE**: ECDH-Keypair (aus Mnemonic/CLI abgeleitet) passwortverschlüsselt; Passwort nur zur Laufzeit.
-- **Einziger SPOF:** Verlust von Seed bzw. Vault + Passwort = Verlust des Zugriffs (by design).
-- **Passwort:** Wird nur im Prozess gehalten (`getWalletPassword()`), nicht auf Disk; verschlüsselte Env-Datei optional (ENCRYPTED_ENV_FILE).
+### 2.1 Zwei Domänen (nicht „ein Seed für alles“)
+
+| Domäne | Schlüssel | Herkunft im Code | SPOF |
+|--------|-----------|------------------|------|
+| **On-Chain-Signing** | Ed25519 (IOTA) | Mnemonic / Bech32 / CLI-Keystore; optional `WALLET_DERIVATION_PATH` (BIP44-Style) | **Seed bzw. CLI-Wallet** |
+| **Messenger E2E** | P-256 ECDH | `generateKeyPair()` in `wallet-bridge.ts` — **nicht** aus dem IOTA-Seed abgeleitet | **Tresor-Passwort** + Vault-Datei (optional on-chain) |
+
+**Krypto-Pfad Messenger:** ECDH → HKDF (`morgendrot-aes-gcm`) → AES-GCM pro Nachricht (`crypto-layer.ts`). Statisches Shared Secret pro Partner — **kein** Signal-artiges Forward Secrecy (siehe `SECURITY-RATING.md`, Roadmap **§ H.23**).
+
+### 2.2 Seed/Mnemonic
+
+- Erscheint **nicht** im Quellcode.
+- **SIGNER=cli:** Seed im IOTA-Rebased-CLI-Keystore des Nutzers.
+- **SIGNER=sdk:** Mnemonic/Bech32 zur Laufzeit oder optional im Tresor (`iotaSdkSignerImport`, UI: „Signer mit speichern“).
+
+### 2.3 Tresor (`VAULT_FILE`)
+
+- Speichert das **eigenständig generierte** ECDH-Messaging-Keypair passwortverschlüsselt (PBKDF2 310k + AES-GCM, `vault-local.ts`).
+- **Tresor-Passwort ≠ Wallet-Mnemonic** — die Mnemonic signiert Transaktionen, entschlüsselt den Tresor **nicht** (`docs/VAULT-TRESOR-MARKTREIFE.md`).
+- Optionaler Signer-Import im gleichen Blob koppelt Signing an den Tresor — nur bei bewusster Wahl (`includeIotaMnemonic`).
+
+### 2.4 SPOF-Einordnung
+
+- **Signing:** Seed/Mnemonic bewusster SPOF für On-Chain-Identität und Recovery (akzeptiertes Trade-off).
+- **Messenger:** eigener SPOF (Tresor + Passwort). Seed-Kompromittierung **allein** liefert **keine** Messenger-Keys ohne entsperrten Tresor.
+- **Beide verloren** (Seed + Tresor-Passwort ohne Backup) = kein Signing und keine Messenger-Keys wiederherstellbar.
+
+### 2.5 Passwort zur Laufzeit
+
+- Wallet-/Tresor-Passwort nur im Prozess (`getWalletPassword()`), nicht als Klartext auf Disk; optional `ENCRYPTED_ENV_FILE`.
+
+**Architektur-Einordnung:** `docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md` § **6b**.
 
 ---
 
@@ -93,7 +120,7 @@ Stand: Nach vollständiger Prüfung von Struktur, Seed/Keys, Ordnern und Krypto.
 ## 7. Kurz-Checkliste
 
 - [x] Modular: klare Module, keine Zirkelimporte.
-- [x] SPOF: nur Seed/Vault+Passwort; nicht im Code.
+- [x] SPOF: Signing-Seed und Tresor+Passwort getrennt dokumentiert; Keys nicht im Code.
 - [x] Kein spawn mit shell: true, kein User-Input als Shell.
 - [x] setEnvKey: keine Zeilenumbrüche im Wert.
 - [x] deploy-package: kein Path-Traversal (nur ein Ordner-Name).

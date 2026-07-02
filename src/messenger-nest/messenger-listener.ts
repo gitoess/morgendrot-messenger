@@ -3,6 +3,7 @@
  */
 import { logger } from '../logger.js';
 import { CFG } from '../config.js';
+import { formatNetworkFetchError, formatRpcUrlForLog } from '../network-fetch-error.js';
 import { getClient, typeName, getHandshakeFromMailbox, findPeerHandshakeFrom } from '../chain-access.js';
 import { deriveSharedSecret, deriveAesGcmKey, decryptMessage } from '../crypto-layer.js';
 import { normalizeAddress, toEventBytes } from '../utils.js';
@@ -26,8 +27,13 @@ export async function listenForMessages(
             await fetchLastMessages(myAddress, peerMap, myPrivKey, CFG.FETCH_LAST_ON_START, seenKeys).then(
                 (r) => r.messages
             );
-        } catch (e: any) {
-            logger.warn('Fetch letzte Nachrichten beim Start fehlgeschlagen: ' + (e?.message || e));
+        } catch (e: unknown) {
+            logger.warn(
+                formatNetworkFetchError(e, {
+                    context: 'Fetch letzte Nachrichten beim Start fehlgeschlagen',
+                    target: `RPC ${formatRpcUrlForLog(CFG.RPC_URL)}`,
+                })
+            );
         }
     }
 
@@ -231,8 +237,13 @@ export async function listenForMessages(
                     }
                 }
             }
-        } catch (e: any) {
-            logger.warn(`Listener-Loop Fehler: ${String(e?.message || e)}`);
+        } catch (e: unknown) {
+            logger.warn(
+                formatNetworkFetchError(e, {
+                    context: 'Listener-Loop Fehler',
+                    target: `RPC ${formatRpcUrlForLog(CFG.RPC_URL)}`,
+                })
+            );
         }
         await new Promise((r) => setTimeout(r, CFG.LISTENER_POLL_MS));
     }

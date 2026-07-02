@@ -30,6 +30,11 @@ import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapsh
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import {
+  isBrowserSessionSignerReady,
+  isMessengerVaultSessionComplete,
+  messengerVaultUiShouldStayLocked,
+} from '@/frontend/lib/messenger-session-keys-ready'
 import { resolveStandaloneDeviceLocked } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import {
   clearDirectIotaSessionSigner,
@@ -126,12 +131,11 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
 
   const applyLockedFromStatusPoll = useCallback(
     (defaultLocked: boolean, res: { locked?: boolean; hasKeys?: boolean }) => {
+      const browserReady = isBrowserSessionSignerReady(false)
+      const sessionComplete = isMessengerVaultSessionComplete(res, browserReady)
+
       if (vaultUnlockRequestedRef.current) {
-        const keysReady =
-          res.hasKeys === true && !res.locked
-            ? true
-            : isStandaloneMessengerWithoutBasis() && !!getDirectIotaSessionSigner()
-        if (keysReady) {
+        if (sessionComplete) {
           vaultUnlockRequestedRef.current = false
           sessionUnlockedStableRef.current = true
           lockPollStreakRef.current = 0
@@ -141,6 +145,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         }
         return
       }
+
+      if (messengerVaultUiShouldStayLocked(res, browserReady)) {
+        setLocked(true)
+        return
+      }
+
       if (!defaultLocked) {
         lockPollStreakRef.current = 0
         sessionUnlockedStableRef.current = true
@@ -568,6 +578,9 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       sdkExtra = signerImport.trim()
     }
 
+    const expectedAddr =
+      (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined
+
     setUnlocking(true)
     if (isStandaloneMessengerWithoutBasis()) {
       const mnemonic = signerImport.trim()
@@ -626,8 +639,18 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         vaultPassword: vaultPw,
         signerImport: sdkExtra,
         apiSigner: signer,
-        expectedAddress: myAddress.trim() || undefined,
+        expectedAddress: expectedAddr,
       })
+      if (mainnetSignerHint && !getDirectIotaSessionSigner()) {
+        setMainnetSignerHint(mainnetSignerHint)
+        setUnlockError(mainnetSignerHint)
+        vaultUnlockRequestedRef.current = true
+        if (signer === 'sdk') {
+          setShowSignerImportOpen(true)
+        }
+        await checkStatus()
+        return
+      }
       setMainnetSignerHint(mainnetSignerHint)
       vaultUnlockRequestedRef.current = false
       sessionUnlockedStableRef.current = true
@@ -672,8 +695,18 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         vaultPassword: vaultPw,
         signerImport: sdkExtra,
         apiSigner: signer,
-        expectedAddress: myAddress.trim() || undefined,
+        expectedAddress: expectedAddr,
       })
+      if (hint && !getDirectIotaSessionSigner()) {
+        setMainnetSignerHint(hint)
+        setUnlockError(hint)
+        vaultUnlockRequestedRef.current = true
+        if (signer === 'sdk') {
+          setShowSignerImportOpen(true)
+        }
+        await checkStatus()
+        return
+      }
       setMainnetSignerHint(hint)
       vaultUnlockRequestedRef.current = false
       sessionUnlockedStableRef.current = true
@@ -778,12 +811,19 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     const { mainnetSignerHint: hint } = await syncMainnetKeysAfterBackendUnlock({
       vaultPassword: vaultPw,
       apiSigner: apiSnapshot?.signer,
-      expectedAddress: myAddress.trim() || undefined,
+      expectedAddress:
+        (apiSnapshot?.myAddressFull || apiSnapshot?.myAddress || myAddress).trim() || undefined,
     })
     setSessionSignerSyncBusy(false)
     if (hint) {
       setSessionSignerSyncError(hint)
       setMainnetSignerHint(hint)
+      if (apiSnapshot?.signer === 'sdk') {
+        setShowSignerImportOpen(true)
+        setUnlockMode('vault')
+        setLocked(true)
+        vaultUnlockRequestedRef.current = true
+      }
       return
     }
     setMainnetSignerHint(null)
