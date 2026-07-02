@@ -15,11 +15,11 @@ import {
   validateMessagingMailboxObjectForPackage,
 } from '@morgendrot/core/iota'
 import { parseMailboxOutNonceMarker } from '@morgendrot/core'
-import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
-import { deriveAesGcmKey, deriveSharedSecret, encryptMessage } from '@morgendrot/shared/morgendrot-crypto'
+import { encryptIotaPeerSessionMessage } from '@morgendrot/shared/morgendrot-crypto-session-wire'
 import { resolveDirectIotaSubmitContext } from '@/frontend/lib/direct-iota-submit-context'
 import {
   canUseDirectEncryptedMailboxDrain,
+  getDirectChainFieldIdsFromLs,
   getDirectMailboxChainSnapshot,
   type DirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
@@ -211,7 +211,10 @@ export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {
 }
 
 async function encryptPlaintextForDirectSubmit(
-  opts: Pick<TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput, 'plaintextUtf8' | 'peerPubRaw' | 'ecdhPrivateKey'>
+  opts: Pick<
+    TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput,
+    'plaintextUtf8' | 'peerPubRaw' | 'ecdhPrivateKey' | 'recipient'
+  >
 ): Promise<
   | { ok: true; ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; nonce: bigint }
   | { ok: false; error: string }
@@ -228,16 +231,22 @@ async function encryptPlaintextForDirectSubmit(
       error: `Nachricht zu lang (${msgUtf8} B UTF-8, max. ${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES}).`,
     }
   }
+  const snap = getDirectMailboxChainSnapshot()
+  const myAddress = (snap?.senderAddress ?? getDirectChainFieldIdsFromLs().senderAddress).trim()
+  if (!myAddress) {
+    return { ok: false, error: 'Verschlüsselter Send: MY_ADDRESS unbekannt — Status aktualisieren.' }
+  }
   try {
-    const sharedSecret = await deriveSharedSecret(opts.ecdhPrivateKey, opts.peerPubRaw)
-    const aesKey = await deriveAesGcmKey(sharedSecret)
-    const encrypted = await encryptMessage(aesKey, bodyForE2ee)
-    const full = base64ToUint8(encrypted.ciphertext)
     const nonce = parsedNonce.nonce
-    const ciphertext = new Uint8Array(full.subarray(0, -16))
-    const iv = base64ToUint8(encrypted.iv)
-    const tag = new Uint8Array(full.subarray(-16))
-    return { ok: true, ciphertext, iv, tag, nonce }
+    const packed = await encryptIotaPeerSessionMessage({
+      plaintext: bodyForE2ee,
+      myAddress,
+      peerAddress: opts.recipient.trim(),
+      myPrivKey: opts.ecdhPrivateKey,
+      peerPubRaw: opts.peerPubRaw,
+      msgId: String(nonce),
+    })
+    return { ok: true, ciphertext: packed.ciphertext, iv: packed.iv, tag: packed.tag, nonce }
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }

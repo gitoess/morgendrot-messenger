@@ -25,8 +25,7 @@ import {
     getVaultFromChain,
     createAccessKeysBatchPtb as chainCreateAccessKeysBatchPtb,
 } from '../chain-access.js';
-import { deriveSharedSecret, deriveAesGcmKey, encryptMessage, decryptMessage } from '../crypto-layer.js';
-import { base64ToUint8 } from '../shared/bytes-base64.js';
+import { encryptIotaPeerSessionMessage } from '../shared/morgendrot-crypto-session-wire.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
@@ -100,15 +99,19 @@ export async function sendEncryptedMessage(
             `morg.send.wire kind=${wireKindForLog(message)} utf8=${msgUtf8} head=${JSON.stringify(message.slice(0, 80))}`
         );
     }
-    const sharedSecret = await deriveSharedSecret(myPrivKey, peerPubRaw);
-    const aesKey = await deriveAesGcmKey(sharedSecret);
-    const encrypted = await encryptMessage(aesKey, bodyForE2ee);
-    const full = base64ToUint8(encrypted.ciphertext);
-    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
-    const ciphertext = new Uint8Array(full.subarray(0, -16));
-    const iv = base64ToUint8(encrypted.iv);
-    const tag = new Uint8Array(full.subarray(-16));
     const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    const nonce = parsedNonce ? parsedNonce.nonce : BigInt(Date.now());
+    const packed = await encryptIotaPeerSessionMessage({
+        plaintext: bodyForE2ee,
+        myAddress: MY_ADDR,
+        peerAddress: recipient,
+        myPrivKey,
+        peerPubRaw,
+        msgId: String(nonce),
+    });
+    const ciphertext = packed.ciphertext;
+    const iv = packed.iv;
+    const tag = packed.tag;
     const result = await storeEncryptedMessage(
         recipient,
         MY_ADDR,

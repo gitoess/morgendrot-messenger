@@ -327,7 +327,7 @@ Partner müssen **beide** PQ-fähig sein; Fallback auf `cs=1`.
 |-------|-------------|----------------|
 | **A0** | Dieses Dokument + Review | Nein |
 | **A1** | Envelope v2 encode/decode in `morgendrot-crypto-session.ts` | Nein | **Ist 2026-06-16** (Tests `morgendrot-crypto-session.test.ts`; Send-Pfad noch v1) |
-| **A2** | Session-Key-Ableitung + `epoch` in Send/Decrypt (Frontend + Nest) | Nein |
+| **A2** | Session-Key-Ableitung + `epoch` in Send/Decrypt (Frontend + Nest) | Nein | **Ist 2026-06-16** (`morgendrot-crypto-session-wire.ts`; v1-Legacy-Fallback beim Decrypt) |
 | **A3** | Vault `.session-keys.enc` + Migration | Nein |
 | **A4** | UI Rotation (ersetzt Peer-Pub-Löschung) | Nein |
 | **B1** | Team-Key Gruppen-Broadcast | **Ja** (`store_team_broadcast`) |
@@ -344,7 +344,7 @@ Partner müssen **beide** PQ-fähig sein; Fallback auf `cs=1`.
 |---------|-------|
 | ECDH/AES | `src/shared/morgendrot-crypto.ts` |
 | Browser Keys | `frontend/frontend/lib/direct-chat-ecdh-session.ts` |
-| Send/Decrypt | `direct-iota-encrypted-submit.ts`, `direct-iota-inbox-decrypt.ts` |
+| Send/Decrypt | `morgendrot-crypto-session-wire.ts`, `direct-iota-encrypted-submit.ts`, `direct-iota-inbox-decrypt.ts`, `messenger-chain-wrap.ts`, `messenger-fetch.ts` |
 | Handshake | `handshake-ecdh-txb.ts`, `direct-iota-handshake-submit.ts` |
 | Vault Peers | `src/vault-local.ts` → `saveHandshakeCache` |
 | Schlüssel erneuern (Phase 1 UI) | `frontend/frontend/lib/peer-key-renewal.ts` |

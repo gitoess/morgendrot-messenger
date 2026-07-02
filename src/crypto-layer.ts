@@ -19,3 +19,11 @@ export {
   encryptSessionMessage,
   decryptSessionMessage,
 } from './shared/morgendrot-crypto-session.js';
+export {
+  DEFAULT_SESSION_KEY_EPOCH,
+  SESSION_CIPHER_SUITE_P256_AES_GCM,
+  buildSessionEnvelope,
+  encryptIotaPeerSessionMessage,
+  decryptIotaPeerSessionMessage,
+  isSessionWireV2Ciphertext,
+} from './shared/morgendrot-crypto-session-wire.js';

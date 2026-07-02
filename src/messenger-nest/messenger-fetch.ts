@@ -11,7 +11,7 @@ import {
     appendInboxCache,
     loadInboxCache,
 } from '../vault-local.js';
-import { deriveSharedSecret, deriveAesGcmKey, decryptMessage } from '../crypto-layer.js';
+import { decryptIotaPeerSessionMessage } from '../shared/morgendrot-crypto-session-wire.js';
 import { normalizeAddress, toEventBytes } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
@@ -550,14 +550,16 @@ export async function fetchLastMessages(
                 });
                 continue;
             }
-            const combined = new Uint8Array([...m.cipher, ...m.tag]);
             try {
-                const aesKey = await deriveAesGcmKey(await deriveSharedSecret(myPrivKey, peer.pubKeyRaw));
-                const decrypted = await decryptMessage(
-                    aesKey,
-                    Buffer.from(m.iv).toString('base64'),
-                    Buffer.from(combined).toString('base64')
-                );
+                const decrypted = await decryptIotaPeerSessionMessage({
+                    iv: m.iv,
+                    ciphertext: m.cipher,
+                    tag: m.tag,
+                    myAddress,
+                    peerAddress: peerAddrForHs,
+                    myPrivKey,
+                    peerPubRaw: peer.pubKeyRaw,
+                });
                 logger.debug(
                     `Inbox verschlüsselt entschlüsselt von ${m.sender.slice(0, 12)}… nonce=${m.nonce} (${decrypted.length} Zeichen)`
                 );
