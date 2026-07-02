@@ -33,4 +33,5 @@ export {
   getSendKeyEpoch,
   resolvePeerPubForEpoch,
   listPeerPubsForEpochDecrypt,
+  rotatePeerSessionEpoch,
 } from './shared/morgendrot-session-keys-archive.js';

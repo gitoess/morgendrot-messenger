@@ -12,6 +12,7 @@ import {
   mergeSessionKeysFromHandshakePeers,
   peerSessionEntryToRuntime,
   upsertPeerSessionFromHandshakePub,
+  rotatePeerSessionEpoch,
 } from '@morgendrot/shared/morgendrot-session-keys-archive'
 
 const LS_SESSION_KEYS = 'morgendrot.directSessionKeys.v1'
@@ -83,6 +84,19 @@ export function mergeDirectSessionKeysFromPeerMap(
 ): void {
   const merged = mergeSessionKeysFromHandshakePeers(readFile(), peerEntries)
   writeFile(merged)
+}
+
+export function rotatePeerSessionEpochForRecipient(
+  peerAddress: string,
+  peerPubRaw: Uint8Array
+): { ok: true; newEpoch: number } | { ok: false; error: string } {
+  try {
+    const { file, newEpoch } = rotatePeerSessionEpoch(readFile(), peerAddress, peerPubRaw)
+    writeFile(file)
+    return { ok: true, newEpoch }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 export function importDirectSessionKeysArchiveFromVault(file: SessionKeysArchiveFile): void {

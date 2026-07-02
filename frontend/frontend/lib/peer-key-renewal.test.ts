@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import {
   getCachedChainHandshakeProbe,
   invalidateChainHandshakeProbe,
@@ -7,6 +7,7 @@ import {
 } from '@/frontend/lib/chain-handshake-probe-cache'
 
 const peer = '0x' + 'a'.repeat(64)
+const peerPubB64 = Buffer.alloc(65, 4).toString('base64')
 
 describe('chain-handshake-probe-cache', () => {
   it('speichert positive und negative Sonden', () => {
@@ -20,21 +21,41 @@ describe('chain-handshake-probe-cache', () => {
   })
 })
 
-describe('peer-key-renewal', () => {
-  it('löscht Peer-Pub und startet Handshake', async () => {
+describe('peer-key-renewal (H.23 A4)', () => {
+  beforeEach(() => {
     vi.resetModules()
-    const setPeer = vi.fn(() => ({ ok: true as const }))
+    localStorage.clear()
+  })
+
+  it('rotiert epoch++, behält Peer-Pub und startet Handshake', async () => {
+    const onHandshake = vi.fn()
     vi.doMock('@/frontend/lib/direct-chat-ecdh-session', () => ({
-      setDirectChatEcdhPeerPubBase64: setPeer,
+      getDirectChatEcdhPeerPubBase64: () => peerPubB64,
+      setDirectChatEcdhPeerPubBase64: vi.fn(() => ({ ok: true as const })),
+    }))
+    vi.doMock('@/frontend/lib/direct-session-keys-archive', () => ({
+      rotatePeerSessionEpochForRecipient: vi.fn(() => ({ ok: true as const, newEpoch: 2 })),
+    }))
+    vi.doMock('@/frontend/lib/api/execute-command', () => ({
+      executeCommand: vi.fn(async () => ({ ok: true })),
     }))
     vi.doMock('@/frontend/lib/chain-handshake-probe-cache', () => ({
       invalidateChainHandshakeProbe: vi.fn(),
     }))
     const { renewDirectChatPeerEncryption } = await import('@/frontend/lib/peer-key-renewal')
-    const onHandshake = vi.fn()
     const r = await renewDirectChatPeerEncryption(peer, { onHandshake })
     expect(r.ok).toBe(true)
-    expect(setPeer).toHaveBeenCalledWith(peer, '')
+    if (r.ok) expect(r.newEpoch).toBe(2)
     expect(onHandshake).toHaveBeenCalledWith(peer)
+  })
+
+  it('blockiert ohne gespeicherten Peer-Pub', async () => {
+    vi.doMock('@/frontend/lib/direct-chat-ecdh-session', () => ({
+      getDirectChatEcdhPeerPubBase64: () => null,
+      setDirectChatEcdhPeerPubBase64: vi.fn(),
+    }))
+    const { renewDirectChatPeerEncryption } = await import('@/frontend/lib/peer-key-renewal')
+    const r = await renewDirectChatPeerEncryption(peer, { onHandshake: vi.fn() })
+    expect(r.ok).toBe(false)
   })
 })

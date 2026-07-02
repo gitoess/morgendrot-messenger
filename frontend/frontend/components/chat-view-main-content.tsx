@@ -665,7 +665,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       onHandshake: (addr) => panelMessengerPorts.handshakeActions.onHandshakeForAddress(addr),
     })
     if (result.ok) {
-      toast.success('Neuer Handshake gesendet — Partner muss antworten, dann wieder verschlüsselt senden.')
+      toast.success(
+        `Session-Schlüssel erneuert (Epoch ${result.newEpoch}) — Handshake gesendet; Partner sollte antworten.`
+      )
       window.setTimeout(() => void panelMessengerPorts.handshakeOffersRead.reload(), 3000)
     } else {
       toast.error(result.error)

@@ -12,7 +12,7 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
-| **2026-06-16** | Repo lokal (Windows), **§ H.23 A3** | `session-keys.enc` + `morgendrot-session-keys-archive`; Nest RAM + Browser LS; Vitest **7/7**; `tsc` frontend grün | **OK (Code)** — **A4** UI Rotation folgt. |
+| **2026-06-16** | Repo lokal (Windows), **§ H.23 A4** | UI „Schlüssel erneuern“ → `keyEpoch++`; `/rotate-session-epoch`; Vitest archive + renewal | **OK (Code)** — **Modus-A-Feldtest** weiter offen. |
 | **2026-06-16** | Repo lokal (Windows), **§ H.23 A1 + Modus-A-CLI** | `morgendrot-crypto-session` (Envelope v2, HKDF sortiertes Adresspaar, AAD); Vitest **4/4**; `npm run feldtest:boss-readiness`; Composer-Hinweis „transport-strong“ | **OK (Code)** — Send-Pfad noch v1; **Modus-A-Feldtest** weiter Gate vor **A2**. |
 | **2026-06-16** | Repo lokal (Windows), **Boss bei 0 — Schreibtisch** | Vitest Boss-Wizard-Slices (**41**), `network-fetch-error` (**3**); Playwright **9/9** (`boss-vault-wizard`, `boss-onboarding-greenfield`, `boss-onboarding-live`) gegen `npm run dm`; Spec **`docs/FELDTEST-BOSS-BEI-0.md`** | **OK (Code/Schreibtisch)** — E2E mit Status-Mock, kein echter Testnet-Deploy. **Modus-A-Feldtest (Inkognito + Deploy + FINAL 🟢)** weiter **offen** — Gate vor **§ H.23**. |
 | **2026-06-17** | Repo lokal (Windows), **§ H.36 P3 + B4b + § C.0b** | `morg-team-update-ping-v1`, Offline-Queue, `POST /api/integrations/telegram/group-alarm`, SOS-Fan-out, Handbuch `TELEGRAM-INTEGRATION-EINRICHTUNG.md`; **`npm run check:pwa-desk`** (A+B) | **OK (Code)** — Gerät **L1–L5** separat. |

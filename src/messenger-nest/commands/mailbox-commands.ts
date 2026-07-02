@@ -5,7 +5,12 @@ import { CFG, ensurePackageIdInHistory } from '../../config.js';
 import { normalizeAddress } from '../../utils.js';
 import { getClient } from '../../chain-access.js';
 import { purgeHandshakeCache, purgeInboxCache, purgeSessionKeysArchive } from '../../vault-local.js';
-import { clearPeerSessionArchiveState } from '../messenger-session-keys-state.js';
+import {
+  clearPeerSessionArchiveState,
+  persistSessionKeysToVault,
+  rotatePeerSessionEpochForPeer,
+} from '../messenger-session-keys-state.js';
+import { getWalletPassword } from '../messenger-session-password.js';
 import { fetchLastMessages, fetchPlaintextOnlyForRecipient, isRebasedStorageEnabled } from '../messenger-fetch.js';
 import type { FetchedMessage } from '../messenger-fetch.js';
 import { purgeHandshake, purgeMessage, purgeTeamPlaintextBroadcast } from '../messenger-chain-wrap.js';
@@ -42,6 +47,7 @@ const MAILBOX_COMMANDS = new Set([
     '/purge-team-broadcast',
     '/purge-handshake-cache',
     '/purge-local-inbox',
+    '/rotate-session-epoch',
     '/clear-local-history',
     '/inbox',
     '/fetch',
@@ -146,6 +152,37 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
         purgeSessionKeysArchive(vp);
         clearPeerSessionArchiveState();
         return { ok: true, message: 'Handshake- und Session-Key-Cache geleert (lokal, immer purgable).' };
+    }
+
+    if (c === '/rotate-session-epoch') {
+        const peerAddr = String(a[0] ?? '').trim();
+        if (!HEX64.test(peerAddr)) {
+            return { ok: false, message: 'Peer-Adresse (0x + 64 Hex) erforderlich: /rotate-session-epoch <peer0x>' };
+        }
+        const peerNorm = normalizeAddress(peerAddr);
+        const peer =
+            peerMap?.get(peerNorm) ??
+            [...(peerMap?.values() ?? [])].find((p) => normalizeAddress(p.address) === peerNorm);
+        if (!peer) {
+            return {
+                ok: false,
+                message: 'Kein verbundener Partner — zuerst /connect oder Handshake-Cache laden.',
+            };
+        }
+        const newEpoch = rotatePeerSessionEpochForPeer(peer.address, peer.pubKeyRaw);
+        const vp = CFG.VAULT_FILE || '.morgendrot-vault';
+        const pw = getWalletPassword();
+        if (vp && pw) {
+            try {
+                await persistSessionKeysToVault(vp, pw);
+            } catch {
+                /* RAM-Rotation gilt trotzdem */
+            }
+        }
+        return {
+            ok: true,
+            message: `Session keyEpoch für ${peer.address.slice(0, 12)}… → ${newEpoch} (Archiv in Vault).`,
+        };
     }
 
     if (c === '/purge-local-inbox') {

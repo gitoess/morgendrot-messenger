@@ -171,3 +171,49 @@ export function listPeerPubsForEpochDecrypt(
 export function getSendKeyEpoch(entry: PeerSessionArchiveEntry | undefined): number {
   return entry?.currentEpoch ?? DEFAULT_SESSION_KEY_EPOCH;
 }
+
+/** UI-Rotation (§ H.23 A4): keyEpoch++ bei gleichem Peer-Pub — alte Nachrichten bleiben lesbar. */
+export function rotatePeerSessionEpoch(
+  file: SessionKeysArchiveFile,
+  peerAddress: string,
+  peerPubRaw: Uint8Array
+): { file: SessionKeysArchiveFile; newEpoch: number } {
+  const key = normalizeSessionPeerAddress(peerAddress);
+  if (!key) throw new Error('rotatePeerSessionEpoch: ungültige Peer-Adresse.');
+  const pubB64 = uint8ToBase64(peerPubRaw);
+  const existing = file.peers[key];
+  if (!existing) {
+    const newEpoch = DEFAULT_SESSION_KEY_EPOCH + 1;
+    return {
+      file: {
+        ...file,
+        peers: {
+          ...file.peers,
+          [key]: {
+            currentEpoch: newEpoch,
+            peerPubCurrent: pubB64,
+            peerPubArchive: { [String(DEFAULT_SESSION_KEY_EPOCH)]: pubB64 },
+          },
+        },
+      },
+      newEpoch,
+    };
+  }
+  const peerPubArchive = { ...existing.peerPubArchive };
+  peerPubArchive[String(existing.currentEpoch)] = existing.peerPubCurrent;
+  const newEpoch = existing.currentEpoch + 1;
+  return {
+    file: {
+      ...file,
+      peers: {
+        ...file.peers,
+        [key]: {
+          currentEpoch: newEpoch,
+          peerPubCurrent: pubB64,
+          peerPubArchive,
+        },
+      },
+    },
+    newEpoch,
+  };
+}

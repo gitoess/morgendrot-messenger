@@ -1516,7 +1516,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) **Modus-A-Feldtest** (`docs/FELDTEST-BOSS-BEI-0.md`) — Wizard/Readiness vor Krypto-Migration; CLI **`npm run feldtest:boss-readiness`**. (3) **Implementierung Session Keys+** — **A1–A3 erledigt 2026-06-16**; **A4** (UI Rotation) als Nächstes — Priorität **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`** § **4 C**.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) **Modus-A-Feldtest** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16** — Feldtest + Double Ratchet (Phase C) folgen.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 

@@ -12,6 +12,9 @@
     "./device-time-trust": "./device-time-trust.ts",
     "./bytes-base64": "./bytes-base64.ts",
     "./morgendrot-crypto": "./morgendrot-crypto.ts",
+    "./morgendrot-crypto-session": "./morgendrot-crypto-session.ts",
+    "./morgendrot-crypto-session-wire": "./morgendrot-crypto-session-wire.ts",
+    "./morgendrot-session-keys-archive": "./morgendrot-session-keys-archive.ts",
     "./messenger-capabilities-matrix": "./messenger-capabilities-matrix.ts"
   }
 }

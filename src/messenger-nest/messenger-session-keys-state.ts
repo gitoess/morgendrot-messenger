@@ -9,6 +9,7 @@ import {
   mergeSessionKeysFromHandshakePeers,
   emptySessionKeysArchive,
   getSendKeyEpoch,
+  rotatePeerSessionEpoch,
 } from '../shared/morgendrot-session-keys-archive.js';
 import { loadSessionKeysArchive, saveSessionKeysArchive } from '../vault-local.js';
 import { normalizeAddress } from '../utils.js';
@@ -80,4 +81,10 @@ export async function restoreSessionKeysFromVault(
 
 export async function persistSessionKeysToVault(vaultPath: string, password: string): Promise<void> {
   await saveSessionKeysArchive(vaultPath, password, exportSessionKeysArchiveFile());
+}
+
+export function rotatePeerSessionEpochForPeer(peerAddress: string, peerPubRaw: Uint8Array): number {
+  const { file, newEpoch } = rotatePeerSessionEpoch(exportSessionKeysArchiveFile(), peerAddress, peerPubRaw);
+  importSessionKeysArchiveFile(file);
+  return newEpoch;
 }
