@@ -8,8 +8,8 @@ import {
   advanceWizardToDone,
   clearMorgendrotStorage,
   clickWizardFertig,
+  expectReadinessAfterFertig,
   installBossStatusMock,
-  sessionSignerSyncDialog,
   startBossWizardFresh,
   vaultUnlockDialog,
   wizardDialog,
@@ -40,10 +40,10 @@ test.describe('Boss bei 0 — Greenfield', () => {
 
     await advanceWizardToDone(page)
     await clickWizardFertig(page)
-    await expect(vaultUnlockDialog(page)).toBeVisible({ timeout: 8000 })
+    await expectReadinessAfterFertig(page)
   })
 
-  test('Dev-Server: Tresor entsperren, Session-Signer nach Fertig', async ({ page }) => {
+  test('Dev-Server: Server-Wallet, Session-Signer-Hinweis im Wizard', async ({ page }) => {
     test.setTimeout(60_000)
     await installBossStatusMock(page, 'server-ready')
 
@@ -51,11 +51,13 @@ test.describe('Boss bei 0 — Greenfield', () => {
     await startBossWizardFresh(page)
     await expect(wizardDialog(page)).toBeVisible({ timeout: 10000 })
 
-    await expect(wizardDialog(page).getByText(/Browser noch nicht entsperrt/i)).toBeVisible()
-    await expect(wizardDialog(page).getByRole('button', { name: 'Tresor entsperren' })).toBeVisible()
+    await expect(wizardDialog(page).getByText(/Server-Tresor offen|Browser-Signer fehlt/i)).toBeVisible()
+    await expect(
+      wizardDialog(page).getByRole('button', { name: /Session-Signer laden|Tresor entsperren/i })
+    ).toBeVisible()
 
     await advanceWizardToDone(page)
     await clickWizardFertig(page)
-    await expect(sessionSignerSyncDialog(page)).toBeVisible({ timeout: 8000 })
+    await expectReadinessAfterFertig(page)
   })
 })

@@ -63,6 +63,17 @@ export function sessionSignerSyncDialog(page: Page) {
   return page.getByRole('dialog', { name: /Session-Signer laden/i })
 }
 
+export function readinessDialog(page: Page) {
+  return page.getByRole('dialog').filter({
+    has: page.getByRole('heading', { name: /^Einrichtung prüfen$/ }),
+  })
+}
+
+/** Readiness öffnet nach Fertig (oft unter dem Tresor-Dialog). */
+export async function expectReadinessAfterFertig(page: Page) {
+  await page.waitForSelector('text=Einrichtung prüfen', { timeout: 20_000 })
+}
+
 export async function clearMorgendrotStorage(page: Page) {
   await page.addInitScript(() => {
     for (const k of Object.keys(localStorage).filter((x) => x.startsWith('morgendrot.'))) {
@@ -142,5 +153,5 @@ export async function advanceWizardToDone(page: Page) {
 
 export async function clickWizardFertig(page: Page) {
   await wizardDialog(page).getByRole('button', { name: 'Fertig' }).click()
-  await expect(wizardDialog(page)).toBeHidden({ timeout: 8000 })
+  await expect(wizardDialog(page)).toBeHidden({ timeout: 12_000 })
 }

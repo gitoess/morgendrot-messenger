@@ -27,6 +27,7 @@ test-screenshots/
 coverage/
 .playwright/
 test-results/
+e2e/.boss-live-review/
 # Lokaler Vault / Laufzeit (nie committen; Pfade relativ zum Repo-Root)
 /.morgendrot-vault
 /.morgendrot-vault.handshakes.enc

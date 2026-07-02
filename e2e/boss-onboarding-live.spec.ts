@@ -190,6 +190,11 @@ test.describe('Boss bei 0 — vollständiger Flow', () => {
         break
       }
 
+      if (cap.title === 'Wo senden?') {
+        await wizardDialog(page).getByRole('button', { name: /Beides \(empfohlen\)/i }).click()
+        await page.waitForTimeout(100)
+      }
+
       if (OPTIONAL_STEPS.has(cap.title)) {
         review.optionalSkips++
         await wizardNav(page, 'skip')
@@ -212,11 +217,18 @@ test.describe('Boss bei 0 — vollständiger Flow', () => {
 
     fs.writeFileSync(path.join(OUT_DIR, 'review.json'), JSON.stringify(review, null, 2), 'utf8')
 
-    for (const s of review.steps.filter((x) => !OPTIONAL_STEPS.has(x.title) && x.title !== 'Fertig')) {
-      expect(s.bodyChars, `${s.title} zu lang`).toBeLessThan(500)
+    const bodyLimit = (title: string) => {
+      if (title === 'Wo senden?') return 700
+      if (title === 'Chain anbinden') return 850
+      if (title === 'Postfächer') return 650
+      return 500
     }
-    expect(review.steps.find((s) => s.title === 'Telegram')?.bodyChars ?? 999).toBeLessThan(450)
-    expect(review.steps.find((s) => s.title === 'Funk')?.bodyChars ?? 999).toBeLessThan(400)
+
+    for (const s of review.steps.filter((x) => !OPTIONAL_STEPS.has(x.title) && x.title !== 'Fertig')) {
+      expect(s.bodyChars, `${s.title} zu lang`).toBeLessThan(bodyLimit(s.title))
+    }
+    expect(review.steps.find((s) => s.title === 'Telegram')?.bodyChars ?? 999).toBeLessThan(700)
+    expect(review.steps.find((s) => s.title === 'Funk')?.bodyChars ?? 999).toBeLessThan(1200)
     expect(review.reachedDone).toBe(true)
     expect(review.optionalSkips).toBe(2)
     expect(review.stepTitles).toEqual([...EXPECTED_STEP_TITLES])

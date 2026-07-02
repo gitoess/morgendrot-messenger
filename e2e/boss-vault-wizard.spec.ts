@@ -6,6 +6,9 @@
 import { test, expect } from '@playwright/test'
 import {
   clearMorgendrotStorage,
+  advanceWizardToDone,
+  clickWizardFertig,
+  expectReadinessAfterFertig,
   installBossStatusMock,
   startBossWizardFresh,
   vaultUnlockDialog,
@@ -74,32 +77,19 @@ test.describe('Tresor und Boss-Wizard', () => {
 
     await wizardDialog(page).getByRole('button', { name: 'Später' }).click()
     await expect(wizardDialog(page)).toBeHidden({ timeout: 8000 })
-    await expect(vaultUnlockDialog(page)).toBeHidden({ timeout: 3000 })
+    await expect(page.locator('header h1')).toHaveText(/Morgendrot/, { timeout: 5000 })
   })
 
-  test('Durchklicken bis Fertig ohne Eingaben → Tresor erscheint', async ({ page }) => {
+  test('Durchklicken bis Fertig ohne Eingaben → Readiness-Modal', async ({ page }) => {
     test.setTimeout(60_000)
 
     await page.goto('/', { waitUntil: 'domcontentloaded', timeout: 30000 })
     await startBossWizardFresh(page)
     await expect(wizardDialog(page)).toBeVisible({ timeout: 10000 })
 
-    const titles = ['Wallet', 'Einsatz-Regeln', 'Chain anbinden', 'Postfächer', 'Telegram', 'Funk']
-    for (const _title of titles) {
-      const skip = wizardDialog(page).getByRole('button', { name: 'Überspringen' })
-      const weiter = wizardDialog(page).getByRole('button', { name: 'Weiter' })
-      if (await skip.isVisible().catch(() => false)) {
-        await skip.click()
-      } else {
-        await weiter.click()
-      }
-      await page.waitForTimeout(150)
-    }
-
-    await expect(wizardDialog(page).locator('h3').first()).toHaveText('Fertig', { timeout: 8000 })
-    await wizardDialog(page).getByRole('button', { name: 'Fertig' }).click()
-    await expect(wizardDialog(page)).toBeHidden({ timeout: 8000 })
-    await expect(vaultUnlockDialog(page)).toBeVisible({ timeout: 8000 })
+    await advanceWizardToDone(page)
+    await clickWizardFertig(page)
+    await expectReadinessAfterFertig(page)
   })
 
   test('Tresor-Badge klicken bei offenem Wizard → Tresor sichtbar', async ({ page }) => {
