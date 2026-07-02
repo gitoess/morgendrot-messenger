@@ -26,7 +26,7 @@ export function OnboardingWizardHost(p: {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [readinessOpen, setReadinessOpen] = useState(false)
   const controlled = p.open !== undefined
-  const open = controlled ? p.open : uncontrolledOpen
+  const open = (controlled ? p.open : uncontrolledOpen) ?? false
 
   const setWizardOpen = useCallback(
     (next: boolean) => {

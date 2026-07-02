@@ -75,7 +75,7 @@ function CreateMailboxButtons(p: {
   showPrivate: boolean
   showTeam: boolean
 }) {
-  const canChain = p.walletValid && p.backendOnline
+  const canChain = Boolean(p.walletValid && p.backendOnline)
   return (
     <div className="flex flex-wrap gap-2">
       {p.showPrivate ? (
@@ -208,7 +208,7 @@ export function OnboardingBossMailboxesStep(p: Props) {
                 Wallet). Ohne Signer siehst du trotzdem, was der Boss schon hat.
               </p>
               {p.onActivateWallet ? (
-                <Button type="button" size="sm" variant="outline" onClick={() => p.onActivateWallet()}>
+                <Button type="button" size="sm" variant="outline" onClick={() => p.onActivateWallet?.()}>
                   Session-Signer laden
                 </Button>
               ) : null}

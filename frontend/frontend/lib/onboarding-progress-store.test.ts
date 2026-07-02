@@ -35,9 +35,9 @@ vi.mock('@/frontend/lib/direct-iota-mnemonic-session', () => ({
   getDirectIotaSessionSigner: () => null,
 }))
 
-const isBrowserSessionSignerReady = vi.fn(() => false)
+const isBrowserSessionSignerReadyMock = vi.fn((_uiLocked = false) => false)
 vi.mock('@/frontend/lib/messenger-session-keys-ready', () => ({
-  isBrowserSessionSignerReady: (uiLocked?: boolean) => isBrowserSessionSignerReady(uiLocked),
+  isBrowserSessionSignerReady: (uiLocked?: boolean) => isBrowserSessionSignerReadyMock(uiLocked ?? false),
 }))
 
 vi.mock('@/frontend/lib/handoff-local-apply', () => ({
@@ -136,10 +136,10 @@ describe('onboarding-progress-store', () => {
   })
 
   it('boss wallet skip nur bei Browser-Signer', () => {
-    isBrowserSessionSignerReady.mockReturnValue(true)
+    isBrowserSessionSignerReadyMock.mockReturnValue(true)
     const ctx = buildOnboardingSkipContext({ hasKeys: true, locked: false })
     expect(shouldSkipOnboardingStep('boss', 'wallet', ctx)).toBe(true)
-    isBrowserSessionSignerReady.mockReturnValue(false)
+    isBrowserSessionSignerReadyMock.mockReturnValue(false)
     expect(shouldSkipOnboardingStep('boss', 'wallet', { hasWallet: false })).toBe(false)
   })
 

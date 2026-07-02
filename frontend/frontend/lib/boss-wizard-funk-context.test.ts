@@ -8,7 +8,7 @@ import {
 describe('boss-wizard-funk-context', () => {
   it('findet Node-ID für eigene Adresse case-insensitive', () => {
     const id = resolveBossOwnMeshNodeId('0xABC', {
-      '0xabc': { meshNodeId: '!deadbeef' },
+      '0xabc': { label: 'Boss', meshNodeId: '!deadbeef' },
     })
     expect(id).toBe('!deadbeef')
   })
