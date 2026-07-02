@@ -6,6 +6,7 @@
  */
 
 import { base64ToUint8, uint8ToBase64 } from '@morgendrot/shared/bytes-base64'
+import { syncPeerSessionArchiveFromPub } from '@/frontend/lib/direct-session-keys-archive'
 
 const LS_PEER_PUB = 'morgendrot.directChatEcdh.peerPubB64ByRecipient.v1'
 /** P-256-ECDH-Privatkey als JWK (Gerät) — für Standalone-APK nach Puls „JWK anwenden“. */
@@ -283,6 +284,7 @@ export function setDirectChatEcdhPeerPubBase64(recipientHex: string, peerPubRawB
   const m = readPeerMap()
   m[addr] = b64
   writePeerMap(m)
+  syncPeerSessionArchiveFromPub(addr, raw)
   return { ok: true }
 }
 

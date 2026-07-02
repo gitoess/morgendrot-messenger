@@ -13,6 +13,7 @@ import { normalizeAddress } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { sendHandshake } from './messenger-chain-wrap.js';
 import { loadHandshakeCache } from '../vault-local.js';
+import { restoreSessionKeysFromVault } from './messenger-session-keys-state.js';
 import { listenForMessages } from './messenger-listener.js';
 
 /** Nach /vault-load: gespeicherte Partner aus `.handshakes`-Cache — kein erneutes /connect nötig. */
@@ -68,6 +69,7 @@ export async function tryRestoreHandshakeSessionFromVault(
     try {
         const pm = await restorePeerMapFromHandshakeCache(vaultPath, password);
         if (pm.size === 0) return 0;
+        await restoreSessionKeysFromVault(vaultPath, password, pm);
         applyRestoredPeerMapToSession(pm, myAddress, privateKey, sessionState, setSessionStatus);
         return pm.size;
     } catch {

@@ -23,6 +23,7 @@ import {
   getDirectMailboxChainSnapshot,
   type DirectMailboxChainSnapshot,
 } from '@/frontend/lib/direct-iota-chain-context'
+import { getSendKeyEpochForRecipient } from '@/frontend/lib/direct-session-keys-archive'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { resolveDirectMailboxUsePrivateMoveCall } from '@/frontend/lib/direct-mailbox-object-kind'
@@ -245,6 +246,7 @@ async function encryptPlaintextForDirectSubmit(
       myPrivKey: opts.ecdhPrivateKey,
       peerPubRaw: opts.peerPubRaw,
       msgId: String(nonce),
+      keyEpoch: getSendKeyEpochForRecipient(opts.recipient),
     })
     return { ok: true, ciphertext: packed.ciphertext, iv: packed.iv, tag: packed.tag, nonce }
   } catch (e) {

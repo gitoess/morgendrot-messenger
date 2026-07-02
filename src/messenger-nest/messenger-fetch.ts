@@ -12,6 +12,11 @@ import {
     loadInboxCache,
 } from '../vault-local.js';
 import { decryptIotaPeerSessionMessage } from '../shared/morgendrot-crypto-session-wire.js';
+import {
+    getPeerSessionArchive,
+    restoreSessionKeysFromVault,
+    syncPeerSessionArchiveFromHandshakeMap,
+} from './messenger-session-keys-state.js';
 import { normalizeAddress, toEventBytes } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
@@ -384,6 +389,7 @@ export async function fetchLastMessages(
                         handshakeNonce: e.handshakeNonce,
                     });
                 }
+                await restoreSessionKeysFromVault(vaultPath, pw, peerMap);
             } catch {}
         }
     }
@@ -483,6 +489,7 @@ export async function fetchLastMessages(
         if (vaultPath && pw && peerMap.size > 0) {
             try {
                 await saveHandshakeCache(vaultPath, pw, peerMap);
+                syncPeerSessionArchiveFromHandshakeMap(peerMap);
             } catch {}
         }
     }
@@ -559,6 +566,7 @@ export async function fetchLastMessages(
                     peerAddress: peerAddrForHs,
                     myPrivKey,
                     peerPubRaw: peer.pubKeyRaw,
+                    sessionArchive: getPeerSessionArchive(peerAddrForHs),
                 });
                 logger.debug(
                     `Inbox verschlüsselt entschlüsselt von ${m.sender.slice(0, 12)}… nonce=${m.nonce} (${decrypted.length} Zeichen)`

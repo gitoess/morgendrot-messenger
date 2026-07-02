@@ -26,6 +26,7 @@ import {
     createAccessKeysBatchPtb as chainCreateAccessKeysBatchPtb,
 } from '../chain-access.js';
 import { encryptIotaPeerSessionMessage } from '../shared/morgendrot-crypto-session-wire.js';
+import { getSendKeyEpochForPeer } from './messenger-session-keys-state.js';
 import { getWalletPassword } from './messenger-session-password.js';
 import type { SignAndExecuteOptions } from '../chain-access.js';
 import { assertMessengerMediaNetBlobWithinLimit } from '../messenger-media-limits.js';
@@ -108,6 +109,7 @@ export async function sendEncryptedMessage(
         myPrivKey,
         peerPubRaw,
         msgId: String(nonce),
+        keyEpoch: getSendKeyEpochForPeer(recipient),
     });
     const ciphertext = packed.ciphertext;
     const iv = packed.iv;

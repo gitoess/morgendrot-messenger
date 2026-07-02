@@ -7,6 +7,7 @@ import { OFFLINE_MAILBOX_QUEUE_STORAGE_KEY } from '@/frontend/lib/api/offline-qu
 import { clearLocalHistory } from '@/frontend/lib/api/clear-local-history'
 import { clearCachedApiStatusSnapshot } from '@/frontend/lib/api/status'
 import { clearDirectChatEcdhKeyMaterial } from '@/frontend/lib/direct-chat-ecdh-session'
+import { clearDirectSessionKeysArchive } from '@/frontend/lib/direct-session-keys-archive'
 import { clearDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { HANDOFF_IMPORT_DRAFT_KEY } from '@/frontend/lib/handoff-pending-server-apply'
@@ -29,6 +30,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.handshakeOffersCache.v1',
   'morgendrot.dismissedHandshakeOffers.v1',
   'morgendrot.dismissedOutgoingHandshakeOffers.v1',
+  'morgendrot.directSessionKeys.v1',
   'morgendrot.meshLocalMessages.v1',
   'morg.delayed-mirror-queue.v1',
   OFFLINE_MAILBOX_QUEUE_STORAGE_KEY,
@@ -129,6 +131,7 @@ export function wipeEinsatzLocalBrowserState(options?: Pick<EinsatzEndCacheWipeO
   clearActivePrivateMailbox()
   clearTeamMemberRemoveSent()
   clearDirectChatEcdhKeyMaterial()
+  clearDirectSessionKeysArchive()
   clearInboxBrowserViewFilters()
 
   if (clearQueues) {

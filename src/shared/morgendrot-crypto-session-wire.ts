@@ -11,6 +11,10 @@ import {
   encryptSessionMessage,
   decryptSessionMessage,
 } from './morgendrot-crypto-session.js';
+import {
+  type PeerSessionArchiveEntry,
+  listPeerPubsForEpochDecrypt,
+} from './morgendrot-session-keys-archive.js';
 
 const MORG_SESSION_WIRE_MAGIC = new Uint8Array([0x4d, 0x47, 0x32, 0x02]);
 
@@ -37,6 +41,7 @@ export type IotaPeerSessionDecryptParams = {
   peerAddress: string;
   myPrivKey: CryptoKey;
   peerPubRaw: Uint8Array;
+  sessionArchive?: PeerSessionArchiveEntry;
 };
 
 function readU32Be(bytes: Uint8Array, offset: number): number {
@@ -157,21 +162,31 @@ export async function encryptIotaPeerSessionMessage(
 /** Entschlüsselt v2 (MG2-Wire) oder fällt auf v1 Legacy zurück. */
 export async function decryptIotaPeerSessionMessage(params: IotaPeerSessionDecryptParams): Promise<string> {
   const ivB64 = uint8ToBase64(params.iv);
-  const sharedSecret = await deriveSharedSecret(params.myPrivKey, params.peerPubRaw);
 
   if (isSessionWireV2Ciphertext(params.ciphertext)) {
     const { envelope, cipherBody } = unpackSessionWireV2(params.ciphertext);
-    const aesKey = await deriveSessionAesGcmKey(
-      sharedSecret,
-      params.myAddress,
-      params.peerAddress,
-      envelope.epoch
-    );
     const combined = uint8ToBase64(new Uint8Array([...cipherBody, ...params.tag]));
     const aad = serializeMorgMsgAad(envelope);
-    return await decryptSessionMessage(aesKey, ivB64, combined, aad);
+    const pubs = listPeerPubsForEpochDecrypt(params.sessionArchive, envelope.epoch, params.peerPubRaw);
+    let lastErr: unknown;
+    for (const peerPub of pubs) {
+      try {
+        const sharedSecret = await deriveSharedSecret(params.myPrivKey, peerPub);
+        const aesKey = await deriveSessionAesGcmKey(
+          sharedSecret,
+          params.myAddress,
+          params.peerAddress,
+          envelope.epoch
+        );
+        return await decryptSessionMessage(aesKey, ivB64, combined, aad);
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error('Session v2 Entschlüsselung fehlgeschlagen.');
   }
 
+  const sharedSecret = await deriveSharedSecret(params.myPrivKey, params.peerPubRaw);
   const aesKey = await deriveAesGcmKey(sharedSecret);
   const combined = uint8ToBase64(new Uint8Array([...params.ciphertext, ...params.tag]));
   return await decryptMessage(aesKey, ivB64, combined);

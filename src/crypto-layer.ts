@@ -27,3 +27,10 @@ export {
   decryptIotaPeerSessionMessage,
   isSessionWireV2Ciphertext,
 } from './shared/morgendrot-crypto-session-wire.js';
+export {
+  type PeerSessionArchiveEntry,
+  type SessionKeysArchiveFile,
+  getSendKeyEpoch,
+  resolvePeerPubForEpoch,
+  listPeerPubsForEpochDecrypt,
+} from './shared/morgendrot-session-keys-archive.js';

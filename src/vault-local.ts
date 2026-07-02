@@ -6,10 +6,10 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import {
-    sanitizeVaultNoteAttachments,
-    type VaultNoteAttachment,
-    type VaultNoteAttachmentKind,
-} from './vault-note-attachments.js';
+    deserializeSessionKeysArchive,
+    mergeSessionKeysFromHandshakePeers,
+    type SessionKeysArchiveFile,
+} from './shared/morgendrot-session-keys-archive.js';
 
 const subtle = crypto.webcrypto.subtle;
 const CURVE = 'P-256';
@@ -530,6 +530,7 @@ export async function decryptPayloadToUtf8(raw: Uint8Array, password: string): P
 }
 
 const HANDSHAKES_SUFFIX = '.handshakes.enc';
+const SESSION_KEYS_SUFFIX = '.session-keys.enc';
 const INBOX_SUFFIX = '.inbox.enc';
 
 export type HandshakeCacheEntry = { pubKeyRaw: string; nonce: string };
@@ -546,6 +547,11 @@ export type InboxCacheEntry = {
 /** Pfad der Handshake-Cache-Datei (verschlüsselt, gleiches Passwort wie Vault). Immer purgbar. */
 export function handshakeCachePath(vaultPath: string): string {
     return vaultPath + HANDSHAKES_SUFFIX;
+}
+
+/** Pfad des Session-Key-Archivs (§ H.23 A3). */
+export function sessionKeysArchivePath(vaultPath: string): string {
+    return vaultPath + SESSION_KEYS_SUFFIX;
 }
 
 /** Pfad der lokalen Inbox-Cache-Datei (verschlüsselt). Immer purgbar. */
@@ -607,6 +613,39 @@ export async function saveHandshakeCache(
         };
     }
     await saveEncryptedJson(handshakeCachePath(vaultPath), password, { peers: peersObj });
+    const sessionFile = mergeSessionKeysFromHandshakePeers(
+        await loadSessionKeysArchive(vaultPath, password),
+        peers
+    );
+    await saveSessionKeysArchive(vaultPath, password, sessionFile);
+}
+
+/** Session-Key-Archiv laden (§ H.23 A3). */
+export async function loadSessionKeysArchive(
+    vaultPath: string,
+    password: string
+): Promise<SessionKeysArchiveFile> {
+    const obj = await loadEncryptedJson(sessionKeysArchivePath(vaultPath), password);
+    return deserializeSessionKeysArchive(obj);
+}
+
+/** Session-Key-Archiv speichern. */
+export async function saveSessionKeysArchive(
+    vaultPath: string,
+    password: string,
+    file: SessionKeysArchiveFile
+): Promise<void> {
+    await saveEncryptedJson(sessionKeysArchivePath(vaultPath), password, file);
+}
+
+/** Session-Key-Archiv leeren (purgable). */
+export function purgeSessionKeysArchive(vaultPath: string, options?: PurgeLocalCacheOptions): void {
+    const p = sessionKeysArchivePath(vaultPath);
+    try {
+        if (!fs.existsSync(p)) return;
+        if (options?.shred === true) shredFileSync(p);
+        else fs.unlinkSync(p);
+    } catch {}
 }
 
 /**
@@ -694,5 +733,8 @@ export function clearLocalMessengerCaches(
 ): void {
     const shred = opts?.shred === true;
     purgeInboxCache(vaultPath, { shred });
-    if (opts?.includeHandshakeCache) purgeHandshakeCache(vaultPath, { shred });
+    if (opts?.includeHandshakeCache) {
+        purgeHandshakeCache(vaultPath, { shred });
+        purgeSessionKeysArchive(vaultPath, { shred });
+    }
 }

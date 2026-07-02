@@ -98,6 +98,7 @@ import {
     watchHandshakeUpdates,
     tryRestoreHandshakeSessionFromVault,
 } from './messenger-connect.js';
+import { syncPeerSessionArchiveFromHandshakeMap } from './messenger-session-keys-state.js';
 import { listenForMessages } from './messenger-listener.js';
 import type { PeerState } from './peer-state.js';
 import { encryptPairingPayload, decryptPairingPayload, generatePairingNonce } from '../pairing-crypto.js';
@@ -1301,7 +1302,11 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 sessionState.peerMap = pm;
                                 const vp = CFG.VAULT_FILE || '.morgendrot-vault';
                                 const pw = getWalletPassword();
-                                if (vp && pw && pm.size > 0) saveHandshakeCache(vp, pw, pm).catch(() => {});
+                                if (vp && pw && pm.size > 0) {
+                                    saveHandshakeCache(vp, pw, pm)
+                                        .then(() => syncPeerSessionArchiveFromHandshakeMap(pm))
+                                        .catch(() => {});
+                                }
                                 if (CFG.ENABLE_LISTENER) {
                                     const firstPeer = pm.values().next().value;
                                     if (pm.size === 1 && firstPeer) watchHandshakeUpdates(MY_ADDR, firstPeer);
@@ -1450,7 +1455,9 @@ export function createMessengerCommandHandler(deps: MessengerCommandDeps) {
                                 const vp = CFG.VAULT_FILE || '.morgendrot-vault';
                                 const pw = getWalletPassword();
                                 if (vp && pw && pm.size > 0) {
-                                    saveHandshakeCache(vp, pw, pm).catch(() => {});
+                                    saveHandshakeCache(vp, pw, pm)
+                                        .then(() => syncPeerSessionArchiveFromHandshakeMap(pm))
+                                        .catch(() => {});
                                 }
                                 if (CFG.ENABLE_LISTENER) {
                                     const firstPeer = pm.values().next().value;

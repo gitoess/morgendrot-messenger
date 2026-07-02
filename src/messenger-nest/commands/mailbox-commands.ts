@@ -4,7 +4,8 @@
 import { CFG, ensurePackageIdInHistory } from '../../config.js';
 import { normalizeAddress } from '../../utils.js';
 import { getClient } from '../../chain-access.js';
-import { purgeHandshakeCache, purgeInboxCache } from '../../vault-local.js';
+import { purgeHandshakeCache, purgeInboxCache, purgeSessionKeysArchive } from '../../vault-local.js';
+import { clearPeerSessionArchiveState } from '../messenger-session-keys-state.js';
 import { fetchLastMessages, fetchPlaintextOnlyForRecipient, isRebasedStorageEnabled } from '../messenger-fetch.js';
 import type { FetchedMessage } from '../messenger-fetch.js';
 import { purgeHandshake, purgeMessage, purgeTeamPlaintextBroadcast } from '../messenger-chain-wrap.js';
@@ -142,7 +143,9 @@ export async function tryHandleMailboxCommand(ctx: MessengerCommandContext): Pro
     if (c === '/purge-handshake-cache') {
         const vp = CFG.VAULT_FILE || '.morgendrot-vault';
         purgeHandshakeCache(vp);
-        return { ok: true, message: 'Handshake-Cache geleert (lokal, immer purgable).' };
+        purgeSessionKeysArchive(vp);
+        clearPeerSessionArchiveState();
+        return { ok: true, message: 'Handshake- und Session-Key-Cache geleert (lokal, immer purgable).' };
     }
 
     if (c === '/purge-local-inbox') {
