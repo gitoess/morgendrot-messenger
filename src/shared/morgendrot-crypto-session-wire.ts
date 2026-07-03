@@ -2,24 +2,25 @@
  * § H.23 Phase A2 — IOTA 1:1 Send/Decrypt mit Envelope v2 (Move-Felder unverändert).
  * v2: MG2-Prefix + Envelope-JSON in `ciphertext`; v1: roher Cipher-Body (Legacy).
  */
-import { base64ToUint8, uint8ToBase64 } from './bytes-base64.js';
-import { deriveAesGcmKey, deriveSharedSecret, decryptMessage } from './morgendrot-crypto.js';
+import { base64ToUint8, uint8ToBase64 } from './bytes-base64';
+import { deriveAesGcmKey, deriveSharedSecret, decryptMessage } from './morgendrot-crypto';
 import {
   type MorgMsgEnvelopeV2,
+  DEFAULT_SESSION_KEY_EPOCH,
+  SESSION_CIPHER_SUITE_P256_AES_GCM,
   deriveSessionAesGcmKey,
   serializeMorgMsgAad,
   encryptSessionMessage,
   decryptSessionMessage,
-} from './morgendrot-crypto-session.js';
+} from './morgendrot-crypto-session';
 import {
   type PeerSessionArchiveEntry,
   listPeerPubsForEpochDecrypt,
-} from './morgendrot-session-keys-archive.js';
+} from './morgendrot-session-keys-archive';
 
 const MORG_SESSION_WIRE_MAGIC = new Uint8Array([0x4d, 0x47, 0x32, 0x02]);
 
-export const DEFAULT_SESSION_KEY_EPOCH = 1;
-export const SESSION_CIPHER_SUITE_P256_AES_GCM = 1;
+export { DEFAULT_SESSION_KEY_EPOCH, SESSION_CIPHER_SUITE_P256_AES_GCM };
 
 export type IotaPeerSessionEncryptParams = {
   plaintext: string;

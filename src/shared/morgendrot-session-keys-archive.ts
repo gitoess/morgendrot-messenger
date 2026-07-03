@@ -1,8 +1,8 @@
 /**
  * § H.23 Phase A3 — Session-Key-Archiv (Peer-Pub pro keyEpoch, kein Raw-Key on-disk).
  */
-import { base64ToUint8, uint8ToBase64 } from './bytes-base64.js';
-import { DEFAULT_SESSION_KEY_EPOCH } from './morgendrot-crypto-session-wire.js';
+import { base64ToUint8, uint8ToBase64 } from './bytes-base64';
+import { DEFAULT_SESSION_KEY_EPOCH } from './morgendrot-crypto-session';
 
 export const SESSION_KEYS_SCHEMA = 1 as const;
 

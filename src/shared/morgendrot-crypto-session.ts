@@ -2,7 +2,7 @@
  * § H.23 Phase A1 — Session Keys+ (Envelope v2, Session-Key-Ableitung).
  * Wire/Send-Pfad nutzt v1 weiter; diese API ist für Migration und Tests.
  */
-import { base64ToUint8, uint8ToBase64 } from './bytes-base64.js';
+import { base64ToUint8, uint8ToBase64 } from './bytes-base64';
 
 function getSubtle(): SubtleCrypto {
   const s = globalThis.crypto?.subtle;
@@ -23,6 +23,10 @@ export type MorgMsgEnvelopeV2 = {
   msgId: string;
   ts: number;
 };
+
+/** Default keyEpoch für neue Session v2-Nachrichten (§ H.23). */
+export const DEFAULT_SESSION_KEY_EPOCH = 1;
+export const SESSION_CIPHER_SUITE_P256_AES_GCM = 1;
 
 export function buildSessionKeyInfo(localAddress: string, remoteAddress: string, epoch: number): Uint8Array {
   const local = localAddress.trim().toLowerCase();
