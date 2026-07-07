@@ -7,8 +7,8 @@ import {
   EinsatzleitungHelferFlowPanel,
   type HelferEinrichtenWizardStep,
 } from '@/frontend/components/einsatzleitung-helfer-flow-panel'
-import { EinsatzleitungHelferOverviewPanel } from '@/frontend/components/einsatzleitung-helfer-overview-panel'
 import { EinsatzleitungHelferJoinHintPanel } from '@/frontend/components/einsatzleitung-helfer-join-hint-panel'
+import { PhonebookContactDistributePanel } from '@/frontend/components/phonebook-contact-distribute-panel'
 import { EinsatzleitungMeshtasticHintPanel } from '@/frontend/components/einsatzleitung-meshtastic-hint-panel'
 import { HandoffProvisionEntry } from '@/frontend/components/handoff-provision-entry'
 import { DashboardEinsatzParameterPanel } from '@/frontend/components/dashboard-einsatz-konfiguration'
@@ -24,7 +24,6 @@ export function BossHelferEinrichtenPanel(p: {
   apiStatus?: ApiStatus | null
   contactDirectory?: Record<string, ContactMeshEntryClient>
   onRefreshStatus?: () => void | Promise<void>
-  onOpenMailboxes?: () => void
   onContactsChanged?: () => void
 }) {
   const [step, setStep] = useState<HelferEinrichtenWizardStep>('choose')
@@ -60,7 +59,6 @@ export function BossHelferEinrichtenPanel(p: {
           <HandoffProvisionEntry
             apiSnapshot={p.apiStatus ?? null}
             contactDirectory={p.contactDirectory}
-            onOpenMailboxes={p.onOpenMailboxes}
           />
         </div>
       ) : null}
@@ -68,11 +66,19 @@ export function BossHelferEinrichtenPanel(p: {
       {step === 'join' ? <EinsatzleitungHelferJoinHintPanel /> : null}
 
       {step === 'phonebook' ? (
-        <EinsatzleitungHelferOverviewPanel
-          apiStatus={p.apiStatus ?? null}
-          contactDirectory={p.contactDirectory ?? {}}
-          onContactsChanged={p.onContactsChanged ?? (() => {})}
-        />
+        <div className="space-y-3">
+          <PhonebookContactDistributePanel
+            directory={p.contactDirectory ?? {}}
+            onContactsChanged={p.onContactsChanged ?? (() => {})}
+          />
+          <p className="text-xs text-muted-foreground">
+            Wer schon im Team ist, steht oben unter{' '}
+            <a href="#mein-team" className="font-medium text-primary hover:underline">
+              Mein Team
+            </a>{' '}
+            (Roster &amp; Kontakte).
+          </p>
+        </div>
       ) : null}
 
       {step !== 'choose' && step !== 'handoff' ? (

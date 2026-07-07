@@ -12,7 +12,7 @@ export function onboardingStepHint(path: OnboardingPath, stepId: OnboardingStepI
         return 'Aufbewahrung und Löschen festlegen — ohne neuen Blockchain-Contract.'
       case 'chain':
       case 'package':
-        return 'Messenger mit der Chain verbinden — passend zu deiner Netzwerk-Wahl.'
+        return 'Testnet-Token besorgen, dann Messenger-Contract anlegen.'
       case 'mailboxes':
         return 'Postfächer prüfen — meist schon vom Chain-Schritt da; Namen für Helfer später.'
       case 'telegram':

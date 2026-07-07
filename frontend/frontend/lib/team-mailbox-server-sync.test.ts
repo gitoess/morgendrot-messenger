@@ -3,7 +3,9 @@ import {
   diffTeamMailboxSync,
   mergeTeamMailboxIdLists,
   parseTeamMailboxIdsCsv,
+  syncLocalTeamMailboxesToServer,
 } from './team-mailbox-server-sync'
+import * as dashboardRest from '@/frontend/lib/api/dashboard-rest'
 
 const ID_A = `0x${'a'.repeat(64)}`
 const ID_B = `0x${'b'.repeat(64)}`
@@ -56,5 +58,19 @@ describe('team-mailbox-server-sync', () => {
       privateServerMailboxId: ID_PRIV,
     })
     expect(d.inSync).toBe(true)
+  })
+
+  it('syncLocalTeamMailboxesToServer nutzt Backend auch ohne explizite API-Basis (Next-Proxy)', async () => {
+    store['morgendrot.myTeamMailboxes.v1'] = JSON.stringify([{ objectId: ID_A, label: 'Team #1' }])
+    vi.spyOn(dashboardRest, 'getConfig').mockResolvedValue({
+      ok: true,
+      config: [{ key: 'TEAM_MAILBOX_IDS', value: '', envKey: 'TEAM_MAILBOX_IDS' }],
+    })
+    vi.spyOn(dashboardRest, 'setConfig').mockResolvedValue({ ok: true, message: 'ok' })
+
+    const r = await syncLocalTeamMailboxesToServer({ privateServerMailboxId: ID_PRIV })
+    expect(r.ok).toBe(true)
+    expect(r.message).toContain('Server übernommen')
+    expect(dashboardRest.setConfig).toHaveBeenCalledWith('TEAM_MAILBOX_IDS', ID_A)
   })
 })

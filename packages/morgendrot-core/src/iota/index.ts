@@ -36,6 +36,8 @@ export type {
 } from './mailbox-object-validate'
 export { buildStoreTeamPlaintextBroadcastTransaction } from './team-broadcast-txb'
 export type { BuildStoreTeamPlaintextBroadcastTxInput } from './team-broadcast-txb'
+export { buildStoreTeamEncryptedBroadcastTransaction } from './team-encrypted-broadcast-txb'
+export type { BuildStoreTeamEncryptedBroadcastTxInput } from './team-encrypted-broadcast-txb'
 export { buildStoreEcdhInitTransaction } from './handshake-ecdh-txb'
 export type { BuildStoreEcdhInitTxInput } from './handshake-ecdh-txb'
 export { buildPurgeHandshakeTransaction } from './purge-handshake-txb'
@@ -94,6 +96,8 @@ export type { PlainMailboxRowForInbox, FetchPlaintextMailboxInboxInput } from '.
 export { fetchMailboxInboxRpcRows } from './mailbox-inbox-mixed-rpc'
 export { fetchTeamPlainBroadcastRpcRows } from './team-broadcast-inbox-rpc'
 export type { TeamPlainBroadcastRpcRow, FetchTeamPlainBroadcastRpcInput } from './team-broadcast-inbox-rpc'
+export { fetchTeamEncBroadcastRpcRows } from './team-encrypted-broadcast-inbox-rpc'
+export type { TeamEncBroadcastRpcRow, FetchTeamEncBroadcastRpcInput } from './team-encrypted-broadcast-inbox-rpc'
 export {
   fetchHsKeyFromMailbox,
   findPeerHandshakeFromRpc,

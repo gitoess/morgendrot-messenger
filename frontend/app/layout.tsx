@@ -19,6 +19,7 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Morgendrot - IOTA Messaging & Access Control',
   description: 'Local dashboard for IOTA/Stardust messaging, access keys, tickets, and device monitoring',
+  manifest: '/manifest.webmanifest',
   generator: 'v0.app',
   applicationName: 'Morgendrot Messenger',
   appleWebApp: {

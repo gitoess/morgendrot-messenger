@@ -23,7 +23,7 @@ import {
   isDirectMailboxDrainEnabled,
   listDirectIotaSetupGaps,
 } from '@/frontend/lib/direct-iota-plain-submit'
-import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
+import { readLocalHandoffAppliedSnapshot, type LocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   parseHandoffEnvLines,
   readHandoffEnvBackup,
@@ -34,6 +34,48 @@ import { getIncludeSdkMnemonicInBackup } from '@/frontend/lib/vault-sdk-mnemonic
 
 export const STANDALONE_HANDOFF_APPLIED_EVENT = 'morgendrot.standaloneHandoffApplied' as const
 export const HELPER_SEED_SETUP_REQUEST_EVENT = 'morgendrot.helperSeedSetupRequest' as const
+/** Wallet auf APK/Standalone entsperrt — UI-Overlays bereinigen (nur nach Dialog-Close feuern). */
+export const STANDALONE_WALLET_UNLOCKED_EVENT = 'morgendrot.standaloneWalletUnlocked' as const
+const LS_HELPER_WALLET_ACTIVATED = 'morgendrot.handoff.helperWalletActivated.v1'
+
+type HelperWalletActivatedMarker = {
+  handoffSavedAtMs: number
+}
+
+function readHelperWalletActivatedForCurrentHandoff(): boolean {
+  if (typeof window === 'undefined') return false
+  const handoff = readLocalHandoffAppliedSnapshot()
+  if (!handoff) return false
+  try {
+    const raw = window.localStorage.getItem(LS_HELPER_WALLET_ACTIVATED)
+    if (!raw) return false
+    const parsed = JSON.parse(raw) as HelperWalletActivatedMarker
+    return parsed.handoffSavedAtMs === handoff.savedAtMs
+  } catch {
+    return false
+  }
+}
+
+function markHelperWalletActivatedForCurrentHandoff(): void {
+  if (typeof window === 'undefined') return
+  const handoff = readLocalHandoffAppliedSnapshot()
+  if (!handoff) return
+  try {
+    window.localStorage.setItem(
+      LS_HELPER_WALLET_ACTIVATED,
+      JSON.stringify({ handoffSavedAtMs: handoff.savedAtMs } satisfies HelperWalletActivatedMarker)
+    )
+  } catch {
+    /* ignore */
+  }
+}
+
+function resolveNeedsMnemonicForHandoff(handoff: LocalHandoffAppliedSnapshot | null): boolean {
+  if (isHelperHandoffProfileForSeedSetup(handoff)) {
+    return !readHelperWalletActivatedForCurrentHandoff()
+  }
+  return !getDirectIotaSessionSignerAddress()
+}
 
 export type StandaloneHelperReadiness = {
   standaloneMode: boolean
@@ -75,9 +117,22 @@ export function notifyStandaloneHandoffApplied(): void {
   maybeRequestHelperSeedSetup()
 }
 
+export function isHelperHandoffProfileForSeedSetup(handoff: LocalHandoffAppliedSnapshot | null): boolean {
+  if (!handoff) return false
+  const role = (handoff.role || '').trim().toLowerCase()
+  if (role === 'boss' || role === 'kommandant') return false
+  if (handoff.simpleMode === true) return true
+  if (handoff.uiVariant === 'messenger') return true
+  if (role === 'messenger' || role === 'arbeiter' || role === 'lock') return true
+  return !role
+}
+
 export function shouldShowHelperSeedSetupDialog(): boolean {
   const r = getStandaloneHelperReadiness()
-  return r.standaloneMode && r.hasHandoff && r.needsMnemonic && !isStandaloneSoloPath()
+  if (isStandaloneSoloPath()) return false
+  if (!r.hasHandoff || !r.needsMnemonic) return false
+  if (r.standaloneMode) return true
+  return isHelperHandoffProfileForSeedSetup(readLocalHandoffAppliedSnapshot())
 }
 
 export function maybeRequestHelperSeedSetup(): void {
@@ -87,8 +142,18 @@ export function maybeRequestHelperSeedSetup(): void {
   }
 }
 
+/** Nur lokale Marker — ohne Status-Poll während Tresor-Dialog noch offen ist. */
+export function markStandaloneWalletActivatedLocal(): void {
+  if (typeof window === 'undefined') return
+  if (isHelperHandoffProfileForSeedSetup(readLocalHandoffAppliedSnapshot())) {
+    markHelperWalletActivatedForCurrentHandoff()
+  }
+}
+
+/** Nach geschlossenem Tresor: UI/Status aktualisieren. */
 export function notifyStandaloneWalletActivated(): void {
   if (typeof window === 'undefined') return
+  markStandaloneWalletActivatedLocal()
   window.dispatchEvent(new Event(DIRECT_IOTA_UI_CHANGED))
   window.dispatchEvent(new CustomEvent('morgendrot.apiBaseChanged'))
 }
@@ -98,7 +163,7 @@ export function getStandaloneHelperReadiness(): StandaloneHelperReadiness {
   const handoff = readLocalHandoffAppliedSnapshot()
   const chain = getDirectChainIdsReadiness()
   const hasHandoff = Boolean(handoff)
-  const needsMnemonic = !getDirectIotaSessionSignerAddress()
+  const needsMnemonic = resolveNeedsMnemonicForHandoff(handoff)
   const configuredFromHandoff = {
     packageId: !chain.missing.includes('Package-ID'),
     mailboxId: !chain.missing.includes('Mailbox-ID'),
@@ -162,12 +227,6 @@ export async function activateStandaloneHelperWallet(opts: {
   persistDirectChainFieldIds({ senderAddress: applied.address })
 
   const password = String(opts.password || '').trim()
-  if (password.length >= 8 && getIncludeSdkMnemonicInBackup()) {
-    await persistDirectIotaSessionSignerEncrypted({
-      signerImportRaw: mnemonic,
-      password,
-    })
-  }
 
   const handoff = readLocalHandoffAppliedSnapshot()
   const envBackup = readHandoffEnvBackup()
@@ -177,11 +236,26 @@ export async function activateStandaloneHelperWallet(opts: {
     if (env) seedPartnersFromHandoffEnv(env)
   }
 
-  const ecdh = await ensureStandaloneChatEcdhKeypair()
-  if (!ecdh.ok) {
-    return { ok: false, error: ecdh.error }
+  if (password.length >= 8 && getIncludeSdkMnemonicInBackup()) {
+    const pwd = password
+    const mem = mnemonic
+    window.setTimeout(() => {
+      void persistDirectIotaSessionSignerEncrypted({ signerImportRaw: mem, password: pwd }).then((saved) => {
+        if (!saved.ok) console.warn('[standalone] Session-Signer lokal speichern fehlgeschlagen:', saved.error)
+      })
+    }, 400)
   }
 
-  notifyStandaloneWalletActivated()
+  markStandaloneWalletActivatedLocal()
+
+  if (typeof window !== 'undefined') {
+    const runEcdh = () => void ensureStandaloneChatEcdhKeypair()
+    if ('requestIdleCallback' in window) {
+      window.requestIdleCallback(runEcdh, { timeout: 4000 })
+    } else {
+      window.setTimeout(runEcdh, 1500)
+    }
+  }
+
   return { ok: true, address: applied.address }
 }

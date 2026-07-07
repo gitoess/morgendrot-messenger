@@ -51,6 +51,25 @@ describe('useChatViewInboxPanelProps', () => {
     expect(result.current.inboxPackageExpertMenu).toBeNull()
   })
 
+  it('onRefresh lädt Posteingang mit forceLive', () => {
+    const loadMessages = vi.fn()
+    const refreshContactDirectory = vi.fn()
+    const reload = vi.fn()
+    const ports = testPanelMessengerPorts()
+    const messengerPorts = {
+      ...ports,
+      inboxActions: { ...ports.inboxActions, loadMessages, refreshContactDirectory },
+      handshakeOffersRead: { ...ports.handshakeOffersRead, reload },
+    }
+    const { result } = renderHook(() =>
+      useChatViewInboxPanelProps(baseDeps({ messengerPorts }))
+    )
+    result.current.onRefresh()
+    expect(loadMessages).toHaveBeenCalledWith('reset', undefined, { forceLive: true })
+    expect(refreshContactDirectory).toHaveBeenCalled()
+    expect(reload).toHaveBeenCalled()
+  })
+
   it('onApplySendRecipient setzt Recipient und Partner-Strip', () => {
     const onRecipientChange = vi.fn()
     const onSelectPartner = vi.fn()

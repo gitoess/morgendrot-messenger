@@ -6,7 +6,7 @@ import {
   hasLocalHandoffPendingServerApply,
   readHandoffImportDraft,
 } from '@/frontend/lib/handoff-pending-server-apply'
-import { FileUp, Lock, Package, RefreshCw } from 'lucide-react'
+import { FileUp, KeyRound, Lock, Package, RefreshCw } from 'lucide-react'
 import { applyHandoffEnvImport, previewHandoffEnvImport, type HandoffImportSummary } from '@/frontend/lib/api/handoff-env-import'
 import {
   consumePendingHandoffZipFromInbox,
@@ -25,10 +25,15 @@ import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-ap
 import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
 import { HANDOFF_DRAFT_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { parseHandoffExtrasJson, saveHandoffExtras } from '@/frontend/lib/handoff-extras'
+import { applyTeamBroadcastKeysFromExtras } from '@/frontend/lib/handoff-team-broadcast-keys'
 import { clearLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
-import { notifyStandaloneHandoffApplied } from '@/frontend/lib/handoff-standalone-ready'
+import {
+  maybeRequestHelperSeedSetup,
+  notifyStandaloneHandoffApplied,
+  shouldShowHelperSeedSetupDialog,
+} from '@/frontend/lib/handoff-standalone-ready'
 import { restartBackend } from '@/frontend/lib/api/backend-restart'
 import { triggerHiddenFileInput } from '@/frontend/lib/trigger-hidden-file-input'
 import { waitForBackend } from '@/frontend/lib/wait-for-backend'
@@ -40,7 +45,13 @@ type HandoffDraftSnapshot = {
 }
 
 export function HandoffImportPanel(
-  p: { backendOnline?: boolean | null; embedded?: boolean; onApplied?: () => void } = {}
+  p: {
+    backendOnline?: boolean | null
+    embedded?: boolean
+    onApplied?: () => void
+    /** Boss auf Einsatzleitung-Home: Import sichtbar, mit Hinweis auf Lokal vormerken. */
+    bossEinsatzViewer?: boolean
+  } = {}
 ) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
@@ -132,6 +143,10 @@ export function HandoffImportPanel(
   const standaloneHandoffMode =
     typeof window !== 'undefined' &&
     (!getApiBase().trim() || isStandaloneMessengerWithoutBasis())
+  const helperSeedPending =
+    typeof window !== 'undefined' &&
+    (applied || localAppliedOnly) &&
+    shouldShowHelperSeedSetupDialog()
 
   const fireHandoffApplied = useCallback(() => {
     notifyStandaloneHandoffApplied()
@@ -144,7 +159,10 @@ export function HandoffImportPanel(
     setRuntimeConfigText(runtimeJson?.trim() || null)
     if (extrasJson?.trim()) {
       const parsed = parseHandoffExtrasJson(extrasJson)
-      if (parsed) saveHandoffExtras(parsed)
+      if (parsed) {
+        saveHandoffExtras(parsed)
+        applyTeamBroadcastKeysFromExtras(parsed)
+      }
     }
     persistDraft(text, runtimeJson)
     setFileLabel(label)
@@ -355,7 +373,9 @@ export function HandoffImportPanel(
     setDraft(null)
     fireHandoffApplied()
     setStatusMsg(
-      'Schritt 1 erledigt — Package, Mailbox und Fullnode sind gespeichert. Gleich „Seed einrichten?“ (QR oder Eingabe).'
+      shouldShowHelperSeedSetupDialog()
+        ? 'Schritt 1 erledigt — unten „Seed einrichten“ (QR vom Boss) oder Dialog bestätigen.'
+        : 'Schritt 1 erledigt — Package, Mailbox und Fullnode sind lokal gespeichert.'
     )
   }, [envText, fireHandoffApplied])
 
@@ -450,6 +470,18 @@ export function HandoffImportPanel(
               <p className="mt-1 text-xs opacity-90">
                 Lokal vorgemerkt reicht für Offline-Hinweise. Für den dauerhaften Stand auf dem Server jetzt{' '}
                 <strong>Import bestätigen</strong> (unten).
+              </p>
+            </div>
+          ) : null}
+
+          {p.bossEinsatzViewer && !embedded ? (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm text-amber-950 dark:text-amber-100">
+              <p className="font-medium">Boss-Profil — Helfer testen</p>
+              <p className="mt-1 text-xs opacity-90">
+                In <strong>Inkognito</strong> oder zweitem Browser: ZIP wählen, dann{' '}
+                <strong>Lokal vormerken (ohne Basis)</strong> — nicht „Import bestätigen“ (würde die Boss-.env
+                überschreiben). Oder Backend neu mit <span className="font-mono">npm run env:role:arbeiter</span>{' '}
+                starten und dort normal importieren.
               </p>
             </div>
           ) : null}
@@ -688,7 +720,21 @@ export function HandoffImportPanel(
 
           {applied || localAppliedOnly ? (
             <div className="flex flex-wrap items-center gap-2">
-              {!standaloneHandoffMode ? (
+              {helperSeedPending ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => maybeRequestHelperSeedSetup()}
+                    className="inline-flex items-center gap-2 rounded-lg border border-emerald-600/45 bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-foreground hover:bg-emerald-500/25"
+                  >
+                    <KeyRound className="h-4 w-4" aria-hidden />
+                    Seed einrichten (QR scannen)
+                  </button>
+                  <p className="w-full text-sm font-medium text-emerald-800 dark:text-emerald-100">
+                    Handoff übernommen — Seed-QR vom Boss scannen oder Mnemonic eingeben.
+                  </p>
+                </>
+              ) : !standaloneHandoffMode ? (
                 <>
                   <button
                     type="button"
@@ -710,14 +756,16 @@ export function HandoffImportPanel(
                 </>
               ) : (
                 <p className="text-sm font-medium text-emerald-800 dark:text-emerald-100">
-                  Handoff übernommen — gleich erscheint „Seed einrichten?“ (QR scannen).
+                  Handoff übernommen — Wallet ist eingerichtet.
                 </p>
               )}
               <p className="w-full text-xs text-amber-900/90 dark:text-amber-100/90">
-                {standaloneHandoffMode
-                  ? 'Kein Neustart nötig — Seed-QR vom Boss scannen oder Mnemonic eingeben.'
-                  : 'Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.'}
-                {localAppliedOnly && !standaloneHandoffMode
+                {helperSeedPending
+                  ? 'Boss-Wallet im gleichen Browser? Das ist ok — Helfer braucht den Seed-QR vom Boss, nicht die Boss-Sitzung.'
+                  : standaloneHandoffMode
+                    ? 'Kein Neustart nötig — Seed-QR vom Boss scannen oder Mnemonic eingeben.'
+                    : 'Nach Handoff-Import App/Seite neu starten, damit Profil/Capabilities konsistent aktiv sind.'}
+                {localAppliedOnly && !standaloneHandoffMode && !helperSeedPending
                   ? ' Lokaler Modus bleibt ein Fallback; fuer persistentes Anwenden bitte spaeter mit Basisverbindung "Import bestätigen".'
                   : ''}
               </p>

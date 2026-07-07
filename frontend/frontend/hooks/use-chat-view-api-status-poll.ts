@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { toast } from 'sonner'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { fetchStatus, readBootstrapCachedApiStatus, type ApiStatus, type ApiStatusFetchOk } from '@/frontend/lib/api'
 import { shouldShowPackageIdMismatchBanner } from '@/frontend/lib/package-id-compare'
 import type { StatusPollClockHint } from '@/frontend/lib/device-time-trust'
@@ -26,6 +27,7 @@ import { cacheServerMailboxObjectId } from '@/frontend/lib/my-private-mailbox-st
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import { enrichApiStatusWithDirectSessionSigner } from '@/frontend/lib/messenger-session-keys-ready'
+import { reconcileWalletIdentityWithServer } from '@/frontend/lib/wallet-identity-reconcile'
 import {
   tryAutoRestoreDirectIotaSessionSigner,
   tryAutoRestoreDirectIotaSessionSignerAsync,
@@ -103,12 +105,15 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
       myAddress: boot.myAddress,
       myAddressFull: boot.myAddressFull,
     })
+    reconcileWalletIdentityWithServer((boot.myAddressFull || boot.myAddress || '').trim())
   }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    tryAutoRestoreDirectIotaSessionSigner()
-    void tryAutoRestoreDirectIotaSessionSignerAsync().then((restored) => {
+    const boot = readBootstrapCachedApiStatus()
+    const expected = (boot?.myAddressFull || boot?.myAddress || '').trim()
+    tryAutoRestoreDirectIotaSessionSigner(expected || undefined)
+    void tryAutoRestoreDirectIotaSessionSignerAsync(expected || undefined).then((restored) => {
       if (!restored.ok) return
       setApiStatus((prev) => enrichApiStatusWithDirectSessionSigner(prev))
       setDirectSignerTick((n) => n + 1)
@@ -167,6 +172,8 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
   const applyStatusOk = useCallback((s: ApiStatusFetchOk) => {
     const { pollClockHint: hint, ...rest } = s
     setPollClockHint(hint)
+    const serverAddr = (rest.myAddressFull || rest.myAddress || '').trim()
+    reconcileWalletIdentityWithServer(serverAddr)
     setApiStatus(enrichApiStatusWithDirectSessionSigner(rest))
     applyDirectChainSnapshotFromStatusOrNetworkProfile({
       packageId: rest.packageId,
@@ -222,10 +229,12 @@ export function useChatViewApiStatusPoll(p: UseChatViewApiStatusPollParams) {
         void runOfflineMailboxDrain?.()
       }
     }
-    void tick()
+    const startDelay = isCapacitorNativePlatform() ? 400 : 0
+    const bootTimer = window.setTimeout(() => void tick(), startDelay)
     const id = setInterval(() => void tick(), pollIntervalMs)
     return () => {
       alive = false
+      window.clearTimeout(bootTimer)
       clearInterval(id)
     }
   }, [runMirrorDrain, runOfflineMailboxDrain, pollIntervalMs, applyStatusOk])

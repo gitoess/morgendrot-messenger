@@ -122,8 +122,9 @@ export async function fetchStatus(): Promise<ApiStatusFetchResult> {
   const { shouldPreferStandaloneHandoffStatus, readStandaloneDeviceStatusFallback } = await import(
     '@/frontend/lib/capacitor-standalone-bootstrap'
   )
+  const { isCapacitorNativePlatform } = await import('@/frontend/lib/capacitor-platform')
   const standaloneFirst =
-    !apiBase.trim() || shouldPreferStandaloneHandoffStatus()
+    isCapacitorNativePlatform() && (!apiBase.trim() || shouldPreferStandaloneHandoffStatus())
   if (standaloneFirst) {
     const standalone = readStandaloneDeviceStatusFallback()
     if (standalone) {
@@ -219,12 +220,13 @@ export type { UnlockBackendResult }
 
 export async function unlockBackend(
   password: string,
-  opts?: { sdkSignerImport?: string }
+  opts?: { sdkSignerImport?: string; createNew?: boolean }
 ): Promise<UnlockBackendResult> {
   try {
-    const body: Record<string, string> = { password }
+    const body: Record<string, string | boolean> = { password }
     const extra = (opts?.sdkSignerImport ?? '').trim()
     if (extra) body.sdkSignerImport = extra
+    if (opts?.createNew === true) body.createNew = true
     const fr = await fetchApiText(API_BASE, '/api/unlock', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

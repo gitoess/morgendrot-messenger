@@ -7,6 +7,8 @@ import { getClient } from './chain-access.js';
 export type MessagingMoveFeatures = {
     teamBroadcastStore: boolean;
     teamBroadcastPurge: boolean;
+    teamEncryptedBroadcastStore: boolean;
+    teamEncryptedBroadcastPurge: boolean;
     privateMailboxPurge: boolean;
     /** true wenn RPC-Modul gelesen wurde */
     probed: boolean;
@@ -23,6 +25,8 @@ export async function getMessagingMoveFeatures(packageId: string): Promise<Messa
         return {
             teamBroadcastStore: false,
             teamBroadcastPurge: false,
+            teamEncryptedBroadcastStore: false,
+            teamEncryptedBroadcastPurge: false,
             privateMailboxPurge: false,
             probed: false,
             error: 'Keine gültige PACKAGE_ID',
@@ -34,6 +38,8 @@ export async function getMessagingMoveFeatures(packageId: string): Promise<Messa
     const fallback: MessagingMoveFeatures = {
         teamBroadcastStore: false,
         teamBroadcastPurge: false,
+        teamEncryptedBroadcastStore: false,
+        teamEncryptedBroadcastPurge: false,
         privateMailboxPurge: false,
         probed: false,
     };
@@ -56,6 +62,8 @@ export async function getMessagingMoveFeatures(packageId: string): Promise<Messa
         const data: MessagingMoveFeatures = {
             teamBroadcastStore: names.has('store_team_plaintext_broadcast'),
             teamBroadcastPurge: names.has('purge_team_plaintext_broadcast'),
+            teamEncryptedBroadcastStore: names.has('store_team_encrypted_broadcast'),
+            teamEncryptedBroadcastPurge: names.has('purge_team_encrypted_broadcast'),
             privateMailboxPurge: names.has('purge_private_mailbox'),
             probed: true,
         };

@@ -15,6 +15,7 @@ import { notifyDirectIotaUiChanged } from '@/frontend/lib/direct-iota-ui-events'
 import {
   applyDirectIotaMnemonicSession,
   clearDirectIotaSessionSigner,
+  clearDirectIotaSessionSignerTabSession,
   getDirectIotaSessionSigner,
   getDirectIotaSessionSignerAddress,
   hasPersistedDirectIotaSessionSigner,
@@ -25,6 +26,7 @@ import {
 } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { readNetworkProfilesState, validateNetworkProfile } from '@/frontend/lib/einsatz-network-profiles'
 import { directIotaSignerMatchesIdentity } from '@/frontend/lib/direct-iota-signer-identity'
+import { sessionSignerMatchesServerIdentity } from '@/frontend/lib/wallet-identity-reconcile'
 
 const MISSING_MY_ADDRESS =
   'MY_ADDRESS unbekannt — Status aktualisieren und Tresor erneut entsperren.'
@@ -136,14 +138,30 @@ async function tryVaultRevealSignerPath(opts: {
   return finalizeSignerSession(applied.address, 'vault')
 }
 
+function rejectSignerIfIdentityMismatch(
+  signerAddress: string,
+  expectedMyAddress?: string | null
+): boolean {
+  if (!sessionSignerMatchesServerIdentity(signerAddress, expectedMyAddress)) {
+    clearDirectIotaSessionSigner()
+    clearDirectIotaSessionSignerTabSession()
+    return true
+  }
+  return false
+}
+
 /** Tab-Reload oder fehlender RAM-Signer — ohne Vault-Passwort (sync: Legacy-Tab). */
-export function tryAutoRestoreDirectIotaSessionSigner(): { ok: true; address: string; source: 'session' | 'tab' } | { ok: false } {
+export function tryAutoRestoreDirectIotaSessionSigner(
+  expectedMyAddress?: string | null
+): { ok: true; address: string; source: 'session' | 'tab' } | { ok: false } {
   const existing = getDirectIotaSessionSignerAddress()
   if (existing && getDirectIotaSessionSigner()) {
+    if (rejectSignerIfIdentityMismatch(existing, expectedMyAddress)) return { ok: false }
     return { ok: true, address: existing, source: 'session' }
   }
   const tab = restoreDirectIotaSessionSignerFromTabSession()
   if (tab.ok) {
+    if (rejectSignerIfIdentityMismatch(tab.address, expectedMyAddress)) return { ok: false }
     syncActiveNetworkChainSnapshot(tab.address)
     notifyDirectIotaUiChanged()
     return { ok: true, address: tab.address, source: 'tab' }
@@ -152,15 +170,17 @@ export function tryAutoRestoreDirectIotaSessionSigner(): { ok: true; address: st
 }
 
 /** Inkl. verschlüsselter Tab-Session (nach Reload). */
-export async function tryAutoRestoreDirectIotaSessionSignerAsync(): Promise<
-  { ok: true; address: string; source: 'session' | 'tab' } | { ok: false }
-> {
+export async function tryAutoRestoreDirectIotaSessionSignerAsync(
+  expectedMyAddress?: string | null
+): Promise<{ ok: true; address: string; source: 'session' | 'tab' } | { ok: false }> {
   const existing = getDirectIotaSessionSignerAddress()
   if (existing && getDirectIotaSessionSigner()) {
+    if (rejectSignerIfIdentityMismatch(existing, expectedMyAddress)) return { ok: false }
     return { ok: true, address: existing, source: 'session' }
   }
   const tab = await restoreDirectIotaSessionSignerFromTabSessionAsync()
   if (tab.ok) {
+    if (rejectSignerIfIdentityMismatch(tab.address, expectedMyAddress)) return { ok: false }
     syncActiveNetworkChainSnapshot(tab.address)
     notifyDirectIotaUiChanged()
     return { ok: true, address: tab.address, source: 'tab' }

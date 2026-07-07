@@ -14,6 +14,18 @@ import {
 export const BOSS_PROVISION_REGISTRY_SCHEMA = 'morgendrot.boss-provision-registry.v1' as const
 const LS_BOSS_PROVISION_REGISTRY = 'morgendrot.bossProvisionRegistry.v1'
 
+/** Feuert bei Entsperren, Sperren und jeder Änderung — z. B. für „Mein Team“-Panel. */
+export const BOSS_PROVISION_REGISTRY_CHANGED_EVENT = 'morgendrot.bossProvisionRegistryChanged'
+
+function notifyBossProvisionRegistryChanged(): void {
+  if (typeof window === 'undefined' || typeof window.dispatchEvent !== 'function') return
+  try {
+    window.dispatchEvent(new CustomEvent(BOSS_PROVISION_REGISTRY_CHANGED_EVENT))
+  } catch {
+    // Event ist Best-Effort — Persistenz darf daran nie scheitern.
+  }
+}
+
 export type BossProvisionRegistryEntry = {
   id: string
   label: string
@@ -23,6 +35,8 @@ export type BossProvisionRegistryEntry = {
   seedShownAtIso?: string
   handedOverAtIso?: string
   zipFilenameBase?: string
+  /** Lokale Messenger-Gruppe (Mitgliederliste) — optional */
+  messengerGroupId?: string
   seedEnc: {
     crypto: HandoffCryptoMetaJson
     ciphertextB64: string
@@ -85,6 +99,7 @@ async function persistUnlocked(password: string): Promise<{ ok: true } | { ok: f
     }
     window.localStorage.setItem(LS_BOSS_PROVISION_REGISTRY, JSON.stringify(stored))
     unlockedPassword = password
+    notifyBossProvisionRegistryChanged()
     return { ok: true }
   } catch (e) {
     return { ok: false, error: 'Registry speichern fehlgeschlagen.' }
@@ -102,6 +117,7 @@ export function isBossProvisionRegistryUnlocked(): boolean {
 export function lockBossProvisionRegistry(): void {
   unlockedEntries = null
   unlockedPassword = null
+  notifyBossProvisionRegistryChanged()
 }
 
 export function getBossProvisionRegistryEntries(): BossProvisionRegistryEntry[] {
@@ -115,6 +131,7 @@ export async function unlockBossProvisionRegistry(
   if (!stored) {
     unlockedEntries = []
     unlockedPassword = password
+    notifyBossProvisionRegistryChanged()
     return { ok: true, entries: [] }
   }
   const dec = await decryptHandoffEnvUtf8(stored.crypto, b64ToBytes(stored.ciphertextB64), password)
@@ -126,6 +143,7 @@ export async function unlockBossProvisionRegistry(
     }
     unlockedEntries = payload.entries
     unlockedPassword = password
+    notifyBossProvisionRegistryChanged()
     return { ok: true, entries: [...unlockedEntries] }
   } catch {
     return { ok: false, error: 'Registry-Inhalt beschädigt.' }
@@ -161,6 +179,7 @@ export async function addBossProvisionRegistryEntry(opts: {
   seedImport: string
   zipFilenameBase?: string
   masterPassword: string
+  messengerGroupId?: string
 }): Promise<{ ok: true; entry: BossProvisionRegistryEntry } | { ok: false; error: string }> {
   if (!unlockedEntries) return { ok: false, error: 'Registry ist gesperrt.' }
   const password = opts.masterPassword || unlockedPassword || ''
@@ -174,6 +193,7 @@ export async function addBossProvisionRegistryEntry(opts: {
       address: opts.address.trim(),
       createdAtIso: new Date().toISOString(),
       zipFilenameBase: opts.zipFilenameBase,
+      ...(opts.messengerGroupId?.trim() ? { messengerGroupId: opts.messengerGroupId.trim() } : {}),
       seedEnc,
     }
     unlockedEntries = [entry, ...unlockedEntries]
@@ -185,14 +205,29 @@ export async function addBossProvisionRegistryEntry(opts: {
   }
 }
 
+export type BossProvisionRegistryEntryPatch = Partial<
+  Pick<BossProvisionRegistryEntry, 'seedShownAtIso' | 'handedOverAtIso'>
+> & {
+  /** `null` oder `''` entfernt die Gruppen-Zuordnung. */
+  messengerGroupId?: string | null
+}
+
 export async function updateBossProvisionRegistryEntry(
   id: string,
-  patch: Partial<Pick<BossProvisionRegistryEntry, 'seedShownAtIso' | 'handedOverAtIso'>>
+  patch: BossProvisionRegistryEntryPatch
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (!unlockedEntries) return { ok: false, error: 'Registry ist gesperrt.' }
   const idx = unlockedEntries.findIndex((e) => e.id === id)
   if (idx < 0) return { ok: false, error: 'Eintrag nicht gefunden.' }
-  unlockedEntries[idx] = { ...unlockedEntries[idx]!, ...patch }
+  const current = unlockedEntries[idx]!
+  const { messengerGroupId, ...rest } = patch
+  const next: BossProvisionRegistryEntry = { ...current, ...rest }
+  if (messengerGroupId === null || messengerGroupId === '') {
+    delete next.messengerGroupId
+  } else if (typeof messengerGroupId === 'string') {
+    next.messengerGroupId = messengerGroupId
+  }
+  unlockedEntries[idx] = next
   const password = unlockedPassword || ''
   if (!password) return { ok: false, error: 'Master-Passwort fehlt.' }
   return persistUnlocked(password)
@@ -202,10 +237,16 @@ export async function revealBossProvisionSeed(
   entry: BossProvisionRegistryEntry,
   password: string
 ): Promise<{ ok: true; seedImport: string } | { ok: false; error: string }> {
+  // Fallback auf das Passwort der entsperrten Session — z. B. wenn die Registry
+  // in einem anderen Panel (Schnell-Assistent) entsperrt wurde.
+  const effectivePassword = password || unlockedPassword || ''
+  if (!effectivePassword) {
+    return { ok: false, error: 'Registry ist gesperrt — Master-Passwort eingeben.' }
+  }
   const dec = await decryptHandoffEnvUtf8(
     entry.seedEnc.crypto,
     b64ToBytes(entry.seedEnc.ciphertextB64),
-    password
+    effectivePassword
   )
   if (!dec.ok) return { ok: false, error: dec.error }
   try {

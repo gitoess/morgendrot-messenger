@@ -43,7 +43,6 @@ import { resolveTelegramAlarmGroupPartnerKey } from '@/frontend/lib/telegram-ein
 import {
   patchTelegramAlarmGroupMembershipChatId,
   readTelegramAlarmGroupMembership,
-  TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT,
   TELEGRAM_ALARM_INBOX_PARTNER_KEY,
 } from '@/frontend/lib/telegram-alarm-group-prefs'
 import { ChatViewTelegramAlarmThreadBanner } from '@/frontend/components/chat-view-telegram-alarm-thread-banner'
@@ -184,7 +183,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [groupSettingsOpen, setGroupSettingsOpen] = useState(false)
   const [contactDetailAddress, setContactDetailAddress] = useState<string | null>(null)
   const [contactDetailOpen, setContactDetailOpen] = useState(false)
-  const [sidebarMetaTick, setSidebarMetaTick] = useState(0)
   const [telegramAlarmSelected, setTelegramAlarmSelected] = useState(false)
   const [messengerSearchQuery, setMessengerSearchQuery] = useState('')
   useEffect(() => {
@@ -194,12 +192,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   useEffect(() => {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
   }, [phonebookNavRequest])
-
-  useEffect(() => {
-    const sync = () => setSidebarMetaTick((n) => n + 1)
-    window.addEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
-    return () => window.removeEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
-  }, [])
 
   const pendingHandshakeRefreshKey = `${[...handshakeConnectedAddresses].join('|')}|${apiStatus?.locked === true ? 'locked' : 'open'}`
 
@@ -447,9 +439,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     onOpenPhonebook:
       (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
     activeConversation:
-      showConversationSidebar && isPrivate
+      showConversationSidebar && (isPrivate || isGroup)
         ? {
-            inboxPartnerKey,
+            inboxPartnerKey: isPrivate ? inboxPartnerKey : null,
+            inboxConversationGroupId: isGroup ? inboxConversationGroupId : null,
             inboxPartnerFiltersArmed,
             directory,
           }
@@ -924,6 +917,25 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
         onRenewEncryptionKeys:
           inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? handleRenewPeerEncryption : undefined,
+        encryptionToggle: {
+          encrypted,
+          onEncryptedChange: setEncrypted,
+          forcedTransport,
+        },
+      }
+    }
+
+    if (isPrivate && composerDelivery === 'chain') {
+      return {
+        title: 'Direktchat',
+        subtitle: 'Kontakt wählen oder Telefonbuch',
+        canClearHistory: false,
+        canExport: false,
+        encryptionToggle: {
+          encrypted,
+          onEncryptedChange: setEncrypted,
+          forcedTransport,
+        },
       }
     }
 
@@ -947,6 +959,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     inboxPartnerKey,
     handleOpenContactDetail,
     handleRenewPeerEncryption,
+    composerDelivery,
     panelMessengerPorts.inboxExportActions,
     panelMessengerPorts.inboxActions,
   ])
@@ -1003,11 +1016,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {showPartnerSetupPanel ? <ChatViewSetupPanel {...setupPanelProps} /> : null}
 
-      <ContactAddAliasDialog {...contactAliasDialog} />
+      {contactAliasDialog.open ? <ContactAddAliasDialog {...contactAliasDialog} /> : null}
 
       {showConversationSidebar ? (
         <ChatViewContactSidebar
-          key={`sidebar-mobile-${sidebarMetaTick}`}
           className="lg:hidden"
           directory={directory}
           partnerOptions={inboxPartnerOptions}
@@ -1111,7 +1123,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
             />
             <div className="grid gap-4 lg:grid-cols-[minmax(240px,280px)_minmax(0,1fr)] lg:items-start">
             <ChatViewContactSidebar
-              key={`sidebar-desktop-${sidebarMetaTick}`}
               className="hidden lg:flex"
               directory={directory}
               partnerOptions={inboxPartnerOptions}
@@ -1142,6 +1153,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         )}
       </div>
 
+      {contactDetailOpen ? (
       <ChatViewContactDetailDialog
         open={contactDetailOpen}
         onOpenChange={setContactDetailOpen}
@@ -1157,7 +1169,6 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         onToggleFavorite={() => {
           if (!contactDetailAddress) return
           toggleContactFavorite(contactDetailAddress)
-          setSidebarMetaTick((n) => n + 1)
         }}
         onEdit={() => setPhonebookOpen(true)}
         onShowQr={() => undefined}
@@ -1168,8 +1179,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           setContactDetailOpen(false)
         }}
       />
+      ) : null}
 
-      {(isPrivate || isGroup || onPinnwandTab) ? (
+      {(isPrivate || isGroup || onPinnwandTab) && phonebookOpen ? (
         <ChatViewPhonebookSheet
           open={phonebookOpen}
           onOpenChange={setPhonebookOpen}
@@ -1191,13 +1203,16 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {uiCaps.expertTools ? <LazyChatViewRelaySubmitButton hideMenuTrigger /> : null}
 
+      {groupSettingsOpen ? (
       <ChatViewGroupSettingsSheet
         open={groupSettingsOpen}
         onOpenChange={setGroupSettingsOpen}
         {...groupSettingsSheetProps}
         encryptedPartnerPanel={encryptedPartnerPanelProps}
       />
+      ) : null}
 
+      {replyPathChoiceDialog.open ? (
       <Dialog open={replyPathChoiceDialog.open} onOpenChange={(open) => !open && replyPathChoiceDialog.onClose()}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -1221,6 +1236,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           </div>
         </DialogContent>
       </Dialog>
+      ) : null}
     </>
   )
 }

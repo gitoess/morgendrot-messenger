@@ -17,7 +17,7 @@ export type InboxActionsPort = {
   readonly loadMessages: (
     mode?: InboxLoadMode,
     overridePackageId?: unknown,
-    opts?: { silent?: boolean }
+    opts?: { silent?: boolean; forceLive?: boolean }
   ) => void | Promise<void>
   readonly loadMoreInbox: () => void
   readonly refreshContactDirectory: () => void

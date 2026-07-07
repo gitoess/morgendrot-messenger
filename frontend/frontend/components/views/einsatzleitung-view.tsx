@@ -6,6 +6,7 @@ import { EinsatzleitungHub } from '@/frontend/components/einsatzleitung-hub'
 import {
   LazyBossHelferEinrichtenPanel,
   LazyEinsatzleitungErweitertPanel,
+  LazyEinsatzleitungMeinTeamPanel,
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { EinsatzChainModeBanner } from '@/frontend/components/einsatz-chain-mode-banner'
@@ -36,11 +37,16 @@ export function EinsatzleitungView(p: EinsatzleitungViewProps) {
             contactDirectory={p.contactDirectory}
             onContactsChanged={p.refreshContactDirectory}
           />
+          <LazyEinsatzleitungMeinTeamPanel
+            apiStatus={p.apiSnapshot ?? null}
+            contactDirectory={p.contactDirectory}
+            onContactsChanged={p.refreshContactDirectory}
+            onOpenMailboxes={p.onOpenSettings}
+          />
           <LazyBossHelferEinrichtenPanel
             apiStatus={p.apiSnapshot ?? null}
             contactDirectory={p.contactDirectory}
             onRefreshStatus={p.onRefreshStatus}
-            onOpenMailboxes={p.onOpenSettings}
             onContactsChanged={p.refreshContactDirectory}
           />
           <LazyEinsatzleitungErweitertPanel

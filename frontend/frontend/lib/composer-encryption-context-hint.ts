@@ -22,7 +22,7 @@ export function getComposerEncryptionContextHint(input: ComposerEncryptionHintIn
 
   if (forcedTransport === 'internet') {
     if (encrypted) {
-      return 'Online · transport-strong (ECDH): Schutz auf der Mailbox — kein Forward Secrecy pro Nachricht; Rotation unter Einstellungen (§ H.23).'
+      return 'Online · Session Keys+ (Envelope v2): Schutz auf der Mailbox — Rotation unter Einstellungen (§ H.23).'
     }
     return 'Online · Klartext: unverschlüsselt auf Mailbox/IOTA — Schloss aus.'
   }

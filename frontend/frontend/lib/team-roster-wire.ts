@@ -6,9 +6,13 @@ import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
 import type { TeamMemberWireMember } from '@/frontend/lib/morg-team-member-update-v1'
 import { canAccessEinsatzleitung } from '@/frontend/lib/messenger-role-capabilities'
 import { publishTeamMemberUpdateWire, type PublishWireResult } from '@/frontend/lib/team-sync-wire'
+import { resolveEinsatzleitungBossAddress, resolveTeamSyncSigningAddress } from '@/frontend/lib/resolve-einsatzleitung-boss-address'
 
 export type TeamSyncContext = {
+  /** Organisatorische Einsatzleitung (Roster). */
   boss: string
+  /** On-Chain-Signer für Team-Wire (= msg.from nach dem Senden). */
+  signer: string
   teamMb: string
   teamId: string
 }
@@ -17,19 +21,20 @@ export function formatTeamWireDeliveryChannels(
   channels?: { iota?: boolean; lan?: boolean; meshPing?: boolean }
 ): string {
   const parts: string[] = []
-  if (channels?.lan) parts.push('LAN')
-  if (channels?.iota) parts.push('IOTA')
-  if (channels?.meshPing) parts.push('Funk')
-  return parts.length ? ` (${parts.join(' + ')})` : ''
+  if (channels?.lan) parts.push('Lokales Netz ✓')
+  if (channels?.iota) parts.push('IOTA ✓')
+  if (channels?.meshPing) parts.push('Funk-Hinweis ✓')
+  return parts.length ? ` — Zugestellt: ${parts.join(' · ')}` : ''
 }
 
 export function resolveTeamSyncContext(apiStatus?: ApiStatus | null): TeamSyncContext | null {
-  const boss = (apiStatus?.myAddressFull || apiStatus?.myAddress || '').trim()
+  const signer = resolveTeamSyncSigningAddress(apiStatus)
+  const boss = resolveEinsatzleitungBossAddress(apiStatus) || signer
   const teamMb = (apiStatus?.inboxUnionMailboxIds?.[0] || apiStatus?.mailboxId || '').trim()
   const teamId = (apiStatus?.handoffLabel || 'default').trim()
-  if (!/^0x[a-fA-F0-9]{64}$/i.test(boss)) return null
+  if (!signer) return null
   if (!/^0x[a-fA-F0-9]{64}$/i.test(teamMb)) return null
-  return { boss, teamMb, teamId }
+  return { boss, signer, teamMb, teamId }
 }
 
 export function canManageTeamRoster(apiStatus?: ApiStatus | null): boolean {
@@ -83,7 +88,7 @@ export async function publishTeamMemberAddWire(
   return publishTeamMemberUpdateWire({
     teamMailboxAddress: ctx.teamMb,
     teamId: teamIdOverride?.trim() || ctx.teamId,
-    bossAddress: ctx.boss,
+    bossAddress: ctx.signer,
     kind: 'add',
     member,
     telegramGroupHint: true,
@@ -97,7 +102,7 @@ export async function publishTeamMemberRemoveWire(
   return publishTeamMemberUpdateWire({
     teamMailboxAddress: ctx.teamMb,
     teamId: ctx.teamId,
-    bossAddress: ctx.boss,
+    bossAddress: ctx.signer,
     kind: 'remove',
     member: { address: member.address.trim().toLowerCase(), name: member.name.trim() || member.address },
     telegramGroupHint: true,

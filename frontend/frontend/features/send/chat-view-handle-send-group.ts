@@ -18,7 +18,8 @@ import {
   resolveGroupTeamMailboxObjectId,
   shouldSendGroupTeamBroadcast,
 } from '@/frontend/lib/group-team-broadcast'
-import { sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendTeamPlaintextBroadcastHybrid, sendTeamEncryptedBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { encryptTeamBroadcastPlaintext } from '@/frontend/lib/team-broadcast-encrypted-send'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import type { Message } from '@/frontend/lib/types'
 
@@ -91,7 +92,6 @@ export function getGroupSendPreSendError(p: {
   ) {
     return null
   }
-  if (p.encrypted) return GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG
   const teamMb = resolveGroupTeamMailboxObjectId(p.activeGroup)
   if (teamMb && groupUsesTeamBroadcast(p.activeGroup)) return null
   const targets = resolveGroupTargetsForInternetSend({
@@ -177,6 +177,36 @@ export async function attemptGroupTeamBroadcast(
 
   const body = p.payloadText ?? stripMailboxOutNonceFromPayload(p.textSnap)
   const messageNonceU64 = nextChainMessageNonceU64()
+
+  if (p.encrypted) {
+    if (!p.activeGroup?.id) {
+      return { kind: 'failure', message: GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG }
+    }
+    const enc = await encryptTeamBroadcastPlaintext({
+      teamMailboxObjectId: teamMb,
+      groupId: p.activeGroup.id,
+      plaintextUtf8: body,
+    })
+    const res = await sendTeamEncryptedBroadcastHybrid(teamMb, enc, messageNonceU64)
+    if (res.ok) {
+      return {
+        kind: 'success',
+        teamMailboxObjectId: teamMb,
+        mailboxCapture: {
+          payloadUtf8: body,
+          messageNonceU64,
+          encrypted: true,
+          txDigest: res.txDigest,
+        },
+      }
+    }
+    const errText = res.error || res.message || 'Verschlüsselter Team-Broadcast fehlgeschlagen.'
+    return {
+      kind: 'failure',
+      message: `${errText} — Move braucht store_team_encrypted_broadcast (nach Deploy).`,
+    }
+  }
+
   const res = await sendTeamPlaintextBroadcastHybrid(teamMb, body, messageNonceU64)
   if (res.ok) {
     return {
@@ -276,9 +306,6 @@ export async function attemptGroupInternetChainMailbox(
     })
   ) {
     return { kind: 'not-applicable' }
-  }
-  if (p.encrypted) {
-    return { kind: 'failure', message: GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG }
   }
 
   const tb = await attemptGroupTeamBroadcast({

@@ -28,20 +28,29 @@ import { clearInboxBrowserViewFilters } from '@/frontend/lib/inbox-browser-view-
 import { EINSATZ_END_CACHE_WIPED_EVENT } from '@/frontend/lib/einsatz-end-cache-wipe'
 import { mapTelegramJournalToMessages } from '@/frontend/features/inbox/map-telegram-journal-messages'
 import { fetchTelegramJournal } from '@/frontend/lib/api/telegram-journal'
+import { loadTeamSyncLanInboxMessages } from '@/frontend/lib/load-team-sync-lan-inbox-messages'
 import { OFFLINE_CACHE_TTL_MS } from '@/frontend/lib/offline-cache-ttl'
 import { enrichInboxMessagesWithChainDigests } from '@/frontend/lib/enrich-inbox-messages-chain-digest'
 import {
   getDirectIotaSessionSigner,
   whenDirectIotaTabSessionPersistIdle,
 } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { DIRECT_IOTA_UI_CHANGED } from '@/frontend/lib/direct-iota-ui-events'
 import {
   tryAutoRestoreDirectIotaSessionSigner,
   tryAutoRestoreDirectIotaSessionSignerAsync,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
+import { buildInboxCacheKey } from '@/frontend/lib/inbox-cache-key'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
+
+export type InboxLoadMessagesOpts = {
+  silent?: boolean
+  /** Posteingang-Toolbar „Aktualisieren“: kein Warm-Cache, immer Live-Fetch. */
+  forceLive?: boolean
+}
 
 export type UseChatViewInboxParams = {
   refreshContactDirectory: () => void
@@ -60,11 +69,12 @@ async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]
 }
 
 const PAGE_SIZE = 50
-/** Erster Load / Aktualisieren: bis zu 300 Zeilen; ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
-const RESET_PAGE_SIZE = 300
+/** Erster Load / Aktualisieren: ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
+function resetPageSize(): number {
+  return isCapacitorNativePlatform() ? 100 : 300
+}
 /** Auto-Poll (Status-Tick): klein — volle Union nur bei Aktualisieren. */
 const POLL_PAGE_SIZE = 80
-const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'
 
 type InboxLiveSource = 'rpc' | 'api'
 
@@ -75,12 +85,6 @@ type InboxCacheEnvelope = {
   messages: Message[]
   /** Letzter erfolgreicher Live-Ladepfad (§ H.15 B.1). */
   liveSource?: InboxLiveSource
-}
-
-function inboxCacheKey(packageId?: string, activeMailboxId?: string): string {
-  const pkg = (packageId || '__default__').trim().toLowerCase() || '__default__'
-  const mb = (activeMailboxId || '__server__').trim().toLowerCase() || '__server__'
-  return `${INBOX_CACHE_KEY_PREFIX}${pkg}:${mb}`
 }
 
 function writeInboxCache(key: string, messages: Message[], liveSource?: InboxLiveSource): void {
@@ -141,11 +145,13 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   const inboxLiveSourceRef = useRef<InboxLiveSource | null>(null)
   /** Nach Reset: bis zu 3 Auto-Append-Runden wenn hasMore (ältere Move-Pakete / Events). */
   const autoAppendBudgetRef = useRef(0)
+  const lastInboxCacheKeyRef = useRef<string | null>(null)
   inboxLiveSourceRef.current = inboxLiveSource
 
   const clearInboxRam = useCallback(() => {
     awaitingManualRefreshRef.current = true
     inboxLoadEpochRef.current += 1
+    lastInboxCacheKeyRef.current = null
     mailboxOffsetRef.current = 0
     setInboxHasMore(true)
     setLoadError(null)
@@ -169,28 +175,44 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     async (
       mode: InboxLoadMode = 'reset',
       overridePackageId?: unknown,
-      opts?: { silent?: boolean }
+      opts?: InboxLoadMessagesOpts
     ) => {
       if (awaitingManualRefreshRef.current && mode !== 'reset') return
       const silent = opts?.silent === true || mode === 'poll'
+      const forceLive = opts?.forceLive === true && mode === 'reset' && !silent
       if (inboxLoadInFlightRef.current && (mode === 'poll' || silent)) return
-      const loadEpoch = inboxLoadEpochRef.current
-      inboxLoadInFlightRef.current = true
       const trimPkg = (v: unknown): string | undefined =>
         typeof v === 'string' ? v.trim() || undefined : undefined
       const pkg = trimPkg(overridePackageId) ?? trimPkg(packageId)
-      const cacheKey = inboxCacheKey(pkg, readActiveSendMailboxObjectId())
+      const cacheKey = buildInboxCacheKey({
+        packageId: pkg,
+        activeMailboxId: readActiveSendMailboxObjectId(),
+        myAddress,
+      })
+      const walletScopeChanged =
+        mode === 'reset' &&
+        lastInboxCacheKeyRef.current != null &&
+        lastInboxCacheKeyRef.current !== cacheKey
+      if (mode === 'reset') {
+        lastInboxCacheKeyRef.current = cacheKey
+      }
+      if (walletScopeChanged || forceLive) {
+        inboxLoadEpochRef.current += 1
+      }
+      const loadEpoch = inboxLoadEpochRef.current
+      inboxLoadInFlightRef.current = true
       if (!silent) {
         if (mode === 'append') setLoadingMore(true)
         else {
-          const hasWarmCache = mode === 'reset' && readInboxCache(cacheKey) != null
+          const hasWarmCache =
+            !forceLive && mode === 'reset' && readInboxCache(cacheKey) != null
           if (!hasWarmCache) setLoading(true)
         }
         setLoadError(null)
       }
       /** Shared-Posteingang: immer Backend-MAILBOX_ID — kein Manifest-Override (sonst leer/falsch). */
       const pageSize =
-        mode === 'reset' ? RESET_PAGE_SIZE : mode === 'poll' ? POLL_PAGE_SIZE : PAGE_SIZE
+        mode === 'reset' ? resetPageSize() : mode === 'poll' ? POLL_PAGE_SIZE : PAGE_SIZE
       const offset = mode === 'append' ? mailboxOffsetRef.current : 0
       if (mode === 'reset') {
         awaitingManualRefreshRef.current = false
@@ -200,28 +222,49 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
       }
-      if (!silent && mode === 'reset') {
+      if (!silent && mode === 'reset' && !forceLive) {
         const cached = readInboxCache(cacheKey)
         if (cached) {
           setMessages((prev) => {
+            const base = walletScopeChanged ? [] : prev
             const next = mergeAllMessages([
               ...cached.messages,
-              ...pickInboxOverlayRowsForMerge(prev, cached.messages),
+              ...pickInboxOverlayRowsForMerge(base, cached.messages),
             ])
-            if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+            if (!walletScopeChanged && inboxMessageListSignature(prev) === inboxMessageListSignature(next)) {
+              return prev
+            }
             return next
           })
+          // Kein Banner-Flash: Cache nur anzeigen wenn Live-Fetch scheitert (siehe unten).
+        } else if (walletScopeChanged) {
+          setMessages([])
+          setInboxFromCache(false)
+          setInboxCacheAgeMinutes(null)
+          setInboxLiveSource(null)
         }
+      } else if (forceLive && walletScopeChanged) {
+        setMessages([])
+        setInboxFromCache(false)
+        setInboxCacheAgeMinutes(null)
+        setInboxLiveSource(null)
       }
       try {
         if (mode === 'reset') {
           tryAutoRestoreDirectIotaSessionSigner()
-          await whenDirectIotaTabSessionPersistIdle()
-          await tryAutoRestoreDirectIotaSessionSignerAsync()
+          if (getDirectIotaSessionSigner()) {
+            /* Signer im RAM — Tab-Persist (PBKDF2) nicht abwarten; sonst APK „eingefroren“ nach Unlock. */
+          } else if (isCapacitorNativePlatform()) {
+            void whenDirectIotaTabSessionPersistIdle().then(() => tryAutoRestoreDirectIotaSessionSignerAsync())
+          } else {
+            await whenDirectIotaTabSessionPersistIdle()
+            await tryAutoRestoreDirectIotaSessionSignerAsync()
+          }
         }
         const applyMappedToState = (mapped: Message[], stride: number, chainHasMore: boolean) => {
           if (loadEpoch !== inboxLoadEpochRef.current) return
           if (awaitingManualRefreshRef.current && mode !== 'reset') return
+          const replaceOnReset = mode === 'reset' && (forceLive || walletScopeChanged)
           if (mode === 'poll') {
             setMessages((prev) => {
               const prevIds = new Set(prev.map((m) => m.id))
@@ -254,7 +297,8 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             )
           }
           setMessages((prev) => {
-            const localOverlay = pickInboxOverlayRowsForMerge(prev, mapped)
+            const overlayBase = replaceOnReset ? [] : prev
+            const localOverlay = pickInboxOverlayRowsForMerge(overlayBase, mapped)
             const next =
               mode === 'reset'
                 ? mergeAllMessages([...mapped, ...localOverlay])
@@ -269,7 +313,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
                     ...mapped,
                     ...localOverlay,
                   ])
-            if (inboxMessageListSignature(prev) === inboxMessageListSignature(next)) return prev
+            if (!replaceOnReset && inboxMessageListSignature(prev) === inboxMessageListSignature(next)) {
+              return prev
+            }
             return next
           })
         }
@@ -295,8 +341,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         if (res.ok && raw != null) {
           const mapped: Message[] = raw
           const tgJournal = mode === 'poll' ? [] : await loadTelegramJournalMessages(myAddress)
+          const lanInbox = await loadTeamSyncLanInboxMessages(myAddress)
           const page = enrichInboxMessagesWithChainDigests(
-            mergeAllMessages([...mapped, ...tgJournal])
+            mergeAllMessages([...mapped, ...tgJournal, ...lanInbox])
           )
           const liveSource: InboxLiveSource = res.loadedViaRpc === true ? 'rpc' : 'api'
           writeInboxCache(cacheKey, page, liveSource)
@@ -380,6 +427,10 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
 
   useEffect(() => {
     mailboxOffsetRef.current = 0
+    if (isCapacitorNativePlatform()) {
+      const t = window.setTimeout(() => void loadMessagesRef.current('reset'), 0)
+      return () => window.clearTimeout(t)
+    }
     void loadMessagesRef.current('reset')
   }, [packageId, myAddress, alsoMailboxIdsKey])
 
@@ -393,17 +444,20 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
     return () => window.removeEventListener(ACTIVE_MAILBOX_CHANGED_EVENT, onMailboxChanged)
   }, [])
 
-  /** Telegram Long Polling: Journal periodisch in den Posteingang mergen (ohne Full-Inbox-Reload). */
+  /** Telegram + LAN-Team-Sync: periodisch in den Posteingang mergen (ohne Full-Inbox-Reload). */
   useEffect(() => {
     if (!myAddress.trim()) return
-    const refreshTg = async () => {
+    const refreshOverlay = async () => {
       if (awaitingManualRefreshRef.current) return
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return
-      const tg = await loadTelegramJournalMessages(myAddress)
-      if (tg.length === 0) return
-      setMessages((prev) => mergeJournalIntoInboxIfChanged(prev, tg))
+      const [tg, lan] = await Promise.all([
+        loadTelegramJournalMessages(myAddress),
+        loadTeamSyncLanInboxMessages(myAddress),
+      ])
+      if (tg.length === 0 && lan.length === 0) return
+      setMessages((prev) => mergeJournalIntoInboxIfChanged(prev, [...lan, ...tg]))
     }
-    const iv = window.setInterval(() => void refreshTg(), 30_000)
+    const iv = window.setInterval(() => void refreshOverlay(), 15_000)
     return () => window.clearInterval(iv)
   }, [myAddress])
 

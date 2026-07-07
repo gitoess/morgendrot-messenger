@@ -1,18 +1,21 @@
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
+import {
+  generateMnemonicKeypairLocally,
+  type GenerateMnemonicOk,
+  type GenerateMnemonicResult,
+} from '@/frontend/lib/generate-mnemonic-local'
 
-export type GenerateMnemonicOk = {
-  ok: true
-  address: string
-  /** Mnemonic oder Bech32-Secret — nur einmalig anzeigen */
-  secretKey: string
-}
+export type { GenerateMnemonicOk, GenerateMnemonicResult }
 
-export type GenerateMnemonicResult = GenerateMnemonicOk | { ok: false; error: string }
-
-/** POST /api/generate-mnemonic — nur Boss/Messenger. */
+/** POST /api/generate-mnemonic — oder lokal wenn Basis-URL leer (Boss-APK offline). */
 export async function fetchGenerateMnemonic(): Promise<GenerateMnemonicResult> {
+  const apiBase = getApiBase().trim()
+  if (!apiBase) {
+    return generateMnemonicKeypairLocally()
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/api/generate-mnemonic`, {
+    const res = await fetch(`${apiBase}/api/generate-mnemonic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',

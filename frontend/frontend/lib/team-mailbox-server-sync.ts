@@ -1,6 +1,5 @@
 'use client'
 
-import { getApiBase } from '@/frontend/lib/api/api-base'
 import { getConfig, setConfig } from '@/frontend/lib/api/dashboard-rest'
 import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
 
@@ -44,7 +43,6 @@ export function mergeTeamMailboxIdLists(existing: string[], add: string[]): stri
 
 /** Liest TEAM_MAILBOX_IDS aus GET /api/config (falls exponiert). */
 export async function readServerTeamMailboxIds(): Promise<string[]> {
-  if (!getApiBase().trim()) return []
   try {
     const r = await getConfig()
     if (!r.ok || !r.config) return []
@@ -68,9 +66,6 @@ export async function syncLocalTeamMailboxesToServer(opts?: {
 
   if (!teamOnly.length) {
     return { ok: true, message: 'Keine Team-Postfächer zum Synchronisieren.', syncedIds: [] }
-  }
-  if (!getApiBase().trim()) {
-    return { ok: true, message: 'Kein Backend — Team-Postfächer nur lokal.', syncedIds: teamOnly }
   }
 
   const existing = await readServerTeamMailboxIds()
@@ -97,9 +92,6 @@ export async function mergeTeamMailboxIdOnServer(
   const id = objectId.trim()
   if (!OBJECT_ID_RE.test(id)) {
     return { ok: false, error: 'Team-Mailbox-ID ungültig.' }
-  }
-  if (!getApiBase().trim()) {
-    return { ok: true, message: 'Team-Mailbox lokal — kein Backend für Server-Sync.', syncedIds: [id] }
   }
   const existing = await readServerTeamMailboxIds()
   const priv = opts?.privateServerMailboxId?.trim().toLowerCase()

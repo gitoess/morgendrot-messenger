@@ -23,6 +23,8 @@ import {
 } from '@/frontend/lib/handoff-local-apply'
 import { addConnectedPeerToLocalSnapshot } from '@/frontend/lib/connected-peers-snapshot'
 import { applyMessengerGroupHandoffFromEnv } from '@/frontend/lib/messenger-group-handoff'
+import { readHandoffExtras } from '@/frontend/lib/handoff-extras'
+import { applyTeamBroadcastKeysFromExtras } from '@/frontend/lib/handoff-team-broadcast-keys'
 import { joinMyTeamMailbox } from '@/frontend/lib/my-team-mailbox-store'
 import { parseTeamMailboxIdsCsv } from '@/frontend/lib/team-mailbox-server-sync'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
@@ -212,6 +214,7 @@ export function applyHandoffEnvToLocalDevice(envText: string): LocalHandoffAppli
   seedPartnersFromHandoffEnv(env)
   importTeamMailboxesFromHandoffEnv(env)
   applyMessengerGroupHandoffFromEnv(env)
+  applyTeamBroadcastKeysFromExtras(readHandoffExtras())
   enableStandaloneDirectDefaults()
 
   return snapshot

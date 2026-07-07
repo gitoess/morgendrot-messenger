@@ -25,11 +25,14 @@ import {
     type HierarchyPermissions,
 } from '../../config.js';
 import {
-    getBalanceInMist,
     getMessengerCreditsSnapshot,
     getPackageIdsForOwner,
     isChainReachable,
 } from '../../chain-access.js';
+import {
+    fetchWalletNativeBalancesForAddress,
+    resolveBossWalletAddressForBalance,
+} from '../wallet-native-balances.js';
 import { getMessagingMoveFeatures } from '../../move-package-features.js';
 import { getClient } from '../../chain-access.js';
 import { resolveUpgradeCapId } from '../../move-package-deploy.js';
@@ -41,7 +44,7 @@ import {
     readCapabilitiesOverrideFromRuntimeRaw,
     resolveMessengerCapabilities,
 } from '../../shared/messenger-capabilities-matrix.js';
-import { mask, rpcUrlLabel, formatWalletNativeIotaForStatusUi } from '../http-middleware.js';
+import { mask, rpcUrlLabel } from '../http-middleware.js';
 import { collectLanIpv4Hosts, buildLanInstallUrlPair } from '../../lib/lan-install-urls.js';
 import type { ApiStatus } from '../../api-server.js';
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
@@ -130,18 +133,24 @@ export async function handleStatusRoutes(
         }
         let walletNativeIotaBalance: { mist: string; displayIota: string } | undefined;
         let walletNativeIotaBalanceFetchFailed: boolean | undefined;
-        if (!ctx.getResolvePassword()) {
-            const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
+        let walletNativeIotaBalanceTestnet: { mist: string; displayIota: string } | undefined;
+        let walletNativeIotaBalanceMainnet: { mist: string; displayIota: string } | undefined;
+        let walletNativeIotaBalanceTestnetFetchFailed: boolean | undefined;
+        let walletNativeIotaBalanceMainnetFetchFailed: boolean | undefined;
+        let walletNativeIotaBalanceNetwork: 'testnet' | 'mainnet' | undefined;
+        {
+            const myAddr = resolveBossWalletAddressForBalance();
             if (myAddr && /^0x[a-fA-F0-9]{64}$/i.test(myAddr)) {
-                try {
-                    const mist = await getBalanceInMist(myAddr);
-                    walletNativeIotaBalance = {
-                        mist: mist.toString(),
-                        displayIota: formatWalletNativeIotaForStatusUi(mist),
-                    };
-                } catch {
-                    walletNativeIotaBalanceFetchFailed = true;
-                }
+                const balances = await fetchWalletNativeBalancesForAddress(myAddr);
+                walletNativeIotaBalance = balances.walletNativeIotaBalance;
+                walletNativeIotaBalanceFetchFailed = balances.walletNativeIotaBalanceFetchFailed;
+                walletNativeIotaBalanceNetwork = balances.walletNativeIotaBalanceNetwork;
+                walletNativeIotaBalanceTestnet = balances.walletNativeIotaBalanceTestnet ?? undefined;
+                walletNativeIotaBalanceMainnet = balances.walletNativeIotaBalanceMainnet ?? undefined;
+                walletNativeIotaBalanceTestnetFetchFailed =
+                    balances.walletNativeIotaBalanceTestnetFetchFailed;
+                walletNativeIotaBalanceMainnetFetchFailed =
+                    balances.walletNativeIotaBalanceMainnetFetchFailed;
             }
         }
         const lastVaultOnchainSuccessAt = ctx.getLastVaultOnchainAt();
@@ -223,6 +232,10 @@ export async function handleStatusRoutes(
                 const raw = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
                 return raw || undefined;
             })(),
+            bossAddress: (() => {
+                const raw = (CFG.BOSS_ADDRESS || '').trim();
+                return /^0x[a-fA-F0-9]{64}$/i.test(raw) ? raw : undefined;
+            })(),
             partnerAddress: custom.partnerAddress ?? (CFG.PARTNER_ADDRESS ? mask(CFG.PARTNER_ADDRESS) : undefined),
             partnerCount: custom.partnerCount,
             connectedAddresses: custom.connectedAddresses,
@@ -272,6 +285,15 @@ export async function handleStatusRoutes(
             ...(messengerCreditsFetchFailed && { messengerCreditsFetchFailed: true }),
             ...(walletNativeIotaBalance !== undefined && { walletNativeIotaBalance }),
             ...(walletNativeIotaBalanceFetchFailed && { walletNativeIotaBalanceFetchFailed: true }),
+            ...(walletNativeIotaBalanceNetwork && { walletNativeIotaBalanceNetwork }),
+            ...(walletNativeIotaBalanceTestnet !== undefined && { walletNativeIotaBalanceTestnet }),
+            ...(walletNativeIotaBalanceMainnet !== undefined && { walletNativeIotaBalanceMainnet }),
+            ...(walletNativeIotaBalanceTestnetFetchFailed && {
+                walletNativeIotaBalanceTestnetFetchFailed: true,
+            }),
+            ...(walletNativeIotaBalanceMainnetFetchFailed && {
+                walletNativeIotaBalanceMainnetFetchFailed: true,
+            }),
             ...(configHints.length > 0 && { configHints }),
             rpcUrlLabel: rpcUrlLabel(CFG.RPC_URL || ''),
             rpcSocksProxyActive: Boolean((CFG.RPC_SOCKS_PROXY || '').trim()),

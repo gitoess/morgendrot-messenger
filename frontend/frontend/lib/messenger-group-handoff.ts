@@ -4,6 +4,7 @@
 import {
   createMessengerGroupId,
   getActiveMessengerGroup,
+  readMessengerGroups,
   normalizeGroupMemberAddress,
   upsertMessengerGroup,
   writeActiveGroupId,
@@ -112,7 +113,30 @@ export function resolveMessengerGroupHandoffJson(p: {
   handoffLabel: string
   teamMailboxObjectId?: string
   memberAddresses: string[]
+  /** Explizite Gruppe statt nur aktive Gruppe */
+  messengerGroupId?: string
 }): string | undefined {
+  if (p.messengerGroupId) {
+    const group = readMessengerGroups().find((g) => g.id === p.messengerGroupId)
+    if (group?.teamMailboxObjectId) {
+      const merged = [
+        ...new Set([
+          ...group.memberAddresses,
+          ...p.memberAddresses
+            .map((a) => normalizeGroupMemberAddress(a))
+            .filter((m): m is string => !!m),
+        ]),
+      ]
+      if (merged.length > 0) {
+        return serializeMessengerGroupHandoff({
+          name: group.name,
+          teamMailboxObjectId: group.teamMailboxObjectId,
+          memberAddresses: merged,
+          useTeamBroadcast: group.useTeamBroadcast !== false,
+        })
+      }
+    }
+  }
   const active = getActiveMessengerGroup()
   if (active?.teamMailboxObjectId && active.memberAddresses.length) {
     return serializeMessengerGroupHandoff({

@@ -33,6 +33,8 @@ export type ApiStatus = {
   hasKeys?: boolean
   network?: string
   myAddress?: string
+  /** BOSS_ADDRESS aus .env — Einsatzleitung unabhängig von MY_ADDRESS (Handoff/Helfer-Mix). */
+  bossAddress?: string
   role?: string
   roleId?: number
   capabilities?: MessengerCapabilitiesMatrix
@@ -90,6 +92,11 @@ export type ApiStatus = {
   myAddressFull?: string
   walletNativeIotaBalance?: { mist: string; displayIota: string } | null
   walletNativeIotaBalanceFetchFailed?: boolean
+  walletNativeIotaBalanceNetwork?: 'testnet' | 'mainnet'
+  walletNativeIotaBalanceTestnet?: { mist: string; displayIota: string } | null
+  walletNativeIotaBalanceMainnet?: { mist: string; displayIota: string } | null
+  walletNativeIotaBalanceTestnetFetchFailed?: boolean
+  walletNativeIotaBalanceMainnetFetchFailed?: boolean
   broadcastPinnwand?: {
     enabled: boolean
     address?: string

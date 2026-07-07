@@ -378,13 +378,22 @@ export function vaultFileExists(filePath: string): boolean {
  * Hilft nach Browser-Import unter abweichendem Dateinamen.
  */
 export function resolveVaultFilePathForSession(configuredPath?: string, cwd: string = process.cwd()): string {
-    const base = (configuredPath || '').trim() || '.morgendrot-vault';
-    const candidates = path.isAbsolute(base) ? [base] : [base, path.join(cwd, base)];
+    const configured = (configuredPath || '').trim();
+    const base = configured || '.morgendrot-vault';
+    const explicitConfigured = Boolean(configured);
+    const candidates = path.isAbsolute(base)
+        ? [base]
+        : explicitConfigured
+          ? [path.join(cwd, base)]
+          : [base, path.join(cwd, base)];
     for (const p of candidates) {
         if (vaultFileExists(p)) return p;
     }
-    const listed = listVaultFiles(cwd);
-    if (listed.length === 1) return listed[0]!;
+    /** Nur ohne explizites VAULT_FILE: einzelne `.morgendrot-vault*` im cwd finden (Import-Fallback). */
+    if (!explicitConfigured) {
+        const listed = listVaultFiles(cwd);
+        if (listed.length === 1) return listed[0]!;
+    }
     return path.isAbsolute(base) ? base : path.join(cwd, base);
 }
 

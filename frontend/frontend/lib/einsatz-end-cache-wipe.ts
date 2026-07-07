@@ -20,8 +20,13 @@ import { clearTeamMemberRemoveSent } from '@/frontend/lib/team-removed-members-s
 import { clearActivePrivateMailbox } from '@/frontend/lib/my-private-mailbox-store'
 import { clearActiveSendMailbox } from '@/frontend/lib/my-mailbox-active'
 import { saveMirrorQueue } from '@/frontend/lib/delayed-mirror-queue'
+import {
+  INBOX_CACHE_KEY_PREFIX,
+  INBOX_CACHE_KEY_PREFIX_LEGACY,
+  isInboxCacheStorageKey,
+} from '@/frontend/lib/inbox-cache-key'
 
-export const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'
+export { INBOX_CACHE_KEY_PREFIX } from '@/frontend/lib/inbox-cache-key'
 
 export const EINSATZ_END_CACHE_WIPED_EVENT = 'morgendrot:einsatz-end-cache-wiped'
 
@@ -44,6 +49,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
 
 export const EINSATZ_END_LOCAL_STORAGE_PREFIXES = [
   INBOX_CACHE_KEY_PREFIX,
+  INBOX_CACHE_KEY_PREFIX_LEGACY,
   'morgendrot.directChain.',
   'morgendrot.directChatEcdh.',
 ] as const
@@ -89,7 +95,7 @@ function removeLocalStorageKeysMatching(predicate: (key: string) => boolean): nu
 }
 
 export function wipeAllInboxCacheKeys(): number {
-  return removeLocalStorageKeysMatching((key) => key.startsWith(INBOX_CACHE_KEY_PREFIX))
+  return removeLocalStorageKeysMatching(isInboxCacheStorageKey)
 }
 
 export function wipeEinsatzLocalBrowserState(options?: Pick<EinsatzEndCacheWipeOptions, 'clearTransportQueues'>): {

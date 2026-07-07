@@ -77,9 +77,9 @@ export function HelperSeedSetupDialog(p: {
         setError(ecdh.error)
         return
       }
-      notifyStandaloneWalletActivated()
       setAppPassword('')
       p.onOpenChange(false)
+      notifyStandaloneWalletActivated()
       p.onActivated?.()
     } finally {
       setBusy(false)
@@ -146,6 +146,7 @@ export function HelperSeedSetupDialog(p: {
       setSeedImport('')
       setAppPassword('')
       p.onOpenChange(false)
+      notifyStandaloneWalletActivated()
       p.onActivated?.()
     } finally {
       setBusy(false)

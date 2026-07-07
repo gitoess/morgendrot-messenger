@@ -87,7 +87,7 @@ import {
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
-import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
+import { resolveChatSendEncryption } from '@/frontend/lib/resolve-chat-send-encryption'
 import {
   buildTelegramMessagePreview,
   readTelegramNotifyOnSend,
@@ -203,6 +203,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    const sendEncrypted = resolveChatSendEncryption({ encrypted, emergencyWire: emergencyKind })
     const inventoryType = attachedBlobBase64 || attachedAudioBase64 || attachedLora ? 'image' : 'text'
     const meshLoRaImageSendActive = isMeshLoRaImageSendActive({
       isPrivate,
@@ -227,7 +228,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       isGroupChannel,
       messagingPersistenceMode,
       forcedTransport,
-      encrypted,
+      encrypted: sendEncrypted,
       activeGroup,
       myAddress,
       composerRecipient: plainMailboxRecipient,
@@ -238,7 +239,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
-    if (encrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
+    if (sendEncrypted && isPrivate && !ADDR_64_LOWER.test(encryptedMailboxRecipient)) {
       setStatus('error')
       setStatusMsg(
         'Verschlüsselt: gültige 0x-Empfängeradresse im Composer oder Partner (Handshake) eintragen.'
@@ -367,7 +368,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (path4SelfArchiveActive) {
         return 'Klartext über LoRa gesendet; anschließend eigene Tangle-Kopie (Mailbox an dich).'
       }
-      if (!encrypted) {
+      if (!sendEncrypted) {
         if (forcedTransport === 'internet') return 'Klartext über IOTA (/send-plain) gesendet.'
         if (forcedTransport === 'mesh') {
           return meshSelfArchiveAfterLoRa && isPrivate
@@ -381,7 +382,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     const shouldLoadMessagesAfterSend = (): boolean => {
       if (!isPrivate) return true
-      if (!encrypted) {
+      if (!sendEncrypted) {
         if (forcedTransport === 'internet' || forcedTransport === 'mesh') return true
         return false
       }
@@ -429,7 +430,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     })
 
     /** Ohne Pfad 4: verschlüsselter „Funk“-Modus + LUMA — nicht unterstützt (Pfad 4 = Klartext-Luft). */
-    if (attachedLora && encrypted && isPrivate && forcedTransport === 'mesh' && !meshLoRaImageSendActive) {
+    if (attachedLora && sendEncrypted && isPrivate && forcedTransport === 'mesh' && !meshLoRaImageSendActive) {
       applyValidationError(
         {
           ok: false,
@@ -443,7 +444,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       return
     }
 
-    if (attachedLora && encrypted && isPrivate && forcedTransport === 'internet') {
+    if (attachedLora && sendEncrypted && isPrivate && forcedTransport === 'internet') {
       const { lumaText, chromaText } = buildLoraMeshDualWireTexts(
         attachedLora.lumaWire,
         attachedLora.chromaWire,
@@ -521,7 +522,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     /** Online: LUMA+CHROMA nur mit Schloss (zwei verschlüsselte Mailbox-Sends). */
-    if (attachedLora && isPrivate && forcedTransport === 'internet' && !encrypted) {
+    if (attachedLora && isPrivate && forcedTransport === 'internet' && !sendEncrypted) {
       applyValidationError(
         {
           ok: false,
@@ -680,7 +681,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
 
-    if (!encrypted && !plainMailboxRecipient && !groupMailboxInternetChain) {
+    if (!sendEncrypted && !plainMailboxRecipient && !groupMailboxInternetChain) {
       const broadcastTargets = parseComposerIotaRecipientAddresses(recipient, partner, false)
       if (broadcastTargets.length === 0 && !meshKlartextOkWithoutZeroXRecipient) {
         applyValidationError(
@@ -696,9 +697,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         return
       }
     }
-    const iotaSendTargets = parseComposerIotaRecipientAddresses(recipient, partner, encrypted)
+    const iotaSendTargets = parseComposerIotaRecipientAddresses(recipient, partner, sendEncrypted)
     if (
-      encrypted &&
+      sendEncrypted &&
       forcedTransport === 'internet' &&
       !groupMailboxInternetChain &&
       iotaSendTargets.length === 0
@@ -717,7 +718,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
     const recipientTrimLower = plainMailboxRecipient.trim().toLowerCase()
     if (
-      !encrypted &&
+      !sendEncrypted &&
       forcedTransport === 'internet' &&
       iotaSendTargets.length === 0 &&
       !ADDR_64_LOWER.test(recipientTrimLower) &&
@@ -753,7 +754,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
     }
 
-    if (isPrivate && !encrypted && forcedTransport === 'mesh') {
+    if (isPrivate && !sendEncrypted && forcedTransport === 'mesh') {
       const blocksPlaintextByAttachment =
         !!attachedBlobBase64 ||
         !!attachedAudioBase64 ||
@@ -775,7 +776,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     /** LongFast / TEXT_MESSAGE: harte Nutzlastgrenze — galt fälschlich nur privat; öffentlicher Funk braucht dieselbe Kappe. */
-    if (!encrypted && forcedTransport === 'mesh') {
+    if (!sendEncrypted && forcedTransport === 'mesh') {
       const plaintextMaxChars = MESH_PLAINTEXT_MAX_CHARS
       for (const snap of textSnaps) {
         const charCount = [...snap].length
@@ -895,7 +896,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       setStatus,
       setStatusMsg,
       isPrivate,
-      encrypted,
+      encrypted: sendEncrypted,
       meshPath4StyleActive,
       forcedTransport,
       mailbox: {
@@ -928,7 +929,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         myAddress,
         meshPath4StyleActive,
         isEmergencySend,
-        encrypted,
+        encrypted: sendEncrypted,
         isUserCancelError,
         runPath4MailboxSelfArchive,
       },
@@ -966,7 +967,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       const forensicGate =
         isForensicImageMailboxAttestationEnabled() &&
-        encrypted &&
+        sendEncrypted &&
         isPrivate &&
         forcedTransport === 'internet' &&
         attachedBlobBase64 &&

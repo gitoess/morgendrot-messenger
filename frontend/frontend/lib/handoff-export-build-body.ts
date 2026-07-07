@@ -36,6 +36,7 @@ export type HandoffExportBodyBuildInput = {
   bossDefaultTtlDays: number
   exportEnablePurge: boolean
   helperAddress?: string
+  messengerGroupId?: string
 }
 
 export function buildHandoffZipExportBody(input: HandoffExportBodyBuildInput): StandaloneSmartphoneHandoffZipBody {
@@ -56,6 +57,7 @@ export function buildHandoffZipExportBody(input: HandoffExportBodyBuildInput): S
     handoffLabel: input.bezeichnung.trim() || getHandoffPreset(input.activePresetId).label,
     teamMailboxObjectId: primaryMb,
     memberAddresses: memberPool,
+    messengerGroupId: input.messengerGroupId,
   })
   return {
     handoffLabel: input.bezeichnung.trim() || undefined,

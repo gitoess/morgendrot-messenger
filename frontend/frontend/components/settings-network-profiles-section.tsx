@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { Check, ChevronDown, Copy, Globe } from 'lucide-react'
+import { ChevronDown, Globe } from 'lucide-react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,11 @@ import {
     type EinsatzNetworkProfilesState,
     writeNetworkProfilesState,
 } from '@/frontend/lib/einsatz-network-profiles'
+import { BossWalletGasFundingPanel } from '@/frontend/components/onboarding/boss-wallet-gas-funding-panel'
+import {
+    BossNetworkDeployIdsPanel,
+    buildBossDeployIdExtrasFromApi,
+} from '@/frontend/components/onboarding/boss-network-deploy-ids-panel'
 import { postDeployMainnetPackage } from '@/frontend/lib/api/einsatz-config'
 import { DEFAULT_MAINNET_RPC_URL } from '@morgendrot/shared/einsatz-chain-mode'
 
@@ -27,39 +32,6 @@ type SettingsNetworkProfilesSectionProps = {
     apiStatus?: ApiStatus | null
     backendOnline?: boolean
     onApplied?: () => void | Promise<void>
-}
-
-type MainnetDeployResult = {
-    packageId: string
-    mailboxId?: string
-}
-
-function maskId(id: string): string {
-    const t = id.trim()
-    if (t.length <= 18) return t
-    return `${t.slice(0, 10)}…${t.slice(-6)}`
-}
-
-function IdRow(p: { label: string; value: string; copyKey: string; copied: string | null; onCopy: (v: string, k: string) => void }) {
-    if (!p.value.trim()) return null
-    return (
-        <div className="space-y-0.5">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{p.label}</p>
-            <div className="flex items-start gap-2">
-                <p className="min-w-0 flex-1 break-all font-mono text-[11px] text-foreground" title={p.value}>
-                    {p.value}
-                </p>
-                <button
-                    type="button"
-                    className="inline-flex shrink-0 items-center gap-1 text-[10px] text-primary hover:underline"
-                    onClick={() => p.onCopy(p.value, p.copyKey)}
-                >
-                    {p.copied === p.copyKey ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    {p.copied === p.copyKey ? 'Kopiert' : 'Kopieren'}
-                </button>
-            </div>
-        </div>
-    )
 }
 
 export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSectionProps) {
@@ -71,8 +43,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
     const [msg, setMsg] = useState('')
     const [msgTone, setMsgTone] = useState<'neutral' | 'error' | 'success'>('neutral')
     const [mainnetSetupOpen, setMainnetSetupOpen] = useState(false)
-    const [deployResult, setDeployResult] = useState<MainnetDeployResult | null>(null)
-    const [copied, setCopied] = useState<string | null>(null)
 
     const refresh = useCallback(() => {
         setState(syncProfilesFromApi(readNetworkProfilesState(), p.apiStatus))
@@ -89,9 +59,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         const synced = syncProfilesFromApi(readNetworkProfilesState(), p.apiStatus)
         setState(synced)
         writeNetworkProfilesState(synced)
-        if (synced.mainnet.packageId && synced.mainnet.mailboxId) {
-            setDeployResult({ packageId: synced.mainnet.packageId, mailboxId: synced.mainnet.mailboxId })
-        }
     }, [p.apiStatus?.packageId, p.apiStatus?.mailboxId, p.apiStatus?.einsatzConfig?.mainnetPackageId])
 
     useEffect(() => {
@@ -128,14 +95,7 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
         p.apiStatus?.myAddressFull?.trim() || p.apiStatus?.myAddress?.trim() || undefined
 
     const summary = summarizeNetworkState(state)
-    const mainnetReady = Boolean(state.mainnet.packageId.trim() && state.mainnet.mailboxId.trim())
-
-    const copyId = (value: string, key: string) => {
-        void navigator.clipboard.writeText(value).then(() => {
-            setCopied(key)
-            setTimeout(() => setCopied(null), 2000)
-        })
-    }
+    const deployExtras = buildBossDeployIdExtrasFromApi(p.apiStatus)
 
     const pickNetwork = async (target: EinsatzNetworkId) => {
         if (target === 'mainnet' && !summarizeNetworkState({ ...state, active: 'mainnet' }).activeOk) {
@@ -187,10 +147,7 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 : 'Boss hat noch kein MAINNET_PACKAGE_ID — „Mainnet deployen“ oder Terminal.'
         )
         if (synced.mainnet.packageId) {
-            setDeployResult({
-                packageId: synced.mainnet.packageId,
-                mailboxId: synced.mainnet.mailboxId || undefined,
-            })
+            setMainnetSetupOpen(true)
         }
     }
 
@@ -203,7 +160,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
             return
         }
         setDeploying(true)
-        setDeployResult(null)
         setMsgTone('neutral')
         setMsg('Mainnet-Deploy läuft — bitte warten (Publish + Postfach, kann 2–5 Min. dauern)…')
         setMainnetSetupOpen(true)
@@ -227,10 +183,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
             setState(next)
             writeNetworkProfilesState(next)
             notifyNetworkProfilesChanged()
-            setDeployResult({
-                packageId: out.packageId,
-                mailboxId: out.mailboxId,
-            })
             const apply = await applyActiveNetworkProfile({
                 state: next,
                 backendOnline: p.backendOnline,
@@ -275,12 +227,6 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
                 setMsgTone('error')
                 setMsg(out.error)
                 return
-            }
-            if (state.mainnet.packageId) {
-                setDeployResult({
-                    packageId: state.mainnet.packageId,
-                    mailboxId: state.mainnet.mailboxId || undefined,
-                })
             }
             setMsgTone('success')
             setMsg('Mainnet gespeichert.')
@@ -331,31 +277,34 @@ export function SettingsNetworkProfilesSection(p: SettingsNetworkProfilesSection
 
             {summary.hint ? <p className="text-xs text-muted-foreground">{summary.hint}</p> : null}
 
-            {(deployResult || mainnetReady) && state.mainnet.packageId ? (
-                <div className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 p-3 space-y-2 text-xs">
-                    <p className="font-semibold text-emerald-900 dark:text-emerald-200">
-                        Mainnet-IDs {mainnetReady ? '(bereit)' : '(Package da, Postfach fehlt)'}
-                    </p>
-                    <IdRow
-                        label="Package"
-                        value={deployResult?.packageId || state.mainnet.packageId}
-                        copyKey="pkg"
-                        copied={copied}
-                        onCopy={copyId}
-                    />
-                    <IdRow
-                        label="Mailbox"
-                        value={deployResult?.mailboxId || state.mainnet.mailboxId}
-                        copyKey="mb"
-                        copied={copied}
-                        onCopy={copyId}
-                    />
-                    <p className="text-[10px] text-muted-foreground font-mono">
-                        {maskId(deployResult?.packageId || state.mainnet.packageId)}
-                        {state.mainnet.mailboxId ? ` · ${maskId(state.mainnet.mailboxId)}` : ''}
-                    </p>
-                </div>
-            ) : null}
+            <div className="space-y-2">
+                <BossWalletGasFundingPanel
+                    network="testnet"
+                    apiSnapshot={p.apiStatus}
+                    backendOnline={p.backendOnline}
+                    onReload={() => void p.onApplied?.()}
+                    compact
+                />
+                <BossWalletGasFundingPanel
+                    network="mainnet"
+                    apiSnapshot={p.apiStatus}
+                    backendOnline={p.backendOnline}
+                    onReload={() => void p.onApplied?.()}
+                    compact
+                />
+            </div>
+
+            <BossNetworkDeployIdsPanel
+                testnet={{
+                    packageId: state.testnet.packageId,
+                    mailboxId: state.testnet.mailboxId,
+                }}
+                mainnet={{
+                    packageId: state.mainnet.packageId,
+                    mailboxId: state.mainnet.mailboxId,
+                }}
+                extras={deployExtras}
+            />
 
             <Collapsible open={mainnetSetupOpen} onOpenChange={setMainnetSetupOpen}>
                 <CollapsibleTrigger className="flex w-full items-center gap-1 text-xs text-muted-foreground hover:text-foreground">

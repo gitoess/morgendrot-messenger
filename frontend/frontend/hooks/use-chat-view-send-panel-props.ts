@@ -21,11 +21,13 @@ import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import { resolveActiveSendPath } from '@/frontend/lib/messenger-channel-send-path'
 import type { ChatViewActiveConversationBarProps } from '@/frontend/components/chat-view-active-conversation-bar'
 
 export type ChatViewActiveConversationContext = {
   inboxPartnerKey: string | null
+  inboxConversationGroupId: string | null
   inboxPartnerFiltersArmed: boolean
   directory: Record<string, ContactMeshEntryClient>
 }
@@ -183,10 +185,16 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   }
 
   const activePartnerKey = deps.activeConversation?.inboxPartnerKey?.trim().toLowerCase() ?? ''
+  const activeGroupId = deps.activeConversation?.inboxConversationGroupId?.trim() ?? ''
   const hasActiveDirectConversation =
     composerSendPath.isPrivate &&
     deps.activeConversation?.inboxPartnerFiltersArmed === true &&
     isValidRecipient0x(activePartnerKey) &&
+    composerSendPath.composerDelivery === 'chain'
+  const hasActiveGroupConversation =
+    composerSendPath.isGroup &&
+    deps.activeConversation?.inboxPartnerFiltersArmed === true &&
+    Boolean(activeGroupId) &&
     composerSendPath.composerDelivery === 'chain'
 
   const activeConversationBar: ChatViewActiveConversationBarProps | undefined = useMemo(() => {
@@ -194,6 +202,22 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
       return {
         displayName: `Alle · ${iotaBroadcastTargets.length} Empfänger`,
         addressLine: `${iotaBroadcastTargets.length} IOTA-Adressen — pro Empfänger eine Transaktion`,
+        handshakeBadge: 'none',
+        encrypted: sendTransportRead.encrypted,
+        forcedTransport: sendTransportRead.forcedTransport,
+        onEncryptedChange: sendTransportChoice.onEncryptedChange,
+      }
+    }
+    if (hasActiveGroupConversation) {
+      const group =
+        deps.activeGroup ??
+        readMessengerGroups().find((g) => g.id === activeGroupId) ??
+        null
+      return {
+        displayName: group?.name ?? 'Gruppe',
+        addressLine: group?.teamMailboxObjectId?.trim()
+          ? 'Team-Postfach · Broadcast'
+          : `${group?.memberAddresses.length ?? 0} Mitglieder`,
         handshakeBadge: 'none',
         encrypted: sendTransportRead.encrypted,
         forcedTransport: sendTransportRead.forcedTransport,
@@ -225,6 +249,9 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
   }, [
     isIotaBroadcastAll,
     iotaBroadcastTargets.length,
+    hasActiveGroupConversation,
+    activeGroupId,
+    deps.activeGroup,
     hasActiveDirectConversation,
     deps.activeConversation,
     activePartnerKey,
@@ -239,6 +266,26 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     inboxFeedRead.myAddress,
     handleEncryptedHandshakeForComposerRecipient,
     handleEncryptedAcceptForComposerRecipient,
+  ])
+
+  const encryptionModeToggle = useMemo(() => {
+    if (activeConversationBar) return undefined
+    if (composerSendPath.composerDelivery !== 'chain') return undefined
+    if (sendTransportRead.forcedTransport !== 'internet') return undefined
+    if (!composerSendPath.isPrivate && !composerSendPath.isGroup) return undefined
+    return {
+      encrypted: sendTransportRead.encrypted,
+      forcedTransport: sendTransportRead.forcedTransport,
+      onEncryptedChange: sendTransportChoice.onEncryptedChange,
+    }
+  }, [
+    activeConversationBar,
+    composerSendPath.composerDelivery,
+    composerSendPath.isPrivate,
+    composerSendPath.isGroup,
+    sendTransportRead.encrypted,
+    sendTransportRead.forcedTransport,
+    sendTransportChoice.onEncryptedChange,
   ])
 
   const sendPanelProps = {
@@ -290,6 +337,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
         composerSendPath.composerDelivery === 'chain' &&
         !isIotaBroadcastAll),
     activeConversationBar,
+    encryptionModeToggle,
     onStatusFeedback: sendActions.onStatusFeedback,
     composerDelivery: composerSendPath.composerDelivery,
     messagingPersistenceMode: sendTransportChoice.messagingPersistenceMode,

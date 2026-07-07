@@ -58,6 +58,7 @@ describe('useChatViewSendPanelProps', () => {
           }),
           activeConversation: {
             inboxPartnerKey: addr,
+            inboxConversationGroupId: null,
             inboxPartnerFiltersArmed: true,
             directory: { [addr]: { label: 'Alice' } },
           },
@@ -174,6 +175,7 @@ describe('useChatViewSendPanelProps', () => {
           }),
           activeConversation: {
             inboxPartnerKey: null,
+            inboxConversationGroupId: null,
             inboxPartnerFiltersArmed: false,
             directory: {},
           },
@@ -183,6 +185,52 @@ describe('useChatViewSendPanelProps', () => {
     expect(result.current.sendPanelProps.hideComposerIotaRecipient).toBe(false)
     expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Alle · 2 Empfänger')
     expect(result.current.sendPanelProps.activeConversationBar?.onEncryptedChange).toBeDefined()
+  })
+
+  it('zeigt Verschlüsselungs-Leiste bei aktiver Gruppe', () => {
+    const { result } = renderHook(() =>
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({
+            encrypted: true,
+            forcedTransport: 'internet',
+            composerDelivery: 'chain',
+            isPrivate: false,
+            isGroup: true,
+          }),
+          activeGroup: {
+            id: 'g1',
+            name: 'Einsatz Alpha',
+            memberAddresses: ['0x' + 'a'.repeat(64)],
+          },
+          activeConversation: {
+            inboxPartnerKey: null,
+            inboxConversationGroupId: 'g1',
+            inboxPartnerFiltersArmed: true,
+            directory: {},
+          },
+        })
+      )
+    )
+    expect(result.current.sendPanelProps.activeConversationBar?.displayName).toBe('Einsatz Alpha')
+    expect(result.current.sendPanelProps.encryptionModeToggle).toBeUndefined()
+  })
+
+  it('liefert encryptionModeToggle wenn keine Konversationsleiste', () => {
+    const { result } = renderHook(() =>
+      useChatViewSendPanelProps(
+        baseDeps({
+          messengerPorts: testMessengerPorts({
+            encrypted: true,
+            forcedTransport: 'internet',
+            composerDelivery: 'chain',
+            isPrivate: true,
+          }),
+        })
+      )
+    )
+    expect(result.current.sendPanelProps.activeConversationBar).toBeUndefined()
+    expect(result.current.sendPanelProps.encryptionModeToggle?.onEncryptedChange).toBeDefined()
   })
 
   it('spiegelt attachmentBar aus messengerPorts', () => {

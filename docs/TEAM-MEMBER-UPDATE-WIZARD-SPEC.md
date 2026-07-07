@@ -385,7 +385,7 @@ Persistenz-Gate: **Ja/Nein** erst, wenn Payload verifiziert (Boss + `seq`) — u
 
 ## 11. Offene Punkte (Freeze vor P1-Code)
 
-1. Exaktes Signatur-Schema (`sig`) — bis P1: Boss-ECDH-`.morg-pkg` als tragfähiger Transport.  
+1. ~~Exaktes Signatur-Schema (`sig`)~~ — **Freeze 2026-07-03:** `docs/MORG-TEAM-WIRE-SIG-SCHEMA.md` (Ed25519 personal message).  
 2. Eindeutige `teamId`-Quelle: `metadata.teamid` vs. `deploymentChannelTag`.  
 3. Soll **Freigabe** automatisch den Neuling auch in **bestehende** Helfer-Handoffs (Partner-Liste) schreiben — oder nur Telefonbuch-Sync?  
 4. **P1b:** Eigener Endpoint `POST /api/team-sync/push` vs. bestehendes `/api/send-plain` mit System-Marker?

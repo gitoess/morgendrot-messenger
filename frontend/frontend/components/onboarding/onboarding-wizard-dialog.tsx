@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import {
   OnboardingBossMailboxesStep,
@@ -62,6 +62,7 @@ function skipContext(api?: ApiStatus | null, sessionLocked?: boolean) {
 
 export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   const [progress, setProgress] = useState<OnboardingProgress | null>(() => readOnboardingProgress())
+  const beforeAdvanceRef = useRef<(() => Promise<boolean>) | null>(null)
   const ctx = useMemo(
     () => skipContext(p.apiSnapshot, p.sessionLocked),
     [p.apiSnapshot, p.sessionLocked]
@@ -70,6 +71,10 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
   const syncProgress = useCallback(() => {
     setProgress(readOnboardingProgress())
   }, [])
+
+  useEffect(() => {
+    if (!p.open) beforeAdvanceRef.current = null
+  }, [p.open])
 
   useEffect(() => {
     if (!p.open) return
@@ -109,10 +114,17 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       p.onOpenChange(false)
       p.onOpenHandoffImport?.()
     },
+    onRegisterBeforeAdvance: (fn: (() => Promise<boolean>) | null) => {
+      beforeAdvanceRef.current = fn
+    },
   }
 
-  const advance = (action: 'complete' | 'skip') => {
+  const advance = async (action: 'complete' | 'skip') => {
     if (!progress) return
+    if (action === 'complete' && beforeAdvanceRef.current) {
+      const ok = await beforeAdvanceRef.current()
+      if (!ok) return
+    }
     if (action === 'complete') markOnboardingStepComplete(stepId)
     else skipOnboardingStep(stepId)
     setProgress(readOnboardingProgress())
@@ -236,7 +248,8 @@ export function OnboardingWizardDialog(p: OnboardingWizardDialogProps) {
       onBack={handleBack}
       onSkip={() => advance('skip')}
       onLater={handleLater}
-      onNext={stepId === 'done' ? handleFinish : () => advance('complete')}
+      onDismiss={() => dismissOnboarding()}
+      onNext={stepId === 'done' ? handleFinish : () => void advance('complete')}
       nextLabel={stepId === 'done' ? 'Fertig' : 'Weiter'}
       nextDisabled={nextDisabled}
       showNextChevron={stepId !== 'done'}

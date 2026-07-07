@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import type { OnboardingStepId } from '@/frontend/lib/onboarding-progress-store'
+import { scheduleReleaseStuckModalPointerEvents } from '@/frontend/lib/release-modal-pointer-events'
 
 export function OnboardingStepIndicator(p: { current: number; total: number; className?: string }) {
   const pct = p.total > 0 ? Math.round(((p.current + 1) / p.total) * 100) : 0
@@ -49,7 +50,7 @@ export type OnboardingWizardShellProps = {
   stepHint?: string
   children: ReactNode
   onBack?: () => void
-  onNext?: () => void
+  onNext?: () => void | Promise<void>
   onSkip?: () => void
   onLater?: () => void
   nextLabel?: string
@@ -59,11 +60,21 @@ export type OnboardingWizardShellProps = {
   nextDisabled?: boolean
   /** Pfeil neben Primäraktion — bei „Fertig“ aus. */
   showNextChevron?: boolean
+  /** X / Overlay-Schließen — z. B. dismissOnboarding (vor onOpenChange(false)). */
+  onDismiss?: () => void
 }
 
 export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      p.onDismiss?.()
+      scheduleReleaseStuckModalPointerEvents()
+    }
+    p.onOpenChange(open)
+  }
+
   return (
-    <Dialog open={p.open} onOpenChange={p.onOpenChange}>
+    <Dialog open={p.open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{p.title}</DialogTitle>
@@ -98,7 +109,12 @@ export function OnboardingWizardShell(p: OnboardingWizardShellProps) {
               </Button>
             ) : null}
             {p.onNext ? (
-              <Button type="button" size="sm" onClick={p.onNext} disabled={p.nextDisabled}>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void Promise.resolve(p.onNext?.())}
+                disabled={p.nextDisabled}
+              >
                 {p.nextLabel ?? 'Weiter'}
                 {p.showNextChevron !== false ? (
                   <ChevronRight className="ml-1 h-4 w-4" aria-hidden />

@@ -352,12 +352,16 @@ export function syncDirectMailboxFlagsFromApiStatus(status: ApiStatus): void {
   }
   if (typeof window !== 'undefined') {
     try {
-      window.localStorage.setItem(LS_FLAGS, JSON.stringify(memoryFlagsOnly))
+      const nextFlags = JSON.stringify(memoryFlagsOnly)
+      const prevFlags = window.localStorage.getItem(LS_FLAGS)
+      if (prevFlags !== nextFlags) {
+        window.localStorage.setItem(LS_FLAGS, nextFlags)
+        notifyDirectIotaUiChanged()
+      }
     } catch {
       /* ignore */
     }
   }
-  notifyDirectIotaUiChanged()
 }
 
 export function applyDirectMailboxChainSnapshotFromNetworkIds(j: {

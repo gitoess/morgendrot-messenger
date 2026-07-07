@@ -1,5 +1,7 @@
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
 import type { HandoffExtras } from '@/frontend/lib/handoff-extras'
+import { buildHandoffPartsLocally } from '@/frontend/lib/handoff-build-parts-locally'
+import { resolveBossHandoffExportContext } from '@/frontend/lib/resolve-boss-handoff-export-context'
 import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
 
 export type StandaloneHandoffPackageSource = 'boss' | 'custom' | 'history'
@@ -66,8 +68,23 @@ export type StandaloneSmartphoneHandoffPartsResult =
 export async function fetchStandaloneSmartphoneHandoffParts(
   body: StandaloneSmartphoneHandoffZipBody
 ): Promise<StandaloneSmartphoneHandoffPartsResult> {
+  const apiBase = getApiBase().trim()
+  if (!apiBase) {
+    const bossContext = resolveBossHandoffExportContext()
+    if (bossContext.ready) {
+      return buildHandoffPartsLocally(body, bossContext)
+    }
+    const hint = bossContext.missing.length
+      ? `${bossContext.missing.join(', ')} fehlt`
+      : 'Boss-Kontext unvollständig'
+    return {
+      ok: false,
+      error: `Handoff offline: ${hint} — zuerst Wallet & Netzwerk einrichten.`,
+    }
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetch(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'parts' }),
@@ -105,8 +122,31 @@ export async function fetchStandaloneSmartphoneHandoffParts(
 export async function downloadStandaloneSmartphoneHandoffZip(
   body: StandaloneSmartphoneHandoffZipBody
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const apiBase = getApiBase().trim()
+  if (!apiBase) {
+    const parts = await fetchStandaloneSmartphoneHandoffParts(body)
+    if (!parts.ok) return parts
+    const { buildHandoffZipBytes, downloadHandoffZipBytes } = await import('@/frontend/lib/handoff-zip-build')
+    const { HANDOFF_RUNTIME_CONFIG_FILENAME } = await import('@/frontend/lib/handoff-zip-payload')
+    const { enrichHandoffExtrasFromEnvContent } = await import('@/frontend/lib/handoff-team-broadcast-keys')
+    const { buildHandoffExtrasJson, HANDOFF_EXTRAS_FILENAME } = await import('@/frontend/lib/handoff-extras')
+    const extras = enrichHandoffExtrasFromEnvContent(parts.handoffExtras, parts.envContent)
+    const entries: Record<string, string | Uint8Array> = {
+      'morgendrot-standalone-handoff.env': parts.envContent,
+      'README-HANDOFF.txt': parts.readme || '',
+    }
+    if (parts.runtimeConfigContent?.trim()) {
+      entries[HANDOFF_RUNTIME_CONFIG_FILENAME] = parts.runtimeConfigContent
+    }
+    const extrasJson = buildHandoffExtrasJson(extras)
+    if (extrasJson) entries[HANDOFF_EXTRAS_FILENAME] = extrasJson
+    const zipBytes = buildHandoffZipBytes(entries)
+    downloadHandoffZipBytes(zipBytes, `${parts.filenameBase}.zip`)
+    return { ok: true }
+  }
+
   try {
-    const res = await fetch(`${API_BASE}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetch(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'zip' }),

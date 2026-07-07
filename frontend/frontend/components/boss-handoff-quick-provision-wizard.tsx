@@ -11,7 +11,13 @@ import { HandoffQuickWizardRightsStep } from '@/frontend/components/handoff-quic
 import { HandoffQuickWizardTeamStep } from '@/frontend/components/handoff-quick-wizard-team-step'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
+import { Download, QrCode } from 'lucide-react'
 import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
+import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
+import {
+  buildTeamMailboxOptions,
+  pickPrimaryMailboxId,
+} from '@/frontend/lib/handoff-export-autofill'
 import {
   fetchHandoffCurrentIdsDefaults,
   mergeHandoffExportDefaults,
@@ -31,7 +37,13 @@ import {
 } from '@/frontend/lib/handoff-export-presets'
 import { HANDOFF_PRESET_VISUAL } from '@/frontend/lib/handoff-preset-ui'
 import { provisionNewHandoffDevice } from '@/frontend/lib/handoff-provision-new-device'
+import { writeHandoffLastPresetId } from '@/frontend/lib/handoff-last-preset'
+import { readActiveGroupId } from '@/frontend/lib/messenger-group-store'
+import { readMyTeamMailboxes } from '@/frontend/lib/my-team-mailbox-store'
+import { HandoffProvisionGroupSelect } from '@/frontend/components/handoff-provision-group-select'
 import { useHandoffProvisionRegistryAccess } from '@/frontend/lib/handoff-provision-registry-access'
+
+type QuickDeliverMode = 'team-wallet' | 'own-wallet'
 
 const STEP_WHO = 0
 const STEP_RIGHTS = 1
@@ -44,8 +56,8 @@ const STEP_TITLES = [
   'Wer soll eingerichtet werden?',
   'Rechte (optional)',
   'Team-Postfächer (optional)',
-  'Provision-Registry',
-  'ZIP + Seed-QR erstellen',
+  'Provision-Registry (optional)',
+  'Handoff ausliefern',
 ] as const
 
 export function BossHandoffQuickProvisionWizard(p: {
@@ -70,19 +82,40 @@ export function BossHandoffQuickProvisionWizard(p: {
   const [provisionAddress, setProvisionAddress] = useState('')
   const [provisionEntryId, setProvisionEntryId] = useState<string | null>(null)
   const [provisionQrDataUrl, setProvisionQrDataUrl] = useState('')
+  const [deliverMode, setDeliverMode] = useState<QuickDeliverMode>('team-wallet')
+  const [zipOnlyDone, setZipOnlyDone] = useState(false)
+  const [selectedMessengerGroupId, setSelectedMessengerGroupId] = useState<string | null>(null)
 
   const labelEdited = useRef(false)
+  const wasOpenRef = useRef(false)
   const provisionRegistry = useHandoffProvisionRegistryAccess()
   const preset = useMemo(() => getHandoffPreset(presetId), [presetId])
   const bossDefaultTtlDays = p.apiSnapshot?.einsatzConfig?.defaultTtlDays ?? 30
+  const teamMailboxOptions = useMemo(
+    () => buildTeamMailboxOptions(p.apiSnapshot ?? null, readMyTeamMailboxes()),
+    [p.apiSnapshot]
+  )
+  const defaultTeamMailboxId = useMemo(
+    () => pickPrimaryMailboxId(defaults.selectedTeamIds) || defaults.handoffMailbox.trim() || undefined,
+    [defaults.selectedTeamIds, defaults.handoffMailbox]
+  )
 
+  /** Nur beim Öffnen zurücksetzen — nicht bei jedem Status-Poll (apiSnapshot-Referenz). */
   useEffect(() => {
+    const wasOpen = wasOpenRef.current
+    wasOpenRef.current = p.open
     if (!p.open) return
+    if (wasOpen) return
+
     setStepIndex(0)
     setStatusMsg('')
     setExportTuning({})
     setCapabilitiesOverride(null)
     setSelectedCapPresetId(null)
+    setDeliverMode('team-wallet')
+    setZipOnlyDone(false)
+    setSelectedMessengerGroupId(readActiveGroupId())
+    labelEdited.current = false
     const seeded = seedHandoffExportDefaultsFromStatus(p.apiSnapshot, p.contactDirectory)
     setDefaults(seeded)
     void fetchHandoffCurrentIdsDefaults().then((patch) => {
@@ -122,6 +155,43 @@ export function BossHandoffQuickProvisionWizard(p: {
     })
   }
 
+  const buildQuickExportBody = useCallback(
+    (helperAddress?: string) =>
+      buildHandoffZipExportBody({
+        activePresetId: presetId,
+        bezeichnung,
+        exportTuning,
+        capabilitiesOverride,
+        selectedTeamIds: defaults.selectedTeamIds,
+        handoffBoss: defaults.handoffBoss,
+        handoffMailbox: defaults.handoffMailbox,
+        handoffRpc: defaults.handoffRpc,
+        handoffPkgSource: 'boss',
+        handoffPkgCustom: defaults.handoffPkgCustom,
+        handoffCmdReg: defaults.handoffCmdReg,
+        handoffVaultReg: defaults.handoffVaultReg,
+        handoffDirectIota: defaults.handoffDirectIota,
+        partnerExportCsv: '',
+        includeIotaArchivReadme: true,
+        protectWithPassword: false,
+        einsatzChainMode: defaults.einsatzChainMode,
+        bossDefaultTtlDays,
+        exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
+        helperAddress,
+        messengerGroupId: selectedMessengerGroupId ?? undefined,
+      }),
+    [
+      presetId,
+      bezeichnung,
+      exportTuning,
+      capabilitiesOverride,
+      defaults,
+      bossDefaultTtlDays,
+      p.apiSnapshot?.einsatzConfig?.enablePurge,
+      selectedMessengerGroupId,
+    ]
+  )
+
   const runProvision = async () => {
     if (!bezeichnung.trim()) {
       setStatusMsg('Bezeichnung fehlt.')
@@ -135,32 +205,11 @@ export function BossHandoffQuickProvisionWizard(p: {
     setStatusMsg('')
     try {
       const r = await provisionNewHandoffDevice({
-        buildBody: (helperAddress) =>
-          buildHandoffZipExportBody({
-            activePresetId: presetId,
-            bezeichnung,
-            exportTuning,
-            capabilitiesOverride,
-            selectedTeamIds: defaults.selectedTeamIds,
-            handoffBoss: defaults.handoffBoss,
-            handoffMailbox: defaults.handoffMailbox,
-            handoffRpc: defaults.handoffRpc,
-            handoffPkgSource: 'boss',
-            handoffPkgCustom: defaults.handoffPkgCustom,
-            handoffCmdReg: defaults.handoffCmdReg,
-            handoffVaultReg: defaults.handoffVaultReg,
-            handoffDirectIota: defaults.handoffDirectIota,
-            partnerExportCsv: '',
-            includeIotaArchivReadme: true,
-            protectWithPassword: false,
-            einsatzChainMode: defaults.einsatzChainMode,
-            bossDefaultTtlDays,
-            exportEnablePurge: p.apiSnapshot?.einsatzConfig?.enablePurge !== false,
-            helperAddress,
-          }),
+        buildBody: (helperAddress) => buildQuickExportBody(helperAddress),
         presetId,
         label: bezeichnung.trim() || preset.label,
         masterPassword: provisionRegistry.activeMasterPassword(),
+        messengerGroupId: selectedMessengerGroupId ?? undefined,
       })
       if (!r.ok) {
         setStatusMsg(r.error)
@@ -170,19 +219,59 @@ export function BossHandoffQuickProvisionWizard(p: {
       setProvisionEntryId(r.entryId)
       setProvisionQrDataUrl(r.qrDataUrl)
       setProvisionResultOpen(true)
+      // Wizard schließen — Ergebnis-Dialog bleibt offen (Geschwister-Dialog)
       p.onOpenChange(false)
     } finally {
       setBusy(false)
     }
   }
 
-  const isSkipStep = stepIndex === STEP_RIGHTS || stepIndex === STEP_TEAM
+  const runZipOnly = async () => {
+    if (!bezeichnung.trim()) {
+      setStatusMsg('Bezeichnung fehlt.')
+      return
+    }
+    setBusy(true)
+    setStatusMsg('')
+    setZipOnlyDone(false)
+    try {
+      const r = await downloadHandoffZipExport(buildQuickExportBody(), {})
+      if (!r.ok) {
+        setStatusMsg(r.error)
+        return
+      }
+      writeHandoffLastPresetId(presetId)
+      setZipOnlyDone(true)
+      setStatusMsg('')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const runDeliver = async () => {
+    if (deliverMode === 'own-wallet') {
+      await runZipOnly()
+      return
+    }
+    await runProvision()
+  }
+
+  const isSkipStep =
+    stepIndex === STEP_RIGHTS || stepIndex === STEP_TEAM || stepIndex === STEP_REGISTRY
   const isLastStep = stepIndex === STEP_DELIVER
 
   const nextDisabled =
     (stepIndex === STEP_WHO && !bezeichnung.trim()) ||
-    (stepIndex === STEP_REGISTRY && !provisionRegistry.registryUnlocked) ||
-    (isLastStep && busy)
+    (isLastStep && busy) ||
+    (isLastStep && deliverMode === 'team-wallet' && !provisionRegistry.registryUnlocked)
+
+  const nextLabel = isLastStep
+    ? busy
+      ? '…'
+      : deliverMode === 'own-wallet'
+        ? 'Nur ZIP herunterladen'
+        : 'ZIP + Seed + QR'
+    : 'Weiter'
 
   return (
     <>
@@ -200,10 +289,10 @@ export function BossHandoffQuickProvisionWizard(p: {
         onSkip={isSkipStep ? () => setStepIndex((i) => i + 1) : undefined}
         onNext={
           isLastStep
-            ? () => void runProvision()
+            ? () => void runDeliver()
             : () => setStepIndex((i) => Math.min(QUICK_STEPS - 1, i + 1))
         }
-        nextLabel={isLastStep ? (busy ? '…' : 'ZIP + Seed + QR') : 'Weiter'}
+        nextLabel={nextLabel}
         nextDisabled={nextDisabled}
       >
         {stepIndex === STEP_WHO ? (
@@ -276,14 +365,16 @@ export function BossHandoffQuickProvisionWizard(p: {
         {stepIndex === STEP_REGISTRY ? (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">
-              Einmalig pro Browser: verschlüsselte Seed-Historie für wiederholte Provisionierung.
+              Nur für <strong className="font-medium text-foreground">ZIP + Seed + QR</strong> (Team-Wallet):
+              verschlüsselte Seed-Historie in diesem Browser. Bei <strong className="font-medium text-foreground">Nur
+              ZIP</strong> überspringen.
             </p>
             <HandoffProvisionRegistryMini registry={provisionRegistry} />
           </div>
         ) : null}
 
         {stepIndex === STEP_DELIVER ? (
-          <div className="space-y-3 text-sm">
+          <div className="space-y-4 text-sm">
             <p>
               <strong className="text-foreground">{bezeichnung.trim() || preset.label}</strong> · Preset{' '}
               <strong className="text-foreground">{preset.label}</strong>
@@ -294,10 +385,72 @@ export function BossHandoffQuickProvisionWizard(p: {
                 </>
               ) : null}
             </p>
-            <p className="text-muted-foreground">
-              Es wird ein neues Wallet erzeugt, Handoff-ZIP heruntergeladen und ein Seed-QR für 60 Sekunden
-              angezeigt. Der Roster-Vorschlag erscheint oben im Panel „Beitrittsanfragen &amp; Roster-Vorschläge“.
-            </p>
+
+            <div className="grid gap-2">
+              <button
+                type="button"
+                aria-pressed={deliverMode === 'team-wallet'}
+                onClick={() => setDeliverMode('team-wallet')}
+                className={cn(
+                  'rounded-lg border p-3 text-left transition-colors',
+                  deliverMode === 'team-wallet'
+                    ? 'border-emerald-500/50 bg-emerald-500/10 ring-2 ring-emerald-500/30'
+                    : 'border-border bg-muted/15 hover:bg-muted/30'
+                )}
+              >
+                <p className="flex items-center gap-2 font-semibold text-foreground">
+                  <QrCode className="h-4 w-4 shrink-0" aria-hidden />
+                  ZIP + Seed + QR (Team-Wallet)
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Boss erzeugt neues Helfer-Wallet, speichert Seed in Registry, QR ~60 s. Für Einsatz / Gerät der
+                  Einheit.
+                </p>
+              </button>
+              <button
+                type="button"
+                aria-pressed={deliverMode === 'own-wallet'}
+                onClick={() => setDeliverMode('own-wallet')}
+                className={cn(
+                  'rounded-lg border p-3 text-left transition-colors',
+                  deliverMode === 'own-wallet'
+                    ? 'border-sky-500/50 bg-sky-500/10 ring-2 ring-sky-500/30'
+                    : 'border-border bg-muted/15 hover:bg-muted/30'
+                )}
+              >
+                <p className="flex items-center gap-2 font-semibold text-foreground">
+                  <Download className="h-4 w-4 shrink-0" aria-hidden />
+                  Nur ZIP (eigene Wallet)
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Nur Konfiguration — kein Seed, keine Registry. Helfer legt Wallet selbst an oder nutzt bestehenden
+                  Tresor.
+                </p>
+              </button>
+            </div>
+
+            <HandoffProvisionGroupSelect
+              value={selectedMessengerGroupId}
+              onChange={setSelectedMessengerGroupId}
+              bossAddress={defaults.handoffBoss}
+              defaultGroupName={`${bezeichnung.trim() || preset.label} Gruppe`}
+              teamMailboxOptions={teamMailboxOptions}
+              defaultTeamMailboxId={defaultTeamMailboxId}
+              hint="Beim Team-Wallet wird die Helfer-Adresse der Gruppe hinzugefügt; beim Nur-ZIP nur das Gruppen-JSON im Export."
+            />
+
+            {deliverMode === 'team-wallet' && !provisionRegistry.registryUnlocked ? (
+              <p className="text-xs text-amber-700 dark:text-amber-200">
+                Registry noch gesperrt — Schritt 4 entsperren oder anlegen.
+              </p>
+            ) : null}
+
+            {zipOnlyDone ? (
+              <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-900 dark:text-emerald-100">
+                ZIP gespeichert. Helfer: Einstellungen → Handoff importieren → eigene Wallet beim Entsperren.
+              </p>
+            ) : null}
+
             {statusMsg ? (
               <p className="text-xs text-destructive" role="alert">
                 {statusMsg}
@@ -305,7 +458,7 @@ export function BossHandoffQuickProvisionWizard(p: {
             ) : null}
             {p.onOpenExpert ? (
               <Button type="button" variant="link" size="sm" className="h-auto px-0 text-xs" onClick={p.onOpenExpert}>
-                Spezielle Rechte, Partner oder IOTA → Experten-Assistent öffnen
+                Passwort-ZIP, Partner, IOTA → Experten-Assistent
               </Button>
             ) : null}
           </div>
@@ -318,6 +471,7 @@ export function BossHandoffQuickProvisionWizard(p: {
         address={provisionAddress}
         entryId={provisionEntryId}
         qrDataUrl={provisionQrDataUrl}
+        resolveMasterPassword={() => provisionRegistry.activeMasterPassword()}
       />
     </>
   )

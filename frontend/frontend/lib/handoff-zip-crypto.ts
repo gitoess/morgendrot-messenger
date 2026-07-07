@@ -9,7 +9,9 @@ export const HANDOFF_ENV_ENC_FILENAME = 'handoff.morg.enc'
 export const HANDOFF_ENV_ENC_FILENAME_LEGACY = 'handoff.env.enc'
 export const HANDOFF_CRYPTO_JSON_FILENAME = 'handoff.crypto.json'
 
-const PBKDF2_ITERATIONS = 210_000
+const PBKDF2_ITERATIONS_DESKTOP = 210_000
+const PBKDF2_ITERATIONS_MOBILE = 60_000
+
 const SALT_BYTES = 16
 const IV_BYTES = 12
 
@@ -21,6 +23,15 @@ export type HandoffCryptoMetaJson = {
   algo: 'AES-256-GCM'
   saltB64: string
   ivB64: string
+}
+
+/** APK: weniger PBKDF2-Iterationen — WebView blockiert sonst mehrere Sekunden. */
+export function resolveHandoffPbdkf2Iterations(): number {
+  if (typeof window !== 'undefined') {
+    const cap = (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+    if (cap?.isNativePlatform?.()) return PBKDF2_ITERATIONS_MOBILE
+  }
+  return PBKDF2_ITERATIONS_DESKTOP
 }
 
 export const HANDOFF_ENCRYPTED_README = [
@@ -54,13 +65,18 @@ function b64ToBytes(b64: string): Uint8Array {
   return out
 }
 
-async function deriveAesGcmKey(password: string, salt: Uint8Array, decrypt: boolean): Promise<CryptoKey> {
+async function deriveAesGcmKey(
+  password: string,
+  salt: Uint8Array,
+  iterations: number,
+  decrypt: boolean
+): Promise<CryptoKey> {
   const enc = new TextEncoder()
   const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), { name: 'PBKDF2' }, false, [
     'deriveKey',
   ])
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', salt, iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
     keyMaterial,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -79,10 +95,11 @@ export async function encryptHandoffEnvUtf8(
   plainUtf8: string,
   password: string
 ): Promise<{ meta: HandoffCryptoMetaJson; ciphertext: Uint8Array }> {
+  const iterations = resolveHandoffPbdkf2Iterations()
   const enc = new TextEncoder()
   const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES))
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
-  const aesKey = await deriveAesGcmKey(password, salt, false)
+  const aesKey = await deriveAesGcmKey(password, salt, iterations, false)
   const ciphertext = new Uint8Array(
     await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, enc.encode(plainUtf8))
   )
@@ -91,7 +108,7 @@ export async function encryptHandoffEnvUtf8(
       schema: HANDOFF_ENV_ENC_SCHEMA,
       kdf: 'PBKDF2',
       hash: 'SHA-256',
-      iterations: PBKDF2_ITERATIONS,
+      iterations,
       algo: 'AES-256-GCM',
       saltB64: bytesToB64(salt),
       ivB64: bytesToB64(iv),
@@ -111,10 +128,11 @@ export async function decryptHandoffEnvUtf8(
   if (meta.kdf !== 'PBKDF2' || meta.algo !== 'AES-256-GCM') {
     return { ok: false, error: 'Handoff-Krypto-Metadaten nicht unterstützt.' }
   }
+  const iterations = meta.iterations > 0 ? meta.iterations : PBKDF2_ITERATIONS_DESKTOP
   try {
     const salt = b64ToBytes(meta.saltB64)
     const iv = b64ToBytes(meta.ivB64)
-    const aesKey = await deriveAesGcmKey(password, salt, true)
+    const aesKey = await deriveAesGcmKey(password, salt, iterations, true)
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext)
     return { ok: true, envText: new TextDecoder().decode(plain) }
   } catch {

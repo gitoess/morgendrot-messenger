@@ -1,8 +1,7 @@
 'use client'
 
-import { Download, Eraser, KeyRound, Lock, MoreVertical, Settings2, Unlock, UserCircle, Users } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { Download, Eraser, KeyRound, MoreVertical, Settings2, UserCircle, Users } from 'lucide-react'
+import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 
 export type ChatViewConversationMenuProps = {
   title: string
@@ -40,39 +40,13 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
         {p.subtitle ? <p className="truncate text-[11px] text-muted-foreground">{p.subtitle}</p> : null}
       </div>
       {enc ? (
-        <div
-          className={cn(
-            'inline-flex shrink-0 rounded-md border border-border bg-card p-0.5 shadow-sm',
-            enc.encrypted && 'ring-1 ring-emerald-500/30'
-          )}
-          role="group"
-          aria-label="Verschlüsselung"
-        >
-          <button
-            type="button"
-            disabled={enc.forcedTransport === 'mesh'}
-            onClick={() => enc.onEncryptedChange(true)}
-            className={cn(
-              'inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold',
-              enc.encrypted ? 'bg-emerald-600/15 text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'
-            )}
-            title={enc.forcedTransport === 'mesh' ? 'Funk = Klartext' : 'Verschlüsselt'}
-          >
-            <Lock className="h-3 w-3" aria-hidden />
-            <span className="hidden sm:inline">Verschl.</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => enc.onEncryptedChange(false)}
-            className={cn(
-              'inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] font-semibold',
-              !enc.encrypted ? 'bg-amber-600/15 text-amber-800 dark:text-amber-200' : 'text-muted-foreground'
-            )}
-          >
-            <Unlock className="h-3 w-3" aria-hidden />
-            <span className="hidden sm:inline">Klar</span>
-          </button>
-        </div>
+        <ChatViewEncryptionModeToggle
+          compact
+          encrypted={enc.encrypted}
+          forcedTransport={enc.forcedTransport ?? 'internet'}
+          onEncryptedChange={enc.onEncryptedChange}
+          className="shrink-0 shadow-sm"
+        />
       ) : null}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

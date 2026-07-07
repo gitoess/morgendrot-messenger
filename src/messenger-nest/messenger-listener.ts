@@ -5,10 +5,35 @@ import { logger } from '../logger.js';
 import { CFG } from '../config.js';
 import { formatNetworkFetchError, formatRpcUrlForLog } from '../network-fetch-error.js';
 import { getClient, typeName, getHandshakeFromMailbox, findPeerHandshakeFrom } from '../chain-access.js';
-import { deriveSharedSecret, deriveAesGcmKey, decryptMessage } from '../crypto-layer.js';
+import { decryptIotaPeerSessionMessage } from '../shared/morgendrot-crypto-session-wire.js';
+import { getPeerSessionArchive } from './messenger-session-keys-state.js';
 import { normalizeAddress, toEventBytes } from '../utils.js';
 import type { PeerState } from './peer-state.js';
 import { fetchLastMessages, isRebasedStorageEnabled } from './messenger-fetch.js';
+
+async function tryDecryptListenerPeerMessage(
+    myAddress: string,
+    myPrivKey: CryptoKey,
+    peer: PeerState,
+    ivBytes: Uint8Array,
+    cipherBytes: Uint8Array,
+    tagBytes: Uint8Array
+): Promise<string | null> {
+    try {
+        return await decryptIotaPeerSessionMessage({
+            iv: ivBytes,
+            ciphertext: cipherBytes,
+            tag: tagBytes,
+            myAddress,
+            peerAddress: peer.address,
+            myPrivKey,
+            peerPubRaw: peer.pubKeyRaw,
+            sessionArchive: getPeerSessionArchive(peer.address),
+        });
+    } catch {
+        return null;
+    }
+}
 
 export async function listenForMessages(
     myAddress: string,
@@ -83,28 +108,29 @@ export async function listenForMessages(
                         const cipherBytes = toEventBytes(f.ciphertext);
                         const tagBytes = toEventBytes(f.tag);
                         if (ivBytes.length < 12 || cipherBytes.length === 0 || tagBytes.length !== 16) continue;
-                        const combined = new Uint8Array([...cipherBytes, ...tagBytes]);
-                        try {
-                            const aesKey = await deriveAesGcmKey(await deriveSharedSecret(myPrivKey, peer.pubKeyRaw));
-                            const decrypted = await decryptMessage(
-                                aesKey,
-                                Buffer.from(ivBytes).toString('base64'),
-                                Buffer.from(combined).toString('base64')
-                            );
-                            const ts = new Date().toLocaleTimeString('de-DE', {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                            });
-                            console.log(`\n\x1b[90m[${ts}]\x1b[0m \x1b[33m<< ${sender.slice(0, 10)}…\x1b[0m ${decrypted}\n> `);
-                        } catch {
+                        const decrypted = await tryDecryptListenerPeerMessage(
+                            myAddress,
+                            myPrivKey,
+                            peer,
+                            ivBytes,
+                            cipherBytes,
+                            tagBytes
+                        );
+                        if (!decrypted) {
                             if (lastDecryptWarnNonce.get(sender) !== nonce) {
                                 lastDecryptWarnNonce.set(sender, nonce);
                                 logger.warn(
                                     'Empfangene Nachricht konnte nicht entschlüsselt werden (evtl. Partner neu gestartet / Handshake geändert).'
                                 );
                             }
+                            continue;
                         }
+                        const ts = new Date().toLocaleTimeString('de-DE', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                        });
+                        console.log(`\n\x1b[90m[${ts}]\x1b[0m \x1b[33m<< ${sender.slice(0, 10)}…\x1b[0m ${decrypted}\n> `);
                     }
                 }
                 if (CFG.ENABLE_PLAINTEXT_CHANNEL) {
@@ -211,30 +237,31 @@ export async function listenForMessages(
                             );
                         continue;
                     }
-                    const combined = new Uint8Array([...cipherBytes, ...tagBytes]);
-                    try {
-                        const aesKey = await deriveAesGcmKey(await deriveSharedSecret(myPrivKey, peer.pubKeyRaw));
-                        const decrypted = await decryptMessage(
-                            aesKey,
-                            Buffer.from(ivBytes).toString('base64'),
-                            Buffer.from(combined).toString('base64')
-                        );
-                        const ts = new Date().toLocaleTimeString('de-DE', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                        });
-                        console.log(
-                            `\n\x1b[90m[${ts}]\x1b[0m \x1b[33m<< ${String(data.sender).slice(0, 10)}…\x1b[0m ${decrypted}\n> `
-                        );
-                    } catch {
+                    const decrypted = await tryDecryptListenerPeerMessage(
+                        myAddress,
+                        myPrivKey,
+                        peer,
+                        ivBytes,
+                        cipherBytes,
+                        tagBytes
+                    );
+                    if (!decrypted) {
                         if (lastDecryptWarnNonce.get(sender) !== nonce) {
                             lastDecryptWarnNonce.set(sender, nonce);
                             logger.warn(
                                 'Empfangene Nachricht konnte nicht entschlüsselt werden (evtl. Partner neu gestartet / Handshake geändert).'
                             );
                         }
+                        continue;
                     }
+                    const ts = new Date().toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                    });
+                    console.log(
+                        `\n\x1b[90m[${ts}]\x1b[0m \x1b[33m<< ${String(data.sender).slice(0, 10)}…\x1b[0m ${decrypted}\n> `
+                    );
                 }
             }
         } catch (e: unknown) {

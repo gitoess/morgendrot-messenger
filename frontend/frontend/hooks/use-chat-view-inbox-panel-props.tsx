@@ -59,7 +59,7 @@ export function useChatViewInboxPanelProps(deps: ChatViewInboxPanelPropsDeps & {
   } = deps.messengerPorts
 
   const onRefresh = useCallback(() => {
-    void inboxActions.loadMessages('reset')
+    void inboxActions.loadMessages('reset', undefined, { forceLive: true })
     inboxActions.refreshContactDirectory()
     void handshakeOffersRead.reload()
   }, [inboxActions.loadMessages, inboxActions.refreshContactDirectory, handshakeOffersRead.reload])

@@ -130,6 +130,7 @@ export function DashboardSharedDialogs(p: {
         backToWizardLabel={p.backToWizardVaultLabel}
         backToWizardHint={p.backToWizardVaultHint}
         contextHint={p.vaultContextHint}
+        stackedOverModal={p.vaultOpenedFromWizard}
       />
 
       {p.sessionSignerSync ? (

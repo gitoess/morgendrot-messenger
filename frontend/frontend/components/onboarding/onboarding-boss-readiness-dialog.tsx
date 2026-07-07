@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { scheduleReleaseStuckModalPointerEvents } from '@/frontend/lib/release-modal-pointer-events'
 import {
   evaluateBossReadiness,
   type BossReadinessItem,
@@ -83,7 +84,13 @@ export function OnboardingBossReadinessDialog(p: {
   }
 
   return (
-    <Dialog open={p.open} onOpenChange={p.onOpenChange}>
+    <Dialog
+      open={p.open}
+      onOpenChange={(open) => {
+        if (!open) scheduleReleaseStuckModalPointerEvents()
+        p.onOpenChange(open)
+      }}
+    >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Einrichtung prüfen</DialogTitle>

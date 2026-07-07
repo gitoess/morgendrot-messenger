@@ -11,6 +11,7 @@ import {
   fetchMailboxInboxRpcRows,
   fetchMessagingEventInboxRpcRows,
   fetchTeamPlainBroadcastRpcRows,
+  fetchTeamEncBroadcastRpcRows,
   isLikelyIotaHexId,
   mailboxPlainInboxKey,
   mailboxEncryptedInboxKey,
@@ -28,6 +29,7 @@ import {
 import { isStandaloneDeviceMode } from '@/frontend/lib/capacitor-standalone-bootstrap'
 import { getDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-chat-ecdh-session'
 import { decryptDirectInboxEncryptedPayload } from '@/frontend/lib/direct-iota-inbox-decrypt'
+import { decryptTeamBroadcastInboxPayload } from '@/frontend/lib/team-broadcast-inbox-decrypt'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import { isIotaRelayOnlyMode } from '@/frontend/lib/direct-iota-plain-submit'
 
@@ -54,9 +56,23 @@ type PendingEncryptedRow = {
   decryptErrorPrefix: string
 }
 
+type PendingTeamEncRow = {
+  sortTs: number
+  sender: string
+  teamMailboxObjectId: string
+  nonce: string
+  ts: number
+  inboxKey: string
+  ciphertext: Uint8Array
+  iv: Uint8Array
+  tag: Uint8Array
+  keyEpoch: number
+}
+
 type SortableInboxEntry =
   | { sortTs: number; row: InboxApiRow }
   | { sortTs: number; pending: PendingEncryptedRow }
+  | { sortTs: number; teamEnc: PendingTeamEncRow }
 
 function shouldIncludeMessagingEventsInDirectInbox(mailboxObjectId: string, sharedMailboxId: string): boolean {
   const mb = mailboxObjectId.trim().toLowerCase()
@@ -132,11 +148,34 @@ async function resolvePendingEncryptedRow(pending: PendingEncryptedRow): Promise
   }
 }
 
+async function resolvePendingTeamEncRow(pending: PendingTeamEncRow): Promise<InboxApiRow> {
+  const dec = await decryptTeamBroadcastInboxPayload({
+    teamMailboxObjectId: pending.teamMailboxObjectId,
+    ciphertext: pending.ciphertext,
+    iv: pending.iv,
+    tag: pending.tag,
+    keyEpoch: pending.keyEpoch,
+  })
+  return {
+    sender: pending.sender,
+    recipient: pending.teamMailboxObjectId,
+    text: dec.ok ? dec.text : dec.error,
+    isPlain: false,
+    nonce: pending.nonce,
+    ts: pending.ts,
+    chainPurgeable: true,
+    chainPurgeKind: 'team-broadcast',
+    inboxKey: pending.inboxKey,
+  }
+}
+
 async function materializeInboxPage(entries: SortableInboxEntry[]): Promise<InboxApiRow[]> {
   const rows: InboxApiRow[] = []
   for (const entry of entries) {
     if ('row' in entry) {
       rows.push(entry.row)
+    } else if ('teamEnc' in entry) {
+      rows.push(await resolvePendingTeamEncRow(entry.teamEnc))
     } else {
       rows.push(await resolvePendingEncryptedRow(entry.pending))
     }
@@ -285,6 +324,30 @@ export async function tryFetchDirectMailboxInboxViaIota(
           },
         })
       }
+      const teamEncRows = await fetchTeamEncBroadcastRpcRows(client, {
+        teamMailboxObjectId: mailboxObjectId,
+        packageId: pkg,
+        limit: fetchWindow,
+        offset: 0,
+      })
+      for (const r of teamEncRows) {
+        const ts = r.ts ?? 0
+        sortable.push({
+          sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+          teamEnc: {
+            sortTs: inboxTsFromRow(ts, BigInt(r.nonce)),
+            sender: r.sender,
+            teamMailboxObjectId: r.teamMailboxObjectId,
+            nonce: r.nonce,
+            ts,
+            inboxKey: `team-enc:${r.teamMailboxObjectId}:${r.sender}:${r.nonce}`,
+            ciphertext: r.ciphertext,
+            iv: r.iv,
+            tag: r.tag,
+            keyEpoch: r.keyEpoch,
+          },
+        })
+      }
     }
 
     const mailboxLogicalKeys = new Set<string>()
@@ -295,6 +358,15 @@ export async function tryFetchDirectMailboxInboxViaIota(
           sender: entry.row.sender ?? '',
           recipient: entry.row.recipient,
           nonce: entry.row.nonce ?? '',
+        })
+        if (lk) mailboxLogicalKeys.add(lk)
+        continue
+      }
+      if ('teamEnc' in entry) {
+        const lk = chainMessageLogicalDedupKey({
+          sender: entry.teamEnc.sender,
+          recipient: entry.teamEnc.teamMailboxObjectId,
+          nonce: entry.teamEnc.nonce,
         })
         if (lk) mailboxLogicalKeys.add(lk)
         continue

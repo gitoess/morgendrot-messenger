@@ -60,8 +60,27 @@ function clampRoleId(n: number): number {
     return Math.max(0, Math.min(63, Math.floor(n)))
 }
 
+/** BW+L+S — aktiver Sender mit Boss-Gas (typisch Boss/Kommandant/Helfer-Vollprofil). */
+const WERKSTATT_LEAD_ROLE_ID = 14
+
+function isWerkstattLeadRole(hierarchyRole?: string): boolean {
+    const r = String(hierarchyRole || '').trim().toLowerCase()
+    return r === 'boss' || r === 'kommandant'
+}
+
+/** Boss/Kommandant ohne ROLE_ID in .env → 0 blockiert fälschlich alle Sendepfade. */
+function effectiveRoleIdForCapabilities(roleId: number, hierarchyRole?: string): number {
+    const id = clampRoleId(roleId)
+    if (isWerkstattLeadRole(hierarchyRole) && id === 0) return WERKSTATT_LEAD_ROLE_ID
+    return id
+}
+
 function hasRoleBit(roleId: number, bit: number): boolean {
     return (clampRoleId(roleId) & bit) !== 0
+}
+
+function allTransportWriteDisabled(transport: MessengerTransportCapabilities): boolean {
+    return (Object.keys(transport) as TransportChannel[]).every((ch) => !transport[ch].write)
 }
 
 function defaultTransportAccess(roleId: number, channel: TransportChannel, transportProfile?: string): TransportAccess {
@@ -150,9 +169,40 @@ export function mergeCapabilitiesOverride(
     }
 }
 
+/** Werkstatt-Boss/Kommandant: mindestens voller Transport wenn Matrix alles sperrt (ROLE_ID 0 / fehlerhafter Handoff). */
+function enforceWerkstattLeadTransportMinimum(
+    cap: MessengerCapabilitiesMatrix,
+    hierarchyRole?: string,
+    transportProfile?: string
+): MessengerCapabilitiesMatrix {
+    if (!isWerkstattLeadRole(hierarchyRole) || !allTransportWriteDisabled(cap.transport)) return cap
+    const iotaUi = transportProfile === 'iota-anchored' || transportProfile === 'iota-full'
+    const transport = { ...cap.transport }
+    for (const ch of Object.keys(transport) as TransportChannel[]) {
+        transport[ch] = {
+            read: true,
+            write: ch === 'iota' ? iotaUi : true,
+        }
+    }
+    return {
+        ...cap,
+        roleId: effectiveRoleIdForCapabilities(cap.roleId, hierarchyRole),
+        transport,
+        product: {
+            ...cap.product,
+            canInviteMembers: true,
+            canExportData: hierarchyRole?.trim().toLowerCase() === 'boss' ? true : cap.product.canExportData,
+            canManageEinsatzTemplates:
+                hierarchyRole?.trim().toLowerCase() === 'boss' ? true : cap.product.canManageEinsatzTemplates,
+        },
+    }
+}
+
 export function resolveMessengerCapabilities(input: ResolveMessengerCapabilitiesInput): MessengerCapabilitiesMatrix {
-    const base = defaultCapabilitiesFromRoleId(input)
-    return mergeCapabilitiesOverride(base, input.override)
+    const roleId = effectiveRoleIdForCapabilities(input.roleId, input.hierarchyRole)
+    const base = defaultCapabilitiesFromRoleId({ ...input, roleId })
+    const merged = mergeCapabilitiesOverride(base, input.override)
+    return enforceWerkstattLeadTransportMinimum(merged, input.hierarchyRole, input.transportProfile)
 }
 
 /** Handoff-Datei-Inhalt für `.morgendrot-runtime-config.json` (öffentlich, keine Secrets). */

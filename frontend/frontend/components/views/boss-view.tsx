@@ -22,7 +22,7 @@ import {
   downloadStandaloneSmartphoneHandoffZip,
 } from '@/frontend/lib/api'
 import type { ApiStatus } from '@/frontend/lib/api'
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { fetchHandoffCurrentIdsFields } from '@/frontend/lib/handoff-export-defaults'
 import { MeshFunkPanel } from '@/frontend/components/mesh-funk-panel'
 import { useMeshtasticBle } from '@/frontend/hooks/use-meshtastic-ble'
 import { useContactDirectory } from '@/frontend/hooks/use-contact-directory'
@@ -87,25 +87,15 @@ export function BossView({ variant, apiSnapshot }: BossViewProps) {
   useEffect(() => {
     if (!handoffOpen) return
     let cancelled = false
-    void (async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/current-ids`)
-        const j = (await r.json()) as {
-          mailboxId?: string
-          commandRegistryId?: string
-          vaultRegistryId?: string
-        }
-        if (cancelled || !r.ok) return
-        const mb = String(j.mailboxId || '').trim()
-        const cr = String(j.commandRegistryId || '').trim()
-        const vr = String(j.vaultRegistryId || '').trim()
-        if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) setHandoffMailbox((prev) => prev || mb)
-        if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) setHandoffCmdReg((prev) => prev || cr)
-        if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) setHandoffVaultReg((prev) => prev || vr)
-      } catch {
-        /* optional */
-      }
-    })()
+    void fetchHandoffCurrentIdsFields().then((j) => {
+      if (cancelled) return
+      const mb = j.mailboxId?.trim()
+      const cr = j.commandRegistryId?.trim()
+      const vr = j.vaultRegistryId?.trim()
+      if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) setHandoffMailbox((prev) => prev || mb)
+      if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) setHandoffCmdReg((prev) => prev || cr)
+      if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) setHandoffVaultReg((prev) => prev || vr)
+    })
     return () => {
       cancelled = true
     }

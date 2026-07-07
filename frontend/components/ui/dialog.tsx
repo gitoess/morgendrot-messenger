@@ -5,11 +5,36 @@ import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { XIcon } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
+import {
+  NativeModalShell,
+  NativeOverlayOpenContext,
+} from '@/frontend/components/native-modal-shell'
+import { useCapacitorRadixOverlayState } from '@/frontend/lib/capacitor-radix-overlay'
 
 function Dialog({
+  modal,
+  open,
+  defaultOpen,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  const { native, isOpen, radixOpen, handleOpenChange, radixModal } = useCapacitorRadixOverlayState({
+    open,
+    defaultOpen,
+    onOpenChange,
+  })
+
+  return (
+    <NativeOverlayOpenContext.Provider value={native && isOpen}>
+      <DialogPrimitive.Root
+        data-slot="dialog"
+        open={radixOpen}
+        onOpenChange={handleOpenChange}
+        modal={radixModal ? modal : false}
+        {...props}
+      />
+    </NativeOverlayOpenContext.Provider>
+  )
 }
 
 function DialogTrigger({
@@ -54,6 +79,31 @@ function DialogContent({
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
 }) {
+  const nativeOpen = React.useContext(NativeOverlayOpenContext)
+
+  const panelClassName = cn(
+    'bg-background relative grid w-full gap-4 rounded-lg border p-6 shadow-lg duration-200',
+    'max-h-[min(92vh,720px)] overflow-y-auto',
+    className,
+  )
+
+  if (nativeOpen) {
+    return (
+      <NativeModalShell open enabled panelClassName={panelClassName}>
+        {children}
+        {showCloseButton ? (
+          <DialogPrimitive.Close
+            data-slot="dialog-close"
+            className="ring-offset-background focus:ring-ring absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        ) : null}
+      </NativeModalShell>
+    )
+  }
+
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />

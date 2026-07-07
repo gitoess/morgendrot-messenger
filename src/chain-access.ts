@@ -2113,6 +2113,52 @@ export async function storeTeamPlaintextBroadcast(
     return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
 }
 
+/** Team-Broadcast verschlüsselt — 1× AEAD-Blob in Shared Team-Mailbox (`store_team_encrypted_broadcast`). */
+export async function storeTeamEncryptedBroadcast(
+    teamMailboxObjectId: string,
+    senderAddress: string,
+    ciphertext: Uint8Array,
+    iv: Uint8Array,
+    tag: Uint8Array,
+    keyEpoch: bigint,
+    nonce: bigint,
+    walletPassword?: string,
+    options?: { signOptions?: SignAndExecuteOptions }
+): Promise<{ digest?: string; status?: string }> {
+    const mb = teamMailboxObjectId.trim();
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+        throw new Error('teamMailboxObjectId: 0x + 64 Hex.');
+    }
+    assertSafeAddress(senderAddress);
+    if (!CFG.PACKAGE_ID) throw new Error('PACKAGE_ID fehlt.');
+    if (mb.toLowerCase() === (CFG.PACKAGE_ID || '').trim().toLowerCase()) {
+        throw new Error('Team-Mailbox-ID darf nicht gleich PACKAGE_ID sein.');
+    }
+    const { validateMessagingMailboxObjectForPackage } = await import('@morgendrot/core/iota');
+    const mbCheck = await validateMessagingMailboxObjectForPackage(getClient() as never, mb, CFG.PACKAGE_ID!, 'mailbox');
+    if (!mbCheck.ok) {
+        throw new Error(mbCheck.error);
+    }
+    const nonceU64 = nonce != null && typeof nonce === 'bigint' ? nonce : BigInt(Number(nonce) || Date.now() || 0);
+    const epochU64 = keyEpoch != null && typeof keyEpoch === 'bigint' ? keyEpoch : BigInt(Number(keyEpoch) || 1);
+    const ttlDays = CFG.DEFAULT_TTL_DAYS != null ? CFG.DEFAULT_TTL_DAYS : 30n;
+    const txb = new Transaction();
+    txb.setSender(senderAddress);
+    txb.moveCall({
+        target: `${CFG.PACKAGE_ID}::messaging::store_team_encrypted_broadcast`,
+        arguments: [
+            txb.object(mb),
+            txb.pure(bcs.vector(bcs.u8()).serialize(ciphertext)),
+            txb.pure(bcs.vector(bcs.u8()).serialize(iv)),
+            txb.pure(bcs.vector(bcs.u8()).serialize(tag)),
+            txb.pure.u64(epochU64),
+            txb.pure.u64(nonceU64),
+            txb.pure.u64(ttlDays),
+        ],
+    });
+    return signAndExecute(getClient(), txb, senderAddress, walletPassword, options?.signOptions);
+}
+
 /** § H.33e — Forensisches Batch-Archiv: mehrere Klartext-Mailbox-Einträge in einer PTB. */
 export async function storeForensicPlaintextMailboxBatch(
     recipient: string,
@@ -4508,6 +4554,18 @@ export function iotaToMist(iotaStr: string): bigint {
 export async function getBalanceInMist(owner: string): Promise<bigint> {
     assertSafeAddress(owner);
     const client = getClient();
+    const balance = await client.getBalance({ owner });
+    return BigInt((balance as { totalBalance: string }).totalBalance || '0');
+}
+
+/** Saldo auf explizitem RPC (z. B. Mainnet-Balance während Testnet aktiv). */
+export async function getBalanceInMistForRpc(owner: string, rpcUrl: string): Promise<bigint> {
+    assertSafeAddress(owner);
+    const url = (rpcUrl || '').trim();
+    if (!url) throw new Error('RPC-URL fehlt.');
+    const client = new IotaClient({
+        transport: new IotaHTTPTransport({ url, fetch: createRpcFetch() }),
+    });
     const balance = await client.getBalance({ owner });
     return BigInt((balance as { totalBalance: string }).totalBalance || '0');
 }

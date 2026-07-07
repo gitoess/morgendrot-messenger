@@ -38,9 +38,12 @@
     "title": "Seed importieren",
     "subtitle": "Bestehendes Profil wiederherstellen (24 Wörter)",
     "hint": "Vault-Passwort <strong>und</strong> dein IOTA-Mnemonic (12–24 Wörter) oder Bech32-Secret — Pflicht bei <mono>SIGNER=sdk</mono> ohne gespeicherten Import.",
-    "vaultPasswordPlaceholder": "Vault-Passwort",
+    "vaultPasswordPlaceholder": "Tresor-Passwort",
+    "newPasswordPlaceholder": "Neues Tresor-Passwort (min. 8 Zeichen)",
+    "confirmPasswordPlaceholder": "Passwort wiederholen",
     "mnemonicLabel": "Mnemonic / Secret (Pflicht)",
     "mnemonicPlaceholder": "24 Wörter oder Bech32-Secret …",
+    "importRecoverHint": "Mit Seed: Passwort ist das neue Tresor-Passwort (min. 8 Zeichen) — nicht zwingend das alte. Seed/Bech32-Secret ist Pflicht.",
     "importing": "Import läuft…",
     "restore": "Profil wiederherstellen"
   },
@@ -52,10 +55,11 @@
     "mnemonicPlaceholder": "24 Wörter …",
     "repeatLabel": "Wiederholen",
     "repeatPlaceholder": "Erneut eingeben",
-    "newPasswordPlaceholder": "Neues Passwort",
+    "newPasswordPlaceholder": "Neues Passwort (min. 8 Zeichen)",
     "confirmPasswordPlaceholder": "Passwort wiederholen",
     "creating": "Wird angelegt…",
-    "create": "Profil anlegen"
+    "create": "Profil anlegen",
+    "blockedHint": "Noch offen: Passwort mindestens 8 Zeichen, beide Felder identisch, und gültiger Seed (erzeugen oder einfügen)."
   },
   "sdkMnemonicPref": {
     "label": "Wallet-Seed merken",

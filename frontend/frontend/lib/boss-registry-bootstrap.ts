@@ -2,6 +2,8 @@
 
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { persistBossChainRegistryIds } from '@/frontend/lib/boss-chain-registry-store'
+import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
 
 export type BossRegistryBootstrapResult = {
   ok: boolean
@@ -54,6 +56,11 @@ export async function createBossGlobalsRegistries(opts?: {
     if (!body.ok) {
       return { ok: false, error: body.error || 'create_globals fehlgeschlagen.' }
     }
+    if (body.mailboxId) persistDirectChainFieldIds({ mailboxId: body.mailboxId.trim() })
+    persistBossChainRegistryIds({
+      commandRegistryId: body.commandRegistryId,
+      vaultRegistryId: body.vaultRegistryId,
+    })
     return {
       ok: true,
       message: body.message,

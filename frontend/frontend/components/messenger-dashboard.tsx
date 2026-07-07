@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { flushSync } from 'react-dom'
+import { scheduleReleaseStuckModalPointerEvents, clearStuckRadixBodyLock } from '@/frontend/lib/release-modal-pointer-events'
+import { forceReleaseNativeBodyLock } from '@/frontend/components/native-modal-shell'
 import Link from 'next/link'
 import {
   Crown,
@@ -15,8 +17,19 @@ import {
   LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import dynamic from 'next/dynamic'
 import type { ProjectType } from '@/frontend/lib/types'
-import { ChatView } from './views/chat-view'
+const LazyChatView = dynamic(
+  () => import('./views/chat-view').then((m) => m.ChatView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground" role="status">
+        Nachrichten werden geladen…
+      </div>
+    ),
+  }
+)
 import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
 import { SettingsView } from './views/settings-view'
@@ -45,8 +58,6 @@ import { OnboardingResumeCard } from '@/frontend/components/onboarding/onboardin
 import { OnboardingWizardHost } from '@/frontend/components/onboarding/onboarding-wizard-host'
 import { drainTeamSyncOfflineQueue } from '@/frontend/lib/team-sync-wire'
 import {
-  buildOnboardingSkipContext,
-  readOnboardingProgress,
   clearOnboardingDismissed,
   prepareOnboardingWizardOpen,
   resolveMessengerSetupOnboardingPath,
@@ -62,13 +73,16 @@ import {
   getStandaloneHelperReadiness,
   HELPER_SEED_SETUP_REQUEST_EVENT,
   maybeRequestHelperSeedSetup,
+  STANDALONE_WALLET_UNLOCKED_EVENT,
 } from '@/frontend/lib/handoff-standalone-ready'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
 import { CapacitorStandaloneBootstrap } from '@/frontend/components/capacitor-standalone-bootstrap'
 import { InstallQrLandingBootstrap } from '@/frontend/components/install-qr-landing-bootstrap'
 import { MessengerDashboardOfflineHint } from '@/frontend/components/messenger-dashboard-offline-hint'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
 
 /** Morgendrot Messenger — schlanke Einsatz-App (eigenes Build). */
 export function MessengerDashboard() {
@@ -113,6 +127,7 @@ function MessengerDashboardBody({
   const [helperSeedSetupOpen, setHelperSeedSetupOpen] = useState(false)
   const [onboardingWizardOpen, setOnboardingWizardOpen] = useState(false)
   const [vaultOverWizard, setVaultOverWizard] = useState(false)
+  const vaultFromWizardFlowRef = useRef(false)
   const liteMessengerFromApi = true
   const effectiveRole = s.role || s.apiSnapshot?.role
   const isEinsatzLeadHome = canAccessEinsatzleitung(effectiveRole)
@@ -129,6 +144,8 @@ function MessengerDashboardBody({
   const vaultSessionLocked = !!(s.locked || s.apiSnapshot?.locked)
   const browserSignerReady = isBrowserSessionSignerReady(s.locked)
   const vaultKeysReady = browserSignerReady
+  const standaloneApkWithoutBasis = isStandaloneMessengerWithoutBasis()
+  const standaloneWalletActive = standaloneApkWithoutBasis && !vaultSessionLocked && vaultKeysReady
   const showHomeVaultBadge = s.backendReachable === true
   const backendVaultUnlocked =
     s.apiSnapshot?.hasKeys === true && s.apiSnapshot?.locked !== true
@@ -151,18 +168,26 @@ function MessengerDashboardBody({
   }, [promptBrowserWalletUnlock])
 
   const returnToWizardFromVault = useCallback(() => {
+    vaultFromWizardFlowRef.current = true
     setVaultOverWizard(false)
+    clearOnboardingDismissed()
     s.sessionSignerSync.close()
+    scheduleReleaseStuckModalPointerEvents()
     setOnboardingWizardOpen(true)
   }, [s.sessionSignerSync.close])
 
   const handleWizardActivateWallet = useCallback(() => {
-    setVaultOverWizard(true)
+    vaultFromWizardFlowRef.current = true
+    flushSync(() => {
+      setOnboardingWizardOpen(false)
+      setVaultOverWizard(true)
+    })
+    scheduleReleaseStuckModalPointerEvents()
     if (backendVaultUnlocked && !isBrowserSessionSignerReady(s.locked)) {
       s.requestMainnetSessionSignerSync()
       return
     }
-    s.requestVaultUnlock()
+    s.requestVaultUnlock({ navigateHome: false })
   }, [backendVaultUnlocked, s.locked, s.requestMainnetSessionSignerSync, s.requestVaultUnlock])
 
   const openMessengerSetupFromVault = useCallback(() => {
@@ -191,22 +216,13 @@ function MessengerDashboardBody({
     [s.apiSnapshot, vaultOverWizard]
   )
 
-  const handleWizardOpenChange = useCallback(
-    (open: boolean) => {
-      setOnboardingWizardOpen(open)
-      if (!open) setVaultOverWizard(false)
-      if (open) return
-      queueMicrotask(() => {
-        const progress = readOnboardingProgress()
-        if (progress?.dismissed || !progress?.finishedAtMs) return
-        const ctx = buildOnboardingSkipContext(s.apiSnapshot, { uiLocked: s.locked })
-        if (ctx.hasWallet) return
-        clearOnboardingDismissed()
-        promptBrowserWalletUnlock()
-      })
-    },
-    [promptBrowserWalletUnlock, s.apiSnapshot, s.locked]
-  )
+  const handleWizardOpenChange = useCallback((open: boolean) => {
+    setOnboardingWizardOpen(open)
+    if (!open) {
+      setVaultOverWizard(false)
+      scheduleReleaseStuckModalPointerEvents()
+    }
+  }, [])
 
   const homeVaultActions = useMemo(
     () => ({
@@ -221,7 +237,25 @@ function MessengerDashboardBody({
   useEffect(() => {
     if (!liteMessengerFromApi) return
     if (browserSignerReady) setVaultOverWizard(false)
-  }, [vaultOverWizard, browserSignerReady])
+  }, [liteMessengerFromApi, vaultOverWizard, browserSignerReady])
+
+  useEffect(() => {
+    const onWalletUnlocked = () => {
+      forceReleaseNativeBodyLock()
+      clearStuckRadixBodyLock()
+      scheduleReleaseStuckModalPointerEvents()
+      const resumeWizard = vaultFromWizardFlowRef.current && !isCapacitorNativePlatform()
+      vaultFromWizardFlowRef.current = false
+      setVaultOverWizard(false)
+      if (resumeWizard) {
+        queueMicrotask(() => setOnboardingWizardOpen(true))
+      } else {
+        setOnboardingWizardOpen(false)
+      }
+    }
+    window.addEventListener(STANDALONE_WALLET_UNLOCKED_EVENT, onWalletUnlocked)
+    return () => window.removeEventListener(STANDALONE_WALLET_UNLOCKED_EVENT, onWalletUnlocked)
+  }, [])
 
   const prevVaultOverWizardRef = useRef(false)
   useEffect(() => {
@@ -306,7 +340,7 @@ function MessengerDashboardBody({
         contactDirectory={s.contactDirectory}
         fallbackMyAddress={s.myAddress}
         onActivateWallet={handleWizardActivateWallet}
-        onOpenHandoffImport={s.openSettingsView}
+        onOpenHandoffImport={() => s.openSettingsCategory('general')}
         onReloadStatus={() => void s.checkStatus()}
       />
       {s.activeView ? (
@@ -390,7 +424,7 @@ function MessengerDashboardBody({
           )}
           {s.activeView.type === 'config' && <LazyConfigView messengerMode />}
           {s.activeView.type === 'chat' && s.activeView.variant && (
-            <ChatView
+            <LazyChatView
               variant={s.activeView.variant as 'private-chat' | 'pinnwand'}
               role={s.role}
               myAddress={s.myAddress}
@@ -491,7 +525,9 @@ function MessengerDashboardBody({
                       ? 'bg-emerald-500/10 text-emerald-400'
                       : s.backendReachable
                         ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-red-500/10 text-red-400'
+                        : standaloneWalletActive
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-red-500/10 text-red-400'
               )}
             >
               {s.backendReachable === null ? (
@@ -521,8 +557,12 @@ function MessengerDashboardBody({
                 </>
               ) : (
                 <>
-                  <WifiOff className="h-3.5 w-3.5" />
-                  {t('connection.offline')}
+                  {standaloneWalletActive ? (
+                    <Wifi className="h-3.5 w-3.5 text-emerald-500/80" />
+                  ) : (
+                    <WifiOff className="h-3.5 w-3.5" />
+                  )}
+                  {standaloneWalletActive ? t('connection.standaloneActive') : t('connection.offline')}
                 </>
               )}
             </div>
@@ -579,8 +619,12 @@ function MessengerDashboardBody({
         <OnboardingResumeCard apiSnapshot={s.apiSnapshot} />
         <StandaloneHandoffActivateCard
           apiRole={s.role}
-          onOpenHandoffImport={s.openSettingsView}
-          onActivateWallet={s.requestStandaloneWalletUnlock}
+          onOpenHandoffImport={() => s.openSettingsCategory('general')}
+          onActivateWallet={() => {
+            setOnboardingWizardOpen(false)
+            setVaultOverWizard(false)
+            s.requestStandaloneWalletUnlock()
+          }}
         />
         <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
         {!s.locked && isEinsatzLeadHome ? (

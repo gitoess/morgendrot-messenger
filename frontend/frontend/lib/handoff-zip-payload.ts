@@ -10,6 +10,11 @@ import {
 } from '@/frontend/lib/handoff-extras'
 
 export const HANDOFF_RUNTIME_CONFIG_FILENAME = '.morgendrot-runtime-config.json'
+import { enrichHandoffExtrasFromEnvContent } from '@/frontend/lib/handoff-team-broadcast-keys'
+import {
+  handoffExtrasNeedsZipFile,
+  serializeHandoffEncryptedBundle,
+} from '@/frontend/lib/handoff-zip-bundle'
 import {
   encryptHandoffEnvUtf8,
   HANDOFF_CRYPTO_JSON_FILENAME,
@@ -29,8 +34,14 @@ export async function buildHandoffZipPayload(
   const parts = await fetchStandaloneSmartphoneHandoffParts(body)
   if (!parts.ok) return parts
 
+  const extras = enrichHandoffExtrasFromEnvContent(
+    options.handoffExtras ?? parts.handoffExtras,
+    parts.envContent
+  )
+
   if (options.password?.length) {
-    const { meta, ciphertext } = await encryptHandoffEnvUtf8(parts.envContent, options.password)
+    const plain = serializeHandoffEncryptedBundle(parts.envContent, extras)
+    const { meta, ciphertext } = await encryptHandoffEnvUtf8(plain, options.password)
     const zipBytes = buildHandoffZipBytes({
       [HANDOFF_ENV_ENC_FILENAME]: ciphertext,
       [HANDOFF_CRYPTO_JSON_FILENAME]: JSON.stringify(meta, null, 2),
@@ -51,8 +62,7 @@ export async function buildHandoffZipPayload(
   if (parts.runtimeConfigContent?.trim()) {
     zipEntries[HANDOFF_RUNTIME_CONFIG_FILENAME] = parts.runtimeConfigContent
   }
-  const extras = options.handoffExtras ?? parts.handoffExtras
-  if (extras?.telegramAlarmGroup?.inviteLink?.trim()) {
+  if (handoffExtrasNeedsZipFile(extras)) {
     zipEntries[HANDOFF_EXTRAS_FILENAME] = buildHandoffExtrasJson(extras)
   }
   const zipBytes = buildHandoffZipBytes(zipEntries)

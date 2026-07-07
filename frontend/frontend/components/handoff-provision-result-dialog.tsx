@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { HandoffProvisionSeedRevealPanel } from '@/frontend/components/handoff-provision-seed-reveal-panel'
 import { formatHandoffAddressShort } from '@/frontend/lib/handoff-export-display'
 import { HANDOFF_SEED_QR_SECONDS } from '@/frontend/lib/handoff-provision-new-device'
 import { updateBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
@@ -23,6 +24,8 @@ export function HandoffProvisionResultDialog(p: {
   initialQrSeconds?: number
   zipPasswordProtected?: boolean
   onSeedAcknowledged?: () => void
+  /** Master-Passwort für „Seed aus Registry anzeigen“ (Custody B). */
+  resolveMasterPassword?: () => string
 }) {
   const {
     open,
@@ -33,6 +36,7 @@ export function HandoffProvisionResultDialog(p: {
     initialQrSeconds = HANDOFF_SEED_QR_SECONDS,
     zipPasswordProtected = false,
     onSeedAcknowledged,
+    resolveMasterPassword,
   } = p
 
   const [qrDataUrl, setQrDataUrl] = useState(initialQrDataUrl)
@@ -115,9 +119,16 @@ export function HandoffProvisionResultDialog(p: {
             </div>
           ) : (
             <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-              QR abgelaufen. Seed über Boss-Registry (Master-Passwort) erneut anzeigen.
+              QR abgelaufen — unten „Seed erneut anzeigen“ (Registry muss in dieser Sitzung entsperrt sein).
             </p>
           )}
+
+          {resolveMasterPassword && entryId ? (
+            <HandoffProvisionSeedRevealPanel
+              entryId={entryId}
+              resolveMasterPassword={resolveMasterPassword}
+            />
+          ) : null}
 
           <label className="flex items-start gap-2 text-sm">
             <input

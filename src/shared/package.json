@@ -15,6 +15,10 @@
     "./morgendrot-crypto-session": "./morgendrot-crypto-session.ts",
     "./morgendrot-crypto-session-wire": "./morgendrot-crypto-session-wire.ts",
     "./morgendrot-session-keys-archive": "./morgendrot-session-keys-archive.ts",
-    "./messenger-capabilities-matrix": "./messenger-capabilities-matrix.ts"
+    "./morg-team-wire-signature": "./morg-team-wire-signature.ts",
+    "./morgendrot-team-broadcast-crypto": "./morgendrot-team-broadcast-crypto.ts",
+    "./messenger-capabilities-matrix": "./messenger-capabilities-matrix.ts",
+    "./iota-testnet-faucet-url": "./iota-testnet-faucet-url.ts",
+    "./standalone-smartphone-handoff-env": "./standalone-smartphone-handoff-env.ts"
   }
 }

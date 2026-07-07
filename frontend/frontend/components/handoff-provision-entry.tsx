@@ -5,7 +5,6 @@ import { Check, QrCode } from 'lucide-react'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
 import { BossHandoffExportPanel } from '@/frontend/components/boss-handoff-export-panel'
 import { BossHandoffQuickProvisionWizard } from '@/frontend/components/boss-handoff-quick-provision-wizard'
-import { EinsatzleitungTeamOverviewPanel } from '@/frontend/components/einsatzleitung-team-overview-panel'
 import { Button } from '@/components/ui/button'
 import {
   bossProvisionedHelpersLabel,
@@ -27,8 +26,6 @@ function StatusRow(p: { ok: boolean; label: string }) {
 export function HandoffProvisionEntry(p: {
   apiSnapshot?: ApiStatus | null
   contactDirectory?: Record<string, ContactMeshEntryClient>
-  onOpenMailboxes?: () => void
-  showTeamOverview?: boolean
   showExpertPanel?: boolean
   /** Wizard: eine Hauptaktion, Experten-UI unter „Mehr Optionen“. */
   layout?: 'default' | 'wizard'
@@ -121,17 +118,21 @@ export function HandoffProvisionEntry(p: {
 
   return (
     <div className="space-y-4">
-      {p.showTeamOverview !== false ? (
-        <EinsatzleitungTeamOverviewPanel
-          serverMailboxId={p.apiSnapshot?.mailboxId}
-          onOpenMailboxes={p.onOpenMailboxes}
-        />
-      ) : null}
+      <StatusRow ok={helperCount > 0} label={helperLabel} />
+      <p className="text-xs text-muted-foreground">
+        Bereits eingerichtete Helfer, Seeds und Gruppen findest du oben unter{' '}
+        <a href="#mein-team" className="font-medium text-primary hover:underline">
+          Mein Team
+        </a>
+        .
+      </p>
 
       <div className="rounded-lg border border-emerald-500/35 bg-emerald-500/10 p-4 space-y-3">
         <p className="text-sm font-medium text-foreground">Schnellweg (empfohlen)</p>
         <p className="text-xs text-muted-foreground">
-          Geführter Dialog: Bezeichnung → optional Rechte &amp; Team → Registry → ZIP + Seed + QR.
+          Geführter Dialog: Bezeichnung → optional Rechte &amp; Team → optional Registry →{' '}
+          <strong className="font-medium text-foreground">ZIP + Seed + QR</strong> oder{' '}
+          <strong className="font-medium text-foreground">Nur ZIP (eigene Wallet)</strong>.
         </p>
         <Button type="button" onClick={() => setQuickWizardOpen(true)}>
           <QrCode className="mr-2 h-4 w-4" aria-hidden />

@@ -21,6 +21,7 @@ import {
   readContactFavorites,
   readContactLastContacted,
   readHiddenContacts,
+  CONTACT_PHONEBOOK_META_CHANGED_EVENT,
 } from '@/frontend/lib/contact-phonebook-meta-store'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 import {
@@ -117,14 +118,21 @@ function SidebarRow(p: {
 export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const [selfProfileOpen, setSelfProfileOpen] = useState(false)
   const [joinMetaTick, setJoinMetaTick] = useState(0)
-  const favorites = useMemo(() => readContactFavorites(), [])
-  const lastContacted = useMemo(() => readContactLastContacted(), [])
-  const hidden = useMemo(() => readHiddenContacts(), [])
+  const [phonebookMetaTick, setPhonebookMetaTick] = useState(0)
+  const favorites = useMemo(() => readContactFavorites(), [phonebookMetaTick])
+  const lastContacted = useMemo(() => readContactLastContacted(), [phonebookMetaTick])
+  const hidden = useMemo(() => readHiddenContacts(), [phonebookMetaTick])
 
   useEffect(() => {
     const sync = () => setJoinMetaTick((n) => n + 1)
     window.addEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
     return () => window.removeEventListener(TELEGRAM_ALARM_GROUP_JOIN_CHANGED_EVENT, sync)
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setPhonebookMetaTick((n) => n + 1)
+    window.addEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, sync)
+    return () => window.removeEventListener(CONTACT_PHONEBOOK_META_CHANGED_EVENT, sync)
   }, [])
 
   const contacts = useMemo(

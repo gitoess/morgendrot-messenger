@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/frontend/lib/mailbox-send-hybrid', () => ({
-  sendPlaintextMailboxHybrid: vi.fn(async () => ({ ok: true })),
+  sendTeamPlaintextBroadcastHybrid: vi.fn(async () => ({ ok: true })),
 }))
 vi.mock('@/frontend/lib/api/team-sync-lan', () => ({
   postTeamSyncLanPush: vi.fn(async () => ({ ok: true, entryId: 'lan-1' })),
@@ -15,7 +15,7 @@ vi.mock('@/frontend/lib/api/telegram-integrations', () => ({
 
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { postTeamSyncLanPush } from '@/frontend/lib/api/team-sync-lan'
-import { sendPlaintextMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { publishTeamMemberUpdateWire } from './team-sync-wire'
 
 const TEAM_MB = `0x${'a'.repeat(64)}`
@@ -38,7 +38,7 @@ describe('team-sync-wire LAN push', () => {
       telegramGroupHint: false,
     })
     expect(r.ok).toBe(true)
-    expect(sendPlaintextMailboxHybrid).toHaveBeenCalled()
+    expect(sendTeamPlaintextBroadcastHybrid).toHaveBeenCalled()
     expect(postTeamSyncLanPush).toHaveBeenCalledWith(
       expect.objectContaining({
         teamMailboxAddress: TEAM_MB,

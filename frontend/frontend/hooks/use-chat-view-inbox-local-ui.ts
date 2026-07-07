@@ -460,19 +460,21 @@ export function useChatViewInboxLocalUi(p: UseChatViewInboxLocalUiParams) {
         !inboxPartnerBlockedNorms.has(a.trim().toLowerCase()) &&
         !isIgnoredInboxCounterpartyAddress(a)
     )
-    return addrs.map((address) => {
-      const label = contactDisplayLabel(contactDirectory, address)
-      const short =
-        address.startsWith('0x') && address.length > 12
-          ? `${address.slice(0, 8)}…${address.slice(-4)}`
-          : address
-      const norm = address.trim().toLowerCase()
-      return {
-        address,
-        label: label || short,
-        unreadCount: partnerUnreadByNorm[norm] ?? 0,
-      }
-    })
+    return addrs
+      .map((address) => {
+        const label = contactDisplayLabel(contactDirectory, address)
+        const short =
+          address.startsWith('0x') && address.length > 12
+            ? `${address.slice(0, 8)}…${address.slice(-4)}`
+            : address
+        const norm = address.trim().toLowerCase()
+        return {
+          address,
+          label: label || short,
+          unreadCount: partnerUnreadByNorm[norm] ?? 0,
+        }
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, 'de'))
   }, [
     displayMessages,
     myAddress,

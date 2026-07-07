@@ -4,7 +4,7 @@
  * Team-Sync Wire veröffentlichen (IOTA Persistenz) — § H.36 P1/P3.
  * LAN-Zustellung folgt automatisch, wenn Basis-URL auf Boss-LAN zeigt.
  */
-import { sendPlaintextMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { postTeamSyncLanPush } from '@/frontend/lib/api/team-sync-lan'
 import { isBossLanApiBase } from '@/frontend/lib/is-boss-lan-api-base'
@@ -31,6 +31,7 @@ import {
   listTeamSyncQueueItems,
   removeTeamSyncQueueItem,
 } from '@/frontend/lib/team-sync-offline-queue'
+import { trySignTeamWirePayload } from '@/frontend/lib/team-sync-wire-sign'
 import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
 
 const LS_TEAM_SEQ = 'morgendrot.bossTeamUpdateSeq'
@@ -152,7 +153,7 @@ export async function publishTeamMemberUpdateWire(opts: {
     return { ok: false, error: 'Team-Mailbox-Adresse (0x+64 Hex) fehlt oder ungültig.' }
   }
   const seq = opts.seq ?? bumpBossTeamUpdateSeq()
-  const payload: MorgTeamMemberUpdateV1 = {
+  const signed = await trySignTeamWirePayload({
     v: 1,
     kind: opts.kind,
     seq,
@@ -160,9 +161,10 @@ export async function publishTeamMemberUpdateWire(opts: {
     boss: opts.bossAddress.trim(),
     issuedAt: Date.now(),
     member: opts.member,
-  }
+  })
+  const payload: MorgTeamMemberUpdateV1 = signed as MorgTeamMemberUpdateV1
   const wire = buildMorgTeamMemberUpdateV1Marker(payload)
-  const r = await sendPlaintextMailboxHybrid(recipient, wire, 0n)
+  const r = await sendTeamPlaintextBroadcastHybrid(recipient, wire, 0n)
   if (!r.ok) {
     if (opts.queueOnFailure !== false) {
       enqueueTeamSyncItem({
@@ -211,7 +213,7 @@ export async function publishTelegramAlarmGroupWire(opts: {
     return { ok: false, error: 'Einladungslink muss mit https://t.me/ beginnen.' }
   }
   const tgSeq = opts.tgSeq ?? bumpBossTelegramGroupTgSeq()
-  const payload: MorgTelegramAlarmGroupV1 = {
+  const signed = await trySignTeamWirePayload({
     v: 1,
     kind: 'invite_link',
     tgSeq,
@@ -220,9 +222,10 @@ export async function publishTelegramAlarmGroupWire(opts: {
     issuedAt: Date.now(),
     label: opts.label?.trim() || undefined,
     inviteLink,
-  }
+  })
+  const payload: MorgTelegramAlarmGroupV1 = signed as MorgTelegramAlarmGroupV1
   const wire = buildMorgTelegramAlarmGroupV1Marker(payload)
-  const r = await sendPlaintextMailboxHybrid(recipient, wire, 0n)
+  const r = await sendTeamPlaintextBroadcastHybrid(recipient, wire, 0n)
   if (!r.ok) {
     if (opts.queueOnFailure !== false) {
       enqueueTeamSyncItem({

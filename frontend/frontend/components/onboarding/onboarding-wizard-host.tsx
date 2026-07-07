@@ -1,9 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import type { ApiStatus } from '@/frontend/lib/api/status'
 import { OnboardingBossReadinessDialog } from '@/frontend/components/onboarding/onboarding-boss-readiness-dialog'
 import { OnboardingWizardDialog } from '@/frontend/components/onboarding/onboarding-wizard-dialog'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
+import { clearStuckRadixBodyLock } from '@/frontend/lib/release-modal-pointer-events'
 import {
   ONBOARDING_WIZARD_OPEN_REQUEST_EVENT,
   prepareOnboardingWizardOpen,
@@ -44,7 +47,8 @@ export function OnboardingWizardHost(p: {
       })
       if (!path) return
       prepareOnboardingWizardOpen(path)
-      setWizardOpen(true)
+      if (isCapacitorNativePlatform()) clearStuckRadixBodyLock()
+      flushSync(() => setWizardOpen(true))
     }
     window.addEventListener(ONBOARDING_WIZARD_OPEN_REQUEST_EVENT, onOpen)
     return () => window.removeEventListener(ONBOARDING_WIZARD_OPEN_REQUEST_EVENT, onOpen)

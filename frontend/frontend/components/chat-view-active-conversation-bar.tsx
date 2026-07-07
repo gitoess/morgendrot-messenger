@@ -1,9 +1,8 @@
 'use client'
 
-import { Lock, Unlock } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { ContactHandshakeBadge } from '@/frontend/components/contact-handshake-badge'
 import { ChatViewEncryptedRecipientHandshakeBar } from '@/frontend/components/chat-view-encrypted-recipient-handshake-bar'
+import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import type { ContactHandshakeBadgeKind } from '@/frontend/lib/contact-handshake-ui'
 import type { EncryptedRecipientHandshakeStatus } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
@@ -22,10 +21,8 @@ export type ChatViewActiveConversationBarProps = {
   onEncryptedAcceptHandshakeForRecipient?: () => void | Promise<void>
 }
 
-/** Kompakte Leiste: aktiver Chat-Partner, Handshake-Status, Verschlüsselt/Klartext. */
+/** Kompakte Leiste: aktiver Chat-Partner, Handshake-Status, Verschlüsselt/Unverschlüsselt. */
 export function ChatViewActiveConversationBar(p: ChatViewActiveConversationBarProps) {
-  const showEncryptToggle = p.forcedTransport === 'internet'
-
   return (
     <div className="rounded-xl border border-border/70 bg-card/50 p-3 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -38,36 +35,11 @@ export function ChatViewActiveConversationBar(p: ChatViewActiveConversationBarPr
             <p className="truncate font-mono text-[10px] text-muted-foreground">{p.addressLine}</p>
           ) : null}
         </div>
-        {showEncryptToggle ? (
-          <div className="flex shrink-0 rounded-lg border border-border bg-background p-0.5">
-            <button
-              type="button"
-              onClick={() => p.onEncryptedChange(true)}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors',
-                p.encrypted
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'text-muted-foreground hover:bg-muted/60'
-              )}
-            >
-              <Lock className="h-3.5 w-3.5" />
-              Verschlüsselt
-            </button>
-            <button
-              type="button"
-              onClick={() => p.onEncryptedChange(false)}
-              className={cn(
-                'inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-[11px] font-medium transition-colors',
-                !p.encrypted
-                  ? 'bg-amber-500/20 text-amber-400'
-                  : 'text-muted-foreground hover:bg-muted/60'
-              )}
-            >
-              <Unlock className="h-3.5 w-3.5" />
-              Klartext
-            </button>
-          </div>
-        ) : null}
+        <ChatViewEncryptionModeToggle
+          encrypted={p.encrypted}
+          forcedTransport={p.forcedTransport}
+          onEncryptedChange={p.onEncryptedChange}
+        />
       </div>
       {p.encrypted && p.encryptedRecipientHandshakeStatus ? (
         <ChatViewEncryptedRecipientHandshakeBar

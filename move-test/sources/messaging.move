@@ -556,6 +556,32 @@ module messaging::messaging { // Named address via Move.toml
         expires_at_ms: u64,
     }
 
+    /// Team-Broadcast verschlüsselt (§ H.23 B1): AEAD-Blob + key_epoch, Team-Key nur off-chain.
+    struct TeamEncBroadcastKey has copy, drop, store {
+        sender: address,
+        nonce: u64,
+    }
+
+    struct TeamEncBroadcastEntry has key, store {
+        id: UID,
+        sender: address,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        key_epoch: u64,
+        nonce: u64,
+        created_at_ms: u64,
+        expires_at_ms: u64,
+    }
+
+    struct TeamEncBroadcastStored has copy, drop {
+        mailbox_id: ID,
+        sender: address,
+        nonce: u64,
+        key_epoch: u64,
+        expires_at_ms: u64,
+    }
+
     fun store_ecdh_init_on_uid(
         mailbox_uid: &mut UID,
         recipient: address,
@@ -1099,6 +1125,125 @@ module messaging::messaging { // Named address via Move.toml
         ctx: &mut TxContext,
     ) {
         purge_team_plaintext_broadcast_on_uid(&mut mailbox.id, broadcast_sender, nonce, ctx);
+    }
+
+    fun store_team_encrypted_broadcast_on_uid(
+        mailbox_uid: &mut UID,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        key_epoch: u64,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        let sender = tx_context::sender(ctx);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let exp = now + ttl_days * 86400000;
+        let key = TeamEncBroadcastKey { sender, nonce };
+        if (dof::exists_<TeamEncBroadcastKey>(mailbox_uid, key)) {
+            let old = dof::remove<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key);
+            let TeamEncBroadcastEntry {
+                id,
+                sender: _,
+                ciphertext: _,
+                iv: _,
+                tag: _,
+                key_epoch: _,
+                nonce: _,
+                created_at_ms: _,
+                expires_at_ms: _,
+            } = old;
+            object::delete(id);
+        };
+        let entry = TeamEncBroadcastEntry {
+            id: object::new(ctx),
+            sender,
+            ciphertext,
+            iv,
+            tag,
+            key_epoch,
+            nonce,
+            created_at_ms: now,
+            expires_at_ms: exp,
+        };
+        let mailbox_id = object::uid_to_inner(mailbox_uid);
+        event::emit(TeamEncBroadcastStored { mailbox_id, sender, nonce, key_epoch, expires_at_ms: exp });
+        dof::add<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key, entry);
+    }
+
+    fun store_team_encrypted_broadcast_impl(
+        mailbox: &mut Mailbox,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        key_epoch: u64,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_team_encrypted_broadcast_on_uid(
+            &mut mailbox.id,
+            ciphertext,
+            iv,
+            tag,
+            key_epoch,
+            nonce,
+            ttl_days,
+            ctx,
+        );
+    }
+
+    /// Verschlüsselter Team-Broadcast: 1× TX pro Gruppennachricht (symmetrischer Team-Key off-chain).
+    public entry fun store_team_encrypted_broadcast(
+        mailbox: &mut Mailbox,
+        ciphertext: vector<u8>,
+        iv: vector<u8>,
+        tag: vector<u8>,
+        key_epoch: u64,
+        nonce: u64,
+        ttl_days: u64,
+        ctx: &mut TxContext,
+    ) {
+        store_team_encrypted_broadcast_impl(mailbox, ciphertext, iv, tag, key_epoch, nonce, ttl_days, ctx);
+    }
+
+    fun purge_team_encrypted_broadcast_on_uid(
+        mailbox_uid: &mut UID,
+        broadcast_sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        let by = tx_context::sender(ctx);
+        let key = TeamEncBroadcastKey { sender: broadcast_sender, nonce };
+        assert!(dof::exists_<TeamEncBroadcastKey>(mailbox_uid, key), E_TEAM_BROADCAST_MISSING);
+        let pref = dof::borrow<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key);
+        let now = tx_context::epoch_timestamp_ms(ctx);
+        let allowed = by == pref.sender || now >= pref.expires_at_ms;
+        assert!(allowed, E_NOT_OWNER);
+        let p = dof::remove<TeamEncBroadcastKey, TeamEncBroadcastEntry>(mailbox_uid, key);
+        let TeamEncBroadcastEntry {
+            id,
+            sender: _,
+            ciphertext: _,
+            iv: _,
+            tag: _,
+            key_epoch: _,
+            nonce: _,
+            created_at_ms: _,
+            expires_at_ms: _,
+        } = p;
+        object::delete(id);
+    }
+
+    /// Purge verschlüsselter Team-Broadcast (Rebate): Original-Sender jederzeit; nach TTL jeder.
+    public entry fun purge_team_encrypted_broadcast(
+        mailbox: &mut Mailbox,
+        broadcast_sender: address,
+        nonce: u64,
+        ctx: &mut TxContext,
+    ) {
+        purge_team_encrypted_broadcast_on_uid(&mut mailbox.id, broadcast_sender, nonce, ctx);
     }
 
     public entry fun store_plaintext_message_with_credits(

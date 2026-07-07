@@ -48,7 +48,7 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
   const i = prev.findIndex((m) => m.dedupKey === key)
   if (i < 0) return [msg, ...prev]
   const cur = prev[i]!
-  const tr = new Set<'internet' | 'mesh' | 'adhoc' | 'telegram'>([
+  const tr = new Set<'internet' | 'lan' | 'mesh' | 'adhoc' | 'telegram'>([
     ...(cur.transports ?? []),
     ...(msg.transports ?? []),
   ])

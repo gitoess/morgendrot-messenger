@@ -14,6 +14,7 @@ import {
     sendEncryptedMessage,
     sendPlaintextOnly,
     sendTeamPlaintextBroadcastOnly,
+    sendTeamEncryptedBroadcastOnly,
     buildMeshPeerInnerBlob,
     packMeshEmergencyV2Wire,
     decryptMeshEmergencyV2Wire,
@@ -32,6 +33,7 @@ import { denyMessengerReadCommand, denyMessengerSendCommand } from '../../messen
 const SEND_COMMANDS = new Set([
     '/send-plain',
     '/send-team-broadcast',
+    '/send-team-broadcast-encrypted',
     '/send',
     '/sos-gateway-ack',
     '/mesh-build-v2',
@@ -120,6 +122,39 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
             digest: lastDigest,
             txDigest: lastDigest,
             nonce: parsed ? parsed.nonce.toString() : undefined,
+        };
+    }
+
+    if (c === '/send-team-broadcast-encrypted') {
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
+        const teamMb = String(opts?.mailboxObjectId ?? '').trim();
+        if (!/^0x[a-fA-F0-9]{64}$/.test(teamMb)) {
+            return {
+                ok: false,
+                message:
+                    'Team-Broadcast verschlüsselt: gültige Team-Mailbox-Object-ID (mailboxObjectId, 0x + 64 Hex) angeben.',
+            };
+        }
+        const wire = a.join(' ').trim();
+        if (!wire) {
+            return { ok: false, message: 'Team-Broadcast verschlüsselt: Wire-JSON fehlt.' };
+        }
+        const result = await sendTeamEncryptedBroadcastOnly(teamMb, wire);
+        const lastDigest = result?.digest;
+        let nonceOut: string | undefined;
+        try {
+            const parsed = JSON.parse(wire) as { nonce?: string };
+            if (parsed.nonce?.trim()) nonceOut = parsed.nonce.trim();
+        } catch {
+            /* ignore */
+        }
+        return {
+            ok: true,
+            message: `Verschlüsselter Team-Broadcast in ${teamMb.slice(0, 12)}… gespeichert (1× TX).`,
+            digest: lastDigest,
+            txDigest: lastDigest,
+            nonce: nonceOut,
         };
     }
 

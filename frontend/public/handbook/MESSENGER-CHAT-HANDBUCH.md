@@ -2,7 +2,7 @@
 
 **Zweck:** Ausführliche Hinweise, die früher direkt in der Chat-UI standen — hier gebündelt für Nachlesen (PWA-Handbuch, offline nach erstem Abruf möglich).
 
-**Stand:** 2026-06-16 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**.
+**Stand:** 2026-07-03 — Telegram-ähnliche Chat-Oberfläche (Seitenleiste, Inbox vor Composer), Sendepfad + **SOS im Kopf**, Gruppe verwalten als Sheet, Peering-QR unter **Ich**; § *IOTA vs. Server* (Threat Model).
 
 **Verwandt:** `docs/PWA-HANDBUCH-OFFLINE.md`, `docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`, `docs/MESSENGER-CAPABILITIES-OVERVIEW.md`, `docs/GRUPPENCHAT-ZIELBILD.md`, `docs/EXPORT-ASSISTENT-REFERENZ.md`.
 
@@ -31,6 +31,26 @@
 **Unverschlüsselt · funk:** Meshtastic-**Klartext** (LongFast). Für **Ende-zu-Ende** den Transport **online** wählen (oder Verschlüsselung aktivieren — wechselt bei Bedarf automatisch zu online).
 
 **Schloss / Verschlüsselung:** Gilt für **Sendepfad online** (Morgendrot-E2E). Umschalten im **Konversations-Menü** (⋮, Verschl./Klar) oder im erweiterten Setup (**Verschlüsselt**-Karte, wenn sichtbar). Bei **funk** steuert die Meshtastic-Kanalwahl (Primary/Secondary + PSK) die Funkverschlüsselung auf dem Radio — nicht der App-Schalter.
+
+---
+
+## IOTA vs. Server — Kurz (Threat Model)
+
+Morgendrot ist **Hybrid**: Boss-**Server** (Setup, LAN, API) + **IOTA** (Archiv auf der Chain) + optional **Funk**. Das ist **kein** reiner Blockchain-Messenger und **kein** reiner Matrix-Ersatz.
+
+| | **IOTA (Online-Pfad)** | **Eigener Server** |
+|--|------------------------|---------------------|
+| **Stärke** | Archiv bleibt, wenn der Boss-PC weg ist; Nachweis/Verifizierbarkeit on-chain | Schnell, einfacheres Key-Management, Metadaten unter **eurer** Betriebspolicy |
+| **Schwäche** | **Metadaten** (Adressen, Zeitpunkte, Postfächer) öffentlich analysierbar; **kein** Signal-artiges Forward Secrecy (Ist) | Ein Betreiber kann abschalten; Logs/IPs unless gehärtet |
+
+**Praktische Regeln:**
+
+- **Verschlüsselt** senden, wenn Inhalt geheim bleiben soll — das schützt den **Text**, nicht das „Wer spricht wann mit wem“ auf der Chain.
+- **Funk** für taktische Reichweite ohne Netz; **Online** für E2E und Archiv.
+- **Seed/Tresor** sichern — Verlust = Identität on-chain weg (wie bei jeder Wallet).
+- Für **Anonymität** gegen Ledger-Analyse ist Morgendrot **nicht** das richtige Werkzeug — eher für **Einsatz-Archiv** und **Server-unabhängige Speicherung**.
+
+Ausführlich: **`docs/ROADMAP-FAHRPLAN.md`** § **I.0b** · Krypto: **`docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`**.
 
 ---
 
@@ -327,6 +347,9 @@ Wo welche Funktion liegt (Messenger, Boss):
 
 | Thema | Ort |
 |--------|-----|
+| **Team-Übersicht** (provisionierte Helfer, Seeds, Roster, Team-Postfächer) | **Einsatzleitung → Mein Team** |
+| **Seed erneut anzeigen** (Registry, nur Boss) | **Mein Team → Provisionierte Helfer** |
+| **Helfer ↔ Messenger-Gruppe** zuordnen | **Mein Team → Provisionierte Helfer** (Dropdown) oder im Schnell-Assistenten |
 | **Handoff-ZIP** (Profil, Rechte, Partner, Team) | **Einsatzleitung → Helfer einrichten** |
 | **Neues Helfer-Handy** (Seed + Handoff-ZIP + QR) | **Helfer einrichten** → **Neues Gerät** → Seed + QR |
 | **TTL / Purge** für bestehende Geräte | **Helfer einrichten** → **Bestehende Geräte** |

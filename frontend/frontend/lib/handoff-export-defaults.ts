@@ -2,7 +2,13 @@ import type { ApiStatus } from '@/frontend/lib/api'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/standalone-smartphone-handoff'
 import type { MessengerCapabilitiesOverride } from '@morgendrot/shared/messenger-capabilities-matrix'
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { getApiBase } from '@/frontend/lib/api/api-base'
+import { syncBossChainRegistryIdsFromEinsatzConfig } from '@/frontend/lib/boss-chain-registry-store'
+import {
+  handoffCurrentIdsFieldsFromPatch,
+  readHandoffCurrentIdsFromLocal,
+  type HandoffCurrentIdsFields,
+} from '@/frontend/lib/handoff-current-ids-local'
 import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
 import {
   buildTeamMailboxOptions,
@@ -45,31 +51,45 @@ export function seedHandoffExportDefaultsFromStatus(
   const teamOpts = buildTeamMailboxOptions(apiSnapshot ?? null, readMyTeamMailboxes())
   const selectedTeamIds = teamOpts.length ? defaultSelectedTeamMailboxIds(teamOpts) : []
   const mode = parseEinsatzChainMode(apiSnapshot?.einsatzChainMode) ?? 'mainnet-direct'
+  syncBossChainRegistryIdsFromEinsatzConfig(apiSnapshot?.einsatzConfig)
+  const localReg = readHandoffCurrentIdsFromLocal()
+  const apiMb = apiSnapshot?.mailboxId?.trim() ?? ''
+  const apiCr = apiSnapshot?.einsatzConfig?.commandRegistryId?.trim() ?? ''
+  const apiVr = apiSnapshot?.einsatzConfig?.vaultRegistryId?.trim() ?? ''
+  const hex = /^0x[a-fA-F0-9]{64}$/i
+  const mailbox = hex.test(apiMb) ? apiMb : localReg.handoffMailbox ?? ''
+  const cmdReg = hex.test(apiCr) ? apiCr : localReg.handoffCmdReg ?? ''
+  const vaultReg = hex.test(apiVr) ? apiVr : localReg.handoffVaultReg ?? ''
+  const teamFromMb = mailbox && hex.test(mailbox) ? [mailbox] : selectedTeamIds
   return {
     handoffBoss: boss,
     handoffPkgCustom: pkgOk,
-    handoffMailbox: '',
-    handoffCmdReg: '',
-    handoffVaultReg: '',
-    handoffRpc: defaultHandoffRpcForChainMode(mode),
+    handoffMailbox: mailbox,
+    handoffCmdReg: cmdReg,
+    handoffVaultReg: vaultReg,
+    handoffRpc: localReg.handoffRpc ?? defaultHandoffRpcForChainMode(mode),
     handoffDirectIota: '',
-    selectedTeamIds,
+    selectedTeamIds: teamFromMb.length ? teamFromMb : selectedTeamIds,
     einsatzChainMode: mode,
   }
 }
 
-/** Ergänzt IDs/RPC aus GET /api/current-ids (wie Experten-Panel). */
+/** Ergänzt IDs/RPC aus GET /api/current-ids oder lokal (Boss-APK offline). */
 export async function fetchHandoffCurrentIdsDefaults(): Promise<Partial<HandoffExportRuntimeDefaults>> {
+  const local = readHandoffCurrentIdsFromLocal()
+  const apiBase = getApiBase().trim()
+  if (!apiBase) return local
+
   try {
-    const r = await fetch(`${API_BASE}/api/current-ids`)
+    const r = await fetch(`${apiBase}/api/current-ids`)
     const j = (await r.json()) as {
       mailboxId?: string
       commandRegistryId?: string
       vaultRegistryId?: string
       rpcUrl?: string
     }
-    if (!r.ok) return {}
-    const out: Partial<HandoffExportRuntimeDefaults> = {}
+    if (!r.ok) return local
+    const out: Partial<HandoffExportRuntimeDefaults> = { ...local }
     const mb = String(j.mailboxId || '').trim()
     const cr = String(j.commandRegistryId || '').trim()
     const vr = String(j.vaultRegistryId || '').trim()
@@ -83,8 +103,16 @@ export async function fetchHandoffCurrentIdsDefaults(): Promise<Partial<HandoffE
     if (rpc) out.handoffRpc = rpc
     return out
   } catch {
-    return {}
+    return local
   }
+}
+
+export type { HandoffCurrentIdsFields }
+
+/** Flache Felder für Wizards (Device-Provision, Boss-View). */
+export async function fetchHandoffCurrentIdsFields(): Promise<HandoffCurrentIdsFields> {
+  const patch = await fetchHandoffCurrentIdsDefaults()
+  return handoffCurrentIdsFieldsFromPatch(patch)
 }
 
 export function mergeHandoffExportDefaults(

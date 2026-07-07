@@ -122,7 +122,7 @@ import {
     type PersonalSecretEntry,
     type VaultNoteEntry,
 } from './vault-local.js';
-import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
+import { applySdkSignerFromImport, isPlausibleSdkImport } from './messenger-nest/sdk-signer-import.js';
 import { runVaultOnchainPreflight } from './vault-onchain-preflight.js';
 import { syncVaultChainConfig } from './vault-sync-chain-config.js';
 import { setWalletPassword } from './messenger-nest/messenger-session-password.js';
@@ -158,6 +158,7 @@ import { handleStatusRoutes } from './api/routes/handle-status-routes.js';
 import { handleTelegramIntegrationRoutes } from './api/routes/handle-telegram-integration-routes.js';
 import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifest-routes.js';
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
+import { handleBossWalletRoutes } from './api/routes/handle-boss-wallet-routes.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
 import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
 import {
@@ -327,6 +328,19 @@ export function setPurgeAfterLieferungHandler(handler: PurgeAfterLieferungFn | n
 }
 let _sessionStatus: Partial<ApiStatus> = {};
 let _resolvePassword: ((pw: string) => void) | null = null;
+export type VaultUnlockBypassMode = 'createNew' | 'signerRecover';
+let _vaultUnlockBypass: VaultUnlockBypassMode | null = null;
+
+export function setVaultUnlockBypass(mode: VaultUnlockBypassMode | null): void {
+    _vaultUnlockBypass = mode;
+}
+
+/** Einmalig nach /api/unlock — wallet-bridge überspringt Entschlüsseln einer alten Vault-Datei. */
+export function consumeVaultUnlockBypass(): VaultUnlockBypassMode | null {
+    const mode = _vaultUnlockBypass;
+    _vaultUnlockBypass = null;
+    return mode;
+}
 
 export function setCommandHandler(handler: CommandHandlerFn | null): void {
     _commandHandler = handler;
@@ -430,6 +444,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (shopHandled) return;
 
         if (await handleStatusRoutes(req, res, url, cors, sendJson, routeCtx)) return;
+        if (await handleBossWalletRoutes(req, res, url, cors, sendJson)) return;
         if (await handleContactRoutes(req, res, url, cors, sendJson, routeCtx)) return;
         if (await handleRosterPendingRoutes(req, res, url, cors, sendJson)) return;
         if (await handleTeamSyncRoutes(req, res, url, cors, sendJson)) return;
@@ -736,6 +751,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     if (CFG.API_RATE_LIMIT_UNLOCK_PER_MINUTE > 0) unlockRateLimit.record(unlockIp);
                     const data = JSON.parse(body || '{}');
                     const password = String(data.password ?? '');
+                    const createNew = data.createNew === true;
+                    if (createNew) {
+                        setVaultUnlockBypass('createNew');
+                    }
                     if (!_resolvePassword) {
                         const err =
                             _commandHandler == null
@@ -750,7 +769,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     }
                     const vaultPath = resolveVaultFilePathForSession(CFG.VAULT_FILE || undefined);
                     const vaultLoadArgs: string[] = [password];
-                    if (vaultFileExists(vaultPath)) {
+                    if (!createNew && vaultFileExists(vaultPath)) {
                         const def = CFG.VAULT_FILE || '.morgendrot-vault';
                         if (path.resolve(vaultPath) !== path.resolve(def) && path.basename(vaultPath) !== path.basename(def)) {
                             vaultLoadArgs.push(vaultPath);
@@ -764,8 +783,9 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     /** Vault hatte bereits gespeicherten Signer-Import — sonst nach Unlock optional in Datei sichern. */
                     let vaultHadSdkSignerImport = false;
                     let sdkImportPersistedToVault = false;
+                    let vaultRecoveredFromSigner = false;
 
-                    if (vaultFileExists(vaultPath)) {
+                    if (!createNew && vaultFileExists(vaultPath)) {
                         try {
                             if (CFG.SIGNER === 'sdk') {
                                 const content = await loadVaultContent(password, vaultPath);
@@ -799,16 +819,41 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                 vaultVerifiedSource = 'local';
                             }
                         } catch {
-                            sendJson(
-                                res,
-                                400,
-                                {
-                                    ok: false,
-                                    error: 'Falsches Passwort oder beschädigter Vault (lokale Datei lässt sich nicht entschlüsseln).',
-                                },
-                                cors
-                            );
-                            return;
+                            if (CFG.SIGNER === 'sdk' && signerPost && isPlausibleSdkImport(signerPost)) {
+                                try {
+                                    applySdkSignerFromImport(signerPost);
+                                    sdkSignerReady = true;
+                                    vaultRecoveredFromSigner = true;
+                                    setVaultUnlockBypass('signerRecover');
+                                } catch (e: any) {
+                                    sendJson(
+                                        res,
+                                        400,
+                                        {
+                                            ok: false,
+                                            error:
+                                                `Vault-Passwort passt nicht zu ${path.resolve(vaultPath)} und der Seed-Import ist ungültig: ${String(e?.message || e)}`,
+                                        },
+                                        cors
+                                    );
+                                    return;
+                                }
+                            } else {
+                                const vaultHint = signerPost
+                                    ? ' Seed eingetragen? Unter „Seed importieren“ Mnemonic/Bech32-Secret einfügen — dann wird der Tresor mit neuem Passwort neu angelegt.'
+                                    : ' Passwort vergessen? Unter „Seed importieren“ Mnemonic + neues Passwort — oder altes Passwort dieser Vault-Datei.';
+                                sendJson(
+                                    res,
+                                    400,
+                                    {
+                                        ok: false,
+                                        error:
+                                            `Falsches Passwort oder beschädigter Vault (${path.resolve(vaultPath)}).${vaultHint}`,
+                                    },
+                                    cors
+                                );
+                                return;
+                            }
                         }
                     } else if (CFG.VAULT_REGISTRY_ID && CFG.PACKAGE_ID) {
                         const myAddr = (CFG.MY_ADDRESS || process.env.MY_ADDRESS || '').trim();
@@ -888,7 +933,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     if (isMessengerCommandHandlerReady()) {
                         const handler = _commandHandler!;
                         let loadRes: { ok?: boolean; message?: string; error?: string };
-                        if (vaultFileExists(vaultPath)) {
+                        if (!createNew && vaultFileExists(vaultPath) && !vaultRecoveredFromSigner) {
                             loadRes = (await handler('/vault-load', vaultLoadArgs, {})) as typeof loadRes;
                         } else if (vaultVerifiedSource === 'chain') {
                             loadRes = (await handler('/vault-load-from-chain', [password], {})) as typeof loadRes;
@@ -918,7 +963,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             CFG.SIGNER === 'sdk' &&
                             signerPost &&
                             !vaultHadSdkSignerImport &&
-                            vaultFileExists(vaultPath)
+                            (createNew || vaultFileExists(vaultPath))
                         ) {
                             const saveArgs = [password, '', vaultPath, 'includeIotaMnemonic'];
                             const saveRes = (await handler('/vault-save', saveArgs, {})) as {
@@ -933,7 +978,11 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     if (resolve) resolve(password);
                     let okMessage = vaultChecked
                         ? 'Passwort korrekt – Vault entschlüsselt.'
-                        : 'Entsperrt. Hinweis: Es wurde kein lokaler Vault und kein On-Chain-Vault mit Daten gefunden – das Passwort konnte nicht gegen einen Vault geprüft werden.';
+                        : vaultRecoveredFromSigner
+                          ? 'Seed übernommen — Tresor wird mit deinem Passwort neu gespeichert (alte Datei wird überschrieben).'
+                          : createNew
+                          ? 'Neues Profil gestartet — Tresor wird mit deinem Passwort neu angelegt.'
+                          : 'Entsperrt. Hinweis: Es wurde kein lokaler Vault und kein On-Chain-Vault mit Daten gefunden – das Passwort konnte nicht gegen einen Vault geprüft werden.';
                     if (CFG.SIGNER === 'sdk' && sdkImportPersistedToVault) {
                         okMessage +=
                             ' IOTA-Seed/Secret wurde in der Vault-Datei gespeichert — beim nächsten Mal reicht meist nur noch das Passwort unter „Tresor öffnen“.';

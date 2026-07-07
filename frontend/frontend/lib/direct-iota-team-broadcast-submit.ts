@@ -3,6 +3,7 @@
 import {
   attachGasPaymentForOwner,
   buildStoreTeamPlaintextBroadcastTransaction,
+  buildStoreTeamEncryptedBroadcastTransaction,
   createDirectIotaClient,
   isDirectChainExecutionSuccess,
   signAndExecuteTransactionWithSigner,
@@ -68,6 +69,67 @@ export async function trySubmitTeamPlaintextBroadcastViaDirectIota(opts: {
       teamMailboxObjectId: teamMb,
       senderAddress: snap.senderAddress.trim(),
       plaintextUtf8: new TextEncoder().encode(opts.payloadUtf8),
+      nonce: opts.nonce,
+      ttlDays: snap.ttlDays,
+    })
+    await attachGasPaymentForOwner(client, txb, snap.senderAddress.trim())
+    const out = await signAndExecuteTransactionWithSigner({ client, transaction: txb, signer })
+    if (isDirectChainExecutionSuccess(out.digest, out.status)) {
+      return { ok: true, digest: out.digest! }
+    }
+    return {
+      ok: false,
+      error: `Chain-Status: ${out.status || 'kein Digest'}.`,
+    }
+  } catch (e) {
+    return { ok: false, error: formatDirectIotaSubmitError(e) }
+  }
+}
+
+export async function trySubmitTeamEncryptedBroadcastViaDirectIota(opts: {
+  teamMailboxObjectId: string
+  ciphertext: Uint8Array
+  iv: Uint8Array
+  tag: Uint8Array
+  keyEpoch: number
+  nonce: bigint
+}): Promise<{ ok: true; digest: string } | { ok: false; error: string }> {
+  if (!canTryLiveTeamBroadcastDirectMailbox()) {
+    return { ok: false, error: 'Direkt-Team-Broadcast nicht verfügbar (Drain/RPC/Signer/Flags).' }
+  }
+  const teamMb = opts.teamMailboxObjectId.trim()
+  if (!/^0x[a-fA-F0-9]{64}$/i.test(teamMb)) {
+    return { ok: false, error: 'Ungültige Team-Mailbox-Object-ID.' }
+  }
+  const rpc = getConfiguredDirectIotaRpcUrl()
+  const signer = getDirectIotaSessionSigner()
+  const signerAddr = getDirectIotaSessionSignerAddress()
+  const snap = getDirectMailboxChainSnapshot()
+  if (!rpc || !signer || !signerAddr || !snap) {
+    return { ok: false, error: 'Direkt-RPC/Signer/Snapshot fehlt.' }
+  }
+  if (!directIotaSignerMatchesIdentity(signerAddr, snap.senderAddress)) {
+    return { ok: false, error: 'Signer-Adresse stimmt nicht mit gespeichertem Absender überein.' }
+  }
+  try {
+    const client = createDirectIotaClient({ rpcUrl: rpc })
+    const mailboxCheck = await validateMessagingMailboxObjectForPackage(
+      client,
+      teamMb,
+      snap.packageId,
+      'mailbox'
+    )
+    if (!mailboxCheck.ok) {
+      return { ok: false, error: mailboxCheck.error }
+    }
+    const txb = buildStoreTeamEncryptedBroadcastTransaction({
+      packageId: snap.packageId,
+      teamMailboxObjectId: teamMb,
+      senderAddress: snap.senderAddress.trim(),
+      ciphertext: opts.ciphertext,
+      iv: opts.iv,
+      tag: opts.tag,
+      keyEpoch: BigInt(Math.max(1, Math.trunc(opts.keyEpoch))),
       nonce: opts.nonce,
       ttlDays: snap.ttlDays,
     })

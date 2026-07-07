@@ -39,7 +39,7 @@
 | **Telefonbuch UX** | Sheet ohne Fließtext; **Kontakt-Dialog** schlank (Name, 0x, Node-ID, Telegram, QR); Postfächer unter **„Erweitert · Postfach-ID“**; **entfernt:** „Wallet aus Chain“, Dialog-Fußtexte; **Funk · Node-IDs sichern** eingeklappt mit Vorschau (`contact-mesh-export-stats.ts`, `phonebook-mesh-backup-panel.tsx`) | **`GET /api/resolve-private-mailbox-owner`** ohne UI (Backend optional behalten) |
 | **Handbuch** | **`docs/MESSENGER-CHAT-HANDBUCH.md`** + **`frontend/public/handbook/…`** — Abschnitt Kontakt anlegen, Funk-Export-Umfang | — |
 | **§ H.36 P0** | **`onboarding/`** — Wizard Host/Dialog/Shell, Progress-Store, Resume-Card, Einstellungen-Sektion; Deep-Links Handoff/Seed/WLAN | Feldtest Boss/Helfer/Wanderer linear |
-| **§ H.36 P1 (Teil)** | Wire **`MORG_TEAM_*`** + **`MORG_TELEGRAM_ALARM_GROUP_V1`**; **`team-sync-wire.ts`** (IOTA-Klartext Team-Mailbox, Funk-Ping, TG-Hinweis); Posteingang **`InboxTeamSyncSystemCards`** (Ja/Nein); Join-Request **`helper-join-request-form`**, Boss **`einsatzleitung-join-requests-panel`**; Offline-Queue **`team-sync-offline-queue.ts`** | Dedizierter **LAN-Push** (`POST /api/team-sync/push`), Kanal-Feedback „Zugestellt über …“, Boss-**`sig`** freeze |
+| **§ H.36 P1 (Teil)** | Wire **`MORG_TEAM_*`** + LAN-Poll + Kanal-Feedback; **Boss-`sig` freeze** (`docs/MORG-TEAM-WIRE-SIG-SCHEMA.md`) | Feldtest Block 2 (zweiter PC); manueller LAN-Zustelltest |
 | **§ H.3n B2.5 (Teil)** | **`ChatViewSosEmergencySheet`** + Lage-Bundle (`sos-lage-bundle.ts`); SOS auf Dashboard + Chat; **`MORG_EMERGENCY_V1`**-Marker bei `emergencyWire` | Sendepfad erzwingt noch nicht durchgängig **`encrypted=false`** / **`/send-plain`** bei normalem Composer-SOS; Fan-out-Feldabnahme |
 | **§ H.26 B4b (Teil)** | Einstellungen **`settings-telegram-einsatz-group`**, Handoff-Extras, Alarmgruppe-Join-Karten, **`postTelegramGroupAlarm`**, Inbound ohne Telefonbuch-Eintrag | Einladungslink-Onboarding Feldtest; **B4c** Multi-Pick |
 | **§ H.1b Scope B lazy** | **`lazy/messenger-scope-b.ts`** — BossView, ConfigView, Handoff-Import, Pulse/Relay/Protokoll lazy (Wellen 1–4 laut **`docs/MESSENGER-SCOPE-P0-LAZY-PLAN.md`**) | Manuell Network-Tab Helfer vs Boss; optional CI Bundle-Diff |
@@ -709,6 +709,51 @@ Kurzfassung für Partner- und Betriebstexte (ohne Marketing-Garantien):
 | **IOTA Rebased** (Mailbox / Events) | **Archiv / persistente Beweisspur** für das, was **on-chain** ankommt – die **Speicherlast der Inhalte** liegt hier **dezentral** im Netzwerk, nicht auf dem kleinen VPS. |
 
 **Ehrliche Caveats:** Sind **`ENABLE_PLAINTEXT_CHANNEL`**, **`MAILBOX_STORE_PLAINTEXT`** oder ähnliche Optionen aktiv, kann **Inhalt** zusätzlich oder im Klartext in der Chain landen – das muss in **Betriebsdoku** und **UI** erkennbar sein. **Server-Logs**, **RPC-Limits** und **Bridge-Kosten** skalieren **nicht** automatisch mit „beliebig vielen Nutzern“ – Unterhalt und Architektur separat planen.
+
+### I.0b IOTA vs. eigener Server — **externe Kritik, Hybrid-Antwort** (2026-07-03)
+
+**Kurzfazit:** IOTA bringt **Dezentralität des Archivs** und **Zensurresistenz der Speicherung**; ein gut betriebener **eigener Server** ist oft **besser bei Metadaten-Kontrolle, Latenz und (mit modernem Protokoll) Forward Secrecy**. Morgendrot ist **kein** reiner On-Chain-Messenger — sondern **Hybrid**: Boss-Server + LAN-Zustellung + optional IOTA-Persistenz + Funk (`docs/TRANSPORT-AND-IOTA-LAYERS.md` §2.1: *IOTA speichert, LAN liefert schnell*).
+
+| Kriterium | IOTA (On-Chain) | Eigener Server (Matrix/XMPP/eigener Messenger) | Morgendrot-Hybrid |
+|-----------|-----------------|--------------------------------------------------|-------------------|
+| **Dezentralität / Zensur des Archivs** | Stark | Schwach (Betreiber kann abschalten) | **IOTA** für Persistenz; Server für Setup/LAN |
+| **Anonymität / Metadaten** | Schwach (öffentliches Ledger: Adressen, TX-Muster, Handshakes) | Mittel–gut (Inhalt mit E2EE; Metadaten beim Betreiber) | **Beide leaken anders** — kein Anonymitäts-Produkt |
+| **Forward Secrecy** | Schwach (Ist: FS nur bei Key-Rotation, nicht pro Nachricht — `docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`) | Gut (Signal/Matrix mit Ratchet) | Roadmap Phase 3; **ehrlich kommunizieren** |
+| **Seed / Key-SPOF** | Seed = Identität on-chain | Passwort/E2EE oft einfacher | Vault, Boss-Gas, Handoff — Seed bleibt kritisch |
+| **Verifizierbarkeit / Audit** | Stark | Schwach (Vertrauen in Betreiber) | **Bewusster IOTA-Vorteil** (Manifest, Anker) |
+| **Latenz / Betrieb** | Höher (RPC, Gas) | Niedriger | LAN + Funk für Echtzeit; Chain im Hintergrund |
+
+**Was externe Kritik zutreffend nennt (Ist):**
+
+- Verschlüsselter **Inhalt** schützt nicht vor **Ledger-Metadaten** (wer, wann, welches Postfach, Gas-Zahler).
+- **Kein** Signal-artiges PFS — Langzeit-Schlüssel + Ciphertext-Archiv = nachträglich entschlüsselbar.
+- **Komplexität** (Wallet, Gas, Signer) höher als reiner Server-Chat.
+
+**Was am Vergleich zu grob ist:**
+
+- „Eigener Server = gute Anonymität“ gilt primär für **Inhalt** mit E2EE — **Metadaten** (IPs, Zeiten, Räume, Logs) bleiben beim Betreiber.
+- Morgendrot ersetzt den Server **nicht** durch IOTA — der Boss bleibt **Dirigent**; IOTA ist **Archiv**, nicht alleiniger Transport.
+
+**Produktversprechen (verbindlich):**
+
+| Versprechen | Nicht versprechen |
+|-------------|-------------------|
+| Dezentrales **Archiv**, wenn Boss-Server weg ist | **Anonymität** gegen Chain-/RPC-Analyse |
+| **Verifizierbare** On-Chain-Spur für Einsatz-Nachweis | „Militärtaugliches PFS“ im Ist-Stand |
+| Funk-Fallback + LAN-Speed + Chain-Persistenz | Dass **alles** ohne Server geht (Setup/Handoff) |
+
+**Nachteile abmildern (Betrieb + Roadmap):**
+
+1. **Verschlüsselt senden** als Default; **`MAILBOX_STORE_PLAINTEXT`** / Klartext-on-chain in Einsatz **aus**.
+2. **Minimale Chain-Interaktion** — Handshake einmalig; Session Keys statt wiederholter On-Chain-Metadaten (§ H.23).
+3. **Helfer `mesh-first`** — Funk primär; IOTA im Hintergrund / Pfad 4, nicht als Expert-Pflicht.
+4. **Eigener/Boss-RPC** statt öffentlicher Node (weniger Drittpartei-Korrelation).
+5. **Double Ratchet** (Phase 3) oder UI-Badge „transport-verschlüsselt, kein Forward Secrecy“.
+6. **§ H.36 LAN-Push** — schnelle Zustellung **ohne** zusätzliche Chain-TX pro Ping.
+
+**Wann welches Modell:** Für **Beschlagnahmung/Zensur des Servers** und **forensischen Nachweis** ist der Hybrid sinnvoll. Für **hochsensible Anonymität** oder **maximales PFS** sind dedizierte Messenger (Signal, Matrix+ E2EE, Tor) oder **Funk-only ohne Chain-Spuren** passender — oder bewusst andere Threat-Model-Annahmen.
+
+**Handbuch (Nutzer):** `docs/MESSENGER-CHAT-HANDBUCH.md` § *IOTA vs. Server — Kurz* · **Krypto-Spec:** `docs/MESSENGER-E2EE-ZIELARCHITEKTUR.md`.
 
 ### I.1 Was **sinnvoll** ist (und zum Projekt passt)
 
@@ -1516,7 +1561,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) **Modus-A-Feldtest** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16** — Feldtest + Double Ratchet (Phase C) folgen.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. Double Ratchet (Phase C) / Team-Key **B1** folgen.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 

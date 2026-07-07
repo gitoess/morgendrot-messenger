@@ -8,8 +8,19 @@
 
 ## Vorbereitung (Modus A)
 
+**Wichtig — Isolation:** Der Feldtest lebt in einem **eigenen Ordner** (z. B. `morgendrot-modus-a-feldtest\`) mit **eigener** `.env` und `data\`. **Nicht** `morgendrot\.env` überschreiben — sonst zeigt der normale Dev-Server auf gelöschte Feldtest-Pfade (leere `PACKAGE_ID` / `MY_ADDRESS`).
+
+Falls das passiert ist: im Repo `node scripts/restore-morgendrot-env-local.mjs` (stellt lokale `.morgendrot-vault` im Repo wieder an).
+
 ```powershell
-npm run env:role:boss   # möglichst leere .env / frisches Datenverzeichnis
+# Im Feldtest-Arbeitsordner (Sibling), nicht im Haupt-Repo:
+# VORBEREITEN.ps1 legt dort .env + data\ an und startet dm mit cwd=morgendrot + Feldtest-.env
+```
+
+Im **Haupt-Repo** nur für normalen Betrieb:
+
+```powershell
+npm run env:role:boss
 npm run dm
 ```
 

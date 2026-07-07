@@ -39,8 +39,11 @@
     "subtitle": "Restore existing profile (24 words)",
     "hint": "Vault password <strong>and</strong> your IOTA mnemonic (12–24 words) or Bech32 secret — required for <mono>SIGNER=sdk</mono> without stored import.",
     "vaultPasswordPlaceholder": "Vault password",
+    "newPasswordPlaceholder": "New vault password (min. 8 characters)",
+    "confirmPasswordPlaceholder": "Repeat password",
     "mnemonicLabel": "Mnemonic / secret (required)",
     "mnemonicPlaceholder": "24 words or Bech32 secret …",
+    "importRecoverHint": "With seed: password is the new vault password (min. 8 characters) — not necessarily the old one. Seed/Bech32 secret is required.",
     "importing": "Importing…",
     "restore": "Restore profile"
   },
@@ -52,10 +55,11 @@
     "mnemonicPlaceholder": "24 words …",
     "repeatLabel": "Repeat",
     "repeatPlaceholder": "Enter again",
-    "newPasswordPlaceholder": "New password",
+    "newPasswordPlaceholder": "New password (min. 8 characters)",
     "confirmPasswordPlaceholder": "Repeat password",
     "creating": "Creating…",
-    "create": "Create profile"
+    "create": "Create profile",
+    "blockedHint": "Still required: password at least 8 characters, both fields must match, and a valid seed (generate or paste)."
   },
   "sdkMnemonicPref": {
     "label": "Remember wallet seed",

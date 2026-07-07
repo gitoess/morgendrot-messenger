@@ -28,6 +28,8 @@ export function shouldPreferStandaloneHandoffStatus(): boolean {
 
 /** APK/Autarkie: Direkt-RPC + lokales Handoff — keine Morgendrot-Basis nötig. */
 export function isStandaloneMessengerWithoutBasis(): boolean {
+  /** Nur native APK — Desktop-Browser nutzt immer POST /api/unlock gegen den Node-Tresor. */
+  if (!isCapacitorNativePlatform()) return false
   if (!isStandaloneDeviceMode()) return false
   if (!getApiBase().trim()) return true
   return shouldPreferStandaloneHandoffStatus()

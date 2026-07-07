@@ -19,7 +19,9 @@ import {
 import {
   canTryLiveTeamBroadcastDirectMailbox,
   trySubmitTeamPlaintextBroadcastViaDirectIota,
+  trySubmitTeamEncryptedBroadcastViaDirectIota,
 } from '@/frontend/lib/direct-iota-team-broadcast-submit'
+import type { TeamBroadcastEncryptedPayload } from '@/frontend/lib/team-broadcast-encrypted-send'
 import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
@@ -145,6 +147,51 @@ export async function sendTeamPlaintextBroadcastHybrid(
   }
   const { executeCommand } = await import('@/frontend/lib/api/execute-command')
   const apiRes = await executeCommand('/send-team-broadcast', [wireForApi], {
+    mailboxObjectId: teamMb,
+    messagingPersistenceMode: 'mailbox',
+  })
+  const hybrid = fromApiResponse(apiRes)
+  if (hybrid.ok) return hybrid
+  if (directErr) {
+    return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
+  }
+  return hybrid
+}
+
+/** Team-Broadcast verschlüsselt: Direct zuerst, dann `/send-team-broadcast-encrypted` (1× TX). */
+export async function sendTeamEncryptedBroadcastHybrid(
+  teamMailboxObjectId: string,
+  enc: TeamBroadcastEncryptedPayload,
+  messageNonceU64: bigint
+): Promise<MailboxHybridSendResult> {
+  syncActiveNetworkChainSnapshot()
+  const teamMb = teamMailboxObjectId.trim()
+  let directErr: string | undefined
+  if (canTryLiveTeamBroadcastDirectMailbox()) {
+    const dr = await trySubmitTeamEncryptedBroadcastViaDirectIota({
+      teamMailboxObjectId: teamMb,
+      ciphertext: enc.ciphertext,
+      iv: enc.iv,
+      tag: enc.tag,
+      keyEpoch: enc.keyEpoch,
+      nonce: messageNonceU64,
+    })
+    if (dr.ok) return { ok: true, txDigest: dr.digest }
+    directErr = dr.error
+  }
+  if (!shouldUseMailboxApiRelayFallback()) {
+    return { ok: false, error: directErr ?? formatMainnetDirectSendBlockedMessage() }
+  }
+  const { uint8ToBase64 } = await import('@morgendrot/shared/bytes-base64')
+  const wire = JSON.stringify({
+    ciphertextB64: uint8ToBase64(enc.ciphertext),
+    ivB64: uint8ToBase64(enc.iv),
+    tagB64: uint8ToBase64(enc.tag),
+    keyEpoch: enc.keyEpoch,
+    nonce: messageNonceU64.toString(),
+  })
+  const { executeCommand } = await import('@/frontend/lib/api/execute-command')
+  const apiRes = await executeCommand('/send-team-broadcast-encrypted', [wire], {
     mailboxObjectId: teamMb,
     messagingPersistenceMode: 'mailbox',
   })

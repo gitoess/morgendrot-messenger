@@ -324,7 +324,7 @@ export function ChatViewInboxPanel(props: ChatViewInboxPanelProps) {
             onDelete={onDeleteOutgoingHandshake}
           />
         ) : null}
-        <InboxTeamSyncSystemCards messages={messages} />
+        <InboxTeamSyncSystemCards messages={messages} myAddress={myAddress} />
         <ChatViewInboxList
           loadError={loadError}
           einsatzRpcHint={apiStatus?.rpcUrlLabel || apiStatus?.network}

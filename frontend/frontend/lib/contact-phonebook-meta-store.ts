@@ -4,6 +4,13 @@ const FAVORITES_KEY = 'morgendrot.contactPhonebook.favorites'
 const LAST_CONTACT_KEY = 'morgendrot.contactPhonebook.lastContact'
 const HIDDEN_KEY = 'morgendrot.contactPhonebook.hidden'
 
+export const CONTACT_PHONEBOOK_META_CHANGED_EVENT = 'morgendrot.contactPhonebookMetaChanged' as const
+
+function notifyContactPhonebookMetaChanged(): void {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new CustomEvent(CONTACT_PHONEBOOK_META_CHANGED_EVENT))
+}
+
 function norm(addr: string): string {
   return addr.trim().toLowerCase()
 }
@@ -40,6 +47,7 @@ export function toggleContactFavorite(address: string): boolean {
   if (next.has(a)) next.delete(a)
   else next.add(a)
   writeJson(FAVORITES_KEY, [...next])
+  notifyContactPhonebookMetaChanged()
   return next.has(a)
 }
 
@@ -59,6 +67,7 @@ export function recordContactLastContacted(address: string, at = Date.now()): vo
   const map = readContactLastContacted()
   map[a] = at
   writeJson(LAST_CONTACT_KEY, map)
+  notifyContactPhonebookMetaChanged()
 }
 
 export function readHiddenContacts(): Set<string> {
@@ -76,6 +85,7 @@ export function hideContactFromPhonebook(address: string): void {
     fav.delete(a)
     writeJson(FAVORITES_KEY, [...fav])
   }
+  notifyContactPhonebookMetaChanged()
 }
 
 /** Ausgeblendeten Kontakt wieder in der Telefonbuch-Liste anzeigen. */
@@ -85,4 +95,5 @@ export function showContactInPhonebook(address: string): void {
   if (!set.has(a)) return
   set.delete(a)
   writeJson(HIDDEN_KEY, [...set])
+  notifyContactPhonebookMetaChanged()
 }

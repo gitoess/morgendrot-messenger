@@ -13,8 +13,17 @@ export type HandoffTelegramAlarmGroup = {
   chatId?: string
 }
 
+/** § H.23 B1 — symmetrischer Team-Broadcast-Key (32 B Base64), nie on-chain. */
+export type HandoffTeamBroadcastKeyEntry = {
+  teamMailboxObjectId: string
+  keyBase64: string
+  keyEpoch?: number
+  groupName?: string
+}
+
 export type HandoffExtras = {
   telegramAlarmGroup?: HandoffTelegramAlarmGroup
+  teamBroadcastKeys?: HandoffTeamBroadcastKeyEntry[]
 }
 
 const LS_HANDOFF_EXTRAS = 'morgendrot.handoff.extras.v1'

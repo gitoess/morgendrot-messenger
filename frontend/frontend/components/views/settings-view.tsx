@@ -168,9 +168,12 @@ export function SettingsView({
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
         <CapacitorApiBaseCard />
-        {(!slimMessengerEinsatz || !isBossRole) ? (
-          <LazyHandoffImportPanel backendOnline={backendOnline} />
-        ) : null}
+        <div id="settings-handoff-import">
+          <LazyHandoffImportPanel
+            backendOnline={backendOnline}
+            bossEinsatzViewer={slimMessengerEinsatz && isBossRole}
+          />
+        </div>
         <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
         {canToggleFullTiles && onShowAllTilesChange ? (
           <div className="rounded-xl border border-border bg-card p-4">

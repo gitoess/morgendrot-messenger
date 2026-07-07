@@ -41,7 +41,8 @@
     "vaultUnlocked": "Tresor: entsperrt",
     "vaultKeysMissing": "Keys fehlen",
     "vaultKeysMissingTitle": "Wallet-Keys nicht in der Sitzung — antippen zum Entsperren",
-    "offline": "Offline"
+    "offline": "Offline",
+    "standaloneActive": "Autark (Direkt-RPC)"
   },
   "lock": {
     "button": "Abmelden",

@@ -32,6 +32,36 @@ describe('buildConversationSidebarContacts', () => {
     expect(items.find((i) => i.address === ghost)).toBeUndefined()
   })
 
+  it('behält stabile Reihenfolge bei wechselnden Unread-Zahlen', () => {
+    const directory = {
+      [alice]: { label: 'Alice' },
+      [bob]: { label: 'Bob' },
+    }
+    const first = buildConversationSidebarContacts({
+      directory,
+      partnerOptions: [
+        { address: alice, label: 'Alice', unreadCount: 0 },
+        { address: bob, label: 'Bob', unreadCount: 9 },
+      ],
+      favorites: new Set(),
+      lastContacted: {},
+      hidden: new Set(),
+    })
+    const second = buildConversationSidebarContacts({
+      directory,
+      partnerOptions: [
+        { address: alice, label: 'Alice', unreadCount: 12 },
+        { address: bob, label: 'Bob', unreadCount: 0 },
+      ],
+      favorites: new Set(),
+      lastContacted: {},
+      hidden: new Set(),
+    })
+    expect(first.map((i) => i.address)).toEqual(second.map((i) => i.address))
+    expect(second.find((i) => i.address === bob)?.unreadCount).toBe(0)
+    expect(second.find((i) => i.address === alice)?.unreadCount).toBe(12)
+  })
+
   it('blendet Platzhalter-Adresse 0x00…00 aus', () => {
     const directory = {
       [alice]: { label: 'Alice' },

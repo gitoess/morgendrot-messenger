@@ -18,8 +18,12 @@ export function EinsatzleitungTeamOverviewPanel(p: {
     <div className="rounded-xl border border-violet-500/30 bg-violet-500/5 p-4">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <Users className="h-4 w-4 text-violet-400" aria-hidden />
-        Teams & Gruppen
+        Team-Postfächer (IOTA)
       </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Gemeinsame Mailbox-Objekte on-chain — nicht einzelne Helfer-Wallets. Provisionierte Helfer stehen oben unter{' '}
+        <strong className="font-medium text-foreground">Provisionierte Helfer</strong>.
+      </p>
       <ul className="mt-3 space-y-2 text-sm">
         <li className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 bg-card/60 px-3 py-2">
           <span className="text-muted-foreground">Server-Postfach</span>
@@ -43,7 +47,7 @@ export function EinsatzleitungTeamOverviewPanel(p: {
         {groups.length > 0 ? (
           <li className="text-xs text-muted-foreground">
             <Layers className="mr-1 inline h-3.5 w-3.5" aria-hidden />
-            {groups.length} Messenger-Gruppe(n) lokal — optional im Handoff als JSON.
+            {groups.length} Messenger-Gruppe(n) lokal (Mitgliederlisten) — optional im Handoff als JSON.
           </li>
         ) : null}
       </ul>

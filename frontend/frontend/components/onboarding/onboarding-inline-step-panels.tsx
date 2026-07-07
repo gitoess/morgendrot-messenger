@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Check, Copy, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,11 @@ import { OnboardingFunkStep } from '@/frontend/components/onboarding/onboarding-
 import { HandoffImportPanel } from '@/frontend/components/handoff-import-panel'
 import { HelperJoinRequestForm } from '@/frontend/components/onboarding/helper-join-request-form'
 import { BossRegistryBootstrapPanel } from '@/frontend/components/boss-registry-bootstrap-panel'
+import { BossWalletGasFundingPanel } from '@/frontend/components/onboarding/boss-wallet-gas-funding-panel'
+import {
+  BossNetworkDeployIdsPanel,
+  buildBossDeployIdExtrasFromApi,
+} from '@/frontend/components/onboarding/boss-network-deploy-ids-panel'
 import { resolveBossWizardDeployNetwork } from '@/frontend/lib/boss-wizard-package-context'
 import {
   getBossMainnetWizardStatus,
@@ -40,6 +45,7 @@ import {
   applyBossPackageId,
   deployBossMovePackage,
   ensureBossRoleOnServer,
+  applyBossMainnetPackageId,
 } from '@/frontend/lib/onboarding-boss-bootstrap'
 import { getStandaloneHelperReadiness } from '@/frontend/lib/handoff-standalone-ready'
 import { isBrowserSessionSignerReady } from '@/frontend/lib/messenger-session-keys-ready'
@@ -60,6 +66,7 @@ type PanelProps = {
   onActivateWallet?: () => void
   onReload?: () => void
   onOpenHandoffImport?: () => void
+  onRegisterBeforeAdvance?: (fn: (() => Promise<boolean>) | null) => void
 }
 
 function StatusRow(p: { ok: boolean; label: string }) {
@@ -228,10 +235,10 @@ export function OnboardingBossEinsatzRulesStep(p: PanelProps) {
     if (cfg?.enablePurge != null) setEnablePurge(cfg.enablePurge !== false)
   }, [cfg?.defaultTtlDays, cfg?.enablePurge])
 
-  const saveRules = async () => {
+  const saveRules = useCallback(async (): Promise<boolean> => {
     if (!p.backendOnline) {
       setMsg('Boss-Server nicht erreichbar — Regeln werden beim Speichern auf dem PC hinterlegt.')
-      return
+      return true
     }
     setBusy(true)
     setMsg('')
@@ -240,13 +247,19 @@ export function OnboardingBossEinsatzRulesStep(p: PanelProps) {
     if (!r.ok) {
       setMsg(r.error || 'Speichern fehlgeschlagen.')
       toast.error(r.error || 'Speichern fehlgeschlagen.')
-      return
+      return false
     }
     setSaved(true)
     setMsg('Einsatz-Regeln gespeichert — gelten für Server und künftige Helfer-Handoffs.')
     toast.success('Einsatz-Regeln gespeichert.')
     p.onReload?.()
-  }
+    return true
+  }, [enablePurge, p.backendOnline, p.onReload, ttlDays])
+
+  useEffect(() => {
+    p.onRegisterBeforeAdvance?.(async () => saveRules())
+    return () => p.onRegisterBeforeAdvance?.(null)
+  }, [p.onRegisterBeforeAdvance, saveRules])
 
   return (
     <div className="space-y-4">
@@ -317,11 +330,18 @@ export function OnboardingBossEinsatzRulesStep(p: PanelProps) {
       </label>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" disabled={busy || !p.backendOnline} onClick={() => void saveRules()}>
-          {busy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-          Regeln speichern
-        </Button>
-        {saved ? <StatusRow ok={true} label="Gespeichert" /> : null}
+        {busy ? (
+          <span className="inline-flex items-center text-xs text-muted-foreground">
+            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+            Speichern…
+          </span>
+        ) : saved ? (
+          <StatusRow ok={true} label="Gespeichert" />
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Mit <strong className="font-medium text-foreground">Weiter</strong> werden die Regeln übernommen.
+          </p>
+        )}
       </div>
 
       {!p.backendOnline ? (
@@ -345,7 +365,8 @@ export function OnboardingBossChainStep(p: PanelProps) {
   const mainnetAnchorReady = mainnetStatus.anchorReady
   const mainnetConfigured = mainnetSendReady || mainnetAnchorReady
   const [manualId, setManualId] = useState('')
-  const [busy, setBusy] = useState<'testnet' | 'mainnet' | 'manual' | null>(null)
+  const [manualMainnetId, setManualMainnetId] = useState('')
+  const [busy, setBusy] = useState<'testnet' | 'mainnet' | 'manual' | 'manual-mainnet' | null>(null)
   const [msg, setMsg] = useState('')
   const [withGlobals, setWithGlobals] = useState(true)
 
@@ -368,6 +389,13 @@ export function OnboardingBossChainStep(p: PanelProps) {
     window.addEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, refresh)
     return () => window.removeEventListener(EINSATZ_NETWORK_PROFILES_CHANGED, refresh)
   }, [p.apiSnapshot?.packageId, p.apiSnapshot?.einsatzConfig?.mainnetPackageId, p.apiSnapshot?.einsatzConfig?.mainnetRpcUrl])
+
+  useEffect(() => {
+    const fromApi = p.apiSnapshot?.einsatzConfig?.mainnetPackageId?.trim()
+    const fromProfile = profileState.mainnet.packageId?.trim()
+    if (fromApi) setManualMainnetId(fromApi)
+    else if (fromProfile) setManualMainnetId(fromProfile)
+  }, [p.apiSnapshot?.einsatzConfig?.mainnetPackageId, profileState.mainnet.packageId])
 
   const showTestnet = plan !== 'mainnet-only'
   const showMainnet = plan === 'mainnet-only' || plan === 'both'
@@ -464,11 +492,32 @@ export function OnboardingBossChainStep(p: PanelProps) {
     setMsg('')
     try {
       const r = await applyBossPackageId(manualId)
-      const text = r.ok ? r.message || 'Gespeichert.' : r.error || 'Speichern fehlgeschlagen.'
+      const text = r.ok ? r.message || 'Testnet Package-ID gespeichert.' : r.error || 'Speichern fehlgeschlagen.'
       setMsg(text)
       if (r.ok) toast.success(text)
       else toast.error(text)
       if (r.ok) p.onReload?.()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const runApplyManualMainnet = async () => {
+    setBusy('manual-mainnet')
+    setMsg('')
+    try {
+      const r = await applyBossMainnetPackageId(manualMainnetId)
+      const text = r.ok ? r.message || 'Mainnet Package-ID gespeichert.' : r.error || 'Speichern fehlgeschlagen.'
+      setMsg(text)
+      if (r.ok) toast.success(text)
+      else toast.error(text)
+      if (r.ok) {
+        setProfileState((prev) => ({
+          ...prev,
+          mainnet: { ...prev.mainnet, packageId: manualMainnetId.trim() },
+        }))
+        p.onReload?.()
+      }
     } finally {
       setBusy(null)
     }
@@ -503,7 +552,21 @@ export function OnboardingBossChainStep(p: PanelProps) {
             }
           />
           {!testnetDone ? (
+            <p className="text-xs text-muted-foreground">
+              Normal vor dem ersten Anlegen — verschwindet nach „Messenger-Contract anlegen (Testnet)“.
+            </p>
+          ) : null}
+          {!testnetDone ? (
             <>
+              <BossWalletGasFundingPanel
+                network="testnet"
+                apiSnapshot={p.apiSnapshot}
+                fallbackMyAddress={p.fallbackMyAddress}
+                sessionLocked={p.sessionLocked}
+                backendOnline={p.backendOnline}
+                onActivateWallet={p.onActivateWallet}
+                onReload={p.onReload}
+              />
               {!p.backendOnline ? (
                 <p className="text-xs text-amber-800 dark:text-amber-200">
                   Basis nicht erreichbar — Wallet entsperren und Backend starten (`npm run dm`).
@@ -560,7 +623,17 @@ export function OnboardingBossChainStep(p: PanelProps) {
             }
           />
           {!mainnetConfigured ? (
-            <Button
+            <>
+              <BossWalletGasFundingPanel
+                network="mainnet"
+                apiSnapshot={p.apiSnapshot}
+                fallbackMyAddress={p.fallbackMyAddress}
+                sessionLocked={p.sessionLocked}
+                backendOnline={p.backendOnline}
+                onActivateWallet={p.onActivateWallet}
+                onReload={p.onReload}
+              />
+              <Button
               type="button"
               variant={plan === 'mainnet-only' ? 'default' : 'outline'}
               className="w-full sm:w-auto"
@@ -568,8 +641,9 @@ export function OnboardingBossChainStep(p: PanelProps) {
               onClick={() => void runMainnetDeploy()}
             >
               {busy === 'mainnet' ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-              Messenger-Contract anlegen (Mainnet)
-            </Button>
+                Messenger-Contract anlegen (Mainnet)
+              </Button>
+            </>
           ) : mainnetSendReady ? (
             <p className="text-xs text-emerald-800 dark:text-emerald-200">Mainnet bereit — unter Einstellungen umschaltbar.</p>
           ) : (
@@ -592,6 +666,24 @@ export function OnboardingBossChainStep(p: PanelProps) {
         </p>
       ) : null}
 
+      {testnetDone || mainnetConfigured ? (
+        <BossNetworkDeployIdsPanel
+          testnet={{
+            packageId:
+              profileState.testnet.packageId ||
+              (profileState.active !== 'mainnet' ? p.apiSnapshot?.packageId : undefined),
+            mailboxId:
+              profileState.testnet.mailboxId ||
+              (profileState.active !== 'mainnet' ? p.apiSnapshot?.mailboxId : undefined),
+          }}
+          mainnet={{
+            packageId: mainnetStatus.packageId || profileState.mainnet.packageId,
+            mailboxId: mainnetStatus.mailboxId || profileState.mainnet.mailboxId,
+          }}
+          extras={buildBossDeployIdExtrasFromApi(p.apiSnapshot)}
+        />
+      ) : null}
+
       {!withGlobals && testnetDone && showTestnet ? (
         <BossRegistryBootstrapPanel
           apiSnapshot={p.apiSnapshot}
@@ -603,36 +695,70 @@ export function OnboardingBossChainStep(p: PanelProps) {
 
       {msg ? <p className="whitespace-pre-wrap text-xs text-muted-foreground">{msg}</p> : null}
 
-      {showTestnet ? (
+      {(showTestnet || showMainnet) ? (
         <details className="rounded-md border border-border/60 p-3">
           <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-            Schon verbunden? (Testnet Package-ID eintragen)
+            Schon verbunden? (Package-ID eintragen)
           </summary>
-          <div className="mt-3 space-y-2">
-            <p className="text-xs text-muted-foreground">
-              Nur wenn der Contract bereits auf Testnet existiert — sonst oben „anlegen“.
-            </p>
-            <Label htmlFor="boss-pkg-manual" className="text-xs">
-              Package-ID (0x…)
-            </Label>
-            <div className="flex flex-wrap gap-2">
-              <Input
-                id="boss-pkg-manual"
-                className="min-w-[12rem] flex-1 font-mono text-xs"
-                placeholder="0x…"
-                value={manualId}
-                onChange={(e) => setManualId(e.target.value)}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={busy !== null}
-                onClick={() => void runApplyManual()}
-              >
-                Übernehmen
-              </Button>
-            </div>
+          <div className="mt-3 space-y-4">
+            {showTestnet ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="font-medium text-foreground">Testnet</strong> — nur wenn der Contract bereits auf
+                  Testnet existiert (sonst oben „anlegen“).
+                </p>
+                <Label htmlFor="boss-pkg-manual" className="text-xs">
+                  Testnet Package-ID (0x…)
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    id="boss-pkg-manual"
+                    className="min-w-[12rem] flex-1 font-mono text-xs"
+                    placeholder="0x…"
+                    value={manualId}
+                    onChange={(e) => setManualId(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy !== null}
+                    onClick={() => void runApplyManual()}
+                  >
+                    Übernehmen
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+            {showMainnet ? (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="font-medium text-foreground">Mainnet</strong> — separates Package auf der echten
+                  Chain{plan === 'both' ? ' (optional, unabhängig von Testnet)' : ''}.
+                </p>
+                <Label htmlFor="boss-pkg-manual-mainnet" className="text-xs">
+                  Mainnet Package-ID (0x…)
+                </Label>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    id="boss-pkg-manual-mainnet"
+                    className="min-w-[12rem] flex-1 font-mono text-xs"
+                    placeholder="0x…"
+                    value={manualMainnetId}
+                    onChange={(e) => setManualMainnetId(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={busy !== null}
+                    onClick={() => void runApplyManualMainnet()}
+                  >
+                    Übernehmen
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </details>
       ) : null}

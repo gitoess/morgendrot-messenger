@@ -11,6 +11,7 @@ import {
   type HandoffCryptoMetaJson,
 } from '@/frontend/lib/handoff-zip-crypto'
 import { HANDOFF_EXTRAS_FILENAME, parseHandoffExtrasJson } from '@/frontend/lib/handoff-extras'
+import { parseHandoffEncryptedBundle } from '@/frontend/lib/handoff-zip-bundle'
 
 const ENV_NAMES = [
   'morgendrot-standalone-handoff.env',
@@ -148,14 +149,17 @@ export async function decryptHandoffPending(
 ): Promise<HandoffZipExtract> {
   const dec = await decryptHandoffEnvUtf8(pending.cryptoMeta, pending.ciphertext, password)
   if (!dec.ok) return dec
-  if (!dec.envText.trim()) {
+  const bundle = parseHandoffEncryptedBundle(dec.envText)
+  if (!bundle.envText.trim()) {
     return { ok: false, error: 'Entschlüsselte Handoff-.env ist leer.' }
   }
+  const extrasText = bundle.extras ? `${JSON.stringify(bundle.extras, null, 2)}\n` : undefined
   return {
     ok: true,
-    envText: dec.envText,
+    envText: bundle.envText,
     envFileName: HANDOFF_ENV_ENC_FILENAME,
     readmeText: pending.readmeText,
+    extrasText,
     encrypted: true,
   }
 }

@@ -12,6 +12,8 @@ const nodeUnitTests = [
   'frontend/lib/handoff-zip-crypto.test.ts',
   'frontend/lib/handoff-zip-import.test.ts',
   'frontend/lib/handoff-iota-wire.test.ts',
+  'frontend/lib/morg-team-wire-signature.test.ts',
+  'frontend/lib/morgendrot-team-broadcast-crypto.test.ts',
 ]
 
 const sharedPool = {

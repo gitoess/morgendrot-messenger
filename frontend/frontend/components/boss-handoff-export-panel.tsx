@@ -10,7 +10,6 @@ import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/stan
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { sendHandoffZipViaIota } from '@/frontend/lib/handoff-iota-send'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
-import { API_BASE } from '@/frontend/lib/api/api-base'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api/contacts'
 import {
   buildTeamMailboxOptions,
@@ -72,6 +71,7 @@ import {
 } from '@morgendrot/shared/einsatz-chain-mode'
 import { persistEinsatzChainMode } from '@/frontend/lib/einsatz-chain-mode-local'
 import { buildHandoffZipExportBody } from '@/frontend/lib/handoff-export-build-body'
+import { fetchHandoffCurrentIdsDefaults } from '@/frontend/lib/handoff-export-defaults'
 
 type HandoffPkgSource = 'boss' | 'custom'
 
@@ -366,31 +366,20 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
 
   useEffect(() => {
     let cancelled = false
-    void (async () => {
-      try {
-        const r = await fetch(`${API_BASE}/api/current-ids`)
-        const j = (await r.json()) as {
-          mailboxId?: string
-          commandRegistryId?: string
-          vaultRegistryId?: string
-          rpcUrl?: string
-        }
-        if (cancelled || !r.ok) return
-        const mb = String(j.mailboxId || '').trim()
-        const cr = String(j.commandRegistryId || '').trim()
-        const vr = String(j.vaultRegistryId || '').trim()
-        const rpc = String(j.rpcUrl || '').trim()
-        if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) {
-          setHandoffMailbox((prev) => prev || mb)
-          setSelectedTeamIds((prev) => (prev.length ? prev : [mb]))
-        }
-        if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) setHandoffCmdReg((prev) => prev || cr)
-        if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) setHandoffVaultReg((prev) => prev || vr)
-        if (rpc) setHandoffRpc((prev) => prev || rpc)
-      } catch {
-        /* optional */
+    void fetchHandoffCurrentIdsDefaults().then((patch) => {
+      if (cancelled) return
+      const mb = patch.handoffMailbox?.trim()
+      const cr = patch.handoffCmdReg?.trim()
+      const vr = patch.handoffVaultReg?.trim()
+      const rpc = patch.handoffRpc?.trim()
+      if (mb && /^0x[a-fA-F0-9]{64}$/i.test(mb)) {
+        setHandoffMailbox((prev) => prev || mb)
+        setSelectedTeamIds((prev) => (prev.length ? prev : [mb]))
       }
-    })()
+      if (cr && /^0x[a-fA-F0-9]{64}$/i.test(cr)) setHandoffCmdReg((prev) => prev || cr)
+      if (vr && /^0x[a-fA-F0-9]{64}$/i.test(vr)) setHandoffVaultReg((prev) => prev || vr)
+      if (rpc) setHandoffRpc((prev) => prev || rpc)
+    })
     return () => {
       cancelled = true
     }
@@ -1203,6 +1192,7 @@ export function BossHandoffExportPanel(p: BossHandoffExportPanelProps) {
           entryId={provisionEntryId}
           qrDataUrl={provisionQrDataUrl}
           zipPasswordProtected={protectWithPassword}
+          resolveMasterPassword={() => provisionRegistry.activeMasterPassword()}
         />
       ) : null}
     </div>

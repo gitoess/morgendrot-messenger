@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Check, MessageCircle, Radio, UserMinus, UserPlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -40,11 +40,37 @@ import {
 } from '@/frontend/lib/telegram-alarm-group-prefs'
 import { openTelegramAlarmGroupInvite } from '@/frontend/lib/telegram-alarm-group-invite'
 import { maskWalletAddress } from '@/frontend/lib/contact-phonebook-format'
+import {
+  collectTeamSyncReceiveChannels,
+  formatTeamSyncReceivedVia,
+  type TeamSyncReceiveChannel,
+} from '@/frontend/lib/team-sync-received-via'
+import {
+  formatTeamWireSigStatusLine,
+  resolveTeamMemberUpdateSigStatus,
+  resolveTelegramAlarmGroupSigStatus,
+  type TeamWireSigStatus,
+} from '@/frontend/lib/team-sync-wire-verify'
 
 function shortBoss(addr: string): string {
   const a = addr.trim()
   if (a.length < 12) return a
   return `${a.slice(0, 6)}…${a.slice(-4)}`
+}
+
+function mergeReceiveChannels(
+  target: Set<TeamSyncReceiveChannel>,
+  msg: Message
+): void {
+  for (const ch of collectTeamSyncReceiveChannels(msg)) target.add(ch)
+}
+
+function teamSyncSenderLine(chainFrom: string, wireBoss: string): string {
+  const chain = chainFrom.trim()
+  if (chain) return `Von ${shortBoss(chain)} (Chain)`
+  const boss = wireBoss.trim()
+  if (boss) return `Von Einsatzleitung (${shortBoss(boss)})`
+  return ''
 }
 
 function teamUpdateCardTitle(kind: TeamMemberUpdateKind): string {
@@ -63,6 +89,10 @@ function teamUpdateMemberLine(u: MorgTeamMemberUpdateV1): string {
 
 function TeamRemoveUpdateCard(p: {
   update: MorgTeamMemberUpdateV1
+  senderLine: string
+  receivedLine: string
+  sigLine: string | null
+  sigBlocksAccept: boolean
   onAccept: (alsoHideFromPhonebook: boolean) => void
   onReject: () => void
 }) {
@@ -76,9 +106,17 @@ function TeamRemoveUpdateCard(p: {
           <p className="font-semibold text-foreground">{teamUpdateCardTitle('remove')}</p>
           <p className="text-muted-foreground">{teamUpdateMemberLine(u)}</p>
           <p className="text-xs text-muted-foreground">
-            Von Einsatzleitung ({shortBoss(u.boss)}) · Update #{u.seq}
+            {p.senderLine ? `${p.senderLine} · ` : ''}Update #{u.seq}
             {isTeamUpdateSeqRejected(u.seq) ? ' · abgelehnt' : ''}
           </p>
+          {p.receivedLine ? <p className="text-xs text-muted-foreground">{p.receivedLine}</p> : null}
+          {p.sigLine ? (
+            <p
+              className={`text-xs ${p.sigBlocksAccept ? 'text-rose-400' : p.sigLine.includes('verifiziert') ? 'text-emerald-400' : 'text-amber-400'}`}
+            >
+              {p.sigLine}
+            </p>
+          ) : null}
           <p className="text-[11px] text-muted-foreground">
             Standard: Kontakt bleibt im Telefonbuch — nur nicht mehr im aktiven Team-Telefonbuch.
           </p>
@@ -92,7 +130,7 @@ function TeamRemoveUpdateCard(p: {
             <span>Auch aus meinem Telefonbuch ausblenden (optional)</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" onClick={() => p.onAccept(alsoHide)}>
+            <Button type="button" size="sm" onClick={() => p.onAccept(alsoHide)} disabled={p.sigBlocksAccept}>
               Entfernung bestätigen
             </Button>
             <Button type="button" size="sm" variant="secondary" onClick={p.onReject}>
@@ -107,14 +145,32 @@ function TeamRemoveUpdateCard(p: {
 
 export function InboxTeamSyncSystemCards(p: {
   messages: readonly Message[]
+  /** Eigene Wallet — Team-Update über sich selbst braucht kein Telefonbuch-Import. */
+  myAddress?: string
   onApplied?: () => void
 }) {
-  const [, bump] = useState(0)
+  const [teamSyncRevision, bumpTeamSyncRevision] = useState(0)
+  const [sigByTeamSeq, setSigByTeamSeq] = useState<Map<number, TeamWireSigStatus>>(new Map())
+  const [sigByTgSeq, setSigByTgSeq] = useState<Map<number, TeamWireSigStatus>>(new Map())
   const cards = useMemo(() => {
-    const teamUpdates: MorgTeamMemberUpdateV1[] = []
-    const tgGroups: MorgTelegramAlarmGroupV1[] = []
-    const funkPings: MorgTeamUpdatePingV1[] = []
-    const seenTeam = new Set<number>()
+    const teamBySeq = new Map<
+      number,
+      {
+        update: MorgTeamMemberUpdateV1
+        chainFrom: string
+        receivedVia: Set<TeamSyncReceiveChannel>
+      }
+    >()
+    const tgGroups: {
+      group: MorgTelegramAlarmGroupV1
+      chainFrom: string
+      receivedVia: Set<TeamSyncReceiveChannel>
+    }[] = []
+    const funkPings: {
+      ping: MorgTeamUpdatePingV1
+      chainFrom: string
+      receivedVia: Set<TeamSyncReceiveChannel>
+    }[] = []
     const seenTg = new Set<number>()
     const seenPing = new Set<string>()
 
@@ -125,13 +181,24 @@ export function InboxTeamSyncSystemCards(p: {
         const key = `${ping.seq ?? 't'}-${ping.tgSeq ?? 's'}-${ping.teamId}`
         if (!seenPing.has(key)) {
           seenPing.add(key)
-          funkPings.push(ping)
+          const receivedVia = collectTeamSyncReceiveChannels(m)
+          funkPings.push({ ping, chainFrom: m.from ?? '', receivedVia })
         }
       }
       const tu = parseMorgTeamMemberUpdateV1(content)
-      if (tu && shouldShowTeamMemberUpdate(tu.seq) && !seenTeam.has(tu.seq)) {
-        seenTeam.add(tu.seq)
-        teamUpdates.push(tu)
+      if (tu && shouldShowTeamMemberUpdate(tu.seq)) {
+        const existing = teamBySeq.get(tu.seq)
+        if (existing) {
+          mergeReceiveChannels(existing.receivedVia, m)
+          if (m.from?.trim() && m.source !== 'lan') existing.chainFrom = m.from.trim()
+        } else {
+          const receivedVia = collectTeamSyncReceiveChannels(m)
+          teamBySeq.set(tu.seq, {
+            update: tu,
+            chainFrom: m.source === 'lan' ? '' : (m.from ?? '').trim(),
+            receivedVia,
+          })
+        }
       }
       const tg = parseMorgTelegramAlarmGroupV1(content)
       if (
@@ -143,25 +210,68 @@ export function InboxTeamSyncSystemCards(p: {
         !seenTg.has(tg.tgSeq)
       ) {
         seenTg.add(tg.tgSeq)
-        tgGroups.push(tg)
+        tgGroups.push({
+          group: tg,
+          chainFrom: m.source === 'lan' ? '' : (m.from ?? '').trim(),
+          receivedVia: collectTeamSyncReceiveChannels(m),
+        })
       }
     }
-    teamUpdates.sort((a, b) => b.seq - a.seq)
-    tgGroups.sort((a, b) => b.tgSeq - a.tgSeq)
-    funkPings.sort((a, b) => (b.seq ?? b.tgSeq ?? 0) - (a.seq ?? a.tgSeq ?? 0))
+    const teamUpdates = [...teamBySeq.values()].sort((a, b) => b.update.seq - a.update.seq)
+    tgGroups.sort((a, b) => b.group.tgSeq - a.group.tgSeq)
+    funkPings.sort((a, b) => (b.ping.seq ?? b.ping.tgSeq ?? 0) - (a.ping.seq ?? a.ping.tgSeq ?? 0))
     return { teamUpdates, tgGroups, funkPings }
-  }, [p.messages, bump])
+  }, [p.messages, teamSyncRevision])
+
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const team = new Map<number, TeamWireSigStatus>()
+      const tg = new Map<number, TeamWireSigStatus>()
+      for (const { update } of cards.teamUpdates) {
+        team.set(update.seq, await resolveTeamMemberUpdateSigStatus(update))
+      }
+      for (const { group } of cards.tgGroups) {
+        tg.set(group.tgSeq, await resolveTelegramAlarmGroupSigStatus(group))
+      }
+      if (!cancelled) {
+        setSigByTeamSeq(team)
+        setSigByTgSeq(tg)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [cards.teamUpdates, cards.tgGroups])
 
   if (!cards.teamUpdates.length && !cards.tgGroups.length && !cards.funkPings.length) return null
+
+  const teamSigBlocksAccept = (seq: number): boolean => {
+    const s = sigByTeamSeq.get(seq)
+    return s === 'invalid' || s === 'boss-mismatch'
+  }
+
+  const teamSigLine = (seq: number): string | null => {
+    const s = sigByTeamSeq.get(seq)
+    if (!s) return null
+    return formatTeamWireSigStatusLine(s)
+  }
 
   const handleAcceptTeam = async (
     update: NonNullable<ReturnType<typeof parseMorgTeamMemberUpdateV1>>,
     alsoHideFromPhonebook = false
   ) => {
+    const selfAddr = (p.myAddress || '').trim().toLowerCase()
+    const memberAddr = update.member.address.trim().toLowerCase()
+    const isSelf = Boolean(selfAddr) && Boolean(memberAddr) && selfAddr === memberAddr
+    if (teamSigBlocksAccept(update.seq) && !isSelf) {
+      toast.error(formatTeamWireSigStatusLine(sigByTeamSeq.get(update.seq) ?? 'invalid') ?? 'Signatur ungültig')
+      return
+    }
     if (update.kind === 'remove') {
       if (alsoHideFromPhonebook) hideContactFromPhonebook(update.member.address)
       markTeamUpdateSeqApplied(update.seq)
-      bump((n) => n + 1)
+      bumpTeamSyncRevision((n) => n + 1)
       toast.message(
         alsoHideFromPhonebook
           ? 'Entfernung bestätigt — Kontakt aus dem Telefonbuch ausgeblendet.'
@@ -170,24 +280,34 @@ export function InboxTeamSyncSystemCards(p: {
       p.onApplied?.()
       return
     }
+    if (isSelf) {
+      markTeamUpdateSeqApplied(update.seq)
+      bumpTeamSyncRevision((n) => n + 1)
+      toast.message('Das bist du — Profil kommt aus dem Handoff, kein Import nötig.')
+      p.onApplied?.()
+      return
+    }
     const contact = memberToInitialProfileContact(update.member)
     const r = await applyInitialProfileProvisioning({ version: 1, contacts: [contact] })
     if (r.ok) {
       markTeamUpdateSeqApplied(update.seq)
-      bump((n) => n + 1)
+      bumpTeamSyncRevision((n) => n + 1)
+      toast.success(r.message ?? 'Kontakt ins Telefonbuch übernommen.')
       p.onApplied?.()
+      return
     }
+    toast.error(r.error || 'Telefonbuch-Update fehlgeschlagen — Backend erreichbar?')
   }
 
   const handleRejectTeam = (seq: number) => {
     rejectTeamUpdateSeq(seq)
-    bump((n) => n + 1)
+    bumpTeamSyncRevision((n) => n + 1)
     p.onApplied?.()
   }
 
   return (
     <div className="mb-4 space-y-3" role="region" aria-label="Team-Systemnachrichten">
-      {cards.funkPings.map((ping) => (
+      {cards.funkPings.map(({ ping, chainFrom, receivedVia }) => (
         <div
           key={`ping-${ping.seq ?? 'x'}-${ping.tgSeq ?? 'y'}-${ping.teamId}`}
           className="rounded-xl border border-violet-500/35 bg-violet-500/10 px-4 py-3 text-sm"
@@ -200,23 +320,38 @@ export function InboxTeamSyncSystemCards(p: {
                 {ping.hint === 'telegram_group'
                   ? `Neue Telegram-Alarmgruppe #${ping.tgSeq ?? '?'}`
                   : `Team-Update #${ping.seq ?? '?'}`}{' '}
-                von Einsatzleitung ({shortBoss(ping.boss)}). Posteingang/Mailbox prüfen.
+                {teamSyncSenderLine(chainFrom, ping.boss ?? '') || 'Absender unbekannt'}. Posteingang/Mailbox prüfen.
               </p>
+              {formatTeamSyncReceivedVia(receivedVia) ? (
+                <p className="text-xs text-muted-foreground">{formatTeamSyncReceivedVia(receivedVia)}</p>
+              ) : null}
             </div>
           </div>
         </div>
       ))}
-      {cards.teamUpdates.map((u) => {
+      {cards.teamUpdates.map(({ update: u, chainFrom, receivedVia }) => {
+        const chainSender = chainFrom.trim()
+        const receivedLine = formatTeamSyncReceivedVia(receivedVia)
+        const senderLine = teamSyncSenderLine(chainSender, u.boss)
+        const sigLine = teamSigLine(u.seq)
+        const sigBlocksAccept = teamSigBlocksAccept(u.seq)
         if (u.kind === 'remove') {
           return (
             <TeamRemoveUpdateCard
               key={`team-${u.seq}-remove`}
               update={u}
+              senderLine={senderLine}
+              receivedLine={receivedLine}
+              sigLine={sigLine}
+              sigBlocksAccept={sigBlocksAccept}
               onAccept={(alsoHide) => void handleAcceptTeam(u, alsoHide)}
               onReject={() => handleRejectTeam(u.seq)}
             />
           )
         }
+        const selfAddr = (p.myAddress || '').trim().toLowerCase()
+        const isSelf =
+          Boolean(selfAddr) && u.member.address.trim().toLowerCase() === selfAddr
         return (
         <div
           key={`team-${u.seq}-${u.kind}`}
@@ -228,23 +363,42 @@ export function InboxTeamSyncSystemCards(p: {
               <p className="font-semibold text-foreground">{teamUpdateCardTitle(u.kind)}</p>
               <p className="text-muted-foreground">{teamUpdateMemberLine(u)}</p>
               <p className="text-xs text-muted-foreground">
-                Von Einsatzleitung ({shortBoss(u.boss)}) · Update #{u.seq}
+                {senderLine ? `${senderLine} · ` : ''}Update #{u.seq}
                 {isTeamUpdateSeqRejected(u.seq) ? ' · abgelehnt' : ''}
               </p>
+              {receivedLine ? <p className="text-xs text-muted-foreground">{receivedLine}</p> : null}
+              {sigLine ? (
+                <p
+                  className={`text-xs ${sigBlocksAccept ? 'text-rose-400' : sigLine.includes('verifiziert') ? 'text-emerald-400' : 'text-amber-400'}`}
+                >
+                  {sigLine}
+                </p>
+              ) : null}
+              {isSelf ? (
+                <p className="text-xs text-foreground">
+                  Das bist du — dein Profil hast du schon über den Handoff. Die Karte ist nur die
+                  Team-Bestätigung für alle.
+                </p>
+              ) : null}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" onClick={() => void handleAcceptTeam(u)}>
-                  Daten übernehmen
+                <Button type="button" size="sm" onClick={() => void handleAcceptTeam(u)} disabled={sigBlocksAccept && !isSelf}>
+                  {isSelf ? 'Verstanden' : 'Daten übernehmen'}
                 </Button>
-                <Button type="button" size="sm" variant="secondary" onClick={() => handleRejectTeam(u.seq)}>
-                  Ablehnen
-                </Button>
+                {!isSelf ? (
+                  <Button type="button" size="sm" variant="secondary" onClick={() => handleRejectTeam(u.seq)}>
+                    Ablehnen
+                  </Button>
+                ) : null}
               </div>
             </div>
           </div>
         </div>
         )
       })}
-      {cards.tgGroups.map((g) => (
+      {cards.tgGroups.map(({ group: g, chainFrom, receivedVia }) => {
+        const sender = teamSyncSenderLine(chainFrom, g.boss ?? '')
+        const receivedLine = formatTeamSyncReceivedVia(receivedVia)
+        return (
         <div
           key={`tg-${g.tgSeq}`}
           className="rounded-xl border border-sky-500/35 bg-sky-500/10 px-4 py-3 text-sm"
@@ -254,9 +408,10 @@ export function InboxTeamSyncSystemCards(p: {
             <div className="min-w-0 flex-1 space-y-2">
               <p className="font-semibold text-foreground">Neue Telegram-Alarmgruppe</p>
               <p className="text-muted-foreground">
-                Einsatzleitung ({shortBoss(g.boss)}) hat Alarmgruppe „{g.label || 'Einsatz'}“ eingerichtet. Nur
+                {sender || 'Einsatzleitung'} hat Alarmgruppe „{g.label || 'Einsatz'}“ eingerichtet. Nur
                 Hinweise — Inhalte in Morgendrot.
               </p>
+              {receivedLine ? <p className="text-xs text-muted-foreground">{receivedLine}</p> : null}
               <div className="flex flex-wrap gap-2">
                 <Button
                   type="button"
@@ -273,7 +428,7 @@ export function InboxTeamSyncSystemCards(p: {
                     toast.message(
                       'Telegram geöffnet — nach Beitritt hier auf „Beigetreten“ tippen.'
                     )
-                    bump((n) => n + 1)
+                    bumpTeamSyncRevision((n) => n + 1)
                   }}
                 >
                   Gruppe beitreten
@@ -290,7 +445,7 @@ export function InboxTeamSyncSystemCards(p: {
                         inviteLink: g.inviteLink,
                       })
                       toast.success('Telegram-Alarmgruppe als erledigt markiert — unter Gruppen sichtbar.')
-                      bump((n) => n + 1)
+                      bumpTeamSyncRevision((n) => n + 1)
                       p.onApplied?.()
                     }}
                   >
@@ -304,7 +459,7 @@ export function InboxTeamSyncSystemCards(p: {
                   variant="secondary"
                   onClick={() => {
                     snoozeTelegramGroupCard(g.tgSeq)
-                    bump((n) => n + 1)
+                    bumpTeamSyncRevision((n) => n + 1)
                     p.onApplied?.()
                   }}
                 >
@@ -316,7 +471,7 @@ export function InboxTeamSyncSystemCards(p: {
                   variant="ghost"
                   onClick={() => {
                     dismissTelegramGroupTgSeq(g.tgSeq)
-                    bump((n) => n + 1)
+                    bumpTeamSyncRevision((n) => n + 1)
                     p.onApplied?.()
                   }}
                 >
@@ -326,7 +481,8 @@ export function InboxTeamSyncSystemCards(p: {
             </div>
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

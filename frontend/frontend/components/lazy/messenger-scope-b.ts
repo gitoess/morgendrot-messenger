@@ -30,6 +30,12 @@ export const LazyBossHelferEinrichtenPanel = dynamic(
   { ssr: false, loading: () => null }
 )
 
+/** B1 — Boss: „Mein Team“ (provisionierte Helfer, Roster, Team-Postfächer) */
+export const LazyEinsatzleitungMeinTeamPanel = dynamic(
+  () => import('@/frontend/components/einsatzleitung-mein-team-panel').then((m) => m.EinsatzleitungMeinTeamPanel),
+  { ssr: false, loading: () => null }
+)
+
 /** B3 — Kommandant/Boss: erweiterte Einsatzleitung */
 export const LazyEinsatzleitungErweitertPanel = dynamic(
   () => import('@/frontend/components/einsatzleitung-erweitert-panel').then((m) => m.EinsatzleitungErweitertPanel),

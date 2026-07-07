@@ -37,4 +37,27 @@ describe('messenger-capabilities-matrix', () => {
     expect(merged.transport.lora.write).toBe(true)
     expect(merged.transport.iota.write).toBe(false)
   })
+
+  it('Boss ohne ROLE_ID (0): voller Transport bei iota-full', () => {
+    const c = resolveMessengerCapabilities({
+      roleId: 0,
+      hierarchyRole: 'boss',
+      transportProfile: 'iota-full',
+    })
+    expect(c.roleId).toBe(14)
+    expect(c.transport.iota.write).toBe(true)
+    expect(c.transport.lora.write).toBe(true)
+    expect(c.transport.telegram.write).toBe(true)
+  })
+
+  it('Boss mit teilweisem Override: gezielte Sperre bleibt', () => {
+    const c = resolveMessengerCapabilities({
+      roleId: 14,
+      hierarchyRole: 'boss',
+      transportProfile: 'iota-full',
+      override: { transport: { telegram: { write: false } } },
+    })
+    expect(c.transport.telegram.write).toBe(false)
+    expect(c.transport.iota.write).toBe(true)
+  })
 })

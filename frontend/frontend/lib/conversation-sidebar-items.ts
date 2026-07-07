@@ -127,9 +127,10 @@ export function buildConversationSidebarContacts(p: {
 
   return items.sort((a, b) => {
     if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1
-    if (a.unreadCount !== b.unreadCount) return b.unreadCount - a.unreadCount
     if (a.lastContactedAt !== b.lastContactedAt) return b.lastContactedAt - a.lastContactedAt
-    return a.displayName.localeCompare(b.displayName, 'de')
+    const byName = a.displayName.localeCompare(b.displayName, 'de')
+    if (byName !== 0) return byName
+    return a.address.localeCompare(b.address, 'de')
   })
 }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { flushSync } from 'react-dom'
 import { fetchStatus, unlockBackend, fetchHelp, vaultLockCommand, type ApiStatus } from '@/frontend/lib/api'
 import type { ProjectType, ProjectVariant } from '@/frontend/lib/types'
 import {
@@ -15,6 +16,7 @@ import {
   type DashboardUnlockMode,
   SIGNER_IMPORT_REQUIRED_CODE,
   isPlausibleSdkImport,
+  isVaultUnlockButtonDisabled,
   normalizeSignerWords,
 } from '@/frontend/lib/dashboard-unlock'
 import { isPwaStandaloneDisplay, readShowAllTilesPref, writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
@@ -30,12 +32,22 @@ import { resolveConnectedAddresses } from '@/frontend/lib/connected-peers-snapsh
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import {
   isBrowserSessionSignerReady,
   isMessengerVaultSessionComplete,
   messengerVaultUiShouldStayLocked,
 } from '@/frontend/lib/messenger-session-keys-ready'
 import { resolveStandaloneDeviceLocked } from '@/frontend/lib/capacitor-standalone-bootstrap'
+import { markOnboardingStepComplete, readOnboardingProgress } from '@/frontend/lib/onboarding-progress-store'
+import {
+  clearStuckRadixBodyLock,
+  isNativeVaultOverlayOpen,
+  purgeOrphanRadixOverlays,
+  releaseStuckModalPointerEvents,
+  scheduleReleaseStuckModalPointerEvents,
+} from '@/frontend/lib/release-modal-pointer-events'
+import { forceReleaseNativeBodyLock } from '@/frontend/components/native-modal-shell'
 import {
   clearDirectIotaSessionSigner,
   clearDirectIotaSessionSignerOnLock,
@@ -47,7 +59,9 @@ import {
   activateStandaloneHelperWallet,
   getStandaloneHelperReadiness,
   HELPER_SEED_SETUP_REQUEST_EVENT,
+  notifyStandaloneWalletActivated,
   STANDALONE_HANDOFF_APPLIED_EVENT,
+  STANDALONE_WALLET_UNLOCKED_EVENT,
   shouldShowHelperSeedSetupDialog,
 } from '@/frontend/lib/handoff-standalone-ready'
 import {
@@ -58,10 +72,12 @@ import {
   shouldAutoRestoreSessionSignerForMainnet,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import { syncMainnetKeysAfterBackendUnlock, ensureBackendVaultKeysInSession } from '@/frontend/lib/dashboard-vault-key-sync'
+import { vaultSave } from '@/frontend/lib/api/vault-commands'
 import {
   getIncludeSdkMnemonicInBackup,
   setIncludeSdkMnemonicInBackup as persistIncludeSdkMnemonicInBackup,
 } from '@/frontend/lib/vault-sdk-mnemonic-preference'
+import { reconcileWalletIdentityWithServer } from '@/frontend/lib/wallet-identity-reconcile'
 import { readLocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import {
   isStandaloneEinsatzPath,
@@ -128,9 +144,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   /** Entsperrt und stabil — verhindert kurzen Login-Dialog bei einem transienten locked-Poll. */
   const sessionUnlockedStableRef = useRef(false)
   const lockPollStreakRef = useRef(0)
+  /** Verhindert vorzeitiges setLocked(false) aus Status-Poll während Profil-Anlegen läuft. */
+  const standaloneUnlockInFlightRef = useRef(false)
 
   const applyLockedFromStatusPoll = useCallback(
     (defaultLocked: boolean, res: { locked?: boolean; hasKeys?: boolean }) => {
+      if (standaloneUnlockInFlightRef.current) return
       const browserReady = isBrowserSessionSignerReady(false)
       const sessionComplete = isMessengerVaultSessionComplete(res, browserReady)
 
@@ -295,28 +314,42 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       )
 
       if (liveBackend) {
+        const serverAddr = (res.myAddressFull || res.myAddress || '').trim()
+        reconcileWalletIdentityWithServer(serverAddr)
+        if (!res.locked && res.signer === 'sdk') {
+          await tryAutoRestoreDirectIotaSessionSignerAsync(serverAddr || undefined)
+        }
         applyLockedFromStatusPoll(!!res.locked, res)
         vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
         signerIsSdkRef.current = res.signer === 'sdk'
       } else if (standaloneWithoutBasis) {
+        if (!resolveStandaloneDeviceLocked()) {
+          await tryAutoRestoreDirectIotaSessionSignerAsync()
+        }
         applyLockedFromStatusPoll(resolveStandaloneDeviceLocked(), res)
         vaultHasLocalRef.current = false
         signerIsSdkRef.current = true
       } else {
+        const serverAddr = (res.myAddressFull || res.myAddress || '').trim()
+        reconcileWalletIdentityWithServer(serverAddr)
+        if (!res.locked && res.signer === 'sdk') {
+          await tryAutoRestoreDirectIotaSessionSignerAsync(serverAddr || undefined)
+        }
         applyLockedFromStatusPoll(!!res.locked, res)
         vaultHasLocalRef.current = res.vaultStatus?.hasLocal === true
         signerIsSdkRef.current = res.signer === 'sdk'
       }
 
       if (!res.locked && res.signer === 'sdk' && shouldAutoRestoreSessionSignerForMainnet()) {
-        const restored = await tryAutoRestoreDirectIotaSessionSignerAsync()
-        if (restored.ok) {
+        if (getDirectIotaSessionSigner()) {
           setMainnetSignerHint(null)
         } else if (!getDirectIotaSessionSigner()) {
           setMainnetSignerHint(
             'Mainnet-Direkt-Send: Session-Signer fehlt im Browser — mit Vault-Passwort nachladen (Tresor ist bereits entsperrt).'
           )
         }
+      } else if (!res.locked && res.signer === 'sdk' && getDirectIotaSessionSigner()) {
+        setMainnetSignerHint(null)
       }
 
       if (!res.locked) {
@@ -360,6 +393,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     window.addEventListener(STANDALONE_HANDOFF_APPLIED_EVENT, onHandoffApplied)
     const onOnboardingChanged = () => {
       void checkStatus()
+      if (getDirectIotaSessionSigner()) {
+        sessionUnlockedStableRef.current = true
+        lockPollStreakRef.current = 0
+        setLocked(false)
+        return
+      }
       sessionUnlockedStableRef.current = false
       lockPollStreakRef.current = 0
       setLocked(resolveStandaloneDeviceLocked())
@@ -368,6 +407,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
       setShowSignerImportOpen(false)
       setUnlockError('')
+      vaultUnlockRequestedRef.current = true
       sessionUnlockedStableRef.current = false
       lockPollStreakRef.current = 0
       setLocked(true)
@@ -456,6 +496,12 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const navigateTo = useCallback((v: DashboardActiveView | null) => {
     setActiveView(v)
     persistDashboardActiveView(v)
+    if (isCapacitorNativePlatform() && v?.type === 'chat') {
+      forceReleaseNativeBodyLock()
+      purgeOrphanRadixOverlays()
+      releaseStuckModalPointerEvents({ force: true })
+      scheduleReleaseStuckModalPointerEvents()
+    }
   }, [])
 
   const openSettingsView = useCallback(() => {
@@ -550,6 +596,14 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         }
       }
     } else if (sdkLike && unlockMode === 'import') {
+      if (!password.trim() || password !== passwordConfirm.trim()) {
+        setUnlockError('Tresor-Passwort und Wiederholung müssen übereinstimmen.')
+        return
+      }
+      if (password.length < 8) {
+        setUnlockError('Passwort mindestens 8 Zeichen.')
+        return
+      }
       const t = signerImport.trim()
       if (!t || !isPlausibleSdkImport(t)) {
         setUnlockError(
@@ -586,6 +640,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       const mnemonic = signerImport.trim()
       const vaultPassword = password.trim()
       let unlockResult: { ok: true; address: string } | { ok: false; error: string }
+      standaloneUnlockInFlightRef.current = true
       if (hasPersistedDirectIotaSessionSigner() && !mnemonic) {
         const restored = await restoreDirectIotaSessionSignerFromEncryptedStorage({
           password: vaultPassword,
@@ -594,9 +649,17 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
           ? { ok: true, address: restored.address }
           : { ok: false, error: restored.error }
       } else if (mnemonic) {
-        if (unlockMode === 'create' && (!vaultPassword || vaultPassword !== passwordConfirm.trim())) {
+        if (
+          (unlockMode === 'create' || unlockMode === 'import') &&
+          (!vaultPassword || vaultPassword !== passwordConfirm.trim())
+        ) {
           setUnlocking(false)
-          setUnlockError('Neues Profil: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).')
+          standaloneUnlockInFlightRef.current = false
+          setUnlockError(
+            unlockMode === 'import'
+              ? 'Import: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).'
+              : 'Neues Profil: Passwort und Wiederholung müssen übereinstimmen (min. 8 Zeichen).'
+          )
           return
         }
         unlockResult = await activateStandaloneHelperWallet({
@@ -605,6 +668,7 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         })
       } else {
         setUnlocking(false)
+        standaloneUnlockInFlightRef.current = false
         setUnlockError('Wallet-Schlüssel eingeben (Mnemonic, Bech32 oder 64 Hex).')
         return
       }
@@ -613,23 +677,64 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
         vaultUnlockRequestedRef.current = false
         sessionUnlockedStableRef.current = true
         lockPollStreakRef.current = 0
-        setPassword('')
-        setPasswordConfirm('')
-        setSignerImport('')
-        setSignerImportConfirm('')
-        setShowSignerImportOpen(false)
-        setLocked(false)
-        await checkStatus()
+        const prog = readOnboardingProgress()
+        flushSync(() => {
+          setPassword('')
+          setPasswordConfirm('')
+          setSignerImport('')
+          setSignerImportConfirm('')
+          setShowSignerImportOpen(false)
+          setLocked(false)
+        })
+        forceReleaseNativeBodyLock()
+        clearStuckRadixBodyLock()
+        queueMicrotask(() => {
+          window.dispatchEvent(new CustomEvent(STANDALONE_WALLET_UNLOCKED_EVENT))
+        })
+        window.setTimeout(() => {
+          forceReleaseNativeBodyLock()
+          clearStuckRadixBodyLock()
+          if (!isNativeVaultOverlayOpen()) {
+            releaseStuckModalPointerEvents({ force: true })
+            scheduleReleaseStuckModalPointerEvents()
+          }
+          if (prog && !prog.completedSteps.includes('wallet')) {
+            markOnboardingStepComplete('wallet')
+          }
+          notifyStandaloneWalletActivated()
+          void checkStatus()
+          standaloneUnlockInFlightRef.current = false
+        }, 200)
       } else {
         setUnlockError(unlockResult.error)
+        standaloneUnlockInFlightRef.current = false
       }
       return
     }
 
-    const res = await unlockBackend(password, { sdkSignerImport: sdkExtra })
+    const res = await unlockBackend(password, {
+      sdkSignerImport: sdkExtra,
+      createNew: unlockMode === 'create',
+    })
     setUnlocking(false)
     if (res.ok) {
       const vaultPw = password
+      if (unlockMode === 'create') {
+        for (let i = 0; i < 12; i++) {
+          await new Promise((r) => setTimeout(r, 250))
+          const snap = await fetchStatus()
+          if ('pollClockHint' in snap && snap.hasKeys === true) break
+        }
+        const save = await vaultSave(vaultPw, undefined, { includeIotaMnemonic: true })
+        if (!save.ok) {
+          setUnlocking(false)
+          setUnlockError(
+            `${save.error || save.message || 'Tresor konnte nicht gespeichert werden.'}\n\n` +
+              'Profil-Sitzung kann trotzdem aktiv sein — später unter Einstellungen → Tresor lokal sichern.'
+          )
+          return
+        }
+      }
       await checkStatus()
       const vaultKeysLoaded = await ensureBackendVaultKeysInSession(vaultPw)
       if (vaultKeysLoaded) {
@@ -774,13 +879,13 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
     return r
   }, [checkStatus, navigateTo])
 
-  const requestVaultUnlock = useCallback(() => {
+  const requestVaultUnlock = useCallback((opts?: { navigateHome?: boolean }) => {
     vaultUnlockRequestedRef.current = true
     sessionUnlockedStableRef.current = false
     lockPollStreakRef.current = 0
     setUnlockError('')
     setLocked(true)
-    navigateTo(null)
+    if (opts?.navigateHome !== false) navigateTo(null)
   }, [navigateTo])
 
   /** Session-Signer nachladen — ohne Vollsperre wenn Backend-Tresor schon offen ist. */
@@ -846,15 +951,17 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
       }
       return
     }
-    if (isStandaloneSoloPath()) {
-      setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
-      setShowSignerImportOpen(false)
-    } else {
-      setUnlockMode('import')
-      setShowSignerImportOpen(true)
-    }
-    setUnlockError('')
-    setLocked(true)
+    flushSync(() => {
+      if (isStandaloneSoloPath()) {
+        setUnlockMode(hasPersistedDirectIotaSessionSigner() ? 'vault' : 'create')
+        setShowSignerImportOpen(false)
+      } else {
+        setUnlockMode('import')
+        setShowSignerImportOpen(true)
+      }
+      setUnlockError('')
+      setLocked(true)
+    })
   }, [])
 
   const chatVaultBannerActions: ChatViewVaultBannerActions = useMemo(
@@ -904,30 +1011,18 @@ export function useDashboardSession(options: UseDashboardSessionOptions) {
   const suppressVaultUnlockForHelperSeed = shouldShowHelperSeedSetupDialog()
   const importMnemonicRequired =
     unlockMode === 'import' && (signerKind === 'sdk' || signerKind == null)
-  const unlockButtonDisabled = standaloneHelperUnlock
-    ? unlocking || !signerImport.trim() || !isPlausibleSdkImport(signerImport.trim())
-    : isStandaloneMessengerWithoutBasis() && unlockMode === 'create'
-      ? unlocking ||
-        !signerImport.trim() ||
-        !isPlausibleSdkImport(signerImport.trim()) ||
-        !password.trim() ||
-        password.length < 8 ||
-        password !== passwordConfirm.trim()
-      : unlocking ||
-      !password.trim() ||
-      (unlockMode === 'create' &&
-        (!passwordConfirm.trim() || password !== passwordConfirm)) ||
-      (unlockMode === 'create' &&
-        signerKind === 'sdk' &&
-        (!signerImport.trim() ||
-          !signerImportConfirm.trim() ||
-          normalizeSignerWords(signerImport) !== normalizeSignerWords(signerImportConfirm))) ||
-      (importMnemonicRequired && (!signerImport.trim() || !isPlausibleSdkImport(signerImport.trim()))) ||
-      (unlockMode === 'vault' &&
-        signerKind === 'sdk' &&
-        showSignerImportOpen &&
-        !!signerImport.trim() &&
-        !isPlausibleSdkImport(signerImport.trim()))
+  const unlockButtonDisabled = isVaultUnlockButtonDisabled({
+    unlocking,
+    unlockMode,
+    signerKind,
+    password,
+    passwordConfirm,
+    signerImport,
+    signerImportConfirm,
+    showSignerImportOpen,
+    standaloneWithoutBasis: isStandaloneMessengerWithoutBasis(),
+    standaloneHelperUnlock,
+  })
 
 
   const onUnlockModeChange = useCallback((m: DashboardUnlockMode) => {

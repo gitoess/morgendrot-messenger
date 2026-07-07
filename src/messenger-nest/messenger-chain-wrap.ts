@@ -11,6 +11,7 @@ import {
     storeEncryptedMessage,
     storePlaintextMessage,
     storeTeamPlaintextBroadcast,
+    storeTeamEncryptedBroadcast,
     purgeHandshake as chainPurgeHandshake,
     purgeMessage as chainPurgeMessage,
     purgeTeamPlaintextBroadcast as chainPurgeTeamPlaintextBroadcast,
@@ -182,6 +183,46 @@ export async function sendTeamPlaintextBroadcastOnly(teamMailboxObjectId: string
         teamMailboxObjectId.trim(),
         MY_ADDR,
         new TextEncoder().encode(body),
+        nonce,
+        getWalletPassword(),
+        { signOptions: messengerGasPolicyOpts() }
+    );
+}
+
+/** Team-Broadcast verschlüsselt — 1× TX in Shared Team-Mailbox (§ H.23 B1). */
+export async function sendTeamEncryptedBroadcastOnly(
+    teamMailboxObjectId: string,
+    wireJson: string
+) {
+    type Wire = {
+        ciphertextB64?: string;
+        ivB64?: string;
+        tagB64?: string;
+        keyEpoch?: number;
+        nonce?: string;
+    };
+    let parsed: Wire;
+    try {
+        parsed = JSON.parse(wireJson) as Wire;
+    } catch {
+        throw new Error('Team-Broadcast verschlüsselt: ungültiges Wire-JSON.');
+    }
+    const ciphertext = base64ToUint8(String(parsed.ciphertextB64 ?? ''));
+    const iv = base64ToUint8(String(parsed.ivB64 ?? ''));
+    const tag = base64ToUint8(String(parsed.tagB64 ?? ''));
+    if (ciphertext.length === 0 || iv.length === 0 || tag.length === 0) {
+        throw new Error('Team-Broadcast verschlüsselt: ciphertext/iv/tag fehlen.');
+    }
+    const keyEpoch = BigInt(Math.max(1, Math.trunc(Number(parsed.keyEpoch) || 1)));
+    const nonce = parsed.nonce?.trim() ? BigInt(parsed.nonce.trim()) : BigInt(Date.now());
+    const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    return storeTeamEncryptedBroadcast(
+        teamMailboxObjectId.trim(),
+        MY_ADDR,
+        ciphertext,
+        iv,
+        tag,
+        keyEpoch,
         nonce,
         getWalletPassword(),
         { signOptions: messengerGasPolicyOpts() }

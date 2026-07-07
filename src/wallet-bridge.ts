@@ -45,6 +45,7 @@ import {
     setWalletPassword,
     getWalletPassword,
     clearWalletPassword,
+    getSessionIotaMnemonic,
 } from './messenger-nest/messenger-session-password.js';
 import { applySdkSignerFromImport } from './messenger-nest/sdk-signer-import.js';
 export { setWalletPassword, getWalletPassword, clearWalletPassword };
@@ -229,6 +230,7 @@ async function main() {
         const vaultStateRef: { current: VaultState | null } = { current: null };
         let myKeys: { privateKey: CryptoKey; pubRaw: Uint8Array };
         let usedKeysFromVault = false;
+        let vaultBootstrapBypass: 'createNew' | 'signerRecover' | null = null;
 
         if (hasLocalVaultFile) {
             if (CFG.ENABLE_UI) {
@@ -236,6 +238,24 @@ async function main() {
                 for (;;) {
                     setWalletPassword(pw);
                     walletPassword = pw;
+                    const { consumeVaultUnlockBypass } = await import('./api-server.js');
+                    const bypass = consumeVaultUnlockBypass();
+                    if (bypass === 'createNew' || bypass === 'signerRecover') {
+                        vaultBootstrapBypass = bypass;
+                        myKeys = await generateKeyPair(true);
+                        vaultStateRef.current = {
+                            keys: myKeys,
+                            notes: '',
+                            vaultNotes: [],
+                            personalSecrets: [],
+                        };
+                        logger.info(
+                            bypass === 'signerRecover'
+                                ? 'Vault-Datei umgangen — Messaging-Tresor nach Seed-Wiederherstellung neu erzeugt.'
+                                : 'Vault-Datei umgangen — neues Profil mit frischen Messaging-Keys.'
+                        );
+                        break;
+                    }
                     try {
                         const vaultBlob = await loadVaultContent(pw, vaultPath);
                         myKeys = vaultBlob.keys;
@@ -287,21 +307,23 @@ async function main() {
                     process.exit(1);
                 }
             }
-            usedKeysFromVault = true;
-            logger.info('Keys aus lokalem Vault geladen.');
-            seedStreamsAnchorHistoryFromKnownFiles();
-            const vaultPkg = readVaultPackageId(vaultPath);
-            if (vaultPkg && CFG.PACKAGE_ID && normalizeAddress(vaultPkg) !== normalizeAddress(CFG.PACKAGE_ID)) {
-                logger.warn(
-                    `Vault wurde mit Package ${vaultPkg.slice(0, 18)}… gespeichert; aktuelle PACKAGE_ID weicht ab. Entschlüsselung kann fehlschlagen – gleiche Package-ID setzen oder neuen Handshake.`
-                );
-            }
-            const vaultAnchor = await readVaultAnchorId(vaultPath, walletPassword);
-            if (vaultAnchor && !CFG.STREAMS_ANCHOR_ID) {
-                (CFG as { STREAMS_ANCHOR_ID: string }).STREAMS_ANCHOR_ID = vaultAnchor;
-                process.env.STREAMS_ANCHOR_ID = vaultAnchor;
-                ensureStreamsAnchorIdInHistory(vaultAnchor);
-                logger.info('Streams Anchor-ID aus Vault wiederhergestellt: ' + vaultAnchor.slice(0, 16) + '…');
+            if (!vaultBootstrapBypass) {
+                usedKeysFromVault = true;
+                logger.info('Keys aus lokalem Vault geladen.');
+                seedStreamsAnchorHistoryFromKnownFiles();
+                const vaultPkg = readVaultPackageId(vaultPath);
+                if (vaultPkg && CFG.PACKAGE_ID && normalizeAddress(vaultPkg) !== normalizeAddress(CFG.PACKAGE_ID)) {
+                    logger.warn(
+                        `Vault wurde mit Package ${vaultPkg.slice(0, 18)}… gespeichert; aktuelle PACKAGE_ID weicht ab. Entschlüsselung kann fehlschlagen – gleiche Package-ID setzen oder neuen Handshake.`
+                    );
+                }
+                const vaultAnchor = await readVaultAnchorId(vaultPath, walletPassword);
+                if (vaultAnchor && !CFG.STREAMS_ANCHOR_ID) {
+                    (CFG as { STREAMS_ANCHOR_ID: string }).STREAMS_ANCHOR_ID = vaultAnchor;
+                    process.env.STREAMS_ANCHOR_ID = vaultAnchor;
+                    ensureStreamsAnchorIdInHistory(vaultAnchor);
+                    logger.info('Streams Anchor-ID aus Vault wiederhergestellt: ' + vaultAnchor.slice(0, 16) + '…');
+                }
             }
         } else if (CFG.VAULT_REGISTRY_ID && CFG.PACKAGE_ID) {
             const enc = await getVaultFromChain(getClient(), CFG.VAULT_REGISTRY_ID, CFG.PACKAGE_ID, MY_ADDR);
@@ -435,6 +457,34 @@ async function main() {
             setSessionStatus,
         });
         setCommandHandler(messengerCommandHandler);
+
+        if (vaultBootstrapBypass && CFG.SIGNER === 'sdk') {
+            const phrase = (getSessionIotaMnemonic() || '').trim();
+            if (phrase && vaultStateRef.current?.keys) {
+                try {
+                    await saveVaultLocal(
+                        vaultStateRef.current.keys,
+                        walletPassword,
+                        vaultPath,
+                        '',
+                        phrase,
+                        [],
+                        []
+                    );
+                    if (CFG.PACKAGE_ID) writeVaultPackageId(vaultPath, CFG.PACKAGE_ID);
+                    logger.info(
+                        vaultBootstrapBypass === 'signerRecover'
+                            ? 'Vault mit Seed neu verschlüsselt — beim nächsten Start reicht das neue Passwort unter „Tresor öffnen“.'
+                            : 'Neuer Vault mit Seed gespeichert.'
+                    );
+                } catch (e) {
+                    logger.warn(
+                        'Vault-Neuspeichern nach Profil-Anlage fehlgeschlagen: ' +
+                            String((e as Error)?.message || e)
+                    );
+                }
+            }
+        }
 
         setVaultPersonalSecretsBridge({
             getEntries: () =>

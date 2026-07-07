@@ -20,7 +20,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { API_BASE } from '@/frontend/lib/api/api-base'
+import { fetchHandoffCurrentIdsFields } from '@/frontend/lib/handoff-export-defaults'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { validateHandoffExportPassword } from '@/frontend/lib/handoff-zip-crypto'
 import { buildWizardHandoffExportBody } from '@/frontend/lib/handoff-export-defaults'
@@ -129,26 +129,15 @@ export function BossDeviceProvisionWizard(p: BossDeviceProvisionWizardProps) {
       const r = await fetchEinsatzRoleTemplates()
       if (!cancelled && r.ok) setSavedTemplates(r.templates ?? [])
     })()
-    void (async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/current-ids`)
-        const j = (await res.json()) as {
-          mailboxId?: string
-          commandRegistryId?: string
-          vaultRegistryId?: string
-          rpcUrl?: string
-        }
-        if (cancelled || !res.ok) return
-        setChainIds({
-          rpcUrl: j.rpcUrl?.trim() || undefined,
-          mailboxId: j.mailboxId?.trim() || undefined,
-          commandRegistryId: j.commandRegistryId?.trim() || undefined,
-          vaultRegistryId: j.vaultRegistryId?.trim() || undefined,
-        })
-      } catch {
-        /* optional */
-      }
-    })()
+    void fetchHandoffCurrentIdsFields().then((j) => {
+      if (cancelled) return
+      setChainIds({
+        rpcUrl: j.rpcUrl?.trim() || undefined,
+        mailboxId: j.mailboxId?.trim() || undefined,
+        commandRegistryId: j.commandRegistryId?.trim() || undefined,
+        vaultRegistryId: j.vaultRegistryId?.trim() || undefined,
+      })
+    })
     if (registryExists && registryUnlocked) {
       setRegistryReady(true)
     } else if (!registryExists) {

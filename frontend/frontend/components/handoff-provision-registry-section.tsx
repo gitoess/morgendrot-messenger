@@ -25,6 +25,8 @@ import {
   updateBossProvisionRegistryEntry,
 } from '@/frontend/lib/boss-provision-registry'
 import type { useHandoffProvisionRegistryAccess } from '@/frontend/lib/handoff-provision-registry-access'
+import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { assignProvisionHelperMessengerGroup } from '@/frontend/lib/provision-helper-messenger-group'
 
 type RegistryAccess = ReturnType<typeof useHandoffProvisionRegistryAccess>
 
@@ -67,6 +69,7 @@ export function HandoffProvisionRegistrySection(p: {
   const visibleEntries = entries.filter((e) =>
     registryFilter === 'open' ? !e.handedOverAtIso : true
   )
+  const messengerGroups = readMessengerGroups()
 
   const onUnlockRegistry = async () => {
     setStatusMsg('')
@@ -243,6 +246,7 @@ export function HandoffProvisionRegistrySection(p: {
                     <th className="px-3 py-2 font-medium">Bezeichnung</th>
                     <th className="px-3 py-2 font-medium">Adresse</th>
                     <th className="px-3 py-2 font-medium">Profil</th>
+                    <th className="px-3 py-2 font-medium">Gruppe</th>
                     <th className="px-3 py-2 font-medium">Status</th>
                     <th className="px-3 py-2 font-medium" />
                   </tr>
@@ -253,6 +257,29 @@ export function HandoffProvisionRegistrySection(p: {
                       <td className="px-3 py-2 font-medium text-foreground">{e.label}</td>
                       <td className="px-3 py-2 font-mono">{formatHandoffAddressShort(e.address)}</td>
                       <td className="px-3 py-2">{getHandoffPreset(e.presetId).label}</td>
+                      <td className="px-3 py-2">
+                        <select
+                          className="max-w-[9rem] rounded border border-border bg-input px-1 py-0.5 text-[10px]"
+                          value={e.messengerGroupId ?? ''}
+                          onChange={(ev) => {
+                            const groupId = ev.target.value.trim() || null
+                            void assignProvisionHelperMessengerGroup({
+                              entryId: e.id,
+                              groupId,
+                              helperAddress: e.address,
+                            }).then((r) => {
+                              if (r.ok) refreshRegistry()
+                            })
+                          }}
+                        >
+                          <option value="">—</option>
+                          {messengerGroups.map((g) => (
+                            <option key={g.id} value={g.id}>
+                              {g.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="px-3 py-2 text-muted-foreground">
                         {e.handedOverAtIso ? 'Übergeben' : e.seedShownAtIso ? 'Seed gezeigt' : 'Erzeugt'}
                       </td>
@@ -263,7 +290,7 @@ export function HandoffProvisionRegistrySection(p: {
                             className="rounded border border-border px-2 py-0.5 hover:bg-muted"
                             onClick={() => void onRevealSeed(e.id)}
                           >
-                            Seed
+                            Seed erneut anzeigen
                           </button>
                           {!e.handedOverAtIso ? (
                             <button

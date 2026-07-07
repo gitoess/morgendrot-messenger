@@ -21,8 +21,8 @@ describe('onboarding-boss-runtime', () => {
     expect(resolveBossWizardAddress({}, addr)).toBe(addr)
   })
 
-  it('enrichBossWizardApiSnapshot setzt myAddressFull', () => {
-    const enriched = enrichBossWizardApiSnapshot({ myAddress: addr }, null)
+  it('enrichBossWizardApiSnapshot lässt Server-Status unverändert', () => {
+    const enriched = enrichBossWizardApiSnapshot({ myAddressFull: addr }, `0x${'x'.repeat(64)}`)
     expect(enriched?.myAddressFull).toBe(addr)
   })
 

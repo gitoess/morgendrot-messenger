@@ -13,6 +13,17 @@ export function countMnemonicWords(s: string): number {
         .filter(Boolean).length;
 }
 
+/** Genug für Unlock/Import (Mnemonic ≥12 Wörter, Bech32-Secret oder 64 Hex). */
+export function isPlausibleSdkImport(s: string): boolean {
+    const t = String(s || '').trim();
+    if (!t) return false;
+    if (countMnemonicWords(t) >= 12) return true;
+    const hex = t.replace(/^0x/i, '').replace(/\s+/g, '');
+    if (/^[a-fA-F0-9]{64}$/i.test(hex)) return true;
+    if (!/\s/.test(t) && t.length >= 60 && /^[a-z]{2,30}1[02-9ac-hj-np-z]+$/i.test(t)) return true;
+    return false;
+}
+
 export function applySdkSignerFromImport(raw: string): void {
     const t = String(raw).trim();
     if (!t) throw new Error('Signer-Import leer.');

@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getOfflineMailboxQueueCount, isOfflineMailboxQueueEnabled } from '@/frontend/lib/api/offline-queue'
-
-const INBOX_CACHE_KEY_PREFIX = 'morgendrot.inbox.cache.v1:'
+import { isInboxCacheStorageKey } from '@/frontend/lib/inbox-cache-key'
 
 export type OfflineMode = 'online' | 'offline' | 'cache'
 
@@ -23,7 +22,7 @@ function latestInboxCacheSavedAtMs(): number | null {
   try {
     for (let i = 0; i < window.localStorage.length; i++) {
       const key = window.localStorage.key(i)
-      if (!key || !key.startsWith(INBOX_CACHE_KEY_PREFIX)) continue
+      if (!key || !isInboxCacheStorageKey(key)) continue
       const raw = window.localStorage.getItem(key)
       if (!raw) continue
       const parsed = JSON.parse(raw) as { savedAtMs?: unknown }

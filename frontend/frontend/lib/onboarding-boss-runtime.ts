@@ -20,7 +20,7 @@ function normalizeAddr(v?: string | null): string {
   return (v || '').trim()
 }
 
-/** Volle 0x-Adresse für Wizard — Header und Schritte nutzen dieselbe Quelle. */
+/** Volle 0x-Adresse für Wizard — nur wenn Server leer, Browser-Signer als Fallback. */
 export function resolveBossWizardAddress(
   api?: ApiStatus | null,
   fallbackMyAddress?: string | null
@@ -34,15 +34,12 @@ export function resolveBossWizardAddress(
   return fromApi || fromSession || fromBrowser
 }
 
+/** Kein myAddressFull-Override — Server-Status bleibt maßgeblich für die UI. */
 export function enrichBossWizardApiSnapshot(
   api?: ApiStatus | null,
-  fallbackMyAddress?: string | null
+  _fallbackMyAddress?: string | null
 ): ApiStatus | null | undefined {
-  if (!api) return api
-  const displayAddress = resolveBossWizardAddress(api, fallbackMyAddress)
-  if (!displayAddress) return api
-  if (normalizeAddr(api.myAddressFull) === displayAddress) return api
-  return { ...api, myAddressFull: displayAddress, myAddress: api.myAddress || displayAddress }
+  return api
 }
 
 export function buildBossOnboardingRuntime(

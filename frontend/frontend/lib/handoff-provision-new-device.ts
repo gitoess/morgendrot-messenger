@@ -3,6 +3,7 @@ import type { StandaloneSmartphoneHandoffZipBody } from '@/frontend/lib/api/stan
 import { fetchGenerateMnemonic } from '@/frontend/lib/api/generate-mnemonic'
 import { downloadHandoffZipExport } from '@/frontend/lib/handoff-export-download'
 import { addBossProvisionRegistryEntry } from '@/frontend/lib/boss-provision-registry'
+import { addMemberToMessengerGroup } from '@/frontend/lib/provision-helper-messenger-group'
 import { enqueueRosterPendingSuggestion } from '@/frontend/lib/team-roster-pending-store'
 import { syncHandoffSuggestionToServer } from '@/frontend/lib/roster-pending-sync'
 import { buildSeedSetupQrText } from '@/frontend/lib/seed-setup-qr'
@@ -17,6 +18,7 @@ export type ProvisionNewHandoffDeviceInput = {
   label: string
   masterPassword: string
   zipPassword?: string
+  messengerGroupId?: string
 }
 
 export type ProvisionNewHandoffDeviceSuccess = {
@@ -64,9 +66,14 @@ export async function provisionNewHandoffDevice(
     seedImport: mnemonic.secretKey,
     zipFilenameBase: input.label.trim().replace(/\s+/g, '-').slice(0, 40) || 'handoff',
     masterPassword: input.masterPassword,
+    messengerGroupId: input.messengerGroupId,
   })
   if (!added.ok) {
     return { ok: false, error: added.error }
+  }
+
+  if (input.messengerGroupId?.trim()) {
+    addMemberToMessengerGroup(input.messengerGroupId.trim(), mnemonic.address)
   }
 
   const pendingEntry = enqueueRosterPendingSuggestion({

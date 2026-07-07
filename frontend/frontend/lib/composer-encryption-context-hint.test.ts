@@ -10,9 +10,9 @@ describe('getComposerEncryptionContextHint (H.3o.6)', () => {
     expect(getComposerEncryptionContextHint({ forcedTransport: 'mesh', encrypted: true })).toMatch(/Schloss/)
   })
 
-  it('online verschlüsselt: transport-strong Hinweis', () => {
+  it('online verschlüsselt: Session Keys+ Hinweis', () => {
     expect(getComposerEncryptionContextHint({ forcedTransport: 'internet', encrypted: true })).toMatch(
-      /transport-strong/
+      /Session Keys\+/
     )
   })
 

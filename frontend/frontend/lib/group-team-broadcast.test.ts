@@ -22,7 +22,7 @@ describe('group-team-broadcast', () => {
     expect(resolveGroupTeamMailboxObjectId(group)).toBe(MB.toLowerCase())
   })
 
-  it('shouldSendGroupTeamBroadcast nur Klartext + mailbox + internet + sendAll', () => {
+  it('shouldSendGroupTeamBroadcast mailbox + internet + sendAll (Klartext)', () => {
     expect(
       shouldSendGroupTeamBroadcast({
         activeGroup: group,
@@ -33,6 +33,9 @@ describe('group-team-broadcast', () => {
         isGroupChannel: true,
       })
     ).toBe(true)
+  })
+
+  it('shouldSendGroupTeamBroadcast auch bei Schloss (verschlüsselt)', () => {
     expect(
       shouldSendGroupTeamBroadcast({
         activeGroup: group,
@@ -42,7 +45,7 @@ describe('group-team-broadcast', () => {
         sendAllMembers: true,
         isGroupChannel: true,
       })
-    ).toBe(false)
+    ).toBe(true)
   })
 
   it('useTeamBroadcast kann abgeschaltet werden', () => {
@@ -81,6 +84,6 @@ describe('group-team-broadcast', () => {
   })
 
   it('encrypted pending message ist gesetzt', () => {
-    expect(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG).toContain('H.22')
+    expect(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG).toContain('Team-Key')
   })
 })
