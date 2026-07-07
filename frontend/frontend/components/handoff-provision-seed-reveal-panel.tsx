@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { EyeOff, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -26,7 +26,7 @@ export function HandoffProvisionSeedRevealPanel(p: {
   const [revealBusy, setRevealBusy] = useState(false)
   const entryId = p.entryId
 
-  const onReveal = async () => {
+  const onReveal = useCallback(async () => {
     if (!entryId) return
     setRevealError('')
     setRevealedSeed('')
@@ -51,13 +51,12 @@ export function HandoffProvisionSeedRevealPanel(p: {
       return
     }
     setRevealedSeed(revealed.seedImport)
-  }
+  }, [entryId, p.resolveEntry, p.resolveMasterPassword])
 
   useEffect(() => {
     if (!p.autoReveal || !entryId) return
     void onReveal()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- nur bei entryId/autoReveal
-  }, [p.autoReveal, entryId])
+  }, [p.autoReveal, entryId, onReveal])
 
   if (!entryId) return null
 
