@@ -9,10 +9,13 @@ import {
   getDirectChatEcdhPrivateKey,
   hasDirectChatEcdhPeerPubForRecipient,
   setDirectChatEcdhPeerPubBase64,
+  ensureSelfForensicEcdhMaterial,
 } from '@/frontend/lib/direct-chat-ecdh-session'
 import { canTryLiveEncryptedDirect } from '@/frontend/lib/direct-iota-encrypted-submit'
 import type { MessagingPersistenceMode } from '@/frontend/lib/messaging-persistence-mode'
 import { tryAutoRestoreDirectChatEcdhPrivateKey } from '@/frontend/lib/direct-iota-vault-unlock-sync'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
+import { normalizeRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 
 const ECDH_MISSING =
   'Chat-ECDH-Privatkey fehlt — Tresor entsperren (wird automatisch aus Vault geladen) oder in Puls JWK anwenden.'
@@ -60,8 +63,15 @@ export async function prepareEncryptedDirectSend(
   if (!getDirectChatEcdhPrivateKey()) {
     return { ok: false, error: ECDH_MISSING }
   }
-  const peer = await ensureDirectChatPeerPubForRecipient(recipientTrimmed)
-  if (!peer.ok) return peer
+  const myAddr = normalizeRecipient0x(getDirectIotaSessionSignerAddress() ?? '')
+  const recipientNorm = normalizeRecipient0x(recipientTrimmed)
+  if (myAddr && recipientNorm === myAddr) {
+    const self = await ensureSelfForensicEcdhMaterial(recipientTrimmed)
+    if (!self.ok) return self
+  } else {
+    const peer = await ensureDirectChatPeerPubForRecipient(recipientTrimmed)
+    if (!peer.ok) return peer
+  }
   const persistMode = mode === 'mailbox' ? 'mailbox' : 'event'
   if (!canTryLiveEncryptedDirect(recipientTrimmed, persistMode)) {
     return { ok: false, error: NOT_READY[persistMode] }

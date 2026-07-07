@@ -1,0 +1,16 @@
+{
+  "testnet": {
+    "rpcUrl": "https://api.testnet.iota.cafe",
+    "packageId": "0xcf409a0387de039a707d1916afeb16f17a22969a0735e8cfeeaaf5b5fa3d811f",
+    "mailboxId": "0xcf231121f32227f8c55d30454c0ca90955d33b220a26a988d496085bace7fcaf"
+  },
+  "mainnet": {
+    "rpcUrl": "https://api.mainnet.iota.cafe",
+    "packageId": "0xb58808d193dd06d4e09381ed56d2d06bbe2a1e64c1d94ca97f7df7c5308ea7fe",
+    "mailboxId": "0x9f288abc3d8c8794dd401d9dfb8393f0b0cba3852580a20e9141741ae0779760"
+  },
+  "packageId": "0xcf409a0387de039a707d1916afeb16f17a22969a0735e8cfeeaaf5b5fa3d811f",
+  "mailboxId": "0xcf231121f32227f8c55d30454c0ca90955d33b220a26a988d496085bace7fcaf",
+  "rpcUrl": "https://api.testnet.iota.cafe",
+  "_note": "Lab-Deploy: Testnet = env/monitor.env (2026-05-21); Mainnet = frühere globals-IDs. Beide Netze getrennt deployen — nicht mischen."
+}

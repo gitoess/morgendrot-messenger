@@ -15,9 +15,18 @@ vi.mock('@/frontend/lib/direct-iota-mnemonic-session', () => ({
   getDirectIotaSessionSigner: () => getDirectIotaSessionSigner(),
 }))
 
+vi.mock('@/frontend/lib/dashboard-basis-offline-hint', () => ({
+  isStandaloneMessengerWithoutBasis: vi.fn(() => false),
+}))
+
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+
+const isStandalone = vi.mocked(isStandaloneMessengerWithoutBasis)
+
 describe('messenger-session-keys-ready', () => {
   beforeEach(() => {
     getDirectIotaSessionSigner.mockReset()
+    isStandalone.mockReturnValue(false)
   })
 
   it('isBrowserSessionSignerReady braucht RAM-Signer', () => {
@@ -48,20 +57,29 @@ describe('messenger-session-keys-ready', () => {
     expect(enrichApiStatusWithDirectSessionSigner(status)?.hasKeys).toBe(true)
   })
 
-  it('messengerVaultUiShouldStayLocked bei Server-Keys ohne Browser-Signer', () => {
+  it('Standalone-APK: Direct-Signer hebt locked für Send-Status auf', () => {
+    isStandalone.mockReturnValue(true)
+    getDirectIotaSessionSigner.mockReturnValue({})
+    const status: ApiStatus = { hasKeys: false, locked: true }
+    expect(isMessengerSessionKeysReady(status)).toBe(true)
+    expect(enrichApiStatusWithDirectSessionSigner(status)).toEqual({
+      hasKeys: true,
+      locked: false,
+    })
+  })
+
+  it('messengerVaultUiShouldStayLocked: Backend offen reicht (Reload ohne Browser-Signer)', () => {
     getDirectIotaSessionSigner.mockReturnValue(null)
     expect(
       messengerVaultUiShouldStayLocked({ hasKeys: true, locked: false }, false)
-    ).toBe(true)
-    getDirectIotaSessionSigner.mockReturnValue({})
-    expect(
-      messengerVaultUiShouldStayLocked({ hasKeys: true, locked: false }, true)
     ).toBe(false)
+    expect(messengerVaultUiShouldStayLocked({ hasKeys: false, locked: false }, false)).toBe(true)
+    expect(messengerVaultUiShouldStayLocked({ hasKeys: true, locked: true }, false)).toBe(true)
   })
 
-  it('isMessengerVaultSessionComplete erst mit Browser-Signer', () => {
+  it('isMessengerVaultSessionComplete wenn Backend-Tresor offen', () => {
     getDirectIotaSessionSigner.mockReturnValue(null)
-    expect(isMessengerVaultSessionComplete({ hasKeys: true, locked: false }, false)).toBe(false)
+    expect(isMessengerVaultSessionComplete({ hasKeys: true, locked: false }, false)).toBe(true)
     expect(isMessengerVaultSessionComplete({ hasKeys: true, locked: false }, true)).toBe(true)
   })
 })

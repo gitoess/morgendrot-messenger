@@ -21,8 +21,19 @@ import {
 } from '@/frontend/lib/handoff-local-apply'
 import { isStandaloneSoloPath } from '@/frontend/lib/standalone-onboarding'
 import { isLikelyIotaHexId } from '@morgendrot/core/iota'
+import { syncActiveNetworkChainSnapshot } from '@/frontend/lib/active-network-chain-sync'
+import {
+  readNetworkProfilesState,
+  writeNetworkProfilesState,
+  type EinsatzNetworkProfilesState,
+} from '@/frontend/lib/einsatz-network-profiles'
+import {
+  buildLabDualNetworkProfilesState,
+  labTestnetChainForSoloForm,
+  LAB_TESTNET_CHAIN,
+} from '@/frontend/lib/morgendrot-lab-chain-profiles'
 
-export const SOLO_TESTNET_RPC_URL = 'https://api.testnet.iota.cafe'
+export const SOLO_TESTNET_RPC_URL = LAB_TESTNET_CHAIN.rpcUrl
 
 export type StandaloneSoloChainFormValues = {
   rpcUrl: string
@@ -37,15 +48,50 @@ export type StandaloneSoloChainApplyError =
   | 'missingSigner'
 
 export function getStandaloneSoloChainDefaults(): StandaloneSoloChainFormValues {
-  const packageId =
-    typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOLO_TESTNET_PACKAGE_ID
-      ? String(process.env.NEXT_PUBLIC_SOLO_TESTNET_PACKAGE_ID).trim()
-      : ''
-  const mailboxId =
-    typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SOLO_TESTNET_MAILBOX_ID
-      ? String(process.env.NEXT_PUBLIC_SOLO_TESTNET_MAILBOX_ID).trim()
-      : ''
-  return { rpcUrl: SOLO_TESTNET_RPC_URL, packageId, mailboxId }
+  const lab = labTestnetChainForSoloForm()
+  return { rpcUrl: lab.rpcUrl, packageId: lab.packageId, mailboxId: lab.mailboxId }
+}
+
+/** Testnet aus Formular + Mainnet-Lab-Vorlage — für Solo und Smoke-Skripte. */
+export function buildStandaloneSoloNetworkProfilesState(
+  testnet: StandaloneSoloChainFormValues,
+  senderAddress?: string
+): EinsatzNetworkProfilesState {
+  return buildLabDualNetworkProfilesState(
+    {
+      rpcUrl: testnet.rpcUrl.trim(),
+      packageId: testnet.packageId.trim(),
+      mailboxId: testnet.mailboxId.trim(),
+    },
+    senderAddress
+  )
+}
+
+export function persistStandaloneSoloNetworkProfiles(
+  testnet: StandaloneSoloChainFormValues,
+  senderAddress: string
+): EinsatzNetworkProfilesState {
+  const prev = readNetworkProfilesState()
+  const next = buildStandaloneSoloNetworkProfilesState(testnet, senderAddress)
+  // Mainnet manuell gesetzt? Nicht mit Lab-Template überschreiben.
+  if (
+    prev.mainnet.packageId.trim() &&
+    prev.mainnet.packageId.trim().toLowerCase() !== next.mainnet.packageId.trim().toLowerCase()
+  ) {
+    next.mainnet = { ...prev.mainnet }
+  }
+  if (
+    prev.mainnet.mailboxId.trim() &&
+    prev.mainnet.mailboxId.trim().toLowerCase() !== next.mainnet.mailboxId.trim().toLowerCase()
+  ) {
+    next.mainnet.mailboxId = prev.mainnet.mailboxId.trim()
+  }
+  if (prev.mainnet.rpcUrl.trim() && prev.mainnet.rpcUrl.trim() !== next.mainnet.rpcUrl) {
+    next.mainnet.rpcUrl = prev.mainnet.rpcUrl.trim()
+  }
+  writeNetworkProfilesState(next)
+  syncActiveNetworkChainSnapshot(senderAddress)
+  return next
 }
 
 export function readStandaloneSoloChainFormValues(): StandaloneSoloChainFormValues {
@@ -122,6 +168,11 @@ export function applyStandaloneSoloChainConfig(
       messengerCreditsConfigured: false,
     },
   })
+
+  persistStandaloneSoloNetworkProfiles(
+    { rpcUrl, packageId, mailboxId },
+    senderAddress
+  )
 
   notifyStandaloneWalletActivated()
   return { ok: true }

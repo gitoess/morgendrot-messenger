@@ -24,6 +24,7 @@
 ## 0. Schreibtisch (Blocker — vor dem Handy)
 
 - [ ] `cd frontend` → **`npm run test:h15-direct-submit`** grün (Stand Repo; aktuell **73** Tests).
+- [ ] **Oder Root:** **`npm run smoke:standalone-desk`** (führt H.15-Tests + druckt §0/§A–C Hinweise).
 - [ ] Optional Root: **`npm run test:smoke`**.
 - [ ] APK bauen: **`npm run apk:debug:build`** → `frontend/android/app/build/outputs/apk/debug/app-debug.apk`.
 - [ ] Zwei **Handoff-ZIPs** (verschiedene Profile/Adressen) vom Boss oder Test-Export — je ~3 KB, **ohne** Secrets im Chat.
@@ -40,6 +41,7 @@
 | V2 | **WLAN mit Internet** (Fullnode erreichbar) — Morgendrot-PC **nicht** nötig, aber RPC muss antworten. |
 | V3 | PC: **kein** `dev:lan` / keine erreichbare Basis-URL während 4b–4f (Flugmodus-Test optional in separater Runde). |
 | V4 | Pro Gerät: Handoff-ZIP bereit; Notizblock für Digest/Fehlertexte. |
+| V5 | **Team-Broadcast (verschl. Gruppe):** Handoff enthält `teamBroadcastKeys` in `.morgendrot-handoff-extras.json` (Passwort-ZIP: mitverschlüsselt). Optional 4c+ Gruppen-Send testen. |
 
 ---
 

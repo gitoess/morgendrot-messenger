@@ -51,8 +51,8 @@ export function formatDirectIotaSubmitError(reason: unknown): string {
   }
   if (lower.includes('package object does not exist') || lower.includes('dependent package not found')) {
     return (
-      'Package existiert auf diesem Netz nicht — vermutlich Testnet-Package-ID mit Mainnet-RPC gemischt. ' +
-      'Einstellungen → Netzwerk: Mainnet-Profil mit eigener Package-ID + Mailbox-ID (Mainnet-Deploy), dann erneut umschalten.'
+      'Package existiert auf diesem Netz nicht — Testnet- und Mainnet-IDs vermischt oder falsches Netzwerk aktiv. ' +
+      'Einstellungen → Netzwerk: pro Profil (Testnet/Mainnet) eigene Package-ID + Mailbox-ID + passende RPC-URL.'
     )
   }
   if (

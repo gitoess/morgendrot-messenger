@@ -55,7 +55,7 @@
   },
   "soloWizard": {
     "title": "Step 3: Network & mailbox",
-    "description": "Full node (testnet), package ID and mailbox ID — then chat is ready. Get IDs from your team or copy from a reachable boss setup.",
+    "description": "Full node (testnet), package ID and mailbox ID — then chat is ready. Saving also stores a mainnet lab profile (switch under Settings → Network).",
     "rpcUrlLabel": "Full node URL (RPC)",
     "packageIdLabel": "Package ID",
     "mailboxIdLabel": "Mailbox ID",

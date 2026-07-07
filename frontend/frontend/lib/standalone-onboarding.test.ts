@@ -10,7 +10,9 @@ import {
   needsStandaloneOnboardingChoice,
   readStandaloneOnboardingPath,
   setStandaloneOnboardingPath,
+  shouldApplyMeshFirstTransportDefault,
 } from './standalone-onboarding'
+import { requestOpenOnboardingWizard } from './onboarding-progress-store'
 
 vi.mock('@/frontend/lib/onboarding-boss-bootstrap', () => ({
   ensureBossRoleOnServer: vi.fn(async () => ({ ok: true })),
@@ -33,10 +35,13 @@ vi.mock('@/frontend/lib/handoff-device-bootstrap', () => ({
 vi.mock('@/frontend/lib/direct-iota-plain-submit', () => ({
   setIotaSubmitMode: vi.fn(),
   setDirectMailboxDrainEnabled: vi.fn(),
+  getIotaSubmitMode: vi.fn(() => 'client'),
+  isDirectMailboxDrainEnabled: vi.fn(() => true),
 }))
 
 vi.mock('@/frontend/lib/direct-iota-chain-context', () => ({
   setDirectChainOptimisticFlagsEnabled: vi.fn(),
+  getDirectChainIdsReadiness: vi.fn(() => ({ ready: true, missing: [] })),
 }))
 
 describe('standalone-onboarding', () => {
@@ -46,6 +51,7 @@ describe('standalone-onboarding', () => {
   beforeEach(() => {
     Object.keys(store).forEach((k) => delete store[k])
     events.length = 0
+    vi.mocked(requestOpenOnboardingWizard).mockClear()
     vi.stubGlobal('window', {
       localStorage: {
         getItem: (k: string) => (k in store ? store[k] : null),
@@ -71,30 +77,43 @@ describe('standalone-onboarding', () => {
     expect(needsStandaloneOnboardingChoice()).toBe(true)
   })
 
-  it('beginStandaloneSoloOnboarding setzt Pfad und Profil', () => {
+  it('beginStandaloneSoloOnboarding setzt Pfad und Profil ohne Wizard-Zwang', () => {
     beginStandaloneSoloOnboarding()
     expect(readStandaloneOnboardingPath()).toBe('solo')
     expect(isStandaloneSoloPath()).toBe(true)
     expect(store['morgendrot.handoff.localApplied.v1']).toContain('consumer')
+    expect(store['morgendrot.handoff.localApplied.v1']).toContain('iota-anchored')
     expect(needsFirstStartChoice()).toBe(false)
-    expect(events).toContain('morgendrot.standaloneSoloWalletSetupRequest')
+    expect(requestOpenOnboardingWizard).not.toHaveBeenCalled()
+    expect(events).not.toContain('morgendrot.standaloneSoloWalletSetupRequest')
   })
 
-  it('beginStandaloneBossOnboarding setzt boss Pfad und Profil', () => {
+  it('beginStandaloneBossOnboarding öffnet keinen Wizard automatisch', () => {
     beginStandaloneBossOnboarding()
     expect(readStandaloneOnboardingPath()).toBe('boss')
     expect(isStandaloneBossPath()).toBe(true)
-    expect(store['morgendrot.handoff.localApplied.v1']).toContain('boss')
+    expect(requestOpenOnboardingWizard).not.toHaveBeenCalled()
   })
 
-  it('beginStandaloneEinsatzOnboarding setzt einsatz Pfad', () => {
+  it('beginStandaloneEinsatzOnboarding öffnet keinen Wizard automatisch', () => {
     beginStandaloneEinsatzOnboarding()
     expect(readStandaloneOnboardingPath()).toBe('einsatz')
     expect(isStandaloneEinsatzPath()).toBe(true)
+    expect(requestOpenOnboardingWizard).not.toHaveBeenCalled()
   })
 
   it('needsStandaloneOnboardingChoice false nach Pfadwahl', () => {
     setStandaloneOnboardingPath('einsatz')
     expect(needsStandaloneOnboardingChoice()).toBe(false)
+  })
+
+  it('Solo: kein automatischer Funk-Sendepfad bei mesh-first-Profil', () => {
+    setStandaloneOnboardingPath('solo')
+    expect(shouldApplyMeshFirstTransportDefault('mesh-first')).toBe(false)
+  })
+
+  it('Standalone mit Direkt-RPC: kein Funk-Default bei mesh-first', () => {
+    setStandaloneOnboardingPath('einsatz')
+    expect(shouldApplyMeshFirstTransportDefault('mesh-first')).toBe(false)
   })
 })

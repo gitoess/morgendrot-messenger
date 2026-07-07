@@ -30,6 +30,8 @@ import { telegramRecipientToComposerDisplay } from '@/frontend/lib/telegram-noti
 import { ChatViewAttachmentBar } from '@/frontend/components/chat-view-attachment-bar'
 import { ChatViewVoiceRecord } from '@/frontend/components/chat-view-voice-record'
 import type { ApiStatus, ContactMeshEntryClient } from '@/frontend/lib/api'
+import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/dashboard-basis-offline-hint'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import {
   isMessengerSessionKeysReady,
   shouldBlockSendForMissingSessionKeys,
@@ -40,6 +42,7 @@ import {
   ChatViewActiveConversationBar,
   type ChatViewActiveConversationBarProps,
 } from '@/frontend/components/chat-view-active-conversation-bar'
+import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
@@ -147,6 +150,11 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   hideComposerIotaRecipient?: boolean
   /** Aktiver Sidebar-Chat: Name, Handshake-Badge, Verschlüsselt/Klartext. */
   activeConversationBar?: ChatViewActiveConversationBarProps
+  /** Fallback-Umschalter im Composer, wenn keine activeConversationBar. */
+  encryptionModeToggle?: Pick<
+    ChatViewActiveConversationBarProps,
+    'encrypted' | 'forcedTransport' | 'onEncryptedChange'
+  >
   /** Pinnwand-Kanal: Empfänger = feste Brett-0x (Server). */
   isPinnwandChannel?: boolean
   pinnwandBroadcastAddress?: string
@@ -217,6 +225,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     encryptedHandshakeBlocksSend = false,
     hideComposerIotaRecipient = false,
     activeConversationBar,
+    encryptionModeToggle,
     isPinnwandChannel = false,
     pinnwandBroadcastAddress = '',
     canPostToPinnwand: canPostPinnwand = true,
@@ -337,7 +346,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null))
 
-  const vaultLocked = apiStatus?.locked === true
+  const vaultLocked = isStandaloneMessengerWithoutBasis()
+    ? !getDirectIotaSessionSigner()
+    : apiStatus?.locked === true
   const sessionKeysReady = isMessengerSessionKeysReady(apiStatus)
   const sessionKeysMissingBlock = shouldBlockSendForMissingSessionKeys(apiStatus, statusPollAttempted)
   const isTelegramDelivery = composerDelivery === 'telegram'
@@ -611,6 +622,12 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
       <div className="space-y-3">
         {activeConversationBar ? <ChatViewActiveConversationBar {...activeConversationBar} /> : null}
+        {encryptionModeToggle ? (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium text-muted-foreground">Verschlüsselung</p>
+            <ChatViewEncryptionModeToggle {...encryptionModeToggle} />
+          </div>
+        ) : null}
         {showRecipientRow ? (
           <div className="min-h-[4.5rem]">
             {showTelegramField ? (

@@ -55,7 +55,7 @@
   },
   "soloWizard": {
     "title": "Schritt 3: Netz & Postfach",
-    "description": "Fullnode (Testnet), Package-ID und Mailbox-ID — danach ist der Chat bereit. IDs vom Team oder aus dem Boss-Setup übernehmen.",
+    "description": "Fullnode (Testnet), Package-ID und Mailbox-ID — danach ist der Chat bereit. Beim Speichern wird zusätzlich ein Mainnet-Lab-Profil hinterlegt (eigene IDs, Umschalten unter Einstellungen → Netzwerk).",
     "rpcUrlLabel": "Fullnode-URL (RPC)",
     "packageIdLabel": "Package-ID",
     "mailboxIdLabel": "Mailbox-ID",

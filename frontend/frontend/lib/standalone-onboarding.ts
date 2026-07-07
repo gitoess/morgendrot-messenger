@@ -13,14 +13,15 @@ import { syncLocalHandoffSnapshotToChainContext } from '@/frontend/lib/handoff-d
 import {
   setDirectMailboxDrainEnabled,
   setIotaSubmitMode,
+  getIotaSubmitMode,
+  isDirectMailboxDrainEnabled,
 } from '@/frontend/lib/direct-iota-plain-submit'
-import { setDirectChainOptimisticFlagsEnabled } from '@/frontend/lib/direct-iota-chain-context'
+import { setDirectChainOptimisticFlagsEnabled, getDirectChainIdsReadiness } from '@/frontend/lib/direct-iota-chain-context'
 import { hasPersistedDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 import { isStandaloneMessengerWithoutBasis } from '@/frontend/lib/standalone-device-mode'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import {
   readOnboardingProgress,
-  requestOpenOnboardingWizard,
   startOnboarding,
 } from '@/frontend/lib/onboarding-progress-store'
 import { ensureBossRoleOnServer } from '@/frontend/lib/onboarding-boss-bootstrap'
@@ -117,7 +118,7 @@ export function buildStandaloneSoloProfileSnapshot(): LocalHandoffAppliedSnapsho
     handoffLabel: i18n.t('profileLabelSolo', { ns: 'standalone' }),
     role: 'messenger',
     deploymentProfile: 'consumer',
-    transportProfile: 'mesh-first',
+    transportProfile: 'iota-anchored',
     uiVariant: 'messenger',
     simpleMode: true,
   }
@@ -129,7 +130,7 @@ function applyStandaloneDirectIotaDefaults(): void {
   setDirectChainOptimisticFlagsEnabled(true)
 }
 
-/** Privat/Solo: Consumer-Profil lokal anlegen und Wallet-Dialog öffnen. */
+/** Privat/Solo: Consumer-Profil lokal anlegen — Wallet über Startkarte/Tresor, Wizard optional. */
 export function beginStandaloneSoloOnboarding(): void {
   setStandaloneOnboardingPath('solo')
   startOnboarding('wanderer')
@@ -137,11 +138,9 @@ export function beginStandaloneSoloOnboarding(): void {
   saveLocalHandoffAppliedSnapshot(snapshot)
   applyStandaloneDirectIotaDefaults()
   syncLocalHandoffSnapshotToChainContext(snapshot)
-  requestStandaloneSoloWalletSetup()
-  requestOpenOnboardingWizard()
 }
 
-/** Einsatzleitung (Boss bei 0): Profil lokal + Boss-Wizard. */
+/** Einsatzleitung (Boss bei 0): Profil lokal — Wizard optional unter Einstellungen / Einrichtungs-Karte. */
 export function beginStandaloneBossOnboarding(): void {
   setStandaloneOnboardingPath('boss')
   const snapshot = buildStandaloneBossProfileSnapshot()
@@ -149,12 +148,24 @@ export function beginStandaloneBossOnboarding(): void {
   syncLocalHandoffSnapshotToChainContext(snapshot)
   startOnboarding('boss')
   void ensureBossRoleOnServer()
-  requestOpenOnboardingWizard()
 }
 
-/** Einsatz-Helfer: Pfad merken — Handoff-ZIP folgt separat. */
+/** Einsatz-Helfer: Pfad merken — Handoff-ZIP folgt separat; Wizard optional. */
 export function beginStandaloneEinsatzOnboarding(): void {
   setStandaloneOnboardingPath('einsatz')
   startOnboarding('helper')
-  requestOpenOnboardingWizard()
+}
+
+/**
+ * mesh-first-Profil schaltet beim Chat-Start sonst auf Funk — Solo/Standalone-Direkt-RPC bleibt Online.
+ */
+export function shouldApplyMeshFirstTransportDefault(transportProfile?: string | null): boolean {
+  if (transportProfile !== 'mesh-first') return false
+  if (isStandaloneSoloPath()) return false
+  if (!isStandaloneMessengerWithoutBasis()) return true
+  return !(
+    getIotaSubmitMode() === 'client' &&
+    isDirectMailboxDrainEnabled() &&
+    getDirectChainIdsReadiness().ready
+  )
 }

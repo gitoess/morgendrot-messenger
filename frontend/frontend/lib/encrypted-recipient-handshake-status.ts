@@ -4,6 +4,7 @@ import {
   getDirectChatEcdhMaterialForRecipient,
   hasDirectChatEcdhPeerPubForRecipient,
 } from '@/frontend/lib/direct-chat-ecdh-session'
+import { getDirectIotaSessionSignerAddress } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 const ADDR_64 = /^0x[a-f0-9]{64}$/
 
@@ -37,6 +38,11 @@ export function resolveEncryptedRecipientHandshakeStatusSync(p: {
   if (connected.includes(addr)) return 'ready'
   if (getDirectChatEcdhMaterialForRecipient(addr)) return 'ready'
   if (canTryLiveEncryptedDirectMailbox(addr)) return 'ready'
+
+  const myAddr = normalizeRecipient0x(getDirectIotaSessionSignerAddress() ?? '')
+  if (myAddr && addr === myAddr && hasDirectChatEcdhPeerPubForRecipient(addr)) {
+    return 'ready'
+  }
 
   if (p.incomingOffers.some((o) => normalizeRecipient0x(o.sender) === addr)) return 'needs_accept'
 

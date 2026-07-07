@@ -43,6 +43,7 @@ import {
 } from '@/frontend/lib/messenger-pinnwand-capabilities'
 import { writeActiveGroupId } from '@/frontend/lib/messenger-group-store'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import { shouldApplyMeshFirstTransportDefault } from '@/frontend/lib/standalone-onboarding'
 
 export type UseChatViewInboxOrchestrationParams = {
   channelMode: MessengerChatChannel
@@ -336,7 +337,7 @@ export function useChatViewInboxOrchestration(p: UseChatViewInboxOrchestrationPa
   useEffect(() => {
     if (meshFirstTransportDefaultApplied.current || !apiStatus?.transportProfile) return
     meshFirstTransportDefaultApplied.current = true
-    if (apiStatus.transportProfile === 'mesh-first') {
+    if (shouldApplyMeshFirstTransportDefault(apiStatus.transportProfile)) {
       onMeshFirstTransportDefault('mesh')
     }
   }, [apiStatus?.transportProfile, meshFirstTransportDefaultApplied, onMeshFirstTransportDefault])

@@ -128,5 +128,6 @@ describe('capacitor-standalone-bootstrap', () => {
     const fb = readStandaloneDeviceStatusFallback()
     expect(fb?.status.hasKeys).toBe(true)
     expect(fb?.status.locked).toBe(false)
+    expect(fb?.status.capabilities?.transport.iota.write).toBe(true)
   })
 })

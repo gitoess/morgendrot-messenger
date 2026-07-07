@@ -30,6 +30,8 @@ import {
   isStandaloneSoloPath,
   readStandaloneOnboardingPath,
 } from '@/frontend/lib/standalone-onboarding'
+import { resolveMessengerCapabilities } from '@morgendrot/shared/messenger-capabilities-matrix'
+import type { LocalHandoffAppliedSnapshot } from '@/frontend/lib/handoff-local-apply'
 import { ensureI18nInitialized, i18n } from '@/frontend/lib/i18n/client'
 import { standaloneT } from '@/frontend/lib/i18n/standalone-tt'
 import {
@@ -38,6 +40,20 @@ import {
 } from '@/frontend/lib/messaging-persistence-mode'
 
 const LS_CAP_BOOT = 'morgendrot.capacitorStandaloneBootstrapped.v1'
+
+function standaloneCapabilitiesForHandoff(handoff: LocalHandoffAppliedSnapshot | null) {
+  return resolveMessengerCapabilities({
+    roleId: 6,
+    simpleMode: handoff?.simpleMode ?? true,
+    transportProfile: handoff?.transportProfile ?? 'mesh-first',
+    hierarchyRole: handoff?.role ?? 'messenger',
+    override: {
+      transport: {
+        iota: { read: true, write: true },
+      },
+    },
+  })
+}
 
 export { isAutarkyModeEnabled, isStandaloneDeviceMode, shouldPreferStandaloneHandoffStatus } from '@/frontend/lib/standalone-device-mode'
 
@@ -110,7 +126,7 @@ export function readStandaloneDeviceStatusFallback():
         fromCache: true,
         role: 'messenger',
         deploymentProfile: solo ? 'consumer' : 'einsatz',
-        transportProfile: 'mesh-first',
+        transportProfile: solo ? 'iota-anchored' : 'mesh-first',
         uiVariant: 'messenger',
         simpleMode: true,
         signer: 'sdk',
@@ -122,6 +138,8 @@ export function readStandaloneDeviceStatusFallback():
           : onboardingPath === 'einsatz'
             ? [tt('hints.einsatzAwaitHandoff')]
             : [tt('hints.firstStartChoice')],
+        capabilities: standaloneCapabilitiesForHandoff(null),
+        roleId: 6,
       },
       pollClockHint: { okAtMs: Date.now(), httpDateUtcMs: null },
     }
@@ -171,6 +189,8 @@ export function readStandaloneDeviceStatusFallback():
           : [tt('hints.missingFullnode')],
       rpcUrlLabel: rpc ?? undefined,
       ...(broadcastPinnwand ? { broadcastPinnwand } : {}),
+      capabilities: standaloneCapabilitiesForHandoff(handoff),
+      roleId: 6,
     },
     pollClockHint: { okAtMs: savedAtMs, httpDateUtcMs: null },
   }

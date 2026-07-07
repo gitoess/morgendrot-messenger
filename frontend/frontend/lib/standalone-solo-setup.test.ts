@@ -36,6 +36,20 @@ vi.mock('@/frontend/lib/direct-iota-chain-context', () => ({
   persistDirectMailboxChainSnapshot: (...args: unknown[]) => persistDirectMailboxChainSnapshot(...args),
 }))
 
+const writeNetworkProfilesState = vi.fn()
+vi.mock('@/frontend/lib/einsatz-network-profiles', () => ({
+  readNetworkProfilesState: () => ({
+    active: 'testnet',
+    testnet: { rpcUrl: '', packageId: '', mailboxId: '' },
+    mainnet: { rpcUrl: 'https://api.mainnet.iota.cafe', packageId: '', mailboxId: '' },
+  }),
+  writeNetworkProfilesState: (...args: unknown[]) => writeNetworkProfilesState(...args),
+}))
+
+vi.mock('@/frontend/lib/active-network-chain-sync', () => ({
+  syncActiveNetworkChainSnapshot: vi.fn(),
+}))
+
 const setBrowserDirectIotaRpcUrlOverride = vi.fn()
 vi.mock('@/frontend/lib/direct-iota-rpc', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@/frontend/lib/direct-iota-rpc')>()
@@ -51,6 +65,7 @@ describe('standalone-solo-setup', () => {
     persistDirectChainFieldIds.mockClear()
     persistDirectMailboxChainSnapshot.mockClear()
     setBrowserDirectIotaRpcUrlOverride.mockClear()
+    writeNetworkProfilesState.mockClear()
   })
 
   afterEach(() => {
@@ -86,6 +101,17 @@ describe('standalone-solo-setup', () => {
       senderAddress: HEX_ADDR,
     })
     expect(persistDirectMailboxChainSnapshot).toHaveBeenCalled()
+    expect(writeNetworkProfilesState).toHaveBeenCalled()
+    const np = writeNetworkProfilesState.mock.calls[0]?.[0] as {
+      active: string
+      setupPlan: string
+      testnet: { packageId: string }
+      mainnet: { packageId: string }
+    }
+    expect(np.active).toBe('testnet')
+    expect(np.setupPlan).toBe('both')
+    expect(np.testnet.packageId).toBe(HEX_PKG)
+    expect(np.mainnet.packageId).toMatch(/^0x[a-f0-9]{64}$/i)
   })
 
   it('lehnt ungültige Package-ID ab', () => {
