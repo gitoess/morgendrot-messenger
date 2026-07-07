@@ -132,7 +132,7 @@ describe('EinsatzleitungJoinRequestsPanel (Roster P0 UI)', () => {
     expect(rosterOrder).toBeLessThan(wireOrder)
 
     expect(screen.getByText(/Freigegeben — Roster aktualisiert/i)).toBeInTheDocument()
-    expect(screen.getByText(/LAN \+ IOTA/i)).toBeInTheDocument()
+    expect(screen.getByText(/Lokales Netz ✓ · IOTA ✓/)).toBeInTheDocument()
   })
 
   it('zeigt Konflikt-Diff bei bestehendem Roster-Eintrag', () => {

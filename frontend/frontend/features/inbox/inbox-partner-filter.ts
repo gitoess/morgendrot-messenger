@@ -3,6 +3,7 @@
  * Eingehend = Absender ist nicht ich; ausgehend = Absender bin ich (Mailbox spiegelt gesendete Zeilen so).
  */
 import { isPlaceholderIotaAddress } from '@/frontend/lib/contact-storage-key'
+import { telegramOutboundCounterpartyKeys } from '@/frontend/lib/telegram-outbound-inbox'
 import type { Message } from '@/frontend/lib/types'
 
 /** Keine Platzhalter-/Leer-Adressen als Posteingangs-Gegenüber. */
@@ -108,6 +109,12 @@ export function filterInboxMessagesByPartnerAndDirection(
         return false
       }
       if (!partnerAddress) return true
+      if (isMessageOutgoing(m, myAddress)) {
+        const tgKeys = telegramOutboundCounterpartyKeys(m)
+        if (tgKeys.length > 0) {
+          return tgKeys.some((k) => norm(k) === norm(partnerAddress))
+        }
+      }
       const cpTg = messageCounterpartyAddress(m, myAddress)
       if (!cpTg) return false
       return norm(cpTg) === norm(partnerAddress)
@@ -163,6 +170,17 @@ export function uniqueCounterpartyAddresses(messages: Message[], myAddress: stri
   const seen = new Set<string>()
   const out: string[] = []
   for (const m of messages) {
+    const tgKeys = telegramOutboundCounterpartyKeys(m)
+    if (tgKeys.length > 1) {
+      for (const k of tgKeys) {
+        if (isIgnoredInboxCounterpartyAddress(k)) continue
+        const key = norm(k)
+        if (seen.has(key)) continue
+        seen.add(key)
+        out.push(k)
+      }
+      continue
+    }
     const cp = messageCounterpartyAddress(m, myAddress)
     if (!cp || isIgnoredInboxCounterpartyAddress(cp)) continue
     const k = norm(cp)

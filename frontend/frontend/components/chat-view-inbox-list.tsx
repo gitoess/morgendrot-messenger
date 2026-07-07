@@ -49,6 +49,10 @@ import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import { contactDisplayLabel } from '@/frontend/lib/contact-display'
 import { formatInboxLoadError, INBOX_BASIS_OFFLINE_HEADLINE } from '@/frontend/features/inbox/inbox-load-error'
 import { addressMatchesIdentity, isMessageOutgoing } from '@/frontend/features/inbox/inbox-partner-filter'
+import {
+  formatTelegramOutboundRecipientLine,
+  telegramOutboundCounterpartyKeys,
+} from '@/frontend/lib/telegram-outbound-inbox'
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
@@ -448,7 +452,10 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                     <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-foreground/80">
                       {myAddress && addressMatchesIdentity(row.msg.recipient, myAddress)
                         ? 'An mich'
-                        : `An ${row.msg.recipient.slice(0, 8)}…${row.msg.recipient.slice(-4)}`}
+                        : formatTelegramOutboundRecipientLine(
+                            telegramOutboundCounterpartyKeys(row.msg)
+                          ) ??
+                          `An ${row.msg.recipient.slice(0, 8)}…${row.msg.recipient.slice(-4)}`}
                     </span>
                   ) : null}
                 </div>

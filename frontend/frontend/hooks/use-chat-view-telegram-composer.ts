@@ -33,7 +33,11 @@ export function useChatViewTelegramComposer(p: {
   onMessageChange: (v: string) => void
   clearAttachments: () => void
   onStatusFeedback?: (msg: string, status?: 'idle' | 'success' | 'error') => void
-  onTelegramDelivered?: (payload: { recipientKey: string; text: string }) => void
+  onTelegramDelivered?: (payload: {
+    recipientKey: string
+    recipientKeys?: string[]
+    text: string
+  }) => void
 }) {
   const [telegramOnlyBusy, setTelegramOnlyBusy] = useState(false)
   const [telegramNotifyOnSend, setTelegramNotifyOnSend] = useState(false)
@@ -121,23 +125,30 @@ export function useChatViewTelegramComposer(p: {
 
     let delivered = 0
     let lastError = ''
+    const deliveredTargets: string[] = []
     for (const target of targets) {
       const r = await notifyTelegramContact({
         recipientAddress: target,
         messagePreview: telegramPreview,
         senderLabel: myLabel,
+        skipJournal: true,
       })
       if (r.delivered) {
         delivered++
-        p.onTelegramDelivered?.({
-          recipientKey: target,
-          text: telegramPreview,
-        })
+        deliveredTargets.push(target)
       } else if (r.error) {
         lastError = r.error
       } else if (r.skipped) {
         lastError = r.skipped
       }
+    }
+
+    if (deliveredTargets.length > 0) {
+      p.onTelegramDelivered?.({
+        recipientKey: deliveredTargets[0]!,
+        text: telegramPreview,
+        recipientKeys: deliveredTargets,
+      })
     }
 
     if (delivered > 0) {

@@ -40,6 +40,8 @@ export interface Message {
   chainPurgeKind?: 'pairwise' | 'team-broadcast'
   /** Wire hatte [[MORG_PINNWAND_V1]] — bleibt gesetzt, auch wenn UI-Marker entfernt wird. */
   pinnwandPost?: boolean
+  /** Ausgehende Telegram-Broadcasts: alle tg:-Empfänger einer zusammengeführten Zeile. */
+  telegramRecipients?: string[]
 }
 
 export interface KeyData {

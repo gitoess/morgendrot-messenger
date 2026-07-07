@@ -1,5 +1,10 @@
 import type { TelegramJournalEntryClient } from '@/frontend/lib/api/telegram-journal'
 import type { Message } from '@/frontend/lib/types'
+import {
+  applyTelegramOutboundRecipients,
+  buildTelegramOutboundDedupKey,
+  normalizeTelegramContactKey,
+} from '@/frontend/lib/telegram-outbound-inbox'
 
 /** Telegram-Journal → Posteingangs-Zeilen (lokal, kein IOTA). */
 export function mapTelegramJournalToMessages(
@@ -9,12 +14,12 @@ export function mapTelegramJournalToMessages(
   const me = myAddress.trim()
   return entries.map((e) => {
     const out = e.direction === 'out'
-    const cp = e.contactKey?.trim() || `tg:${e.chatId}`
+    const cp = normalizeTelegramContactKey(e.contactKey?.trim() || `tg:${e.chatId}`)
     const content =
       e.direction === 'in' && e.senderLabel?.trim()
         ? `${e.senderLabel.trim()}: ${e.text}`
         : e.text
-    return {
+    const row: Message = {
       id: e.id,
       from: out ? me : cp,
       recipient: out ? cp : me,
@@ -23,7 +28,10 @@ export function mapTelegramJournalToMessages(
       encrypted: false,
       source: 'telegram',
       transports: ['telegram'],
-      dedupKey: `telegram|${e.direction}|${cp}|${e.text.slice(0, 80)}|${Math.floor(e.ts / 60_000)}`,
+      dedupKey: out
+        ? buildTelegramOutboundDedupKey(me, e.text, e.ts)
+        : `telegram|${e.direction}|${cp}|${e.text.slice(0, 80)}|${Math.floor(e.ts / 60_000)}`,
     }
+    return out ? applyTelegramOutboundRecipients(row, [cp]) : row
   })
 }

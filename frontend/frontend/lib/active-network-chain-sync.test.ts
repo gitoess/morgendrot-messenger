@@ -156,7 +156,7 @@ describe('active-network-chain-sync', () => {
             'Dependent package not found on-chain: 0x06e099'
         )
         expect(cleared).toBe(1)
-        expect(userMessage).toMatch(/Testnet-Package-ID/)
+        expect(userMessage).toMatch(/Package existiert auf diesem Netz nicht/)
         expect(userMessage).toMatch(/Warteschlange entfernt/)
     })
 

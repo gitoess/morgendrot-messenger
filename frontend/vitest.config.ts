@@ -34,6 +34,11 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
+      /** Vite löst @iota/iota-sdk/verify-Subpath in CI nicht über package exports — direkter dist-Pfad. */
+      '@iota/iota-sdk/verify': path.resolve(
+        __dirname,
+        'node_modules/@iota/iota-sdk/dist/esm/verify/index.js'
+      ),
     },
   },
   test: {

@@ -1,6 +1,35 @@
 import type { Message } from '@/frontend/lib/types'
+import {
+  applyTelegramOutboundRecipients,
+  buildTelegramOutboundDedupKey,
+  normalizeTelegramContactKey,
+} from '@/frontend/lib/telegram-outbound-inbox'
 
 export type AppendInboxMessageFn = (msg: Message) => void
+
+function buildTelegramOutgoingRow(
+  myAddress: string,
+  recipients: string[],
+  text: string,
+  ts: number,
+  idPrefix: string
+): Message {
+  const me = myAddress.trim()
+  const trimmed = text.trim()
+  const keys = recipients.map((r) => normalizeTelegramContactKey(r)).filter(Boolean)
+  const base: Message = {
+    id: `${idPrefix}-${ts}-${Math.random().toString(36).slice(2, 9)}`,
+    from: me,
+    recipient: keys[0] ?? '',
+    content: trimmed,
+    timestamp: ts,
+    encrypted: false,
+    source: 'telegram',
+    transports: ['telegram'],
+    dedupKey: buildTelegramOutboundDedupKey(me, trimmed, ts),
+  }
+  return applyTelegramOutboundRecipients(base, keys)
+}
 
 /** Sofort im Posteingang/Ausgang anzeigen (Server-Journal wird beim Notify mitgeschrieben). */
 export function recordTelegramOutgoing(
@@ -9,20 +38,18 @@ export function recordTelegramOutgoing(
   contactKey: string,
   text: string
 ): void {
+  recordTelegramOutgoingMany(append, myAddress, [contactKey], text)
+}
+
+/** Mehrere tg:-Empfänger → eine Ausgangszeile im Posteingang. */
+export function recordTelegramOutgoingMany(
+  append: AppendInboxMessageFn | undefined,
+  myAddress: string,
+  contactKeys: string[],
+  text: string
+): void {
   const me = myAddress.trim()
-  const cp = contactKey.trim().toLowerCase()
-  if (!append || !me || !cp || !text.trim()) return
-  const ts = Date.now()
-  const id = `telegram-out-local-${ts}-${Math.random().toString(36).slice(2, 9)}`
-  append({
-    id,
-    from: me,
-    recipient: cp,
-    content: text.trim(),
-    timestamp: ts,
-    encrypted: false,
-    source: 'telegram',
-    transports: ['telegram'],
-    dedupKey: `telegram|out|${cp}|${text.slice(0, 80)}|${Math.floor(ts / 60_000)}`,
-  })
+  const keys = contactKeys.map((k) => normalizeTelegramContactKey(k)).filter(Boolean)
+  if (!append || !me || keys.length === 0 || !text.trim()) return
+  append(buildTelegramOutgoingRow(me, keys, text, Date.now(), 'telegram-out-local'))
 }

@@ -15,7 +15,6 @@ import {
   resolveSingleWireSuccessMessage,
   stripMailboxOutNonceFromPayload,
 } from '@/frontend/features/send/chat-view-handle-send-group'
-import { GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG } from '@/frontend/lib/group-team-broadcast'
 
 const MB = '0x' + 'a'.repeat(64)
 
@@ -58,7 +57,7 @@ describe('chat-view-handle-send-group', () => {
     expect(stripMailboxOutNonceFromPayload(body)).toBe(body)
   })
 
-  it('getGroupSendPreSendError blockiert verschlüsselt auf Internet-Chain', () => {
+  it('getGroupSendPreSendError erlaubt Team-Broadcast mit Team-Postfach (auch verschlüsselt)', () => {
     expect(
       getGroupSendPreSendError({
         isGroupChannel: true,
@@ -67,7 +66,7 @@ describe('chat-view-handle-send-group', () => {
         encrypted: true,
         activeGroup: group,
       })
-    ).toBe(GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG)
+    ).toBeNull()
   })
 
   it('getGroupSendPreSendError ignoriert Nicht-Gruppen-Chain', () => {

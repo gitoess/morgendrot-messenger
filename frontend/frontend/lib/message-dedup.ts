@@ -1,4 +1,8 @@
 import type { Message } from './types'
+import {
+  applyTelegramOutboundRecipients,
+  mergeTelegramOutboundRecipientKeys,
+} from '@/frontend/lib/telegram-outbound-inbox'
 
 const DEFAULT_WINDOW_MS = 120_000
 
@@ -68,6 +72,18 @@ export function mergeMessageByDedup(prev: Message[], msg: Message): Message[] {
     content: pickMergedInboxContent(cc, mc),
     encrypted: Boolean(msg.encrypted || cur.encrypted),
     pinnwandPost: cur.pinnwandPost === true || msg.pinnwandPost === true ? true : undefined,
+  }
+  if (
+    merged.source === 'telegram' &&
+    cur.from.trim().toLowerCase() === msg.from.trim().toLowerCase() &&
+    key.startsWith('telegram|out|')
+  ) {
+    const withRecipients = applyTelegramOutboundRecipients(
+      merged,
+      mergeTelegramOutboundRecipientKeys(cur, msg)
+    )
+    const rest = prev.filter((_, j) => j !== i)
+    return [withRecipients, ...rest]
   }
   const rest = prev.filter((_, j) => j !== i)
   return [merged, ...rest]

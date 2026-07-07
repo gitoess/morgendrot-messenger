@@ -17,7 +17,7 @@ import {
 } from '@/frontend/lib/contact-handshake-ui'
 import { isValidRecipient0x } from '@/frontend/lib/encrypted-recipient-handshake-status'
 import { isPinnwandChannel } from '@/frontend/lib/messenger-chat-channel'
-import { recordTelegramOutgoing } from '@/frontend/lib/record-telegram-outgoing'
+import { recordTelegramOutgoingMany } from '@/frontend/lib/record-telegram-outgoing'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
@@ -165,8 +165,13 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onMessageChange: composerDraft.onMessageChange,
     clearAttachments: attachmentBar.clearCompactAttachment,
     onStatusFeedback: sendActions.onStatusFeedback,
-    onTelegramDelivered: ({ recipientKey, text }) => {
-      recordTelegramOutgoing(inboxActions.appendMeshMessage, inboxFeedRead.myAddress, recipientKey, text)
+    onTelegramDelivered: ({ recipientKeys, recipientKey, text }) => {
+      recordTelegramOutgoingMany(
+        inboxActions.appendMeshMessage,
+        inboxFeedRead.myAddress,
+        recipientKeys?.length ? recipientKeys : [recipientKey],
+        text
+      )
     },
   })
 
