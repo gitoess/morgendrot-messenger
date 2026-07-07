@@ -64,6 +64,7 @@ import { HelperSeedSetupDialog } from '@/frontend/components/helper-seed-setup-d
 import { StandaloneHandoffActivateCard } from '@/frontend/components/standalone-handoff-activate-card'
 import { StandaloneFirstStartCard } from '@/frontend/components/standalone-first-start-card'
 import { StandaloneSoloWizardCard } from '@/frontend/components/standalone-solo-wizard-card'
+import { DashboardSosEmergencyButton } from '@/frontend/components/dashboard-sos-emergency-button'
 import { OnboardingResumeCard } from '@/frontend/components/onboarding/onboarding-resume-card'
 import { OnboardingWizardHost } from '@/frontend/components/onboarding/onboarding-wizard-host'
 import { drainTeamSyncOfflineQueue } from '@/frontend/lib/team-sync-wire'
@@ -636,6 +637,11 @@ function MessengerDashboardBody({
           }}
         />
         <StandaloneSoloWizardCard apiSnapshot={s.apiSnapshot} />
+        {!s.locked && !isEinsatzLeadHome && liteMessengerFromApi ? (
+          <div className="mb-6 flex justify-center">
+            <DashboardSosEmergencyButton onOpenMessages={s.openMessengerChatView} />
+          </div>
+        ) : null}
         {!s.locked && isEinsatzLeadHome ? (
           <DashboardMessengerBossHome
             apiSnapshot={s.apiSnapshot}

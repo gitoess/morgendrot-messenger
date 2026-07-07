@@ -51,7 +51,7 @@
 | **Handbuch** | **`docs/MESSENGER-CHAT-HANDBUCH.md`** + **`frontend/public/handbook/…`** — Abschnitt Kontakt anlegen, Funk-Export-Umfang | — |
 | **§ H.36 P0** | **`onboarding/`** — Wizard Host/Dialog/Shell, Progress-Store, Resume-Card, Einstellungen-Sektion; Deep-Links Handoff/Seed/WLAN | Feldtest Boss/Helfer/Wanderer linear |
 | **§ H.36 P1 (Teil)** | Wire **`MORG_TEAM_*`** + LAN-Poll + Kanal-Feedback; **Boss-`sig` freeze** (`docs/MORG-TEAM-WIRE-SIG-SCHEMA.md`) | Feldtest Block 2 (zweiter PC); manueller LAN-Zustelltest |
-| **§ H.3n B2.5 (Teil)** | **`ChatViewSosEmergencySheet`** + Lage-Bundle (`sos-lage-bundle.ts`); SOS auf Dashboard + Chat; **`MORG_EMERGENCY_V1`**-Marker bei `emergencyWire` | Sendepfad erzwingt noch nicht durchgängig **`encrypted=false`** / **`/send-plain`** bei normalem Composer-SOS; Fan-out-Feldabnahme |
+| **§ H.3n B2.5 (Teil)** | **`ChatViewSosEmergencySheet`** + Lage-Bundle; SOS **Fan-out** Funk+Online parallel (`chat-view-emergency-fanout.ts`); Klartext erzwingen; Dashboard-SOS mit Boss-Partner-Override (`resolve-dashboard-emergency-partner.ts`); CDP **`apk-h36-sos-fanout-fieldtest.mjs`** | Fan-out **Feld-PASS** (Composer-Status + Boss-Inbox); Boss-Vault-PW am PC |
 | **§ H.26 B4b (Teil)** | Einstellungen **`settings-telegram-einsatz-group`**, Handoff-Extras, Alarmgruppe-Join-Karten, **`postTelegramGroupAlarm`**, Inbound ohne Telefonbuch-Eintrag | Einladungslink-Onboarding Feldtest; **B4c** Multi-Pick |
 | **§ H.1b Scope B lazy** | **`lazy/messenger-scope-b.ts`** — BossView, ConfigView, Handoff-Import, Pulse/Relay/Protokoll lazy (Wellen 1–4 laut **`docs/MESSENGER-SCOPE-P0-LAZY-PLAN.md`**) | Manuell Network-Tab Helfer vs Boss; optional CI Bundle-Diff |
 
@@ -59,7 +59,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-07-07):** **4e/4f** wenn zweites Gerät. **Dann Code:** **§ H.3n B2.5**; **§ H.1a** Vitest-Slices. **Erledigt (Feld):** Modus A (**2026-07-03**); Standalone **4b–4d** + Helfer→Boss + **§3 Simple** + **§ H.36 P1 LAN WLAN-only** (**2026-07-07**, 1 Gerät). **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
+**Nächste konkrete Schritte (2026-07-07):** **§ H.3n B2.5** Fan-out-Feldtest **PASS** (Boss-Vault + Composer-Status); **4e/4f** wenn zweites Gerät; **§ H.1a** Vitest-Slices. **Erledigt (Feld):** Modus A; Standalone **4b–4d** + Helfer→Boss + **§3 Simple** + **§ H.36 P1 LAN WLAN-only**; **B2.5 PARTIAL** (Dashboard-SOS → Chat, Pending konsumiert). **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C**; **§ H.26** B5 `/nodes`/`/qr`.
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 

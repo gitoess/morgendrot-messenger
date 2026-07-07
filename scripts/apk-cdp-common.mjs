@@ -964,7 +964,9 @@ export async function applyBossHandoffChainViaStorage(session, p) {
           const b = boss.toLowerCase();
           if (!peers.some((x) => String(x?.address || x).toLowerCase() === b)) {
             peers.push({ address: boss, label: 'Boss', savedAtMs: Date.now() });
-            localStorage.setItem(peerKey, JSON.stringify({ ...snap, peers }));
+            localStorage.setItem(peerKey, JSON.stringify({ ...snap, peers, addresses: [boss], savedAtMs: Date.now() }));
+          } else {
+            localStorage.setItem(peerKey, JSON.stringify({ ...snap, peers, addresses: [boss], savedAtMs: Date.now() }));
           }
           const dirKey = 'morgendrot.contacts.directory.v1';
           const dirRaw = localStorage.getItem(dirKey);

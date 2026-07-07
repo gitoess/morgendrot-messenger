@@ -19,3 +19,12 @@ export function consumeDashboardSosPending(): string | null {
     return null
   }
 }
+
+export function peekDashboardSosPending(): string | null {
+  try {
+    const raw = sessionStorage.getItem(DASHBOARD_SOS_PENDING_KEY)
+    return raw?.trim() ? raw : null
+  } catch {
+    return null
+  }
+}

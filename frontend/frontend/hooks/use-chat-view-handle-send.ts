@@ -66,6 +66,14 @@ import {
   resolveSingleWireSuccessMessage,
 } from '@/frontend/features/send/chat-view-handle-send-group'
 import { createChatViewSendOnePart } from '@/frontend/features/send/chat-view-handle-send-one-part'
+import {
+  emergencyFanOutAnyOk,
+  formatEmergencyFanOutStatus,
+  planEmergencyFanOutLegs,
+  runEmergencyFanOut,
+  type EmergencyFanOutLegResult,
+} from '@/frontend/features/send/chat-view-emergency-fanout'
+import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import type { SendPartOk } from '@/frontend/features/send/chat-view-handle-send-part-types'
 import {
   isForensicImageMailboxAttestationEnabled,
@@ -204,6 +212,17 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
     const emergencyKind = opts?.emergencyWire
     const isEmergencySend = emergencyKind === 'text' || emergencyKind === 'voice'
+    const emergencyPartnerHint = opts?.emergencyPartnerOverride?.trim().toLowerCase() ?? ''
+    const emergencyPartnerResolved =
+      emergencyPartnerHint && ADDR_64_LOWER.test(emergencyPartnerHint) ? emergencyPartnerHint : ''
+    const sendPartner = emergencyPartnerResolved || partner
+    const sendRecipient = recipient.trim() || emergencyPartnerResolved || recipient
+    const sendPlainMailboxRecipient = emergencyPartnerResolved
+      ? resolveComposerKlartextIotaAddress(sendRecipient, sendPartner, isPrivate)
+      : plainMailboxRecipient
+    const sendEncryptedMailboxRecipient = emergencyPartnerResolved
+      ? resolveEncryptedMailboxRecipient(sendRecipient, sendPartner)
+      : encryptedMailboxRecipient
     const sendEncrypted = resolveChatSendEncryption({ encrypted, emergencyWire: emergencyKind })
     const inventoryType = attachedBlobBase64 || attachedAudioBase64 || attachedLora ? 'image' : 'text'
     const meshLoRaImageSendActive = isMeshLoRaImageSendActive({
@@ -682,7 +701,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       forcedTransport === 'mesh' &&
       (!meshPlaintextToNodeEnabled || parseMeshtasticNodeIdToNumber(meshPlaintextNodeId) !== null)
 
-    if (!sendEncrypted && !plainMailboxRecipient && !groupMailboxInternetChain) {
+    if (
+      !isEmergencySend &&
+      !sendEncrypted &&
+      !plainMailboxRecipient &&
+      !groupMailboxInternetChain
+    ) {
       const broadcastTargets = parseComposerIotaRecipientAddresses(recipient, partner, false)
       if (broadcastTargets.length === 0 && !meshKlartextOkWithoutZeroXRecipient) {
         applyValidationError(
@@ -719,6 +743,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
     const recipientTrimLower = plainMailboxRecipient.trim().toLowerCase()
     if (
+      !isEmergencySend &&
       !sendEncrypted &&
       forcedTransport === 'internet' &&
       iotaSendTargets.length === 0 &&
@@ -777,7 +802,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
     }
 
     /** LongFast / TEXT_MESSAGE: harte Nutzlastgrenze — galt fälschlich nur privat; öffentlicher Funk braucht dieselbe Kappe. */
-    if (!sendEncrypted && forcedTransport === 'mesh') {
+    if (!sendEncrypted && forcedTransport === 'mesh' && !isEmergencySend) {
       const plaintextMaxChars = MESH_PLAINTEXT_MAX_CHARS
       for (const snap of textSnaps) {
         const charCount = [...snap].length
@@ -892,57 +917,98 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
     type PartOk = SendPartOk
 
-    const sendOnePart = createChatViewSendOnePart({
+    const emergencyFanOutLegs =
+      isEmergencySend && emergencyKind === 'text'
+        ? planEmergencyFanOutLegs({
+            isPrivate,
+            plainMailboxRecipient: sendPlainMailboxRecipient,
+            composerRecipient: sendRecipient,
+            composerPartner: sendPartner,
+            groupMailboxInternetChain,
+          })
+        : null
+
+    const mailboxCtx = {
       throwIfCancelled,
-      setStatus,
-      setStatusMsg,
+      ensureEncryptedPeerReady,
+      shouldMarkPinnwandPlainPost,
+      mailboxOptsFor,
+      publishGroupStreamsAfterSend,
+      onOfflineMailboxQueueChanged,
+      myAddress,
+      encryptedMailboxRecipient: sendEncryptedMailboxRecipient,
+      plainMailboxRecipient: sendPlainMailboxRecipient,
+      composerRecipient: sendRecipient,
+      composerPartner: sendPartner,
+      apiStatus,
+      deviceTimeTrustWarn,
+      allowOfflineMailboxQueue,
+      groupMailboxInternetChain,
+      isGroupChannel,
       isPrivate,
-      encrypted: sendEncrypted,
+      activeGroup,
+      messagingPersistenceMode,
+    }
+
+    const meshCtx = {
+      meshtastic,
+      meshtasticChannelIndex,
+      meshPlaintextDest,
+      appendMeshMessage,
+      myAddress,
       meshPath4StyleActive,
-      forcedTransport,
-      mailbox: {
+      isEmergencySend,
+      isUserCancelError,
+      runPath4MailboxSelfArchive,
+    }
+
+    const buildSendOnePart = (transport: ForcedTransport, quiet: boolean) => {
+      const legCapture = { err: '' }
+      const enc = emergencyFanOutLegs ? false : sendEncrypted
+      const sender = createChatViewSendOnePart({
         throwIfCancelled,
-        ensureEncryptedPeerReady,
-        shouldMarkPinnwandPlainPost,
-        mailboxOptsFor,
-        publishGroupStreamsAfterSend,
-        onOfflineMailboxQueueChanged,
-        myAddress,
-        encryptedMailboxRecipient,
-        plainMailboxRecipient,
-        composerRecipient: recipient,
-        composerPartner: partner,
-        apiStatus,
-        deviceTimeTrustWarn,
-        allowOfflineMailboxQueue,
-        groupMailboxInternetChain,
-        isGroupChannel,
+        setStatus: quiet ? () => {} : setStatus,
+        setStatusMsg: quiet ? (m) => { legCapture.err = m } : setStatusMsg,
         isPrivate,
-        activeGroup,
-        messagingPersistenceMode,
-        forcedTransport,
-      },
-      mesh: {
-        meshtastic,
-        meshtasticChannelIndex,
-        meshPlaintextDest,
-        appendMeshMessage,
-        myAddress,
+        encrypted: enc,
         meshPath4StyleActive,
-        isEmergencySend,
-        encrypted: sendEncrypted,
-        isUserCancelError,
-        runPath4MailboxSelfArchive,
-      },
-    })
+        forcedTransport: transport,
+        mailbox: { ...mailboxCtx, forcedTransport: transport },
+        mesh: { ...meshCtx, encrypted: enc },
+      })
+      return { sender, legCapture }
+    }
+
+    const sendOnePart = buildSendOnePart(forcedTransport, false).sender
 
     let userCancelledMain = false
+    let lastFanOutResults: EmergencyFanOutLegResult[] | null = null
     try {
       let lastOk: PartOk | null = null
       const path4Footnotes: string[] = []
       for (let i = 0; i < textSnaps.length; i++) {
         throwIfCancelled()
         const textSnap = textSnaps[i]!
+        if (emergencyFanOutLegs) {
+          const { results, best } = await runEmergencyFanOut(emergencyFanOutLegs, async (transport) => {
+            const { sender, legCapture } = buildSendOnePart(transport, true)
+            const part = await sender(textSnap)
+            return {
+              ok: part.ok,
+              part: part.ok ? part : undefined,
+              detail: part.ok ? undefined : legCapture.err.trim() || 'Senden fehlgeschlagen',
+            }
+          })
+          lastFanOutResults = results
+          if (!emergencyFanOutAnyOk(results)) {
+            setStatus('error')
+            setStatusMsg(formatEmergencyFanOutStatus(results))
+            return
+          }
+          if (best?.path4Footnote) path4Footnotes.push(best.path4Footnote)
+          lastOk = best
+          continue
+        }
         const r = await sendOnePart(textSnap)
         if (!r.ok) {
           if (textSnaps.length > 1 && i > 0) {
@@ -958,7 +1024,9 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
 
       const successTail = path4Footnotes.join('')
       let successMsg: string
-      if (textSnaps.length > 1) {
+      if (isEmergencySend && lastFanOutResults) {
+        successMsg = `SOS — ${formatEmergencyFanOutStatus(lastFanOutResults)}${successTail}`
+      } else if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
       } else if (lastOk?.broadcastTargetCount != null && lastOk.broadcastTargetCount > 1) {
         successMsg = `An ${lastOk.broadcastTargetCount} Empfänger gesendet.${successTail}`

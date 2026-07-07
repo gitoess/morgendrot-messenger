@@ -82,7 +82,8 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 import { useMessengerClientExpertMode } from '@/frontend/hooks/use-messenger-client-expert-mode'
 import { recordContactLastContacted, readContactFavorites, readHiddenContacts, toggleContactFavorite } from '@/frontend/lib/contact-phonebook-meta-store'
-import { consumeDashboardSosPending } from '@/frontend/lib/dashboard-sos-pending'
+import { consumeDashboardSosPending, peekDashboardSosPending } from '@/frontend/lib/dashboard-sos-pending'
+import { resolveDashboardEmergencyPartner } from '@/frontend/lib/resolve-dashboard-emergency-partner'
 import { canFetchHandshakesViaDirectIota } from '@/frontend/lib/direct-iota-handshake-fetch'
 import { hasCachedHandshakeOffers } from '@/frontend/lib/handshake-offers-cache'
 import {
@@ -419,15 +420,39 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const dashboardSosHandledRef = useRef(false)
   useEffect(() => {
     if (dashboardSosHandledRef.current) return
+    const pendingPeek = peekDashboardSosPending()
+    if (!pendingPeek) return
+    const me = myAddress.trim()
+    if (!/^0x[a-fA-F0-9]{64}$/i.test(me)) return
+    if (apiStatus?.locked) return
     const pending = consumeDashboardSosPending()
     if (!pending) return
     dashboardSosHandledRef.current = true
+    const emergencyPartner = resolveDashboardEmergencyPartner({ directory, myAddress: me })
+    if (emergencyPartner) {
+      setPartner(emergencyPartner)
+      setRecipient(emergencyPartner)
+      selectInboxConversationPartner(emergencyPartner)
+    }
     setMessage(pending)
-    void panelMessengerPorts.sendActions.onSend({
-      emergencyWire: 'text',
-      composerOverride: pending,
-    })
-  }, [panelMessengerPorts.sendActions, setMessage])
+    const timer = window.setTimeout(() => {
+      void messengerPorts.sendActions.onSend({
+        emergencyWire: 'text',
+        composerOverride: pending,
+        emergencyPartnerOverride: emergencyPartner ?? undefined,
+      })
+    }, 400)
+    return () => window.clearTimeout(timer)
+  }, [
+    apiStatus?.locked,
+    directory,
+    messengerPorts.sendActions,
+    myAddress,
+    selectInboxConversationPartner,
+    setMessage,
+    setPartner,
+    setRecipient,
+  ])
 
   const inboxPanelProps = useChatViewInboxPanelProps({
     messengerPorts: panelMessengerPorts,
