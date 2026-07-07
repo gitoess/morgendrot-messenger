@@ -330,3 +330,101 @@ export function resolveHandoffExportPackageId(opts: {
     }
     return { ok: true, packageId: normalizeHandoffId(id) };
 }
+
+export type ResolvedPackageGlobals = {
+    mailboxId: string;
+    vaultRegistryId: string;
+    commandRegistryId: string;
+};
+
+/**
+ * Handoff-Export: MAILBOX_ID / Registries gegen GlobalsCreated auf der Ziel-RPC prüfen.
+ * autoCorrect=true → Chain-Werte übernehmen; false → 400 bei Mismatch.
+ */
+export function reconcileHandoffExportGlobals(opts: {
+    packageId: string;
+    mailboxId?: string;
+    commandRegistryId?: string;
+    vaultRegistryId?: string;
+    resolved: ResolvedPackageGlobals | null;
+    autoCorrect?: boolean;
+}):
+    | {
+          ok: true;
+          mailboxId: string;
+          commandRegistryId: string;
+          vaultRegistryId: string;
+          corrected: boolean;
+          warnings: string[];
+      }
+    | { ok: false; error: string } {
+    const pkg = normalizeHandoffId(opts.packageId);
+    const mbIn = opts.mailboxId?.trim() ? normalizeHandoffAddress(opts.mailboxId) : '';
+    const crIn = opts.commandRegistryId?.trim() ? normalizeHandoffAddress(opts.commandRegistryId) : '';
+    const vrIn = opts.vaultRegistryId?.trim() ? normalizeHandoffAddress(opts.vaultRegistryId) : '';
+    const hasAny = Boolean(mbIn || crIn || vrIn);
+
+    if (!opts.resolved) {
+        if (hasAny) {
+            return {
+                ok: false,
+                error: `Kein GlobalsCreated für Package ${pkg.slice(0, 14)}… auf der Ziel-RPC — create_globals ausführen oder MAILBOX_ID leer lassen.`,
+            };
+        }
+        return {
+            ok: true,
+            mailboxId: '',
+            commandRegistryId: '',
+            vaultRegistryId: '',
+            corrected: false,
+            warnings: [],
+        };
+    }
+
+    const resolved = {
+        mailboxId: normalizeHandoffAddress(opts.resolved.mailboxId),
+        commandRegistryId: normalizeHandoffAddress(opts.resolved.commandRegistryId),
+        vaultRegistryId: normalizeHandoffAddress(opts.resolved.vaultRegistryId),
+    };
+    const warnings: string[] = [];
+    let corrected = false;
+    const autoCorrect = opts.autoCorrect !== false;
+
+    const pick = (label: string, input: string, chain: string): string | { ok: false; error: string } => {
+        if (!input) {
+            if (chain) {
+                corrected = true;
+                warnings.push(`${label} aus GlobalsCreated übernommen (${chain.slice(0, 14)}…).`);
+            }
+            return chain;
+        }
+        if (input === chain) return input;
+        if (autoCorrect) {
+            corrected = true;
+            warnings.push(
+                `${label} ${input.slice(0, 14)}… passt nicht zu Package ${pkg.slice(0, 14)}… — Chain-Wert ${chain.slice(0, 14)}… übernommen.`
+            );
+            return chain;
+        }
+        return {
+            ok: false as const,
+            error: `${label} ${input.slice(0, 14)}… gehört nicht zu Package ${pkg.slice(0, 14)}… (Chain: ${chain.slice(0, 14)}…).`,
+        };
+    };
+
+    const mb = pick('MAILBOX_ID', mbIn, resolved.mailboxId);
+    if (typeof mb === 'object') return mb;
+    const cr = pick('COMMAND_REGISTRY_ID', crIn, resolved.commandRegistryId);
+    if (typeof cr === 'object') return cr;
+    const vr = pick('VAULT_REGISTRY_ID', vrIn, resolved.vaultRegistryId);
+    if (typeof vr === 'object') return vr;
+
+    return {
+        ok: true,
+        mailboxId: mb,
+        commandRegistryId: cr,
+        vaultRegistryId: vr,
+        corrected,
+        warnings,
+    };
+}

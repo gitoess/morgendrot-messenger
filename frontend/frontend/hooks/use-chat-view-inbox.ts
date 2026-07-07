@@ -3,7 +3,8 @@
 /**
  * Posteingang: Shared-Mailbox + alle eigenen privaten Mailboxen (M4d), Merge mit Mesh, Dedup.
  * Standard: 50 Nachrichten pro Seite; „Weitere laden“ holt ältere Chunks (offset).
- * Erster Load / „Aktualisieren“: 200 Zeilen — verschlüsselte liegen oft älter als Klartext-Tests.
+ * Erster Load / „Aktualisieren“: Reset merged Chain-Zeilen wie Poll (kein Voll-Ersatz),
+ * außer bei Wallet-/Package-Scope-Wechsel oder forceLive.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -42,7 +43,7 @@ import {
   tryAutoRestoreDirectIotaSessionSignerAsync,
 } from '@/frontend/lib/direct-iota-vault-unlock-sync'
 import type { Message } from '@/frontend/lib/types'
-import { buildInboxCacheKey } from '@/frontend/lib/inbox-cache-key'
+import { buildInboxCacheKey, buildInboxWalletScopeKey } from '@/frontend/lib/inbox-cache-key'
 
 export type InboxLoadMode = 'reset' | 'append' | 'poll'
 
@@ -68,6 +69,28 @@ async function loadTelegramJournalMessages(myAddress: string): Promise<Message[]
   return mapTelegramJournalToMessages(j.entries, myAddress)
 }
 
+/** Chain-Zeilen aus `prev` behalten (Mesh/Telegram/optimistic separat via Overlay). */
+function retainPriorChainRowsForInboxMerge(prev: Message[]): Message[] {
+  return prev.filter(
+    (m) =>
+      !isPendingMailboxOptimisticRow(m) &&
+      !m.transports?.includes('mesh') &&
+      m.source !== 'telegram' &&
+      !m.transports?.includes('telegram')
+  )
+}
+
+function mergeFetchedInboxPageIntoState(
+  prev: Message[],
+  mapped: Message[],
+  opts: { replaceChainRows: boolean }
+): Message[] {
+  const overlayBase = opts.replaceChainRows ? [] : prev
+  const priorChain = opts.replaceChainRows ? [] : retainPriorChainRowsForInboxMerge(prev)
+  const localOverlay = pickInboxOverlayRowsForMerge(overlayBase, mapped)
+  return mergeAllMessages([...priorChain, ...mapped, ...localOverlay])
+}
+
 const PAGE_SIZE = 50
 /** Erster Load / Aktualisieren: ältere über „Weitere laden“ (50er-Chunks, unbegrenzt solange hasMore). */
 function resetPageSize(): number {
@@ -90,12 +113,14 @@ type InboxCacheEnvelope = {
 function writeInboxCache(key: string, messages: Message[], liveSource?: InboxLiveSource): void {
   if (typeof window === 'undefined') return
   try {
+    const prior = readInboxCache(key)
+    const merged = prior ? mergeAllMessages([...prior.messages, ...messages]) : messages
     const unreadCountEstimate = 0
     const payload: InboxCacheEnvelope = {
       savedAtMs: Date.now(),
-      messageCount: messages.length,
+      messageCount: merged.length,
       unreadCountEstimate,
-      messages,
+      messages: merged,
       liveSource,
     }
     window.localStorage.setItem(key, JSON.stringify(payload))
@@ -146,12 +171,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
   /** Nach Reset: bis zu 3 Auto-Append-Runden wenn hasMore (ältere Move-Pakete / Events). */
   const autoAppendBudgetRef = useRef(0)
   const lastInboxCacheKeyRef = useRef<string | null>(null)
+  const lastInboxWalletScopeRef = useRef<string | null>(null)
   inboxLiveSourceRef.current = inboxLiveSource
 
   const clearInboxRam = useCallback(() => {
     awaitingManualRefreshRef.current = true
     inboxLoadEpochRef.current += 1
     lastInboxCacheKeyRef.current = null
+    lastInboxWalletScopeRef.current = null
     mailboxOffsetRef.current = 0
     setInboxHasMore(true)
     setLoadError(null)
@@ -189,12 +216,14 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
         activeMailboxId: readActiveSendMailboxObjectId(),
         myAddress,
       })
+      const walletScopeKey = buildInboxWalletScopeKey({ packageId: pkg, myAddress })
       const walletScopeChanged =
         mode === 'reset' &&
-        lastInboxCacheKeyRef.current != null &&
-        lastInboxCacheKeyRef.current !== cacheKey
+        lastInboxWalletScopeRef.current != null &&
+        lastInboxWalletScopeRef.current !== walletScopeKey
       if (mode === 'reset') {
         lastInboxCacheKeyRef.current = cacheKey
+        lastInboxWalletScopeRef.current = walletScopeKey
       }
       if (walletScopeChanged || forceLive) {
         inboxLoadEpochRef.current += 1
@@ -204,9 +233,7 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       if (!silent) {
         if (mode === 'append') setLoadingMore(true)
         else {
-          const hasWarmCache =
-            !forceLive && mode === 'reset' && readInboxCache(cacheKey) != null
-          if (!hasWarmCache) setLoading(true)
+          setLoading(true)
         }
         setLoadError(null)
       }
@@ -222,27 +249,11 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
       const applyLocalOverlayFallback = () => {
         setMessages((prev) => mergeAllMessages(pickInboxOverlayRowsForMerge(prev)))
       }
-      if (!silent && mode === 'reset' && !forceLive) {
-        const cached = readInboxCache(cacheKey)
-        if (cached) {
-          setMessages((prev) => {
-            const base = walletScopeChanged ? [] : prev
-            const next = mergeAllMessages([
-              ...cached.messages,
-              ...pickInboxOverlayRowsForMerge(base, cached.messages),
-            ])
-            if (!walletScopeChanged && inboxMessageListSignature(prev) === inboxMessageListSignature(next)) {
-              return prev
-            }
-            return next
-          })
-          // Kein Banner-Flash: Cache nur anzeigen wenn Live-Fetch scheitert (siehe unten).
-        } else if (walletScopeChanged) {
-          setMessages([])
-          setInboxFromCache(false)
-          setInboxCacheAgeMinutes(null)
-          setInboxLiveSource(null)
-        }
+      if (!silent && mode === 'reset' && !forceLive && walletScopeChanged) {
+        setMessages([])
+        setInboxFromCache(false)
+        setInboxCacheAgeMinutes(null)
+        setInboxLiveSource(null)
       } else if (forceLive && walletScopeChanged) {
         setMessages([])
         setInboxFromCache(false)
@@ -297,22 +308,9 @@ export function useChatViewInbox(p: UseChatViewInboxParams) {
             )
           }
           setMessages((prev) => {
-            const overlayBase = replaceOnReset ? [] : prev
-            const localOverlay = pickInboxOverlayRowsForMerge(overlayBase, mapped)
-            const next =
-              mode === 'reset'
-                ? mergeAllMessages([...mapped, ...localOverlay])
-                : mergeAllMessages([
-                    ...prev.filter(
-                      (m) =>
-                        !isPendingMailboxOptimisticRow(m) &&
-                        !m.transports?.includes('mesh') &&
-                        m.source !== 'telegram' &&
-                        !m.transports?.includes('telegram')
-                    ),
-                    ...mapped,
-                    ...localOverlay,
-                  ])
+            const next = mergeFetchedInboxPageIntoState(prev, mapped, {
+              replaceChainRows: replaceOnReset,
+            })
             if (!replaceOnReset && inboxMessageListSignature(prev) === inboxMessageListSignature(next)) {
               return prev
             }

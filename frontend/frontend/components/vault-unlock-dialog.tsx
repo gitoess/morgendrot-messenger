@@ -349,15 +349,31 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
         <div className="shrink-0 space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
-              <DialogTitle className="text-xl font-semibold tracking-tight">{dialogTitle}</DialogTitle>
-              <DialogDescription
-                className={cn(
-                  'text-sm text-muted-foreground',
-                  !dialogDescription.trim() && 'sr-only',
-                )}
-              >
-                {dialogDescription.trim() || dialogTitle}
-              </DialogDescription>
+              {nativeVaultOverlay ? (
+                <>
+                  <h2 className="text-xl font-semibold tracking-tight">{dialogTitle}</h2>
+                  <p
+                    className={cn(
+                      'text-sm text-muted-foreground',
+                      !dialogDescription.trim() && 'sr-only',
+                    )}
+                  >
+                    {dialogDescription.trim() || dialogTitle}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <DialogTitle className="text-xl font-semibold tracking-tight">{dialogTitle}</DialogTitle>
+                  <DialogDescription
+                    className={cn(
+                      'text-sm text-muted-foreground',
+                      !dialogDescription.trim() && 'sr-only',
+                    )}
+                  >
+                    {dialogDescription.trim() || dialogTitle}
+                  </DialogDescription>
+                </>
+              )}
             </div>
             <LocaleFlagSwitch className="shrink-0" />
           </div>

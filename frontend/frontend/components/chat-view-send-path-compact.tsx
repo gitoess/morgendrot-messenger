@@ -6,6 +6,7 @@
 
 import { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { SEND_PATH_ACTIVE_CLASS } from '@/frontend/lib/messenger-appearance-theme'
 import type { ComposerDeliveryChannel } from '@/frontend/lib/composer-delivery-channel'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
@@ -34,6 +35,8 @@ export type ChatViewSendPathCompactProps = {
   /** Nur für Telegram in Gruppenmodus: zurück auf 1:1 wechseln. */
   onChannelModeChange?: (c: MessengerChatChannel) => void
   className?: string
+  /** Native: 2×2-Grid statt Horizontal-Scroll. */
+  layout?: 'scroll' | 'grid'
 }
 
 function sendPathCapabilityReason(
@@ -116,6 +119,7 @@ function PathButton(p: {
   activeClass?: string
   onClick: () => void
   children: ReactNode
+  gridLayout?: boolean
 }) {
   return (
     <button
@@ -124,7 +128,8 @@ function PathButton(p: {
       disabled={p.disabled}
       onClick={p.onClick}
       className={cn(
-        'flex min-h-[2.75rem] flex-1 items-center justify-center gap-1.5 rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-colors sm:text-base',
+        'flex min-h-[2.75rem] items-center justify-center gap-1.5 rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition-colors sm:text-base',
+        p.gridLayout ? 'w-full' : 'flex-1',
         p.disabled && 'cursor-not-allowed opacity-40',
         p.active && !p.disabled
           ? p.activeClass ?? SEND_PATH_ACTIVE_CLASS.default
@@ -150,9 +155,12 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
     apiStatus,
     onChannelModeChange,
     className,
+    layout,
   } = p
 
   if (!visible) return null
+
+  const gridLayout = layout === 'grid' || (layout == null && isCapacitorNativePlatform())
 
   const showTelegramPath = Boolean(onComposerDeliveryChange)
   const chainActive = composerDelivery === 'chain'
@@ -175,8 +183,15 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
       )}
     >
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Sendepfad</p>
-      <div className="flex flex-nowrap gap-2 overflow-x-auto pb-0.5" role="group" aria-label="Sendepfad">
+      <div
+        className={cn(
+          gridLayout ? 'grid grid-cols-2 gap-2' : 'flex flex-nowrap gap-2 overflow-x-auto pb-0.5'
+        )}
+        role="group"
+        aria-label="Sendepfad"
+      >
         <PathButton
+          gridLayout={gridLayout}
           active={chainActive && forcedTransport === ONLINE.id}
           disabled={!onlineChannelOk || Boolean(onlineCapReason)}
           disabledTitle={onlineCapReason ?? sendPathDisabledReason(channelMode, 'internet')}
@@ -191,6 +206,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
           {ONLINE.short}
         </PathButton>
         <PathButton
+          gridLayout={gridLayout}
           active={chainActive && forcedTransport === FUNK.id}
           disabled={!funkChannelOk || Boolean(funkCapReason)}
           disabledTitle={funkCapReason ?? sendPathDisabledReason(channelMode, 'mesh')}
@@ -211,6 +227,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         </PathButton>
         {showAdhocTransport ? (
           <PathButton
+            gridLayout={gridLayout}
             active={chainActive && forcedTransport === ADHOC.id}
             disabled={!adhocChannelOk || Boolean(adhocCapReason)}
             disabledTitle={adhocCapReason ?? sendPathDisabledReason(channelMode, 'adhoc')}
@@ -232,6 +249,7 @@ export function ChatViewSendPathCompact(p: ChatViewSendPathCompactProps) {
         ) : null}
         {showTelegramPath ? (
           <PathButton
+            gridLayout={gridLayout}
             active={composerDelivery === 'telegram'}
             disabled={!telegramChannelOk || Boolean(telegramCapReason)}
             disabledTitle={telegramCapReason ?? sendPathDisabledReason(channelMode, 'telegram')}

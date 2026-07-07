@@ -5,7 +5,14 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
+import {
+  ChatViewMobileBottomNav,
+  type ChatViewMobileTab,
+} from '@/frontend/components/chat-view-mobile-bottom-nav'
+import { ChatViewSendPathCompact } from '@/frontend/components/chat-view-send-path-compact'
 import { ChatViewInboxPanel, type ChatViewInboxPanelProps } from '@/frontend/components/chat-view-inbox-panel'
 import { useChatViewInboxPanelProps } from '@/frontend/hooks/use-chat-view-inbox-panel-props'
 import { ChatViewPackageIdBanner } from '@/frontend/components/chat-view-package-id-banner'
@@ -185,6 +192,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const [contactDetailOpen, setContactDetailOpen] = useState(false)
   const [telegramAlarmSelected, setTelegramAlarmSelected] = useState(false)
   const [messengerSearchQuery, setMessengerSearchQuery] = useState('')
+  const isNativeMobile = isCapacitorNativePlatform()
+  const [mobileTab, setMobileTab] = useState<ChatViewMobileTab>('chats')
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
@@ -325,6 +334,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     channelMode != null && isPinnwandChannel(channelMode) && pinnwandCaps.configured
   const onNotesTab = channelMode === 'notes'
   const showConversationSidebar = !onNotesTab && (isPrivate || isGroup || onPinnwandTab)
+  const useNativeMessengerTabs =
+    isNativeMobile && showConversationSidebar && !onNotesTab && !onPinnwandTab
+
+  const inChatThread = Boolean(
+    inboxConversationGroupId ||
+      telegramAlarmSelected ||
+      (inboxPartnerFiltersArmed && inboxPartnerKey?.trim())
+  )
 
   useEffect(() => {
     if (!onChannelModeChange || channelMode == null) return
@@ -970,6 +987,76 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     </section>
   )
 
+  const sendPathProps = chatHeaderProps.sendPath
+
+  const nativeHeaderProps = useMemo(
+    () => ({
+      ...mergedChatHeaderProps,
+      compactNative: true,
+      sendPath: sendPathProps ? { ...sendPathProps, visible: false } : null,
+    }),
+    [mergedChatHeaderProps, sendPathProps]
+  )
+
+  const showNativeComposerFooter = useNativeMessengerTabs
+
+  const nativeComposerFooter = showNativeComposerFooter ? (
+    <div className="sticky bottom-[3.5rem] z-20 -mx-1 space-y-2 border-t border-border bg-background/98 px-1 pt-2 backdrop-blur-sm">
+      {sendPathProps?.visible ? <ChatViewSendPathCompact {...sendPathProps} layout="grid" /> : null}
+      {composerBlock}
+    </div>
+  ) : null
+
+  const handleMobileBackToChatList = useCallback(() => {
+    selectInboxConversationAll()
+  }, [selectInboxConversationAll])
+
+  const handleMobileSelectContact = useCallback(
+    (address: string) => {
+      handleSelectSidebarContact(address)
+      setMobileTab('chats')
+    },
+    [handleSelectSidebarContact]
+  )
+
+  const handleMobileSelectGroup = useCallback(
+    (groupId: string) => {
+      handleSelectSidebarGroup(groupId)
+      setMobileTab('chats')
+    },
+    [handleSelectSidebarGroup]
+  )
+
+  const mobileInboxUnreadBadge = inboxOverviewUnreadCounts?.alle ?? 0
+
+  const sharedContactSidebar = (
+    <ChatViewContactSidebar
+      directory={directory}
+      partnerOptions={inboxPartnerOptions}
+      activePartnerKey={inboxPartnerKey}
+      activeGroupId={inboxConversationGroupId}
+      activeTelegramAlarmSelected={activeTelegramAlarmSelected}
+      showAllActive={showAllConversationsActive}
+      searchQuery={messengerSearchQuery}
+      activeSendPath={activeSendPath}
+      onSelectAll={handleSelectSidebarAll}
+      onSelectSelf={handleSelectSidebarSelf}
+      activeSelfSelected={activeSelfSelected}
+      onSelectContact={handleMobileSelectContact}
+      onSelectGroup={handleMobileSelectGroup}
+      onSelectTelegramAlarmGroup={() => {
+        void handleSelectSidebarTelegramAlarm()
+        setMobileTab('chats')
+      }}
+      onOpenGroupSettings={openGroupSettings}
+      onOpenContactDetail={handleOpenContactDetail}
+      onOpenPhonebook={() => setPhonebookOpen(true)}
+      selfProfile={myDataPanelProps}
+      {...pinnwandSidebarProps}
+      {...sidebarHandshakeProps}
+    />
+  )
+
   const conversationBody = (
     <>
       {!onNotesTab && isGroup && !showConversationSidebar ? (
@@ -1006,11 +1093,11 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         />
       ) : null}
 
-      {isPrivate && uiCaps.showPackageIdBanner ? (
+      {isPrivate && uiCaps.showPackageIdBanner && !useNativeMessengerTabs ? (
         <ChatViewPackageIdBanner {...packageIdBannerProps} />
       ) : null}
 
-      {!showConversationSidebar && channelMode === 'private' && composerDelivery === 'chain' ? (
+      {!showConversationSidebar && channelMode === 'private' && composerDelivery === 'chain' && !useNativeMessengerTabs ? (
         <ChatViewTransportCard {...transportCardProps} />
       ) : null}
 
@@ -1018,7 +1105,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
       {contactAliasDialog.open ? <ContactAddAliasDialog {...contactAliasDialog} /> : null}
 
-      {showConversationSidebar ? (
+      {showConversationSidebar && !useNativeMessengerTabs ? (
         <ChatViewContactSidebar
           className="lg:hidden"
           directory={directory}
@@ -1054,7 +1141,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           />
           {composerBlock}
         </>
-      ) : (
+      ) : useNativeMessengerTabs ? null : (
         <>
           {!showConversationSidebar &&
           inboxOverviewChipsVisible &&
@@ -1098,8 +1185,121 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
 
   return (
     <>
-      <div className="space-y-6">
-        <ChatViewChatHeader {...mergedChatHeaderProps} />
+      {useNativeMessengerTabs ? (
+        <div className="pb-[calc(3.5rem+env(safe-area-inset-bottom,0px)+0.35rem)]">
+          <div className="space-y-2">
+            <ChatViewChatHeader {...nativeHeaderProps} />
+
+            {uiCaps.showProminentOfflineQueueBanner ? (
+              <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
+            ) : null}
+
+            {mobileTab === 'chats' && !inChatThread ? (
+              <>
+                <ChatViewMessengerSearch
+                  directory={directory}
+                  partnerOptions={inboxPartnerOptions}
+                  messages={inboxMessages}
+                  myAddress={myAddress}
+                  query={messengerSearchQuery}
+                  onQueryChange={setMessengerSearchQuery}
+                  activeSendPath={activeSendPath}
+                  onSelectContact={handleMobileSelectContact}
+                  onSelectGroup={handleMobileSelectGroup}
+                  onSelectTelegramAlarmGroup={() => {
+                    void handleSelectSidebarTelegramAlarm()
+                    setMobileTab('chats')
+                  }}
+                  onSelectMessageHit={(hit) => {
+                    handleSelectMessageHit(hit)
+                    setMobileTab('chats')
+                  }}
+                  {...sidebarHandshakeProps}
+                />
+                {sharedContactSidebar}
+              </>
+            ) : null}
+
+            {mobileTab === 'chats' && inChatThread ? (
+              <>
+                <div className="flex items-center gap-2 border-b border-border/60 px-1 pb-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 shrink-0 px-2"
+                    onClick={handleMobileBackToChatList}
+                  >
+                    <ChevronLeft className="mr-0.5 h-4 w-4" aria-hidden />
+                    Chats
+                  </Button>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{activeConversationTitle ?? 'Chat'}</p>
+                    {activeConversationSubtitle ? (
+                      <p className="truncate text-[11px] text-muted-foreground">{activeConversationSubtitle}</p>
+                    ) : null}
+                  </div>
+                </div>
+                {telegramAlarmSelected ? (
+                  <ChatViewTelegramAlarmThreadBanner partnerKeyReady={telegramAlarmPartnerKeyReady} />
+                ) : null}
+                <ChatViewInboxPanel
+                  {...inboxPanelProps}
+                  hidePartnerStrip
+                  inboxSearchQuery={messengerSearchQuery}
+                  conversationMenu={conversationMenuProps}
+                />
+                {nativeComposerFooter}
+              </>
+            ) : null}
+
+            {mobileTab === 'inbox' ? (
+              <>
+                {inboxOverviewChipsVisible && (inboxPanelRead.inboxUnreadThreadOptions?.length ?? 0) > 0 ? (
+                  <ChatViewInboxUnreadThreadsStrip
+                    threads={[...(inboxPanelRead.inboxUnreadThreadOptions ?? [])]}
+                    onOpenThread={(address) => {
+                      setInboxOverviewCategory('direkt')
+                      selectInboxPartnerForSend(address)
+                    }}
+                  />
+                ) : null}
+                {telegramAlarmSelected ? (
+                  <ChatViewTelegramAlarmThreadBanner partnerKeyReady={telegramAlarmPartnerKeyReady} />
+                ) : null}
+                <ChatViewInboxPanel
+                  {...inboxPanelProps}
+                  hidePartnerStrip={false}
+                  inboxSearchQuery={messengerSearchQuery}
+                  conversationMenu={undefined}
+                />
+                {nativeComposerFooter}
+              </>
+            ) : null}
+
+            {mobileTab === 'contacts' ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <p className="text-sm font-semibold text-foreground">Kontakte</p>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setPhonebookOpen(true)}>
+                    Telefonbuch
+                  </Button>
+                </div>
+                {sharedContactSidebar}
+              </div>
+            ) : null}
+          </div>
+          <ChatViewMobileBottomNav
+            active={mobileTab}
+            onChange={setMobileTab}
+            inboxUnreadCount={mobileInboxUnreadBadge}
+          />
+        </div>
+      ) : (
+      <div className={isNativeMobile ? 'space-y-3' : 'space-y-6'}>
+        <ChatViewChatHeader
+          {...(isNativeMobile ? nativeHeaderProps : mergedChatHeaderProps)}
+        />
 
         {uiCaps.showProminentOfflineQueueBanner ? (
           <ChatViewOfflineQueueStrip {...offlineQueueStripProps} />
@@ -1145,13 +1345,14 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
               {...pinnwandSidebarProps}
               {...sidebarHandshakeProps}
             />
-            <div className="min-w-0 space-y-8">{conversationBody}</div>
+            <div className={isNativeMobile ? 'min-w-0 space-y-3' : 'min-w-0 space-y-8'}>{conversationBody}</div>
             </div>
           </div>
         ) : (
-          <div className="space-y-8">{conversationBody}</div>
+          <div className={isNativeMobile ? 'space-y-3' : 'space-y-8'}>{conversationBody}</div>
         )}
       </div>
+      )}
 
       {contactDetailOpen ? (
       <ChatViewContactDetailDialog

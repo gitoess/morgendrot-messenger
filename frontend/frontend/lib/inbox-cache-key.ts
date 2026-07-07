@@ -29,3 +29,10 @@ export function buildInboxCacheKey(p: {
   const wallet = normWalletScope(p.myAddress)
   return `${INBOX_CACHE_KEY_PREFIX}${pkg}:${mb}:${wallet}`
 }
+
+/** Nur Package + Wallet — kein Mailbox-Wechsel (sonst Posteingang-Flash). */
+export function buildInboxWalletScopeKey(p: { packageId?: string; myAddress?: string }): string {
+  const pkg = normPackageOrMailbox(p.packageId, '__default__')
+  const wallet = normWalletScope(p.myAddress)
+  return `${pkg}:${wallet}`
+}

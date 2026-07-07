@@ -2155,7 +2155,9 @@ export function buildMessengerExportJson(p: MessengerExportParams): Record<strin
 export {
     buildStandaloneSmartphoneHandoffEnv,
     buildStandaloneSmartphoneHandoffReadme,
+    reconcileHandoffExportGlobals,
     type StandaloneSmartphoneHandoffParams,
+    type ResolvedPackageGlobals,
 } from './shared/standalone-smartphone-handoff-env.js';
 
 export function buildDeviceJson(p: DeviceProvisionParams): Record<string, unknown> {

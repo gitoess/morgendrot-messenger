@@ -19,6 +19,9 @@ import {
 import { cn } from '@/lib/utils'
 import dynamic from 'next/dynamic'
 import type { ProjectType } from '@/frontend/lib/types'
+import { ChatView } from './views/chat-view'
+import type { ComponentProps } from 'react'
+import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 const LazyChatView = dynamic(
   () => import('./views/chat-view').then((m) => m.ChatView),
   {
@@ -30,6 +33,13 @@ const LazyChatView = dynamic(
     ),
   }
 )
+
+type MessengerChatViewProps = ComponentProps<typeof ChatView>
+
+function MessengerChatView(props: MessengerChatViewProps) {
+  if (isCapacitorNativePlatform()) return <ChatView {...props} />
+  return <LazyChatView {...props} />
+}
 import { LazyBossView, LazyConfigView } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzleitungView } from './views/einsatzleitung-view'
 import { SettingsView } from './views/settings-view'
@@ -75,7 +85,6 @@ import {
   maybeRequestHelperSeedSetup,
   STANDALONE_WALLET_UNLOCKED_EVENT,
 } from '@/frontend/lib/handoff-standalone-ready'
-import { isCapacitorNativePlatform } from '@/frontend/lib/capacitor-platform'
 import { writeShowAllTilesPref } from '@/frontend/lib/dashboard-prefs'
 import { useDashboardSession } from '@/frontend/hooks/use-dashboard-session'
 import { CapacitorForegroundSyncBootstrap } from '@/frontend/components/capacitor-foreground-sync-bootstrap'
@@ -424,7 +433,7 @@ function MessengerDashboardBody({
           )}
           {s.activeView.type === 'config' && <LazyConfigView messengerMode />}
           {s.activeView.type === 'chat' && s.activeView.variant && (
-            <LazyChatView
+            <MessengerChatView
               variant={s.activeView.variant as 'private-chat' | 'pinnwand'}
               role={s.role}
               myAddress={s.myAddress}

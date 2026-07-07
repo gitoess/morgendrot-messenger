@@ -156,6 +156,41 @@ export type GlobalsCreatedIds = {
     commandRegistryId: string;
 };
 
+/** Neuestes GlobalsCreated-Event für ein Package auf einer RPC-URL (Handoff-Validierung). */
+export async function queryGlobalsCreatedForPackage(opts: {
+    rpcUrl: string;
+    packageId: string;
+}): Promise<GlobalsCreatedIds | null> {
+    const pkg = opts.packageId.trim().toLowerCase();
+    if (!HEX64.test(pkg)) return null;
+    const rpc = opts.rpcUrl.trim();
+    if (!rpc) return null;
+    const { IotaClient } = await import('@iota/iota-sdk/client');
+    const client = new IotaClient({ url: rpc });
+    const eventType = `${pkg}::messaging::GlobalsCreated`;
+    const res = await client.queryEvents({
+        query: { MoveEventType: eventType },
+        limit: 1,
+        order: 'descending',
+    });
+    const ev = res.data?.[0];
+    if (!ev?.parsedJson || typeof ev.parsedJson !== 'object') return null;
+    const pj = ev.parsedJson as Record<string, unknown>;
+    const pickId = (v: unknown): string | undefined => {
+        if (typeof v === 'string' && HEX64.test(v.trim())) return v.trim().toLowerCase();
+        if (v && typeof v === 'object' && typeof (v as { id?: string }).id === 'string') {
+            const id = (v as { id: string }).id.trim();
+            if (HEX64.test(id)) return id.toLowerCase();
+        }
+        return undefined;
+    };
+    const vaultRegistryId = pickId(pj.vault_registry_id);
+    const mailboxId = pickId(pj.mailbox_id);
+    const commandRegistryId = pickId(pj.command_registry_id);
+    if (!vaultRegistryId || !mailboxId || !commandRegistryId) return null;
+    return { vaultRegistryId, mailboxId, commandRegistryId };
+}
+
 /** Parst GlobalsCreated aus `iota client call … create_globals --json`. */
 export function parseGlobalsCreatedFromCliOutput(stdout: string): GlobalsCreatedIds {
     const pickId = (v: unknown): string | undefined => {

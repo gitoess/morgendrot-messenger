@@ -13,6 +13,7 @@ import { dirname, join } from 'node:path'
 import {
   applyBossHandoffChainViaStorage,
   assertChainIds,
+  configureSoloChain,
   createCdpSession,
   isDirectRelay,
   openMessagesComposer,
@@ -152,7 +153,7 @@ async function main() {
   try {
     execSync(`adb shell am force-stop ${PACKAGE}`, { stdio: 'ignore' })
     execSync(`adb shell am start -n ${PACKAGE}/.MainActivity`, { stdio: 'ignore' })
-    await new Promise((r) => setTimeout(r, 3500))
+    await new Promise((r) => setTimeout(r, 8000))
   } catch {
     console.log('ADB Neustart übersprungen')
   }
@@ -176,7 +177,7 @@ async function main() {
     process.exit(1)
   }
 
-  const helperAddr = await unlockVaultIfNeeded(session, { force: true })
+  const helperAddr = await unlockVaultIfNeeded(session)
   console.log('   Helfer:', helperAddr.slice(0, 12) + '…')
 
   console.log('… Boss-Handoff-Kette auf Helfer setzen (gleiches Package wie Boss)')
@@ -184,6 +185,7 @@ async function main() {
     ...chain,
     senderAddress: helperAddr,
   })
+  await configureSoloChain(session, helperAddr)
 
   await openMessagesComposer(session)
 

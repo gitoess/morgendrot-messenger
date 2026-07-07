@@ -37,6 +37,7 @@ import {
     resolveMessengerExportPackageId,
     buildStandaloneSmartphoneHandoffEnv,
     buildStandaloneSmartphoneHandoffReadme,
+    reconcileHandoffExportGlobals,
     resolveSimpleMode,
     resolveTransportProfile,
     getSignerConfigSource,
@@ -89,6 +90,7 @@ import {
     applyGlobalsCreatedToEnv,
     createGlobalsCli,
     deployTestnetMovePackage,
+    queryGlobalsCreatedForPackage,
     resolveUpgradeCapId,
     upgradePackageCli,
 } from './move-package-deploy.js';
@@ -2446,7 +2448,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
             req.on('data', (chunk) => {
                 body += chunk;
             });
-            req.on('end', () => {
+            req.on('end', async () => {
                 try {
                     const data = JSON.parse(body || '{}') as Record<string, unknown>;
                     const pkgRes = resolveMessengerExportPackageId({
@@ -2518,6 +2520,57 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                 data.exportEnablePurge === '1'
                               ? true
                               : CFG.ENABLE_PURGE;
+                    let mailboxIdResolved = mailboxIdField;
+                    let commandRegistryIdResolved = commandRegistryId;
+                    let vaultRegistryIdResolved = vaultRegistryId;
+                    let handoffGlobalsWarnings: string[] = [];
+                    const strictGlobals =
+                        data.strictGlobals === true ||
+                        data.strictGlobals === 'true' ||
+                        data.strictGlobals === 1 ||
+                        data.strictGlobals === '1';
+                    try {
+                        const chainGlobals = await queryGlobalsCreatedForPackage({
+                            rpcUrl,
+                            packageId: pkgRes.packageId,
+                        });
+                        const recon = reconcileHandoffExportGlobals({
+                            packageId: pkgRes.packageId,
+                            mailboxId: mailboxIdField || undefined,
+                            commandRegistryId: commandRegistryId || undefined,
+                            vaultRegistryId: vaultRegistryId || undefined,
+                            resolved: chainGlobals,
+                            autoCorrect: !strictGlobals,
+                        });
+                        if (!recon.ok) {
+                            sendJson(res, 400, { ok: false, error: recon.error }, cors);
+                            return;
+                        }
+                        mailboxIdResolved = recon.mailboxId;
+                        commandRegistryIdResolved = recon.commandRegistryId;
+                        vaultRegistryIdResolved = recon.vaultRegistryId;
+                        handoffGlobalsWarnings = recon.warnings;
+                        if (handoffGlobalsWarnings.length) {
+                            logger.warn(
+                                'standalone-smartphone-handoff-zip globals: ' + handoffGlobalsWarnings.join(' ')
+                            );
+                        }
+                    } catch (e: unknown) {
+                        const msg = e instanceof Error ? e.message : String(e);
+                        if (mailboxIdField || commandRegistryId || vaultRegistryId) {
+                            sendJson(
+                                res,
+                                502,
+                                {
+                                    ok: false,
+                                    error: `GlobalsCreated auf RPC nicht prüfbar: ${msg}`,
+                                },
+                                cors
+                            );
+                            return;
+                        }
+                        logger.warn('standalone-smartphone-handoff-zip: Globals-Query übersprungen: ' + msg);
+                    }
                     let envContent: string;
                     let runtimeConfigContent: string;
                     try {
@@ -2526,10 +2579,10 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             packageId: pkgRes.packageId,
                             bossAddress,
                             partnerAddresses: partnerAddresses || undefined,
-                            mailboxId: mailboxIdField || undefined,
+                            mailboxId: mailboxIdResolved || undefined,
                             teamMailboxIds: teamMailboxIds || undefined,
-                            commandRegistryId: commandRegistryId || undefined,
-                            vaultRegistryId: vaultRegistryId || undefined,
+                            commandRegistryId: commandRegistryIdResolved || undefined,
+                            vaultRegistryId: vaultRegistryIdResolved || undefined,
                             nextPublicDirectIotaRpcUrl: nextPublicDirectIotaRpcUrl || undefined,
                             helperRole,
                             roleId,
@@ -2602,6 +2655,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                                 createdAtIso,
                                 packageId: pkgRes.packageId,
                                 filenameBase: `morgendrot-standalone-handoff-${slug}-${day}`,
+                                globalsWarnings: handoffGlobalsWarnings.length ? handoffGlobalsWarnings : undefined,
                             },
                             cors
                         );

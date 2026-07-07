@@ -247,6 +247,15 @@ export async function snapshot(session) {
 
 export async function unlockVaultIfNeeded(session, { force = false } = {}) {
   let state = await readSessionState(session)
+  const hasSigner = await session.evaluate(
+    `Boolean(localStorage.getItem('morgendrot.directIotaSigner.enc.v1'))`
+  )
+  if (state.addr.length >= 66 && hasSigner && !state.vaultDialogOpen) {
+    if (!force) {
+      console.log('… Vault bereits entsperrt:', state.addr.slice(0, 10) + '…')
+      return state.addr
+    }
+  }
   if (!force && state.addr.length >= 66 && !state.vaultDialogOpen) {
     const diag = await readSendDiagnostics(session).catch(() => null)
     const vaultBlocked = /tresor gesperrt/i.test(
@@ -468,10 +477,12 @@ export async function fillRecipientFields(session, myAddr) {
         ...document.querySelectorAll('input[list="chat-recipient-addresses"]'),
         ...document.querySelectorAll('input[list="chat-partner-addresses-encrypted"]'),
         ...document.querySelectorAll('input[placeholder*="0x"]'),
-      ].filter((el) => el instanceof HTMLInputElement && el.offsetParent !== null);
-      if (inputs[0]) {
-        setInput(inputs[0], addr);
-        return { ok: true, via: 'input' };
+      ].filter((el) => el instanceof HTMLInputElement);
+      const visible = inputs.find((el) => el.offsetParent !== null);
+      const target = visible || inputs[0];
+      if (target) {
+        setInput(target, addr);
+        return { ok: true, via: visible ? 'input' : 'input-hidden' };
       }
       return { ok: false };
     })()`
@@ -532,7 +543,26 @@ export async function armRecipient(session, myAddr) {
   await clickIfPresent(session, `(t) => /Wallet-Adresse des Partners|Verschlüsselung|Partner/i.test(t)`)
   await sleep(500)
   r = await fillRecipientFields(session, myAddr)
-  return r?.ok ? r : { ok: false }
+  if (r?.ok) return r
+
+  const bossBtn = await clickIfPresent(
+    session,
+    `(t, el) => /Boss|smoke/i.test(t) && el.tagName === 'BUTTON' && t.toLowerCase().includes(${JSON.stringify(myAddr.slice(0, 8))})`
+  )
+  if (bossBtn) {
+    await sleep(600)
+    r = await fillRecipientFields(session, myAddr)
+    if (r?.ok) return { ...r, via: 'sidebar-boss' }
+  }
+
+  return { ok: false }
+}
+
+/** WebView neu laden (nach localStorage-Handoff). */
+export async function reloadWebApp(session) {
+  await session.cdpSend('Page.reload', { ignoreCache: true })
+  await sleep(2500)
+  await waitForAppReady(session)
 }
 
 export async function fillComposerMessage(session, message) {
@@ -657,12 +687,116 @@ async function applyEcdhJwkViaPulse(session, jwkJson) {
   return { ok: true }
 }
 
+export async function openPrivateChatWithPartner(session, addr) {
+  await clickIfPresent(session, `(t) => /^Nachrichten$/i.test(t)`)
+  await sleep(800)
+  await openMobileMessengerTab(session, 'Chats')
+  const sidebar = await session.evaluate(
+    `(() => {
+      const addr = ${JSON.stringify(addr.toLowerCase())};
+      const short = addr.slice(0, 10);
+      for (const el of document.querySelectorAll('button')) {
+        const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+        const tl = t.toLowerCase();
+        if (tl.includes('boss') || tl.includes(short)) {
+          el.scrollIntoView({ block: 'center' });
+          el.click();
+          return { ok: true, via: 'sidebar', text: t.slice(0, 80) };
+        }
+      }
+      const input = document.querySelector('input[aria-label="Messenger durchsuchen"]');
+      if (!input) return { ok: false, why: 'no-search' };
+      const proto = HTMLInputElement.prototype;
+      const q = 'Boss';
+      Object.getOwnPropertyDescriptor(proto, 'value')?.set?.call(input, q);
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: q }));
+      input.focus();
+      return { ok: true, via: 'search-typed' };
+    })()`
+  )
+  if (sidebar?.via === 'search-typed') {
+    await sleep(1200)
+    const picked = await session.evaluate(
+      `(() => {
+        const addr = ${JSON.stringify(addr.toLowerCase())};
+        const short = addr.slice(0, 10);
+        for (const el of document.querySelectorAll('button')) {
+          const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+          const tl = t.toLowerCase();
+          if (tl.includes('boss') || tl.includes(short)) {
+            el.click();
+            return { ok: true, text: t.slice(0, 80) };
+          }
+        }
+        return { ok: false };
+      })()`
+    )
+    if (picked?.ok) {
+      console.log('   Chat via Suche:', picked.text)
+      await sleep(1000)
+      return { ok: true, via: 'search' }
+    }
+  } else if (sidebar?.ok) {
+    console.log('   Chat via Sidebar:', sidebar.text)
+    await sleep(1000)
+    return { ok: true, via: sidebar.via }
+  }
+  return { ok: false }
+}
+
+async function openMobileMessengerTab(session, label) {
+  const re = label === 'Posteingang' ? /^Posteingang$/i : label === 'Chats' ? /^Chats$/i : new RegExp(`^${label}$`, 'i')
+  await clickIfPresent(session, `(t) => ${re}.test(t)`)
+  await sleep(700)
+}
+
 export async function openMessagesComposer(session) {
   const pre = await snapshot(session)
   if (!pre.composerVisible) {
     console.log('7) Nachrichten öffnen …')
-    await clickButton(session, `(t) => /^Nachrichten/i.test(t) && !/verlauf/i.test(t)`)
-    await sleep(2000)
+    await session.evaluate(
+      `(() => {
+        sessionStorage.setItem(
+          'morgendrot.dashboard.activeView',
+          JSON.stringify({ type: 'chat', variant: 'private-chat' })
+        );
+        window.dispatchEvent(new CustomEvent('morg:open-messenger-inbox'));
+        return true;
+      })()`
+    )
+    await sleep(1200)
+    let found = false
+    for (let i = 0; i < 90; i++) {
+      const s = await snapshot(session)
+      if (s.composerVisible) {
+        if (i > 0) console.log(`   Composer nach ${i + 1}s`)
+        found = true
+        break
+      }
+      if (i === 1 || i === 3 || (i > 0 && i % 12 === 0)) {
+        await clickIfPresent(session, `(t) => t === 'Übersicht' || /^Start/i.test(t) || /Zurück/i.test(t)`)
+        await sleep(400)
+        await clickIfPresent(
+          session,
+          `(t) => (/Nachrichten/i.test(t) && /Chats|Funk|Postfächer/i.test(t)) || t === 'Nachrichten'`
+        )
+        await session.evaluate(`window.dispatchEvent(new CustomEvent('morg:open-messenger-inbox'))`)
+        await sleep(500)
+        await openMobileMessengerTab(session, 'Posteingang')
+      }
+      await sleep(1000)
+    }
+    if (!found) {
+      const diag = await session.evaluate(
+        `(() => ({
+          loading: (document.body?.innerText || '').includes('Nachrichten werden geladen'),
+          activeView: sessionStorage.getItem('morgendrot.dashboard.activeView'),
+          h2: [...document.querySelectorAll('h2')].map((h) => (h.textContent||'').trim().slice(0,60)),
+          hasComposer: Boolean(document.getElementById('chat-composer-message')),
+        }))()`
+      )
+      throw new Error('Chat-Composer nicht geladen — ' + JSON.stringify(diag))
+    }
   } else {
     console.log('7) Chat bereits offen')
   }
@@ -672,6 +806,11 @@ export async function openMessagesComposer(session) {
 
 export async function sendComposerMessage(session, { encrypted, message, myAddr, recipientAddr }) {
   const toAddr = recipientAddr || myAddr
+
+  if (toAddr.toLowerCase() !== myAddr.toLowerCase()) {
+    await openPrivateChatWithPartner(session, toAddr)
+  }
+
   if (encrypted) {
     await clickIfPresent(session, `(t) => /^Verschl\\./i.test(t) || t === 'Verschlüsselt' || t.includes('Verschl')`)
   } else {
@@ -686,7 +825,19 @@ export async function sendComposerMessage(session, { encrypted, message, myAddr,
   }
 
   const armed = await armRecipient(session, toAddr)
-  if (!armed?.ok) throw new Error('Empfänger nicht gesetzt')
+  if (!armed?.ok) {
+    const diag = await session.evaluate(
+      `(() => ({
+        composer: Boolean(document.getElementById('chat-composer-message')),
+        recipientInputs: [...document.querySelectorAll('input[list="chat-recipient-addresses"],input[placeholder*="0x"]')].map((el) => ({
+          visible: el.offsetParent !== null,
+          value: (el.value || '').slice(0, 20),
+        })),
+        partnerText: (document.body?.innerText || '').toLowerCase().includes(${JSON.stringify(toAddr.slice(0, 10))}),
+      }))()`
+    )
+    throw new Error('Empfänger nicht gesetzt — ' + JSON.stringify(diag))
+  }
   console.log('   Empfänger via:', armed.via || 'input')
 
   const composed = await fillComposerMessage(session, message)
@@ -770,6 +921,7 @@ export function isDirectRelay(fin, rpcState) {
 /** Boss-Handoff-Ketten-IDs + Partner für Helfer→Boss-Smoke. */
 export async function applyBossHandoffChainViaStorage(session, p) {
   const { packageId, mailboxId, rpcUrl, bossAddress, senderAddress } = p
+  const mainnet = CHAIN.mainnet
   await session.evaluate(
     `(() => {
       const pkg = ${JSON.stringify(packageId)};
@@ -777,12 +929,32 @@ export async function applyBossHandoffChainViaStorage(session, p) {
       const rpc = ${JSON.stringify(rpcUrl)};
       const boss = ${JSON.stringify(bossAddress || '')};
       const sender = ${JSON.stringify(senderAddress || '')};
+      const mainnet = ${JSON.stringify(mainnet)};
       localStorage.setItem('morgendrot.directIotaRpcUrl', rpc);
       localStorage.setItem('morgendrot.directChain.packageId', pkg);
       localStorage.setItem('morgendrot.directChain.mailboxId', mb);
       if (sender) localStorage.setItem('morgendrot.directChain.senderAddress', sender);
+      localStorage.setItem('morgendrot.directChain.ttlDays', '30');
+      localStorage.setItem(
+        'morgendrot.directChain.flagsJson',
+        JSON.stringify({ useMailbox: true, mailboxStorePlaintext: true, messengerCreditsConfigured: false })
+      );
       localStorage.setItem('morgendrot.directMailboxDrain', '1');
-      localStorage.removeItem('morgendrot.iotaSubmitMode');
+      localStorage.setItem('morgendrot.iotaSubmitMode', 'client');
+      localStorage.setItem('morgendrot.directChainOptimisticFlags', '1');
+      localStorage.setItem('morgendrot.autarkyMode', '1');
+      localStorage.setItem('morgendrot.directChain.savedAtMs', String(Date.now()));
+      const testnet = { packageId: pkg, mailboxId: mb, rpcUrl: rpc };
+      localStorage.setItem(
+        'morgendrot.einsatz.networkProfiles.v1',
+        JSON.stringify({
+          active: 'testnet',
+          setupPlan: 'both',
+          setupPlanChosen: true,
+          testnet,
+          mainnet,
+        })
+      );
       if (boss) {
         try {
           const peerKey = 'morgendrot.connectedPeersSnapshot.v1';
@@ -794,9 +966,22 @@ export async function applyBossHandoffChainViaStorage(session, p) {
             peers.push({ address: boss, label: 'Boss', savedAtMs: Date.now() });
             localStorage.setItem(peerKey, JSON.stringify({ ...snap, peers }));
           }
+          const dirKey = 'morgendrot.contacts.directory.v1';
+          const dirRaw = localStorage.getItem(dirKey);
+          const dirEnv = dirRaw ? JSON.parse(dirRaw) : { savedAtMs: Date.now(), directory: {} };
+          const directory = dirEnv.directory && typeof dirEnv.directory === 'object' ? dirEnv.directory : {};
+          directory[b] = { ...(directory[b] || {}), label: 'Boss' };
+          localStorage.setItem(dirKey, JSON.stringify({ savedAtMs: Date.now(), directory }));
+          const lastKey = 'morgendrot.contactPhonebook.lastContact';
+          const lastRaw = localStorage.getItem(lastKey);
+          const last = lastRaw ? JSON.parse(lastRaw) : {};
+          last[b] = Date.now();
+          localStorage.setItem(lastKey, JSON.stringify(last));
         } catch { /* ignore */ }
       }
       window.dispatchEvent(new CustomEvent('morgendrot-direct-iota-ui-changed'));
+      window.dispatchEvent(new CustomEvent('morgendrot:einsatz-network-profiles-changed'));
+      window.dispatchEvent(new CustomEvent('morgendrot.standaloneHandoffApplied'));
       window.dispatchEvent(new CustomEvent('morgendrot.apiBaseChanged'));
       return { pkg: pkg.slice(0, 14), mb: mb.slice(0, 14), boss: boss.slice(0, 14) };
     })()`
