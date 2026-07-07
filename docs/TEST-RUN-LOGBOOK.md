@@ -12,6 +12,9 @@
 
 | Datum | Umgebung | Kommandos / Notiz | Ergebnis |
 |--------|-----------|---------------------|----------|
+| **2026-07-07** | PC Boss + Samsung APK, **§ H.36 P1 LAN WLAN-only** | APK-Rebuild: `network_security_config` + `MainActivity` **Mixed-Content** für Boss-HTTP aus `https://localhost`; `SKIP_ADB_REVERSE=1`, API `http://192.168.178.41:3342`. CDP `apk-h36-lan-fieldtest.mjs`: Push + `lan-inbox` Poll 1 TREFFER; Posteingang **„Empfangen über: LAN“**. | **PASS (P1 LAN, WLAN-only)** — ohne `adb reverse`. |
+| **2026-07-07** | PC Boss + Samsung APK, **§ H.36 P1 LAN Team-Sync (USB-Reverse)** | CDP `apk-h36-lan-fieldtest.mjs`: Boss LAN `192.168.178.41:3342` OK; APK via `adb reverse` + `morgendrot.apiBaseOverride` → `127.0.0.1:3342`; Boss `POST /api/team-sync/push` (`MORG_TEAM_MEMBER_UPDATE_V1`); APK `lan-inbox` Poll 1 TREFFER; Posteingang **„Empfangen über: LAN“**. | **PASS (P1 LAN, USB-Reverse)** — Feldtest-Skript `scripts/apk-h36-lan-fieldtest.mjs`. |
+| **2026-07-07** | Samsung APK, **Block 2 §3 Simple-Mode** | CDP `apk-block2-simple-mode-check.mjs`: Handoff `SIMPLE_MODE=true` gesetzt, **6/6 PASS** (Dashboard, Sendepfad ohne Ad-hoc/Pfad-4-Checkbox, Offline-Streifen, kein Expert-UI). Skript `scripts/apk-block2-simple-mode-check.mjs` neu. | **PASS (§3)** — Block 2 Feldtest (1 Gerät) weitgehend grün; **4e/4f** N/A. |
 | **2026-07-07** | PC Boss + Samsung APK, **CDP Mobile-Nav + Helfer→Boss (2)** | Nach Bottom-Nav (**Chats/Posteingang/Kontakte**): `apk-cdp-common.mjs` — `openMobileMessengerTab`, Composer über Tab **Posteingang**, Partner-Chat über **Chats**. `apk-standalone-helper-boss-send-test.mjs`: **PASS** (Tx `E3rRYhCZ…`, Boss-Inbox Poll 1 TREFFER). Boss-Flackern weiter **weg**. | **PASS (3+Regression)** — Block 2 Kernpfad stabil; **§3 Simple-Mode-Checks** am APK manuell; **4e/4f** N/A (1 Gerät). |
 | **2026-07-07** | PC Boss + Samsung APK, **Posteingang-Flackern + Mobile-Shell** | Boss-PC: Testnachricht rhythmisch sichtbar/weg — Ursache Reset ersetzte Liste + Warm-Cache-Downgrade; Fix `use-chat-view-inbox` (Merge wie Poll, Wallet-Scope nur Package+Adresse, kein Cache-Flash, Cache-Merge beim Schreiben). APK: Bottom-Nav **Chats/Posteingang/Kontakte**, Sendepfad 2×2-Grid, Composer sticky. `npm run dm` neu, Boss **Strg+F5** → Flackern **weg**. Rebuild+Install APK. | **PASS (UX+Inbox)** — Block 2 Boss-Inbox stabil; **4e/4f** weiter N/A (1 Gerät). |
 | **2026-07-07** | Samsung APK, **DialogTitle-Crash + Helfer→Boss PASS** | Handy-Fehler „Etwas ist schiefgelaufen — DialogTitle must be used within Dialog“: `vault-unlock-dialog.tsx` nutzte Radix `DialogTitle` im APK-`NativeModalShell` ohne `Dialog`-Root → auf Capacitor `<h2>`/`<p>`. Rebuild+Install. CDP `apk-standalone-helper-boss-send-test.mjs`: **PASS** (Klartext Tx `FsP7UkQ5…`, Boss-Inbox Poll 1 TREFFER, Direkt-RPC). | **PASS (3)** — Block 2 Helfer→Boss Kernpfad grün. |
@@ -145,11 +148,11 @@
 ## Nächste Pflege
 
 - **Feldtest (zweiter PC / später):** Helfer-ZIP / Handoff — Boss exportiert, Import + Checks (`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`).
-- **Manuell (später):** Boss+Helfer LAN — Team-Update, LAN-Inbox-Poll, „Empfangen über: LAN“ (`docs/TEST-RUN-LOGBOOK.md` Nachtrag 2026-07-03).
-- **Code (Ist 2026-07-03):** **§ H.36 P1** — LAN-Inbox-Poll; **sig freeze** (`docs/MORG-TEAM-WIRE-SIG-SCHEMA.md`); **§ H.23** Nest-Listener Envelope v2.
+- **Manuell (optional):** zweiter PC / **4e/4f** Peering.
+- **Code (Ist 2026-07-07):** **§ H.36 P1** LAN-Push + Inbox + UI **PASS (WLAN-only + USB-Reverse)**; **sig freeze** (`docs/MORG-TEAM-WIRE-SIG-SCHEMA.md`); **§ H.23** Nest-Listener Envelope v2.
 - Nach CLI-Angleichung: **`test:tickets-accesskey-realworld`** erneut und Zeile oben **OK** ergänzen (inkl. Commit-Hash optional).
 - CI: **`.github/workflows/frontend-checks.yml`** spiegelt Frontend-Unit; Root-Smoke lokal oder in eigener Pipeline pflegen.
 
 ---
 
-*Stand: 2026-07-07 — Block 2 teil-PASS (4b–4d, Helfer→Boss); Boss-Inbox stabil; APK Mobile-Shell; § H.36 P1 offen; 4e/4f + zweiter PC.*
+*Stand: 2026-07-07 — Block 2 teil-PASS; § H.36 P1 LAN **PASS (WLAN-only)**; 4e/4f + zweiter PC.*

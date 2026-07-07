@@ -744,7 +744,7 @@ export async function openPrivateChatWithPartner(session, addr) {
   return { ok: false }
 }
 
-async function openMobileMessengerTab(session, label) {
+export async function openMobileMessengerTab(session, label) {
   const re = label === 'Posteingang' ? /^Posteingang$/i : label === 'Chats' ? /^Chats$/i : new RegExp(`^${label}$`, 'i')
   await clickIfPresent(session, `(t) => ${re}.test(t)`)
   await sleep(700)

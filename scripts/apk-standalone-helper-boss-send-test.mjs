@@ -150,12 +150,14 @@ async function main() {
   console.log('Boss Adresse:', chain.bossAddress.slice(0, 12) + '…')
   console.log('Package:', chain.packageId.slice(0, 14) + '…')
 
-  try {
-    execSync(`adb shell am force-stop ${PACKAGE}`, { stdio: 'ignore' })
-    execSync(`adb shell am start -n ${PACKAGE}/.MainActivity`, { stdio: 'ignore' })
-    await new Promise((r) => setTimeout(r, 8000))
-  } catch {
-    console.log('ADB Neustart übersprungen')
+  if (process.env.APK_COLD_START === '1') {
+    try {
+      execSync(`adb shell am force-stop ${PACKAGE}`, { stdio: 'ignore' })
+      execSync(`adb shell am start -n ${PACKAGE}/.MainActivity`, { stdio: 'ignore' })
+      await new Promise((r) => setTimeout(r, 8000))
+    } catch {
+      console.log('ADB Neustart übersprungen')
+    }
   }
 
   const bossStatus = await ensureBossUnlocked()

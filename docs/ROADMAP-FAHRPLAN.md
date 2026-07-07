@@ -36,11 +36,11 @@
 | Bereich | Ist (Feld/Code) | Offen |
 |---------|-------------------|-------|
 | **Modus A Boss** | **`docs/FELDTEST-BOSS-BEI-0.md`** Wizard + FINAL+ **PASS 2026-07-03** (`docs/TEST-RUN-LOGBOOK.md`) | — |
-| **§ H.15 Standalone 4b–4d** | Samsung APK: Klartext + verschl. + Posteingang RPC **PASS**; CDP `apk-standalone-helper-boss-send-test.mjs` **PASS** | **4e/4f** (2. Gerät); §3 Simple-Mode-Checks **`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`** |
+| **§ H.15 Standalone 4b–4d** | Samsung APK: Klartext + verschl. + Posteingang RPC **PASS**; CDP `apk-standalone-helper-boss-send-test.mjs` **PASS**; **§3 Simple-Mode** CDP **6/6 PASS** | **4e/4f** (2. Gerät) |
 | **Boss-Inbox Stabilität** | `use-chat-view-inbox` — Reset/Poll-Merge, Wallet-Scope, kein Cache-Flash (`inbox-cache-key.ts`) | — |
 | **APK Mobile-Shell (Capacitor)** | **`chat-view-mobile-bottom-nav.tsx`**, **`chat-view-main-content.tsx`** — Tabs Chats/Posteingang/Kontakte; Sendepfad 2×2; Composer sticky; CDP-Nav angepasst | Voll-Shell P1 (Backlog); manuell §3 |
 | **Handoff-Export** | `queryGlobalsCreatedForPackage` + `reconcileHandoffExportGlobals` in API-ZIP-Route; Vitest 6/6 | Zweiter PC / echte Boss-ZIP am Gerät |
-| **§ H.36 P1/P2** | unverändert **Teil-Ist** (Wizard P0 war schon grün) | LAN-Push, Zustell-UI, `sig` freeze; Join-Queue Feldtest |
+| **§ H.36 P1/P2** | **P1 Feldtest PASS (2026-07-07):** `scripts/apk-h36-lan-fieldtest.mjs` — Boss `POST /api/team-sync/push`, APK `lan-inbox`, Posteingang **„Empfangen über: LAN“** (**WLAN-only** `192.168.x.x` + USB-Reverse); APK **Mixed-Content** + `network_security_config` | **`sig` freeze** Code-Ist; Join-Queue Feldtest |
 
 **Nachtrag 2026-06-17 (Messenger-Navigation, Telefonbuch, § H.36/H.3n/H.26 Teil-Ist):**
 
@@ -59,7 +59,7 @@
 
 **Reihenfolge ab 2026-03:** **Produkt/UX** (früher „später“) ist **jetzt vorangestellt** (**§ H.0**) – Handy-Einsatz, Entsperren und schlanke Oberfläche hängen daran; die **nummerierte 8-Punkte-Checkliste** (**§ A**) bleibt als **technische** Referenz (Bild/Audio … LoRa … Kabel-Bridge), wird aber **nicht** mehr strikt 1→8 abgearbeitet, wenn UX/Einsatz Vorrang hat. **Zuordnung § A ↔ § H:** siehe **§ A–H: Brücke** (unmittelbar unter dem Gesamtüberblick).
 
-**Nächste konkrete Schritte (2026-07-07):** **Block 2 abschließen** — **`docs/FELDTEST-BLOCK2-SIMPLE-HANDOFF.md`** §3 Simple-Checks am APK (manuell); **4e/4f** wenn zweites Gerät. **Dann Code:** **§ H.36 P1** (LAN-Push, Zustell-Feedback); **§ H.3n B2.5**; **§ H.1a** Vitest-Slices. **Erledigt (Feld):** Modus A (**2026-07-03**); Standalone **4b–4d** + Helfer→Boss (**2026-07-07**, 1 Gerät). **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
+**Nächste konkrete Schritte (2026-07-07):** **4e/4f** wenn zweites Gerät. **Dann Code:** **§ H.3n B2.5**; **§ H.1a** Vitest-Slices. **Erledigt (Feld):** Modus A (**2026-07-03**); Standalone **4b–4d** + Helfer→Boss + **§3 Simple** + **§ H.36 P1 LAN WLAN-only** (**2026-07-07**, 1 Gerät). **Backlog:** **§ H.24** Package-Profile; **§ H.28** Discord/Matrix; LoRa **Ticket A–C** (**§ H.3** Phase B); **§ H.26** B5 `/nodes`/`/qr`.
 
 ### Spätere Tests (Rollen / Consumer / Feld)
 
