@@ -245,33 +245,63 @@ export async function snapshot(session) {
   }
 }
 
-export async function unlockVaultIfNeeded(session) {
+export async function unlockVaultIfNeeded(session, { force = false } = {}) {
   let state = await readSessionState(session)
-  if (state.addr.length >= 66 && !state.vaultDialogOpen) {
-    console.log('… Vault bereits entsperrt:', state.addr.slice(0, 10) + '…')
-    return state.addr
+  if (!force && state.addr.length >= 66 && !state.vaultDialogOpen) {
+    const diag = await readSendDiagnostics(session).catch(() => null)
+    const vaultBlocked = /tresor gesperrt/i.test(
+      `${diag?.sendTitle || ''} ${diag?.hint || ''} ${diag?.status || ''}`
+    )
+    if (!vaultBlocked) {
+      console.log('… Vault bereits entsperrt:', state.addr.slice(0, 10) + '…')
+      return state.addr
+    }
+    console.log('… Vault laut Composer gesperrt — erneut entsperren')
   }
 
   console.log('… Vault entsperren (Passwort', PASSWORD + ')')
 
-  if (!state.hasPasswordField) {
-    const picked = await session.evaluate(
-      `(() => {
-        const buttons = [...document.querySelectorAll('button')];
-        const vaultCard = buttons.find((b) => {
-          const title = b.querySelector('p.font-semibold, p.text-base')?.textContent?.trim();
-          return title === 'Tresor öffnen';
-        });
-        if (vaultCard) {
-          vaultCard.click();
-          return { ok: true };
+  await session.evaluate(
+    `(() => {
+      if (localStorage.getItem('morgendrot.directIotaSigner.enc.v1')) {
+        localStorage.setItem('morgendrot.standaloneOnboardingPath.v1', 'solo');
+      }
+    })()`
+  )
+
+  await clickIfPresent(session, `(t) => t === 'Übersicht' || /^Start/i.test(t)`)
+  await sleep(500)
+  const opened = await session.evaluate(
+    `(() => {
+      const nodes = [...document.querySelectorAll('button,[role="button"],a')];
+      for (const el of nodes) {
+        const t = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+        if (/Tresor öffnen/i.test(t)) {
+          el.click();
+          return { ok: true, label: t.slice(0, 80) };
         }
-        return { ok: false };
-      })()`
-    )
-    if (picked?.ok) console.log('   Modus: Tresor öffnen')
-    await sleep(700)
+      }
+      return { ok: false };
+    })()`
+  )
+  if (opened?.ok) console.log('   Dialog:', opened.label)
+
+  await clickIfPresent(session, `(t) => t === 'Tresor entsperren'`)
+  await sleep(800)
+  await clickIfPresent(session, `(t) => {
+    const title = el.querySelector?.('p.font-semibold, p.text-base')?.textContent?.trim();
+    return title === 'Tresor öffnen';
+  }`)
+  await sleep(800)
+
+  let hasPw = false
+  for (let i = 0; i < 20; i++) {
+    hasPw = await session.evaluate(`Boolean(document.getElementById('wallet-password'))`)
+    if (hasPw) break
+    await clickIfPresent(session, `(t) => t === 'Tresor entsperren'`)
+    await sleep(500)
   }
+  if (!hasPw) throw new Error('wallet-password Feld nicht gefunden — Tresor-Dialog öffnen')
 
   await fillById(session, 'wallet-password', PASSWORD)
   await sleep(300)
@@ -280,7 +310,11 @@ export async function unlockVaultIfNeeded(session) {
   for (let i = 0; i < 45; i++) {
     await sleep(1000)
     state = await readSessionState(session)
-    if (state.addr.length >= 66 && !state.vaultDialogOpen) {
+    const diag = await readSendDiagnostics(session).catch(() => null)
+    const vaultBlocked = /tresor gesperrt/i.test(
+      `${diag?.sendTitle || ''} ${diag?.hint || ''}`
+    )
+    if (state.addr.length >= 66 && !state.vaultDialogOpen && !vaultBlocked) {
       console.log('   Entsperrt:', state.addr.slice(0, 10) + '…')
       return state.addr
     }
@@ -636,7 +670,8 @@ export async function openMessagesComposer(session) {
   await sleep(400)
 }
 
-export async function sendComposerMessage(session, { encrypted, message, myAddr }) {
+export async function sendComposerMessage(session, { encrypted, message, myAddr, recipientAddr }) {
+  const toAddr = recipientAddr || myAddr
   if (encrypted) {
     await clickIfPresent(session, `(t) => /^Verschl\\./i.test(t) || t === 'Verschlüsselt' || t.includes('Verschl')`)
   } else {
@@ -646,11 +681,11 @@ export async function sendComposerMessage(session, { encrypted, message, myAddr 
   await sleep(400)
 
   if (encrypted) {
-    const ecdh = await ensureChatEcdhForSelf(session, myAddr)
+    const ecdh = await ensureChatEcdhForSelf(session, toAddr)
     console.log('   ECDH:', ecdh?.via || JSON.stringify(ecdh))
   }
 
-  const armed = await armRecipient(session, myAddr)
+  const armed = await armRecipient(session, toAddr)
   if (!armed?.ok) throw new Error('Empfänger nicht gesetzt')
   console.log('   Empfänger via:', armed.via || 'input')
 
@@ -730,4 +765,40 @@ export function isDirectRelay(fin, rpcState) {
   const directRpc = rpcState.ready || /Direkt-RPC aktiv/i.test(fin.iotaLine + ' ' + rpcState.uiLine)
   const relay = /über Relay/i.test(fin.iotaLine + ' ' + rpcState.uiLine)
   return { directRpc, relay }
+}
+
+/** Boss-Handoff-Ketten-IDs + Partner für Helfer→Boss-Smoke. */
+export async function applyBossHandoffChainViaStorage(session, p) {
+  const { packageId, mailboxId, rpcUrl, bossAddress, senderAddress } = p
+  await session.evaluate(
+    `(() => {
+      const pkg = ${JSON.stringify(packageId)};
+      const mb = ${JSON.stringify(mailboxId)};
+      const rpc = ${JSON.stringify(rpcUrl)};
+      const boss = ${JSON.stringify(bossAddress || '')};
+      const sender = ${JSON.stringify(senderAddress || '')};
+      localStorage.setItem('morgendrot.directIotaRpcUrl', rpc);
+      localStorage.setItem('morgendrot.directChain.packageId', pkg);
+      localStorage.setItem('morgendrot.directChain.mailboxId', mb);
+      if (sender) localStorage.setItem('morgendrot.directChain.senderAddress', sender);
+      localStorage.setItem('morgendrot.directMailboxDrain', '1');
+      localStorage.removeItem('morgendrot.iotaSubmitMode');
+      if (boss) {
+        try {
+          const peerKey = 'morgendrot.connectedPeersSnapshot.v1';
+          const raw = localStorage.getItem(peerKey);
+          const snap = raw ? JSON.parse(raw) : { peers: [] };
+          const peers = Array.isArray(snap.peers) ? snap.peers : [];
+          const b = boss.toLowerCase();
+          if (!peers.some((x) => String(x?.address || x).toLowerCase() === b)) {
+            peers.push({ address: boss, label: 'Boss', savedAtMs: Date.now() });
+            localStorage.setItem(peerKey, JSON.stringify({ ...snap, peers }));
+          }
+        } catch { /* ignore */ }
+      }
+      window.dispatchEvent(new CustomEvent('morgendrot-direct-iota-ui-changed'));
+      window.dispatchEvent(new CustomEvent('morgendrot.apiBaseChanged'));
+      return { pkg: pkg.slice(0, 14), mb: mb.slice(0, 14), boss: boss.slice(0, 14) };
+    })()`
+  )
 }
