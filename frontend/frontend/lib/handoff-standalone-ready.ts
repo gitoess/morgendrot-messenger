@@ -253,7 +253,7 @@ export async function activateStandaloneHelperWallet(opts: {
     if ('requestIdleCallback' in window) {
       window.requestIdleCallback(runEcdh, { timeout: 4000 })
     } else {
-      window.setTimeout(runEcdh, 1500)
+      globalThis.setTimeout(runEcdh, 1500)
     }
   }
 

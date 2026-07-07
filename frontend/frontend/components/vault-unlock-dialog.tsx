@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 import { KeyRound, Copy, Check, PlusCircle, Sprout, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { VaultUnlockShell } from '@/frontend/components/vault-unlock-shell'
+import { DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -322,6 +323,14 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
         })
       : []
 
+  const dialogTitle = streamlined
+    ? t('title.streamlined')
+    : soloPath
+      ? t('title.solo')
+      : standaloneApk
+        ? t('title.standalone')
+        : t('title.default')
+
   const dialogDescription = streamlined
     ? t('description.streamlined')
     : soloPath
@@ -340,18 +349,15 @@ export function VaultUnlockDialog(p: VaultUnlockDialogProps) {
         <div className="shrink-0 space-y-1 border-b border-border/60 px-5 pb-4 pt-5 text-left">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1 space-y-1">
-              <h2 className="text-xl font-semibold tracking-tight">
-                {streamlined
-                  ? t('title.streamlined')
-                  : soloPath
-                    ? t('title.solo')
-                    : standaloneApk
-                      ? t('title.standalone')
-                      : t('title.default')}
-              </h2>
-              {dialogDescription.trim() ? (
-                <p className="text-sm text-muted-foreground">{dialogDescription}</p>
-              ) : null}
+              <DialogTitle className="text-xl font-semibold tracking-tight">{dialogTitle}</DialogTitle>
+              <DialogDescription
+                className={cn(
+                  'text-sm text-muted-foreground',
+                  !dialogDescription.trim() && 'sr-only',
+                )}
+              >
+                {dialogDescription.trim() || dialogTitle}
+              </DialogDescription>
             </div>
             <LocaleFlagSwitch className="shrink-0" />
           </div>

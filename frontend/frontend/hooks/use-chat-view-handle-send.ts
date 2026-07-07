@@ -87,6 +87,7 @@ import {
 import type { Message } from '@/frontend/lib/types'
 import { formatUnknownError } from '@/frontend/lib/format-unknown-error'
 import { notifyTelegramContact } from '@/frontend/lib/api/telegram-notify'
+import { postTelegramGroupAlarm } from '@/frontend/lib/api/telegram-integrations'
 import { resolveChatSendEncryption } from '@/frontend/lib/resolve-chat-send-encryption'
 import {
   buildTelegramMessagePreview,

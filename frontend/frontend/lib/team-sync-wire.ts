@@ -4,7 +4,7 @@
  * Team-Sync Wire veröffentlichen (IOTA Persistenz) — § H.36 P1/P3.
  * LAN-Zustellung folgt automatisch, wenn Basis-URL auf Boss-LAN zeigt.
  */
-import { sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendPlaintextMailboxHybrid, sendTeamPlaintextBroadcastHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { getApiBase } from '@/frontend/lib/api/api-base'
 import { postTeamSyncLanPush } from '@/frontend/lib/api/team-sync-lan'
 import { isBossLanApiBase } from '@/frontend/lib/is-boss-lan-api-base'

@@ -39,6 +39,13 @@ export type PrepareForensicBatchOpts = {
   planOpts?: PlanForensicBatchTxGroupsOpts
 }
 
+function mapForensicTransports(
+  transports: Message['transports']
+): ForensicBatchMessageInput['transports'] {
+  if (!transports?.length) return undefined
+  return transports.map((t) => (t === 'lan' ? 'internet' : t))
+}
+
 export function messageToForensicBatchInput(m: Message): ForensicBatchMessageInput {
   return {
     id: m.id,
@@ -48,7 +55,7 @@ export function messageToForensicBatchInput(m: Message): ForensicBatchMessageInp
     timestamp: m.timestamp,
     source:
       m.source === 'mesh' ? 'mesh' : m.source === 'telegram' ? 'telegram' : 'mailbox',
-    transports: m.transports,
+    transports: mapForensicTransports(m.transports),
     chainPurgeKind: m.chainPurgeKind,
     pinnwandPost: m.pinnwandPost,
     chainTxDigest: resolveInboxMessageTxDigest(m),
