@@ -12,7 +12,6 @@ import {
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
-import { SettingsEinsatzProfilesSection } from '@/frontend/components/settings-einsatz-profiles-section'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
 import { SettingsTelegramAlarmGroupJoin } from '@/frontend/components/views/settings-telegram-alarm-group-join'
@@ -169,7 +168,6 @@ export function SettingsView({
         <SettingsAppearanceSection />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
-        <SettingsEinsatzProfilesSection canManage={isBossRole} />
         <CapacitorApiBaseCard />
         <div id="settings-handoff-import">
           <LazyHandoffImportPanel

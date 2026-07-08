@@ -24,3 +24,9 @@ export type SendPartOk =
 export type MailboxPartResult = SendPartOk | { ok: false; error: string }
 
 export type QueueMailboxOutcome = 'queued' | 'duplicate' | 'skipped' | { reject: string }
+
+export function isSendPartSuccess(
+  part: SendPartOk | null | undefined
+): part is Extract<SendPartOk, { ok: true }> {
+  return part?.ok === true
+}

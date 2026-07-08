@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 import {
   emergencyFanOutAnyOk,
   formatEmergencyFanOutStatus,
@@ -47,7 +48,7 @@ describe('formatEmergencyFanOutStatus', () => {
 
 describe('runEmergencyFanOut', () => {
   it('parallelisiert Wege und behält Online-Erfolg', async () => {
-    const send = vi.fn(async (t: 'mesh' | 'internet') =>
+    const send = vi.fn(async (t: ForcedTransport) =>
       t === 'internet'
         ? { ok: true, part: { ok: true as const } }
         : { ok: false, detail: 'NO_RESPONSE' }

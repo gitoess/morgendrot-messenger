@@ -27,7 +27,7 @@ import {
   type PhonebookFilterId,
 } from '@/frontend/lib/contact-phonebook-format'
 import { formatContactDirectoryKey, resolveContactStorageKey } from '@/frontend/lib/contact-storage-key'
-import { contactHasAnyMailboxSlot, slotsToSavePayload } from '@/frontend/lib/contact-mailbox-slots'
+import { contactHasAnyMailboxSlot, persistContactMailboxSlots, slotsToSavePayload } from '@/frontend/lib/contact-mailbox-slots'
 import {
   hideContactFromPhonebook,
   readContactFavorites,
@@ -129,7 +129,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       }
       const hasLora = Boolean(entry.meshNodeId?.trim())
       const isOnline = connectedSet.has(a)
-      const hasMb = contactHasAnyMailboxSlot(entry)
+      const hasMb = contactHasAnyMailboxSlot(entry, a)
       if (filter === 'lora' && !hasLora) continue
       if (filter === 'online' && !isOnline) continue
       if (filter === 'mailbox' && !hasMb) continue
@@ -168,17 +168,29 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       setBusy(true)
       try {
         const roleTags = parseContactRoleTagsCsv(values.roleTagsCsv)
-        const r = await saveContactEntry({
-          address: storageKey,
-          label: values.label.trim() || undefined,
-          meshNodeId: values.meshNodeId.trim() || undefined,
+        const walletForSlots = storageKey.startsWith('0x') ? storageKey : undefined
+        const slotFields = {
           mailboxSharedId: values.mailboxSharedId.trim(),
           mailboxPrivateId: values.mailboxPrivateId.trim(),
           mailboxTeamId: values.mailboxTeamId.trim(),
           mailboxBufferId: values.mailboxBufferId.trim(),
-          mailboxObjectId: values.mailboxPrivateId.trim(),
+        }
+        const slotScope =
+          walletForSlots && persistContactMailboxSlots(walletForSlots, slotFields) === 'profile'
+            ? 'profile'
+            : 'telefonbuch'
+        const r = await saveContactEntry({
+          address: storageKey,
+          label: values.label.trim() || undefined,
+          meshNodeId: values.meshNodeId.trim() || undefined,
           telegramChatId: values.telegramChatId.trim(),
           ...(roleTags.length ? { roleTags } : {}),
+          ...(slotScope === 'telefonbuch'
+            ? {
+                ...slotFields,
+                mailboxObjectId: values.mailboxPrivateId.trim(),
+              }
+            : {}),
         })
         if (r.ok) {
           if (previousKey && previousKey !== storageKey) {
@@ -194,12 +206,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             onSelectContact(storageKey, {
               label: values.label.trim() || storageKey.slice(0, 12),
               meshNodeId: values.meshNodeId.trim() || undefined,
-              ...slotsToSavePayload({
-                mailboxSharedId: values.mailboxSharedId,
-                mailboxPrivateId: values.mailboxPrivateId,
-                mailboxTeamId: values.mailboxTeamId,
-                mailboxBufferId: values.mailboxBufferId,
-              }),
+              ...slotsToSavePayload(slotFields),
               telegramChatId: values.telegramChatId.trim() || undefined,
             })
           }
@@ -254,7 +261,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     const { address, entry, displayName } = row
     const hasLora = Boolean(entry.meshNodeId?.trim())
     const isOnline = connectedSet.has(address)
-    const hasMb = contactHasAnyMailboxSlot(entry)
+    const hasMb = contactHasAnyMailboxSlot(entry, address)
     return (
       <ContactPhonebookCard
         key={address}

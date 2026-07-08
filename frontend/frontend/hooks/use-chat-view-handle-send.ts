@@ -74,7 +74,7 @@ import {
   type EmergencyFanOutLegResult,
 } from '@/frontend/features/send/chat-view-emergency-fanout'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
-import type { SendPartOk } from '@/frontend/features/send/chat-view-handle-send-part-types'
+import { type SendPartOk, isSendPartSuccess } from '@/frontend/features/send/chat-view-handle-send-part-types'
 import {
   isForensicImageMailboxAttestationEnabled,
   runForensicMailboxAttestationAfterSend,
@@ -1005,7 +1005,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
             setStatusMsg(formatEmergencyFanOutStatus(results))
             return
           }
-          if (best?.path4Footnote) path4Footnotes.push(best.path4Footnote)
+          if (isSendPartSuccess(best) && best.path4Footnote) path4Footnotes.push(best.path4Footnote)
           lastOk = best
           continue
         }
@@ -1028,10 +1028,14 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         successMsg = `SOS — ${formatEmergencyFanOutStatus(lastFanOutResults)}${successTail}`
       } else if (textSnaps.length > 1) {
         successMsg = `Alle ${textSnaps.length} Teile gesendet.${successTail}`
-      } else if (lastOk?.broadcastTargetCount != null && lastOk.broadcastTargetCount > 1) {
+      } else if (isSendPartSuccess(lastOk) && lastOk.broadcastTargetCount != null && lastOk.broadcastTargetCount > 1) {
         successMsg = `An ${lastOk.broadcastTargetCount} Empfänger gesendet.${successTail}`
       } else {
-        successMsg = singleWireSuccessMsg(lastOk?.groupDelivery, lastOk?.pairwiseTargetCount) + successTail
+        successMsg =
+          singleWireSuccessMsg(
+            isSendPartSuccess(lastOk) ? lastOk.groupDelivery : undefined,
+            isSendPartSuccess(lastOk) ? lastOk.pairwiseTargetCount : undefined
+          ) + successTail
       }
 
       const forensicGate =
@@ -1045,9 +1049,11 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         lastOk.mailboxCapture?.encrypted === true
 
       setStatus('success')
-      const digestSuffix = formatTxDigestStatusSuffix(lastOk?.mailboxCapture?.txDigest)
+      const digestSuffix = formatTxDigestStatusSuffix(
+        isSendPartSuccess(lastOk) ? lastOk.mailboxCapture?.txDigest : undefined
+      )
       let statusLine = successMsg + digestSuffix
-      if (forensicGate && lastOk?.ok && lastOk.mailboxCapture) {
+      if (forensicGate && isSendPartSuccess(lastOk) && lastOk.mailboxCapture) {
         const imgHash = await sha256HexFromBase64Bytes(attachedBlobBase64)
         await runForensicMailboxAttestationAfterSend({
           recipient: recipient.trim(),
@@ -1107,7 +1113,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       }
 
-      if (lastOk?.ok && lastOk.mailboxCapture?.txDigest) {
+      if (isSendPartSuccess(lastOk) && lastOk.mailboxCapture?.txDigest) {
         const previewSource =
           lastOk.mailboxCapture.payloadUtf8?.trim() ||
           textSnaps[textSnaps.length - 1]?.trim() ||
@@ -1132,7 +1138,7 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       if (
         isGroupChannel &&
-        lastOk?.ok &&
+        isSendPartSuccess(lastOk) &&
         lastOk.mailboxCapture &&
         lastOk.groupDelivery &&
         forcedTransport === 'internet' &&
