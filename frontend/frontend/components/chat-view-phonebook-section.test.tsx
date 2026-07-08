@@ -82,7 +82,7 @@ describe('ChatViewPhonebookSection (§ H.1a)', () => {
         })}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /Einstellungen → Meine Mailboxen/i }))
+    fireEvent.click(screen.getByRole('button', { name: /Einstellungen.*Meine Mailboxen/i }))
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
   })
 })

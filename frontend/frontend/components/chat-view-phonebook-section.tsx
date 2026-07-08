@@ -417,7 +417,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             onClick={p.onOpenSettings}
             className="text-xs font-medium text-primary underline hover:no-underline"
           >
-            Einstellungen ÔåÆ Meine Mailboxen
+            Einstellungen {'\u2192'} Meine Mailboxen
           </button>
         </div>
       ) : null}
