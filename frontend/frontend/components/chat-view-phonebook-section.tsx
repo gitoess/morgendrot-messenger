@@ -1,7 +1,7 @@
-'use client'
+﻿'use client'
 
 /**
- * Telefonbuch — Kartenliste, Filter, Favoriten, Modal für Anlegen/Bearbeiten.
+ * Telefonbuch ÔÇö Kartenliste, Filter, Favoriten, Modal f├╝r Anlegen/Bearbeiten.
  */
 
 import { useCallback, useMemo, useState } from 'react'
@@ -27,7 +27,7 @@ import {
   type PhonebookFilterId,
 } from '@/frontend/lib/contact-phonebook-format'
 import { formatContactDirectoryKey, resolveContactStorageKey } from '@/frontend/lib/contact-storage-key'
-import { contactHasAnyMailboxSlot, persistContactMailboxSlots, slotsToSavePayload } from '@/frontend/lib/contact-mailbox-slots'
+import { contactHasAnyMailboxSlot, slotsToSavePayload } from '@/frontend/lib/contact-mailbox-slots'
 import {
   hideContactFromPhonebook,
   readContactFavorites,
@@ -52,14 +52,14 @@ export type ChatViewPhonebookSectionProps = {
   myAddressLine?: string
   serverMailboxId?: string
   connectedAddresses?: string[]
-  /** Kontakt ins Composer übernehmen und Telefonbuch schließen (Caller). */
+  /** Kontakt ins Composer ├╝bernehmen und Telefonbuch schlie├ƒen (Caller). */
   onSelectContact?: (storageKey: string, entry: ContactMeshEntryClient) => void
   /** Im Sheet: kein eigener Seitentitel (steht in SheetHeader). */
   embedded?: boolean
   teamMailboxCreateAllowed?: boolean
   /** Boss/Kommandant: initialProfile-JSON ins Telefonbuch. */
   allowInitialProfileImport?: boolean
-  /** Boss/Kommandant: Team-Telefonbuch „Aus Team entfernen“. */
+  /** Boss/Kommandant: Team-Telefonbuch ÔÇ×Aus Team entfernenÔÇ£. */
   apiStatus?: ApiStatus | null
   /** Mailbox-Verwaltung liegt unter Einstellungen. */
   onOpenSettings?: () => void
@@ -129,7 +129,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       }
       const hasLora = Boolean(entry.meshNodeId?.trim())
       const isOnline = connectedSet.has(a)
-      const hasMb = contactHasAnyMailboxSlot(entry, a)
+      const hasMb = contactHasAnyMailboxSlot(entry)
       if (filter === 'lora' && !hasLora) continue
       if (filter === 'online' && !isOnline) continue
       if (filter === 'mailbox' && !hasMb) continue
@@ -161,36 +161,24 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     async (values: ContactPhonebookFormValues) => {
       const storageKey = resolveContactStorageKey(values.address, values.telegramChatId)
       if (!storageKey) {
-        setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID nötig.')
+        setStatusMsg('IOTA-Adresse (0x + 64 Hex) oder Telegram Chat-ID n├Âtig.')
         return
       }
       const previousKey = (dialog?.editStorageKey ?? '').trim().toLowerCase()
       setBusy(true)
       try {
         const roleTags = parseContactRoleTagsCsv(values.roleTagsCsv)
-        const walletForSlots = storageKey.startsWith('0x') ? storageKey : undefined
-        const slotFields = {
-          mailboxSharedId: values.mailboxSharedId.trim(),
-          mailboxPrivateId: values.mailboxPrivateId.trim(),
-          mailboxTeamId: values.mailboxTeamId.trim(),
-          mailboxBufferId: values.mailboxBufferId.trim(),
-        }
-        const slotScope =
-          walletForSlots && persistContactMailboxSlots(walletForSlots, slotFields) === 'profile'
-            ? 'profile'
-            : 'telefonbuch'
         const r = await saveContactEntry({
           address: storageKey,
           label: values.label.trim() || undefined,
           meshNodeId: values.meshNodeId.trim() || undefined,
+          mailboxSharedId: values.mailboxSharedId.trim(),
+          mailboxPrivateId: values.mailboxPrivateId.trim(),
+          mailboxTeamId: values.mailboxTeamId.trim(),
+          mailboxBufferId: values.mailboxBufferId.trim(),
+          mailboxObjectId: values.mailboxPrivateId.trim(),
           telegramChatId: values.telegramChatId.trim(),
           ...(roleTags.length ? { roleTags } : {}),
-          ...(slotScope === 'telefonbuch'
-            ? {
-                ...slotFields,
-                mailboxObjectId: values.mailboxPrivateId.trim(),
-              }
-            : {}),
         })
         if (r.ok) {
           if (previousKey && previousKey !== storageKey) {
@@ -206,7 +194,12 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             onSelectContact(storageKey, {
               label: values.label.trim() || storageKey.slice(0, 12),
               meshNodeId: values.meshNodeId.trim() || undefined,
-              ...slotsToSavePayload(slotFields),
+              ...slotsToSavePayload({
+                mailboxSharedId: values.mailboxSharedId,
+                mailboxPrivateId: values.mailboxPrivateId,
+                mailboxTeamId: values.mailboxTeamId,
+                mailboxBufferId: values.mailboxBufferId,
+              }),
               telegramChatId: values.telegramChatId.trim() || undefined,
             })
           }
@@ -252,7 +245,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       }
       markTeamMemberRemoveSent(address)
       setTeamRemoveTick((n) => n + 1)
-      setStatusMsg(`„${displayName}" — Entfernung an das Team gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
+      setStatusMsg(`ÔÇ×${displayName}" ÔÇö Entfernung an das Team gesendet${formatTeamWireDeliveryChannels(r.channels)}.`)
     },
     [directory, p.apiStatus, setStatusMsg]
   )
@@ -261,7 +254,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
     const { address, entry, displayName } = row
     const hasLora = Boolean(entry.meshNodeId?.trim())
     const isOnline = connectedSet.has(address)
-    const hasMb = contactHasAnyMailboxSlot(entry, address)
+    const hasMb = contactHasAnyMailboxSlot(entry)
     return (
       <ContactPhonebookCard
         key={address}
@@ -349,7 +342,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name, Adresse oder Meshtastic suchen…"
+          placeholder="Name, Adresse oder Meshtastic suchenÔÇª"
           className="min-h-12 w-full rounded-xl border border-border bg-input py-3 pl-11 pr-4 text-base text-foreground placeholder:text-muted-foreground"
         />
       </div>
@@ -382,7 +375,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
         <p className="text-xs text-muted-foreground">
           {visibleDirectoryCount} {visibleDirectoryCount === 1 ? 'Kontakt' : 'Kontakte'} gespeichert
           {rows.length !== visibleDirectoryCount
-            ? ` · ${rows.length} angezeigt (Filter „${PHONEBOOK_FILTER_LABELS[filter]}“)`
+            ? ` ┬À ${rows.length} angezeigt (Filter ÔÇ×${PHONEBOOK_FILTER_LABELS[filter]}ÔÇ£)`
             : ''}
         </p>
       ) : null}
@@ -390,10 +383,10 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
       {rows.length === 0 ? (
         <p className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-8 text-center text-sm text-muted-foreground">
           {visibleDirectoryCount > 0 && filter === 'recent'
-            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat „Zuletzt kontaktiert“. Filter „Alle“ wählen oder einen Kontakt öffnen/speichern.`
+            ? `${visibleDirectoryCount} Kontakt(e) sind gespeichert, aber keiner hat ÔÇ×Zuletzt kontaktiertÔÇ£. Filter ÔÇ×AlleÔÇ£ w├ñhlen oder einen Kontakt ├Âffnen/speichern.`
             : visibleDirectoryCount > 0 && filter !== 'all'
-              ? `Keine Treffer für „${PHONEBOOK_FILTER_LABELS[filter]}“${search.trim() ? ' und diese Suche' : ''}. Filter „Alle“ probieren.`
-              : `Keine Kontakte${search.trim() ? ' für diese Suche' : ''}. „Neuer Kontakt“ oder QR-Scan nutzen.`}
+              ? `Keine Treffer f├╝r ÔÇ×${PHONEBOOK_FILTER_LABELS[filter]}ÔÇ£${search.trim() ? ' und diese Suche' : ''}. Filter ÔÇ×AlleÔÇ£ probieren.`
+              : `Keine Kontakte${search.trim() ? ' f├╝r diese Suche' : ''}. ÔÇ×Neuer KontaktÔÇ£ oder QR-Scan nutzen.`}
         </p>
       ) : (
         <div className="space-y-6">
@@ -424,7 +417,7 @@ export function ChatViewPhonebookSection(p: ChatViewPhonebookSectionProps) {
             onClick={p.onOpenSettings}
             className="text-xs font-medium text-primary underline hover:no-underline"
           >
-            Einstellungen → Meine Mailboxen
+            Einstellungen ÔåÆ Meine Mailboxen
           </button>
         </div>
       ) : null}
