@@ -1,0 +1,130 @@
+# Hobby release artifacts (experimental)
+#
+# Builds standalone PC ZIP + unsigned debug APK, uploads as DRAFT pre-release.
+# See docs/HOBBY-RELEASE-POLICY.md
+
+name: Hobby release artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag (e.g. v0.1.0-experimental)'
+        required: true
+        default: 'v0.1.0-experimental'
+  push:
+    tags:
+      - 'v*-experimental'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hobby-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-draft-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      NODE_OPTIONS: '--max-old-space-size=6144'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+            packages/morgendrot-core/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: |
+            platforms;android-36
+            build-tools;36.0.0
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Install @morgendrot/core
+        working-directory: packages/morgendrot-core
+        run: npm ci
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Android debug APK
+        working-directory: frontend
+        env:
+          CAPACITOR_EXPORT: '1'
+          NEXT_PUBLIC_MORG_PRODUCT: messenger
+        run: |
+          npm run prebuild
+          npx next build
+          npx cap sync android
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Build standalone bundle and package artifacts
+        run: |
+          npm run bundle:messenger:standalone
+          node scripts/package-hobby-release-artifacts.mjs --skip-bundle --require-apk
+
+      - name: Verify release artifacts
+        run: |
+          set -euo pipefail
+          for f in \
+            dist/hobby-release/morgendrot-messenger-pc-standalone.zip \
+            dist/hobby-release/morgendrot-messenger-android-debug.apk \
+            dist/hobby-release/SHA256SUMS.txt \
+            dist/hobby-release/LICENSE \
+            dist/hobby-release/DISCLAIMER.md \
+            dist/hobby-release/COMMERCIAL-LICENSING.md
+          do
+            test -s "$f" || { echo "Missing or empty: $f"; exit 1; }
+          done
+          echo "All release artifacts present."
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create draft pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }} (experimental hobby build)
+          commitish: ${{ github.sha }}
+          draft: true
+          prerelease: true
+          make_latest: false
+          generate_release_notes: false
+          body_path: .github/release_template.md
+          fail_on_unmatched_files: true
+          files: |
+            dist/hobby-release/morgendrot-messenger-pc-standalone.zip
+            dist/hobby-release/morgendrot-messenger-android-debug.apk
+            dist/hobby-release/SHA256SUMS.txt
+            dist/hobby-release/LICENSE
+            dist/hobby-release/DISCLAIMER.md
+            dist/hobby-release/COMMERCIAL-LICENSING.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

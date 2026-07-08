@@ -14,6 +14,7 @@
     "bundle:messenger": "tsx scripts/bundle-messenger-standalone.ts",
     "bundle:messenger:standalone": "tsx scripts/bundle-messenger-standalone.ts --standalone-only",
     "bundle:messenger:sales": "tsx scripts/bundle-messenger-standalone.ts --sales-only",
+    "package:hobby-release": "node scripts/package-hobby-release-artifacts.mjs",
     "bundle:standalone-smartphone": "tsx scripts/bundle-standalone-smartphone.ts",
     "assemble:messenger-units": "tsx scripts/assemble-messenger-units.ts",
     "messenger:desktop": "tsx scripts/bundle-messenger-standalone.ts && tsx scripts/copy-messenger-bundle-to-desktop.ts",
@@ -177,7 +178,7 @@
     "clean:deep": "node scripts/clean-cache.mjs --deep",
     "pack:deploy": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/pack-deploy-bundles.ps1"
   },
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-or-later",
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@tailwindcss/cli": "^4.2.1",

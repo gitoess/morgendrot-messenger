@@ -1,5 +1,7 @@
 # Morgendrot — Einsatz-Messenger (Funk-Default, IOTA gekoppelt)
 
+> **Experimentelles Hobby-Projekt** — kein fertiges Produkt, keine Sicherheitsgarantien, kein Support, nicht für lebenskritische Einsätze. Nutzung auf eigene Gefahr. **EU-Nutzer:** nicht auf EU-„Chat Control“/Scanning ausgelegt. **Lizenz:** AGPL-3.0; **kommerzielle Nutzung** nur mit Erlaubnis → [`COMMERCIAL-LICENSING.md`](COMMERCIAL-LICENSING.md), vollständig [`DISCLAIMER.md`](DISCLAIMER.md). **Hobby-Releases:** [`docs/HOBBY-RELEASE-POLICY.md`](docs/HOBBY-RELEASE-POLICY.md).
+
 **Boss-geführtes Einsatz-Messenger-System** für trainierte Teams: **LoRa/Meshtastic** im Feld, **IOTA Rebased** für Mailbox, Verankerung und **Delayed LoRa → Tangle** (keine volle TX über die Luft — Gateway/Queue). Handoff in **unter 20 Sekunden**. Helfer-UI: Funk zuerst, Chain-Expert ausgeblendet (**§ H.0-SIMPLE**, **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**).
 
 Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, AccessKey-NFTs für Türschlösser. **SPOF = Seed**. Alle Funktionen optional über **`.env`** (**.env.example`**). **`npm install`** legt **`.env`** an, falls fehlend.

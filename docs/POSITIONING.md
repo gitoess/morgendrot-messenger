@@ -1,6 +1,16 @@
 # Morgendrot — Positionierung (GitHub / Außenwirkung)
 
-**Stand:** 2026-05-28 — kanonisch mit **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** und **§ H.0-SIMPLE**.
+**Stand:** 2026-07-08 — kanonisch mit **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** und **§ H.0-SIMPLE**.
+
+---
+
+## Hobby-Release & Lizenz (öffentliche Außenwirkung)
+
+- **Experimentelles Hobby-Projekt** — kein fertiges Produkt (`DISCLAIMER.md`)
+- **Lizenz:** AGPL-3.0 — **kommerzielle Nutzung** nur mit Erlaubnis (`COMMERCIAL-LICENSING.md`)
+- **GitHub Releases:** nur `standalone` + debug APK, **kein** Verkaufs-Bundle (`docs/HOBBY-RELEASE-POLICY.md`)
+- **Keine App Stores** — Sideload / direkter Download
+- **EU:** explizit nicht Chat-Control-konform positioniert
 
 ---
 
@@ -22,6 +32,7 @@
 
 ## Was Morgendrot nicht ist
 
+- Kein **fertiges Produkt** oder kommerzielles Endnutzer-Angebot ohne separate Lizenz (Hobby-Releases: `DISCLAIMER.md`)
 - Kein Ersatz für **Signal**, **ATAK** oder **Meshtastic-Frontends** in deren Kern
 - Kein universelles „Alles-in-einem“-Hybrid-Produkt für Endnutzer ohne Vorbereitung
 - Kein Signal-Niveau-E2EE-Versprechen (§ H.23: Session Keys+ geplant, Ratchet Phase 3 — bis Umsetzung transport-strong)
@@ -30,12 +41,13 @@
 
 Empfohlene GitHub-Topics:
 
-`emergency-comms` · `meshtastic` · `lora` · `pwa` · `offline-first` · `team-messaging` · `iota` (optional layer)
+`emergency-comms` · `meshtastic` · `lora` · `pwa` · `offline-first` · `team-messaging` · `iota` (optional layer) · `experimental` · `hobby-project` · `agpl-3.0`
 
 ## Dokumentation — Einstieg
 
 | Ziel | Dokument |
 |------|----------|
+| Hobby-Releases & Disclaimer | **`docs/HOBBY-RELEASE-POLICY.md`**, **`DISCLAIMER.md`**, **`COMMERCIAL-LICENSING.md`** |
 | Einführung (ohne Fachjargon) | **`docs/EINFUEHRUNG-MORGENDROT-LAIEN.md`** |
 | Transport & IOTA-Schichten | **`docs/TRANSPORT-AND-IOTA-LAYERS.md`** |
 | Strategie & Prioritäten | **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`** |

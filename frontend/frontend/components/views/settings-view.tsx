@@ -12,6 +12,7 @@ import {
 import { LazyHandoffImportPanel } from '@/frontend/components/lazy/messenger-scope-b'
 import { EinsatzEndPanel } from '@/frontend/components/einsatz-end-panel'
 import { ActiveProfilePanel } from '@/frontend/components/active-profile-panel'
+import { SettingsEinsatzProfilesSection } from '@/frontend/components/settings-einsatz-profiles-section'
 import { SettingsTelegramIntegration } from '@/frontend/components/views/settings-telegram-integration'
 import { SettingsTelegramEinsatzGroup } from '@/frontend/components/views/settings-telegram-einsatz-group'
 import { SettingsTelegramAlarmGroupJoin } from '@/frontend/components/views/settings-telegram-alarm-group-join'
@@ -35,6 +36,7 @@ import {
 } from '@/frontend/components/settings-collapsible-section'
 import { SETTINGS_ACTIVE_CATEGORY_KEY, type SettingsCategoryId } from '@/frontend/lib/settings-navigation'
 import { SettingsHandbookLink } from '@/frontend/components/settings-handbook-link'
+import { SettingsProjectDisclaimerSection } from '@/frontend/components/views/settings-project-disclaimer-section'
 import { useAppTranslation } from '@/frontend/lib/i18n/hooks'
 
 interface SettingsViewProps {
@@ -167,6 +169,7 @@ export function SettingsView({
         <SettingsAppearanceSection />
         <SettingsExpertModeSection apiStatus={advancedIotaStatus} />
         <ActiveProfilePanel status={advancedIotaStatus} />
+        <SettingsEinsatzProfilesSection canManage={isBossRole} />
         <CapacitorApiBaseCard />
         <div id="settings-handoff-import">
           <LazyHandoffImportPanel
@@ -175,6 +178,7 @@ export function SettingsView({
           />
         </div>
         <EinsatzEndPanel apiStatus={advancedIotaStatus} backendOnline={backendOnline} />
+        <SettingsProjectDisclaimerSection />
         {canToggleFullTiles && onShowAllTilesChange ? (
           <div className="rounded-xl border border-border bg-card p-4">
             <div className="flex items-center justify-between gap-4">
