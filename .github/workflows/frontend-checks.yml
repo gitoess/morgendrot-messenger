@@ -3,6 +3,8 @@ name: Frontend checks
 
 on:
   push:
+    branches:
+      - main
     paths:
       - 'frontend/**'
       - 'src/shared/**'
