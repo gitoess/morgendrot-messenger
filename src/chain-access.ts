@@ -435,8 +435,14 @@ function pickString(obj: unknown, keys: string[]): string | undefined {
 async function fetchRemoteSignature(signingAddress: string, base64Tx: string): Promise<string> {
     const url = CFG.REMOTE_SIGNER_URL?.trim();
     if (!url) throw new Error('REMOTE_SIGNER_URL fehlt (SIGNER=remote).');
+    const token = (CFG.REMOTE_SIGNER_TOKEN || '').trim();
+    if (!token) {
+        throw new Error(
+            'REMOTE_SIGNER_TOKEN fehlt — Boss-Signer verlangt Bearer-Token (BOSS_SIGNER_TOKEN am Boss, gleicher Wert hier).'
+        );
+    }
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (CFG.REMOTE_SIGNER_TOKEN) headers['Authorization'] = `Bearer ${CFG.REMOTE_SIGNER_TOKEN}`;
+    headers['Authorization'] = `Bearer ${token}`;
     let res: Response;
     try {
         res = await fetch(url, {
