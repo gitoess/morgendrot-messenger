@@ -9,11 +9,16 @@
 1. **Boss-Rechner:** IOTA-CLI + Keystore mit mindestens zwei Adressen:
    - eine für dich (Boss),
    - eine für die „Maschine“ (Arbeiter).
-2. **Boss-Signer:** `npm run boss-signer` (läuft auf Port 3340, siehe .env `PORT=3340`).
+2. **Boss-Signer:** `npm run boss-signer` (Port 3340). In `.env` am Boss:
+   - `BOSS_SIGNER_TOKEN=` mindestens 16 Zeichen (gleicher Wert wie `REMOTE_SIGNER_TOKEN` am Arbeiter)
+   - `BOSS_SIGNER_BIND_HOST=0.0.0.0` nur wenn Arbeiter im LAN (sonst Default `127.0.0.1`)
+   - Optional: `BOSS_SIGNER_ALLOWED_ADDRESSES=0x…` (nur Maschinen-Adressen)
+   - Nur Entwicklung ohne Token: `BOSS_SIGNER_ALLOW_INSECURE=1`
 3. **Arbeiter-Instanz:** Eigenes Verzeichnis oder zweite .env mit:
    - `MY_ADDRESS` = die **Maschinen-**Adresse (vom Boss angelegt),
    - `SIGNER=remote`,
-   - `REMOTE_SIGNER_URL=http://<Boss-IP>:3340` (oder `http://127.0.0.1:3340` wenn alles auf einem Rechner),
+   - `REMOTE_SIGNER_URL=http://<Boss-IP>:3340/sign` (oder `http://127.0.0.1:3340/sign` lokal),
+   - `REMOTE_SIGNER_TOKEN=` **gleicher Wert** wie `BOSS_SIGNER_TOKEN` am Boss,
    - `BOSS_ADDRESS` = Boss-Adresse,
    - `PACKAGE_ID` (gleich wie beim Boss),
    - Optional: `ROLE=arbeiter` (dann AUTHORIZED_SENDERS aus BOSS_ADDRESS abgeleitet).
