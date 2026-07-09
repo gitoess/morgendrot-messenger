@@ -604,6 +604,12 @@ function applyEnvToCfg(key: string, value: string): void {
         case 'HANDOFF_LABEL':
             (CFG as { HANDOFF_LABEL: string }).HANDOFF_LABEL = v;
             break;
+        case 'API_AUTH_TOKEN':
+            (CFG as { API_AUTH_TOKEN: string | undefined }).API_AUTH_TOKEN = v || undefined;
+            break;
+        case 'API_STRICT_CORS':
+            (CFG as { API_STRICT_CORS: boolean }).API_STRICT_CORS = truthy(v);
+            break;
         case 'PAIRING_WAIT_TIMEOUT_MS':
             (CFG as { PAIRING_WAIT_TIMEOUT_MS: number }).PAIRING_WAIT_TIMEOUT_MS = Math.max(15_000, parseInt(v, 10) || 120_000);
             break;
@@ -1352,6 +1358,16 @@ export const CFG = {
      * Nur dieser PC: API_BIND_HOST=127.0.0.1 in .env
      */
     API_BIND_HOST: (process.env.API_BIND_HOST || '0.0.0.0').trim() || '0.0.0.0',
+    /**
+     * Optional: LAN-Operator-Token für Secret-Befehle und Sponsored-TX von Helfer-Geräten.
+     * Header: Authorization: Bearer … oder X-Morgendrot-Api-Token. Leer = nur Loopback für Vault-Secrets.
+     */
+    API_AUTH_TOKEN: (process.env.API_AUTH_TOKEN || '').trim() || undefined as string | undefined,
+    /**
+     * true = CORS nur gleicher Host wie API oder Loopback (blockiert evil.html auf anderer LAN-IP).
+     * Default false — Feld-LAN mit Handy-UI bleibt ohne Token erreichbar; Vault-Secrets trotzdem Loopback+Token.
+     */
+    API_STRICT_CORS: envBool('API_STRICT_CORS', false),
     /**
      * Vor dem Listen: ggf. laufende Morgendrot-API auf demselben Port per /restart beenden.
      * Bei zweiter Instanz auf demselben PC auf false setzen, sonst wird die erste API neu gestartet.

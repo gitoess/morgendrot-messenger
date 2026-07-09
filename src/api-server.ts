@@ -2598,6 +2598,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                             exportEnablePurge,
                             einsatzChainMode: String(data.einsatzChainMode ?? '').trim() || undefined,
                             mainnetRpcUrl: String(data.mainnetRpcUrl ?? '').trim() || undefined,
+                            apiAuthToken: (CFG.API_AUTH_TOKEN || '').trim() || undefined,
                         });
                         const resolvedRoleId =
                             roleId != null && Number.isFinite(roleId) ? roleId : 14;

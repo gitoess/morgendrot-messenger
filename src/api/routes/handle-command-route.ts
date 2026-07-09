@@ -8,15 +8,14 @@ import type { CommandApiOptions } from '../../messenger-nest/command-api-options
 import type { ApiRouteContext, SendJsonFn } from './api-route-types.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api-ip-rate-limit.js';
 import { readHttpBodyWithLimit } from './api-body-limit.js';
+import {
+    denyUnlessTrustedApiClient,
+    denyVaultSecretCommandUnlessTrusted,
+    isVaultSecretCommand,
+} from './api-security.js';
 
 const commandRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
 const vaultSecretCommandRateLimit = createIpRateLimiter(CFG.API_RATE_LIMIT_VAULT_SECRET_COMMANDS_PER_MINUTE);
-
-const VAULT_SECRET_COMMANDS = new Set([
-    '/vault-show-signer-import',
-    '/vault-show-ecdh-jwk',
-    '/vault-ecdh-jwk',
-]);
 
 function checkCommandRateLimit(ip: string): boolean {
     const limit = CFG.API_RATE_LIMIT_COMMANDS_PER_MINUTE;
@@ -90,12 +89,16 @@ export function handleCommandRoute(
             let cmd = String(data.cmd ?? data.command ?? '').trim();
             let args = Array.isArray(data.args) ? data.args.map(String) : [];
             const cmdLower = cmd.toLowerCase();
-            if (VAULT_SECRET_COMMANDS.has(cmdLower)) {
+            if (isVaultSecretCommand(cmdLower)) {
+                if (denyVaultSecretCommandUnlessTrusted(cmdLower, req, res, cors, sendJson)) return;
                 if (!vaultSecretCommandRateLimit.check(ip)) {
                     sendJson(res, 429, { ok: false, error: 'Rate-Limit Vault-Secret-Befehle überschritten.' }, cors);
                     return;
                 }
                 vaultSecretCommandRateLimit.record(ip);
+            }
+            if (data.sponsorForSender) {
+                if (denyUnlessTrustedApiClient(req, res, cors, sendJson)) return;
             }
             const userMessage = typeof data.userMessage === 'string' ? data.userMessage.trim() : '';
             if (cmd === '/transfer-coins' && args.length < 2 && userMessage) {

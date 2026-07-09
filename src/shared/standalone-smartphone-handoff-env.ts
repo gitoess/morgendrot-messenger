@@ -38,6 +38,8 @@ export interface StandaloneSmartphoneHandoffParams {
     einsatzChainMode?: string;
     /** § H.33 Modus A — Boss Mainnet-RPC für Anker (nicht im Helfer-Handoff). */
     mainnetRpcUrl?: string;
+    /** LAN-API-Token (öffentlich im Team — kein Seed); Helfer speichert in PWA localStorage. */
+    apiAuthToken?: string;
 }
 
 const ADDR_64_HEX = /^0x[a-fA-F0-9]{64}$/;
@@ -250,6 +252,15 @@ export function buildStandaloneSmartphoneHandoffEnv(p: StandaloneSmartphoneHando
             '# --- Gruppenchat (M2c) — Team-Mailbox + Mitglieder automatisch nach Import ---',
             `# Klartext-Teamkanal heute; verschlüsselt folgt mit Team-Key im Handoff (Phase 3).`,
             `MESSENGER_GROUP_HANDOFF=${groupHandoff}`,
+            ''
+        );
+    }
+    const apiAuthToken = String(p.apiAuthToken || '').trim();
+    if (apiAuthToken) {
+        lines.push(
+            '',
+            '# --- LAN-API (Vault-Secrets / Operator) — Team-Token, kein Seed ---',
+            `API_AUTH_TOKEN=${apiAuthToken}`,
             ''
         );
     }
