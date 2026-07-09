@@ -1,12 +1,60 @@
-# Morgendrot — Einsatz-Messenger (Funk-Default, IOTA gekoppelt)
+# Morgendrot — Einsatz-Messenger (LoRa-first, IOTA gekoppelt)
 
-> **Experimentelles Hobby-Projekt** — kein fertiges Produkt, keine Sicherheitsgarantien, kein Support, nicht für lebenskritische Einsätze. Nutzung auf eigene Gefahr. **EU-Nutzer:** nicht auf EU-„Chat Control“/Scanning ausgelegt. **Lizenz:** AGPL-3.0; **kommerzielle Nutzung** nur mit Erlaubnis → [`COMMERCIAL-LICENSING.md`](COMMERCIAL-LICENSING.md), vollständig [`DISCLAIMER.md`](DISCLAIMER.md). **Hobby-Releases:** [`docs/HOBBY-RELEASE-POLICY.md`](docs/HOBBY-RELEASE-POLICY.md).
+> **Experimentelles Hobby-Projekt** — kein fertiges Produkt, keine Sicherheitsgarantien, kein Support, nicht für lebenskritische Einsätze. Nutzung auf eigene Gefahr.
+>
+> **EU-Nutzer:** nicht auf EU-„Chat Control“/Scanning ausgelegt. **Lizenz:** [AGPL-3.0](LICENSE) — kommerzielle Nutzung nur mit Erlaubnis → [COMMERCIAL-LICENSING.md](COMMERCIAL-LICENSING.md). Vollständig: [DISCLAIMER.md](DISCLAIMER.md) · Hobby-Releases: [docs/HOBBY-RELEASE-POLICY.md](docs/HOBBY-RELEASE-POLICY.md) · Sicherheitsmeldungen: [SECURITY.md](SECURITY.md).
 
-**Boss-geführtes Einsatz-Messenger-System** für trainierte Teams: **LoRa/Meshtastic** im Feld, **IOTA Rebased** für Mailbox, Verankerung und **Delayed LoRa → Tangle** (keine volle TX über die Luft — Gateway/Queue). Handoff in **unter 20 Sekunden**. Helfer-UI: Funk zuerst, Chain-Expert ausgeblendet (**§ H.0-SIMPLE**, **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**).
+**Kurz:** Boss-geführtes Messenger-System für trainierte Teams und Solo/Wanderer: **LoRa/Meshtastic** im Feld, **IOTA Rebased** für Mailbox, Verankerung und **Delayed LoRa → Tangle** (keine volle TX über die Luft — Gateway/Queue). Handoff in **unter 20 Sekunden**. Helfer-UI: Funk zuerst, Chain-Experte ausgeblendet ([§ H.0-SIMPLE](docs/ROADMAP-FAHRPLAN.md), [Transport & IOTA](docs/TRANSPORT-AND-IOTA-LAYERS.md)).
 
-Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, AccessKey-NFTs für Türschlösser. **SPOF = Seed**. Alle Funktionen optional über **`.env`** (**.env.example`**). **`npm install`** legt **`.env`** an, falls fehlend.
+Krypto/Chain (Ist): ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten; optional AccessKey-NFTs (Schloss/Ticket-Layer). **SPOF = Seed.** Konfiguration über `.env` (Vorlage: [`.env.example`](.env.example)); `npm install` legt `.env` an, falls fehlend.
 
-**Einstieg (empfohlene Lese-Reihenfolge für neue Entwickler):**
+---
+
+## Schnellstart (lokal entwickeln)
+
+```bash
+git clone https://github.com/gitoess/morgendrot-messenger.git
+cd morgendrot-messenger
+npm install
+npm run dev:messenger   # Backend + Messenger-UI → http://127.0.0.1:3341
+```
+
+Ausführlich: [docs/DEV-START.md](docs/DEV-START.md) · Messenger vs. Projekt-Dashboard: [docs/PRODUCT-MESSENGER-VS-PROJEKT.md](docs/PRODUCT-MESSENGER-VS-PROJEKT.md)
+
+## Downloads (Hobby-Releases, experimental)
+
+Öffentliche Binär-Abgaben nur als **Pre-release** auf [GitHub Releases](https://github.com/gitoess/morgendrot-messenger/releases) — siehe [docs/HOBBY-RELEASE-POLICY.md](docs/HOBBY-RELEASE-POLICY.md):
+
+| Artefakt | Hinweis |
+|----------|---------|
+| `morgendrot-messenger-android-debug.apk` | Unsigned debug — **nur Sideload**, nicht Play Store |
+| `morgendrot-messenger-pc-standalone.zip` | PC-Bundle ohne `.env` / ohne `node_modules` — danach `npm install` |
+
+Maintainer-Build lokal: `npm run package:hobby-release` (siehe CI [`.github/workflows/release-hobby-artifacts.yml`](.github/workflows/release-hobby-artifacts.yml)).
+
+**Nicht** in Hobby-Releases: Verkaufs-Bundle (`sales`), Handoff-ZIPs mit Secrets, Store-Builds.
+
+## Was es ist / was es nicht ist
+
+| Ist | Ist nicht |
+|-----|-----------|
+| Einsatz- & Solo-Messenger (Boss-Handoff, LoRa-first) | Fertiges Produkt oder Signal-Ersatz |
+| Open Source (AGPL) für Hobby/Forschung/Selbsthost | Kommerzielle Nutzung ohne separate Erlaubnis |
+| PWA + Node-Backend + optional APK (Capacitor) | Chat-Control-konform für EU-Massenmarkt |
+
+Positionierung & GitHub-About: [docs/POSITIONING.md](docs/POSITIONING.md) · [`.github/REPOSITORY-ABOUT.md`](.github/REPOSITORY-ABOUT.md)
+
+## Dokumentation — Einstieg
+
+| Ziel | Dokument |
+|------|----------|
+| Laien / Überblick | [docs/EINFUEHRUNG-MORGENDROT-LAIEN.md](docs/EINFUEHRUNG-MORGENDROT-LAIEN.md) · [docs/WAS-IST-MORGENDROT-MESSENGER.md](docs/WAS-IST-MORGENDROT-MESSENGER.md) |
+| Handoff & Modi | [docs/HANDOFF-UND-MODUS-ZIELBILD.md](docs/HANDOFF-UND-MODUS-ZIELBILD.md) |
+| Fahrplan | [docs/ROADMAP-FAHRPLAN.md](docs/ROADMAP-FAHRPLAN.md) |
+| Tests & CI | [TESTING.md](TESTING.md) |
+
+<details>
+<summary><strong>Lese-Reihenfolge für neue Entwickler (ausführlich)</strong></summary>
 
 0. **`docs/POSITIONING.md`** — GitHub/Außenwirkung, Einzeiler, was wir sind / nicht sind · **About-Texte:** **`.github/REPOSITORY-ABOUT.md`**  
 0a. **`docs/EINFUEHRUNG-MORGENDROT-LAIEN.md`** — Einführung für Neulinge (3 Ebenen, Rollen, Handoff — laienverständlich, abgeglichen)  
@@ -23,7 +71,14 @@ Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, A
 8. **`docs/KONTAKT-MAILBOX-VIER-SLOTS-ZIELBILD.md`** — Backlog: vier Ziel-Mailboxen pro Kontakt + Send-Auswahl (**§ H.22 M4e**).
 9. **`docs/ROADMAP-FAHRPLAN.md`** (§ **H** = nächste Pakete, § **C** = Reihenfolge, **§ H.36** Team-Member-Update & Einstiegs-Wizard **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**, **§ H.1a** Baseline/Vitest/AppError **`PHASE-A-QUALITY-BASELINE-AND-TESTS.md`**, **§ H.1b** Messenger-UI-Modularität **`docs/MESSENGER-UI-MODULARITY-STRATEGY.md`**, **§ H.6f** Android Foreground Service + minimale Sync-Ehrlichkeit **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**, **§ H.7b** Feld-Architektur Backpack-Node/Heltec/Betriebsmodi, **§ H.10b** Boss/Arbeiter-Seed (Team vs. dezentral) **`docs/BOSS-WORKER-SEED-CUSTODY.md`**, **§ H.3m** LoRa/Notfall: keine volle IOTA-TX über Funk **`docs/LORA-IOTA-NOTFALL-GATEWAY-REALITAET.md`**, **§ H.3n** SOS / **`MORG_EMERGENCY_V1`** **`docs/MORG-EMERGENCY-SOS-WIRE-SPEC.md`**, **§ H.10**–**H.14**, **§ H.15** (Handy-first / Client-IOTA), **§ H.16** (Telefonbuch, QR, Boss-LAN — **`docs/QR-CONTACT-SCHEMA-V2.md`**) u. a. → **`docs/ROADMAP-SICHERHEIT-VERTRAUEN-UND-SCHLANKHEIT.md`**, **`docs/OFFLINE-KARTEN-UND-GEODATEN-ZIELBILD.md`**, **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`**, **`docs/MORGENDROT-HARDENING-V3-PRECISION.md`**) und **`docs/MACRO-OPERATIONAL-PATTERNS.md`** — Fahrplan, Heartbeat/Streams vs. LoRa, Betrieb (kein Pflicht-Coding).
 
-**Inhalt:** Move-Package unter `move-test/`, Node/TS-Client unter `src/` (u. a. `wallet-bridge.ts`, `m2m-lock.ts`, `monitoring.ts`, `streams-adapter.ts`). **LoRa-Bridge** unter `lora-bridge/` – eigenes Projekt für HTTP ↔ LoRa-Mesh (Heltec/Meshtastic); siehe `lora-bridge/README.md`. **Hardware-Doku (strikt getrennt):** `hardware/README.md` → `heltec/`, `cm4/`, `meshtastic/`. **Raspi / ohne Next-Frontend:** `npm run pack:deploy` legt auf dem Desktop schlanke Ordner **`Morgendrot-Raspi-headless`** und **`Morgendrot-Raspi-lite-ui`** (ohne `frontend/`, ohne `node_modules`) an; Details **`deploy/README-DEPLOY-BUNDLES.md`**. **Messenger (zwei Editionen):** `npm run bundle:messenger` baut **`exports/Morgendrot-Messenger-standalone`** (`MESSENGER_EDITION=standalone`, Plug-and-Play) und **`exports/Morgendrot-Messenger-verkauf`** (`sales`, Kunden-UI mit Sweep-Hinweisen); Übersicht **`exports/README.md`**, Ablauf je Ordner in dessen `README.md`. **Standalone Smartphone / PWA (Next.js + API):** `npm run bundle:standalone-smartphone` → **`exports/morgendrot-standalone-smartphone/`** (volle `.env.example` aus dem Repo + PWA-Overrides, `postinstall` → `.env`; Bundle-`README.md`). Kurzüberblick **„Wanderer“-Abgabe:** **`docs/WANDERER-STANDALONE-BUNDLE.md`**. Abgabe an Tester/Käufer: **`.env`** pro Einsatz anpassen; **Seed/Vault-Passwort nur auf dem Gerät**, nicht auf dem Medium. **Optional (Boss):** **Einstellungen** oder **Einsatzleitung / Boss-Modus → Export-Assistent** → ZIP (~3 KB) mit öffentlicher Handoff-`.env` (**`POST /api/standalone-smartphone-handoff-zip`**, Fahrplan **§ H.7**). Helfer: **Einstellungen → Handoff importieren** (**`docs/HANDOFF-IMPORT-UX.md`**). Aktives Profil/Theme: **`docs/HANDOFF-PROFILE-UX.md`**. Verschlüsselte ZIP / IOTA-Übertragung: Backlog **`docs/HANDOFF-ZIP-ENCRYPTION.md`**. Das **Standalone-Bundle** weiter per **`npm run bundle:standalone-smartphone`** bauen. **Portable Version:** Ordner **`portable/`** ist **eigenständig** – nur diesen Ordner kopieren (inkl. src, scripts, package.json, .env.example). Einmalig **prepare.cmd** (npm install; `.env` wird bei Bedarf aus `.env.example` erzeugt), dann **start.cmd**. Optional: Node-ZIP als **node/** in portable/ legen, dann keine systemweite Installation nötig. **Funktionen testen:** **`npm run validate:ui`** (UI-Daten: alle refs in TREE), **`npm run test`** (Modultests), **`npm run test:kacheln`** / **`npm run test:all-tiles`** (Kacheln/Projekte mit 2 Wallets), **`npm run test:sortierstation`** (Szenario Autonome Sortierstation, 6 Stationen), **`npm run test:ai-coverage`** (KI-Befehl-Coverage, Intent ohne Ollama), **`npm run test:ai-copilot-api`** (API-Integration ohne Ollama), **`npm run test:ai-natural`** (100+ natürliche Sätze DE/EN). **Ollama optional:** Direktbefehle und Intent-Matcher (Kurzbefehle, natürliche Phrasen) funktionieren **ohne** Ollama; nur **Plan-Modus** („Als Plan“: Wunsch in mehrere Schritte zerlegen) und freie Formulierungen ohne Treffer brauchen Ollama. **`TESTING.md`** (Checkliste, Klartext-TX). **Listener & Whitelist:** Abschnitt 7.1. **Sicherheit & SPOF:** Abschnitt 8.
+</details>
+
+<details>
+<summary><strong>Repo-Struktur, Betrieb & Doku-Index (für Contributors)</strong></summary>
+
+**Inhalt (Repo):** Move-Package unter `move-test/`, Node/TS-Client unter `src/`. **LoRa-Bridge:** `lora-bridge/README.md`. **Hardware:** `hardware/README.md`.
+
+**Messenger-Bundles (Build im Repo):** `npm run bundle:messenger:standalone` → `exports/Morgendrot-Messenger-standalone` (Hobby/Plug-and-Play). Zusätzlich im Repo-Skript `bundle:messenger:sales` → Verkaufs-Bundle für **Hersteller/kommerzielle** Abgabe — **nicht** Teil der öffentlichen Hobby-Releases ([COMMERCIAL-LICENSING.md](COMMERCIAL-LICENSING.md)). **Wanderer/PWA:** `docs/WANDERER-STANDALONE-BUNDLE.md` · `npm run bundle:standalone-smartphone`. **Handoff:** Boss exportiert öffentliche `.env`/ZIP — Helfer importiert in der App ([docs/HANDOFF-IMPORT-UX.md](docs/HANDOFF-IMPORT-UX.md)); **Seed nur auf dem Gerät**, nie im Release-Medium.
 
 **Zwei Web-UIs:** **`ui/`** = Boss-Werkstatt (Alpine, über den API-Server), **`frontend/`** = Kunden-Produkt (Next.js). Beide nutzen **`/api/*`**. Beim ersten **Entsperren** (Next + Lite): **Tresor öffnen**, **Seed importieren** (`SIGNER=sdk`) oder **Neu anlegen** — siehe **`docs/ONBOARDING-WALLET-UX-SPEC.md`** §2.2. **Messenger-Editionen** (`standalone` / `sales`) betreffen die **Export-Bundles** unter **`exports/`**, nicht die Wahl der Oberfläche. Festgelegte Rollen, URLs und Feature-Fokus: **`docs/DEV-START.md`** → Abschnitt *Zwei Oberflächen: Boss-Werkstatt und Kunden-Produkt*.
 
@@ -50,6 +105,16 @@ Technisch: ECDH P-256, AES-GCM, Vault (lokal/on-chain), purgebare Nachrichten, A
 **Änderungen & Betrieb (kurz):** **`CHANGELOG.md`**, **`docs/OPERATIONS-SNAPSHOT-2026-03.md`** (Ist/Lücken/Artefakte), **`docs/TEST-RUN-LOGBOOK.md`** (Smoke-/Test-Läufe). **Wann Messenger am Handy testen:** **`docs/HANDY-TEST-WINDOW.md`**. **Roadmap & Sitzungsprotokolle:** **`docs/ROADMAP-FAHRPLAN.md`** (**§ H** = nächste Arbeitspakete; **§ H.27** Handshake-Anfragen UX; **§ H.0** = Produkt/UX; **§ H.6f** = Android Foreground Service + minimale Sync-Ehrlichkeit — **`docs/ANDROID-FOREGROUND-SERVICE-MINIMAL-SYNC.md`**; **§ H.3g** = gebündelte Umsetzung `initialProfile`, Offline-Relay-Queue, Einsatzleitung/Rollen-Manager — **Teil 7a (Ist):** Client-Mailbox-Outbox in **`frontend/frontend/lib/api/offline-queue.ts`**, Opt-in **`localStorage`** `morgendrot.offlineMailboxQueue`, **`timeIsTrusted`** / monotones **`clientOutSeq`** (**§ H.6c**); **§ H.3m** = LoRa/Notfall vs. volle IOTA-TX (Gateway/Delayed Upload); **§ H.3n** = SOS / `MORG_EMERGENCY_V1` (Priorität, Basis); **§ H.10b** = Boss/Arbeiter-Seed-Custody; **§ H.12** = Sync/Source of Truth vs. **§ H.3g**/Delayed Upload; **§ H.7** / **§ H.7b** = Standalone-Abgabe / Backpack-Feldarchitektur; **C** = Reihenfolge; **E–G** Macro/Puls/Purge), **`docs/EINSATZLEITUNG-ROLLEN-MANAGER-CRITIQUE.md`** (Einsatz-Labels vs. Chain-`ROLE`, Provisioning-Maske, Handshake-Reihenfolge), **`docs/OFFLINE-QUEUE-AND-PROFILE-PROVISIONING-CRITIQUE.md`** (Offline-Warteschlange, Profil-Payload), **`docs/SYNC-SOURCE-OF-TRUTH-UND-KONFLIKTE.md`** (Offline vs. IOTA, Idempotenz, CRDT-Grenzen), **`docs/UX-MESSENGER-INVENTORY.md`** (Messenger-UX: Ist vs. Wunsch, Wald-Check/Rolle/Toast u. a.), **`docs/CHAT-PROTOKOLL-2026-03-28.md`** (Abstimmung 2026-03-28; **Nachtrag 2026-03-29** Fahrplan/Sicherheit/LoRa; **Nachtrag 2026-03-30** Sync-Check & Mailbox-Offline-Outbox; **Nachtrag 2026-03-31** Android FG-Service **§ H.6f**; **Nachtrag 2026-04-15** Messenger-Realworld, Tickets/Gate, PWA **§ H.2**), **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`** (Review: IOTA→LoRa-Makros), **`docs/MACRO-BIDIRECTIONAL-SPEC.md`** (Wald↔Netz-Opcodes 0x40–0xB0, Backlog). **Phasen A/B/C und Meshtastic-First:** **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**.
 
 **Weitere Dokumentation:** **`docs/DEPLOY-CHECKLIST.md`** (zentrale Anleitung nach jedem Move-Deploy inkl. Einsatzprofile-Manifest), **`docs/MESSENGER-PACKAGE-ID-BANNER.md`** (Next-Messenger: Banner wenn Posteingangs-Package-ID ≠ Server; „Jetzt updaten“), **`docs/ROADMAP-FAHRPLAN.md`**, **`docs/PROTOCOL-CHANNELS-TX-VS-STREAMS.md`** (TX vs. Streams vs. Audit), **`docs/MACRO-OPERATIONAL-PATTERNS.md`**, **`docs/CHAT-PROTOKOLL-2026-03-28.md`**, **`docs/HYBRID-MESH-GATEWAY-IOTA-MACROS.md`**, **`docs/MACRO-BIDIRECTIONAL-SPEC.md`**, **`docs/PROJECT-FOCUS-AND-PRIORITIES.md`**, **`docs/EINSATZBERICHT-EXPORT.md`**, **`docs/MESSENGER-SPRACHAUFNAHME.md`** (Chat: Mikrofon → Opus, ffmpeg, Höhlenrettung/CM4), **`docs/ARCHITECTURE-ROLES-AND-HUB.md`** (Boss, Kommandanten-Hub, Arbeiter), **`docs/ARCHITECTURE-PROVISIONED-AUTONOMY-RELAY.md`** (Zielbild: provisionierte Geräte-Identität, Gas-Sponsoring, Credits, E2E-Blind-Relay — Skelett, Abgleich mit Ist-Code), **`docs/MESSENGER-OPERATIONAL-LIMITS-AND-GAS-POLICY.md`** (PTB-/Größenlimits, Gas-Station-Risiko, PWA-Speicher, Sponsor-Workflow; **MIST vs. Credits**, Self-Pay, Offline-Buffer/Idempotenz/Ampel als Zielbild), **`docs/DEPLOY-SERVER-MESSENGER-ABGRENZUNG.md`** (kein separater „Messenger-Server-Ordner“: gleiche `src/`-App; was auf den Host; Messenger-only ≈ `.env`), **`docs/DISCUSSION-OPEN.md`** (offene Punkte, z. B. zentrale Signatur/SPOF), **`docs/MESSENGER-EXPORT-FIELDS.md`** (Messenger-Stapel in Boss-UI: Felder, Limits, SIGNER, PACKAGE-Verlauf), **`docs/AI-COPILOT-PLAN.md`** (AI-Copilot in Säule 3: Ollama + Qwen, Quick Start), **`docs/AI-COPILOT-LEAN-LINUX.md`** (Lean Linux/Industrie unter 500 MB, optional Fetch.ai). **KI & RAG:** **`ai-training/RAG-SETUP.md`** (RAG-Chunks, Embeddings, Abfrage-Flow), **`ai-training/Modelfile`** (Ollama-System-Prompt: Synonym-Tabelle, Logik-Baum, Sicherheits-Regel), **`ai-training/intents.json`**, **`ai-training/logic-tree.mmd`**, **`ai-training/drill-examples.txt`**, **`ai-training/security-checklist.md`**. **Diagramme:** **`docs/architecture.mmd`** (High-Level: UI, Node, Chain, Boss), **`docs/saeulen-befehlsfluss.mmd`** (4 Säulen + Befehlsfluss). **`docs/SCHLOSS-EINRICHTEN.md`** (Schloss Schritt für Schritt, wie für Freunde), **`docs/NOTFALL-DATENSPEICHER.md`** (Notfall-Datenspeicher: Testament, Patientenverfügung – verschlüsselt on-chain), **`docs/LEIHGERAETE-EINRICHTEN.md`** (Leihgeräte: Powerbank, Werkzeug – NFT + Purge), **`docs/SENSOR-ALARME-EINRICHTEN.md`** (Sensor-Alarme: Rauch, Wasser, Einbruch, Offline-Monitor), **`docs/CHAT-GRUPPE-EINRICHTEN.md`** (Dezentrale Chat-Gruppe: Pairwise, Broadcast), **`docs/FAMILIEN-ZUGANG.md`** (Familien-/Firmen-Zugang: Whitelist + Key), **`docs/CAR-SHARING-EINRICHTEN.md`** (Car-Sharing / E-Scooter: Zahlung → Freischaltung), **`docs/VAULT-EINRICHTEN.md`** (Vault: Schlüssel speichern, lokal & on-chain), **`docs/BOSS-MODUS.md`** (Boss-Modus: Maschinen ohne Wallet), **`docs/BROADCAST-PINNWAND.md`** (Pinnwand: Status/Alarm an alle, Klartext), **`docs/OFFLINE-CACHE.md`** (Offline-Fähigkeit des Locks: Cache, TTL, Sicherheit), **`docs/INDUSTRY-FEATURES.md`** (Industrie: Gas Station, Audit Blackbox, ZK-Roadmap, Multi-Sig, Euro-Orakel), **`docs/DESIGN-PRINCIPLES.md`** (7 Grundregeln, Flag-Zuordnung), **`docs/CONFIG-REFERENCE.md`** (alle Optionen mit Erklärung, inkl. ENABLE_MONITOR), **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`** (**Hauptreferenz** alle `.env`-Keys in Messenger-Einstellungen, 77 Keys), **`docs/ENV-ERKLAERUNG.md`** (.env ganz einfach erklärt, wie für Freunde; inkl. Lock/Shop), **`TESTING.md`** (Checkliste), **`docs/SECRETS-OPTIONS.md`** (Secrets), **`docs/TICKET-REVIEW.md`** (Tickets), **`docs/ARCHITECTURE-CHECKS.md`** (Optionalität, Layer, SPOF), **`docs/STREAMS-INTEGRATION.md`** (Streams letzte Meile, Ablauf, Fallback), **`docs/PROJECT-RATING.md`** (Bewertung Logik/Sicherheit/Technik), **`SECURITY-RATING.md`** (Layer-Bewertung). **UI & Tests:** **`docs/UI-NACHRICHTEN-STREAMS-ORT.md`** (Wo Posteingang und Streams in der UI; Filter Eingang/Ausgang/Alle, Selbstnachrichten), **`docs/MESSENGER-CHAT-INBOX-ARCHITEKTUR.md`** (Chat-Verlauf, Datenfluss Mailbox/API/UI, Persistenz, Dateipfade — Referenz für Reviews/Handoff), **`docs/STREAMS-UND-NACHRICHTEN-FAQ.md`** (Bedeutung der Streams-Ausgabe, Nachrichten laden), **`docs/TEST-ARBEITER-KOMMANDANT-BOSS-BEWEIS.md`** (Beweis nach test:arbeiter-kommandant-boss), **`docs/BEGRIFFE-MOVE-REBASED.md`** (AccessKey, Ticket, Rebate, Gast ohne Wallet), **`docs/KRITIK-LKW-HAUSTUER-ERKENNUNG.md`** (LKW/Haustür-Erkennung: Ist vs. Beschreibung). .env: **`.env.example`**, **`docs/ENV-MESSENGER-EINSTELLUNGEN-REFERENZ.md`** (Messenger-UI), **`docs/ENV-ERKLAERUNG.md`** (gesamt, laienfreundlich).
+
+</details>
+
+---
+
+## Entwickler-Referenz (ausführlich)
+
+Die Abschnitte ab **Funktionen-Übersicht** sind die historisch gewachsene Setup-, Lock- und Move-Anleitung im Repo. Für den Einstieg reichen meist [Schnellstart](#schnellstart-lokal-entwickeln) und [docs/DEV-START.md](docs/DEV-START.md).
+
+**Raspi / ohne Next-Frontend:** `npm run pack:deploy` → **`Morgendrot-Raspi-headless`** / **`Morgendrot-Raspi-lite-ui`** ([deploy/README-DEPLOY-BUNDLES.md](deploy/README-DEPLOY-BUNDLES.md)). **Portable:** Ordner **`portable/`** — `prepare.cmd`, dann `start.cmd`.
 
 ---
 
