@@ -22,6 +22,15 @@ export function isOfflineEncryptedWirePayload(payload: string): boolean {
   return parseOfflineEncryptedWirePayload(payload) != null
 }
 
+/** `encrypted_send` mit Klartext-Payload (vor P0-2) — nicht mehr drainen. */
+export function isLegacyPlaintextEncryptedQueuePayload(
+  kind: string,
+  encrypted: boolean,
+  payload: string
+): boolean {
+  return kind === 'encrypted_send' && encrypted === true && !isOfflineEncryptedWirePayload(payload)
+}
+
 export function parseOfflineEncryptedWirePayload(payload: string): OfflineEncryptedWireV1 | null {
   const raw = payload.trim()
   if (!raw.startsWith('{')) return null

@@ -328,14 +328,11 @@ export async function sendPreEncryptedMailboxHybrid(
   return hybrid
 }
 
-/** Erkennt verschlüsseltes Queue-Wire und leitet an den passenden Hybrid-Pfad. */
+/** @deprecated Nutze `sendPreEncryptedMailboxHybrid` — nur noch Ciphertext-Wire v1. */
 export async function sendEncryptedMailboxHybridFromQueue(
   recipient: string,
   payload: string,
-  opts?: Parameters<typeof sendEncryptedMailboxHybrid>[2]
+  opts?: Parameters<typeof sendPreEncryptedMailboxHybrid>[2]
 ): Promise<MailboxHybridSendResult> {
-  if (isOfflineEncryptedWirePayload(payload)) {
-    return sendPreEncryptedMailboxHybrid(recipient, payload, opts)
-  }
-  return sendEncryptedMailboxHybrid(recipient, payload, opts)
+  return sendPreEncryptedMailboxHybrid(recipient, payload, opts)
 }

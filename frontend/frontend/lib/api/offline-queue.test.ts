@@ -6,8 +6,19 @@ import {
   loadOfflineMailboxQueue,
   nextOfflineMailboxClientOutSeq,
   nextChainMessageNonceU64,
+  purgeInsecureEncryptedQueueItems,
   saveOfflineMailboxQueue,
 } from '@/frontend/lib/api/offline-queue'
+
+function encQueueWirePayload(nonce: string): string {
+  return JSON.stringify({
+    v: 1,
+    ciphertextB64: 'YQ==',
+    ivB64: 'Yg==',
+    tagB64: 'Yw==',
+    nonce,
+  })
+}
 
 describe('offlineMailboxDedupKey', () => {
   it('ist stabil für gleiche Nutzlast', () => {
@@ -15,13 +26,13 @@ describe('offlineMailboxDedupKey', () => {
       kind: 'encrypted_send',
       recipient: '0xabc',
       encrypted: true,
-      payload: 'hello',
+      payload: encQueueWirePayload('hello'),
     })
     const b = offlineMailboxDedupKey({
       kind: 'encrypted_send',
       recipient: '0xabc',
       encrypted: true,
-      payload: 'hello',
+      payload: encQueueWirePayload('hello'),
     })
     expect(a).toBe(b)
   })
@@ -72,7 +83,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     const r = await enqueueOfflineMailboxFailure({
       kind: 'encrypted_send',
       recipient: '0xr',
-      payload: 'wire',
+      payload: encQueueWirePayload('wire'),
       encrypted: true,
       timeIsTrusted: true,
       lastError: 'net',
@@ -81,7 +92,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     const items = loadOfflineMailboxQueue()
     expect(items).toHaveLength(1)
     expect(items[0]?.status).toBe(OFFLINE_QUEUE_ITEM_STATUS.PENDING)
-    expect(items[0]?.payload).toBe('wire')
+    expect(items[0]?.payload).toBe(encQueueWirePayload('wire'))
     expect(items[0]?.timeIsTrusted).toBe(true)
     expect(items[0]?.clientOutSeq).toBe(1)
     expect(items[0]?.canonicalMsgRef).toMatch(/^[0-9a-f]{64}$/)
@@ -91,7 +102,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     const p = {
       kind: 'encrypted_send' as const,
       recipient: '0xr',
-      payload: 'same',
+      payload: encQueueWirePayload('same'),
       encrypted: true,
       timeIsTrusted: false,
       lastError: 'e',
@@ -121,7 +132,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       kind: 'encrypted_send' as const,
       status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
       recipient: '0x',
-      payload: `${i}`,
+      payload: encQueueWirePayload(String(i)),
       encrypted: true,
       timeIsTrusted: false,
       clientOutSeq: i + 1,
@@ -138,11 +149,11 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     store['morgendrot.offline-mailbox-queue.v1'] = JSON.stringify([
       {
         id: 'legacy-1',
-        kind: 'encrypted_send',
+        kind: 'plain_send',
         status: 'pending',
         recipient: '0x',
         payload: 'x',
-        encrypted: true,
+        encrypted: false,
         createdAt: 1,
         attempts: 0,
         lastAttemptAt: 0,
@@ -159,7 +170,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       enqueueOfflineMailboxFailure({
         kind: 'encrypted_send',
         recipient: '0x1',
-        payload: 'a',
+        payload: encQueueWirePayload('a'),
         encrypted: true,
         timeIsTrusted: true,
       })
@@ -168,7 +179,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
       enqueueOfflineMailboxFailure({
         kind: 'encrypted_send',
         recipient: '0x1',
-        payload: 'b',
+        payload: encQueueWirePayload('b'),
         encrypted: true,
         timeIsTrusted: true,
       })
@@ -184,7 +195,7 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
         kind: 'encrypted_send',
         status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
         recipient: '0x',
-        payload: 'p',
+        payload: encQueueWirePayload('p'),
         encrypted: true,
         timeIsTrusted: false,
         clientOutSeq: 7,
@@ -202,5 +213,47 @@ describe('enqueueOfflineMailboxFailure (localStorage)', () => {
     const n = nextChainMessageNonceU64()
     expect(n).toBeGreaterThanOrEqual(BigInt(Date.now() - 50))
     expect(n).toBeGreaterThan(BigInt(1))
+  })
+
+  it('purgeInsecureEncryptedQueueItems entfernt Legacy-Klartext encrypted_send', () => {
+    saveOfflineMailboxQueue([
+      {
+        id: 'legacy',
+        kind: 'encrypted_send',
+        status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+        recipient: '0x' + 'aa'.repeat(32),
+        payload: '[[MORG_MAILBOX_NONCE_V1:1]]secret',
+        encrypted: true,
+        timeIsTrusted: false,
+        clientOutSeq: 1,
+        createdAt: 1,
+        attempts: 0,
+        lastAttemptAt: 0,
+        priority: 100,
+      },
+      {
+        id: 'v1',
+        kind: 'encrypted_send',
+        status: OFFLINE_QUEUE_ITEM_STATUS.PENDING,
+        recipient: '0x' + 'bb'.repeat(32),
+        payload: JSON.stringify({
+          v: 1,
+          ciphertextB64: 'YQ==',
+          ivB64: 'Yg==',
+          tagB64: 'Yw==',
+          nonce: '1',
+        }),
+        encrypted: true,
+        timeIsTrusted: false,
+        clientOutSeq: 2,
+        createdAt: 2,
+        attempts: 0,
+        lastAttemptAt: 0,
+        priority: 100,
+      },
+    ])
+    expect(purgeInsecureEncryptedQueueItems()).toBe(1)
+    expect(loadOfflineMailboxQueue()).toHaveLength(1)
+    expect(loadOfflineMailboxQueue()[0]?.id).toBe('v1')
   })
 })

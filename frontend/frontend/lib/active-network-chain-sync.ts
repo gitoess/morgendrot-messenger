@@ -12,7 +12,7 @@ import {
     applyDirectMailboxChainSnapshotFromNetworkIds,
 } from '@/frontend/lib/direct-iota-chain-context'
 import { setBrowserDirectIotaRpcUrlOverride, getConfiguredDirectIotaRpcUrl } from '@/frontend/lib/direct-iota-rpc'
-import { clearOfflineMailboxQueue, loadOfflineMailboxQueue } from '@/frontend/lib/api/offline-queue'
+import { clearOfflineMailboxQueue, loadOfflineMailboxQueue, purgeInsecureEncryptedQueueItems } from '@/frontend/lib/api/offline-queue'
 import { formatDirectIotaSubmitError } from '@/frontend/lib/direct-iota-error-messages'
 import {
     canTryLivePlaintextDirectMailbox,
@@ -135,11 +135,12 @@ export function ensureDirectChainAlignedWithActiveProfile(): boolean {
 
 /** Queue-Einträge mit falscher Package-ID (Netzwechsel / Testnet-Rest auf Mainnet). */
 export function purgeStaleOfflineMailboxQueue(): number {
-    if (loadOfflineMailboxQueue().length === 0) return 0
+    const legacyPurged = purgeInsecureEncryptedQueueItems()
+    if (loadOfflineMailboxQueue().length === 0) return legacyPurged
 
     const state = readNetworkProfilesState()
     const profile = state[state.active]
-    if (!HEX64.test(profile.packageId)) return 0
+    if (!HEX64.test(profile.packageId)) return legacyPurged
 
     const snapPkg = getDirectChainFieldIdsFromLs().packageId.trim().toLowerCase()
     const profilePkg = profile.packageId.trim().toLowerCase()
@@ -152,7 +153,7 @@ export function purgeStaleOfflineMailboxQueue(): number {
     const rpc = (getConfiguredDirectIotaRpcUrl() || '').toLowerCase()
     if (rpc.includes('mainnet') && HEX64.test(testnetPkg) && snapPkg === testnetPkg) purge = true
 
-    return purge ? clearOfflineMailboxQueue() : 0
+    return purge ? legacyPurged + clearOfflineMailboxQueue() : legacyPurged
 }
 
 /** Testnet-Package auf Mainnet-RPC (oder umgekehrt) — zwei typische Fullnode-Meldungen. */

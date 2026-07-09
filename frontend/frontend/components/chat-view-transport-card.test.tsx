@@ -94,11 +94,12 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
     expect(onEncryptedChange).toHaveBeenCalledWith(false)
   })
 
-  it('warnt bei mehreren Partnern ohne Auswahl (§ H.1a)', () => {
+  it('warnt bei mehreren Partnern ohne Ziel-0x (§ H.1a)', () => {
     render(
       <ChatViewTransportCard
         {...baseProps({
           partner: '',
+          composerRecipient: '',
           apiStatus: {
             connected: true,
             connectedAddresses: [PEER_A, PEER_B],
@@ -107,6 +108,23 @@ describe('ChatViewTransportCard (Sendepfad / Partner-UI)', () => {
       />
     )
     expect(screen.getByText(/Mehrere Partner verbunden/i)).toBeInTheDocument()
+    expect(screen.getByText(/Empfängerfeld/i)).toBeInTheDocument()
+  })
+
+  it('kein Warnhinweis wenn Empfängerfeld verbundene 0x enthält', () => {
+    render(
+      <ChatViewTransportCard
+        {...baseProps({
+          partner: '',
+          composerRecipient: PEER_A,
+          apiStatus: {
+            connected: true,
+            connectedAddresses: [PEER_A, PEER_B],
+          },
+        })}
+      />
+    )
+    expect(screen.queryByText(/Mehrere Partner verbunden/i)).not.toBeInTheDocument()
   })
 
   it('zeigt Messenger-Credits-Balken wenn konfiguriert (§ H.1a)', () => {

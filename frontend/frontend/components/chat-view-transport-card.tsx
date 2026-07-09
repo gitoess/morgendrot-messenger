@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG } from '@/frontend/lib/chat-view-messenger-transport'
+import { resolveEncryptedMailboxRecipient } from '@/frontend/lib/composer-recipient-fields'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,8 @@ export type ChatViewTransportCardProps = SendTransportChoicePort & {
   apiStatus: ApiStatus | null
   /** Aktuelles Partnerfeld aus Setup (0x…), für Inline-Hinweis bei mehreren verbundenen Partnern. */
   partner?: string
+  /** Composer-Empfängerfeld (0x…) — zusammen mit Partner für Zielauflösung. */
+  composerRecipient?: string
   /** Web Bluetooth / Heltec – für Hinweise unter „funk“. */
   meshBleSupported?: boolean
   meshBleConnected?: boolean
@@ -58,6 +61,7 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
     messagingPersistenceMode,
     apiStatus,
     partner = '',
+    composerRecipient = '',
     meshBleSupported = false,
     meshBleConnected = false,
     onOpenPartnerSetup,
@@ -92,8 +96,14 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
   )
 
   const selectedPartner = partner.trim().toLowerCase()
+  const encryptedTarget = useMemo(
+    () => resolveEncryptedMailboxRecipient(composerRecipient, partner),
+    [composerRecipient, partner]
+  )
   const requiresPartnerSelection =
     isPrivate && encrypted && forcedTransport === 'internet' && connectedAddresses.length > 1
+  const encryptedTargetConnected =
+    encryptedTarget.length > 0 && connectedAddresses.includes(encryptedTarget)
   const selectedPartnerConnected =
     selectedPartner.length > 0 && connectedAddresses.includes(selectedPartner)
 
@@ -179,13 +189,13 @@ export function ChatViewTransportCard(p: ChatViewTransportCardProps) {
       {isPrivate && encrypted && forcedTransport === 'internet' ? (
         <span className="sr-only">{CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG}</span>
       ) : null}
-      {requiresPartnerSelection && !selectedPartner ? (
+      {requiresPartnerSelection && !encryptedTargetConnected ? (
         <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
-          Mehrere Partner verbunden. Bitte unter <strong>Verschlüsselt</strong> die Zieladresse
-          auswählen, sonst wird verschlüsselt nicht gesendet.
+          Mehrere Partner verbunden. Trage die Ziel-<strong>0x-Adresse</strong> ins Empfängerfeld ein oder wähle
+          unten einen verbundenen Partner — sonst wird verschlüsselt nicht gesendet.
         </p>
       ) : null}
-      {requiresPartnerSelection && selectedPartner && !selectedPartnerConnected ? (
+      {requiresPartnerSelection && encryptedTargetConnected && selectedPartner && !selectedPartnerConnected ? (
         <p className="rounded-md border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-950 dark:text-amber-100/95">
           Gewählter Partner ist nicht verbunden. Erst <strong>/connect</strong> für diese Adresse durchführen oder
           Partnerfeld korrigieren.

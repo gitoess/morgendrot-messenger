@@ -9,8 +9,12 @@
  * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
  */
 
-import { sendPlaintextMailboxHybrid, sendEncryptedMailboxHybridFromQueue } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendPlaintextMailboxHybrid, sendPreEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
 import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
+import {
+  isLegacyPlaintextEncryptedQueuePayload,
+  isOfflineEncryptedWirePayload,
+} from '@/frontend/lib/offline-mailbox-encrypted-payload'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem, OfflineMailboxTrySend } from '@morgendrot/core'
 import {
   createOfflineMailboxManager,
@@ -78,7 +82,17 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
       return { ok: false as const, error: r.error ?? r.message ?? 'Klartext fehlgeschlagen' }
     }
     if (item.kind === 'encrypted_send' && item.encrypted === true) {
-      const r = await sendEncryptedMailboxHybridFromQueue(item.recipient, item.payload, {
+      if (
+        isLegacyPlaintextEncryptedQueuePayload(item.kind, item.encrypted, item.payload) ||
+        !isOfflineEncryptedWirePayload(item.payload)
+      ) {
+        return {
+          ok: false as const,
+          error:
+            'Veralteter verschlüsselter Queue-Eintrag (Klartext) — wurde verworfen. Nachricht bitte erneut senden.',
+        }
+      }
+      const r = await sendPreEncryptedMailboxHybrid(item.recipient, item.payload, {
         messagingPersistenceMode: mode,
       })
       if (r.ok) return { ok: true as const }
@@ -104,7 +118,24 @@ function getMailboxManager(): ReturnType<typeof createOfflineMailboxManager> {
 }
 
 export function loadOfflineMailboxQueue() {
+  purgeInsecureEncryptedQueueItems()
   return getMailboxManager().load()
+}
+
+/**
+ * Entfernt `encrypted_send`-Einträge ohne Ciphertext-Wire v1 (Legacy-Klartext in localStorage).
+ * @returns Anzahl verworfener Einträge
+ */
+export function purgeInsecureEncryptedQueueItems(): number {
+  const mgr = getMailboxManager()
+  const items = mgr.load()
+  const kept = items.filter(
+    (item) =>
+      !isLegacyPlaintextEncryptedQueuePayload(item.kind, item.encrypted, item.payload)
+  )
+  const purged = items.length - kept.length
+  if (purged > 0) mgr.save(kept)
+  return purged
 }
 
 export function saveOfflineMailboxQueue(items: OfflineMailboxQueueItem[]): void {

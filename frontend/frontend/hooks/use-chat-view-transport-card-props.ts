@@ -11,6 +11,7 @@ export type ChatViewTransportCardPropsDeps = {
     ChatViewMessengerPorts,
     | 'sendTransportChoice'
     | 'composerPartner'
+    | 'composerDraft'
     | 'composerSendPath'
     | 'inboxFeedRead'
     | 'contactDirectoryRead'
@@ -30,6 +31,7 @@ export function useChatViewTransportCardProps(
     sendTransportChoice,
     composerPartner,
     composerSendPath,
+    composerDraft,
     inboxFeedRead,
     contactDirectoryRead,
     connectionStatusRead,
@@ -53,6 +55,7 @@ export function useChatViewTransportCardProps(
         isPrivate: composerSendPath.isPrivate,
         apiStatus: connectionStatusRead.apiStatus,
         partner: composerPartner.partner,
+        composerRecipient: composerDraft.recipient,
         meshBleSupported: meshDevice.bleSupported,
         meshBleConnected: meshDevice.connected,
         onOpenPartnerSetup: deps.onOpenPartnerSetup,
@@ -70,6 +73,7 @@ export function useChatViewTransportCardProps(
       composerSendPath.channelMode,
       connectionStatusRead.apiStatus,
       composerPartner.partner,
+      composerDraft.recipient,
       meshDevice.bleSupported,
       meshDevice.connected,
       deps.onOpenPartnerSetup,
