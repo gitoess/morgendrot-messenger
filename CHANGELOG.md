@@ -6,6 +6,14 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ## [Unreleased]
 
+### Sicherheit / Sendepfad
+
+- **LAN-API:** `API_AUTH_TOKEN` für Vault-Geheimnisse und `sponsorForSender`; CORS- und Handoff-Kette geschlossen (`105dc8a`).
+- **Boss-Signer:** Token-Pflicht, Loopback-Default, Adress-Allowlist, Rate-Limit; **PTB-Allowlist** `worker-messenger` (nur `messaging::*` auf `PACKAGE_ID`) (`0aca958`, `253c4c3`).
+- **Pass 3 P0 — Sendepfad:** `/send <0x> <Text>` zielgerichtet (kein `peerMap`-Broadcast); `/send-encrypted` für vorbereitetes Ciphertext-Wire; `ensureEncryptedPeerReady` nur für exakte Zieladresse (`f2c2235`).
+- **Offline-Queue:** `encrypted_send` speichert nur Ciphertext-Wire v1; Legacy-Klartext beim Laden verworfen; Drain ohne Klartext-Fallback (`f2c2235`, `d88ff17`).
+- **Multi-Peer-UX:** Verschlüsselt-Hinweis nutzt Empfängerfeld **und** Partner-Feld (`d88ff17`).
+
 ### Dokumentation
 
 - **§ H.36 Team-Member-Update & Einstiegs-Wizard:** Neue Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`** — linearer Wizard (Boss/Helfer/Wanderer), Join-Request, Wire `MORG_TEAM_MEMBER_UPDATE_V1`, Transport **IOTA = Persistenz / LAN = Zustellung** (Anschluss § H.16 Boss-LAN Ist), Funk nur Ping; Roadmap **§ H.36**.
