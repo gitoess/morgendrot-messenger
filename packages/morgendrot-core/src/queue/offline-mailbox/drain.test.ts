@@ -66,9 +66,11 @@ describe('drainOfflineMailboxOnce', () => {
   })
 
   it('encrypted_send nutzt sendEncrypted', async () => {
+    let usedRecipient = ''
     let used = ''
     const send: OfflineMailboxSendPort = {
-      sendEncrypted: async (p) => {
+      sendEncrypted: async (recipient, p) => {
+        usedRecipient = recipient
         used = p
         return { ok: true }
       },
@@ -76,6 +78,7 @@ describe('drainOfflineMailboxOnce', () => {
     }
     const sorted = [encItem('e', 'wire-body', 1)]
     await drainOfflineMailboxOnce(sorted, 3_000_000, createOfflineMailboxTrySendFromSendPort(send))
+    expect(usedRecipient).toBe('0xr')
     expect(used).toBe('wire-body')
   })
 })

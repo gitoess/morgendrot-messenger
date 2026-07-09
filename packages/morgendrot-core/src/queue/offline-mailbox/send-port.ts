@@ -6,7 +6,7 @@ import type { OfflineMailboxQueueItem } from './model'
 export type MailboxSendResult = { ok: true } | { ok: false; error?: string }
 
 export type OfflineMailboxSendPort = {
-  sendEncrypted(payload: string): Promise<MailboxSendResult>
+  sendEncrypted(recipient: string, payload: string): Promise<MailboxSendResult>
   sendPlain(recipient: string, payload: string): Promise<MailboxSendResult>
 }
 
@@ -16,7 +16,7 @@ export type OfflineMailboxTrySend = (item: OfflineMailboxQueueItem) => Promise<M
 export function createOfflineMailboxTrySendFromSendPort(port: OfflineMailboxSendPort): OfflineMailboxTrySend {
   return (item) =>
     item.kind === 'encrypted_send'
-      ? port.sendEncrypted(item.payload)
+      ? port.sendEncrypted(item.recipient, item.payload)
       : port.sendPlain(item.recipient, item.payload)
 }
 

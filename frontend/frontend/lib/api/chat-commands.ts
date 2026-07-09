@@ -19,11 +19,26 @@ export const sendMessage = (
 
 /** Verschlüsseltes /send mit Timeout (Standard 120s – Chain/RPC kann langsam sein). */
 export function sendEncryptedMessageWithTimeout(
+  recipient: string,
   message: string,
   timeoutMs = 120_000,
   opts?: { mailboxObjectId?: string; messagingPersistenceMode?: MessagingPersistenceMode }
 ) {
-  return executeCommand('/send', [message], {
+  return executeCommand('/send', [recipient.trim(), message], {
+    timeoutMs,
+    mailboxObjectId: opts?.mailboxObjectId,
+    messagingPersistenceMode: opts?.messagingPersistenceMode,
+  })
+}
+
+/** Bereits verschlüsseltes Wire (Offline-Queue-Drain, Relay). */
+export function sendEncryptedWireWithTimeout(
+  recipient: string,
+  wireJson: string,
+  timeoutMs = 120_000,
+  opts?: { mailboxObjectId?: string; messagingPersistenceMode?: MessagingPersistenceMode }
+) {
+  return executeCommand('/send-encrypted', [recipient.trim(), wireJson], {
     timeoutMs,
     mailboxObjectId: opts?.mailboxObjectId,
     messagingPersistenceMode: opts?.messagingPersistenceMode,

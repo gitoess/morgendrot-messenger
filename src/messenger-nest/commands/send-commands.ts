@@ -12,6 +12,7 @@ import { assertMessengerMediaNetBlobWithinLimit } from '../../messenger-media-li
 import { getWalletPassword } from '../messenger-session-password.js';
 import {
     sendEncryptedMessage,
+    sendEncryptedWireOnly,
     sendPlaintextOnly,
     sendTeamPlaintextBroadcastOnly,
     sendTeamEncryptedBroadcastOnly,
@@ -35,6 +36,7 @@ const SEND_COMMANDS = new Set([
     '/send-team-broadcast',
     '/send-team-broadcast-encrypted',
     '/send',
+    '/send-encrypted',
     '/sos-gateway-ack',
     '/mesh-build-v2',
     '/mesh-decrypt-v2',
@@ -163,8 +165,11 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
         if (capDenied) return capDenied;
         const pm = sessionState.peerMap;
         if (!pm?.size) return { ok: false, message: 'Nicht verbunden. Zuerst /connect ausführen.' };
-        const text = a && a.length > 0 ? a.join(' ').trim() : '';
-        if (!text) return { ok: false, message: 'Verwendung: /send <Text> (Nachricht eingeben).' };
+        const { resolveSendRecipientAndText } = await import('./send-command-args.js');
+        const peerAddrs = [...pm.values()].map((p) => p.address);
+        const resolved = resolveSendRecipientAndText(a ?? [], peerAddrs);
+        if (!resolved.ok) return { ok: false, message: resolved.message };
+        const { recipient: sendRecipient, text } = resolved;
         if (new TextEncoder().encode(text).length > MESSAGING_MAX_PLAINTEXT_UTF8_BYTES) {
             return {
                 ok: false,
@@ -172,26 +177,89 @@ export async function tryHandleSendCommand(ctx: MessengerCommandContext): Promis
                     `Nachricht zu lang für Mailbox/Move (max. ~${MESSAGING_MAX_PLAINTEXT_UTF8_BYTES} Byte UTF-8; reines Arg-Limit ${MOVE_MAX_PURE_VECTOR_U8_BYTES}). Bild: „Bild anhängen“ erneut (Server komprimiert für Chain) oder kürzerer Text.`,
             };
         }
+        const normRecipient = normalizeAddress(sendRecipient);
+        const peer =
+            pm.get(sendRecipient) ??
+            pm.get(normRecipient) ??
+            [...pm.values()].find((p) => normalizeAddress(p.address) === normRecipient);
+        if (!peer) {
+            return {
+                ok: false,
+                message:
+                    'Empfänger nicht in peerMap — zuerst Handshake/Connect für genau diese 0x-Adresse.',
+            };
+        }
         const forceLegacyEncrypted = resolveCommandForceLegacyEncrypted(opts);
         const { runWithMailboxObjectIdOverride } = await import('../../mailbox-object-id-scope.js');
         return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
             const { parseMailboxOutNonceMarker } = await import('@morgendrot/core/queue/offline-mailbox');
-            let lastDigest: string | undefined;
-            let lastNonce: string | undefined;
-            for (const p of pm.values()) {
-                const result = await sendEncryptedMessage(p.address, text, p.pubKeyRaw, keys!.privateKey, {
-                    forceLegacyEncrypted,
-                });
-                if (result?.digest) lastDigest = result.digest;
-            }
+            const result = await sendEncryptedMessage(peer.address, text, peer.pubKeyRaw, keys!.privateKey, {
+                forceLegacyEncrypted,
+            });
             const parsed = parseMailboxOutNonceMarker(text);
-            if (parsed) lastNonce = parsed.nonce.toString();
+            const lastNonce = parsed ? parsed.nonce.toString() : undefined;
             return {
                 ok: true,
-                message: pm.size > 1 ? `An ${pm.size} Partner gesendet.` : 'Verschlüsselte Nachricht gesendet.',
-                digest: lastDigest,
-                txDigest: lastDigest,
+                message: `Verschlüsselte Nachricht an ${peer.address.slice(0, 12)}… gesendet.`,
+                digest: result?.digest,
+                txDigest: result?.digest,
                 nonce: lastNonce,
+            };
+        });
+    }
+
+    if (c === '/send-encrypted') {
+        const capDenied = denyMessengerSendCommand(c);
+        if (capDenied) return capDenied;
+        const recipientRaw = String(a[0] ?? '').trim();
+        if (!/^0x[a-fA-F0-9]{64}$/.test(recipientRaw)) {
+            return {
+                ok: false,
+                message: 'Verwendung: /send-encrypted <0xEmpfänger> <verschlüsseltes-JSON-Wire>',
+            };
+        }
+        const wireJson = (a ?? []).slice(1).join(' ').trim();
+        if (!wireJson) {
+            return { ok: false, message: 'Verschlüsseltes Wire (JSON) fehlt.' };
+        }
+        let wire: {
+            v?: number;
+            ciphertextB64?: string;
+            ivB64?: string;
+            tagB64?: string;
+            nonce?: string;
+        };
+        try {
+            wire = JSON.parse(wireJson) as typeof wire;
+        } catch {
+            return { ok: false, message: 'Verschlüsseltes Wire ist kein gültiges JSON.' };
+        }
+        if (wire.v !== 1 || !wire.ciphertextB64 || !wire.ivB64 || !wire.tagB64 || !wire.nonce) {
+            return { ok: false, message: 'Verschlüsseltes Wire: v=1, ciphertextB64, ivB64, tagB64, nonce erforderlich.' };
+        }
+        let nonce: bigint;
+        try {
+            nonce = BigInt(String(wire.nonce));
+        } catch {
+            return { ok: false, message: 'Verschlüsseltes Wire: nonce ungültig.' };
+        }
+        const forceLegacyEncrypted = resolveCommandForceLegacyEncrypted(opts);
+        const { runWithMailboxObjectIdOverride } = await import('../../mailbox-object-id-scope.js');
+        return runWithMailboxObjectIdOverride(String(opts?.mailboxObjectId ?? ''), async () => {
+            const result = await sendEncryptedWireOnly(
+                recipientRaw,
+                base64ToUint8(wire.ciphertextB64!),
+                base64ToUint8(wire.ivB64!),
+                base64ToUint8(wire.tagB64!),
+                nonce,
+                { forceLegacyEncrypted }
+            );
+            return {
+                ok: true,
+                message: `Verschlüsseltes Wire an ${recipientRaw.slice(0, 12)}… gesendet.`,
+                digest: result?.digest,
+                txDigest: result?.digest,
+                nonce: nonce.toString(),
             };
         });
     }

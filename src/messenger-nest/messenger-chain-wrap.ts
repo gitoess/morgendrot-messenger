@@ -133,6 +133,34 @@ export async function sendEncryptedMessage(
     return result;
 }
 
+/** Bereits verschlüsseltes Wire on-chain speichern (Offline-Queue, kein Re-Encrypt). */
+export async function sendEncryptedWireOnly(
+    recipient: string,
+    ciphertext: Uint8Array,
+    iv: Uint8Array,
+    tag: Uint8Array,
+    nonce: bigint,
+    sendOpts?: SendEncryptedMessageOptions
+) {
+    const MY_ADDR = process.env.MY_ADDRESS || CFG.MY_ADDRESS;
+    const result = await storeEncryptedMessage(
+        recipient,
+        MY_ADDR,
+        ciphertext,
+        iv,
+        tag,
+        nonce,
+        undefined,
+        getWalletPassword(),
+        {
+            forceLegacyEncrypted: sendOpts?.forceLegacyEncrypted,
+            signOptions: messengerGasPolicyOpts(),
+        }
+    );
+    if (result?.digest) logger.info(`TX ausgeführt: ${result.digest}${result.status ? ` (${result.status})` : ''}`);
+    return result;
+}
+
 export type SendPlaintextOnlyOptions = {
   /**
    * `true` (Default): Move-Event-Pfad `send_plaintext_message` (Legacy, z. B. CLI `/send-plain`).

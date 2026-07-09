@@ -29,7 +29,7 @@ export type OfflineMailboxQueueItem = {
   kind: OfflineMailboxKind
   status: OfflineQueueItemStatus
   recipient: string
-  /** Ein Argument an `/send` bzw. Klartextteil für `/send-plain`. */
+  /** Verschlüsselt: JSON-Wire (v1) oder Legacy-Klartext für `/send-plain`-Drain. */
   payload: string
   encrypted: boolean
   /**

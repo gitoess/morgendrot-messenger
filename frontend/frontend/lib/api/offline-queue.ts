@@ -9,7 +9,7 @@
  * Orchestrierung: **`createOfflineMailboxManager`** + **`OfflineMailboxTrySend`** (aus **`OfflineMailboxSendPort`**, `@morgendrot/core`).
  */
 
-import { sendPlaintextMailboxHybrid, sendEncryptedMailboxHybrid } from '@/frontend/lib/mailbox-send-hybrid'
+import { sendPlaintextMailboxHybrid, sendEncryptedMailboxHybridFromQueue } from '@/frontend/lib/mailbox-send-hybrid'
 import { readMessagingPersistenceModeFromStorage } from '@/frontend/lib/messaging-persistence-mode'
 import type { OfflineMailboxKind, OfflineMailboxQueueItem, OfflineMailboxTrySend } from '@morgendrot/core'
 import {
@@ -78,7 +78,7 @@ function createHybridOfflineMailboxTrySend(): OfflineMailboxTrySend {
       return { ok: false as const, error: r.error ?? r.message ?? 'Klartext fehlgeschlagen' }
     }
     if (item.kind === 'encrypted_send' && item.encrypted === true) {
-      const r = await sendEncryptedMailboxHybrid(item.recipient, item.payload, {
+      const r = await sendEncryptedMailboxHybridFromQueue(item.recipient, item.payload, {
         messagingPersistenceMode: mode,
       })
       if (r.ok) return { ok: true as const }

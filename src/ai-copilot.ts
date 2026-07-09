@@ -172,6 +172,10 @@ function extractArgsForAction(cmd: string, msg: string): string[] {
             return cmd === '/connect' ? [] : [];
         case '/send':
             const quotedSend = msg.match(/["']([^"']*)["']/);
+            if (ids.length >= 1) {
+                const textFromQuoted = quotedSend ? quotedSend[1] : msg.replace(new RegExp(ids[0], 'gi'), '').replace(/\b(an alle|partner|sende|schick)\b/gi, '').trim().slice(0, 500);
+                return [ids[0], textFromQuoted || 'Nachricht'];
+            }
             const textSend = quotedSend ? quotedSend[1] : msg.replace(/\b0x[a-fA-F0-9]+\b/g, '').replace(/\b(an alle|partner|sende|schick)\b/gi, '').trim().slice(0, 500);
             return [textSend || 'Nachricht'];
         case '/fetch':
@@ -1135,7 +1139,10 @@ function parseStrictJson(content: string): ParseStrictJsonResult {
         const parts = actionStr.split(/\s+/);
         const cmd = parts[0].toLowerCase();
         let args = parts.slice(1);
-        if (cmd === '/send' && args.length > 1) args = [args.join(' ')];
+        if (cmd === '/send' && args.length > 2) args = [args[0], args.slice(1).join(' ')];
+        else if (cmd === '/send' && args.length > 1 && !/^0x[a-fA-F0-9]{64}$/i.test(args[0] ?? '')) {
+            args = [args.join(' ')];
+        }
         if (!ALLOWED_AI_COMMANDS.has(cmd)) return null; // Post-Filter: nur erlaubte Befehle
         return {
             cmd,

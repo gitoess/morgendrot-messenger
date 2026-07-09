@@ -32,6 +32,7 @@ import {
 import type { MessengerGroupDefinition } from '@/frontend/lib/messenger-group-store'
 import { parseComposerIotaRecipientAddresses } from '@/frontend/lib/composer-recipient-fields'
 import { prependPinnwandPostMarker } from '@/frontend/lib/pinnwand-post-marker'
+import { buildOfflineEncryptedQueuePayload } from '@/frontend/lib/offline-mailbox-encrypted-payload'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
 
 const ADDR_64_LOWER = /^0x[a-f0-9]{64}$/
@@ -110,10 +111,20 @@ export function createChatViewMailboxSendHandlers(ctx: ChatViewMailboxSendContex
     if (!ADDR_64_LOWER.test(recipientTrim)) {
       return { reject: 'Empfängeradresse ungültig; nicht in Mailbox-Warteschlange gespeichert.' }
     }
+    let payloadForQueue = wireForQueue
+    if (encrypted && kind === 'encrypted_send') {
+      const encPayload = await buildOfflineEncryptedQueuePayload(recipientTrim, wireForQueue)
+      if (!encPayload.ok) {
+        return {
+          reject: `${encPayload.error} — nicht in verschlüsselter Warteschlange gespeichert.`,
+        }
+      }
+      payloadForQueue = encPayload.payload
+    }
     const en = await enqueueOfflineMailboxFailure({
       kind,
       recipient: recipientTrim,
-      payload: wireForQueue,
+      payload: payloadForQueue,
       encrypted,
       timeIsTrusted: !ctx.deviceTimeTrustWarn,
       lastError: lastErr,

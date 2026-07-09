@@ -318,24 +318,12 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       if (connected.includes(target)) return { ok: true }
       if (getDirectChatEcdhMaterialForRecipient(target)) return { ok: true }
       if (canTryLiveEncryptedDirectMailbox(target)) return { ok: true }
-      if (connected.length === 1 && connected[0] === target) return { ok: true }
-      const partnerNorm = partner.trim().toLowerCase()
       if (connected.length > 1) {
-        if (!partnerNorm) {
-          return {
-            ok: false,
-            message:
-              'Mehrere verbundene Partner: im Feld „Partner (Handshake)“ die Zieladresse wählen, dann verschlüsselt senden.',
-          }
+        return {
+          ok: false,
+          message:
+            'Mehrere verbundene Partner: Zieladresse im Composer muss verbunden sein (Handshake/Connect für genau diese 0x-Adresse).',
         }
-        if (!connected.includes(partnerNorm)) {
-          return {
-            ok: false,
-            message:
-              'Partner-Adresse ist nicht verbunden. Erst Handshake/Connect für diese Adresse durchführen oder Partnerfeld korrigieren.',
-          }
-        }
-        return { ok: true }
       }
       try {
         const hs = await findPeerHandshake(target)
@@ -362,18 +350,6 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
         }
       } catch {
         /* optional */
-      }
-      const partnerForConnect = partner.trim().toLowerCase()
-      if (ADDR_64_LOWER.test(partnerForConnect) && partnerForConnect !== target) {
-        try {
-          const cr2 = await connectPartnerHybrid(partnerForConnect)
-          if (cr2.ok) {
-            await refreshApiStatus?.()
-            return { ok: true }
-          }
-        } catch {
-          /* optional */
-        }
       }
       return { ok: false, message: CHAT_ENCRYPTED_HANDSHAKE_REQUIRED_MSG }
     }

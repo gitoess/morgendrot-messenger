@@ -11,7 +11,11 @@ import {
   readMessagingPersistenceModeFromStorage,
   type MessagingPersistenceMode,
 } from '@/frontend/lib/messaging-persistence-mode'
-import { sendEncryptedMessageWithTimeout, sendMessage } from '@/frontend/lib/api/chat-commands'
+import {
+  sendEncryptedMessageWithTimeout,
+  sendEncryptedWireWithTimeout,
+  sendMessage,
+} from '@/frontend/lib/api/chat-commands'
 import {
   canTryLivePlaintextDirectMailbox,
   trySubmitPlaintextMailboxViaDirectIota,
@@ -22,7 +26,15 @@ import {
   trySubmitTeamEncryptedBroadcastViaDirectIota,
 } from '@/frontend/lib/direct-iota-team-broadcast-submit'
 import type { TeamBroadcastEncryptedPayload } from '@/frontend/lib/team-broadcast-encrypted-send'
-import { trySubmitEncryptedMailboxViaDirectIotaFromPlaintext } from '@/frontend/lib/direct-iota-encrypted-submit'
+import {
+  trySubmitEncryptedMailboxViaDirectIota,
+  trySubmitEncryptedMailboxViaDirectIotaFromPlaintext,
+} from '@/frontend/lib/direct-iota-encrypted-submit'
+import {
+  isOfflineEncryptedWirePayload,
+  offlineEncryptedWireToDirectSubmitInput,
+  parseOfflineEncryptedWirePayload,
+} from '@/frontend/lib/offline-mailbox-encrypted-payload'
 import { getDirectChatEcdhMaterialForRecipient } from '@/frontend/lib/direct-chat-ecdh-session'
 import { mergeDirectThenRelayErrors } from '@/frontend/lib/direct-iota-error-messages'
 import { syncActiveNetworkChainSnapshot, formatMainnetDirectSendBlockedMessage } from '@/frontend/lib/active-network-chain-sync'
@@ -250,7 +262,7 @@ export async function sendEncryptedMailboxHybrid(
       error: directErr ?? formatMainnetDirectSendBlockedMessage(),
     }
   }
-  const apiRes = await sendEncryptedMessageWithTimeout(wireForApi, opts?.timeoutMs ?? 120_000, {
+  const apiRes = await sendEncryptedMessageWithTimeout(rTrim, wireForApi, opts?.timeoutMs ?? 120_000, {
     mailboxObjectId: opts?.mailboxObjectId,
     messagingPersistenceMode: mode,
   })
@@ -260,4 +272,70 @@ export async function sendEncryptedMailboxHybrid(
     return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
   }
   return hybrid
+}
+
+/** Verschlüsseltes Wire (Offline-Queue): Direct zuerst, dann `/send-encrypted`. */
+export async function sendPreEncryptedMailboxHybrid(
+  recipient: string,
+  wireJson: string,
+  opts?: {
+    timeoutMs?: number
+    mailboxObjectId?: string
+    messagingPersistenceMode?: MessagingPersistenceMode
+  }
+): Promise<MailboxHybridSendResult> {
+  syncActiveNetworkChainSnapshot()
+  await tryAutoRestoreDirectIotaSessionSignerAsync()
+  const rTrim = recipient.trim()
+  const parsed = parseOfflineEncryptedWirePayload(wireJson)
+  if (!parsed) {
+    return { ok: false, error: 'Verschlüsseltes Queue-Wire ungültig.' }
+  }
+  const mode = resolvePersistenceMode(opts)
+  let directErr: string | undefined
+  if (rTrim) {
+    const submitInput = offlineEncryptedWireToDirectSubmitInput(rTrim, parsed, opts?.mailboxObjectId)
+    const attemptDirect = async (persistenceMode: MessagingPersistenceMode) => {
+      const { trySubmitEncryptedEventViaDirectIota } = await import('@/frontend/lib/direct-iota-encrypted-submit')
+      return persistenceMode === 'event'
+        ? trySubmitEncryptedEventViaDirectIota(submitInput)
+        : trySubmitEncryptedMailboxViaDirectIota(submitInput)
+    }
+    const er = await attemptDirect(mode)
+    if (er.ok) return { ok: true, txDigest: er.digest }
+    directErr = er.error
+    if (mode === 'mailbox') {
+      const ev = await attemptDirect('event')
+      if (ev.ok) return { ok: true, txDigest: ev.digest }
+      directErr = mergeDirectThenRelayErrors(er.error, ev.error)
+    }
+  }
+  if (!shouldUseMailboxApiRelayFallback()) {
+    return {
+      ok: false,
+      error: directErr ?? formatMainnetDirectSendBlockedMessage(),
+    }
+  }
+  const apiRes = await sendEncryptedWireWithTimeout(rTrim, wireJson, opts?.timeoutMs ?? 120_000, {
+    mailboxObjectId: opts?.mailboxObjectId,
+    messagingPersistenceMode: mode,
+  })
+  const hybrid = fromApiResponse(apiRes)
+  if (hybrid.ok) return hybrid
+  if (directErr) {
+    return { ok: false, error: mergeDirectThenRelayErrors(directErr, apiRelayErrorMessage(apiRes)) }
+  }
+  return hybrid
+}
+
+/** Erkennt verschlüsseltes Queue-Wire und leitet an den passenden Hybrid-Pfad. */
+export async function sendEncryptedMailboxHybridFromQueue(
+  recipient: string,
+  payload: string,
+  opts?: Parameters<typeof sendEncryptedMailboxHybrid>[2]
+): Promise<MailboxHybridSendResult> {
+  if (isOfflineEncryptedWirePayload(payload)) {
+    return sendPreEncryptedMailboxHybrid(recipient, payload, opts)
+  }
+  return sendEncryptedMailboxHybrid(recipient, payload, opts)
 }

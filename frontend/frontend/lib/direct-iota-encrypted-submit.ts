@@ -202,6 +202,12 @@ export async function trySubmitEncryptedMailboxViaDirectIota(
   return trySubmitEncryptedViaDirectIota(opts, 'mailbox')
 }
 
+export async function trySubmitEncryptedEventViaDirectIota(
+  opts: TrySubmitEncryptedMailboxViaDirectIotaInput
+): Promise<{ ok: true; digest?: string } | { ok: false; error: string }> {
+  return trySubmitEncryptedViaDirectIota(opts, 'event')
+}
+
 export type TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput = {
   recipient: string
   plaintextUtf8: string
@@ -252,6 +258,18 @@ async function encryptPlaintextForDirectSubmit(
   } catch (e) {
     return { ok: false, error: formatDirectIotaSubmitError(e) }
   }
+}
+
+export async function encryptPlaintextWireForRecipient(
+  opts: Pick<
+    TrySubmitEncryptedMailboxViaDirectIotaFromPlaintextInput,
+    'plaintextUtf8' | 'peerPubRaw' | 'ecdhPrivateKey' | 'recipient'
+  >
+): Promise<
+  | { ok: true; ciphertext: Uint8Array; iv: Uint8Array; tag: Uint8Array; nonce: bigint }
+  | { ok: false; error: string }
+> {
+  return encryptPlaintextForDirectSubmit(opts)
 }
 
 export async function trySubmitEncryptedMailboxViaDirectIotaFromPlaintext(

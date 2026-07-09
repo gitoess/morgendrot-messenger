@@ -56,6 +56,7 @@ const SEND_COMMAND_TRANSPORT: Partial<Record<string, TransportChannel>> = {
     '/send-plain': 'iota',
     '/send-team-broadcast': 'iota',
     '/send': 'iota',
+    '/send-encrypted': 'iota',
     '/mesh-build-v2': 'lora',
     '/morg-pkg-export': 'iota',
     '/boss-command': 'iota',
