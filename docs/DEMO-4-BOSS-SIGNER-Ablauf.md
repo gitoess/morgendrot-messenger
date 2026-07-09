@@ -13,7 +13,8 @@
    - `BOSS_SIGNER_TOKEN=` mindestens 16 Zeichen (gleicher Wert wie `REMOTE_SIGNER_TOKEN` am Arbeiter)
    - `BOSS_SIGNER_BIND_HOST=0.0.0.0` nur wenn Arbeiter im LAN (sonst Default `127.0.0.1`)
    - Optional: `BOSS_SIGNER_ALLOWED_ADDRESSES=0x…` (nur Maschinen-Adressen)
-   - Nur Entwicklung ohne Token: `BOSS_SIGNER_ALLOW_INSECURE=1`
+   - `PACKAGE_ID` oder `BOSS_SIGNER_ALLOWED_PACKAGE_IDS` — PTB-Allowlist (`worker-messenger`, Standard)
+   - Nur Entwicklung ohne Token/Allowlist: `BOSS_SIGNER_ALLOW_INSECURE=1`
 3. **Arbeiter-Instanz:** Eigenes Verzeichnis oder zweite .env mit:
    - `MY_ADDRESS` = die **Maschinen-**Adresse (vom Boss angelegt),
    - `SIGNER=remote`,

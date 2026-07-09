@@ -6,6 +6,8 @@
  *   BOSS_SIGNER_TOKEN=…        (pflicht, min. 16 Zeichen)
  *   BOSS_SIGNER_BIND_HOST=…    (Default 127.0.0.1 — LAN: 0.0.0.0)
  *   BOSS_SIGNER_ALLOWED_ADDRESSES=0x…,0x…  (optional, empfohlen bei LAN-Bind)
+ *   BOSS_SIGNER_ALLOWED_PACKAGE_IDS=0x…     (Default: PACKAGE_ID)
+ *   BOSS_SIGNER_PTB_POLICY=worker-messenger (off nur mit ALLOW_INSECURE)
  *   WALLET_PASSWORD=…          (Keystore, nie im HTTP-Body)
  *   PORT=3340
  */
@@ -22,6 +24,12 @@ import {
     validateBossSignerTokenConfig,
     BOSS_SIGNER_MAX_BODY_BYTES,
 } from './boss-signer-lib.js'
+import {
+    parseBossSignerAllowedPackageIds,
+    resolveBossSignerPtbPolicy,
+    validateBossSignerPtbBytes,
+    validateBossSignerPtbPolicyConfig,
+} from './boss-signer-ptb-policy.js'
 
 dotenv.config()
 
@@ -31,6 +39,11 @@ const ALLOW_INSECURE =
     process.env.BOSS_SIGNER_ALLOW_INSECURE === '1' || process.env.BOSS_SIGNER_ALLOW_INSECURE === 'true'
 const BIND_HOST = (process.env.BOSS_SIGNER_BIND_HOST || '127.0.0.1').trim() || '127.0.0.1'
 const ALLOWED_ADDRESSES = parseBossSignerAllowedAddresses(process.env.BOSS_SIGNER_ALLOWED_ADDRESSES)
+const ALLOWED_PACKAGES = parseBossSignerAllowedPackageIds(
+    process.env.BOSS_SIGNER_ALLOWED_PACKAGE_IDS,
+    process.env.PACKAGE_ID
+)
+const PTB_POLICY = resolveBossSignerPtbPolicy(process.env.BOSS_SIGNER_PTB_POLICY)
 const WALLET_PASSWORD = (process.env.WALLET_PASSWORD || '').trim() || undefined
 const RATE_LIMIT_PER_MIN = Math.max(0, parseInt(process.env.BOSS_SIGNER_RATE_LIMIT_PER_MINUTE || '60', 10) || 60)
 
@@ -39,8 +52,20 @@ if (tokenError && !ALLOW_INSECURE) {
     console.error('[boss-signer]', tokenError)
     process.exit(1)
 }
+const ptbError = validateBossSignerPtbPolicyConfig(PTB_POLICY, ALLOWED_PACKAGES, ALLOW_INSECURE)
+if (ptbError) {
+    console.error('[boss-signer]', ptbError)
+    process.exit(1)
+}
 if (ALLOW_INSECURE) {
     console.warn('[boss-signer] WARNUNG: BOSS_SIGNER_ALLOW_INSECURE — kein oder schwaches Token (nur Entwicklung).')
+}
+if (PTB_POLICY === 'off') {
+    console.warn('[boss-signer] WARNUNG: BOSS_SIGNER_PTB_POLICY=off — beliebige PTBs (nur Dev).')
+} else {
+    console.log(
+        `[boss-signer] PTB-Policy: ${PTB_POLICY}, Packages: ${ALLOWED_PACKAGES.size}, erlaubte Move-Fns: messaging (Allowlist)`
+    )
 }
 if (BIND_HOST === '0.0.0.0' || BIND_HOST === '::') {
     console.warn('[boss-signer] Lauscht auf allen Interfaces — BOSS_SIGNER_TOKEN und Allowlist prüfen.')
@@ -187,6 +212,8 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
             service: 'boss-signer',
             bindHost: BIND_HOST,
             addressAllowlist: ALLOWED_ADDRESSES.size,
+            packageAllowlist: ALLOWED_PACKAGES.size,
+            ptbPolicy: PTB_POLICY,
             tokenRequired: !ALLOW_INSECURE || Boolean(TOKEN),
         })
         return
@@ -225,6 +252,12 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
     if (!isBossSignerAddressAllowed(address, ALLOWED_ADDRESSES)) {
         send(res, 403, { error: 'Adresse nicht in BOSS_SIGNER_ALLOWED_ADDRESSES.' })
+        return
+    }
+
+    const ptb = validateBossSignerPtbBytes(txBytesBase64, PTB_POLICY, ALLOWED_PACKAGES)
+    if (!ptb.ok) {
+        send(res, 403, { error: ptb.error })
         return
     }
 
