@@ -974,7 +974,7 @@ export async function signAndExecute(
     const maxTxBytes = 128 * 1024 - 4096;
     if (bytes.length > maxTxBytes) {
         throw new Error(
-            `Transaktion zu groß (${bytes.length} B, praktisches Limit ~${maxTxBytes} B). Kürzere Nachricht, kleineres Kompaktbild oder kürzeres Audio; bei ENABLE_PLAINTEXT_CHANNEL=doppelt Klartext weniger Nutzlast.`
+            `Transaktion zu groß (${bytes.length} B, praktisches Limit ~${maxTxBytes} B). Kürzere Nachricht, kleineres Kompaktbild oder kürzeres Audio.`
         );
     }
     const base64Tx = Buffer.from(bytes).toString('base64');
@@ -1854,7 +1854,7 @@ export async function queryRecentPairingOffers(maxCandidates = 200): Promise<Pai
     return out;
 }
 
-/** Verschlüsselte Nachricht speichern (ciphertext ohne Tag, iv, tag separat; nonce). Optional Plaintext parallel. */
+/** Verschlüsselte Nachricht speichern (ciphertext, iv, tag, nonce). Kein Klartext-Spiegel — siehe `docs/KLARTEXT-P1-PLAINTEXT-POLICY.md`. */
 export async function storeEncryptedMessage(
     recipient: string,
     senderAddress: string,
@@ -1862,7 +1862,8 @@ export async function storeEncryptedMessage(
     iv: Uint8Array,
     tag: Uint8Array,
     nonce: bigint,
-    plaintext?: Uint8Array,
+    /** @deprecated Ignoriert (P1): Klartext-Spiegel bei E2EE entfernt. Nur `/send-plain` nutzt Klartext on-chain. */
+    _plaintext?: Uint8Array,
     walletPassword?: string,
     options?: {
         /** `true` (Default bei Modus „event“): `send_encrypted_message` — flüchtiges Event. */
@@ -1910,19 +1911,6 @@ export async function storeEncryptedMessage(
                 txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
             ],
         });
-        if (CFG.ENABLE_PLAINTEXT_CHANNEL && plaintext) {
-            txb.moveCall({
-                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message_with_credits`,
-                arguments: [
-                    txb.object(CFG.MAILBOX_ID),
-                    txb.object(creditsId),
-                    txb.pure.address(recipient),
-                    txb.pure(bcs.vector(bcs.u8()).serialize(plaintext)),
-                    txb.pure.u64(nonce),
-                    txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
-                ],
-            });
-        }
     } else if (useMailbox) {
         const encStore = privateMb ? 'store_encrypted_message_private' : 'store_encrypted_message';
         txb.moveCall({
@@ -1937,18 +1925,6 @@ export async function storeEncryptedMessage(
                 txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
             ],
         });
-        if (CFG.ENABLE_PLAINTEXT_CHANNEL && plaintext) {
-            txb.moveCall({
-                target: `${CFG.PACKAGE_ID}::messaging::store_plaintext_message`,
-                arguments: [
-                    txb.object(CFG.MAILBOX_ID),
-                    txb.pure.address(recipient),
-                    txb.pure(bcs.vector(bcs.u8()).serialize(plaintext)),
-                    txb.pure.u64(nonce),
-                    txb.pure.u64(CFG.DEFAULT_TTL_DAYS),
-                ],
-            });
-        }
     } else {
         txb.moveCall({
             target: `${CFG.PACKAGE_ID}::messaging::send_encrypted_message`,
@@ -1960,16 +1936,6 @@ export async function storeEncryptedMessage(
                 txb.pure.u64(nonce),
             ],
         });
-        if (CFG.ENABLE_PLAINTEXT_CHANNEL && plaintext) {
-            txb.moveCall({
-                target: `${CFG.PACKAGE_ID}::messaging::send_plaintext_message`,
-                arguments: [
-                    txb.pure.address(recipient),
-                    txb.pure(bcs.vector(bcs.u8()).serialize(plaintext)),
-                    txb.pure.u64(nonce),
-                ],
-            });
-        }
     }
     return signAndExecute(getClient(), txb, senderAddress, walletPassword, signOptions);
 }

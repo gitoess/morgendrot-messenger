@@ -122,7 +122,7 @@ export async function sendEncryptedMessage(
         iv,
         tag,
         nonce,
-        CFG.ENABLE_PLAINTEXT_CHANNEL ? new TextEncoder().encode(bodyForE2ee) : undefined,
+        undefined,
         getWalletPassword(),
         {
             forceLegacyEncrypted: sendOpts?.forceLegacyEncrypted,

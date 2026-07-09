@@ -13,6 +13,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 - **Pass 3 P0 — Sendepfad:** `/send <0x> <Text>` zielgerichtet (kein `peerMap`-Broadcast); `/send-encrypted` für vorbereitetes Ciphertext-Wire; `ensureEncryptedPeerReady` nur für exakte Zieladresse (`f2c2235`).
 - **Offline-Queue:** `encrypted_send` speichert nur Ciphertext-Wire v1; Legacy-Klartext beim Laden verworfen; Drain ohne Klartext-Fallback (`f2c2235`, `d88ff17`).
 - **Multi-Peer-UX:** Verschlüsselt-Hinweis nutzt Empfängerfeld **und** Partner-Feld (`d88ff17`).
+- **Klartext P1:** Verschlüsselter Send spiegelt keinen Klartext mehr on-chain, auch wenn `ENABLE_PLAINTEXT_CHANNEL=true` — Policy **`docs/KLARTEXT-P1-PLAINTEXT-POLICY.md`**.
 
 ### Dokumentation
 
