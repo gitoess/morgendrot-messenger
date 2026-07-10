@@ -4,7 +4,7 @@
  */
 
 import { getApiBase } from '@/frontend/lib/api/api-base'
-import { joinApiUrl } from '@/frontend/lib/api-fetch-text'
+import { fetchApiText, joinApiUrl } from '@/frontend/lib/api-fetch-text'
 import type { CommandResponse } from '@/frontend/lib/api/command-response-types'
 
 export type ConfigItem = {
@@ -32,18 +32,18 @@ export async function getConfig(): Promise<ConfigResponse> {
 }
 
 export async function setConfig(key: string, value: string): Promise<CommandResponse> {
+  const fr = await fetchApiText(getApiBase(), '/api/config', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key, value }),
+  })
+  if (!fr.ok) {
+    return { ok: false, error: fr.error }
+  }
   try {
-    const response = await fetch(joinApiUrl(getApiBase(), '/api/config'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
-    })
-    return await response.json()
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'Connection failed',
-    }
+    return JSON.parse(fr.text) as CommandResponse
+  } catch {
+    return { ok: false, error: 'Ungültige JSON-Antwort vom Server.' }
   }
 }
 

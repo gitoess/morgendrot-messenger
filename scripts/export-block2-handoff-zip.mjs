@@ -5,6 +5,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { apiTestFetchInit } from './api-test-headers.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const API = (process.env.MORGENDROT_API_URL || 'http://127.0.0.1:3342').replace(/\/$/, '')
@@ -29,12 +30,14 @@ const body = {
   einsatzChainMode: 'testnet-direct',
 }
 
-const zipRes = await fetch(`${API}/api/standalone-smartphone-handoff-zip`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(body),
-  signal: AbortSignal.timeout(60_000),
-})
+const zipRes = await fetch(
+  `${API}/api/standalone-smartphone-handoff-zip`,
+  apiTestFetchInit({
+    method: 'POST',
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(60_000),
+  })
+)
 if (!zipRes.ok) {
   const text = await zipRes.text()
   throw new Error(`Handoff-ZIP HTTP ${zipRes.status}: ${text.slice(0, 300)}`)

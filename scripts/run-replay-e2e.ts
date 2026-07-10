@@ -8,15 +8,18 @@
  *
  * Aufruf: npm run test:replay-e2e
  */
+import { apiTestFetchInit } from './api-test-headers.js';
+
 const API_BASE = (process.env.API_BASE || 'http://127.0.0.1:3342').replace(/\/$/, '');
 const LOCK_ADDRESS = process.env.LOCK_ADDRESS || process.env.PARTNER_ADDRESS || '';
 
 async function postCommand(cmd: string, args: string[]): Promise<{ ok?: boolean; error?: string }> {
-    const res = await fetch(`${API_BASE}/api/command`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd, args }),
-    });
+    const res = await fetch(
+        `${API_BASE}/api/command`,
+        apiTestFetchInit({
+            body: JSON.stringify({ cmd, args }),
+        })
+    );
     const data = (await res.json()) as { ok?: boolean; error?: string };
     if (!res.ok) return { ok: false, error: data?.error || `HTTP ${res.status}` };
     return data;

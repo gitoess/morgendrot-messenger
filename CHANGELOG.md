@@ -9,6 +9,7 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 ### Sicherheit / Sendepfad
 
 - **LAN-API P0.5:** Bei `API_BIND_HOST` ≠ localhost erfordern **alle Mutationen** (POST/PUT/PATCH/DELETE) Loopback oder `API_AUTH_TOKEN`; Startup-Warnung ohne Token; Vault-Debug-Befehle geschützt; Client sendet Token via `fetchApiText` / Handoff.
+- **P0 Nacharbeit:** `dashboard-rest.setConfig` mit LAN-Token; `run-security-tests` P0.5-Integration; Feldtest-Skripte nutzen `api-test-headers`.
 - **LAN-API:** `API_AUTH_TOKEN` für Vault-Geheimnisse und `sponsorForSender`; CORS- und Handoff-Kette geschlossen (`105dc8a`).
 - **Boss-Signer:** Token-Pflicht, Loopback-Default, Adress-Allowlist, Rate-Limit; **PTB-Allowlist** `worker-messenger` (nur `messaging::*` auf `PACKAGE_ID`) (`0aca958`, `253c4c3`).
 - **Pass 3 P0 — Sendepfad:** `/send <0x> <Text>` zielgerichtet (kein `peerMap`-Broadcast); `/send-encrypted` für vorbereitetes Ciphertext-Wire; `ensureEncryptedPeerReady` nur für exakte Zieladresse (`f2c2235`).

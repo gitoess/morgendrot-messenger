@@ -1,10 +1,12 @@
 /**
  * Sicherheitsfokussierte Tests: Blocklist setEnvKey, Adress-Validierung (kein Injection),
- * optional API Injection + Rate-Limit (wenn API_BASE gesetzt und API läuft).
+ * optional API Injection + Rate-Limit + LAN-Auth P0.5 (wenn API_BASE gesetzt und API läuft).
  * Ausführung: npm run test:security
  * Optional: API_RATE_LIMIT_COMMANDS_PER_MINUTE=2 API_BASE=http://127.0.0.1:3342 npm run test:security
+ * LAN-Auth (403 ohne Token): API_BASE=http://<WLAN-IP>:3342 API_AUTH_TOKEN=… (Boss .env)
  */
 import { strict as assert } from 'node:assert';
+import { apiTestFetchInit, isLoopbackApiBase } from './api-test-headers.js';
 
 const API_BASE = (process.env.API_BASE || process.env.API_URL || '').replace(/\/$/, '');
 
@@ -19,20 +21,36 @@ function fail(name: string, err: unknown) {
     failed++;
     console.log('  ✗ ' + name + ': ' + (err instanceof Error ? err.message : String(err)));
 }
-async function postCommand(cmd: string, args: string[]): Promise<{ status: number; body: string; json?: Record<string, unknown> }> {
-    const r = await fetch(API_BASE + '/api/command', {
+
+function mutationFetchInit(init?: RequestInit, opts?: { omitAuth?: boolean }): RequestInit {
+    const base: RequestInit = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cmd, args }),
-    });
-    const body = await r.text();
+        ...init,
+    };
+    if (opts?.omitAuth) return base;
+    if (isLoopbackApiBase(API_BASE)) return base;
+    return apiTestFetchInit(base);
+}
+
+async function postJson(
+    path: string,
+    body: Record<string, unknown>,
+    opts?: { omitAuth?: boolean }
+): Promise<{ status: number; body: string; json?: Record<string, unknown> }> {
+    const r = await fetch(API_BASE + path, mutationFetchInit({ body: JSON.stringify(body) }, opts));
+    const text = await r.text();
     let json: Record<string, unknown> | undefined;
     try {
-        json = JSON.parse(body) as Record<string, unknown>;
+        json = JSON.parse(text) as Record<string, unknown>;
     } catch {
         // ignore
     }
-    return { status: r.status, body, json };
+    return { status: r.status, body: text, json };
+}
+
+async function postCommand(cmd: string, args: string[]): Promise<{ status: number; body: string; json?: Record<string, unknown> }> {
+    return postJson('/api/command', { cmd, args });
 }
 
 async function testSetEnvKeyBlocklist() {
@@ -175,6 +193,58 @@ async function testApiRateLimit() {
     }
 }
 
+async function testLanMutationAuth() {
+    console.log('\n--- LAN API-Auth P0.5 (Mutationen ohne Token) ---');
+    if (!API_BASE) {
+        console.log('  ⚠ API_BASE nicht gesetzt – übersprungen');
+        return;
+    }
+    if (isLoopbackApiBase(API_BASE)) {
+        console.log('  ℹ API_BASE ist Loopback — Mutationen ohne Token erlaubt (P0.5). Für 403-Test: API_BASE=http://<WLAN-IP>:3342');
+        try {
+            const withToken = await postJson('/api/unlock', { password: '' });
+            if (withToken.status === 403) {
+                fail('Loopback /api/unlock', new Error('403 trotz Loopback — API_BIND_HOST prüfen'));
+            } else {
+                ok('Loopback: POST /api/unlock ohne explizites Token nicht 403');
+            }
+        } catch (e) {
+            console.log('  ⚠ API nicht erreichbar: ' + (e instanceof Error ? e.message : e));
+        }
+        return;
+    }
+    const token = (process.env.API_AUTH_TOKEN || '').trim();
+    if (!token) {
+        console.log('  ⚠ API_BASE ist LAN-IP aber API_AUTH_TOKEN nicht gesetzt — 403-Test unvollständig');
+    }
+    try {
+        const noAuthUnlock = await postJson('/api/unlock', { password: '' }, { omitAuth: true });
+        if (noAuthUnlock.status === 403) {
+            ok('POST /api/unlock ohne Token → 403');
+        } else {
+            fail('LAN-Auth /api/unlock ohne Token', new Error(`erwartet 403, bekam ${noAuthUnlock.status}`));
+        }
+
+        const noAuthCmd = await postJson('/api/command', { cmd: '/vault-debug-chain', args: [] }, { omitAuth: true });
+        if (noAuthCmd.status === 403) {
+            ok('POST /api/command (vault-debug) ohne Token → 403');
+        } else {
+            fail('LAN-Auth vault-debug ohne Token', new Error(`erwartet 403, bekam ${noAuthCmd.status}`));
+        }
+
+        if (token) {
+            const withAuth = await postJson('/api/unlock', { password: '' });
+            if (withAuth.status !== 403) {
+                ok('POST /api/unlock mit API_AUTH_TOKEN → nicht 403');
+            } else {
+                fail('LAN-Auth mit Token', new Error('403 trotz gültigem API_AUTH_TOKEN'));
+            }
+        }
+    } catch (e) {
+        console.log('  ⚠ API nicht erreichbar: ' + (e instanceof Error ? e.message : e));
+    }
+}
+
 async function main() {
     console.log('Morgendrot – Sicherheits-Tests');
     await testSetEnvKeyBlocklist();
@@ -182,6 +252,7 @@ async function main() {
     await testApiInjection();
     await testRoleForbidden();
     await testApiRateLimit();
+    await testLanMutationAuth();
     console.log('\n--- Ergebnis ---');
     console.log('Bestanden: ' + passed + ', Fehlgeschlagen: ' + failed);
     process.exit(failed > 0 ? 1 : 0);
