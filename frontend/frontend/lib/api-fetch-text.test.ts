@@ -28,7 +28,8 @@ describe('fetchApiText LAN auth', () => {
       method: 'POST',
       body: '{}',
     })
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect(fetchMock).toHaveBeenCalledOnce()
+    const [, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     const headers = new Headers(init.headers)
     expect(headers.get('X-Morgendrot-Api-Token')).toBe('handoff-lan-token')
   })
