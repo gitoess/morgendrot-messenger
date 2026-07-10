@@ -8,12 +8,18 @@ Das Format orientiert sich an [Keep a Changelog](https://keepachangelog.com/de/1
 
 ### Sicherheit / Sendepfad
 
+- **LAN-API P0.5:** Bei `API_BIND_HOST` ≠ localhost erfordern **alle Mutationen** (POST/PUT/PATCH/DELETE) Loopback oder `API_AUTH_TOKEN`; Startup-Warnung ohne Token; Vault-Debug-Befehle geschützt; Client sendet Token via `fetchApiText` / Handoff.
 - **LAN-API:** `API_AUTH_TOKEN` für Vault-Geheimnisse und `sponsorForSender`; CORS- und Handoff-Kette geschlossen (`105dc8a`).
 - **Boss-Signer:** Token-Pflicht, Loopback-Default, Adress-Allowlist, Rate-Limit; **PTB-Allowlist** `worker-messenger` (nur `messaging::*` auf `PACKAGE_ID`) (`0aca958`, `253c4c3`).
 - **Pass 3 P0 — Sendepfad:** `/send <0x> <Text>` zielgerichtet (kein `peerMap`-Broadcast); `/send-encrypted` für vorbereitetes Ciphertext-Wire; `ensureEncryptedPeerReady` nur für exakte Zieladresse (`f2c2235`).
 - **Offline-Queue:** `encrypted_send` speichert nur Ciphertext-Wire v1; Legacy-Klartext beim Laden verworfen; Drain ohne Klartext-Fallback (`f2c2235`, `d88ff17`).
 - **Multi-Peer-UX:** Verschlüsselt-Hinweis nutzt Empfängerfeld **und** Partner-Feld (`d88ff17`).
 - **Klartext P1:** Verschlüsselter Send spiegelt keinen Klartext mehr on-chain, auch wenn `ENABLE_PLAINTEXT_CHANNEL=true` — Policy **`docs/KLARTEXT-P1-PLAINTEXT-POLICY.md`**.
+
+### Dokumentation (Sicherheit)
+
+- **`SECURITY.md`:** Threat Model, LAN-API, Boss-Signer, Restrisiken, Feldtest-Checkliste.
+- **`README.md`**, **`DISCLAIMER.md`**, **`docs/HOBBY-RELEASE-POLICY.md`:** LAN-`API_AUTH_TOKEN` und Juli-2026-Sicherheitsstand.
 
 ### Dokumentation
 

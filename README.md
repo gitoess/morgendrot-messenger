@@ -268,12 +268,24 @@ Die Abschnitte ab **Funktionen-Übersicht** sind die historisch gewachsene Setup
 
 **Rollen-Verwirrung?** `ROLE` (messenger / arbeiter / **lock** …) vs. `ROLE_ID` 0–63 (6 Rechte-Bits), Profil-Slots `profiles/id-00`…, Einsatz-Vorlagen: **`docs/ROLE-ROLE-ID-UND-VORLAGEN-ERKLAERUNG.md`**. **Consumer vs. Einsatz (Citizen/Arbeiter/Kommandant/Boss):** **`docs/ROLLEN-MODELL-CONSUMER-EINSATZ.md`**. Kurz: **Tür/Schloss = `ROLE=lock`**, nicht dasselbe wie „Helfer“-Chat (`messenger`).
 
-**Sicherheit:** Pinnwand erfordert `BROADCAST_AUTHORIZED_SENDERS` (nicht leer). Replay-Schutz (Nonce) und AccessKey-Prüfung gelten unverändert. Keine neuen Krypto-Primitive. Details: **`docs/SECURITY-MODES.md`**.
+**Sicherheit:** Pinnwand erfordert `BROADCAST_AUTHORIZED_SENDERS` (nicht leer). Replay-Schutz (Nonce) und AccessKey-Prüfung gelten unverändert. Keine neuen Krypto-Primitive. Details: **`docs/SECURITY-MODES.md`**, **`SECURITY.md`** (LAN-API, Boss-Signer, Restrisiken).
+
+### LAN-API-Hardening (`API_AUTH_TOKEN`)
+
+Wenn die API im WLAN erreichbar ist (`API_BIND_HOST=0.0.0.0` oder feste LAN-IP, Standard für Handy→Boss):
+
+- **Schreib-Requests** (POST/PUT/PATCH/DELETE) brauchen **Loopback** oder **`API_AUTH_TOKEN`** im Header (`Authorization: Bearer …` oder `X-Morgendrot-Api-Token`).
+- Token im Boss-`.env` setzen und per **Handoff** an Helfer-Geräte verteilen (Client speichert es automatisch).
+- Nur **localhost** (`API_BIND_HOST=127.0.0.1`): kein Token nötig — Handy im WLAN erreicht die API dann nicht.
+- Verschlüsselter Send spiegelt **keinen** Klartext mehr on-chain (`docs/KLARTEXT-P1-PLAINTEXT-POLICY.md`).
 
 ### Konfigurations-Flags (Auswahl)
 
 | Flag | Default | Beschreibung |
 |------|---------|--------------|
+| API_BIND_HOST | 0.0.0.0 | API-Bind-Adresse; `127.0.0.1` = nur dieser PC |
+| API_AUTH_TOKEN | – | LAN-Token für Mutationen (Pflicht bei WLAN-Bind für Feldtest) |
+| API_STRICT_CORS | false | `true` = Cross-Origin von anderer LAN-IP blockieren |
 | ENABLE_PLAINTEXT_CHANNEL | false | Klartext-Events erlauben |
 | ENABLE_PURGE | true | Purge-Befehle erlauben |
 | ENABLE_LISTENER | true | Events/Mailbox abfragen |
@@ -687,6 +699,7 @@ OPEN_COMMAND=node scripts/relay-on.js
 
 - **Ein Passwort (SIGNER=cli):** Wallet-Passwort (IOTA Rebased) – für Vault (lokal/on-chain) und für die TX-Signatur (wird an die CLI übergeben). **PC1 und PC2** können sich so **nur mit diesem Passwort** verbinden, wenn auf dem Rechner das IOTA Rebased Wallet (CLI) installiert ist. `/vault-save` und `/vault-onchain` nutzen dasselbe Passwort. **Eingabe im Terminal ist maskiert** (*).
 - **Krypto:** ECDH P-256, AES-GCM 256, HKDF, PBKDF2 310k. Signatur per `spawn('iota', ...)` ohne Shell; Adressen validiert. **OPEN_COMMAND** / **OPEN_URL** nur aus .env, spawn ohne Shell. Replay: monotone Nonce pro Sender, optional `REPLAY_STATE_FILE`.
+- **LAN-API:** Bei WLAN-Bind schützen Mutationen per `API_AUTH_TOKEN`; Boss-Signer mit PTB-Allowlist `worker-messenger`. Vollständig: **`SECURITY.md`**.
 
 ### SPOF (Single Point of Failure) & Sicherheitsbedenken
 

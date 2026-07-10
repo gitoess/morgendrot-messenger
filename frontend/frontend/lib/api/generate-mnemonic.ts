@@ -1,4 +1,5 @@
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import {
   generateMnemonicKeypairLocally,
   type GenerateMnemonicOk,
@@ -15,7 +16,7 @@ export async function fetchGenerateMnemonic(): Promise<GenerateMnemonicResult> {
   }
 
   try {
-    const res = await fetch(`${apiBase}/api/generate-mnemonic`, {
+    const res = await fetchWithApiAuth(`${apiBase}/api/generate-mnemonic`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',

@@ -162,8 +162,11 @@ import { handleEinsatzManifestRoutes } from './api/routes/handle-einsatz-manifes
 import { handleForensicBatchRoutes } from './api/routes/handle-forensic-batch-routes.js';
 import { handleBossWalletRoutes } from './api/routes/handle-boss-wallet-routes.js';
 import { createIpRateLimiter, normalizeApiClientIp } from './api/routes/api-ip-rate-limit.js';
-import { denyUnlessTrustedApiClient } from './api/routes/api-security.js';
-import { denyUnlessTrustedApiClient } from './api/routes/api-security.js';
+import {
+    denyUnlessTrustedApiClient,
+    denyUnlessTrustedForLanMutation,
+    warnIfLanApiMissingAuthToken,
+} from './api/routes/api-security.js';
 import { startForensicBatchScheduler } from './shared/forensic-batch-scheduler.js';
 import {
     applyTelegramIntegrationToMonitorWebhook,
@@ -443,6 +446,8 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
         if (handleCorsPreflightIfOptions(req, res, cors)) return;
 
         const url = normalizeApiRequestPath(req.url || '/');
+
+        if (denyUnlessTrustedForLanMutation(req, res, url, cors, sendJson)) return;
 
         const shopHandled = await handleShopApi(req, res, url, cors, sendJson);
         if (shopHandled) return;
@@ -3208,6 +3213,7 @@ export function startApiServer(getStatus?: GetStatusFn): http.Server | null {
                     ? `Morgendrot API: ${statusUrl}  Lite-UI: http://127.0.0.1:${p}/`
                     : `Morgendrot API: ${statusUrl}  (Lite-UI aus — nur Next: http://127.0.0.1:${CFG.UI_PORT}/)`
             );
+            warnIfLanApiMissingAuthToken((msg) => logger.warn(msg));
             startForensicBatchScheduler();
         };
         const onError = (err: NodeJS.ErrnoException) => {

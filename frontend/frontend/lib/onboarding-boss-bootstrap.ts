@@ -1,6 +1,7 @@
 'use client'
 
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import { joinApiUrl } from '@/frontend/lib/api-fetch-text'
 import { setConfig } from '@/frontend/lib/api/dashboard-rest'
 import { setPackageIdCommand } from '@/frontend/lib/api/package-connect'
@@ -45,7 +46,7 @@ export async function deployBossMovePackage(opts?: {
   forceGlobals?: boolean
 }): Promise<BossBootstrapResult> {
   try {
-    const res = await fetch(joinApiUrl(getApiBase(), '/api/deploy-package'), {
+    const res = await fetchWithApiAuth(joinApiUrl(getApiBase(), '/api/deploy-package'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

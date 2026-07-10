@@ -11,7 +11,7 @@ import { readHttpBodyWithLimit } from './api-body-limit.js';
 import {
     denyUnlessTrustedApiClient,
     denyVaultSecretCommandUnlessTrusted,
-    isVaultSecretCommand,
+    isVaultProtectedCommand,
 } from './api-security.js';
 
 const commandRateLimitByIp = new Map<string, { count: number; resetAt: number }>();
@@ -89,7 +89,7 @@ export function handleCommandRoute(
             let cmd = String(data.cmd ?? data.command ?? '').trim();
             let args = Array.isArray(data.args) ? data.args.map(String) : [];
             const cmdLower = cmd.toLowerCase();
-            if (isVaultSecretCommand(cmdLower)) {
+            if (isVaultProtectedCommand(cmdLower)) {
                 if (denyVaultSecretCommandUnlessTrusted(cmdLower, req, res, cors, sendJson)) return;
                 if (!vaultSecretCommandRateLimit.check(ip)) {
                     sendJson(res, 429, { ok: false, error: 'Rate-Limit Vault-Secret-Befehle überschritten.' }, cors);

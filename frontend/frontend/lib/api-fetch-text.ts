@@ -1,5 +1,6 @@
 import { toAppError } from '@/frontend/lib/app-error'
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { withApiAuthHeaders } from '@/frontend/lib/api-auth-header'
 
 const NETWORKISH =
   /failed to fetch|network|load failed|Connection refused|aborted|AbortError|message channel closed|asynchronous response/i
@@ -43,6 +44,12 @@ export function joinApiUrl(apiBase: string, path: string): string {
  * `fetch` + `response.text()` mit gemeinsamem Catch (kein `response.json()`).
  * `path` z. B. `/api/status` oder `/api/audit-events?limit=10`.
  */
+function withMutationApiAuth(init?: RequestInit): RequestInit | undefined {
+  const method = (init?.method || 'GET').toUpperCase()
+  if (method === 'GET' || method === 'HEAD' || method === 'OPTIONS') return init
+  return withApiAuthHeaders(init)
+}
+
 export async function fetchApiText(
   apiBase: string,
   path: string,
@@ -53,7 +60,7 @@ export async function fetchApiText(
 > {
   try {
     const url = joinApiUrl(apiBase || getApiBase(), path)
-    const response = await fetch(url, init)
+    const response = await fetch(url, withMutationApiAuth(init))
     const text = await response.text()
     return { ok: true, response, text }
   } catch (e) {

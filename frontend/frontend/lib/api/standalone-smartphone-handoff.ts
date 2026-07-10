@@ -1,4 +1,5 @@
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import type { HandoffExtras } from '@/frontend/lib/handoff-extras'
 import { buildHandoffPartsLocally } from '@/frontend/lib/handoff-build-parts-locally'
 import { resolveBossHandoffExportContext } from '@/frontend/lib/resolve-boss-handoff-export-context'
@@ -84,7 +85,7 @@ export async function fetchStandaloneSmartphoneHandoffParts(
   }
 
   try {
-    const res = await fetch(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetchWithApiAuth(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'parts' }),
@@ -146,7 +147,7 @@ export async function downloadStandaloneSmartphoneHandoffZip(
   }
 
   try {
-    const res = await fetch(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
+    const res = await fetchWithApiAuth(`${apiBase}/api/standalone-smartphone-handoff-zip`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, format: 'zip' }),

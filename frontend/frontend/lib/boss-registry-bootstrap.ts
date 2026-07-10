@@ -2,6 +2,7 @@
 
 import type { ApiStatus } from '@/frontend/lib/api'
 import { getApiBase } from '@/frontend/lib/api/api-base'
+import { fetchWithApiAuth } from '@/frontend/lib/api-authenticated-fetch'
 import { persistBossChainRegistryIds } from '@/frontend/lib/boss-chain-registry-store'
 import { persistDirectChainFieldIds } from '@/frontend/lib/direct-iota-chain-context'
 
@@ -44,7 +45,7 @@ export async function createBossGlobalsRegistries(opts?: {
     return { ok: false, error: 'create_globals braucht erreichbares Backend (Boss-PC mit IOTA-CLI).' }
   }
   try {
-    const res = await fetch(`${base}/api/create-globals`, {
+    const res = await fetchWithApiAuth(`${base}/api/create-globals`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

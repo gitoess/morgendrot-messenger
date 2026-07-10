@@ -99,8 +99,58 @@ export const VAULT_SECRET_COMMANDS = new Set([
 
 export const VAULT_DEBUG_COMMANDS = new Set(['/vault-debug-chain', '/vault-list-chain'])
 
+/** Webhooks von Drittanbietern — kein API_AUTH_TOKEN (eigene Secrets). */
+export const API_LAN_MUTATION_EXEMPT_PATHS = new Set([
+    '/api/integrations/telegram/webhook',
+    '/api/shop/webhook/stripe',
+])
+
+export function isApiMutationMethod(method: string | undefined): boolean {
+    const m = (method || '').toUpperCase()
+    return m === 'POST' || m === 'PUT' || m === 'PATCH' || m === 'DELETE'
+}
+
+export function isApiLanMutationExemptPath(url: string): boolean {
+    const path = (url.split('?')[0] || '').trim()
+    return API_LAN_MUTATION_EXEMPT_PATHS.has(path)
+}
+
 export function isVaultSecretCommand(cmd: string): boolean {
     return VAULT_SECRET_COMMANDS.has(String(cmd || '').trim().toLowerCase())
+}
+
+export function isVaultDebugCommand(cmd: string): boolean {
+    return VAULT_DEBUG_COMMANDS.has(String(cmd || '').trim().toLowerCase())
+}
+
+export function isVaultProtectedCommand(cmd: string): boolean {
+    const c = String(cmd || '').trim().toLowerCase()
+    return isVaultSecretCommand(c) || isVaultDebugCommand(c)
+}
+
+/**
+ * LAN-exponierte API: Mutationen nur von Loopback oder mit gültigem API_AUTH_TOKEN.
+ * @returns true wenn der Request abgelehnt wurde
+ */
+export function denyUnlessTrustedForLanMutation(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+    url: string,
+    cors: Record<string, string>,
+    sendJson: SendJsonFn
+): boolean {
+    if (!isApiMutationMethod(req.method)) return false
+    if (!isApiExternallyReachable()) return false
+    if (isApiLanMutationExemptPath(url)) return false
+    return denyUnlessTrustedApiClient(req, res, cors, sendJson)
+}
+
+export function warnIfLanApiMissingAuthToken(log: (msg: string) => void): void {
+    if (!isApiExternallyReachable()) return
+    if ((CFG.API_AUTH_TOKEN || '').trim()) return
+    log(
+        'API bindet auf LAN (API_BIND_HOST) ohne API_AUTH_TOKEN — POST/PUT/PATCH/DELETE sind für jedes Gerät im WLAN offen. Setze API_AUTH_TOKEN in .env und exportiere es im Handoff.'
+    )
 }
 
 export function denyVaultSecretCommandUnlessTrusted(
@@ -110,7 +160,7 @@ export function denyVaultSecretCommandUnlessTrusted(
     cors: Record<string, string>,
     sendJson: SendJsonFn
 ): boolean {
-    if (!isVaultSecretCommand(cmd)) return false
+    if (!isVaultProtectedCommand(cmd)) return false
     if (isTrustedApiClient(req)) return false
     sendJson(
         res,

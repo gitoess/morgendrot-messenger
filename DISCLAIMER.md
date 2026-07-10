@@ -1,6 +1,6 @@
 # Disclaimer — Morgendrot Messenger (Hobby / Experimental)
 
-**Stand:** 2026-07-08
+**Stand:** 2026-07-10
 
 ## Kurzfassung
 
@@ -10,6 +10,7 @@ Dieses Projekt ist ein **experimentelles Hobby-Projekt**. Es ist **kein fertiges
 - **Kein Support** — Community auf best-effort-Basis; keine SLA.
 - **Nicht für lebenskritische oder behördliche Einsätze** — keine Garantie für Rettungsdienst, Polizei, Militär oder vergleichbare Missionen.
 - **Nutzen auf eigene Gefahr** — du bist selbst verantwortlich für Keys, Seeds, Handoff-Dateien und Betrieb.
+- **LAN-Betrieb:** Wenn die Boss-API im WLAN erreichbar ist (`API_BIND_HOST=0.0.0.0`), setze **`API_AUTH_TOKEN`** und verteile es nur über Handoff — sonst sind Schreib-Operationen für jedes Gerät im WLAN offen. Details: **`SECURITY.md`**.
 
 ## Binär-Downloads (GitHub Releases)
 

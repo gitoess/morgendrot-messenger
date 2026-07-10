@@ -1,6 +1,6 @@
 # Hobby-Release-Policy — GitHub Releases
 
-**Stand:** 2026-07-08 · Kanonisch mit `DISCLAIMER.md`, `COMMERCIAL-LICENSING.md`, `LICENSE`
+**Stand:** 2026-07-10 · Kanonisch mit `DISCLAIMER.md`, `COMMERCIAL-LICENSING.md`, `LICENSE`
 
 ---
 
@@ -56,6 +56,7 @@ Nicht Teil der Hobby-Policy v1. F-Droid erst nach reproduzierbarem Build und Met
 ## Checkliste vor Publish
 
 - [ ] `LICENSE`, `DISCLAIMER.md`, `COMMERCIAL-LICENSING.md` auf dem Tag-Stand
+- [ ] `SECURITY.md` (LAN-API, Restrisiken) auf dem Tag-Stand
 - [ ] Release Notes enthalten EU-/Hobby-Disclaimer
 - [ ] Keine Secrets in Artefakten (ZIP/APK geprüft)
 - [ ] `SHA256SUMS.txt` beigefügt
