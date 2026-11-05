@@ -610,109 +610,147 @@ export type FetchEvidenceImagesByOwnerResult =
     }
   | { ok: false; error: string }
 
-/** Besitzer-Adresse → ImageNFTs (bekannte Packages), Seite à 10. */
+/** Eine Owned-Object-Zeile → Galerie-Eintrag oder null (Coins o. Ä. ohne Bild). */
+export function evidenceOwnerItemFromObjectData(d: {
+  objectId?: string
+  type?: string | null
+  content?: unknown
+}): EvidenceOwnerListItem | null {
+  if (!d?.objectId) return null
+  const objectId = String(d.objectId).toLowerCase()
+  const typeString = String(d.type || '').trim()
+  const extracted = extractEvidenceFieldsFromMoveContent(d.content)
+  const match = classifyEvidenceObjectType(typeString, extracted)
+  const meta = {
+    name: extracted.name || undefined,
+    description: extracted.description || undefined,
+    classification: extracted.classification || undefined,
+  }
+  const mediaUrl =
+    extracted.mediaUrl ||
+    extractNftMediaUrlFromFields(extracted.rawFields, extracted.description) ||
+    undefined
+  const matchWithUrl: EvidenceObjectTypeMatch = {
+    ...match,
+    hasMediaUrl: match.hasMediaUrl || Boolean(mediaUrl),
+  }
+  if (!shouldAttemptEvidenceImageRender(matchWithUrl)) return null
+
+  if (matchWithUrl.hasImageDataField || matchWithUrl.isImageNftType) {
+    const parsed = parseEvidenceImageFields(extracted)
+    if (parsed.ok) {
+      return { objectId, match: matchWithUrl, ...meta, parsed, source: 'embedded' }
+    }
+    if (parsed.needsPassphrase) {
+      return {
+        objectId,
+        match: matchWithUrl,
+        ...meta,
+        error: parsed.error,
+        needsPassphrase: parsed.needsPassphrase,
+        ciphertext: parsed.ciphertext,
+      }
+    }
+    if (mediaUrl) {
+      return { objectId, match: matchWithUrl, ...meta, displayUrl: mediaUrl, source: 'url' }
+    }
+    return { objectId, match: matchWithUrl, ...meta, error: parsed.error }
+  }
+  if (mediaUrl) {
+    return { objectId, match: matchWithUrl, ...meta, displayUrl: mediaUrl, source: 'url' }
+  }
+  return null
+}
+
+/**
+ * Besitzer-Adresse → Bild-NFTs.
+ * Default: **Media-Scan** (alle Owned Objects der Seite, nur Einträge mit image_data/URL).
+ * Optional `structType`: nur dieser Move-Typ (z. B. ImageNFT).
+ */
 export async function fetchEvidenceImagesByOwner(
   client: OwnedObjectsClient,
   ownerRaw: string,
-  opts?: { cursor?: string | null; limit?: number; structType?: string }
+  opts?: { cursor?: string | null; limit?: number; structType?: string | null }
 ): Promise<FetchEvidenceImagesByOwnerResult> {
   const owner = ownerRaw.trim().toLowerCase()
   if (!isPlausibleIotaObjectId(owner)) {
     return { ok: false, error: 'Besitzer-Adresse: 0x + 64 Hex.' }
   }
   const limit = Math.min(Math.max(opts?.limit ?? EVIDENCE_IMAGE_OWNER_PAGE_SIZE, 1), 50)
-  const structType = (opts?.structType || knownImageNftStructTypes()[0] || '').trim()
-  if (!structType) return { ok: false, error: 'Kein ImageNFT-StructType konfiguriert.' }
+  const structType =
+    opts?.structType === null
+      ? ''
+      : (opts?.structType !== undefined ? String(opts.structType).trim() : '')
+  /** Explizit ImageNFT-only nur wenn structType gesetzt; Default = Scan ohne Filter. */
+  const useStructFilter = Boolean(structType)
 
-  let page: Awaited<ReturnType<OwnedObjectsClient['getOwnedObjects']>>
+  const byId = new Map<string, EvidenceOwnerListItem>()
+
+  const ingestPage = (
+    page: Awaited<ReturnType<OwnedObjectsClient['getOwnedObjects']>>
+  ): { nextCursor: string | null; hasNextPage: boolean } => {
+    for (const row of page.data || []) {
+      const item = evidenceOwnerItemFromObjectData(row?.data || {})
+      if (!item) continue
+      if (!byId.has(item.objectId)) byId.set(item.objectId, item)
+    }
+    return {
+      nextCursor: page.nextCursor ?? null,
+      hasNextPage: Boolean(page.hasNextPage),
+    }
+  }
+
   try {
-    page = await client.getOwnedObjects({
+    // Erste Seite ohne Cursor: ImageNFTs + Media-Scan mergen (SimpleNFT o. Ä. finden).
+    if (!opts?.cursor && !useStructFilter) {
+      const imageNftType = knownImageNftStructTypes()[0]
+      const [nftPage, scanPage] = await Promise.all([
+        imageNftType
+          ? client.getOwnedObjects({
+              owner,
+              cursor: null,
+              limit,
+              filter: { StructType: imageNftType },
+              options: { showType: true, showContent: true },
+            })
+          : Promise.resolve({ data: [], nextCursor: null, hasNextPage: false }),
+        client.getOwnedObjects({
+          owner,
+          cursor: null,
+          limit: Math.max(limit, 25),
+          options: { showType: true, showContent: true },
+        }),
+      ])
+      ingestPage(nftPage)
+      const scanMeta = ingestPage(scanPage)
+      return {
+        ok: true,
+        owner,
+        items: [...byId.values()],
+        nextCursor: scanMeta.nextCursor,
+        hasNextPage: scanMeta.hasNextPage,
+      }
+    }
+
+    const page = await client.getOwnedObjects({
       owner,
       cursor: opts?.cursor ?? null,
-      limit,
-      filter: { StructType: structType },
+      limit: useStructFilter ? limit : Math.max(limit, 25),
+      ...(useStructFilter ? { filter: { StructType: structType } } : {}),
       options: { showType: true, showContent: true },
     })
+    const meta = ingestPage(page)
+    return {
+      ok: true,
+      owner,
+      items: [...byId.values()],
+      nextCursor: meta.nextCursor,
+      hasNextPage: meta.hasNextPage,
+    }
   } catch (e) {
     return {
       ok: false,
       error: e instanceof Error ? e.message : 'getOwnedObjects fehlgeschlagen.',
     }
-  }
-
-  const items: EvidenceOwnerListItem[] = []
-  for (const row of page.data || []) {
-    const d = row?.data
-    if (!d?.objectId) continue
-    const objectId = String(d.objectId).toLowerCase()
-    const typeString = String(d.type || '').trim()
-    const extracted = extractEvidenceFieldsFromMoveContent(d.content)
-    const match = classifyEvidenceObjectType(typeString, extracted)
-    const meta = {
-      name: extracted.name || undefined,
-      description: extracted.description || undefined,
-      classification: extracted.classification || undefined,
-    }
-    const mediaUrl =
-      extracted.mediaUrl ||
-      extractNftMediaUrlFromFields(extracted.rawFields, extracted.description) ||
-      undefined
-    const matchWithUrl: EvidenceObjectTypeMatch = {
-      ...match,
-      hasMediaUrl: match.hasMediaUrl || Boolean(mediaUrl),
-    }
-    if (!shouldAttemptEvidenceImageRender(matchWithUrl)) {
-      items.push({ objectId, match: matchWithUrl, ...meta, error: 'Kein image_data / Bild-URL.' })
-      continue
-    }
-    if (matchWithUrl.hasImageDataField || matchWithUrl.isImageNftType) {
-      const parsed = parseEvidenceImageFields(extracted)
-      if (parsed.ok) {
-        items.push({ objectId, match: matchWithUrl, ...meta, parsed, source: 'embedded' })
-        continue
-      }
-      if (parsed.needsPassphrase) {
-        items.push({
-          objectId,
-          match: matchWithUrl,
-          ...meta,
-          error: parsed.error,
-          needsPassphrase: parsed.needsPassphrase,
-          ciphertext: parsed.ciphertext,
-        })
-        continue
-      }
-      if (mediaUrl) {
-        items.push({
-          objectId,
-          match: matchWithUrl,
-          ...meta,
-          displayUrl: mediaUrl,
-          source: 'url',
-        })
-        continue
-      }
-      items.push({ objectId, match: matchWithUrl, ...meta, error: parsed.error })
-      continue
-    }
-    if (mediaUrl) {
-      items.push({
-        objectId,
-        match: matchWithUrl,
-        ...meta,
-        displayUrl: mediaUrl,
-        source: 'url',
-      })
-      continue
-    }
-    items.push({ objectId, match: matchWithUrl, ...meta, error: 'Kein image_data / Bild-URL.' })
-  }
-
-  return {
-    ok: true,
-    owner,
-    items,
-    nextCursor: page.nextCursor ?? null,
-    hasNextPage: Boolean(page.hasNextPage),
   }
 }

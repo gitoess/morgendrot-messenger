@@ -416,10 +416,11 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             continue
           }
           if (it.displayUrl) {
+            const cid = extractIpfsCid(it.displayUrl)
             mapped.push({
               ...it,
               attrs,
-              previewUrl: it.displayUrl,
+              previewUrl: cid ? ipfsCidDisplayUrlFallbacks(cid)[0] || it.displayUrl : it.displayUrl,
             })
             continue
           }
@@ -447,16 +448,21 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           mapped.push({ ...it, attrs })
         }
         setOwnerItems((prev) => (opts?.append ? [...prev, ...mapped] : mapped))
-        const pkgShort = KNOWN_IMAGE_NFT_PACKAGE_IDS[0].slice(0, 10)
         const totalShown = (opts?.append ? ownerItems.length : 0) + mapped.length
+        const urlN = mapped.filter((x) => x.source === 'url').length
+        const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
         setInfo(
-          `${mapped.length} ImageNFT(s) · geladen ${opts?.append ? totalShown : mapped.length}` +
+          `${mapped.length} Bild-NFT(s) auf dieser Seite` +
+            ` (ImageNFT ${embN}, URL/IPFS ${urlN})` +
+            ` · gesamt ${opts?.append ? totalShown : mapped.length}` +
             (unlocked ? ` · ${unlocked} mit lokaler Passphrase` : '') +
-            `. Nur ${pkgShort}…::image_nft::ImageNFT. ` +
+            `. Scan: ImageNFT-Package + Owned Objects mit image_data/URL. ` +
             (r.hasNextPage ? 'Weitere Seiten möglich.' : 'Keine weitere Seite.')
         )
-        if (r.items.length === 0 && !opts?.append) {
-          setError('Keine ImageNFTs dieses Packages für die Adresse.')
+        if (mapped.length === 0 && !opts?.append) {
+          setError(
+            'Keine Bild-NFTs gefunden (weder ImageNFT noch URL/IPFS in den geladenen Owned Objects). „Mehr laden“ falls die Wallet viele Objekte hat.'
+          )
         }
       } finally {
         setBusy(false)

@@ -166,38 +166,73 @@ describe('evidence-onchain-image', () => {
     }
   })
 
-  it('fetchEvidenceImagesByOwner: Seite', async () => {
+  it('fetchEvidenceImagesByOwner: ImageNFT + SimpleNFT Media-Scan', async () => {
     const owner = `0x${'22'.repeat(32)}`
     const objectId = `0x${'33'.repeat(32)}`
+    const simpleId = `0x${'44'.repeat(32)}`
+    const simplePkg = `0x${'b8'.repeat(32)}`
+    let calls = 0
     const client = {
       getObject: async () => ({ data: null }),
-      getOwnedObjects: async () => ({
-        data: [
-          {
-            data: {
-              objectId,
-              type: `${KNOWN_PKG}::image_nft::ImageNFT`,
-              content: {
-                fields: {
-                  image_data: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-                  content_type: 'image/png',
-                  name: 'A',
-                  encrypted: false,
+      getOwnedObjects: async (input: { filter?: { StructType?: string } }) => {
+        calls++
+        if (input.filter?.StructType?.includes('ImageNFT')) {
+          return {
+            data: [
+              {
+                data: {
+                  objectId,
+                  type: `${KNOWN_PKG}::image_nft::ImageNFT`,
+                  content: {
+                    fields: {
+                      image_data: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+                      content_type: 'image/png',
+                      name: 'A',
+                      encrypted: false,
+                    },
+                  },
+                },
+              },
+            ],
+            nextCursor: null,
+            hasNextPage: false,
+          }
+        }
+        return {
+          data: [
+            {
+              data: {
+                objectId: `0x${'55'.repeat(32)}`,
+                type: '0x2::coin::Coin<0x2::iota::IOTA>',
+                content: { fields: { balance: '1' } },
+              },
+            },
+            {
+              data: {
+                objectId: simpleId,
+                type: `${simplePkg}::nft::SimpleNFT`,
+                content: {
+                  fields: {
+                    name: 'URL-NFT',
+                    url: 'https://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
+                  },
                 },
               },
             },
-          },
-        ],
-        nextCursor: 'cur',
-        hasNextPage: true,
-      }),
+          ],
+          nextCursor: 'cur',
+          hasNextPage: true,
+        }
+      },
     }
     const r = await fetchEvidenceImagesByOwner(client, owner)
     expect(r.ok).toBe(true)
+    expect(calls).toBeGreaterThanOrEqual(2)
     if (r.ok) {
-      expect(r.items).toHaveLength(1)
+      expect(r.items.length).toBe(2)
+      expect(r.items.some((i) => i.source === 'embedded')).toBe(true)
+      expect(r.items.some((i) => i.source === 'url' && i.displayUrl?.includes('pinata'))).toBe(true)
       expect(r.hasNextPage).toBe(true)
-      expect(r.items[0]?.parsed?.mime).toBe('image/png')
     }
   })
 })
