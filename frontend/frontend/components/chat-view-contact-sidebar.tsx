@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { BookUser, Megaphone, MessageCircle, User, Users } from 'lucide-react'
+import { BookUser, Megaphone, MessageCircle, Settings2, User, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ContactMeshEntryClient } from '@/frontend/lib/api'
 import type { InboxPartnerOption } from '@/frontend/components/chat-view-inbox-partner-strip'
@@ -207,7 +207,9 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
   const filteredGroups = groups.filter(filterItem)
   const showTelegramAlarm =
     telegramAlarm && (!q || filterItem(telegramAlarm))
-  const showGroupsSection = filteredGroups.length > 0 || showTelegramAlarm
+  /** Immer sichtbar — sonst findet man „Gruppe verwalten“ nur per Doppelklick (Handy: kaum). */
+  /** Immer sichtbar (auch leer), damit „Verwalten“ / Team-Key auffindbar bleibt. */
+  const showGroupsSection = !q || filteredGroups.length > 0 || Boolean(showTelegramAlarm) || Boolean(p.onOpenGroupSettings)
   const showSelfRow =
     p.selfProfile &&
     (!q ||
@@ -301,9 +303,22 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
 
           {showGroupsSection ? (
             <section className="mt-2">
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Gruppen
-              </p>
+              <div className="flex items-center justify-between gap-2 px-2 pb-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Gruppen
+                </p>
+                {p.onOpenGroupSettings ? (
+                  <button
+                    type="button"
+                    onClick={() => p.onOpenGroupSettings?.()}
+                    className="inline-flex items-center gap-1 rounded-md border border-violet-500/40 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-950 hover:bg-violet-500/20 dark:text-violet-100"
+                    title="Gruppe anlegen · Team-Postfach · Team-Key erzeugen/rotieren"
+                  >
+                    <Settings2 className="h-3 w-3" aria-hidden />
+                    Gruppe verwalten
+                  </button>
+                ) : null}
+              </div>
               {showTelegramAlarm && telegramAlarm ? (
                 <SidebarRow
                   key={telegramAlarm.key}
@@ -314,16 +329,42 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
                   onClick={() => p.onSelectTelegramAlarmGroup?.()}
                 />
               ) : null}
+              {filteredGroups.length === 0 && !showTelegramAlarm ? (
+                <p className="px-2 py-2 text-[11px] text-muted-foreground">
+                  Noch keine Gruppe — oben{' '}
+                  <span className="font-medium text-foreground">Gruppe verwalten</span> tippen
+                  (anlegen, Team-Postfach, Team-Key).
+                </p>
+              ) : null}
               {filteredGroups.map((g) => (
-                <SidebarRow
-                  key={g.key}
-                  title={g.displayName}
-                  subtitle={`${g.memberCount} Mitglieder`}
-                  active={p.activeGroupId === g.groupId}
-                  icon={<Users className="h-4 w-4" />}
-                  onClick={() => p.onSelectGroup(g.groupId)}
-                  onDoubleClick={() => p.onOpenGroupSettings?.()}
-                />
+                <div key={g.key} className="flex items-stretch gap-0.5">
+                  <div className="min-w-0 flex-1">
+                    <SidebarRow
+                      title={g.displayName}
+                      subtitle={`${g.memberCount} Mitglieder`}
+                      active={p.activeGroupId === g.groupId}
+                      icon={<Users className="h-4 w-4" />}
+                      onClick={() => p.onSelectGroup(g.groupId)}
+                      onDoubleClick={() => p.onOpenGroupSettings?.()}
+                    />
+                  </div>
+                  {p.onOpenGroupSettings ? (
+                    <button
+                      type="button"
+                      className="mt-1 mb-1 mr-1 flex h-auto w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title={`„${g.displayName}“ verwalten`}
+                      aria-label={`Gruppe ${g.displayName} verwalten`}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        p.onSelectGroup(g.groupId)
+                        p.onOpenGroupSettings?.()
+                      }}
+                    >
+                      <Settings2 className="h-4 w-4" aria-hidden />
+                    </button>
+                  ) : null}
+                </div>
               ))}
             </section>
           ) : null}
@@ -358,7 +399,7 @@ export function ChatViewContactSidebar(p: ChatViewContactSidebarProps) {
         <div className="border-t border-border px-3 py-2 text-[10px] text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <BookUser className="h-3 w-3" aria-hidden />
-            Doppelklick Kontakt → Details · Gruppe → Verwalten · „Ich“ → Profil
+            Kontakt doppelklicken → Details · Gruppe: Zahnrad/„Verwalten“ · „Ich“ → Profil
           </span>
         </div>
       </aside>

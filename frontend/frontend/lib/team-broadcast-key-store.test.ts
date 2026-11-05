@@ -4,6 +4,7 @@ import {
   createTeamBroadcastKey,
   exportTeamBroadcastKeysSnapshot,
   hasTeamBroadcastKey,
+  hydrateTeamBroadcastKeysFromArchiveSidecar,
   importTeamBroadcastKeysSnapshot,
   requireTeamBroadcastKey,
   writeTeamBroadcastKeyRaw,
@@ -43,6 +44,15 @@ describe('team-broadcast-key-store (H.23 B1)', () => {
     window.localStorage.clear()
     expect(hasTeamBroadcastKey(MB)).toBe(false)
     expect(importTeamBroadcastKeysSnapshot(snap)).toBe(1)
+    expect(hasTeamBroadcastKey(MB)).toBe(true)
+  })
+
+  it('Archiv-Sidecar hydratisiert nach Clear der Einzelkeys', () => {
+    createTeamBroadcastKey(MB)
+    expect(window.localStorage.getItem('morgendrot.teamKeysArchive.v1')).toBeTruthy()
+    window.localStorage.removeItem(`morgendrot.teamBroadcastKey.v1:${MB}`)
+    expect(hasTeamBroadcastKey(MB)).toBe(false)
+    expect(hydrateTeamBroadcastKeysFromArchiveSidecar()).toBeGreaterThanOrEqual(1)
     expect(hasTeamBroadcastKey(MB)).toBe(true)
   })
 })

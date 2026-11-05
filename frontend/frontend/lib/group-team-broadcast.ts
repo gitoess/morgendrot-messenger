@@ -7,12 +7,12 @@ import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
 
 const ADDR_64 = /^0x[a-fA-F0-9]{64}$/i
 
-/** Bis Team-E2EE on-chain: verschlüsselter Gruppen-Chain-Versand braucht lokalen Team-Key. */
+/** Enc-Gruppen-Broadcast: Team-Postfach + lokaler gemeinsamer Team-Key (Handoff). */
 export const GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG =
-  'Gruppe verschlüsselt: Team-Postfach verknüpfen und Team-Key bereitstellen (Handoff/Provision). Ohne Key: 1:1-Privatchat.'
+  'Gruppe verschlüsselt: „Gruppe verwalten“ (Sidebar oder Composer-Link) — Team-Key erzeugen, dann Handoff an Mitglieder.'
 
 export const GROUP_TEAM_MAILBOX_REQUIRED_MSG =
-  'Gruppe: Team-Postfach verknüpfen oder neu erstellen (Gruppenpanel) — Internet + Mailbox = nur 1× Team-Broadcast.'
+  'Gruppe: „Gruppe verwalten“ — Team-Postfach verknüpfen (Internet + Mailbox = 1× Team-Broadcast).'
 
 export function isGroupMailboxInternetChainSend(p: {
   isGroupChannel: boolean

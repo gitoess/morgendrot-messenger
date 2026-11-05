@@ -86,7 +86,7 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           {p.onCreateGroup ? (
             <DropdownMenuItem onSelect={() => p.onCreateGroup?.()}>
               <Users className="mr-2 h-4 w-4" />
-              Neue Gruppe erstellen
+              {p.onManageGroup ? 'Neue Gruppe erstellen' : 'Gruppen verwalten…'}
             </DropdownMenuItem>
           ) : null}
           {p.onManageGroup || p.onCreateGroup ? <DropdownMenuSeparator /> : null}

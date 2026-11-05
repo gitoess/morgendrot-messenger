@@ -52,6 +52,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.passphraseMsg.default.v1',
   'morgendrot.composer.passphraseProtect',
   'morgendrot.composer.passphraseReuse',
+  'morgendrot.teamKeysArchive.v1',
   'morgendrot.inbox.burnOnRead.v1',
 ] as const
 

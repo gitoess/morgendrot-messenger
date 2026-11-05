@@ -46,6 +46,7 @@ import { ChatViewContactDetailDialog } from '@/frontend/components/chat-view-con
 import { ChatViewMessengerSearch } from '@/frontend/components/chat-view-messenger-search'
 import { resolveContactSidebarDisplayName } from '@/frontend/lib/conversation-sidebar-items'
 import { readMessengerGroups } from '@/frontend/lib/messenger-group-store'
+import { hydrateTeamBroadcastKeysFromArchiveSidecar } from '@/frontend/lib/team-broadcast-key-store'
 import { fetchTelegramIntegration } from '@/frontend/lib/api/telegram-integrations'
 import { resolveTelegramAlarmGroupPartnerKey } from '@/frontend/lib/telegram-einsatz-group-target'
 import {
@@ -202,6 +203,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   useEffect(() => {
     if (phonebookOpen) refreshContactDirectory()
   }, [phonebookOpen, refreshContactDirectory])
+
+  useEffect(() => {
+    hydrateTeamBroadcastKeysFromArchiveSidecar()
+  }, [])
 
   useEffect(() => {
     if (phonebookNavRequest != null && phonebookNavRequest > 0) setPhonebookOpen(true)
@@ -484,6 +489,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     vaultBannerActions,
     onOpenPhonebook:
       (isPrivate || isGroup) && !showConversationSidebar ? () => setPhonebookOpen(true) : undefined,
+    onOpenGroupSettings: () => setGroupSettingsOpen(true),
     activeConversation:
       showConversationSidebar && (isPrivate || isGroup)
         ? {
@@ -973,6 +979,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           inboxPartnerKey && !telegramAlarmSelected ? () => handleOpenContactDetail(inboxPartnerKey) : undefined,
         onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
         onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+        onCreateGroup: openGroupSettings,
         onRenewEncryptionKeys: canRenew ? handleRenewPeerEncryption : undefined,
         renewEncryptionLabel: canRenew
           ? `Schlüssel erneuern (Epoch ${epoch || 1})`
@@ -1003,9 +1010,10 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
           ? `Partner ${renewPeer.slice(0, 10)}…`
           : 'Kontakt wählen oder Telefonbuch',
         menuScopeNote:
-          'Verkürztes Menü (Composer-Direktchat). Partner in der linken Liste öffnen → Profil, Export, Verlauf leeren.',
+          'Verkürztes Menü (Composer-Direktchat). Partner in der Liste öffnen → Profil/Export. Gruppen: ⋮ → Gruppen verwalten oder Sidebar „Gruppe verwalten“.',
         canClearHistory: false,
         canExport: false,
+        onCreateGroup: openGroupSettings,
         onRenewEncryptionKeys: canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
         renewEncryptionLabel: canRenew
           ? `Schlüssel erneuern (Epoch ${epoch || 1})`

@@ -9,6 +9,13 @@ import {
 
 const LS_KEY_PREFIX = 'morgendrot.teamBroadcastKey.v1:'
 const LS_EPOCH_PREFIX = 'morgendrot.teamBroadcastKeyEpoch.v1:'
+const LS_ARCHIVE = 'morgendrot.teamKeysArchive.v1'
+
+/** Snapshot für Backup / später Nest Vault `.team-keys.enc`. */
+export type TeamBroadcastKeysSnapshot = {
+  schema: 1
+  keys: Record<string, { keyBase64: string; keyEpoch: number }>
+}
 
 /** Klartext-Fehler wenn Enc-Send ohne gemeinsamen Key (kein Auto-Fork). */
 export const TEAM_BROADCAST_KEY_MISSING_MSG =
@@ -39,15 +46,43 @@ export function readTeamBroadcastKeyRaw(teamMailboxObjectId: string): Uint8Array
   }
 }
 
+function persistArchiveSidecar(): void {
+  if (typeof window === 'undefined') return
+  try {
+    const ids: string[] = []
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i)
+      if (k?.startsWith(LS_KEY_PREFIX)) ids.push(k.slice(LS_KEY_PREFIX.length))
+    }
+    window.localStorage.setItem(LS_ARCHIVE, JSON.stringify(exportTeamBroadcastKeysSnapshot(ids)))
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Beim Start: Archiv-Sidecar → Einzelkeys (Vault-/Backup-Restore). */
+export function hydrateTeamBroadcastKeysFromArchiveSidecar(): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const raw = window.localStorage.getItem(LS_ARCHIVE)?.trim()
+    if (!raw) return 0
+    return importTeamBroadcastKeysSnapshot(JSON.parse(raw) as TeamBroadcastKeysSnapshot)
+  } catch {
+    return 0
+  }
+}
+
 export function writeTeamBroadcastKeyRaw(teamMailboxObjectId: string, raw32: Uint8Array): void {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(LS_KEY_PREFIX + normMb(teamMailboxObjectId), teamBroadcastKeyToBase64(raw32))
+  persistArchiveSidecar()
 }
 
 export function writeTeamBroadcastKeyEpoch(teamMailboxObjectId: string, epoch: number): void {
   if (typeof window === 'undefined') return
   const n = Number.isFinite(epoch) && epoch >= 1 ? Math.floor(epoch) : DEFAULT_TEAM_BROADCAST_KEY_EPOCH
   window.localStorage.setItem(LS_EPOCH_PREFIX + normMb(teamMailboxObjectId), String(n))
+  persistArchiveSidecar()
 }
 
 export function readTeamBroadcastKeyEpoch(teamMailboxObjectId: string): number {
@@ -103,12 +138,6 @@ export function requireTeamBroadcastKey(teamMailboxObjectId: string): Uint8Array
   const existing = readTeamBroadcastKeyRaw(teamMailboxObjectId)
   if (existing) return existing
   throw new Error(TEAM_BROADCAST_KEY_MISSING_MSG)
-}
-
-/** Snapshot für späteres Vault `.team-keys.enc` / Backup. */
-export type TeamBroadcastKeysSnapshot = {
-  schema: 1
-  keys: Record<string, { keyBase64: string; keyEpoch: number }>
 }
 
 export function exportTeamBroadcastKeysSnapshot(teamMailboxObjectIds: string[]): TeamBroadcastKeysSnapshot {
