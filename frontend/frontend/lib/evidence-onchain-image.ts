@@ -27,13 +27,24 @@ export const KNOWN_URL_NFT_STRUCT_TYPES = [
   '0xb800e7cf19a2d63d3f5f4e857d4cf20c685d4768c71b04a3d803b09b48ab53f8::nft::SimpleNFT',
 ] as const
 
+/** Nur Package-Hex normalisieren — Modul/Struct bleiben case-sensitiv (SimpleNFT ≠ simplenft). */
+export function normalizeMoveStructType(typeString: string): string {
+  const t = typeString.trim()
+  const i = t.indexOf('::')
+  if (i <= 0) return t
+  return `${t.slice(0, i).toLowerCase()}${t.slice(i)}`
+}
+
 export function knownImageNftStructTypes(): string[] {
   return KNOWN_IMAGE_NFT_PACKAGE_IDS.map((p) => `${p.toLowerCase()}::image_nft::ImageNFT`)
 }
 
-/** ImageNFT + bekannte URL-NFT-Typen für getOwnedObjects MatchAny. */
+/** ImageNFT + bekannte URL-NFT-Typen für parallele StructType-Queries. */
 export function knownOwnerGalleryStructTypes(): string[] {
-  return [...knownImageNftStructTypes(), ...KNOWN_URL_NFT_STRUCT_TYPES.map((t) => t.toLowerCase())]
+  return [
+    ...knownImageNftStructTypes(),
+    ...KNOWN_URL_NFT_STRUCT_TYPES.map((t) => normalizeMoveStructType(t)),
+  ]
 }
 
 const HEX_OBJECT_ID = /^0x[a-f0-9]{64}$/i

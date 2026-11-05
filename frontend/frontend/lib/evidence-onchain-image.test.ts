@@ -176,7 +176,8 @@ describe('evidence-onchain-image', () => {
       getOwnedObjects: async (input: { filter?: { StructType?: string } }) => {
         const st = input.filter?.StructType || ''
         seen.push(st)
-        if (/SimpleNFT/i.test(st)) {
+        // Move-Struct-Namen sind case-sensitiv — kein toLowerCase auf SimpleNFT.
+        if (st.endsWith('::nft::SimpleNFT')) {
           return {
             data: [
               {
@@ -201,8 +202,9 @@ describe('evidence-onchain-image', () => {
     }
     const r = await fetchEvidenceImagesByOwner(client, owner)
     expect(r.ok).toBe(true)
-    expect(seen.some((s) => /ImageNFT/i.test(s))).toBe(true)
-    expect(seen.some((s) => /SimpleNFT/i.test(s))).toBe(true)
+    expect(seen.some((s) => s.includes('::image_nft::ImageNFT'))).toBe(true)
+    expect(seen.some((s) => s.endsWith('::nft::SimpleNFT'))).toBe(true)
+    expect(seen.some((s) => s.includes('simplenft'))).toBe(false)
     if (r.ok) {
       expect(r.items).toHaveLength(1)
       expect(r.items[0]?.source).toBe('url')
