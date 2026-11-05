@@ -54,6 +54,7 @@ import {
 } from '@/frontend/lib/evidence-mailbox-plain-scan'
 import { getDirectMailboxChainSnapshot } from '@/frontend/lib/direct-iota-chain-context'
 import {
+  getDefaultEvidencePassphrase,
   lookupEvidencePassphrase,
   rememberEvidencePassphrase,
 } from '@/frontend/lib/evidence-passphrase-local-store'
@@ -425,11 +426,19 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             continue
           }
           if (it.needsPassphrase && it.ciphertext) {
-            const remembered = lookupEvidencePassphrase({ objectId: it.objectId })
+            const remembered = lookupEvidencePassphrase({
+              objectId: it.objectId,
+              allowDefault: true,
+            })
             if (remembered) {
               try {
                 const dec = await decryptEvidenceImageBytes(it.ciphertext, remembered)
                 unlocked++
+                rememberEvidencePassphrase({
+                  objectId: it.objectId,
+                  passphrase: remembered,
+                  asDefault: false,
+                })
                 mapped.push({
                   ...it,
                   attrs,
@@ -451,14 +460,18 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         const totalShown = (opts?.append ? ownerItems.length : 0) + mapped.length
         const urlN = mapped.filter((x) => x.source === 'url').length
         const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
+        const lockedN = mapped.filter((x) => x.needsPassphrase).length
         setInfo(
           `${mapped.length} Bild-NFT(s)` +
-            ` (eingebettet ${embN}, URL/IPFS ${urlN})` +
+            ` (Klartext/eingebettet ${embN}, URL/IPFS ${urlN}, verschlüsselt ${lockedN})` +
             ` · gesamt ${opts?.append ? totalShown : mapped.length}` +
-            (unlocked ? ` · ${unlocked} mit lokaler Passphrase` : '') +
-            `. Filter: parallele StructType-Queries (ImageNFT + SimpleNFT).` +
+            (unlocked ? ` · ${unlocked} auto-entschlüsselt (lokal gemerkt / Geräte-Standard)` : '') +
+            `. Filter: ImageNFT + SimpleNFT.` +
             (r.rpcUrl ? ` RPC: ${r.rpcUrl}` : '') +
             (r.networkNote ? `\n${r.networkNote}` : '') +
+            (lockedN
+              ? `\n${lockedN} noch gesperrt — Passphrase oben eingeben → „Alle entsperren & merken“.`
+              : '') +
             (r.hasNextPage ? ' Weitere Seiten möglich.' : '')
         )
         if (mapped.length === 0 && !opts?.append) {
@@ -965,15 +978,72 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
                 autoComplete="off"
+                placeholder={getDefaultEvidencePassphrase() ? 'Geräte-Standard vorhanden — oder neu eingeben' : 'mind. 8 Zeichen'}
               />
               {pendingCipher ? (
                 <Button type="button" size="sm" disabled={busy} onClick={() => void onDecryptPending()}>
                   Entschlüsseln
                 </Button>
               ) : (
-                <p className="text-[10px] text-muted-foreground">
-                  Galerie-Einträge: Object-ID-Tab + Passphrase, oder lokal gemerkte Keys werden beim Laden genutzt.
-                </p>
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy || passphrase.trim().length < 8}
+                    onClick={() => {
+                      void (async () => {
+                        const pass = passphrase.trim()
+                        if (pass.length < 8) return
+                        setBusy(true)
+                        setError('')
+                        let n = 0
+                        try {
+                          rememberEvidencePassphrase({ passphrase: pass })
+                          const next = []
+                          for (const it of ownerItems) {
+                            if (!it.needsPassphrase || !it.ciphertext) {
+                              next.push(it)
+                              continue
+                            }
+                            try {
+                              const dec = await decryptEvidenceImageBytes(it.ciphertext, pass)
+                              n++
+                              rememberEvidencePassphrase({
+                                objectId: it.objectId,
+                                passphrase: pass,
+                              })
+                              next.push({
+                                ...it,
+                                needsPassphrase: false,
+                                error: undefined,
+                                ciphertext: undefined,
+                                rememberedPass: pass,
+                                previewUrl: evidenceImageBytesToObjectUrl(dec.bytes, dec.contentType),
+                              })
+                            } catch {
+                              next.push(it)
+                            }
+                          }
+                          setOwnerItems(next)
+                          setSharePassphrase(pass)
+                          setInfo(
+                            n
+                              ? `${n} NFT(s) entschlüsselt und Passphrase lokal gemerkt (pro Object-ID + Geräte-Standard).`
+                              : 'Keine Einträge mit dieser Passphrase entschlüsselbar.'
+                          )
+                        } finally {
+                          setBusy(false)
+                        }
+                      })()
+                    }}
+                  >
+                    Alle entsperren & merken
+                  </Button>
+                  <p className="text-[10px] text-muted-foreground">
+                    Eigene Mints: Passphrase wird beim Minten lokal gespeichert und beim Galerie-Laden auto-versucht.
+                    Vault-Lock löscht ImageNFT-Merker nicht — nur Einsatz-Ende.
+                  </p>
+                </>
               )}
             </div>
           ) : null}
@@ -1070,7 +1140,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                       ) : null}
                       {it.needsPassphrase ? (
                         <div className="space-y-1">
-                          <p className="text-xs text-amber-800 dark:text-amber-200">Verschlüsselt — Passphrase nötig.</p>
+                          <p className="text-xs text-amber-800 dark:text-amber-200">
+                            Verschlüsselt — kein Bild bis Passphrase (oben „Alle entsperren & merken“).
+                          </p>
                           <Button
                             type="button"
                             size="sm"
@@ -1079,13 +1151,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                             onClick={() => {
                               void (async () => {
                                 if (!it.ciphertext) return
+                                const pass = passphrase.trim()
                                 setBusy(true)
                                 setError('')
                                 try {
-                                  const dec = await decryptEvidenceImageBytes(it.ciphertext, passphrase.trim())
+                                  const dec = await decryptEvidenceImageBytes(it.ciphertext, pass)
                                   rememberEvidencePassphrase({
                                     objectId: it.objectId,
-                                    passphrase: passphrase.trim(),
+                                    passphrase: pass,
                                   })
                                   const url = evidenceImageBytesToObjectUrl(dec.bytes, dec.contentType)
                                   setOwnerItems((prev) =>
@@ -1096,13 +1169,13 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                                             needsPassphrase: false,
                                             ciphertext: undefined,
                                             error: undefined,
-                                            rememberedPass: passphrase.trim(),
+                                            rememberedPass: pass,
                                             previewUrl: url,
                                           }
                                         : row
                                     )
                                   )
-                                  setSharePassphrase(passphrase.trim())
+                                  setSharePassphrase(pass)
                                 } catch (e) {
                                   setError(e instanceof Error ? e.message : String(e))
                                 } finally {
@@ -1111,7 +1184,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                               })()
                             }}
                           >
-                            Mit Passphrase oben entschlüsseln
+                            Nur dieses NFT entsperren & merken
                           </Button>
                         </div>
                       ) : null}

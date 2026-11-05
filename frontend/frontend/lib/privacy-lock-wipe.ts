@@ -1,11 +1,11 @@
 /**
- * Beim Vault-/Session-Lock: Klartext-Passphrase-Stores auf diesem Gerät leeren.
- * ECDH-Material wird separat über clearDirectChatEcdhKeyMaterial entfernt.
+ * Beim Vault-/Session-Lock: Chat-Passphrase-Nachrichten-Merker leeren.
+ * ImageNFT-Passphrasen bleiben (eigene Galerie ohne erneute Eingabe) —
+ * werden bei Einsatz-Ende / clearAllEvidencePassphrases entfernt.
+ * ECDH-Material: clearDirectChatEcdhKeyMaterial separat.
  */
-import { clearAllEvidencePassphrases } from '@/frontend/lib/evidence-passphrase-local-store'
 import { clearAllPassphraseMessagePassphrases } from '@/frontend/lib/passphrase-message-local-store'
 
 export function wipeLocalPassphraseStoresOnLock(): void {
-  clearAllEvidencePassphrases()
   clearAllPassphraseMessagePassphrases()
 }

@@ -47,6 +47,7 @@ export const EINSATZ_END_LOCAL_STORAGE_KEYS = [
   'morgendrot.einsatz.manifestLastAnchorMeta.v1',
   'morgendrot.einsatz.manifestLastSequence.v1',
   'morgendrot.evidenceImage.passphrases.v1',
+  'morgendrot.evidenceImage.defaultPassphrase.v1',
   'morgendrot.passphraseMsg.v1',
   'morgendrot.composer.passphraseProtect',
   'morgendrot.inbox.burnOnRead.v1',

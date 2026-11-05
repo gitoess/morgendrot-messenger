@@ -11,7 +11,7 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
     window.localStorage.clear()
   })
 
-  it('removes evidence + passphrase-message stores', () => {
+  it('clears passphrase-message store but keeps ImageNFT passphrases', () => {
     rememberEvidencePassphrase({
       objectId: '0x' + 'ab'.repeat(32),
       passphrase: 'test-pass-12',
@@ -24,7 +24,7 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
 
     wipeLocalPassphraseStoresOnLock()
 
-    expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeNull()
+    expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeTruthy()
     expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeNull()
   })
 })
