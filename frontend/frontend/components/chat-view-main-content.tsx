@@ -690,34 +690,42 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     setContactDetailOpen(true)
   }, [])
 
-  const handleRenewPeerEncryption = useCallback(async () => {
-    if (!inboxPartnerKey || !isValidRecipient0x(inboxPartnerKey)) {
-      toast.error('Schlüssel erneuern ist nur für IOTA-1:1-Chats verfügbar.')
-      return
-    }
-    if (!window.confirm(PEER_KEY_RENEWAL_CONFIRM)) return
-    setEncrypted(true)
-    setForcedTransport('internet')
-    setComposerDelivery('chain')
-    const result = await renewDirectChatPeerEncryption(inboxPartnerKey, {
-      onHandshake: (addr) => panelMessengerPorts.handshakeActions.onHandshakeForAddress(addr),
-    })
-    if (result.ok) {
-      toast.success(
-        `Session-Schlüssel erneuert (Epoch ${result.newEpoch}) — Handshake gesendet; Partner sollte antworten.`
-      )
-      window.setTimeout(() => void panelMessengerPorts.handshakeOffersRead.reload(), 3000)
-    } else {
-      toast.error(result.error)
-    }
-  }, [
-    inboxPartnerKey,
-    setEncrypted,
-    setForcedTransport,
-    setComposerDelivery,
-    panelMessengerPorts.handshakeActions,
-    panelMessengerPorts.handshakeOffersRead,
-  ])
+  const handleRenewPeerEncryption = useCallback(
+    async (peerOverride?: string) => {
+      const peer = (peerOverride || inboxPartnerKey || recipient || partner || '').trim()
+      if (!isValidRecipient0x(peer)) {
+        toast.error('Schlüssel erneuern: zuerst einen 1:1-Partner (0x…) wählen.')
+        return
+      }
+      if (!window.confirm(PEER_KEY_RENEWAL_CONFIRM)) return
+      setEncrypted(true)
+      setForcedTransport('internet')
+      setComposerDelivery('chain')
+      selectInboxPartnerForSend(peer)
+      const result = await renewDirectChatPeerEncryption(peer, {
+        onHandshake: (addr) => panelMessengerPorts.handshakeActions.onHandshakeForAddress(addr),
+      })
+      if (result.ok) {
+        toast.success(
+          `Session-Schlüssel erneuert (Epoch ${result.newEpoch}) — Handshake gesendet; Partner sollte antworten.`
+        )
+        window.setTimeout(() => void panelMessengerPorts.handshakeOffersRead.reload(), 3000)
+      } else {
+        toast.error(result.error)
+      }
+    },
+    [
+      inboxPartnerKey,
+      recipient,
+      partner,
+      setEncrypted,
+      setForcedTransport,
+      setComposerDelivery,
+      selectInboxPartnerForSend,
+      panelMessengerPorts.handshakeActions,
+      panelMessengerPorts.handshakeOffersRead,
+    ]
+  )
 
   const handleSelectMessageHit = useCallback(
     (hit: InboxSearchMessageHit) => {
@@ -984,11 +992,26 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     }
 
     if (isPrivate && composerDelivery === 'chain') {
+      const renewPeer = [inboxPartnerKey, recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) || ''
+      const canRenew = Boolean(renewPeer)
+      const epoch = canRenew ? getSendKeyEpochForRecipient(renewPeer) : 0
       return {
         title: 'Direktchat',
-        subtitle: 'Kontakt wählen oder Telefonbuch',
+        subtitle: canRenew
+          ? `Partner ${renewPeer.slice(0, 10)}…`
+          : 'Kontakt wählen oder Telefonbuch',
         canClearHistory: false,
         canExport: false,
+        onRenewEncryptionKeys: canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
+        renewEncryptionLabel: canRenew
+          ? `Schlüssel erneuern (Epoch ${epoch || 1})`
+          : undefined,
+        renewEncryptionHint:
+          'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht).',
+        burnOnRead: {
+          enabled: burnOnReadEnabled,
+          onEnabledChange: setBurnOnReadEnabled,
+        },
         encryptionToggle: {
           encrypted,
           onEncryptedChange: setEncrypted,
@@ -1019,6 +1042,9 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
     handleRenewPeerEncryption,
     burnOnReadEnabled,
     setBurnOnReadEnabled,
+    recipient,
+    partner,
+    selectInboxPartnerForSend,
     composerDelivery,
     panelMessengerPorts.inboxExportActions,
     panelMessengerPorts.inboxActions,
