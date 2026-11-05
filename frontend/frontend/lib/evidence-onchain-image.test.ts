@@ -116,9 +116,9 @@ describe('evidence-onchain-image', () => {
     }
   })
 
-  it('normalisiert IPFS auf inbrowser.link-Subdomain', () => {
+  it('normalisiert IPFS auf Pinata-Pfad für img (nicht inbrowser HTML)', () => {
     expect(normalizeNftMediaUrl('ipfs://bafybeitestcid123456789012345678901')).toBe(
-      'https://bafybeitestcid123456789012345678901.ipfs.inbrowser.link/'
+      'https://gateway.pinata.cloud/ipfs/bafybeitestcid123456789012345678901'
     )
     expect(
       extractNftMediaUrlFromFields({
@@ -126,13 +126,13 @@ describe('evidence-onchain-image', () => {
         description: 'Text\nhttps://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
       })
     ).toBe(
-      'https://bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam.ipfs.inbrowser.link/'
+      'https://gateway.pinata.cloud/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam'
     )
     expect(
       extractNftMediaUrlFromFields({
         url: { url: 'https://ipfs.io/ipfs/bafybeiexamplecidabcdefghijklmnop' },
       })
-    ).toBe('https://bafybeiexamplecidabcdefghijklmnop.ipfs.inbrowser.link/')
+    ).toBe('https://gateway.pinata.cloud/ipfs/bafybeiexamplecidabcdefghijklmnop')
   })
 
   it('fetchEvidenceImageByObjectId: SimpleNFT mit URL', async () => {
@@ -160,7 +160,7 @@ describe('evidence-onchain-image', () => {
     if (r.ok) {
       expect(r.source).toBe('url')
       expect(r.displayUrl).toBe(
-        'https://bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam.ipfs.inbrowser.link/'
+        'https://gateway.pinata.cloud/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam'
       )
       expect(r.name).toBe('IOTA Rebased NFT')
     }

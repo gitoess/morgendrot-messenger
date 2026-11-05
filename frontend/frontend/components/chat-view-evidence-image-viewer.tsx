@@ -30,6 +30,9 @@ import {
   EVIDENCE_IMAGE_MAX_RAW_BYTES,
   EVIDENCE_IMAGE_OWNER_PAGE_SIZE,
   evidenceImageBytesToObjectUrl,
+  extractIpfsCid,
+  ipfsCidDisplayUrlFallbacks,
+  ipfsCidToBrowserViewUrl,
   isPlausibleIotaObjectId,
   KNOWN_IMAGE_NFT_PACKAGE_IDS,
   type EvidenceObjectTypeMatch,
@@ -69,6 +72,9 @@ type PreviewMeta = {
   objectId?: string
   /** embedded = image_data; url = HTTP/IPFS */
   source?: 'embedded' | 'url'
+  /** IPFS-CID für Gateway-Fallback / Browser-Link */
+  ipfsCid?: string
+  browserViewUrl?: string
 }
 
 function metaFromDescription(description?: string): { body?: string; attrs: EvidenceAttrPair[] } {
@@ -237,16 +243,23 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     []
   )
 
+  const [urlGatewayIndex, setUrlGatewayIndex] = useState(0)
+
   const showExternalUrl = useCallback((displayUrl: string, extra: Omit<PreviewMeta, 'mime' | 'bytes'>) => {
+    const cid = extra.ipfsCid || extractIpfsCid(displayUrl) || undefined
+    const primary = cid ? ipfsCidDisplayUrlFallbacks(cid)[0] || displayUrl : displayUrl
+    setUrlGatewayIndex(0)
     setPreviewUrl((prev) => {
       revokeIfObjectUrl(prev)
-      return displayUrl
+      return primary
     })
     setMeta({
+      ...extra,
       mime: 'image/* (URL)',
       bytes: 0,
       source: 'url',
-      ...extra,
+      ipfsCid: cid,
+      browserViewUrl: cid ? ipfsCidToBrowserViewUrl(cid) : extra.browserViewUrl || displayUrl,
     })
     setPendingCipher(null)
   }, [])
@@ -337,7 +350,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           objectId: r.objectId,
         })
         setInfo(
-          'URL-/IPFS-NFT (kein image_data). Bild via *.ipfs.inbrowser.link — RPC-Netz muss zum Objekt passen (z. B. Testnet).'
+          'URL-/IPFS-NFT (kein image_data). Vorschau über Bild-Gateway (Pinata); „Im Browser“ öffnet inbrowser.link. RPC-Netz muss zum Objekt passen (z. B. Testnet).'
         )
         return
       }
@@ -994,11 +1007,37 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   ))}
                 </ul>
               ) : null}
+              {meta.source === 'url' && meta.browserViewUrl ? (
+                <p className="text-[11px]">
+                  <a
+                    href={meta.browserViewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline underline-offset-2"
+                  >
+                    Im Browser öffnen (inbrowser.link)
+                  </a>
+                </p>
+              ) : null}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={previewUrl}
                 alt={meta.name || 'On-Chain Evidenz-Bild'}
                 className="max-h-80 w-full rounded-md border border-border object-contain bg-muted/20"
+                onError={() => {
+                  if (!meta.ipfsCid) return
+                  const list = ipfsCidDisplayUrlFallbacks(meta.ipfsCid)
+                  const next = urlGatewayIndex + 1
+                  if (next >= list.length) {
+                    setError(
+                      'Bild-Gateways fehlgeschlagen. Nutze „Im Browser öffnen (inbrowser.link)“.'
+                    )
+                    return
+                  }
+                  setUrlGatewayIndex(next)
+                  setPreviewUrl(list[next]!)
+                  setInfo(`Gateway-Fallback ${next + 1}/${list.length}…`)
+                }}
               />
             </div>
           ) : null}

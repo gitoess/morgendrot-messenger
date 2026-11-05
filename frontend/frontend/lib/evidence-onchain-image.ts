@@ -96,11 +96,28 @@ const IPFS_URL_IN_TEXT = /ipfs:\/\/[^\s"'<>\\]+/i
 const IPFS_CID_RE = /^(bafy[a-z0-9]+|Qm[1-9A-HJ-NP-Za-km-z]{44,88})$/i
 
 /**
- * Anzeige-Gateway für CIDs — ipfs.io liefert oft kein Bild (wie Explorer);
- * Subdomain-Gateway inbrowser.link funktioniert zuverlässiger im Browser.
+ * `<img src>` braucht echte Bild-Bytes.
+ * inbrowser.link liefert nur HTML+Service-Worker → kaputtes Bild-Icon.
+ * Pinata/Filebase liefern für typische NFT-CIDs `image/*`.
  */
 export function ipfsCidToDisplayUrl(cid: string): string {
+  return `https://gateway.pinata.cloud/ipfs/${cid.trim()}`
+}
+
+/** Menschliche Ansicht im Tab (HTML-Gateway) — nicht für `<img>`. */
+export function ipfsCidToBrowserViewUrl(cid: string): string {
   return `https://${cid.trim()}.ipfs.inbrowser.link/`
+}
+
+/** Alternative Gateways für onError-Fallback im Viewer. */
+export function ipfsCidDisplayUrlFallbacks(cid: string): string[] {
+  const c = cid.trim()
+  return [
+    `https://gateway.pinata.cloud/ipfs/${c}`,
+    `https://ipfs.filebase.io/ipfs/${c}`,
+    `https://${c}.ipfs.dweb.link/`,
+    `https://nftstorage.link/ipfs/${c}`,
+  ]
 }
 
 /** CID aus ipfs://, path-Gateway oder Subdomain-Gateway. */
@@ -117,7 +134,7 @@ export function extractIpfsCid(raw: string): string | null {
   return null
 }
 
-/** ipfs:// / Gateway-URL / bare CID → https://{cid}.ipfs.inbrowser.link/; sonst http(s) unverändert. */
+/** ipfs:// / Gateway-URL / bare CID → Pinata-Pfad für `<img>`; sonst http(s) unverändert. */
 export function normalizeNftMediaUrl(raw: string): string | null {
   const t = raw.trim().replace(/[.,;)\]]+$/g, '')
   if (!t) return null
