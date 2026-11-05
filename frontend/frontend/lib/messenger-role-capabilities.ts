@@ -1,4 +1,5 @@
 import type { ApiStatus } from '@/frontend/lib/api/status'
+import { getDirectIotaSessionSigner } from '@/frontend/lib/direct-iota-mnemonic-session'
 
 export type TransportProfile = 'mesh-first' | 'iota-anchored' | 'iota-full'
 export type UiMode = 'simple' | 'expert'
@@ -82,11 +83,13 @@ export function canAccessEinsatzleitung(role: string | null | undefined): boolea
   return r === 'boss' || r === 'kommandant'
 }
 
-/** Team-Mailbox on-chain erstellen — nur Einsatz + teamManage (Kommandant/Boss). */
+/** Team-Mailbox on-chain erstellen — Einsatz + teamManage, oder Direkt-IOTA-Signer (Standalone). */
 export function canCreateTeamMailbox(status: ApiStatus | null | undefined): boolean {
-  if (!status) return false
-  if (status.deploymentProfile === 'consumer') return false
-  return Boolean(status.permissions?.teamManage)
+  if (status?.deploymentProfile === 'consumer') return false
+  if (status?.permissions?.teamManage) return true
+  /* Standalone / Direct-RPC: Gruppe verwalten soll „Neu erstellen“ anbieten. */
+  if (typeof window !== 'undefined' && getDirectIotaSessionSigner()) return true
+  return false
 }
 
 /** Einsatz-Rollen-Vorlagen in Einstellungen anzeigen (Lesen für Kommandant, Schreiben nur Boss). */

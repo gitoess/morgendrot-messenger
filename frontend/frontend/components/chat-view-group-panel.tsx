@@ -428,7 +428,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
         <div className="rounded-lg border border-sky-500/25 bg-sky-500/5 px-3 py-3">
           <p className="text-xs font-medium text-foreground">Team-Postfach (Pflicht für Chain)</p>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Internet + Mailbox: 1× Team-Broadcast pro Nachricht. Nach Move-Deploy neues Postfach anlegen.
+            Internet + Mailbox: 1× Team-Broadcast. Hier erstellen, wählen oder Object-ID einfügen.
           </p>
           <div className="mt-2 flex max-w-lg flex-wrap gap-2">
             <select
@@ -442,7 +442,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               className="min-w-[12rem] flex-1 rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
             >
               <option value="">
-                {teamMailboxOptions.length > 0 ? '— Team-Postfach wählen —' : '— zuerst Team-Postfach erstellen —'}
+                {teamMailboxOptions.length > 0 ? '— Team-Postfach wählen —' : '— noch keins in der Liste —'}
               </option>
               {teamMailboxOptions.map((t) => (
                 <option key={t.objectId} value={t.objectId}>
@@ -451,16 +451,19 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 </option>
               ))}
             </select>
-            {teamMailboxCreateAllowed ? (
-              <button
-                type="button"
-                disabled={teamMbBusy}
-                onClick={() => void createTeamMailboxForGroup()}
-                className="rounded-md border border-sky-600/45 bg-sky-600/15 px-2 py-1.5 text-xs text-sky-950 disabled:opacity-50 dark:text-sky-100"
-              >
-                {teamMbBusy ? '…' : 'Neu erstellen'}
-              </button>
-            ) : null}
+            <button
+              type="button"
+              disabled={teamMbBusy || !teamMailboxCreateAllowed}
+              title={
+                teamMailboxCreateAllowed
+                  ? 'create_team_mailbox on-chain und mit dieser Gruppe verknüpfen'
+                  : 'Nicht erlaubt (Rechte/teamManage oder Tresor/Direkt-Signer fehlen)'
+              }
+              onClick={() => void createTeamMailboxForGroup()}
+              className="rounded-md border border-sky-600/45 bg-sky-600/15 px-2 py-1.5 text-xs font-medium text-sky-950 disabled:opacity-50 dark:text-sky-100"
+            >
+              {teamMbBusy ? '…' : 'Team-Postfach erstellen'}
+            </button>
             {onOpenSettings ? (
               <button
                 type="button"
@@ -471,11 +474,23 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               </button>
             ) : null}
           </div>
-          {teamMailboxObjectId.trim() ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <code className="max-w-full break-all font-mono text-[10px] text-foreground" title={teamMailboxObjectId}>
-                {teamMailboxObjectId.trim()}
-              </code>
+          <div className="mt-2 flex max-w-lg flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={teamMailboxObjectId}
+              onChange={(e) => setTeamMailboxObjectId(e.target.value.trim())}
+              onBlur={() => {
+                const id = teamMailboxObjectId.trim()
+                if (/^0x[a-fA-F0-9]{64}$/i.test(id)) {
+                  linkTeamMailboxToGroup(id, 'Team-Postfach-ID übernommen und gespeichert.')
+                }
+              }}
+              placeholder="oder Object-ID einfügen (0x…)"
+              className="min-w-[12rem] flex-1 rounded-md border border-border bg-input px-2 py-1.5 font-mono text-[11px]"
+              spellCheck={false}
+              autoComplete="off"
+            />
+            {teamMailboxObjectId.trim() ? (
               <button
                 type="button"
                 onClick={() => void copyTeamMailboxId(teamMailboxObjectId)}
@@ -484,77 +499,80 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
                 {copiedTeamMbId ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                 {copiedTeamMbId ? 'Kopiert' : 'ID kopieren'}
               </button>
-              {savedTeamMbId && !teamMbDirty ? (
-                <span className="text-[10px] text-emerald-700 dark:text-emerald-300">✓ in Gruppe gespeichert</span>
-              ) : teamMbDirty ? (
-                <span className="text-[10px] text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
-              ) : null}
-            </div>
+            ) : null}
+            {savedTeamMbId && !teamMbDirty ? (
+              <span className="text-[10px] text-emerald-700 dark:text-emerald-300">✓ in Gruppe gespeichert</span>
+            ) : teamMbDirty ? (
+              <span className="text-[10px] text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
+            ) : null}
+          </div>
+          {!teamMailboxCreateAllowed ? (
+            <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-200">
+              Erstellen gesperrt — Tresor entsperren (Direkt-Signer) oder Boss mit teamManage. Object-ID einfügen geht
+              immer.
+            </p>
           ) : null}
-          {teamMailboxObjectId.trim() ? (
-            <div className="mt-3 rounded-md border border-border/70 bg-background/60 px-2.5 py-2">
-              <p className="text-[11px] font-medium text-foreground">Team-Key (§ H.23 B1)</p>
-              {(() => {
-                void teamKeyTick
-                const ready = hasTeamBroadcastKey(teamMailboxObjectId)
-                const epoch = ready ? readTeamBroadcastKeyEpoch(teamMailboxObjectId) : null
-                return (
-                  <>
-                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                      {ready
-                        ? `Lokal vorhanden (Epoch ${epoch}). Mitglieder brauchen denselben Key per Handoff-ZIP — Enc-Send erzeugt keinen neuen Key mehr.`
-                        : 'Fehlt lokal. Vor verschlüsseltem Gruppenchat erzeugen und per Handoff teilen (kein stilles Auto-Key).'}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-3 rounded-md border border-violet-500/30 bg-violet-500/5 px-2.5 py-2">
+            <p className="text-[11px] font-medium text-foreground">Team-Key (§ H.23 B1)</p>
+            {(() => {
+              void teamKeyTick
+              const mb = teamMailboxObjectId.trim()
+              const mbOk = /^0x[a-fA-F0-9]{64}$/i.test(mb)
+              const ready = mbOk && hasTeamBroadcastKey(mb)
+              const epoch = ready ? readTeamBroadcastKeyEpoch(mb) : null
+              return (
+                <>
+                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                    {!mbOk
+                      ? 'Zuerst Team-Postfach erstellen oder ID wählen — danach „Team-Key erzeugen“.'
+                      : ready
+                        ? `Lokal vorhanden (Epoch ${epoch}). Mitglieder: gleicher Key per Handoff-ZIP.`
+                        : 'Fehlt lokal. Für verschlüsselten Gruppenchat erzeugen und per Handoff teilen.'}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={!mbOk}
+                      className="rounded-md border border-violet-600/40 bg-violet-600/10 px-2 py-1 text-[11px] font-semibold text-violet-950 hover:bg-violet-500/15 disabled:opacity-40 dark:text-violet-100"
+                      onClick={() => {
+                        const r = createTeamBroadcastKey(mb)
+                        if (!r.ok) {
+                          setMsg(r.error)
+                          return
+                        }
+                        setTeamKeyTick((n) => n + 1)
+                        setMsg(
+                          r.created
+                            ? `Team-Key erzeugt (Epoch ${r.epoch}). Handoff-ZIP an Mitglieder exportieren.`
+                            : `Team-Key bereits da (Epoch ${r.epoch}).`
+                        )
+                      }}
+                    >
+                      {ready ? 'Key prüfen' : 'Team-Key erzeugen'}
+                    </button>
+                    {ready ? (
                       <button
                         type="button"
-                        className="rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                        className="rounded-md border border-amber-600/40 px-2 py-1 text-[11px] text-amber-900 hover:bg-amber-500/10 dark:text-amber-100"
                         onClick={() => {
-                          const r = createTeamBroadcastKey(teamMailboxObjectId)
+                          if (!window.confirm('Team-Key rotieren? Mitglieder brauchen neuen Handoff.')) return
+                          const r = createTeamBroadcastKey(mb, { rotate: true })
                           if (!r.ok) {
                             setMsg(r.error)
                             return
                           }
                           setTeamKeyTick((n) => n + 1)
-                          setMsg(
-                            r.created
-                              ? `Team-Key erzeugt (Epoch ${r.epoch}). Handoff-ZIP an Mitglieder exportieren.`
-                              : `Team-Key bereits da (Epoch ${r.epoch}).`
-                          )
+                          setMsg(`Team-Key rotiert (Epoch ${r.epoch}). Neuen Handoff exportieren.`)
                         }}
                       >
-                        {ready ? 'Key prüfen' : 'Team-Key erzeugen'}
+                        Rotieren…
                       </button>
-                      {ready ? (
-                        <button
-                          type="button"
-                          className="rounded-md border border-amber-600/40 px-2 py-1 text-[11px] text-amber-900 hover:bg-amber-500/10 dark:text-amber-100"
-                          onClick={() => {
-                            if (
-                              !window.confirm(
-                                'Team-Key rotieren? Alte Enc-Broadcasts bleiben mit dem alten Key lesbar nur wo noch gespeichert. Mitglieder brauchen neuen Handoff.'
-                              )
-                            ) {
-                              return
-                            }
-                            const r = createTeamBroadcastKey(teamMailboxObjectId, { rotate: true })
-                            if (!r.ok) {
-                              setMsg(r.error)
-                              return
-                            }
-                            setTeamKeyTick((n) => n + 1)
-                            setMsg(`Team-Key rotiert (Epoch ${r.epoch}). Neuen Handoff exportieren.`)
-                          }}
-                        >
-                          Rotieren…
-                        </button>
-                      ) : null}
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-          ) : null}
+                    ) : null}
+                  </div>
+                </>
+              )
+            })()}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
           <button

@@ -913,46 +913,44 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
   const conversationMenuProps = useMemo((): ChatViewInboxPanelProps['conversationMenu'] => {
     if (!showConversationSidebar) return undefined
 
+    const exportHistory = () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt()
+    const clearHistory = () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal()
+    const burnToggle = {
+      enabled: burnOnReadEnabled,
+      onEnabledChange: setBurnOnReadEnabled,
+    }
+    const encToggle = {
+      encrypted,
+      onEncryptedChange: setEncrypted,
+      forcedTransport,
+    }
+
     if (onPinnwandTab) {
       return {
         title: pinnwandSidebarLabel(role, apiStatus),
         subtitle: pinnwandCaps.canPost ? 'Team-Brett · posten erlaubt' : 'Team-Brett · nur Lesen',
         canClearHistory: false,
         canExport: true,
-        onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
+        onExportHistory: exportHistory,
+        onClearHistory: clearHistory,
+        onCreateGroup: openGroupSettings,
+        burnOnRead: burnToggle,
       }
     }
 
     if (isGroup) {
-      if (inboxConversationGroupId && activeConversationTitle) {
-        return {
-          title: activeConversationTitle,
-          subtitle: activeConversationSubtitle,
-          canClearHistory: true,
-          canExport: true,
-          onManageGroup: openGroupSettings,
-          onCreateGroup: openGroupSettings,
-          encryptionToggle: {
-            encrypted,
-            onEncryptedChange: setEncrypted,
-            forcedTransport,
-          },
-          onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
-          onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
-        }
-      }
+      const hasActive = Boolean(inboxConversationGroupId && activeConversationTitle)
       return {
-        title: 'Gruppenchat',
-        subtitle: 'Gruppe wählen oder anlegen',
-        canClearHistory: false,
-        canExport: false,
+        title: hasActive ? (activeConversationTitle as string) : 'Gruppenchat',
+        subtitle: hasActive ? activeConversationSubtitle : 'Gruppe wählen oder anlegen',
+        canClearHistory: hasActive,
+        canExport: true,
         onManageGroup: openGroupSettings,
         onCreateGroup: openGroupSettings,
-        encryptionToggle: {
-          encrypted,
-          onEncryptedChange: setEncrypted,
-          forcedTransport,
-        },
+        encryptionToggle: encToggle,
+        onExportHistory: exportHistory,
+        onClearHistory: clearHistory,
+        burnOnRead: burnToggle,
       }
     }
 
@@ -962,73 +960,52 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         subtitle: activeConversationSubtitle,
         canClearHistory: false,
         canExport: true,
-        onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
+        onExportHistory: exportHistory,
+        onClearHistory: clearHistory,
+        onCreateGroup: openGroupSettings,
+        burnOnRead: burnToggle,
       }
     }
 
-    if (inboxPartnerFiltersArmed && (activeConversationTitle || telegramAlarmSelected)) {
-      const canRenew =
-        !!inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) && !telegramAlarmSelected
-      const epoch = canRenew ? getSendKeyEpochForRecipient(inboxPartnerKey) : 0
+    const renewPeer =
+      (inboxPartnerKey && isValidRecipient0x(inboxPartnerKey) ? inboxPartnerKey : '') ||
+      [recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) ||
+      ''
+    const canRenew = Boolean(renewPeer)
+    const epoch = canRenew ? getSendKeyEpochForRecipient(renewPeer) : 0
+    const partnerTitle =
+      inboxPartnerFiltersArmed && activeConversationTitle
+        ? activeConversationTitle
+        : canRenew
+          ? `Direktchat · ${renewPeer.slice(0, 10)}…`
+          : 'Direktchat'
+    const partnerSubtitle =
+      inboxPartnerFiltersArmed && activeConversationSubtitle
+        ? activeConversationSubtitle
+        : canRenew
+          ? 'Partner gesetzt'
+          : 'Kontakt wählen oder Telefonbuch'
+
+    if (isPrivate && (composerDelivery === 'chain' || inboxPartnerFiltersArmed)) {
       return {
-        title: activeConversationTitle ?? 'Einsatz-Alarmgruppe',
-        subtitle: activeConversationSubtitle,
-        canClearHistory: !telegramAlarmSelected,
+        title: partnerTitle,
+        subtitle: partnerSubtitle,
+        canClearHistory: true,
         canExport: true,
-        onViewProfile:
-          inboxPartnerKey && !telegramAlarmSelected ? () => handleOpenContactDetail(inboxPartnerKey) : undefined,
-        onExportHistory: () => panelMessengerPorts.inboxExportActions.onExportEinsatzberichtTxt(),
-        onClearHistory: () => panelMessengerPorts.inboxActions.onHideAllVisibleLocal(),
+        onViewProfile: renewPeer ? () => handleOpenContactDetail(renewPeer) : undefined,
+        onExportHistory: exportHistory,
+        onClearHistory: clearHistory,
         onCreateGroup: openGroupSettings,
-        onRenewEncryptionKeys: canRenew ? handleRenewPeerEncryption : undefined,
+        onRenewEncryptionKeys: canRenew
+          ? () => void handleRenewPeerEncryption(renewPeer)
+          : undefined,
         renewEncryptionLabel: canRenew
           ? `Schlüssel erneuern (Epoch ${epoch || 1})`
           : undefined,
         renewEncryptionHint:
           'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht). Alte Nachrichten bleiben lesbar.',
-        burnOnRead: telegramAlarmSelected
-          ? undefined
-          : {
-              enabled: burnOnReadEnabled,
-              onEnabledChange: setBurnOnReadEnabled,
-            },
-        encryptionToggle: {
-          encrypted,
-          onEncryptedChange: setEncrypted,
-          forcedTransport,
-        },
-      }
-    }
-
-    if (isPrivate && composerDelivery === 'chain') {
-      const renewPeer = [inboxPartnerKey, recipient, partner].map((s) => (s || '').trim()).find(isValidRecipient0x) || ''
-      const canRenew = Boolean(renewPeer)
-      const epoch = canRenew ? getSendKeyEpochForRecipient(renewPeer) : 0
-      return {
-        title: 'Direktchat',
-        subtitle: canRenew
-          ? `Partner ${renewPeer.slice(0, 10)}…`
-          : 'Kontakt wählen oder Telefonbuch',
-        menuScopeNote:
-          'Verkürztes Menü (Composer-Direktchat). Partner in der Liste öffnen → Profil/Export. Gruppen: ⋮ → Gruppen verwalten oder Sidebar „Gruppe verwalten“.',
-        canClearHistory: false,
-        canExport: false,
-        onCreateGroup: openGroupSettings,
-        onRenewEncryptionKeys: canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,
-        renewEncryptionLabel: canRenew
-          ? `Schlüssel erneuern (Epoch ${epoch || 1})`
-          : undefined,
-        renewEncryptionHint:
-          'Session-Epoch erhöhen — Forward Secrecy ab Rotation (nicht pro Nachricht).',
-        burnOnRead: {
-          enabled: burnOnReadEnabled,
-          onEnabledChange: setBurnOnReadEnabled,
-        },
-        encryptionToggle: {
-          encrypted,
-          onEncryptedChange: setEncrypted,
-          forcedTransport,
-        },
+        burnOnRead: burnToggle,
+        encryptionToggle: encToggle,
       }
     }
 
