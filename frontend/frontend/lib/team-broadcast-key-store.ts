@@ -10,6 +10,10 @@ import {
 const LS_KEY_PREFIX = 'morgendrot.teamBroadcastKey.v1:'
 const LS_EPOCH_PREFIX = 'morgendrot.teamBroadcastKeyEpoch.v1:'
 
+/** Klartext-Fehler wenn Enc-Send ohne gemeinsamen Key (kein Auto-Fork). */
+export const TEAM_BROADCAST_KEY_MISSING_MSG =
+  'Kein gemeinsamer Team-Key für dieses Postfach. Boss: in Gruppenverwaltung „Team-Key erzeugen“, dann Handoff-ZIP an Mitglieder — sonst entschlüsseln Geräte unterschiedliche Keys.'
+
 function normMb(teamMailboxObjectId: string): string {
   return teamMailboxObjectId.trim().toLowerCase()
 }
@@ -56,11 +60,87 @@ export function readTeamBroadcastKeyEpoch(teamMailboxObjectId: string): number {
   }
 }
 
-/** Erzeugt lokalen Team-Key falls noch keiner für diese Team-Mailbox existiert (Boss-Setup). */
+/**
+ * Explizit erzeugen (Gruppenverwaltung / Boss).
+ * `rotate=true` ersetzt vorhandenen Key und erhöht Epoch (Mitglieder brauchen neuen Handoff).
+ */
+export function createTeamBroadcastKey(
+  teamMailboxObjectId: string,
+  opts?: { rotate?: boolean }
+): { ok: true; created: boolean; rotated: boolean; epoch: number } | { ok: false; error: string } {
+  const id = normMb(teamMailboxObjectId)
+  if (!/^0x[a-f0-9]{64}$/.test(id)) {
+    return { ok: false, error: 'Ungültige Team-Mailbox-Object-ID.' }
+  }
+  const existing = readTeamBroadcastKeyRaw(id)
+  if (existing && !opts?.rotate) {
+    return { ok: true, created: false, rotated: false, epoch: readTeamBroadcastKeyEpoch(id) }
+  }
+  const raw = generateTeamBroadcastKeyRaw()
+  writeTeamBroadcastKeyRaw(id, raw)
+  const prevEpoch = readTeamBroadcastKeyEpoch(id)
+  const epoch = opts?.rotate && existing ? prevEpoch + 1 : DEFAULT_TEAM_BROADCAST_KEY_EPOCH
+  writeTeamBroadcastKeyEpoch(id, epoch)
+  return { ok: true, created: !existing, rotated: Boolean(opts?.rotate && existing), epoch }
+}
+
+/**
+ * Nur Handoff-Export: fehlenden Key einmalig anlegen.
+ * Enc-Send darf dies **nicht** nutzen (Geräte-Fork).
+ */
 export function ensureTeamBroadcastKey(teamMailboxObjectId: string): Uint8Array {
   const existing = readTeamBroadcastKeyRaw(teamMailboxObjectId)
   if (existing) return existing
-  const raw = generateTeamBroadcastKeyRaw()
-  writeTeamBroadcastKeyRaw(teamMailboxObjectId, raw)
+  const created = createTeamBroadcastKey(teamMailboxObjectId)
+  if (!created.ok) throw new Error(created.error)
+  const raw = readTeamBroadcastKeyRaw(teamMailboxObjectId)
+  if (!raw) throw new Error(TEAM_BROADCAST_KEY_MISSING_MSG)
   return raw
+}
+
+/** Enc-Send / Decrypt-Vorbereitung: vorhandenen Key oder Fehler (kein Auto-Generate). */
+export function requireTeamBroadcastKey(teamMailboxObjectId: string): Uint8Array {
+  const existing = readTeamBroadcastKeyRaw(teamMailboxObjectId)
+  if (existing) return existing
+  throw new Error(TEAM_BROADCAST_KEY_MISSING_MSG)
+}
+
+/** Snapshot für späteres Vault `.team-keys.enc` / Backup. */
+export type TeamBroadcastKeysSnapshot = {
+  schema: 1
+  keys: Record<string, { keyBase64: string; keyEpoch: number }>
+}
+
+export function exportTeamBroadcastKeysSnapshot(teamMailboxObjectIds: string[]): TeamBroadcastKeysSnapshot {
+  const keys: TeamBroadcastKeysSnapshot['keys'] = {}
+  for (const rawId of teamMailboxObjectIds) {
+    const id = normMb(rawId)
+    const raw = readTeamBroadcastKeyRaw(id)
+    if (!raw) continue
+    keys[id] = {
+      keyBase64: teamBroadcastKeyToBase64(raw),
+      keyEpoch: readTeamBroadcastKeyEpoch(id),
+    }
+  }
+  return { schema: 1, keys }
+}
+
+export function importTeamBroadcastKeysSnapshot(snap: TeamBroadcastKeysSnapshot | null | undefined): number {
+  if (!snap || snap.schema !== 1 || !snap.keys) return 0
+  let n = 0
+  for (const [id, entry] of Object.entries(snap.keys)) {
+    const mb = normMb(id)
+    const b64 = String(entry?.keyBase64 ?? '').trim()
+    if (!/^0x[a-f0-9]{64}$/.test(mb) || !b64) continue
+    try {
+      writeTeamBroadcastKeyRaw(mb, teamBroadcastKeyFromBase64(b64))
+      if (entry.keyEpoch != null && Number.isFinite(entry.keyEpoch) && entry.keyEpoch >= 1) {
+        writeTeamBroadcastKeyEpoch(mb, Math.floor(entry.keyEpoch))
+      }
+      n++
+    } catch {
+      /* skip */
+    }
+  }
+  return n
 }

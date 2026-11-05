@@ -31,6 +31,11 @@ import { readMyTeamMailboxes, addMyTeamMailbox, suggestNextTeamMailboxLabel } fr
 import { createTeamMailboxOnChain } from '@/frontend/lib/create-team-mailbox-on-chain'
 import { normalizeMeshtasticChannelIndex } from '@/frontend/lib/meshtastic-channel-index'
 import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transport'
+import {
+  createTeamBroadcastKey,
+  hasTeamBroadcastKey,
+  readTeamBroadcastKeyEpoch,
+} from '@/frontend/lib/team-broadcast-key-store'
 
 export type ChatViewGroupPanelProps = {
   contactDirectory: Record<string, ContactMeshEntryClient>
@@ -78,6 +83,7 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
   const [copiedTeamMbId, setCopiedTeamMbId] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [phonebookPickerOpen, setPhonebookPickerOpen] = useState(false)
+  const [teamKeyTick, setTeamKeyTick] = useState(0)
 
   const reload = useCallback(() => {
     setGroups(readMessengerGroups())
@@ -483,6 +489,70 @@ export function ChatViewGroupPanel(p: ChatViewGroupPanelProps) {
               ) : teamMbDirty ? (
                 <span className="text-[10px] text-amber-700 dark:text-amber-300">noch nicht gespeichert</span>
               ) : null}
+            </div>
+          ) : null}
+          {teamMailboxObjectId.trim() ? (
+            <div className="mt-3 rounded-md border border-border/70 bg-background/60 px-2.5 py-2">
+              <p className="text-[11px] font-medium text-foreground">Team-Key (§ H.23 B1)</p>
+              {(() => {
+                void teamKeyTick
+                const ready = hasTeamBroadcastKey(teamMailboxObjectId)
+                const epoch = ready ? readTeamBroadcastKeyEpoch(teamMailboxObjectId) : null
+                return (
+                  <>
+                    <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                      {ready
+                        ? `Lokal vorhanden (Epoch ${epoch}). Mitglieder brauchen denselben Key per Handoff-ZIP — Enc-Send erzeugt keinen neuen Key mehr.`
+                        : 'Fehlt lokal. Vor verschlüsseltem Gruppenchat erzeugen und per Handoff teilen (kein stilles Auto-Key).'}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className="rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-muted"
+                        onClick={() => {
+                          const r = createTeamBroadcastKey(teamMailboxObjectId)
+                          if (!r.ok) {
+                            setMsg(r.error)
+                            return
+                          }
+                          setTeamKeyTick((n) => n + 1)
+                          setMsg(
+                            r.created
+                              ? `Team-Key erzeugt (Epoch ${r.epoch}). Handoff-ZIP an Mitglieder exportieren.`
+                              : `Team-Key bereits da (Epoch ${r.epoch}).`
+                          )
+                        }}
+                      >
+                        {ready ? 'Key prüfen' : 'Team-Key erzeugen'}
+                      </button>
+                      {ready ? (
+                        <button
+                          type="button"
+                          className="rounded-md border border-amber-600/40 px-2 py-1 text-[11px] text-amber-900 hover:bg-amber-500/10 dark:text-amber-100"
+                          onClick={() => {
+                            if (
+                              !window.confirm(
+                                'Team-Key rotieren? Alte Enc-Broadcasts bleiben mit dem alten Key lesbar nur wo noch gespeichert. Mitglieder brauchen neuen Handoff.'
+                              )
+                            ) {
+                              return
+                            }
+                            const r = createTeamBroadcastKey(teamMailboxObjectId, { rotate: true })
+                            if (!r.ok) {
+                              setMsg(r.error)
+                              return
+                            }
+                            setTeamKeyTick((n) => n + 1)
+                            setMsg(`Team-Key rotiert (Epoch ${r.epoch}). Neuen Handoff exportieren.`)
+                          }}
+                        >
+                          Rotieren…
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           ) : null}
         </div>

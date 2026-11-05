@@ -182,11 +182,19 @@ export async function attemptGroupTeamBroadcast(
     if (!p.activeGroup?.id) {
       return { kind: 'failure', message: GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG }
     }
-    const enc = await encryptTeamBroadcastPlaintext({
-      teamMailboxObjectId: teamMb,
-      groupId: p.activeGroup.id,
-      plaintextUtf8: body,
-    })
+    let enc
+    try {
+      enc = await encryptTeamBroadcastPlaintext({
+        teamMailboxObjectId: teamMb,
+        groupId: p.activeGroup.id,
+        plaintextUtf8: body,
+      })
+    } catch (e) {
+      return {
+        kind: 'failure',
+        message: e instanceof Error ? e.message : 'Team-Key fehlt für verschlüsselten Broadcast.',
+      }
+    }
     const res = await sendTeamEncryptedBroadcastHybrid(teamMb, enc, messageNonceU64)
     if (res.ok) {
       return {

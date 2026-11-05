@@ -23,6 +23,7 @@
 | **Vault-/Session-Lock:** leert `evidenceImage.passphrases` + `passphraseMsg` Stores | Weniger Klartext-Reste nach Sperre | Nur dieses Gerät; ECDH separat |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
 | **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
+| **H.23 B1 Team-Key** | Enc Team-Broadcast + Handoff; UI erzeugen/rotieren; Enc-Send ohne Auto-Fork | Keys noch localStorage (kein `.team-keys.enc`); 2-Geräte-Feldtest offen |
 
 ## Bewusst **nicht** in dieser Runde
 

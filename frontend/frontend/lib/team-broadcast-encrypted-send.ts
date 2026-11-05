@@ -5,8 +5,8 @@ import {
   encryptTeamBroadcastPayload,
 } from '@morgendrot/shared/morgendrot-team-broadcast-crypto'
 import {
-  ensureTeamBroadcastKey,
   readTeamBroadcastKeyEpoch,
+  requireTeamBroadcastKey,
 } from '@/frontend/lib/team-broadcast-key-store'
 
 export type TeamBroadcastEncryptedPayload = {
@@ -16,14 +16,14 @@ export type TeamBroadcastEncryptedPayload = {
   keyEpoch: number
 }
 
-/** Verschlüsselt Gruppen-Plaintext für Team-Broadcast on-chain (§ H.23 B1). */
+/** Verschlüsselt Gruppen-Plaintext für Team-Broadcast on-chain (§ H.23 B1). Kein Auto-Key. */
 export async function encryptTeamBroadcastPlaintext(p: {
   teamMailboxObjectId: string
   groupId: string
   plaintextUtf8: string
 }): Promise<TeamBroadcastEncryptedPayload> {
   const teamMb = p.teamMailboxObjectId.trim()
-  const keyRaw = ensureTeamBroadcastKey(teamMb)
+  const keyRaw = requireTeamBroadcastKey(teamMb)
   const keyEpoch = readTeamBroadcastKeyEpoch(teamMb)
   const aad = buildTeamBroadcastAad({
     teamMailboxObjectId: teamMb,

@@ -1582,7 +1582,7 @@ Was behalten, was nicht zurückbauen, Commit-Reihenfolge: **`docs/GIT-CLEANUP-AN
 
 **Ist heute:** Pairwise **ECDH** über **`/handshake`**, Keys in Shared-Mailbox-`HsKey` / Vault — siehe **`docs/MESSENGER-KANAL-MAILBOX-MEILENSTEINE.md`** Leitplanken. **Session:** `restorePeerMapFromHandshakeCache` nach Vault-Laden (API-Start, `/vault-load`, UI-Entsperren) — ersetzt **nicht** H.23-B, nur UX bis zur Architektur-Entscheid.
 
-**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. Double Ratchet (Phase C) / Team-Key **B1** folgen.
+**Lieferreihenfolge:** (1) ~~Architektur-Entscheid~~ **erledigt 2026-06-16** (Option A). (2) ~~**Modus-A-Feldtest**~~ **PASS 2026-07-03** (`docs/FELDTEST-BOSS-BEI-0.md`). (3) **Session Keys+ A1–A4** **erledigt 2026-06-16**; **Nest-Listener v2** **2026-07-03**. (4) **B1 Team-Key** **Teil-Ist 2026-11-05** (kein Enc-Auto-Fork, Gruppen-UI Key erzeugen/rotieren, Handoff; Vault `.team-keys.enc` offen). Double Ratchet = Phase C.
 
 **Verknüpfung:** **§ H.22** (Gruppen-E2EE **M2c**), **`docs/VAULT-EINRICHTEN.md`**, **`docs/MESSAGING-MAILBOX-SSOT-SPEC.md`**, **§ H.15** (Direct-IOTA verschlüsselt).
 
