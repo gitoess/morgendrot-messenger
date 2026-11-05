@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
@@ -15,6 +16,11 @@ import type { ForcedTransport } from '@/frontend/lib/chat-view-messenger-transpo
 export type ChatViewConversationMenuProps = {
   title: string
   subtitle?: string
+  /**
+   * Kurzer Hinweis oben im ⋮-Menü, warum Einträge fehlen
+   * (z. B. Direktchat vs. Konversation aus der Liste).
+   */
+  menuScopeNote?: string
   canClearHistory: boolean
   canExport: boolean
   onViewProfile?: () => void
@@ -63,6 +69,14 @@ export function ChatViewConversationMenu(p: ChatViewConversationMenuProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[14rem]">
+          {p.menuScopeNote ? (
+            <>
+              <DropdownMenuLabel className="max-w-[16rem] whitespace-normal text-[11px] font-normal leading-snug text-muted-foreground">
+                {p.menuScopeNote}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           {p.onManageGroup ? (
             <DropdownMenuItem onSelect={() => p.onManageGroup?.()}>
               <Settings2 className="mr-2 h-4 w-4" />

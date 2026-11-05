@@ -1,6 +1,6 @@
 # Security-Claims-Check (Ist vs. Marketing-Text)
 
-**Stand:** 2026-11-05 (nach H.23-UX + Lock-Wipe + Burn-on-read-Opt-in)  
+**Stand:** 2026-11-05 (nach H.23-UX + Lock-Wipe + Burn-on-read + Passphrase-Reuse + Mailbox-Force bei Burn)  
 **Kontext:** ImageNFT-Passphrase + Passphrase-Nachrichtenkanal + Session-Epoch.
 
 | Claim | Morgendrot Ist | Urteil |
@@ -18,11 +18,11 @@
 |---------|--------|--------|
 | ImageNFT MORGIMGE1 + lokale Passphrase-Merker (Object-ID nach Mint) | Teilen ohne Handshake | Passphrase Klartext in `localStorage` dieses Geräts |
 | Galerie: Auto-Entschlüsselung + pro Eintrag Unlock | Nutzbar ohne Object-ID-Umweg | Nur wenn Passphrase lokal oder eingegeben |
-| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat-ähnliches Teilen ohne ECDH | Ciphertext öffentlich; Key off-chain; **kein** FS |
+| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat-ähnliches Teilen ohne ECDH; optional **Passphrase wiederverwenden** (Geräte-Standard, neuer Salt/IV pro Wire) | Ciphertext öffentlich; Key off-chain; **kein** FS; Vault-Lock leert Default |
 | Gegenseitiger Ausschluss Handshake ↔ Passphrase-Schutz | Weniger Fehlbedienung | — |
 | **Vault-/Session-Lock:** leert `evidenceImage.passphrases` + `passphraseMsg` Stores | Weniger Klartext-Reste nach Sperre | Nur dieses Gerät; ECDH separat |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |
-| **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen | Mit Bestätigung; braucht Purge-fähig |
+| **Burn-on-read Opt-in** (Chat-⋮) | Purge nach Lesen vorschlagen; bei aktiv → Composer erzwingt Mailbox (Event nicht purgebar) | Mit Bestätigung; nur Mailbox-Objekte; Explorer behält TX/Events |
 
 ## Bewusst **nicht** in dieser Runde
 

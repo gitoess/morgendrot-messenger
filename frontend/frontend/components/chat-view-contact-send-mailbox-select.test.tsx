@@ -33,6 +33,22 @@ describe('ChatViewContactSendMailboxSelect (§ H.1a)', () => {
     )
     expect(screen.getByText(/Speicher auf der Chain/i)).toBeInTheDocument()
     expect(screen.getByText(/Flüchtig — schneller Event/)).toBeInTheDocument()
+    expect(screen.getByText(/kein Burn\/Purge/)).toBeInTheDocument()
+  })
+
+  it('bei Burn-on-read: wechselt von Event auf Mailbox-Slot', () => {
+    window.localStorage.setItem('morgendrot.inbox.burnOnRead.v1', '1')
+    const onTargetChange = vi.fn()
+    render(
+      <ChatViewContactSendMailboxSelect
+        recipientWallet={RECIPIENT}
+        contactDirectory={{ [RECIPIENT]: entry }}
+        onTargetChange={onTargetChange}
+      />
+    )
+    expect(screen.getByText(/Burn-on-read aktiv/)).toBeInTheDocument()
+    expect(onTargetChange).toHaveBeenCalled()
+    expect(onTargetChange.mock.calls.some((c) => c[0] !== 'event')).toBe(true)
   })
 
   it('ruft onTargetChange bei Slot-Wechsel auf', () => {

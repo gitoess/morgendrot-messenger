@@ -11,13 +11,14 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
     window.localStorage.clear()
   })
 
-  it('clears passphrase-message store but keeps ImageNFT passphrases', () => {
+  it('clears passphrase-message store + default but keeps ImageNFT passphrases', () => {
     rememberEvidencePassphrase({
       objectId: '0x' + 'ab'.repeat(32),
       passphrase: 'test-pass-12',
     })
     const wire = 'MORG_PWMSG_V1|abc'
     rememberPassphraseMessagePassphrase(wire, 'test-pass-34')
+    window.localStorage.setItem('morgendrot.passphraseMsg.default.v1', 'shared-pass-99')
     expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeTruthy()
     expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeTruthy()
     expect(fingerprintPassphraseMessageWire(wire)).toMatch(/^fnv:/)
@@ -26,5 +27,6 @@ describe('wipeLocalPassphraseStoresOnLock', () => {
 
     expect(window.localStorage.getItem('morgendrot.evidenceImage.passphrases.v1')).toBeTruthy()
     expect(window.localStorage.getItem('morgendrot.passphraseMsg.v1')).toBeNull()
+    expect(window.localStorage.getItem('morgendrot.passphraseMsg.default.v1')).toBeNull()
   })
 })

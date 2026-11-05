@@ -25,5 +25,10 @@ export function writeBurnOnReadEnabled(on: boolean): void {
 }
 
 export const BURN_ON_READ_CONFIRM =
-  'Burn-on-read: Diese Nachricht jetzt von der Chain löschen (Purge/Rebate)?\n\n' +
-  'Lokal ausgeblendet; on-chain nur wenn Purge möglich (ENABLE_PURGE / MAILBOX).'
+  'Burn-on-read: Mailbox-Eintrag jetzt von der Chain löschen (Purge / Storage-Rebate)?\n\n' +
+  'Das Message-Objekt im Postfach verschwindet (Inbox/DF-Scan). Explorer zeigt die alte Send-TX und Events weiter — Ledger-Historie ist unveränderlich.\n\n' +
+  'Nur Mailbox-Nachrichten sind purgebar; reine Events („Nur Wallet-Adresse“) nicht.'
+
+/** Kurzer UI-Hinweis wenn Burn an, aber die Zeile ein Event ist. */
+export const BURN_EVENT_NOT_PURGEABLE_HINT =
+  'Burn-on-read: Event-Pfad — nur lokal ausblendbar. Explorer behält die TX-Historie; speichere künftig in die Mailbox.'

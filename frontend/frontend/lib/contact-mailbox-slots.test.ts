@@ -2,6 +2,7 @@ import { beforeEach, describe, it, expect } from 'vitest'
 import {
   readContactMailboxSlots,
   defaultContactSendSlot,
+  firstNonEventSendTarget,
   resolveContactMailboxSlotObjectId,
   resolveContactMailboxSlots,
   readContactSendMailboxTarget,
@@ -80,5 +81,10 @@ describe('contact-mailbox-slots', () => {
     expect(readContactSendMailboxTarget(WALLET)).toBe('private')
     writeRegistryState({ activeProfileId: 'b', userProfiles: [] })
     expect(readContactSendMailboxTarget(WALLET)).toBe('team')
+  })
+
+  it('firstNonEventSendTarget überspringt Event', () => {
+    expect(firstNonEventSendTarget([{ value: 'event' }, { value: 'own' }])).toBe('own')
+    expect(firstNonEventSendTarget([{ value: 'event' }])).toBeNull()
   })
 })

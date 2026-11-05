@@ -1002,6 +1002,8 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
         subtitle: canRenew
           ? `Partner ${renewPeer.slice(0, 10)}…`
           : 'Kontakt wählen oder Telefonbuch',
+        menuScopeNote:
+          'Verkürztes Menü (Composer-Direktchat). Partner in der linken Liste öffnen → Profil, Export, Verlauf leeren.',
         canClearHistory: false,
         canExport: false,
         onRenewEncryptionKeys: canRenew ? () => void handleRenewPeerEncryption(renewPeer) : undefined,

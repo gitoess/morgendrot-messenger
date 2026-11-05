@@ -11,9 +11,13 @@ import {
   buildChatOutgoingWireContent,
   buildLoraMeshDualWireTexts,
 } from '@/frontend/features/send/chat-view-outgoing-payload'
-import { encryptPassphraseMessage } from '@/frontend/lib/passphrase-message-crypto'
+import {
+  encryptPassphraseMessage,
+  generatePassphraseMessageSharePassphrase,
+} from '@/frontend/lib/passphrase-message-crypto'
 import {
   readPassphraseProtectEnabled,
+  resolvePassphraseForProtectSend,
   rememberPassphraseMessagePassphrase,
 } from '@/frontend/lib/passphrase-message-local-store'
 import { takeEncryptedSendKeyEpochRenewHint } from '@/frontend/lib/session-epoch-renew-hint'
@@ -698,20 +702,26 @@ export function useChatViewHandleSend(p: UseChatViewSendFlowParams) {
       }
       try {
         const wrapped: string[] = []
-        let lastPass = ''
+        const { passphrase: batchPass, reused } = resolvePassphraseForProtectSend(
+          generatePassphraseMessageSharePassphrase
+        )
+        if (batchPass.length < 8) {
+          throw new Error('Passphrase mindestens 8 Zeichen (Wiederverwenden: Feld prüfen).')
+        }
         for (const snap of textSnaps) {
           if (!snap.trim()) {
             wrapped.push(snap)
             continue
           }
-          const { wire, passphrase } = await encryptPassphraseMessage(snap)
+          const { wire, passphrase } = await encryptPassphraseMessage(snap, batchPass)
           rememberPassphraseMessagePassphrase(wire, passphrase)
-          lastPass = passphrase
           wrapped.push(wire)
         }
         textSnaps = wrapped
-        if (lastPass) {
-          sharedPassphraseNote = ` Passphrase zum Teilen: ${lastPass}`
+        if (batchPass) {
+          sharedPassphraseNote = reused
+            ? ` Passphrase (wiederverwendet): ${batchPass}`
+            : ` Passphrase zum Teilen: ${batchPass}`
         }
       } catch (e) {
         applyValidationError(

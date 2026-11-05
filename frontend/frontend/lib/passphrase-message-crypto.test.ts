@@ -16,4 +16,15 @@ describe('passphrase-message-crypto', () => {
     const { wire } = await encryptPassphraseMessage('x')
     await expect(decryptPassphraseMessageWire(wire, 'falsch-geheim')).rejects.toThrow(/Passphrase|falsch/i)
   })
+
+  it('gleiche Passphrase: zwei Wires, beide entschlüsselbar', async () => {
+    const pass = 'reuse-pass-8888'
+    const a = await encryptPassphraseMessage('eins', pass)
+    const b = await encryptPassphraseMessage('zwei', pass)
+    expect(a.passphrase).toBe(pass)
+    expect(b.passphrase).toBe(pass)
+    expect(a.wire).not.toBe(b.wire)
+    expect(await decryptPassphraseMessageWire(a.wire, pass)).toBe('eins')
+    expect(await decryptPassphraseMessageWire(b.wire, pass)).toBe('zwei')
+  })
 })

@@ -209,6 +209,14 @@ export function writeContactSendMailboxTarget(
   writeSendSlotMap(map)
 }
 
+/** Erste Mailbox-Option (nicht Event) — für Burn/Purge-Pflicht. */
+export function firstNonEventSendTarget(
+  options: { value: ContactSendMailboxTarget }[]
+): ContactSendMailboxTarget | null {
+  const hit = options.find((o) => o.value !== 'event')
+  return hit ? hit.value : null
+}
+
 export function buildSendMailboxTargetOptions(
   entry: ContactMeshEntryClient | undefined,
   serverMailboxId?: string,

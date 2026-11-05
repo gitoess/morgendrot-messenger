@@ -56,7 +56,7 @@ import {
 import type { InboxFeedReadPort } from '@/frontend/features/messenger-ports'
 import { openProtokollAnchorDialogFromPrefill, openR1CourierDialogFromPrefill } from '@/frontend/lib/messenger-imperative-dialogs'
 import { isTeamBroadcastInboxMessage, teamBroadcastPurgeHint } from '@/frontend/lib/mailbox-purge-routing'
-import { BURN_ON_READ_CONFIRM } from '@/frontend/lib/inbox-burn-on-read'
+import { BURN_EVENT_NOT_PURGEABLE_HINT, BURN_ON_READ_CONFIRM } from '@/frontend/lib/inbox-burn-on-read'
 import { useInboxBurnOnRead } from '@/frontend/hooks/use-inbox-burn-on-read'
 import { EinsatzInboxExplorerLink } from '@/frontend/components/einsatz-inbox-explorer-link'
 import { EinsatzInboxMessageBadges } from '@/frontend/components/einsatz-inbox-message-badges'
@@ -613,7 +613,7 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
             !isMessageOutgoing(row.msg, myAddress) ? (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-orange-500/35 bg-orange-500/10 px-3 py-2">
                 <span className="text-[11px] text-orange-950 dark:text-orange-100">
-                  Burn-on-read aktiv — nach dem Lesen von der Chain löschen?
+                  Burn-on-read aktiv — Mailbox-Objekt löschen? (Explorer behält die Send-TX.)
                 </span>
                 <button
                   type="button"
@@ -627,6 +627,12 @@ export function ChatViewInboxList(p: ChatViewInboxListProps) {
                   Jetzt löschen
                 </button>
               </div>
+            ) : null}
+            {burnOnReadEnabled &&
+            !row.msg.chainPurgeable &&
+            myAddress.trim() &&
+            !isMessageOutgoing(row.msg, myAddress) ? (
+              <p className="mt-2 text-[10px] text-muted-foreground">{BURN_EVENT_NOT_PURGEABLE_HINT}</p>
             ) : null}
                 </>
               )
