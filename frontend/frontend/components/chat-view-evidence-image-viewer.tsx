@@ -337,7 +337,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
           objectId: r.objectId,
         })
         setInfo(
-          'URL-/IPFS-NFT (kein eingebettetes image_data). Bild wird vom Gateway geladen — RPC-Netz muss zum Objekt passen (z. B. Testnet).'
+          'URL-/IPFS-NFT (kein image_data). Bild via *.ipfs.inbrowser.link — RPC-Netz muss zum Objekt passen (z. B. Testnet).'
         )
         return
       }

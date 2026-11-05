@@ -93,19 +93,37 @@ const NFT_URL_FIELD_KEYS = [
 
 const HTTP_URL_IN_TEXT = /https?:\/\/[^\s"'<>\\]+/i
 const IPFS_URL_IN_TEXT = /ipfs:\/\/[^\s"'<>\\]+/i
+const IPFS_CID_RE = /^(bafy[a-z0-9]+|Qm[1-9A-HJ-NP-Za-km-z]{44,88})$/i
 
-/** ipfs:// / bare CID → https://ipfs.io/ipfs/…; http(s) unverändert. */
+/**
+ * Anzeige-Gateway für CIDs — ipfs.io liefert oft kein Bild (wie Explorer);
+ * Subdomain-Gateway inbrowser.link funktioniert zuverlässiger im Browser.
+ */
+export function ipfsCidToDisplayUrl(cid: string): string {
+  return `https://${cid.trim()}.ipfs.inbrowser.link/`
+}
+
+/** CID aus ipfs://, path-Gateway oder Subdomain-Gateway. */
+export function extractIpfsCid(raw: string): string | null {
+  const t = raw.trim().replace(/[.,;)\]]+$/g, '')
+  if (!t) return null
+  if (IPFS_CID_RE.test(t)) return t
+  const ipfsProto = t.match(/^ipfs:\/\/(?:ipfs\/)?([a-z0-9]+)/i)
+  if (ipfsProto?.[1] && IPFS_CID_RE.test(ipfsProto[1])) return ipfsProto[1]
+  const pathGw = t.match(/\/ipfs\/([a-z0-9]+)(?:[/?#]|$)/i)
+  if (pathGw?.[1] && IPFS_CID_RE.test(pathGw[1])) return pathGw[1]
+  const subGw = t.match(/^https?:\/\/([a-z0-9]+)\.ipfs\./i)
+  if (subGw?.[1] && IPFS_CID_RE.test(subGw[1])) return subGw[1]
+  return null
+}
+
+/** ipfs:// / Gateway-URL / bare CID → https://{cid}.ipfs.inbrowser.link/; sonst http(s) unverändert. */
 export function normalizeNftMediaUrl(raw: string): string | null {
   const t = raw.trim().replace(/[.,;)\]]+$/g, '')
   if (!t) return null
+  const cid = extractIpfsCid(t)
+  if (cid) return ipfsCidToDisplayUrl(cid)
   if (/^https?:\/\//i.test(t)) return t
-  if (/^ipfs:\/\//i.test(t)) {
-    const path = t.replace(/^ipfs:\/\//i, '').replace(/^ipfs\//i, '')
-    return path ? `https://ipfs.io/ipfs/${path}` : null
-  }
-  if (/^(bafy[a-z0-9]+|Qm[1-9A-HJ-NP-Za-km-z]{44,88})$/i.test(t)) {
-    return `https://ipfs.io/ipfs/${t}`
-  }
   return null
 }
 

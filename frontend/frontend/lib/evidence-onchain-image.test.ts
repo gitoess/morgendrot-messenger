@@ -116,21 +116,23 @@ describe('evidence-onchain-image', () => {
     }
   })
 
-  it('normalisiert ipfs:// und findet URL in SimpleNFT-Feldern', () => {
-    expect(normalizeNftMediaUrl('ipfs://bafybeitestcid123456789012345678901')).toMatch(
-      /^https:\/\/ipfs\.io\/ipfs\/bafy/
+  it('normalisiert IPFS auf inbrowser.link-Subdomain', () => {
+    expect(normalizeNftMediaUrl('ipfs://bafybeitestcid123456789012345678901')).toBe(
+      'https://bafybeitestcid123456789012345678901.ipfs.inbrowser.link/'
     )
     expect(
       extractNftMediaUrlFromFields({
         name: 'IOTA Rebased NFT',
         description: 'Text\nhttps://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
       })
-    ).toContain('ipfs.io/ipfs/bafybei')
+    ).toBe(
+      'https://bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam.ipfs.inbrowser.link/'
+    )
     expect(
       extractNftMediaUrlFromFields({
-        url: { url: 'https://ipfs.io/ipfs/bafybeiexample' },
+        url: { url: 'https://ipfs.io/ipfs/bafybeiexamplecidabcdefghijklmnop' },
       })
-    ).toContain('bafybeiexample')
+    ).toBe('https://bafybeiexamplecidabcdefghijklmnop.ipfs.inbrowser.link/')
   })
 
   it('fetchEvidenceImageByObjectId: SimpleNFT mit URL', async () => {
@@ -157,7 +159,9 @@ describe('evidence-onchain-image', () => {
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.source).toBe('url')
-      expect(r.displayUrl).toContain('ipfs.io/ipfs/bafybei')
+      expect(r.displayUrl).toBe(
+        'https://bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam.ipfs.inbrowser.link/'
+      )
       expect(r.name).toBe('IOTA Rebased NFT')
     }
   })
