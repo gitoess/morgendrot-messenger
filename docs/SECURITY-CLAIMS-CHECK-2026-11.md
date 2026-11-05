@@ -18,7 +18,7 @@
 |---------|--------|--------|
 | ImageNFT MORGIMGE1 + lokale Passphrase-Merker (Object-ID nach Mint) | Teilen ohne Handshake | Passphrase Klartext in `localStorage` dieses Geräts |
 | Galerie: Auto-Entschlüsselung + pro Eintrag Unlock | Nutzbar ohne Object-ID-Umweg | Nur wenn Passphrase lokal oder eingegeben |
-| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat-ähnliches Teilen ohne ECDH; optional **Passphrase wiederverwenden** (Geräte-Standard, neuer Salt/IV pro Wire) | Ciphertext öffentlich; Key off-chain; **kein** FS; Vault-Lock leert Default |
+| Passphrase-Nachricht `MORG_PWMSG_V1` | Chat-ähnliches Teilen ohne ECDH; optional **Passphrase wiederverwenden**; Posteingang **Wire einfügen** (Paste+Passphrase) | Ciphertext öffentlich; Key off-chain; **kein** FS; Vault-Lock leert Default |
 | Gegenseitiger Ausschluss Handshake ↔ Passphrase-Schutz | Weniger Fehlbedienung | — |
 | **Vault-/Session-Lock:** leert `evidenceImage.passphrases` + `passphraseMsg` Stores | Weniger Klartext-Reste nach Sperre | Nur dieses Gerät; ECDH separat |
 | **H.23 A4 UX:** ⋮ → Schlüssel erneuern (Epoch-Anzeige) + Hinweis nach Enc-Send | Rotation auffindbar | Kein Auto-Ratchet |

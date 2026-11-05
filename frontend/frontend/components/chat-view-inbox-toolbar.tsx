@@ -16,6 +16,7 @@ import {
 } from '@/frontend/components/lazy/messenger-scope-b'
 /** Eager: On-Chain/NFT-Dialog ohne Lazy-Delay in der Toolbar. */
 import { ChatViewEvidenceImageViewerButton } from '@/frontend/components/chat-view-evidence-image-viewer'
+import { ChatViewWirePasteImportDialog } from '@/frontend/components/chat-view-wire-paste-import-dialog'
 import {
   ChatViewPendingSendsButton,
   type OfflineMailboxQueueListItem,
@@ -231,12 +232,13 @@ export function ChatViewInboxToolbar(p: ChatViewInboxToolbarProps) {
               Telefonbuch
             </button>
           ) : null}
+          <ChatViewWirePasteImportDialog />
           <a
             href="/einsatzbericht-decrypt.html"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-border bg-muted/30 px-3 py-1.5 text-sm font-medium text-foreground hover:bg-muted"
-            title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) hier entpacken."
+            title="Passwortgeschützte Nachrichtenverlauf-Exporte (.json) hier entpacken — nicht Wire-Paste."
           >
             <KeyRound className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
             Entschlüsseln

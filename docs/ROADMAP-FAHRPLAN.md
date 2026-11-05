@@ -27,6 +27,8 @@
 
 **Nachtrag 2026-11-05 (Burn/Mailbox + Passphrase-Reuse):** Burn-on-read erzwingt Composer-**Mailbox** (Event-Pfad nicht purgebar; Explorer behält TX/Events). Direktchat-⋮ mit **Scope-Hinweis**. Chat-**Passphrase-Schutz**: optional **Passphrase wiederverwenden** (Geräte-Standard, neuer Salt/IV pro Wire; Vault-Lock leert Default). Feldtest: Epoch-Renew Self **PASS**; Burn + Passphrase-Reuse Retest offen. Wire-Import-Dialog weiter Backlog.
 
+**Nachtrag 2026-11-05 (Wire einfügen):** Posteingang-Button **Wire einfügen** — Paste `MORG_PWMSG_V1` + Passphrase → lokaler Klartext (≠ Toolbar **Entschlüsseln** = Einsatzbericht-.json). ECDH-Wires weiter nur mit Handshake.
+
 **Nachtrag 2026-05-20 (Strategie — korrigiert):** **IOTA bleibt gekoppelt**; **Funk-Default** im Helfer-UI (`TRANSPORT_PROFILE=mesh-first`). **Delayed LoRa → IOTA**, **Offline-TX/Outbox** und **Pfad 4** bleiben — siehe **`docs/TRANSPORT-AND-IOTA-LAYERS.md`**. Keine volle IOTA-TX im LoRa-Frame (**§ H.3m**). **Keine neuen Move-Publishes** in Tranche A; Fokus Runtime + Simple Mode.
 
 **Nachtrag 2026-06-16 (§ H.36 — Team-Member-Update & Einstiegs-Wizard):** Spec **`docs/TEAM-MEMBER-UPDATE-WIZARD-SPEC.md`**: geführter linearer Wizard (Boss/Helfer/Wanderer) orchestriert Handoff/Seed/Funk **ohne** zweiten Export-Assistenten; spontaner **Join-Request**; Wire `MORG_TEAM_MEMBER_UPDATE_V1` + Empfänger **Ja/Nein**; Transport **IOTA = Persistenz**, **LAN = Zustellung** (Boss-Relay Ist via § H.16), Funk nur Ping. **P0** Wizard-Skelett → **P1** Wire+LAN+IOTA → **P2** Join-Queue.
