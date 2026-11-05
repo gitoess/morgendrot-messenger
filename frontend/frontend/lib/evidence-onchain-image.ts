@@ -64,6 +64,8 @@ export type EvidenceImageFields = {
   description?: string | null
   classification?: string | null
   hash?: string | null
+  /** Externe Bild-URL (IPFS/HTTP) — z. B. SimpleNFT.url / Description. */
+  mediaUrl?: string | null
 }
 
 export type EvidenceObjectTypeMatch = {
@@ -72,7 +74,86 @@ export type EvidenceObjectTypeMatch = {
   packageId: string | null
   isKnownPackage: boolean
   hasImageDataField: boolean
+  hasMediaUrl: boolean
   isPackageObject: boolean
+}
+
+const NFT_URL_FIELD_KEYS = [
+  'url',
+  'image_url',
+  'imageUrl',
+  'uri',
+  'media_url',
+  'mediaUrl',
+  'img_url',
+  'imgUrl',
+  'image',
+  'link',
+] as const
+
+const HTTP_URL_IN_TEXT = /https?:\/\/[^\s"'<>\\]+/i
+const IPFS_URL_IN_TEXT = /ipfs:\/\/[^\s"'<>\\]+/i
+
+/** ipfs:// / bare CID → https://ipfs.io/ipfs/…; http(s) unverändert. */
+export function normalizeNftMediaUrl(raw: string): string | null {
+  const t = raw.trim().replace(/[.,;)\]]+$/g, '')
+  if (!t) return null
+  if (/^https?:\/\//i.test(t)) return t
+  if (/^ipfs:\/\//i.test(t)) {
+    const path = t.replace(/^ipfs:\/\//i, '').replace(/^ipfs\//i, '')
+    return path ? `https://ipfs.io/ipfs/${path}` : null
+  }
+  if (/^(bafy[a-z0-9]+|Qm[1-9A-HJ-NP-Za-km-z]{44,88})$/i.test(t)) {
+    return `https://ipfs.io/ipfs/${t}`
+  }
+  return null
+}
+
+export function firstNftMediaUrlInText(text: string): string | null {
+  const ipfs = text.match(IPFS_URL_IN_TEXT)
+  if (ipfs?.[0]) return normalizeNftMediaUrl(ipfs[0])
+  const http = text.match(HTTP_URL_IN_TEXT)
+  if (http?.[0]) return normalizeNftMediaUrl(http[0])
+  return null
+}
+
+function stringFromNftFieldValue(v: unknown): string | null {
+  if (typeof v === 'string' && v.trim()) return v.trim()
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>
+    for (const k of ['url', 'Url', 'href', 'uri', 'value']) {
+      if (typeof o[k] === 'string' && (o[k] as string).trim()) return String(o[k]).trim()
+    }
+  }
+  return null
+}
+
+/**
+ * URL-NFTs (SimpleNFT u. a.): dedizierte Felder oder URL in description/anderen Strings.
+ */
+export function extractNftMediaUrlFromFields(
+  rawFields: Record<string, unknown>,
+  description?: string | null
+): string | null {
+  for (const key of NFT_URL_FIELD_KEYS) {
+    const asStr = stringFromNftFieldValue(rawFields[key])
+    if (!asStr) continue
+    const direct = normalizeNftMediaUrl(asStr)
+    if (direct) return direct
+    const nested = firstNftMediaUrlInText(asStr)
+    if (nested) return nested
+  }
+  for (const v of Object.values(rawFields)) {
+    const asStr = stringFromNftFieldValue(v)
+    if (!asStr) continue
+    const nested = firstNftMediaUrlInText(asStr)
+    if (nested) return nested
+  }
+  if (description?.trim()) {
+    const nested = firstNftMediaUrlInText(description)
+    if (nested) return nested
+  }
+  return null
 }
 
 function bytesFromUnknown(raw: unknown): Uint8Array | null {
@@ -220,6 +301,7 @@ export function extractEvidenceFieldsFromMoveContent(content: unknown): Evidence
   const description = typeof fields.description === 'string' ? fields.description : null
   const classification = typeof fields.classification === 'string' ? fields.classification : null
   const hash = typeof fields.hash === 'string' ? fields.hash : null
+  const mediaUrl = extractNftMediaUrlFromFields(rawFields, description)
 
   return {
     imageData: imageData as EvidenceImageFields['imageData'],
@@ -229,6 +311,7 @@ export function extractEvidenceFieldsFromMoveContent(content: unknown): Evidence
     description,
     classification,
     hash,
+    mediaUrl,
     rawFields,
   }
 }
@@ -250,12 +333,21 @@ export function classifyEvidenceObjectType(
       isKnownImageNftPackageId(type)
   )
   const hasImageDataField = bytesFromUnknown(fields.imageData ?? null) != null
-  return { typeString: type, isImageNftType, packageId, isKnownPackage, hasImageDataField, isPackageObject }
+  const hasMediaUrl = Boolean(fields.mediaUrl && String(fields.mediaUrl).trim())
+  return {
+    typeString: type,
+    isImageNftType,
+    packageId,
+    isKnownPackage,
+    hasImageDataField,
+    hasMediaUrl,
+    isPackageObject,
+  }
 }
 
 export function shouldAttemptEvidenceImageRender(match: EvidenceObjectTypeMatch): boolean {
   if (match.isPackageObject) return false
-  return match.isImageNftType || match.hasImageDataField
+  return match.isImageNftType || match.hasImageDataField || match.hasMediaUrl
 }
 
 export type FetchEvidenceImageResult =
@@ -263,7 +355,11 @@ export type FetchEvidenceImageResult =
       ok: true
       objectId: string
       match: EvidenceObjectTypeMatch
-      parsed: EvidenceImageParseOk
+      /** Eingebettetes image_data (Morgendrot ImageNFT). */
+      parsed?: EvidenceImageParseOk
+      /** Externes Bild (HTTP/IPFS), z. B. SimpleNFT. */
+      displayUrl?: string
+      source: 'embedded' | 'url'
       name?: string
       description?: string
       classification?: string
@@ -362,39 +458,96 @@ export async function fetchEvidenceImageByObjectId(
     }
   }
 
-  if (!shouldAttemptEvidenceImageRender(match)) {
+  const mediaUrl =
+    extracted.mediaUrl ||
+    extractNftMediaUrlFromFields(extracted.rawFields, extracted.description) ||
+    undefined
+  const matchWithUrl: EvidenceObjectTypeMatch = {
+    ...match,
+    hasMediaUrl: match.hasMediaUrl || Boolean(mediaUrl),
+  }
+
+  if (!shouldAttemptEvidenceImageRender(matchWithUrl)) {
     return {
       ok: false,
       objectId,
-      match,
-      error:
-        typeString
-          ? `Kein ImageNFT / image_data (Typ: ${typeString}).`
-          : 'Objekt ohne Typ und ohne image_data.',
+      match: matchWithUrl,
+      error: typeString
+        ? `Kein ImageNFT / image_data / Bild-URL (Typ: ${typeString}).`
+        : 'Objekt ohne Typ, ohne image_data und ohne Bild-URL.',
     }
   }
-  const parsed = parseEvidenceImageFields(extracted)
-  if (!parsed.ok) {
+
+  if (matchWithUrl.hasImageDataField || matchWithUrl.isImageNftType) {
+    const parsed = parseEvidenceImageFields(extracted)
+    if (parsed.ok) {
+      return {
+        ok: true,
+        objectId,
+        match: matchWithUrl,
+        parsed,
+        source: 'embedded',
+        name: extracted.name || undefined,
+        description: extracted.description || undefined,
+        classification: extracted.classification || undefined,
+      }
+    }
+    if (parsed.needsPassphrase) {
+      return {
+        ok: false,
+        objectId,
+        match: matchWithUrl,
+        error: parsed.error,
+        needsPassphrase: parsed.needsPassphrase,
+        ciphertext: parsed.ciphertext,
+        name: extracted.name || undefined,
+        description: extracted.description || undefined,
+        classification: extracted.classification || undefined,
+      }
+    }
+    if (mediaUrl) {
+      return {
+        ok: true,
+        objectId,
+        match: matchWithUrl,
+        displayUrl: mediaUrl,
+        source: 'url',
+        name: extracted.name || undefined,
+        description: extracted.description || undefined,
+        classification: extracted.classification || undefined,
+      }
+    }
     return {
       ok: false,
       objectId,
-      match,
+      match: matchWithUrl,
       error: parsed.error,
-      needsPassphrase: parsed.needsPassphrase,
-      ciphertext: parsed.ciphertext,
       name: extracted.name || undefined,
       description: extracted.description || undefined,
       classification: extracted.classification || undefined,
     }
   }
+
+  if (mediaUrl) {
+    return {
+      ok: true,
+      objectId,
+      match: matchWithUrl,
+      displayUrl: mediaUrl,
+      source: 'url',
+      name: extracted.name || undefined,
+      description: extracted.description || undefined,
+      classification: extracted.classification || undefined,
+    }
+  }
+
   return {
-    ok: true,
+    ok: false,
     objectId,
-    match,
-    parsed,
-    name: extracted.name || undefined,
-    description: extracted.description || undefined,
-    classification: extracted.classification || undefined,
+    match: matchWithUrl,
+    error: typeString
+      ? `Kein ImageNFT / image_data / Bild-URL (Typ: ${typeString}).`
+      : 'Objekt ohne Bilddaten.',
   }
 }
 
@@ -405,6 +558,8 @@ export type EvidenceOwnerListItem = {
   classification?: string
   match: EvidenceObjectTypeMatch
   parsed?: EvidenceImageParseOk
+  displayUrl?: string
+  source?: 'embedded' | 'url'
   error?: string
   needsPassphrase?: boolean
   ciphertext?: Uint8Array
@@ -463,23 +618,59 @@ export async function fetchEvidenceImagesByOwner(
       description: extracted.description || undefined,
       classification: extracted.classification || undefined,
     }
-    if (!shouldAttemptEvidenceImageRender(match)) {
-      items.push({ objectId, match, ...meta, error: 'Kein image_data.' })
+    const mediaUrl =
+      extracted.mediaUrl ||
+      extractNftMediaUrlFromFields(extracted.rawFields, extracted.description) ||
+      undefined
+    const matchWithUrl: EvidenceObjectTypeMatch = {
+      ...match,
+      hasMediaUrl: match.hasMediaUrl || Boolean(mediaUrl),
+    }
+    if (!shouldAttemptEvidenceImageRender(matchWithUrl)) {
+      items.push({ objectId, match: matchWithUrl, ...meta, error: 'Kein image_data / Bild-URL.' })
       continue
     }
-    const parsed = parseEvidenceImageFields(extracted)
-    if (!parsed.ok) {
+    if (matchWithUrl.hasImageDataField || matchWithUrl.isImageNftType) {
+      const parsed = parseEvidenceImageFields(extracted)
+      if (parsed.ok) {
+        items.push({ objectId, match: matchWithUrl, ...meta, parsed, source: 'embedded' })
+        continue
+      }
+      if (parsed.needsPassphrase) {
+        items.push({
+          objectId,
+          match: matchWithUrl,
+          ...meta,
+          error: parsed.error,
+          needsPassphrase: parsed.needsPassphrase,
+          ciphertext: parsed.ciphertext,
+        })
+        continue
+      }
+      if (mediaUrl) {
+        items.push({
+          objectId,
+          match: matchWithUrl,
+          ...meta,
+          displayUrl: mediaUrl,
+          source: 'url',
+        })
+        continue
+      }
+      items.push({ objectId, match: matchWithUrl, ...meta, error: parsed.error })
+      continue
+    }
+    if (mediaUrl) {
       items.push({
         objectId,
-        match,
+        match: matchWithUrl,
         ...meta,
-        error: parsed.error,
-        needsPassphrase: parsed.needsPassphrase,
-        ciphertext: parsed.ciphertext,
+        displayUrl: mediaUrl,
+        source: 'url',
       })
       continue
     }
-    items.push({ objectId, match, ...meta, parsed })
+    items.push({ objectId, match: matchWithUrl, ...meta, error: 'Kein image_data / Bild-URL.' })
   }
 
   return {

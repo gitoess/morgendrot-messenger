@@ -67,6 +67,8 @@ type PreviewMeta = {
   attrs?: EvidenceAttrPair[]
   encryptedFlag?: boolean
   objectId?: string
+  /** embedded = image_data; url = HTTP/IPFS */
+  source?: 'embedded' | 'url'
 }
 
 function metaFromDescription(description?: string): { body?: string; attrs: EvidenceAttrPair[] } {
@@ -75,14 +77,21 @@ function metaFromDescription(description?: string): { body?: string; attrs: Evid
   return { body: u.body || undefined, attrs: u.attrs }
 }
 
-function revokeAll(urls: string[]) {
-  for (const u of urls) {
-    try {
-      URL.revokeObjectURL(u)
-    } catch {
-      /* ignore */
-    }
+function isRevocableObjectUrl(u: string): boolean {
+  return u.startsWith('blob:') || u.startsWith('object:')
+}
+
+function revokeIfObjectUrl(u: string | null | undefined) {
+  if (!u || !isRevocableObjectUrl(u)) return
+  try {
+    URL.revokeObjectURL(u)
+  } catch {
+    /* ignore */
   }
+}
+
+function revokeAll(urls: string[]) {
+  for (const u of urls) revokeIfObjectUrl(u)
 }
 
 export function ChatViewEvidenceImageViewerButton(p?: {
@@ -146,7 +155,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
   const clearSinglePreview = useCallback(() => {
     setPreviewUrl((prev) => {
-      if (prev) URL.revokeObjectURL(prev)
+      revokeIfObjectUrl(prev)
       return null
     })
     setMeta(null)
@@ -188,7 +197,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
 
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      revokeIfObjectUrl(previewUrl)
       revokeAll(ownerItems.map((x) => x.previewUrl).filter(Boolean) as string[])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nur unmount
@@ -219,14 +228,28 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     (bytes: Uint8Array, mime: string, extra: Omit<PreviewMeta, 'mime' | 'bytes'>) => {
       const url = evidenceImageBytesToObjectUrl(bytes, mime)
       setPreviewUrl((prev) => {
-        if (prev) URL.revokeObjectURL(prev)
+        revokeIfObjectUrl(prev)
         return url
       })
-      setMeta({ mime, bytes: bytes.length, ...extra })
+      setMeta({ mime, bytes: bytes.length, source: 'embedded', ...extra })
       setPendingCipher(null)
     },
     []
   )
+
+  const showExternalUrl = useCallback((displayUrl: string, extra: Omit<PreviewMeta, 'mime' | 'bytes'>) => {
+    setPreviewUrl((prev) => {
+      revokeIfObjectUrl(prev)
+      return displayUrl
+    })
+    setMeta({
+      mime: 'image/* (URL)',
+      bytes: 0,
+      source: 'url',
+      ...extra,
+    })
+    setPendingCipher(null)
+  }, [])
 
   const onDecryptPending = useCallback(async () => {
     if (!pendingCipher) return
@@ -304,6 +327,24 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         return
       }
       const descMeta = metaFromDescription(r.description)
+      if (r.source === 'url' && r.displayUrl) {
+        showExternalUrl(r.displayUrl, {
+          match: r.match,
+          name: r.name,
+          description: descMeta.body || r.description,
+          classification: r.classification,
+          attrs: descMeta.attrs,
+          objectId: r.objectId,
+        })
+        setInfo(
+          'URL-/IPFS-NFT (kein eingebettetes image_data). Bild wird vom Gateway geladen — RPC-Netz muss zum Objekt passen (z. B. Testnet).'
+        )
+        return
+      }
+      if (!r.parsed) {
+        setError('Objekt ohne Bilddaten und ohne URL.')
+        return
+      }
       showDecrypted(r.parsed.bytes, r.parsed.mime, {
         match: r.match,
         name: r.name,
@@ -319,7 +360,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
     } finally {
       setBusy(false)
     }
-  }, [query, clearSinglePreview, clearOwnerGallery, showDecrypted])
+  }, [query, clearSinglePreview, clearOwnerGallery, showDecrypted, showExternalUrl])
 
   const onLoadOwnerPage = useCallback(
     async (opts?: { append?: boolean; cursor?: string | null; ownerOverride?: string }) => {
@@ -358,6 +399,14 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               ...it,
               attrs,
               previewUrl: evidenceImageBytesToObjectUrl(it.parsed.bytes, it.parsed.mime),
+            })
+            continue
+          }
+          if (it.displayUrl) {
+            mapped.push({
+              ...it,
+              attrs,
+              previewUrl: it.displayUrl,
             })
             continue
           }
@@ -928,7 +977,9 @@ export function ChatViewEvidenceImageViewerButton(p?: {
               <p className="text-xs text-muted-foreground break-all">
                 {meta.name ? `${meta.name} · ` : ''}
                 {meta.classification ? `${meta.classification} · ` : ''}
-                {meta.mime} · {meta.bytes} B
+                {meta.source === 'url'
+                  ? 'URL/IPFS'
+                  : `${meta.mime} · ${meta.bytes} B`}
                 {meta.objectId ? ` · ${meta.objectId.slice(0, 10)}…` : ''}
               </p>
               {meta.description ? (

@@ -18,9 +18,10 @@ Echte Bild-Object-IDs z. B. aus Mint-Events / Explorer.
 
 Ablauf:
 
-1. **Object-ID** → `getObject` → `ImageNFT` / `image_data` → lokal rendern  
-2. **Besitzer-Adresse** → `getOwnedObjects` StructType `…::image_nft::ImageNFT`, **10er-Seiten**  
+1. **Object-ID** → `getObject` → `ImageNFT` / `image_data` **oder** URL-NFT (`url` / IPFS in Description, z. B. `SimpleNFT`) → lokal bzw. Gateway-Bild  
+2. **Besitzer-Adresse** → `getOwnedObjects` StructType `…::image_nft::ImageNFT`, **10er-Seiten** (Galerie filtert weiter auf ImageNFT; fremde URL-NFTs per Object-ID laden)  
 3. **On-Chain / NFT** (Posteingang-Toolbar) → Tabs ohne Auto-Laden; **Eigene NFT anzeigen** oder Adresse/Object suchen  
+ 
 
 4. **Wire** → nur lokale `MORG_COMPACT_IMG_V1`  
 5. **Klartext** → `PlainMsgKey`-DFs **und** `PlaintextMessage`-Events (Default-Send oft Event → nur Events)

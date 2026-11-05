@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest'
 import {
   EVIDENCE_IMAGE_MAX_RAW_BYTES,
   classifyEvidenceObjectType,
+  extractNftMediaUrlFromFields,
   fetchEvidenceImageByObjectId,
   fetchEvidenceImagesByOwner,
   isImageNftMoveType,
   isKnownImageNftPackageId,
   isPlausibleIotaObjectId,
+  normalizeNftMediaUrl,
   packageIdFromMoveType,
   parseEvidenceImageFields,
   shouldAttemptEvidenceImageRender,
@@ -111,6 +113,52 @@ describe('evidence-onchain-image', () => {
       expect(r.parsed.mime).toBe('image/jpeg')
       expect(r.parsed.encryptedFlag).toBe(true)
       expect(r.name).toBe('Test')
+    }
+  })
+
+  it('normalisiert ipfs:// und findet URL in SimpleNFT-Feldern', () => {
+    expect(normalizeNftMediaUrl('ipfs://bafybeitestcid123456789012345678901')).toMatch(
+      /^https:\/\/ipfs\.io\/ipfs\/bafy/
+    )
+    expect(
+      extractNftMediaUrlFromFields({
+        name: 'IOTA Rebased NFT',
+        description: 'Text\nhttps://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
+      })
+    ).toContain('ipfs.io/ipfs/bafybei')
+    expect(
+      extractNftMediaUrlFromFields({
+        url: { url: 'https://ipfs.io/ipfs/bafybeiexample' },
+      })
+    ).toContain('bafybeiexample')
+  })
+
+  it('fetchEvidenceImageByObjectId: SimpleNFT mit URL', async () => {
+    const objectId = `0x${'44'.repeat(32)}`
+    const pkg = `0x${'b8'.repeat(32)}`
+    const client = {
+      getObject: async () => ({
+        data: {
+          objectId,
+          type: `${pkg}::nft::SimpleNFT`,
+          content: {
+            dataType: 'moveObject',
+            fields: {
+              name: 'IOTA Rebased NFT',
+              description: 'NFT de prueba',
+              url: 'https://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
+              creator: `0x${'aa'.repeat(32)}`,
+            },
+          },
+        },
+      }),
+    }
+    const r = await fetchEvidenceImageByObjectId(client, objectId)
+    expect(r.ok).toBe(true)
+    if (r.ok) {
+      expect(r.source).toBe('url')
+      expect(r.displayUrl).toContain('ipfs.io/ipfs/bafybei')
+      expect(r.name).toBe('IOTA Rebased NFT')
     }
   })
 
