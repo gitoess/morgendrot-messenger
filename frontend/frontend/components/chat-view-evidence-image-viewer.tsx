@@ -453,15 +453,15 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
         setInfo(
           `${mapped.length} Bild-NFT(s) auf dieser Seite` +
-            ` (ImageNFT ${embN}, URL/IPFS ${urlN})` +
+            ` (eingebettet ${embN}, URL/IPFS ${urlN})` +
             ` · gesamt ${opts?.append ? totalShown : mapped.length}` +
             (unlocked ? ` · ${unlocked} mit lokaler Passphrase` : '') +
-            `. Scan: ImageNFT-Package + Owned Objects mit image_data/URL. ` +
+            `. Filter: ImageNFT + bekannte URL-NFT-Typen (MatchAny). ` +
             (r.hasNextPage ? 'Weitere Seiten möglich.' : 'Keine weitere Seite.')
         )
         if (mapped.length === 0 && !opts?.append) {
           setError(
-            'Keine Bild-NFTs gefunden (weder ImageNFT noch URL/IPFS in den geladenen Owned Objects). „Mehr laden“ falls die Wallet viele Objekte hat.'
+            'Keine passenden NFTs für diese Adresse (ImageNFT / bekannte URL-NFT-Typen). Object-ID-Tab für andere Packages. RPC-Netz prüfen (Testnet/Mainnet).'
           )
         }
       } finally {
@@ -1048,95 +1048,97 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             </div>
           ) : null}
 
-          {ownerItems.length > 0 ? (
+          {mode === 'owner' && (ownerItems.length > 0 || ownerHasNext) ? (
             <div className="space-y-3">
-              <ul className="space-y-3">
-                {ownerItems.map((it) => (
-                  <li key={it.objectId} className="space-y-1 rounded-md border border-border p-2">
-                    <p className="text-xs break-all text-muted-foreground">
-                      {it.name || 'ImageNFT'}
-                      {it.classification ? ` · ${it.classification}` : ''} · {it.objectId}
-                    </p>
-                    {it.attrs && it.attrs.length > 0 ? (
-                      <p className="text-[10px] text-muted-foreground">
-                        {it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')}
+              {ownerItems.length > 0 ? (
+                <ul className="space-y-3">
+                  {ownerItems.map((it) => (
+                    <li key={it.objectId} className="space-y-1 rounded-md border border-border p-2">
+                      <p className="text-xs break-all text-muted-foreground">
+                        {it.name || (it.source === 'url' ? 'URL-NFT' : 'ImageNFT')}
+                        {it.classification ? ` · ${it.classification}` : ''} · {it.objectId}
                       </p>
-                    ) : null}
-                    {it.needsPassphrase ? (
-                      <div className="space-y-1">
-                        <p className="text-xs text-amber-800 dark:text-amber-200">Verschlüsselt — Passphrase nötig.</p>
+                      {it.attrs && it.attrs.length > 0 ? (
+                        <p className="text-[10px] text-muted-foreground">
+                          {it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')}
+                        </p>
+                      ) : null}
+                      {it.needsPassphrase ? (
+                        <div className="space-y-1">
+                          <p className="text-xs text-amber-800 dark:text-amber-200">Verschlüsselt — Passphrase nötig.</p>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={busy || passphrase.trim().length < 8 || !it.ciphertext}
+                            onClick={() => {
+                              void (async () => {
+                                if (!it.ciphertext) return
+                                setBusy(true)
+                                setError('')
+                                try {
+                                  const dec = await decryptEvidenceImageBytes(it.ciphertext, passphrase.trim())
+                                  rememberEvidencePassphrase({
+                                    objectId: it.objectId,
+                                    passphrase: passphrase.trim(),
+                                  })
+                                  const url = evidenceImageBytesToObjectUrl(dec.bytes, dec.contentType)
+                                  setOwnerItems((prev) =>
+                                    prev.map((row) =>
+                                      row.objectId === it.objectId
+                                        ? {
+                                            ...row,
+                                            needsPassphrase: false,
+                                            ciphertext: undefined,
+                                            error: undefined,
+                                            rememberedPass: passphrase.trim(),
+                                            previewUrl: url,
+                                          }
+                                        : row
+                                    )
+                                  )
+                                  setSharePassphrase(passphrase.trim())
+                                } catch (e) {
+                                  setError(e instanceof Error ? e.message : String(e))
+                                } finally {
+                                  setBusy(false)
+                                }
+                              })()
+                            }}
+                          >
+                            Mit Passphrase oben entschlüsseln
+                          </Button>
+                        </div>
+                      ) : null}
+                      {it.rememberedPass ? (
                         <Button
                           type="button"
                           size="sm"
-                          variant="outline"
-                          disabled={busy || passphrase.trim().length < 8 || !it.ciphertext}
+                          variant="ghost"
+                          className="h-auto px-0 text-xs"
                           onClick={() => {
-                            void (async () => {
-                              if (!it.ciphertext) return
-                              setBusy(true)
-                              setError('')
-                              try {
-                                const dec = await decryptEvidenceImageBytes(it.ciphertext, passphrase.trim())
-                                rememberEvidencePassphrase({
-                                  objectId: it.objectId,
-                                  passphrase: passphrase.trim(),
-                                })
-                                const url = evidenceImageBytesToObjectUrl(dec.bytes, dec.contentType)
-                                setOwnerItems((prev) =>
-                                  prev.map((row) =>
-                                    row.objectId === it.objectId
-                                      ? {
-                                          ...row,
-                                          needsPassphrase: false,
-                                          ciphertext: undefined,
-                                          error: undefined,
-                                          rememberedPass: passphrase.trim(),
-                                          previewUrl: url,
-                                        }
-                                      : row
-                                  )
-                                )
-                                setSharePassphrase(passphrase.trim())
-                              } catch (e) {
-                                setError(e instanceof Error ? e.message : String(e))
-                              } finally {
-                                setBusy(false)
-                              }
-                            })()
+                            setSharePassphrase(it.rememberedPass || '')
+                            void navigator.clipboard.writeText(it.rememberedPass || '')
                           }}
                         >
-                          Mit Passphrase oben entschlüsseln
+                          Passphrase kopieren
                         </Button>
-                      </div>
-                    ) : null}
-                    {it.rememberedPass ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-auto px-0 text-xs"
-                        onClick={() => {
-                          setSharePassphrase(it.rememberedPass || '')
-                          void navigator.clipboard.writeText(it.rememberedPass || '')
-                        }}
-                      >
-                        Passphrase kopieren
-                      </Button>
-                    ) : null}
-                    {it.error && !it.needsPassphrase ? (
-                      <p className="text-xs text-destructive">{it.error}</p>
-                    ) : null}
-                    {it.previewUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={it.previewUrl}
-                        alt={it.name || it.objectId}
-                        className="max-h-48 w-full object-contain bg-muted/20"
-                      />
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
+                      ) : null}
+                      {it.error && !it.needsPassphrase ? (
+                        <p className="text-xs text-destructive">{it.error}</p>
+                      ) : null}
+                      {it.previewUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={it.previewUrl}
+                          alt={it.name || it.objectId}
+                          className="max-h-48 w-full object-contain bg-muted/20"
+                        />
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {ownerHasNext ? (
                 <Button
                   type="button"
@@ -1145,7 +1147,7 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                   disabled={busy}
                   onClick={() => void onLoadOwnerPage({ append: true, cursor: ownerCursor })}
                 >
-                  Nächste {EVIDENCE_IMAGE_OWNER_PAGE_SIZE} laden
+                  Mehr laden
                 </Button>
               ) : null}
             </div>

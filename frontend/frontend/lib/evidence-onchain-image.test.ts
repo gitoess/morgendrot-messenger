@@ -166,47 +166,19 @@ describe('evidence-onchain-image', () => {
     }
   })
 
-  it('fetchEvidenceImagesByOwner: ImageNFT + SimpleNFT Media-Scan', async () => {
+  it('fetchEvidenceImagesByOwner: MatchAny findet SimpleNFT ohne Coin-Scan', async () => {
     const owner = `0x${'22'.repeat(32)}`
-    const objectId = `0x${'33'.repeat(32)}`
     const simpleId = `0x${'44'.repeat(32)}`
-    const simplePkg = `0x${'b8'.repeat(32)}`
-    let calls = 0
+    const simplePkg = '0xb800e7cf19a2d63d3f5f4e857d4cf20c685d4768c71b04a3d803b09b48ab53f8'
     const client = {
       getObject: async () => ({ data: null }),
-      getOwnedObjects: async (input: { filter?: { StructType?: string } }) => {
-        calls++
-        if (input.filter?.StructType?.includes('ImageNFT')) {
-          return {
-            data: [
-              {
-                data: {
-                  objectId,
-                  type: `${KNOWN_PKG}::image_nft::ImageNFT`,
-                  content: {
-                    fields: {
-                      image_data: [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
-                      content_type: 'image/png',
-                      name: 'A',
-                      encrypted: false,
-                    },
-                  },
-                },
-              },
-            ],
-            nextCursor: null,
-            hasNextPage: false,
-          }
-        }
+      getOwnedObjects: async (input: {
+        filter?: { StructType?: string; MatchAny?: Array<{ StructType: string }> }
+      }) => {
+        expect(input.filter?.MatchAny?.length).toBeGreaterThanOrEqual(2)
+        expect(input.filter?.MatchAny?.some((x) => /SimpleNFT/i.test(x.StructType))).toBe(true)
         return {
           data: [
-            {
-              data: {
-                objectId: `0x${'55'.repeat(32)}`,
-                type: '0x2::coin::Coin<0x2::iota::IOTA>',
-                content: { fields: { balance: '1' } },
-              },
-            },
             {
               data: {
                 objectId: simpleId,
@@ -220,19 +192,18 @@ describe('evidence-onchain-image', () => {
               },
             },
           ],
-          nextCursor: 'cur',
-          hasNextPage: true,
+          nextCursor: null,
+          hasNextPage: false,
         }
       },
     }
     const r = await fetchEvidenceImagesByOwner(client, owner)
     expect(r.ok).toBe(true)
-    expect(calls).toBeGreaterThanOrEqual(2)
     if (r.ok) {
-      expect(r.items.length).toBe(2)
-      expect(r.items.some((i) => i.source === 'embedded')).toBe(true)
-      expect(r.items.some((i) => i.source === 'url' && i.displayUrl?.includes('pinata'))).toBe(true)
-      expect(r.hasNextPage).toBe(true)
+      expect(r.items).toHaveLength(1)
+      expect(r.items[0]?.source).toBe('url')
+      expect(r.items[0]?.displayUrl).toContain('pinata')
+      expect(r.hasNextPage).toBe(false)
     }
   })
 })

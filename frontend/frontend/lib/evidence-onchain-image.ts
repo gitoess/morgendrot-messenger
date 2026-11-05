@@ -22,8 +22,18 @@ export const KNOWN_IMAGE_NFT_PACKAGE_IDS = [
   '0x236609dff5ad4a4e118bf29c0df1a9013ca4585348d4b2d94a3028c505d106c7',
 ] as const
 
+/** URL-NFTs (ohne image_data), die die Besitzer-Galerie per StructType findet. */
+export const KNOWN_URL_NFT_STRUCT_TYPES = [
+  '0xb800e7cf19a2d63d3f5f4e857d4cf20c685d4768c71b04a3d803b09b48ab53f8::nft::SimpleNFT',
+] as const
+
 export function knownImageNftStructTypes(): string[] {
   return KNOWN_IMAGE_NFT_PACKAGE_IDS.map((p) => `${p.toLowerCase()}::image_nft::ImageNFT`)
+}
+
+/** ImageNFT + bekannte URL-NFT-Typen für getOwnedObjects MatchAny. */
+export function knownOwnerGalleryStructTypes(): string[] {
+  return [...knownImageNftStructTypes(), ...KNOWN_URL_NFT_STRUCT_TYPES.map((t) => t.toLowerCase())]
 }
 
 const HEX_OBJECT_ID = /^0x[a-f0-9]{64}$/i
@@ -425,12 +435,16 @@ type GetObjectClient = {
   }>
 }
 
+type OwnedObjectsFilter =
+  | { StructType: string }
+  | { MatchAny: Array<{ StructType: string }> }
+
 type OwnedObjectsClient = GetObjectClient & {
   getOwnedObjects: (input: {
     owner: string
     cursor?: string | null
     limit?: number
-    filter?: { StructType?: string }
+    filter?: OwnedObjectsFilter
     options?: { showContent?: boolean; showType?: boolean }
   }) => Promise<{
     data?: Array<{ data?: { objectId?: string; type?: string | null; content?: unknown } | null }>
@@ -664,8 +678,9 @@ export function evidenceOwnerItemFromObjectData(d: {
 
 /**
  * Besitzer-Adresse → Bild-NFTs.
- * Default: **Media-Scan** (alle Owned Objects der Seite, nur Einträge mit image_data/URL).
- * Optional `structType`: nur dieser Move-Typ (z. B. ImageNFT).
+ * Default: **MatchAny** über ImageNFT + bekannte URL-NFT-Typen (SimpleNFT) —
+ * unfiltered Scan versinkt in Coin-Wallets.
+ * Optional `structType`: nur dieser eine Move-Typ.
  */
 export async function fetchEvidenceImagesByOwner(
   client: OwnedObjectsClient,
@@ -677,12 +692,10 @@ export async function fetchEvidenceImagesByOwner(
     return { ok: false, error: 'Besitzer-Adresse: 0x + 64 Hex.' }
   }
   const limit = Math.min(Math.max(opts?.limit ?? EVIDENCE_IMAGE_OWNER_PAGE_SIZE, 1), 50)
-  const structType =
-    opts?.structType === null
-      ? ''
-      : (opts?.structType !== undefined ? String(opts.structType).trim() : '')
-  /** Explizit ImageNFT-only nur wenn structType gesetzt; Default = Scan ohne Filter. */
-  const useStructFilter = Boolean(structType)
+  const explicitStruct =
+    opts?.structType != null && String(opts.structType).trim()
+      ? String(opts.structType).trim()
+      : ''
 
   const byId = new Map<string, EvidenceOwnerListItem>()
 
@@ -700,43 +713,25 @@ export async function fetchEvidenceImagesByOwner(
     }
   }
 
-  try {
-    // Erste Seite ohne Cursor: ImageNFTs + Media-Scan mergen (SimpleNFT o. Ä. finden).
-    if (!opts?.cursor && !useStructFilter) {
-      const imageNftType = knownImageNftStructTypes()[0]
-      const [nftPage, scanPage] = await Promise.all([
-        imageNftType
-          ? client.getOwnedObjects({
-              owner,
-              cursor: null,
-              limit,
-              filter: { StructType: imageNftType },
-              options: { showType: true, showContent: true },
-            })
-          : Promise.resolve({ data: [], nextCursor: null, hasNextPage: false }),
-        client.getOwnedObjects({
-          owner,
-          cursor: null,
-          limit: Math.max(limit, 25),
-          options: { showType: true, showContent: true },
-        }),
-      ])
-      ingestPage(nftPage)
-      const scanMeta = ingestPage(scanPage)
-      return {
-        ok: true,
-        owner,
-        items: [...byId.values()],
-        nextCursor: scanMeta.nextCursor,
-        hasNextPage: scanMeta.hasNextPage,
-      }
-    }
+  const galleryTypes = knownOwnerGalleryStructTypes()
+  const filter: OwnedObjectsFilter | undefined = explicitStruct
+    ? { StructType: explicitStruct }
+    : galleryTypes.length === 1
+      ? { StructType: galleryTypes[0]! }
+      : galleryTypes.length > 1
+        ? { MatchAny: galleryTypes.map((StructType) => ({ StructType })) }
+        : undefined
 
+  if (!filter) {
+    return { ok: false, error: 'Keine NFT-StructTypes für Besitzer-Galerie konfiguriert.' }
+  }
+
+  try {
     const page = await client.getOwnedObjects({
       owner,
       cursor: opts?.cursor ?? null,
-      limit: useStructFilter ? limit : Math.max(limit, 25),
-      ...(useStructFilter ? { filter: { StructType: structType } } : {}),
+      limit,
+      filter,
       options: { showType: true, showContent: true },
     })
     const meta = ingestPage(page)
