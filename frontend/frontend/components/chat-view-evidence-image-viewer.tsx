@@ -1127,15 +1127,56 @@ export function ChatViewEvidenceImageViewerButton(p?: {
             <div className="space-y-3">
               {ownerItems.length > 0 ? (
                 <ul className="space-y-3">
-                  {ownerItems.map((it) => (
+                  {ownerItems.map((it) => {
+                    const storedPass =
+                      it.rememberedPass ||
+                      lookupEvidencePassphrase({ objectId: it.objectId, allowDefault: false }) ||
+                      ''
+                    return (
                     <li key={it.objectId} className="space-y-1 rounded-md border border-border p-2">
                       <p className="text-xs break-all text-muted-foreground">
                         {it.name || (it.source === 'url' ? 'URL-NFT' : 'ImageNFT')}
-                        {it.classification ? ` · ${it.classification}` : ''} · {it.objectId}
+                        {it.classification ? ` · ${it.classification}` : ''}
                       </p>
+                      <p className="font-mono text-[10px] break-all text-muted-foreground">{it.objectId}</p>
                       {it.attrs && it.attrs.length > 0 ? (
                         <p className="text-[10px] text-muted-foreground">
                           {it.attrs.map((a) => `${a.key}=${a.value}`).join(' · ')}
+                        </p>
+                      ) : null}
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px]"
+                          onClick={() => void navigator.clipboard.writeText(it.objectId)}
+                        >
+                          Object-ID kopieren
+                        </Button>
+                        {storedPass ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[11px]"
+                            onClick={() => {
+                              setSharePassphrase(storedPass)
+                              void navigator.clipboard.writeText(storedPass)
+                            }}
+                          >
+                            Passphrase kopieren (teilen)
+                          </Button>
+                        ) : null}
+                      </div>
+                      {storedPass ? (
+                        <p className="text-[10px] text-muted-foreground">
+                          Teilen: Object-ID + Passphrase separat (nicht on-chain). Empfänger: Object-ID-Tab → laden →
+                          Passphrase.
+                        </p>
+                      ) : it.needsPassphrase ? (
+                        <p className="text-[10px] text-muted-foreground">
+                          Keine lokale Passphrase — nach Entsperren hier zum Teilen verfügbar.
                         </p>
                       ) : null}
                       {it.needsPassphrase ? (
@@ -1188,20 +1229,6 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                           </Button>
                         </div>
                       ) : null}
-                      {it.rememberedPass ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-auto px-0 text-xs"
-                          onClick={() => {
-                            setSharePassphrase(it.rememberedPass || '')
-                            void navigator.clipboard.writeText(it.rememberedPass || '')
-                          }}
-                        >
-                          Passphrase kopieren
-                        </Button>
-                      ) : null}
                       {it.error && !it.needsPassphrase ? (
                         <p className="text-xs text-destructive">{it.error}</p>
                       ) : null}
@@ -1214,7 +1241,8 @@ export function ChatViewEvidenceImageViewerButton(p?: {
                         />
                       ) : null}
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               ) : null}
               {ownerHasNext ? (
