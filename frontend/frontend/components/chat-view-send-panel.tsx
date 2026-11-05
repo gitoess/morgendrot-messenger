@@ -44,6 +44,8 @@ import {
 } from '@/frontend/components/chat-view-active-conversation-bar'
 import { ChatViewEncryptionModeToggle } from '@/frontend/components/chat-view-encryption-mode-toggle'
 import { PassphraseProtectComposerToggle } from '@/frontend/components/chat-view-passphrase-protect-toggle'
+import { hasTeamBroadcastKey } from '@/frontend/lib/team-broadcast-key-store'
+import { GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG } from '@/frontend/lib/group-team-broadcast'
 import {
   encryptedHandshakeStatusLabel,
   type EncryptedRecipientHandshakeStatus,
@@ -136,6 +138,8 @@ export type ChatViewSendPanelProps = AttachmentBarPort &
   groupMailboxSendAll?: boolean
   groupMemberCount?: number
   groupTeamBroadcastReady?: boolean
+  groupTeamMailboxObjectId?: string | null
+  onOpenGroupSettings?: () => void
   /** Expert: Pfad-4-Checkbox; Simple Mode: nur Hinweistext. */
   showPath4Checkbox?: boolean
   /** Nur bei composerDelivery === 'telegram'. */
@@ -215,6 +219,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     groupMailboxSendAll = false,
     groupMemberCount = 0,
     groupTeamBroadcastReady = false,
+    groupTeamMailboxObjectId = null,
+    onOpenGroupSettings,
     showPath4Checkbox = true,
     onTelegramSend,
     canSendTelegram = false,
@@ -340,6 +346,9 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (groupMailboxInternetChain
       ? groupTeamBroadcastReady
       : groupMemberCount > 0 || forcedTransport === 'mesh')
+  const groupEncNeedsTeamKey =
+    Boolean(encrypted && groupMailboxInternetChain && groupTeamMailboxObjectId) &&
+    !hasTeamBroadcastKey(groupTeamMailboxObjectId || '')
   const meshKlartextRecipientOk =
     encrypted ||
     klartextIota.length > 0 ||
@@ -369,8 +378,8 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     (onlineChainNeedsKeys && sessionKeysMissingBlock) ||
     loraOnlineFallbackOffer != null ||
     hasNoPayload ||
-    (encrypted && groupMailboxInternetChain) ||
-    (groupMailboxInternetChain && !groupTeamBroadcastReady && !encrypted) ||
+    (groupMailboxInternetChain && !groupTeamBroadcastReady) ||
+    groupEncNeedsTeamKey ||
     (!encrypted && !meshKlartextRecipientOk) ||
     meshPlaintextBlocked ||
     meshPath4Blocked ||
@@ -388,15 +397,15 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     if (isPinnwandChannel && !canPostPinnwand) {
       return 'Nur autorisierte Führungs-Adressen dürfen auf die Pinnwand schreiben.'
     }
-    if (encrypted && groupMailboxInternetChain) {
-      return 'Gruppe verschlüsselt auf der Chain folgt mit Team-E2EE (§ H.22) — bis dahin Klartext + Team-Postfach.'
+    if (isGroupChannel && groupMailboxInternetChain && !groupTeamBroadcastReady) {
+      return 'Gruppe: links „Gruppen → Verwalten“ — Team-Postfach verknüpfen (1× Broadcast).'
+    }
+    if (groupEncNeedsTeamKey) {
+      return GROUP_ENCRYPTED_TEAM_BROADCAST_PENDING_MSG
     }
     if (!encrypted && !meshKlartextRecipientOk) {
-      if (isGroupChannel && groupMailboxInternetChain && !groupTeamBroadcastReady) {
-        return 'Gruppe: Team-Postfach im Gruppenpanel verknüpfen oder neu erstellen (1× Broadcast).'
-      }
       return isGroupChannel && groupMemberCount === 0
-        ? 'Gruppe: Mitglieder eintragen und speichern — dann geht Senden ohne Empfängerfeld.'
+        ? 'Gruppe: unter Verwalten Mitglieder eintragen und speichern — dann geht Senden ohne Empfängerfeld.'
         : 'Empfänger (0x…) fehlt — Partner-Adresse prüfen oder im Empfängerfeld eintragen.'
     }
     if (meshPlaintextBlocked) return 'Nachricht zu lang oder Anhang für Funk-Klartext nicht erlaubt.'
@@ -422,6 +431,7 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
     composerDelivery,
     groupMailboxInternetChain,
     groupTeamBroadcastReady,
+    groupEncNeedsTeamKey,
     isGroupChannel,
     groupMemberCount,
     isPinnwandChannel,
@@ -960,9 +970,20 @@ export function ChatViewSendPanel(p: ChatViewSendPanelProps) {
           </div>
 
           {primarySendDisabled && sendDisableReason && !sending && !telegramBusy ? (
-            <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" role="status">
-              {sendDisableReason}
-            </p>
+            <div className="mt-2 space-y-1.5" role="status">
+              <p className="text-xs text-amber-800 dark:text-amber-200">{sendDisableReason}</p>
+              {onOpenGroupSettings &&
+              isGroupChannel &&
+              (groupEncNeedsTeamKey || (groupMailboxInternetChain && !groupTeamBroadcastReady)) ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenGroupSettings()}
+                  className="text-xs font-semibold text-primary underline-offset-2 hover:underline"
+                >
+                  Gruppe verwalten öffnen
+                </button>
+              ) : null}
+            </div>
           ) : null}
           {encryptedOnlineSendBlocked && !primarySendDisabled ? (
             <p className="mt-2 text-xs text-amber-800 dark:text-amber-200" role="status">

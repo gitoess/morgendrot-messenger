@@ -11,6 +11,7 @@ export type GroupSendPanelContext = {
   groupMailboxSendAll: boolean
   groupMemberCount: number
   groupTeamBroadcastReady: boolean
+  groupTeamMailboxObjectId: string | null
 }
 
 /** Send-Panel / Persistenz-Inferenz: gemeinsame Gruppen-Flags für Core und Main-Content. */
@@ -20,9 +21,11 @@ export function buildGroupSendPanelContext(p: {
   myAddress: string
 }): GroupSendPanelContext {
   const isGroup = p.isGroupChannel && Boolean(p.activeGroup)
+  const teamMb = isGroup ? resolveGroupTeamMailboxObjectId(p.activeGroup) : null
   return {
     groupMailboxSendAll: isGroup && readGroupMailboxSendAll(),
     groupMemberCount: isGroup ? groupMailboxTargetCount(p.activeGroup!, p.myAddress) : 0,
-    groupTeamBroadcastReady: isGroup && !!resolveGroupTeamMailboxObjectId(p.activeGroup),
+    groupTeamBroadcastReady: Boolean(teamMb),
+    groupTeamMailboxObjectId: teamMb,
   }
 }

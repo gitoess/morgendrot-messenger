@@ -415,10 +415,13 @@ Zielbild: `docs/EINSATZ-HELFER-EINRICHTEN-ZIELBILD.md`
 
 ### Gruppe einrichten und verwalten
 
-Kanal **Gruppe** wählen (Sendepfad im Kopf oder Sidebar) → **Gruppe verwalten**:
+In der Chat-**Sidebar** Abschnitt **Gruppen**:
 
-- **⋮** (Konversations-Menü) → **Gruppe verwalten…**, oder
-- **Doppelklick** auf die Gruppe in der **Sidebar**
+- Button **Verwalten** (auch ohne bestehende Gruppe) → Sheet „Gruppe verwalten“
+- Zahnrad an der Gruppenzeile (Handy-tauglich; Doppelklick weiterhin)
+- Im Gruppenkanal zusätzlich Chat-⋮ → **Gruppe verwalten…**
+
+Dort: Name, Mitglieder, **Team-Postfach**, **Team-Key** erzeugen/rotieren (Enc-Broadcast).
 
 Im Sheet **Gruppe verwalten** (blockiert den Nachrichtenfluss nicht):
 

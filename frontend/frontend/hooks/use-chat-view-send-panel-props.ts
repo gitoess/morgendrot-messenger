@@ -41,6 +41,7 @@ export type ChatViewSendPanelPropsDeps = {
   canPostToPinnwand: boolean
   vaultBannerActions?: ChatViewVaultBannerActions
   onOpenPhonebook?: () => void
+  onOpenGroupSettings?: () => void
   activeConversation?: ChatViewActiveConversationContext
 }
 
@@ -332,6 +333,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     groupMailboxSendAll: groupSendPanelContext.groupMailboxSendAll,
     groupMemberCount: groupSendPanelContext.groupMemberCount,
     groupTeamBroadcastReady: groupSendPanelContext.groupTeamBroadcastReady,
+    groupTeamMailboxObjectId: groupSendPanelContext.groupTeamMailboxObjectId,
     partner: composerPartner.partner,
     onPartnerChange: syncPartnerAndRecipient,
     myAddress: inboxFeedRead.myAddress,
@@ -360,6 +362,7 @@ export function useChatViewSendPanelProps(deps: ChatViewSendPanelPropsDeps): {
     onEncryptedAcceptHandshakeForRecipient: handleEncryptedAcceptForComposerRecipient,
     showPath4Checkbox: deps.expertTools,
     onOpenPhonebook: deps.onOpenPhonebook,
+    onOpenGroupSettings: deps.onOpenGroupSettings,
     isPinnwandChannel:
       composerSendPath.channelMode != null && isPinnwandChannel(composerSendPath.channelMode),
     pinnwandBroadcastAddress: deps.pinnwandBroadcastAddress,
