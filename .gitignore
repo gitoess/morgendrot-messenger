@@ -34,6 +34,15 @@ e2e/.boss-live-review/
 /.morgendrot-vault.inbox.enc
 /.morgendrot-vault.package-id
 /.morgendrot-vault.streams-anchor
+/.morgendrot-vault.session-keys.enc
+/.morgendrot-roster-pending.json
+/.morgendrot-team-sync-lan-outbox.json
+.env.modus-a-feldtest.backup
+.adb-logcat-*.txt
+.phone-screenshot*.png
+.phone-ui-*.xml
+.phone-test-*.png
+tsc-out.txt
 .morgendrot-runtime-config.json
 .morgendrot-contact-labels.json
 .morgendrot-telegram-journal.json
