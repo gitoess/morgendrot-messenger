@@ -166,44 +166,47 @@ describe('evidence-onchain-image', () => {
     }
   })
 
-  it('fetchEvidenceImagesByOwner: MatchAny findet SimpleNFT ohne Coin-Scan', async () => {
+  it('fetchEvidenceImagesByOwner: parallele StructType-Queries finden SimpleNFT', async () => {
     const owner = `0x${'22'.repeat(32)}`
     const simpleId = `0x${'44'.repeat(32)}`
     const simplePkg = '0xb800e7cf19a2d63d3f5f4e857d4cf20c685d4768c71b04a3d803b09b48ab53f8'
+    const seen: string[] = []
     const client = {
       getObject: async () => ({ data: null }),
-      getOwnedObjects: async (input: {
-        filter?: { StructType?: string; MatchAny?: Array<{ StructType: string }> }
-      }) => {
-        expect(input.filter?.MatchAny?.length).toBeGreaterThanOrEqual(2)
-        expect(input.filter?.MatchAny?.some((x) => /SimpleNFT/i.test(x.StructType))).toBe(true)
-        return {
-          data: [
-            {
-              data: {
-                objectId: simpleId,
-                type: `${simplePkg}::nft::SimpleNFT`,
-                content: {
-                  fields: {
-                    name: 'URL-NFT',
-                    url: 'https://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
+      getOwnedObjects: async (input: { filter?: { StructType?: string } }) => {
+        const st = input.filter?.StructType || ''
+        seen.push(st)
+        if (/SimpleNFT/i.test(st)) {
+          return {
+            data: [
+              {
+                data: {
+                  objectId: simpleId,
+                  type: `${simplePkg}::nft::SimpleNFT`,
+                  content: {
+                    fields: {
+                      name: 'URL-NFT',
+                      url: 'https://ipfs.io/ipfs/bafybeiejkquasj2mdw6zlxjg7oyivv3m2ugqxb5bhj3hv32hcvtpcq2yam',
+                    },
                   },
                 },
               },
-            },
-          ],
-          nextCursor: null,
-          hasNextPage: false,
+            ],
+            nextCursor: null,
+            hasNextPage: false,
+          }
         }
+        return { data: [], nextCursor: null, hasNextPage: false }
       },
     }
     const r = await fetchEvidenceImagesByOwner(client, owner)
     expect(r.ok).toBe(true)
+    expect(seen.some((s) => /ImageNFT/i.test(s))).toBe(true)
+    expect(seen.some((s) => /SimpleNFT/i.test(s))).toBe(true)
     if (r.ok) {
       expect(r.items).toHaveLength(1)
       expect(r.items[0]?.source).toBe('url')
       expect(r.items[0]?.displayUrl).toContain('pinata')
-      expect(r.hasNextPage).toBe(false)
     }
   })
 })

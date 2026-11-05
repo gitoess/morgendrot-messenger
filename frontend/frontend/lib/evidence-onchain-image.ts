@@ -621,6 +621,10 @@ export type FetchEvidenceImagesByOwnerResult =
       items: EvidenceOwnerListItem[]
       nextCursor: string | null
       hasNextPage: boolean
+      /** Aktive / genutzte RPC-URL (für UI-Hinweis). */
+      rpcUrl?: string
+      /** z. B. Treffer nur auf dem anderen Netz. */
+      networkNote?: string
     }
   | { ok: false; error: string }
 
@@ -678,9 +682,8 @@ export function evidenceOwnerItemFromObjectData(d: {
 
 /**
  * Besitzer-Adresse → Bild-NFTs.
- * Default: **MatchAny** über ImageNFT + bekannte URL-NFT-Typen (SimpleNFT) —
- * unfiltered Scan versinkt in Coin-Wallets.
- * Optional `structType`: nur dieser eine Move-Typ.
+ * Default: **parallele StructType-Queries** (ImageNFT + bekannte URL-NFTs).
+ * MatchAny ist im SDK/RPC teils unzuverlässig; Coin-Scan versinkt in großen Wallets.
  */
 export async function fetchEvidenceImagesByOwner(
   client: OwnedObjectsClient,
@@ -699,48 +702,44 @@ export async function fetchEvidenceImagesByOwner(
 
   const byId = new Map<string, EvidenceOwnerListItem>()
 
-  const ingestPage = (
-    page: Awaited<ReturnType<OwnedObjectsClient['getOwnedObjects']>>
-  ): { nextCursor: string | null; hasNextPage: boolean } => {
+  const ingestPage = (page: Awaited<ReturnType<OwnedObjectsClient['getOwnedObjects']>>): boolean => {
     for (const row of page.data || []) {
       const item = evidenceOwnerItemFromObjectData(row?.data || {})
       if (!item) continue
       if (!byId.has(item.objectId)) byId.set(item.objectId, item)
     }
-    return {
-      nextCursor: page.nextCursor ?? null,
-      hasNextPage: Boolean(page.hasNextPage),
-    }
+    return Boolean(page.hasNextPage)
   }
 
-  const galleryTypes = knownOwnerGalleryStructTypes()
-  const filter: OwnedObjectsFilter | undefined = explicitStruct
-    ? { StructType: explicitStruct }
-    : galleryTypes.length === 1
-      ? { StructType: galleryTypes[0]! }
-      : galleryTypes.length > 1
-        ? { MatchAny: galleryTypes.map((StructType) => ({ StructType })) }
-        : undefined
-
-  if (!filter) {
+  const types = explicitStruct ? [explicitStruct] : knownOwnerGalleryStructTypes()
+  if (types.length === 0) {
     return { ok: false, error: 'Keine NFT-StructTypes für Besitzer-Galerie konfiguriert.' }
   }
 
   try {
-    const page = await client.getOwnedObjects({
-      owner,
-      cursor: opts?.cursor ?? null,
-      limit,
-      filter,
-      options: { showType: true, showContent: true },
-    })
-    const meta = ingestPage(page)
+    // Cursor nur bei einem Typ sinnvoll; Multi-Typ = erste Seite je Typ parallel.
+    const cursor = types.length === 1 ? (opts?.cursor ?? null) : null
+    const pages = await Promise.all(
+      types.map((StructType) =>
+        client.getOwnedObjects({
+          owner,
+          cursor,
+          limit,
+          filter: { StructType },
+          options: { showType: true, showContent: true },
+        })
+      )
+    )
+    let hasNextPage = false
+    for (const page of pages) {
+      if (ingestPage(page)) hasNextPage = true
+    }
     return {
       ok: true,
       owner,
       items: [...byId.values()],
-      nextCursor: meta.nextCursor,
-      hasNextPage: meta.hasNextPage,
+      nextCursor: types.length === 1 ? (pages[0]?.nextCursor ?? null) : null,
+      hasNextPage: types.length === 1 ? hasNextPage : false,
     }
   } catch (e) {
     return {

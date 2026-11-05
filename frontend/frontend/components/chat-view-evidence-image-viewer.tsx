@@ -452,17 +452,22 @@ export function ChatViewEvidenceImageViewerButton(p?: {
         const urlN = mapped.filter((x) => x.source === 'url').length
         const embN = mapped.filter((x) => x.source === 'embedded' || x.parsed).length
         setInfo(
-          `${mapped.length} Bild-NFT(s) auf dieser Seite` +
+          `${mapped.length} Bild-NFT(s)` +
             ` (eingebettet ${embN}, URL/IPFS ${urlN})` +
             ` · gesamt ${opts?.append ? totalShown : mapped.length}` +
             (unlocked ? ` · ${unlocked} mit lokaler Passphrase` : '') +
-            `. Filter: ImageNFT + bekannte URL-NFT-Typen (MatchAny). ` +
-            (r.hasNextPage ? 'Weitere Seiten möglich.' : 'Keine weitere Seite.')
+            `. Filter: parallele StructType-Queries (ImageNFT + SimpleNFT).` +
+            (r.rpcUrl ? ` RPC: ${r.rpcUrl}` : '') +
+            (r.networkNote ? `\n${r.networkNote}` : '') +
+            (r.hasNextPage ? ' Weitere Seiten möglich.' : '')
         )
         if (mapped.length === 0 && !opts?.append) {
           setError(
-            'Keine passenden NFTs für diese Adresse (ImageNFT / bekannte URL-NFT-Typen). Object-ID-Tab für andere Packages. RPC-Netz prüfen (Testnet/Mainnet).'
+            (r.networkNote ? `${r.networkNote}\n` : '') +
+              'Keine passenden NFTs. Object-ID-Tab für andere Packages — oder RPC auf Testnet stellen (SimpleNFT-Demo).'
           )
+        } else if (r.networkNote && mapped.length > 0) {
+          setError('')
         }
       } finally {
         setBusy(false)
