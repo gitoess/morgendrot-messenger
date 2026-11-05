@@ -704,6 +704,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       selectInboxPartnerForSend(peer)
       const result = await renewDirectChatPeerEncryption(peer, {
         onHandshake: (addr) => panelMessengerPorts.handshakeActions.onHandshakeForAddress(addr),
+        myAddress: myAddress || undefined,
       })
       if (result.ok) {
         toast.success(
@@ -718,6 +719,7 @@ export function ChatViewMainContent(c: ChatViewMainContentProps) {
       inboxPartnerKey,
       recipient,
       partner,
+      myAddress,
       setEncrypted,
       setForcedTransport,
       setComposerDelivery,

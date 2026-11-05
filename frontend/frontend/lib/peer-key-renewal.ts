@@ -1,6 +1,7 @@
 import { base64ToUint8 } from '@morgendrot/shared/bytes-base64'
 import { invalidateChainHandshakeProbe } from '@/frontend/lib/chain-handshake-probe-cache'
 import {
+  ensureSelfForensicEcdhMaterial,
   getDirectChatEcdhPeerPubBase64,
   setDirectChatEcdhPeerPubBase64,
 } from '@/frontend/lib/direct-chat-ecdh-session'
@@ -31,17 +32,36 @@ export type RenewDirectChatPeerEncryptionResult =
  */
 export async function renewDirectChatPeerEncryption(
   peerAddress: string,
-  opts: { onHandshake: (address: string) => void | Promise<void> }
+  opts: {
+    onHandshake: (address: string) => void | Promise<void>
+    /** Eigene Adresse — Self-Chat: Peer-Pub = eigenes Pub (Handshake mit sich selbst speichert oft nichts). */
+    myAddress?: string
+  }
 ): Promise<RenewDirectChatPeerEncryptionResult> {
   const addr = normalizeRecipient0x(peerAddress)
   if (!isValidRecipient0x(addr)) {
     return { ok: false, error: 'Gültige Partner-Wallet (0x + 64 Hex) erforderlich.' }
   }
-  const peerB64 = getDirectChatEcdhPeerPubBase64(addr)
+  const my = opts.myAddress ? normalizeRecipient0x(opts.myAddress) : ''
+  const isSelf = Boolean(my && my === addr)
+
+  let peerB64 = getDirectChatEcdhPeerPubBase64(addr)
+  if (!peerB64 && isSelf) {
+    const selfMat = await ensureSelfForensicEcdhMaterial(addr)
+    if (!selfMat.ok) {
+      return {
+        ok: false,
+        error: `Self-Chat: eigenes ECDH-Material fehlt (${selfMat.error}). Tresor/Signer prüfen.`,
+      }
+    }
+    peerB64 = getDirectChatEcdhPeerPubBase64(addr)
+  }
   if (!peerB64) {
     return {
       ok: false,
-      error: 'Kein Peer-Pub gespeichert — zuerst Handshake/Connect abschließen.',
+      error: isSelf
+        ? 'Self-Chat: kein Peer-Pub — Tresor entsperren und erneut versuchen (Handshake mit sich selbst speichert oft keinen Fremd-Pub).'
+        : 'Kein Peer-Pub gespeichert — zuerst Handshake/Connect mit diesem Partner abschließen.',
     }
   }
   let peerPubRaw: Uint8Array
